@@ -65,6 +65,27 @@ def test_policy_engine_rejects_bad_compound_logic() -> None:
         engine.evaluate(Regime.NOMINAL, _state(), [0], [1])
 
 
+def test_policy_engine_supports_casefolded_compound_logic() -> None:
+    engine = PolicyEngine(
+        [
+            _rule(
+                CompoundCondition(
+                    [
+                        PolicyCondition("R", layer=0, op=">", threshold=0.5),
+                        PolicyCondition("R_good", layer=99, op=">", threshold=0.5),
+                    ],
+                    logic="or",
+                )
+            )
+        ]
+    )
+
+    actions = engine.evaluate(Regime.NOMINAL, _state(), [0], [1])
+
+    assert len(actions) == 1
+    assert actions[0].justification == "policy rule: boundary"
+
+
 def test_policy_engine_compound_or_shortfall_fails_closed() -> None:
     engine = PolicyEngine(
         [

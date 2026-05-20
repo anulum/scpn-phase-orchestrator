@@ -590,3 +590,68 @@ def _load_proposal_yaml(tmp_path: Path, yaml_text: str):
     path = tmp_path / "binding_spec.yaml"
     path.write_text(yaml_text, encoding="utf-8")
     return load_binding_spec(path)
+
+
+def test_inferred_channels_rotation_is_deterministic():
+    assert binding_proposal._inferred_channels(5, prefer_event=True) == (
+        "I",
+        "P",
+        "S",
+        "I",
+        "P",
+    )
+    assert binding_proposal._inferred_channels(5, prefer_event=False) == (
+        "P",
+        "I",
+        "S",
+        "P",
+        "I",
+    )
+
+
+def test_families_for_channels_maps_unknown_channels_to_physical_extractor():
+    families = binding_proposal._families_for_channels(("P", "noise", "S", ""))
+    assert families == (
+        ("auto_p_0", "P", "physical"),
+        ("auto_noise_1", "noise", "physical"),
+        ("auto_s_2", "S", "ring"),
+        ("auto__3", "", "physical"),
+    )
+
+
+def test_resolve_sample_rate_hz_validates_explicit_rate_inputs():
+    with pytest.raises(ValueError, match="sample_rate_hz must be positive"):
+        binding_proposal._resolve_sample_rate_hz(
+            0.0,
+            rows=[],
+            fieldnames=["time", "value"],
+        )
+
+    with pytest.raises(ValueError, match="sample_rate_hz must be positive"):
+        binding_proposal._resolve_sample_rate_hz(
+            float("nan"),
+            rows=[],
+            fieldnames=["time", "value"],
+        )
+
+
+def test_cross_channel_coupling_lines_filters_invalid_entries():
+    coupling = {
+        "edges": (
+            {"source_channel": "P", "target_channel": "I", "strength": 0.2},
+            {"source_channel": "I", "target_channel": "", "strength": 0.5},
+            {"source_channel": "P", "target_channel": "S", "strength": "0.9"},
+            {"source_channel": "I", "target_channel": "P", "strength": -0.3},
+            {"source_channel": "P", "target_channel": "I", "strength": 0.2},
+        )
+    }
+
+    lines = binding_proposal._cross_channel_coupling_lines(coupling)
+
+    assert lines == [
+        "  - source: P",
+        "    target: I",
+        "    strength: 0.2",
+        "    mode: directed",
+        "    template: auto_initial_k",
+    ]

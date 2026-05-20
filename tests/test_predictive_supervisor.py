@@ -555,6 +555,43 @@ class TestFEPHierarchyInPredictiveCoverage:
         assert all(child["actions"] for child in record["children"])
         assert record["parent"]["assessment"]["target_R"] == pytest.approx(0.7)
 
+    def test_fep_hierarchy_assessment_is_deterministic_for_identical_inputs(self):
+        children = {
+            "coherent_child": (
+                np.array([0.0, 0.02, 0.04], dtype=np.float64),
+                np.array([1.0, 1.0, 1.0], dtype=np.float64),
+            ),
+            "dispersed_child": (
+                np.array([0.0, 2.1, 4.2], dtype=np.float64),
+                np.array([0.8, 1.1, 1.4], dtype=np.float64),
+            ),
+        }
+
+        first = assess_fep_hierarchy(
+            children,
+            dt=0.01,
+            parent_dt=0.02,
+            child_target_R=0.75,
+            parent_target_R=0.7,
+            free_energy_threshold=0.0,
+            child_drive_gain=0.08,
+            parent_drive_gain=0.05,
+            hierarchy="predictive_coverage_hierarchy",
+        )
+        second = assess_fep_hierarchy(
+            children,
+            dt=0.01,
+            parent_dt=0.02,
+            child_target_R=0.75,
+            parent_target_R=0.7,
+            free_energy_threshold=0.0,
+            child_drive_gain=0.08,
+            parent_drive_gain=0.05,
+            hierarchy="predictive_coverage_hierarchy",
+        )
+
+        assert first.to_audit_record() == second.to_audit_record()
+
     @pytest.mark.parametrize(
         ("kwargs", "match"),
         [

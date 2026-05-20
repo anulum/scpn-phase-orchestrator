@@ -1155,3 +1155,57 @@ def test_run_owned_live_adapter_routes_supported_transports_and_rejects_unknown(
             transport="memory",
             envelope_record={"ok": True},
         )
+
+
+def test_stable_json_payload_normalises_nested_values_and_is_deterministic() -> None:
+    payload_a = {
+        "zebra": 1,
+        "alpha": {
+            "nested": [
+                {"inner": "text", "items": (1, 2, 3), "value": 2.0},
+                {"value": 2.0, "items": [1, 2, 3]},
+            ],
+            "flag": False,
+        },
+        "list": [0, {"z": -1}],
+    }
+    payload_b = {
+        "list": [0, {"z": -1}],
+        "zebra": 1,
+        "alpha": {
+            "flag": False,
+            "nested": (
+                {"items": [1, 2, 3], "value": 2.0, "inner": "text"},
+                {"value": 2.0, "items": (1, 2, 3)},
+            ),
+        },
+    }
+
+    canonical_a = ui._stable_json_payload(payload_a, "payload")
+    canonical_b = ui._stable_json_payload(payload_b, "payload")
+    assert canonical_a == canonical_b == json.dumps(
+        {
+            "alpha": {
+                "flag": False,
+                "nested": [
+                    {"inner": "text", "items": [1, 2, 3], "value": 2.0},
+                    {"value": 2.0, "items": [1, 2, 3]},
+                ],
+            },
+            "list": [0, {"z": -1}],
+            "zebra": 1,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def test_stable_json_payload_reports_invalid_inputs() -> None:
+    with pytest.raises(ValueError, match="non-finite float"):
+        ui._stable_json_payload({"payload": float("nan")}, "payload")
+
+    with pytest.raises(ValueError, match="contains a non-JSON-safe value"):
+        ui._stable_json_payload({"payload": object()}, "payload")
+
+    with pytest.raises(ValueError, match="contains an invalid key"):
+        ui._stable_json_payload({1: "bad"}, "payload")

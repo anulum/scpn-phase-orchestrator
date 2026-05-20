@@ -319,6 +319,25 @@ def test_bft_meta_orchestrator_reports_missing_signing_keys_and_quorum_block(
     assert "valid quorum not reached" in manifest["blocked_reasons"]
     assert manifest["manifest_sha256"] == manifest["manifest_sha256"]
 
+
+def test_sign_policy_proposal_is_deterministic_across_payload_key_order() -> None:
+    keyring = {"node-a": "alpha"}
+    payload_a = {"policy": "hold", "actuation": False, "knobs": {"K": 0.3}}
+    payload_b = {"knobs": {"K": 0.3}, "policy": "hold", "actuation": False}
+    parent_hash = "a" * 64
+
+    first = sign_policy_proposal("node-a", payload_a, parent_hash, keyring["node-a"])
+    second = sign_policy_proposal("node-a", payload_b, parent_hash, keyring["node-a"])
+
+    assert first["payload_hash"] == second["payload_hash"]
+    assert first["signature"] == second["signature"]
+    assert first["payload"] == second["payload"]
+    assert first["payload"] == {
+        "policy": "hold",
+        "actuation": False,
+        "knobs": {"K": 0.3},
+    }
+
 def test_sign_policy_proposal_does_not_accept_nan_payload() -> None:
     keyring = {"node-a": "alpha"}
 

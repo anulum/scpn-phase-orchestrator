@@ -431,6 +431,49 @@ def test_policy_dry_run_rejects_non_int_step_values(tmp_path: Path) -> None:
         )
 
 
+def test_policy_dry_run_rejects_non_numeric_layer_values(tmp_path: Path) -> None:
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(
+        yaml.safe_dump(
+            {
+                "rules": [
+                    {
+                        "name": "low_stability_boost",
+                        "regime": ["DEGRADED"],
+                        "condition": {
+                            "metric": "R",
+                            "layer": 0,
+                            "op": ">",
+                            "threshold": 0.1,
+                        },
+                        "action": {
+                            "knob": "K",
+                            "scope": "global",
+                            "value": 0.1,
+                            "ttl_s": 5.0,
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="could not convert"):
+        dry_run_policy_rules(
+            load_policy_rules(policy_path),
+            [
+                {
+                    "step": 0,
+                    "regime": "DEGRADED",
+                    "layers": [{"R": "not-a-number"}],
+                }
+            ],
+            good_layers=[],
+            bad_layers=[],
+        )
+
+
 def test_policy_dry_run_cli_outputs_json(tmp_path: Path) -> None:
     binding_path = tmp_path / "binding_spec.yaml"
     policy_path = tmp_path / "policy.yaml"

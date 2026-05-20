@@ -386,6 +386,89 @@ class TestQuantumControlBridge:
         assert manifest["co_simulation_parity"]["max_abs_coupling_error"] > 0.0
         assert manifest["co_simulation_parity"]["term_count"] == 3
 
+    def test_qpu_target_readiness_passes_only_when_preconditions_met(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            np.array([[0.0, 0.4], [0.0, 0.0]]),
+            np.array([1.0, -0.5]),
+            dt=0.1,
+        )
+
+        ready = bridge.audit_qpu_target_readiness(
+            manifest,
+            target_backend="qiskit_openqasm3",
+            provider="local",
+            credentials_configured=True,
+            operator_approved=True,
+        )
+
+        assert ready["status"] == "ready_not_executed"
+        assert ready["blocked_reasons"] == []
+        assert ready["qpu_execution_permitted"] is False
+        assert ready["actuation_permitted"] is False
+        assert ready["operator_approved"] is True
+        assert ready["credentials_configured"] is True
+        assert len(ready["readiness_sha256"]) == 64
+
+    def test_audit_qpu_target_readiness_reports_blocking_reasons(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            np.array([[0.0, 0.4], [0.0, 0.0]]),
+            np.array([1.0, -0.5]),
+            dt=0.1,
+        )
+
+        manifest["status"] = "co_simulation_parity_failed"
+
+        blocked = bridge.audit_qpu_target_readiness(
+            manifest,
+            target_backend="qiskit_openqasm3",
+            provider="local",
+            credentials_configured=False,
+            operator_approved=False,
+        )
+
+        assert blocked["status"] == "blocked"
+        assert set(blocked["blocked_reasons"]) == {
+            "co_simulation_parity_not_passed",
+            "credentials_not_configured",
+            "operator_approval_missing",
+        }
+
+    def test_audit_qpu_target_readiness_rejects_manifest_validation_errors(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = {
+            "manifest_kind": "quantum_compiler_manifest",
+            "status": "co_simulation_parity_passed",
+            "target_backends": "qiskit_openqasm3",
+            "qpu_execution_permitted": False,
+            "actuation_permitted": False,
+            "manifest_sha256": "a" * 64,
+        }
+
+        with pytest.raises(ValueError, match="target_backends must be a list"):
+            bridge.audit_qpu_target_readiness(
+                manifest,
+                target_backend="qiskit_openqasm3",
+                provider="local",
+            )
+
+        with pytest.raises(ValueError, match="target_backend"):
+            bridge.audit_qpu_target_readiness(
+                {
+                    "manifest_kind": "quantum_compiler_manifest",
+                    "status": "co_simulation_parity_passed",
+                    "target_backends": ["qiskit_openqasm3"],
+                    "qpu_execution_permitted": False,
+                    "actuation_permitted": False,
+                    "manifest_sha256": "a" * 64,
+                },
+                target_backend="missing_backend",
+                provider="local",
+                credentials_configured=True,
+                operator_approved=True,
+            )
+
 
 class TestExportArtifactValidation:
     def test_rejects_non_upde_state(self):

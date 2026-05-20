@@ -247,6 +247,23 @@ class TestHigherOrderTopologySupervisor:
         assert existing[0] in result.pruned_simplices
         assert result.hyperedges == ()
 
+    def test_to_audit_record_is_deterministically_repeatable(self) -> None:
+        phases = np.array([0.0, 0.03, 0.06, np.pi], dtype=np.float64)
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=0.5,
+                coherence_floor=0.9,
+                simplex_threshold=0.99,
+                max_simplex_strength=0.2,
+            )
+        )
+
+        result = supervisor.mutate(phases, _zero_knm(4))
+        first = json.dumps(result.to_audit_record(), sort_keys=True)
+        second = json.dumps(result.to_audit_record(), sort_keys=True)
+
+        assert first == second
+
     def test_mutate_does_not_mutate_inputs(self) -> None:
         phases = np.array([0.0, 0.1, 0.2], dtype=np.float64)
         knm = np.full((3, 3), 0.1, dtype=np.float64)

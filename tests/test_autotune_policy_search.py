@@ -169,6 +169,42 @@ class TestReplayPolicySearch:
         assert seed_record["K"] == [[0.0, 0.2], [0.3, 0.0]]
         assert seed_record["alpha"] == [0.1, 0.2]
 
+    def test_audit_record_serialises_mutated_array_candidates(self) -> None:
+        seed = KnobPolicyCandidate(
+            K=np.array([0.0, 0.3], dtype=np.float64),
+            alpha=np.array([0.0, 0.1], dtype=np.float64),
+            channel_weights=(0.2,),
+            cross_channel_gains=(0.15,),
+        )
+
+        def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
+            coherence = 0.75 + float(np.asarray(candidate.K).mean()) * 0.1
+            return RewardObservation(coherence=coherence, previous_coherence=0.6)
+
+        result = search_replay_policy(
+            seed,
+            evaluator,
+            search_config=OfflinePolicySearchConfig(
+                K_step=0.05,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.0,
+                cross_channel_gain_step=0.0,
+            ),
+        )
+
+        candidate_records = cast(
+            "list[object]",
+            result.to_audit_record()["candidates"],
+        )
+        assert isinstance(candidate_records, list)
+        assert any(isinstance(record["K"], list) for record in candidate_records)
+        assert any(
+            isinstance(record["channel_weights"], list)
+            for record in candidate_records
+        )
+
     def test_evaluator_alias_accepts_candidate_to_observation_callable(self) -> None:
         def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
             return RewardObservation(coherence=0.75)

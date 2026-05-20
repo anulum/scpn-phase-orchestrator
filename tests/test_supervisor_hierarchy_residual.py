@@ -137,6 +137,15 @@ def test_transport_runtime_validates_watermarks_and_reports_sorted_state() -> No
     assert runtime.to_audit_record()["previous_sequences"] == {"edge-a": 1, "edge-b": 4}
 
 
+def test_transport_runtime_audit_record_is_deterministic_for_identical_state() -> None:
+    runtime = HierarchyTransportRuntime(previous_sequences={"edge-b": 4, "edge-a": 1})
+
+    first = json.dumps(runtime.to_audit_record(), sort_keys=True)
+    second = json.dumps(runtime.to_audit_record(), sort_keys=True)
+
+    assert first == second
+
+
 def test_hierarchy_adapters_reject_unknown_frame_keys_and_sort_watermarks() -> None:
     with pytest.raises(ValueError, match="frame contains unknown keys: socket"):
         handle_hierarchy_frame(

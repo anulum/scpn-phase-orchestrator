@@ -155,6 +155,33 @@ class TestAutotuneRewardScoring:
         assert report.components["actuation"] == 0.0
         assert report.reward == pytest.approx(report.components["target_tracking"])
 
+    def test_reward_component_order_controls_scoring_terms(self) -> None:
+        candidate = KnobPolicyCandidate(K=0.1)
+        observation = RewardObservation(coherence=0.6, previous_coherence=0.4)
+
+        full = evaluate_knob_policy(candidate, observation)
+        coherence_only = evaluate_knob_policy(
+            candidate,
+            observation,
+            RewardConfig(component_order=("coherence_gain",)),
+        )
+        penalty_only = evaluate_knob_policy(
+            candidate,
+            observation,
+            RewardConfig(component_order=("bad_coherence",)),
+        )
+
+        assert full.reward == pytest.approx(
+            coherence_only.reward
+            + full.components["target_tracking"]
+            + full.components["actuation"]
+            + full.components["regime_churn"]
+            + full.components["unsafe"]
+            + full.components["bad_coherence"]
+        )
+        assert penalty_only.reward == full.components["bad_coherence"]
+        assert penalty_only.reward < coherence_only.reward
+
 
 class TestAutotuneReplayRanking:
     def test_ranks_replay_candidates_by_reward(self) -> None:
@@ -450,6 +477,10 @@ class TestAutotuneRewardValidation:
     def test_rejects_negative_config_weights(self) -> None:
         with pytest.raises(ValueError, match="non-negative"):
             RewardConfig(actuation_penalty=-0.1)
+
+    def test_rejects_invalid_bad_coherence_threshold(self) -> None:
+        with pytest.raises(ValueError, match="bad_coherence_threshold"):
+            RewardConfig(bad_coherence_threshold=1.5)
 
     def test_replay_ranking_rejects_empty_replays(self) -> None:
         with pytest.raises(ValueError, match="at least one"):

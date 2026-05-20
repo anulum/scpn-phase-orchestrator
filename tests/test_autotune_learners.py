@@ -173,3 +173,33 @@ def test_failed_search_closes_without_alternatives_when_ranking_fails(
     assert proposal.policy_search.proposal.reasons == (
         "no safe replay candidates remain after filtering",
     )
+
+
+def test_failed_search_collects_alternatives_when_ranking_fallback_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def safe_observation(candidate: KnobPolicyCandidate) -> RewardObservation:
+        return RewardObservation(coherence=0.9, previous_coherence=0.8)
+
+    def force_search_failure(*_args, **_kwargs) -> None:
+        raise ValueError("search blocked")
+
+    monkeypatch.setattr(learner_mod, "search_replay_policy", force_search_failure)
+    monkeypatch.setattr(
+        learner_mod,
+        "rank_replay_candidates",
+        learner_mod.rank_replay_candidates,
+    )
+
+    seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
+    proposal = generate_ppo_like_proposal(
+        seed,
+        safe_observation,
+        seed_value=7,
+        proposal_config=None,
+    )
+
+    assert proposal.policy_search.proposal.accepted is False
+    assert proposal.policy_search.proposal.selected is None
+    assert len(proposal.policy_search.proposal.alternatives) == 3
+    assert proposal.policy_search.proposal.reasons == ("search blocked",)

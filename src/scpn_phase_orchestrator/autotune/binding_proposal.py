@@ -672,6 +672,10 @@ def _cross_channel_coupling_lines(
         strength = edge.get("strength")
         if not isinstance(source, str) or not isinstance(target, str):
             continue
+        source = source.strip()
+        target = target.strip()
+        if not source or not target:
+            continue
         if source == target:
             continue
         if not isinstance(strength, int | float) or isinstance(strength, bool):
