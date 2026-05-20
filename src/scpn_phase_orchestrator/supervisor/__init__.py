@@ -44,6 +44,17 @@ from scpn_phase_orchestrator.supervisor.causal import (
     learn_causal_graph,
 )
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
+from scpn_phase_orchestrator.supervisor.evolutionary_examples import (
+    EvolutionaryBoundary,
+    build_evolutionary_supervisor_search_examples,
+    build_evolutionary_supervisor_search_examples_from_worker_a_api,
+)
+from scpn_phase_orchestrator.supervisor.evolutionary_search import (
+    EvolutionaryCandidate,
+    EvolutionarySearchConfig,
+    EvolutionarySearchReport,
+    run_offline_evolutionary_supervisor_search,
+)
 from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalCheckerAvailability,
     FormalCheckerCommand,
@@ -199,6 +210,10 @@ __all__ = [
     "DistributionPair",
     "EventBus",
     "DomainScenario",
+    "EvolutionaryBoundary",
+    "EvolutionaryCandidate",
+    "EvolutionarySearchConfig",
+    "EvolutionarySearchReport",
     "FEPHierarchyAssessment",
     "FEPHierarchyChildAssessment",
     "FEPPredictionAssessment",
@@ -275,6 +290,8 @@ __all__ = [
     "audit_formal_checker_availability",
     "build_bft_meta_orchestrator_manifest",
     "build_autopoietic_lineage_sandbox",
+    "build_evolutionary_supervisor_search_examples",
+    "build_evolutionary_supervisor_search_examples_from_worker_a_api",
     "build_formal_verification_package",
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
@@ -304,6 +321,7 @@ __all__ = [
     "sheaf_coherence",
     "sheaf_laplacian",
     "replay_hierarchy_jsonl",
+    "run_offline_evolutionary_supervisor_search",
     "simulate_multiverse_counterfactual_branches",
     "simulate_hierarchy_gossip_consensus",
     "sign_policy_proposal",

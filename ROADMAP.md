@@ -662,6 +662,19 @@ Speculative research watchlist:
   - Remaining scope: real hardware-in-the-loop rebinding evidence and any
     maintained simulator-specific live integration.
 - Evolutionary supervisor policy search over policy DSL, Petri nets, and topology mutations, initially offline over `audit.jsonl` with STL and counterfactual safety filters.
+  - Foundation is in place: deterministic offline search mutates bounded
+    policy genomes over audit-style replay summaries, evaluates replay reward,
+    safety margin, violation count, STL robustness, and counterfactual
+    safety-margin rejection reasons, and emits hashed operator-review evidence
+    without live merge, hot patch, or actuation.
+  - Domain examples are in place for power-grid, cardiac-rhythm,
+    cyber-industrial, and traffic-flow replay envelopes.
+  - Reference-suite gates enforce scenario and candidate coverage, accepted and
+    rejected candidates, counterfactual filter evidence, deterministic hashes,
+    operator review, non-actuation, disabled execution, disabled live merge,
+    and disabled hot patching.
+  - Remaining scope: richer policy DSL, Petri-net, and topology-mutation
+    grammars plus maintained operator UI surfacing.
 - Information-geometry control layer using Fisher-Rao or Wasserstein metrics as
   supervisor control primitives.
   - Foundation is in place: dependency-free NumPy/JAX-compatible Fisher-Rao

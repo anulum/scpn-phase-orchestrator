@@ -17,6 +17,7 @@ from benchmarks.reference_suite import (
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
     benchmark_domain_formal_safety_exports,
+    benchmark_evolutionary_supervisor_search,
     benchmark_formal_export_artifact_quality,
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_hybrid_entanglement_order_parameter_gate,
@@ -151,6 +152,75 @@ def test_semantic_retrieval_ranking_quality_reports_thresholds() -> None:
     assert projection[0]["domainpack"] == "power_grid"
     assert projection[0]["ranking_features"]["source_priority"] == 1.0
     assert projection[0]["ranking_features"]["matched_term_count"] >= 1.0
+
+
+def test_evolutionary_supervisor_search_benchmark_shape() -> None:
+    out = benchmark_evolutionary_supervisor_search()
+
+    assert out["suite"] == "evolutionary_supervisor_search"
+    assert out["scenario_count"] >= 1
+    assert int(out["candidate_count"]) == int(out["accepted_count"]) + int(
+        out["rejected_count"]
+    )
+    assert int(out["candidate_count"]) >= int(out["scenario_count"]) * 4
+    assert out["non_actuating"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["operator_review_required"] == 1
+    assert out["live_merge_disabled"] == 1
+    assert out["hot_patch_disabled"] == 1
+    assert out["claim_boundary"] == 1
+    assert out["deterministic_hash"] == 1
+    assert len(str(out["evolutionary_search_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_evolutionary_supervisor_search_reports_thresholds_and_records() -> None:
+    out = benchmark_evolutionary_supervisor_search()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    scenarios = json.loads(str(out["scenario_records_json"]))
+    candidates = json.loads(str(out["candidate_records_json"]))
+
+    assert thresholds == {
+        "min_accepted_count": 1,
+        "min_candidate_count": 8,
+        "min_counterfactual_filter_rejected_count": 1,
+        "min_rejected_count": 1,
+        "min_scenario_count": 1,
+        "min_stl_filter_rejected_count": 0,
+        "require_deterministic_hash": True,
+        "require_execution_disabled": True,
+        "require_hot_patch_disabled": True,
+        "require_live_merge_disabled": True,
+        "require_non_actuating": True,
+        "require_operator_review": True,
+    }
+    assert len(scenarios) >= thresholds["min_scenario_count"]
+    assert int(out["scenario_count"]) == len(scenarios)
+    assert int(out["candidate_count"]) == sum(
+        int(record["candidate_count"]) for record in scenarios
+    )
+    assert int(out["accepted_count"]) == sum(
+        int(record["accepted_count"]) for record in scenarios
+    )
+    assert int(out["rejected_count"]) == sum(
+        int(record["rejected_count"]) for record in scenarios
+    )
+    assert (
+        int(out["stl_filter_rejected_count"])
+        >= thresholds["min_stl_filter_rejected_count"]
+    )
+    assert (
+        int(out["counterfactual_filter_rejected_count"])
+        >= thresholds["min_counterfactual_filter_rejected_count"]
+    )
+    assert all(int(record["report_hash_match"]) == 1 for record in scenarios)
+    assert all(int(record["candidate_hash_match"]) == 1 for record in scenarios)
+    assert out["deterministic_hash"] == int(thresholds["require_deterministic_hash"])
+    assert len(candidates) == int(out["candidate_count"])
+    assert {record["status"] for record in candidates} <= {
+        "accepted_for_review",
+        "rejected",
+    }
 
 
 def test_meta_transfer_package_manifest_quality_benchmark_shape() -> None:
@@ -1301,6 +1371,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
     assert out["metadata"]["snapshot_date"] == "2026-05-06"
     assert set(out["benchmarks"].keys()) == {
         "auto_binding",
+        "evolutionary_supervisor_search",
         "autopoietic_lineage",
         "bayesian_backends",
         "bayesian_posterior",

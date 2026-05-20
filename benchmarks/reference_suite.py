@@ -408,6 +408,21 @@ class MetaAuditCorpusThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class EvolutionarySupervisorSearchThresholds(NamedTuple):
+    min_scenario_count: int
+    min_candidate_count: int
+    min_accepted_count: int
+    min_rejected_count: int
+    min_stl_filter_rejected_count: int
+    min_counterfactual_filter_rejected_count: int
+    require_non_actuating: bool
+    require_execution_disabled: bool
+    require_operator_review: bool
+    require_live_merge_disabled: bool
+    require_hot_patch_disabled: bool
+    require_deterministic_hash: bool
+
+
 class ReferenceSuiteResult(TypedDict):
     metadata: dict[str, str]
     benchmarks: dict[str, BenchmarkRecord]
@@ -3066,6 +3081,320 @@ def benchmark_integrated_information_replay_corpus_gate() -> dict[
     }
 
 
+def _evolutionary_example_payload(payload: object) -> Mapping[str, object]:
+    if isinstance(payload, Mapping):
+        return payload
+    if hasattr(payload, "to_audit_record"):
+        audit_record = payload.to_audit_record()
+        if isinstance(audit_record, Mapping):
+            return audit_record
+    if hasattr(payload, "__dict__"):
+        raw = payload.__dict__
+        if isinstance(raw, Mapping):
+            return raw
+    raise TypeError("evolutionary supervisor example payload must be mapping-like")
+
+
+def _evolutionary_candidate_record(payload: Mapping[str, object]) -> dict[str, object]:
+    blocked_reasons = payload.get("blocked_reasons", ())
+    if isinstance(blocked_reasons, tuple):
+        blocked_reason_values = list(blocked_reasons)
+    elif isinstance(blocked_reasons, list):
+        blocked_reason_values = blocked_reasons
+    elif blocked_reasons:
+        raise TypeError("candidate blocked_reasons must be a sequence")
+    else:
+        blocked_reason_values = []
+
+    return {
+        "candidate_id": str(payload["candidate_id"]),
+        "generation": int(payload["generation"]),
+        "knob": str(payload["knob"]),
+        "parent_value": float(payload["parent_value"]),
+        "candidate_value": float(payload["candidate_value"]),
+        "mutation_delta": float(payload["mutation_delta"]),
+        "replay_fitness": float(payload["replay_fitness"]),
+        "stl_robustness": float(payload["stl_robustness"]),
+        "stl_satisfied": bool(payload["stl_satisfied"]),
+        "replay_violation_count": int(payload["replay_violation_count"]),
+        "blocked_reasons": [str(reason) for reason in blocked_reason_values],
+        "review_required": bool(payload["review_required"]),
+        "live_merge_permitted": bool(payload["live_merge_permitted"]),
+        "hot_patch_permitted": bool(payload["hot_patch_permitted"]),
+        "actuation_permitted": bool(payload["actuation_permitted"]),
+        "candidate_hash": str(payload["candidate_hash"]),
+        "status": str(payload["status"]),
+    }
+
+
+def _evolutionary_example_scalar(
+    *, payload: Mapping[str, object], key: str, default: float | int
+) -> float:
+    value = payload.get(key, default)
+    if not isinstance(value, int | float | np.floating):
+        raise ValueError(f"evolutionary example key '{key}' must be numeric")
+    return float(value)
+
+
+def benchmark_evolutionary_supervisor_search() -> dict[str, float | int | str]:
+    """Benchmark offline evolutionary supervisor search with review and safety gates."""
+    thresholds = EvolutionarySupervisorSearchThresholds(
+        min_scenario_count=1,
+        min_candidate_count=8,
+        min_accepted_count=1,
+        min_rejected_count=1,
+        min_stl_filter_rejected_count=0,
+        min_counterfactual_filter_rejected_count=1,
+        require_non_actuating=True,
+        require_execution_disabled=True,
+        require_operator_review=True,
+        require_live_merge_disabled=True,
+        require_hot_patch_disabled=True,
+        require_deterministic_hash=True,
+    )
+
+    from scpn_phase_orchestrator.supervisor.evolutionary_examples import (
+        build_evolutionary_supervisor_search_examples,
+    )
+    from scpn_phase_orchestrator.supervisor.evolutionary_search import (
+        run_offline_evolutionary_supervisor_search,
+    )
+
+    examples = build_evolutionary_supervisor_search_examples()
+    if not examples:
+        raise RuntimeError("evolutionary search examples list is empty")
+
+    t0 = time.perf_counter()
+    scenario_records: list[dict[str, object]] = []
+    candidate_records: list[dict[str, object]] = []
+
+    for idx, raw_example in enumerate(examples):
+        payload = _evolutionary_example_payload(raw_example)
+        scenario_id = str(
+            payload.get("scenario_id", payload.get("scenario", f"scenario_{idx}"))
+        )
+        parent_policy = payload.get("parent_policy")
+        if not isinstance(parent_policy, Mapping):
+            raise ValueError("evolutionary example parent_policy must be mapping")
+        audit_replays = payload.get("audit_replays")
+        if not isinstance(audit_replays, Iterable) or isinstance(
+            audit_replays, (str, bytes, bytearray)
+        ):
+            raise ValueError("evolutionary example audit_replays must be sequence")
+        trace = payload.get("trace")
+        if not isinstance(trace, Mapping):
+            raise ValueError("evolutionary example trace must be mapping")
+        stl_spec = payload.get("stl_spec")
+        if not isinstance(stl_spec, str) or not stl_spec.strip():
+            raise ValueError("evolutionary example stl_spec must be non-empty string")
+
+        generation_count = int(payload.get("generation_count", 2))
+        population_size = int(payload.get("population_size", 4))
+        mutation_step = float(payload.get("mutation_step", 0.05))
+        minimum_replay_reward = _evolutionary_example_scalar(
+            payload=payload,
+            key="minimum_replay_reward",
+            default=0.0,
+        )
+        minimum_safety_margin = _evolutionary_example_scalar(
+            payload=payload,
+            key="minimum_safety_margin",
+            default=0.0,
+        )
+
+        kwargs: dict[str, object] = {
+            "parent_policy": parent_policy,
+            "audit_replays": tuple(audit_replays),
+            "stl_spec": stl_spec,
+            "trace": trace,
+            "generation_count": generation_count,
+            "population_size": population_size,
+            "mutation_step": mutation_step,
+            "minimum_replay_reward": minimum_replay_reward,
+            "minimum_safety_margin": minimum_safety_margin,
+        }
+
+        report = run_offline_evolutionary_supervisor_search(**kwargs)
+        repeated = run_offline_evolutionary_supervisor_search(**kwargs)
+
+        candidate_run_records = [
+            _evolutionary_candidate_record(candidate.to_audit_record())
+            for candidate in report.candidates
+        ]
+        repeated_candidate_records = [
+            _evolutionary_candidate_record(candidate.to_audit_record())
+            for candidate in repeated.candidates
+        ]
+        candidate_hash_match = int(
+            _stable_record_hash(candidate_run_records)
+            == _stable_record_hash(repeated_candidate_records)
+        )
+        report_hash_match = int(report.report_hash == repeated.report_hash)
+        stl_filtered_rejections = sum(
+            1
+            for record in candidate_run_records
+            if "stl_spec_not_satisfied" in record["blocked_reasons"]
+        )
+        counterfactual_filtered_rejections = sum(
+            1
+            for record in candidate_run_records
+            if (
+                "counterfactual_safety_delta_exceeds_replay_margin"
+                in record["blocked_reasons"]
+            )
+        )
+        for candidate_record in candidate_run_records:
+            candidate_record["scenario_id"] = scenario_id
+        candidate_records.extend(candidate_run_records)
+
+        scenario_records.append(
+            {
+                "scenario_id": scenario_id,
+                "candidate_count": int(report.candidate_count),
+                "accepted_count": int(report.accepted_count),
+                "rejected_count": int(report.rejected_count),
+                "stl_filter_rejected_count": stl_filtered_rejections,
+                "counterfactual_filter_rejected_count": (
+                    counterfactual_filtered_rejections
+                ),
+                "candidate_hash_match": candidate_hash_match,
+                "report_hash_match": report_hash_match,
+                "report_hash": str(report.report_hash),
+                "claim_boundary": str(report.claim_boundary),
+                "best_candidate_id": (
+                    str(report.best_candidate.candidate_id)
+                    if report.best_candidate is not None
+                    else ""
+                ),
+                "non_actuating": bool(report.non_actuating),
+                "execution_disabled": bool(report.execution_disabled),
+                "operator_review_required": bool(report.operator_review_required),
+                "hot_patch_permitted": bool(report.hot_patch_permitted),
+                "live_merge_permitted": bool(report.live_merge_permitted),
+                "generation_count": generation_count,
+                "population_size": population_size,
+                "minimum_replay_reward": minimum_replay_reward,
+                "minimum_safety_margin": minimum_safety_margin,
+                "stl_spec": stl_spec,
+            }
+        )
+
+    elapsed = time.perf_counter() - t0
+    scenario_count = len(scenario_records)
+    candidate_count = sum(int(record["candidate_count"]) for record in scenario_records)
+    accepted_count = sum(int(record["accepted_count"]) for record in scenario_records)
+    rejected_count = sum(int(record["rejected_count"]) for record in scenario_records)
+    stl_filter_rejected_count = sum(
+        int(record["stl_filter_rejected_count"]) for record in scenario_records
+    )
+    counterfactual_filter_rejected_count = sum(
+        int(record["counterfactual_filter_rejected_count"])
+        for record in scenario_records
+    )
+    deterministic_hash = int(
+        all(record["candidate_hash_match"] == 1 for record in scenario_records)
+        and all(record["report_hash_match"] == 1 for record in scenario_records)
+    )
+    non_actuating = int(
+        all(record["non_actuating"] is True for record in scenario_records)
+        and all(
+            candidate["actuation_permitted"] is False for candidate in candidate_records
+        )
+    )
+    execution_disabled = int(
+        all(record["execution_disabled"] is True for record in scenario_records)
+        and all(
+            candidate["actuation_permitted"] is False for candidate in candidate_records
+        )
+    )
+    operator_review_required = int(
+        all(record["operator_review_required"] is True for record in scenario_records)
+        and all(candidate["review_required"] is True for candidate in candidate_records)
+    )
+    live_merge_disabled = int(
+        all(record["live_merge_permitted"] is False for record in scenario_records)
+        and all(
+            candidate["live_merge_permitted"] is False
+            for candidate in candidate_records
+        )
+    )
+    hot_patch_disabled = int(
+        all(record["hot_patch_permitted"] is False for record in scenario_records)
+        and all(
+            candidate["hot_patch_permitted"] is False for candidate in candidate_records
+        )
+    )
+    claim_boundary_value = str(scenario_records[0]["claim_boundary"])
+    claim_boundary = int(
+        all(
+            str(record["claim_boundary"]) == claim_boundary_value
+            and claim_boundary_value
+            for record in scenario_records
+        )
+    )
+    acceptance_passed = int(
+        scenario_count >= thresholds.min_scenario_count
+        and candidate_count >= thresholds.min_candidate_count
+        and accepted_count >= thresholds.min_accepted_count
+        and rejected_count >= thresholds.min_rejected_count
+        and stl_filter_rejected_count >= thresholds.min_stl_filter_rejected_count
+        and counterfactual_filter_rejected_count
+        >= thresholds.min_counterfactual_filter_rejected_count
+        and claim_boundary == 1
+        and non_actuating == int(thresholds.require_non_actuating)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and operator_review_required == int(thresholds.require_operator_review)
+        and live_merge_disabled == int(thresholds.require_live_merge_disabled)
+        and hot_patch_disabled == int(thresholds.require_hot_patch_disabled)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "evolutionary_supervisor_search",
+        "wall_time_s": elapsed,
+        "steps_per_second": candidate_count / elapsed if elapsed > 0.0 else 0.0,
+        "scenario_count": scenario_count,
+        "candidate_count": candidate_count,
+        "accepted_count": accepted_count,
+        "rejected_count": rejected_count,
+        "stl_filter_rejected_count": stl_filter_rejected_count,
+        "counterfactual_filter_rejected_count": (counterfactual_filter_rejected_count),
+        "claim_boundary": claim_boundary,
+        "claim_boundary_value": claim_boundary_value,
+        "non_actuating": non_actuating,
+        "execution_disabled": execution_disabled,
+        "operator_review_required": operator_review_required,
+        "live_merge_disabled": live_merge_disabled,
+        "hot_patch_disabled": hot_patch_disabled,
+        "deterministic_hash": deterministic_hash,
+        "evolutionary_search_sha256": _stable_record_hash(candidate_records),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_accepted_count": thresholds.min_accepted_count,
+                "min_candidate_count": thresholds.min_candidate_count,
+                "min_counterfactual_filter_rejected_count": (
+                    thresholds.min_counterfactual_filter_rejected_count
+                ),
+                "min_rejected_count": thresholds.min_rejected_count,
+                "min_scenario_count": thresholds.min_scenario_count,
+                "min_stl_filter_rejected_count": (
+                    thresholds.min_stl_filter_rejected_count
+                ),
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_hot_patch_disabled": thresholds.require_hot_patch_disabled,
+                "require_live_merge_disabled": thresholds.require_live_merge_disabled,
+                "require_non_actuating": thresholds.require_non_actuating,
+                "require_operator_review": thresholds.require_operator_review,
+            },
+            sort_keys=True,
+        ),
+        "scenario_records_json": json.dumps(scenario_records, sort_keys=True),
+        "candidate_records_json": json.dumps(candidate_records, sort_keys=True),
+    }
+
+
 def benchmark_topos_semantic_binding_gate() -> dict[str, float | int | str]:
     """Benchmark categorical proof-obligation surfaces for semantic binding."""
     thresholds = ToposSemanticBindingThresholds(
@@ -5156,6 +5485,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "morphogenetic_domain_demos": benchmark_morphogenetic_domain_demo_gate(),
             "integrated_information_replay_corpus": (
                 benchmark_integrated_information_replay_corpus_gate()
+            ),
+            "evolutionary_supervisor_search": (
+                benchmark_evolutionary_supervisor_search()
             ),
             "topos_semantic_binding": benchmark_topos_semantic_binding_gate(),
             "multiverse_counterfactual": benchmark_multiverse_counterfactual_gate(),
