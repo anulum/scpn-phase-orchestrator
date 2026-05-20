@@ -163,7 +163,7 @@ keyword names, result type, and deterministic execution hash. It deliberately
 does not store argument values, because runtime payloads may contain proprietary
 measurements or credentials.
 
-For production deployments, bind execution to reviewed target hashes:
+For production deployments, bind execution to reviewed target hashes through a request stage:
 
 ```python
 policy = PluginRuntimeExecutionPolicy(
@@ -175,8 +175,19 @@ policy = PluginRuntimeExecutionPolicy(
 ```
 
 This approval check happens before the implementation module is imported. It is
-the intended guard for promoting reviewed plugin metadata into an owned runtime
-path.
+the intended guard for promoting reviewed plugin metadata into a deployment
+request stage, not an execution gate by itself.
+
+Approval artefacts alone do not execute plugins.
+
+`build_plugin_execution_request()` consumes both the reviewed plan and operator
+approval artefacts together. It verifies `plan_hash`, `target_hash`, `plugin`,
+`kind`, `name`, and operator binding before returning a request envelope.
+
+The request envelope remains import-free and non-invoking; it sets policy such
+that `loading_permitted` and `execution_permitted` are true only when
+`require_target_hash_approval=True` and `approved_target_hashes` contains the
+reviewed `target_hash`.
 
 For traceability, keep operator ownership in a deployment artefact alongside
 that approval check. The deployment record should include the reviewer/operator
@@ -220,6 +231,12 @@ handled at execution time and remain outside deterministic plan artifacts. The
 operator-facing command is
 `spo plugins plan-execution <plugin> <kind> <capability>` with optional
 `--approved-target-hash` and `--require-target-hash-approval` flags.
+
+The operator request artifact is produced with:
+
+```bash
+spo plugins request-execution PLAN_JSON APPROVAL_JSON
+```
 
 ## References
 

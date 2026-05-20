@@ -20,11 +20,13 @@ from scpn_phase_orchestrator.plugins import (
     PluginCompatibilityReport,
     PluginExecutionApproval,
     PluginExecutionPlan,
+    PluginExecutionRequest,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
     PluginRuntimeLoadPolicy,
     build_plugin_execution_approval,
     build_plugin_execution_plan,
+    build_plugin_execution_request,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
     build_rust_plugin_runtime_handoff,
@@ -1151,6 +1153,185 @@ class TestPluginRuntimeExecution:
         assert "argument_values" not in first.audit_record
         assert private_argument not in str(first.audit_record)
         assert private_keyword_value not in str(first.audit_record)
+
+    def test_runtime_execution_request_is_deterministic_and_policy_convertible(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-01",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        second = build_plugin_execution_request(plan, approval)
+
+        assert request == second
+        assert isinstance(request, PluginExecutionRequest)
+        assert request.schema == "scpn_plugin_runtime_execution_request_v1"
+        assert request.version == "1.0.0"
+        assert request.plan_hash == plan.plan_hash
+        assert request.approval_hash == approval.approval_hash
+        assert request.target_hash == plan.target_hash
+        assert request.loading_permitted is True
+        assert request.execution_permitted is True
+        assert request.require_target_hash_approval is True
+        assert request.approved_target_hashes == (plan.target_hash,)
+        assert request.audit_record["approved_target_hashes"] == [plan.target_hash]
+        assert len(request.audit_record["request_hash"]) == 64
+
+        runtime_policy = request.to_execution_policy()
+        assert runtime_policy.loading_permitted is True
+        assert runtime_policy.execution_permitted is True
+        assert runtime_policy.require_target_hash_approval is True
+        assert runtime_policy.approved_target_hashes == (plan.target_hash,)
+        assert runtime_policy == PluginRuntimeExecutionPolicy(
+            loading_permitted=True,
+            execution_permitted=True,
+            approved_target_hashes=(plan.target_hash,),
+            require_target_hash_approval=True,
+        )
+
+    def test_runtime_execution_request_rejects_plan_hash_mismatch(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-02",
+            approval_reason="operator approved",
+        )
+        bad = replace(approval, plan_hash="0" * 64)
+
+        with pytest.raises(ValueError, match="plan hash mismatch"):
+            build_plugin_execution_request(plan, bad)
+
+    def test_runtime_execution_request_rejects_target_hash_mismatch(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-03",
+            approval_reason="operator approved",
+        )
+        bad = replace(approval, target_hash="1" * 64)
+
+        with pytest.raises(ValueError, match="target hash mismatch"):
+            build_plugin_execution_request(plan, bad)
+
+    def test_runtime_execution_request_rejects_plugin_identity_mismatch(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-04",
+            approval_reason="operator approved",
+        )
+        bad = replace(approval, plugin="other_pack")
+
+        with pytest.raises(ValueError, match="plugin name mismatch"):
+            build_plugin_execution_request(plan, bad)
+
+    def test_runtime_execution_request_rejects_rejected_approval(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-05",
+            approval_reason="operator approved",
+        )
+        rejected = replace(approval, approved=False)
+
+        with pytest.raises(PermissionError, match="must be granted"):
+            build_plugin_execution_request(plan, rejected)
+
+    def test_runtime_execution_request_rejects_disabled_plan(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-06",
+            approval_reason="operator approved",
+        )
+        disabled = replace(
+            plan,
+            audit_record={**plan.audit_record, "execution_permitted": False},
+        )
+
+        with pytest.raises(
+            PermissionError,
+            match="execution must be permitted",
+        ):
+            build_plugin_execution_request(disabled, approval)
 
     def test_runtime_execution_approval_rejects_unapproved_target_hash(
         self,

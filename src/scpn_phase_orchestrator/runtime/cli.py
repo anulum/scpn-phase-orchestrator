@@ -28,6 +28,7 @@ import click
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator import plugins as plugin_api
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_event_log,
@@ -60,6 +61,7 @@ from scpn_phase_orchestrator.meta import CrossDomainMetaTransfer
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.plugins import (
     PluginCapability,
+    PluginExecutionApproval,
     PluginExecutionPlan,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
@@ -71,6 +73,7 @@ from scpn_phase_orchestrator.plugins import (
     compatibility_report,
     discover_plugin_manifests,
 )
+from scpn_phase_orchestrator.plugins import registry as plugin_registry
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
@@ -392,7 +395,7 @@ def _require_sha256(value: object, field_name: str) -> str:
     return value.lower()
 
 
-def _load_json_file(path: Path) -> dict[str, object]:
+def _load_json_file(path: Path, *, artifact: str = "plan") -> dict[str, object]:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -401,10 +404,10 @@ def _load_json_file(path: Path) -> dict[str, object]:
     try:
         payload = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise click.ClickException(f"malformed plan JSON: {exc}") from exc
+        raise click.ClickException(f"malformed {artifact} JSON: {exc}") from exc
 
     if not isinstance(payload, dict):
-        raise click.ClickException("plan payload must be a JSON object")
+        raise click.ClickException(f"{artifact} payload must be a JSON object")
     return payload
 
 
@@ -513,6 +516,114 @@ def _load_plan_from_payload(
         plan_hash=plan_hash,
         audit_record=cast(dict[str, object], audit_record),
     ), audit_record
+
+
+def _load_approval_from_payload(
+    approval_payload: dict[str, object],
+) -> PluginExecutionApproval:
+    if approval_payload.get("schema") != "scpn_plugin_execution_approval_v1":
+        raise click.ClickException(
+            "approval schema mismatch: expected scpn_plugin_execution_approval_v1"
+        )
+
+    plan_hash = _require_sha256(approval_payload.get("plan_hash"), "plan_hash")
+    target_hash = _require_sha256(approval_payload.get("target_hash"), "target_hash")
+    approval_hash = _require_sha256(
+        approval_payload.get("approval_hash"), "approval_hash"
+    )
+    plugin = approval_payload.get("plugin")
+    kind = approval_payload.get("kind")
+    name = approval_payload.get("name")
+    operator_identity = approval_payload.get("operator_identity")
+    approval_reference = approval_payload.get("approval_reference")
+    approval_reason = approval_payload.get("approval_reason")
+    approved = approval_payload.get("approved")
+    execution_permitted = approval_payload.get("execution_permitted")
+    version = approval_payload.get("version")
+
+    for field_name, value in (
+        ("plugin", plugin),
+        ("kind", kind),
+        ("name", name),
+        ("operator_identity", operator_identity),
+        ("approval_reference", approval_reference),
+        ("approval_reason", approval_reason),
+        ("version", version),
+    ):
+        if not isinstance(value, str) or not value:
+            raise click.ClickException(
+                f"approval schema mismatch: {field_name} must be a non-empty string"
+            )
+
+    if not isinstance(approved, bool):
+        raise click.ClickException(
+            "approval schema mismatch: approved must be a boolean"
+        )
+    if not isinstance(execution_permitted, bool):
+        raise click.ClickException(
+            "approval schema mismatch: execution_permitted must be a boolean"
+        )
+    if kind not in _PLUGIN_KIND_OPTIONS:
+        raise click.ClickException(
+            f"approval schema mismatch: unsupported kind {kind!r}"
+        )
+
+    return PluginExecutionApproval(
+        schema="scpn_plugin_execution_approval_v1",
+        version=str(version),
+        plan_hash=plan_hash,
+        target_hash=target_hash,
+        plugin=str(plugin),
+        kind=cast(
+            Literal["actuator", "bridge", "domainpack", "extractor", "monitor"],
+            str(kind),
+        ),
+        name=str(name),
+        operator_identity=str(operator_identity),
+        approval_reference=str(approval_reference),
+        approval_reason=str(approval_reason),
+        approved=bool(approved),
+        execution_permitted=bool(execution_permitted),
+        approval_hash=approval_hash,
+        audit_record=approval_payload,
+    )
+
+
+def _build_plugin_execution_request(
+    plan: PluginExecutionPlan,
+    approval: PluginExecutionApproval,
+) -> object:
+    builder_candidates = (
+        "build_plugin_execution_request",
+        "build_plugin_execution_request_from_approval",
+        "build_plugin_execution_request_from_plan_and_approval",
+    )
+    for name in builder_candidates:
+        for module in (plugin_registry, plugin_api):
+            candidate = getattr(module, name, None)
+            if not callable(candidate):
+                continue
+            try:
+                return candidate(plan, approval)
+            except TypeError:
+                pass
+            try:
+                return candidate(plan=plan, approval=approval)
+            except TypeError:
+                pass
+            try:
+                return candidate(plan=plan, approved_execution=approval)
+            except TypeError:
+                pass
+            try:
+                return candidate(plan=plan, approval_record=approval)
+            except TypeError:
+                pass
+
+    raise click.ClickException(
+        "registry request builder not available: expected "
+        "build_plugin_execution_request"
+    )
 
 
 @main.group("plugins")
@@ -668,6 +779,49 @@ def plugins_approve_execution_plan(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(json.dumps(approval.audit_record, indent=2, sort_keys=True))
+
+
+@plugins_group.command("request-execution")
+@click.argument(
+    "plan_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "approval_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+def plugins_request_execution(plan_json: Path, approval_json: Path) -> None:
+    """Emit a deterministic execution request from a stored plan and approval."""
+    plan_payload = _load_json_file(plan_json, artifact="plan")
+    plan, _ = _load_plan_from_payload(plan_payload)
+    approval_payload = _load_json_file(approval_json, artifact="approval")
+    approval = _load_approval_from_payload(approval_payload)
+
+    if plan.plan_hash != approval.plan_hash:
+        raise click.ClickException("plan hash mismatch")
+    if plan.target_hash != approval.target_hash:
+        raise click.ClickException("target hash mismatch")
+    if approval.plugin != plan.manifest.name:
+        raise click.ClickException("plugin mismatch between plan and approval")
+    if approval.kind != plan.capability.kind:
+        raise click.ClickException("kind mismatch between plan and approval")
+    if approval.name != plan.capability.name:
+        raise click.ClickException("name mismatch between plan and approval")
+    if not approval.approved:
+        raise click.ClickException("approval is not approved")
+    if approval.approved is not True or approval.execution_permitted is not True:
+        raise click.ClickException("approval does not permit execution")
+
+    try:
+        request = _build_plugin_execution_request(plan, approval)
+    except (PermissionError, TypeError, ValueError, KeyError, LookupError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if isinstance(request, PluginExecutionApproval):
+        payload = request.audit_record
+    else:
+        payload = cast(dict[str, object], getattr(request, "audit_record", request))
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @main.command("meta-transfer-manifest")

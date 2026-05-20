@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
+    build_plugin_execution_approval,
     build_plugin_execution_plan,
 )
 from scpn_phase_orchestrator.runtime.audit_stream import read_event_stream
@@ -1440,6 +1441,42 @@ def _write_plan_payload(
     return payload
 
 
+def _write_approval_payload(
+    path: Path,
+    manifest: PluginManifest,
+    kind: str,
+    name: str,
+    *,
+    operator_identity: str = "operator_42",
+    approval_reference: str = "RFC-2026-05-20-01",
+    approval_reason: str = "Production change window",
+    approved: bool = True,
+) -> dict[str, object]:
+    policy = PluginRuntimeExecutionPolicy(
+        loading_permitted=True,
+        execution_permitted=True,
+    )
+    plan = build_plugin_execution_plan(
+        manifest,
+        kind,
+        name,
+        policy=policy,
+    )
+    approval = build_plugin_execution_approval(
+        plan,
+        operator_identity=operator_identity,
+        approval_reference=approval_reference,
+        approval_reason=approval_reason,
+    )
+    payload = dict(approval.audit_record)
+    payload["approved"] = approved
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    return payload
+
+
 def _recompute_plan_hash(plan_payload: dict[str, object]) -> str:
     canonical_payload = dict(plan_payload)
     canonical_payload.pop("plan_hash", None)
@@ -1965,6 +2002,182 @@ def test_plugins_approve_execution_plan_rejects_missing_operator_metadata(
 
     assert result.exit_code == 1
     assert "operator identity is required" in result.output
+
+
+def _request_execution_test_fixture(
+    tmp_path: Path,
+) -> tuple[Path, Path, dict[str, object], dict[str, object]]:
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    plan_path = tmp_path / "plan.json"
+    plan_payload = _write_plan_payload(plan_path, manifest, "actuator", "phase_driver")
+    approval_path = tmp_path / "approval.json"
+    approval_payload = _write_approval_payload(
+        approval_path, manifest, "actuator", "phase_driver"
+    )
+    return plan_path, approval_path, plan_payload, approval_payload
+
+
+def test_plugins_request_execution_outputs_deterministic_request(
+    runner,
+    tmp_path: Path,
+):
+    (
+        plan_path,
+        approval_path,
+        plan_payload,
+        approval_payload,
+    ) = _request_execution_test_fixture(tmp_path)
+    approval_payload["plan_hash"] = plan_payload["plan_hash"]
+    approval_path.write_text(
+        json.dumps(approval_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        ["plugins", "request-execution", str(plan_path), str(approval_path)],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_runtime_execution_request_v1"
+    assert payload["plan_hash"] == plan_payload["plan_hash"]
+    assert payload["target_hash"] == plan_payload["target_hash"]
+    assert payload["approval_hash"] == approval_payload["approval_hash"]
+    assert payload["operator_identity"] == "operator_42"
+
+
+def test_plugins_request_execution_rejects_plan_hash_mismatch(
+    runner,
+    tmp_path: Path,
+):
+    (
+        plan_path,
+        approval_path,
+        plan_payload,
+        approval_payload,
+    ) = _request_execution_test_fixture(tmp_path)
+    approval_payload["plan_hash"] = "0" * 64
+    approval_path.write_text(
+        json.dumps(approval_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        ["plugins", "request-execution", str(plan_path), str(approval_path)],
+    )
+
+    assert result.exit_code == 1
+    assert "plan hash mismatch" in result.output
+
+
+def test_plugins_request_execution_rejects_target_hash_mismatch(
+    runner,
+    tmp_path: Path,
+):
+    (
+        plan_path,
+        approval_path,
+        plan_payload,
+        approval_payload,
+    ) = _request_execution_test_fixture(tmp_path)
+    approval_payload["target_hash"] = plan_payload["target_hash"][::-1]
+    approval_path.write_text(
+        json.dumps(approval_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        ["plugins", "request-execution", str(plan_path), str(approval_path)],
+    )
+
+    assert result.exit_code == 1
+    assert "target hash mismatch" in result.output
+
+
+def test_plugins_request_execution_rejects_unapproved_approval(
+    runner,
+    tmp_path: Path,
+):
+    (
+        _plan_path,
+        approval_path,
+        plan_payload,
+        approval_payload,
+    ) = _request_execution_test_fixture(tmp_path)
+    approval_payload["approved"] = False
+    approval_payload["plan_hash"] = plan_payload["plan_hash"]
+    approval_payload["target_hash"] = plan_payload["target_hash"]
+    approval_path.write_text(
+        json.dumps(approval_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    plan_path = tmp_path / "plan.json"
+
+    result = runner.invoke(
+        main,
+        ["plugins", "request-execution", str(plan_path), str(approval_path)],
+    )
+
+    assert result.exit_code == 1
+    assert "not approved" in result.output
+
+
+def test_plugins_request_execution_rejects_malformed_approval_json(
+    runner,
+    tmp_path: Path,
+):
+    plan_path, approval_path, _, _ = _request_execution_test_fixture(tmp_path)
+    approval_path.write_text("{bad-json", encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        ["plugins", "request-execution", str(plan_path), str(approval_path)],
+    )
+
+    assert result.exit_code == 1
+    assert "malformed approval JSON" in result.output
+
+
+def test_plugins_request_execution_rejects_missing_approval_hash(
+    runner,
+    tmp_path: Path,
+):
+    (
+        plan_path,
+        approval_path,
+        plan_payload,
+        approval_payload,
+    ) = _request_execution_test_fixture(tmp_path)
+    approval_payload.pop("approval_hash", None)
+    approval_payload["plan_hash"] = plan_payload["plan_hash"]
+    approval_payload["target_hash"] = plan_payload["target_hash"]
+    approval_path.write_text(
+        json.dumps(approval_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        ["plugins", "request-execution", str(plan_path), str(approval_path)],
+    )
+
+    assert result.exit_code == 1
+    assert "approval_hash" in result.output
 
 
 def _write_meta_audit_record(

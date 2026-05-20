@@ -175,6 +175,30 @@ target import happens during planning.
 Argument payloads are not copied into the plan record. The audit shape contains
 `argument_count` and `keyword_names` only.
 
+Approval artifacts do not execute anything by themselves.
+
+`build_plugin_execution_request()` consumes two metadata artifacts:
+
+- reviewed execution plan
+- operator approval artifact
+
+The request builder verifies that the bound values match (`plan_hash`,
+`target_hash`, `plugin`, `kind`, `name`, and `operator`) and returns a
+request envelope containing deployment policy, not runtime invocation data.
+The request phase still does not import modules or invoke targets.
+
+Runtime permissions in the emitted envelope follow these semantics:
+
+- `loading_permitted` and `execution_permitted` are set true only when
+  `require_target_hash_approval=true`
+- `approved_target_hashes` contains the reviewed `target_hash`
+
+Operators can materialize this request through:
+
+```bash
+spo plugins request-execution PLAN_JSON APPROVAL_JSON
+```
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:
@@ -234,6 +258,6 @@ records, target hashes, and explicit no-load policy. `--rust-registry` and
 The `spo plugins plan-execution <plugin> <kind> <capability>` command emits the
 same deterministic plan JSON for operator sign-off, keeps argument payloads out
 of the audit record, and enforces `--require-target-hash-approval` before any
-future command can enable loading.
+future request artifact can be produced.
 
 ::: scpn_phase_orchestrator.plugins.registry
