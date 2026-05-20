@@ -32,13 +32,16 @@ __all__ = [
     "STLAutomatonTransition",
     "STLControllerCandidate",
     "STLControllerSynthesis",
+    "STLClosedLoopSynthesisPlan",
     "STLMonitor",
     "STLMonitoringAutomaton",
     "STLProjectedActionPlan",
     "STLTraceResult",
     "project_stl_controller_candidates",
+    "synthesise_stl_closed_loop_plan",
     "synthesise_stl_monitoring_automaton",
     "synthesise_stl_controller_candidates",
+    "synthesize_stl_closed_loop_plan",
     "synthesize_stl_monitoring_automaton",
     "synthesize_stl_controller_candidates",
 ]
@@ -243,6 +246,45 @@ class STLProjectedActionPlan:
                 _control_action_record(action) for action in self.approved_actions
             ],
             "rejected_candidates": list(self.rejected_candidates),
+        }
+
+
+@dataclass(frozen=True)
+class STLClosedLoopSynthesisPlan:
+    """Offline closed-loop STL controller plan for operator review.
+
+    The plan binds the current monitor state, signal feedback surface, projected
+    action proposals, and next review horizon. It is intentionally non-actuating:
+    callers must still pass approved actions through runtime policy, safety, and
+    actuation gates before any live controller can use them.
+    """
+
+    spec: str
+    trace_length: int
+    horizon_steps: int
+    next_review_start_index: int
+    next_review_end_index: int
+    feedback_signals: tuple[str, ...]
+    satisfied: bool
+    actuating: bool
+    synthesis: STLControllerSynthesis
+    projected_plan: STLProjectedActionPlan
+    blocked_reasons: tuple[str, ...]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable closed-loop synthesis plan."""
+        return {
+            "spec": self.spec,
+            "trace_length": self.trace_length,
+            "horizon_steps": self.horizon_steps,
+            "next_review_start_index": self.next_review_start_index,
+            "next_review_end_index": self.next_review_end_index,
+            "feedback_signals": list(self.feedback_signals),
+            "satisfied": self.satisfied,
+            "actuating": self.actuating,
+            "controller_synthesis": self.synthesis.to_audit_record(),
+            "projected_action_plan": self.projected_plan.to_audit_record(),
+            "blocked_reasons": list(self.blocked_reasons),
         }
 
 
@@ -463,6 +505,54 @@ def project_stl_controller_candidates(
     )
 
 
+def synthesise_stl_closed_loop_plan(
+    automaton: STLMonitoringAutomaton,
+    trace: dict[str, list[float]],
+    templates: Sequence[STLActionProjectionTemplate],
+    *,
+    horizon_steps: int = 1,
+    action_map: dict[str, str] | None = None,
+) -> STLClosedLoopSynthesisPlan:
+    """Build an offline closed-loop STL controller plan.
+
+    The function synthesizes candidates from the current STL automaton, projects
+    them through explicit policy templates, and records the future feedback
+    review window. It does not mutate runtime state or permit actuation.
+    """
+    _validate_horizon_steps(horizon_steps)
+    _validate_trace(trace)
+    trace_length = len(next(iter(trace.values())))
+    synthesis = synthesise_stl_controller_candidates(
+        automaton,
+        trace,
+        action_map=action_map,
+    )
+    projected_plan = project_stl_controller_candidates(synthesis, templates)
+    blocked_reasons: list[str] = []
+    if synthesis.satisfied:
+        blocked_reasons.append("stl_satisfied_no_control_needed")
+    if synthesis.candidates and not projected_plan.approved_actions:
+        blocked_reasons.append("no_projected_actions")
+    if projected_plan.rejected_candidates:
+        blocked_reasons.append("unprojected_candidates")
+    return STLClosedLoopSynthesisPlan(
+        spec=automaton.spec,
+        trace_length=trace_length,
+        horizon_steps=horizon_steps,
+        next_review_start_index=trace_length,
+        next_review_end_index=trace_length + horizon_steps - 1,
+        feedback_signals=automaton.signals,
+        satisfied=synthesis.satisfied,
+        actuating=False,
+        synthesis=synthesis,
+        projected_plan=projected_plan,
+        blocked_reasons=tuple(blocked_reasons),
+    )
+
+
+synthesize_stl_closed_loop_plan = synthesise_stl_closed_loop_plan
+
+
 def _parse_simple_spec(spec: str) -> tuple[str, list[tuple[str, str, float]]] | None:
     match = _SIMPLE_SPEC_RE.match(spec.strip())
     if match is None:
@@ -502,6 +592,15 @@ def _validate_trace(trace: dict[str, list[float]]) -> None:
     length = lengths.pop()
     if length == 0:
         raise ValueError("trace signals must be non-empty")
+
+
+def _validate_horizon_steps(horizon_steps: int) -> None:
+    if (
+        isinstance(horizon_steps, bool)
+        or not isinstance(horizon_steps, int)
+        or horizon_steps <= 0
+    ):
+        raise ValueError("closed-loop horizon_steps must be a positive integer")
 
 
 def _pointwise_robustness(

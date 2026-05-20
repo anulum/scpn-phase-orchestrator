@@ -14,13 +14,16 @@ from scpn_phase_orchestrator.monitor.stl import (
     STLActionProjectionTemplate,
     STLAutomatonState,
     STLAutomatonTransition,
+    STLClosedLoopSynthesisPlan,
     STLControllerCandidate,
     STLControllerSynthesis,
     STLMonitoringAutomaton,
     STLProjectedActionPlan,
     project_stl_controller_candidates,
+    synthesise_stl_closed_loop_plan,
     synthesise_stl_controller_candidates,
     synthesise_stl_monitoring_automaton,
+    synthesize_stl_closed_loop_plan,
     synthesize_stl_controller_candidates,
     synthesize_stl_monitoring_automaton,
 )
@@ -328,6 +331,111 @@ def test_stl_projection_template_validation_raises_for_invalid_inputs():
             ttl_s=0.0,
             previous_value=0.0,
             value_bounds=(1.0, 0.0),
+        )
+
+
+def test_stl_closed_loop_plan_binds_projection_and_review_horizon():
+    trace = {"R": [0.1, 0.2, 0.75]}
+    automaton = synthesise_stl_monitoring_automaton(
+        "eventually (R >= 0.8)",
+        trace,
+    )
+
+    plan = synthesise_stl_closed_loop_plan(
+        automaton,
+        trace,
+        (
+            STLActionProjectionTemplate(
+                action="raise_coupling",
+                knob="K",
+                scope="global",
+                base_value=0.9,
+                step=10.0,
+                ttl_s=0.5,
+                previous_value=0.9,
+                value_bounds=(0.0, 1.0),
+                rate_limit=0.05,
+            ),
+        ),
+        horizon_steps=4,
+        action_map={"R": "raise_coupling"},
+    )
+
+    assert isinstance(plan, STLClosedLoopSynthesisPlan)
+    assert plan.spec == "eventually (R >= 0.8)"
+    assert plan.trace_length == 3
+    assert plan.horizon_steps == 4
+    assert plan.next_review_start_index == 3
+    assert plan.next_review_end_index == 6
+    assert plan.feedback_signals == ("R",)
+    assert plan.satisfied is False
+    assert plan.actuating is False
+    assert plan.blocked_reasons == ()
+    assert len(plan.synthesis.candidates) == 1
+    assert len(plan.projected_plan.approved_actions) == 1
+    assert plan.projected_plan.approved_actions[0].value == pytest.approx(0.95)
+    assert plan.to_audit_record()["projected_action_plan"]["approved_actions"] == [
+        {
+            "knob": "K",
+            "scope": "global",
+            "value": pytest.approx(0.95),
+            "ttl_s": 0.5,
+            "justification": (
+                "STL candidate raise_coupling: "
+                "R >= 0.8 violated at t=2 with robustness -0.05"
+            ),
+        }
+    ]
+
+
+def test_stl_closed_loop_plan_records_fail_closed_blockers():
+    trace = {"R": [0.1, 0.2, 0.75]}
+    automaton = synthesize_stl_monitoring_automaton(
+        "eventually (R >= 0.8)",
+        trace,
+    )
+
+    plan = synthesize_stl_closed_loop_plan(automaton, trace, (), horizon_steps=1)
+
+    assert plan.actuating is False
+    assert plan.projected_plan.approved_actions == ()
+    assert plan.blocked_reasons == ("no_projected_actions", "unprojected_candidates")
+    assert plan.to_audit_record()["blocked_reasons"] == [
+        "no_projected_actions",
+        "unprojected_candidates",
+    ]
+
+
+def test_stl_closed_loop_plan_satisfied_monitor_never_projects_actions():
+    trace = {"R": [0.8, 0.9]}
+    automaton = synthesise_stl_monitoring_automaton(
+        "always (R >= 0.3)",
+        trace,
+    )
+
+    plan = synthesise_stl_closed_loop_plan(automaton, trace, (), horizon_steps=2)
+
+    assert plan.satisfied is True
+    assert plan.actuating is False
+    assert plan.synthesis.candidates == ()
+    assert plan.projected_plan.approved_actions == ()
+    assert plan.blocked_reasons == ("stl_satisfied_no_control_needed",)
+
+
+@pytest.mark.parametrize("bad_horizon", [0, -1, True, 1.5])
+def test_stl_closed_loop_plan_rejects_invalid_horizon(bad_horizon):
+    trace = {"R": [0.1, 0.2, 0.75]}
+    automaton = synthesise_stl_monitoring_automaton(
+        "eventually (R >= 0.8)",
+        trace,
+    )
+
+    with pytest.raises(ValueError, match="horizon_steps"):
+        synthesise_stl_closed_loop_plan(
+            automaton,
+            trace,
+            (),
+            horizon_steps=bad_horizon,
         )
 
 

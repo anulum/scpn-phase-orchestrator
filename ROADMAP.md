@@ -544,8 +544,12 @@ Near-term candidate tracks:
     `project_stl_controller_candidates()` maps candidates through explicit
     projection templates and `ActionProjector` into bounded, non-actuating
     `ControlAction` proposals with rejected-candidate reasons.
-  - Remaining scope: closed-loop controller synthesis and runtime integration
-    that passes projected plans through the full safety/actuation stack.
+  - Offline closed-loop synthesis planning is in place:
+    `synthesise_stl_closed_loop_plan()` binds STL automata, feedback signals,
+    candidate synthesis, policy-gated projection, fail-closed blockers, and a
+    future review horizon without mutating runtime state or enabling actuation.
+  - Remaining scope: runtime integration that passes projected plans through
+    the full safety/actuation stack.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
   - LLM-guided scaffold foundation is in place: `spo scaffold --llm` accepts

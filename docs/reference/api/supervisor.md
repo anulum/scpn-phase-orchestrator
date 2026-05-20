@@ -750,6 +750,10 @@ actuation safety gates. `project_stl_controller_candidates()` can then map
 those candidates through explicit policy-approved projection templates and the
 standard `ActionProjector`, yielding bounded `ControlAction` proposals while
 still recording `actuating=False`.
+`synthesise_stl_closed_loop_plan()` combines those two stages into an offline
+closed-loop review artefact: it records the feedback signals, trace length,
+future review horizon, projected actions, and fail-closed blockers without
+mutating runtime state or enabling actuation.
 
 ::: scpn_phase_orchestrator.supervisor.formal_export
 
