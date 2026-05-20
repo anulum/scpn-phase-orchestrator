@@ -630,7 +630,8 @@ Near-term candidate tracks:
   and QPU execution disabled. Non-executing QPU target-readiness audits now
   validate requested backends, credentials posture, operator approval, stable
   readiness hashes, and disabled execution/actuation before any external
-  handoff. Real QPU target execution remains open.
+  handoff; reference-suite gates enforce blocked/ready evidence quality and
+  deterministic non-execution. Real QPU target execution remains open.
 - Neuromorphic compiler target: deterministic Lava/PyNN schedule manifests
   from `UPDEState` are in place with population records, projections,
   control-action review records, simulator parity evidence, SHA-256 coverage,
