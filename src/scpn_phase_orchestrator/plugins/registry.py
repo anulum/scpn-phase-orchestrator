@@ -195,10 +195,21 @@ class PluginRuntimeExecutionPolicy:
     execution_permitted: bool = False
     allowed_kinds: tuple[PluginKind, ...] = _DEFAULT_RUNTIME_LOAD_KINDS
     require_package_target: bool = True
+    approved_target_hashes: tuple[str, ...] = ()
+    require_target_hash_approval: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.execution_permitted, bool):
             raise TypeError("execution_permitted must be a boolean")
+        if not isinstance(self.require_target_hash_approval, bool):
+            raise TypeError("require_target_hash_approval must be a boolean")
+        for target_hash in self.approved_target_hashes:
+            _validate_sha256(target_hash, "approved target hash")
+        if self.require_target_hash_approval and not self.approved_target_hashes:
+            raise ValueError(
+                "approved_target_hashes must not be empty when target hash "
+                "approval is required"
+            )
         PluginRuntimeLoadPolicy(
             loading_permitted=self.loading_permitted,
             allowed_kinds=self.allowed_kinds,
@@ -370,6 +381,12 @@ def execute_plugin_capability(
     for key in kwargs:
         _require_identifier(key, "plugin execution keyword")
 
+    capability = _select_capability(manifest, kind, name)
+    _assert_execution_target_hash_approved(
+        manifest=manifest,
+        capability=capability,
+        policy=policy,
+    )
     loaded = load_plugin_capability(
         manifest,
         kind,
@@ -690,6 +707,11 @@ def _runtime_execute_audit_record(
         "target": loaded.capability.target,
         "loading_permitted": policy.loading_permitted,
         "execution_permitted": policy.execution_permitted,
+        "target_hash_approved": _execution_target_hash_approved(
+            str(loaded.audit_record["target_hash"]),
+            policy,
+        ),
+        "approved_target_hashes": list(policy.approved_target_hashes),
         "load_policy": "python_owned_explicit",
         "argument_count": len(args),
         "keyword_names": sorted(kwargs),
@@ -697,6 +719,52 @@ def _runtime_execute_audit_record(
     }
     record["execution_hash"] = _record_hash(record)
     return record
+
+
+def _assert_execution_target_hash_approved(
+    *,
+    manifest: PluginManifest,
+    capability: PluginCapability,
+    policy: PluginRuntimeExecutionPolicy,
+) -> None:
+    if not policy.require_target_hash_approval:
+        return
+    expected_hash = _preimport_target_hash(
+        manifest=manifest,
+        capability=capability,
+        policy=policy,
+    )
+    if expected_hash not in policy.approved_target_hashes:
+        raise PermissionError(
+            f"plugin runtime target hash {expected_hash} is not approved"
+        )
+
+
+def _preimport_target_hash(
+    *,
+    manifest: PluginManifest,
+    capability: PluginCapability,
+    policy: PluginRuntimeExecutionPolicy,
+) -> str:
+    module_name, _attribute_path = _parse_target(capability.target)
+    load_policy = policy.to_load_policy()
+    record = _runtime_load_audit_record(
+        manifest=manifest,
+        capability=capability,
+        policy=load_policy,
+        module_name=module_name,
+        callable_target=True,
+    )
+    return str(record["target_hash"])
+
+
+def _execution_target_hash_approved(
+    target_hash: str,
+    policy: PluginRuntimeExecutionPolicy,
+) -> bool:
+    if not policy.require_target_hash_approval:
+        return False
+    return target_hash in policy.approved_target_hashes
 
 
 def _require_identifier(value: str, label: str) -> None:
@@ -714,6 +782,15 @@ def _validate_version(value: str, label: str) -> None:
     parts = value.split(".")
     if len(parts) != 3 or any(not part.isdigit() for part in parts):
         raise ValueError(f"{label} must use MAJOR.MINOR.PATCH")
+
+
+def _validate_sha256(value: str, label: str) -> None:
+    if not isinstance(value, str) or len(value) != 64:
+        raise ValueError(f"{label} must be a 64-character SHA-256 hex digest")
+    try:
+        int(value, 16)
+    except ValueError as exc:
+        raise ValueError(f"{label} must be a SHA-256 hex digest") from exc
 
 
 def _version_tuple(value: str) -> tuple[int, int, int]:

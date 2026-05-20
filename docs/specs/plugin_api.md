@@ -163,6 +163,21 @@ keyword names, result type, and deterministic execution hash. It deliberately
 does not store argument values, because runtime payloads may contain proprietary
 measurements or credentials.
 
+For production deployments, bind execution to reviewed target hashes:
+
+```python
+policy = PluginRuntimeExecutionPolicy(
+    loading_permitted=True,
+    execution_permitted=True,
+    approved_target_hashes=(reviewed_target_hash,),
+    require_target_hash_approval=True,
+)
+```
+
+This approval check happens before the implementation module is imported. It is
+the intended guard for promoting reviewed plugin metadata into an owned runtime
+path.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

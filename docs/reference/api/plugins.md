@@ -144,6 +144,22 @@ the load hash and target hash, records argument count, keyword names, result
 type, and a deterministic execution hash. Argument payloads are intentionally
 not copied into the audit record.
 
+Deployments can also require a pre-approved target hash before import:
+
+```python
+policy = PluginRuntimeExecutionPolicy(
+    loading_permitted=True,
+    execution_permitted=True,
+    approved_target_hashes=("64_hex_characters_from_reviewed_load_audit",),
+    require_target_hash_approval=True,
+)
+```
+
+When `require_target_hash_approval` is true, the loader computes the declared
+target hash from manifest metadata and policy shape before import. Targets that
+do not match the approved set fail closed without loading the implementation
+module.
+
 A runnable metadata-only example is available at
 `examples/plugin_marketplace_catalog.py`. It builds a validated
 extractor/actuator manifest and prints the resulting catalogue JSON without

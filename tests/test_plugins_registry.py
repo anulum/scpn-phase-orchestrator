@@ -1089,6 +1089,74 @@ class TestPluginRuntimeExecution:
                 ),
             )
 
+    def test_runtime_execution_can_require_preapproved_target_hash(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import types
+
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def breaker() -> str:
+            return "armed"
+
+        module = types.SimpleNamespace(BreakerMapper=breaker)
+        monkeypatch.setattr(
+            registry.importlib,
+            "import_module",
+            lambda module_name: module,
+        )
+        initial = execute_plugin_capability(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approved_hash = str(initial.audit_record["target_hash"])
+
+        approved = execute_plugin_capability(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                approved_target_hashes=(approved_hash,),
+                require_target_hash_approval=True,
+            ),
+        )
+
+        assert approved.result == "armed"
+        assert approved.audit_record["target_hash_approved"] is True
+        assert approved.audit_record["approved_target_hashes"] == [approved_hash]
+
+    def test_runtime_execution_rejects_unapproved_target_hash_before_import(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def fail_import(_module: str) -> object:
+            raise AssertionError("target-hash rejection must occur before import")
+
+        monkeypatch.setattr(registry.importlib, "import_module", fail_import)
+
+        with pytest.raises(PermissionError, match="not approved"):
+            execute_plugin_capability(
+                _manifest(),
+                "actuator",
+                "breaker",
+                policy=PluginRuntimeExecutionPolicy(
+                    loading_permitted=True,
+                    execution_permitted=True,
+                    approved_target_hashes=("0" * 64,),
+                    require_target_hash_approval=True,
+                ),
+            )
+
     def test_discovery_rejects_invalid_entry_point_payload(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
