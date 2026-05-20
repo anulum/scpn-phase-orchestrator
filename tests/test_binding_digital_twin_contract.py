@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.binding import (
     DigitalTwinAdapterManifest,
     DigitalTwinBindingContract,
+    DigitalTwinOperatorEvidence,
     DigitalTwinSyncEnvelope,
     DigitalTwinSyncGrpcAdapter,
     DigitalTwinSyncHardwareAdapter,
@@ -24,6 +25,7 @@ from scpn_phase_orchestrator.binding import (
     DigitalTwinSyncRestAdapter,
     build_digital_twin_adapter_manifest,
     build_digital_twin_binding_contract,
+    build_digital_twin_operator_evidence,
     build_digital_twin_sync_envelope,
     load_binding_spec,
     read_digital_twin_sync_jsonl,
@@ -1165,3 +1167,132 @@ def test_digital_twin_grpc_kafka_and_hardware_responses_expose_audit_records() -
             "contract_hash": contract.contract_hash,
         },
     }
+
+
+def test_digital_twin_operator_evidence_summarises_live_and_replay_health(
+    tmp_path: Path,
+) -> None:
+    hints = get_type_hints(build_digital_twin_operator_evidence)
+    assert hints["return"] is DigitalTwinOperatorEvidence
+
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    path = tmp_path / "sync.jsonl"
+    accepted = build_digital_twin_sync_envelope(
+        contract,
+        capability="phase_observation",
+        direction="twin_to_spo",
+        sequence=41,
+        payload={
+            "layer": "twin_supervisor",
+            "R": 0.94,
+            "TwinResidual": -0.031,
+        },
+    )
+    rejected = build_digital_twin_sync_envelope(
+        contract,
+        capability="control_action_proposal",
+        direction="twin_to_spo",
+        sequence=42,
+        payload={"knob": "K"},
+    )
+    path.write_text(
+        accepted.to_json() + "\n" + rejected.to_json() + "\n",
+        encoding="utf-8",
+    )
+    replay_report = read_digital_twin_sync_jsonl(contract, path)
+    rest_adapter = DigitalTwinSyncRestAdapter.for_contract(
+        contract,
+        sync_capabilities=("phase_observation",),
+    )
+
+    evidence = build_digital_twin_operator_evidence(
+        contract,
+        replay_report.accepted,
+        rejected=replay_report.rejected,
+        adapter_records=(rest_adapter.to_audit_record(),),
+    )
+
+    assert evidence.to_audit_record() == {
+        "contract_hash": contract.contract_hash,
+        "accepted_count": 1,
+        "rejected_count": 1,
+        "adapter_count": 1,
+        "unhealthy_adapter_count": 0,
+        "latest_sequence": 41,
+        "capability_counts": {
+            "audit_replay": 0,
+            "control_action_proposal": 0,
+            "phase_observation": 1,
+            "state_snapshot": 0,
+        },
+        "direction_counts": {"twin_to_spo": 1},
+        "max_abs_twin_residual": 0.031,
+        "mismatch_reasons": ["direction_not_allowed"],
+        "status": "degraded",
+    }
+
+
+def test_digital_twin_operator_evidence_marks_residual_and_adapter_status() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    nominal = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=50,
+        payload={"twin_residual": 0.07},
+    )
+    critical = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=51,
+        payload={"twin_residual": 0.23},
+    )
+    incompatible_adapter = DigitalTwinSyncGrpcAdapter.for_contract(
+        contract,
+        requires_auth=False,
+    )
+
+    warning_evidence = build_digital_twin_operator_evidence(
+        contract,
+        (validate_digital_twin_sync_envelope(contract, nominal),),
+    )
+    critical_evidence = build_digital_twin_operator_evidence(
+        contract,
+        (validate_digital_twin_sync_envelope(contract, critical),),
+        adapter_records=(incompatible_adapter.to_audit_record(),),
+    )
+
+    assert warning_evidence.status == "warning"
+    assert warning_evidence.max_abs_twin_residual == 0.07
+    assert critical_evidence.status == "critical"
+    assert critical_evidence.unhealthy_adapter_count == 1
+    assert critical_evidence.latest_sequence == 51
+
+
+def test_digital_twin_operator_evidence_rejects_invalid_residual_inputs() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    invalid_residual = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=60,
+        payload={"TwinResidual": "bad"},
+    )
+
+    with pytest.raises(ValueError, match="TwinResidual"):
+        build_digital_twin_operator_evidence(
+            contract,
+            (validate_digital_twin_sync_envelope(contract, invalid_residual),),
+        )
+
+    with pytest.raises(ValueError, match="residual_warning_threshold"):
+        build_digital_twin_operator_evidence(
+            contract,
+            (),
+            residual_warning_threshold=0.3,
+            residual_critical_threshold=0.2,
+        )

@@ -359,6 +359,10 @@ sessions do not treat them as abstract research labels.
   - Promote Prometheus/Grafana live-run telemetry, adapter health, replay
     linkage, twin residuals, and mismatch evidence to first-class operator
     surfaces.
+  - Digital-twin operator evidence is in place: live and replay validation
+    records reduce to the same accepted/rejected counts, capability and
+    direction counts, latest sequence, twin-residual extrema, mismatch reasons,
+    adapter health, and operator status payload.
   - Acceptance: live and replayed runs expose the same digital-twin residual
     channels and operational evidence in dashboards and audit records.
 

@@ -21,6 +21,8 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from pathlib import Path
 
 from scpn_phase_orchestrator.binding.channel_algebra import (
@@ -44,11 +46,13 @@ __all__ = [
     "DigitalTwinSyncKafkaAdapter",
     "DigitalTwinSyncKafkaResponse",
     "DigitalTwinSyncMemoryAdapter",
+    "DigitalTwinOperatorEvidence",
     "DigitalTwinSyncRestAdapter",
     "DigitalTwinSyncRestResponse",
     "DigitalTwinTransportValidation",
     "build_digital_twin_adapter_manifest",
     "build_digital_twin_binding_contract",
+    "build_digital_twin_operator_evidence",
     "build_digital_twin_sync_envelope",
     "read_digital_twin_sync_jsonl",
     "validate_digital_twin_sync_envelope",
@@ -269,6 +273,39 @@ class DigitalTwinSyncJsonlReport:
             "rejected_count": len(self.rejected),
             "accepted": [validation.to_audit_record() for validation in self.accepted],
             "rejected": list(self.rejected),
+        }
+
+
+@dataclass(frozen=True)
+class DigitalTwinOperatorEvidence:
+    """Transport-neutral operator summary for live or replayed twin sync."""
+
+    contract_hash: str
+    accepted_count: int
+    rejected_count: int
+    adapter_count: int
+    unhealthy_adapter_count: int
+    latest_sequence: int | None
+    capability_counts: dict[str, int]
+    direction_counts: dict[str, int]
+    max_abs_twin_residual: float | None
+    mismatch_reasons: tuple[str, ...]
+    status: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe operator evidence record."""
+        return {
+            "contract_hash": self.contract_hash,
+            "accepted_count": self.accepted_count,
+            "rejected_count": self.rejected_count,
+            "adapter_count": self.adapter_count,
+            "unhealthy_adapter_count": self.unhealthy_adapter_count,
+            "latest_sequence": self.latest_sequence,
+            "capability_counts": dict(sorted(self.capability_counts.items())),
+            "direction_counts": dict(sorted(self.direction_counts.items())),
+            "max_abs_twin_residual": self.max_abs_twin_residual,
+            "mismatch_reasons": list(self.mismatch_reasons),
+            "status": self.status,
         }
 
 
@@ -1039,6 +1076,106 @@ def write_digital_twin_sync_jsonl(
     )
 
 
+def build_digital_twin_operator_evidence(
+    contract: DigitalTwinBindingContract,
+    validations: Sequence[DigitalTwinTransportValidation],
+    *,
+    rejected: Sequence[Mapping[str, object]] = (),
+    adapter_records: Sequence[Mapping[str, object]] = (),
+    residual_warning_threshold: float = 0.05,
+    residual_critical_threshold: float = 0.2,
+) -> DigitalTwinOperatorEvidence:
+    """Summarise live or replayed digital-twin sync evidence for operators.
+
+    Accepted validations may come from REST, gRPC, Kafka, hardware, memory, or
+    JSONL replay paths. Rejected JSONL lines and adapter audit records are
+    folded into the same deterministic summary so dashboards can display live
+    and replayed health with the same fields.
+    """
+    warning_threshold = _validated_residual_threshold(
+        residual_warning_threshold,
+        "residual_warning_threshold",
+    )
+    critical_threshold = _validated_residual_threshold(
+        residual_critical_threshold,
+        "residual_critical_threshold",
+    )
+    if warning_threshold > critical_threshold:
+        raise ValueError(
+            "residual_warning_threshold must be <= residual_critical_threshold"
+        )
+
+    accepted: list[DigitalTwinTransportValidation] = []
+    mismatch_reasons: list[str] = []
+    capability_counts = {
+        capability.name: 0 for capability in contract.sync_capabilities
+    }
+    direction_counts: dict[str, int] = {}
+    latest_sequence: int | None = None
+    residuals: list[float] = []
+
+    for validation in validations:
+        envelope = validation.envelope
+        if envelope.contract_hash != contract.contract_hash:
+            mismatch_reasons.append("contract_hash_mismatch")
+            continue
+        if not validation.accepted:
+            mismatch_reasons.append(validation.reason)
+            continue
+        accepted.append(validation)
+        capability_counts[envelope.capability] = (
+            capability_counts.get(envelope.capability, 0) + 1
+        )
+        direction_counts[envelope.direction] = (
+            direction_counts.get(
+                envelope.direction,
+                0,
+            )
+            + 1
+        )
+        latest_sequence = (
+            envelope.sequence
+            if latest_sequence is None
+            else max(latest_sequence, envelope.sequence)
+        )
+        residual = _extract_twin_residual(envelope.payload)
+        if residual is not None:
+            residuals.append(abs(residual))
+
+    for rejection in rejected:
+        reason = rejection.get("reason")
+        if isinstance(reason, str) and reason:
+            mismatch_reasons.append(reason)
+        else:
+            mismatch_reasons.append("rejected")
+
+    unhealthy_adapter_count = sum(
+        1 for record in adapter_records if record.get("compatible") is False
+    )
+    max_abs_residual = max(residuals) if residuals else None
+    rejected_count = len(validations) - len(accepted) + len(rejected)
+    status = _operator_status(
+        rejected_count=rejected_count,
+        unhealthy_adapter_count=unhealthy_adapter_count,
+        max_abs_residual=max_abs_residual,
+        warning_threshold=warning_threshold,
+        critical_threshold=critical_threshold,
+    )
+    return DigitalTwinOperatorEvidence(
+        contract_hash=contract.contract_hash,
+        accepted_count=len(accepted),
+        rejected_count=rejected_count,
+        adapter_count=len(adapter_records),
+        unhealthy_adapter_count=unhealthy_adapter_count,
+        latest_sequence=latest_sequence,
+        capability_counts=capability_counts,
+        direction_counts=direction_counts,
+        max_abs_twin_residual=max_abs_residual,
+        mismatch_reasons=tuple(sorted(mismatch_reasons)),
+        status=status,
+    )
+
+
 def read_digital_twin_sync_jsonl(
     contract: DigitalTwinBindingContract,
     path: str | Path,
@@ -1231,6 +1368,52 @@ def _has_authorization(headers: Mapping[str, str] | None) -> bool:
     normalised = {key.lower(): value for key, value in headers.items()}
     token = normalised.get("authorization")
     return isinstance(token, str) and bool(token.strip())
+
+
+def _extract_twin_residual(payload: Mapping[str, object]) -> float | None:
+    for key in (
+        "TwinResidual",
+        "twin_residual",
+        "twin_residual_norm",
+        "residual",
+        "residual_norm",
+    ):
+        value = payload.get(key)
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, Real):
+            raise ValueError(f"{key} must be a finite real value")
+        result = float(value)
+        if not isfinite(result):
+            raise ValueError(f"{key} must be a finite real value")
+        return result
+    return None
+
+
+def _operator_status(
+    *,
+    rejected_count: int,
+    unhealthy_adapter_count: int,
+    max_abs_residual: float | None,
+    warning_threshold: float,
+    critical_threshold: float,
+) -> str:
+    if max_abs_residual is not None and max_abs_residual > critical_threshold:
+        return "critical"
+    if rejected_count or unhealthy_adapter_count:
+        return "degraded"
+    if max_abs_residual is not None and max_abs_residual > warning_threshold:
+        return "warning"
+    return "healthy"
+
+
+def _validated_residual_threshold(value: object, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{field} must be a finite non-negative real value")
+    result = float(value)
+    if not isfinite(result) or result < 0.0:
+        raise ValueError(f"{field} must be a finite non-negative real value")
+    return result
 
 
 def _record_hash(record: dict[str, object]) -> str:

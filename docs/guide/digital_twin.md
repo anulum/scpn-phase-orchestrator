@@ -92,6 +92,25 @@ The replay report separates accepted validations from malformed JSON, invalid
 envelope shapes, and contract-validation rejections. This is useful for adapter
 smoke tests and audit replay before introducing a live network transport.
 
+The same accepted/rejected validation records can be reduced to a stable
+operator evidence payload:
+
+```python
+from scpn_phase_orchestrator.binding import build_digital_twin_operator_evidence
+
+evidence = build_digital_twin_operator_evidence(
+    contract,
+    replay_report.accepted,
+    rejected=replay_report.rejected,
+)
+```
+
+The evidence record reports accepted/rejected counts, capability and direction
+counts, latest sequence, maximum absolute twin residual, mismatch reasons,
+adapter health, and an operator status (`healthy`, `warning`, `degraded`, or
+`critical`). Live REST/gRPC/Kafka/hardware adapters and replayed JSONL files
+therefore expose the same dashboard fields.
+
 For runtime-facing tests that should not touch disk, use the in-memory adapter:
 
 ```python
