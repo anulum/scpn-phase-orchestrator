@@ -19,6 +19,7 @@ from benchmarks.reference_suite import (
     benchmark_formal_export_artifact_quality,
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_kuramoto_reference,
+    benchmark_meta_transfer_audit_corpus_quality,
     benchmark_meta_transfer_package_manifest_quality,
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
@@ -178,6 +179,53 @@ def test_meta_transfer_package_manifest_quality_reports_thresholds() -> None:
     assert manifest["training_summary"]["record_count"] == 4
     assert manifest["training_summary"]["domain_count"] == 4
     assert manifest["training_summary"]["knob_keys"] == ["K", "Psi", "alpha", "zeta"]
+
+
+def test_meta_transfer_audit_corpus_quality_benchmark_shape() -> None:
+    out = benchmark_meta_transfer_audit_corpus_quality()
+
+    assert out["suite"] == "meta_transfer_audit_corpus_quality"
+    assert out["record_count"] == 6
+    assert out["domain_count"] == 4
+    assert out["feature_key_count"] == 5
+    assert out["knob_count"] == 4
+    assert out["proposal_knob_count"] == 4
+    assert out["neighbour_count"] == 3
+    assert out["top_neighbour_domain"] == "power_grid"
+    assert float(out["confidence"]) >= 0.97
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["proposal_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_meta_transfer_audit_corpus_quality_reports_thresholds() -> None:
+    out = benchmark_meta_transfer_audit_corpus_quality()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    proposal = json.loads(str(out["proposal_json"]))
+    summary = json.loads(str(out["training_summary_json"]))
+
+    assert thresholds == {
+        "min_confidence": 0.97,
+        "min_domain_count": 4,
+        "min_feature_key_count": 5,
+        "min_knob_count": 4,
+        "min_neighbour_count": 3,
+        "min_record_count": 6,
+        "required_top_domain": "power_grid",
+        "require_deterministic_hash": True,
+    }
+    assert proposal["method"] == "cosine_nearest_policy_transfer"
+    assert proposal["neighbours"][0]["domain"] == "power_grid"
+    assert len(proposal["neighbours"]) == 3
+    assert set(proposal["knobs"]) == {"K", "Psi", "alpha", "zeta"}
+    assert summary["domains"] == [
+        "cardiac_rhythm",
+        "manufacturing_spc",
+        "power_grid",
+        "traffic_flow",
+    ]
+    assert summary["record_count"] == 6
 
 
 def test_replay_policy_candidate_quality_benchmark_shape() -> None:
@@ -540,6 +588,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "formal_export",
         "hybrid_cocompiler",
         "meta_transfer",
+        "meta_transfer_corpus",
         "plugin_ecosystem",
         "replay_policy",
         "semantic_retrieval",

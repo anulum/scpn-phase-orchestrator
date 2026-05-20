@@ -224,6 +224,17 @@ class MetaPackageManifestThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class MetaAuditCorpusThresholds(NamedTuple):
+    min_record_count: int
+    min_domain_count: int
+    min_feature_key_count: int
+    min_knob_count: int
+    min_neighbour_count: int
+    min_confidence: float
+    required_top_domain: str
+    require_deterministic_hash: bool
+
+
 class ReferenceSuiteResult(TypedDict):
     metadata: dict[str, str]
     benchmarks: dict[str, BenchmarkRecord]
@@ -317,6 +328,100 @@ def benchmark_meta_transfer_package_manifest_quality() -> dict[str, float | int 
             sort_keys=True,
         ),
         "manifest_json": json.dumps(manifest_record, sort_keys=True),
+    }
+
+
+def benchmark_meta_transfer_audit_corpus_quality() -> dict[str, float | int | str]:
+    """Benchmark nested audit-history corpus loading and proposal quality."""
+    thresholds = MetaAuditCorpusThresholds(
+        min_record_count=6,
+        min_domain_count=4,
+        min_feature_key_count=5,
+        min_knob_count=4,
+        min_neighbour_count=3,
+        min_confidence=0.97,
+        required_top_domain="power_grid",
+        require_deterministic_hash=True,
+    )
+    query = {
+        "coherence": 0.9,
+        "event_rate": 0.07,
+        "load_variance": 0.34,
+        "phase_spread": 0.1,
+        "safety_margin": 0.73,
+    }
+    t0 = time.perf_counter()
+    with tempfile.TemporaryDirectory(prefix="spo-meta-audit-corpus-") as tmp:
+        root = Path(tmp)
+        _write_meta_transfer_audit_corpus(root)
+        model = CrossDomainMetaTransfer.fit_audit_directory(
+            root,
+            min_records=thresholds.min_record_count,
+        )
+        proposal = model.propose(query, k_neighbours=thresholds.min_neighbour_count)
+        repeated = CrossDomainMetaTransfer.fit_audit_directory(
+            root,
+            min_records=thresholds.min_record_count,
+        ).propose(query, k_neighbours=thresholds.min_neighbour_count)
+    elapsed = time.perf_counter() - t0
+
+    proposal_record = proposal.to_audit_record()
+    repeated_record = repeated.to_audit_record()
+    proposal_sha256 = sha256(
+        json.dumps(proposal_record, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    deterministic_hash = int(
+        proposal_sha256
+        == sha256(
+            json.dumps(repeated_record, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+    )
+    summary = model.training_summary
+    top_domain = proposal.neighbours[0][0] if proposal.neighbours else ""
+    acceptance_passed = int(
+        summary.record_count >= thresholds.min_record_count
+        and summary.domain_count >= thresholds.min_domain_count
+        and len(summary.feature_keys) >= thresholds.min_feature_key_count
+        and len(summary.knob_keys) >= thresholds.min_knob_count
+        and len(proposal.neighbours) >= thresholds.min_neighbour_count
+        and proposal.confidence >= thresholds.min_confidence
+        and top_domain == thresholds.required_top_domain
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "meta_transfer_audit_corpus_quality",
+        "record_count": summary.record_count,
+        "domain_count": summary.domain_count,
+        "feature_key_count": len(summary.feature_keys),
+        "knob_count": len(summary.knob_keys),
+        "proposal_knob_count": len(proposal.knobs),
+        "neighbour_count": len(proposal.neighbours),
+        "wall_time_s": elapsed,
+        "steps_per_second": summary.record_count / elapsed,
+        "top_neighbour_domain": top_domain,
+        "confidence": proposal.confidence,
+        "proposal_sha256": proposal_sha256,
+        "deterministic_hash": deterministic_hash,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_confidence": thresholds.min_confidence,
+                "min_domain_count": thresholds.min_domain_count,
+                "min_feature_key_count": thresholds.min_feature_key_count,
+                "min_knob_count": thresholds.min_knob_count,
+                "min_neighbour_count": thresholds.min_neighbour_count,
+                "min_record_count": thresholds.min_record_count,
+                "required_top_domain": thresholds.required_top_domain,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+            },
+            sort_keys=True,
+        ),
+        "proposal_json": json.dumps(proposal_record, sort_keys=True),
+        "training_summary_json": json.dumps(
+            summary.to_audit_record(),
+            sort_keys=True,
+        ),
     }
 
 
@@ -2329,6 +2434,107 @@ def _meta_transfer_package_records() -> tuple[MetaPolicyRecord, ...]:
     )
 
 
+def _write_meta_transfer_audit_corpus(root: Path) -> None:
+    records_by_path = {
+        root / "grid" / "audit.jsonl": (
+            {
+                "domain": "power_grid",
+                "metrics": {
+                    "coherence": 0.89,
+                    "event_rate": 0.07,
+                    "load_variance": 0.33,
+                    "phase_spread": 0.1,
+                    "safety_margin": 0.72,
+                },
+                "actions": [
+                    {"knob": "K", "value": 0.43},
+                    {"knob": "alpha", "value": 0.01},
+                    {"knob": "zeta", "value": 0.06},
+                    {"knob": "Psi", "value": 0.02},
+                ],
+                "reward": 0.93,
+            },
+            {
+                "domain": "power_grid",
+                "features": {
+                    "coherence": 0.91,
+                    "event_rate": 0.06,
+                    "load_variance": 0.35,
+                    "phase_spread": 0.09,
+                    "safety_margin": 0.74,
+                },
+                "knobs": {"K": 0.44, "Psi": 0.02, "alpha": 0.01, "zeta": 0.06},
+                "reward": 0.94,
+            },
+        ),
+        root / "cardiac" / "nested" / "audit.jsonl": (
+            {
+                "domain": "cardiac_rhythm",
+                "features": {
+                    "coherence": 0.84,
+                    "event_rate": 0.05,
+                    "load_variance": 0.13,
+                    "phase_spread": 0.16,
+                    "safety_margin": 0.85,
+                },
+                "knobs": {"K": 0.35, "Psi": 0.01, "alpha": 0.0, "zeta": 0.08},
+                "reward": 0.91,
+            },
+        ),
+        root / "traffic" / "audit.jsonl": (
+            {
+                "domain": "traffic_flow",
+                "metrics": {
+                    "coherence": 0.75,
+                    "event_rate": 0.18,
+                    "load_variance": 0.44,
+                    "phase_spread": 0.22,
+                    "safety_margin": 0.62,
+                },
+                "actions": [
+                    {"knob": "K", "value": 0.31},
+                    {"knob": "alpha", "value": 0.02},
+                    {"knob": "zeta", "value": 0.05},
+                    {"knob": "Psi", "value": 0.04},
+                ],
+                "reward": 0.84,
+            },
+            {
+                "domain": "traffic_flow",
+                "features": {
+                    "coherence": 0.73,
+                    "event_rate": 0.2,
+                    "load_variance": 0.46,
+                    "phase_spread": 0.24,
+                    "safety_margin": 0.6,
+                },
+                "knobs": {"K": 0.3, "Psi": 0.04, "alpha": 0.02, "zeta": 0.05},
+                "reward": 0.82,
+            },
+        ),
+        root / "manufacturing" / "audit.jsonl": (
+            {
+                "domainpack": "manufacturing_spc",
+                "features": {
+                    "coherence": 0.79,
+                    "event_rate": 0.11,
+                    "load_variance": 0.26,
+                    "phase_spread": 0.14,
+                    "safety_margin": 0.77,
+                },
+                "knobs": {"K": 0.38, "Psi": 0.03, "alpha": 0.01, "zeta": 0.07},
+                "reward": 0.88,
+            },
+        ),
+    }
+    for path, records in records_by_path.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "\n".join(json.dumps(record, sort_keys=True) for record in records) + "\n",
+            encoding="utf-8",
+        )
+
+
 def _semantic_ranking_projection(
     records: list[dict[str, object]],
 ) -> list[dict[str, object]]:
@@ -2408,6 +2614,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "stl_closed_loop": benchmark_stl_closed_loop_plan_quality(),
             "domain_formal_export": benchmark_domain_formal_safety_exports(),
             "hybrid_cocompiler": benchmark_hybrid_cocompiler_review_gate(),
+            "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
             "kuramoto": benchmark_kuramoto_reference(),
