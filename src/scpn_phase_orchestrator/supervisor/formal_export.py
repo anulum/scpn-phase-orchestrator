@@ -17,7 +17,10 @@ the source policy/Petri structures.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import isfinite
 
@@ -31,8 +34,12 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
 )
 
 __all__ = [
+    "FormalCheckerCommand",
+    "FormalSafetyProperty",
+    "FormalVerificationPackage",
     "PrismExport",
     "TLAExport",
+    "build_formal_verification_package",
     "export_petri_net_prism",
     "export_petri_net_tla",
     "export_policy_rules_prism",
@@ -41,6 +48,7 @@ __all__ = [
 ]
 
 _IDENT_RE = re.compile(r"[^A-Za-z0-9_]")
+_PACKAGE_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
 _SIMPLE_STL_RE = re.compile(r"^(always|eventually)\s*\((.*)\)\s*$")
 _STL_PREDICATE_RE = re.compile(
     r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|>|<=|<|==)\s*"
@@ -71,6 +79,219 @@ class TLAExport:
     transition_names: dict[str, str]
     rule_names: dict[str, str] = field(default_factory=dict)
     action_names: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class FormalSafetyProperty:
+    """Named model-checking property bound to one exported artefact."""
+
+    name: str
+    artifact_name: str
+    checker: str
+    expression: str
+    description: str = ""
+    required: bool = True
+
+    def __post_init__(self) -> None:
+        _require_package_identifier(self.name, "property name")
+        _require_package_identifier(self.artifact_name, "property artifact_name")
+        if self.checker not in {"prism", "tlc"}:
+            raise PolicyError("property checker must be 'prism' or 'tlc'")
+        if not isinstance(self.expression, str) or not self.expression.strip():
+            raise PolicyError("property expression must be a non-empty string")
+        if any(ord(char) < 32 for char in self.expression):
+            raise PolicyError("property expression must not contain control characters")
+        if any(ord(char) < 32 for char in self.description):
+            raise PolicyError(
+                "property description must not contain control characters"
+            )
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe formal property record."""
+        return {
+            "name": self.name,
+            "artifact_name": self.artifact_name,
+            "checker": self.checker,
+            "expression": self.expression,
+            "description": self.description,
+            "required": self.required,
+        }
+
+
+@dataclass(frozen=True)
+class FormalCheckerCommand:
+    """External model-checker command manifest for one property."""
+
+    property_name: str
+    checker: str
+    artifact_name: str
+    command: tuple[str, ...]
+    execution_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe external checker command record."""
+        return {
+            "property_name": self.property_name,
+            "checker": self.checker,
+            "artifact_name": self.artifact_name,
+            "command": list(self.command),
+            "execution_permitted": self.execution_permitted,
+        }
+
+
+@dataclass(frozen=True)
+class FormalVerificationPackage:
+    """Deterministic bundle for external formal-verification workflows."""
+
+    package_name: str
+    artifact_hashes: dict[str, str]
+    artifact_types: dict[str, str]
+    properties: tuple[FormalSafetyProperty, ...]
+    checker_commands: tuple[FormalCheckerCommand, ...]
+    package_hash: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe package manifest."""
+        return {
+            "package_name": self.package_name,
+            "artifact_hashes": dict(sorted(self.artifact_hashes.items())),
+            "artifact_types": dict(sorted(self.artifact_types.items())),
+            "properties": [item.to_audit_record() for item in self.properties],
+            "checker_commands": [
+                command.to_audit_record() for command in self.checker_commands
+            ],
+            "package_hash": self.package_hash,
+        }
+
+
+def _require_package_identifier(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not _PACKAGE_NAME_RE.fullmatch(value):
+        raise PolicyError(
+            f"{field_name} must start with a letter and contain only letters, "
+            "digits, underscore, dot, or hyphen"
+        )
+    return value
+
+
+def _artifact_text(export: PrismExport | TLAExport) -> str:
+    if isinstance(export, PrismExport):
+        return export.model
+    return export.module
+
+
+def _artifact_type(export: PrismExport | TLAExport) -> str:
+    if isinstance(export, PrismExport):
+        return "prism"
+    return "tla"
+
+
+def _checker_command(property_: FormalSafetyProperty) -> FormalCheckerCommand:
+    if property_.checker == "prism":
+        command = (
+            "prism",
+            f"{property_.artifact_name}.prism",
+            "-pf",
+            property_.expression,
+        )
+    else:
+        command = (
+            "tlc2.TLC",
+            f"{property_.artifact_name}.tla",
+            "-config",
+            f"{property_.artifact_name}.cfg",
+        )
+    return FormalCheckerCommand(
+        property_name=property_.name,
+        checker=property_.checker,
+        artifact_name=property_.artifact_name,
+        command=command,
+    )
+
+
+def _checker_matches_artifact(
+    property_: FormalSafetyProperty,
+    artifact_type: str,
+) -> bool:
+    if property_.checker == "prism":
+        return artifact_type == "prism"
+    return artifact_type == "tla"
+
+
+def build_formal_verification_package(
+    artifacts: Mapping[str, PrismExport | TLAExport],
+    properties: Sequence[FormalSafetyProperty],
+    *,
+    package_name: str = "spo-formal-verification",
+) -> FormalVerificationPackage:
+    """Build a deterministic manifest for external model-checker execution.
+
+    The package records exported artefact hashes, property-library entries, and
+    exact checker commands. It never writes files or invokes external tools;
+    CI or operators can materialise the package and run the recorded commands
+    in a controlled environment.
+    """
+
+    _require_package_identifier(package_name, "package_name")
+    if not artifacts:
+        raise PolicyError("formal verification package requires artifacts")
+    if not properties:
+        raise PolicyError("formal verification package requires properties")
+
+    artifact_hashes: dict[str, str] = {}
+    artifact_types: dict[str, str] = {}
+    for artifact_name, export in sorted(artifacts.items()):
+        _require_package_identifier(artifact_name, "artifact name")
+        if not isinstance(export, PrismExport | TLAExport):
+            raise PolicyError("formal artifacts must be PrismExport or TLAExport")
+        artifact_text = _artifact_text(export)
+        if not artifact_text.strip():
+            raise PolicyError(f"formal artifact {artifact_name!r} is empty")
+        artifact_hashes[artifact_name] = hashlib.sha256(
+            artifact_text.encode("utf-8")
+        ).hexdigest()
+        artifact_types[artifact_name] = _artifact_type(export)
+
+    property_names: set[str] = set()
+    commands: list[FormalCheckerCommand] = []
+    for property_ in properties:
+        if property_.name in property_names:
+            raise PolicyError(f"duplicate formal property {property_.name!r}")
+        property_names.add(property_.name)
+        if property_.artifact_name not in artifact_hashes:
+            raise PolicyError(
+                f"formal property {property_.name!r} references unknown artifact "
+                f"{property_.artifact_name!r}"
+            )
+        if not _checker_matches_artifact(
+            property_,
+            artifact_types[property_.artifact_name],
+        ):
+            raise PolicyError(
+                f"formal property {property_.name!r} checker does not match "
+                f"artifact {property_.artifact_name!r}"
+            )
+        commands.append(_checker_command(property_))
+
+    package_seed = {
+        "package_name": package_name,
+        "artifact_hashes": dict(sorted(artifact_hashes.items())),
+        "artifact_types": dict(sorted(artifact_types.items())),
+        "properties": [item.to_audit_record() for item in properties],
+        "checker_commands": [command.to_audit_record() for command in commands],
+    }
+    package_hash = hashlib.sha256(
+        json.dumps(package_seed, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+    ).hexdigest()
+    return FormalVerificationPackage(
+        package_name=package_name,
+        artifact_hashes=artifact_hashes,
+        artifact_types=artifact_types,
+        properties=tuple(properties),
+        checker_commands=tuple(commands),
+        package_hash=package_hash,
+    )
 
 
 def _identifier(raw: str, *, prefix: str) -> str:

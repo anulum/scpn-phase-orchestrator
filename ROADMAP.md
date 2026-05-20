@@ -337,6 +337,10 @@ sessions do not treat them as abstract research labels.
     `benchmark_domain_formal_safety_exports()` emits deterministic policy
     PRISM, policy TLA, and STL PRISM artefacts for plasma-control, power-grid,
     and medical/cardiac-style profiles with per-domain acceptance results.
+  - Formal verification package manifests are in place:
+    `build_formal_verification_package()` records exported artefact hashes,
+    named safety properties, and exact external PRISM/TLC checker commands
+    without writing files or invoking model checkers locally.
   - Acceptance: plasma, power, and medical-style policies have reproducible
     safety artefacts suitable for credibility reviews.
 - Neuromorphic and quantum tighter integration:

@@ -19,10 +19,13 @@ from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.supervisor import (
     CompoundCondition,
+    FormalSafetyProperty,
+    FormalVerificationPackage,
     PolicyAction,
     PolicyCondition,
     PolicyRule,
     PolicySTLSpec,
+    build_formal_verification_package,
     export_petri_net_prism,
     export_petri_net_tla,
     export_policy_rules_prism,
@@ -95,6 +98,139 @@ def test_petri_net_prism_export_serialises_guards_and_arcs() -> None:
     assert "(nominal'=nominal-2)" in export.model
     assert "(cool_down'=cool_down+1)" in export.model
     assert 'label "active_done" = done > 0;' in export.model
+
+
+def test_formal_verification_package_records_hashes_and_checker_commands() -> None:
+    prism_export = export_petri_net_prism(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+    tla_export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+    properties = (
+        FormalSafetyProperty(
+            name="petri_tokens_bounded",
+            artifact_name="petri_supervisor",
+            checker="prism",
+            expression='P>=1 [ G !"active_done" | F "active_done" ]',
+            description="Petri supervisor reaches a reviewed terminal place.",
+        ),
+        FormalSafetyProperty(
+            name="tla_type_ok",
+            artifact_name="petri_supervisor_tla",
+            checker="tlc",
+            expression="Safety",
+            description="TLA state variables remain inside exported bounds.",
+        ),
+    )
+
+    package = build_formal_verification_package(
+        {
+            "petri_supervisor": prism_export,
+            "petri_supervisor_tla": tla_export,
+        },
+        properties,
+        package_name="spo-formal-review",
+    )
+    repeated = build_formal_verification_package(
+        {
+            "petri_supervisor": prism_export,
+            "petri_supervisor_tla": tla_export,
+        },
+        properties,
+        package_name="spo-formal-review",
+    )
+    record = package.to_audit_record()
+
+    assert isinstance(package, FormalVerificationPackage)
+    assert package.package_hash == repeated.package_hash
+    assert record["artifact_types"] == {
+        "petri_supervisor": "prism",
+        "petri_supervisor_tla": "tla",
+    }
+    assert sorted(record["artifact_hashes"]) == [
+        "petri_supervisor",
+        "petri_supervisor_tla",
+    ]
+    assert all(len(item) == 64 for item in record["artifact_hashes"].values())
+    assert record["properties"] == [
+        {
+            "name": "petri_tokens_bounded",
+            "artifact_name": "petri_supervisor",
+            "checker": "prism",
+            "expression": 'P>=1 [ G !"active_done" | F "active_done" ]',
+            "description": "Petri supervisor reaches a reviewed terminal place.",
+            "required": True,
+        },
+        {
+            "name": "tla_type_ok",
+            "artifact_name": "petri_supervisor_tla",
+            "checker": "tlc",
+            "expression": "Safety",
+            "description": "TLA state variables remain inside exported bounds.",
+            "required": True,
+        },
+    ]
+    assert record["checker_commands"] == [
+        {
+            "property_name": "petri_tokens_bounded",
+            "checker": "prism",
+            "artifact_name": "petri_supervisor",
+            "command": [
+                "prism",
+                "petri_supervisor.prism",
+                "-pf",
+                'P>=1 [ G !"active_done" | F "active_done" ]',
+            ],
+            "execution_permitted": False,
+        },
+        {
+            "property_name": "tla_type_ok",
+            "checker": "tlc",
+            "artifact_name": "petri_supervisor_tla",
+            "command": [
+                "tlc2.TLC",
+                "petri_supervisor_tla.tla",
+                "-config",
+                "petri_supervisor_tla.cfg",
+            ],
+            "execution_permitted": False,
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    ("artifacts", "properties", "message"),
+    [
+        ({}, [FormalSafetyProperty("p", "a", "prism", "P>=1 [ F true ]")], "artifacts"),
+        (
+            {"a": export_petri_net_prism(_net(), Marking(tokens={"warmup": 1}))},
+            [],
+            "properties",
+        ),
+        (
+            {"a": export_petri_net_prism(_net(), Marking(tokens={"warmup": 1}))},
+            [FormalSafetyProperty("p", "missing", "prism", "P>=1 [ F true ]")],
+            "unknown artifact",
+        ),
+        (
+            {"a": export_petri_net_prism(_net(), Marking(tokens={"warmup": 1}))},
+            [FormalSafetyProperty("p", "a", "tlc", "Safety")],
+            "checker does not match",
+        ),
+    ],
+)
+def test_formal_verification_package_rejects_invalid_manifests(
+    artifacts,
+    properties,
+    message: str,
+) -> None:
+    with pytest.raises(PolicyError, match=message):
+        build_formal_verification_package(artifacts, properties)
 
 
 def test_petri_net_prism_export_is_deterministic() -> None:
