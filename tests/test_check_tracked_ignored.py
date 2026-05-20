@@ -63,7 +63,9 @@ def test_tracked_ignored_paths_fail(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_git_inspection_failure_exits(capsys: pytest.CaptureFixture[str]) -> None:
     with (
-        patch.object(mod.subprocess, "run", return_value=_completed(128, stderr="boom")),
+        patch.object(
+            mod.subprocess, "run", return_value=_completed(128, stderr="boom")
+        ),
         pytest.raises(SystemExit) as exc,
     ):
         mod._tracked_ignored_paths()
