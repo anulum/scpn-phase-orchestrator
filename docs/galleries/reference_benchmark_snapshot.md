@@ -30,18 +30,19 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
 |----------|-------------------|------|-------|---------------|---------|---------------|
-| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.05236929497914389 | 76.38063490434621 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
-| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 scenarios | 9 learner gates | 0.013055607967544347 | 689.358934671874 | accepted scenarios = 3/3; accepted learners = 9/9; min coherence improvement = 0.035689587760827646; unsafe acceptances = 0; non-actuating = yes |
-| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.3823742069653235 | 40.295936599433354 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
-| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.2867484980379231 | 10.46212977758385 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
-| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 3 package properties | 0.0009058300056494772 | 5519.799486455537 | identifier maps = 22; fail-closed = 5; checker commands = 3; checker readiness = 2 ready/1 missing; checker execution disabled = yes; package SHA-256 = b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92 |
-| `stl_closed_loop_plan_quality` | Offline STL closed-loop synthesis plan quality | 3 plans | 1 projected action | 0.0005155940307304263 | 5818.531288560482 | projected actions = 1; rejected candidates = 1; blocked reasons = 3; non-actuating = yes; SHA-256 = c5e8bc18e6edef4cd0913b4d3fef1acf7f27865ffc64ef2903e15457d64a4c28 |
-| `domain_formal_safety_exports` | Plasma, power-grid, and medical-style formal safety artefacts | 3 domains | 9 artefacts | 0.0006900079897604883 | 13043.327227448526 | accepted domains = 3/3; SHA-256 = ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b |
-| `hybrid_cocompiler_review_gate` | Hybrid quantum/neuromorphic review manifest gate | 1 manifest | 2 blocked probes | 0.0002019969979301095 | 4950.568623529731 | target backends = 4; component hashes = 3; non-actuating = yes; SHA-256 = e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7 |
-| `plugin_ecosystem_catalog_quality` | Python/Rust plugin marketplace capability gate | 3 manifests | 6 handoff target hashes | 0.0004642080166377127 | 6462.619973108575 | compatible plugins = 2/3; incompatible monitor rejection = 1; required kinds = 4/4; loading disabled = yes; handoff SHA-256 = db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77 |
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.15490243799285963 | 6455.676314443133 | final `R` = 1.0 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.28508444398175925 | 3507.7326073392614 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.021801681024953723 | 229340.11346543004 | reachable markings = 4 |
+| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.04649585095467046 | 86.02918148330403 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
+| `semantic_retrieval_ranking_quality` | Symbolic compiler retrieval ranking quality | 3 evidence records | 3 ranked records | 0.013822539011016488 | 217.0368264187221 | top source = domainpack; top domainpack = power_grid; feature-complete = 3; retrieval score = 1.0; SHA-256 = 88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d |
+| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 scenarios | 9 learner gates | 0.013306184962857515 | 676.3771903909595 | accepted scenarios = 3/3; accepted learners = 9/9; min coherence improvement = 0.035689587760827646; unsafe acceptances = 0; non-actuating = yes |
+| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.282076189003419 | 42.066956599693164 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
+| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.327277499018237 | 9.166533015558244 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
+| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 3 package properties | 0.0005707399686798453 | 8760.556951294808 | identifier maps = 22; fail-closed = 5; checker commands = 3; checker readiness = 2 ready/1 missing; checker execution disabled = yes; package SHA-256 = b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92 |
+| `stl_closed_loop_plan_quality` | Offline STL closed-loop synthesis plan quality | 3 plans | 1 projected action | 0.0002836330095306039 | 10577.048154461378 | projected actions = 1; rejected candidates = 1; blocked reasons = 3; non-actuating = yes; SHA-256 = c5e8bc18e6edef4cd0913b4d3fef1acf7f27865ffc64ef2903e15457d64a4c28 |
+| `domain_formal_safety_exports` | Plasma, power-grid, and medical-style formal safety artefacts | 3 domains | 9 artefacts | 0.0004183580167591572 | 21512.6748848252 | accepted domains = 3/3; SHA-256 = ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b |
+| `hybrid_cocompiler_review_gate` | Hybrid quantum/neuromorphic review manifest gate | 1 manifest | 2 blocked probes | 0.00013897602912038565 | 7195.485482850908 | target backends = 4; component hashes = 3; non-actuating = yes; SHA-256 = e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7 |
+| `plugin_ecosystem_catalog_quality` | Python/Rust plugin marketplace capability gate | 3 manifests | 6 handoff target hashes | 0.0002623760374262929 | 11433.97098846256 | compatible plugins = 2/3; incompatible monitor rejection = 1; required kinds = 4/4; loading disabled = yes; handoff SHA-256 = db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77 |
+| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.1378499370184727 | 7254.265193215098 | final `R` = 1.0 |
+| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.2725750480312854 | 3668.7143860843153 | final mean amplitude = 3.6193922141707704 |
+| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.018811515998095274 | 265794.63348441804 | reachable markings = 4 |
 
 ## Auto-Binding Acceptance Gates
 
@@ -57,6 +58,26 @@ multiplier. The 2026-05-20 snapshot passed all four gates:
 | `industrial_sensor_chain` | 128 | 1.0 | 1.0 | 6.0 | yes |
 | `cardiac_rhythm_surrogate` | 160 | 1.0 | 1.0 | 4.5 | yes |
 | `power_grid_surrogate` | 192 | 1.0 | 1.0 | 6.0 | yes |
+
+## Semantic Retrieval Ranking Acceptance Gates
+
+The semantic retrieval benchmark uses a deterministic synthetic domainpack/docs
+corpus to exercise symbolic-to-binding retrieval ranking. The gate requires
+ranked evidence records, complete ranking features, domainpack precedence for
+the best matching power-grid corpus item, positive retrieval score, and a stable
+ranking hash.
+
+| Metric | Snapshot value | Gate |
+|--------|---------------:|------|
+| Evidence records | 3 | >= 3 |
+| Ranked records | 3 | >= 3 |
+| Feature-complete records | 3 | >= 3 |
+| Domainpack top-rank flag | 1 | required |
+| Top source | `domainpack` | domainpack |
+| Top domainpack | `power_grid` | power_grid |
+| Retrieval score | 1.0 | > 0 |
+| Deterministic hash | 1 | required |
+| Ranking SHA-256 | `88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d` | stable |
 
 ## Replay-Policy Acceptance Gates
 
