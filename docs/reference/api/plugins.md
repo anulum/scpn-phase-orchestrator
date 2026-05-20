@@ -236,6 +236,19 @@ spo plugins persist-execution-request REQUEST_JSON bundle.json \
   --created-by deployment_gate
 ```
 
+Request lifecycle rotation is explicit. Use
+`build_plugin_execution_request_revocation()` or the CLI command below to emit a
+hash-linked revocation artefact for the request hash. Deployment stores then add
+that request hash to their revoked-request set before accepting any replacement
+bundle.
+
+```bash
+spo plugins revoke-execution-request REQUEST_JSON \
+  --revoked-by deployment_gate \
+  --revocation-reference REV-2026-05-20-01 \
+  --revocation-reason operator_rotation
+```
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

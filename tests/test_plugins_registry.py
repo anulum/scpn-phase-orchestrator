@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionApproval,
     PluginExecutionPlan,
     PluginExecutionRequest,
+    PluginExecutionRequestRevocation,
     PluginExecutionRequestStorageManifest,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
@@ -29,6 +30,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_execution_request,
+    build_plugin_execution_request_revocation,
     build_plugin_execution_request_storage_bundle,
     build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
@@ -1443,6 +1445,103 @@ class TestPluginRuntimeExecution:
                 retention_policy="retain_until_revoked",
                 created_by="deployment_gate",
                 revoked_request_hashes=(str(request.audit_record["request_hash"]),),
+            )
+
+    def test_execution_request_revocation_is_deterministic(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-19",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+
+        revocation = build_plugin_execution_request_revocation(
+            request,
+            revoked_by="deployment_gate",
+            revocation_reference="REV-2026-05-20-01",
+            revocation_reason="operator rotation",
+        )
+        repeated = build_plugin_execution_request_revocation(
+            request,
+            revoked_by="deployment_gate",
+            revocation_reference="REV-2026-05-20-01",
+            revocation_reason="operator rotation",
+        )
+
+        assert revocation == repeated
+        assert isinstance(revocation, PluginExecutionRequestRevocation)
+        assert revocation.schema == "scpn_plugin_execution_request_revocation_v1"
+        assert revocation.request_hash == request.audit_record["request_hash"]
+        assert revocation.plan_hash == request.plan_hash
+        assert revocation.approval_hash == request.approval_hash
+        assert revocation.target_hash == request.target_hash
+        assert revocation.revoked is True
+        assert len(revocation.revocation_hash) == 64
+
+    def test_execution_request_revocation_rejects_tampered_request(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-20",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        tampered = replace(
+            request,
+            audit_record={**request.audit_record, "operator_identity": "other"},
+        )
+
+        with pytest.raises(ValueError, match="request audit record mismatch"):
+            build_plugin_execution_request_revocation(
+                tampered,
+                revoked_by="deployment_gate",
+                revocation_reference="REV-2026-05-20-02",
+                revocation_reason="operator rotation",
             )
 
     def test_execution_request_storage_bundle_is_deterministic(

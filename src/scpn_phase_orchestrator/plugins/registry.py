@@ -27,11 +27,13 @@ __all__ = [
     "PluginExecutionPlan",
     "PluginExecutionApproval",
     "PluginExecutionRequest",
+    "PluginExecutionRequestRevocation",
     "PluginExecutionRequestStorageManifest",
     "build_plugin_marketplace_catalog",
     "build_plugin_execution_plan",
     "build_plugin_execution_approval",
     "build_plugin_execution_request",
+    "build_plugin_execution_request_revocation",
     "build_plugin_execution_request_storage_manifest",
     "build_plugin_execution_request_storage_bundle",
     "build_rust_plugin_runtime_handoff",
@@ -398,6 +400,54 @@ class PluginExecutionRequestStorageManifest:
             _validate_sha256(revoked_hash, "revoked request hash")
 
 
+@dataclass(frozen=True)
+class PluginExecutionRequestRevocation:
+    """Operator lifecycle artefact that revokes an execution request hash."""
+
+    schema: str
+    version: str
+    request_hash: str
+    plan_hash: str
+    approval_hash: str
+    target_hash: str
+    plugin: str
+    kind: PluginKind
+    name: str
+    operator_identity: str
+    approval_reference: str
+    revoked_by: str
+    revocation_reference: str
+    revocation_reason: str
+    revoked: bool
+    revocation_hash: str
+    audit_record: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if self.schema != "scpn_plugin_execution_request_revocation_v1":
+            raise ValueError(
+                "revocation schema must be "
+                "scpn_plugin_execution_request_revocation_v1"
+            )
+        if self.version != "1.0.0":
+            raise ValueError("revocation version must be 1.0.0")
+        _validate_sha256(self.request_hash, "revocation request hash")
+        _validate_sha256(self.plan_hash, "revocation plan hash")
+        _validate_sha256(self.approval_hash, "revocation approval hash")
+        _validate_sha256(self.target_hash, "revocation target hash")
+        _validate_sha256(self.revocation_hash, "revocation hash")
+        _require_identifier(self.plugin, "plugin")
+        _require_identifier(self.name, "capability name")
+        _require_identifier(self.revoked_by, "revocation actor")
+        _require_identifier(self.revocation_reference, "revocation reference")
+        _require_non_empty(self.revocation_reason, "revocation reason")
+        if self.kind not in _VALID_KINDS:
+            raise ValueError(f"unsupported plugin capability kind: {self.kind}")
+        if self.revoked is not True:
+            raise PermissionError("revocation artefact must mark request revoked")
+        if self.audit_record is None:
+            raise ValueError("audit_record must be provided")
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -520,6 +570,58 @@ def build_plugin_execution_request_storage_manifest(
         revoked_request_hashes=normalised_revocations,
         revocation_hash=revocation_hash,
         manifest_hash=str(audit_record["manifest_hash"]),
+        audit_record=audit_record,
+    )
+
+
+def build_plugin_execution_request_revocation(
+    request: PluginExecutionRequest,
+    *,
+    revoked_by: str,
+    revocation_reference: str,
+    revocation_reason: str,
+) -> PluginExecutionRequestRevocation:
+    """Build a deterministic revocation artefact for an execution request."""
+    validate_plugin_execution_request(request)
+    _require_identifier(revoked_by, "revocation actor")
+    _require_identifier(revocation_reference, "revocation reference")
+    _require_non_empty(revocation_reason, "revocation reason")
+    request_hash = str(request.audit_record["request_hash"])
+    audit_record = {
+        "schema": "scpn_plugin_execution_request_revocation_v1",
+        "version": "1.0.0",
+        "request_hash": request_hash,
+        "plan_hash": request.plan_hash,
+        "approval_hash": request.approval_hash,
+        "target_hash": request.target_hash,
+        "plugin": request.plugin,
+        "kind": request.kind,
+        "name": request.name,
+        "operator_identity": request.operator_identity,
+        "approval_reference": request.approval_reference,
+        "revoked_by": revoked_by,
+        "revocation_reference": revocation_reference,
+        "revocation_reason": revocation_reason,
+        "revoked": True,
+    }
+    audit_record["revocation_hash"] = _record_hash(audit_record)
+    return PluginExecutionRequestRevocation(
+        schema="scpn_plugin_execution_request_revocation_v1",
+        version="1.0.0",
+        request_hash=request_hash,
+        plan_hash=request.plan_hash,
+        approval_hash=request.approval_hash,
+        target_hash=request.target_hash,
+        plugin=request.plugin,
+        kind=request.kind,
+        name=request.name,
+        operator_identity=request.operator_identity,
+        approval_reference=request.approval_reference,
+        revoked_by=revoked_by,
+        revocation_reference=revocation_reference,
+        revocation_reason=revocation_reason,
+        revoked=True,
+        revocation_hash=str(audit_record["revocation_hash"]),
         audit_record=audit_record,
     )
 

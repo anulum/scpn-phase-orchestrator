@@ -272,6 +272,20 @@ spo plugins persist-execution-request REQUEST_JSON OUTPUT_JSON \
   --created-by deployment_gate
 ```
 
+Revocation is represented by
+`build_plugin_execution_request_revocation()` and exposed as:
+
+```bash
+spo plugins revoke-execution-request REQUEST_JSON \
+  --revoked-by deployment_gate \
+  --revocation-reference REV-2026-05-20-01 \
+  --revocation-reason operator_rotation
+```
+
+The revocation artefact is immutable metadata. It does not delete stored bundles;
+the deployment store must feed the emitted `request_hash` into its revoked-hash
+set before persisting or consuming replacement requests.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

@@ -2347,6 +2347,71 @@ def test_plugins_persist_execution_request_rejects_revoked_request(
     assert "revoked" in result.output
 
 
+def test_plugins_revoke_execution_request_outputs_revocation(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revoke-execution-request",
+            str(request_path),
+            "--revoked-by",
+            "deployment_gate",
+            "--revocation-reference",
+            "REV-2026-05-20-01",
+            "--revocation-reason",
+            "operator rotation",
+        ],
+    )
+
+    assert result.exit_code == 0
+    request_payload = json.loads(request_path.read_text(encoding="utf-8"))
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_execution_request_revocation_v1"
+    assert payload["request_hash"] == request_payload["request_hash"]
+    assert payload["plan_hash"] == request_payload["plan_hash"]
+    assert payload["target_hash"] == request_payload["target_hash"]
+    assert payload["revoked_by"] == "deployment_gate"
+    assert payload["revocation_reference"] == "REV-2026-05-20-01"
+    assert payload["revoked"] is True
+    assert len(payload["revocation_hash"]) == 64
+
+
+def test_plugins_revoke_execution_request_rejects_tampered_request(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    request_payload = json.loads(request_path.read_text(encoding="utf-8"))
+    request_payload["request_hash"] = "0" * 64
+    request_path.write_text(
+        json.dumps(request_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revoke-execution-request",
+            str(request_path),
+            "--revoked-by",
+            "deployment_gate",
+            "--revocation-reference",
+            "REV-2026-05-20-02",
+            "--revocation-reason",
+            "operator rotation",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "request audit record mismatch" in result.output
+
+
 def _write_meta_audit_record(
     path: Path,
     *,

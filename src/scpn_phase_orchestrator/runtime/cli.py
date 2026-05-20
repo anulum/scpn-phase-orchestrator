@@ -68,6 +68,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginRuntimeExecutionPolicy,
     build_plugin_execution_approval,
     build_plugin_execution_plan,
+    build_plugin_execution_request_revocation,
     build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
@@ -1006,6 +1007,49 @@ def plugins_persist_execution_request(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(json.dumps(bundle, indent=2, sort_keys=True))
+
+
+@plugins_group.command("revoke-execution-request")
+@click.argument(
+    "request_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--revoked-by",
+    required=True,
+    help="Operator or deployment component revoking the request.",
+)
+@click.option(
+    "--revocation-reference",
+    required=True,
+    help="Reference for the revocation decision.",
+)
+@click.option(
+    "--revocation-reason",
+    required=True,
+    help="Human reason for revoking the request.",
+)
+def plugins_revoke_execution_request(
+    request_json: Path,
+    revoked_by: str,
+    revocation_reference: str,
+    revocation_reason: str,
+) -> None:
+    """Emit a deterministic revocation artefact for an execution request."""
+    request_payload = _load_json_file(request_json, artifact="request")
+    request = _load_request_from_payload(request_payload)
+
+    try:
+        revocation = build_plugin_execution_request_revocation(
+            request,
+            revoked_by=revoked_by,
+            revocation_reference=revocation_reference,
+            revocation_reason=revocation_reason,
+        )
+    except (PermissionError, TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(json.dumps(revocation.audit_record, indent=2, sort_keys=True))
 
 
 @main.command("meta-transfer-manifest")
