@@ -30,17 +30,17 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
 |----------|-------------------|------|-------|---------------|---------|---------------|
-| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.04418204998364672 | 90.5345044306576 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
-| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 learners | 3 acceptance gates | 0.003209030022844672 | 934.8619298178533 | accepted learners = 3/3; min coherence improvement = 0.05827974999403174; unsafe acceptances = 0; non-actuating = yes |
-| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.239883091999218 | 42.85937973410691 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
-| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.2792614630307071 | 10.742620795015048 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
-| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 5 fail-closed probes | 0.000659086974337697 | 7586.252186252653 | identifier maps = 22; fail-closed = 5; deterministic hash = yes; SHA-256 = 74217fecfc92b3cf0d3d87f7b58c4278d4c758a1309f11c6d99bac429a57e378 |
-| `domain_formal_safety_exports` | Plasma, power-grid, and medical-style formal safety artefacts | 3 domains | 9 artefacts | 0.0005617240094579756 | 16022.103111961282 | accepted domains = 3/3; SHA-256 = ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b |
-| `hybrid_cocompiler_review_gate` | Hybrid quantum/neuromorphic review manifest gate | 1 manifest | 2 blocked probes | 0.0001534480252303183 | 6516.864576778012 | target backends = 4; component hashes = 3; non-actuating = yes; SHA-256 = e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7 |
-| `plugin_ecosystem_catalog_quality` | Python/Rust plugin marketplace capability gate | 3 manifests | 5 compatible capabilities | 0.0001012010034173727 | 29643.97484901819 | compatible plugins = 2/3; incompatible monitor rejection = 1; required kinds = 4/4; SHA-256 = 4dc86c339a42dba16bfe99c79fd6197051c87c97c7fbbf2a93dd86c1585ff25b |
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.13473092700587586 | 7422.2008429912175 | final `R` = 1.0 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.25828218803508207 | 3871.7342748551114 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.019045552995521575 | 262528.47586918133 | reachable markings = 4 |
+| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.044935028010513633 | 89.01741418886184 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
+| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 scenarios | 9 learner gates | 0.011230827018152922 | 801.3657396247729 | accepted scenarios = 3/3; accepted learners = 9/9; min coherence improvement = 0.035689587760827646; unsafe acceptances = 0; non-actuating = yes |
+| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.3043662669952027 | 41.66004396739412 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
+| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.318855457007885 | 9.408651895601125 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
+| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 3 package properties | 0.0005820520455017686 | 8590.297102537726 | identifier maps = 22; fail-closed = 5; checker commands = 3; checker execution disabled = yes; package SHA-256 = b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92 |
+| `domain_formal_safety_exports` | Plasma, power-grid, and medical-style formal safety artefacts | 3 domains | 9 artefacts | 0.000440205039922148 | 20445.018079737765 | accepted domains = 3/3; SHA-256 = ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b |
+| `hybrid_cocompiler_review_gate` | Hybrid quantum/neuromorphic review manifest gate | 1 manifest | 2 blocked probes | 0.0001508689601905644 | 6628.268656036921 | target backends = 4; component hashes = 3; non-actuating = yes; SHA-256 = e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7 |
+| `plugin_ecosystem_catalog_quality` | Python/Rust plugin marketplace capability gate | 3 manifests | 6 handoff target hashes | 0.00032508198637515306 | 9228.441210944005 | compatible plugins = 2/3; incompatible monitor rejection = 1; required kinds = 4/4; loading disabled = yes; handoff SHA-256 = db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77 |
+| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.124519354023505 | 8030.880081591446 | final `R` = 1.0 |
+| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.26026641501812264 | 3842.216829744894 | final mean amplitude = 3.6193922141707704 |
+| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.020743144035805017 | 241043.49810083918 | reachable markings = 4 |
 
 ## Auto-Binding Acceptance Gates
 
@@ -60,16 +60,17 @@ multiplier. The 2026-05-20 snapshot passed all four gates:
 ## Replay-Policy Acceptance Gates
 
 The replay-policy benchmark evaluates deterministic PPO-like, SAC-like, and
-hybrid-physics learner proposals against a simulator-backed coherence surface.
-All proposals remain review-only (`actuation_permitted = false`) and must pass
-minimum acceptance rate, minimum coherence improvement, zero unsafe accepted
-candidates, and non-actuating output gates.
+hybrid-physics learner proposals across deterministic replay scenarios against
+a simulator-backed coherence surface. All proposals remain review-only
+(`actuation_permitted = false`) and must pass minimum acceptance rate, minimum
+coherence improvement, zero unsafe accepted candidates, and non-actuating output
+gates.
 
-| Learner proposal | Candidate count | Baseline coherence | Selected coherence | Coherence improvement | Accepted |
-|------------------|----------------:|-------------------:|-------------------:|----------------------:|----------|
-| `ppo_like_replay` | 15 | 0.793 | 0.8653832908831077 | 0.07238329088310769 | yes |
-| `sac_like_replay` | 15 | 0.793 | 0.8512797499940318 | 0.05827974999403174 | yes |
-| `hybrid_physics_replay` | 15 | 0.793 | 0.8581479119360509 | 0.06514791193605085 | yes |
+| Replay scenario | Learners | Baseline coherence | Minimum coherence improvement | Unsafe acceptances | Accepted |
+|-----------------|---------:|-------------------:|------------------------------:|-------------------:|----------|
+| `two_channel_low_coupling` | 3 | 0.793 | 0.05827974999403174 | 0 | yes |
+| `three_channel_cross_gain` | 3 | 0.7758666666666668 | 0.05663105080295605 | 0 | yes |
+| `stability_recovery` | 3 | 0.8022666666666668 | 0.035689587760827646 | 0 | yes |
 
 ## Bayesian Posterior-Fit Acceptance Gates
 
@@ -116,7 +117,11 @@ closed before text generation.
 | Artefact count | 5 | >= 5 |
 | Identifier-map entries | 22 | >= 12 |
 | Fail-closed malformed probes | 5 | >= 4 |
+| Formal package properties | 3 | >= 3 |
+| Formal checker commands | 3 | >= 3 |
+| Checker execution disabled | 1 | required |
 | Deterministic hash | 1 | required |
+| Package SHA-256 | `b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92` | stable |
 | Petri PRISM bytes | 1012 | > 0 |
 | Petri TLA bytes | 1281 | > 0 |
 | Policy PRISM bytes | 1116 | > 0 |
@@ -169,6 +174,9 @@ deterministic registry hash for release evidence.
 | Full plugin count | 3 | >= 3 |
 | Incompatible plugin count | 1 | >= 1 |
 | Compatible capability count | 5 | >= 5 |
+| Handoff target hashes | 6 | >= 5 |
+| Blocked handoff capabilities | 1 | >= 1 |
+| Handoff loading disabled | 1 | required |
 | Required capability kinds observed | 4 | = 4 |
 | Extractor capabilities | 1 | >= 1 |
 | Monitor capabilities | 2 | >= 1 |
@@ -176,6 +184,7 @@ deterministic registry hash for release evidence.
 | Bridge capabilities | 1 | >= 1 |
 | Deterministic hash | 1 | required |
 | Registry SHA-256 | `4dc86c339a42dba16bfe99c79fd6197051c87c97c7fbbf2a93dd86c1585ff25b` | stable |
+| Handoff SHA-256 | `db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77` | stable |
 
 ## Use Policy
 
