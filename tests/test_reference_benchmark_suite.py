@@ -20,6 +20,7 @@ from benchmarks.reference_suite import (
     benchmark_evolutionary_mutation_grammar_gate,
     benchmark_evolutionary_supervisor_search,
     benchmark_federated_meta_orchestrator,
+    benchmark_federated_production_boundary_gate,
     benchmark_formal_export_artifact_quality,
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_hybrid_entanglement_order_parameter_gate,
@@ -327,6 +328,54 @@ def test_federated_meta_orchestrator_reports_thresholds_and_records() -> None:
     assert all("time_series" not in node for node in record["node_updates"])
     assert all("samples" not in node for node in record["node_updates"])
     assert len(record["aggregate_delta"]) == thresholds["min_policy_key_count"]
+
+
+def test_federated_production_boundary_gate_benchmark_shape() -> None:
+    out = benchmark_federated_production_boundary_gate()
+
+    assert out["suite"] == "federated_production_boundary_gate"
+    assert out["boundary_surface_count"] == 3
+    assert out["transport_envelope_count"] == 3
+    assert out["transport_node_sequence_count"] == 3
+    assert out["secure_accepted_node_count"] == 3
+    assert out["secure_rejected_node_count"] == 0
+    assert out["dp_noise_vector_count"] == 2
+    assert out["transport_execution_disabled"] == 1
+    assert out["secure_execution_disabled"] == 1
+    assert out["service_execution_disabled"] == 1
+    assert out["raw_data_export_disabled"] == 1
+    assert out["operator_review_required"] == 1
+    assert out["non_actuating"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["boundary_hash"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_federated_production_boundary_gate_reports_thresholds_and_records() -> None:
+    out = benchmark_federated_production_boundary_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    record = json.loads(str(out["boundary_record_json"]))
+
+    assert thresholds == {
+        "min_boundary_surface_count": 3,
+        "min_dp_noise_vector_count": 2,
+        "min_secure_accepted_node_count": 3,
+        "min_transport_envelope_count": 3,
+        "require_deterministic_hash": True,
+        "require_non_actuating": True,
+        "require_operator_review": True,
+        "require_raw_data_export_disabled": True,
+        "require_secure_execution_disabled": True,
+        "require_service_execution_disabled": True,
+        "require_transport_execution_disabled": True,
+    }
+    assert set(record) == {"dp_noise_service", "secure_aggregation", "transport"}
+    assert record["transport"]["envelope_count"] == 3
+    assert record["secure_aggregation"]["accepted_node_count"] == 3
+    assert record["dp_noise_service"]["service_execution_permitted"] is False
+    assert record["dp_noise_service"]["raw_data_export_permitted"] is False
+    assert record["dp_noise_service"]["operator_review_required"] is True
 
 
 def test_meta_transfer_package_manifest_quality_benchmark_shape() -> None:
@@ -1528,6 +1577,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "evolutionary_supervisor_search",
         "evolutionary_mutation_grammars",
         "federated_meta_orchestrator",
+        "federated_production_boundary",
         "autopoietic_lineage",
         "bayesian_backends",
         "bayesian_posterior",

@@ -736,8 +736,14 @@ Speculative research watchlist:
     counts, policy-key coverage, privacy-budget bounds, deterministic hashes,
     operator review, non-actuation, disabled execution, disabled live
     transport, and disabled raw-data export.
-  - Remaining scope: live distributed transport, secure aggregation protocol,
-    and production differential-privacy noise service integration.
+  - Offline production-boundary evidence is in place: hash-linked transport
+    envelopes, secure aggregation manifests, DP noise-service manifests, and a
+    combined reference-suite gate prove no live transport, secure aggregation
+    execution, service execution, raw-data export, or actuation is permitted by
+    default.
+  - Remaining scope: real deployed distributed transport, live secure
+    aggregation services, production differential-privacy noise service
+    deployment, and operator UI surfacing.
 - Byzantine-fault-tolerant meta-orchestrator:
   offline three-node BFT consensus manifests verify signed policy proposals,
   hash-linked audit parents, quorum winners, rejected nodes, and non-actuating

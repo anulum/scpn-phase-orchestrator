@@ -69,6 +69,18 @@ from scpn_phase_orchestrator.supervisor.alignment import (
 from scpn_phase_orchestrator.supervisor.causal import (
     build_temporal_causal_hypergraph_experiment,
 )
+from scpn_phase_orchestrator.supervisor.federated_dp_noise_service import (
+    DpNoiseNodePrivacyBudget,
+    DpNoiseServiceRequestManifest,
+    build_dp_noise_service_manifest,
+)
+from scpn_phase_orchestrator.supervisor.federated_secure_aggregation import (
+    build_federated_secure_aggregation_manifest,
+)
+from scpn_phase_orchestrator.supervisor.federated_transport import (
+    build_signed_transport_envelopes,
+    replay_federated_transport_batch,
+)
 from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalSafetyProperty,
     audit_formal_checker_availability,
@@ -307,6 +319,20 @@ class TemporalCausalHypergraphThresholds(NamedTuple):
     min_accepted_hyperedge_count: int
     min_baseline_edge_count: int
     require_research_only: bool
+    require_deterministic_hash: bool
+
+
+class FederatedProductionBoundaryThresholds(NamedTuple):
+    min_boundary_surface_count: int
+    min_transport_envelope_count: int
+    min_secure_accepted_node_count: int
+    min_dp_noise_vector_count: int
+    require_transport_execution_disabled: bool
+    require_secure_execution_disabled: bool
+    require_service_execution_disabled: bool
+    require_raw_data_export_disabled: bool
+    require_operator_review: bool
+    require_non_actuating: bool
     require_deterministic_hash: bool
 
 
@@ -3677,6 +3703,173 @@ def benchmark_federated_meta_orchestrator() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_federated_production_boundary_gate() -> dict[str, float | int | str]:
+    """Gate offline transport, secure aggregation, and DP-noise service boundaries."""
+    thresholds = FederatedProductionBoundaryThresholds(
+        min_boundary_surface_count=3,
+        min_transport_envelope_count=3,
+        min_secure_accepted_node_count=3,
+        min_dp_noise_vector_count=2,
+        require_transport_execution_disabled=True,
+        require_secure_execution_disabled=True,
+        require_service_execution_disabled=True,
+        require_raw_data_export_disabled=True,
+        require_operator_review=True,
+        require_non_actuating=True,
+        require_deterministic_hash=True,
+    )
+    policy_keys = ("K", "alpha")
+    transport_records = _federated_transport_fixture_records()
+    secure_commitments = _federated_secure_commitment_fixture_records()
+    dp_request = DpNoiseServiceRequestManifest(
+        epsilon=2.5,
+        delta=1e-6,
+        sensitivity=1.25,
+        noise_multiplier=0.8,
+        node_count=3,
+        seed_hash="f" * 64,
+        policy_keys=policy_keys,
+        node_budgets=(
+            DpNoiseNodePrivacyBudget(node_id="site-a", epsilon_spent=0.5),
+            DpNoiseNodePrivacyBudget(node_id="site-b", epsilon_spent=0.6),
+            DpNoiseNodePrivacyBudget(node_id="site-c", epsilon_spent=0.4),
+        ),
+    )
+
+    t0 = time.perf_counter()
+    envelopes = build_signed_transport_envelopes(transport_records)
+    transport_ledger = replay_federated_transport_batch(envelopes)
+    secure_manifest = build_federated_secure_aggregation_manifest(
+        secure_commitments,
+        required_policy_keys=policy_keys,
+        clipping_norm=1.0,
+        min_node_count=3,
+        epsilon=2.5,
+        delta=1e-6,
+    )
+    dp_manifest = build_dp_noise_service_manifest(dp_request)
+    repeated_envelopes = build_signed_transport_envelopes(transport_records)
+    repeated_secure_manifest = build_federated_secure_aggregation_manifest(
+        secure_commitments,
+        required_policy_keys=policy_keys,
+        clipping_norm=1.0,
+        min_node_count=3,
+        epsilon=2.5,
+        delta=1e-6,
+    )
+    repeated_dp_manifest = build_dp_noise_service_manifest(dp_request)
+    elapsed = time.perf_counter() - t0
+
+    transport_record = transport_ledger.to_audit_record()
+    secure_record = secure_manifest.to_audit_record()
+    dp_record = dp_manifest.to_audit_record()
+    boundary_record = {
+        "transport": transport_record,
+        "secure_aggregation": secure_record,
+        "dp_noise_service": dp_record,
+    }
+    boundary_hash = _stable_record_hash(boundary_record)
+    deterministic_hash = int(
+        tuple(envelope.envelope_hash for envelope in envelopes)
+        == tuple(envelope.envelope_hash for envelope in repeated_envelopes)
+        and secure_manifest.report_hash == repeated_secure_manifest.report_hash
+        and dp_manifest.audit_record_hash == repeated_dp_manifest.audit_record_hash
+    )
+    transport_execution_disabled = int(
+        all(envelope.transport_execution_permitted is False for envelope in envelopes)
+    )
+    raw_data_export_disabled = int(
+        all(envelope.raw_data_export_permitted is False for envelope in envelopes)
+        and secure_manifest.raw_data_export_permitted is False
+        and dp_manifest.raw_data_export_permitted is False
+    )
+    operator_review_required = int(
+        all(envelope.operator_review_required is True for envelope in envelopes)
+        and secure_manifest.operator_review_required is True
+        and dp_manifest.operator_review_required is True
+    )
+    non_actuating = int(
+        secure_manifest.non_actuating is True and dp_manifest.non_actuating is True
+    )
+    secure_execution_disabled = int(
+        secure_manifest.secure_aggregation_execution_permitted is False
+    )
+    service_execution_disabled = int(dp_manifest.service_execution_permitted is False)
+    boundary_surface_count = len(boundary_record)
+    acceptance_passed = int(
+        boundary_surface_count >= thresholds.min_boundary_surface_count
+        and transport_ledger.envelope_count >= thresholds.min_transport_envelope_count
+        and secure_manifest.accepted_node_count
+        >= thresholds.min_secure_accepted_node_count
+        and len(dp_manifest.policy_noise_audit_vector)
+        >= thresholds.min_dp_noise_vector_count
+        and transport_execution_disabled
+        == int(thresholds.require_transport_execution_disabled)
+        and secure_execution_disabled
+        == int(thresholds.require_secure_execution_disabled)
+        and service_execution_disabled
+        == int(thresholds.require_service_execution_disabled)
+        and raw_data_export_disabled == int(thresholds.require_raw_data_export_disabled)
+        and operator_review_required == int(thresholds.require_operator_review)
+        and non_actuating == int(thresholds.require_non_actuating)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "federated_production_boundary_gate",
+        "wall_time_s": elapsed,
+        "steps_per_second": (
+            boundary_surface_count / elapsed if elapsed > 0.0 else 0.0
+        ),
+        "boundary_surface_count": boundary_surface_count,
+        "transport_envelope_count": transport_ledger.envelope_count,
+        "transport_node_sequence_count": len(transport_ledger.node_last_sequences),
+        "secure_accepted_node_count": secure_manifest.accepted_node_count,
+        "secure_rejected_node_count": secure_manifest.rejected_node_count,
+        "dp_noise_vector_count": len(dp_manifest.policy_noise_audit_vector),
+        "dp_privacy_budget_spent": dp_manifest.privacy_budget_spent,
+        "dp_privacy_budget_remaining": dp_manifest.privacy_budget_remaining,
+        "transport_execution_disabled": transport_execution_disabled,
+        "secure_execution_disabled": secure_execution_disabled,
+        "service_execution_disabled": service_execution_disabled,
+        "raw_data_export_disabled": raw_data_export_disabled,
+        "operator_review_required": operator_review_required,
+        "non_actuating": non_actuating,
+        "deterministic_hash": deterministic_hash,
+        "boundary_hash": boundary_hash,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_boundary_surface_count": (thresholds.min_boundary_surface_count),
+                "min_dp_noise_vector_count": thresholds.min_dp_noise_vector_count,
+                "min_secure_accepted_node_count": (
+                    thresholds.min_secure_accepted_node_count
+                ),
+                "min_transport_envelope_count": (
+                    thresholds.min_transport_envelope_count
+                ),
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_actuating": thresholds.require_non_actuating,
+                "require_operator_review": thresholds.require_operator_review,
+                "require_raw_data_export_disabled": (
+                    thresholds.require_raw_data_export_disabled
+                ),
+                "require_secure_execution_disabled": (
+                    thresholds.require_secure_execution_disabled
+                ),
+                "require_service_execution_disabled": (
+                    thresholds.require_service_execution_disabled
+                ),
+                "require_transport_execution_disabled": (
+                    thresholds.require_transport_execution_disabled
+                ),
+            },
+            sort_keys=True,
+        ),
+        "boundary_record_json": json.dumps(boundary_record, sort_keys=True),
+    }
+
+
 def benchmark_topos_semantic_binding_gate() -> dict[str, float | int | str]:
     """Benchmark categorical proof-obligation surfaces for semantic binding."""
     thresholds = ToposSemanticBindingThresholds(
@@ -5822,6 +6015,98 @@ def _stable_record_hash(records: object) -> str:
     return sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _federated_transport_fixture_records() -> tuple[dict[str, object], ...]:
+    records = (
+        {
+            "node_id": "site-a",
+            "policy_delta": {"K": 0.10, "alpha": -0.02},
+            "sample_count": 120,
+            "local_loss": 0.21,
+            "previous_audit_hash": "a" * 64,
+            "privacy_epsilon_spent": 0.5,
+            "clipped_l2_norm": 0.25,
+            "clip_scale": 1.0,
+            "accepted": True,
+            "rejection_reasons": [],
+        },
+        {
+            "node_id": "site-b",
+            "policy_delta": {"K": 0.04, "alpha": -0.01},
+            "sample_count": 80,
+            "local_loss": 0.24,
+            "previous_audit_hash": "b" * 64,
+            "privacy_epsilon_spent": 0.6,
+            "clipped_l2_norm": 0.18,
+            "clip_scale": 1.0,
+            "accepted": True,
+            "rejection_reasons": [],
+        },
+        {
+            "node_id": "site-c",
+            "policy_delta": {"K": 0.08, "alpha": -0.03},
+            "sample_count": 100,
+            "local_loss": 0.19,
+            "previous_audit_hash": "c" * 64,
+            "privacy_epsilon_spent": 0.4,
+            "clipped_l2_norm": 0.22,
+            "clip_scale": 1.0,
+            "accepted": True,
+            "rejection_reasons": [],
+        },
+    )
+    return tuple(
+        {
+            **record,
+            "update_hash": _stable_record_hash(
+                {
+                    "accepted": record["accepted"],
+                    "clip_scale": record["clip_scale"],
+                    "clipped_l2_norm": record["clipped_l2_norm"],
+                    "local_loss": record["local_loss"],
+                    "node_id": record["node_id"],
+                    "policy_delta": [
+                        [key, value]
+                        for key, value in sorted(dict(record["policy_delta"]).items())
+                    ],
+                    "previous_audit_hash": record["previous_audit_hash"],
+                    "privacy_epsilon_spent": record["privacy_epsilon_spent"],
+                    "rejection_reasons": record["rejection_reasons"],
+                    "sample_count": record["sample_count"],
+                }
+            ),
+        }
+        for record in records
+    )
+
+
+def _federated_secure_commitment_fixture_records() -> tuple[dict[str, object], ...]:
+    records = (
+        ("site-a", {"K": 0.10, "alpha": -0.02}, 120),
+        ("site-b", {"K": 0.04, "alpha": -0.01}, 80),
+        ("site-c", {"K": 0.08, "alpha": -0.03}, 100),
+    )
+    return tuple(
+        {
+            "node_id": node_id,
+            "masked_policy_delta": dict(sorted(delta.items())),
+            "sample_count": sample_count,
+            "share_commitment": f"commit-{node_id}",
+            "share_commitment_hash": _stable_record_hash(
+                {"node_id": node_id, "share_commitment": f"commit-{node_id}"}
+            ),
+            "share_hash": _stable_record_hash(
+                {
+                    "node_id": node_id,
+                    "masked_policy_delta": [
+                        [key, float(value)] for key, value in sorted(delta.items())
+                    ],
+                }
+            ),
+        }
+        for node_id, delta, sample_count in records
+    )
+
+
 def _build_evolutionary_mutation_grammar_records() -> list[dict[str, object]]:
     from scpn_phase_orchestrator.supervisor.evolutionary_petri_grammar import (
         run_offline_evolutionary_petri_mutation_grammar,
@@ -6091,6 +6376,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
                 benchmark_evolutionary_mutation_grammar_gate()
             ),
             "federated_meta_orchestrator": benchmark_federated_meta_orchestrator(),
+            "federated_production_boundary": (
+                benchmark_federated_production_boundary_gate()
+            ),
             "topos_semantic_binding": benchmark_topos_semantic_binding_gate(),
             "multiverse_counterfactual": benchmark_multiverse_counterfactual_gate(),
             "hybrid_entanglement_order": (
