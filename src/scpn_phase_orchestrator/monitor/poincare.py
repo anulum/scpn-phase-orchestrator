@@ -269,6 +269,10 @@ def poincare_section(
             f"direction must be one of {list(_DIRECTION_IDS)}, got {direction!r}"
         )
 
+    norm_mag = float(np.linalg.norm(norm_vec))
+    if norm_mag == 0.0:
+        return _assemble_result(np.zeros(t * d), np.zeros(t), 0, d)
+
     backend_fn = _dispatch("section")
     if backend_fn is not None:
         fn = cast(
@@ -286,9 +290,6 @@ def poincare_section(
         )
         return _assemble_result(cr_flat, times, n_cr, d)
 
-    norm_mag = float(np.linalg.norm(norm_vec))
-    if norm_mag == 0.0:
-        return _assemble_result(np.zeros(t * d), np.zeros(t), 0, d)
     n = norm_vec / norm_mag
     signed_dist = traj @ n - offset
 
