@@ -1141,6 +1141,49 @@ def test_plugins_catalog_can_emit_rust_registry(
     assert data["capabilities"][0]["knobs"] == ["Psi"]
 
 
+def test_plugins_catalog_can_emit_guarded_rust_runtime_handoff(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    result = runner.invoke(main, ["plugins", "catalog", "--rust-runtime-handoff"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["schema"] == "scpn_rust_plugin_runtime_handoff_v1"
+    assert data["registry_schema"] == "scpn_rust_plugin_registry_v1"
+    assert data["loading_permitted"] is False
+    assert data["compatible_capability_count"] == 1
+    assert data["blocked_capability_count"] == 0
+    assert data["dispatch_groups"]["actuator"][0]["plugin"] == "cli_plugin"
+    assert data["dispatch_groups"]["actuator"][0]["loading_permitted"] is False
+    assert len(data["handoff_hash"]) == 64
+
+
+def test_plugins_catalog_rejects_conflicting_rust_output_modes(runner) -> None:
+    result = runner.invoke(
+        main,
+        ["plugins", "catalog", "--rust-registry", "--rust-runtime-handoff"],
+    )
+
+    assert result.exit_code == 1
+    assert "mutually exclusive" in result.output
+
+
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(main, ["scaffold", "test_domain"])

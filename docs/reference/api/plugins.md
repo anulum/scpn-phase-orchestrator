@@ -75,6 +75,20 @@ compatible capability into records containing plugin name, package, kind,
 target, channels, knobs, and compatibility status. This is the metadata bridge
 for Rust loaders that need stable JSON before any Python callback is invoked.
 
+Rust runtime handoff review jobs can consume a stricter no-load handoff:
+
+```python
+from scpn_phase_orchestrator.plugins import build_rust_plugin_runtime_handoff
+
+handoff = build_rust_plugin_runtime_handoff((manifest,))
+```
+
+The handoff uses schema `scpn_rust_plugin_runtime_handoff_v1`, groups compatible
+capabilities by kind for dispatch review, records deterministic target hashes,
+keeps incompatible capabilities in a blocked review list when requested, and
+sets `loading_permitted` to `false`. It is a runtime preflight contract, not a
+dynamic plugin loader.
+
 A runnable metadata-only example is available at
 `examples/plugin_marketplace_catalog.py`. It builds a validated
 extractor/actuator manifest and prints the resulting catalogue JSON without
@@ -86,11 +100,15 @@ The same catalogue is available from the command line:
 spo plugins catalog
 spo plugins catalog --include-incompatible
 spo plugins catalog --rust-registry
+spo plugins catalog --rust-runtime-handoff
 ```
 
 The default output omits incompatible entries from `plugins` while still
 counting them. Use `--include-incompatible` in CI or review jobs that need the
 full rejection reason list. Use `--rust-registry` when a Rust-side dispatcher
 needs the flattened capability registry instead of the marketplace catalogue.
+Use `--rust-runtime-handoff` when a runtime review job needs grouped dispatch
+records, target hashes, and explicit no-load policy. `--rust-registry` and
+`--rust-runtime-handoff` are mutually exclusive output modes.
 
 ::: scpn_phase_orchestrator.plugins.registry

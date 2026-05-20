@@ -59,6 +59,7 @@ from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.plugins import (
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
+    build_rust_plugin_runtime_handoff,
     discover_plugin_manifests,
 )
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
@@ -324,14 +325,28 @@ def plugins_group() -> None:
     is_flag=True,
     help="Emit flattened Rust-facing capability registry JSON",
 )
-def plugins_catalog(include_incompatible: bool, rust_registry: bool) -> None:
+@click.option(
+    "--rust-runtime-handoff",
+    is_flag=True,
+    help="Emit guarded Rust runtime handoff JSON with loading disabled",
+)
+def plugins_catalog(
+    include_incompatible: bool,
+    rust_registry: bool,
+    rust_runtime_handoff: bool,
+) -> None:
     """Print the discovered plugin marketplace catalogue as JSON."""
+    if rust_registry and rust_runtime_handoff:
+        raise click.ClickException(
+            "--rust-registry and --rust-runtime-handoff are mutually exclusive"
+        )
     manifests = discover_plugin_manifests()
-    builder = (
-        build_rust_plugin_registry
-        if rust_registry
-        else build_plugin_marketplace_catalog
-    )
+    if rust_runtime_handoff:
+        builder = build_rust_plugin_runtime_handoff
+    elif rust_registry:
+        builder = build_rust_plugin_registry
+    else:
+        builder = build_plugin_marketplace_catalog
     catalog = builder(manifests, include_incompatible=include_incompatible)
     click.echo(json.dumps(catalog, indent=2, sort_keys=True))
 

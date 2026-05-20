@@ -419,6 +419,9 @@ sessions do not treat them as abstract research labels.
     Rust dispatch, records deterministic target hashes, carries blocked
     incompatible capabilities for review, and keeps plugin loading disabled by
     default.
+  - CLI guarded runtime handoff export is in place:
+    `spo plugins catalog --rust-runtime-handoff` emits the same no-load handoff
+    JSON and rejects conflicting Rust output modes.
   - Monitor capability support is in place: manifests, marketplace counts,
     compatibility reports, Rust-facing registry records, and the reference
     benchmark gate now require monitor metadata with declared channels.
