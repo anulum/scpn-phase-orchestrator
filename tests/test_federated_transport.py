@@ -15,10 +15,13 @@ from dataclasses import replace
 import pytest
 
 from scpn_phase_orchestrator.supervisor.federated_transport import (
+    FederatedTransportDeploymentPreflightManifest,
     FederatedTransportReplayLedger,
     build_signed_transport_envelopes,
+    build_transport_deployment_preflight_manifest,
     replay_federated_transport_batch,
     validate_federated_transport_batch,
+    validate_transport_deployment_preflight_manifest,
 )
 
 
@@ -173,3 +176,170 @@ def test_transport_batch_rejects_bad_schema_name_and_hashes() -> None:
     envelopes = build_signed_transport_envelopes(_records())
     replay = replay_federated_transport_batch(envelopes)
     json.loads(json.dumps(replay.to_audit_record(), allow_nan=False))
+
+
+def _live_declaration() -> dict[str, object]:
+    return {
+        "transport": "rest",
+        "endpoint": "https://transport.local/replay",
+        "owner": "node-owner-a",
+        "auth_policy": "mtls+token",
+        "tls": True,
+        "replay_supported": True,
+        "operator_approved": True,
+    }
+
+
+def _jsonl_declaration() -> dict[str, object]:
+    return {
+        "transport": "jsonl",
+        "endpoint": "review-replays/preflight.jsonl",
+        "replay_supported": True,
+        "local_path_evidence": "review-replays/preflight.jsonl",
+    }
+
+
+def _replay_ledger() -> FederatedTransportReplayLedger:
+    return replay_federated_transport_batch(
+        build_signed_transport_envelopes(_records())
+    )
+
+
+def _as_json(record: dict[str, object]) -> str:
+    return json.dumps(record, allow_nan=False)
+
+
+def test_transport_preflight_manifest_is_deterministic_and_review_only() -> None:
+    manifest_a = build_transport_deployment_preflight_manifest(
+        _live_declaration(),
+        replay_ledger=_replay_ledger(),
+    )
+    manifest_b = build_transport_deployment_preflight_manifest(
+        _live_declaration(),
+        replay_ledger=_replay_ledger(),
+    )
+
+    assert manifest_a == manifest_b
+    assert manifest_a.preflight_hash == manifest_b.preflight_hash
+    assert manifest_a.transport_execution_permitted is False
+    assert manifest_a.raw_data_export_permitted is False
+    assert manifest_a.operator_review_required is True
+    assert manifest_a.non_actuating is True
+    _as_json(manifest_a.to_audit_record())
+
+
+def test_transport_preflight_manifest_accepts_live_preflight_with_prerequisites() -> (
+    None
+):
+    manifest = build_transport_deployment_preflight_manifest(
+        _live_declaration(),
+        replay_ledger=_replay_ledger(),
+    )
+    assert manifest.transport == "rest"
+    assert manifest.replay_ledger_hash == _replay_ledger().replay_hash
+    assert manifest.transport_endpoint == "https://transport.local/replay"
+    assert manifest.transport == "rest"
+    assert manifest.operator_review_required is True
+    assert manifest.transport_audit_record[0][0] == "transport"
+    valid = validate_transport_deployment_preflight_manifest(manifest)
+    assert isinstance(valid, FederatedTransportDeploymentPreflightManifest)
+
+
+def test_transport_preflight_manifest_blocks_live_without_prerequisites() -> None:
+    base = _live_declaration()
+    replay_ledger = _replay_ledger()
+
+    missing_owner = dict(base)
+    missing_owner.pop("owner")
+    with pytest.raises(ValueError, match="owner"):
+        build_transport_deployment_preflight_manifest(
+            missing_owner, replay_ledger=replay_ledger
+        )
+
+    missing_auth = dict(base)
+    missing_auth.pop("auth_policy")
+    with pytest.raises(ValueError, match="auth_policy"):
+        build_transport_deployment_preflight_manifest(
+            missing_auth, replay_ledger=replay_ledger
+        )
+
+    missing_tls = dict(base)
+    missing_tls["tls"] = False
+    with pytest.raises(ValueError, match="TLS"):
+        build_transport_deployment_preflight_manifest(
+            missing_tls, replay_ledger=replay_ledger
+        )
+
+    missing_approval = dict(base)
+    missing_approval["operator_approved"] = False
+    with pytest.raises(ValueError, match="operator approval"):
+        build_transport_deployment_preflight_manifest(
+            missing_approval, replay_ledger=replay_ledger
+        )
+
+
+def test_transport_preflight_manifest_offline_jsonl_requires_replay_and_path() -> None:
+    replay_ledger = _replay_ledger()
+    manifest = build_transport_deployment_preflight_manifest(
+        _jsonl_declaration(), replay_ledger=replay_ledger
+    )
+    assert manifest.transport == "jsonl"
+    assert manifest.transport_endpoint == "review-replays/preflight.jsonl"
+    assert manifest.transport_execution_permitted is False
+    assert manifest.replay_ledger_hash == replay_ledger.replay_hash
+    assert manifest.transport_audit_record[7][0] == "local_path_evidence"
+    _as_json(manifest.to_audit_record())
+
+    offline_without_path = dict(_jsonl_declaration())
+    offline_without_path.pop("local_path_evidence")
+    with pytest.raises(ValueError, match="local_path_evidence"):
+        build_transport_deployment_preflight_manifest(
+            offline_without_path, replay_ledger=replay_ledger
+        )
+
+    offline_without_replay = dict(_jsonl_declaration())
+    offline_without_replay["replay_supported"] = False
+    with pytest.raises(ValueError, match="replay support"):
+        build_transport_deployment_preflight_manifest(
+            offline_without_replay, replay_ledger=replay_ledger
+        )
+
+
+def test_transport_preflight_manifest_rejects_invalid_schema_transport_and_input() -> (
+    None
+):
+    replay_ledger = _replay_ledger()
+
+    with pytest.raises(ValueError, match="schema_name"):
+        build_transport_deployment_preflight_manifest(
+            _live_declaration(),
+            schema_name="invalid_schema",
+            replay_ledger=replay_ledger,
+        )
+
+    unsupported = dict(_live_declaration())
+    unsupported["transport"] = "udp"
+    with pytest.raises(ValueError, match="transport must be one of"):
+        build_transport_deployment_preflight_manifest(
+            unsupported, replay_ledger=replay_ledger
+        )
+
+    with pytest.raises(ValueError, match="must be a mapping"):
+        build_transport_deployment_preflight_manifest(
+            "udp", replay_ledger=replay_ledger
+        )
+
+
+def test_transport_preflight_manifest_stable_hash_is_sensitive_to_input() -> None:
+    first = build_transport_deployment_preflight_manifest(
+        _live_declaration(),
+        replay_ledger=_replay_ledger(),
+    )
+    changed = build_transport_deployment_preflight_manifest(
+        {**_live_declaration(), "endpoint": "https://transport.local/replay-v2"},
+        replay_ledger=_replay_ledger(),
+    )
+
+    assert first.preflight_hash != changed.preflight_hash
+    _as_json(first.to_audit_record())
+    _as_json(changed.to_audit_record())

@@ -741,9 +741,13 @@ Speculative research watchlist:
     combined reference-suite gate prove no live transport, secure aggregation
     execution, service execution, raw-data export, or actuation is permitted by
     default.
-  - Remaining scope: real deployed distributed transport, live secure
-    aggregation services, production differential-privacy noise service
-    deployment, and operator UI surfacing.
+  - Deployment-preflight evidence is in place: owned transport declarations,
+    secure aggregation quorum/custody prerequisites, and DP noise-service
+    readiness metadata produce deterministic non-actuating preflight manifests
+    with reference-suite gates and no live service execution.
+  - Remaining scope: actual live distributed transport, live secure aggregation
+    execution, production differential-privacy noise service operation, and
+    operator UI surfacing.
 - Byzantine-fault-tolerant meta-orchestrator:
   offline three-node BFT consensus manifests verify signed policy proposals,
   hash-linked audit parents, quorum winners, rejected nodes, and non-actuating

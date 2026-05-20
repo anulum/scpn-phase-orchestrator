@@ -22,7 +22,9 @@ __all__ = [
     "DpNoiseServiceReadiness",
     "DpNoiseServiceRequestManifest",
     "DpNoiseServiceResponseManifest",
+    "DpNoiseServiceDeploymentPreflightManifest",
     "build_dp_noise_service_manifest",
+    "build_dp_noise_service_deployment_preflight_manifest",
 ]
 
 
@@ -205,6 +207,86 @@ class DpNoiseServiceResponseManifest:
         }
 
 
+@dataclass(frozen=True)
+class DpNoiseServiceDeploymentPreflightManifest:
+    """Deterministic review-only deployment preflight manifest."""
+
+    schema_name: str
+    schema_version: str
+    mechanism_label: str
+    privacy_accountant_owner: str
+    seed_custody_label: str
+    budget_issuer_label: str
+    service_endpoint_label: str
+    operator_approved: bool
+    request_hash: str
+    response_hash: str
+    epsilon: float
+    delta: float
+    deployment_readiness: DpNoiseServiceReadiness
+    service_execution_permitted: bool
+    raw_data_export_permitted: bool
+    operator_review_required: bool
+    non_actuating: bool
+    audit_record_hash: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.mechanism_label, str):
+            raise ValueError("mechanism_label must be a non-empty string")
+        if not isinstance(self.privacy_accountant_owner, str):
+            raise ValueError("privacy_accountant_owner must be a non-empty string")
+        if not isinstance(self.seed_custody_label, str):
+            raise ValueError("seed_custody_label must be a non-empty string")
+        if not isinstance(self.budget_issuer_label, str):
+            raise ValueError("budget_issuer_label must be a non-empty string")
+        if not isinstance(self.service_endpoint_label, str):
+            raise ValueError("service_endpoint_label must be a non-empty string")
+        if not isinstance(self.operator_approved, bool):
+            raise ValueError("operator_approved must be a boolean")
+        if not isinstance(self.request_hash, str) or len(self.request_hash) != 64:
+            raise ValueError("request_hash must be a 64-char hex hash")
+        if not isinstance(self.response_hash, str) or len(self.response_hash) != 64:
+            raise ValueError("response_hash must be a 64-char hex hash")
+        if not isinstance(self.epsilon, Real) or not math.isfinite(self.epsilon):
+            raise ValueError("epsilon must be a finite float")
+        if self.epsilon <= 0.0:
+            raise ValueError("epsilon must be greater than 0")
+        if not isinstance(self.delta, Real) or not math.isfinite(self.delta):
+            raise ValueError("delta must be a finite float")
+        if not 0.0 < self.delta < 1.0:
+            raise ValueError("delta must be in (0, 1)")
+        try:
+            bytes.fromhex(self.request_hash)
+        except ValueError as exc:
+            raise ValueError("request_hash must be hexadecimal") from exc
+        try:
+            bytes.fromhex(self.response_hash)
+        except ValueError as exc:
+            raise ValueError("response_hash must be hexadecimal") from exc
+
+    def to_audit_record(self) -> dict[str, object]:
+        return {
+            "schema_name": self.schema_name,
+            "schema_version": self.schema_version,
+            "mechanism_label": self.mechanism_label,
+            "privacy_accountant_owner": self.privacy_accountant_owner,
+            "seed_custody_label": self.seed_custody_label,
+            "budget_issuer_label": self.budget_issuer_label,
+            "service_endpoint_label": self.service_endpoint_label,
+            "operator_approved": self.operator_approved,
+            "request_hash": self.request_hash,
+            "response_hash": self.response_hash,
+            "epsilon": self.epsilon,
+            "delta": self.delta,
+            "deployment_readiness": self.deployment_readiness.to_audit_record(),
+            "service_execution_permitted": self.service_execution_permitted,
+            "raw_data_export_permitted": self.raw_data_export_permitted,
+            "operator_review_required": self.operator_review_required,
+            "non_actuating": self.non_actuating,
+            "audit_record_hash": self.audit_record_hash,
+        }
+
+
 def build_dp_noise_service_manifest(
     request: DpNoiseServiceRequestManifest,
 ) -> DpNoiseServiceResponseManifest:
@@ -266,6 +348,125 @@ def build_dp_noise_service_manifest(
     )
 
 
+def build_dp_noise_service_deployment_preflight_manifest(
+    request_manifest: DpNoiseServiceRequestManifest,
+    response_manifest: DpNoiseServiceResponseManifest,
+    *,
+    mechanism_label: str,
+    privacy_accountant_owner: str,
+    seed_custody_label: str,
+    budget_issuer_label: str,
+    service_endpoint_label: str,
+    operator_approved: bool,
+) -> DpNoiseServiceDeploymentPreflightManifest:
+    """Build a deterministic DP-noise deployment preflight manifest."""
+    if not isinstance(request_manifest, DpNoiseServiceRequestManifest):
+        raise ValueError("request_manifest must be a DpNoiseServiceRequestManifest")
+    if not isinstance(response_manifest, DpNoiseServiceResponseManifest):
+        raise ValueError("response_manifest must be a DpNoiseServiceResponseManifest")
+
+    request_hash = _stable_hash(request_manifest.to_audit_record())
+    response_hash_record = response_manifest.to_audit_record()
+    response_hash_record["audit_record_hash"] = ""
+    response_hash = _stable_hash(response_hash_record)
+
+    missing_reasons: list[str] = []
+
+    mechanism_label = _validated_label(
+        mechanism_label, "mechanism_label", missing_reasons
+    )
+    privacy_accountant_owner = _validated_label(
+        privacy_accountant_owner,
+        "privacy_accountant_owner",
+        missing_reasons,
+    )
+    seed_custody_label = _validated_label(
+        seed_custody_label, "seed_custody_label", missing_reasons
+    )
+    budget_issuer_label = _validated_label(
+        budget_issuer_label, "budget_issuer_label", missing_reasons
+    )
+    service_endpoint_label = _validated_label(
+        service_endpoint_label, "service_endpoint_label", missing_reasons
+    )
+    if not isinstance(operator_approved, bool):
+        raise ValueError("operator_approved must be a boolean")
+    if operator_approved is False:
+        missing_reasons.append("operator approval required")
+
+    if response_manifest.request_hash != request_hash:
+        missing_reasons.append("request and response hash linkage broken")
+    if response_manifest.audit_record_hash != response_hash:
+        missing_reasons.append("response hash integrity check failed")
+
+    if request_manifest.epsilon != response_manifest.epsilon:
+        missing_reasons.append(
+            "epsilon mismatch between request and response manifests"
+        )
+    if request_manifest.delta != response_manifest.delta:
+        missing_reasons.append("delta mismatch between request and response manifests")
+
+    if not math.isfinite(request_manifest.epsilon) or request_manifest.epsilon <= 0.0:
+        missing_reasons.append("epsilon must be finite and positive")
+    if (
+        not math.isfinite(request_manifest.delta)
+        or not 0.0 < request_manifest.delta < 1.0
+    ):
+        missing_reasons.append("delta must be finite in (0, 1)")
+    if not math.isfinite(response_manifest.epsilon) or response_manifest.epsilon <= 0.0:
+        missing_reasons.append("response epsilon must be finite and positive")
+    if (
+        not math.isfinite(response_manifest.delta)
+        or not 0.0 < response_manifest.delta < 1.0
+    ):
+        missing_reasons.append("response delta must be finite in (0, 1)")
+
+    ready = len(missing_reasons) == 0
+    reason = (
+        "offline_deployment_preflight_ready" if ready else "; ".join(missing_reasons)
+    )
+    manifest = DpNoiseServiceDeploymentPreflightManifest(
+        schema_name="federated_dp_noise_service_deployment_preflight_manifest",
+        schema_version="1.0.0",
+        mechanism_label=mechanism_label.strip(),
+        privacy_accountant_owner=privacy_accountant_owner.strip(),
+        seed_custody_label=seed_custody_label.strip(),
+        budget_issuer_label=budget_issuer_label.strip(),
+        service_endpoint_label=service_endpoint_label.strip(),
+        operator_approved=operator_approved,
+        request_hash=request_hash,
+        response_hash=response_hash,
+        epsilon=request_manifest.epsilon,
+        delta=request_manifest.delta,
+        deployment_readiness=DpNoiseServiceReadiness(ready=ready, reason=reason),
+        service_execution_permitted=False,
+        raw_data_export_permitted=False,
+        operator_review_required=True,
+        non_actuating=True,
+        audit_record_hash="",
+    )
+    return DpNoiseServiceDeploymentPreflightManifest(
+        schema_name=manifest.schema_name,
+        schema_version=manifest.schema_version,
+        mechanism_label=manifest.mechanism_label,
+        privacy_accountant_owner=manifest.privacy_accountant_owner,
+        seed_custody_label=manifest.seed_custody_label,
+        budget_issuer_label=manifest.budget_issuer_label,
+        service_endpoint_label=manifest.service_endpoint_label,
+        operator_approved=manifest.operator_approved,
+        request_hash=manifest.request_hash,
+        response_hash=manifest.response_hash,
+        epsilon=manifest.epsilon,
+        delta=manifest.delta,
+        deployment_readiness=manifest.deployment_readiness,
+        service_execution_permitted=manifest.service_execution_permitted,
+        raw_data_export_permitted=manifest.raw_data_export_permitted,
+        operator_review_required=manifest.operator_review_required,
+        non_actuating=manifest.non_actuating,
+        audit_record_hash=_stable_hash(manifest.to_audit_record()),
+    )
+
+
 def _generate_audit_noise(
     seed_hash: str,
     policy_keys: tuple[str, ...],
@@ -282,6 +483,15 @@ def _generate_audit_noise(
         z = math.sqrt(-2.0 * math.log(u1)) * math.cos(2.0 * math.pi * u2)
         vector.append((key, round(z * scale, 12)))
     return tuple(vector)
+
+
+def _validated_label(value: object, field_name: str, reasons: list[str]) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be a non-empty string")
+    text = value.strip()
+    if not text:
+        reasons.append(f"{field_name} is required")
+    return text
 
 
 def _stable_hash(payload: Mapping[str, object]) -> str:

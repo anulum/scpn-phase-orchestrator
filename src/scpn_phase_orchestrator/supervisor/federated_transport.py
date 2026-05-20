@@ -18,7 +18,10 @@ from numbers import Integral, Real
 __all__ = [
     "FederatedTransportEnvelope",
     "FederatedTransportReplayLedger",
+    "FederatedTransportDeploymentPreflightManifest",
     "build_signed_transport_envelopes",
+    "build_transport_deployment_preflight_manifest",
+    "validate_transport_deployment_preflight_manifest",
     "replay_federated_transport_batch",
     "validate_federated_transport_batch",
 ]
@@ -28,6 +31,8 @@ _DEFAULT_SCHEMA_NAME = "federated_transport_envelope"
 _DEFAULT_SCHEMA_VERSION = "0.1.0"
 _ALLOWED_SCHEMA_NAMES = {_DEFAULT_SCHEMA_NAME}
 _ALLOWED_SCHEMA_VERSIONS = {_DEFAULT_SCHEMA_VERSION}
+_ALLOWED_TRANSPORTS = {"jsonl", "rest", "grpc", "kafka"}
+_LIVE_TRANSPORTS = {"rest", "grpc", "kafka"}
 _ZERO_SHA256 = "0" * 64
 _ALLOWED_UPDATE_KEYS = {
     "node_id",
@@ -43,6 +48,17 @@ _ALLOWED_UPDATE_KEYS = {
     "update_hash",
 }
 _FORBIDDEN_UPDATE_SUBSTRINGS = ("raw_time_series", "raw_data_series", "raw_data")
+_ALLOWED_TRANSPORT_DECLARATION_KEYS = {
+    "transport",
+    "endpoint",
+    "owner",
+    "auth_policy",
+    "tls",
+    "secure_channel",
+    "replay_supported",
+    "local_path_evidence",
+    "operator_approved",
+}
 
 
 @dataclass(frozen=True)
@@ -110,6 +126,49 @@ class FederatedTransportReplayLedger:
             "envelope_ids": list(self.envelope_ids),
             "node_last_sequences": [list(pair) for pair in self.node_last_sequences],
             "replay_hash": self.replay_hash,
+        }
+
+
+@dataclass(frozen=True)
+class FederatedTransportDeploymentPreflightManifest:
+    """Deterministic, review-only preflight manifest for transport deployment."""
+
+    schema_name: str
+    schema_version: str
+    batch_id: str
+    preflight_id: str
+    transport: str
+    transport_endpoint: str
+    transport_audit_record: tuple[tuple[str, object], ...]
+    transport_audit_hash: str
+    replay_ledger_hash: str
+    transport_execution_permitted: bool
+    raw_data_export_permitted: bool
+    operator_review_required: bool
+    non_actuating: bool
+    preflight_signature: str
+    preflight_hash: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return JSON-safe preflight audit evidence."""
+        return {
+            "schema_name": self.schema_name,
+            "schema_version": self.schema_version,
+            "batch_id": self.batch_id,
+            "preflight_id": self.preflight_id,
+            "transport": self.transport,
+            "transport_endpoint": self.transport_endpoint,
+            "transport_audit_record": [
+                [key, value] for key, value in self.transport_audit_record
+            ],
+            "transport_audit_hash": self.transport_audit_hash,
+            "replay_ledger_hash": self.replay_ledger_hash,
+            "transport_execution_permitted": self.transport_execution_permitted,
+            "raw_data_export_permitted": self.raw_data_export_permitted,
+            "operator_review_required": self.operator_review_required,
+            "non_actuating": self.non_actuating,
+            "preflight_signature": self.preflight_signature,
+            "preflight_hash": self.preflight_hash,
         }
 
 
@@ -358,6 +417,317 @@ def replay_federated_transport_batch(
         envelope_ids=tuple(envelope.envelope_id for envelope in validated),
         node_last_sequences=node_last,
         replay_hash=replay_hash,
+    )
+
+
+def build_transport_deployment_preflight_manifest(
+    transport_declaration: Mapping[str, object],
+    *,
+    replay_ledger: FederatedTransportReplayLedger,
+    schema_name: str = _DEFAULT_SCHEMA_NAME,
+    schema_version: str = _DEFAULT_SCHEMA_VERSION,
+    batch_id: str | None = None,
+) -> FederatedTransportDeploymentPreflightManifest:
+    """Build deterministic transport preflight evidence."""
+    if schema_name not in _ALLOWED_SCHEMA_NAMES:
+        raise ValueError(
+            f"schema_name must be one of {_sorted_repr(_ALLOWED_SCHEMA_NAMES)}"
+        )
+    if schema_version not in _ALLOWED_SCHEMA_VERSIONS:
+        raise ValueError(
+            f"schema_version must be one of {_sorted_repr(_ALLOWED_SCHEMA_VERSIONS)}"
+        )
+    if not isinstance(replay_ledger, FederatedTransportReplayLedger):
+        raise ValueError("replay_ledger must be a FederatedTransportReplayLedger")
+    if replay_ledger.schema_name != schema_name:
+        raise ValueError("replay_ledger.schema_name must match schema_name")
+    if replay_ledger.schema_version != schema_version:
+        raise ValueError("replay_ledger.schema_version must match schema_version")
+    if replay_ledger.batch_id == "":
+        raise ValueError("replay_ledger.batch_id must be non-empty")
+    if not _is_sha256(replay_ledger.replay_hash):
+        raise ValueError("replay_ledger.replay_hash must be a SHA-256 digest")
+
+    normalised_declaration = _normalise_transport_declaration(
+        _normalise_transport_input(transport_declaration)
+    )
+
+    resolved_batch_id = _text(batch_id or replay_ledger.batch_id, "batch_id")
+    if resolved_batch_id != replay_ledger.batch_id:
+        raise ValueError("batch_id must match replay_ledger.batch_id")
+
+    transport_audit_record = tuple(
+        (key, value)
+        for key, value in (
+            ("transport", normalised_declaration["transport"]),
+            ("endpoint", normalised_declaration["endpoint"]),
+            ("owner", normalised_declaration["owner"]),
+            ("auth_policy", normalised_declaration["auth_policy"]),
+            ("secure_channel", normalised_declaration["secure_channel"]),
+            ("replay_supported", normalised_declaration["replay_supported"]),
+            ("operator_approved", normalised_declaration["operator_approved"]),
+            ("local_path_evidence", normalised_declaration["local_path_evidence"]),
+        )
+    )
+    transport_audit_hash = _stable_hash(
+        {
+            "transport_audit_record": [list(pair) for pair in transport_audit_record],
+            "replay_ledger_hash": replay_ledger.replay_hash,
+        }
+    )
+    preflight_signature = _build_transport_preflight_signature(
+        schema_name=schema_name,
+        schema_version=schema_version,
+        batch_id=resolved_batch_id,
+        transport=normalised_declaration["transport"],
+        transport_endpoint=normalised_declaration["endpoint"],
+        transport_audit_record=transport_audit_record,
+        replay_ledger_hash=replay_ledger.replay_hash,
+        transport_execution_permitted=False,
+        raw_data_export_permitted=False,
+        operator_review_required=True,
+        non_actuating=True,
+    )
+    preflight_id = _stable_hash(
+        {
+            "schema_name": schema_name,
+            "schema_version": schema_version,
+            "batch_id": resolved_batch_id,
+            "transport_audit_hash": transport_audit_hash,
+            "replay_ledger_hash": replay_ledger.replay_hash,
+            "transport_endpoint": normalised_declaration["endpoint"],
+        }
+    )
+    preflight_hash = _stable_hash(
+        {
+            "preflight_id": preflight_id,
+            "preflight_signature": preflight_signature,
+            "transport_audit_hash": transport_audit_hash,
+        }
+    )
+
+    manifest = FederatedTransportDeploymentPreflightManifest(
+        schema_name=schema_name,
+        schema_version=schema_version,
+        batch_id=resolved_batch_id,
+        preflight_id=preflight_id,
+        transport=normalised_declaration["transport"],
+        transport_endpoint=normalised_declaration["endpoint"],
+        transport_audit_record=transport_audit_record,
+        transport_audit_hash=transport_audit_hash,
+        replay_ledger_hash=replay_ledger.replay_hash,
+        transport_execution_permitted=False,
+        raw_data_export_permitted=False,
+        operator_review_required=True,
+        non_actuating=True,
+        preflight_signature=preflight_signature,
+        preflight_hash=preflight_hash,
+    )
+    return validate_transport_deployment_preflight_manifest(manifest)
+
+
+def validate_transport_deployment_preflight_manifest(
+    manifest: FederatedTransportDeploymentPreflightManifest,
+) -> FederatedTransportDeploymentPreflightManifest:
+    """Validate deterministic transport preflight manifest content and hashes."""
+    if not isinstance(manifest, FederatedTransportDeploymentPreflightManifest):
+        raise ValueError(
+            "manifest must be a FederatedTransportDeploymentPreflightManifest"
+        )
+
+    if manifest.schema_name not in _ALLOWED_SCHEMA_NAMES:
+        raise ValueError(
+            f"schema_name must be one of {_sorted_repr(_ALLOWED_SCHEMA_NAMES)}"
+        )
+    if manifest.schema_version not in _ALLOWED_SCHEMA_VERSIONS:
+        raise ValueError(
+            f"schema_version must be one of {_sorted_repr(_ALLOWED_SCHEMA_VERSIONS)}"
+        )
+    if manifest.batch_id == "":
+        raise ValueError("batch_id must be non-empty")
+    if not _is_sha256(manifest.replay_ledger_hash):
+        raise ValueError("replay_ledger_hash must be a SHA-256 digest")
+    if not _is_sha256(manifest.transport_audit_hash):
+        raise ValueError("transport_audit_hash must be a SHA-256 digest")
+    if not _is_sha256(manifest.preflight_signature):
+        raise ValueError("preflight_signature must be a SHA-256 digest")
+    if not _is_sha256(manifest.preflight_hash):
+        raise ValueError("preflight_hash must be a SHA-256 digest")
+
+    if manifest.transport_execution_permitted is not False:
+        raise ValueError("transport_execution_permitted must be False")
+    if manifest.raw_data_export_permitted is not False:
+        raise ValueError("raw_data_export_permitted must be False")
+    if manifest.operator_review_required is not True:
+        raise ValueError("operator_review_required must be True")
+    if manifest.non_actuating is not True:
+        raise ValueError("non_actuating must be True")
+
+    declaration_from_record = dict(manifest.transport_audit_record)
+    if declaration_from_record.get("transport") != manifest.transport:
+        raise ValueError("transport mismatch")
+    if declaration_from_record.get("endpoint") != manifest.transport_endpoint:
+        raise ValueError("transport_endpoint mismatch")
+    _normalise_transport_declaration(declaration_from_record)
+    expected_signature = _build_transport_preflight_signature(
+        schema_name=manifest.schema_name,
+        schema_version=manifest.schema_version,
+        batch_id=manifest.batch_id,
+        transport=manifest.transport,
+        transport_endpoint=manifest.transport_endpoint,
+        transport_audit_record=manifest.transport_audit_record,
+        replay_ledger_hash=manifest.replay_ledger_hash,
+        transport_execution_permitted=manifest.transport_execution_permitted,
+        raw_data_export_permitted=manifest.raw_data_export_permitted,
+        operator_review_required=manifest.operator_review_required,
+        non_actuating=manifest.non_actuating,
+    )
+    if manifest.preflight_signature != expected_signature:
+        raise ValueError("preflight_signature mismatch")
+
+    expected_transport_audit_hash = _stable_hash(
+        {
+            "transport_audit_record": [
+                list(pair) for pair in manifest.transport_audit_record
+            ],
+            "replay_ledger_hash": manifest.replay_ledger_hash,
+        }
+    )
+    if manifest.transport_audit_hash != expected_transport_audit_hash:
+        raise ValueError("transport_audit_hash mismatch")
+
+    expected_preflight_id = _stable_hash(
+        {
+            "schema_name": manifest.schema_name,
+            "schema_version": manifest.schema_version,
+            "batch_id": manifest.batch_id,
+            "transport_audit_hash": manifest.transport_audit_hash,
+            "replay_ledger_hash": manifest.replay_ledger_hash,
+            "transport_endpoint": manifest.transport_endpoint,
+        }
+    )
+    if manifest.preflight_id != expected_preflight_id:
+        raise ValueError("preflight_id mismatch")
+
+    expected_hash = _stable_hash(
+        {
+            "preflight_id": manifest.preflight_id,
+            "preflight_signature": manifest.preflight_signature,
+            "transport_audit_hash": manifest.transport_audit_hash,
+        }
+    )
+    if manifest.preflight_hash != expected_hash:
+        raise ValueError("preflight_hash mismatch")
+
+    return manifest
+
+
+def _normalise_transport_input(
+    transport_declaration: Mapping[str, object] | object,
+) -> Mapping[str, object]:
+    if not isinstance(transport_declaration, Mapping):
+        raise ValueError("transport declaration must be a mapping")
+    return transport_declaration
+
+
+def _normalise_transport_declaration(
+    raw: Mapping[str, object],
+) -> dict[str, object]:
+    for key in raw:
+        if not isinstance(key, str):
+            raise ValueError("transport declaration keys must be text")
+        if key not in _ALLOWED_TRANSPORT_DECLARATION_KEYS:
+            raise ValueError(f"unsupported transport declaration key: {key}")
+
+    transport = _text(raw.get("transport"), "transport").lower()
+    if transport not in _ALLOWED_TRANSPORTS:
+        raise ValueError(
+            f"transport must be one of {_sorted_repr(_ALLOWED_TRANSPORTS)}"
+        )
+    endpoint = _text(raw.get("endpoint"), "endpoint")
+
+    replay_supported = _bool(raw.get("replay_supported", False), "replay_supported")
+    operator_approved = _bool(raw.get("operator_approved", False), "operator_approved")
+    tls = raw.get("tls")
+    secure_channel = raw.get("secure_channel")
+    if tls is not None and secure_channel is not None:
+        tls_bool = _bool(tls, "tls")
+        secure_bool = _bool(secure_channel, "secure_channel")
+        if tls_bool != secure_bool:
+            raise ValueError("tls and secure_channel values must match")
+        secure_channel_value = tls_bool
+    elif tls is not None:
+        secure_channel_value = _bool(tls, "tls")
+    elif secure_channel is not None:
+        secure_channel_value = _bool(secure_channel, "secure_channel")
+    else:
+        secure_channel_value = False
+
+    if transport in _LIVE_TRANSPORTS:
+        owner = _text(raw.get("owner"), "owner")
+        auth_policy = _text(raw.get("auth_policy"), "auth_policy")
+        if not operator_approved:
+            raise ValueError("operator approval is required for live transport")
+        if not replay_supported:
+            raise ValueError("replay support must be true for live transport")
+        if not secure_channel_value:
+            raise ValueError("live transport must use TLS or secure_channel")
+        local_path_evidence = ""
+    else:
+        owner = ""
+        auth_policy = ""
+        if raw.get("owner") not in (None, ""):
+            raise ValueError("owner is not permitted for jsonl transport")
+        if raw.get("auth_policy") not in (None, ""):
+            raise ValueError("auth_policy is not permitted for jsonl transport")
+        if "tls" in raw or raw.get("secure_channel") not in (None, False):
+            raise ValueError("TLS is not applicable to jsonl transport")
+        if not replay_supported:
+            raise ValueError("jsonl transport must declare replay support")
+        local_path_evidence = _text(
+            raw.get("local_path_evidence"), "local_path_evidence"
+        )
+
+    return {
+        "transport": transport,
+        "endpoint": endpoint,
+        "owner": owner,
+        "auth_policy": auth_policy,
+        "secure_channel": secure_channel_value,
+        "replay_supported": replay_supported,
+        "local_path_evidence": local_path_evidence,
+        "operator_approved": operator_approved,
+    }
+
+
+def _build_transport_preflight_signature(
+    *,
+    schema_name: str,
+    schema_version: str,
+    batch_id: str,
+    transport: str,
+    transport_endpoint: str,
+    transport_audit_record: tuple[tuple[str, object], ...],
+    replay_ledger_hash: str,
+    transport_execution_permitted: bool,
+    raw_data_export_permitted: bool,
+    operator_review_required: bool,
+    non_actuating: bool,
+) -> str:
+    return _stable_hash(
+        {
+            "schema_name": schema_name,
+            "schema_version": schema_version,
+            "batch_id": batch_id,
+            "transport": transport,
+            "transport_endpoint": transport_endpoint,
+            "transport_audit_record": [list(pair) for pair in transport_audit_record],
+            "replay_ledger_hash": replay_ledger_hash,
+            "transport_execution_permitted": transport_execution_permitted,
+            "raw_data_export_permitted": raw_data_export_permitted,
+            "operator_review_required": operator_review_required,
+            "non_actuating": non_actuating,
+        }
     )
 
 

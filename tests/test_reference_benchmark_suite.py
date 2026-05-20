@@ -19,6 +19,7 @@ from benchmarks.reference_suite import (
     benchmark_domain_formal_safety_exports,
     benchmark_evolutionary_mutation_grammar_gate,
     benchmark_evolutionary_supervisor_search,
+    benchmark_federated_deployment_preflight_gate,
     benchmark_federated_meta_orchestrator,
     benchmark_federated_production_boundary_gate,
     benchmark_formal_export_artifact_quality,
@@ -376,6 +377,57 @@ def test_federated_production_boundary_gate_reports_thresholds_and_records() -> 
     assert record["dp_noise_service"]["service_execution_permitted"] is False
     assert record["dp_noise_service"]["raw_data_export_permitted"] is False
     assert record["dp_noise_service"]["operator_review_required"] is True
+
+
+def test_federated_deployment_preflight_gate_benchmark_shape() -> None:
+    out = benchmark_federated_deployment_preflight_gate()
+
+    assert out["suite"] == "federated_deployment_preflight_gate"
+    assert out["preflight_surface_count"] == 3
+    assert out["transport_preflight_count"] == 1
+    assert out["secure_preflight_count"] == 1
+    assert out["dp_preflight_count"] == 1
+    assert out["transport_execution_disabled"] == 1
+    assert out["secure_execution_disabled"] == 1
+    assert out["service_execution_disabled"] == 1
+    assert out["raw_data_export_disabled"] == 1
+    assert out["operator_review_required"] == 1
+    assert out["non_actuating"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["preflight_hash"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_federated_deployment_preflight_gate_reports_thresholds_and_records() -> None:
+    out = benchmark_federated_deployment_preflight_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    record = json.loads(str(out["preflight_record_json"]))
+
+    assert thresholds == {
+        "min_dp_preflight_count": 1,
+        "min_preflight_surface_count": 3,
+        "min_secure_preflight_count": 1,
+        "min_transport_preflight_count": 1,
+        "require_deterministic_hash": True,
+        "require_non_actuating": True,
+        "require_operator_review": True,
+        "require_raw_data_export_disabled": True,
+        "require_secure_execution_disabled": True,
+        "require_service_execution_disabled": True,
+        "require_transport_execution_disabled": True,
+    }
+    assert set(record) == {
+        "dp_noise_service_preflight",
+        "secure_aggregation_preflight",
+        "transport_preflight",
+    }
+    assert record["transport_preflight"]["transport_execution_permitted"] is False
+    assert (
+        record["secure_aggregation_preflight"]["secure_aggregation_execution_permitted"]
+        is False
+    )
+    assert record["dp_noise_service_preflight"]["service_execution_permitted"] is False
 
 
 def test_meta_transfer_package_manifest_quality_benchmark_shape() -> None:
@@ -1576,6 +1628,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "auto_binding",
         "evolutionary_supervisor_search",
         "evolutionary_mutation_grammars",
+        "federated_deployment_preflight",
         "federated_meta_orchestrator",
         "federated_production_boundary",
         "autopoietic_lineage",

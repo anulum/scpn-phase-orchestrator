@@ -18,9 +18,16 @@ from numbers import Integral, Real
 __all__ = [
     "SecureAggregationConfig",
     "SecureNodeCommitment",
+    "SecureNodeCustodyRecord",
+    "SecureAggregationQuorumEvidence",
     "FederatedSecureAggregationManifest",
+    "FederatedSecureAggregationPreflightManifest",
     "build_federated_secure_aggregation_manifest",
+    "build_federated_secure_aggregation_preflight_manifest",
 ]
+
+
+SUPPORTED_CUSTODY_ROTATION_POLICIES = ("continuous", "manual", "scheduled")
 
 
 @dataclass(frozen=True)
@@ -73,6 +80,43 @@ class SecureNodeCommitment:
 
 
 @dataclass(frozen=True)
+class SecureAggregationQuorumEvidence:
+    """Signed quorum metadata for review-only preflight."""
+
+    node_id: str
+    evidence_hash: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe quorum evidence record."""
+        return {"node_id": self.node_id, "evidence_hash": self.evidence_hash}
+
+
+@dataclass(frozen=True)
+class SecureNodeCustodyRecord:
+    """Custody metadata for key and share labels used in review."""
+
+    node_id: str
+    key_custody_label: str
+    share_custody_label: str
+    previous_key_custody_label: str
+    previous_share_custody_label: str
+    key_custody_continuity_hash: str
+    share_custody_continuity_hash: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe node-custody audit record."""
+        return {
+            "node_id": self.node_id,
+            "key_custody_label": self.key_custody_label,
+            "share_custody_label": self.share_custody_label,
+            "previous_key_custody_label": self.previous_key_custody_label,
+            "previous_share_custody_label": self.previous_share_custody_label,
+            "key_custody_continuity_hash": self.key_custody_continuity_hash,
+            "share_custody_continuity_hash": self.share_custody_continuity_hash,
+        }
+
+
+@dataclass(frozen=True)
 class FederatedSecureAggregationManifest:
     """Manifest for deterministic offline secure aggregation review only."""
 
@@ -120,6 +164,59 @@ class FederatedSecureAggregationManifest:
             "non_actuating": self.non_actuating,
             "quorum_met": self.quorum_met,
             "claim_boundary": self.claim_boundary,
+            "report_hash": self.report_hash,
+        }
+
+
+@dataclass(frozen=True)
+class FederatedSecureAggregationPreflightManifest:
+    """Review-only deployment preflight envelope for manifest execution."""
+
+    schema_name: str
+    schema_version: str
+    secure_aggregation_schema_name: str
+    secure_aggregation_schema_version: str
+    secure_aggregation_report_hash: str
+    accepted_node_threshold: int
+    accepted_node_count: int
+    quorum_evidence: tuple[SecureAggregationQuorumEvidence, ...]
+    custody_rotation_policy: str
+    custody_records: tuple[SecureNodeCustodyRecord, ...]
+    operator_approved: bool
+    operator_id: str
+    service_owner: str
+    secure_aggregation_execution_permitted: bool
+    raw_data_export_permitted: bool
+    operator_review_required: bool
+    non_actuating: bool
+    report_hash: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe preflight audit record."""
+        return {
+            "schema_name": self.schema_name,
+            "schema_version": self.schema_version,
+            "secure_aggregation_schema_name": self.secure_aggregation_schema_name,
+            "secure_aggregation_schema_version": self.secure_aggregation_schema_version,
+            "secure_aggregation_report_hash": self.secure_aggregation_report_hash,
+            "accepted_node_threshold": self.accepted_node_threshold,
+            "accepted_node_count": self.accepted_node_count,
+            "quorum_evidence": [
+                entry.to_audit_record() for entry in self.quorum_evidence
+            ],
+            "custody_rotation_policy": self.custody_rotation_policy,
+            "custody_records": [
+                record.to_audit_record() for record in self.custody_records
+            ],
+            "operator_approved": self.operator_approved,
+            "operator_id": self.operator_id,
+            "service_owner": self.service_owner,
+            "secure_aggregation_execution_permitted": (
+                self.secure_aggregation_execution_permitted
+            ),
+            "raw_data_export_permitted": self.raw_data_export_permitted,
+            "operator_review_required": self.operator_review_required,
+            "non_actuating": self.non_actuating,
             "report_hash": self.report_hash,
         }
 
@@ -216,6 +313,114 @@ def build_federated_secure_aggregation_manifest(
         quorum_met=report.quorum_met,
         claim_boundary=report.claim_boundary,
         report_hash=_stable_hash(report.to_audit_record()),
+    )
+
+
+def build_federated_secure_aggregation_preflight_manifest(
+    secure_aggregation_manifest: FederatedSecureAggregationManifest,
+    *,
+    quorum_evidence: Sequence[Mapping[str, object]],
+    custody_rotation_policy: str,
+    custody_records: Sequence[Mapping[str, object]],
+    accepted_node_threshold: int,
+    operator_approved: bool,
+    operator_id: str,
+    service_owner: str,
+) -> FederatedSecureAggregationPreflightManifest:
+    """Build a deterministic review-only deployment preflight manifest."""
+    if not isinstance(secure_aggregation_manifest, FederatedSecureAggregationManifest):
+        raise TypeError(
+            "secure_aggregation_manifest must be a FederatedSecureAggregationManifest"
+        )
+
+    if not operator_approved:
+        raise ValueError("operator approval is required for preflight")
+
+    operator = _non_empty_text(operator_id, "operator_id")
+    owner = _non_empty_text(service_owner, "service_owner")
+    threshold = _positive_int(accepted_node_threshold, "accepted_node_threshold")
+    rotation_policy = _non_empty_text(
+        custody_rotation_policy, "custody_rotation_policy"
+    )
+    if rotation_policy not in SUPPORTED_CUSTODY_ROTATION_POLICIES:
+        raise ValueError("unsupported custody rotation policy")
+
+    if not secure_aggregation_manifest.quorum_met:
+        raise ValueError("secure aggregation manifest quorum not met")
+
+    report_record = secure_aggregation_manifest.to_audit_record()
+    report_record["report_hash"] = ""
+    expected_report_hash = _stable_hash(report_record)
+    manifest_report_hash = _sha256_hex(
+        secure_aggregation_manifest.report_hash, "secure_aggregation_report_hash"
+    )
+    if manifest_report_hash != expected_report_hash:
+        raise ValueError("secure_aggregation_manifest report hash mismatch")
+
+    accepted_nodes = tuple(
+        node.node_id
+        for node in secure_aggregation_manifest.node_commitments
+        if node.accepted
+    )
+    if len(accepted_nodes) < threshold:
+        raise ValueError("accepted-node threshold not met")
+
+    evidence = _resolve_preflight_quorum_evidence(
+        quorum_evidence,
+        accepted_nodes=accepted_nodes,
+        accepted_node_threshold=threshold,
+    )
+    custody = _resolve_node_custody_records(
+        custody_records,
+        accepted_nodes=accepted_nodes,
+        custody_rotation_policy=rotation_policy,
+    )
+
+    custody_node_ids = tuple(record.node_id for record in custody)
+    if len(custody_node_ids) != len(set(custody_node_ids)):
+        raise ValueError("custody records must be unique per accepted node")
+    if set(custody_node_ids) != set(accepted_nodes):
+        raise ValueError("custody labels must cover all accepted nodes")
+
+    preflight = FederatedSecureAggregationPreflightManifest(
+        schema_name="federated_secure_aggregation_preflight_manifest",
+        schema_version="0.1.0",
+        secure_aggregation_schema_name=secure_aggregation_manifest.schema_name,
+        secure_aggregation_schema_version=secure_aggregation_manifest.schema_version,
+        secure_aggregation_report_hash=manifest_report_hash,
+        accepted_node_threshold=threshold,
+        accepted_node_count=len(accepted_nodes),
+        quorum_evidence=tuple(sorted(evidence, key=lambda entry: entry.node_id)),
+        custody_rotation_policy=rotation_policy,
+        custody_records=tuple(sorted(custody, key=lambda entry: entry.node_id)),
+        operator_approved=operator_approved,
+        operator_id=operator,
+        service_owner=owner,
+        secure_aggregation_execution_permitted=False,
+        raw_data_export_permitted=False,
+        operator_review_required=True,
+        non_actuating=True,
+        report_hash="",
+    )
+    return FederatedSecureAggregationPreflightManifest(
+        schema_name=preflight.schema_name,
+        schema_version=preflight.schema_version,
+        secure_aggregation_schema_name=preflight.secure_aggregation_schema_name,
+        secure_aggregation_schema_version=preflight.secure_aggregation_schema_version,
+        secure_aggregation_report_hash=preflight.secure_aggregation_report_hash,
+        accepted_node_threshold=preflight.accepted_node_threshold,
+        accepted_node_count=preflight.accepted_node_count,
+        quorum_evidence=preflight.quorum_evidence,
+        custody_rotation_policy=preflight.custody_rotation_policy,
+        custody_records=preflight.custody_records,
+        operator_approved=preflight.operator_approved,
+        operator_id=preflight.operator_id,
+        service_owner=preflight.service_owner,
+        secure_aggregation_execution_permitted=preflight.secure_aggregation_execution_permitted,
+        raw_data_export_permitted=preflight.raw_data_export_permitted,
+        operator_review_required=preflight.operator_review_required,
+        non_actuating=preflight.non_actuating,
+        report_hash=_stable_hash(preflight.to_audit_record()),
     )
 
 
@@ -375,6 +580,155 @@ def _weighted_masked_average(
     return tuple(
         (key, aggregate[key]) for key in required_policy_keys
     ), total_sample_count
+
+
+def _resolve_preflight_quorum_evidence(
+    quorum_evidence: Sequence[Mapping[str, object]],
+    *,
+    accepted_nodes: tuple[str, ...],
+    accepted_node_threshold: int,
+) -> tuple[SecureAggregationQuorumEvidence, ...]:
+    if not isinstance(quorum_evidence, Sequence) or isinstance(
+        quorum_evidence, (str, bytes, bytearray)
+    ):
+        raise ValueError("quorum_evidence must be a sequence of mappings")
+    if not quorum_evidence:
+        raise ValueError("quorum_evidence must be non-empty")
+
+    seen_nodes: set[str] = set()
+    accepted_set = set(accepted_nodes)
+    resolved = tuple(
+        _validate_preflight_quorum_evidence(
+            raw,
+            seen_nodes=seen_nodes,
+            accepted_nodes=accepted_set,
+        )
+        for raw in quorum_evidence
+    )
+
+    if len(resolved) < accepted_node_threshold:
+        raise ValueError("quorum evidence below accepted-node threshold")
+    return resolved
+
+
+def _validate_preflight_quorum_evidence(
+    raw: Mapping[str, object],
+    *,
+    seen_nodes: set[str],
+    accepted_nodes: set[str],
+) -> SecureAggregationQuorumEvidence:
+    if not isinstance(raw, Mapping):
+        raise ValueError("each quorum evidence entry must be a mapping")
+
+    node_id = _non_empty_text(raw.get("node_id"), "quorum_evidence.node_id")
+    if node_id in seen_nodes:
+        raise ValueError(f"quorum evidence duplicated node_id: {node_id}")
+    if node_id not in accepted_nodes:
+        raise ValueError("quorum evidence must reference accepted nodes only")
+    seen_nodes.add(node_id)
+    evidence_hash = _sha256_hex(
+        raw.get("evidence_hash"), "quorum_evidence.evidence_hash"
+    )
+
+    return SecureAggregationQuorumEvidence(node_id=node_id, evidence_hash=evidence_hash)
+
+
+def _resolve_node_custody_records(
+    custody_records: Sequence[Mapping[str, object]],
+    *,
+    accepted_nodes: tuple[str, ...],
+    custody_rotation_policy: str,
+) -> tuple[SecureNodeCustodyRecord, ...]:
+    if not isinstance(custody_records, Sequence) or isinstance(
+        custody_records, (str, bytes, bytearray)
+    ):
+        raise ValueError("custody_records must be a sequence of mappings")
+    if not custody_records:
+        raise ValueError("custody_records must be non-empty")
+
+    accepted_set = set(accepted_nodes)
+    seen_nodes: set[str] = set()
+    return tuple(
+        _validate_node_custody_record(
+            raw,
+            seen_nodes=seen_nodes,
+            accepted_nodes=accepted_set,
+            custody_rotation_policy=custody_rotation_policy,
+        )
+        for raw in custody_records
+    )
+
+
+def _validate_node_custody_record(
+    raw: Mapping[str, object],
+    *,
+    seen_nodes: set[str],
+    accepted_nodes: set[str],
+    custody_rotation_policy: str,
+) -> SecureNodeCustodyRecord:
+    if not isinstance(raw, Mapping):
+        raise ValueError("each custody record must be a mapping")
+
+    node_id = _non_empty_text(raw.get("node_id"), "custody_records.node_id")
+    if node_id in seen_nodes:
+        raise ValueError(f"custody record duplicated node_id: {node_id}")
+    if node_id not in accepted_nodes:
+        raise ValueError("custody labels must reference accepted nodes only")
+    seen_nodes.add(node_id)
+
+    key_custody_label = _sha256_hex(
+        raw.get("key_custody_label"), "custody_records.key_custody_label"
+    )
+    share_custody_label = _sha256_hex(
+        raw.get("share_custody_label"), "custody_records.share_custody_label"
+    )
+    previous_key_custody_label = _sha256_hex(
+        raw.get("previous_key_custody_label"),
+        "custody_records.previous_key_custody_label",
+    )
+    previous_share_custody_label = _sha256_hex(
+        raw.get("previous_share_custody_label"),
+        "custody_records.previous_share_custody_label",
+    )
+    key_custody_continuity_hash = _sha256_hex(
+        raw.get("key_custody_continuity_hash"),
+        "custody_records.key_custody_continuity_hash",
+    )
+    share_custody_continuity_hash = _sha256_hex(
+        raw.get("share_custody_continuity_hash"),
+        "custody_records.share_custody_continuity_hash",
+    )
+
+    expected_key_continuity = _stable_hash(
+        {
+            "node_id": node_id,
+            "rotation_policy": custody_rotation_policy,
+            "previous_key_custody_label": previous_key_custody_label,
+            "key_custody_label": key_custody_label,
+        }
+    )
+    if key_custody_continuity_hash != expected_key_continuity:
+        raise ValueError("key custody continuity hash mismatch")
+    expected_share_continuity = _stable_hash(
+        {
+            "node_id": node_id,
+            "rotation_policy": custody_rotation_policy,
+            "previous_share_custody_label": previous_share_custody_label,
+            "share_custody_label": share_custody_label,
+        }
+    )
+    if share_custody_continuity_hash != expected_share_continuity:
+        raise ValueError("share custody continuity hash mismatch")
+
+    return SecureNodeCustodyRecord(
+        node_id=node_id,
+        key_custody_label=key_custody_label,
+        share_custody_label=share_custody_label,
+        previous_key_custody_label=previous_key_custody_label,
+        previous_share_custody_label=previous_share_custody_label,
+        key_custody_continuity_hash=key_custody_continuity_hash,
+        share_custody_continuity_hash=share_custody_continuity_hash,
+    )
 
 
 def _sha256_hex(value: object, field: str) -> str:

@@ -72,13 +72,16 @@ from scpn_phase_orchestrator.supervisor.causal import (
 from scpn_phase_orchestrator.supervisor.federated_dp_noise_service import (
     DpNoiseNodePrivacyBudget,
     DpNoiseServiceRequestManifest,
+    build_dp_noise_service_deployment_preflight_manifest,
     build_dp_noise_service_manifest,
 )
 from scpn_phase_orchestrator.supervisor.federated_secure_aggregation import (
     build_federated_secure_aggregation_manifest,
+    build_federated_secure_aggregation_preflight_manifest,
 )
 from scpn_phase_orchestrator.supervisor.federated_transport import (
     build_signed_transport_envelopes,
+    build_transport_deployment_preflight_manifest,
     replay_federated_transport_batch,
 )
 from scpn_phase_orchestrator.supervisor.formal_export import (
@@ -327,6 +330,20 @@ class FederatedProductionBoundaryThresholds(NamedTuple):
     min_transport_envelope_count: int
     min_secure_accepted_node_count: int
     min_dp_noise_vector_count: int
+    require_transport_execution_disabled: bool
+    require_secure_execution_disabled: bool
+    require_service_execution_disabled: bool
+    require_raw_data_export_disabled: bool
+    require_operator_review: bool
+    require_non_actuating: bool
+    require_deterministic_hash: bool
+
+
+class FederatedDeploymentPreflightThresholds(NamedTuple):
+    min_preflight_surface_count: int
+    min_transport_preflight_count: int
+    min_secure_preflight_count: int
+    min_dp_preflight_count: int
     require_transport_execution_disabled: bool
     require_secure_execution_disabled: bool
     require_service_execution_disabled: bool
@@ -3870,6 +3887,217 @@ def benchmark_federated_production_boundary_gate() -> dict[str, float | int | st
     }
 
 
+def benchmark_federated_deployment_preflight_gate() -> dict[str, float | int | str]:
+    """Gate review-only deployment preflights for federated runtime surfaces."""
+    thresholds = FederatedDeploymentPreflightThresholds(
+        min_preflight_surface_count=3,
+        min_transport_preflight_count=1,
+        min_secure_preflight_count=1,
+        min_dp_preflight_count=1,
+        require_transport_execution_disabled=True,
+        require_secure_execution_disabled=True,
+        require_service_execution_disabled=True,
+        require_raw_data_export_disabled=True,
+        require_operator_review=True,
+        require_non_actuating=True,
+        require_deterministic_hash=True,
+    )
+    policy_keys = ("K", "alpha")
+    transport_records = _federated_transport_fixture_records()
+    secure_commitments = _federated_secure_commitment_fixture_records()
+    dp_request = DpNoiseServiceRequestManifest(
+        epsilon=2.5,
+        delta=1e-6,
+        sensitivity=1.25,
+        noise_multiplier=0.8,
+        node_count=3,
+        seed_hash="f" * 64,
+        policy_keys=policy_keys,
+        node_budgets=(
+            DpNoiseNodePrivacyBudget(node_id="site-a", epsilon_spent=0.5),
+            DpNoiseNodePrivacyBudget(node_id="site-b", epsilon_spent=0.6),
+            DpNoiseNodePrivacyBudget(node_id="site-c", epsilon_spent=0.4),
+        ),
+    )
+
+    t0 = time.perf_counter()
+    envelopes = build_signed_transport_envelopes(transport_records)
+    transport_ledger = replay_federated_transport_batch(envelopes)
+    transport_preflight = build_transport_deployment_preflight_manifest(
+        {
+            "transport": "rest",
+            "endpoint": "https://spo-federated-transport.internal/replay",
+            "owner": "federated-runtime-owner",
+            "auth_policy": "mtls+operator-token",
+            "tls": True,
+            "replay_supported": True,
+            "operator_approved": True,
+        },
+        replay_ledger=transport_ledger,
+    )
+    secure_manifest = build_federated_secure_aggregation_manifest(
+        secure_commitments,
+        required_policy_keys=policy_keys,
+        clipping_norm=1.0,
+        min_node_count=3,
+        epsilon=2.5,
+        delta=1e-6,
+    )
+    secure_preflight = build_federated_secure_aggregation_preflight_manifest(
+        secure_manifest,
+        quorum_evidence=_federated_secure_quorum_fixture_records(),
+        custody_rotation_policy="scheduled",
+        custody_records=_federated_secure_custody_fixture_records("scheduled"),
+        accepted_node_threshold=3,
+        operator_approved=True,
+        operator_id="federated-operator",
+        service_owner="secure-aggregation-owner",
+    )
+    dp_manifest = build_dp_noise_service_manifest(dp_request)
+    dp_preflight = build_dp_noise_service_deployment_preflight_manifest(
+        dp_request,
+        dp_manifest,
+        mechanism_label="gaussian-mechanism-review-v1",
+        privacy_accountant_owner="privacy-accountant-owner",
+        seed_custody_label="seed-custody-ledger-federated",
+        budget_issuer_label="budget-issuer-federated",
+        service_endpoint_label="dp-noise-service-review-endpoint",
+        operator_approved=True,
+    )
+
+    repeated_transport_preflight = build_transport_deployment_preflight_manifest(
+        dict(transport_preflight.transport_audit_record),
+        replay_ledger=transport_ledger,
+    )
+    repeated_secure_preflight = build_federated_secure_aggregation_preflight_manifest(
+        secure_manifest,
+        quorum_evidence=_federated_secure_quorum_fixture_records(),
+        custody_rotation_policy="scheduled",
+        custody_records=_federated_secure_custody_fixture_records("scheduled"),
+        accepted_node_threshold=3,
+        operator_approved=True,
+        operator_id="federated-operator",
+        service_owner="secure-aggregation-owner",
+    )
+    repeated_dp_preflight = build_dp_noise_service_deployment_preflight_manifest(
+        dp_request,
+        dp_manifest,
+        mechanism_label="gaussian-mechanism-review-v1",
+        privacy_accountant_owner="privacy-accountant-owner",
+        seed_custody_label="seed-custody-ledger-federated",
+        budget_issuer_label="budget-issuer-federated",
+        service_endpoint_label="dp-noise-service-review-endpoint",
+        operator_approved=True,
+    )
+    elapsed = time.perf_counter() - t0
+
+    transport_record = transport_preflight.to_audit_record()
+    secure_record = secure_preflight.to_audit_record()
+    dp_record = dp_preflight.to_audit_record()
+    preflight_record = {
+        "transport_preflight": transport_record,
+        "secure_aggregation_preflight": secure_record,
+        "dp_noise_service_preflight": dp_record,
+    }
+    preflight_hash = _stable_record_hash(preflight_record)
+    deterministic_hash = int(
+        transport_preflight.preflight_hash
+        == repeated_transport_preflight.preflight_hash
+        and secure_preflight.report_hash == repeated_secure_preflight.report_hash
+        and dp_preflight.audit_record_hash == repeated_dp_preflight.audit_record_hash
+    )
+    transport_execution_disabled = int(
+        transport_preflight.transport_execution_permitted is False
+    )
+    secure_execution_disabled = int(
+        secure_preflight.secure_aggregation_execution_permitted is False
+    )
+    service_execution_disabled = int(dp_preflight.service_execution_permitted is False)
+    raw_data_export_disabled = int(
+        transport_preflight.raw_data_export_permitted is False
+        and secure_preflight.raw_data_export_permitted is False
+        and dp_preflight.raw_data_export_permitted is False
+    )
+    operator_review_required = int(
+        transport_preflight.operator_review_required is True
+        and secure_preflight.operator_review_required is True
+        and dp_preflight.operator_review_required is True
+    )
+    non_actuating = int(
+        transport_preflight.non_actuating is True
+        and secure_preflight.non_actuating is True
+        and dp_preflight.non_actuating is True
+    )
+    preflight_surface_count = len(preflight_record)
+    acceptance_passed = int(
+        preflight_surface_count >= thresholds.min_preflight_surface_count
+        and int(bool(transport_preflight.preflight_hash))
+        >= thresholds.min_transport_preflight_count
+        and int(bool(secure_preflight.report_hash))
+        >= thresholds.min_secure_preflight_count
+        and int(bool(dp_preflight.audit_record_hash))
+        >= thresholds.min_dp_preflight_count
+        and transport_execution_disabled
+        == int(thresholds.require_transport_execution_disabled)
+        and secure_execution_disabled
+        == int(thresholds.require_secure_execution_disabled)
+        and service_execution_disabled
+        == int(thresholds.require_service_execution_disabled)
+        and raw_data_export_disabled == int(thresholds.require_raw_data_export_disabled)
+        and operator_review_required == int(thresholds.require_operator_review)
+        and non_actuating == int(thresholds.require_non_actuating)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "federated_deployment_preflight_gate",
+        "wall_time_s": elapsed,
+        "steps_per_second": (
+            preflight_surface_count / elapsed if elapsed > 0.0 else 0.0
+        ),
+        "preflight_surface_count": preflight_surface_count,
+        "transport_preflight_count": int(bool(transport_preflight.preflight_hash)),
+        "secure_preflight_count": int(bool(secure_preflight.report_hash)),
+        "dp_preflight_count": int(bool(dp_preflight.audit_record_hash)),
+        "transport_execution_disabled": transport_execution_disabled,
+        "secure_execution_disabled": secure_execution_disabled,
+        "service_execution_disabled": service_execution_disabled,
+        "raw_data_export_disabled": raw_data_export_disabled,
+        "operator_review_required": operator_review_required,
+        "non_actuating": non_actuating,
+        "deterministic_hash": deterministic_hash,
+        "preflight_hash": preflight_hash,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_dp_preflight_count": thresholds.min_dp_preflight_count,
+                "min_preflight_surface_count": (thresholds.min_preflight_surface_count),
+                "min_secure_preflight_count": thresholds.min_secure_preflight_count,
+                "min_transport_preflight_count": (
+                    thresholds.min_transport_preflight_count
+                ),
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_actuating": thresholds.require_non_actuating,
+                "require_operator_review": thresholds.require_operator_review,
+                "require_raw_data_export_disabled": (
+                    thresholds.require_raw_data_export_disabled
+                ),
+                "require_secure_execution_disabled": (
+                    thresholds.require_secure_execution_disabled
+                ),
+                "require_service_execution_disabled": (
+                    thresholds.require_service_execution_disabled
+                ),
+                "require_transport_execution_disabled": (
+                    thresholds.require_transport_execution_disabled
+                ),
+            },
+            sort_keys=True,
+        ),
+        "preflight_record_json": json.dumps(preflight_record, sort_keys=True),
+    }
+
+
 def benchmark_topos_semantic_binding_gate() -> dict[str, float | int | str]:
     """Benchmark categorical proof-obligation surfaces for semantic binding."""
     thresholds = ToposSemanticBindingThresholds(
@@ -6107,6 +6335,63 @@ def _federated_secure_commitment_fixture_records() -> tuple[dict[str, object], .
     )
 
 
+def _federated_secure_quorum_fixture_records() -> tuple[dict[str, object], ...]:
+    return tuple(
+        {
+            "node_id": node_id,
+            "evidence_hash": _stable_record_hash(
+                {"node_id": node_id, "evidence": "federated_quorum"}
+            ),
+        }
+        for node_id in ("site-a", "site-b", "site-c")
+    )
+
+
+def _federated_secure_custody_fixture_records(
+    rotation_policy: str,
+) -> tuple[dict[str, object], ...]:
+    records: list[dict[str, object]] = []
+    for node_id in ("site-a", "site-b", "site-c"):
+        previous_key = _stable_record_hash(
+            {"node_id": node_id, "kind": "key", "label": "previous"}
+        )
+        previous_share = _stable_record_hash(
+            {"node_id": node_id, "kind": "share", "label": "previous"}
+        )
+        key_label = _stable_record_hash(
+            {"node_id": node_id, "kind": "key", "label": "current"}
+        )
+        share_label = _stable_record_hash(
+            {"node_id": node_id, "kind": "share", "label": "current"}
+        )
+        records.append(
+            {
+                "node_id": node_id,
+                "key_custody_label": key_label,
+                "share_custody_label": share_label,
+                "previous_key_custody_label": previous_key,
+                "previous_share_custody_label": previous_share,
+                "key_custody_continuity_hash": _stable_record_hash(
+                    {
+                        "node_id": node_id,
+                        "rotation_policy": rotation_policy,
+                        "previous_key_custody_label": previous_key,
+                        "key_custody_label": key_label,
+                    }
+                ),
+                "share_custody_continuity_hash": _stable_record_hash(
+                    {
+                        "node_id": node_id,
+                        "rotation_policy": rotation_policy,
+                        "previous_share_custody_label": previous_share,
+                        "share_custody_label": share_label,
+                    }
+                ),
+            }
+        )
+    return tuple(records)
+
+
 def _build_evolutionary_mutation_grammar_records() -> list[dict[str, object]]:
     from scpn_phase_orchestrator.supervisor.evolutionary_petri_grammar import (
         run_offline_evolutionary_petri_mutation_grammar,
@@ -6378,6 +6663,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "federated_meta_orchestrator": benchmark_federated_meta_orchestrator(),
             "federated_production_boundary": (
                 benchmark_federated_production_boundary_gate()
+            ),
+            "federated_deployment_preflight": (
+                benchmark_federated_deployment_preflight_gate()
             ),
             "topos_semantic_binding": benchmark_topos_semantic_binding_gate(),
             "multiverse_counterfactual": benchmark_multiverse_counterfactual_gate(),

@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 
 import pytest
 
 from scpn_phase_orchestrator.supervisor.federated_secure_aggregation import (
     FederatedSecureAggregationManifest,
+    FederatedSecureAggregationPreflightManifest,
     build_federated_secure_aggregation_manifest,
+    build_federated_secure_aggregation_preflight_manifest,
 )
 
 
@@ -44,6 +47,91 @@ def _node_commitment(
             {"node_id": node_id, "masked_policy_delta": delta_items}
         ),
     }
+
+
+def _label(node_id: str, kind: str, tag: str) -> str:
+    return _stable_hash({"node_id": node_id, "kind": kind, "tag": tag})
+
+
+def _custody_record(
+    node_id: str, rotation_policy: str, *, tag: str = "current"
+) -> dict[str, str]:
+    key_previous = _label(node_id, "key", f"previous-{tag}")
+    share_previous = _label(node_id, "share", f"previous-{tag}")
+    key_label = _label(node_id, "key", tag)
+    share_label = _label(node_id, "share", tag)
+    return {
+        "node_id": node_id,
+        "key_custody_label": key_label,
+        "share_custody_label": share_label,
+        "previous_key_custody_label": key_previous,
+        "previous_share_custody_label": share_previous,
+        "key_custody_continuity_hash": _stable_hash(
+            {
+                "node_id": node_id,
+                "rotation_policy": rotation_policy,
+                "previous_key_custody_label": key_previous,
+                "key_custody_label": key_label,
+            }
+        ),
+        "share_custody_continuity_hash": _stable_hash(
+            {
+                "node_id": node_id,
+                "rotation_policy": rotation_policy,
+                "previous_share_custody_label": share_previous,
+                "share_custody_label": share_label,
+            }
+        ),
+    }
+
+
+def _quorum_evidence(node_id: str) -> dict[str, str]:
+    return {
+        "node_id": node_id,
+        "evidence_hash": _stable_hash({"node_id": node_id, "kind": "quorum"}),
+    }
+
+
+def _build_ready_manifest() -> FederatedSecureAggregationManifest:
+    return build_federated_secure_aggregation_manifest(
+        (
+            _node_commitment("node-a", {"alpha": 0.2, "theta": 1.0}, 100),
+            _node_commitment("node-b", {"theta": 0.4, "alpha": 0.1}, 40),
+            _node_commitment("node-c", {"alpha": 0.0, "theta": -0.2}, 60),
+        ),
+        required_policy_keys=("theta", "alpha"),
+        clipping_norm=2.0,
+        min_node_count=3,
+    )
+
+
+def _build_preflight(
+    manifest: FederatedSecureAggregationManifest,
+    *,
+    rotation_policy: str = "continuous",
+    accepted_node_threshold: int = 3,
+    operator_approved: bool = True,
+    operator_id: str = "ops-1",
+    service_owner: str = "svc-phase-orchestrator",
+) -> FederatedSecureAggregationPreflightManifest:
+    return build_federated_secure_aggregation_preflight_manifest(
+        manifest,
+        quorum_evidence=(
+            _quorum_evidence("node-a"),
+            _quorum_evidence("node-b"),
+            _quorum_evidence("node-c"),
+        ),
+        custody_rotation_policy=rotation_policy,
+        custody_records=(
+            _custody_record("node-a", rotation_policy),
+            _custody_record("node-b", rotation_policy),
+            _custody_record("node-c", rotation_policy),
+        ),
+        accepted_node_threshold=accepted_node_threshold,
+        operator_approved=operator_approved,
+        operator_id=operator_id,
+        service_owner=service_owner,
+    )
 
 
 def test_secure_aggregation_manifest_is_deterministic_and_review_only() -> None:
@@ -79,6 +167,204 @@ def test_secure_aggregation_manifest_is_deterministic_and_review_only() -> None:
     assert len(first.aggregate_masked_delta_hash) == 64
     assert len(first.report_hash) == 64
     assert isinstance(json.loads(json.dumps(first.to_audit_record())), dict)
+
+
+def test_federated_secure_aggregation_preflight_manifest_is_deterministic() -> None:
+    manifest = _build_ready_manifest()
+    first = _build_preflight(manifest, rotation_policy="continuous")
+    second = _build_preflight(manifest, rotation_policy="continuous")
+    assert first == second
+    assert first.report_hash == second.report_hash
+
+
+def test_federated_secure_preflight_ready_with_complete_prerequisites() -> None:
+    manifest = _build_ready_manifest()
+    preflight = _build_preflight(manifest, rotation_policy="scheduled")
+
+    assert preflight.accepted_node_threshold == 3
+    assert preflight.accepted_node_count == 3
+    assert preflight.operator_approved is True
+    assert preflight.operator_id == "ops-1"
+    assert preflight.service_owner == "svc-phase-orchestrator"
+    assert preflight.secure_aggregation_execution_permitted is False
+    assert preflight.raw_data_export_permitted is False
+    assert preflight.operator_review_required is True
+    assert preflight.non_actuating is True
+    assert preflight.secure_aggregation_report_hash == manifest.report_hash
+    assert len(preflight.report_hash) == 64
+    assert isinstance(json.loads(json.dumps(preflight.to_audit_record())), dict)
+
+
+def test_federated_secure_aggregation_preflight_manifest_blocks_quorum_gap() -> None:
+    manifest = _build_ready_manifest()
+    with pytest.raises(
+        ValueError, match="quorum evidence below accepted-node threshold"
+    ):
+        build_federated_secure_aggregation_preflight_manifest(
+            manifest,
+            quorum_evidence=(
+                _quorum_evidence("node-a"),
+                _quorum_evidence("node-b"),
+            ),
+            custody_rotation_policy="continuous",
+            custody_records=(
+                _custody_record("node-a", "continuous"),
+                _custody_record("node-b", "continuous"),
+                _custody_record("node-c", "continuous"),
+            ),
+            accepted_node_threshold=3,
+            operator_approved=True,
+            operator_id="ops-1",
+            service_owner="svc-phase-orchestrator",
+        )
+
+
+def test_federated_secure_preflight_blocks_hash_and_custody_gaps() -> None:
+    manifest = _build_ready_manifest()
+    with pytest.raises(ValueError, match="key custody continuity hash mismatch"):
+        invalid = _custody_record("node-a", "continuous")
+        invalid["key_custody_continuity_hash"] = "0" * 64
+        build_federated_secure_aggregation_preflight_manifest(
+            manifest,
+            quorum_evidence=(
+                _quorum_evidence("node-a"),
+                _quorum_evidence("node-b"),
+                _quorum_evidence("node-c"),
+            ),
+            custody_rotation_policy="continuous",
+            custody_records=(
+                invalid,
+                _custody_record("node-b", "continuous"),
+                _custody_record("node-c", "continuous"),
+            ),
+            accepted_node_threshold=3,
+            operator_approved=True,
+            operator_id="ops-1",
+            service_owner="svc-phase-orchestrator",
+        )
+
+    with pytest.raises(
+        ValueError, match="custody labels must cover all accepted nodes"
+    ):
+        build_federated_secure_aggregation_preflight_manifest(
+            manifest,
+            quorum_evidence=(
+                _quorum_evidence("node-a"),
+                _quorum_evidence("node-b"),
+                _quorum_evidence("node-c"),
+            ),
+            custody_rotation_policy="continuous",
+            custody_records=(
+                _custody_record("node-a", "continuous"),
+                _custody_record("node-b", "continuous"),
+            ),
+            accepted_node_threshold=3,
+            operator_approved=True,
+            operator_id="ops-1",
+            service_owner="svc-phase-orchestrator",
+        )
+
+
+def test_federated_secure_aggregation_preflight_manifest_blocks_operator_gap() -> None:
+    manifest = _build_ready_manifest()
+    with pytest.raises(ValueError, match="operator approval is required"):
+        build_federated_secure_aggregation_preflight_manifest(
+            manifest,
+            quorum_evidence=(
+                _quorum_evidence("node-a"),
+                _quorum_evidence("node-b"),
+                _quorum_evidence("node-c"),
+            ),
+            custody_rotation_policy="continuous",
+            custody_records=(
+                _custody_record("node-a", "continuous"),
+                _custody_record("node-b", "continuous"),
+                _custody_record("node-c", "continuous"),
+            ),
+            accepted_node_threshold=3,
+            operator_approved=False,
+            operator_id="ops-1",
+            service_owner="svc-phase-orchestrator",
+        )
+
+
+def test_federated_secure_aggregation_preflight_manifest_malformed_inputs() -> None:
+    manifest = _build_ready_manifest()
+    with pytest.raises(ValueError, match="accepted-node threshold not met"):
+        _build_preflight(
+            manifest,
+            accepted_node_threshold=4,
+        )
+
+    with pytest.raises(ValueError, match="unsupported custody rotation policy"):
+        _build_preflight(manifest, rotation_policy="bad")
+
+    with pytest.raises(ValueError, match="operator_id must be a non-empty string"):
+        build_federated_secure_aggregation_preflight_manifest(
+            manifest,
+            quorum_evidence=(_quorum_evidence("node-a"),),
+            custody_rotation_policy="continuous",
+            custody_records=(
+                _custody_record("node-a", "continuous"),
+                _custody_record("node-b", "continuous"),
+                _custody_record("node-c", "continuous"),
+            ),
+            accepted_node_threshold=1,
+            operator_approved=True,
+            operator_id="",
+            service_owner="svc-phase-orchestrator",
+        )
+
+    with pytest.raises(ValueError, match="report hash mismatch"):
+        broken = replace(
+            manifest,
+            report_hash="0" * 64,
+        )
+        build_federated_secure_aggregation_preflight_manifest(
+            broken,
+            quorum_evidence=(
+                _quorum_evidence("node-a"),
+                _quorum_evidence("node-b"),
+                _quorum_evidence("node-c"),
+            ),
+            custody_rotation_policy="continuous",
+            custody_records=(
+                _custody_record("node-a", "continuous"),
+                _custody_record("node-b", "continuous"),
+                _custody_record("node-c", "continuous"),
+            ),
+            accepted_node_threshold=3,
+            operator_approved=True,
+            operator_id="ops-1",
+            service_owner="svc-phase-orchestrator",
+        )
+
+    with pytest.raises(TypeError, match="FederatedSecureAggregationManifest"):
+        build_federated_secure_aggregation_preflight_manifest(
+            "not-a-manifest",  # type: ignore[arg-type]
+            quorum_evidence=(_quorum_evidence("node-a"),),
+            custody_rotation_policy="continuous",
+            custody_records=(
+                _custody_record("node-a", "continuous"),
+                _custody_record("node-b", "continuous"),
+                _custody_record("node-c", "continuous"),
+            ),
+            accepted_node_threshold=1,
+            operator_approved=True,
+            operator_id="ops-1",
+            service_owner="svc-phase-orchestrator",
+        )
+
+
+def test_federated_secure_preflight_stable_hash_changes_with_inputs() -> None:
+    manifest = _build_ready_manifest()
+    first = _build_preflight(manifest, rotation_policy="continuous")
+    second = _build_preflight(
+        manifest,
+        rotation_policy="continuous",
+        service_owner="svc-phase-orchestrator-alt",
+    )
+    assert first.report_hash != second.report_hash
 
 
 def test_secure_aggregation_manifest_aggregates_weighted_masked_updates() -> None:
