@@ -548,6 +548,10 @@ Near-term candidate tracks:
     `synthesise_stl_closed_loop_plan()` binds STL automata, feedback signals,
     candidate synthesis, policy-gated projection, fail-closed blockers, and a
     future review horizon without mutating runtime state or enabling actuation.
+  - Reference-suite evidence is in place:
+    `benchmark_stl_closed_loop_plan_quality()` gates projected non-actuating
+    plans, missing-template blockers, satisfied-monitor no-action behaviour,
+    deterministic plan hashes, and zero actuation leaks.
   - Remaining scope: runtime integration that passes projected plans through
     the full safety/actuation stack.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.

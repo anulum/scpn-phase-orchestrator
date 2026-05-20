@@ -37,6 +37,11 @@ from scpn_phase_orchestrator.autotune.reward import (
     RewardObservation,
 )
 from scpn_phase_orchestrator.exceptions import PolicyError
+from scpn_phase_orchestrator.monitor.stl import (
+    STLActionProjectionTemplate,
+    synthesise_stl_closed_loop_plan,
+    synthesise_stl_monitoring_automaton,
+)
 from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginManifest,
@@ -166,6 +171,14 @@ class DomainFormalExportFixture(NamedTuple):
     rules: tuple[PolicyRule, ...]
     stl_specs: tuple[PolicySTLSpec, ...]
     required_labels: tuple[str, ...]
+
+
+class STLClosedLoopThresholds(NamedTuple):
+    min_plan_count: int
+    min_projected_action_count: int
+    min_blocked_reason_count: int
+    require_non_actuating: bool
+    require_deterministic_hash: bool
 
 
 class HybridCocompilerThresholds(NamedTuple):
@@ -960,6 +973,151 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
             checker_availability_records,
             sort_keys=True,
         ),
+    }
+
+
+def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
+    """Benchmark offline STL closed-loop plan synthesis and fail-closed gates."""
+    thresholds = STLClosedLoopThresholds(
+        min_plan_count=3,
+        min_projected_action_count=1,
+        min_blocked_reason_count=3,
+        require_non_actuating=True,
+        require_deterministic_hash=True,
+    )
+    projection_template = STLActionProjectionTemplate(
+        action="raise_coupling",
+        knob="K",
+        scope="global",
+        base_value=0.9,
+        step=10.0,
+        ttl_s=0.5,
+        previous_value=0.9,
+        value_bounds=(0.0, 1.0),
+        rate_limit=0.05,
+    )
+    t0 = time.perf_counter()
+    projected = synthesise_stl_closed_loop_plan(
+        synthesise_stl_monitoring_automaton(
+            "eventually (R >= 0.8)",
+            {"R": [0.1, 0.2, 0.75]},
+        ),
+        {"R": [0.1, 0.2, 0.75]},
+        (projection_template,),
+        horizon_steps=4,
+        action_map={"R": "raise_coupling"},
+    )
+    blocked = synthesise_stl_closed_loop_plan(
+        synthesise_stl_monitoring_automaton(
+            "eventually (R >= 0.8)",
+            {"R": [0.1, 0.2, 0.75]},
+        ),
+        {"R": [0.1, 0.2, 0.75]},
+        (),
+        horizon_steps=1,
+    )
+    satisfied = synthesise_stl_closed_loop_plan(
+        synthesise_stl_monitoring_automaton(
+            "always (R >= 0.3)",
+            {"R": [0.8, 0.9]},
+        ),
+        {"R": [0.8, 0.9]},
+        (),
+        horizon_steps=2,
+    )
+    plans = (projected, blocked, satisfied)
+    elapsed = time.perf_counter() - t0
+
+    records = [plan.to_audit_record() for plan in plans]
+    repeated_records = [
+        plan.to_audit_record()
+        for plan in (
+            synthesise_stl_closed_loop_plan(
+                synthesise_stl_monitoring_automaton(
+                    "eventually (R >= 0.8)",
+                    {"R": [0.1, 0.2, 0.75]},
+                ),
+                {"R": [0.1, 0.2, 0.75]},
+                (projection_template,),
+                horizon_steps=4,
+                action_map={"R": "raise_coupling"},
+            ),
+            synthesise_stl_closed_loop_plan(
+                synthesise_stl_monitoring_automaton(
+                    "eventually (R >= 0.8)",
+                    {"R": [0.1, 0.2, 0.75]},
+                ),
+                {"R": [0.1, 0.2, 0.75]},
+                (),
+                horizon_steps=1,
+            ),
+            synthesise_stl_closed_loop_plan(
+                synthesise_stl_monitoring_automaton(
+                    "always (R >= 0.3)",
+                    {"R": [0.8, 0.9]},
+                ),
+                {"R": [0.8, 0.9]},
+                (),
+                horizon_steps=2,
+            ),
+        )
+    ]
+    plans_json = json.dumps(records, sort_keys=True)
+    deterministic_hash = int(
+        sha256(plans_json.encode()).hexdigest()
+        == sha256(json.dumps(repeated_records, sort_keys=True).encode()).hexdigest()
+    )
+    projected_action_count = sum(
+        len(plan.projected_plan.approved_actions) for plan in plans
+    )
+    rejected_candidate_count = sum(
+        len(plan.projected_plan.rejected_candidates) for plan in plans
+    )
+    blocked_reason_count = sum(len(plan.blocked_reasons) for plan in plans)
+    non_actuating = int(
+        all(
+            not plan.actuating
+            and not plan.synthesis.actuating
+            and not plan.projected_plan.actuating
+            for plan in plans
+        )
+    )
+    acceptance_passed = int(
+        len(plans) >= thresholds.min_plan_count
+        and projected_action_count >= thresholds.min_projected_action_count
+        and blocked_reason_count >= thresholds.min_blocked_reason_count
+        and non_actuating == int(thresholds.require_non_actuating)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and projected.next_review_start_index == 3
+        and projected.next_review_end_index == 6
+        and rejected_candidate_count == 1
+    )
+
+    return {
+        "suite": "stl_closed_loop_plan_quality",
+        "plan_count": len(plans),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(plans) / elapsed,
+        "projected_action_count": projected_action_count,
+        "rejected_candidate_count": rejected_candidate_count,
+        "blocked_reason_count": blocked_reason_count,
+        "non_actuating": non_actuating,
+        "deterministic_hash": deterministic_hash,
+        "plan_sha256": sha256(plans_json.encode()).hexdigest(),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_blocked_reason_count": thresholds.min_blocked_reason_count,
+                "min_plan_count": thresholds.min_plan_count,
+                "min_projected_action_count": (
+                    thresholds.min_projected_action_count
+                ),
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "plans_json": plans_json,
     }
 
 
@@ -1947,6 +2105,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "bayesian_posterior": benchmark_bayesian_posterior_fit_quality(),
             "bayesian_backends": benchmark_bayesian_backend_fail_closed(),
             "formal_export": benchmark_formal_export_artifact_quality(),
+            "stl_closed_loop": benchmark_stl_closed_loop_plan_quality(),
             "domain_formal_export": benchmark_domain_formal_safety_exports(),
             "hybrid_cocompiler": benchmark_hybrid_cocompiler_review_gate(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

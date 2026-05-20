@@ -22,6 +22,7 @@ from benchmarks.reference_suite import (
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
     benchmark_replay_policy_candidate_quality,
+    benchmark_stl_closed_loop_plan_quality,
     benchmark_stuart_landau_reference,
     build_benchmark_metadata,
     run_reference_suite,
@@ -284,6 +285,43 @@ def test_formal_export_artifact_quality_reports_thresholds() -> None:
     )
 
 
+def test_stl_closed_loop_plan_quality_benchmark_shape() -> None:
+    out = benchmark_stl_closed_loop_plan_quality()
+
+    assert out["suite"] == "stl_closed_loop_plan_quality"
+    assert out["plan_count"] == 3
+    assert out["projected_action_count"] == 1
+    assert out["rejected_candidate_count"] == 1
+    assert out["blocked_reason_count"] == 3
+    assert out["non_actuating"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["plan_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_stl_closed_loop_plan_quality_reports_thresholds_and_plans() -> None:
+    out = benchmark_stl_closed_loop_plan_quality()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    plans = json.loads(str(out["plans_json"]))
+
+    assert thresholds == {
+        "min_blocked_reason_count": 3,
+        "min_plan_count": 3,
+        "min_projected_action_count": 1,
+        "require_deterministic_hash": True,
+        "require_non_actuating": True,
+    }
+    assert [plan["actuating"] for plan in plans] == [False, False, False]
+    assert [plan["next_review_end_index"] for plan in plans] == [6, 3, 3]
+    assert plans[0]["projected_action_plan"]["approved_actions"][0]["knob"] == "K"
+    assert plans[1]["blocked_reasons"] == [
+        "no_projected_actions",
+        "unprojected_candidates",
+    ]
+    assert plans[2]["blocked_reasons"] == ["stl_satisfied_no_control_needed"]
+
+
 def test_domain_formal_safety_exports_benchmark_shape() -> None:
     out = benchmark_domain_formal_safety_exports()
 
@@ -420,6 +458,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "hybrid_cocompiler",
         "plugin_ecosystem",
         "replay_policy",
+        "stl_closed_loop",
         "kuramoto",
         "stuart_landau",
         "petri_reachability",
