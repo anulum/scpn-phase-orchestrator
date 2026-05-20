@@ -42,6 +42,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginManifest,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
+    build_rust_plugin_runtime_handoff,
 )
 from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
@@ -170,9 +171,12 @@ class HybridCocompilerThresholds(NamedTuple):
 class PluginEcosystemThresholds(NamedTuple):
     min_plugin_count: int
     min_capability_count: int
+    min_handoff_target_hash_count: int
+    min_blocked_handoff_count: int
     required_capability_kinds: frozenset[str]
     min_incompatible_count: int
     require_deterministic_hash: bool
+    require_loading_disabled: bool
 
 
 class ReferenceSuiteResult(TypedDict):
@@ -1038,11 +1042,14 @@ def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]
     thresholds = PluginEcosystemThresholds(
         min_plugin_count=2,
         min_capability_count=5,
+        min_handoff_target_hash_count=5,
+        min_blocked_handoff_count=1,
         required_capability_kinds=frozenset(
             {"extractor", "monitor", "actuator", "bridge"}
         ),
         min_incompatible_count=1,
         require_deterministic_hash=True,
+        require_loading_disabled=True,
     )
     manifests = _plugin_ecosystem_manifests()
 
@@ -1054,11 +1061,28 @@ def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]
     )
     rust_registry = build_rust_plugin_registry(manifests)
     repeated_registry = build_rust_plugin_registry(manifests)
+    rust_handoff = build_rust_plugin_runtime_handoff(
+        manifests,
+        include_incompatible=True,
+    )
+    repeated_handoff = build_rust_plugin_runtime_handoff(
+        manifests,
+        include_incompatible=True,
+    )
     elapsed = time.perf_counter() - t0
 
     capabilities = rust_registry["capabilities"]
     if not isinstance(capabilities, list):
         raise TypeError("rust registry capabilities must be a list")
+    dispatch_groups = rust_handoff["dispatch_groups"]
+    target_hashes = rust_handoff["target_hashes"]
+    blocked_capabilities = rust_handoff["blocked_capabilities"]
+    if not isinstance(dispatch_groups, dict):
+        raise TypeError("rust runtime handoff dispatch groups must be a mapping")
+    if not isinstance(target_hashes, dict):
+        raise TypeError("rust runtime handoff target hashes must be a mapping")
+    if not isinstance(blocked_capabilities, list):
+        raise TypeError("rust runtime handoff blocked capabilities must be a list")
     capability_kinds = {str(capability["kind"]) for capability in capabilities}
     registry_hash = sha256(
         json.dumps(rust_registry, sort_keys=True, separators=(",", ":")).encode()
@@ -1066,13 +1090,29 @@ def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]
     repeated_hash = sha256(
         json.dumps(repeated_registry, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
-    deterministic_hash = int(registry_hash == repeated_hash)
+    handoff_hash = sha256(
+        json.dumps(rust_handoff, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    repeated_handoff_hash = sha256(
+        json.dumps(
+            repeated_handoff,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    deterministic_hash = int(
+        registry_hash == repeated_hash and handoff_hash == repeated_handoff_hash
+    )
+    handoff_loading_disabled = int(rust_handoff["loading_permitted"] is False)
     acceptance_passed = int(
         catalog["plugin_count"] >= thresholds.min_plugin_count
         and rust_registry["capability_count"] >= thresholds.min_capability_count
+        and len(target_hashes) >= thresholds.min_handoff_target_hash_count
+        and len(blocked_capabilities) >= thresholds.min_blocked_handoff_count
         and thresholds.required_capability_kinds <= capability_kinds
         and full_catalog["incompatible_count"] >= thresholds.min_incompatible_count
         and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and handoff_loading_disabled == int(thresholds.require_loading_disabled)
     )
 
     return {
@@ -1082,23 +1122,39 @@ def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]
         "compatible_count": catalog["compatible_count"],
         "incompatible_count": full_catalog["incompatible_count"],
         "capability_count": rust_registry["capability_count"],
+        "handoff_target_hash_count": len(target_hashes),
+        "handoff_blocked_count": len(blocked_capabilities),
+        "handoff_loading_disabled": handoff_loading_disabled,
         "wall_time_s": elapsed,
         "steps_per_second": len(manifests) / elapsed,
         "required_kind_count": len(thresholds.required_capability_kinds),
         "observed_kind_count": len(capability_kinds),
         "deterministic_hash": deterministic_hash,
         "registry_sha256": registry_hash,
+        "handoff_sha256": handoff_hash,
         "acceptance_passed": acceptance_passed,
         "capability_counts_json": json.dumps(
             rust_registry["capability_counts"],
             sort_keys=True,
         ),
+        "handoff_dispatch_groups_json": json.dumps(
+            {
+                kind: len(records) if isinstance(records, list) else 0
+                for kind, records in sorted(dispatch_groups.items())
+            },
+            sort_keys=True,
+        ),
         "acceptance_thresholds_json": json.dumps(
             {
+                "min_blocked_handoff_count": thresholds.min_blocked_handoff_count,
                 "min_capability_count": thresholds.min_capability_count,
+                "min_handoff_target_hash_count": (
+                    thresholds.min_handoff_target_hash_count
+                ),
                 "min_incompatible_count": thresholds.min_incompatible_count,
                 "min_plugin_count": thresholds.min_plugin_count,
                 "require_deterministic_hash": (thresholds.require_deterministic_hash),
+                "require_loading_disabled": thresholds.require_loading_disabled,
                 "required_capability_kinds": sorted(
                     thresholds.required_capability_kinds
                 ),

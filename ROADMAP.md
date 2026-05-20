@@ -422,6 +422,11 @@ sessions do not treat them as abstract research labels.
   - CLI guarded runtime handoff export is in place:
     `spo plugins catalog --rust-runtime-handoff` emits the same no-load handoff
     JSON and rejects conflicting Rust output modes.
+  - Runtime handoff benchmark evidence is in place:
+    `benchmark_plugin_ecosystem_catalog_quality()` now gates the guarded
+    handoff for deterministic hashes, disabled loading, target hashes, and
+    blocked incompatible capability records alongside marketplace and registry
+    metadata.
   - Monitor capability support is in place: manifests, marketplace counts,
     compatibility reports, Rust-facing registry records, and the reference
     benchmark gate now require monitor metadata with declared channels.

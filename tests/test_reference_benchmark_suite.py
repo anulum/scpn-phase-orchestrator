@@ -324,11 +324,15 @@ def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     assert out["compatible_count"] == 2
     assert out["incompatible_count"] == 1
     assert out["capability_count"] == 5
+    assert out["handoff_target_hash_count"] == 6
+    assert out["handoff_blocked_count"] == 1
+    assert out["handoff_loading_disabled"] == 1
     assert out["required_kind_count"] == 4
     assert out["observed_kind_count"] == 4
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
     assert len(str(out["registry_sha256"])) == 64
+    assert len(str(out["handoff_sha256"])) == 64
     assert float(out["steps_per_second"]) > 0.0
 
 
@@ -336,15 +340,26 @@ def test_plugin_ecosystem_catalog_quality_reports_thresholds_and_counts() -> Non
     out = benchmark_plugin_ecosystem_catalog_quality()
     thresholds = json.loads(str(out["acceptance_thresholds_json"]))
     capability_counts = json.loads(str(out["capability_counts_json"]))
+    dispatch_groups = json.loads(str(out["handoff_dispatch_groups_json"]))
 
     assert thresholds == {
+        "min_blocked_handoff_count": 1,
         "min_capability_count": 5,
+        "min_handoff_target_hash_count": 5,
         "min_incompatible_count": 1,
         "min_plugin_count": 2,
         "require_deterministic_hash": True,
+        "require_loading_disabled": True,
         "required_capability_kinds": ["actuator", "bridge", "extractor", "monitor"],
     }
     assert capability_counts == {
+        "actuator": 1,
+        "bridge": 1,
+        "domainpack": 0,
+        "extractor": 1,
+        "monitor": 2,
+    }
+    assert dispatch_groups == {
         "actuator": 1,
         "bridge": 1,
         "domainpack": 0,
