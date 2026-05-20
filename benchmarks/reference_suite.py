@@ -338,6 +338,16 @@ class ToposSemanticBindingThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class SelfModelDigitalTwinThresholds(NamedTuple):
+    min_scenario_count: int
+    max_breach_count: int
+    max_max_observed_error: float
+    require_non_actuating: bool
+    require_operator_review: bool
+    require_execution_disabled: bool
+    require_deterministic_hash: bool
+
+
 class InformationGeometryControlThresholds(NamedTuple):
     min_scenario_count: int
     min_finite_metric_count: int
@@ -1091,6 +1101,189 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
         ),
         "scenario_results_json": json.dumps(scenario_results, sort_keys=True),
         "learner_results_json": json.dumps(learner_results, sort_keys=True),
+    }
+
+
+def benchmark_self_model_digital_twin() -> dict[str, float | int | str]:
+    """Benchmark replay-backed self-model monitoring for digital-twin drift."""
+    thresholds = SelfModelDigitalTwinThresholds(
+        min_scenario_count=3,
+        max_breach_count=1,
+        max_max_observed_error=3.0,
+        require_non_actuating=True,
+        require_operator_review=True,
+        require_execution_disabled=True,
+        require_deterministic_hash=True,
+    )
+
+    from scpn_phase_orchestrator.monitor.self_model import compute_self_model_error
+    from scpn_phase_orchestrator.monitor.self_model_examples import (
+        build_self_model_reconfiguration_examples,
+    )
+
+    t0 = time.perf_counter()
+    scenarios = tuple(build_self_model_reconfiguration_examples())
+    repeated_scenarios = tuple(build_self_model_reconfiguration_examples())
+    if len(scenarios) != len(repeated_scenarios):
+        raise RuntimeError(
+            "self-model digital-twin benchmark has mismatched replay examples"
+        )
+
+    scenario_records: list[dict[str, object]] = []
+    repeated_records: list[dict[str, object]] = []
+    breach_count = 0
+    max_observed_error = 0.0
+    non_actuating = 1
+    operator_review_required = 1
+    execution_disabled = 1
+    scenario_hash_matches = 0
+    threshold_matches = 0
+
+    for scenario, repeated_scenario in zip(scenarios, repeated_scenarios, strict=True):
+        if scenario["scenario_id"] != repeated_scenario["scenario_id"]:
+            raise RuntimeError(
+                "self-model digital-twin benchmark requires replay scenarios "
+                "to be ordered"
+            )
+
+        scenario_id = str(scenario["scenario_id"])
+        domain = str(scenario["domain"])
+        scenario_hash = scenario["scenario_hash"]
+        repeated_scenario_hash = repeated_scenario["scenario_hash"]
+        if not isinstance(scenario_hash, str) or not isinstance(
+            repeated_scenario_hash, str
+        ):
+            raise ValueError("self-model scenario hashes must be strings")
+
+        threshold = float(scenario["error_threshold"])
+        predicted = np.asarray(scenario["predicted_phase"], dtype=np.float64)
+        observed = np.asarray(scenario["observed_phase"], dtype=np.float64)
+
+        monitor_record = compute_self_model_error(
+            observed_phases=observed,
+            predicted_phases=predicted,
+            tolerance=threshold,
+            max_abs_tolerance=threshold,
+            domain=domain,
+            scenario_id=scenario_id,
+            channel_labels=(f"{domain}_phase",),
+        ).to_audit_record()
+        repeated_record = compute_self_model_error(
+            observed_phases=np.asarray(
+                repeated_scenario["observed_phase"], dtype=np.float64
+            ),
+            predicted_phases=np.asarray(
+                repeated_scenario["predicted_phase"], dtype=np.float64
+            ),
+            tolerance=float(repeated_scenario["error_threshold"]),
+            max_abs_tolerance=float(repeated_scenario["error_threshold"]),
+            domain=domain,
+            scenario_id=scenario_id,
+            channel_labels=(f"{domain}_phase",),
+        ).to_audit_record()
+
+        breached = bool(monitor_record["breached"])
+        breached_counted = int(breached)
+        breach_count += breached_counted
+        non_actuating &= int(monitor_record["non_actuating"] is True)
+        max_observed_error = max(
+            max_observed_error,
+            float(monitor_record["overall_max_abs_error"]),
+        )
+        operator_review = int(bool(scenario["operator_review_required"]))
+        operator_review_required &= operator_review
+        execution_blocked = int(bool(scenario["execution_disabled"]))
+        execution_disabled &= execution_blocked
+        scenario_hash_match = int(scenario_hash == repeated_scenario_hash)
+        scenario_hash_matches += scenario_hash_match
+        threshold_match = int(
+            bool(scenario["self_model_error"]["within_threshold"]) is (not breached)
+        )
+        threshold_matches += threshold_match
+        record_hash_match = int(
+            monitor_record["record_hash"] == repeated_record["record_hash"]
+        )
+
+        scenario_records.append(
+            {
+                "scenario_id": scenario_id,
+                "domain": domain,
+                "breached": breached,
+                "breached_count": breached_counted,
+                "scenario_hash": scenario_hash,
+                "scenario_hash_match": scenario_hash_match,
+                "record_hash_match": record_hash_match,
+                "within_threshold_match": threshold_match,
+                "non_actuating": non_actuating,
+                "operator_review_required": operator_review,
+                "execution_disabled": execution_blocked,
+                "max_observed_error": float(monitor_record["overall_max_abs_error"]),
+                "overall_rmse": float(monitor_record["overall_rmse"]),
+                "overall_mae": float(monitor_record["overall_mae"]),
+                "claim_boundary": str(monitor_record["claim_boundary"]),
+                "record_hash": str(monitor_record["record_hash"]),
+            }
+        )
+        repeated_records.append(
+            {
+                "scenario_id": scenario_id,
+                "breached": bool(repeated_record["breached"]),
+                "scenario_hash": str(repeated_scenario_hash),
+                "record_hash": str(repeated_record["record_hash"]),
+            }
+        )
+
+    elapsed = time.perf_counter() - t0
+    scenario_count = len(scenario_records)
+    scenario_hash_match_count = scenario_hash_matches
+    record_hash_match_count = sum(
+        int(record["record_hash"] == repeated["record_hash"])
+        for record, repeated in zip(scenario_records, repeated_records, strict=True)
+    )
+    deterministic_hash = int(
+        scenario_hash_match_count == scenario_count
+        and record_hash_match_count == scenario_count
+    )
+    acceptance_passed = int(
+        scenario_count >= thresholds.min_scenario_count
+        and breach_count <= thresholds.max_breach_count
+        and max_observed_error <= thresholds.max_max_observed_error
+        and non_actuating == int(thresholds.require_non_actuating)
+        and operator_review_required == int(thresholds.require_operator_review)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and threshold_matches == scenario_count
+        and scenario_hash_match_count == scenario_count
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "self_model_digital_twin",
+        "scenario_count": scenario_count,
+        "breach_count": breach_count,
+        "max_observed_error": max_observed_error,
+        "non_actuating": non_actuating,
+        "operator_review_required": operator_review_required,
+        "execution_disabled": execution_disabled,
+        "deterministic_hash": deterministic_hash,
+        "scenario_hash_match_count": scenario_hash_match_count,
+        "record_hash_match_count": record_hash_match_count,
+        "self_model_sha256": _stable_record_hash(scenario_records),
+        "wall_time_s": elapsed,
+        "steps_per_second": scenario_count / elapsed if elapsed > 0.0 else 0.0,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "max_breach_count": thresholds.max_breach_count,
+                "max_max_observed_error": thresholds.max_max_observed_error,
+                "min_scenario_count": thresholds.min_scenario_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_non_actuating": thresholds.require_non_actuating,
+                "require_operator_review": thresholds.require_operator_review,
+            },
+            sort_keys=True,
+        ),
+        "scenario_results_json": json.dumps(scenario_records, sort_keys=True),
     }
 
 
@@ -4969,6 +5162,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "hybrid_entanglement_order": (
                 benchmark_hybrid_entanglement_order_parameter_gate()
             ),
+            "self_model_digital_twin": benchmark_self_model_digital_twin(),
             "information_geometry_control": (
                 benchmark_information_geometry_control_gate()
             ),

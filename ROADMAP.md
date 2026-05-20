@@ -650,6 +650,17 @@ Near-term candidate tracks:
 Speculative research watchlist:
 
 - Self-modelling embodied digital twin with a `self_model_error` monitor and controlled rebinding/reconfiguration regime.
+  - Foundation is in place: dependency-free self-model error monitoring emits
+    RMSE, MAE, max-absolute, weighted-channel, optional order-parameter,
+    deterministic-hash, and non-actuating audit evidence.
+  - Replay-backed controlled reconfiguration evidence is in place for
+    power-grid, cardiac-rhythm, traffic-flow, and cyber-industrial scenarios;
+    all proposals require operator review and keep execution disabled.
+  - Reference-suite gates enforce scenario count, threshold breaches,
+    deterministic hashes, non-actuation, operator review, and disabled
+    execution.
+  - Remaining scope: real hardware-in-the-loop rebinding evidence and any
+    maintained simulator-specific live integration.
 - Evolutionary supervisor policy search over policy DSL, Petri nets, and topology mutations, initially offline over `audit.jsonl` with STL and counterfactual safety filters.
 - Information-geometry control layer using Fisher-Rao or Wasserstein metrics as
   supervisor control primitives.

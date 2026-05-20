@@ -125,7 +125,7 @@ into the active roadmap.
 
 | Track | First acceptance gate |
 |-------|-----------------------|
-| Self-modelling embodied digital twin | `self_model_error` monitor plus one hardware-in-the-loop or replay-backed reconfiguration demo |
+| Self-modelling embodied digital twin | dependency-free `self_model_error` monitor, replay-backed review-only reconfiguration evidence across power-grid, cardiac-rhythm, traffic-flow, and cyber-industrial scenarios, and reference-suite gates are implemented without live actuation; real hardware-in-the-loop rebinding remains open |
 | Evolutionary supervisor policy search | offline evolution over `audit.jsonl` histories with STL/counterfactual safety filter before any live hot-patch path |
 | Information-geometry control layer | dependency-free NumPy/JAX-compatible Fisher-Rao and Wasserstein review primitive now emits audit-visible metric tensors, natural-gradient proposals, curvature/geodesic metrics, deterministic domain scenarios, and reference-suite gates without live actuation; optional JAX-native acceleration remains open |
 | Sheaf-cohomology control | supervisor foundation, edge-consensus, power-grid, and network-security heterogeneous-domain demos, and obstruction-summary triage are implemented; additional heterogeneous demos and deeper obstruction hardening remain open |

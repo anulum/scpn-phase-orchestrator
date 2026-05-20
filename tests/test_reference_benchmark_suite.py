@@ -35,6 +35,7 @@ from benchmarks.reference_suite import (
     benchmark_plugin_ecosystem_catalog_quality,
     benchmark_quantum_target_readiness_gate,
     benchmark_replay_policy_candidate_quality,
+    benchmark_self_model_digital_twin,
     benchmark_semantic_retrieval_ranking_quality,
     benchmark_stl_closed_loop_plan_quality,
     benchmark_stuart_landau_reference,
@@ -295,6 +296,54 @@ def test_replay_policy_candidate_quality_reports_thresholds() -> None:
     assert all(record["accepted"] is True for record in results)
     assert all(record["non_actuating"] is True for record in results)
     assert all(record["unsafe_selected"] is False for record in results)
+
+
+def test_self_model_digital_twin_benchmark_shape() -> None:
+    out = benchmark_self_model_digital_twin()
+
+    assert out["suite"] == "self_model_digital_twin"
+    assert out["scenario_count"] >= 3
+    assert int(out["breach_count"]) >= 0
+    assert int(out["scenario_hash_match_count"]) == int(out["scenario_count"])
+    assert float(out["max_observed_error"]) >= 0.0
+    assert out["non_actuating"] == 1
+    assert out["operator_review_required"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["self_model_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_self_model_digital_twin_benchmark_reports_thresholds_and_records() -> None:
+    out = benchmark_self_model_digital_twin()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    scenario_results = json.loads(str(out["scenario_results_json"]))
+
+    assert thresholds == {
+        "max_breach_count": 1,
+        "max_max_observed_error": 3.0,
+        "min_scenario_count": 3,
+        "require_deterministic_hash": True,
+        "require_execution_disabled": True,
+        "require_non_actuating": True,
+        "require_operator_review": True,
+    }
+    assert int(out["scenario_count"]) == len(scenario_results)
+    assert int(out["scenario_count"]) >= thresholds["min_scenario_count"]
+    assert int(out["breach_count"]) <= thresholds["max_breach_count"]
+    assert float(out["max_observed_error"]) <= thresholds["max_max_observed_error"]
+    assert int(out["scenario_hash_match_count"]) == int(out["scenario_count"])
+    assert out["deterministic_hash"] == int(thresholds["require_deterministic_hash"])
+    assert all(record["scenario_hash_match"] == 1 for record in scenario_results)
+    assert all(record["record_hash_match"] == 1 for record in scenario_results)
+    assert all(record["within_threshold_match"] == 1 for record in scenario_results)
+    assert all(record["non_actuating"] == 1 for record in scenario_results)
+    assert all(record["operator_review_required"] == 1 for record in scenario_results)
+    assert all(record["execution_disabled"] == 1 for record in scenario_results)
+    assert all(
+        float(record["max_observed_error"]) >= 0.0 for record in scenario_results
+    )
 
 
 def test_bayesian_posterior_fit_quality_benchmark_shape() -> None:
@@ -1272,6 +1321,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "plugin_ecosystem",
         "quantum_target_readiness",
         "replay_policy",
+        "self_model_digital_twin",
         "semantic_retrieval",
         "stl_closed_loop",
         "temporal_causal_hypergraph",
