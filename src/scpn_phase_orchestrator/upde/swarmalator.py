@@ -272,7 +272,7 @@ class SwarmalatorEngine:
 
         Returns
         -------
-        tuple[numpy.ndarray, numpy.ndarray]
+        tuple[FloatArray, FloatArray]
             Updated positions with shape ``(n_agents, dim)`` and updated
             phases wrapped into ``[0, 2*pi)``.
 

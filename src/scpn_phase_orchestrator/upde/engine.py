@@ -231,7 +231,7 @@ class UPDEEngine:
 
         Returns
         -------
-        numpy.ndarray
+        FloatArray
             New phases wrapped into ``[0, 2*pi)``.
 
         Raises
