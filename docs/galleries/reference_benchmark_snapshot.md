@@ -30,24 +30,25 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
 |----------|-------------------|------|-------|---------------|---------|---------------|
-| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.0451822149916552 | 88.53040960339746 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
-| `semantic_retrieval_ranking_quality` | Symbolic compiler retrieval ranking quality | 3 evidence records | 3 ranked records | 0.014694545010570437 | 204.15739295377756 | top source = domainpack; top domainpack = power_grid; feature-complete = 3; retrieval score = 1.0; SHA-256 = 88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d |
-| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 scenarios | 9 learner gates | 0.012663560977671295 | 710.7005696003694 | accepted scenarios = 3/3; accepted learners = 9/9; min coherence improvement = 0.035689587760827646; unsafe acceptances = 0; non-actuating = yes |
-| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.2318070830078796 | 43.01447052969186 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
-| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.2815162740298547 | 10.656577529446313 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
-| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 3 package properties | 0.0005537740071304142 | 9028.953933589908 | identifier maps = 22; fail-closed = 5; checker commands = 3; checker readiness = 2 ready/1 missing; checker execution disabled = yes; package SHA-256 = b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92 |
-| `stl_closed_loop_plan_quality` | Offline STL closed-loop synthesis plan quality | 3 plans | 1 projected action | 0.0002713369904085994 | 11056.362037046174 | projected actions = 1; rejected candidates = 1; blocked reasons = 3; non-actuating = yes; SHA-256 = c5e8bc18e6edef4cd0913b4d3fef1acf7f27865ffc64ef2903e15457d64a4c28 |
-| `domain_formal_safety_exports` | Plasma, power-grid, and medical-style formal safety artefacts | 3 domains | 9 artefacts | 0.00037819199496880174 | 23797.43653945515 | accepted domains = 3/3; SHA-256 = ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b |
-| `hybrid_cocompiler_review_gate` | Hybrid quantum/neuromorphic review manifest gate | 1 manifest | 2 blocked probes | 0.00012394599616527557 | 8068.029875418902 | target backends = 4; component hashes = 3; non-actuating = yes; SHA-256 = e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7 |
-| `quantum_target_readiness_gate` | Non-executing QPU target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.00011414696928113699 | 17521.271152404603 | ready = 1; blocked = 1; blocked reasons = 2; non-executing = yes; readiness SHA-256 = aa0f85ce5bbfd35acf04d96e29d3bb64edf7ce5b091193263b13712d98f6134c |
-| `neuromorphic_target_readiness_gate` | Non-executing neuromorphic hardware target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.00017654901603236794 | 11328.298763405888 | ready = 1; blocked = 1; blocked reasons = 3; non-executing = yes; readiness SHA-256 = fbff4ea82152b5fb51733f179661b8ec117b1afc076c80972e610af7717368d0 |
-| `hybrid_target_readiness_gate` | Non-executing hybrid target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.00010957301128655672 | 18252.669854710617 | ready = 1; blocked = 1; blocked reasons = 1; component hash linked = 1; non-executing = yes; readiness SHA-256 = 5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64 |
-| `meta_transfer_audit_corpus_quality` | Cross-domain meta-transfer audit-corpus proposal gate | 6 records | 3 neighbours | 0.0018796410295180976 | 3192.0988666321464 | domains = 4; top neighbour = power_grid; confidence = 0.9977061617091371; deterministic hash = yes; proposal SHA-256 = bfef70f740fbdedc765080f9c9bb0156ec046fd0351dab4f4117c7c259a781fb |
-| `meta_transfer_package_manifest_quality` | Cross-domain meta-transfer package manifest gate | 4 records | 4 domain gates | 0.0004404600476846099 | 9081.413901276668 | feature keys = 5; knobs = 4; digest linked = yes; execution disabled = yes; manifest SHA-256 = bf551f9836e581eba6469309784c56e3b3fd5cbfee23e55cee6018f0163df6af |
-| `plugin_ecosystem_catalog_quality` | Python/Rust plugin marketplace capability gate | 3 manifests | 6 handoff target hashes | 0.0002708049723878503 | 11078.083144290875 | compatible plugins = 2/3; incompatible monitor rejection = 1; required kinds = 4/4; loading disabled = yes; handoff SHA-256 = db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77 |
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.13901762099703774 | 7193.332707235068 | final `R` = 1.0 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.27916788501897827 | 3582.0739191831412 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.020592576009221375 | 242805.95092915988 | reachable markings = 4 |
+| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.04307294404134154 | 92.86572090732382 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
+| `semantic_retrieval_ranking_quality` | Symbolic compiler retrieval ranking quality | 3 evidence records | 3 ranked records | 0.015583062020596117 | 192.51672078535677 | top source = domainpack; top domainpack = power_grid; feature-complete = 3; retrieval score = 1.0; SHA-256 = 88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d |
+| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 scenarios | 9 learner gates | 0.01423552498454228 | 632.221151645106 | accepted scenarios = 3/3; accepted learners = 9/9; min coherence improvement = 0.035689587760827646; unsafe acceptances = 0; non-actuating = yes |
+| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.1922598049859516 | 43.790430213455096 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
+| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.2778991900268011 | 10.79528155411563 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
+| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 3 package properties | 0.0005473069613799453 | 9135.641153537157 | identifier maps = 22; fail-closed = 5; checker commands = 3; checker readiness = 2 ready/1 missing; checker execution disabled = yes; package SHA-256 = b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92 |
+| `stl_closed_loop_plan_quality` | Offline STL closed-loop synthesis plan quality | 3 plans | 1 projected action | 0.0003578549949452281 | 8383.283850653443 | projected actions = 1; rejected candidates = 1; blocked reasons = 3; non-actuating = yes; SHA-256 = c5e8bc18e6edef4cd0913b4d3fef1acf7f27865ffc64ef2903e15457d64a4c28 |
+| `domain_formal_safety_exports` | Plasma, power-grid, and medical-style formal safety artefacts | 3 domains | 9 artefacts | 0.0006097939913161099 | 14759.0827856067 | accepted domains = 3/3; SHA-256 = ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b |
+| `hybrid_cocompiler_review_gate` | Hybrid quantum/neuromorphic review manifest gate | 1 manifest | 2 blocked probes | 0.00011891900794580579 | 8409.084613754294 | target backends = 4; component hashes = 3; non-actuating = yes; SHA-256 = e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7 |
+| `quantum_target_readiness_gate` | Non-executing QPU target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.0001809889799915254 | 11050.39654952278 | ready = 1; blocked = 1; blocked reasons = 2; non-executing = yes; readiness SHA-256 = aa0f85ce5bbfd35acf04d96e29d3bb64edf7ce5b091193263b13712d98f6134c |
+| `neuromorphic_target_readiness_gate` | Non-executing neuromorphic hardware target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.00024182797642424703 | 8270.341709725644 | ready = 1; blocked = 1; blocked reasons = 3; non-executing = yes; readiness SHA-256 = fbff4ea82152b5fb51733f179661b8ec117b1afc076c80972e610af7717368d0 |
+| `hybrid_target_readiness_gate` | Non-executing hybrid target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.00011475704377517104 | 17428.124097709828 | ready = 1; blocked = 1; blocked reasons = 1; component hash linked = 1; non-executing = yes; readiness SHA-256 = 5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64 |
+| `hybrid_operator_handoff_package_gate` | Non-executing hybrid operator handoff package gate | 2 packages | 1 blocked / 1 ready | 0.0001218619872815907 | 16412.008737216234 | ready packages = 1; blocked packages = 1; blocked reasons = 1; hash chain linked = 1; non-executing = yes; package SHA-256 = c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5 |
+| `meta_transfer_audit_corpus_quality` | Cross-domain meta-transfer audit-corpus proposal gate | 6 records | 3 neighbours | 0.0032925489940680563 | 1822.296345721737 | domains = 4; top neighbour = power_grid; confidence = 0.9977061617091371; deterministic hash = yes; proposal SHA-256 = bfef70f740fbdedc765080f9c9bb0156ec046fd0351dab4f4117c7c259a781fb |
+| `meta_transfer_package_manifest_quality` | Cross-domain meta-transfer package manifest gate | 4 records | 4 domain gates | 0.00042936898535117507 | 9315.99658212028 | feature keys = 5; knobs = 4; digest linked = yes; execution disabled = yes; manifest SHA-256 = bf551f9836e581eba6469309784c56e3b3fd5cbfee23e55cee6018f0163df6af |
+| `plugin_ecosystem_catalog_quality` | Python/Rust plugin marketplace capability gate | 3 manifests | 6 handoff target hashes | 0.0002764470409601927 | 10851.988104412334 | compatible plugins = 2/3; incompatible monitor rejection = 1; required kinds = 4/4; loading disabled = yes; handoff SHA-256 = db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77 |
+| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.13140711496816948 | 7609.938017756712 | final `R` = 1.0 |
+| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.2567110530217178 | 3895.4302443510283 | final mean amplitude = 3.6193922141707704 |
+| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.018718710052780807 | 267112.42312646494 | reachable markings = 4 |
 
 ## Auto-Binding Acceptance Gates
 
@@ -278,6 +279,28 @@ permit hybrid actuation.
 | Deterministic hash | 1 | required |
 | Hybrid manifest SHA-256 | `e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7` | stable |
 | Ready readiness SHA-256 | `5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64` | stable |
+
+## Hybrid Operator Handoff Package Gates
+
+The hybrid operator handoff benchmark validates deterministic, non-executing
+packages prepared for external approved operator workflows. The gate requires
+one blocked package, one ready-not-executed package, blocked-reason preservation,
+operator commands, package-hash determinism, manifest/readiness hash-chain
+linkage, and forced disabled execution, QPU execution, hardware writes, and
+actuation. These packages are review artefacts only; they do not submit jobs,
+run external simulators, or permit hybrid actuation.
+
+| Metric | Snapshot value | Gate |
+|--------|---------------:|------|
+| Packages | 2 | >= 2 |
+| Ready-not-executed packages | 1 | >= 1 |
+| Blocked packages | 1 | >= 1 |
+| Blocked reasons | 1 | >= 1 |
+| Operator commands | 8 | >= 8 |
+| Hash chain linked | 1 | required |
+| Non-executing flag | 1 | required |
+| Deterministic hash | 1 | required |
+| Ready package SHA-256 | `c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5` | stable |
 
 ## Meta-Transfer Audit-Corpus Gates
 
