@@ -389,7 +389,7 @@ def _derivative(
         coupling[active] += zeta[active, None] * np.sin(
             psi[active, None] - theta[active]
         )
-    return coupling
+    return np.asarray(coupling, dtype=np.float64)
 
 
 def _euler_step(
@@ -402,7 +402,8 @@ def _euler_step(
     dt: float,
 ) -> FloatArray:
     dtheta = _derivative(theta, omegas, knm, alpha, zeta, psi)
-    return (theta + dt * dtheta) % TWO_PI
+    result: FloatArray = np.asarray((theta + dt * dtheta) % TWO_PI, dtype=np.float64)
+    return result
 
 
 def _rk4_step(
@@ -418,15 +419,19 @@ def _rk4_step(
     k2 = _derivative(theta + 0.5 * dt * k1, omegas, knm, alpha, zeta, psi)
     k3 = _derivative(theta + 0.5 * dt * k2, omegas, knm, alpha, zeta, psi)
     k4 = _derivative(theta + dt * k3, omegas, knm, alpha, zeta, psi)
-    return (theta + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+    result: FloatArray = np.asarray(
+        (theta + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI,
+        dtype=np.float64,
+    )
+    return result
 
 
 def _order_parameters(theta: FloatArray) -> tuple[FloatArray, FloatArray]:
     z = np.exp(1j * theta)
     mean = np.mean(z, axis=1)
-    R = np.abs(mean).astype(np.float64)
-    psi = np.angle(mean) % TWO_PI
-    return R.astype(np.float64), psi.astype(np.float64)
+    R: FloatArray = np.asarray(np.abs(mean), dtype=np.float64)
+    psi: FloatArray = np.asarray(np.angle(mean) % TWO_PI, dtype=np.float64)
+    return R, psi
 
 
 def simulate_multiverse_counterfactual_branches(

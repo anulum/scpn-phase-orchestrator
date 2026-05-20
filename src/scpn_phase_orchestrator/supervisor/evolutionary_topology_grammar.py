@@ -70,6 +70,7 @@ class TopologyMutationNode:
     community: str | None = None
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {"node_id": self.node_id, "community": self.community}
 
 
@@ -83,9 +84,11 @@ class TopologyMutationEdge:
 
     @property
     def pair(self) -> tuple[int, int]:
+        """Return the canonical undirected edge pair."""
         return (self.source, self.target)
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "source": self.source,
             "target": self.target,
@@ -106,6 +109,7 @@ class TopologyMutationPlan:
     source_communities: tuple[str | None, str | None]
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "operation": self.operation,
             "node_a": self.node_a,
@@ -138,13 +142,16 @@ class TopologyMutationCandidate:
 
     @property
     def accepted(self) -> bool:
+        """Return whether this candidate is accepted for review."""
         return not self.blocked_reasons
 
     @property
     def status(self) -> str:
+        """Return the review status label for this candidate."""
         return "accepted" if self.accepted else "rejected"
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "candidate_id": self.candidate_id,
             "generation": self.generation,
@@ -190,6 +197,7 @@ class TopologyMutationReport:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -330,12 +338,14 @@ def run_offline_evolutionary_topology_mutation_search(
                 plan=plan,
                 source_edge_count=len(edges),
                 candidate_edges=_sort_edges(
-                    TopologyMutationEdge(
-                        source=pair[0],
-                        target=pair[1],
-                        weight=weight,
+                    tuple(
+                        TopologyMutationEdge(
+                            source=pair[0],
+                            target=pair[1],
+                            weight=weight,
+                        )
+                        for pair, weight in next_edges.items()
                     )
-                    for pair, weight in next_edges.items()
                 ),
                 blocked_reasons=tuple(blocked_reasons),
                 candidate_hash="",
@@ -580,7 +590,7 @@ def _build_community_bridge_axes(
             for target in communities[right_label]:
                 pair = tuple(sorted((source, target)))
                 if pair not in existing_edges:
-                    axis_pair = pair
+                    axis_pair = (pair[0], pair[1])
                     break
             if axis_pair is not None:
                 break

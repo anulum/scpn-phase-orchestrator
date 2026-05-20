@@ -14,7 +14,7 @@ import hmac
 import json
 from collections.abc import Mapping, Sequence
 from hashlib import sha256
-from typing import Any
+from typing import Any, TypedDict, cast
 
 import numpy as np
 
@@ -22,6 +22,15 @@ __all__ = [
     "build_autopoietic_lineage_sandbox",
     "build_intergenerational_policy_inheritance",
 ]
+
+
+class _ReplaySummary(TypedDict):
+    replay_count: int
+    mean_reward: float
+    min_reward: float
+    mean_safety_margin: float
+    min_safety_margin: float
+    violation_count: int
 
 
 def build_autopoietic_lineage_sandbox(
@@ -114,12 +123,14 @@ def build_intergenerational_policy_inheritance(
     weights = _validated_objective_weights(objective_weights)
     parent_genome = _parent_genome_from_lineage(lineage)
     inherited_genome = dict(parent_genome)
-    for diff in child["policy_diff"]:
-        inherited_genome[str(diff["knob"])] = float(diff["child_value"])
+    for diff in _policy_diff_items(child):
+        inherited_genome[str(diff["knob"])] = _finite_number(
+            diff["child_value"], "policy_diff.child_value"
+        )
     fitness = _multi_objective_fitness(child, weights)
     signed_payload: dict[str, object] = {
-        "lineage_sha256": lineage["lineage_sha256"],
-        "child_sha256": child["child_sha256"],
+        "lineage_sha256": str(lineage["lineage_sha256"]),
+        "child_sha256": str(child["child_sha256"]),
         "inherited_policy_genome": inherited_genome,
         "multi_objective_replay_fitness": fitness,
     }
@@ -191,13 +202,18 @@ def _validated_replays(
     return replays
 
 
-def _replay_summary(replays: Sequence[Mapping[str, object]]) -> dict[str, object]:
+def _replay_summary(replays: Sequence[Mapping[str, object]]) -> _ReplaySummary:
     rewards = [_finite_number(replay["reward"], "reward") for replay in replays]
     margins = [
         _finite_number(replay.get("safety_margin", 0.0), "safety_margin")
         for replay in replays
     ]
-    violation_count = sum(len(replay.get("violations", [])) for replay in replays)
+    violation_count = 0
+    for replay in replays:
+        violations = replay.get("violations", [])
+        if not isinstance(violations, list):
+            raise ValueError("violations must be a list")
+        violation_count += len(violations)
     return {
         "replay_count": len(replays),
         "mean_reward": float(np.mean(rewards)),
@@ -213,7 +229,7 @@ def _child_candidate(
     *,
     index: int,
     mutation_step: float,
-    replay_summary: Mapping[str, object],
+    replay_summary: _ReplaySummary,
     minimum_replay_reward: float,
     minimum_safety_margin: float,
 ) -> dict[str, object]:
@@ -253,19 +269,28 @@ def _child_candidate(
 
 
 def _blocked_reasons(
-    replay_summary: Mapping[str, object],
+    replay_summary: _ReplaySummary,
     *,
     minimum_replay_reward: float,
     minimum_safety_margin: float,
 ) -> list[str]:
     reasons: list[str] = []
-    if float(replay_summary["mean_reward"]) < minimum_replay_reward:
+    if replay_summary["mean_reward"] < minimum_replay_reward:
         reasons.append("replay_reward_below_minimum")
-    if float(replay_summary["min_safety_margin"]) < minimum_safety_margin:
+    if replay_summary["min_safety_margin"] < minimum_safety_margin:
         reasons.append("safety_margin_below_minimum")
-    if int(replay_summary["violation_count"]) > 0:
+    if replay_summary["violation_count"] > 0:
         reasons.append("replay_violations_present")
     return reasons
+
+
+def _policy_diff_items(child: Mapping[str, object]) -> list[Mapping[str, object]]:
+    raw = child.get("policy_diff")
+    if not isinstance(raw, list):
+        raise ValueError("policy_diff must be a list")
+    if not all(isinstance(item, Mapping) for item in raw):
+        raise ValueError("policy_diff entries must be mappings")
+    return cast(list[Mapping[str, object]], raw)
 
 
 def _finite_number(value: object, field: str) -> float:
@@ -308,6 +333,12 @@ def _validated_lineage_manifest(manifest: Mapping[str, object]) -> dict[str, obj
     return data
 
 
+def _require_mapping(value: object, field: str) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field} must be a mapping")
+    return value
+
+
 def _validated_review_child(candidate: Mapping[str, object]) -> dict[str, object]:
     if not isinstance(candidate, Mapping):
         raise ValueError("child_candidate must be a mapping")
@@ -337,9 +368,14 @@ def _validated_review_child(candidate: Mapping[str, object]) -> dict[str, object
 
 def _parent_genome_from_lineage(manifest: Mapping[str, object]) -> dict[str, float]:
     if "parent_policy_genome" in manifest:
-        return _validated_policy(manifest["parent_policy_genome"])
+        return _validated_policy(
+            _require_mapping(manifest["parent_policy_genome"], "parent_policy_genome")
+        )
     genome: dict[str, float] = {}
-    for candidate in manifest["child_candidates"]:
+    candidates = manifest["child_candidates"]
+    if not isinstance(candidates, list):
+        raise ValueError("lineage_manifest.child_candidates must be a list")
+    for candidate in candidates:
         if not isinstance(candidate, Mapping):
             raise ValueError("lineage child candidate must be a mapping")
         diffs = candidate.get("policy_diff")
@@ -382,7 +418,7 @@ def _multi_objective_fitness(
 ) -> dict[str, object]:
     reward = _finite_number(child.get("replay_reward"), "child.replay_reward")
     safety = _finite_number(child.get("safety_margin"), "child.safety_margin")
-    diff_count = len(child["policy_diff"])
+    diff_count = len(_policy_diff_items(child))
     simplicity = 1.0 / float(1 + diff_count)
     score = (
         reward * weights["reward"]

@@ -416,13 +416,15 @@ def _hybrid_readiness_blocked_reasons(
         reasons.append("quantum_target_readiness_not_ready")
     if neuromorphic_readiness.get("status") != "ready_not_executed":
         reasons.append("neuromorphic_target_readiness_not_ready")
-    if quantum_readiness.get("manifest_sha256") != component_hashes[
-        "quantum_manifest_sha256"
-    ]:
+    if (
+        quantum_readiness.get("manifest_sha256")
+        != component_hashes["quantum_manifest_sha256"]
+    ):
         reasons.append("quantum_manifest_hash_mismatch")
-    if neuromorphic_readiness.get("manifest_sha256") != component_hashes[
-        "neuromorphic_schedule_sha256"
-    ]:
+    if (
+        neuromorphic_readiness.get("manifest_sha256")
+        != component_hashes["neuromorphic_schedule_sha256"]
+    ):
         reasons.append("neuromorphic_manifest_hash_mismatch")
     if not hybrid_operator_approved:
         reasons.append("hybrid_operator_approval_missing")

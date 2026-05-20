@@ -110,20 +110,12 @@ def test_expected_relationship_is_reflective_of_phi_ordering() -> None:
     )
     by_name = {record["case_name"]: record for record in records}
 
-    assert (
-        "recontainment" in by_name["cyber_recontainment"]["expected_relationship"]
-    )
-    assert (
-        by_name["cyber_recontainment"]["phi"]
-        > by_name["cyber_disruption"]["phi"]
-    )
+    assert "recontainment" in by_name["cyber_recontainment"]["expected_relationship"]
+    assert by_name["cyber_recontainment"]["phi"] > by_name["cyber_disruption"]["phi"]
     assert (
         "spc_recovery > spc_fragmentation"
         in by_name["spc_recovery"]["expected_relationship"]
     )
-    assert (
-        by_name["spc_recovery"]["phi"]
-        > by_name["spc_fragmentation"]["phi"]
-    )
+    assert by_name["spc_recovery"]["phi"] > by_name["spc_fragmentation"]["phi"]
     assert np.isfinite(by_name["cyber_recontainment"]["phi"])
     assert np.isfinite(by_name["spc_recovery"]["phi"])

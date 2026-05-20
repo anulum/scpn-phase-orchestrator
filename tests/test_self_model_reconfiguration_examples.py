@@ -16,7 +16,7 @@ import json
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.monitor import self_model_examples as examples
+import scpn_phase_orchestrator.monitor.self_model_examples as examples
 
 
 def test_build_examples_have_required_domains_and_safe_gating() -> None:

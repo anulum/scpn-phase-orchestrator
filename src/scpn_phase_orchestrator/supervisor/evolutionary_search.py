@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Offline evolutionary supervisor policy search
 
+"""Deterministic offline evolutionary supervisor policy search."""
+
 from __future__ import annotations
 
 import hashlib
@@ -13,7 +15,7 @@ import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from numbers import Integral, Real
-from typing import Any
+from typing import Any, TypedDict
 
 from scpn_phase_orchestrator.monitor import STLMonitor
 
@@ -41,6 +43,15 @@ class EvolutionarySearchConfig:
         _require_finite_positive(self.mutation_step, "mutation_step")
         _require_finite_real(self.minimum_replay_reward, "minimum_replay_reward")
         _require_finite_real(self.minimum_safety_margin, "minimum_safety_margin")
+
+
+class _ReplaySummary(TypedDict):
+    replay_count: int
+    mean_reward: float
+    min_reward: float
+    mean_safety_margin: float
+    min_safety_margin: float
+    violation_count: int
 
 
 @dataclass(frozen=True)
@@ -107,7 +118,7 @@ class EvolutionarySearchReport:
     schema_version: str
     config: EvolutionarySearchConfig
     parent_policy_hash: str
-    replay_summary: dict[str, object]
+    replay_summary: _ReplaySummary
     stl_spec: str
     stl_monitoring: dict[str, object]
     candidate_count: int
@@ -256,7 +267,7 @@ def run_offline_evolutionary_supervisor_search(
         schema_version="0.1.0",
         config=config,
         parent_policy_hash=_build_stable_hash(parent),
-        replay_summary=dict(replay_summary),
+        replay_summary=replay_summary,
         stl_spec=stl_spec,
         stl_monitoring=stl_monitor_record,
         candidate_count=len(candidates),
@@ -331,8 +342,8 @@ def _validate_parent_policy(policy: Mapping[str, object]) -> dict[str, float]:
     for key, value in policy.items():
         if not isinstance(key, str) or not key:
             raise ValueError("parent_policy keys must be non-empty strings")
-        _ = _require_finite_real(value, f"parent_policy[{key}]")
-        validated[key] = float(value)
+        numeric = _require_finite_real(value, f"parent_policy[{key}]")
+        validated[key] = numeric
     return validated
 
 
@@ -387,10 +398,20 @@ def _validate_replays(
     return out
 
 
-def _summarise_replays(replays: Sequence[Mapping[str, object]]) -> dict[str, object]:
-    rewards: list[float] = [float(replay["reward"]) for replay in replays]
-    margins: list[float] = [float(replay["safety_margin"]) for replay in replays]
-    violation_count = sum(len(replay["violations"]) for replay in replays)
+def _summarise_replays(replays: Sequence[Mapping[str, object]]) -> _ReplaySummary:
+    rewards: list[float] = [
+        _require_finite_real(replay["reward"], "reward") for replay in replays
+    ]
+    margins: list[float] = [
+        _require_finite_real(replay["safety_margin"], "safety_margin")
+        for replay in replays
+    ]
+    violation_count = 0
+    for replay in replays:
+        violations = replay["violations"]
+        if not isinstance(violations, list):
+            raise ValueError("violations must be a list")
+        violation_count += len(violations)
     return {
         "replay_count": len(replays),
         "mean_reward": float(sum(rewards) / len(rewards)),
@@ -402,7 +423,7 @@ def _summarise_replays(replays: Sequence[Mapping[str, object]]) -> dict[str, obj
 
 
 def _candidate_blocked_reasons(
-    replay_summary: Mapping[str, object],
+    replay_summary: _ReplaySummary,
     stl_robustness: float,
     *,
     mutation_delta: float,
@@ -410,15 +431,15 @@ def _candidate_blocked_reasons(
     minimum_safety_margin: float,
 ) -> list[str]:
     reasons: list[str] = []
-    if float(replay_summary["mean_reward"]) < float(minimum_replay_reward):
+    if replay_summary["mean_reward"] < float(minimum_replay_reward):
         reasons.append("replay_reward_below_minimum")
-    if float(replay_summary["mean_safety_margin"]) < float(minimum_safety_margin):
+    if replay_summary["mean_safety_margin"] < float(minimum_safety_margin):
         reasons.append("safety_margin_below_minimum")
-    if int(replay_summary["violation_count"]) > 0:
+    if replay_summary["violation_count"] > 0:
         reasons.append("replay_violations_present")
     if stl_robustness < 0.0:
         reasons.append("stl_spec_not_satisfied")
-    if abs(float(mutation_delta)) > float(replay_summary["min_safety_margin"]):
+    if abs(float(mutation_delta)) > replay_summary["min_safety_margin"]:
         reasons.append("counterfactual_safety_delta_exceeds_replay_margin")
     return reasons
 
@@ -498,6 +519,7 @@ def _require_positive_int(value: object, field: str) -> int:
 
 
 def _build_stable_hash(payload: Mapping[str, Any] | object) -> str:
+    clean_payload: object
     if isinstance(payload, dict):
         clean_payload = dict(payload)
         clean_payload.pop("candidate_hash", None)

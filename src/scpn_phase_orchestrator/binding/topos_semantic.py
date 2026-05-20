@@ -44,6 +44,7 @@ class SymbolicBindingObligation:
     evidence: str
 
     def to_audit_record(self) -> dict[str, str]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "name": self.name,
             "status": self.status,
@@ -60,6 +61,7 @@ class SymbolicBindingObject:
     detail: str
 
     def to_audit_record(self) -> dict[str, str]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "name": self.name,
             "kind": self.kind,
@@ -77,6 +79,7 @@ class SymbolicBindingMorphism:
     deterministic: bool = True
 
     def to_audit_record(self) -> dict[str, Any]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "source": self.source,
             "target": self.target,
@@ -102,6 +105,7 @@ class SymbolicBindingValidationReport:
     non_actuating: bool = True
 
     def to_audit_record(self) -> dict[str, Any]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,

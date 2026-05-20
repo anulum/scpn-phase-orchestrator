@@ -263,7 +263,7 @@ def delay_embed(
 
     indices = np.arange(dimension) * delay
     rows = np.arange(t_eff)[:, np.newaxis] + indices[np.newaxis, :]
-    return cast("FloatArray", s[rows])
+    return s[rows]
 
 
 def mutual_information(

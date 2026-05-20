@@ -36,6 +36,7 @@ class DpNoiseServiceReadiness:
     reason: str
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {"ready": self.ready, "reason": self.reason}
 
 
@@ -47,6 +48,7 @@ class DpNoiseNodePrivacyBudget:
     epsilon_spent: float
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {"node_id": self.node_id, "epsilon_spent": self.epsilon_spent}
 
 
@@ -143,6 +145,7 @@ class DpNoiseServiceRequestManifest:
                 raise ValueError("privacy budget exceeded")
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -182,6 +185,7 @@ class DpNoiseServiceResponseManifest:
     audit_record_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -265,6 +269,7 @@ class DpNoiseServiceDeploymentPreflightManifest:
             raise ValueError("response_hash must be hexadecimal") from exc
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,

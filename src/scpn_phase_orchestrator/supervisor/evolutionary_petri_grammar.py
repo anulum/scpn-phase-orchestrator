@@ -64,6 +64,7 @@ def _validate_guard_metric(value: object) -> str:
 
 
 def _build_stable_hash(payload: Mapping[str, Any] | object) -> str:
+    clean: object
     if isinstance(payload, Mapping):
         clean = dict(payload)
         clean.pop("candidate_hash", None)
@@ -184,13 +185,16 @@ class EvolutionaryPetriMutationCandidate:
 
     @property
     def accepted(self) -> bool:
+        """Return whether this candidate is accepted for review."""
         return not self.blocked_reasons
 
     @property
     def status(self) -> str:
+        """Return the review status label for this candidate."""
         return "accepted" if self.accepted else "blocked"
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "candidate_id": self.candidate_id,
             "generation": self.generation,
@@ -234,6 +238,7 @@ class EvolutionaryPetriMutationPlan:
     plan_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -566,7 +571,7 @@ def _parse_transition_record(record: object) -> _PetriNetTransition:
             )
         guard_weights = parsed
     else:
-        guard_weights = ()
+        guard_weights = []
 
     guard_weights = [
         (metric, float(weight)) for metric, weight in guard_weights if metric.strip()
@@ -635,7 +640,9 @@ def _parse_arc_record(item: object) -> _PetriNetArc:
 def _validate_arc_direction(value: object) -> Literal["input", "output"]:
     if value not in {"input", "output"}:
         raise ValueError("arc.direction must be 'input' or 'output'")
-    return value
+    if value == "input":
+        return "input"
+    return "output"
 
 
 def _validate_arc_references(
@@ -694,7 +701,7 @@ def _build_add_arc_candidate(
     )
 
     # Deterministic fallback: skip taken arcs by cycling over places and transitions.
-    candidate_tuple = (
+    candidate_tuple: tuple[str, str, Literal["input", "output"]] | None = (
         selected_place,
         selected_transition,
         direction,
@@ -734,7 +741,7 @@ def _build_add_arc_candidate(
         candidate_id="",
         generation=generation + 1,
         mutation_type="add_arc",
-        mutation_target=after_arc_dict["place"],
+        mutation_target=after_arc.place,
         mutation_kind="add_arc",
         blocked_reasons=(),
         before={
@@ -769,12 +776,12 @@ def _first_free_arc_tuple(
     *,
     start: tuple[str, str, Literal["input", "output"]],
     config: EvolutionaryPetriMutationConfig,
-    prefer_direction: str,
+    prefer_direction: Literal["input", "output"],
 ) -> tuple[str, str, Literal["input", "output"]] | None:
     transitions = [transition.name for transition in spec.transitions]
     places = [place.name for place in spec.places]
     if prefer_direction == "input":
-        direction_cycle: tuple[str, str, str] = (
+        direction_cycle: tuple[Literal["input", "output"], ...] = (
             prefer_direction,
             "output",
             "input",

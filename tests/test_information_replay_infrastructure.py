@@ -106,17 +106,21 @@ def test_recovered_infrastructure_cases_exceed_fragmented_base() -> None:
     )
     by_name = {record["case_name"]: record for record in records}
 
-    assert by_name["power_grid_resynchronisation"]["phi"] > by_name[
-        "power_grid_islanding"
-    ]["phi"]
-    assert by_name["traffic_platoon_recovery"]["phi"] > by_name[
-        "traffic_spillback_fragmentation"
-    ]["phi"]
+    assert (
+        by_name["power_grid_resynchronisation"]["phi"]
+        > by_name["power_grid_islanding"]["phi"]
+    )
+    assert (
+        by_name["traffic_platoon_recovery"]["phi"]
+        > by_name["traffic_spillback_fragmentation"]["phi"]
+    )
     assert np.isfinite(by_name["power_grid_resynchronisation"]["phi"])
     assert np.isfinite(by_name["traffic_platoon_recovery"]["phi"])
-    assert "power_grid_resynchronisation > power_grid_islanding" in by_name[
-        "power_grid_resynchronisation"
-    ]["expected_relationship"]
-    assert "traffic_platoon_recovery > traffic_spillback_fragmentation" in by_name[
-        "traffic_platoon_recovery"
-    ]["expected_relationship"]
+    assert (
+        "power_grid_resynchronisation > power_grid_islanding"
+        in by_name["power_grid_resynchronisation"]["expected_relationship"]
+    )
+    assert (
+        "traffic_platoon_recovery > traffic_spillback_fragmentation"
+        in by_name["traffic_platoon_recovery"]["expected_relationship"]
+    )

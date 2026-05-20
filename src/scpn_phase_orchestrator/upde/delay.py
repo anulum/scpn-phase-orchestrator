@@ -148,6 +148,7 @@ class DelayedEngine:
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
         knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
+        alpha64: FloatArray
         if alpha is None:
             alpha64 = np.zeros((self._n, self._n), dtype=np.float64)
         else:
@@ -184,6 +185,7 @@ class DelayedEngine:
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
         knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
+        alpha64: FloatArray
         if alpha is None:
             alpha64 = np.zeros((self._n, self._n), dtype=np.float64)
         else:

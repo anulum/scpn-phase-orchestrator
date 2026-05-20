@@ -165,7 +165,7 @@ def find_optimal_noise(
     D_range = _validate_noise_range(D_range)
     if D_range is None:
         K_mean = float(np.mean(knm[knm > 0])) if np.any(knm > 0) else 1.0
-        D_range = np.linspace(0.0, K_mean, 11)
+        D_range = np.linspace(0.0, K_mean, 11, dtype=np.float64)
 
     best_D = 0.0
     best_R = 0.0

@@ -365,6 +365,7 @@ def _build_scenario(
     phases = phases + phase_offset
     phases = np.mod(phases, 2.0 * math.pi).astype(np.float64)
 
+    bipartition: tuple[tuple[int, ...], tuple[int, ...]]
     if qubit_count == 2:
         bipartition = ((0,), (1,))
     elif qubit_count == 3:

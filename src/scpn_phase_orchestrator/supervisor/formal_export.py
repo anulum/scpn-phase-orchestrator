@@ -408,9 +408,7 @@ def build_formal_verification_package(
         "checker_commands": [command.to_audit_record() for command in commands],
     }
     package_hash = hashlib.sha256(
-        json.dumps(package_seed, sort_keys=True, separators=(",", ":")).encode(
-            "utf-8"
-        )
+        json.dumps(package_seed, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
     return FormalVerificationPackage(
         package_name=package_name,

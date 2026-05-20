@@ -993,3 +993,56 @@ $\Psi$ to drive the network toward a target coherence level {target}$
 !!! note "Rust-only module"
     `ActiveInferenceAgent` is implemented in `spo-kernel` (Rust crate `spo-supervisor::active_inference`).
     Python access via `spo_kernel.PyActiveInferenceAgent` when the FFI is installed.
+
+## Evolutionary Review Surfaces
+
+Offline-only evolutionary search, grammar, policy DSL, topology mutation, and
+example builders used for non-actuating supervisor review workflows.
+
+::: scpn_phase_orchestrator.supervisor.evolutionary_examples
+
+::: scpn_phase_orchestrator.supervisor.evolutionary_petri_grammar
+
+::: scpn_phase_orchestrator.supervisor.evolutionary_policy_dsl
+
+::: scpn_phase_orchestrator.supervisor.evolutionary_search
+
+::: scpn_phase_orchestrator.supervisor.evolutionary_topology_grammar
+
+## Federated Review Surfaces
+
+Federated orchestration, differential-privacy noise service, secure
+aggregation, and transport manifests. These APIs produce audit material and
+deployment preflight evidence without exporting raw local data.
+
+::: scpn_phase_orchestrator.supervisor.federated
+
+::: scpn_phase_orchestrator.supervisor.federated_dp_noise_service
+
+::: scpn_phase_orchestrator.supervisor.federated_secure_aggregation
+
+::: scpn_phase_orchestrator.supervisor.federated_transport
+
+## Information Geometry and Lineage
+
+Information-geometric control proposals, static scenario examples, and
+autopoietic lineage inheritance helpers for review-only policy evolution.
+
+::: scpn_phase_orchestrator.supervisor.information_geometry
+
+::: scpn_phase_orchestrator.supervisor.information_geometry_examples
+
+::: scpn_phase_orchestrator.supervisor.lineage
+
+## Multiverse and Topos Review
+
+Counterfactual branch simulation, example manifests, branch-risk gates, and
+categorical policy composition checks.
+
+::: scpn_phase_orchestrator.supervisor.multiverse
+
+::: scpn_phase_orchestrator.supervisor.multiverse_examples
+
+::: scpn_phase_orchestrator.supervisor.multiverse_risk
+
+::: scpn_phase_orchestrator.supervisor.topos_policy

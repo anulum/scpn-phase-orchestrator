@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from scpn_phase_orchestrator.supervisor import (
+from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
 )

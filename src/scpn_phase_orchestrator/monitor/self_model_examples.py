@@ -80,7 +80,7 @@ def _coerce_vector(values: object, *, label: str) -> FloatArray:
         raise ValueError(f"{label} must contain at least one value")
     if not np.isfinite(arr).all():
         raise ValueError(f"{label} must contain only finite values")
-    return arr
+    return np.asarray(arr, dtype=np.float64)
 
 
 def _coerce_bool(value: object, *, label: str) -> bool:
@@ -91,7 +91,7 @@ def _coerce_bool(value: object, *, label: str) -> bool:
 
 def _circular_error(predicted: FloatArray, observed: FloatArray) -> FloatArray:
     delta = observed - predicted
-    return np.arctan2(np.sin(delta), np.cos(delta))
+    return np.asarray(np.arctan2(np.sin(delta), np.cos(delta)), dtype=np.float64)
 
 
 def _coerce_error_payload(
@@ -145,7 +145,7 @@ def _coerce_error_payload(
     else:
         threshold = error_threshold
 
-    result = {
+    result: dict[str, Any] = {
         "error_norm": _from_obj(
             error_result,
             ("error_norm", "rms_error", "norm", "overall_rmse"),
@@ -252,6 +252,7 @@ class SelfModelReconfigurationProposal:
     scenario_hash: str = ""
 
     def to_audit_record(self) -> dict[str, Any]:
+        """Return a deterministic JSON-safe audit record."""
         _validate_self_model_reconfiguration_proposal(self)
         error_payload = _coerce_error_payload(
             self.self_model_error,
@@ -407,11 +408,14 @@ def _validate_scenario_record(record: dict[str, Any]) -> None:
         predicted_phase=predicted,
         observed_phase=observed,
         error_threshold=error_threshold,
-        self_model_error=_coerce_error_payload(
-            cast(SelfModelErrorResult, record["self_model_error"]),
-            predicted_phase=predicted,
-            observed_phase=observed,
-            error_threshold=error_threshold,
+        self_model_error=cast(
+            SelfModelErrorResult,
+            _coerce_error_payload(
+                cast(SelfModelErrorResult, record["self_model_error"]),
+                predicted_phase=predicted,
+                observed_phase=observed,
+                error_threshold=error_threshold,
+            ),
         ),
         proposed_reconfiguration_action=record["proposed_reconfiguration_action"],
         serialisable_evidence=record["serialisable_evidence"],

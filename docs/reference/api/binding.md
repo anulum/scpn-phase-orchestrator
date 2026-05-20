@@ -458,3 +458,16 @@ spo validate domainpacks/cardiac_review/binding_spec.yaml
 ```
 
 ::: scpn_phase_orchestrator.binding.semantic
+
+## Topos Binding Examples
+
+Domain-level topos obligation fixtures and semantic validation examples used by
+the public roadmap and direct test-linkage gates.
+
+::: scpn_phase_orchestrator.binding.topos_examples
+
+## Topos Semantic Binding
+
+Topos-oriented semantic binding helpers for categorical validation surfaces.
+
+::: scpn_phase_orchestrator.binding.topos_semantic

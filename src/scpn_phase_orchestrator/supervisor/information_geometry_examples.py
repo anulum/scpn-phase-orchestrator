@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Information-geometry control fixtures
 
+"""Information geometry control scenarios for non-actuating review."""
+
 from __future__ import annotations
 
 import hashlib
@@ -88,13 +90,16 @@ class DistributionPair:
 
     @property
     def current_summary(self) -> dict[str, float]:
+        """Return summary statistics for the current distribution."""
         return _distribution_summary(self.current_distribution)
 
     @property
     def target_summary(self) -> dict[str, float]:
+        """Return summary statistics for the target distribution."""
         return _distribution_summary(self.target_distribution)
 
     def to_record(self) -> dict[str, list[float]]:
+        """Return a deterministic JSON-safe record."""
         return {
             "current_distribution": self.current_distribution.tolist(),
             "target_distribution": self.target_distribution.tolist(),
@@ -117,6 +122,7 @@ class InformationGeometryScenario:
     claim_boundary: str = InformationGeometryBoundary
 
     def scenario_hash(self) -> str:
+        """Return the deterministic scenario digest."""
         return _compute_scenario_hash(
             domain=self.domain,
             scenario_id=self.scenario_id,
@@ -131,6 +137,7 @@ class InformationGeometryScenario:
         )
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         distributions = self.distributions.to_record()
         return {
             "domain": self.domain,
@@ -306,6 +313,13 @@ def _validate_scenario_record(record: dict[str, object]) -> None:
     if not isinstance(record["claim_boundary"], str):
         raise ValueError("record claim_boundary must be a string")
 
+    if not isinstance(record["current_distribution"], list | tuple):
+        raise ValueError("record current_distribution must be a sequence")
+    if not isinstance(record["target_distribution"], list | tuple):
+        raise ValueError("record target_distribution must be a sequence")
+    max_step_raw = record["max_step"]
+    if not isinstance(max_step_raw, int | float) or isinstance(max_step_raw, bool):
+        raise ValueError("record max_step must be numeric")
     current_distribution = _ensure_float64_vector(
         record["current_distribution"],
         label=f"{record['scenario_id']}.current_distribution",
@@ -339,7 +353,7 @@ def _validate_scenario_record(record: dict[str, object]) -> None:
         objective_labels=objective_labels,
         control_gradient=tuple(control_gradient),
         knob_hints=knob_hints,
-        max_step=record["max_step"],
+        max_step=float(max_step_raw),
         non_actuating=record["non_actuating"],
         execution_disabled=record["execution_disabled"],
         claim_boundary=record["claim_boundary"],
@@ -443,6 +457,7 @@ def _build_static_scenarios() -> tuple[InformationGeometryScenario, ...]:
 
 
 def build_information_geometry_control_scenarios() -> tuple[dict[str, object], ...]:
+    """Build deterministic information-geometry control scenarios."""
     records: list[dict[str, object]] = []
     for scenario in _build_static_scenarios():
         _validate_information_geometry_scenario(scenario)

@@ -248,7 +248,8 @@ def _python_torus_run(
         z_re = np.where(nonzero, nr / np.where(nonzero, norm, 1.0), nr)
         z_im = np.where(nonzero, ni / np.where(nonzero, norm, 1.0), ni)
 
-    return np.arctan2(z_im, z_re) % TWO_PI
+    result: FloatArray = np.asarray(np.arctan2(z_im, z_re) % TWO_PI, dtype=np.float64)
+    return result
 
 
 class TorusEngine:

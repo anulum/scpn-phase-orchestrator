@@ -152,7 +152,12 @@ def sheaf_coherence(
         and audit-visible approximate dimensions.
     """
     states = _validate_node_states(node_states)
-    maps = _validate_restriction_maps(restriction_maps, states.shape)
+    if len(states.shape) != 2:
+        raise ValueError("node_states must be a 2-D matrix")
+    maps = _validate_restriction_maps(
+        restriction_maps,
+        (states.shape[0], states.shape[1]),
+    )
     tol = _validate_tolerance(tolerance)
     residuals, edge_count = _restriction_residuals(states, maps, tol)
     laplacian = sheaf_laplacian(maps, tol)

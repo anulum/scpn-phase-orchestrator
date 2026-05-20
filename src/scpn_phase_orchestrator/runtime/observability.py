@@ -198,9 +198,9 @@ def _validated_optional_residual(value: object, *, field: str) -> float | None:
     return result
 
 
-def _evidence_record(evidence: Mapping[str, object] | PrometheusEvidenceSource) -> (
-    Mapping[str, object]
-):
+def _evidence_record(
+    evidence: Mapping[str, object] | PrometheusEvidenceSource,
+) -> Mapping[str, object]:
     if isinstance(evidence, Mapping):
         return evidence
     if not hasattr(evidence, "to_audit_record"):

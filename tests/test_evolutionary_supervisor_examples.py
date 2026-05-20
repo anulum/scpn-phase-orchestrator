@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from scpn_phase_orchestrator.supervisor import evolutionary_examples as examples
+import scpn_phase_orchestrator.supervisor.evolutionary_examples as examples
 
 
 def _records() -> tuple[dict[str, object], ...]:

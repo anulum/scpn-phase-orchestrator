@@ -14,7 +14,7 @@ import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from numbers import Real
+from numbers import Integral, Real
 
 __all__ = [
     "BranchRiskDecision",
@@ -118,9 +118,7 @@ def _is_finite_real(value: object, field: str) -> float:
 
 def _is_non_negative_int(value: object, field: str) -> int:
     """Return a non-negative int or raise ValueError with field context."""
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError(f"{field} must be a finite non-negative integer")
-    if float(value) != int(value):
+    if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a finite non-negative integer")
     value_i = int(value)
     if value_i < 0:

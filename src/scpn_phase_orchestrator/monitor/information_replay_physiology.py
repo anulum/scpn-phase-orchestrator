@@ -114,17 +114,17 @@ def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
         if not isinstance(record["minimum_partition"][0], list):
             raise ValueError("minimum_partition must be list-of-lists")
 
-    by_name = {record["case_name"]: record for record in records}
+    by_name = {str(record["case_name"]): record for record in records}
 
-    required = {
+    required_names = {
         "cardiac_respiratory_lock",
         "cardiac_respiratory_recovery",
         "eeg_sleep_spindle",
         "eeg_sleep_baseline",
     }
-    if not required.issubset(by_name.keys()):
-        missing = ", ".join(sorted(required - by_name.keys()))
-        raise ValueError(f"missing replay cases: {missing}")
+    if not required_names.issubset(by_name.keys()):
+        missing_names = ", ".join(sorted(required_names - by_name.keys()))
+        raise ValueError(f"missing replay cases: {missing_names}")
 
     if not (
         by_name["cardiac_respiratory_lock"]["phi"]
@@ -208,7 +208,7 @@ def _eeg_spindle_fragments_series(n_samples: int) -> FloatArray:
 def _eeg_sleep_spindle_series(n_samples: int) -> FloatArray:
     t = _time_norm(n_samples)
     fragmented = _eeg_spindle_fragments_series(n_samples)
-    spindle_core = (_TWO_PI * 9.8 * t[None, :])
+    spindle_core = _TWO_PI * 9.8 * t[None, :]
     spindle_offsets = np.array([0.0, 0.14, 0.28, 0.42], dtype=np.float64)
     coherent = (spindle_core + spindle_offsets[:, None]) % _TWO_PI
 

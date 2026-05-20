@@ -258,16 +258,15 @@ def test_compile_artifacts_records_deterministic_retrieval_ranking(tmp_path):
     )
     records = artefacts.audit_record["retrieval_evidence"]
 
-    assert [record["rank"] for record in records] == list(
-        range(1, len(records) + 1)
-    )
+    assert [record["rank"] for record in records] == list(range(1, len(records) + 1))
     assert records[0]["source"] == "domainpack"
     assert records[0]["domainpack"] == "power_grid"
     assert records[0]["ranking_features"]["source_priority"] == 1.0
     assert records[0]["ranking_features"]["phrase_match"] == 1.0
-    assert records[0]["ranking_features"]["matched_term_count"] >= records[1][
-        "ranking_features"
-    ]["matched_term_count"]
+    assert (
+        records[0]["ranking_features"]["matched_term_count"]
+        >= records[1]["ranking_features"]["matched_term_count"]
+    )
     assert artefacts.retrieval_evidence[0].rank == 1
     assert artefacts.retrieval_evidence[0].ranking_features["term_density"] > 0.0
 

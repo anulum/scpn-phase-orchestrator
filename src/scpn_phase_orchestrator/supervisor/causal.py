@@ -444,7 +444,10 @@ def build_temporal_causal_hypergraph_experiment(
     accepted: list[dict[str, object]] = []
     evaluated: list[dict[str, object]] = []
     for candidate in candidates:
-        advantage = float(candidate["score"]) - baseline_score
+        score = candidate["score"]
+        if not isinstance(score, int | float) or isinstance(score, bool):
+            raise ValueError("candidate score must be finite")
+        advantage = float(score) - baseline_score
         record = {
             **candidate,
             "baseline_score": baseline_score,

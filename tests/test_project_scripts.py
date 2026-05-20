@@ -32,9 +32,7 @@ def test_project_script_targets_are_importable_click_commands() -> None:
     data = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     scripts = data["project"]["scripts"]
 
-    resolved = {
-        name: _load_entry_point(target) for name, target in scripts.items()
-    }
+    resolved = {name: _load_entry_point(target) for name, target in scripts.items()}
 
     assert isinstance(resolved["spo"], click.Group)
     assert resolved["spo"].name == "main"

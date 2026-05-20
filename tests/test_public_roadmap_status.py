@@ -20,8 +20,7 @@ def test_public_roadmap_reflects_benchmark_gated_auto_binding_status() -> None:
     ) not in text
     assert "benchmark-gated domain thresholds" in text
     assert (
-        "deterministic domain-like fixtures now enforce domain-specific gates"
-        in text
+        "deterministic domain-like fixtures now enforce domain-specific gates" in text
     )
     assert "private or partner live datasets remain future work" in text
 
@@ -35,6 +34,5 @@ def test_public_roadmap_reflects_bayesian_posterior_fit_status() -> None:
     )
     assert "Gaussian posterior fitting from observed Kuramoto trajectories" in text
     assert (
-        "reserved NumPyro/BlackJAX sampler names are benchmarked as fail-closed"
-        in text
+        "reserved NumPyro/BlackJAX sampler names are benchmarked as fail-closed" in text
     )

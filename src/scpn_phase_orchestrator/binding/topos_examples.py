@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Topos domain obligations examples
 
+"""Deterministic topos obligation examples for binding review surfaces."""
+
 from __future__ import annotations
 
 import hashlib
@@ -114,10 +116,7 @@ class ToposDomainObligation:
             raise ValueError("policy rules must be a non-empty tuple")
         if not isinstance(self.obligations, tuple) or not self.obligations:
             raise ValueError("obligations must be a non-empty tuple")
-        if any(
-            not isinstance(item, ToposProofObligation)
-            for item in self.obligations
-        ):
+        if any(not isinstance(item, ToposProofObligation) for item in self.obligations):
             raise ValueError(
                 "obligations must contain only ToposProofObligation values"
             )
@@ -135,10 +134,7 @@ class ToposDomainObligation:
             or self.policy_object_count < 1
         ):
             raise ValueError("policy_object_count must be a positive integer")
-        if (
-            not isinstance(self.non_actuating, bool)
-            or self.non_actuating is not True
-        ):
+        if not isinstance(self.non_actuating, bool) or self.non_actuating is not True:
             raise ValueError("non_actuating must be True")
         if not isinstance(self.passed, bool) or not self.passed:
             raise ValueError("all obligations must be passed")
@@ -161,7 +157,7 @@ def _binding_signature(binding: BindingSpec) -> dict[str, object]:
 def _policy_rule_to_dict(rule: PolicyRule) -> dict[str, object]:
     condition = rule.condition
     if isinstance(condition, CompoundCondition):
-        condition_data = {
+        condition_data: dict[str, object] = {
             "logic": condition.logic,
             "conditions": [
                 _policy_condition_to_dict(item) for item in condition.conditions
@@ -220,7 +216,6 @@ def _count_policy_objects(rules: tuple[PolicyRule, ...]) -> int:
             total += 2
         total += len(rule.actions) + 1
     return total
-
 
 
 def _build_domain_example(
@@ -288,7 +283,7 @@ def _power_grid_policy_rules() -> tuple[PolicyRule, ...]:
             name="grid_load_spike_guard",
             regimes=["DEGRADED"],
             condition=CompoundCondition(
-                conditions=(
+                conditions=[
                     PolicyCondition(
                         metric="pac_max",
                         layer=None,
@@ -301,7 +296,7 @@ def _power_grid_policy_rules() -> tuple[PolicyRule, ...]:
                         op=">",
                         threshold=0.62,
                     ),
-                ),
+                ],
                 logic="OR",
             ),
             actions=[
@@ -336,7 +331,7 @@ def _cardiac_policy_rules() -> tuple[PolicyRule, ...]:
             name="cardiac_rhythm_stability",
             regimes=["CRITICAL"],
             condition=CompoundCondition(
-                conditions=(
+                conditions=[
                     PolicyCondition(
                         metric="stability_proxy",
                         layer=None,
@@ -349,7 +344,7 @@ def _cardiac_policy_rules() -> tuple[PolicyRule, ...]:
                         op="<",
                         threshold=0.5,
                     ),
-                ),
+                ],
                 logic="AND",
             ),
             actions=[
@@ -380,7 +375,7 @@ def _cyber_industrial_policy_rules() -> tuple[PolicyRule, ...]:
             name="industrial_threat_isolation",
             regimes=["CRITICAL"],
             condition=CompoundCondition(
-                conditions=(
+                conditions=[
                     PolicyCondition(
                         metric="imprint_mean",
                         layer=None,
@@ -393,7 +388,7 @@ def _cyber_industrial_policy_rules() -> tuple[PolicyRule, ...]:
                         op="<",
                         threshold=0.58,
                     ),
-                ),
+                ],
                 logic="OR",
             ),
             actions=[
@@ -474,10 +469,7 @@ def build_topos_domain_obligation_examples() -> tuple[dict[str, object], ...]:
         ),
     )
 
-    records = [
-        example.to_audit_record()
-        for example in examples
-    ]
+    records = [example.to_audit_record() for example in examples]
 
     for record in records:
         if not isinstance(record, dict):

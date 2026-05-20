@@ -47,6 +47,7 @@ class PolicyCompositionObject:
     action_labels: tuple[str, ...]
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "name": self.name,
             "regimes": list(self.regimes),
@@ -64,6 +65,7 @@ class PolicyCompositionMorphism:
     deterministic: bool = True
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "source": self.source,
             "target": self.target,
@@ -81,6 +83,7 @@ class PolicyCompositionObligation:
     evidence: str
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "name": self.name,
             "status": self.status,
@@ -105,14 +108,14 @@ class PolicyCompositionValidationReport:
     non_actuating: bool = True
 
     def to_audit_record(self) -> dict[str, object]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
             "object_count": self.object_count,
             "morphism_count": self.morphism_count,
             "obligation_records": [
-                obligation.to_audit_record()
-                for obligation in self.obligation_records
+                obligation.to_audit_record() for obligation in self.obligation_records
             ],
             "objects": [obj.to_audit_record() for obj in self.objects],
             "morphisms": [morphism.to_audit_record() for morphism in self.morphisms],
@@ -134,17 +137,12 @@ def _build_report_hash(record: dict[str, object]) -> str:
 def _as_action_label(action: PolicyAction) -> str:
     """Create a deterministic action label for morphism naming."""
     value = _as_finite_real(action.value, "policy action value")
-    ttl = _as_finite_real(
-        action.ttl_s, "policy action ttl_s", allow_negative=False
-    )
+    ttl = _as_finite_real(action.ttl_s, "policy action ttl_s", allow_negative=False)
     if not isinstance(action.knob, str) or not action.knob:
         raise ValueError("policy action knob must be a non-empty string")
     if not isinstance(action.scope, str) or not action.scope:
         raise ValueError("policy action scope must be a non-empty string")
-    return (
-        f"action[{action.knob}|{action.scope}|"
-        f"{value:.17g}|{ttl:.17g}]"
-    )
+    return f"action[{action.knob}|{action.scope}|{value:.17g}|{ttl:.17g}]"
 
 
 def _as_finite_real(
@@ -156,12 +154,12 @@ def _as_finite_real(
     """Validate a finite real scalar and return a float."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{message_prefix} must be a finite real")
-    value = float(value)
-    if value != value or value in (float("inf"), float("-inf")):
+    parsed = float(value)
+    if parsed != parsed or parsed in (float("inf"), float("-inf")):
         raise ValueError(f"{message_prefix} must be a finite real")
-    if not allow_negative and value < 0:
+    if not allow_negative and parsed < 0:
         raise ValueError(f"{message_prefix} must be non-negative")
-    return value
+    return parsed
 
 
 def _normalised_logic(raw_logic: str) -> str:
@@ -236,9 +234,7 @@ def validate_policy_composition_category(
         raise ValueError("rule names must be non-empty")
 
     duplicates = {
-        name
-        for name in set(normalized_names)
-        if normalized_names.count(name) > 1
+        name for name in set(normalized_names) if normalized_names.count(name) > 1
     }
     if duplicates:
         name_failures.update(duplicates)
@@ -290,9 +286,8 @@ def validate_policy_composition_category(
             if isinstance(rule.condition, CompoundCondition):
                 cond_logic = _normalised_logic(rule.condition.logic)
                 cond_conditions = rule.condition.conditions
-                if (
-                    not isinstance(cond_conditions, list)
-                    and not isinstance(cond_conditions, tuple)
+                if not isinstance(cond_conditions, list) and not isinstance(
+                    cond_conditions, tuple
                 ):
                     raise ValueError(
                         "compound condition entries must be a list or tuple"

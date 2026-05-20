@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Offline review-only policy DSL mutation search
 
+"""Policy DSL mutation helpers for offline evolutionary supervisor review."""
+
 from __future__ import annotations
 
 import hashlib
@@ -59,31 +61,40 @@ _CONDITION_RE: Final[re.Pattern[str]] = re.compile(
 
 @dataclass(frozen=True)
 class PolicyCondition:
+    """Atomic predicate in the policy mutation DSL."""
+
     metric: str
     operator: str
     threshold: float
 
     def to_dsl(self) -> str:
+        """Return the deterministic policy DSL representation."""
         return f"{self.metric} {self.operator} {_format_float(self.threshold)}"
 
 
 @dataclass(frozen=True)
 class PolicyAction:
+    """Bounded action in the policy mutation DSL."""
+
     target: str
     operator: str
     value: float
 
     def to_dsl(self) -> str:
+        """Return the deterministic policy DSL representation."""
         return f"set {self.target} {self.operator} {_format_float(self.value)}"
 
 
 @dataclass(frozen=True)
 class PolicyRule:
+    """Policy rule composed from conditions and actions."""
+
     name: str
     conditions: tuple[PolicyCondition, ...]
     action: PolicyAction
 
     def to_dsl(self) -> str:
+        """Return the deterministic policy DSL representation."""
         condition_text = " and ".join(
             condition.to_dsl() for condition in self.conditions
         )
@@ -92,6 +103,8 @@ class PolicyRule:
 
 @dataclass(frozen=True)
 class PolicyMutationSearchConfig:
+    """Configuration for deterministic policy mutation search."""
+
     generation_count: int = 2
     population_size: int = 6
     mutation_step: float = 0.05
@@ -104,6 +117,8 @@ class PolicyMutationSearchConfig:
 
 @dataclass(frozen=True)
 class PolicyMutationPlan:
+    """Planned mutation candidate for policy DSL review."""
+
     rule_name: str
     component: str
     component_index: int
@@ -115,6 +130,8 @@ class PolicyMutationPlan:
 
 @dataclass(frozen=True)
 class PolicyMutationCandidate:
+    """One non-actuating policy mutation candidate."""
+
     candidate_id: str
     generation: int
     mutation_index: int
@@ -133,9 +150,11 @@ class PolicyMutationCandidate:
 
     @property
     def accepted(self) -> bool:
+        """Return whether this candidate is accepted for review."""
         return not self.blocked_reasons
 
     def to_audit_record(self) -> dict[str, Any]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "candidate_id": self.candidate_id,
             "generation": self.generation,
@@ -166,6 +185,8 @@ class PolicyMutationCandidate:
 
 @dataclass(frozen=True)
 class PolicyMutationSearchReport:
+    """Aggregate report for policy mutation search."""
+
     schema_name: str
     schema_version: str
     config: PolicyMutationSearchConfig
@@ -184,6 +205,7 @@ class PolicyMutationSearchReport:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, Any]:
+        """Return a deterministic JSON-safe audit record."""
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,

@@ -509,3 +509,31 @@ and a functional desynchronisation flag. Includes ultradian
 **Detailed documentation:** [Sleep Staging — detailed reference](monitor_sleep_staging.md)
 
 ::: scpn_phase_orchestrator.monitor.sleep_staging
+
+## Hybrid Order Monitoring
+
+Hybrid classical/quantum order-parameter monitors and deterministic example
+fixtures for review-only cosimulation evidence.
+
+::: scpn_phase_orchestrator.monitor.hybrid_order
+
+::: scpn_phase_orchestrator.monitor.hybrid_order_examples
+
+## Information Replay Examples
+
+Domain-specific information replay fixtures for cyber-industrial,
+infrastructure, and physiology validation paths.
+
+::: scpn_phase_orchestrator.monitor.information_replay_cyber_industrial
+
+::: scpn_phase_orchestrator.monitor.information_replay_infrastructure
+
+::: scpn_phase_orchestrator.monitor.information_replay_physiology
+
+## Self-Model Reconfiguration
+
+Self-model error records and review-only reconfiguration examples.
+
+::: scpn_phase_orchestrator.monitor.self_model
+
+::: scpn_phase_orchestrator.monitor.self_model_examples

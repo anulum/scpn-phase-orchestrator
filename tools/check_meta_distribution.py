@@ -88,9 +88,7 @@ def build_meta_distribution_evidence(
             "spo": spo_target,
             "scpn-meta": meta_target,
         },
-        "scpn_meta_command_name": (
-            str(meta_command.name) if meta_is_command else ""
-        ),
+        "scpn_meta_command_name": (str(meta_command.name) if meta_is_command else ""),
         "checks": checks,
         "accepted": accepted,
     }

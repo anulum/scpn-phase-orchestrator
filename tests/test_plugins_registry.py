@@ -655,9 +655,7 @@ class TestPluginMarketplaceCatalog:
             "extractor",
             "monitor",
         }
-        assert [record["name"] for record in dispatch_groups["actuator"]] == [
-            "breaker"
-        ]
+        assert [record["name"] for record in dispatch_groups["actuator"]] == ["breaker"]
         assert [record["name"] for record in dispatch_groups["extractor"]] == ["pmu"]
         assert [record["name"] for record in dispatch_groups["monitor"]] == [
             "frequency_drift"

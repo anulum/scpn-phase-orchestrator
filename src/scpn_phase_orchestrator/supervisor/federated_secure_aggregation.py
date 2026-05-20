@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Offline secure aggregation manifest
 
+"""Offline secure aggregation manifests for federated supervisor review."""
+
 from __future__ import annotations
 
 import hashlib
@@ -566,7 +568,7 @@ def _validate_node_commitment(
 def _weighted_masked_average(
     accepted_nodes: tuple[SecureNodeCommitment, ...],
     required_policy_keys: tuple[str, ...],
-) -> tuple[tuple[str, float], int]:
+) -> tuple[tuple[tuple[str, float], ...], int]:
     total_sample_count = sum(node.sample_count for node in accepted_nodes)
     if total_sample_count <= 0:
         raise ValueError("total_sample_count must be positive for aggregation")
@@ -577,9 +579,10 @@ def _weighted_masked_average(
             aggregate[key] += value * node.sample_count
     for key in required_policy_keys:
         aggregate[key] /= float(total_sample_count)
-    return tuple(
-        (key, aggregate[key]) for key in required_policy_keys
-    ), total_sample_count
+    return (
+        tuple((key, aggregate[key]) for key in required_policy_keys),
+        total_sample_count,
+    )
 
 
 def _resolve_preflight_quorum_evidence(

@@ -118,7 +118,7 @@ def network_graph_json(
     else:
         layer_names = _validate_layer_names(layer_names, expected_length=n)
     if R_values is None:
-        r_values = np.zeros(n, dtype=np.float64)
+        r_values: FloatArray = np.zeros(n, dtype=np.float64)
     else:
         r_values = _validate_metric_values(
             R_values,

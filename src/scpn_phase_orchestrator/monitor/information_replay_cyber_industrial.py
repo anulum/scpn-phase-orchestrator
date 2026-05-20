@@ -131,8 +131,7 @@ def _validate_replay_records(
             "cyber recontainment integration must exceed disruption integration"
         )
     if not (
-        case_by_name["spc_recovery"]["phi"]
-        > case_by_name["spc_fragmentation"]["phi"]
+        case_by_name["spc_recovery"]["phi"] > case_by_name["spc_fragmentation"]["phi"]
     ):
         raise ValueError(
             "SPC recovery integration must exceed fragmentation integration"
@@ -201,11 +200,14 @@ def _spc_recovery_series(n_samples: int) -> FloatArray:
     line_offsets = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float64)[:, None]
     line_locked = (recovery_phase[None, :] + line_offsets) % _TWO_PI
     switch = n_samples // 3
-    return np.where(
-        np.arange(n_samples) < switch,
-        fragmentation[:, :],
-        np.broadcast_to(line_locked, fragmentation.shape),
-    ) % _TWO_PI
+    return (
+        np.where(
+            np.arange(n_samples) < switch,
+            fragmentation[:, :],
+            np.broadcast_to(line_locked, fragmentation.shape),
+        )
+        % _TWO_PI
+    )
 
 
 def _build_cyber_disruption_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
@@ -218,8 +220,7 @@ def _build_cyber_disruption_case(*, n_samples: int, n_bins: int) -> dict[str, An
         phase_series=_lateral_movement_disruption_series(n_samples),
         n_bins=n_bins,
         expected_relationship=(
-            "cyber_disruption < cyber_recontainment "
-            "in engineering proxy integration"
+            "cyber_disruption < cyber_recontainment in engineering proxy integration"
         ),
     )
 

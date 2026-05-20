@@ -15,7 +15,7 @@ import json
 
 import pytest
 
-from scpn_phase_orchestrator.supervisor import topos_policy
+import scpn_phase_orchestrator.supervisor.topos_policy as topos_policy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     CompoundCondition,
     PolicyAction,

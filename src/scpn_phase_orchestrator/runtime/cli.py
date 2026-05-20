@@ -616,9 +616,7 @@ def formal_export(
                     record.to_audit_record()
                     for record in audit_formal_checker_availability(
                         package,
-                        executable_paths=_parse_checker_path_overrides(
-                            checker_paths
-                        )
+                        executable_paths=_parse_checker_path_overrides(checker_paths)
                         if checker_paths
                         else None,
                     )

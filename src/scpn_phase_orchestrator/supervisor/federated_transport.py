@@ -6,14 +6,17 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Federated transport envelope and replay
 
+"""Federated transport envelope and replay validation helpers."""
+
 from __future__ import annotations
 
 import hashlib
 import json
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import ItemsView, Mapping, Sequence
 from dataclasses import dataclass
 from numbers import Integral, Real
+from typing import TypedDict
 
 __all__ = [
     "FederatedTransportEnvelope",
@@ -59,6 +62,32 @@ _ALLOWED_TRANSPORT_DECLARATION_KEYS = {
     "local_path_evidence",
     "operator_approved",
 }
+
+
+class _NormalisedUpdateRecord(TypedDict):
+    node_id: str
+    sample_count: int
+    local_loss: float
+    previous_audit_hash: str
+    privacy_epsilon_spent: float
+    clipped_l2_norm: float
+    clip_scale: float
+    accepted: bool
+    rejection_reasons: tuple[str, ...]
+    policy_delta: tuple[tuple[str, float], ...]
+    update_hash: str
+    payload: tuple[tuple[str, object], ...]
+
+
+class _NormalisedTransportDeclaration(TypedDict):
+    transport: str
+    endpoint: str
+    owner: str
+    auth_policy: str
+    secure_channel: bool
+    replay_supported: bool
+    local_path_evidence: str
+    operator_approved: bool
 
 
 @dataclass(frozen=True)
@@ -371,9 +400,7 @@ def validate_federated_transport_batch(
             node_sequence=envelope.node_sequence,
             parent_hash=envelope.parent_envelope_hash,
             node_update_hash=envelope.node_update_audit_hash,
-            node_update_record=tuple(
-                [tuple(kv) for kv in envelope.node_update_audit_record]
-            ),
+            node_update_record=tuple(envelope.node_update_audit_record),
         )
         expected_hash = _stable_hash(
             {
@@ -408,7 +435,9 @@ def replay_federated_transport_batch(
             "envelopes": [envelope.to_audit_record() for envelope in validated],
         }
     )
-    node_last = tuple(sorted(_group_last_sequence(validated), key=lambda item: item[0]))
+    node_last = tuple(
+        sorted(_group_last_sequence(validated).items(), key=lambda item: item[0])
+    )
     return FederatedTransportReplayLedger(
         schema_name=first.schema_name,
         schema_version=first.schema_version,
@@ -632,7 +661,7 @@ def _normalise_transport_input(
 
 def _normalise_transport_declaration(
     raw: Mapping[str, object],
-) -> dict[str, object]:
+) -> _NormalisedTransportDeclaration:
     for key in raw:
         if not isinstance(key, str):
             raise ValueError("transport declaration keys must be text")
@@ -731,7 +760,7 @@ def _build_transport_preflight_signature(
     )
 
 
-def _normalise_update_record(raw: object) -> dict[str, object]:
+def _normalise_update_record(raw: object) -> _NormalisedUpdateRecord:
     if not isinstance(raw, Mapping):
         raise ValueError("each node update audit record must be a mapping")
 
@@ -783,7 +812,7 @@ def _normalise_update_record(raw: object) -> dict[str, object]:
     update_hash = _sha256_text(raw["update_hash"], "update_hash")
     policy_delta = _normalise_policy_delta(raw["policy_delta"])
 
-    payload = {
+    payload: dict[str, object] = {
         "node_id": node_id,
         "policy_delta": policy_delta,
         "sample_count": sample_count,
@@ -815,7 +844,7 @@ def _normalise_update_record(raw: object) -> dict[str, object]:
 
 def _normalise_policy_delta(raw: object) -> tuple[tuple[str, float], ...]:
     if isinstance(raw, Mapping):
-        items = raw.items()
+        items: ItemsView[object, object] | list[tuple[object, object]] = raw.items()
     elif isinstance(raw, Sequence) and not isinstance(raw, (str, bytes, bytearray)):
         items = []
         for item in raw:

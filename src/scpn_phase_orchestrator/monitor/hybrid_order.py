@@ -115,12 +115,12 @@ def compute_hybrid_entanglement_order_parameter(
     normalised_entropy = float(np.clip(normalised_entropy, 0.0, 1.0))
 
     result_payload = {
-        "R": r_value,
-        "Psi": psi_value,
-        "entanglement_entropy": entropy,
-        "normalised_entanglement_entropy": normalised_entropy,
-        "participation_ratio": participation_ratio,
-        "qubit_count": qubit_count,
+        "R": float(r_value),
+        "Psi": float(psi_value),
+        "entanglement_entropy": float(entropy),
+        "normalised_entanglement_entropy": float(normalised_entropy),
+        "participation_ratio": float(participation_ratio),
+        "qubit_count": int(qubit_count),
         "bipartition": [list(partition[0]), list(partition[1])],
         "backend": BACKEND,
         "claim_boundary": CLAIM_BOUNDARY,
@@ -129,14 +129,12 @@ def compute_hybrid_entanglement_order_parameter(
     }
     result_payload["record_hash"] = _deterministic_record_hash(result_payload)
     return HybridOrderParameterResult(
-        R=float(result_payload["R"]),
-        Psi=float(result_payload["Psi"]),
-        entanglement_entropy=float(result_payload["entanglement_entropy"]),
-        normalised_entanglement_entropy=float(
-            result_payload["normalised_entanglement_entropy"],
-        ),
-        participation_ratio=float(result_payload["participation_ratio"]),
-        qubit_count=int(result_payload["qubit_count"]),
+        R=float(r_value),
+        Psi=float(psi_value),
+        entanglement_entropy=float(entropy),
+        normalised_entanglement_entropy=float(normalised_entropy),
+        participation_ratio=float(participation_ratio),
+        qubit_count=int(qubit_count),
         bipartition=(tuple(partition[0]), tuple(partition[1])),
         backend=str(result_payload["backend"]),
         claim_boundary=str(result_payload["claim_boundary"]),
@@ -155,7 +153,7 @@ def _require_finite_float_array(values: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must be numeric")
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain finite values")
-    return array
+    return np.asarray(array, dtype=np.float64)
 
 
 def _validate_quantum_state(
@@ -198,7 +196,7 @@ def _validate_quantum_state(
 
 
 def _normalise_statevector(
-    vector: object,
+    vector: NDArray[np.generic],
 ) -> tuple[int, ComplexArray]:
     if vector.dtype == np.bool_:
         raise ValueError("quantum_state must be numeric")
@@ -217,7 +215,10 @@ def _normalise_statevector(
     if not np.isfinite(norm) or norm <= 0.0:
         raise ValueError("quantum_state vector must have non-zero norm")
     vector_complex = vector_complex / norm
-    density = np.outer(vector_complex, np.conj(vector_complex))
+    density: ComplexArray = np.asarray(
+        np.outer(vector_complex, np.conj(vector_complex)),
+        dtype=np.complex128,
+    )
     return n_qubits, density
 
 
@@ -229,9 +230,9 @@ def _validate_bipartition(
     if bipartition is None:
         if n_qubits < 2:
             raise ValueError("bipartition requires at least two qubits")
-        left = tuple(range(n_qubits // 2))
-        right = tuple(range(n_qubits // 2, n_qubits))
-        return left, right
+        default_left = tuple(range(n_qubits // 2))
+        default_right = tuple(range(n_qubits // 2, n_qubits))
+        return default_left, default_right
 
     if not isinstance(bipartition, tuple) and not isinstance(bipartition, list):
         raise ValueError("bipartition must be two index groups")
@@ -239,27 +240,29 @@ def _validate_bipartition(
         raise ValueError("bipartition must be two index groups")
 
     left_raw, right_raw = bipartition
-    left: list[int] = []
-    right: list[int] = []
+    left_indices: list[int] = []
+    right_indices: list[int] = []
     for idx in left_raw:
         if isinstance(idx, bool) or not isinstance(idx, int):
             raise ValueError("bipartition indices must be integers")
         if idx < 0 or idx >= n_qubits:
             raise ValueError("bipartition index out of range")
-        left.append(int(idx))
+        left_indices.append(int(idx))
     for idx in right_raw:
         if isinstance(idx, bool) or not isinstance(idx, int):
             raise ValueError("bipartition indices must be integers")
         if idx < 0 or idx >= n_qubits:
             raise ValueError("bipartition index out of range")
-        right.append(int(idx))
+        right_indices.append(int(idx))
 
-    if not left or not right:
+    if not left_indices or not right_indices:
         raise ValueError("bipartition groups must be non-empty")
-    if len(set(left)) != len(left) or len(set(right)) != len(right):
+    if len(set(left_indices)) != len(left_indices) or len(set(right_indices)) != len(
+        right_indices
+    ):
         raise ValueError("bipartition groups must contain unique indices")
-    left_set = set(left)
-    right_set = set(right)
+    left_set = set(left_indices)
+    right_set = set(right_indices)
     if left_set & right_set:
         raise ValueError("bipartition groups must be disjoint")
     all_indices = left_set | right_set
@@ -284,10 +287,10 @@ def _reduced_density_matrix(
 
     tensor = density_matrix.reshape((2,) * (2 * n_qubits))
     ordering = tuple(subsystem_a) + tuple(subsystem_b)
-    permutation = ordering + tuple(index + n_qubits for index in ordering)
+    permutation = list(ordering + tuple(index + n_qubits for index in ordering))
     tensor = np.transpose(tensor, permutation)
     tensor = tensor.reshape((dim_a, dim_b, dim_a, dim_b))
-    return np.einsum("abcb->ac", tensor)
+    return np.asarray(np.einsum("abcb->ac", tensor), dtype=np.complex128)
 
 
 def _von_neumann_entropy(

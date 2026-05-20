@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
-from typing import Final
+from typing import Final, cast
 
 from scpn_phase_orchestrator.supervisor.evolutionary_search import (
     run_offline_evolutionary_supervisor_search,
@@ -51,15 +51,22 @@ def build_evolutionary_supervisor_search_examples_from_worker_a_api() -> tuple[
     enriched: list[dict[str, object]] = []
     for record in build_evolutionary_supervisor_search_examples():
         report = run_offline_evolutionary_supervisor_search(
-            record["parent_policy"],
-            record["audit_replays"],
+            _as_mapping(record["parent_policy"], label="parent_policy"),
+            _as_mapping_sequence(record["audit_replays"], label="audit_replays"),
             stl_spec=str(record["stl_spec"]),
-            trace=_as_mapping(record["trace"], label="trace"),
-            generation_count=int(record["generation_count"]),
-            population_size=int(record["population_size"]),
-            mutation_step=float(record["mutation_step"]),
-            minimum_replay_reward=float(record["minimum_replay_reward"]),
-            minimum_safety_margin=float(record["minimum_safety_margin"]),
+            trace=_as_trace(record["trace"]),
+            generation_count=_as_int(
+                record["generation_count"],
+                label="generation_count",
+            ),
+            population_size=_as_int(record["population_size"], label="population_size"),
+            mutation_step=_as_float(record["mutation_step"], label="mutation_step"),
+            minimum_replay_reward=_as_float(
+                record["minimum_replay_reward"], label="minimum_replay_reward"
+            ),
+            minimum_safety_margin=_as_float(
+                record["minimum_safety_margin"], label="minimum_safety_margin"
+            ),
         )
         merged = dict(record)
         merged.update(
@@ -302,11 +309,16 @@ def _validate_trace(trace: Mapping[str, object]) -> None:
 
 
 def _scenario_hash(record: Mapping[str, object]) -> str:
+    audit_replays = record["audit_replays"]
+    if not isinstance(audit_replays, Sequence) or isinstance(
+        audit_replays, (str, bytes, bytearray)
+    ):
+        raise ValueError("audit_replays must be a sequence")
     payload = {
         "domain": record["domain"],
         "scenario_id": record["scenario_id"],
         "parent_policy": record["parent_policy"],
-        "audit_replays": list(record["audit_replays"]),
+        "audit_replays": list(audit_replays),
         "stl_spec": record["stl_spec"],
         "trace": record["trace"],
         "generation_count": record["generation_count"],
@@ -330,6 +342,21 @@ def _as_mapping(value: object, *, label: str) -> dict[str, object]:
     if not isinstance(value, Mapping):
         raise ValueError(f"{label} must be a mapping")
     return dict(value)
+
+
+def _as_mapping_sequence(
+    value: object,
+    *,
+    label: str,
+) -> tuple[Mapping[str, object], ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        raise ValueError(f"{label} must be a sequence of mappings")
+    return tuple(_as_mapping(item, label=f"{label} item") for item in value)
+
+
+def _as_trace(value: object) -> dict[str, Sequence[object]]:
+    mapping = _as_mapping(value, label="trace")
+    return {key: cast(Sequence[object], item) for key, item in mapping.items()}
 
 
 def _as_non_empty_str(value: object, *, label: str) -> str:

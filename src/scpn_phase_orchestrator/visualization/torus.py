@@ -105,7 +105,7 @@ def torus_points_json(
     phases = _validate_phase_array(phases, name="phases")
     n = len(phases)
     if R_values is None:
-        r_values = np.ones(n, dtype=np.float64)
+        r_values: FloatArray = np.ones(n, dtype=np.float64)
     else:
         r_values = _validate_metric_values(
             R_values,

@@ -98,9 +98,10 @@ def test_expected_coherent_vs_fragmented_ordering_is_present() -> None:
     records = build_physiology_integrated_information_replays(n_samples=192, n_bins=10)
     by_name = {record["case_name"]: record for record in records}
 
-    assert by_name["cardiac_respiratory_lock"]["phi"] > by_name[
-        "cardiac_respiratory_recovery"
-    ]["phi"]
+    assert (
+        by_name["cardiac_respiratory_lock"]["phi"]
+        > by_name["cardiac_respiratory_recovery"]["phi"]
+    )
     assert (
         "cardiac_respiratory_lock > cardiac_respiratory_recovery"
         in by_name["cardiac_respiratory_lock"]["expected_relationship"]

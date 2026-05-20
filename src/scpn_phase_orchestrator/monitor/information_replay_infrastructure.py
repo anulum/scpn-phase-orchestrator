@@ -189,13 +189,13 @@ def _power_grid_islanding_series(n_samples: int) -> FloatArray:
 def _power_grid_resynchronisation_series(n_samples: int) -> FloatArray:
     islanding = _power_grid_islanding_series(n_samples)
     t = _time_axis(n_samples) / n_samples
-    restored = np.array([0.22, 0.24, 0.26, 0.28, 0.3, 0.32], dtype=np.float64)[
-        :, None
-    ] * t[None, :]
     restored = (
-        (restored + np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float64)[:, None])
-        % 1.0
+        np.array([0.22, 0.24, 0.26, 0.28, 0.3, 0.32], dtype=np.float64)[:, None]
+        * t[None, :]
     )
+    restored = (
+        restored + np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float64)[:, None]
+    ) % 1.0
     switch = n_samples // 2
     return np.where(
         np.arange(n_samples)[None, :] < switch,
@@ -212,9 +212,8 @@ def _traffic_spillback_fragmentation_series(n_samples: int) -> FloatArray:
         front_platoon * t[None, :] + np.array([0.0, 0.15], dtype=np.float64)[:, None]
     ) % 1.0
     phase_rear = (
-        rear_platoon * t[None, :] + np.array([0.6, 0.75, 0.9, 1.05], dtype=np.float64)[
-            :, None
-        ]
+        rear_platoon * t[None, :]
+        + np.array([0.6, 0.75, 0.9, 1.05], dtype=np.float64)[:, None]
     ) % 1.0
     return (np.vstack((phase_front, phase_rear)) * _TWO_PI) % _TWO_PI
 
