@@ -19,6 +19,7 @@ from benchmarks.reference_suite import (
     benchmark_domain_formal_safety_exports,
     benchmark_formal_export_artifact_quality,
     benchmark_hybrid_cocompiler_review_gate,
+    benchmark_hybrid_entanglement_order_parameter_gate,
     benchmark_hybrid_operator_handoff_package_gate,
     benchmark_hybrid_target_readiness_gate,
     benchmark_integrated_information_replay_corpus_gate,
@@ -1064,6 +1065,80 @@ def test_multiverse_counterfactual_gate_reports_records() -> None:
     }
 
 
+def test_hybrid_entanglement_order_parameter_gate_benchmark_shape() -> None:
+    out = benchmark_hybrid_entanglement_order_parameter_gate()
+
+    assert out["suite"] == "hybrid_entanglement_order_parameter_gate"
+    assert out["scenario_count"] >= 2
+    assert int(out["product_case_count"]) >= 1
+    assert int(out["bell_case_count"]) >= 1
+    assert out["non_actuating"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["claim_boundary"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["entanglement_gap"] > 0.8
+    assert out["acceptance_passed"] == 1
+    assert float(out["max_entropy"]) >= 0.0
+    assert float(out["min_entropy"]) >= 0.0
+    assert len(str(out["hybrid_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_hybrid_entanglement_order_parameter_gate_reports_records() -> None:
+    out = benchmark_hybrid_entanglement_order_parameter_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = json.loads(str(out["hybrid_records_json"]))
+
+    assert thresholds == {
+        "max_product_entropy": 0.15,
+        "min_bell_entropy": 0.95,
+        "min_entropy_gap": 0.80,
+        "min_record_count": 2,
+        "require_claim_boundary": True,
+        "require_deterministic_hash": True,
+        "require_execution_disabled": True,
+        "require_non_actuating": True,
+    }
+    assert (
+        out["claim_boundary_value"] == "quantum_cosimulation_monitor_not_qpu_execution"
+    )
+    assert {record["scenario"] for record in records} >= {
+        "deterministic_product_state",
+        "deterministic_bell_like_state",
+    }
+    assert any(
+        str(record["category"]).lower().startswith("product") for record in records
+    )
+    assert any(str(record["category"]).lower().startswith("bell") for record in records)
+    assert all(
+        record["backend"] == "numpy_statevector_density_matrix" for record in records
+    )
+    assert all(record["non_actuating"] is True for record in records)
+    assert all(record["execution_disabled"] is True for record in records)
+    assert all(
+        record["claim_boundary"] == out["claim_boundary_value"] for record in records
+    )
+    assert out["entanglement_gap"] >= thresholds["min_entropy_gap"]
+    assert out["entanglement_gap"] == max(
+        record["entanglement_entropy"]
+        for record in records
+        if str(record["category"]).lower().startswith("bell")
+    ) - min(
+        record["entanglement_entropy"]
+        for record in records
+        if str(record["category"]).lower().startswith("product")
+    )
+    assert min(
+        record["entanglement_entropy"]
+        for record in records
+        if record["category"] == "product"
+    ) < max(
+        record["entanglement_entropy"]
+        for record in records
+        if record["category"] == "bell_like"
+    )
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -1133,6 +1208,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "hybrid_target_readiness",
         "integrated_information_replay_corpus",
         "intergenerational_inheritance",
+        "hybrid_entanglement_order",
         "meta_transfer",
         "meta_transfer_corpus",
         "morphogenetic_domain_demos",

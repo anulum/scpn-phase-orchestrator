@@ -881,7 +881,11 @@ Speculative research watchlist:
   domain scenario fixtures, and fail-closed non-actuating branch-risk gates are
   implemented with reference-suite evidence. Remaining scope: optional JAX
   acceleration, larger scenario corpora, and richer Studio surfacing.
-- Entanglement-aware hybrid order parameters: quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi`.
+- Entanglement-aware hybrid order parameters: dependency-free quantum
+  co-simulation monitor now reports bipartition Von Neumann entanglement
+  entropy, normalised entropy, participation ratio, classical `R`/`Psi`,
+  deterministic domain scenarios, and reference-suite gates without QPU
+  execution. Remaining scope: richer simulator backends and Studio surfacing.
 
 Priority order for first implementation tranche:
 

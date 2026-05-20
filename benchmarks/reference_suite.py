@@ -263,6 +263,17 @@ class HybridOperatorHandoffThresholds(NamedTuple):
     require_hash_chain_linked: bool
 
 
+class HybridEntanglementOrderThresholds(NamedTuple):
+    max_product_entropy: float
+    min_bell_entropy: float
+    min_entropy_gap: float
+    min_record_count: int
+    require_non_actuating: bool
+    require_execution_disabled: bool
+    require_claim_boundary: bool
+    require_deterministic_hash: bool
+
+
 class ValueAlignmentReplayCalibrationThresholds(NamedTuple):
     min_replay_case_count: int
     min_approved_case_count: int
@@ -3073,6 +3084,211 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_hybrid_entanglement_order_parameter_gate() -> dict[
+    str, float | int | str
+]:
+    """Benchmark hybrid entanglement-aware order parameters on deterministic cases."""
+    thresholds = HybridEntanglementOrderThresholds(
+        max_product_entropy=0.15,
+        min_bell_entropy=0.95,
+        min_entropy_gap=0.80,
+        min_record_count=2,
+        require_non_actuating=True,
+        require_execution_disabled=True,
+        require_claim_boundary=True,
+        require_deterministic_hash=True,
+    )
+
+    from scpn_phase_orchestrator.monitor.hybrid_order import (
+        compute_hybrid_entanglement_order_parameter,
+    )
+    from scpn_phase_orchestrator.monitor.hybrid_order_examples import (
+        build_hybrid_order_parameter_scenarios,
+    )
+
+    def _amplitude_pairs_to_statevector(candidate: Mapping[str, object]) -> np.ndarray:
+        amplitudes = candidate.get("amplitudes")
+        if not isinstance(amplitudes, list):
+            raise ValueError("hybrid order candidate amplitudes must be a list")
+        values: list[complex] = []
+        for pair in amplitudes:
+            if (
+                not isinstance(pair, list)
+                or len(pair) != 2
+                or not all(isinstance(value, int | float) for value in pair)
+            ):
+                raise ValueError(
+                    "hybrid order candidate amplitudes must be [real, imag] pairs"
+                )
+            values.append(complex(float(pair[0]), float(pair[1])))
+        return np.asarray(values, dtype=np.complex128)
+
+    base_phases = np.array([0.0, 0.82, 1.56, 2.30], dtype=np.float64)
+    product_state = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128)
+    bell_state = np.array(
+        [1 / np.sqrt(2), 0.0, 0.0, 1 / np.sqrt(2)],
+        dtype=np.complex128,
+    )
+    scenario_specs: list[dict[str, object]] = [
+        {
+            "name": "deterministic_product_state",
+            "category": "product",
+            "phases": base_phases,
+            "quantum_state": product_state,
+            "bipartition": ((0,), (1,)),
+        },
+        {
+            "name": "deterministic_bell_like_state",
+            "category": "bell_like",
+            "phases": base_phases,
+            "quantum_state": bell_state,
+            "bipartition": ((0,), (1,)),
+        },
+    ]
+
+    for scenario in build_hybrid_order_parameter_scenarios():
+        phases = np.asarray(scenario["phases"], dtype=np.float64)
+        bipartition = tuple(
+            tuple(int(index) for index in part) for part in scenario["bipartition"]
+        )
+        for candidate in scenario["state_candidates"]:
+            if not isinstance(candidate, Mapping):
+                raise ValueError("hybrid order state candidates must be mappings")
+            scenario_specs.append(
+                {
+                    "name": f"{scenario['scenario_id']}:{candidate['state_id']}",
+                    "category": str(candidate["state_type"]),
+                    "phases": phases,
+                    "quantum_state": _amplitude_pairs_to_statevector(candidate),
+                    "bipartition": bipartition,
+                }
+            )
+
+    t0 = time.perf_counter()
+    records: list[dict[str, object]] = []
+    repeated_records: list[dict[str, object]] = []
+    for spec in scenario_specs:
+        phases = np.asarray(spec["phases"], dtype=np.float64)
+        quantum_state = np.asarray(spec["quantum_state"], dtype=np.complex128)
+        bipartition_raw = spec["bipartition"]
+        if not isinstance(bipartition_raw, tuple):
+            raise ValueError("hybrid order bipartition must be a tuple")
+        bipartition = tuple(
+            tuple(int(index) for index in part) for part in bipartition_raw
+        )
+        result = compute_hybrid_entanglement_order_parameter(
+            phases=phases,
+            quantum_state=quantum_state,
+            bipartition=bipartition,
+        )
+        repeated = compute_hybrid_entanglement_order_parameter(
+            phases=phases,
+            quantum_state=quantum_state,
+            bipartition=bipartition,
+        )
+        result_record = result.to_audit_record()
+        repeated_record = repeated.to_audit_record()
+        records.append(
+            {
+                "scenario": str(spec["name"]),
+                "category": str(spec["category"]),
+                "R": float(result_record["R"]),
+                "Psi": float(result_record["Psi"]),
+                "entanglement_entropy": float(result_record["entanglement_entropy"]),
+                "normalised_entanglement_entropy": float(
+                    result_record["normalised_entanglement_entropy"]
+                ),
+                "participation_ratio": float(result_record["participation_ratio"]),
+                "qubit_count": int(result_record["qubit_count"]),
+                "bipartition": result_record["bipartition"],
+                "backend": str(result_record["backend"]),
+                "claim_boundary": str(result_record["claim_boundary"]),
+                "non_actuating": bool(result_record["non_actuating"]),
+                "execution_disabled": bool(result_record["execution_disabled"]),
+                "record_hash": str(result_record["record_hash"]),
+            }
+        )
+        repeated_records.append(repeated_record)
+
+    elapsed = time.perf_counter() - t0
+    product_records = [
+        record for record in records if "product" in str(record["category"]).lower()
+    ]
+    bell_records = [
+        record for record in records if "bell" in str(record["category"]).lower()
+    ]
+    if not product_records or not bell_records:
+        raise RuntimeError(
+            "Hybrid entanglement benchmark requires product and bell-like scenarios"
+        )
+
+    product_entropy = min(
+        float(record["entanglement_entropy"]) for record in product_records
+    )
+    bell_entropy = max(float(record["entanglement_entropy"]) for record in bell_records)
+    entanglement_gap = bell_entropy - product_entropy
+    deterministic_bundle_hashes = [
+        int(record["record_hash"] == repeated_record["record_hash"])
+        for record, repeated_record in zip(records, repeated_records, strict=False)
+    ]
+    deterministic_record_hash = int(
+        all(value == 1 for value in deterministic_bundle_hashes)
+    )
+    deterministic_hash = deterministic_record_hash
+    claim_boundary_value = str(records[0]["claim_boundary"])
+    claim_boundary = int(
+        all(record["claim_boundary"] == claim_boundary_value for record in records)
+    )
+    non_actuating = int(all(record["non_actuating"] is True for record in records))
+    execution_disabled = int(
+        all(record["execution_disabled"] is True for record in records)
+    )
+    acceptance_passed = int(
+        len(records) >= thresholds.min_record_count
+        and product_entropy <= thresholds.max_product_entropy
+        and bell_entropy >= thresholds.min_bell_entropy
+        and entanglement_gap >= thresholds.min_entropy_gap
+        and non_actuating == int(thresholds.require_non_actuating)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and claim_boundary == int(thresholds.require_claim_boundary)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and deterministic_record_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "hybrid_entanglement_order_parameter_gate",
+        "scenario_count": len(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(records) / elapsed if elapsed > 0.0 else 0.0,
+        "product_case_count": len(product_records),
+        "bell_case_count": len(bell_records),
+        "max_entropy": max(float(record["entanglement_entropy"]) for record in records),
+        "min_entropy": min(float(record["entanglement_entropy"]) for record in records),
+        "entanglement_gap": entanglement_gap,
+        "non_actuating": non_actuating,
+        "execution_disabled": execution_disabled,
+        "claim_boundary": claim_boundary,
+        "deterministic_hash": deterministic_hash,
+        "hybrid_sha256": _stable_record_hash(records),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "max_product_entropy": thresholds.max_product_entropy,
+                "min_bell_entropy": thresholds.min_bell_entropy,
+                "min_entropy_gap": thresholds.min_entropy_gap,
+                "min_record_count": thresholds.min_record_count,
+                "require_claim_boundary": thresholds.require_claim_boundary,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "claim_boundary_value": claim_boundary_value,
+        "hybrid_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -4362,6 +4578,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             ),
             "topos_semantic_binding": benchmark_topos_semantic_binding_gate(),
             "multiverse_counterfactual": benchmark_multiverse_counterfactual_gate(),
+            "hybrid_entanglement_order": (
+                benchmark_hybrid_entanglement_order_parameter_gate()
+            ),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

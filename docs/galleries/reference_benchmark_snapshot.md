@@ -28,33 +28,34 @@ This snapshot records the deterministic local reference-suite output used for pu
 
 | Key | Suite | Acceptance | Steps/s |
 | --- | --- | ---: | ---: |
-| `auto_binding` | `auto_binding_synthetic_quality` | `n/a` | `81.9361` |
-| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | `1` | `14956.9` |
-| `bayesian_backends` | `bayesian_backend_fail_closed` | `1` | `9.33902` |
-| `bayesian_posterior` | `bayesian_posterior_fit_quality` | `1` | `39.7227` |
-| `domain_formal_export` | `domain_formal_safety_exports` | `1` | `23030.3` |
-| `formal_export` | `formal_export_artifact_quality` | `1` | `9188.52` |
-| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | `1` | `8288.44` |
-| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | `1` | `15587.7` |
-| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | `1` | `18403.5` |
-| `integrated_information_replay_corpus` | `integrated_information_replay_corpus_gate` | `1` | `316.849` |
-| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | `1` | `7919.22` |
-| `kuramoto` | `kuramoto_reference_strogatz_2000` | `n/a` | `7126.35` |
-| `meta_transfer` | `meta_transfer_package_manifest_quality` | `1` | `10686.4` |
-| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | `1` | `3144.79` |
-| `morphogenetic_domain_demos` | `morphogenetic_domain_demo_gate` | `1` | `75.7005` |
-| `multiverse_counterfactual` | `multiverse_counterfactual_gate` | `1` | `852.705` |
-| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | `1` | `11702.4` |
-| `petri_reachability` | `petri_net_reachability` | `n/a` | `238936` |
-| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | `1` | `12080.6` |
-| `quantum_target_readiness` | `quantum_target_readiness_gate` | `1` | `17216.7` |
-| `replay_policy` | `replay_policy_candidate_quality` | `1` | `714.157` |
-| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | `1` | `177.737` |
-| `stl_closed_loop` | `stl_closed_loop_plan_quality` | `1` | `11349.6` |
-| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | `n/a` | `3678.59` |
-| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | `1` | `4922.52` |
-| `topos_semantic_binding` | `topos_semantic_binding_gate` | `1` | `76.2454` |
-| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | `1` | `18463` |
+| `auto_binding` | `auto_binding_synthetic_quality` | `n/a` | `79.5511` |
+| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | `1` | `14003.6` |
+| `bayesian_backends` | `bayesian_backend_fail_closed` | `1` | `9.0716` |
+| `bayesian_posterior` | `bayesian_posterior_fit_quality` | `1` | `34.4584` |
+| `domain_formal_export` | `domain_formal_safety_exports` | `1` | `22519.3` |
+| `formal_export` | `formal_export_artifact_quality` | `1` | `6646.86` |
+| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | `1` | `8060.03` |
+| `hybrid_entanglement_order` | `hybrid_entanglement_order_parameter_gate` | `1` | `2237.8` |
+| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | `1` | `15337.2` |
+| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | `1` | `14332.8` |
+| `integrated_information_replay_corpus` | `integrated_information_replay_corpus_gate` | `1` | `239.826` |
+| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | `1` | `7371.29` |
+| `kuramoto` | `kuramoto_reference_strogatz_2000` | `n/a` | `5976.14` |
+| `meta_transfer` | `meta_transfer_package_manifest_quality` | `1` | `10366.6` |
+| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | `1` | `2895.52` |
+| `morphogenetic_domain_demos` | `morphogenetic_domain_demo_gate` | `1` | `57.188` |
+| `multiverse_counterfactual` | `multiverse_counterfactual_gate` | `1` | `523.408` |
+| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | `1` | `10779.8` |
+| `petri_reachability` | `petri_net_reachability` | `n/a` | `186478` |
+| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | `1` | `11257.7` |
+| `quantum_target_readiness` | `quantum_target_readiness_gate` | `1` | `16186.9` |
+| `replay_policy` | `replay_policy_candidate_quality` | `1` | `623.061` |
+| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | `1` | `172.837` |
+| `stl_closed_loop` | `stl_closed_loop_plan_quality` | `1` | `9988.71` |
+| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | `n/a` | `3084.71` |
+| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | `1` | `5044.59` |
+| `topos_semantic_binding` | `topos_semantic_binding_gate` | `1` | `61.4664` |
+| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | `1` | `16396.4` |
 
 ## Benchmark details
 
@@ -76,10 +77,10 @@ This snapshot records the deterministic local reference-suite output used for pu
   "min_domain_extractor_coverage": 1.0,
   "min_sample_count": 128,
   "proposed_edge_count": 33,
-  "steps_per_second": 81.93606066765729,
+  "steps_per_second": 79.55111374398388,
   "suite": "auto_binding_synthetic_quality",
   "validation_error_count": 0,
-  "wall_time_s": 0.04881855397252366
+  "wall_time_s": 0.050282137002795935
 }
 ```
 
@@ -98,9 +99,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "rejected_child_count": 2,
   "review_only": 1,
   "safe_lineage_sha256": "830da8db3a0227d276bb5d8fa97bfe046b10db00c9976338033d64676d1b0ca8",
-  "steps_per_second": 14956.938996467072,
+  "steps_per_second": 14003.64161359697,
   "suite": "autopoietic_lineage_sandbox_gate",
-  "wall_time_s": 0.0003342929994687438
+  "wall_time_s": 0.00035704998299479485
 }
 ```
 
@@ -115,10 +116,10 @@ This snapshot records the deterministic local reference-suite output used for pu
   "backend_results_json": "[{\"available\": true, \"backend\": \"numpy\", \"fail_closed\": false, \"kind\": \"bayesian_backend_status\", \"reason\": \"executed\", \"sample_count\": 16}, {\"available\": false, \"backend\": \"numpyro\", \"fail_closed\": true, \"kind\": \"bayesian_backend_status\", \"reason\": \"numpyro Bayesian UPDE backend is not implemented; use backend='numpy' for reproducible Monte Carlo propagation\", \"sample_count\": 0}, {\"available\": false, \"backend\": \"blackjax\", \"fail_closed\": true, \"kind\": \"bayesian_backend_status\", \"reason\": \"blackjax Bayesian UPDE backend is not implemented; use backend='numpy' for reproducible Monte Carlo propagation\", \"sample_count\": 0}]",
   "fail_closed_backend_count": 2,
   "numpy_sample_count": 16,
-  "steps_per_second": 9.339021304247382,
+  "steps_per_second": 9.071600243768675,
   "suite": "bayesian_backend_fail_closed",
   "unexpected_reserved_success_count": 0,
-  "wall_time_s": 0.3212328039808199
+  "wall_time_s": 0.33070240303641185
 }
 ```
 
@@ -136,9 +137,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "residual_rmse": 3.904347277377099e-07,
   "rollout_sample_count": 128,
   "sample_count": 96,
-  "steps_per_second": 39.722724393398344,
+  "steps_per_second": 34.45839440734481,
   "suite": "bayesian_posterior_fit_quality",
-  "wall_time_s": 2.416752664023079,
+  "wall_time_s": 2.7859684599679895,
   "zero_diagonal_coupling": 1
 }
 ```
@@ -155,9 +156,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "domain_count": 3,
   "domain_results_json": "[{\"accepted\": true, \"artifact_count\": 3, \"deterministic_hash\": 1, \"domain\": \"plasma_control\", \"identifier_map_count\": 12, \"required_labels_present\": true, \"rule_count\": 2, \"stl_spec_count\": 2}, {\"accepted\": true, \"artifact_count\": 3, \"deterministic_hash\": 1, \"domain\": \"power_grid\", \"identifier_map_count\": 12, \"required_labels_present\": true, \"rule_count\": 2, \"stl_spec_count\": 2}, {\"accepted\": true, \"artifact_count\": 3, \"deterministic_hash\": 1, \"domain\": \"medical_cardiac\", \"identifier_map_count\": 12, \"required_labels_present\": true, \"rule_count\": 2, \"stl_spec_count\": 2}]",
   "failed_domain_count": 0,
-  "steps_per_second": 23030.330597833923,
+  "steps_per_second": 22519.254481456064,
   "suite": "domain_formal_safety_exports",
-  "wall_time_s": 0.0003907890059053898
+  "wall_time_s": 0.000399657990783453
 }
 ```
 
@@ -186,10 +187,10 @@ This snapshot records the deterministic local reference-suite output used for pu
   "petri_tla_bytes": 1281,
   "policy_prism_bytes": 1116,
   "policy_tla_bytes": 1370,
-  "steps_per_second": 9188.524709617945,
+  "steps_per_second": 6646.858973084195,
   "stl_prism_bytes": 808,
   "suite": "formal_export_artifact_quality",
-  "wall_time_s": 0.0005441569956019521
+  "wall_time_s": 0.0007522350060753524
 }
 ```
 
@@ -207,11 +208,36 @@ This snapshot records the deterministic local reference-suite output used for pu
   "neuromorphic_sample_count": 2,
   "non_actuating": 1,
   "quantum_term_count": 3,
-  "steps_per_second": 8288.438497436498,
+  "steps_per_second": 8060.028047985213,
   "suite": "hybrid_cocompiler_review_gate",
   "target_backend_count": 4,
   "target_backends_json": "[\"qiskit_openqasm3\", \"pennylane_qasm\", \"lava\", \"pynn\"]",
-  "wall_time_s": 0.00012064998736605048
+  "wall_time_s": 0.00012406904716044664
+}
+```
+
+### `hybrid_entanglement_order`
+
+```json
+{
+  "acceptance_passed": 1,
+  "acceptance_thresholds_json": "{\"max_product_entropy\": 0.15, \"min_bell_entropy\": 0.95, \"min_entropy_gap\": 0.8, \"min_record_count\": 2, \"require_claim_boundary\": true, \"require_deterministic_hash\": true, \"require_execution_disabled\": true, \"require_non_actuating\": true}",
+  "bell_case_count": 1,
+  "claim_boundary": 1,
+  "claim_boundary_value": "quantum_cosimulation_monitor_not_qpu_execution",
+  "deterministic_hash": 1,
+  "entanglement_gap": 1.0,
+  "execution_disabled": 1,
+  "hybrid_records_json": "[{\"Psi\": 1.17781463781052, \"R\": 0.6702937830710448, \"backend\": \"numpy_statevector_density_matrix\", \"bipartition\": [[0], [1]], \"category\": \"product\", \"claim_boundary\": \"quantum_cosimulation_monitor_not_qpu_execution\", \"entanglement_entropy\": -0.0, \"execution_disabled\": true, \"non_actuating\": true, \"normalised_entanglement_entropy\": -0.0, \"participation_ratio\": 1.0, \"qubit_count\": 2, \"record_hash\": \"a74fbdf46f6315f668201278d1cca6cb5a3232cc5e7e5465d57e63566dd6ba2e\", \"scenario\": \"deterministic_product_state\"}, {\"Psi\": 1.17781463781052, \"R\": 0.6702937830710448, \"backend\": \"numpy_statevector_density_matrix\", \"bipartition\": [[0], [1]], \"category\": \"bell_like\", \"claim_boundary\": \"quantum_cosimulation_monitor_not_qpu_execution\", \"entanglement_entropy\": 1.0, \"execution_disabled\": true, \"non_actuating\": true, \"normalised_entanglement_entropy\": 1.0, \"participation_ratio\": 2.0, \"qubit_count\": 2, \"record_hash\": \"8c3e5eead502fe04ddb9b55ab494cc8e91eabfda1107124417ed2d54fd377b5b\", \"scenario\": \"deterministic_bell_like_state\"}, {\"Psi\": 2.0899424410414196, \"R\": 1.1188630228279524e-16, \"backend\": \"numpy_statevector_density_matrix\", \"bipartition\": [[0], [1]], \"category\": \"product\", \"claim_boundary\": \"quantum_cosimulation_monitor_not_qpu_execution\", \"entanglement_entropy\": -0.0, \"execution_disabled\": true, \"non_actuating\": true, \"normalised_entanglement_entropy\": -0.0, \"participation_ratio\": 1.0, \"qubit_count\": 2, \"record_hash\": \"d331852fd1d30e18bd215d9e96160e7b410b24ea402413cc5916e8b96cfb8d1a\", \"scenario\": \"hybrid_order_quantum_simulation_v1:hybrid_order_quantum_simulation_v1_product_state\"}, {\"Psi\": 2.0899424410414196, \"R\": 1.1188630228279524e-16, \"backend\": \"numpy_statevector_density_matrix\", \"bipartition\": [[0], [1]], \"category\": \"entangled\", \"claim_boundary\": \"quantum_cosimulation_monitor_not_qpu_execution\", \"entanglement_entropy\": 1.0, \"execution_disabled\": true, \"non_actuating\": true, \"normalised_entanglement_entropy\": 1.0, \"participation_ratio\": 2.0, \"qubit_count\": 2, \"record_hash\": \"1e4aac7918d8c340263dbed302b1e0d2841c7c1b454419e3afc7283c4480dfd4\", \"scenario\": \"hybrid_order_quantum_simulation_v1:hybrid_order_quantum_simulation_v1_entangled_state\"}, {\"Psi\": 2.9675474137470546, \"R\": 2.1370841983642773e-16, \"backend\": \"numpy_statevector_density_matrix\", \"bipartition\": [[0], [1, 2]], \"category\": \"product\", \"claim_boundary\": \"quantum_cosimulation_monitor_not_qpu_execution\", \"entanglement_entropy\": -0.0, \"execution_disabled\": true, \"non_actuating\": true, \"normalised_entanglement_entropy\": -0.0, \"participation_ratio\": 1.0, \"qubit_count\": 3, \"record_hash\": \"bc064ed00033640327c053874c927fe4d680b13276ea3eea34e330fcd332c502\", \"scenario\": \"hybrid_order_power_grid_v1:hybrid_order_power_grid_v1_product_state\"}, {\"Psi\": 2.9675474137470546, \"R\": 2.1370841983642773e-16, \"backend\": \"numpy_statevector_density_matrix\", \"bipartition\": [[0], [1, 2]], \"category\": \"entangled\", \"claim_boundary\": \"quantum_cosimulation_monitor_not_qpu_execution\", \"entanglement_entropy\": 1.0, \"execution_disabled\": true, \"non_actuating\": true, \"normalised_entanglement_entropy\": 1.0, \"participation_ratio\": 2.0, \"qubit_count\": 3, \"record_hash\": \"a58f47646f2497eadb745dfa5adc58bea5e7b58943ccfc902c00ba8c9e7c9e70\", \"scenario\": \"hybrid_order_power_grid_v1:hybrid_order_power_grid_v1_entangled_state\"}, {\"Psi\": 4.71238898038469, \"R\": 1.1102230246251565e-16, \"backend\": \"numpy_statevector_density_matrix\", \"bipartition\": [[0, 1], [2, 3]], \"category\": \"product\", \"claim_boundary\": \"quantum_cosimulation_monitor_not_qpu_execution\", \"entanglement_entropy\": -0.0, \"execution_disabled\": true, \"non_actuating\": true, \"normalised_entanglement_entropy\": -0.0, \"participation_ratio\": 1.0, \"qubit_count\": 4, \"record_hash\": \"39d5aa9eca7af737edbc5d8c6e5b6347372fadfbc6f3e9355dd455b27f122646\", \"scenario\": \"hybrid_order_cardiac_rhythm_v1:hybrid_order_cardiac_rhythm_v1_product_state\"}, {\"Psi\": 4.71238898038469, \"R\": 1.1102230246251565e-16, \"backend\": \"numpy_statevector_density_matrix\", \"bipartition\": [[0, 1], [2, 3]], \"category\": \"entangled\", \"claim_boundary\": \"quantum_cosimulation_monitor_not_qpu_execution\", \"entanglement_entropy\": 1.0, \"execution_disabled\": true, \"non_actuating\": true, \"normalised_entanglement_entropy\": 0.5, \"participation_ratio\": 2.0, \"qubit_count\": 4, \"record_hash\": \"b4ceb89b6c27961b531350f45249dfd28c04e63762a7a716abcadca524e81a59\", \"scenario\": \"hybrid_order_cardiac_rhythm_v1:hybrid_order_cardiac_rhythm_v1_entangled_state\"}]",
+  "hybrid_sha256": "f2e1b1917871cb7580125161006455ec522bb195f873992b2dee67e1bd7f88ac",
+  "max_entropy": 1.0,
+  "min_entropy": -0.0,
+  "non_actuating": 1,
+  "product_case_count": 4,
+  "scenario_count": 8,
+  "steps_per_second": 2237.7973008481194,
+  "suite": "hybrid_entanglement_order_parameter_gate",
+  "wall_time_s": 0.0035749439848586917
 }
 ```
 
@@ -231,9 +257,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "packages_json": "[{\"actuation_permitted\": false, \"blocked_reasons\": [\"hybrid_operator_approval_missing\"], \"component_manifest_hashes\": {\"neuromorphic_schedule_sha256\": \"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\", \"quantum_manifest_sha256\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\", \"quantum_qasm_sha256\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}, \"component_statuses\": {\"hybrid\": \"co_simulation_parity_passed\", \"neuromorphic\": \"ready_not_executed\", \"quantum\": \"ready_not_executed\"}, \"execution_permitted\": false, \"hardware_write_permitted\": false, \"hybrid_manifest_sha256\": \"e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7\", \"hybrid_readiness_sha256\": \"67f184c426a68a3c63a8e7175f0dbdf09e941b6070c93283ea486a3d5fef735d\", \"operator_commands\": [\"review hybrid_neuromorphic_quantum_cocompiler.json\", \"review scpn_hybrid_target_readiness_v1.json\", \"verify package_sha256 before external operator handoff\", \"execute only outside SPO from an approved operator workflow\"], \"package_sha256\": \"ad392e2aae056e4a5e673d00dcf93f166f32f39db53c5c6cbf8e8ab2678f9afd\", \"qpu_execution_permitted\": false, \"schema\": \"scpn_hybrid_operator_handoff_package_v1\", \"status\": \"blocked\", \"target_backends\": [\"qiskit_openqasm3\", \"pennylane_qasm\", \"lava\", \"pynn\"]}, {\"actuation_permitted\": false, \"blocked_reasons\": [], \"component_manifest_hashes\": {\"neuromorphic_schedule_sha256\": \"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\", \"quantum_manifest_sha256\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\", \"quantum_qasm_sha256\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}, \"component_statuses\": {\"hybrid\": \"co_simulation_parity_passed\", \"neuromorphic\": \"ready_not_executed\", \"quantum\": \"ready_not_executed\"}, \"execution_permitted\": false, \"hardware_write_permitted\": false, \"hybrid_manifest_sha256\": \"e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7\", \"hybrid_readiness_sha256\": \"5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64\", \"operator_commands\": [\"review hybrid_neuromorphic_quantum_cocompiler.json\", \"review scpn_hybrid_target_readiness_v1.json\", \"verify package_sha256 before external operator handoff\", \"execute only outside SPO from an approved operator workflow\"], \"package_sha256\": \"c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5\", \"qpu_execution_permitted\": false, \"schema\": \"scpn_hybrid_operator_handoff_package_v1\", \"status\": \"ready_not_executed\", \"target_backends\": [\"qiskit_openqasm3\", \"pennylane_qasm\", \"lava\", \"pynn\"]}]",
   "ready_package_count": 1,
   "ready_package_sha256": "c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5",
-  "steps_per_second": 15587.7376594625,
+  "steps_per_second": 15337.190142878888,
   "suite": "hybrid_operator_handoff_package_gate",
-  "wall_time_s": 0.00012830598279833794
+  "wall_time_s": 0.00013040198246017098
 }
 ```
 
@@ -254,9 +280,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "ready_count": 1,
   "ready_readiness_sha256": "5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64",
   "record_count": 2,
-  "steps_per_second": 18403.49945956716,
+  "steps_per_second": 14332.807473806763,
   "suite": "hybrid_target_readiness_gate",
-  "wall_time_s": 0.00010867498349398375
+  "wall_time_s": 0.00013954000314697623
 }
 ```
 
@@ -275,9 +301,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "ordering_evidence_count": 6,
   "record_count": 12,
   "replay_records_json": "[{\"case_name\": \"cardiac_respiratory_lock\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"physiology\", \"expected_relationship\": \"cardiac_respiratory_lock > cardiac_respiratory_recovery in engineering proxy integration.\", \"minimum_partition\": [[0, 1], [2, 3]], \"n_bins\": 8, \"n_oscillators\": 4, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.21205869656204718, \"phi\": 0.44096366290559985, \"total_integration\": 0.47158338643364467}, {\"case_name\": \"cardiac_respiratory_recovery\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"physiology\", \"expected_relationship\": \"cardiac_respiratory_recovery < cardiac_respiratory_lock in engineering proxy integration.\", \"minimum_partition\": [[0, 2], [1, 3]], \"n_bins\": 8, \"n_oscillators\": 4, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.048910957729649485, \"phi\": 0.1017074773463796, \"total_integration\": 0.10884102086330437}, {\"case_name\": \"eeg_sleep_spindle\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"physiology\", \"expected_relationship\": \"eeg_sleep_spindle > eeg_sleep_baseline in engineering proxy integration.\", \"minimum_partition\": [[0], [1, 2, 3]], \"n_bins\": 8, \"n_oscillators\": 4, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.43912138463466466, \"phi\": 0.9131272490492912, \"total_integration\": 1.0079023062880308}, {\"case_name\": \"eeg_sleep_baseline\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"physiology\", \"expected_relationship\": \"eeg_sleep_baseline < eeg_sleep_spindle in engineering proxy integration.\", \"minimum_partition\": [[0, 3], [1, 2]], \"n_bins\": 8, \"n_oscillators\": 4, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.05592197906196478, \"phi\": 0.11628648635439953, \"total_integration\": 0.2156371949797753}, {\"case_name\": \"power_grid_islanding\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"infrastructure\", \"expected_relationship\": \"power_grid_islanding < power_grid_resynchronisation in engineering-information proxy integration\", \"minimum_partition\": [[0], [1, 2, 3, 4, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.0, \"phi\": 0.0, \"total_integration\": 0.32029448973968233}, {\"case_name\": \"power_grid_resynchronisation\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"infrastructure\", \"expected_relationship\": \"power_grid_resynchronisation > power_grid_islanding in engineering-information proxy integration\", \"minimum_partition\": [[0, 1], [2, 3, 4, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.1712200819054804, \"phi\": 0.35604215108407994, \"total_integration\": 0.47754008544108995}, {\"case_name\": \"traffic_spillback_fragmentation\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"infrastructure\", \"expected_relationship\": \"traffic_spillback_fragmentation < traffic_platoon_recovery in engineering-information proxy integration\", \"minimum_partition\": [[0], [1, 2, 3, 4, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.0, \"phi\": 0.0, \"total_integration\": 0.32032177007594664}, {\"case_name\": \"traffic_platoon_recovery\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"infrastructure\", \"expected_relationship\": \"traffic_platoon_recovery > traffic_spillback_fragmentation in engineering-information proxy integration\", \"minimum_partition\": [[0, 1], [2, 3, 4, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.12903508602483743, \"phi\": 0.26832091821427817, \"total_integration\": 0.48635445391861476}, {\"case_name\": \"cyber_disruption\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"cyber_industrial\", \"expected_relationship\": \"cyber_disruption < cyber_recontainment in engineering proxy integration\", \"minimum_partition\": [[0, 4, 5], [1, 2, 3]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.04625170926710428, \"phi\": 0.09617772562371486, \"total_integration\": 0.10259992143087594}, {\"case_name\": \"cyber_recontainment\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"cyber_industrial\", \"expected_relationship\": \"cyber_recontainment > cyber_disruption in engineering proxy integration\", \"minimum_partition\": [[0, 5], [1, 2, 3, 4]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.1844030700600674, \"phi\": 0.3834554042962013, \"total_integration\": 0.4014770029901035}, {\"case_name\": \"spc_fragmentation\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"cyber_industrial\", \"expected_relationship\": \"spc_fragmentation < spc_recovery in engineering proxy integration\", \"minimum_partition\": [[0, 2, 4], [1, 3, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.044657360796357355, \"phi\": 0.09286237118172999, \"total_integration\": 0.09992210941069486}, {\"case_name\": \"spc_recovery\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"cyber_industrial\", \"expected_relationship\": \"spc_recovery > spc_fragmentation in engineering proxy integration\", \"minimum_partition\": [[0, 4, 5], [1, 2, 3]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.19783580418940888, \"phi\": 0.41138798966309453, \"total_integration\": 0.43156895842705706}]",
-  "steps_per_second": 316.8491086660551,
+  "steps_per_second": 239.82575708039985,
   "suite": "integrated_information_replay_corpus_gate",
-  "wall_time_s": 0.037872917018830776
+  "wall_time_s": 0.050036326982080936
 }
 ```
 
@@ -295,9 +321,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "policy_gene_count": 3,
   "review_only": 1,
   "signed_metadata_count": 2,
-  "steps_per_second": 7919.223847462971,
+  "steps_per_second": 7371.287536894261,
   "suite": "intergenerational_policy_inheritance_gate",
-  "wall_time_s": 0.00025255000218749046
+  "wall_time_s": 0.00027132302056998014
 }
 ```
 
@@ -308,9 +334,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "final_order_parameter": 1.0,
   "n_oscillators": 64,
   "n_steps": 1000,
-  "steps_per_second": 7126.3528135708875,
+  "steps_per_second": 5976.138486661259,
   "suite": "kuramoto_reference_strogatz_2000",
-  "wall_time_s": 0.1403242340311408
+  "wall_time_s": 0.1673321329872124
 }
 ```
 
@@ -335,9 +361,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "package_name": "scpn-meta",
   "package_sha256": "533acf3b37aa233b7a53da1903c99865a7e34055d3d5bcacef3501c3b9fd273f",
   "record_count": 4,
-  "steps_per_second": 10686.443902584671,
+  "steps_per_second": 10366.642319152608,
   "suite": "meta_transfer_package_manifest_quality",
-  "wall_time_s": 0.00037430599331855774
+  "wall_time_s": 0.00038585299625992775
 }
 ```
 
@@ -357,11 +383,11 @@ This snapshot records the deterministic local reference-suite output used for pu
   "proposal_knob_count": 4,
   "proposal_sha256": "bfef70f740fbdedc765080f9c9bb0156ec046fd0351dab4f4117c7c259a781fb",
   "record_count": 6,
-  "steps_per_second": 3144.785946202151,
+  "steps_per_second": 2895.5236684597908,
   "suite": "meta_transfer_audit_corpus_quality",
   "top_neighbour_domain": "power_grid",
   "training_summary_json": "{\"domain_count\": 4, \"domains\": [\"cardiac_rhythm\", \"manufacturing_spc\", \"power_grid\", \"traffic_flow\"], \"feature_keys\": [\"coherence\", \"event_rate\", \"load_variance\", \"phase_spread\", \"safety_margin\"], \"knob_keys\": [\"K\", \"Psi\", \"alpha\", \"zeta\"], \"record_count\": 6, \"reward_max\": 0.94, \"reward_mean\": 0.8866666666666667, \"reward_min\": 0.82}",
-  "wall_time_s": 0.0019079199992120266
+  "wall_time_s": 0.0020721640321426094
 }
 ```
 
@@ -377,11 +403,11 @@ This snapshot records the deterministic local reference-suite output used for pu
   "non_actuating": 1,
   "record_count": 3,
   "snapshot_rows": 1,
-  "steps_per_second": 75.70047157478744,
+  "steps_per_second": 57.188043311145144,
   "suite": "morphogenetic_domain_demo_gate",
   "total_grown_edges": 12,
   "total_shrunk_edges": 18,
-  "wall_time_s": 0.03962987201521173
+  "wall_time_s": 0.05245851801009849
 }
 ```
 
@@ -404,9 +430,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "risk_report_json": "{\"approved_count\": 3, \"branch_count\": 4, \"branch_decisions\": [{\"action_count\": 0, \"approved\": true, \"branch_hash\": \"d9aa6a3513c21ea4f20596923dc1d75efb01d590d03ea44689cc5b62a819ee18\", \"branch_id\": \"review_baseline\", \"final_R\": 0.8436346224324295, \"max_R\": 0.8436346224324295, \"mean_R\": 0.8162505885045557, \"min_R\": 0.7872473240249155, \"rejection_reasons\": [], \"topology_edge_count\": 20, \"topology_scale\": 2.8000000000000007}, {\"action_count\": 1, \"approved\": true, \"branch_hash\": \"03df5545bcdaef15940385dd27fa61dadf4a7bd7a0177c3d69afd56f6166d4f1\", \"branch_id\": \"review_safe_coupling\", \"final_R\": 0.8130256299775311, \"max_R\": 0.8130256299775311, \"mean_R\": 0.8002495863599326, \"min_R\": 0.7872473240249155, \"rejection_reasons\": [], \"topology_edge_count\": 10, \"topology_scale\": 10.0}, {\"action_count\": 2, \"approved\": true, \"branch_hash\": \"2ef8b780e0532c671d800c50e5183ad5f76c7a6d62a24c460f652ddc0a1a9545\", \"branch_id\": \"review_phase_lag\", \"final_R\": 0.8077674169095258, \"max_R\": 0.8077674169095258, \"mean_R\": 0.7975783754428809, \"min_R\": 0.7872473240249155, \"rejection_reasons\": [], \"topology_edge_count\": 10, \"topology_scale\": 10.0}, {\"action_count\": 7, \"approved\": false, \"branch_hash\": \"cbcadd83906d0bac0022631812e5431e09d107129a5f56e9db874103e1ea542c\", \"branch_id\": \"review_action_heavy\", \"final_R\": 0.8890965556438161, \"max_R\": 0.8890965556438161, \"mean_R\": 0.8415732135009447, \"min_R\": 0.7872473240249155, \"rejection_reasons\": [\"action_count_exceeds_limit\", \"topology_scale_exceeds_limit\"], \"topology_edge_count\": 20, \"topology_scale\": 20.0}], \"claim_boundary\": \"counterfactual_branch_risk_gate_not_live_actuation\", \"execution_disabled\": true, \"non_actuating\": true, \"rejected_count\": 1, \"rejection_reasons\": [\"action_count_exceeds_limit\", \"topology_scale_exceeds_limit\"], \"report_hash\": \"68f819ccf31e498860daa384573a642b327ad55ec33d7a6de9a648b7a3137b0d\", \"safest_branch_hash\": \"d9aa6a3513c21ea4f20596923dc1d75efb01d590d03ea44689cc5b62a819ee18\", \"safest_branch_id\": \"review_baseline\", \"schema_name\": \"multiverse_branch_risk_gate\", \"schema_version\": \"0.1.0\"}",
   "risk_report_sha256": "68f819ccf31e498860daa384573a642b327ad55ec33d7a6de9a648b7a3137b0d",
   "safest_branch_id": "review_baseline",
-  "steps_per_second": 852.7053752687898,
+  "steps_per_second": 523.4079118308698,
   "suite": "multiverse_counterfactual_gate",
-  "wall_time_s": 0.004690952016972005
+  "wall_time_s": 0.007642223034054041
 }
 ```
 
@@ -426,10 +452,10 @@ This snapshot records the deterministic local reference-suite output used for pu
   "ready_count": 1,
   "ready_readiness_sha256": "fbff4ea82152b5fb51733f179661b8ec117b1afc076c80972e610af7717368d0",
   "record_count": 2,
-  "steps_per_second": 11702.409934181958,
+  "steps_per_second": 10779.813224195783,
   "suite": "neuromorphic_target_readiness_gate",
   "target_backends_json": "[\"lava\", \"pynn\"]",
-  "wall_time_s": 0.0001709049683995545
+  "wall_time_s": 0.00018553197151049972
 }
 ```
 
@@ -439,9 +465,9 @@ This snapshot records the deterministic local reference-suite output used for pu
 {
   "n_steps": 5000,
   "reachable_markings": 4,
-  "steps_per_second": 238936.099736348,
+  "steps_per_second": 186477.87066214517,
   "suite": "petri_net_reachability",
-  "wall_time_s": 0.020926097000483423
+  "wall_time_s": 0.026812832977157086
 }
 ```
 
@@ -466,9 +492,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "plugin_count": 2,
   "registry_sha256": "4dc86c339a42dba16bfe99c79fd6197051c87c97c7fbbf2a93dd86c1585ff25b",
   "required_kind_count": 4,
-  "steps_per_second": 12080.602551478314,
+  "steps_per_second": 11257.667908936699,
   "suite": "plugin_ecosystem_catalog_quality",
-  "wall_time_s": 0.00024833198403939605
+  "wall_time_s": 0.0002664850326254964
 }
 ```
 
@@ -488,10 +514,10 @@ This snapshot records the deterministic local reference-suite output used for pu
   "ready_count": 1,
   "ready_readiness_sha256": "aa0f85ce5bbfd35acf04d96e29d3bb64edf7ce5b091193263b13712d98f6134c",
   "record_count": 2,
-  "steps_per_second": 17216.738830204882,
+  "steps_per_second": 16186.861862737569,
   "suite": "quantum_target_readiness_gate",
   "target_backends_json": "[\"qiskit_openqasm3\", \"pennylane_qasm\"]",
-  "wall_time_s": 0.00011616601841524243
+  "wall_time_s": 0.00012355699436739087
 }
 ```
 
@@ -512,10 +538,10 @@ This snapshot records the deterministic local reference-suite output used for pu
   "non_actuating_proposals": 1,
   "scenario_count": 3,
   "scenario_results_json": "[{\"accepted\": true, \"accepted_learner_count\": 3, \"baseline_coherence\": 0.793, \"failed_learner_count\": 0, \"learner_count\": 3, \"min_coherence_improvement\": 0.05827974999403174, \"non_actuating_proposals\": true, \"scenario\": \"two_channel_low_coupling\", \"unsafe_acceptance_count\": 0}, {\"accepted\": true, \"accepted_learner_count\": 3, \"baseline_coherence\": 0.7758666666666668, \"failed_learner_count\": 0, \"learner_count\": 3, \"min_coherence_improvement\": 0.05663105080295605, \"non_actuating_proposals\": true, \"scenario\": \"three_channel_cross_gain\", \"unsafe_acceptance_count\": 0}, {\"accepted\": true, \"accepted_learner_count\": 3, \"baseline_coherence\": 0.8022666666666668, \"failed_learner_count\": 0, \"learner_count\": 3, \"min_coherence_improvement\": 0.035689587760827646, \"non_actuating_proposals\": true, \"scenario\": \"stability_recovery\", \"unsafe_acceptance_count\": 0}]",
-  "steps_per_second": 714.1572209555943,
+  "steps_per_second": 623.0611553082784,
   "suite": "replay_policy_candidate_quality",
   "unsafe_acceptance_count": 0,
-  "wall_time_s": 0.012602267030160874
+  "wall_time_s": 0.014444809989072382
 }
 ```
 
@@ -533,11 +559,11 @@ This snapshot records the deterministic local reference-suite output used for pu
   "ranking_projection_json": "[{\"domainpack\": \"power_grid\", \"rank\": 1, \"ranking_features\": {\"matched_term_count\": 6.0, \"name_match_count\": 2.0, \"phrase_match\": 1.0, \"prompt_term_count\": 7.0, \"source_priority\": 1.0, \"term_density\": 0.75}, \"score\": 1.0, \"source\": \"domainpack\"}, {\"domainpack\": \"power_grid\", \"rank\": 2, \"ranking_features\": {\"matched_term_count\": 5.0, \"name_match_count\": 2.0, \"phrase_match\": 0.0, \"prompt_term_count\": 7.0, \"source_priority\": 0.75, \"term_density\": 0.714286}, \"score\": 1.0, \"source\": \"docs\"}, {\"domainpack\": \"grid_notes\", \"rank\": 3, \"ranking_features\": {\"matched_term_count\": 3.0, \"name_match_count\": 1.0, \"phrase_match\": 0.0, \"prompt_term_count\": 7.0, \"source_priority\": 1.0, \"term_density\": 0.6}, \"score\": 0.571, \"source\": \"domainpack\"}]",
   "ranking_sha256": "88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d",
   "retrieval_score": 1.0,
-  "steps_per_second": 177.73690126223025,
+  "steps_per_second": 172.8371550801063,
   "suite": "semantic_retrieval_ranking_quality",
   "top_domainpack": "power_grid",
   "top_source": "domainpack",
-  "wall_time_s": 0.016878880967851728
+  "wall_time_s": 0.017357378965243697
 }
 ```
 
@@ -555,9 +581,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "plans_json": "[{\"actuating\": false, \"blocked_reasons\": [], \"controller_synthesis\": {\"actuating\": false, \"candidates\": [{\"action\": \"raise_coupling\", \"direction\": \"increase\", \"rationale\": \"R >= 0.8 violated at t=2 with robustness -0.05\", \"robustness\": -0.050000000000000044, \"signal\": \"R\", \"time_index\": 2}], \"satisfied\": false, \"source_backend\": \"builtin\", \"spec\": \"eventually (R >= 0.8)\"}, \"feedback_signals\": [\"R\"], \"horizon_steps\": 4, \"next_review_end_index\": 6, \"next_review_start_index\": 3, \"projected_action_plan\": {\"actuating\": false, \"approved_actions\": [{\"justification\": \"STL candidate raise_coupling: R >= 0.8 violated at t=2 with robustness -0.05\", \"knob\": \"K\", \"scope\": \"global\", \"ttl_s\": 0.5, \"value\": 0.9500000000000001}], \"rejected_candidates\": [], \"spec\": \"eventually (R >= 0.8)\"}, \"satisfied\": false, \"spec\": \"eventually (R >= 0.8)\", \"trace_length\": 3}, {\"actuating\": false, \"blocked_reasons\": [\"no_projected_actions\", \"unprojected_candidates\"], \"controller_synthesis\": {\"actuating\": false, \"candidates\": [{\"action\": \"increase_R\", \"direction\": \"increase\", \"rationale\": \"R >= 0.8 violated at t=2 with robustness -0.05\", \"robustness\": -0.050000000000000044, \"signal\": \"R\", \"time_index\": 2}], \"satisfied\": false, \"source_backend\": \"builtin\", \"spec\": \"eventually (R >= 0.8)\"}, \"feedback_signals\": [\"R\"], \"horizon_steps\": 1, \"next_review_end_index\": 3, \"next_review_start_index\": 3, \"projected_action_plan\": {\"actuating\": false, \"approved_actions\": [], \"rejected_candidates\": [{\"action\": \"increase_R\", \"reason\": \"projection_template_missing\", \"signal\": \"R\"}], \"spec\": \"eventually (R >= 0.8)\"}, \"satisfied\": false, \"spec\": \"eventually (R >= 0.8)\", \"trace_length\": 3}, {\"actuating\": false, \"blocked_reasons\": [\"stl_satisfied_no_control_needed\"], \"controller_synthesis\": {\"actuating\": false, \"candidates\": [], \"satisfied\": true, \"source_backend\": \"builtin\", \"spec\": \"always (R >= 0.3)\"}, \"feedback_signals\": [\"R\"], \"horizon_steps\": 2, \"next_review_end_index\": 3, \"next_review_start_index\": 2, \"projected_action_plan\": {\"actuating\": false, \"approved_actions\": [], \"rejected_candidates\": [], \"spec\": \"always (R >= 0.3)\"}, \"satisfied\": true, \"spec\": \"always (R >= 0.3)\", \"trace_length\": 2}]",
   "projected_action_count": 1,
   "rejected_candidate_count": 1,
-  "steps_per_second": 11349.621555724776,
+  "steps_per_second": 9988.712233552367,
   "suite": "stl_closed_loop_plan_quality",
-  "wall_time_s": 0.00026432599406689405
+  "wall_time_s": 0.0003003390156663954
 }
 ```
 
@@ -568,9 +594,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "final_mean_amplitude": 3.6193922141707704,
   "n_oscillators": 64,
   "n_steps": 1000,
-  "steps_per_second": 3678.5932582949495,
+  "steps_per_second": 3084.7144580296304,
   "suite": "stuart_landau_reference_pikovsky_2001",
-  "wall_time_s": 0.2718430469976738
+  "wall_time_s": 0.3241791140171699
 }
 ```
 
@@ -587,9 +613,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "min_baseline_edge_count": 1,
   "passing_experiment_sha256": "2c501b58b2c121100e1c66d5872f0beee45903a5bd23702dedb8fae328b1b974",
   "research_only": 1,
-  "steps_per_second": 4922.519634068909,
+  "steps_per_second": 5044.5946988188125,
   "suite": "temporal_causal_hypergraph_experiment_gate",
-  "wall_time_s": 0.0004062959924340248
+  "wall_time_s": 0.0003964639618061483
 }
 ```
 
@@ -607,11 +633,11 @@ This snapshot records the deterministic local reference-suite output used for pu
   "proof_boundary": 1,
   "record_count": 6,
   "semantic_report_count": 2,
-  "steps_per_second": 76.24543290244115,
+  "steps_per_second": 61.466386388225914,
   "suite": "topos_semantic_binding_gate",
   "topos_records_json": "[{\"kind\": \"symbolic_binding_functor\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 2, \"obligation_names\": [\"artifacts_input_type\", \"audit_record_boundary_stability\", \"audit_record_non_actuation_boundary\", \"audit_record_preserves_schema_status\", \"binding_layer_and_family_presence\", \"layer_indexes_map_to_stable_object_names\", \"retrieval_evidence_to_evidence_morphisms\", \"schema_validation_has_no_errors\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"d69edfdfc836eed2a46d81b4ca0f12da02098f764e5e82e33243d9a09bf47a8a\"}, {\"kind\": \"symbolic_binding_functor\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 2, \"obligation_names\": [\"artifacts_input_type\", \"audit_record_boundary_stability\", \"audit_record_non_actuation_boundary\", \"audit_record_preserves_schema_status\", \"binding_layer_and_family_presence\", \"layer_indexes_map_to_stable_object_names\", \"retrieval_evidence_to_evidence_morphisms\", \"schema_validation_has_no_errors\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"d69edfdfc836eed2a46d81b4ca0f12da02098f764e5e82e33243d9a09bf47a8a\"}, {\"kind\": \"policy_composition_category\", \"morphism_count\": 3, \"non_actuating\": true, \"object_count\": 2, \"obligation_names\": [\"rule.topos_guard_low_coherence.actions\", \"rule.topos_guard_low_coherence.condition\", \"rule.topos_guard_low_coherence.regimes\", \"rule.topos_guard_stability.actions\", \"rule.topos_guard_stability.condition\", \"rule.topos_guard_stability.regimes\", \"rule_names_unique\", \"rules_collection_valid\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"aeb642480a930cfd53ce9b65d0e2fc4686b72789924221b1de50023a2917eb6f\"}, {\"domain\": \"power_grid\", \"kind\": \"domain_example\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 25, \"obligation_names\": [\"power_grid_coherence_guard\", \"grid_frequency_protective_limit\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"3f8580488c3f7085ce7aa7b603fa844fecd961733470c0ba9912c12028ab180d\"}, {\"domain\": \"cardiac_rhythm\", \"kind\": \"domain_example\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 23, \"obligation_names\": [\"cardiac_rhythm_variability_guard\", \"cardiac_synchrony_cat_proof\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"3741e9afe6e8c6ea5b7ec1bc2719b28aee475faaf4de0fa16f8112dde7711a59\"}, {\"domain\": \"cyber_industrial\", \"kind\": \"domain_example\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 27, \"obligation_names\": [\"cyber_industrial_boundary_containment\", \"industrial_attack_mitigation_guard\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"a322bd56cb445e0ec56d982025bff40840055360d0af05fc72372cbb6a380494\"}]",
   "topos_sha256": "b51f959193a18f8a8882b9b319a181786a77993e7d18f1a22277fae68c639ad2",
-  "wall_time_s": 0.0786932380287908
+  "wall_time_s": 0.09761432796949521
 }
 ```
 
@@ -630,9 +656,9 @@ This snapshot records the deterministic local reference-suite output used for pu
   "record_count": 1,
   "replay_case_count": 3,
   "review_only": 1,
-  "steps_per_second": 18463.01156150121,
+  "steps_per_second": 16396.400002672308,
   "suite": "value_alignment_replay_calibration_gate",
   "threshold_fallback_case_count": 1,
-  "wall_time_s": 0.00016248703468590975
+  "wall_time_s": 0.00018296699272468686
 }
 ```

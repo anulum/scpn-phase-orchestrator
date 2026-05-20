@@ -30,6 +30,9 @@ __all__ = [
     "EVSResult",
     "EmbeddingResult",
     "HAS_RTAMT",
+    "HybridOrderParameterResult",
+    "HybridOrderScenario",
+    "HybridStateCandidate",
     "IntegratedInformationBenchmarkCase",
     "IntegratedInformationBenchmarkReport",
     "IntegratedInformationResult",
@@ -50,6 +53,7 @@ __all__ = [
     "auto_embed",
     "check_session_start",
     "classify_sleep_stage",
+    "compute_hybrid_entanglement_order_parameter",
     "compute_itpc",
     "compute_npe",
     "correlation_dimension",
@@ -63,6 +67,7 @@ __all__ = [
     "itpc_persistence",
     "benchmark_integrated_information_approximations",
     "build_cyber_industrial_integrated_information_replays",
+    "build_hybrid_order_parameter_scenarios",
     "build_infrastructure_integrated_information_replays",
     "build_physiology_integrated_information_replays",
     "integrated_information",
@@ -109,6 +114,26 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "entropy_production_rate": (".entropy_prod", "entropy_production_rate"),
     "EVSMonitor": (".evs", "EVSMonitor"),
     "EVSResult": (".evs", "EVSResult"),
+    "HybridOrderParameterResult": (
+        ".hybrid_order",
+        "HybridOrderParameterResult",
+    ),
+    "compute_hybrid_entanglement_order_parameter": (
+        ".hybrid_order",
+        "compute_hybrid_entanglement_order_parameter",
+    ),
+    "HybridOrderScenario": (
+        ".hybrid_order_examples",
+        "HybridOrderScenario",
+    ),
+    "HybridStateCandidate": (
+        ".hybrid_order_examples",
+        "HybridStateCandidate",
+    ),
+    "build_hybrid_order_parameter_scenarios": (
+        ".hybrid_order_examples",
+        "build_hybrid_order_parameter_scenarios",
+    ),
     "compute_itpc": (".itpc", "compute_itpc"),
     "itpc_persistence": (".itpc", "itpc_persistence"),
     "IntegratedInformationResult": (
