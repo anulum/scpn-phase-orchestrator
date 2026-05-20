@@ -228,6 +228,14 @@ request, storage-manifest, and revocation hashes. The
 a local file atomically and refuses to overwrite an existing file unless the
 caller explicitly opts in.
 
+Operators can persist the same bundle from reviewed request JSON:
+
+```bash
+spo plugins persist-execution-request REQUEST_JSON bundle.json \
+  --storage-uri file:///var/lib/spo/plugin-requests/bundle.json \
+  --created-by deployment_gate
+```
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

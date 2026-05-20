@@ -63,15 +63,18 @@ from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginExecutionApproval,
     PluginExecutionPlan,
+    PluginExecutionRequest,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
     build_plugin_execution_approval,
     build_plugin_execution_plan,
+    build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
     build_rust_plugin_runtime_handoff,
     compatibility_report,
     discover_plugin_manifests,
+    write_plugin_execution_request_storage_bundle,
 )
 from scpn_phase_orchestrator.plugins import registry as plugin_registry
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
@@ -589,6 +592,107 @@ def _load_approval_from_payload(
     )
 
 
+def _load_request_from_payload(
+    request_payload: dict[str, object],
+) -> PluginExecutionRequest:
+    if request_payload.get("schema") != "scpn_plugin_runtime_execution_request_v1":
+        raise click.ClickException(
+            "request schema mismatch: expected "
+            "scpn_plugin_runtime_execution_request_v1"
+        )
+
+    plan_hash = _require_sha256(request_payload.get("plan_hash"), "plan_hash")
+    target_hash = _require_sha256(request_payload.get("target_hash"), "target_hash")
+    approval_hash = _require_sha256(
+        request_payload.get("approval_hash"), "approval_hash"
+    )
+    plugin = request_payload.get("plugin")
+    kind = request_payload.get("kind")
+    name = request_payload.get("name")
+    operator_identity = request_payload.get("operator_identity")
+    approval_reference = request_payload.get("approval_reference")
+    loading_permitted = request_payload.get("loading_permitted")
+    execution_permitted = request_payload.get("execution_permitted")
+    require_target_hash_approval = request_payload.get("require_target_hash_approval")
+    require_package_target = request_payload.get("require_package_target")
+    approved_target_hashes = request_payload.get("approved_target_hashes")
+    allowed_kinds = request_payload.get("allowed_kinds")
+    version = request_payload.get("version")
+
+    for field_name, value in (
+        ("plugin", plugin),
+        ("kind", kind),
+        ("name", name),
+        ("operator_identity", operator_identity),
+        ("approval_reference", approval_reference),
+        ("version", version),
+    ):
+        if not isinstance(value, str) or not value:
+            raise click.ClickException(
+                f"request schema mismatch: {field_name} must be a non-empty string"
+            )
+    if kind not in _PLUGIN_KIND_OPTIONS:
+        raise click.ClickException(
+            f"request schema mismatch: unsupported kind {kind!r}"
+        )
+    for field_name, value in (
+        ("loading_permitted", loading_permitted),
+        ("execution_permitted", execution_permitted),
+        ("require_target_hash_approval", require_target_hash_approval),
+        ("require_package_target", require_package_target),
+    ):
+        if not isinstance(value, bool):
+            raise click.ClickException(
+                f"request schema mismatch: {field_name} must be a boolean"
+            )
+    if not isinstance(approved_target_hashes, list) or not all(
+        isinstance(item, str) for item in approved_target_hashes
+    ):
+        raise click.ClickException(
+            "request schema mismatch: approved_target_hashes must be a string list"
+        )
+    if not isinstance(allowed_kinds, list) or not all(
+        isinstance(item, str) and item in _PLUGIN_KIND_OPTIONS
+        for item in allowed_kinds
+    ):
+        raise click.ClickException(
+            "request schema mismatch: allowed_kinds must be valid kind strings"
+        )
+    normalized_target_hashes = tuple(
+        _require_sha256(item, "approved_target_hash")
+        for item in approved_target_hashes
+    )
+
+    return PluginExecutionRequest(
+        schema="scpn_plugin_runtime_execution_request_v1",
+        version=str(version),
+        plan_hash=plan_hash,
+        approval_hash=approval_hash,
+        target_hash=target_hash,
+        plugin=str(plugin),
+        kind=cast(
+            Literal["actuator", "bridge", "domainpack", "extractor", "monitor"],
+            str(kind),
+        ),
+        name=str(name),
+        operator_identity=str(operator_identity),
+        approval_reference=str(approval_reference),
+        loading_permitted=bool(loading_permitted),
+        execution_permitted=bool(execution_permitted),
+        require_target_hash_approval=bool(require_target_hash_approval),
+        approved_target_hashes=normalized_target_hashes,
+        allowed_kinds=cast(
+            tuple[
+                Literal["actuator", "bridge", "domainpack", "extractor", "monitor"],
+                ...,
+            ],
+            tuple(allowed_kinds),
+        ),
+        require_package_target=bool(require_package_target),
+        audit_record=request_payload,
+    )
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -822,6 +926,86 @@ def plugins_request_execution(plan_json: Path, approval_json: Path) -> None:
     else:
         payload = cast(dict[str, object], getattr(request, "audit_record", request))
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("persist-execution-request")
+@click.argument(
+    "request_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "output_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--storage-uri",
+    required=True,
+    help="Deployment-owned URI for the persisted request bundle.",
+)
+@click.option(
+    "--storage-backend",
+    default="local_file",
+    show_default=True,
+    help="Storage backend identifier; local writes require local_file.",
+)
+@click.option(
+    "--retention-policy",
+    default="retain_until_revoked",
+    show_default=True,
+    help="Retention policy identifier for the request bundle.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Deployment component creating the request bundle.",
+)
+@click.option(
+    "--revoked-request-hash",
+    "revoked_request_hashes",
+    multiple=True,
+    help="Revoked request hash to bind into the storage manifest.",
+)
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    help="Allow replacing an existing local request bundle.",
+)
+def plugins_persist_execution_request(
+    request_json: Path,
+    output_path: Path,
+    storage_uri: str,
+    storage_backend: str,
+    retention_policy: str,
+    created_by: str,
+    revoked_request_hashes: tuple[str, ...],
+    overwrite: bool,
+) -> None:
+    """Persist a validated execution request as a local storage bundle."""
+    request_payload = _load_json_file(request_json, artifact="request")
+    request = _load_request_from_payload(request_payload)
+    normalized_revocations = _normalize_approved_target_hashes(
+        revoked_request_hashes
+    )
+
+    try:
+        storage_manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri=storage_uri,
+            storage_backend=storage_backend,
+            retention_policy=retention_policy,
+            created_by=created_by,
+            revoked_request_hashes=normalized_revocations,
+        )
+        bundle = write_plugin_execution_request_storage_bundle(
+            request,
+            storage_manifest,
+            output_path,
+            overwrite=overwrite,
+        )
+    except (OSError, PermissionError, TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(json.dumps(bundle, indent=2, sort_keys=True))
 
 
 @main.command("meta-transfer-manifest")

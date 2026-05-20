@@ -2180,6 +2180,173 @@ def test_plugins_request_execution_rejects_missing_approval_hash(
     assert "approval_hash" in result.output
 
 
+def _write_request_payload_from_cli(runner, tmp_path: Path) -> Path:
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    target_hash = _lookup_target_hash(manifest, "actuator", "phase_driver")
+    plan_path = tmp_path / "plan.json"
+    _write_plan_payload(
+        plan_path,
+        manifest,
+        "actuator",
+        "phase_driver",
+        require_target_hash_approval=True,
+        approved_target_hashes=(target_hash,),
+    )
+    approval_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "approve-execution-plan",
+            str(plan_path),
+            "--operator-id",
+            "operator_42",
+            "--approval-reference",
+            "RFC-2026-05-20-01",
+            "--approval-reason",
+            "Production change window",
+        ],
+    )
+    assert approval_result.exit_code == 0
+    approval_path = tmp_path / "approval.json"
+    approval_path.write_text(approval_result.output, encoding="utf-8")
+    result = runner.invoke(
+        main,
+        ["plugins", "request-execution", str(plan_path), str(approval_path)],
+    )
+    assert result.exit_code == 0
+    request_path = tmp_path / "request.json"
+    request_path.write_text(result.output, encoding="utf-8")
+    return request_path
+
+
+def test_plugins_persist_execution_request_writes_bundle(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    output_path = tmp_path / "bundle.json"
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "persist-execution-request",
+            str(request_path),
+            str(output_path),
+            "--storage-uri",
+            f"file://{output_path}",
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    written = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload == written
+    assert payload["schema"] == "scpn_plugin_execution_request_storage_bundle_v1"
+    assert payload["storage_manifest"]["storage_backend"] == "local_file"
+    assert payload["storage_manifest"]["created_by"] == "deployment_gate"
+    assert payload["storage_manifest"]["request_hash"] == payload["request"][
+        "request_hash"
+    ]
+    assert len(payload["bundle_hash"]) == 64
+
+
+def test_plugins_persist_execution_request_rejects_existing_bundle(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    output_path = tmp_path / "bundle.json"
+    command = [
+        "plugins",
+        "persist-execution-request",
+        str(request_path),
+        str(output_path),
+        "--storage-uri",
+        f"file://{output_path}",
+        "--created-by",
+        "deployment_gate",
+    ]
+
+    first = runner.invoke(main, command)
+    second = runner.invoke(main, command)
+
+    assert first.exit_code == 0
+    assert second.exit_code == 1
+    assert "already exists" in second.output
+
+
+def test_plugins_persist_execution_request_rejects_tampered_request(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    payload = json.loads(request_path.read_text(encoding="utf-8"))
+    payload["request_hash"] = "0" * 64
+    request_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "persist-execution-request",
+            str(request_path),
+            str(tmp_path / "bundle.json"),
+            "--storage-uri",
+            f"file://{tmp_path / 'bundle.json'}",
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "request audit record mismatch" in result.output
+
+
+def test_plugins_persist_execution_request_rejects_revoked_request(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    payload = json.loads(request_path.read_text(encoding="utf-8"))
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "persist-execution-request",
+            str(request_path),
+            str(tmp_path / "bundle.json"),
+            "--storage-uri",
+            f"file://{tmp_path / 'bundle.json'}",
+            "--created-by",
+            "deployment_gate",
+            "--revoked-request-hash",
+            payload["request_hash"],
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "revoked" in result.output
+
+
 def _write_meta_audit_record(
     path: Path,
     *,

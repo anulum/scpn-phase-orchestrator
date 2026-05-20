@@ -264,6 +264,14 @@ atomically. Existing bundles are not overwritten unless `overwrite=True`, so a
 deployment cannot silently replace an approved request without making that
 rotation explicit.
 
+The CLI surface for that adapter is:
+
+```bash
+spo plugins persist-execution-request REQUEST_JSON OUTPUT_JSON \
+  --storage-uri file:///var/lib/spo/plugin-requests/request.json \
+  --created-by deployment_gate
+```
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).
