@@ -777,6 +777,15 @@ Speculative research watchlist:
   - Remaining scope: production calibration of domainpack-specific prior
     thresholds against real deployment or replay evidence.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
+  - Deterministic offline lineage manifests are in place:
+    `build_autopoietic_lineage_sandbox()` emits parent-policy hashes,
+    replay-corpus hashes, bounded child candidates, reviewable policy diffs,
+    accepted/rejected evidence, and disabled live merge, hot-patch, and
+    actuation flags.
+  - Autopoietic lineage benchmark evidence is in place:
+    `benchmark_autopoietic_lineage_sandbox_gate()` covers safe and unsafe replay
+    summaries, deterministic lineage hashes, accepted and rejected child
+    candidates, and review-only gating.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
 - Intergenerational policy inheritance: signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches.
 - Sheaf-theoretic coherence manifold: obstruction-aware control primitive over a sheaf Laplacian with audit-visible cohomology dimensions.

@@ -79,6 +79,9 @@ from scpn_phase_orchestrator.supervisor.hierarchy_adapters import (
     handle_hierarchy_rest_payload,
     replay_hierarchy_jsonl,
 )
+from scpn_phase_orchestrator.supervisor.lineage import (
+    build_autopoietic_lineage_sandbox,
+)
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldPolicy,
     MorphogeneticFieldResult,
@@ -219,6 +222,7 @@ __all__ = [
     "assess_fep_hierarchy",
     "audit_formal_checker_availability",
     "build_bft_meta_orchestrator_manifest",
+    "build_autopoietic_lineage_sandbox",
     "build_formal_verification_package",
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",

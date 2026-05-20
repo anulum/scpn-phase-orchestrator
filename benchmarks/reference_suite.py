@@ -75,6 +75,9 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     export_policy_rules_tla,
     export_stl_specs_prism,
 )
+from scpn_phase_orchestrator.supervisor.lineage import (
+    build_autopoietic_lineage_sandbox,
+)
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
     Guard,
@@ -250,6 +253,15 @@ class ValueAlignmentReplayCalibrationThresholds(NamedTuple):
     min_blocked_case_count: int
     min_threshold_fallback_case_count: int
     min_fallback_applied_case_count: int
+    require_review_only: bool
+    require_deterministic_hash: bool
+
+
+class AutopoieticLineageSandboxThresholds(NamedTuple):
+    min_child_candidate_count: int
+    min_accepted_child_count: int
+    min_rejected_child_count: int
+    min_policy_diff_count: int
     require_review_only: bool
     require_deterministic_hash: bool
 
@@ -2271,6 +2283,130 @@ def benchmark_value_alignment_replay_calibration_gate() -> dict[str, float | int
     }
 
 
+def benchmark_autopoietic_lineage_sandbox_gate() -> dict[str, float | int | str]:
+    """Benchmark offline autopoietic child-policy lineage sandbox gates."""
+    thresholds = AutopoieticLineageSandboxThresholds(
+        min_child_candidate_count=5,
+        min_accepted_child_count=3,
+        min_rejected_child_count=2,
+        min_policy_diff_count=5,
+        require_review_only=True,
+        require_deterministic_hash=True,
+    )
+    parent_policy = {"K": 0.42, "alpha": 0.18, "zeta": 0.09}
+    safe_replays = [
+        {
+            "replay_id": "nominal_grid_replay",
+            "reward": 0.82,
+            "safety_margin": 0.24,
+            "violations": [],
+        },
+        {
+            "replay_id": "disturbance_grid_replay",
+            "reward": 0.74,
+            "safety_margin": 0.18,
+            "violations": [],
+        },
+    ]
+    unsafe_replays = [
+        {
+            "replay_id": "unsafe_grid_replay",
+            "reward": 0.3,
+            "safety_margin": 0.02,
+            "violations": ["stl_margin_breach"],
+        }
+    ]
+
+    t0 = time.perf_counter()
+    safe_manifest = build_autopoietic_lineage_sandbox(
+        parent_policy,
+        safe_replays,
+        child_budget=3,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+    unsafe_manifest = build_autopoietic_lineage_sandbox(
+        parent_policy,
+        unsafe_replays,
+        child_budget=2,
+        mutation_step=0.04,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+    repeated_safe_manifest = build_autopoietic_lineage_sandbox(
+        parent_policy,
+        safe_replays,
+        child_budget=3,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+    elapsed = time.perf_counter() - t0
+
+    manifests = [safe_manifest, unsafe_manifest]
+    child_candidate_count = sum(
+        int(manifest["child_candidate_count"]) for manifest in manifests
+    )
+    accepted_child_count = sum(
+        int(manifest["accepted_child_count"]) for manifest in manifests
+    )
+    rejected_child_count = sum(
+        int(manifest["rejected_child_count"]) for manifest in manifests
+    )
+    policy_diff_count = sum(
+        len(candidate["policy_diff"])
+        for manifest in manifests
+        for candidate in manifest["child_candidates"]
+    )
+    review_only = int(
+        all(
+            manifest["review_required"] is True
+            and manifest["live_merge_permitted"] is False
+            and manifest["actuation_permitted"] is False
+            for manifest in manifests
+        )
+    )
+    deterministic_hash = int(
+        safe_manifest["lineage_sha256"] == repeated_safe_manifest["lineage_sha256"]
+    )
+    acceptance_passed = int(
+        child_candidate_count >= thresholds.min_child_candidate_count
+        and accepted_child_count >= thresholds.min_accepted_child_count
+        and rejected_child_count >= thresholds.min_rejected_child_count
+        and policy_diff_count >= thresholds.min_policy_diff_count
+        and review_only == int(thresholds.require_review_only)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "autopoietic_lineage_sandbox_gate",
+        "manifest_count": len(manifests),
+        "wall_time_s": elapsed,
+        "steps_per_second": child_candidate_count / elapsed,
+        "child_candidate_count": child_candidate_count,
+        "accepted_child_count": accepted_child_count,
+        "rejected_child_count": rejected_child_count,
+        "policy_diff_count": policy_diff_count,
+        "review_only": review_only,
+        "deterministic_hash": deterministic_hash,
+        "safe_lineage_sha256": str(safe_manifest["lineage_sha256"]),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_accepted_child_count": thresholds.min_accepted_child_count,
+                "min_child_candidate_count": thresholds.min_child_candidate_count,
+                "min_policy_diff_count": thresholds.min_policy_diff_count,
+                "min_rejected_child_count": thresholds.min_rejected_child_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_review_only": thresholds.require_review_only,
+            },
+            sort_keys=True,
+        ),
+        "lineage_manifests_json": json.dumps(manifests, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -3328,6 +3464,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "value_alignment_replay_calibration": (
                 benchmark_value_alignment_replay_calibration_gate()
             ),
+            "autopoietic_lineage": benchmark_autopoietic_lineage_sandbox_gate(),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

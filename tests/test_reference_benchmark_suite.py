@@ -13,6 +13,7 @@ import json
 from benchmarks.reference_suite import (
     BENCHMARK_COMMAND,
     benchmark_auto_binding_proposal_quality,
+    benchmark_autopoietic_lineage_sandbox_gate,
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
     benchmark_domain_formal_safety_exports,
@@ -768,6 +769,45 @@ def test_value_alignment_replay_calibration_gate_reports_thresholds_and_records(
     assert records[2]["score_counterfactual_count"] == 1
 
 
+def test_autopoietic_lineage_sandbox_gate_benchmark_shape() -> None:
+    out = benchmark_autopoietic_lineage_sandbox_gate()
+
+    assert out["suite"] == "autopoietic_lineage_sandbox_gate"
+    assert out["manifest_count"] == 2
+    assert out["child_candidate_count"] == 5
+    assert out["accepted_child_count"] == 3
+    assert out["rejected_child_count"] == 2
+    assert out["policy_diff_count"] == 5
+    assert out["review_only"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["safe_lineage_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_autopoietic_lineage_sandbox_gate_reports_thresholds_and_records() -> None:
+    out = benchmark_autopoietic_lineage_sandbox_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    manifests = json.loads(str(out["lineage_manifests_json"]))
+
+    assert thresholds == {
+        "min_accepted_child_count": 3,
+        "min_child_candidate_count": 5,
+        "min_policy_diff_count": 5,
+        "min_rejected_child_count": 2,
+        "require_deterministic_hash": True,
+        "require_review_only": True,
+    }
+    assert [manifest["schema"] for manifest in manifests] == [
+        "scpn_autopoietic_lineage_sandbox_v1",
+        "scpn_autopoietic_lineage_sandbox_v1",
+    ]
+    assert [manifest["accepted_child_count"] for manifest in manifests] == [3, 0]
+    assert [manifest["rejected_child_count"] for manifest in manifests] == [0, 2]
+    assert all(manifest["live_merge_permitted"] is False for manifest in manifests)
+    assert all(manifest["actuation_permitted"] is False for manifest in manifests)
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -827,6 +867,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
     assert out["metadata"]["snapshot_date"] == "2026-05-06"
     assert set(out["benchmarks"].keys()) == {
         "auto_binding",
+        "autopoietic_lineage",
         "bayesian_backends",
         "bayesian_posterior",
         "domain_formal_export",
