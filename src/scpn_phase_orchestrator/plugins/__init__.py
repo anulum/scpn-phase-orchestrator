@@ -32,6 +32,7 @@ from scpn_phase_orchestrator.plugins.registry import (
     build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_execution_request,
+    build_plugin_execution_request_storage_bundle,
     build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
@@ -42,8 +43,10 @@ from scpn_phase_orchestrator.plugins.registry import (
     execute_plugin_execution_request,
     load_plugin_capability,
     validate_plugin_execution_request,
+    validate_plugin_execution_request_storage_bundle,
     validate_plugin_execution_request_storage_manifest,
     validate_plugin_manifest,
+    write_plugin_execution_request_storage_bundle,
 )
 
 __all__ = [
@@ -59,6 +62,7 @@ __all__ = [
     "ExecutedPluginCapability",
     "build_plugin_execution_approval",
     "build_plugin_execution_request",
+    "build_plugin_execution_request_storage_bundle",
     "build_plugin_execution_request_storage_manifest",
     "build_plugin_execution_plan",
     "build_plugin_marketplace_catalog",
@@ -71,6 +75,8 @@ __all__ = [
     "execute_plugin_execution_request",
     "load_plugin_capability",
     "validate_plugin_execution_request",
+    "validate_plugin_execution_request_storage_bundle",
     "validate_plugin_execution_request_storage_manifest",
     "validate_plugin_manifest",
+    "write_plugin_execution_request_storage_bundle",
 ]

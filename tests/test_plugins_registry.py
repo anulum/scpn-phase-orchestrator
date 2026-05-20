@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, replace
 from pathlib import Path
 from runpy import run_path
@@ -28,6 +29,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_execution_request,
+    build_plugin_execution_request_storage_bundle,
     build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
@@ -38,8 +40,10 @@ from scpn_phase_orchestrator.plugins import (
     execute_plugin_execution_request,
     load_plugin_capability,
     validate_plugin_execution_request,
+    validate_plugin_execution_request_storage_bundle,
     validate_plugin_execution_request_storage_manifest,
     validate_plugin_manifest,
+    write_plugin_execution_request_storage_bundle,
 )
 
 
@@ -1439,6 +1443,160 @@ class TestPluginRuntimeExecution:
                 retention_policy="retain_until_revoked",
                 created_by="deployment_gate",
                 revoked_request_hashes=(str(request.audit_record["request_hash"]),),
+            )
+
+    def test_execution_request_storage_bundle_is_deterministic(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-16",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri="file:///var/lib/spo/plugin-requests/grid_pack.json",
+            storage_backend="local_file",
+            retention_policy="retain_until_revoked",
+            created_by="deployment_gate",
+        )
+
+        bundle = build_plugin_execution_request_storage_bundle(request, manifest)
+        repeated = build_plugin_execution_request_storage_bundle(request, manifest)
+
+        assert bundle == repeated
+        assert bundle["schema"] == "scpn_plugin_execution_request_storage_bundle_v1"
+        assert bundle["request"] == request.audit_record
+        assert bundle["storage_manifest"] == manifest.audit_record
+        assert len(str(bundle["bundle_hash"])) == 64
+        assert validate_plugin_execution_request_storage_bundle(bundle) is bundle
+
+    def test_execution_request_storage_bundle_rejects_tampering(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-17",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri="file:///var/lib/spo/plugin-requests/grid_pack.json",
+            storage_backend="local_file",
+            retention_policy="retain_until_revoked",
+            created_by="deployment_gate",
+        )
+        bundle = build_plugin_execution_request_storage_bundle(request, manifest)
+        tampered = {
+            **bundle,
+            "storage_manifest": {
+                **manifest.audit_record,
+                "storage_backend": "other",
+            },
+        }
+
+        with pytest.raises(ValueError, match="storage bundle hash mismatch"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    def test_execution_request_storage_bundle_writes_atomically(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-18",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri=f"file://{tmp_path / 'request.json'}",
+            storage_backend="local_file",
+            retention_policy="retain_until_revoked",
+            created_by="deployment_gate",
+        )
+        output_path = tmp_path / "request.json"
+
+        bundle = write_plugin_execution_request_storage_bundle(
+            request,
+            manifest,
+            output_path,
+        )
+
+        assert output_path.exists()
+        assert validate_plugin_execution_request_storage_bundle(
+            json.loads(output_path.read_text(encoding="utf-8")),
+        ) == bundle
+        with pytest.raises(FileExistsError):
+            write_plugin_execution_request_storage_bundle(
+                request,
+                manifest,
+                output_path,
             )
 
     def test_runtime_execution_request_rejects_plan_hash_mismatch(

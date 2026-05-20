@@ -15,6 +15,7 @@ import importlib
 import json
 from dataclasses import dataclass
 from importlib import metadata
+from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
 from scpn_phase_orchestrator import __version__
@@ -32,6 +33,7 @@ __all__ = [
     "build_plugin_execution_approval",
     "build_plugin_execution_request",
     "build_plugin_execution_request_storage_manifest",
+    "build_plugin_execution_request_storage_bundle",
     "build_rust_plugin_runtime_handoff",
     "build_rust_plugin_registry",
     "compatibility_report",
@@ -42,8 +44,10 @@ __all__ = [
     "execute_plugin_execution_request",
     "load_plugin_capability",
     "validate_plugin_execution_request",
+    "validate_plugin_execution_request_storage_bundle",
     "validate_plugin_execution_request_storage_manifest",
     "validate_plugin_manifest",
+    "write_plugin_execution_request_storage_bundle",
     "PluginRuntimeExecutionPolicy",
     "PluginRuntimeLoadPolicy",
 ]
@@ -551,6 +555,82 @@ def validate_plugin_execution_request_storage_manifest(
     return manifest
 
 
+def build_plugin_execution_request_storage_bundle(
+    request: PluginExecutionRequest,
+    manifest: PluginExecutionRequestStorageManifest,
+) -> dict[str, object]:
+    """Build a deterministic local persistence bundle for a request envelope."""
+    validate_plugin_execution_request_storage_manifest(request, manifest)
+    bundle: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_storage_bundle_v1",
+        "version": "1.0.0",
+        "request": dict(request.audit_record),
+        "storage_manifest": dict(manifest.audit_record),
+    }
+    bundle["bundle_hash"] = _record_hash(bundle)
+    return bundle
+
+
+def validate_plugin_execution_request_storage_bundle(
+    bundle: dict[str, object],
+) -> dict[str, object]:
+    """Validate an on-disk plugin execution request storage bundle."""
+    if bundle.get("schema") != "scpn_plugin_execution_request_storage_bundle_v1":
+        raise ValueError(
+            "storage bundle schema must be "
+            "scpn_plugin_execution_request_storage_bundle_v1"
+        )
+    if bundle.get("version") != "1.0.0":
+        raise ValueError("storage bundle version must be 1.0.0")
+    bundle_hash = bundle.get("bundle_hash")
+    if not isinstance(bundle_hash, str):
+        raise ValueError("storage bundle is missing bundle_hash")
+    _validate_sha256(bundle_hash, "storage bundle hash")
+    expected_bundle = dict(bundle)
+    expected_bundle.pop("bundle_hash", None)
+    if _record_hash(expected_bundle) != bundle_hash:
+        raise ValueError("storage bundle hash mismatch")
+
+    request_record = bundle.get("request")
+    manifest_record = bundle.get("storage_manifest")
+    if not isinstance(request_record, dict):
+        raise ValueError("storage bundle request must be an object")
+    if not isinstance(manifest_record, dict):
+        raise ValueError("storage bundle manifest must be an object")
+    _validate_request_audit_record(request_record)
+    _validate_storage_manifest_audit_record(manifest_record)
+    for field in ("request_hash", "plan_hash", "approval_hash", "target_hash"):
+        if request_record.get(field) != manifest_record.get(field):
+            raise ValueError(f"storage bundle {field} mismatch")
+    return bundle
+
+
+def write_plugin_execution_request_storage_bundle(
+    request: PluginExecutionRequest,
+    manifest: PluginExecutionRequestStorageManifest,
+    path: str | Path,
+    *,
+    overwrite: bool = False,
+) -> dict[str, object]:
+    """Atomically persist a validated local-file execution request bundle."""
+    if manifest.storage_backend != "local_file":
+        raise ValueError("only local_file request storage bundles can be written")
+    bundle = build_plugin_execution_request_storage_bundle(request, manifest)
+    output_path = Path(path)
+    if output_path.exists() and not overwrite:
+        raise FileExistsError(f"request storage bundle already exists: {output_path}")
+    if output_path.exists() and output_path.is_dir():
+        raise IsADirectoryError(str(output_path))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(bundle, indent=2, sort_keys=True) + "\n"
+    temporary_path = output_path.with_name(
+        f".{output_path.name}.{bundle['bundle_hash']}.tmp"
+    )
+    temporary_path.write_text(payload, encoding="utf-8")
+    temporary_path.replace(output_path)
+    return bundle
+
+
 def _request_revocation_hash(
     revoked_request_hashes: tuple[str, ...],
 ) -> str:
@@ -560,6 +640,41 @@ def _request_revocation_hash(
     for revoked_hash in normalised_revocations:
         _validate_sha256(revoked_hash, "revoked request hash")
     return _record_hash({"revoked_request_hashes": list(normalised_revocations)})
+
+
+def _validate_request_audit_record(record: dict[str, object]) -> None:
+    if record.get("schema") != "scpn_plugin_runtime_execution_request_v1":
+        raise ValueError("storage bundle request schema mismatch")
+    request_hash = record.get("request_hash")
+    if not isinstance(request_hash, str):
+        raise ValueError("storage bundle request is missing request_hash")
+    _validate_sha256(request_hash, "storage bundle request hash")
+    expected = dict(record)
+    expected.pop("request_hash", None)
+    if _record_hash(expected) != request_hash:
+        raise ValueError("storage bundle request hash mismatch")
+
+
+def _validate_storage_manifest_audit_record(record: dict[str, object]) -> None:
+    if record.get("schema") != "scpn_plugin_execution_request_storage_manifest_v1":
+        raise ValueError("storage bundle manifest schema mismatch")
+    manifest_hash = record.get("manifest_hash")
+    if not isinstance(manifest_hash, str):
+        raise ValueError("storage bundle manifest is missing manifest_hash")
+    _validate_sha256(manifest_hash, "storage bundle manifest hash")
+    expected = dict(record)
+    expected.pop("manifest_hash", None)
+    if _record_hash(expected) != manifest_hash:
+        raise ValueError("storage bundle manifest hash mismatch")
+    revoked_hashes = record.get("revoked_request_hashes")
+    if not isinstance(revoked_hashes, list):
+        raise ValueError("storage bundle revoked_request_hashes must be a list")
+    if not all(isinstance(item, str) for item in revoked_hashes):
+        raise ValueError("storage bundle revoked request hashes must be strings")
+    if _request_revocation_hash(tuple(revoked_hashes)) != record.get(
+        "revocation_hash"
+    ):
+        raise ValueError("storage bundle revocation hash mismatch")
 
 
 def compatibility_report(manifest: PluginManifest) -> PluginCompatibilityReport:

@@ -257,6 +257,13 @@ policy, manifest creator, revoked request hashes, and deterministic manifest
 hash. `validate_plugin_execution_request_storage_manifest()` rejects stale or
 tampered storage records before the request is handed to runtime code.
 
+The local-file persistence adapter is
+`write_plugin_execution_request_storage_bundle()`. It first builds and validates
+`scpn_plugin_execution_request_storage_bundle_v1`, then writes the JSON bundle
+atomically. Existing bundles are not overwritten unless `overwrite=True`, so a
+deployment cannot silently replace an approved request without making that
+rotation explicit.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

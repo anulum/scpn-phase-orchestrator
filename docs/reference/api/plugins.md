@@ -218,6 +218,16 @@ deterministic manifest hash. `validate_plugin_execution_request_storage_manifest
 recomputes that manifest before use so request storage changes and approval
 rotation are visible in audit records.
 
+For local deployment stores,
+`build_plugin_execution_request_storage_bundle()` combines the request envelope
+and storage manifest into schema
+`scpn_plugin_execution_request_storage_bundle_v1`.
+`validate_plugin_execution_request_storage_bundle()` recomputes the bundle,
+request, storage-manifest, and revocation hashes. The
+`write_plugin_execution_request_storage_bundle()` adapter writes that bundle to
+a local file atomically and refuses to overwrite an existing file unless the
+caller explicitly opts in.
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:
