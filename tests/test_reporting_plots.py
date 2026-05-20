@@ -301,6 +301,14 @@ class TestExtractors:
         with pytest.raises(ValueError, match="pac_matrix length"):
             plot._extract_pac_matrix()
 
+    def test_extract_pac_matrix_infers_dimension_when_n_is_missing(self) -> None:
+        log = _make_log()
+        log.append({"event": "pac_snapshot", "pac_matrix": [0.11, 0.12, 0.13, 0.14]})
+        plot = CoherencePlot(log)
+        n_out, mat = plot._extract_pac_matrix()
+        assert n_out == 2
+        assert mat.shape == (2, 2)
+
     def test_extract_pac_matrix_ignores_malformed_numeric_values(self) -> None:
         log = _make_log()
         log.append(

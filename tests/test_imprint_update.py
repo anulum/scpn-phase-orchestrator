@@ -146,6 +146,32 @@ def test_update_rejects_invalid_state(state):
         model.update(state, np.zeros(1), dt=0.1)
 
 
+def test_update_rejects_non_string_attribution_key():
+    model = ImprintModel(decay_rate=0.1, saturation=1.0)
+    state = ImprintState(
+        m_k=np.array([0.2]),
+        last_update=0.0,
+        attribution={1: 0.5},
+    )
+    with pytest.raises(ValueError, match="attribution"):
+        model.update(state, np.array([0.1]), dt=0.1)
+
+
+def test_update_copies_attribution_dict_to_avoid_aliasing():
+    model = ImprintModel(decay_rate=0.1, saturation=1.0)
+    base_attr = {"layer": 0.4}
+    state = ImprintState(
+        m_k=np.array([0.1]),
+        last_update=0.0,
+        attribution=base_attr,
+    )
+
+    updated = model.update(state, np.array([0.2]), dt=0.1)
+    base_attr["layer"] = 99.0
+    state.attribution["layer"] = 0.5
+    assert updated.attribution == {"layer": 0.4}
+
+
 @pytest.mark.parametrize(
     "knm",
     [np.ones((2, 3)), np.ones(2), np.array([[0.0, np.nan], [0.0, 0.0]])],

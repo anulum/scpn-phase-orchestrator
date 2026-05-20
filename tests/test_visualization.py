@@ -75,6 +75,41 @@ class TestNetworkGraph:
         with pytest.raises(ValueError, match="layer_names must be non-empty strings"):
             network_graph_json(knm, layer_names=layer_names)
 
+    def test_rejects_whitespace_layer_names(self) -> None:
+        knm = np.full((2, 2), 0.5)
+        np.fill_diagonal(knm, 0.0)
+        with pytest.raises(ValueError, match="layer_names must be non-empty strings"):
+            network_graph_json(knm, layer_names=["A", "   "])
+
+    def test_empty_coupling_matrix_has_no_nodes_or_links(self) -> None:
+        data = json.loads(network_graph_json(np.empty((0, 0))))
+        assert data["nodes"] == []
+        assert data["links"] == []
+
+    def test_zero_threshold_boundary_is_exclusive(self) -> None:
+        knm = np.array([[0.0, 0.2], [0.2, 0.0]])
+        data = json.loads(network_graph_json(knm, threshold=0.2))
+        assert data["links"] == []
+
+    def test_deterministic_payload_for_identical_inputs(self) -> None:
+        knm = np.array([[0.0, 0.123456], [0.123456, 0.0]])
+        payload_one = network_graph_json(
+            knm,
+            layer_names=["Left", "Right"],
+            R_values=[1.0, 0.333333],
+            threshold=0.0,
+        )
+        payload_two = network_graph_json(
+            knm,
+            layer_names=["Left", "Right"],
+            R_values=[1.0, 0.333333],
+            threshold=0.0,
+        )
+        assert payload_one == payload_two
+        data = json.loads(payload_one)
+        assert data["nodes"][0]["R"] == 1.0
+        assert data["nodes"][1]["R"] == 0.3333
+
     def test_R_values(self):
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
@@ -184,6 +219,10 @@ class TestCouplingHeatmap:
         with pytest.raises(ValueError, match="knm must be a square matrix"):
             coupling_heatmap_json(knm)
 
+    def test_zero_size_coupling_matrix_rejects_stats(self) -> None:
+        with pytest.raises(ValueError, match="zero-size array"):
+            coupling_heatmap_json(np.empty((0, 0)))
+
 
 class TestTorusPoints:
     def test_valid_json(self):
@@ -266,6 +305,11 @@ class TestTorusPoints:
     def test_rejects_multidimensional_phases(self):
         with pytest.raises(ValueError, match="phases must be 1-D"):
             torus_points_json(np.array([[0.0, 1.0]]))
+
+    def test_rejects_whitespace_layer_names(self) -> None:
+        phases = np.array([0.0, 1.0])
+        with pytest.raises(ValueError, match="layer_names must be non-empty strings"):
+            phase_wheel_json(phases, layer_names=[" ", "B"])
 
 
 class TestPhaseWheel:

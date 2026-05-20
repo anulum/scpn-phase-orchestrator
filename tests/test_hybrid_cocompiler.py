@@ -641,3 +641,65 @@ def test_hybrid_operator_handoff_package_rejects_mismatched_readiness() -> None:
 
     with pytest.raises(ValueError, match="hybrid readiness manifest hash"):
         build_hybrid_operator_handoff_package(hybrid, readiness)
+
+
+def test_hybrid_pipeline_enforces_no_actuation_review_boundaries_end_to_end() -> None:
+    quantum = _quantum_manifest()
+    neuromorphic = _neuromorphic_manifest()
+    quantum["actuation_permitted"] = True
+    neuromorphic["actuation_permitted"] = True
+
+    manifest = build_hybrid_cocompiler_manifest(
+        quantum,
+        neuromorphic,
+        n_channel_semantics=("Q_control", "S_spike", "audit"),
+    )
+    repeated_manifest = build_hybrid_cocompiler_manifest(
+        quantum,
+        neuromorphic,
+        n_channel_semantics=("Q_control", "S_spike", "audit"),
+    )
+    assert manifest == repeated_manifest
+    assert manifest["actuation_permitted"] is False
+    assert (
+        "quantum actuation_permitted must remain false"
+        in manifest["blocked_reasons"]
+    )
+    assert (
+        "neuromorphic actuation_permitted must remain false"
+        in manifest["blocked_reasons"]
+    )
+
+    quantum_readiness = _quantum_readiness()
+    neuromorphic_readiness = _neuromorphic_readiness()
+    quantum_readiness["actuation_permitted"] = True
+    neuromorphic_readiness["actuation_permitted"] = True
+
+    readiness = audit_hybrid_target_readiness(
+        manifest,
+        quantum_readiness,
+        neuromorphic_readiness,
+        hybrid_operator_approved=True,
+    )
+    assert readiness["status"] == "blocked"
+    assert readiness["actuation_permitted"] is False
+    assert (
+        "quantum_readiness actuation_permitted must remain false"
+        in readiness["blocked_reasons"]
+    )
+    assert (
+        "neuromorphic_readiness actuation_permitted must remain false"
+        in readiness["blocked_reasons"]
+    )
+
+    package = build_hybrid_operator_handoff_package(manifest, readiness)
+    repeated_package = build_hybrid_operator_handoff_package(manifest, readiness)
+    assert package == repeated_package
+    assert package["execution_permitted"] is False
+    assert package["actuation_permitted"] is False
+    assert package["qpu_execution_permitted"] is False
+    assert package["hardware_write_permitted"] is False
+    assert package["status"] == "blocked"
+    assert "execute only outside SPO from an approved operator workflow" in package[
+        "operator_commands"
+    ]

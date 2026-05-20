@@ -72,6 +72,16 @@ class TestSSGFCosts:
         )
         assert abs(costs.u_total - expected) < 1e-10
 
+    def test_single_oscillator_has_finite_edge_costs(self):
+        W = np.array([[0.0]])
+        phases = np.array([0.25])
+        costs = compute_ssgf_costs(W, phases)
+
+        assert np.isfinite(costs.u_total)
+        assert costs.c1_sync == pytest.approx(0.0)
+        assert costs.c4_symmetry == pytest.approx(0.0)
+        assert costs.c3_sparsity == pytest.approx(0.0)
+
     @pytest.mark.parametrize(
         ("W", "phases", "match"),
         [

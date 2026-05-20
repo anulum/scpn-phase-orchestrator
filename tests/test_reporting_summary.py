@@ -270,6 +270,27 @@ def test_audit_report_summary_falls_back_default_claim_boundary() -> None:
     assert phi_summary["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
 
 
+def test_audit_report_summary_skips_total_integration_when_non_finite() -> None:
+    summary = build_audit_report_summary(
+        [
+            {"step": 0, "regime": "nominal", "layers": [{"R": 0.4}]},
+            {
+                "monitor": "integrated_information",
+                "phi": 0.1,
+                "normalised_phi": 0.2,
+                "total_integration": float("nan"),
+            },
+        ],
+        hash_chain_ok=True,
+        hash_chain_verified=2,
+    )
+    phi_summary = cast("dict[str, object]", summary["integrated_information"])
+
+    assert phi_summary["records"] == 1
+    assert "latest_total_integration" not in phi_summary
+    assert "total_integration_mean" not in phi_summary
+
+
 def test_audit_report_summary_skips_non_finite_integrated_information_records() -> None:
     entries: list[dict[str, object]] = [
         {"step": 0, "layers": [{"R": 0.8}], "regime": "nominal"},

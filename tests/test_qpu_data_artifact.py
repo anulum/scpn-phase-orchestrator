@@ -329,6 +329,20 @@ def test_from_dict_rejects_missing_fields_and_schema_mismatch() -> None:
         QPUDataArtifact.from_dict(unsupported_schema)
 
 
+def test_from_dict_rejects_non_mapping_metadata_and_hashes() -> None:
+    payload = _base_payload()
+    payload["metadata"] = "bad-metadata"
+
+    with pytest.raises(ValueError, match="metadata must be a mapping"):
+        QPUDataArtifact.from_dict(payload)
+
+    payload["metadata"] = {"source": "unit"}
+    payload["hashes"] = [("K_nm_sha256", "not", "a", "map")]
+
+    with pytest.raises(ValueError, match="hashes must be a mapping"):
+        QPUDataArtifact.from_dict(payload)
+
+
 def test_json_roundtrip_preserves_payload_and_hashes() -> None:
     payload = _base_payload()
 

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier, SSGFState
 
@@ -85,6 +86,21 @@ class TestGeometryCarrier:
     def test_z_dim_property(self):
         gc = GeometryCarrier(4, z_dim=7)
         assert gc.z_dim == 7
+
+    def test_deterministic_update_with_cost_fn(self):
+        gc1 = GeometryCarrier(5, z_dim=4, lr=0.05, seed=123)
+        gc2 = GeometryCarrier(5, z_dim=4, lr=0.05, seed=123)
+
+        def cost_fn(W):
+            return float(np.sum((W - 0.4) ** 2))
+
+        state1 = gc1.update(cost=cost_fn(gc1.decode()), cost_fn=cost_fn)
+        state2 = gc2.update(cost=cost_fn(gc2.decode()), cost_fn=cost_fn)
+
+        np.testing.assert_array_equal(state1.z, state2.z)
+        np.testing.assert_array_equal(state1.W, state2.W)
+        assert state1.grad_norm == pytest.approx(state2.grad_norm)
+        assert state1.step == state2.step == 1
 
 
 class TestSSGFPipelineWiring:

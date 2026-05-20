@@ -92,6 +92,12 @@ class TestBoltzmannWeight:
         w = boltzmann_weight(1e10, temperature=1e-10)
         assert w == 0.0 or np.isfinite(w)
 
+    def test_extreme_negative_exponent_clamped(self):
+        """Very negative U/T is clamped to a finite maximum."""
+        w = boltzmann_weight(-1e10, temperature=1e-10)
+        assert np.isfinite(w)
+        assert w > 1e100
+
 
 class TestEffectiveTemperature:
     def test_constant_cost_zero_temp(self):

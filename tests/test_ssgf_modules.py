@@ -240,3 +240,16 @@ class TestSSGFModulesPipelineWiring:
         cost = compute_ethical_cost(phases, W)
         assert isinstance(cost, EthicalCost)
         assert np.isfinite(cost.c15_sec)
+
+    def test_cybernetic_closure_run_zero_steps_returns_initial_state(self):
+        """run(…, n_outer_steps=0) should be a no-op with empty history."""
+        gc = GeometryCarrier(4, z_dim=3, lr=0.01, seed=0)
+        closure = CyberneticClosure(gc)
+        phases = np.full(4, 0.5)
+        initial_w = gc.decode()
+
+        final_w, history = closure.run(phases, n_outer_steps=0)
+
+        assert closure._step == 0
+        np.testing.assert_allclose(final_w, initial_w)
+        assert history == []

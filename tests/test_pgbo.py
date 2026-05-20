@@ -118,6 +118,8 @@ class TestPGBO:
             pgbo.alignment_trend(window=0)
         with pytest.raises(ValueError, match="window must be"):
             pgbo.alignment_trend(window=-1)
+        with pytest.raises(ValueError, match="window must be"):
+            pgbo.alignment_trend(window=True)
 
     def test_alignment_trend_large_window_matches_all_history(self):
         pgbo = PGBO()
@@ -141,6 +143,57 @@ class TestPGBO:
 
         assert pgbo.alignment_trend(window=10) == pytest.approx(sum(seen) / len(seen))
 
+    def test_uniform_coupling_has_zero_alignment(self):
+        """Constant off-diagonal coupling collapses variance-based branch."""
+        pgbo = PGBO()
+        phases = np.array([0.1, 0.2, 0.4, 0.8], dtype=np.float64)
+        W = np.full((4, 4), 0.75)
+        np.fill_diagonal(W, 0.0)
+
+        snap = pgbo.observe(phases, W)
+        assert snap.phase_geometry_alignment == 0.0
+
+    def test_records_are_deterministic_for_deterministic_inputs(self):
+        """Same valid inputs should produce reproducible snapshot payloads."""
+        pgbo = PGBO()
+        phases = np.array([0.2, 0.6, 1.0], dtype=np.float64)
+        W = np.array(
+            [
+                [0.0, 0.2, 0.7],
+                [0.2, 0.0, 0.9],
+                [0.7, 0.9, 0.0],
+            ],
+            dtype=np.float64,
+        )
+
+        first = pgbo.observe(phases, W)
+        first_costs = (
+            first.costs.c1_sync,
+            first.costs.c2_spectral_gap,
+            first.costs.c3_sparsity,
+            first.costs.c4_symmetry,
+            first.costs.u_total,
+        )
+
+        pgbo.reset()
+        second = pgbo.observe(phases, W)
+        second_costs = (
+            second.costs.c1_sync,
+            second.costs.c2_spectral_gap,
+            second.costs.c3_sparsity,
+            second.costs.c4_symmetry,
+            second.costs.u_total,
+        )
+
+        assert second.step == 1
+        assert pytest.approx(first.R) == second.R
+        assert pytest.approx(first.psi) == second.psi
+        assert (
+            pytest.approx(first.phase_geometry_alignment)
+            == second.phase_geometry_alignment
+        )
+        assert pytest.approx(first.gauge_curvature) == second.gauge_curvature
+        assert second_costs == first_costs
     def test_alignment_trend_empty(self):
         pgbo = PGBO()
         assert pgbo.alignment_trend() == 0.0

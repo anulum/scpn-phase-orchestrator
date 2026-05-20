@@ -401,3 +401,83 @@ class TestModbusAdapter:
             adapter.write_register(True, 1)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="value"):
             adapter.write_register(0, True)  # type: ignore[arg-type]
+
+
+class TestSecureModbusAdapter:
+    """TLS-modbus adapter branches for optional dependency and transport errors."""
+
+    def test_secure_modbus_adapter_requires_pymodbus(self, tmp_path, monkeypatch):
+        import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
+
+        cert = tmp_path / "client.pem"
+        key = tmp_path / "client.key"
+        cert.write_text("dummy")
+        key.write_text("dummy")
+
+        monkeypatch.setattr(modbus_tls, "HAS_PYMODBUS", False)
+        monkeypatch.setattr(modbus_tls, "ModbusTlsClient", None, raising=False)
+        monkeypatch.setattr(
+            modbus_tls.SecureModbusAdapter,
+            "_build_tls_context",
+            lambda self: MagicMock(),
+        )
+
+        with pytest.raises(
+            ConnectionError,
+            match="pymodbus is required for Modbus TLS",
+        ):
+            modbus_tls.SecureModbusAdapter("plc.local", 802, cert, key)
+
+    def test_secure_modbus_adapter_tls_validation_rejects_missing_client_cert(
+        self,
+        tmp_path,
+    ) -> None:
+        import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
+
+        cert = tmp_path / "missing.pem"
+        key = tmp_path / "client.key"
+        key.write_text("dummy")
+
+        with pytest.raises(ConnectionError, match="TLS certificate not found"):
+            modbus_tls.SecureModbusAdapter("plc.local", 802, cert, key)
+
+    def test_secure_modbus_adapter_transport_errors_raise_connection_error(
+        self,
+        tmp_path,
+        monkeypatch,
+    ) -> None:
+        import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
+
+        cert = tmp_path / "client.pem"
+        key = tmp_path / "client.key"
+        cert.write_text("dummy")
+        key.write_text("dummy")
+
+        read_result = MagicMock()
+        read_result.isError.return_value = True
+        write_result = MagicMock()
+        write_result.isError.return_value = True
+        client = MagicMock()
+        client.connect.return_value = True
+        client.read_holding_registers.return_value = read_result
+        client.write_register.return_value = write_result
+
+        monkeypatch.setattr(modbus_tls, "HAS_PYMODBUS", True)
+        monkeypatch.setattr(
+            modbus_tls,
+            "ModbusTlsClient",
+            MagicMock(return_value=client),
+            raising=False,
+        )
+        monkeypatch.setattr(
+            modbus_tls.SecureModbusAdapter,
+            "_build_tls_context",
+            lambda self: MagicMock(),
+        )
+
+        adapter = modbus_tls.SecureModbusAdapter("plc.local", 802, cert, key)
+
+        with pytest.raises(ConnectionError, match="Modbus read error at address 7"):
+            adapter.read_register(7)
+        with pytest.raises(ConnectionError, match="Modbus write error at address 9"):
+            adapter.write_register(9, 123)

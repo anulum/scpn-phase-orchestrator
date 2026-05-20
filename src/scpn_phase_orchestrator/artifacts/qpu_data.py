@@ -98,6 +98,14 @@ def _hashes_with_verified_values(
     return result
 
 
+def _coerce_mapping(value: object, *, field: str) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field} must be a mapping")
+    return dict(value)
+
+
 @dataclass(frozen=True)
 class QPUDataArtifact:
     """Validated oscillator data ready for quantum-control compilation."""
@@ -247,8 +255,8 @@ class QPUDataArtifact:
             extraction_method=str(data["extraction_method"]),
             source_timestamp=data.get("source_timestamp"),
             replay_id=data.get("replay_id"),
-            metadata=dict(data.get("metadata", {})),
-            hashes=dict(data.get("hashes", {})),
+            metadata=_coerce_mapping(data.get("metadata"), field="metadata"),
+            hashes=_coerce_mapping(data.get("hashes"), field="hashes"),
         )
         expected = parsed.to_dict()["artifact_sha256"]
         if data.get("artifact_sha256") != expected:

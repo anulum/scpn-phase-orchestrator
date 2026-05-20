@@ -15,6 +15,8 @@ from pathlib import Path
 import pytest
 
 from scpn_phase_orchestrator.reporting.explainability import (
+    _event_lines,
+    _integer_value,
     _make_pdf_bytes,
     _pdf_escape,
     _wrap_pdf_lines,
@@ -430,6 +432,22 @@ def test_explainability_report_json_payload_is_serializable() -> None:
 
     assert restored["steps"] == report.steps
     assert restored["metric_summary"] == list(report.metric_summary)
+
+
+def test_event_lines_only_includes_events_and_caps_at_limit() -> None:
+    events = [
+        {"event": f"evt_{i}", "step": i, "detail": {"value": i}} for i in range(15)
+    ]
+    lines = _event_lines(events, limit=12)
+    assert len(lines) == 12
+    assert lines[0] == "Step 0: evt_0 — {'value': 0}"
+    assert lines[-1].startswith("Step 11:")
+
+
+def test_integer_value_rejects_invalid_payloads() -> None:
+    assert _integer_value(True) == 0
+    assert _integer_value(float("inf")) == 0
+    assert _integer_value("1") == 0
 
 
 def test_pdf_escape_escapes_pdf_control_characters() -> None:
