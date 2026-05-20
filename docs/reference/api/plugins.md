@@ -205,6 +205,11 @@ shape, checks the request `plan_hash` and `target_hash`, and only then delegates
 to the explicit runtime execution path. A stale request, changed keyword set, or
 different manifest fails before target import.
 
+Stored request envelopes should pass `validate_plugin_execution_request()`
+immediately before use. The validator recomputes the request hash, rejects
+tampered audit records, and accepts a deployment-owned revoked-request hash set
+so rotated approvals fail closed before plugin import.
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

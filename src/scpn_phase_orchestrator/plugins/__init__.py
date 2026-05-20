@@ -39,6 +39,7 @@ from scpn_phase_orchestrator.plugins.registry import (
     execute_plugin_capability,
     execute_plugin_execution_request,
     load_plugin_capability,
+    validate_plugin_execution_request,
     validate_plugin_manifest,
 )
 
@@ -64,5 +65,6 @@ __all__ = [
     "execute_plugin_capability",
     "execute_plugin_execution_request",
     "load_plugin_capability",
+    "validate_plugin_execution_request",
     "validate_plugin_manifest",
 ]

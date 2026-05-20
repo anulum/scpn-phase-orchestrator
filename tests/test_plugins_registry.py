@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.plugins import (
     execute_plugin_capability,
     execute_plugin_execution_request,
     load_plugin_capability,
+    validate_plugin_execution_request,
     validate_plugin_manifest,
 )
 
@@ -1212,6 +1213,84 @@ class TestPluginRuntimeExecution:
             approved_target_hashes=(plan.target_hash,),
             require_target_hash_approval=True,
         )
+        assert validate_plugin_execution_request(request) is request
+
+    def test_runtime_execution_request_validation_rejects_tampering(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-10",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        tampered = replace(
+            request,
+            audit_record={**request.audit_record, "approval_reference": "changed"},
+        )
+
+        with pytest.raises(ValueError, match="audit record mismatch"):
+            validate_plugin_execution_request(tampered)
+
+    def test_runtime_execution_request_validation_rejects_revocation(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-11",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+
+        with pytest.raises(PermissionError, match="revoked"):
+            validate_plugin_execution_request(
+                request,
+                revoked_request_hashes=(
+                    str(request.audit_record["request_hash"]),
+                ),
+            )
 
     def test_runtime_execution_request_rejects_plan_hash_mismatch(
         self,
@@ -1694,9 +1773,21 @@ class TestPluginRuntimeExecution:
                 kwargs={"different": 3.5},
             )
 
-    def test_request_bound_runtime_execution_rejects_manifest_mismatch(
+    def test_request_bound_runtime_execution_rejects_revocation_before_import(
         self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
         plan = build_plugin_execution_plan(
             _manifest(),
             "monitor",
@@ -1704,6 +1795,51 @@ class TestPluginRuntimeExecution:
             policy=PluginRuntimeExecutionPolicy(
                 loading_permitted=True,
                 execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-12",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+
+        def fail_import(_module: str) -> object:
+            raise AssertionError("revoked request must fail before import")
+
+        monkeypatch.setattr(registry.importlib, "import_module", fail_import)
+
+        with pytest.raises(PermissionError, match="revoked"):
+            execute_plugin_execution_request(
+                _manifest(),
+                request,
+                revoked_request_hashes=(str(request.audit_record["request_hash"]),),
+            )
+
+    def test_request_bound_runtime_execution_rejects_manifest_mismatch(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
             ),
         )
         approval = build_plugin_execution_approval(

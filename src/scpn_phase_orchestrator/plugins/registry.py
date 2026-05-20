@@ -39,6 +39,7 @@ __all__ = [
     "execute_plugin_capability",
     "execute_plugin_execution_request",
     "load_plugin_capability",
+    "validate_plugin_execution_request",
     "validate_plugin_manifest",
     "PluginRuntimeExecutionPolicy",
     "PluginRuntimeLoadPolicy",
@@ -348,6 +349,52 @@ def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     if not compatibility.compatible:
         raise ValueError("; ".join(compatibility.reasons))
     return manifest
+
+
+def validate_plugin_execution_request(
+    request: PluginExecutionRequest,
+    *,
+    revoked_request_hashes: tuple[str, ...] = (),
+) -> PluginExecutionRequest:
+    """Validate a stored plugin execution request before runtime consumption."""
+    request_hash = request.audit_record.get("request_hash")
+    if not isinstance(request_hash, str):
+        raise ValueError("request audit record is missing request_hash")
+    _validate_sha256(request_hash, "request hash")
+    normalised_revocations: set[str] = set()
+    for revoked_hash in revoked_request_hashes:
+        _validate_sha256(revoked_hash, "revoked request hash")
+        normalised_revocations.add(revoked_hash.lower())
+    if request_hash.lower() in normalised_revocations:
+        raise PermissionError("plugin execution request has been revoked")
+    if not request.require_target_hash_approval:
+        raise PermissionError(
+            "plugin execution request must require target hash approval"
+        )
+    if request.approved_target_hashes != (request.target_hash,):
+        raise PermissionError(
+            "plugin execution request must approve exactly the request target hash"
+        )
+
+    expected_record = _runtime_execution_request_audit_record(
+        plan_hash=request.plan_hash,
+        approval_hash=request.approval_hash,
+        target_hash=request.target_hash,
+        plugin=request.plugin,
+        kind=request.kind,
+        name=request.name,
+        operator_identity=request.operator_identity,
+        approval_reference=request.approval_reference,
+        loading_permitted=request.loading_permitted,
+        execution_permitted=request.execution_permitted,
+        require_target_hash_approval=request.require_target_hash_approval,
+        approved_target_hashes=request.approved_target_hashes,
+        allowed_kinds=request.allowed_kinds,
+        require_package_target=request.require_package_target,
+    )
+    if request.audit_record != expected_record:
+        raise ValueError("request audit record mismatch")
+    return request
 
 
 def compatibility_report(manifest: PluginManifest) -> PluginCompatibilityReport:
@@ -743,6 +790,7 @@ def execute_plugin_execution_request(
     *,
     args: tuple[object, ...] = (),
     kwargs: dict[str, object] | None = None,
+    revoked_request_hashes: tuple[str, ...] = (),
 ) -> ExecutedPluginCapability:
     """Invoke a plugin only when the approved request matches this call shape.
 
@@ -761,6 +809,10 @@ def execute_plugin_execution_request(
         raise ValueError(
             "request schema must be scpn_plugin_runtime_execution_request_v1"
         )
+    validate_plugin_execution_request(
+        request,
+        revoked_request_hashes=revoked_request_hashes,
+    )
     if manifest.name != request.plugin:
         raise ValueError("request plugin does not match manifest")
 

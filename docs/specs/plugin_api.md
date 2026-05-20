@@ -244,6 +244,12 @@ request `plan_hash` and `target_hash`, and then invokes the declared capability
 through the explicit runtime execution policy. Mismatched argument counts,
 keyword names, manifests, or target hashes fail before plugin import.
 
+Deployment storage must run `validate_plugin_execution_request()` before use.
+That validator recomputes the request hash from the stored envelope and rejects
+tampered audit records or request hashes present in a deployment-owned revocation
+set. Approval rotation therefore happens by revoking old request hashes before a
+new request envelope is consumed.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).
