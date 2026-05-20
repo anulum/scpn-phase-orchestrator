@@ -83,6 +83,17 @@ from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
 )
+from scpn_phase_orchestrator.supervisor.multiverse import (
+    MultiverseBranchSpec,
+    simulate_multiverse_counterfactual_branches,
+)
+from scpn_phase_orchestrator.supervisor.multiverse_examples import (
+    build_multiverse_domain_scenarios,
+)
+from scpn_phase_orchestrator.supervisor.multiverse_risk import (
+    MultiverseRiskThresholds,
+    evaluate_multiverse_branch_risk,
+)
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
     Guard,
@@ -313,6 +324,16 @@ class ToposSemanticBindingThresholds(NamedTuple):
     min_obligation_count: int
     require_non_actuating: bool
     require_proof_boundary: bool
+    require_deterministic_hash: bool
+
+
+class MultiverseCounterfactualThresholds(NamedTuple):
+    min_branch_count: int
+    min_domain_scenario_count: int
+    min_approved_branch_count: int
+    min_rejected_branch_count: int
+    require_non_actuating: bool
+    require_execution_disabled: bool
     require_deterministic_hash: bool
 
 
@@ -1539,9 +1560,7 @@ def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
             {
                 "min_blocked_reason_count": thresholds.min_blocked_reason_count,
                 "min_plan_count": thresholds.min_plan_count,
-                "min_projected_action_count": (
-                    thresholds.min_projected_action_count
-                ),
+                "min_projected_action_count": (thresholds.min_projected_action_count),
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_non_actuating": thresholds.require_non_actuating,
             },
@@ -2040,8 +2059,7 @@ def benchmark_hybrid_target_readiness_gate() -> dict[str, float | int | str]:
         == component_hashes["quantum_manifest_sha256"]
         and neuromorphic_readiness["manifest_sha256"]
         == component_hashes["neuromorphic_schedule_sha256"]
-        and ready["quantum_readiness_sha256"]
-        == quantum_readiness["readiness_sha256"]
+        and ready["quantum_readiness_sha256"] == quantum_readiness["readiness_sha256"]
         and ready["neuromorphic_readiness_sha256"]
         == neuromorphic_readiness["readiness_sha256"]
     )
@@ -2457,9 +2475,9 @@ def benchmark_autopoietic_lineage_sandbox_gate() -> dict[str, float | int | str]
     }
 
 
-def benchmark_intergenerational_policy_inheritance_gate() -> (
-    dict[str, float | int | str]
-):
+def benchmark_intergenerational_policy_inheritance_gate() -> dict[
+    str, float | int | str
+]:
     """Benchmark signed review-only intergenerational policy inheritance."""
     thresholds = IntergenerationalInheritanceThresholds(
         min_manifest_count=2,
@@ -2539,8 +2557,7 @@ def benchmark_intergenerational_policy_inheritance_gate() -> (
         )
     )
     deterministic_hash = int(
-        inheritance_manifests[0]["inheritance_sha256"]
-        == repeated["inheritance_sha256"]
+        inheritance_manifests[0]["inheritance_sha256"] == repeated["inheritance_sha256"]
     )
     acceptance_passed = int(
         manifest_count >= thresholds.min_manifest_count
@@ -2581,9 +2598,9 @@ def benchmark_intergenerational_policy_inheritance_gate() -> (
     }
 
 
-def benchmark_temporal_causal_hypergraph_experiment_gate() -> (
-    dict[str, float | int | str]
-):
+def benchmark_temporal_causal_hypergraph_experiment_gate() -> dict[
+    str, float | int | str
+]:
     """Benchmark research-only temporal-causal hypergraph baseline gates."""
     thresholds = TemporalCausalHypergraphThresholds(
         min_manifest_count=2,
@@ -2757,9 +2774,9 @@ def benchmark_morphogenetic_domain_demo_gate() -> dict[str, float | int | str]:
     }
 
 
-def benchmark_integrated_information_replay_corpus_gate() -> (
-    dict[str, float | int | str]
-):
+def benchmark_integrated_information_replay_corpus_gate() -> dict[
+    str, float | int | str
+]:
     """Benchmark empirical replay corpus coverage for the Phi proxy monitor."""
     thresholds = IntegratedInformationReplayCorpusThresholds(
         min_domain_count=3,
@@ -2788,8 +2805,7 @@ def benchmark_integrated_information_replay_corpus_gate() -> (
     ]
     domains = sorted({str(record["domain"]) for record in records})
     ordering_evidence_count = sum(
-        int(">" in str(record["expected_relationship"]))
-        for record in records
+        int(">" in str(record["expected_relationship"])) for record in records
     )
     non_actuating = int(all(record["non_actuating"] is True for record in records))
     claim_boundary = int(
@@ -2824,9 +2840,7 @@ def benchmark_integrated_information_replay_corpus_gate() -> (
         "acceptance_thresholds_json": json.dumps(
             {
                 "min_domain_count": thresholds.min_domain_count,
-                "min_ordering_evidence_count": (
-                    thresholds.min_ordering_evidence_count
-                ),
+                "min_ordering_evidence_count": (thresholds.min_ordering_evidence_count),
                 "min_record_count": thresholds.min_record_count,
                 "require_claim_boundary": thresholds.require_claim_boundary,
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
@@ -2905,9 +2919,7 @@ def benchmark_topos_semantic_binding_gate() -> dict[str, float | int | str]:
                 "min_domain_example_count": thresholds.min_domain_example_count,
                 "min_obligation_count": thresholds.min_obligation_count,
                 "min_policy_object_count": thresholds.min_policy_object_count,
-                "min_semantic_report_count": (
-                    thresholds.min_semantic_report_count
-                ),
+                "min_semantic_report_count": (thresholds.min_semantic_report_count),
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_non_actuating": thresholds.require_non_actuating,
                 "require_proof_boundary": thresholds.require_proof_boundary,
@@ -2915,6 +2927,149 @@ def benchmark_topos_semantic_binding_gate() -> dict[str, float | int | str]:
             sort_keys=True,
         ),
         "topos_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
+def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
+    """Benchmark non-actuating multiverse branch simulation and risk review."""
+    thresholds = MultiverseCounterfactualThresholds(
+        min_branch_count=4,
+        min_domain_scenario_count=3,
+        min_approved_branch_count=2,
+        min_rejected_branch_count=1,
+        require_non_actuating=True,
+        require_execution_disabled=True,
+        require_deterministic_hash=True,
+    )
+
+    phases = np.array([0.0, 0.35, 0.85, 1.3, 1.9], dtype=np.float64)
+    omegas = np.array([0.03, -0.015, 0.01, -0.005, 0.02], dtype=np.float64)
+    baseline_k = np.full((5, 5), 0.14, dtype=np.float64)
+    np.fill_diagonal(baseline_k, 0.0)
+    baseline_alpha = np.zeros((5, 5), dtype=np.float64)
+    sparse_topology = np.array(
+        [
+            [0.0, 1.0, 0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0, 1.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
+    dense_topology = np.ones((5, 5), dtype=np.float64)
+    np.fill_diagonal(dense_topology, 0.0)
+    branch_specs = (
+        MultiverseBranchSpec(branch_id="review_baseline", actions=()),
+        MultiverseBranchSpec(
+            branch_id="review_safe_coupling",
+            actions=(ControlAction("K", "global", 0.04, 1.0, "safe coupling"),),
+            topology_mask=sparse_topology,
+        ),
+        MultiverseBranchSpec(
+            branch_id="review_phase_lag",
+            actions=(
+                ControlAction("alpha", "oscillator_1", 0.02, 1.0, "phase lag"),
+                ControlAction("zeta", "global", 0.01, 1.0, "weak drive"),
+            ),
+            topology_mask=sparse_topology,
+        ),
+        MultiverseBranchSpec(
+            branch_id="review_action_heavy",
+            actions=tuple(
+                ControlAction("K", "global", 0.02, 1.0, f"stress action {idx}")
+                for idx in range(7)
+            ),
+            topology_mask=dense_topology,
+        ),
+    )
+
+    t0 = time.perf_counter()
+    manifest = simulate_multiverse_counterfactual_branches(
+        phases=phases,
+        omegas=omegas,
+        baseline_k=baseline_k,
+        baseline_alpha=baseline_alpha,
+        branch_specs=branch_specs,
+        horizon=16,
+        dt=0.02,
+    )
+    repeated = simulate_multiverse_counterfactual_branches(
+        phases=phases,
+        omegas=omegas,
+        baseline_k=baseline_k,
+        baseline_alpha=baseline_alpha,
+        branch_specs=branch_specs,
+        horizon=16,
+        dt=0.02,
+    )
+    risk_report = evaluate_multiverse_branch_risk(
+        manifest.to_audit_record(),
+        MultiverseRiskThresholds(
+            min_mean_R=0.45,
+            min_final_R=0.45,
+            max_action_count=2,
+            max_topology_edge_count=20,
+            max_topology_scale=10.0,
+        ),
+    )
+    domain_scenarios = build_multiverse_domain_scenarios()
+    elapsed = time.perf_counter() - t0
+
+    manifest_record = manifest.to_audit_record()
+    risk_record = risk_report.to_audit_record()
+    branch_records = manifest_record["branch_records"]
+    deterministic_hash = int(manifest.manifest_hash == repeated.manifest_hash)
+    non_actuating = int(
+        manifest.non_actuating is True
+        and risk_report.non_actuating is True
+        and all(record["non_actuating"] is True for record in domain_scenarios)
+    )
+    execution_disabled = int(
+        manifest.execution_disabled is True
+        and risk_report.execution_disabled is True
+        and all(record["execution_disabled"] is True for record in domain_scenarios)
+    )
+    acceptance_passed = int(
+        len(branch_records) >= thresholds.min_branch_count
+        and len(domain_scenarios) >= thresholds.min_domain_scenario_count
+        and risk_report.approved_count >= thresholds.min_approved_branch_count
+        and risk_report.rejected_count >= thresholds.min_rejected_branch_count
+        and non_actuating == int(thresholds.require_non_actuating)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "multiverse_counterfactual_gate",
+        "branch_count": len(branch_records),
+        "domain_scenario_count": len(domain_scenarios),
+        "approved_branch_count": risk_report.approved_count,
+        "rejected_branch_count": risk_report.rejected_count,
+        "wall_time_s": elapsed,
+        "steps_per_second": len(branch_records) / elapsed,
+        "non_actuating": non_actuating,
+        "execution_disabled": execution_disabled,
+        "deterministic_hash": deterministic_hash,
+        "manifest_sha256": manifest.manifest_hash,
+        "risk_report_sha256": risk_report.report_hash,
+        "safest_branch_id": risk_report.safest_branch_id or "",
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_approved_branch_count": thresholds.min_approved_branch_count,
+                "min_branch_count": thresholds.min_branch_count,
+                "min_domain_scenario_count": thresholds.min_domain_scenario_count,
+                "min_rejected_branch_count": thresholds.min_rejected_branch_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "branch_records_json": json.dumps(branch_records, sort_keys=True),
+        "risk_report_json": json.dumps(risk_record, sort_keys=True),
+        "domain_scenarios_json": json.dumps(domain_scenarios, sort_keys=True),
     }
 
 
@@ -4081,9 +4236,7 @@ def _topos_policy_validation_report() -> object:
             name="topos_guard_low_coherence",
             regimes=["NOMINAL", "CRITICAL"],
             condition=PolicyCondition(metric="R", layer=0, op="<", threshold=0.4),
-            actions=[
-                PolicyAction(knob="K", scope="layer_0", value=0.05, ttl_s=5.0)
-            ],
+            actions=[PolicyAction(knob="K", scope="layer_0", value=0.05, ttl_s=5.0)],
         ),
         PolicyRule(
             name="topos_guard_stability",
@@ -4100,9 +4253,7 @@ def _topos_policy_validation_report() -> object:
                     PolicyCondition(metric="R", layer=1, op=">", threshold=0.2),
                 ],
             ),
-            actions=[
-                PolicyAction(knob="zeta", scope="global", value=0.1, ttl_s=10.0)
-            ],
+            actions=[PolicyAction(knob="zeta", scope="global", value=0.1, ttl_s=10.0)],
         ),
     )
     return validate_policy_composition_category(rules)
@@ -4210,6 +4361,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
                 benchmark_integrated_information_replay_corpus_gate()
             ),
             "topos_semantic_binding": benchmark_topos_semantic_binding_gate(),
+            "multiverse_counterfactual": benchmark_multiverse_counterfactual_gate(),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

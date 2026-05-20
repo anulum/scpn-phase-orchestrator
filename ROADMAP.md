@@ -877,7 +877,10 @@ Speculative research watchlist:
     examples, and reference-suite gates now emit non-actuating proof-boundary
     records. Remaining scope: richer Studio UI surfacing and optional external
     categorical proof-tool export.
-- Multiverse counterfactual simulator: vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation.
+- Multiverse counterfactual simulator: deterministic vectorised branch rollouts,
+  domain scenario fixtures, and fail-closed non-actuating branch-risk gates are
+  implemented with reference-suite evidence. Remaining scope: optional JAX
+  acceleration, larger scenario corpora, and richer Studio surfacing.
 - Entanglement-aware hybrid order parameters: quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi`.
 
 Priority order for first implementation tranche:

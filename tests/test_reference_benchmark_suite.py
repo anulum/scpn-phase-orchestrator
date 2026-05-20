@@ -27,6 +27,7 @@ from benchmarks.reference_suite import (
     benchmark_meta_transfer_audit_corpus_quality,
     benchmark_meta_transfer_package_manifest_quality,
     benchmark_morphogenetic_domain_demo_gate,
+    benchmark_multiverse_counterfactual_gate,
     benchmark_neuromorphic_target_readiness_gate,
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
@@ -749,8 +750,9 @@ def test_value_alignment_replay_calibration_gate_benchmark_shape() -> None:
     assert float(out["steps_per_second"]) > 0.0
 
 
-def test_value_alignment_replay_calibration_gate_reports_thresholds_and_records(
-) -> None:
+def test_value_alignment_replay_calibration_gate_reports_thresholds_and_records() -> (
+    None
+):
     out = benchmark_value_alignment_replay_calibration_gate()
     thresholds = json.loads(str(out["acceptance_thresholds_json"]))
     records = json.loads(str(out["calibration_records_json"]))
@@ -1014,6 +1016,54 @@ def test_topos_semantic_binding_gate_reports_obligations() -> None:
     assert all(record["obligation_names"] for record in records)
 
 
+def test_multiverse_counterfactual_gate_benchmark_shape() -> None:
+    out = benchmark_multiverse_counterfactual_gate()
+
+    assert out["suite"] == "multiverse_counterfactual_gate"
+    assert out["branch_count"] >= 4
+    assert out["domain_scenario_count"] >= 3
+    assert out["approved_branch_count"] >= 2
+    assert out["rejected_branch_count"] >= 1
+    assert out["non_actuating"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["manifest_sha256"])) == 64
+    assert len(str(out["risk_report_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_multiverse_counterfactual_gate_reports_records() -> None:
+    out = benchmark_multiverse_counterfactual_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    branches = json.loads(str(out["branch_records_json"]))
+    risk_report = json.loads(str(out["risk_report_json"]))
+    scenarios = json.loads(str(out["domain_scenarios_json"]))
+
+    assert thresholds == {
+        "min_approved_branch_count": 2,
+        "min_branch_count": 4,
+        "min_domain_scenario_count": 3,
+        "min_rejected_branch_count": 1,
+        "require_deterministic_hash": True,
+        "require_execution_disabled": True,
+        "require_non_actuating": True,
+    }
+    assert {branch["branch_id"] for branch in branches} >= {
+        "review_action_heavy",
+        "review_safe_coupling",
+    }
+    assert risk_report["non_actuating"] is True
+    assert risk_report["execution_disabled"] is True
+    assert risk_report["approved_count"] >= 2
+    assert risk_report["rejected_count"] >= 1
+    assert {scenario["domain"] for scenario in scenarios} >= {
+        "cardiac_rhythm",
+        "cyber_industrial",
+        "power_grid",
+    }
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -1086,6 +1136,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "meta_transfer",
         "meta_transfer_corpus",
         "morphogenetic_domain_demos",
+        "multiverse_counterfactual",
         "neuromorphic_target_readiness",
         "plugin_ecosystem",
         "quantum_target_readiness",

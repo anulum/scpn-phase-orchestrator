@@ -144,7 +144,7 @@ into the active roadmap.
 | Morphogenetic field topology | field foundation, dependency-free snapshot visualisation, passive SVG rendering, plus swarm-robotics split-flock, power-grid stressed-replay, traffic-flow corridor-spillback, plasma-control edge-localised, network-security lateral-movement, chemical-reactor thermal-stability, manufacturing-SPC tool-wear, and robotic-CPG gait demos are implemented with reference-suite gates; richer Studio UI rendering remains open |
 | Integrated-information monitor | monitor foundation, audit-report summary integration, expanded deterministic approximation benchmark cases, and physiology/infrastructure/cyber-industrial empirical replay corpus gates are implemented; richer Studio UI rendering remains open |
 | Topos-theoretic semantic binding | symbolic-binding functor validation, policy-composition category validation, deterministic domain obligation examples, and reference-suite proof-boundary gates are implemented; richer Studio UI surfacing and optional external categorical proof-tool export remain open |
-| Multiverse counterfactual simulator | vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation |
+| Multiverse counterfactual simulator | deterministic vectorised branch rollouts, domain scenario fixtures, and fail-closed non-actuating branch-risk gates are implemented with reference-suite evidence; optional JAX acceleration, larger scenario corpora, and Studio surfacing remain open |
 | Entanglement-aware hybrid order parameters | quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi` |
 
 Priority order for the first implementation tranche:

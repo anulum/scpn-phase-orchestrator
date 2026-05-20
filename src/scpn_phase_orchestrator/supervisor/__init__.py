@@ -94,6 +94,23 @@ from scpn_phase_orchestrator.supervisor.morphogenetic import (
     build_morphogenetic_field_snapshot,
     render_morphogenetic_field_svg,
 )
+from scpn_phase_orchestrator.supervisor.multiverse import (
+    MultiverseBranchRecord,
+    MultiverseBranchSpec,
+    MultiverseCounterfactualManifest,
+    simulate_multiverse_counterfactual_branches,
+)
+from scpn_phase_orchestrator.supervisor.multiverse_examples import (
+    BranchCandidate,
+    DomainScenario,
+    build_multiverse_domain_scenarios,
+)
+from scpn_phase_orchestrator.supervisor.multiverse_risk import (
+    BranchRiskDecision,
+    MultiverseRiskReport,
+    MultiverseRiskThresholds,
+    evaluate_multiverse_branch_risk,
+)
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
@@ -160,6 +177,8 @@ from scpn_phase_orchestrator.supervisor.topos_policy import (
 
 __all__ = [
     "Arc",
+    "BranchCandidate",
+    "BranchRiskDecision",
     "CausalInterventionEngine",
     "CausalGraphEstimate",
     "CausalInfluenceEdge",
@@ -168,6 +187,7 @@ __all__ = [
     "ControlAction",
     "CounterfactualRollout",
     "EventBus",
+    "DomainScenario",
     "FEPHierarchyAssessment",
     "FEPHierarchyChildAssessment",
     "FEPPredictionAssessment",
@@ -193,6 +213,11 @@ __all__ = [
     "MorphogeneticFieldSVG",
     "MorphogeneticFieldState",
     "MorphogeneticTopologySupervisor",
+    "MultiverseBranchRecord",
+    "MultiverseBranchSpec",
+    "MultiverseCounterfactualManifest",
+    "MultiverseRiskReport",
+    "MultiverseRiskThresholds",
     "PetriNet",
     "PetriNetAdapter",
     "Place",
@@ -241,6 +266,7 @@ __all__ = [
     "build_hierarchy_sync_envelope",
     "build_intergenerational_policy_inheritance",
     "build_morphogenetic_field_snapshot",
+    "build_multiverse_domain_scenarios",
     "build_sheaf_obstruction_summary",
     "build_temporal_causal_hypergraph_experiment",
     "render_morphogenetic_field_svg",
@@ -251,6 +277,7 @@ __all__ = [
     "export_policy_rules_tla",
     "export_stl_specs_prism",
     "evaluate_policy_stl_specs",
+    "evaluate_multiverse_branch_risk",
     "handle_hierarchy_frame",
     "handle_hierarchy_rest_payload",
     "load_policy_rules",
@@ -261,6 +288,7 @@ __all__ = [
     "sheaf_coherence",
     "sheaf_laplacian",
     "replay_hierarchy_jsonl",
+    "simulate_multiverse_counterfactual_branches",
     "simulate_hierarchy_gossip_consensus",
     "sign_policy_proposal",
     "synthesise_policy_stl_automata",
