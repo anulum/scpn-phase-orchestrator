@@ -22,6 +22,7 @@ from benchmarks.reference_suite import (
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
     benchmark_replay_policy_candidate_quality,
+    benchmark_semantic_retrieval_ranking_quality,
     benchmark_stl_closed_loop_plan_quality,
     benchmark_stuart_landau_reference,
     build_benchmark_metadata,
@@ -95,6 +96,44 @@ def test_auto_binding_proposal_quality_reports_domain_thresholds() -> None:
     assert all(record["sample_count"] >= 96 for record in results)
     assert all(record["expected_edge_recall"] >= 1.0 for record in results)
     assert all(record["validation_error_count"] == 0 for record in results)
+
+
+def test_semantic_retrieval_ranking_quality_benchmark_shape() -> None:
+    out = benchmark_semantic_retrieval_ranking_quality()
+
+    assert out["suite"] == "semantic_retrieval_ranking_quality"
+    assert out["evidence_count"] >= 3
+    assert out["ranked_record_count"] >= 3
+    assert out["feature_complete_count"] >= 3
+    assert out["domainpack_top_rank"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert out["top_source"] == "domainpack"
+    assert out["top_domainpack"] == "power_grid"
+    assert float(out["retrieval_score"]) > 0.0
+    assert len(str(out["ranking_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_semantic_retrieval_ranking_quality_reports_thresholds() -> None:
+    out = benchmark_semantic_retrieval_ranking_quality()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    projection = json.loads(str(out["ranking_projection_json"]))
+
+    assert thresholds == {
+        "min_evidence_count": 3,
+        "min_feature_complete_count": 3,
+        "min_ranked_record_count": 3,
+        "require_deterministic_hash": True,
+        "require_domainpack_top_rank": True,
+    }
+    assert [record["rank"] for record in projection] == list(
+        range(1, len(projection) + 1)
+    )
+    assert projection[0]["source"] == "domainpack"
+    assert projection[0]["domainpack"] == "power_grid"
+    assert projection[0]["ranking_features"]["source_priority"] == 1.0
+    assert projection[0]["ranking_features"]["matched_term_count"] >= 1.0
 
 
 def test_replay_policy_candidate_quality_benchmark_shape() -> None:
@@ -458,6 +497,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "hybrid_cocompiler",
         "plugin_ecosystem",
         "replay_policy",
+        "semantic_retrieval",
         "stl_closed_loop",
         "kuramoto",
         "stuart_landau",

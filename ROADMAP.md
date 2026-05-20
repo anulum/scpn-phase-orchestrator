@@ -569,8 +569,12 @@ Near-term candidate tracks:
   - Retrieval ranking diagnostics are in place: every retrieval evidence record
     now carries a deterministic rank plus source-priority, matched-term,
     name/phrase-match, prompt-term, and term-density features for audit review.
-  - Remaining scope: optional corpus expansion and larger retrieval-quality
-    benchmark gates.
+  - Retrieval ranking benchmark gates are in place:
+    `benchmark_semantic_retrieval_ranking_quality()` verifies deterministic
+    rank ordering, feature completeness, domainpack top-rank precedence,
+    positive retrieval score, and stable ranking hashes on a synthetic corpus.
+  - Remaining scope: optional corpus expansion with larger live-doc/domainpack
+    retrieval corpora.
 - Cross-domain meta-transfer: learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains.
   - Foundation is in place: replay-backed meta-transfer proposals exist.
   - Multi-audit fitting and package export are in place:

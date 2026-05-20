@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import platform
 import sys
+import tempfile
 import time
 from collections.abc import Iterable, Mapping
 from datetime import date
@@ -36,6 +37,7 @@ from scpn_phase_orchestrator.autotune.reward import (
     PolicyProposalConfig,
     RewardObservation,
 )
+from scpn_phase_orchestrator.binding.semantic import compile_symbolic_binding
 from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.monitor.stl import (
     STLActionProjectionTemplate,
@@ -200,6 +202,14 @@ class PluginEcosystemThresholds(NamedTuple):
     require_loading_disabled: bool
 
 
+class SemanticRetrievalThresholds(NamedTuple):
+    min_evidence_count: int
+    min_ranked_record_count: int
+    min_feature_complete_count: int
+    require_domainpack_top_rank: bool
+    require_deterministic_hash: bool
+
+
 class ReferenceSuiteResult(TypedDict):
     metadata: dict[str, str]
     benchmarks: dict[str, BenchmarkRecord]
@@ -216,6 +226,109 @@ def build_benchmark_metadata(*, snapshot_date: str | None = None) -> dict[str, s
         "numpy_version": np.__version__,
         "platform": platform.platform(),
         "executable": sys.executable,
+    }
+
+
+def benchmark_semantic_retrieval_ranking_quality() -> dict[str, float | int | str]:
+    """Benchmark symbolic compiler retrieval ranking diagnostics."""
+    thresholds = SemanticRetrievalThresholds(
+        min_evidence_count=3,
+        min_ranked_record_count=3,
+        min_feature_complete_count=3,
+        require_domainpack_top_rank=True,
+        require_deterministic_hash=True,
+    )
+    t0 = time.perf_counter()
+    with tempfile.TemporaryDirectory(prefix="spo-semantic-ranking-") as tmp:
+        root = Path(tmp)
+        retrieval_root, docs_root = _semantic_retrieval_fixture(root)
+        artefacts = compile_symbolic_binding(
+            "A 2-layer power grid stability controller with renewable demand",
+            name="semantic_retrieval_benchmark",
+            oscillators_per_layer=2,
+            dry_run_steps=2,
+            retrieval_root=retrieval_root,
+            docs_root=docs_root,
+        )
+        repeated = compile_symbolic_binding(
+            "A 2-layer power grid stability controller with renewable demand",
+            name="semantic_retrieval_benchmark",
+            oscillators_per_layer=2,
+            dry_run_steps=2,
+            retrieval_root=retrieval_root,
+            docs_root=docs_root,
+        )
+    elapsed = time.perf_counter() - t0
+
+    records = artefacts.audit_record["retrieval_evidence"]
+    repeated_records = repeated.audit_record["retrieval_evidence"]
+    ranked_record_count = sum(
+        int(record.get("rank") == index)
+        for index, record in enumerate(records, start=1)
+    )
+    feature_keys = {
+        "matched_term_count",
+        "name_match_count",
+        "phrase_match",
+        "prompt_term_count",
+        "source_priority",
+        "term_density",
+    }
+    feature_complete_count = sum(
+        int(feature_keys <= set(record.get("ranking_features", {})))
+        for record in records
+    )
+    top_record = records[0] if records else {}
+    domainpack_top_rank = int(
+        top_record.get("source") == "domainpack"
+        and top_record.get("domainpack") == "power_grid"
+        and top_record.get("rank") == 1
+    )
+    ranking_projection = _semantic_ranking_projection(records)
+    repeated_projection = _semantic_ranking_projection(repeated_records)
+    ranking_hash = sha256(
+        json.dumps(ranking_projection, sort_keys=True).encode()
+    ).hexdigest()
+    deterministic_hash = int(
+        ranking_hash
+        == sha256(json.dumps(repeated_projection, sort_keys=True).encode()).hexdigest()
+    )
+    acceptance_passed = int(
+        len(records) >= thresholds.min_evidence_count
+        and ranked_record_count >= thresholds.min_ranked_record_count
+        and feature_complete_count >= thresholds.min_feature_complete_count
+        and domainpack_top_rank == int(thresholds.require_domainpack_top_rank)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and artefacts.audit_record["confidence_factors"]["retrieval_score"] > 0.0
+    )
+
+    return {
+        "suite": "semantic_retrieval_ranking_quality",
+        "evidence_count": len(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(records) / elapsed,
+        "ranked_record_count": ranked_record_count,
+        "feature_complete_count": feature_complete_count,
+        "domainpack_top_rank": domainpack_top_rank,
+        "deterministic_hash": deterministic_hash,
+        "ranking_sha256": ranking_hash,
+        "top_source": str(top_record.get("source", "")),
+        "top_domainpack": str(top_record.get("domainpack", "")),
+        "retrieval_score": artefacts.audit_record["confidence_factors"][
+            "retrieval_score"
+        ],
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_evidence_count": thresholds.min_evidence_count,
+                "min_feature_complete_count": thresholds.min_feature_complete_count,
+                "min_ranked_record_count": thresholds.min_ranked_record_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_domainpack_top_rank": thresholds.require_domainpack_top_rank,
+            },
+            sort_keys=True,
+        ),
+        "ranking_projection_json": json.dumps(ranking_projection, sort_keys=True),
     }
 
 
@@ -2045,6 +2158,48 @@ def _phase_chain_csv(n_samples: int = 32, dt: float = 0.1) -> str:
     return "\n".join(rows)
 
 
+def _semantic_retrieval_fixture(root: Path) -> tuple[Path, Path]:
+    domainpack_root = root / "domainpacks"
+    power_grid = domainpack_root / "power_grid"
+    grid_notes = domainpack_root / "grid_notes"
+    power_grid.mkdir(parents=True)
+    grid_notes.mkdir()
+    (power_grid / "binding_spec.yaml").write_text(
+        "name: power_grid\n# power grid renewable demand stability controller\n",
+        encoding="utf-8",
+    )
+    (power_grid / "README.md").write_text(
+        "power grid renewable demand stability controller phase coherence",
+        encoding="utf-8",
+    )
+    (grid_notes / "binding_spec.yaml").write_text(
+        "name: grid_notes\n# grid stability controller notes\n",
+        encoding="utf-8",
+    )
+    docs_root = root / "docs"
+    docs_root.mkdir()
+    (docs_root / "power_grid.md").write_text(
+        "power grid renewable stability controller deployment notes",
+        encoding="utf-8",
+    )
+    return domainpack_root, docs_root
+
+
+def _semantic_ranking_projection(
+    records: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "domainpack": record.get("domainpack"),
+            "rank": record.get("rank"),
+            "ranking_features": record.get("ranking_features"),
+            "score": record.get("score"),
+            "source": record.get("source"),
+        }
+        for record in records
+    ]
+
+
 def _sensor_chain_csv(n_samples: int = 32, dt: float = 0.1) -> str:
     rows = ["time,source,driven,independent"]
     previous_source = 0.0
@@ -2101,6 +2256,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
         "metadata": build_benchmark_metadata(snapshot_date=snapshot_date),
         "benchmarks": {
             "auto_binding": benchmark_auto_binding_proposal_quality(),
+            "semantic_retrieval": benchmark_semantic_retrieval_ranking_quality(),
             "replay_policy": benchmark_replay_policy_candidate_quality(),
             "bayesian_posterior": benchmark_bayesian_posterior_fit_quality(),
             "bayesian_backends": benchmark_bayesian_backend_fail_closed(),
