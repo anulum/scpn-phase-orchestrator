@@ -56,6 +56,12 @@ LABEL maintainer="Miroslav Sotek <protoscience@anulum.li>"
 LABEL org.opencontainers.image.source="https://github.com/anulum/scpn-phase-orchestrator"
 LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
+ARG SECURITY_REFRESH_STAMP=manual
+RUN echo "security refresh ${SECURITY_REFRESH_STAMP}" >/dev/null && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --gid 1000 spo && \
     useradd --uid 1000 --gid spo --create-home spo
 

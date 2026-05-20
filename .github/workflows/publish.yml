@@ -174,7 +174,9 @@ jobs:
 
       - name: Extract version tag
         id: meta
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "security_refresh=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Build container image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v6
@@ -183,6 +185,8 @@ jobs:
           push: false
           load: true
           tags: ghcr.io/anulum/scpn-phase-orchestrator:${{ steps.meta.outputs.version }}
+          build-args: |
+            SECURITY_REFRESH_STAMP=${{ steps.meta.outputs.security_refresh }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -215,6 +219,8 @@ jobs:
           tags: |
             ghcr.io/anulum/scpn-phase-orchestrator:${{ steps.meta.outputs.version }}
             ghcr.io/anulum/scpn-phase-orchestrator:latest
+          build-args: |
+            SECURITY_REFRESH_STAMP=${{ steps.meta.outputs.security_refresh }}
           cache-from: type=gha
 
   # spo-kernel Rust wheels are built and verified but published separately.
