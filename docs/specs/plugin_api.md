@@ -112,6 +112,34 @@ def spo_plugin_manifest():
 `validate_plugin_manifest()` and `compatibility_report()` provide the stable
 CI gate for domainpack, extractor, actuator, and bridge extensions.
 
+Runtime loading is available only through the explicit Python-owned loader. It
+is disabled by default and must be enabled with a policy at the deployment
+boundary that owns the risk decision:
+
+```python
+from scpn_phase_orchestrator.plugins import (
+    PluginRuntimeLoadPolicy,
+    load_plugin_capability,
+)
+
+loaded = load_plugin_capability(
+    manifest,
+    "extractor",
+    "my_sensor",
+    policy=PluginRuntimeLoadPolicy(loading_permitted=True),
+)
+
+extractor_cls = loaded.target_object
+audit_record = loaded.audit_record
+```
+
+The loader validates manifest compatibility before import, resolves only the
+declared capability, keeps targets inside the manifest package by default,
+requires callable runtime targets, and records `scpn_plugin_runtime_load_v1`
+audit metadata. Domainpack metadata entries remain manifest/catalogue records
+rather than directly runtime-loadable callables unless an explicit future policy
+expands that boundary.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

@@ -19,11 +19,13 @@ from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginCompatibilityReport,
     PluginManifest,
+    PluginRuntimeLoadPolicy,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
     build_rust_plugin_runtime_handoff,
     compatibility_report,
     discover_plugin_manifests,
+    load_plugin_capability,
     validate_plugin_manifest,
 )
 
@@ -886,6 +888,108 @@ class TestPluginDiscovery:
         discovered = discover_plugin_manifests()
 
         assert discovered == (manifest,)
+
+
+class TestPluginRuntimeLoading:
+    def test_runtime_loading_is_disabled_by_default_without_importing_target(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def fail_import(_module: str) -> object:
+            raise AssertionError("disabled runtime loading must not import targets")
+
+        monkeypatch.setattr(registry.importlib, "import_module", fail_import)
+
+        with pytest.raises(PermissionError, match="disabled"):
+            load_plugin_capability(_manifest(), "extractor", "pmu")
+
+    def test_runtime_loading_resolves_declared_callable_with_audit_metadata(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import types
+
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        class PMUExtractor:
+            pass
+
+        module = types.SimpleNamespace(PMUExtractor=PMUExtractor)
+
+        def fake_import(module_name: str) -> object:
+            assert module_name == "grid_pack.extractors"
+            return module
+
+        monkeypatch.setattr(registry.importlib, "import_module", fake_import)
+
+        loaded = load_plugin_capability(
+            _manifest(),
+            "extractor",
+            "pmu",
+            policy=PluginRuntimeLoadPolicy(loading_permitted=True),
+        )
+        repeated = load_plugin_capability(
+            _manifest(),
+            "extractor",
+            "pmu",
+            policy=PluginRuntimeLoadPolicy(loading_permitted=True),
+        )
+
+        assert loaded.target_object is PMUExtractor
+        assert loaded.capability.name == "pmu"
+        assert loaded.audit_record["schema"] == "scpn_plugin_runtime_load_v1"
+        assert loaded.audit_record["loading_permitted"] is True
+        assert loaded.audit_record["target"] == "grid_pack.extractors:PMUExtractor"
+        assert loaded.audit_record["callable"] is True
+        assert len(str(loaded.audit_record["target_hash"])) == 64
+        assert loaded.audit_record["load_hash"] == repeated.audit_record["load_hash"]
+
+    def test_runtime_loading_rejects_targets_outside_manifest_package(self) -> None:
+        manifest = PluginManifest(
+            name="escape_pack",
+            version="0.1.0",
+            package="escape_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="monitor",
+                    name="escape",
+                    target="other_package.monitors:Monitor",
+                    channels=("P",),
+                ),
+            ),
+        )
+
+        with pytest.raises(ValueError, match="outside plugin package"):
+            load_plugin_capability(
+                manifest,
+                "monitor",
+                "escape",
+                policy=PluginRuntimeLoadPolicy(loading_permitted=True),
+            )
+
+    def test_runtime_loading_rejects_non_runtime_domainpack_capability(self) -> None:
+        manifest = PluginManifest(
+            name="domain_pack",
+            version="0.1.0",
+            package="domain_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="domainpack",
+                    name="core",
+                    target="domain_pack.domainpacks:PACK_DIR",
+                ),
+            ),
+        )
+
+        with pytest.raises(ValueError, match="not permitted by runtime load policy"):
+            load_plugin_capability(
+                manifest,
+                "domainpack",
+                "core",
+                policy=PluginRuntimeLoadPolicy(loading_permitted=True),
+            )
 
     def test_discovery_rejects_invalid_entry_point_payload(
         self, monkeypatch: pytest.MonkeyPatch

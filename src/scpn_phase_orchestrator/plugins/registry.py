@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 from dataclasses import dataclass
 from importlib import metadata
@@ -27,7 +28,10 @@ __all__ = [
     "build_rust_plugin_registry",
     "compatibility_report",
     "discover_plugin_manifests",
+    "LoadedPluginCapability",
+    "load_plugin_capability",
     "validate_plugin_manifest",
+    "PluginRuntimeLoadPolicy",
 ]
 
 PluginKind: TypeAlias = Literal[
@@ -38,6 +42,13 @@ PluginKind: TypeAlias = Literal[
     "bridge",
 ]
 _VALID_KINDS = {"domainpack", "extractor", "monitor", "actuator", "bridge"}
+_DEFAULT_RUNTIME_LOAD_KINDS: tuple[PluginKind, ...] = (
+    "actuator",
+    "bridge",
+    "extractor",
+    "monitor",
+)
+_DEFAULT_RUNTIME_LOAD_POLICY: PluginRuntimeLoadPolicy
 _ENTRY_POINT_GROUP = "scpn_phase_orchestrator.plugins"
 
 
@@ -143,6 +154,36 @@ class PluginCompatibilityReport:
         }
 
 
+@dataclass(frozen=True)
+class PluginRuntimeLoadPolicy:
+    """Explicit policy gate for Python-owned plugin runtime loading."""
+
+    loading_permitted: bool = False
+    allowed_kinds: tuple[PluginKind, ...] = _DEFAULT_RUNTIME_LOAD_KINDS
+    require_package_target: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.loading_permitted, bool):
+            raise TypeError("loading_permitted must be a boolean")
+        if not isinstance(self.require_package_target, bool):
+            raise TypeError("require_package_target must be a boolean")
+        if not self.allowed_kinds:
+            raise ValueError("allowed_kinds must not be empty")
+        for kind in self.allowed_kinds:
+            if kind not in _VALID_KINDS:
+                raise ValueError(f"unsupported runtime load kind: {kind}")
+
+
+@dataclass(frozen=True)
+class LoadedPluginCapability:
+    """Resolved plugin runtime target with deterministic audit evidence."""
+
+    manifest: PluginManifest
+    capability: PluginCapability
+    target_object: object
+    audit_record: dict[str, object]
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -202,6 +243,63 @@ def discover_plugin_manifests(
         validate_plugin_manifest(manifest)
         manifests.append(manifest)
     return tuple(manifests)
+
+
+def load_plugin_capability(
+    manifest: PluginManifest,
+    kind: PluginKind,
+    name: str,
+    *,
+    policy: PluginRuntimeLoadPolicy | None = None,
+) -> LoadedPluginCapability:
+    """Resolve a declared plugin capability under an explicit runtime policy.
+
+    Runtime loading is Python-owned and disabled by default. Callers must pass a
+    policy with ``loading_permitted=True`` after their deployment boundary has
+    approved the manifest. The target must be declared by the manifest, match the
+    requested capability kind/name, and resolve inside the plugin package unless
+    the policy explicitly relaxes that check.
+    """
+    validate_plugin_manifest(manifest)
+    if policy is None:
+        policy = _DEFAULT_RUNTIME_LOAD_POLICY
+    _require_identifier(name, "capability name")
+    if kind not in _VALID_KINDS:
+        raise ValueError(f"unsupported plugin capability kind: {kind}")
+    if not policy.loading_permitted:
+        raise PermissionError("plugin runtime loading is disabled by policy")
+    if kind not in policy.allowed_kinds:
+        raise ValueError(f"{kind} capability is not permitted by runtime load policy")
+
+    capability = _select_capability(manifest, kind, name)
+    module_name, attribute_path = _parse_target(capability.target)
+    if policy.require_package_target and not _target_within_package(
+        module_name,
+        manifest.package,
+    ):
+        raise ValueError(
+            f"capability target {capability.target!r} is outside plugin package "
+            f"{manifest.package!r}"
+        )
+
+    module = importlib.import_module(module_name)
+    target_object = _resolve_attribute_path(module, attribute_path, capability.target)
+    if not callable(target_object):
+        raise TypeError(f"capability target {capability.target!r} must be callable")
+
+    audit_record = _runtime_load_audit_record(
+        manifest=manifest,
+        capability=capability,
+        policy=policy,
+        module_name=module_name,
+        callable_target=True,
+    )
+    return LoadedPluginCapability(
+        manifest=manifest,
+        capability=capability,
+        target_object=target_object,
+        audit_record=audit_record,
+    )
 
 
 def build_plugin_marketplace_catalog(
@@ -401,6 +499,85 @@ def build_rust_plugin_runtime_handoff(
     return handoff
 
 
+def _select_capability(
+    manifest: PluginManifest,
+    kind: PluginKind,
+    name: str,
+) -> PluginCapability:
+    matches = tuple(
+        capability
+        for capability in manifest.capabilities
+        if capability.kind == kind and capability.name == name
+    )
+    if not matches:
+        raise LookupError(f"plugin capability {kind}:{name} is not declared")
+    if len(matches) > 1:
+        raise ValueError(f"plugin capability {kind}:{name} is declared more than once")
+    return matches[0]
+
+
+def _parse_target(target: str) -> tuple[str, str]:
+    if ":" not in target:
+        raise ValueError("capability target must use 'module:attribute' syntax")
+    module_name, attribute_path = target.split(":", maxsplit=1)
+    _require_non_empty(module_name, "capability target module")
+    _require_non_empty(attribute_path, "capability target attribute")
+    return module_name, attribute_path
+
+
+def _target_within_package(module_name: str, package: str) -> bool:
+    return module_name == package or module_name.startswith(f"{package}.")
+
+
+def _resolve_attribute_path(
+    module: object,
+    attribute_path: str,
+    target: str,
+) -> object:
+    current = module
+    for attribute in attribute_path.split("."):
+        _require_identifier(attribute, "capability target attribute")
+        try:
+            current = getattr(current, attribute)
+        except AttributeError as exc:
+            raise AttributeError(
+                f"capability target {target!r} is not importable"
+            ) from exc
+    return current
+
+
+def _runtime_load_audit_record(
+    *,
+    manifest: PluginManifest,
+    capability: PluginCapability,
+    policy: PluginRuntimeLoadPolicy,
+    module_name: str,
+    callable_target: bool,
+) -> dict[str, object]:
+    record = {
+        "schema": "scpn_plugin_runtime_load_v1",
+        "spo_version": __version__,
+        "plugin": manifest.name,
+        "plugin_version": manifest.version,
+        "package": manifest.package,
+        "kind": capability.kind,
+        "name": capability.name,
+        "target": capability.target,
+        "module": module_name,
+        "version": capability.version,
+        "channels": list(capability.channels),
+        "knobs": list(capability.knobs),
+        "loading_permitted": policy.loading_permitted,
+        "load_policy": "python_owned_explicit",
+        "require_package_target": policy.require_package_target,
+        "allowed_kinds": list(policy.allowed_kinds),
+        "callable": callable_target,
+    }
+    record["target_hash"] = _record_hash(record)
+    record["load_hash"] = _record_hash(record)
+    return record
+
+
 def _require_identifier(value: str, label: str) -> None:
     _require_non_empty(value, label)
     if any(char.isspace() for char in value):
@@ -439,3 +616,6 @@ def _capability_counts(
 def _record_hash(record: dict[str, object]) -> str:
     encoded = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+_DEFAULT_RUNTIME_LOAD_POLICY = PluginRuntimeLoadPolicy()

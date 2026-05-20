@@ -86,8 +86,36 @@ handoff = build_rust_plugin_runtime_handoff((manifest,))
 The handoff uses schema `scpn_rust_plugin_runtime_handoff_v1`, groups compatible
 capabilities by kind for dispatch review, records deterministic target hashes,
 keeps incompatible capabilities in a blocked review list when requested, and
-sets `loading_permitted` to `false`. It is a runtime preflight contract, not a
-dynamic plugin loader.
+sets `loading_permitted` to `false`. It is a runtime preflight contract for
+native dispatchers, not a dynamic plugin loader.
+
+Python-owned runtime loading is a separate explicit gate. It is disabled by
+default, validates the manifest before import, only resolves a declared
+capability by kind and name, keeps implementation targets inside the manifest
+package by default, and returns deterministic audit metadata beside the loaded
+callable:
+
+```python
+from scpn_phase_orchestrator.plugins import (
+    PluginRuntimeLoadPolicy,
+    load_plugin_capability,
+)
+
+loaded = load_plugin_capability(
+    manifest,
+    "extractor",
+    "pmu",
+    policy=PluginRuntimeLoadPolicy(loading_permitted=True),
+)
+
+extractor_cls = loaded.target_object
+audit_record = loaded.audit_record
+```
+
+Runtime loading is intended for approved deployment boundaries after manifest
+review. Do not use it as a generic import helper: incompatible manifests,
+undeclared capabilities, non-callable targets, domainpack metadata records, and
+targets outside the plugin package fail closed.
 
 A runnable metadata-only example is available at
 `examples/plugin_marketplace_catalog.py`. It builds a validated
