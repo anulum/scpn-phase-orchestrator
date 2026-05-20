@@ -696,14 +696,28 @@ Speculative research watchlist:
     `domainpacks/network_security/sheaf_obstruction_demo.py` compares nominal
     and lateral-movement sections across traffic-rate, threat-level,
     defence-phase, and trust-score channels.
+  - Cardiac-rhythm heterogeneous replay is in place:
+    `domainpacks/cardiac_rhythm/sheaf_obstruction_demo.py` compares nominal
+    conduction/repolarisation coherence with an arrhythmic desynchronisation
+    incident across P-wave, PR-interval, QRS-amplitude, QT-interval, and
+    RR-dispersion channels.
+  - Manufacturing-SPC heterogeneous replay is in place:
+    `domainpacks/manufacturing_spc/sheaf_obstruction_demo.py` compares nominal
+    process control with an out-of-control drift incident across machine,
+    line, throughput, yield, defect, and process-sensor channels.
+  - Traffic-flow heterogeneous replay is in place:
+    `domainpacks/traffic_flow/sheaf_obstruction_demo.py` compares nominal
+    corridor coherence with a congested spillback incident across flow,
+    congestion, weather, and equity-pressure channels.
   - Obstruction hardening foundation is in place:
     `build_sheaf_obstruction_summary()` classifies nominal/warning/critical
     obstruction severity and reports strongest residual edges for audit triage.
   - Reference-suite gates are in place:
     `benchmark_sheaf_obstruction_domain_gate()` requires deterministic
     obstruction-demo hashes, per-demo top-residual summaries, non-actuation,
-    critical incident coverage, and positive obstruction deltas.
-  - Remaining scope: additional heterogeneous-domain demos.
+    critical incident coverage, and positive obstruction deltas across six
+    heterogeneous domainpacks.
+  - Remaining scope: live-domain validation on maintained operator datasets.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
   - Foundation is in place: deterministic review-only aggregation validates
     node-local policy deltas, clips update norms, rejects raw time-series

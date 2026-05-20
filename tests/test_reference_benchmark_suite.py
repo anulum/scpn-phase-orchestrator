@@ -1372,11 +1372,12 @@ def test_sheaf_obstruction_domain_gate_shape() -> None:
     out = benchmark_sheaf_obstruction_domain_gate()
 
     assert out["suite"] == "sheaf_obstruction_domain_gate"
-    assert out["record_count"] == 3
-    assert out["summary_count"] == 3
-    assert out["top_residual_edge_count"] >= 9
-    assert out["critical_count"] >= 2
+    assert out["record_count"] == 6
+    assert out["summary_count"] == 6
+    assert out["top_residual_edge_count"] >= 18
+    assert out["critical_count"] >= 5
     assert float(out["min_obstruction_delta"]) >= 0.1
+    assert float(out["max_nominal_obstruction_score"]) <= 0.35
     assert out["non_actuating"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
@@ -1390,18 +1391,22 @@ def test_sheaf_obstruction_domain_gate_reports_records() -> None:
     records = json.loads(str(out["records_json"]))
 
     assert thresholds == {
-        "min_critical_count": 2,
-        "min_demo_count": 3,
+        "max_nominal_obstruction_score": 0.35,
+        "min_critical_count": 5,
+        "min_demo_count": 6,
         "min_obstruction_delta": 0.1,
-        "min_summary_count": 3,
-        "min_top_residual_edge_count": 9,
+        "min_summary_count": 6,
+        "min_top_residual_edge_count": 18,
         "require_deterministic_hash": True,
         "require_non_actuating": True,
     }
     assert {record["domainpack"] for record in records} == {
+        "cardiac_rhythm",
         "edge_consensus_nchannel",
+        "manufacturing_spc",
         "network_security",
         "power_grid",
+        "traffic_flow",
     }
     assert all(record["summary_present"] is True for record in records)
     assert all(record["top_residual_edge_count"] == 3 for record in records)

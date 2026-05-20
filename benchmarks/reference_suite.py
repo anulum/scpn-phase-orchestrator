@@ -444,6 +444,7 @@ class SheafObstructionBenchmarkThresholds(NamedTuple):
     min_top_residual_edge_count: int
     min_critical_count: int
     min_obstruction_delta: float
+    max_nominal_obstruction_score: float
     require_non_actuating: bool
     require_deterministic_hash: bool
 
@@ -4383,18 +4384,22 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
 def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
     """Benchmark heterogeneous sheaf-obstruction demos and residual triage."""
     thresholds = SheafObstructionBenchmarkThresholds(
-        min_demo_count=3,
-        min_summary_count=3,
-        min_top_residual_edge_count=9,
-        min_critical_count=2,
+        min_demo_count=6,
+        min_summary_count=6,
+        min_top_residual_edge_count=18,
+        min_critical_count=5,
         min_obstruction_delta=0.1,
+        max_nominal_obstruction_score=0.35,
         require_non_actuating=True,
         require_deterministic_hash=True,
     )
     module_paths = (
+        "domainpacks.cardiac_rhythm.sheaf_obstruction_demo",
         "domainpacks.edge_consensus_nchannel.sheaf_obstruction_demo",
+        "domainpacks.manufacturing_spc.sheaf_obstruction_demo",
         "domainpacks.power_grid.sheaf_obstruction_demo",
         "domainpacks.network_security.sheaf_obstruction_demo",
+        "domainpacks.traffic_flow.sheaf_obstruction_demo",
     )
 
     t0 = time.perf_counter()
@@ -4416,6 +4421,9 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
     min_obstruction_delta = min(
         float(record["obstruction_delta"]) for record in records
     )
+    max_nominal_obstruction_score = max(
+        float(record["nominal_obstruction_score"]) for record in records
+    )
     non_actuating = int(all(record["actuating"] is False for record in records))
     deterministic_hash = int(records == repeated_records)
     acceptance_passed = int(
@@ -4424,6 +4432,7 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
         and top_residual_edge_count >= thresholds.min_top_residual_edge_count
         and critical_count >= thresholds.min_critical_count
         and min_obstruction_delta >= thresholds.min_obstruction_delta
+        and max_nominal_obstruction_score <= thresholds.max_nominal_obstruction_score
         and non_actuating == int(thresholds.require_non_actuating)
         and deterministic_hash == int(thresholds.require_deterministic_hash)
     )
@@ -4437,12 +4446,16 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
         "top_residual_edge_count": top_residual_edge_count,
         "critical_count": critical_count,
         "min_obstruction_delta": min_obstruction_delta,
+        "max_nominal_obstruction_score": max_nominal_obstruction_score,
         "non_actuating": non_actuating,
         "deterministic_hash": deterministic_hash,
         "sheaf_obstruction_sha256": _stable_record_hash(records),
         "acceptance_passed": acceptance_passed,
         "acceptance_thresholds_json": json.dumps(
             {
+                "max_nominal_obstruction_score": (
+                    thresholds.max_nominal_obstruction_score
+                ),
                 "min_critical_count": thresholds.min_critical_count,
                 "min_demo_count": thresholds.min_demo_count,
                 "min_obstruction_delta": thresholds.min_obstruction_delta,
