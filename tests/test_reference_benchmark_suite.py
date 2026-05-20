@@ -13,6 +13,7 @@ import json
 from benchmarks.reference_suite import (
     BENCHMARK_COMMAND,
     benchmark_auto_binding_proposal_quality,
+    benchmark_bayesian_posterior_fit_quality,
     benchmark_kuramoto_reference,
     benchmark_petri_reachability,
     benchmark_replay_policy_candidate_quality,
@@ -126,12 +127,43 @@ def test_replay_policy_candidate_quality_reports_thresholds() -> None:
     assert all(record["unsafe_selected"] is False for record in results)
 
 
+def test_bayesian_posterior_fit_quality_benchmark_shape() -> None:
+    out = benchmark_bayesian_posterior_fit_quality()
+
+    assert out["suite"] == "bayesian_posterior_fit_quality"
+    assert out["sample_count"] >= 96
+    assert out["rollout_sample_count"] >= 96
+    assert out["acceptance_passed"] == 1
+    assert out["finite_audit_record"] == 1
+    assert out["zero_diagonal_coupling"] == 1
+    assert out["non_negative_coupling"] == 1
+    assert float(out["residual_rmse"]) <= 2.5e-3
+    assert float(out["omega_mean_abs_error"]) <= 3.0e-2
+    assert float(out["knm_mean_abs_error"]) <= 6.0e-2
+    assert float(out["credible_interval_width"]) <= 1.0e-2
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_bayesian_posterior_fit_quality_reports_thresholds() -> None:
+    out = benchmark_bayesian_posterior_fit_quality()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert thresholds == {
+        "max_credible_interval_width": 1.0e-2,
+        "max_knm_mean_abs_error": 6.0e-2,
+        "max_omega_mean_abs_error": 3.0e-2,
+        "max_residual_rmse": 2.5e-3,
+        "min_rollout_sample_count": 96,
+    }
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
     assert out["metadata"]["snapshot_date"] == "2026-05-06"
     assert set(out["benchmarks"].keys()) == {
         "auto_binding",
+        "bayesian_posterior",
         "replay_policy",
         "kuramoto",
         "stuart_landau",

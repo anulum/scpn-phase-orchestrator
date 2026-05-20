@@ -306,8 +306,13 @@ sessions do not treat them as abstract research labels.
   - Foundation is in place: `bayesian_upde_run()` samples deterministic or
     Gaussian `omega`/`K_nm` distributions and emits `R ± sigma`, credible
     intervals, sampled final phases, and JSON-safe audit diagnostics.
-  - Remaining scope: posterior fitting from data and benchmarked NumPyro or
-    BlackJAX samplers behind the existing fail-closed backend names.
+  - Posterior fitting from observed Kuramoto phase trajectories is now in
+    place through `fit_gaussian_upde_posterior()`, including non-negative
+    zero-diagonal coupling enforcement, JSON-safe fit diagnostics, and
+    reference-suite acceptance gates for residual quality, parameter recovery,
+    uncertainty width, and posterior rollout sample count.
+  - Remaining scope: benchmarked NumPyro or BlackJAX samplers behind the
+    existing fail-closed backend names.
 - Hierarchical and distributed orchestration:
   - Make nested orchestrators explicit: edge supervisors sync locally, report
     reduced aggregates upward, and escalate only bounded evidence.

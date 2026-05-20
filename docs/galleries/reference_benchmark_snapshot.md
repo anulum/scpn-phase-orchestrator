@@ -30,11 +30,12 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
 |----------|-------------------|------|-------|---------------|---------|---------------|
-| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.05251737096114084 | 76.16527497082286 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
-| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 learners | 3 acceptance gates | 0.004264426999725401 | 703.4942795815659 | accepted learners = 3/3; min coherence improvement = 0.05827974999403174; unsafe acceptances = 0; non-actuating = yes |
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.16285745496861637 | 6140.339109392973 | final `R` = 1.0 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.29826523998053744 | 3352.7205518995524 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.025786341982893646 | 193901.0970736734 | reachable markings = 4 |
+| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.05773294600658119 | 69.28452948761745 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
+| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 learners | 3 acceptance gates | 0.003630557970609516 | 826.319266703885 | accepted learners = 3/3; min coherence improvement = 0.05827974999403174; unsafe acceptances = 0; non-actuating = yes |
+| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.821134733967483 | 34.02886038873835 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
+| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.15538862202083692 | 6435.477623747152 | final `R` = 1.0 |
+| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.29776544298511 | 3358.3480674418147 | final mean amplitude = 3.6193922141707704 |
+| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.026004773972090334 | 192272.38834554987 | reachable markings = 4 |
 
 ## Auto-Binding Acceptance Gates
 
@@ -64,6 +65,26 @@ candidates, and non-actuating output gates.
 | `ppo_like_replay` | 15 | 0.793 | 0.8653832908831077 | 0.07238329088310769 | yes |
 | `sac_like_replay` | 15 | 0.793 | 0.8512797499940318 | 0.05827974999403174 | yes |
 | `hybrid_physics_replay` | 15 | 0.793 | 0.8581479119360509 | 0.06514791193605085 | yes |
+
+## Bayesian Posterior-Fit Acceptance Gates
+
+The Bayesian posterior benchmark fits Gaussian `omega` and `K_nm`
+distributions from a deterministic Kuramoto trajectory, then runs the fitted
+posterior through the existing Bayesian UPDE rollout path. The gate requires
+finite audit diagnostics, non-negative zero-diagonal coupling, bounded residual
+error, bounded parameter-recovery error, bounded credible interval width, and
+at least 96 posterior rollout samples.
+
+| Metric | Snapshot value | Gate |
+|--------|---------------:|------|
+| Residual RMSE | 3.904347277377099e-07 | <= 0.0025 |
+| Max omega mean absolute error | 0.007744271156763904 | <= 0.03 |
+| Max `K_nm` mean absolute error | 0.029439030191471344 | <= 0.06 |
+| Credible interval width | 0.002121338455159605 | <= 0.01 |
+| Posterior rollout samples | 128 | >= 96 |
+| Finite audit record | 1 | required |
+| Zero-diagonal coupling | 1 | required |
+| Non-negative coupling | 1 | required |
 
 ## Use Policy
 

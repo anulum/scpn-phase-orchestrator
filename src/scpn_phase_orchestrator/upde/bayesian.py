@@ -35,9 +35,11 @@ __all__ = [
     "BayesianUPDEConfig",
     "BayesianUPDEResult",
     "FloatArray",
+    "GaussianUPDEPosteriorFit",
     "GaussianArrayDistribution",
     "MethodName",
     "bayesian_upde_run",
+    "fit_gaussian_upde_posterior",
 ]
 
 
@@ -181,6 +183,52 @@ class BayesianUPDEResult:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class GaussianUPDEPosteriorFit:
+    """Gaussian posterior approximation fitted from observed phase trajectories."""
+
+    omega: GaussianArrayDistribution
+    knm: GaussianArrayDistribution
+    residual_rmse: float
+    sample_count: int
+    dt: float
+    ridge: float
+    backend: str = "numpy_lstsq"
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return JSON-safe posterior-fit diagnostics."""
+
+        return {
+            "kind": "gaussian_upde_posterior_fit",
+            "backend": self.backend,
+            "sample_count": self.sample_count,
+            "dt": self.dt,
+            "ridge": self.ridge,
+            "residual_rmse": self.residual_rmse,
+            "omega": {
+                "mean": np.asarray(self.omega.mean, dtype=np.float64).tolist(),
+                "std": np.asarray(self.omega.std, dtype=np.float64).tolist(),
+            },
+            "knm": {
+                "mean": np.asarray(self.knm.mean, dtype=np.float64).tolist(),
+                "std": np.asarray(self.knm.std, dtype=np.float64).tolist(),
+            },
+            "diagnostics": {
+                "finite": bool(
+                    np.all(np.isfinite(np.asarray(self.omega.mean)))
+                    and np.all(np.isfinite(np.asarray(self.omega.std)))
+                    and np.all(np.isfinite(np.asarray(self.knm.mean)))
+                    and np.all(np.isfinite(np.asarray(self.knm.std)))
+                    and np.isfinite(self.residual_rmse)
+                ),
+                "zero_diagonal": bool(
+                    np.allclose(np.diag(np.asarray(self.knm.mean)), 0.0)
+                    and np.allclose(np.diag(np.asarray(self.knm.std)), 0.0)
+                ),
+            },
+        }
+
+
 def _as_finite_array(value: object, *, name: str) -> FloatArray:
     try:
         array = np.asarray(value, dtype=np.float64)
@@ -204,6 +252,128 @@ def _validate_positive_finite(value: object, *, name: str) -> float:
     coerced = float(value)
     if not np.isfinite(coerced) or coerced <= 0.0:
         raise ValueError(f"{name} must be positive finite real")
+    return coerced
+
+
+def fit_gaussian_upde_posterior(
+    phase_trajectory: object,
+    *,
+    dt: float,
+    alpha: object | None = None,
+    ridge: float = 1e-6,
+    coupling_std_floor: float = 1e-6,
+    omega_std_floor: float = 1e-6,
+) -> GaussianUPDEPosteriorFit:
+    """Fit Gaussian ``omega`` and ``K_nm`` priors from observed phases.
+
+    The estimator is a deterministic NumPy ridge least-squares baseline. It
+    fits the Kuramoto right-hand side independently per target oscillator:
+
+    ``d theta_i / dt = omega_i + sum_j K_ij sin(theta_j - theta_i - alpha_ij)``.
+
+    The result is intentionally review-only: it produces distributions that can
+    feed :func:`bayesian_upde_run`, but it does not apply control actions.
+    """
+
+    trajectory = _as_finite_array(phase_trajectory, name="phase_trajectory")
+    if trajectory.ndim != 2:
+        raise ValueError(
+            f"phase_trajectory must be a 2-D array, got shape {trajectory.shape}"
+        )
+    if trajectory.shape[0] < 3:
+        raise ValueError("phase_trajectory must contain at least three samples")
+    dt_value = _validate_positive_finite(dt, name="dt")
+    ridge_value = _validate_non_negative_finite(ridge, name="ridge")
+    coupling_floor = _validate_non_negative_finite(
+        coupling_std_floor,
+        name="coupling_std_floor",
+    )
+    omega_floor = _validate_non_negative_finite(
+        omega_std_floor,
+        name="omega_std_floor",
+    )
+    n_samples, n_oscillators = trajectory.shape
+    alpha_array = (
+        np.zeros((n_oscillators, n_oscillators), dtype=np.float64)
+        if alpha is None
+        else _as_finite_array(alpha, name="alpha")
+    )
+    if alpha_array.shape != (n_oscillators, n_oscillators):
+        raise ValueError(
+            f"alpha must have shape {(n_oscillators, n_oscillators)}, "
+            f"got {alpha_array.shape}"
+        )
+
+    unwrapped = np.unwrap(trajectory, axis=0)
+    derivatives = np.diff(unwrapped, axis=0) / dt_value
+    theta = trajectory[:-1]
+    omega_mean = np.empty(n_oscillators, dtype=np.float64)
+    omega_std = np.empty(n_oscillators, dtype=np.float64)
+    knm_mean = np.zeros((n_oscillators, n_oscillators), dtype=np.float64)
+    knm_std = np.zeros((n_oscillators, n_oscillators), dtype=np.float64)
+    residuals: list[FloatArray] = []
+
+    for target in range(n_oscillators):
+        source_indices = [source for source in range(n_oscillators) if source != target]
+        features = np.column_stack(
+            [
+                np.ones(theta.shape[0], dtype=np.float64),
+                *[
+                    np.sin(
+                        theta[:, source]
+                        - theta[:, target]
+                        - alpha_array[target, source]
+                    )
+                    for source in source_indices
+                ],
+            ]
+        )
+        target_derivative = derivatives[:, target]
+        gram = features.T @ features
+        penalty = ridge_value * np.eye(gram.shape[0], dtype=np.float64)
+        penalty[0, 0] = 0.0
+        coeffs = np.linalg.solve(gram + penalty, features.T @ target_derivative)
+        predicted = features @ coeffs
+        residual = target_derivative - predicted
+        residuals.append(residual)
+        dof = max(1, features.shape[0] - features.shape[1])
+        residual_sigma = float(np.sqrt(float(residual @ residual) / dof))
+        covariance = residual_sigma**2 * np.linalg.pinv(gram + penalty)
+        coefficient_std = np.sqrt(np.maximum(np.diag(covariance), 0.0))
+        omega_mean[target] = coeffs[0]
+        omega_std[target] = max(float(coefficient_std[0]), omega_floor)
+        for offset, source in enumerate(source_indices, start=1):
+            value = max(float(coeffs[offset]), 0.0)
+            knm_mean[target, source] = value
+            knm_std[target, source] = (
+                max(float(coefficient_std[offset]), coupling_floor)
+                if value > 0.0
+                else 0.0
+            )
+
+    residual_vector = np.concatenate(residuals)
+    residual_rmse = float(np.sqrt(float(np.mean(residual_vector**2))))
+    return GaussianUPDEPosteriorFit(
+        omega=GaussianArrayDistribution(omega_mean, omega_std),
+        knm=GaussianArrayDistribution(
+            knm_mean,
+            knm_std,
+            non_negative=True,
+            zero_diagonal=True,
+        ),
+        residual_rmse=residual_rmse,
+        sample_count=n_samples,
+        dt=dt_value,
+        ridge=ridge_value,
+    )
+
+
+def _validate_non_negative_finite(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be non-negative finite real")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced < 0.0:
+        raise ValueError(f"{name} must be non-negative finite real")
     return coerced
 
 

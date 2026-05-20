@@ -39,6 +39,11 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
     Place,
     Transition,
 )
+from scpn_phase_orchestrator.upde.bayesian import (
+    BayesianUPDEConfig,
+    bayesian_upde_run,
+    fit_gaussian_upde_posterior,
+)
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
@@ -78,6 +83,14 @@ class ReplayLearnerBenchmarkThresholds(NamedTuple):
     min_reward_improvement: float
     max_unsafe_acceptances: int
     require_non_actuating: bool
+
+
+class BayesianPosteriorFitThresholds(NamedTuple):
+    max_residual_rmse: float
+    max_omega_mean_abs_error: float
+    max_knm_mean_abs_error: float
+    max_credible_interval_width: float
+    min_rollout_sample_count: int
 
 
 class ReferenceSuiteResult(TypedDict):
@@ -413,6 +426,82 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_bayesian_posterior_fit_quality() -> dict[str, float | int | str]:
+    """Benchmark posterior fitting from observed Kuramoto trajectories."""
+    thresholds = BayesianPosteriorFitThresholds(
+        max_residual_rmse=2.5e-3,
+        max_omega_mean_abs_error=3.0e-2,
+        max_knm_mean_abs_error=6.0e-2,
+        max_credible_interval_width=1.0e-2,
+        min_rollout_sample_count=96,
+    )
+    phases, omega, knm, alpha, dt = _bayesian_posterior_fit_fixture()
+
+    t0 = time.perf_counter()
+    fit = fit_gaussian_upde_posterior(
+        phases,
+        dt=dt,
+        alpha=alpha,
+        ridge=1e-8,
+        coupling_std_floor=2.5e-3,
+        omega_std_floor=2.5e-3,
+    )
+    result = bayesian_upde_run(
+        phases[0],
+        omega=fit.omega,
+        knm=fit.knm,
+        alpha=alpha,
+        zeta=0.0,
+        psi=0.0,
+        config=BayesianUPDEConfig(n_samples=128, seed=41, n_steps=32, dt=dt),
+    )
+    elapsed = time.perf_counter() - t0
+
+    omega_mean_abs_error = float(np.max(np.abs(fit.omega.mean - omega)))
+    knm_mean_abs_error = float(np.max(np.abs(fit.knm.mean - knm)))
+    credible_interval_width = float(result.r_upper - result.r_lower)
+    audit_record = fit.to_audit_record()
+    finite_audit = int(_audit_record_is_finite(audit_record))
+    zero_diagonal = int(np.allclose(np.diag(fit.knm.mean), 0.0))
+    non_negative_coupling = int(np.all(fit.knm.mean >= 0.0))
+    acceptance_passed = int(
+        fit.residual_rmse <= thresholds.max_residual_rmse
+        and omega_mean_abs_error <= thresholds.max_omega_mean_abs_error
+        and knm_mean_abs_error <= thresholds.max_knm_mean_abs_error
+        and credible_interval_width <= thresholds.max_credible_interval_width
+        and result.sample_count >= thresholds.min_rollout_sample_count
+        and finite_audit == 1
+        and zero_diagonal == 1
+        and non_negative_coupling == 1
+    )
+
+    return {
+        "suite": "bayesian_posterior_fit_quality",
+        "sample_count": len(phases),
+        "rollout_sample_count": result.sample_count,
+        "wall_time_s": elapsed,
+        "steps_per_second": len(phases) / elapsed,
+        "residual_rmse": fit.residual_rmse,
+        "omega_mean_abs_error": omega_mean_abs_error,
+        "knm_mean_abs_error": knm_mean_abs_error,
+        "credible_interval_width": credible_interval_width,
+        "finite_audit_record": finite_audit,
+        "zero_diagonal_coupling": zero_diagonal,
+        "non_negative_coupling": non_negative_coupling,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "max_credible_interval_width": (thresholds.max_credible_interval_width),
+                "max_knm_mean_abs_error": thresholds.max_knm_mean_abs_error,
+                "max_omega_mean_abs_error": thresholds.max_omega_mean_abs_error,
+                "max_residual_rmse": thresholds.max_residual_rmse,
+                "min_rollout_sample_count": thresholds.min_rollout_sample_count,
+            },
+            sort_keys=True,
+        ),
+    }
+
+
 def _deterministic_replay_observation(
     candidate: KnobPolicyCandidate,
 ) -> RewardObservation:
@@ -430,6 +519,41 @@ def _deterministic_replay_observation(
         unsafe=unsafe,
         regime_changed=False,
     )
+
+
+def _bayesian_posterior_fit_fixture() -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, float
+]:
+    dt = 0.02
+    omega = np.array([0.92, 1.03, 1.11], dtype=float)
+    knm = np.array(
+        [
+            [0.0, 0.11, 0.04],
+            [0.18, 0.0, 0.07],
+            [0.09, 0.14, 0.0],
+        ],
+        dtype=float,
+    )
+    alpha = np.zeros_like(knm)
+    engine = UPDEEngine(n_oscillators=3, dt=dt, method="rk4")
+    phase = np.array([0.1, 0.6, 1.4], dtype=float)
+    trajectory = [phase.copy()]
+    for _ in range(95):
+        phase = engine.step(phase, omega, knm, zeta=0.0, psi=0.0, alpha=alpha)
+        trajectory.append(phase.copy())
+    return np.asarray(trajectory), omega, knm, alpha, dt
+
+
+def _audit_record_is_finite(value: object) -> bool:
+    if isinstance(value, bool | str):
+        return True
+    if isinstance(value, int | float):
+        return bool(np.isfinite(value))
+    if isinstance(value, Mapping):
+        return all(_audit_record_is_finite(item) for item in value.values())
+    if isinstance(value, Iterable):
+        return all(_audit_record_is_finite(item) for item in value)
+    return False
 
 
 def _auto_binding_quality_fixtures() -> tuple[AutoBindingFixture, ...]:
@@ -648,6 +772,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
         "benchmarks": {
             "auto_binding": benchmark_auto_binding_proposal_quality(),
             "replay_policy": benchmark_replay_policy_candidate_quality(),
+            "bayesian_posterior": benchmark_bayesian_posterior_fit_quality(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
             "petri_reachability": benchmark_petri_reachability(),

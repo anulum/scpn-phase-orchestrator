@@ -18,6 +18,12 @@ distributions. `numpyro` and `blackjax` are reserved backend names and raise
 `NotImplementedError` until their samplers are implemented, benchmarked, and
 validated against the NumPy propagation baseline.
 
+`fit_gaussian_upde_posterior()` provides the deterministic production baseline
+for posterior fitting from observed Kuramoto phase trajectories. It uses a
+finite-difference regression against the same UPDE coupling surface, enforces
+non-negative zero-diagonal coupling, emits JSON-safe diagnostics, and feeds the
+resulting Gaussian distributions directly into `bayesian_upde_run()`.
+
 ## Minimal Example
 
 ```python
@@ -58,6 +64,9 @@ r_mean, r_sigma = result.r_plus_minus
 - `omega` and `knm` may be deterministic arrays or distribution objects.
 - `GaussianArrayDistribution` samples independent normal uncertainty per array
   entry and can enforce non-negative coupling and zero self-coupling.
+- `fit_gaussian_upde_posterior()` estimates Gaussian `omega` and `K_nm`
+  distributions from finite phase trajectories with explicit ridge and
+  uncertainty floors.
 - The existing UPDE kernel performs every rollout, so deterministic engine
   validation, phase wrapping, and backend dispatch semantics are preserved.
 - `BayesianUPDEResult.to_audit_record()` emits JSON-safe uncertainty
