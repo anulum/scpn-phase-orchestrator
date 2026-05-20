@@ -17,6 +17,7 @@ from scpn_phase_orchestrator.supervisor import (
     CausalInfluenceEdge,
     CausalInterventionEngine,
     CounterfactualRollout,
+    build_temporal_causal_hypergraph_experiment,
     learn_causal_graph,
 )
 
@@ -529,6 +530,89 @@ def test_learn_causal_graph_rejects_invalid_trace_inputs() -> None:
 def test_learn_causal_graph_rejects_empty_trace_evidence() -> None:
     with pytest.raises(ValueError, match="at least two signals"):
         learn_causal_graph({})
+
+
+def test_temporal_causal_hypergraph_experiment_beats_baseline_research_only() -> None:
+    trace = {
+        "driver": [0.0, 1.0, 2.0, 3.0, 4.0],
+        "response": [0.0, 0.0, 2.0, 6.0, 12.0],
+        "distractor": [1.0, 1.0, 1.0, 1.0, 1.0],
+    }
+    candidate_hyperedges = [
+        {
+            "sources": ["driver", "response"],
+            "target": "response",
+            "time_offsets": [-1, 0],
+            "score": 2.6,
+        },
+        {
+            "sources": ["distractor", "driver"],
+            "target": "response",
+            "time_offsets": [-1, 1],
+            "score": 0.1,
+        },
+    ]
+
+    first = build_temporal_causal_hypergraph_experiment(
+        trace,
+        candidate_hyperedges,
+        lag=1,
+        min_abs_weight=0.1,
+        required_baseline_margin=0.1,
+    )
+    second = build_temporal_causal_hypergraph_experiment(
+        trace,
+        candidate_hyperedges,
+        lag=1,
+        min_abs_weight=0.1,
+        required_baseline_margin=0.1,
+    )
+
+    assert first == second
+    assert first["schema"] == "scpn_temporal_causal_hypergraph_experiment_v1"
+    assert first["research_only"] is True
+    assert first["production_claim_permitted"] is False
+    assert first["actuation_permitted"] is False
+    assert first["baseline_beaten"] is True
+    assert first["accepted_hyperedge_count"] == 1
+    assert len(str(first["experiment_sha256"])) == 64
+    assert first["accepted_hyperedges"][0]["target"] == "response"
+    assert first["baseline"]["edge_count"] >= 1
+
+
+def test_temporal_causal_hypergraph_experiment_blocks_without_baseline_win() -> None:
+    trace = {
+        "driver": [0.0, 1.0, 2.0, 3.0],
+        "response": [0.0, 0.0, 1.0, 2.0],
+    }
+    manifest = build_temporal_causal_hypergraph_experiment(
+        trace,
+        [
+            {
+                "sources": ["driver", "response"],
+                "target": "response",
+                "time_offsets": [-1, 0],
+                "score": 0.01,
+            }
+        ],
+        lag=1,
+        min_abs_weight=0.1,
+        required_baseline_margin=0.1,
+    )
+
+    assert manifest["baseline_beaten"] is False
+    assert manifest["accepted_hyperedge_count"] == 0
+    assert manifest["blocked_reasons"] == ["conventional_causal_baseline_not_beaten"]
+    assert manifest["production_claim_permitted"] is False
+
+    with pytest.raises(ValueError, match="candidate_hyperedges"):
+        build_temporal_causal_hypergraph_experiment(trace, [])
+
+    with pytest.raises(ValueError, match="time_offsets"):
+        build_temporal_causal_hypergraph_experiment(
+            trace,
+            [{"sources": ["driver"], "target": "response", "time_offsets": []}],
+        )
 
 
 def test_counterfactual_audit_record_is_deterministic_and_ordered() -> None:

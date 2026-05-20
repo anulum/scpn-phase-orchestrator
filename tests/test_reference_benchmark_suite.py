@@ -33,6 +33,7 @@ from benchmarks.reference_suite import (
     benchmark_semantic_retrieval_ranking_quality,
     benchmark_stl_closed_loop_plan_quality,
     benchmark_stuart_landau_reference,
+    benchmark_temporal_causal_hypergraph_experiment_gate,
     benchmark_value_alignment_replay_calibration_gate,
     build_benchmark_metadata,
     run_reference_suite,
@@ -855,6 +856,44 @@ def test_intergenerational_policy_inheritance_gate_reports_signed_records() -> N
     )
 
 
+def test_temporal_causal_hypergraph_experiment_gate_benchmark_shape() -> None:
+    out = benchmark_temporal_causal_hypergraph_experiment_gate()
+
+    assert out["suite"] == "temporal_causal_hypergraph_experiment_gate"
+    assert out["manifest_count"] == 2
+    assert out["accepted_hyperedge_count"] == 1
+    assert out["min_baseline_edge_count"] >= 1
+    assert out["research_only"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["passing_experiment_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_temporal_causal_hypergraph_experiment_gate_reports_baselines() -> None:
+    out = benchmark_temporal_causal_hypergraph_experiment_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    manifests = json.loads(str(out["experiment_manifests_json"]))
+
+    assert thresholds == {
+        "min_accepted_hyperedge_count": 1,
+        "min_baseline_edge_count": 1,
+        "min_manifest_count": 2,
+        "require_deterministic_hash": True,
+        "require_research_only": True,
+    }
+    assert [manifest["schema"] for manifest in manifests] == [
+        "scpn_temporal_causal_hypergraph_experiment_v1",
+        "scpn_temporal_causal_hypergraph_experiment_v1",
+    ]
+    assert [manifest["baseline_beaten"] for manifest in manifests] == [True, False]
+    assert all(manifest["research_only"] is True for manifest in manifests)
+    assert all(
+        manifest["production_claim_permitted"] is False for manifest in manifests
+    )
+    assert all(manifest["actuation_permitted"] is False for manifest in manifests)
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -931,6 +970,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "replay_policy",
         "semantic_retrieval",
         "stl_closed_loop",
+        "temporal_causal_hypergraph",
         "value_alignment_replay_calibration",
         "kuramoto",
         "stuart_landau",

@@ -30,28 +30,29 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Benchmark key | Suite ID | Record size | Wall time (s) | Steps/s | Acceptance |
 |---------------|----------|-------------|---------------|---------|------------|
-| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.04365835600765422 | 91.62049068679353 | 1 |
-| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.014098573010414839 | 212.78749259119007 | 1 |
-| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.011527169030159712 | 780.7641213946268 | 1 |
-| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.1727625819621608 | 44.183382389301414 | 1 |
-| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.2694264340098016 | 11.134764897979021 | 1 |
-| `formal_export` | `formal_export_artifact_quality` | n/a | 0.0006162719801068306 | 8113.300882401389 | 1 |
-| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.0003238169592805207 | 9264.493146577657 | 1 |
-| `domain_formal_export` | `domain_formal_safety_exports` | 3 | 0.00037571799475699663 | 23954.136148897887 | 1 |
-| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.00010862504132091999 | 9205.980387575797 | 1 |
-| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.00011853198520839214 | 16873.082792663787 | 1 |
-| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.00017095200018957257 | 11699.190403049712 | 1 |
-| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.00011312199058011174 | 17680.028345891085 | 1 |
-| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | 2 | 0.0001239309785887599 | 16138.0150691507 | 1 |
-| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.00017469999147579074 | 17172.296201375193 | 1 |
-| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | 2 | 0.0003398690023459494 | 14711.550525312538 | 1 |
-| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | 2 | 0.0002586429473012686 | 7732.66783752812 | 1 |
-| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.001993062032852322 | 3010.44317793423 | 1 |
-| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.00037746602902188897 | 10596.98010537537 | 1 |
-| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | 2 | 0.0002500229747965932 | 11998.89731109974 | 1 |
-| `kuramoto` | `kuramoto_reference_strogatz_2000` | 64 | 0.13324306695722044 | 7505.080923430441 | n/a |
-| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 64 | 0.25500432099215686 | 3921.50217733274 | n/a |
-| `petri_reachability` | `petri_net_reachability` | n/a | 0.0199123959755525 | 251099.86794852634 | n/a |
+| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.04587485402589664 | 87.19373794065864 | 1 |
+| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.01542349299415946 | 194.50846842126063 | 1 |
+| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.012185700994450599 | 738.5705593874841 | 1 |
+| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.2912393439910375 | 41.89872186498886 | 1 |
+| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.2934552769875154 | 10.223022842855984 | 1 |
+| `formal_export` | `formal_export_artifact_quality` | n/a | 0.0005464740097522736 | 9149.565964292775 | 1 |
+| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.0002731640124693513 | 10982.412993866083 | 1 |
+| `domain_formal_export` | `domain_formal_safety_exports` | 3 | 0.000479543989058584 | 18767.82986617836 | 1 |
+| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.0001305490150116384 | 7659.958215011046 | 1 |
+| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.0001195729710161686 | 16726.18805908537 | 1 |
+| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.00017412198940292 | 11486.200030554328 | 1 |
+| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.00011987402103841305 | 16684.182132833517 | 1 |
+| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | 2 | 0.00012567301746457815 | 15914.315103985742 | 1 |
+| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.00016536901239305735 | 18141.246395482183 | 1 |
+| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | 2 | 0.00033599697053432465 | 14881.086552800369 | 1 |
+| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | 2 | 0.0003658159985207021 | 5467.229448924216 | 1 |
+| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | 2 | 0.0004012970020994544 | 4983.839873053264 | 1 |
+| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.002050206996500492 | 2926.533764757133 | 1 |
+| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.0004334470140747726 | 9228.348264293205 | 1 |
+| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | 2 | 0.00028747000033035874 | 10435.871557214383 | 1 |
+| `kuramoto` | `kuramoto_reference_strogatz_2000` | 64 | 0.13407328497851267 | 7458.607433690206 | n/a |
+| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 64 | 0.2681467410293408 | 3729.3013376231165 | n/a |
+| `petri_reachability` | `petri_net_reachability` | n/a | 0.01973997103050351 | 253293.17820546284 | n/a |
 
 ## Benchmark Record Details
 
@@ -60,8 +61,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `auto_binding`
 
 - Suite: `auto_binding_synthetic_quality`
-- Wall time (s): `0.04365835600765422`
-- Steps/s: `91.62049068679353`
+- Wall time (s): `0.04587485402589664`
+- Steps/s: `87.19373794065864`
 
 | Metric | Value |
 |--------|-------|
@@ -168,8 +169,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `semantic_retrieval`
 
 - Suite: `semantic_retrieval_ranking_quality`
-- Wall time (s): `0.014098573010414839`
-- Steps/s: `212.78749259119007`
+- Wall time (s): `0.01542349299415946`
+- Steps/s: `194.50846842126063`
 
 | Metric | Value |
 |--------|-------|
@@ -248,8 +249,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `replay_policy`
 
 - Suite: `replay_policy_candidate_quality`
-- Wall time (s): `0.011527169030159712`
-- Steps/s: `780.7641213946268`
+- Wall time (s): `0.012185700994450599`
+- Steps/s: `738.5705593874841`
 
 | Metric | Value |
 |--------|-------|
@@ -434,8 +435,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `bayesian_posterior`
 
 - Suite: `bayesian_posterior_fit_quality`
-- Wall time (s): `2.1727625819621608`
-- Steps/s: `44.183382389301414`
+- Wall time (s): `2.2912393439910375`
+- Steps/s: `41.89872186498886`
 
 | Metric | Value |
 |--------|-------|
@@ -465,8 +466,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `bayesian_backends`
 
 - Suite: `bayesian_backend_fail_closed`
-- Wall time (s): `0.2694264340098016`
-- Steps/s: `11.134764897979021`
+- Wall time (s): `0.2934552769875154`
+- Steps/s: `10.223022842855984`
 
 | Metric | Value |
 |--------|-------|
@@ -524,8 +525,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `formal_export`
 
 - Suite: `formal_export_artifact_quality`
-- Wall time (s): `0.0006162719801068306`
-- Steps/s: `8113.300882401389`
+- Wall time (s): `0.0005464740097522736`
+- Steps/s: `9149.565964292775`
 
 | Metric | Value |
 |--------|-------|
@@ -666,8 +667,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `stl_closed_loop`
 
 - Suite: `stl_closed_loop_plan_quality`
-- Wall time (s): `0.0003238169592805207`
-- Steps/s: `9264.493146577657`
+- Wall time (s): `0.0002731640124693513`
+- Steps/s: `10982.412993866083`
 
 | Metric | Value |
 |--------|-------|
@@ -817,8 +818,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `domain_formal_export`
 
 - Suite: `domain_formal_safety_exports`
-- Wall time (s): `0.00037571799475699663`
-- Steps/s: `23954.136148897887`
+- Wall time (s): `0.000479543989058584`
+- Steps/s: `18767.82986617836`
 
 | Metric | Value |
 |--------|-------|
@@ -881,8 +882,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_cocompiler`
 
 - Suite: `hybrid_cocompiler_review_gate`
-- Wall time (s): `0.00010862504132091999`
-- Steps/s: `9205.980387575797`
+- Wall time (s): `0.0001305490150116384`
+- Steps/s: `7659.958215011046`
 
 | Metric | Value |
 |--------|-------|
@@ -923,8 +924,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `quantum_target_readiness`
 
 - Suite: `quantum_target_readiness_gate`
-- Wall time (s): `0.00011853198520839214`
-- Steps/s: `16873.082792663787`
+- Wall time (s): `0.0001195729710161686`
+- Steps/s: `16726.18805908537`
 
 | Metric | Value |
 |--------|-------|
@@ -1010,8 +1011,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `neuromorphic_target_readiness`
 
 - Suite: `neuromorphic_target_readiness_gate`
-- Wall time (s): `0.00017095200018957257`
-- Steps/s: `11699.190403049712`
+- Wall time (s): `0.00017412198940292`
+- Steps/s: `11486.200030554328`
 
 | Metric | Value |
 |--------|-------|
@@ -1100,8 +1101,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_target_readiness`
 
 - Suite: `hybrid_target_readiness_gate`
-- Wall time (s): `0.00011312199058011174`
-- Steps/s: `17680.028345891085`
+- Wall time (s): `0.00011987402103841305`
+- Steps/s: `16684.182132833517`
 
 | Metric | Value |
 |--------|-------|
@@ -1197,8 +1198,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_operator_handoff`
 
 - Suite: `hybrid_operator_handoff_package_gate`
-- Wall time (s): `0.0001239309785887599`
-- Steps/s: `16138.0150691507`
+- Wall time (s): `0.00012567301746457815`
+- Steps/s: `15914.315103985742`
 
 | Metric | Value |
 |--------|-------|
@@ -1307,8 +1308,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `value_alignment_replay_calibration`
 
 - Suite: `value_alignment_replay_calibration_gate`
-- Wall time (s): `0.00017469999147579074`
-- Steps/s: `17172.296201375193`
+- Wall time (s): `0.00016536901239305735`
+- Steps/s: `18141.246395482183`
 
 | Metric | Value |
 |--------|-------|
@@ -1433,8 +1434,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `autopoietic_lineage`
 
 - Suite: `autopoietic_lineage_sandbox_gate`
-- Wall time (s): `0.0003398690023459494`
-- Steps/s: `14711.550525312538`
+- Wall time (s): `0.00033599697053432465`
+- Steps/s: `14881.086552800369`
 
 | Metric | Value |
 |--------|-------|
@@ -1648,8 +1649,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `intergenerational_inheritance`
 
 - Suite: `intergenerational_policy_inheritance_gate`
-- Wall time (s): `0.0002586429473012686`
-- Steps/s: `7732.66783752812`
+- Wall time (s): `0.0003658159985207021`
+- Steps/s: `5467.229448924216`
 
 | Metric | Value |
 |--------|-------|
@@ -1762,11 +1763,163 @@ Each record below is copied from the current JSON artefact using stable key orde
 ]
 ```
 
+### `temporal_causal_hypergraph`
+
+- Suite: `temporal_causal_hypergraph_experiment_gate`
+- Wall time (s): `0.0004012970020994544`
+- Steps/s: `4983.839873053264`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `accepted_hyperedge_count` | `1` |
+| `deterministic_hash` | `1` |
+| `manifest_count` | `2` |
+| `min_baseline_edge_count` | `1` |
+| `passing_experiment_sha256` | `2c501b58b2c121100e1c66d5872f0beee45903a5bd23702dedb8fae328b1b974` |
+| `research_only` | `1` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_accepted_hyperedge_count": 1,
+  "min_baseline_edge_count": 1,
+  "min_manifest_count": 2,
+  "require_deterministic_hash": true,
+  "require_research_only": true
+}
+```
+
+`experiment_manifests_json`:
+
+```json
+[
+  {
+    "accepted_hyperedge_count": 1,
+    "accepted_hyperedges": [
+      {
+        "accepted": true,
+        "baseline_margin": 0.6000000000000001,
+        "baseline_score": 2.0,
+        "evidence": "temporal_hypergraph",
+        "score": 2.6,
+        "sources": [
+          "driver",
+          "response"
+        ],
+        "target": "response",
+        "time_offsets": [
+          -1,
+          0
+        ]
+      }
+    ],
+    "actuation_permitted": false,
+    "baseline": {
+      "edge_count": 1,
+      "edges": [
+        {
+          "confidence": 1.0,
+          "evidence": "lagged_trace",
+          "lag": 1,
+          "source": "driver",
+          "target": "response",
+          "weight": 2.0
+        }
+      ],
+      "lag": 1,
+      "min_abs_weight": 0.1,
+      "node_count": 4,
+      "score": 2.0
+    },
+    "baseline_beaten": true,
+    "blocked_reasons": [],
+    "candidate_hyperedge_count": 1,
+    "evaluated_hyperedges": [
+      {
+        "accepted": true,
+        "baseline_margin": 0.6000000000000001,
+        "baseline_score": 2.0,
+        "evidence": "temporal_hypergraph",
+        "score": 2.6,
+        "sources": [
+          "driver",
+          "response"
+        ],
+        "target": "response",
+        "time_offsets": [
+          -1,
+          0
+        ]
+      }
+    ],
+    "experiment_sha256": "2c501b58b2c121100e1c66d5872f0beee45903a5bd23702dedb8fae328b1b974",
+    "hot_patch_permitted": false,
+    "production_claim_permitted": false,
+    "required_baseline_margin": 0.1,
+    "research_only": true,
+    "schema": "scpn_temporal_causal_hypergraph_experiment_v1"
+  },
+  {
+    "accepted_hyperedge_count": 0,
+    "accepted_hyperedges": [],
+    "actuation_permitted": false,
+    "baseline": {
+      "edge_count": 1,
+      "edges": [
+        {
+          "confidence": 1.0,
+          "evidence": "lagged_trace",
+          "lag": 1,
+          "source": "driver",
+          "target": "response",
+          "weight": 2.0
+        }
+      ],
+      "lag": 1,
+      "min_abs_weight": 0.1,
+      "node_count": 4,
+      "score": 2.0
+    },
+    "baseline_beaten": false,
+    "blocked_reasons": [
+      "conventional_causal_baseline_not_beaten"
+    ],
+    "candidate_hyperedge_count": 1,
+    "evaluated_hyperedges": [
+      {
+        "accepted": false,
+        "baseline_margin": -1.9,
+        "baseline_score": 2.0,
+        "evidence": "temporal_hypergraph",
+        "score": 0.1,
+        "sources": [
+          "distractor",
+          "driver"
+        ],
+        "target": "response",
+        "time_offsets": [
+          -1,
+          1
+        ]
+      }
+    ],
+    "experiment_sha256": "dec07b0556da3fd5c22a5c1c00d9119316f8f523339945238e9b3a98c9aae2e2",
+    "hot_patch_permitted": false,
+    "production_claim_permitted": false,
+    "required_baseline_margin": 0.1,
+    "research_only": true,
+    "schema": "scpn_temporal_causal_hypergraph_experiment_v1"
+  }
+]
+```
+
 ### `meta_transfer_corpus`
 
 - Suite: `meta_transfer_audit_corpus_quality`
-- Wall time (s): `0.001993062032852322`
-- Steps/s: `3010.44317793423`
+- Wall time (s): `0.002050206996500492`
+- Steps/s: `2926.533764757133`
 
 | Metric | Value |
 |--------|-------|
@@ -1867,8 +2020,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `meta_transfer`
 
 - Suite: `meta_transfer_package_manifest_quality`
-- Wall time (s): `0.00037746602902188897`
-- Steps/s: `10596.98010537537`
+- Wall time (s): `0.0004334470140747726`
+- Steps/s: `9228.348264293205`
 
 | Metric | Value |
 |--------|-------|
@@ -1944,8 +2097,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `plugin_ecosystem`
 
 - Suite: `plugin_ecosystem_catalog_quality`
-- Wall time (s): `0.0002500229747965932`
-- Steps/s: `11998.89731109974`
+- Wall time (s): `0.00028747000033035874`
+- Steps/s: `10435.871557214383`
 
 | Metric | Value |
 |--------|-------|
@@ -2011,8 +2164,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `kuramoto`
 
 - Suite: `kuramoto_reference_strogatz_2000`
-- Wall time (s): `0.13324306695722044`
-- Steps/s: `7505.080923430441`
+- Wall time (s): `0.13407328497851267`
+- Steps/s: `7458.607433690206`
 
 | Metric | Value |
 |--------|-------|
@@ -2023,8 +2176,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `stuart_landau`
 
 - Suite: `stuart_landau_reference_pikovsky_2001`
-- Wall time (s): `0.25500432099215686`
-- Steps/s: `3921.50217733274`
+- Wall time (s): `0.2681467410293408`
+- Steps/s: `3729.3013376231165`
 
 | Metric | Value |
 |--------|-------|
@@ -2035,8 +2188,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `petri_reachability`
 
 - Suite: `petri_net_reachability`
-- Wall time (s): `0.0199123959755525`
-- Steps/s: `251099.86794852634`
+- Wall time (s): `0.01973997103050351`
+- Steps/s: `253293.17820546284`
 
 | Metric | Value |
 |--------|-------|

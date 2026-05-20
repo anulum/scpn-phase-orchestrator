@@ -40,6 +40,7 @@ from scpn_phase_orchestrator.supervisor.causal import (
     CausalInterventionEngine,
     CounterfactualRollout,
     InterventionParameters,
+    build_temporal_causal_hypergraph_experiment,
     learn_causal_graph,
 )
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
@@ -230,6 +231,7 @@ __all__ = [
     "build_intergenerational_policy_inheritance",
     "build_morphogenetic_field_snapshot",
     "build_sheaf_obstruction_summary",
+    "build_temporal_causal_hypergraph_experiment",
     "render_morphogenetic_field_svg",
     "dry_run_policy_rules",
     "export_petri_net_prism",

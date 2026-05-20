@@ -17,7 +17,9 @@ Outputs are audit-ready records and attribution summaries, not live actuation.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from hashlib import sha256
 from numbers import Integral, Real
 from typing import TypeAlias
 
@@ -36,6 +38,7 @@ __all__ = [
     "CausalInterventionEngine",
     "CounterfactualRollout",
     "InterventionParameters",
+    "build_temporal_causal_hypergraph_experiment",
     "learn_causal_graph",
 ]
 
@@ -417,6 +420,71 @@ def learn_causal_graph(
     )
 
 
+def build_temporal_causal_hypergraph_experiment(
+    trace: dict[str, list[float]],
+    candidate_hyperedges: list[dict[str, object]] | tuple[dict[str, object], ...],
+    *,
+    lag: int = 1,
+    min_abs_weight: float = 1e-6,
+    required_baseline_margin: float = 0.0,
+) -> dict[str, object]:
+    """Build a research-only temporal-causal hypergraph experiment manifest.
+
+    The manifest compares candidate time-symmetric hyperedges against the
+    conventional lagged causal graph baseline. It never permits production
+    claims, hot-patching, or actuation; baseline failure keeps all candidates
+    blocked as research evidence only.
+    """
+
+    if not np.isfinite(required_baseline_margin) or required_baseline_margin < 0.0:
+        raise ValueError("required_baseline_margin must be finite and non-negative")
+    baseline = learn_causal_graph(trace, lag=lag, min_abs_weight=min_abs_weight)
+    candidates = _validated_temporal_hyperedges(candidate_hyperedges)
+    baseline_score = _baseline_score(baseline)
+    accepted: list[dict[str, object]] = []
+    evaluated: list[dict[str, object]] = []
+    for candidate in candidates:
+        advantage = float(candidate["score"]) - baseline_score
+        record = {
+            **candidate,
+            "baseline_score": baseline_score,
+            "baseline_margin": advantage,
+            "accepted": advantage > required_baseline_margin,
+        }
+        evaluated.append(record)
+        if record["accepted"]:
+            accepted.append(record)
+
+    blocked_reasons: list[str] = []
+    baseline_beaten = bool(accepted)
+    if not baseline_beaten:
+        blocked_reasons.append("conventional_causal_baseline_not_beaten")
+    manifest: dict[str, object] = {
+        "schema": "scpn_temporal_causal_hypergraph_experiment_v1",
+        "research_only": True,
+        "production_claim_permitted": False,
+        "hot_patch_permitted": False,
+        "actuation_permitted": False,
+        "baseline_beaten": baseline_beaten,
+        "blocked_reasons": blocked_reasons,
+        "required_baseline_margin": float(required_baseline_margin),
+        "baseline": {
+            "edge_count": len(baseline.edges),
+            "node_count": len(baseline.nodes),
+            "score": baseline_score,
+            "lag": baseline.lag,
+            "min_abs_weight": baseline.min_abs_weight,
+            "edges": [edge.to_audit_record() for edge in baseline.edges],
+        },
+        "candidate_hyperedge_count": len(evaluated),
+        "accepted_hyperedge_count": len(accepted),
+        "evaluated_hyperedges": evaluated,
+        "accepted_hyperedges": accepted,
+    }
+    manifest["experiment_sha256"] = _stable_json_hash(manifest)
+    return manifest
+
+
 def _apply_matrix_delta(matrix: FloatArray, scope: str, value: float) -> None:
     if not isinstance(scope, str):
         raise ValueError(f"unsupported causal intervention scope {scope!r}")
@@ -463,6 +531,60 @@ def _validate_causal_trace(
         data = np.asarray(values, dtype=np.float64)
         if not np.all(np.isfinite(data)):
             raise ValueError(f"trace signal {name!r} contains NaN/Inf")
+
+
+def _validated_temporal_hyperedges(
+    candidate_hyperedges: list[dict[str, object]] | tuple[dict[str, object], ...],
+) -> list[dict[str, object]]:
+    if not isinstance(candidate_hyperedges, list | tuple) or not candidate_hyperedges:
+        raise ValueError("candidate_hyperedges must be a non-empty sequence")
+    records: list[dict[str, object]] = []
+    for index, candidate in enumerate(candidate_hyperedges):
+        if not isinstance(candidate, dict):
+            raise ValueError(f"candidate_hyperedges[{index}] must be a mapping")
+        sources = candidate.get("sources")
+        if not isinstance(sources, list) or not sources:
+            raise ValueError(f"candidate_hyperedges[{index}].sources must be a list")
+        if not all(isinstance(source, str) and source for source in sources):
+            raise ValueError("candidate_hyperedge sources must be non-empty strings")
+        target = candidate.get("target")
+        if not isinstance(target, str) or not target:
+            raise ValueError(f"candidate_hyperedges[{index}].target is required")
+        offsets = candidate.get("time_offsets")
+        if not isinstance(offsets, list) or not offsets:
+            raise ValueError(
+                f"candidate_hyperedges[{index}].time_offsets must be a list"
+            )
+        if not all(
+            isinstance(offset, int) and not isinstance(offset, bool)
+            for offset in offsets
+        ):
+            raise ValueError("candidate_hyperedge time_offsets must be integers")
+        score = _require_finite_real(candidate.get("score", 0.0), name="score")
+        records.append(
+            {
+                "sources": list(sources),
+                "target": target,
+                "time_offsets": list(offsets),
+                "score": float(score),
+                "evidence": str(candidate.get("evidence", "temporal_hypergraph")),
+            }
+        )
+    records.sort(
+        key=lambda item: (item["target"], item["sources"], item["time_offsets"])
+    )
+    return records
+
+
+def _baseline_score(graph: CausalGraphEstimate) -> float:
+    if not graph.edges:
+        return 0.0
+    return float(max(abs(edge.weight) * edge.confidence for edge in graph.edges))
+
+
+def _stable_json_hash(payload: object) -> str:
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _require_positive_int(

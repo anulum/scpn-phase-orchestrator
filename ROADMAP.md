@@ -787,6 +787,15 @@ Speculative research watchlist:
     summaries, deterministic lineage hashes, accepted and rejected child
     candidates, and review-only gating.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
+  - Research-only temporal hypergraph manifests are in place:
+    `build_temporal_causal_hypergraph_experiment()` compares candidate
+    time-symmetric hyperedges against the conventional lagged causal graph
+    baseline, records baseline-beaten or blocked evidence, and disables
+    production claims, hot patches, and actuation.
+  - Temporal-causal hypergraph benchmark evidence is in place:
+    `benchmark_temporal_causal_hypergraph_experiment_gate()` covers passing and
+    baseline-blocked candidates, baseline edge evidence, deterministic hashes,
+    and research-only gating.
 - Intergenerational policy inheritance: signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches.
   - Signed inheritance manifests are in place:
     `build_intergenerational_policy_inheritance()` materialises inherited

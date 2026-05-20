@@ -65,6 +65,9 @@ from scpn_phase_orchestrator.supervisor.alignment import (
     ValueConstraint,
     calibrate_value_alignment_replay_evidence,
 )
+from scpn_phase_orchestrator.supervisor.causal import (
+    build_temporal_causal_hypergraph_experiment,
+)
 from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalSafetyProperty,
     audit_formal_checker_availability,
@@ -273,6 +276,14 @@ class IntergenerationalInheritanceThresholds(NamedTuple):
     min_policy_gene_count: int
     min_fitness_score: float
     require_review_only: bool
+    require_deterministic_hash: bool
+
+
+class TemporalCausalHypergraphThresholds(NamedTuple):
+    min_manifest_count: int
+    min_accepted_hyperedge_count: int
+    min_baseline_edge_count: int
+    require_research_only: bool
     require_deterministic_hash: bool
 
 
@@ -2541,6 +2552,116 @@ def benchmark_intergenerational_policy_inheritance_gate() -> (
     }
 
 
+def benchmark_temporal_causal_hypergraph_experiment_gate() -> (
+    dict[str, float | int | str]
+):
+    """Benchmark research-only temporal-causal hypergraph baseline gates."""
+    thresholds = TemporalCausalHypergraphThresholds(
+        min_manifest_count=2,
+        min_accepted_hyperedge_count=1,
+        min_baseline_edge_count=1,
+        require_research_only=True,
+        require_deterministic_hash=True,
+    )
+    trace = {
+        "driver": [0.0, 1.0, 2.0, 3.0, 4.0],
+        "response": [0.0, 0.0, 2.0, 6.0, 12.0],
+        "distractor": [1.0, 1.0, 1.0, 1.0, 1.0],
+    }
+    passing_candidates = [
+        {
+            "sources": ["driver", "response"],
+            "target": "response",
+            "time_offsets": [-1, 0],
+            "score": 2.6,
+        }
+    ]
+    blocked_candidates = [
+        {
+            "sources": ["distractor", "driver"],
+            "target": "response",
+            "time_offsets": [-1, 1],
+            "score": 0.1,
+        }
+    ]
+
+    t0 = time.perf_counter()
+    passing = build_temporal_causal_hypergraph_experiment(
+        trace,
+        passing_candidates,
+        lag=1,
+        min_abs_weight=0.1,
+        required_baseline_margin=0.1,
+    )
+    blocked = build_temporal_causal_hypergraph_experiment(
+        trace,
+        blocked_candidates,
+        lag=1,
+        min_abs_weight=0.1,
+        required_baseline_margin=0.1,
+    )
+    repeated = build_temporal_causal_hypergraph_experiment(
+        trace,
+        passing_candidates,
+        lag=1,
+        min_abs_weight=0.1,
+        required_baseline_margin=0.1,
+    )
+    elapsed = time.perf_counter() - t0
+
+    manifests = [passing, blocked]
+    accepted_hyperedge_count = sum(
+        int(manifest["accepted_hyperedge_count"]) for manifest in manifests
+    )
+    min_baseline_edge_count = min(
+        int(manifest["baseline"]["edge_count"]) for manifest in manifests
+    )
+    research_only = int(
+        all(
+            manifest["research_only"] is True
+            and manifest["production_claim_permitted"] is False
+            and manifest["actuation_permitted"] is False
+            for manifest in manifests
+        )
+    )
+    deterministic_hash = int(
+        passing["experiment_sha256"] == repeated["experiment_sha256"]
+    )
+    acceptance_passed = int(
+        len(manifests) >= thresholds.min_manifest_count
+        and accepted_hyperedge_count >= thresholds.min_accepted_hyperedge_count
+        and min_baseline_edge_count >= thresholds.min_baseline_edge_count
+        and research_only == int(thresholds.require_research_only)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "temporal_causal_hypergraph_experiment_gate",
+        "manifest_count": len(manifests),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(manifests) / elapsed,
+        "accepted_hyperedge_count": accepted_hyperedge_count,
+        "min_baseline_edge_count": min_baseline_edge_count,
+        "research_only": research_only,
+        "deterministic_hash": deterministic_hash,
+        "passing_experiment_sha256": str(passing["experiment_sha256"]),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_accepted_hyperedge_count": (
+                    thresholds.min_accepted_hyperedge_count
+                ),
+                "min_baseline_edge_count": thresholds.min_baseline_edge_count,
+                "min_manifest_count": thresholds.min_manifest_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_research_only": thresholds.require_research_only,
+            },
+            sort_keys=True,
+        ),
+        "experiment_manifests_json": json.dumps(manifests, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -3601,6 +3722,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "autopoietic_lineage": benchmark_autopoietic_lineage_sandbox_gate(),
             "intergenerational_inheritance": (
                 benchmark_intergenerational_policy_inheritance_gate()
+            ),
+            "temporal_causal_hypergraph": (
+                benchmark_temporal_causal_hypergraph_experiment_gate()
             ),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
