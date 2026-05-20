@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from importlib import metadata
 from typing import Any, Literal, TypeAlias
@@ -21,6 +23,7 @@ __all__ = [
     "PluginCompatibilityReport",
     "PluginManifest",
     "build_plugin_marketplace_catalog",
+    "build_rust_plugin_runtime_handoff",
     "build_rust_plugin_registry",
     "compatibility_report",
     "discover_plugin_manifests",
@@ -299,6 +302,105 @@ def build_rust_plugin_registry(
     }
 
 
+def build_rust_plugin_runtime_handoff(
+    manifests: tuple[PluginManifest, ...],
+    *,
+    include_incompatible: bool = False,
+) -> dict[str, object]:
+    """Build a guarded metadata handoff for a future Rust runtime loader.
+
+    The handoff is intentionally non-executing: it groups capabilities by kind,
+    hashes every target record, carries compatibility state, and records that
+    native/plugin loading remains disabled. Rust can consume this as a stable
+    preflight contract before any future loader is allowed to resolve or call
+    implementation targets.
+    """
+    registry = build_rust_plugin_registry(
+        manifests,
+        include_incompatible=include_incompatible,
+    )
+    capabilities = registry["capabilities"]
+    if not isinstance(capabilities, list):
+        raise TypeError("rust plugin registry payload is malformed")
+
+    dispatch_groups: dict[str, list[dict[str, object]]] = {
+        kind: [] for kind in sorted(_VALID_KINDS)
+    }
+    blocked: list[dict[str, object]] = []
+    target_hashes: dict[str, str] = {}
+    for capability in capabilities:
+        if not isinstance(capability, dict):
+            raise TypeError("rust plugin capability payload is malformed")
+        kind = str(capability["kind"])
+        if kind not in _VALID_KINDS:
+            raise TypeError("rust plugin capability kind is malformed")
+        record = {
+            "plugin": capability["plugin"],
+            "plugin_version": capability["plugin_version"],
+            "package": capability["package"],
+            "kind": capability["kind"],
+            "name": capability["name"],
+            "target": capability["target"],
+            "version": capability["version"],
+            "channels": capability["channels"],
+            "knobs": capability["knobs"],
+            "compatible": capability["compatible"],
+            "loading_permitted": False,
+            "load_policy": "metadata_only_review",
+        }
+        target_hash = _record_hash(record)
+        record["target_hash"] = target_hash
+        target_hashes[
+            (
+                f"{record['plugin']}:{record['kind']}:"
+                f"{record['name']}:{record['version']}"
+            )
+        ] = target_hash
+        if record["compatible"] is True:
+            dispatch_groups[kind].append(record)
+        else:
+            blocked.append(
+                {
+                    **record,
+                    "blocked_reason": "incompatible_manifest",
+                }
+            )
+
+    for records in dispatch_groups.values():
+        records.sort(
+            key=lambda item: (
+                str(item["plugin"]),
+                str(item["name"]),
+                str(item["version"]),
+            )
+        )
+    blocked.sort(
+        key=lambda item: (
+            str(item["plugin"]),
+            str(item["kind"]),
+            str(item["name"]),
+            str(item["version"]),
+        )
+    )
+    handoff = {
+        "schema": "scpn_rust_plugin_runtime_handoff_v1",
+        "registry_schema": registry["schema"],
+        "spo_version": registry["spo_version"],
+        "include_incompatible": include_incompatible,
+        "loading_permitted": False,
+        "load_policy": "metadata_only_review",
+        "dispatch_groups": dispatch_groups,
+        "target_hashes": dict(sorted(target_hashes.items())),
+        "compatible_capability_count": sum(
+            len(records) for records in dispatch_groups.values()
+        ),
+        "blocked_capability_count": len(blocked),
+        "blocked_capabilities": blocked,
+    }
+    handoff["handoff_hash"] = _record_hash(handoff)
+    return handoff
+
+
 def _require_identifier(value: str, label: str) -> None:
     _require_non_empty(value, label)
     if any(char.isspace() for char in value):
@@ -332,3 +434,8 @@ def _capability_counts(
         for capability in report.manifest.capabilities:
             counts[capability.kind] += 1
     return counts
+
+
+def _record_hash(record: dict[str, object]) -> str:
+    encoded = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()

@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginManifest,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
+    build_rust_plugin_runtime_handoff,
     compatibility_report,
     discover_plugin_manifests,
     validate_plugin_manifest,
@@ -630,6 +631,80 @@ class TestPluginMarketplaceCatalog:
             "actuator",
             "bridge",
         ]
+
+    def test_rust_runtime_handoff_groups_compatible_capabilities(self) -> None:
+        handoff = build_rust_plugin_runtime_handoff((_manifest(),))
+        repeated = build_rust_plugin_runtime_handoff((_manifest(),))
+        dispatch_groups = cast(
+            "dict[str, list[dict[str, Any]]]",
+            handoff["dispatch_groups"],
+        )
+        target_hashes = cast("dict[str, str]", handoff["target_hashes"])
+
+        assert handoff["schema"] == "scpn_rust_plugin_runtime_handoff_v1"
+        assert handoff["registry_schema"] == "scpn_rust_plugin_registry_v1"
+        assert handoff["loading_permitted"] is False
+        assert handoff["load_policy"] == "metadata_only_review"
+        assert handoff["compatible_capability_count"] == 3
+        assert handoff["blocked_capability_count"] == 0
+        assert handoff["blocked_capabilities"] == []
+        assert set(dispatch_groups) == {
+            "actuator",
+            "bridge",
+            "domainpack",
+            "extractor",
+            "monitor",
+        }
+        assert [record["name"] for record in dispatch_groups["actuator"]] == [
+            "breaker"
+        ]
+        assert [record["name"] for record in dispatch_groups["extractor"]] == ["pmu"]
+        assert [record["name"] for record in dispatch_groups["monitor"]] == [
+            "frequency_drift"
+        ]
+        assert dispatch_groups["bridge"] == []
+        assert all(
+            record["loading_permitted"] is False
+            for records in dispatch_groups.values()
+            for record in records
+        )
+        assert sorted(target_hashes) == [
+            "grid_pack:actuator:breaker:0.1.0",
+            "grid_pack:extractor:pmu:0.1.0",
+            "grid_pack:monitor:frequency_drift:0.1.0",
+        ]
+        assert all(len(value) == 64 for value in target_hashes.values())
+        assert len(str(handoff["handoff_hash"])) == 64
+        assert handoff["handoff_hash"] == repeated["handoff_hash"]
+
+    def test_rust_runtime_handoff_keeps_incompatible_capabilities_blocked(
+        self,
+    ) -> None:
+        invalid = PluginManifest(
+            name="bad_extractor",
+            version="0.1.0",
+            package="bad_extractor",
+            capabilities=(
+                PluginCapability(
+                    kind="extractor",
+                    name="empty",
+                    target="bad.extractors:Empty",
+                ),
+            ),
+        )
+
+        handoff = build_rust_plugin_runtime_handoff(
+            (_manifest(), invalid),
+            include_incompatible=True,
+        )
+        blocked = cast("list[dict[str, Any]]", handoff["blocked_capabilities"])
+
+        assert handoff["compatible_capability_count"] == 3
+        assert handoff["blocked_capability_count"] == 1
+        assert blocked[0]["plugin"] == "bad_extractor"
+        assert blocked[0]["compatible"] is False
+        assert blocked[0]["loading_permitted"] is False
+        assert blocked[0]["blocked_reason"] == "incompatible_manifest"
 
     @pytest.mark.parametrize(
         ("plugins_payload", "diagnostic"),

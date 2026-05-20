@@ -414,6 +414,11 @@ sessions do not treat them as abstract research labels.
   - Rust-facing registry export is in place: `build_rust_plugin_registry()` and
     `spo plugins catalog --rust-registry` emit flattened capability JSON for
     Rust-side dispatchers without importing plugin implementation targets.
+  - Guarded Rust runtime handoff manifests are in place:
+    `build_rust_plugin_runtime_handoff()` groups compatible capabilities for
+    Rust dispatch, records deterministic target hashes, carries blocked
+    incompatible capabilities for review, and keeps plugin loading disabled by
+    default.
   - Monitor capability support is in place: manifests, marketplace counts,
     compatibility reports, Rust-facing registry records, and the reference
     benchmark gate now require monitor metadata with declared channels.
