@@ -18,6 +18,7 @@ from benchmarks.reference_suite import (
     benchmark_bayesian_posterior_fit_quality,
     benchmark_domain_formal_safety_exports,
     benchmark_evolutionary_supervisor_search,
+    benchmark_federated_meta_orchestrator,
     benchmark_formal_export_artifact_quality,
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_hybrid_entanglement_order_parameter_gate,
@@ -221,6 +222,60 @@ def test_evolutionary_supervisor_search_reports_thresholds_and_records() -> None
         "accepted_for_review",
         "rejected",
     }
+
+
+def test_federated_meta_orchestrator_benchmark_shape() -> None:
+    out = benchmark_federated_meta_orchestrator()
+
+    assert out["suite"] == "federated_meta_orchestrator"
+    assert out["node_count"] == 3
+    assert out["accepted_node_count"] == 3
+    assert out["rejected_node_count"] == 0
+    assert out["policy_key_count"] == 2
+    assert out["raw_time_series_received"] == 0
+    assert out["raw_field_count"] == 0
+    assert out["non_actuating"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["operator_review_required"] == 1
+    assert out["live_transport_disabled"] == 1
+    assert out["raw_data_export_disabled"] == 1
+    assert out["actuation_disabled"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["aggregate_hash"])) == 64
+    assert len(str(out["report_hash"])) == 64
+    assert len(str(out["federated_meta_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_federated_meta_orchestrator_reports_thresholds_and_records() -> None:
+    out = benchmark_federated_meta_orchestrator()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    record = json.loads(str(out["federated_record_json"]))
+
+    assert thresholds == {
+        "max_privacy_budget_spent": 1.0,
+        "max_rejected_node_count": 1,
+        "min_accepted_node_count": 3,
+        "min_node_count": 3,
+        "min_policy_key_count": 2,
+        "require_deterministic_hash": True,
+        "require_execution_disabled": True,
+        "require_live_transport_disabled": True,
+        "require_no_raw_time_series": True,
+        "require_non_actuating": True,
+        "require_operator_review": True,
+        "require_raw_data_export_disabled": True,
+    }
+    assert record["raw_time_series_received"] is False
+    assert record["raw_data_export_permitted"] is False
+    assert record["live_transport_permitted"] is False
+    assert record["actuation_permitted"] is False
+    assert len(record["node_updates"]) == int(out["node_count"])
+    assert all("raw_time_series" not in node for node in record["node_updates"])
+    assert all("time_series" not in node for node in record["node_updates"])
+    assert all("samples" not in node for node in record["node_updates"])
+    assert len(record["aggregate_delta"]) == thresholds["min_policy_key_count"]
 
 
 def test_meta_transfer_package_manifest_quality_benchmark_shape() -> None:
@@ -1372,6 +1427,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
     assert set(out["benchmarks"].keys()) == {
         "auto_binding",
         "evolutionary_supervisor_search",
+        "federated_meta_orchestrator",
         "autopoietic_lineage",
         "bayesian_backends",
         "bayesian_posterior",

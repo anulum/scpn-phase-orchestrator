@@ -423,6 +423,21 @@ class EvolutionarySupervisorSearchThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class FederatedMetaOrchestratorThresholds(NamedTuple):
+    min_node_count: int
+    min_accepted_node_count: int
+    min_policy_key_count: int
+    max_rejected_node_count: int
+    max_privacy_budget_spent: float
+    require_non_actuating: bool
+    require_execution_disabled: bool
+    require_operator_review: bool
+    require_live_transport_disabled: bool
+    require_raw_data_export_disabled: bool
+    require_no_raw_time_series: bool
+    require_deterministic_hash: bool
+
+
 class ReferenceSuiteResult(TypedDict):
     metadata: dict[str, str]
     benchmarks: dict[str, BenchmarkRecord]
@@ -3395,6 +3410,162 @@ def benchmark_evolutionary_supervisor_search() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_federated_meta_orchestrator() -> dict[str, float | int | str]:
+    """Benchmark offline federated aggregation and privacy gate evidence."""
+    thresholds = FederatedMetaOrchestratorThresholds(
+        min_node_count=3,
+        min_accepted_node_count=3,
+        min_policy_key_count=2,
+        max_rejected_node_count=1,
+        max_privacy_budget_spent=1.0,
+        require_non_actuating=True,
+        require_execution_disabled=True,
+        require_operator_review=True,
+        require_live_transport_disabled=True,
+        require_raw_data_export_disabled=True,
+        require_no_raw_time_series=True,
+        require_deterministic_hash=True,
+    )
+    from scpn_phase_orchestrator.supervisor.federated import (
+        build_federated_meta_orchestrator_manifest,
+    )
+
+    updates = (
+        {
+            "node_id": "site-a",
+            "policy_delta": {"K": 0.10, "alpha": -0.02},
+            "sample_count": 120,
+            "local_loss": 0.21,
+            "previous_audit_hash": "a" * 64,
+            "privacy_epsilon_spent": 0.8,
+        },
+        {
+            "node_id": "site-b",
+            "policy_delta": {"K": 0.04, "alpha": -0.01},
+            "sample_count": 80,
+            "local_loss": 0.24,
+            "previous_audit_hash": "b" * 64,
+            "privacy_epsilon_spent": 0.6,
+        },
+        {
+            "node_id": "site-c",
+            "policy_delta": {"K": 0.08, "alpha": -0.03},
+            "sample_count": 100,
+            "local_loss": 0.19,
+            "previous_audit_hash": "c" * 64,
+            "privacy_epsilon_spent": 0.7,
+        },
+    )
+    t0 = time.perf_counter()
+    report = build_federated_meta_orchestrator_manifest(
+        updates,
+        required_policy_keys=("K", "alpha"),
+        clipping_norm=0.2,
+        epsilon=1.0,
+        delta=1e-6,
+        min_node_count=3,
+    )
+    repeated = build_federated_meta_orchestrator_manifest(
+        updates,
+        required_policy_keys=("K", "alpha"),
+        clipping_norm=0.2,
+        epsilon=1.0,
+        delta=1e-6,
+        min_node_count=3,
+    )
+    elapsed = time.perf_counter() - t0
+    record = report.to_audit_record()
+    repeated_record = repeated.to_audit_record()
+    node_records = record["node_updates"]
+    if not isinstance(node_records, list):
+        raise TypeError("federated node_updates must be a list")
+    deterministic_hash = int(
+        record["report_hash"] == repeated_record["report_hash"]
+        and record["aggregate_hash"] == repeated_record["aggregate_hash"]
+    )
+    raw_field_count = sum(
+        int(
+            isinstance(node_record, Mapping)
+            and any(
+                field in node_record
+                for field in ("raw_time_series", "time_series", "samples")
+            )
+        )
+        for node_record in node_records
+    )
+    aggregate_delta = record["aggregate_delta"]
+    if not isinstance(aggregate_delta, list):
+        raise TypeError("aggregate_delta must be a list")
+    policy_key_count = len(aggregate_delta)
+    acceptance_passed = int(
+        len(node_records) >= thresholds.min_node_count
+        and int(record["accepted_node_count"]) >= thresholds.min_accepted_node_count
+        and int(record["rejected_node_count"]) <= thresholds.max_rejected_node_count
+        and policy_key_count >= thresholds.min_policy_key_count
+        and float(record["privacy_budget_spent"]) <= thresholds.max_privacy_budget_spent
+        and int(record["non_actuating"] is True)
+        == int(thresholds.require_non_actuating)
+        and int(record["execution_disabled"] is True)
+        == int(thresholds.require_execution_disabled)
+        and int(record["operator_review_required"] is True)
+        == int(thresholds.require_operator_review)
+        and int(record["live_transport_permitted"] is False)
+        == int(thresholds.require_live_transport_disabled)
+        and int(record["raw_data_export_permitted"] is False)
+        == int(thresholds.require_raw_data_export_disabled)
+        and int(raw_field_count == 0) == int(thresholds.require_no_raw_time_series)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+    return {
+        "suite": "federated_meta_orchestrator",
+        "wall_time_s": elapsed,
+        "steps_per_second": len(node_records) / elapsed if elapsed > 0.0 else 0.0,
+        "node_count": len(node_records),
+        "accepted_node_count": int(record["accepted_node_count"]),
+        "rejected_node_count": int(record["rejected_node_count"]),
+        "policy_key_count": policy_key_count,
+        "total_sample_count": int(record["total_sample_count"]),
+        "privacy_budget_spent": float(record["privacy_budget_spent"]),
+        "privacy_budget_remaining": float(record["privacy_budget_remaining"]),
+        "raw_time_series_received": int(record["raw_time_series_received"] is True),
+        "raw_field_count": raw_field_count,
+        "non_actuating": int(record["non_actuating"] is True),
+        "execution_disabled": int(record["execution_disabled"] is True),
+        "operator_review_required": int(record["operator_review_required"] is True),
+        "live_transport_disabled": int(record["live_transport_permitted"] is False),
+        "raw_data_export_disabled": int(record["raw_data_export_permitted"] is False),
+        "actuation_disabled": int(record["actuation_permitted"] is False),
+        "deterministic_hash": deterministic_hash,
+        "claim_boundary": str(record["claim_boundary"]),
+        "aggregate_hash": str(record["aggregate_hash"]),
+        "report_hash": str(record["report_hash"]),
+        "federated_meta_sha256": _stable_record_hash(record),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "max_privacy_budget_spent": thresholds.max_privacy_budget_spent,
+                "max_rejected_node_count": thresholds.max_rejected_node_count,
+                "min_accepted_node_count": thresholds.min_accepted_node_count,
+                "min_node_count": thresholds.min_node_count,
+                "min_policy_key_count": thresholds.min_policy_key_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_live_transport_disabled": (
+                    thresholds.require_live_transport_disabled
+                ),
+                "require_no_raw_time_series": thresholds.require_no_raw_time_series,
+                "require_non_actuating": thresholds.require_non_actuating,
+                "require_operator_review": thresholds.require_operator_review,
+                "require_raw_data_export_disabled": (
+                    thresholds.require_raw_data_export_disabled
+                ),
+            },
+            sort_keys=True,
+        ),
+        "federated_record_json": json.dumps(record, sort_keys=True),
+    }
+
+
 def benchmark_topos_semantic_binding_gate() -> dict[str, float | int | str]:
     """Benchmark categorical proof-obligation surfaces for semantic binding."""
     thresholds = ToposSemanticBindingThresholds(
@@ -5489,6 +5660,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "evolutionary_supervisor_search": (
                 benchmark_evolutionary_supervisor_search()
             ),
+            "federated_meta_orchestrator": benchmark_federated_meta_orchestrator(),
             "topos_semantic_binding": benchmark_topos_semantic_binding_gate(),
             "multiverse_counterfactual": benchmark_multiverse_counterfactual_gate(),
             "hybrid_entanglement_order": (

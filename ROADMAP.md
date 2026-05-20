@@ -702,6 +702,16 @@ Speculative research watchlist:
   - Remaining scope: additional heterogeneous-domain demos and deeper
     obstruction hardening.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
+  - Foundation is in place: deterministic review-only aggregation validates
+    node-local policy deltas, clips update norms, rejects raw time-series
+    fields, accounts privacy-budget spend, computes sample-weighted aggregate
+    deltas, and emits hashed audit evidence.
+  - Reference-suite gates enforce node coverage, accepted/rejected update
+    counts, policy-key coverage, privacy-budget bounds, deterministic hashes,
+    operator review, non-actuation, disabled execution, disabled live
+    transport, and disabled raw-data export.
+  - Remaining scope: live distributed transport, secure aggregation protocol,
+    and production differential-privacy noise service integration.
 - Byzantine-fault-tolerant meta-orchestrator:
   offline three-node BFT consensus manifests verify signed policy proposals,
   hash-linked audit parents, quorum winners, rejected nodes, and non-actuating

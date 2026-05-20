@@ -55,6 +55,12 @@ from scpn_phase_orchestrator.supervisor.evolutionary_search import (
     EvolutionarySearchReport,
     run_offline_evolutionary_supervisor_search,
 )
+from scpn_phase_orchestrator.supervisor.federated import (
+    FederatedAggregationConfig,
+    FederatedNodeUpdate,
+    FederatedPolicyAggregationReport,
+    build_federated_meta_orchestrator_manifest,
+)
 from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalCheckerAvailability,
     FormalCheckerCommand,
@@ -214,6 +220,9 @@ __all__ = [
     "EvolutionaryCandidate",
     "EvolutionarySearchConfig",
     "EvolutionarySearchReport",
+    "FederatedAggregationConfig",
+    "FederatedNodeUpdate",
+    "FederatedPolicyAggregationReport",
     "FEPHierarchyAssessment",
     "FEPHierarchyChildAssessment",
     "FEPPredictionAssessment",
@@ -292,6 +301,7 @@ __all__ = [
     "build_autopoietic_lineage_sandbox",
     "build_evolutionary_supervisor_search_examples",
     "build_evolutionary_supervisor_search_examples_from_worker_a_api",
+    "build_federated_meta_orchestrator_manifest",
     "build_formal_verification_package",
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
