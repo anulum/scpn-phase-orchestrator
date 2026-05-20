@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -63,16 +63,20 @@ class RetrievalEvidence:
     matched_terms: list[str]
     summary: str
     source: str = "domainpack"
+    rank: int = 0
+    ranking_features: dict[str, float] = field(default_factory=dict)
 
     def to_audit_record(self) -> dict[str, Any]:
         """Return a JSON-safe retrieval evidence record."""
         return {
             "domainpack": self.domainpack,
             "path": self.path,
+            "rank": self.rank,
             "score": self.score,
             "matched_terms": self.matched_terms,
             "summary": self.summary,
             "source": self.source,
+            "ranking_features": dict(sorted(self.ranking_features.items())),
         }
 
 
@@ -517,10 +521,25 @@ def _retrieve_local_evidence(
         docs_root,
         limit=limit_per_source,
     )
-    return sorted(
-        [*domainpack_evidence, *docs_evidence],
-        key=lambda item: (-item.score, item.source, item.domainpack),
+    return _rank_retrieval_evidence([*domainpack_evidence, *docs_evidence])
+
+
+def _rank_retrieval_evidence(
+    evidence: list[RetrievalEvidence],
+) -> list[RetrievalEvidence]:
+    ranked = sorted(
+        evidence,
+        key=lambda item: (
+            -item.score,
+            -item.ranking_features.get("source_priority", 0.0),
+            -item.ranking_features.get("matched_term_count", 0.0),
+            -item.ranking_features.get("name_match_count", 0.0),
+            item.source,
+            item.domainpack,
+            item.path,
+        ),
     )
+    return [replace(item, rank=index) for index, item in enumerate(ranked, start=1)]
 
 
 def _retrieve_domainpack_evidence(
@@ -567,6 +586,17 @@ def _retrieve_domainpack_evidence(
                 matched_terms=matched[:12],
                 summary=_evidence_summary(domain_dir.name, matched),
                 source="domainpack",
+                ranking_features={
+                    "matched_term_count": float(len(matched)),
+                    "name_match_count": float(name_bonus),
+                    "phrase_match": float(phrase_bonus > 0),
+                    "prompt_term_count": float(len(prompt_terms)),
+                    "source_priority": 1.0,
+                    "term_density": round(
+                        len(matched) / max(len(corpus_terms), 1),
+                        6,
+                    ),
+                },
             )
         )
 
@@ -608,6 +638,17 @@ def _retrieve_docs_evidence(
                 matched_terms=matched[:12],
                 summary=_evidence_summary(doc_path.stem, matched),
                 source="docs",
+                ranking_features={
+                    "matched_term_count": float(len(matched)),
+                    "name_match_count": float(title_bonus),
+                    "phrase_match": 0.0,
+                    "prompt_term_count": float(len(prompt_terms)),
+                    "source_priority": 0.75,
+                    "term_density": round(
+                        len(matched) / max(len(corpus_terms), 1),
+                        6,
+                    ),
+                },
             )
         )
     return sorted(scored, key=lambda item: (-item.score, item.path))[:limit]

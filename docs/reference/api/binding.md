@@ -435,9 +435,11 @@ binding is passed through `validate_binding_spec()` and a short
 Local retrieval scans existing `domainpacks/*/binding_spec.yaml`, domainpack
 README content, and long-form public docs under `docs/`. Each evidence record
 is tagged with `source: domainpack` or `source: docs`, records matched terms,
-and contributes the top score to generated confidence factors. Domainpack
-retrieval can be disabled with `retrieval_root=None`; docs retrieval can be
-disabled with `docs_root=None`.
+and contributes the top score to generated confidence factors. Retrieval
+records now also carry a deterministic `rank` plus `ranking_features` such as
+matched-term count, prompt-term count, source priority, name/phrase match
+evidence, and term density. Domainpack retrieval can be disabled with
+`retrieval_root=None`; docs retrieval can be disabled with `docs_root=None`.
 
 The generated review notebook also carries compiler-side execution evidence.
 Before returning artefacts, the compiler writes the generated binding and

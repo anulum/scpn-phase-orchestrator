@@ -566,7 +566,11 @@ Near-term candidate tracks:
   - Notebook preflight execution evidence is in place: generated audit records
     include compiler-side binding-schema and policy-loader checks matching the
     review notebook.
-  - Remaining scope: deeper retrieval ranking and optional corpus expansion.
+  - Retrieval ranking diagnostics are in place: every retrieval evidence record
+    now carries a deterministic rank plus source-priority, matched-term,
+    name/phrase-match, prompt-term, and term-density features for audit review.
+  - Remaining scope: optional corpus expansion and larger retrieval-quality
+    benchmark gates.
 - Cross-domain meta-transfer: learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains.
   - Foundation is in place: replay-backed meta-transfer proposals exist.
   - Multi-audit fitting and package export are in place:

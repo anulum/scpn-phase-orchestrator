@@ -216,6 +216,60 @@ def test_compile_artifacts_records_local_domainpack_retrieval_evidence():
     )
     assert artefacts.audit_record["confidence_factors"]["retrieval_score"] > 0.0
     assert artefacts.audit_record["confidence"] >= 0.8
+    assert [record["rank"] for record in artefacts.audit_record["retrieval_evidence"]]
+    assert all(
+        "matched_term_count" in record["ranking_features"]
+        for record in artefacts.audit_record["retrieval_evidence"]
+    )
+
+
+def test_compile_artifacts_records_deterministic_retrieval_ranking(tmp_path):
+    domainpack_root = tmp_path / "domainpacks"
+    power_grid = domainpack_root / "power_grid"
+    generic_grid = domainpack_root / "grid_notes"
+    power_grid.mkdir(parents=True)
+    generic_grid.mkdir()
+    (power_grid / "binding_spec.yaml").write_text(
+        "name: power_grid\n# power grid renewable stability controller\n",
+        encoding="utf-8",
+    )
+    (power_grid / "README.md").write_text(
+        "power grid renewable demand stability controller",
+        encoding="utf-8",
+    )
+    (generic_grid / "binding_spec.yaml").write_text(
+        "name: grid_notes\n# grid stability notes\n",
+        encoding="utf-8",
+    )
+    docs_root = tmp_path / "docs"
+    docs_root.mkdir()
+    (docs_root / "power_grid.md").write_text(
+        "power grid renewable stability controller deployment notes",
+        encoding="utf-8",
+    )
+
+    artefacts = compile_symbolic_binding(
+        "A 2-layer power grid stability controller with renewable demand",
+        name="ranked_grid_review",
+        oscillators_per_layer=2,
+        dry_run_steps=2,
+        retrieval_root=domainpack_root,
+        docs_root=docs_root,
+    )
+    records = artefacts.audit_record["retrieval_evidence"]
+
+    assert [record["rank"] for record in records] == list(
+        range(1, len(records) + 1)
+    )
+    assert records[0]["source"] == "domainpack"
+    assert records[0]["domainpack"] == "power_grid"
+    assert records[0]["ranking_features"]["source_priority"] == 1.0
+    assert records[0]["ranking_features"]["phrase_match"] == 1.0
+    assert records[0]["ranking_features"]["matched_term_count"] >= records[1][
+        "ranking_features"
+    ]["matched_term_count"]
+    assert artefacts.retrieval_evidence[0].rank == 1
+    assert artefacts.retrieval_evidence[0].ranking_features["term_density"] > 0.0
 
 
 def test_compile_artifacts_records_long_form_docs_retrieval_evidence(tmp_path):
