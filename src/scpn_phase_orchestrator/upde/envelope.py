@@ -210,6 +210,8 @@ def extract_envelope(
         raise ValueError("amplitudes_history must contain only finite values")
 
     if amplitudes.ndim == 1:
+        if window >= amplitudes.size:
+            return _extract_1d_python(amplitudes, int(window))
         backend_fn = _dispatch("extract")
         if backend_fn is not None:
             fn = cast("Callable[[FloatArray, int], FloatArray]", backend_fn)
@@ -219,8 +221,14 @@ def extract_envelope(
             )
         return _extract_1d_python(amplitudes, int(window))
 
+    if amplitudes.ndim != 2:
+        raise ValueError("amplitudes_history must be 1-D or 2-D")
+
     # 2-D path stays pure NumPy.
     sq = amplitudes**2
+    if window >= sq.shape[0]:
+        rms = np.sqrt(np.mean(sq, axis=0))
+        return np.tile(rms, (sq.shape[0], 1))
     cs = np.cumsum(sq, axis=0)
     cs = np.vstack([np.zeros((1, sq.shape[1]), dtype=np.float64), cs])
     rms = np.sqrt((cs[window:] - cs[:-window]) / window)
