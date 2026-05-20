@@ -345,6 +345,9 @@ sessions do not treat them as abstract research labels.
     `benchmark_formal_export_artifact_quality()` now gates package property
     counts, checker command counts, disabled checker execution, and package
     hash determinism alongside PRISM/TLA/STL export artefacts.
+  - CLI formal package export is in place:
+    `spo formal-export --export package` emits the no-execution JSON manifest
+    for protocol PRISM/TLA and policy PRISM artefacts.
   - Acceptance: plasma, power, and medical-style policies have reproducible
     safety artefacts suitable for credibility reviews.
 - Neuromorphic and quantum tighter integration:

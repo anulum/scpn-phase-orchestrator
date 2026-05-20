@@ -79,6 +79,8 @@ from scpn_phase_orchestrator.scaffold.llm import (
 )
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.formal_export import (
+    FormalSafetyProperty,
+    build_formal_verification_package,
     export_petri_net_prism,
     export_petri_net_tla,
     export_policy_rules_prism,
@@ -365,7 +367,9 @@ def plugins_catalog(
 @click.option(
     "--export",
     "export_target",
-    type=click.Choice(["protocol", "protocol-tla", "policy", "policy-tla", "stl"]),
+    type=click.Choice(
+        ["protocol", "protocol-tla", "policy", "policy-tla", "stl", "package"]
+    ),
     default="protocol",
     show_default=True,
     help="Supervisor artefact to export",
@@ -394,7 +398,7 @@ def formal_export(
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
 
-    if export_target in {"policy", "policy-tla", "stl"}:
+    if export_target in {"policy", "policy-tla", "stl", "package"}:
         policy_file = (
             Path(policy_path)
             if policy_path is not None
@@ -419,6 +423,66 @@ def formal_export(
         if not rules:
             click.echo("ERROR: policy file contains no rules", err=True)
             raise SystemExit(1)
+        if export_target == "package":
+            if spec.protocol_net is None:
+                click.echo("ERROR: binding spec has no protocol_net", err=True)
+                raise SystemExit(1)
+            net, marking = _petri_net_from_protocol(spec.protocol_net)
+            petri_prism = export_petri_net_prism(
+                net,
+                marking,
+                module_name=f"{module_name}_protocol",
+                max_tokens=max_tokens,
+            )
+            petri_tla = export_petri_net_tla(
+                net,
+                marking,
+                module_name=f"{module_name}_protocol_tla",
+                max_tokens=max_tokens,
+            )
+            policy_prism = export_policy_rules_prism(
+                rules,
+                module_name=f"{module_name}_policy",
+            )
+            package = build_formal_verification_package(
+                {
+                    "protocol_prism": petri_prism,
+                    "protocol_tla": petri_tla,
+                    "policy_prism": policy_prism,
+                },
+                (
+                    FormalSafetyProperty(
+                        name="protocol_type_ok",
+                        artifact_name="protocol_tla",
+                        checker="tlc",
+                        expression="Safety",
+                        description="Protocol state variables remain bounded.",
+                    ),
+                    FormalSafetyProperty(
+                        name="protocol_reachable_terminal",
+                        artifact_name="protocol_prism",
+                        checker="prism",
+                        expression='P>=1 [ F "active_done" ]',
+                        description="Protocol can reach the terminal place.",
+                    ),
+                    FormalSafetyProperty(
+                        name="policy_rule_review",
+                        artifact_name="policy_prism",
+                        checker="prism",
+                        expression="P>=0 [ F true ]",
+                        description="Policy artefact is available for review.",
+                    ),
+                ),
+                package_name=module_name,
+            )
+            payload = package.to_audit_record()
+            text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+            if output is None:
+                click.echo(text, nl=False)
+                return
+            Path(output).write_text(text, encoding="utf-8")
+            click.echo(f"Formal verification package written: {output}")
+            return
         if export_target == "policy-tla":
             tla_export = export_policy_rules_tla(rules, module_name=module_name)
             if output is None:

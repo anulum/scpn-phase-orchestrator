@@ -871,6 +871,72 @@ def test_formal_export_policy_targets_stdout_and_files(runner, tmp_path):
     assert "---- MODULE CliPolicy ----" in tla_path.read_text(encoding="utf-8")
 
 
+def test_formal_export_package_outputs_no_execution_manifest(runner, tmp_path):
+    spec_path = _write_formal_export_spec(tmp_path)
+    package_path = tmp_path / "formal_package.json"
+    rules = [
+        {
+            "name": "boost",
+            "regime": ["DEGRADED"],
+            "condition": {
+                "metric": "R_good",
+                "layer": 0,
+                "op": "<",
+                "threshold": 0.7,
+            },
+            "action": {"knob": "K", "scope": "global", "value": 0.1, "ttl_s": 5.0},
+        }
+    ]
+    _write_policy_rules(tmp_path, rules)
+
+    stdout_result = runner.invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "package",
+            "--module-name",
+            "cli_formal_package",
+        ],
+    )
+    file_result = runner.invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "package",
+            "--output",
+            str(package_path),
+            "--module-name",
+            "cli_formal_package",
+        ],
+    )
+
+    assert stdout_result.exit_code == 0
+    payload = json.loads(stdout_result.output)
+    assert payload["package_name"] == "cli_formal_package"
+    assert payload["artifact_types"] == {
+        "policy_prism": "prism",
+        "protocol_prism": "prism",
+        "protocol_tla": "tla",
+    }
+    assert [item["name"] for item in payload["properties"]] == [
+        "protocol_type_ok",
+        "protocol_reachable_terminal",
+        "policy_rule_review",
+    ]
+    assert all(
+        command["execution_permitted"] is False
+        for command in payload["checker_commands"]
+    )
+    assert len(payload["package_hash"]) == 64
+    assert file_result.exit_code == 0
+    assert "Formal verification package written:" in file_result.output
+    assert json.loads(package_path.read_text(encoding="utf-8")) == payload
+
+
 def test_formal_export_stl_stdout_and_file_outputs(runner, tmp_path):
     spec_path = _write_formal_export_spec(tmp_path, protocol_net=False)
     policy_path = tmp_path / "policy.yaml"

@@ -722,6 +722,7 @@ spo formal-export domainpacks/my_domain/binding_spec.yaml --export policy
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export stl
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export protocol-tla
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export policy-tla
+spo formal-export domainpacks/my_domain/binding_spec.yaml --export package
 ```
 
 `--export stl` reads `stl_monitors` from the sibling `policy.yaml` by default
@@ -732,6 +733,10 @@ module with Petri places as variables, transition guards as constants, `Init`,
 `Next`, `Spec`, and `Safety == TypeOK`. `--export policy-tla` emits bounded
 rule-fire counters plus reachability predicates for fired rules and emitted
 actions.
+`--export package` emits a JSON formal verification package manifest that binds
+protocol PRISM/TLA and policy PRISM artefact hashes to named safety properties
+and external PRISM/TLC command records. The package does not run model checkers;
+all command records keep `execution_permitted=false`.
 
 For builtin STL automata, `synthesise_stl_controller_candidates()` provides a
 non-actuating controller-synthesis bridge. It proposes signal-level candidate
