@@ -290,6 +290,98 @@ def test_neuromorphic_schedule_manifest_rejects_invalid_state():
         raise AssertionError("invalid cross-layer shape must be rejected")
 
 
+def test_neuromorphic_target_readiness_audit_blocks_missing_preconditions():
+    state = _make_state([0.25, 0.75])
+    bridge = SNNControllerBridge(n_neurons=32)
+    manifest = bridge.build_neuromorphic_schedule_manifest(
+        state,
+        i_scale=2.0,
+        threshold_hz=20.0,
+    )
+
+    record = bridge.audit_hardware_target_readiness(
+        manifest,
+        target_backend="lava",
+        hardware_site="lab_lava_cluster",
+    )
+
+    assert record["schema"] == "scpn_neuromorphic_target_readiness_v1"
+    assert record["status"] == "blocked"
+    assert record["target_backend"] == "lava"
+    assert record["hardware_site"] == "lab_lava_cluster"
+    assert record["manifest_sha256"] == manifest["schedule_sha256"]
+    assert record["blocked_reasons"] == [
+        "credentials_not_configured",
+        "operator_approval_missing",
+        "external_simulator_parity_not_verified",
+    ]
+    assert record["hardware_write_permitted"] is False
+    assert record["actuation_permitted"] is False
+    assert len(record["readiness_sha256"]) == 64
+
+
+def test_neuromorphic_target_readiness_audit_is_ready_not_executed_and_stable():
+    state = _make_state([0.25, 0.75])
+    bridge = SNNControllerBridge(n_neurons=32)
+    manifest = bridge.build_neuromorphic_schedule_manifest(
+        state,
+        i_scale=2.0,
+        threshold_hz=20.0,
+    )
+
+    record = bridge.audit_hardware_target_readiness(
+        manifest,
+        target_backend="pynn",
+        hardware_site="brainscales_review_lane",
+        credentials_configured=True,
+        operator_approved=True,
+        external_simulator_parity_verified=True,
+    )
+    repeated = bridge.audit_hardware_target_readiness(
+        manifest,
+        target_backend="pynn",
+        hardware_site="brainscales_review_lane",
+        credentials_configured=True,
+        operator_approved=True,
+        external_simulator_parity_verified=True,
+    )
+
+    assert record == repeated
+    assert record["status"] == "ready_not_executed"
+    assert record["blocked_reasons"] == []
+    assert record["credentials_configured"] is True
+    assert record["operator_approved"] is True
+    assert record["external_simulator_parity_verified"] is True
+    assert record["hardware_write_permitted"] is False
+    assert record["actuation_permitted"] is False
+    assert record["operator_commands"] == [
+        "review neuromorphic_schedule_manifest.json",
+        "run target simulator parity outside SPO before hardware handoff",
+        "submit neuromorphic hardware job only from an approved operator workflow",
+    ]
+
+
+def test_neuromorphic_target_readiness_audit_rejects_invalid_manifest_or_target():
+    bridge = SNNControllerBridge(n_neurons=32)
+    manifest = {"manifest_kind": "quantum_compiler_manifest"}
+
+    with pytest.raises(ValueError, match="neuromorphic_schedule_manifest"):
+        bridge.audit_hardware_target_readiness(
+            manifest,
+            target_backend="lava",
+            hardware_site="lab",
+        )
+
+    state = _make_state([0.25, 0.75])
+    schedule = bridge.build_neuromorphic_schedule_manifest(state)
+    with pytest.raises(ValueError, match="target_backend"):
+        bridge.audit_hardware_target_readiness(
+            schedule,
+            target_backend="loihi",
+            hardware_site="lab",
+        )
+
+
 class TestSNNPipelineWiring:
     """Pipeline: UPDEState → SNN currents → LIF rates → actions."""
 

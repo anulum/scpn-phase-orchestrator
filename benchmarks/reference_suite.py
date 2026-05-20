@@ -25,6 +25,7 @@ from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
     build_hybrid_cocompiler_manifest,
 )
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
+from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
 from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_time_series_csv,
 )
@@ -88,6 +89,7 @@ from scpn_phase_orchestrator.upde.bayesian import (
     fit_gaussian_upde_posterior,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
@@ -197,6 +199,15 @@ class HybridCocompilerThresholds(NamedTuple):
 
 
 class QuantumTargetReadinessThresholds(NamedTuple):
+    min_ready_count: int
+    min_blocked_count: int
+    min_blocked_reason_count: int
+    min_operator_command_count: int
+    require_non_executing: bool
+    require_deterministic_hash: bool
+
+
+class NeuromorphicTargetReadinessThresholds(NamedTuple):
     min_ready_count: int
     min_blocked_count: int
     min_blocked_reason_count: int
@@ -1735,6 +1746,125 @@ def benchmark_quantum_target_readiness_gate() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_neuromorphic_target_readiness_gate() -> dict[str, float | int | str]:
+    """Benchmark non-executing neuromorphic target-readiness audit gates."""
+    thresholds = NeuromorphicTargetReadinessThresholds(
+        min_ready_count=1,
+        min_blocked_count=1,
+        min_blocked_reason_count=3,
+        min_operator_command_count=6,
+        require_non_executing=True,
+        require_deterministic_hash=True,
+    )
+    bridge = SNNControllerBridge(n_neurons=32)
+    state = UPDEState(
+        layers=[
+            LayerState(R=0.25, psi=0.1),
+            LayerState(R=0.75, psi=0.3),
+        ],
+        cross_layer_alignment=np.array(
+            [
+                [1.0, 0.4],
+                [0.0, 1.0],
+            ],
+            dtype=np.float64,
+        ),
+        stability_proxy=0.5,
+        regime_id="nominal",
+    )
+
+    t0 = time.perf_counter()
+    manifest = bridge.build_neuromorphic_schedule_manifest(
+        state,
+        i_scale=2.0,
+        threshold_hz=20.0,
+    )
+    blocked = bridge.audit_hardware_target_readiness(
+        manifest,
+        target_backend="lava",
+        hardware_site="lab_lava_cluster",
+    )
+    ready = bridge.audit_hardware_target_readiness(
+        manifest,
+        target_backend="pynn",
+        hardware_site="brainscales_review_lane",
+        credentials_configured=True,
+        operator_approved=True,
+        external_simulator_parity_verified=True,
+    )
+    repeated_ready = bridge.audit_hardware_target_readiness(
+        manifest,
+        target_backend="pynn",
+        hardware_site="brainscales_review_lane",
+        credentials_configured=True,
+        operator_approved=True,
+        external_simulator_parity_verified=True,
+    )
+    elapsed = time.perf_counter() - t0
+
+    records = [blocked, ready]
+    ready_count = sum(record["status"] == "ready_not_executed" for record in records)
+    blocked_count = sum(record["status"] == "blocked" for record in records)
+    blocked_reason_count = sum(
+        len(record["blocked_reasons"])
+        for record in records
+        if isinstance(record["blocked_reasons"], list)
+    )
+    operator_command_count = sum(
+        len(record["operator_commands"])
+        for record in records
+        if isinstance(record["operator_commands"], list)
+    )
+    non_executing = all(
+        record["hardware_write_permitted"] is False
+        and record["actuation_permitted"] is False
+        for record in records
+    )
+    deterministic_hash = int(
+        ready["readiness_sha256"] == repeated_ready["readiness_sha256"]
+    )
+    acceptance_passed = int(
+        ready_count >= thresholds.min_ready_count
+        and blocked_count >= thresholds.min_blocked_count
+        and blocked_reason_count >= thresholds.min_blocked_reason_count
+        and operator_command_count >= thresholds.min_operator_command_count
+        and non_executing == thresholds.require_non_executing
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "neuromorphic_target_readiness_gate",
+        "record_count": len(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(records) / elapsed,
+        "ready_count": ready_count,
+        "blocked_count": blocked_count,
+        "blocked_reason_count": blocked_reason_count,
+        "operator_command_count": operator_command_count,
+        "non_executing": int(non_executing),
+        "deterministic_hash": deterministic_hash,
+        "manifest_sha256": str(manifest["schedule_sha256"]),
+        "ready_readiness_sha256": str(ready["readiness_sha256"]),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_blocked_count": thresholds.min_blocked_count,
+                "min_blocked_reason_count": thresholds.min_blocked_reason_count,
+                "min_operator_command_count": thresholds.min_operator_command_count,
+                "min_ready_count": thresholds.min_ready_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_executing": thresholds.require_non_executing,
+            },
+            sort_keys=True,
+        ),
+        "target_backends_json": json.dumps(
+            [record["target_backend"] for record in records],
+            sort_keys=True,
+        ),
+        "readiness_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -2732,6 +2862,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "domain_formal_export": benchmark_domain_formal_safety_exports(),
             "hybrid_cocompiler": benchmark_hybrid_cocompiler_review_gate(),
             "quantum_target_readiness": benchmark_quantum_target_readiness_gate(),
+            "neuromorphic_target_readiness": (
+                benchmark_neuromorphic_target_readiness_gate()
+            ),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

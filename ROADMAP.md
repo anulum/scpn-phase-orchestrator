@@ -635,7 +635,10 @@ Near-term candidate tracks:
 - Neuromorphic compiler target: deterministic Lava/PyNN schedule manifests
   from `UPDEState` are in place with population records, projections,
   control-action review records, simulator parity evidence, SHA-256 coverage,
-  and disabled hardware writes. Real neuromorphic target execution remains open.
+  disabled hardware writes, and non-executing hardware target-readiness audits
+  for backend, credential, operator-approval, external simulator-parity, stable
+  hash, and blocked/ready evidence quality. Real neuromorphic target execution
+  remains open.
 
 Speculative research watchlist:
 

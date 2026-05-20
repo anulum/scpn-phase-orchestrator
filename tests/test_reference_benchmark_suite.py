@@ -21,6 +21,7 @@ from benchmarks.reference_suite import (
     benchmark_kuramoto_reference,
     benchmark_meta_transfer_audit_corpus_quality,
     benchmark_meta_transfer_package_manifest_quality,
+    benchmark_neuromorphic_target_readiness_gate,
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
     benchmark_quantum_target_readiness_gate,
@@ -573,6 +574,56 @@ def test_quantum_target_readiness_gate_reports_thresholds_and_records() -> None:
     assert all(record["actuation_permitted"] is False for record in records)
 
 
+def test_neuromorphic_target_readiness_gate_benchmark_shape() -> None:
+    out = benchmark_neuromorphic_target_readiness_gate()
+
+    assert out["suite"] == "neuromorphic_target_readiness_gate"
+    assert out["record_count"] == 2
+    assert out["ready_count"] == 1
+    assert out["blocked_count"] == 1
+    assert out["blocked_reason_count"] == 3
+    assert out["operator_command_count"] == 6
+    assert out["non_executing"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["manifest_sha256"])) == 64
+    assert len(str(out["ready_readiness_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_neuromorphic_target_readiness_gate_reports_thresholds_and_records() -> None:
+    out = benchmark_neuromorphic_target_readiness_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    backends = json.loads(str(out["target_backends_json"]))
+    records = json.loads(str(out["readiness_records_json"]))
+
+    assert thresholds == {
+        "min_blocked_count": 1,
+        "min_blocked_reason_count": 3,
+        "min_operator_command_count": 6,
+        "min_ready_count": 1,
+        "require_deterministic_hash": True,
+        "require_non_executing": True,
+    }
+    assert backends == ["lava", "pynn"]
+    assert [record["schema"] for record in records] == [
+        "scpn_neuromorphic_target_readiness_v1",
+        "scpn_neuromorphic_target_readiness_v1",
+    ]
+    assert [record["status"] for record in records] == [
+        "blocked",
+        "ready_not_executed",
+    ]
+    assert records[0]["blocked_reasons"] == [
+        "credentials_not_configured",
+        "operator_approval_missing",
+        "external_simulator_parity_not_verified",
+    ]
+    assert records[1]["blocked_reasons"] == []
+    assert all(record["hardware_write_permitted"] is False for record in records)
+    assert all(record["actuation_permitted"] is False for record in records)
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -639,6 +690,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "hybrid_cocompiler",
         "meta_transfer",
         "meta_transfer_corpus",
+        "neuromorphic_target_readiness",
         "plugin_ecosystem",
         "quantum_target_readiness",
         "replay_policy",

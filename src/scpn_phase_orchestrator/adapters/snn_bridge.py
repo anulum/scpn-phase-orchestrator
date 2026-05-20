@@ -22,7 +22,7 @@ from hashlib import sha256
 from math import isfinite
 from numbers import Integral, Real
 from types import SimpleNamespace
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -86,6 +86,20 @@ def _validated_layer_assignments(layer_assignments: list[int]) -> list[int]:
             raise ValueError("layer_assignments must contain non-negative integers")
         validated.append(int(layer))
     return validated
+
+
+def _require_mapping(value: object, *, field: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a mapping")
+    return cast("dict[str, object]", value)
+
+
+def _require_non_empty_text(value: object, *, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} must be a non-empty string")
+    if any(ord(char) < 32 for char in value):
+        raise ValueError(f"{field} must not contain control characters")
+    return value.strip()
 
 
 class SNNControllerBridge:
@@ -303,6 +317,87 @@ class SNNControllerBridge:
         canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
         manifest["schedule_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
         return manifest
+
+    def audit_hardware_target_readiness(
+        self,
+        manifest: dict[str, object],
+        *,
+        target_backend: str,
+        hardware_site: str,
+        credentials_configured: bool = False,
+        operator_approved: bool = False,
+        external_simulator_parity_verified: bool = False,
+    ) -> dict[str, object]:
+        """Return non-executing neuromorphic hardware readiness evidence.
+
+        The audit validates a schedule manifest against a declared target and
+        records whether external operator preconditions are present. It never
+        opens a backend connection, submits a hardware job, or enables
+        actuation/hardware-write permissions.
+        """
+        manifest_record = _require_mapping(manifest, field="manifest")
+        target_backend = _require_non_empty_text(
+            target_backend,
+            field="target_backend",
+        )
+        hardware_site = _require_non_empty_text(hardware_site, field="hardware_site")
+        for field, value in (
+            ("credentials_configured", credentials_configured),
+            ("operator_approved", operator_approved),
+            ("external_simulator_parity_verified", external_simulator_parity_verified),
+        ):
+            if not isinstance(value, bool):
+                raise ValueError(f"{field} must be a boolean")
+        if manifest_record.get("manifest_kind") != "neuromorphic_schedule_manifest":
+            raise ValueError("manifest must be a neuromorphic_schedule_manifest")
+
+        target_backends = manifest_record.get("target_backends")
+        if not isinstance(target_backends, list) or not all(
+            isinstance(item, str) for item in target_backends
+        ):
+            raise ValueError("manifest target_backends must be a list of strings")
+        if target_backend not in target_backends:
+            raise ValueError("target_backend is not declared by manifest")
+
+        blocked_reasons: list[str] = []
+        if manifest_record.get("status") != "simulator_parity_passed":
+            blocked_reasons.append("simulator_parity_not_passed")
+        if manifest_record.get("hardware_write_permitted") is not False:
+            blocked_reasons.append("hardware_write_permission_must_remain_false")
+        if manifest_record.get("actuation_permitted") is not False:
+            blocked_reasons.append("actuation_permission_must_remain_false")
+        if not credentials_configured:
+            blocked_reasons.append("credentials_not_configured")
+        if not operator_approved:
+            blocked_reasons.append("operator_approval_missing")
+        if not external_simulator_parity_verified:
+            blocked_reasons.append("external_simulator_parity_not_verified")
+
+        manifest_sha = str(manifest_record.get("schedule_sha256", ""))
+        record: dict[str, object] = {
+            "schema": "scpn_neuromorphic_target_readiness_v1",
+            "target_backend": target_backend,
+            "hardware_site": hardware_site,
+            "manifest_sha256": manifest_sha,
+            "status": "blocked" if blocked_reasons else "ready_not_executed",
+            "blocked_reasons": blocked_reasons,
+            "credentials_configured": credentials_configured,
+            "operator_approved": operator_approved,
+            "external_simulator_parity_verified": external_simulator_parity_verified,
+            "hardware_write_permitted": False,
+            "actuation_permitted": False,
+            "operator_commands": [
+                "review neuromorphic_schedule_manifest.json",
+                "run target simulator parity outside SPO before hardware handoff",
+                (
+                    "submit neuromorphic hardware job only from an approved "
+                    "operator workflow"
+                ),
+            ],
+        }
+        canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
+        record["readiness_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
+        return record
 
     def _validate_schedule_inputs(
         self,
