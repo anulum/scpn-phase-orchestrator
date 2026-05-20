@@ -37,6 +37,7 @@ __all__ = [
     "LoadedPluginCapability",
     "ExecutedPluginCapability",
     "execute_plugin_capability",
+    "execute_plugin_execution_request",
     "load_plugin_capability",
     "validate_plugin_manifest",
     "PluginRuntimeExecutionPolicy",
@@ -732,6 +733,70 @@ def execute_plugin_capability(
     return ExecutedPluginCapability(
         loaded=loaded,
         result=result,
+        audit_record=audit_record,
+    )
+
+
+def execute_plugin_execution_request(
+    manifest: PluginManifest,
+    request: PluginExecutionRequest,
+    *,
+    args: tuple[object, ...] = (),
+    kwargs: dict[str, object] | None = None,
+) -> ExecutedPluginCapability:
+    """Invoke a plugin only when the approved request matches this call shape.
+
+    The request-bound path validates manifest identity, invocation shape, plan
+    hash, and target hash before importing the plugin module. Argument values
+    remain outside audit records; only positional count and keyword names
+    participate in the plan hash.
+    """
+    if kwargs is None:
+        kwargs = {}
+    if not isinstance(args, tuple):
+        raise TypeError("args must be a tuple")
+    if not isinstance(kwargs, dict):
+        raise TypeError("kwargs must be a dictionary")
+    if request.schema != "scpn_plugin_runtime_execution_request_v1":
+        raise ValueError(
+            "request schema must be scpn_plugin_runtime_execution_request_v1"
+        )
+    if manifest.name != request.plugin:
+        raise ValueError("request plugin does not match manifest")
+
+    policy = request.to_execution_policy()
+    plan = build_plugin_execution_plan(
+        manifest,
+        request.kind,
+        request.name,
+        args=args,
+        kwargs=kwargs,
+        policy=policy,
+    )
+    if plan.plan_hash != request.plan_hash:
+        raise PermissionError("execution request plan hash mismatch")
+    if plan.target_hash != request.target_hash:
+        raise PermissionError("execution request target hash mismatch")
+
+    executed = execute_plugin_capability(
+        manifest,
+        request.kind,
+        request.name,
+        args=args,
+        kwargs=kwargs,
+        policy=policy,
+    )
+    audit_record = {
+        **executed.audit_record,
+        "request_hash": request.audit_record["request_hash"],
+        "approval_hash": request.approval_hash,
+        "operator_identity": request.operator_identity,
+        "approval_reference": request.approval_reference,
+    }
+    audit_record["execution_hash"] = _record_hash(audit_record)
+    return ExecutedPluginCapability(
+        loaded=executed.loaded,
+        result=executed.result,
         audit_record=audit_record,
     )
 

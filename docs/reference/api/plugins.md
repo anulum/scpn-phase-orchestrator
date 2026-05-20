@@ -199,6 +199,12 @@ Operators can materialize this request through:
 spo plugins request-execution PLAN_JSON APPROVAL_JSON
 ```
 
+`execute_plugin_execution_request()` is the first owned runtime consumption
+point for that envelope. It rebuilds the non-importing plan for the actual call
+shape, checks the request `plan_hash` and `target_hash`, and only then delegates
+to the explicit runtime execution path. A stale request, changed keyword set, or
+different manifest fails before target import.
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

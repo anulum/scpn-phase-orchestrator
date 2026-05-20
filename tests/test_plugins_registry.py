@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.plugins import (
     compatibility_report,
     discover_plugin_manifests,
     execute_plugin_capability,
+    execute_plugin_execution_request,
     load_plugin_capability,
     validate_plugin_manifest,
 )
@@ -1575,6 +1576,159 @@ class TestPluginRuntimeExecution:
                     require_target_hash_approval=True,
                 ),
             )
+
+    def test_request_bound_runtime_execution_requires_exact_plan_shape(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import types
+
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def frequency_drift(value: float, *, scale: float) -> float:
+            return value * scale
+
+        module = types.SimpleNamespace(FrequencyDriftMonitor=frequency_drift)
+        monkeypatch.setattr(
+            registry.importlib,
+            "import_module",
+            lambda module_name: module,
+        )
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(2.0,),
+            kwargs={"scale": 3.5},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(2.0,),
+            kwargs={"scale": 3.5},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-07",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+
+        executed = execute_plugin_execution_request(
+            _manifest(),
+            request,
+            args=(2.0,),
+            kwargs={"scale": 3.5},
+        )
+
+        assert executed.result == 7.0
+        assert executed.audit_record["schema"] == "scpn_plugin_runtime_execute_v1"
+        assert executed.audit_record["plan_hash"] == request.plan_hash
+        assert executed.audit_record["request_hash"] == request.audit_record[
+            "request_hash"
+        ]
+        assert executed.audit_record["approval_hash"] == request.approval_hash
+        assert executed.audit_record["target_hash_approved"] is True
+        assert executed.audit_record["operator_identity"] == "operator_alpha"
+
+    def test_request_bound_runtime_execution_rejects_shape_before_import(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(2.0,),
+            kwargs={"scale": 3.5},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(2.0,),
+            kwargs={"scale": 3.5},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-08",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+
+        def fail_import(_module: str) -> object:
+            raise AssertionError("shape mismatch must fail before import")
+
+        monkeypatch.setattr(registry.importlib, "import_module", fail_import)
+
+        with pytest.raises(PermissionError, match="plan hash mismatch"):
+            execute_plugin_execution_request(
+                _manifest(),
+                request,
+                args=(2.0,),
+                kwargs={"different": 3.5},
+            )
+
+    def test_request_bound_runtime_execution_rejects_manifest_mismatch(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-09",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        other_manifest = PluginManifest(
+            name="other_pack",
+            version="0.1.0",
+            package="other_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="monitor",
+                    name="frequency_drift",
+                    target="other_pack.monitors:FrequencyDriftMonitor",
+                    channels=("frequency",),
+                ),
+            ),
+        )
+
+        with pytest.raises(ValueError, match="does not match manifest"):
+            execute_plugin_execution_request(other_manifest, request)
 
     def test_discovery_rejects_invalid_entry_point_payload(
         self, monkeypatch: pytest.MonkeyPatch
