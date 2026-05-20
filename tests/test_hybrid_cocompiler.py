@@ -33,6 +33,9 @@ _COCOMPILER_MODULE = importlib.util.module_from_spec(_COCOMPILER_SPEC)
 _COCOMPILER_SPEC.loader.exec_module(_COCOMPILER_MODULE)
 build_hybrid_cocompiler_manifest = _COCOMPILER_MODULE.build_hybrid_cocompiler_manifest
 audit_hybrid_target_readiness = _COCOMPILER_MODULE.audit_hybrid_target_readiness
+build_hybrid_operator_handoff_package = (
+    _COCOMPILER_MODULE.build_hybrid_operator_handoff_package
+)
 
 
 def _quantum_manifest() -> dict[str, object]:
@@ -563,3 +566,78 @@ def test_hybrid_target_readiness_rejects_invalid_readiness_schema() -> None:
             _neuromorphic_readiness(),
             hybrid_operator_approved=True,
         )
+
+
+def test_hybrid_operator_handoff_package_is_non_executing_and_hash_linked() -> None:
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    readiness = audit_hybrid_target_readiness(
+        hybrid,
+        _quantum_readiness(),
+        _neuromorphic_readiness(),
+        hybrid_operator_approved=True,
+    )
+
+    package = build_hybrid_operator_handoff_package(hybrid, readiness)
+    repeated = build_hybrid_operator_handoff_package(hybrid, readiness)
+
+    assert package == repeated
+    assert package["schema"] == "scpn_hybrid_operator_handoff_package_v1"
+    assert package["status"] == "ready_not_executed"
+    assert package["hybrid_manifest_sha256"] == hybrid["hybrid_manifest_sha256"]
+    assert package["hybrid_readiness_sha256"] == readiness["readiness_sha256"]
+    assert package["execution_permitted"] is False
+    assert package["qpu_execution_permitted"] is False
+    assert package["hardware_write_permitted"] is False
+    assert package["actuation_permitted"] is False
+    assert package["target_backends"] == [
+        "qiskit_openqasm3",
+        "pennylane_qasm",
+        "lava",
+        "pynn",
+    ]
+    assert package["operator_commands"] == [
+        "review hybrid_neuromorphic_quantum_cocompiler.json",
+        "review scpn_hybrid_target_readiness_v1.json",
+        "verify package_sha256 before external operator handoff",
+        "execute only outside SPO from an approved operator workflow",
+    ]
+    assert len(package["package_sha256"]) == 64
+
+
+def test_hybrid_operator_handoff_package_preserves_blocked_readiness() -> None:
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    readiness = audit_hybrid_target_readiness(
+        hybrid,
+        _quantum_readiness(status="blocked"),
+        _neuromorphic_readiness(),
+        hybrid_operator_approved=True,
+    )
+
+    package = build_hybrid_operator_handoff_package(hybrid, readiness)
+
+    assert package["status"] == "blocked"
+    assert package["blocked_reasons"] == readiness["blocked_reasons"]
+    assert package["execution_permitted"] is False
+
+
+def test_hybrid_operator_handoff_package_rejects_mismatched_readiness() -> None:
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    readiness = audit_hybrid_target_readiness(
+        hybrid,
+        _quantum_readiness(),
+        _neuromorphic_readiness(),
+        hybrid_operator_approved=True,
+    )
+    readiness["hybrid_manifest_sha256"] = "f" * 64
+
+    with pytest.raises(ValueError, match="hybrid readiness manifest hash"):
+        build_hybrid_operator_handoff_package(hybrid, readiness)

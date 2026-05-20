@@ -14,7 +14,11 @@ import json
 from collections.abc import Mapping, Sequence
 from hashlib import sha256
 
-__all__ = ["audit_hybrid_target_readiness", "build_hybrid_cocompiler_manifest"]
+__all__ = [
+    "audit_hybrid_target_readiness",
+    "build_hybrid_cocompiler_manifest",
+    "build_hybrid_operator_handoff_package",
+]
 
 
 def build_hybrid_cocompiler_manifest(
@@ -197,6 +201,82 @@ def audit_hybrid_target_readiness(
     return record
 
 
+def build_hybrid_operator_handoff_package(
+    hybrid_manifest: Mapping[str, object],
+    hybrid_readiness: Mapping[str, object],
+) -> dict[str, object]:
+    """Build a deterministic non-executing package for external operators."""
+    hybrid_manifest = _validate_manifest_mapping(
+        hybrid_manifest,
+        label="hybrid_manifest",
+    )
+    hybrid_readiness = _validate_manifest_mapping(
+        hybrid_readiness,
+        label="hybrid_readiness",
+    )
+    _validate_manifest_kind(
+        hybrid_manifest,
+        expected="hybrid_neuromorphic_quantum_cocompiler",
+        label="hybrid manifest kind",
+    )
+    _validate_manifest_kind(
+        hybrid_readiness,
+        expected="scpn_hybrid_target_readiness_v1",
+        label="hybrid_readiness schema",
+        key="schema",
+    )
+    _validate_permission_fields(
+        hybrid_manifest,
+        label="hybrid",
+        fields=(
+            "qpu_execution_permitted",
+            "hardware_write_permitted",
+            "actuation_permitted",
+        ),
+    )
+    _validate_permission_fields(
+        hybrid_readiness,
+        label="hybrid_readiness",
+        fields=(
+            "qpu_execution_permitted",
+            "hardware_write_permitted",
+            "actuation_permitted",
+        ),
+    )
+    hybrid_manifest_sha = _hash_text(hybrid_manifest, "hybrid_manifest_sha256")
+    hybrid_readiness_sha = _hash_text(hybrid_readiness, "readiness_sha256")
+    if hybrid_readiness.get("hybrid_manifest_sha256") != hybrid_manifest_sha:
+        raise ValueError("hybrid readiness manifest hash must match hybrid manifest")
+
+    blocked_reasons = _string_list(
+        hybrid_readiness.get("blocked_reasons"),
+        "hybrid_readiness blocked_reasons",
+    )
+    package: dict[str, object] = {
+        "schema": "scpn_hybrid_operator_handoff_package_v1",
+        "status": hybrid_readiness.get("status"),
+        "blocked_reasons": blocked_reasons,
+        "hybrid_manifest_sha256": hybrid_manifest_sha,
+        "hybrid_readiness_sha256": hybrid_readiness_sha,
+        "component_manifest_hashes": hybrid_manifest.get("component_hashes"),
+        "component_statuses": hybrid_readiness.get("component_statuses"),
+        "target_backends": _target_backends_from_hybrid_manifest(hybrid_manifest),
+        "execution_permitted": False,
+        "qpu_execution_permitted": False,
+        "hardware_write_permitted": False,
+        "actuation_permitted": False,
+        "operator_commands": [
+            "review hybrid_neuromorphic_quantum_cocompiler.json",
+            "review scpn_hybrid_target_readiness_v1.json",
+            "verify package_sha256 before external operator handoff",
+            "execute only outside SPO from an approved operator workflow",
+        ],
+    }
+    canonical = json.dumps(package, sort_keys=True, separators=(",", ":"))
+    package["package_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
+    return package
+
+
 def _validate_manifest_mapping(
     manifest: Mapping[str, object],
     *,
@@ -371,6 +451,15 @@ def _string_list(value: object, label: str) -> list[str]:
             raise ValueError(f"{label} entries must be non-empty strings")
         result.append(item)
     return result
+
+
+def _target_backends_from_hybrid_manifest(
+    hybrid_manifest: Mapping[str, object],
+) -> list[str]:
+    return _string_list(
+        hybrid_manifest.get("target_backends"),
+        "hybrid target_backends",
+    )
 
 
 def _term_count(value: object) -> int:
