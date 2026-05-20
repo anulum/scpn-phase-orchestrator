@@ -602,13 +602,17 @@ Near-term candidate tracks:
     the installed package exposes `scpn-meta` as a narrow console script for
     the review-only manifest exporter, matching the manifest metadata without
     exposing live training or runtime actuation.
+  - Package entry-point release evidence is in place:
+    packaging metadata tests verify both declared console scripts resolve to
+    importable Click commands, including the narrow `scpn-meta` manifest
+    exporter.
   - Package-manifest reference gates are in place:
     `benchmark_meta_transfer_package_manifest_quality()` verifies deterministic
     package and manifest hashes, training-summary coverage, digest linkage,
     public import metadata, and disabled execution on a synthetic multi-domain
     corpus.
-  - Remaining scope: larger private or partner real audit-history corpora and actual
-    optional `scpn-meta` distribution packaging.
+  - Remaining scope: larger private or partner real audit-history corpora and
+    optional `scpn-meta` distribution publication evidence.
 - Quantum-native compiler target: deterministic OpenQASM 3 compiler manifests
   are in place for Qiskit/PennyLane handoff, with Z-frequency terms,
   symmetrised XY coupling terms, co-simulation parity evidence, SHA-256 hashes,
