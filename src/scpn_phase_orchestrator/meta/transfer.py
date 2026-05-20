@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, TypeAlias
 
@@ -21,6 +23,7 @@ from numpy.typing import NDArray
 __all__ = [
     "CrossDomainMetaTransfer",
     "MetaPolicyRecord",
+    "MetaPackageManifest",
     "MetaTrainingSummary",
     "MetaTransferProposal",
     "records_from_audit_directory",
@@ -31,6 +34,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.intp]
 
 _KNOB_ORDER = ("K", "alpha", "zeta", "Psi")
+_PACKAGE_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
 
 
 @dataclass(frozen=True)
@@ -98,6 +102,39 @@ class MetaTrainingSummary:
             "reward_mean": self.reward_mean,
             "reward_min": self.reward_min,
             "reward_max": self.reward_max,
+        }
+
+
+@dataclass(frozen=True)
+class MetaPackageManifest:
+    """Packaging-readiness manifest for the optional ``scpn-meta`` surface."""
+
+    package_name: str
+    import_target: str
+    console_script: str
+    package_sha256: str
+    training_summary: MetaTrainingSummary
+    execution_permitted: bool = False
+
+    def __post_init__(self) -> None:
+        _validate_package_identifier(self.package_name, "package_name")
+        _validate_non_empty_text(self.import_target, "import_target")
+        _validate_non_empty_text(self.console_script, "console_script")
+        if not re.fullmatch(r"[0-9a-f]{64}", self.package_sha256):
+            raise ValueError("package_sha256 must be a 64-character hex digest")
+        if self.execution_permitted:
+            raise ValueError("meta package manifest execution must remain disabled")
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe packaging-readiness manifest."""
+        return {
+            "schema": "scpn_meta_package_manifest_v1",
+            "package_name": self.package_name,
+            "import_target": self.import_target,
+            "console_script": self.console_script,
+            "package_sha256": self.package_sha256,
+            "training_summary": self.training_summary.to_audit_record(),
+            "execution_permitted": self.execution_permitted,
         }
 
 
@@ -205,6 +242,31 @@ class CrossDomainMetaTransfer:
             ],
         }
         return json.dumps(package, indent=2, sort_keys=True) + "\n"
+
+    def to_package_manifest(
+        self,
+        *,
+        package_name: str = "scpn-meta",
+        import_target: str = "scpn_phase_orchestrator.meta",
+        console_script: str = "scpn-meta",
+    ) -> MetaPackageManifest:
+        """Build a deterministic packaging-readiness manifest.
+
+        The manifest binds the JSON package hash and public import/console
+        metadata for review jobs. It does not create distributions, install
+        commands, run proposal jobs, or upload artefacts.
+        """
+        _validate_package_identifier(package_name, "package_name")
+        _validate_non_empty_text(import_target, "import_target")
+        _validate_non_empty_text(console_script, "console_script")
+        return MetaPackageManifest(
+            package_name=package_name,
+            import_target=import_target,
+            console_script=console_script,
+            package_sha256=sha256(self.to_json_package().encode("utf-8")).hexdigest(),
+            training_summary=self.training_summary,
+            execution_permitted=False,
+        )
 
     @classmethod
     def from_json_package(cls, payload: str) -> CrossDomainMetaTransfer:
@@ -410,3 +472,18 @@ def _validate_float_mapping(
     if not allow_empty and not values:
         raise ValueError(f"{name} must be non-empty")
     _finite_float_dict(values, name)
+
+
+def _validate_package_identifier(value: str, name: str) -> None:
+    if not isinstance(value, str) or not _PACKAGE_NAME_RE.fullmatch(value):
+        raise ValueError(
+            f"{name} must start with a letter and contain only letters, digits, "
+            "underscore, dot, or hyphen"
+        )
+
+
+def _validate_non_empty_text(value: str, name: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")
+    if any(ord(char) < 32 for char in value):
+        raise ValueError(f"{name} must not contain control characters")

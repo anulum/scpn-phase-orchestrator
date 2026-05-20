@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from scpn_phase_orchestrator.meta.transfer import (
     CrossDomainMetaTransfer,
+    MetaPackageManifest,
     MetaPolicyRecord,
     MetaTrainingSummary,
     MetaTransferProposal,
@@ -28,6 +29,7 @@ from scpn_phase_orchestrator.meta.transfer import (
 
 __all__ = [
     "CrossDomainMetaTransfer",
+    "MetaPackageManifest",
     "MetaPolicyRecord",
     "MetaTrainingSummary",
     "MetaTransferProposal",

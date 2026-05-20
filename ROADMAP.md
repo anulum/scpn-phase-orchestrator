@@ -584,8 +584,12 @@ Near-term candidate tracks:
   - Nested audit-directory corpus loading is in place:
     `CrossDomainMetaTransfer.fit_audit_directory()` discovers `**/*.jsonl`
     histories recursively for larger multi-domain replay corpora.
-  - Remaining scope: larger real audit-history training corpora and optional
-    `scpn-meta` packaging.
+  - Packaging-readiness manifests are in place:
+    `CrossDomainMetaTransfer.to_package_manifest()` binds the deterministic
+    JSON package hash, training summary, public import target, and proposed
+    `scpn-meta` console-script name while keeping execution disabled.
+  - Remaining scope: larger real audit-history training corpora and actual
+    optional `scpn-meta` distribution packaging.
 - Quantum-native compiler target: deterministic OpenQASM 3 compiler manifests
   are in place for Qiskit/PennyLane handoff, with Z-frequency terms,
   symmetrised XY coupling terms, co-simulation parity evidence, SHA-256 hashes,

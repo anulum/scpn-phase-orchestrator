@@ -16,6 +16,7 @@ import pytest
 
 from scpn_phase_orchestrator.meta import (
     CrossDomainMetaTransfer,
+    MetaPackageManifest,
     MetaPolicyRecord,
     MetaTrainingSummary,
     MetaTransferProposal,
@@ -300,6 +301,47 @@ class TestMetaTransferBehaviour:
         )
         assert loaded.knobs == pytest.approx(original.knobs)
         assert loaded.neighbours == original.neighbours
+
+    def test_package_manifest_binds_json_package_hash_and_entry_metadata(
+        self,
+    ) -> None:
+        model = CrossDomainMetaTransfer.fit(_records())
+
+        manifest = model.to_package_manifest()
+        repeated = model.to_package_manifest()
+        record = manifest.to_audit_record()
+
+        assert isinstance(manifest, MetaPackageManifest)
+        assert manifest == repeated
+        assert record == {
+            "schema": "scpn_meta_package_manifest_v1",
+            "package_name": "scpn-meta",
+            "import_target": "scpn_phase_orchestrator.meta",
+            "console_script": "scpn-meta",
+            "package_sha256": manifest.package_sha256,
+            "training_summary": model.training_summary.to_audit_record(),
+            "execution_permitted": False,
+        }
+        assert len(manifest.package_sha256) == 64
+
+    def test_package_manifest_rejects_execution_and_bad_metadata(self) -> None:
+        model = CrossDomainMetaTransfer.fit(_records())
+
+        with pytest.raises(ValueError, match="package_name"):
+            model.to_package_manifest(package_name="bad name")
+        with pytest.raises(ValueError, match="import_target"):
+            model.to_package_manifest(import_target="")
+        with pytest.raises(ValueError, match="console_script"):
+            model.to_package_manifest(console_script="bad\nscript")
+        with pytest.raises(ValueError, match="execution"):
+            MetaPackageManifest(
+                package_name="scpn-meta",
+                import_target="scpn_phase_orchestrator.meta",
+                console_script="scpn-meta",
+                package_sha256=model.to_package_manifest().package_sha256,
+                training_summary=model.training_summary,
+                execution_permitted=True,
+            )
 
     def test_json_package_rejects_unknown_schema(self) -> None:
         with pytest.raises(ValueError, match="schema"):
