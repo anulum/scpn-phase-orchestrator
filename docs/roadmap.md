@@ -90,7 +90,7 @@ items until they have implementation evidence, tests, and reproducible docs.
 | Formal verification export | Petri nets, policy DSL, STL monitors, and supervisor transitions export to PRISM, SPIN, TLA+, SMT, or equivalent proof workflows with reproducible safety artefacts for plasma, power, and medical-style domainpacks |
 | Neuromorphic and quantum tighter integration | validated phase-control plans emit Lava/BrainScaleS-style schedules and QPU control schedules through partner bridges, with execution disabled until real target evidence, hashes, parity, and operator approval exist |
 | Plugin ecosystem | standard Python and Rust extension interfaces let domain experts add extractors, monitors, actuators, and bridges with schema validation, capability metadata, audit records, compatibility tests, and no core fork |
-| Observability and digital-twin polish | Prometheus/Grafana live-run telemetry, digital-twin residual channels, adapter health, replay linkage, and twin mismatch evidence become first-class operator surfaces; digital-twin sync validations now reduce to a shared live/replay operator evidence record |
+| Observability and digital-twin polish | Prometheus/Grafana live-run telemetry, digital-twin residual channels, adapter health, replay linkage, and twin mismatch evidence become first-class operator surfaces; digital-twin sync validations now reduce to a shared live/replay operator evidence record, and runtime Prometheus text exports accepted/rejected sync counts, adapter health, latest sequence, residual extrema, status, capabilities, directions, and mismatch reasons from the same record |
 
 ## Deferred Maintenance Track
 

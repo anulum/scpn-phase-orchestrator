@@ -17,7 +17,7 @@ validated no-ops rather than disabling runtime observability.
 from __future__ import annotations
 
 import re
-from collections.abc import Generator, Mapping
+from collections.abc import Generator, Iterable, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import isfinite
@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.upde.metrics import UPDEState
 __all__ = [
     "MetricsExporter",
     "OTelExporter",
+    "PrometheusEvidenceSource",
     "RuntimeMetricSnapshot",
     "RuntimeObservability",
 ]
@@ -36,6 +37,8 @@ __all__ = [
 _PROMETHEUS_PREFIX_RE = re.compile(r"^[A-Za-z_:][A-Za-z0-9_:]*$")
 _SERVICE_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
 _SPAN_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
+_CONTRACT_HASH_RE = re.compile(r"^[0-9a-f]{64}$")
+_OPERATOR_STATUS_VALUES = ("healthy", "warning", "degraded", "critical")
 
 try:
     import opentelemetry.metrics as otel_metrics  # pragma: no cover
@@ -54,6 +57,14 @@ class RuntimeMetricSnapshot:
     regime: str
     latency_ms: float
     step_idx: int | None = None
+
+
+class PrometheusEvidenceSource:
+    """Protocol-like base for audit-record evidence exported as metrics."""
+
+    def to_audit_record(self) -> Mapping[str, object]:
+        """Return JSON-safe evidence fields for Prometheus exposition."""
+        raise NotImplementedError
 
 
 class _NoOpSpan:
@@ -118,6 +129,86 @@ def _validated_step_idx(step_idx: object) -> int:
     if result < 0:
         raise ValueError("step_idx must be a non-negative integer")
     return result
+
+
+def _validated_non_negative_count(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{field} must be a non-negative integer")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"{field} must be a non-negative integer")
+    return result
+
+
+def _validated_optional_sequence(value: object, *, field: str) -> int | None:
+    if value is None:
+        return None
+    return _validated_non_negative_count(value, field=field)
+
+
+def _validated_contract_hash(value: object) -> str:
+    if not isinstance(value, str) or not _CONTRACT_HASH_RE.fullmatch(value):
+        raise ValueError("contract_hash must be a 64-character lowercase SHA-256 hex")
+    return value
+
+
+def _validated_operator_status(value: object) -> str:
+    if not isinstance(value, str) or value not in _OPERATOR_STATUS_VALUES:
+        raise ValueError(
+            "status must be one of healthy, warning, degraded, or critical"
+        )
+    return value
+
+
+def _validated_label_mapping(value: object, *, field: str) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field} must be a mapping")
+    validated: dict[str, int] = {}
+    for raw_key, raw_count in value.items():
+        if not isinstance(raw_key, str) or not raw_key:
+            raise ValueError(f"{field} keys must be non-empty strings")
+        if any(ord(ch) < 32 for ch in raw_key):
+            raise ValueError(f"{field} keys must not contain control characters")
+        validated[raw_key] = _validated_non_negative_count(
+            raw_count,
+            field=f"{field}.{raw_key}",
+        )
+    return validated
+
+
+def _validated_reason_counts(value: object, *, field: str) -> dict[str, int]:
+    if not isinstance(value, Iterable) or isinstance(value, str | bytes | Mapping):
+        raise ValueError(f"{field} must be a sequence of non-empty strings")
+    counts: dict[str, int] = {}
+    for reason in value:
+        if not isinstance(reason, str) or not reason:
+            raise ValueError(f"{field} entries must be non-empty strings")
+        if any(ord(ch) < 32 for ch in reason):
+            raise ValueError(f"{field} entries must not contain control characters")
+        counts[reason] = counts.get(reason, 0) + 1
+    return counts
+
+
+def _validated_optional_residual(value: object, *, field: str) -> float | None:
+    if value is None:
+        return None
+    result = _validated_finite_metric(value, field=field)
+    if result < 0.0:
+        raise ValueError(f"{field} must be non-negative")
+    return result
+
+
+def _evidence_record(evidence: Mapping[str, object] | PrometheusEvidenceSource) -> (
+    Mapping[str, object]
+):
+    if isinstance(evidence, Mapping):
+        return evidence
+    if not hasattr(evidence, "to_audit_record"):
+        raise ValueError("evidence must be a mapping or expose to_audit_record()")
+    record = evidence.to_audit_record()
+    if not isinstance(record, Mapping):
+        raise ValueError("evidence.to_audit_record() must return a mapping")
+    return record
 
 
 def _validated_otel_name(value: object, *, field: str) -> str:
@@ -239,6 +330,157 @@ class MetricsExporter:
             + "\n"
         )
 
+    def digital_twin_operator_evidence_lines(
+        self,
+        evidence: Mapping[str, object] | PrometheusEvidenceSource,
+    ) -> list[str]:
+        """Build Prometheus lines for live or replayed digital-twin evidence."""
+        record = _evidence_record(evidence)
+        p = self._prefix
+        contract_hash = _escape_label_value(
+            _validated_contract_hash(record.get("contract_hash"))
+        )
+        accepted_count = _validated_non_negative_count(
+            record.get("accepted_count"),
+            field="accepted_count",
+        )
+        rejected_count = _validated_non_negative_count(
+            record.get("rejected_count"),
+            field="rejected_count",
+        )
+        adapter_count = _validated_non_negative_count(
+            record.get("adapter_count"),
+            field="adapter_count",
+        )
+        unhealthy_adapter_count = _validated_non_negative_count(
+            record.get("unhealthy_adapter_count"),
+            field="unhealthy_adapter_count",
+        )
+        latest_sequence = _validated_optional_sequence(
+            record.get("latest_sequence"),
+            field="latest_sequence",
+        )
+        max_abs_twin_residual = _validated_optional_residual(
+            record.get("max_abs_twin_residual"),
+            field="max_abs_twin_residual",
+        )
+        status = _validated_operator_status(record.get("status"))
+        capability_counts = _validated_label_mapping(
+            record.get("capability_counts"),
+            field="capability_counts",
+        )
+        direction_counts = _validated_label_mapping(
+            record.get("direction_counts"),
+            field="direction_counts",
+        )
+        mismatch_reason_counts = _validated_reason_counts(
+            record.get("mismatch_reasons"),
+            field="mismatch_reasons",
+        )
+
+        contract_label = f'contract_hash="{contract_hash}"'
+        lines = [
+            (
+                f"# HELP {p}_digital_twin_sync_accepted_total "
+                "Accepted digital-twin sync validations"
+            ),
+            f"# TYPE {p}_digital_twin_sync_accepted_total counter",
+            (
+                f"{p}_digital_twin_sync_accepted_total{{{contract_label}}} "
+                f"{accepted_count}"
+            ),
+            (
+                f"# HELP {p}_digital_twin_sync_rejected_total "
+                "Rejected digital-twin sync validations"
+            ),
+            f"# TYPE {p}_digital_twin_sync_rejected_total counter",
+            (
+                f"{p}_digital_twin_sync_rejected_total{{{contract_label}}} "
+                f"{rejected_count}"
+            ),
+            f"# HELP {p}_digital_twin_adapter_count Digital-twin adapter count",
+            f"# TYPE {p}_digital_twin_adapter_count gauge",
+            f"{p}_digital_twin_adapter_count{{{contract_label}}} {adapter_count}",
+            (
+                f"# HELP {p}_digital_twin_unhealthy_adapter_count "
+                "Digital-twin adapters failing compatibility or health review"
+            ),
+            f"# TYPE {p}_digital_twin_unhealthy_adapter_count gauge",
+            (
+                f"{p}_digital_twin_unhealthy_adapter_count{{{contract_label}}} "
+                f"{unhealthy_adapter_count}"
+            ),
+        ]
+        if latest_sequence is not None:
+            lines.extend(
+                [
+                    (
+                        f"# HELP {p}_digital_twin_latest_sequence "
+                        "Latest accepted digital-twin sequence"
+                    ),
+                    f"# TYPE {p}_digital_twin_latest_sequence gauge",
+                    (
+                        f"{p}_digital_twin_latest_sequence{{{contract_label}}} "
+                        f"{latest_sequence}"
+                    ),
+                ]
+            )
+        if max_abs_twin_residual is not None:
+            lines.extend(
+                [
+                    (
+                        f"# HELP {p}_digital_twin_max_abs_residual "
+                        "Maximum absolute digital-twin residual"
+                    ),
+                    f"# TYPE {p}_digital_twin_max_abs_residual gauge",
+                    (
+                        f"{p}_digital_twin_max_abs_residual{{{contract_label}}} "
+                        f"{max_abs_twin_residual:.6f}"
+                    ),
+                ]
+            )
+        lines.extend(
+            [
+                (
+                    f"# HELP {p}_digital_twin_status "
+                    "One-hot digital-twin operator status"
+                ),
+                f"# TYPE {p}_digital_twin_status gauge",
+            ]
+        )
+        for status_value in _OPERATOR_STATUS_VALUES:
+            status_label = _escape_label_value(status_value)
+            lines.append(
+                f"{p}_digital_twin_status{{{contract_label},"
+                f'status="{status_label}"}} {int(status == status_value)}'
+            )
+        for capability, count in sorted(capability_counts.items()):
+            capability_label = _escape_label_value(capability)
+            lines.append(
+                f"{p}_digital_twin_capability_count{{{contract_label},"
+                f'capability="{capability_label}"}} {count}'
+            )
+        for direction, count in sorted(direction_counts.items()):
+            direction_label = _escape_label_value(direction)
+            lines.append(
+                f"{p}_digital_twin_direction_count{{{contract_label},"
+                f'direction="{direction_label}"}} {count}'
+            )
+        for reason, count in sorted(mismatch_reason_counts.items()):
+            reason_label = _escape_label_value(reason)
+            lines.append(
+                f"{p}_digital_twin_mismatch_reason_count{{{contract_label},"
+                f'reason="{reason_label}"}} {count}'
+            )
+        return lines
+
+    def export_digital_twin_operator_evidence(
+        self,
+        evidence: Mapping[str, object] | PrometheusEvidenceSource,
+    ) -> str:
+        """Return Prometheus text for digital-twin operator evidence."""
+        return "\n".join(self.digital_twin_operator_evidence_lines(evidence)) + "\n"
+
 
 class OTelExporter:
     """Instrument UPDE steps with OpenTelemetry spans and metrics.
@@ -358,6 +600,13 @@ class RuntimeObservability:
             snapshot.latency_ms,
             step_idx=snapshot.step_idx,
         )
+
+    def digital_twin_prometheus_text(
+        self,
+        evidence: Mapping[str, object] | PrometheusEvidenceSource,
+    ) -> str:
+        """Return Prometheus text for live or replayed digital-twin evidence."""
+        return self._metrics.export_digital_twin_operator_evidence(evidence)
 
     def record_step(self, snapshot: RuntimeMetricSnapshot) -> None:
         """Record a runtime step through the optional OpenTelemetry backend."""

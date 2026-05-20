@@ -15,6 +15,13 @@ import pytest
 
 from scpn_phase_orchestrator.adapters import metrics_exporter as legacy_metrics
 from scpn_phase_orchestrator.adapters import opentelemetry as legacy_otel
+from scpn_phase_orchestrator.binding import (
+    build_digital_twin_binding_contract,
+    build_digital_twin_operator_evidence,
+    build_digital_twin_sync_envelope,
+    load_binding_spec,
+    validate_digital_twin_sync_envelope,
+)
 from scpn_phase_orchestrator.runtime import observability
 from scpn_phase_orchestrator.runtime.observability import (
     MetricsExporter,
@@ -170,3 +177,67 @@ def test_otel_exporter_rejects_nonfinite_state_before_noop_return() -> None:
 
     with pytest.raises(ValueError, match="stability_proxy"):
         exporter.record_step(bad_state, step_idx=0)
+
+
+def test_runtime_observability_exports_digital_twin_operator_evidence() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    accepted = build_digital_twin_sync_envelope(
+        contract,
+        capability="phase_observation",
+        direction="twin_to_spo",
+        sequence=41,
+        payload={"TwinResidual": -0.031},
+    )
+    rejected = build_digital_twin_sync_envelope(
+        contract,
+        capability="control_action_proposal",
+        direction="twin_to_spo",
+        sequence=42,
+        payload={"knob": "K"},
+    )
+    evidence = build_digital_twin_operator_evidence(
+        contract,
+        (
+            validate_digital_twin_sync_envelope(contract, accepted),
+            validate_digital_twin_sync_envelope(contract, rejected),
+        ),
+    )
+
+    text = RuntimeObservability().digital_twin_prometheus_text(evidence)
+
+    assert "spo_digital_twin_sync_accepted_total" in text
+    assert "spo_digital_twin_sync_rejected_total" in text
+    assert "spo_digital_twin_max_abs_residual" in text
+    assert "spo_digital_twin_latest_sequence" in text
+    assert f'contract_hash="{contract.contract_hash}"' in text
+    assert 'status="degraded"} 1' in text
+    assert 'capability="phase_observation"} 1' in text
+    assert 'direction="twin_to_spo"} 1' in text
+    assert 'reason="direction_not_allowed"} 1' in text
+    assert " 0.031000" in text
+
+
+def test_digital_twin_operator_metrics_reject_invalid_evidence() -> None:
+    exporter = MetricsExporter()
+    malformed = {
+        "contract_hash": "not-a-sha",
+        "accepted_count": 0,
+        "rejected_count": 0,
+        "adapter_count": 0,
+        "unhealthy_adapter_count": 0,
+        "latest_sequence": None,
+        "capability_counts": {},
+        "direction_counts": {},
+        "max_abs_twin_residual": None,
+        "mismatch_reasons": [],
+        "status": "healthy",
+    }
+
+    with pytest.raises(ValueError, match="contract_hash"):
+        exporter.export_digital_twin_operator_evidence(malformed)
+
+    malformed["contract_hash"] = "0" * 64
+    malformed["status"] = "unknown"
+    with pytest.raises(ValueError, match="status"):
+        exporter.export_digital_twin_operator_evidence(malformed)
