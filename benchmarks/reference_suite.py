@@ -37,6 +37,12 @@ from scpn_phase_orchestrator.autotune.reward import (
     RewardObservation,
 )
 from scpn_phase_orchestrator.exceptions import PolicyError
+from scpn_phase_orchestrator.plugins import (
+    PluginCapability,
+    PluginManifest,
+    build_plugin_marketplace_catalog,
+    build_rust_plugin_registry,
+)
 from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
     export_petri_net_tla,
@@ -148,6 +154,14 @@ class HybridCocompilerThresholds(NamedTuple):
     min_neuromorphic_sample_count: int
     min_blocked_probe_count: int
     require_non_actuating: bool
+
+
+class PluginEcosystemThresholds(NamedTuple):
+    min_plugin_count: int
+    min_capability_count: int
+    required_capability_kinds: frozenset[str]
+    min_incompatible_count: int
+    require_deterministic_hash: bool
 
 
 class ReferenceSuiteResult(TypedDict):
@@ -919,6 +933,81 @@ def benchmark_hybrid_cocompiler_review_gate() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
+    """Benchmark plugin marketplace and Rust registry capability contracts."""
+    thresholds = PluginEcosystemThresholds(
+        min_plugin_count=2,
+        min_capability_count=5,
+        required_capability_kinds=frozenset(
+            {"extractor", "monitor", "actuator", "bridge"}
+        ),
+        min_incompatible_count=1,
+        require_deterministic_hash=True,
+    )
+    manifests = _plugin_ecosystem_manifests()
+
+    t0 = time.perf_counter()
+    catalog = build_plugin_marketplace_catalog(manifests)
+    full_catalog = build_plugin_marketplace_catalog(
+        manifests,
+        include_incompatible=True,
+    )
+    rust_registry = build_rust_plugin_registry(manifests)
+    repeated_registry = build_rust_plugin_registry(manifests)
+    elapsed = time.perf_counter() - t0
+
+    capabilities = rust_registry["capabilities"]
+    if not isinstance(capabilities, list):
+        raise TypeError("rust registry capabilities must be a list")
+    capability_kinds = {str(capability["kind"]) for capability in capabilities}
+    registry_hash = sha256(
+        json.dumps(rust_registry, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    repeated_hash = sha256(
+        json.dumps(repeated_registry, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    deterministic_hash = int(registry_hash == repeated_hash)
+    acceptance_passed = int(
+        catalog["plugin_count"] >= thresholds.min_plugin_count
+        and rust_registry["capability_count"] >= thresholds.min_capability_count
+        and thresholds.required_capability_kinds <= capability_kinds
+        and full_catalog["incompatible_count"] >= thresholds.min_incompatible_count
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "plugin_ecosystem_catalog_quality",
+        "plugin_count": catalog["plugin_count"],
+        "full_plugin_count": full_catalog["plugin_count"],
+        "compatible_count": catalog["compatible_count"],
+        "incompatible_count": full_catalog["incompatible_count"],
+        "capability_count": rust_registry["capability_count"],
+        "wall_time_s": elapsed,
+        "steps_per_second": len(manifests) / elapsed,
+        "required_kind_count": len(thresholds.required_capability_kinds),
+        "observed_kind_count": len(capability_kinds),
+        "deterministic_hash": deterministic_hash,
+        "registry_sha256": registry_hash,
+        "acceptance_passed": acceptance_passed,
+        "capability_counts_json": json.dumps(
+            rust_registry["capability_counts"],
+            sort_keys=True,
+        ),
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_capability_count": thresholds.min_capability_count,
+                "min_incompatible_count": thresholds.min_incompatible_count,
+                "min_plugin_count": thresholds.min_plugin_count,
+                "require_deterministic_hash": (thresholds.require_deterministic_hash),
+                "required_capability_kinds": sorted(
+                    thresholds.required_capability_kinds
+                ),
+            },
+            sort_keys=True,
+        ),
+    }
+
+
 def _deterministic_replay_observation(
     candidate: KnobPolicyCandidate,
 ) -> RewardObservation:
@@ -1297,6 +1386,66 @@ def _hybrid_cocompiler_blocked_probe_count(
     return blocked_count
 
 
+def _plugin_ecosystem_manifests() -> tuple[PluginManifest, ...]:
+    return (
+        PluginManifest(
+            name="grid_controls_pack",
+            version="0.2.0",
+            package="grid_controls_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="extractor",
+                    name="pmu_phase",
+                    target="grid_controls.extractors:PMUPhaseExtractor",
+                    channels=("phase", "frequency"),
+                ),
+                PluginCapability(
+                    kind="monitor",
+                    name="frequency_drift",
+                    target="grid_controls.monitors:FrequencyDriftMonitor",
+                    channels=("frequency",),
+                ),
+                PluginCapability(
+                    kind="actuator",
+                    name="breaker_guard",
+                    target="grid_controls.actuators:BreakerGuard",
+                    knobs=("K", "zeta"),
+                ),
+            ),
+        ),
+        PluginManifest(
+            name="field_bridge_pack",
+            version="0.1.0",
+            package="field_bridge_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="bridge",
+                    name="audit_stream",
+                    target="field_bridge.bridges:AuditStreamBridge",
+                ),
+                PluginCapability(
+                    kind="monitor",
+                    name="phase_residual",
+                    target="field_bridge.monitors:PhaseResidualMonitor",
+                    channels=("phase_residual",),
+                ),
+            ),
+        ),
+        PluginManifest(
+            name="incomplete_monitor_pack",
+            version="0.1.0",
+            package="incomplete_monitor_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="monitor",
+                    name="empty_monitor",
+                    target="incomplete.monitors:EmptyMonitor",
+                ),
+            ),
+        ),
+    )
+
+
 def _audit_record_is_finite(value: object) -> bool:
     if isinstance(value, bool | str):
         return True
@@ -1530,6 +1679,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "formal_export": benchmark_formal_export_artifact_quality(),
             "domain_formal_export": benchmark_domain_formal_safety_exports(),
             "hybrid_cocompiler": benchmark_hybrid_cocompiler_review_gate(),
+            "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
             "petri_reachability": benchmark_petri_reachability(),

@@ -9,7 +9,8 @@
 # Plugins
 
 The plugin interface defines metadata and compatibility checks for extension
-packages that provide domainpacks, phase extractors, actuators, or bridges.
+packages that provide domainpacks, phase extractors, monitors, actuators, or
+bridges.
 
 Plugins expose a manifest through the `scpn_phase_orchestrator.plugins` Python
 entry-point group. The manifest is validated before a marketplace, CI job, or
@@ -39,6 +40,11 @@ manifest = PluginManifest(
 validate_plugin_manifest(manifest)
 ```
 
+Supported capability kinds are `domainpack`, `extractor`, `monitor`,
+`actuator`, and `bridge`. Monitor capabilities must declare at least one
+channel so registry, marketplace, and Rust-dispatch metadata can expose the
+observed signal surface explicitly.
+
 Marketplace and CI tooling can package discovered manifests into a
 deterministic metadata catalogue without importing plugin implementation
 targets:
@@ -50,9 +56,10 @@ catalogue = build_plugin_marketplace_catalog((manifest,))
 ```
 
 The catalogue includes the package manifest, compatibility result, reason list,
-SPO version, schema version, and capability counts. By default incompatible
-manifests are counted but omitted from the published `plugins` list; pass
-`include_incompatible=True` when a review job needs the full rejection report.
+SPO version, schema version, and capability counts for every supported
+capability kind. By default incompatible manifests are counted but omitted from
+the published `plugins` list; pass `include_incompatible=True` when a review job
+needs the full rejection report.
 
 Rust-side dispatchers can consume a flattened metadata registry without
 importing plugin implementation targets:

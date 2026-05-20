@@ -27,8 +27,14 @@ __all__ = [
     "validate_plugin_manifest",
 ]
 
-PluginKind: TypeAlias = Literal["domainpack", "extractor", "actuator", "bridge"]
-_VALID_KINDS = {"domainpack", "extractor", "actuator", "bridge"}
+PluginKind: TypeAlias = Literal[
+    "domainpack",
+    "extractor",
+    "monitor",
+    "actuator",
+    "bridge",
+]
+_VALID_KINDS = {"domainpack", "extractor", "monitor", "actuator", "bridge"}
 _ENTRY_POINT_GROUP = "scpn_phase_orchestrator.plugins"
 
 
@@ -163,6 +169,8 @@ def compatibility_report(manifest: PluginManifest) -> PluginCompatibilityReport:
         seen.add(key)
         if capability.kind == "extractor" and not capability.channels:
             reasons.append(f"extractor {capability.name} must declare channels")
+        if capability.kind == "monitor" and not capability.channels:
+            reasons.append(f"monitor {capability.name} must declare channels")
         if capability.kind == "actuator" and not capability.knobs:
             reasons.append(f"actuator {capability.name} must declare knobs")
     return PluginCompatibilityReport(

@@ -350,6 +350,9 @@ sessions do not treat them as abstract research labels.
 - Plugin ecosystem:
   - Standardise Python and Rust extension interfaces for custom extractors,
     monitors, actuators, and bridges.
+  - Monitor capability declarations are now part of the validated manifest
+    surface and must declare channels; marketplace and Rust-registry benchmark
+    gates cover extractor, monitor, actuator, and bridge metadata.
   - Acceptance: domain experts can ship schema-validated, capability-declared,
     audit-visible plugins without core forks.
 - Observability and digital-twin polish:
@@ -389,7 +392,7 @@ sessions do not treat them as abstract research labels.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
   - N-channel runtime execution and replay-only optimisation surfaces are in place. Hierarchical reduced-summary parent orchestration, offline edge/cloud sync envelopes, strict non-socket runtime validation, decoded JSONL/REST/frame adapter boundaries, power-grid/cardiac replay demos, and deterministic offline gossip replay are in place; owned live transports and broader multi-domain demos remain open.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
-- Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, actuators, and bridges so domain experts can publish extensions without forking the core repository.
+- Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, monitors, actuators, and bridges so domain experts can publish extensions without forking the core repository.
   - Plugin manifest registry foundation is in place; deeper Rust runtime loading remains open.
   - Marketplace catalogue packaging is in place: `build_plugin_marketplace_catalog()` emits deterministic metadata-only catalogue payloads with compatibility records and capability counts.
   - Marketplace example is in place: `examples/plugin_marketplace_catalog.py` builds a validated extractor/actuator manifest and catalogue payload without loading plugin targets.
@@ -397,6 +400,9 @@ sessions do not treat them as abstract research labels.
   - Rust-facing registry export is in place: `build_rust_plugin_registry()` and
     `spo plugins catalog --rust-registry` emit flattened capability JSON for
     Rust-side dispatchers without importing plugin implementation targets.
+  - Monitor capability support is in place: manifests, marketplace counts,
+    compatibility reports, Rust-facing registry records, and the reference
+    benchmark gate now require monitor metadata with declared channels.
 
 ### Minor polish before v1.0
 

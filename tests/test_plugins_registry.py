@@ -40,6 +40,12 @@ def _manifest() -> PluginManifest:
                 channels=("P",),
             ),
             PluginCapability(
+                kind="monitor",
+                name="frequency_drift",
+                target="grid_pack.monitors:FrequencyDriftMonitor",
+                channels=("frequency",),
+            ),
+            PluginCapability(
                 kind="actuator",
                 name="breaker",
                 target="grid_pack.actuators:BreakerMapper",
@@ -64,7 +70,8 @@ class TestPluginManifestContracts:
 
         assert record["name"] == "grid_pack"
         assert record["capabilities"][0]["kind"] == "extractor"
-        assert record["capabilities"][1]["knobs"] == ["K", "zeta"]
+        assert record["capabilities"][1]["kind"] == "monitor"
+        assert record["capabilities"][2]["knobs"] == ["K", "zeta"]
 
     def test_invalid_capability_kind_is_rejected(self) -> None:
         invalid_kind: Any = "invalid"
@@ -251,6 +258,27 @@ class TestPluginCompatibility:
         assert not report.compatible
         assert "must declare knobs" in report.reasons[0]
 
+    def test_monitor_must_declare_channels(self) -> None:
+        manifest = PluginManifest(
+            name="bad_monitor",
+            version="0.1.0",
+            package="bad_monitor",
+            capabilities=(
+                PluginCapability(
+                    kind="monitor",
+                    name="empty",
+                    target="bad.monitors:Empty",
+                ),
+            ),
+        )
+
+        report = compatibility_report(manifest)
+
+        assert not report.compatible
+        assert "monitor empty must declare channels" in report.reasons[0]
+        with pytest.raises(ValueError, match="monitor empty must declare channels"):
+            validate_plugin_manifest(manifest)
+
     def test_duplicate_capabilities_are_reported(self) -> None:
         capability = PluginCapability(
             kind="domainpack",
@@ -386,6 +414,7 @@ class TestPluginMarketplaceCatalog:
             "bridge": 0,
             "domainpack": 0,
             "extractor": 1,
+            "monitor": 1,
         }
         plugin_records = cast("list[dict[str, Any]]", catalog["plugins"])
         assert plugin_records[0]["manifest"]["name"] == "actuator_pack"
@@ -459,6 +488,7 @@ class TestPluginMarketplaceCatalog:
             "bridge": 1,
             "domainpack": 1,
             "extractor": 0,
+            "monitor": 0,
         }
         assert catalog["schema_version"] == reversed_order["schema_version"]
 
@@ -466,7 +496,7 @@ class TestPluginMarketplaceCatalog:
         registry = build_rust_plugin_registry((_manifest(),))
 
         assert registry["schema"] == "scpn_rust_plugin_registry_v1"
-        assert registry["capability_count"] == 2
+        assert registry["capability_count"] == 3
         capability_records = cast("list[dict[str, Any]]", registry["capabilities"])
         assert capability_records == [
             {
@@ -493,6 +523,18 @@ class TestPluginMarketplaceCatalog:
                 "knobs": [],
                 "compatible": True,
             },
+            {
+                "plugin": "grid_pack",
+                "plugin_version": "0.1.0",
+                "package": "grid_pack",
+                "kind": "monitor",
+                "name": "frequency_drift",
+                "target": "grid_pack.monitors:FrequencyDriftMonitor",
+                "version": "0.1.0",
+                "channels": ["frequency"],
+                "knobs": [],
+                "compatible": True,
+            },
         ]
 
     def test_rust_plugin_registry_can_carry_incompatible_entries(self) -> None:
@@ -515,8 +557,8 @@ class TestPluginMarketplaceCatalog:
             include_incompatible=True,
         )
 
-        assert default_registry["capability_count"] == 2
-        assert full_registry["capability_count"] == 3
+        assert default_registry["capability_count"] == 3
+        assert full_registry["capability_count"] == 4
         capability_records = cast("list[dict[str, Any]]", full_registry["capabilities"])
         assert capability_records[0]["plugin"] == "bad_extractor"
         assert capability_records[0]["compatible"] is False
@@ -675,6 +717,7 @@ class TestPluginMarketplaceCatalog:
             "bridge": 0,
             "domainpack": 0,
             "extractor": 1,
+            "monitor": 0,
         }
         assert plugin_records[0]["compatible"] is True
         assert plugin_records[0]["manifest"]["name"] == "grid_controls_pack"

@@ -20,6 +20,7 @@ from benchmarks.reference_suite import (
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_kuramoto_reference,
     benchmark_petri_reachability,
+    benchmark_plugin_ecosystem_catalog_quality,
     benchmark_replay_policy_candidate_quality,
     benchmark_stuart_landau_reference,
     build_benchmark_metadata,
@@ -295,6 +296,44 @@ def test_hybrid_cocompiler_review_gate_reports_thresholds_and_backends() -> None
     assert backends == ["qiskit_openqasm3", "pennylane_qasm", "lava", "pynn"]
 
 
+def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
+    out = benchmark_plugin_ecosystem_catalog_quality()
+
+    assert out["suite"] == "plugin_ecosystem_catalog_quality"
+    assert out["plugin_count"] == 2
+    assert out["full_plugin_count"] == 3
+    assert out["compatible_count"] == 2
+    assert out["incompatible_count"] == 1
+    assert out["capability_count"] == 5
+    assert out["required_kind_count"] == 4
+    assert out["observed_kind_count"] == 4
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["registry_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_plugin_ecosystem_catalog_quality_reports_thresholds_and_counts() -> None:
+    out = benchmark_plugin_ecosystem_catalog_quality()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    capability_counts = json.loads(str(out["capability_counts_json"]))
+
+    assert thresholds == {
+        "min_capability_count": 5,
+        "min_incompatible_count": 1,
+        "min_plugin_count": 2,
+        "require_deterministic_hash": True,
+        "required_capability_kinds": ["actuator", "bridge", "extractor", "monitor"],
+    }
+    assert capability_counts == {
+        "actuator": 1,
+        "bridge": 1,
+        "domainpack": 0,
+        "extractor": 1,
+        "monitor": 2,
+    }
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -306,6 +345,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "domain_formal_export",
         "formal_export",
         "hybrid_cocompiler",
+        "plugin_ecosystem",
         "replay_policy",
         "kuramoto",
         "stuart_landau",
