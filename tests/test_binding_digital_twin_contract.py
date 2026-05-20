@@ -1296,3 +1296,104 @@ def test_digital_twin_operator_evidence_rejects_invalid_residual_inputs() -> Non
             residual_warning_threshold=0.3,
             residual_critical_threshold=0.2,
         )
+
+
+def test_digital_twin_contract_unknown_capability_is_bidirectional_and_auditable(
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(
+        spec,
+        sync_capabilities=("state_snapshot", "probe"),
+    )
+    probe = next(cap for cap in contract.sync_capabilities if cap.name == "probe")
+
+    assert probe.direction == "bidirectional"
+    assert probe.payload == "json_object"
+    for direction in ("twin_to_spo", "spo_to_twin"):
+        envelope = build_digital_twin_sync_envelope(
+            contract,
+            capability="probe",
+            direction=direction,
+            sequence=77,
+            payload={"signal": 0.11},
+        )
+        validation = validate_digital_twin_sync_envelope(contract, envelope)
+
+        assert validation.accepted is True
+        assert validation.reason == "accepted"
+
+
+def test_digital_twin_operator_evidence_respects_discrepancy_boundaries() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    equal_warning = build_digital_twin_sync_envelope(
+        contract,
+        capability="phase_observation",
+        direction="twin_to_spo",
+        sequence=91,
+        payload={"TwinResidual": 0.05},
+    )
+    above_warning = build_digital_twin_sync_envelope(
+        contract,
+        capability="phase_observation",
+        direction="twin_to_spo",
+        sequence=92,
+        payload={"TwinResidual": 0.15},
+    )
+    above_critical = build_digital_twin_sync_envelope(
+        contract,
+        capability="phase_observation",
+        direction="twin_to_spo",
+        sequence=93,
+        payload={"TwinResidual": 0.35},
+    )
+
+    at_warning = build_digital_twin_operator_evidence(
+        contract,
+        (validate_digital_twin_sync_envelope(contract, equal_warning),),
+        residual_warning_threshold=0.05,
+        residual_critical_threshold=0.2,
+    )
+    warning = build_digital_twin_operator_evidence(
+        contract,
+        (validate_digital_twin_sync_envelope(contract, above_warning),),
+        residual_warning_threshold=0.05,
+        residual_critical_threshold=0.5,
+    )
+    critical = build_digital_twin_operator_evidence(
+        contract,
+        (validate_digital_twin_sync_envelope(contract, above_critical),),
+        residual_warning_threshold=0.05,
+        residual_critical_threshold=0.2,
+    )
+
+    assert at_warning.status == "healthy"
+    assert at_warning.max_abs_twin_residual == 0.05
+    assert warning.status == "warning"
+    assert critical.status == "critical"
+
+
+def test_digital_twin_operator_evidence_marks_contract_hash_mismatch_as_rejected(
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    contract_alt = build_digital_twin_binding_contract(
+        spec,
+        contract_version="spo-digital-twin-binding/v2",
+    )
+    mismatched = build_digital_twin_sync_envelope(
+        contract_alt,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=101,
+        payload={"R": 0.91},
+    )
+    evidence = build_digital_twin_operator_evidence(
+        contract,
+        (validate_digital_twin_sync_envelope(contract, mismatched),),
+    )
+
+    assert evidence.accepted_count == 0
+    assert evidence.rejected_count == 1
+    assert evidence.mismatch_reasons == ("contract_hash_mismatch",)
+    assert evidence.status == "degraded"

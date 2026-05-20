@@ -606,6 +606,34 @@ def test_loader_preserves_protocol_net_and_amplitude_blocks(tmp_path):
     assert spec.amplitude.amp_coupling_decay == 0.4
 
 
+@pytest.mark.parametrize(
+    ("transitions", "message"),
+    [
+        ({}, r"expected list in protocol_net\.transitions"),
+        (
+            [1],
+            r"expected mapping in protocol_net\.transitions\[0]",
+        ),
+    ],
+)
+def test_loader_rejects_invalid_protocol_net_transitions(
+    tmp_path, transitions: object, message: str
+) -> None:
+    data = {
+        **_SPEC_DATA,
+        "protocol_net": {
+            "places": ["idle", "active"],
+            "initial": {"idle": 1, "active": 0},
+            "transitions": transitions,
+        },
+    }
+    p = tmp_path / "protocol_net_invalid.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(BindingLoadError, match=message):
+        load_binding_spec(p)
+
+
 class TestPipelineWiring:
     """Pipeline wiring: load_binding_spec -> build engine params -> UPDEEngine -> R.
 

@@ -13,6 +13,7 @@ import textwrap
 from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -36,13 +37,37 @@ def test_require_non_empty_accepts_non_empty() -> None:
     assert _require_non_empty("abc", "field") == "abc"
 
 
+def test_require_non_empty_rejects_empty_or_none() -> None:
+    with pytest.raises(ValueError, match="must be a non-empty string"):
+        _require_non_empty("", "field")
+    with pytest.raises(ValueError, match="must be a non-empty string"):
+        _require_non_empty(cast(str, None), "field")
+
+
 def test_require_finite_non_negative_normalises_numeric_input() -> None:
     assert _require_finite_non_negative("3.25", "field") == 3.25
+
+
+@pytest.mark.parametrize(
+    "value",
+    [-1, float("nan"), "not_a_number"],
+)
+
+def test_require_finite_non_negative_rejects_invalid_inputs(value: float) -> None:
+    with pytest.raises(ValueError, match="must be finite and non-negative"):
+        _require_finite_non_negative(value, "field")
 
 
 def test_require_int_range_parses_numeric_and_respects_bounds() -> None:
     assert _require_int_range("16", "field", 4) == 16
     assert _require_int_range(8.0, "field", 4) == 8
+
+
+def test_require_int_range_rejects_non_integral_inputs() -> None:
+    with pytest.raises(ValueError, match="must be an integer"):
+        _require_int_range("bad", "field", 1)
+    with pytest.raises(ValueError, match="must be an integer"):
+        _require_int_range(True, "field", 1)
 
 
 def test_load_config_accepts_numeric_buffer_length_from_string(tmp_path: Path) -> None:
@@ -248,6 +273,33 @@ def test_load_config_normalises_numeric_scalars(tmp_path: Path) -> None:
     assert isinstance(cfg.buffer_length, int)
     assert isinstance(cfg.server.port, int)
     assert isinstance(cfg.security.rate_limit_per_minute, int)
+
+
+def test_load_config_rejects_non_list_services(tmp_path: Path) -> None:
+    cfg_text = textwrap.dedent("""\
+        prometheus_url: "http://prom:9090"
+        services: "not-a-list"
+    """)
+    path = tmp_path / "qw.yaml"
+    path.write_text(cfg_text, encoding="utf-8")
+
+    with pytest.raises(TypeError):
+        load_config(path)
+
+
+def test_load_config_rejects_service_entries_missing_required_fields(
+    tmp_path: Path,
+) -> None:
+    cfg_text = textwrap.dedent("""\
+        prometheus_url: "http://prom:9090"
+        services:
+          - promql: up
+    """)
+    path = tmp_path / "qw.yaml"
+    path.write_text(cfg_text, encoding="utf-8")
+
+    with pytest.raises(KeyError, match="'name'"):
+        load_config(path)
 
 
 def test_load_config_rejects_malformed_yaml_without_leaking_secret_path(

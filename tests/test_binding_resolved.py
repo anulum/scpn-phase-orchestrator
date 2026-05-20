@@ -305,3 +305,64 @@ def test_format_resolved_binding_config_handles_non_list_metadata_gracefully():
     assert any("extractors=none" in line for line in lines)
     assert any("driver_keys=none" in line for line in lines)
     assert not any("missing_required_channels" in line for line in lines)
+
+
+def test_resolved_binding_config_is_deterministic_across_channel_order(tmp_path):
+    base = {
+        "name": "resolved-channel-order-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.02,
+        "control_period_s": 0.1,
+        "layers": [
+            {
+                "name": "plant",
+                "index": 0,
+                "oscillator_ids": ["p0"],
+                "family": "plant",
+            }
+        ],
+        "oscillator_families": {
+            "plant": {"channel": "P", "extractor_type": "physical", "config": {}},
+        },
+        "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}, "Q": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+        "channels": {
+            "P": {
+                "role": "plant",
+                "replay_semantics": "phase",
+                "derived_from": [],
+            },
+            "Q": {
+                "role": "queue",
+                "replay_semantics": "derived",
+                "derived_from": ["P"],
+                "derive_rule": "Q = P",
+            },
+        },
+    }
+
+    path_alpha = tmp_path / "resolved-order-a.yaml"
+    path_alpha.write_text(yaml.dump(base), encoding="utf-8")
+    summary_alpha = resolved_binding_config(load_binding_spec(path_alpha))
+
+    swapped_channels = {
+        "Q": base["channels"]["Q"],
+        "P": base["channels"]["P"],
+    }
+    path_beta = tmp_path / "resolved-order-b.yaml"
+    path_beta.write_text(
+        yaml.dump({**base, "channels": swapped_channels}),
+        encoding="utf-8",
+    )
+    summary_beta = resolved_binding_config(load_binding_spec(path_beta))
+
+    assert (
+        format_resolved_binding_config(summary_alpha)
+        == format_resolved_binding_config(summary_beta)
+    )
+    assert summary_alpha["channels"] == summary_beta["channels"]
+    assert summary_alpha["channel_algebra"] == summary_beta["channel_algebra"]

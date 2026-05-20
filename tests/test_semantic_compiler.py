@@ -19,6 +19,7 @@ from scpn_phase_orchestrator.binding.semantic import (
     GeneratedBindingArtifacts,
     RetrievalEvidence,
     SemanticDomainCompiler,
+    _safe_read,
     compile_symbolic_binding,
 )
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
@@ -546,6 +547,17 @@ def test_generated_artifacts_audit_record_matches_execution_payload():
     assert len(artifacts.audit_record["retrieval_evidence"]) == len(
         artifacts.retrieval_evidence
     )
+
+
+def test_safe_read_truncates_and_fails_closed_on_binary_input(tmp_path) -> None:
+    text = "abcdefghi"
+    text_path = tmp_path / "notes.txt"
+    text_path.write_text(text, encoding="utf-8")
+    assert _safe_read(text_path, max_chars=4) == "abcd"
+
+    binary = tmp_path / "notes.bin"
+    binary.write_bytes(b"\xff\x00")
+    assert _safe_read(binary, max_chars=4) == ""
 
 
 # Pipeline wiring: SemanticDomainCompiler is the natural-language frontend

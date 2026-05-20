@@ -237,3 +237,47 @@ def test_channel_runtime_confidence_weights_clamped_to_unit_interval(tmp_path):
 
     assert run_with_weight(3.0) == 0.8
     assert run_with_weight(-0.5) == 0.0
+
+
+def test_channel_runtime_falls_back_to_default_channel_for_undefined_layer_family(
+    tmp_path,
+) -> None:
+    spec = {
+        "name": "channel-runtime-fallback-channel",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.02,
+        "control_period_s": 0.1,
+        "layers": [
+            {"name": "known", "index": 0, "oscillator_ids": ["p0"], "family": "plant"},
+            {
+                "name": "unknown",
+                "index": 1,
+                "oscillator_ids": ["x0"],
+                "family": "ghost",
+            },
+        ],
+        "oscillator_families": {
+            "plant": {"channel": "P", "extractor_type": "physical", "config": {}},
+        },
+        "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0, 1], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+    }
+    path = _write_runtime_spec_payload(tmp_path, spec)
+    executor = ChannelRuntimeExecutor.from_spec(load_binding_spec(path))
+
+    execution = executor.execute(
+        [LayerState(R=0.21, psi=0.01), LayerState(R=0.62, psi=0.02)]
+    )
+
+    assert [e.channel for e in execution.evidence] == ["P", "P"]
+    assert execution.evidence[0].raw_R == 0.21
+    assert execution.evidence[1].raw_R == 0.62
+    assert execution.evidence[0].executed_R == 0.21
+    assert execution.evidence[1].executed_R == 0.62
+    assert execution.evidence[1].evidence_source == "current_tick"
+    assert execution.to_audit_record()["delayed_layers"] == []
+    assert execution.to_audit_record()["uncertain_layers"] == []

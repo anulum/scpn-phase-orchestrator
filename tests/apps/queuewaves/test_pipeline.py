@@ -9,10 +9,15 @@
 from __future__ import annotations
 
 from typing import get_type_hints
+from unittest.mock import patch
 
 import numpy as np
 
-from scpn_phase_orchestrator.apps.queuewaves.config import QueueWavesConfig
+from scpn_phase_orchestrator.apps.queuewaves.config import (
+    QueueWavesConfig,
+    ServerConfig,
+    ServiceDef,
+)
 from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
     PhaseComputePipeline,
     PipelineSnapshot,
@@ -70,6 +75,23 @@ def test_pipeline_empty_buffers_still_ticks(minimal_config: QueueWavesConfig) ->
     assert snap.tick == 1
 
 
+def test_pipeline_skip_short_buffers_without_extractor_calls(
+    minimal_config: QueueWavesConfig,
+) -> None:
+    pipe = PhaseComputePipeline(minimal_config)
+    short_signals = {
+        svc.name: np.array([0.1, 0.2, 0.3], dtype=float)
+        for svc in minimal_config.services
+    }
+
+    with patch.object(pipe._extractor, "extract") as extract:
+        snap = pipe.tick(short_signals)
+        extract.assert_not_called()
+
+    assert snap.tick == 1
+    assert snap.r_bad >= 0.0
+
+
 def test_pipeline_sine_convergence(minimal_config: QueueWavesConfig) -> None:
     """Synchronized sine inputs should produce coherent R values."""
     pipe = PhaseComputePipeline(minimal_config)
@@ -79,6 +101,52 @@ def test_pipeline_sine_convergence(minimal_config: QueueWavesConfig) -> None:
         snap = pipe.tick(buffers)
     # All services receiving identical signal → high coherence
     assert snap.r_bad > 0.3 or snap.r_good > 0.3
+
+
+def test_pipeline_single_micro_layer_produces_zero_r_good(
+    minimal_config: QueueWavesConfig,
+) -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=[ServiceDef(name="svc-a", promql="up", layer="micro")],
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=ServerConfig(port=0),
+        security=minimal_config.security,
+    )
+    pipe = PhaseComputePipeline(cfg)
+    rng = np.random.default_rng(6)
+    buffers = {"svc-a": rng.standard_normal(16)}
+    snap = pipe.tick(buffers)
+
+    assert snap.r_good == 0.0
+    assert snap.plv_matrix == [[0.0]]
+
+
+def test_pipeline_single_macro_layer_produces_zero_r_bad(
+    minimal_config: QueueWavesConfig,
+) -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=[ServiceDef(name="svc-a", promql="up", layer="macro")],
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=ServerConfig(port=0),
+        security=minimal_config.security,
+    )
+    pipe = PhaseComputePipeline(cfg)
+    rng = np.random.default_rng(7)
+    buffers = {"svc-a": rng.standard_normal(16)}
+    snap = pipe.tick(buffers)
+
+    assert snap.r_bad == 0.0
+    assert snap.r_good >= 0.0
 
 
 def test_pipeline_plv_matrix_shape(minimal_config: QueueWavesConfig) -> None:
