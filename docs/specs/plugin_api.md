@@ -286,6 +286,11 @@ The revocation artefact is immutable metadata. It does not delete stored bundles
 the deployment store must feed the emitted `request_hash` into its revoked-hash
 set before persisting or consuming replacement requests.
 
+For stores that maintain multiple lifecycle decisions,
+`build_plugin_execution_request_revocation_list()` aggregates revocation
+artefacts into a deterministic list, rejects duplicate request hashes, and
+exposes `as_revoked_request_hashes()` for direct use with request validation.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

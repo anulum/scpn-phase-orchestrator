@@ -23,6 +23,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionPlan,
     PluginExecutionRequest,
     PluginExecutionRequestRevocation,
+    PluginExecutionRequestRevocationList,
     PluginExecutionRequestStorageManifest,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
@@ -31,6 +32,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_plan,
     build_plugin_execution_request,
     build_plugin_execution_request_revocation,
+    build_plugin_execution_request_revocation_list,
     build_plugin_execution_request_storage_bundle,
     build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
@@ -1542,6 +1544,115 @@ class TestPluginRuntimeExecution:
                 revoked_by="deployment_gate",
                 revocation_reference="REV-2026-05-20-02",
                 revocation_reason="operator rotation",
+            )
+
+    def test_execution_request_revocation_list_is_deterministic(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-21",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        revocation = build_plugin_execution_request_revocation(
+            request,
+            revoked_by="deployment_gate",
+            revocation_reference="REV-2026-05-20-03",
+            revocation_reason="operator rotation",
+        )
+
+        revocation_list = build_plugin_execution_request_revocation_list(
+            (revocation,),
+            created_by="deployment_gate",
+        )
+        repeated = build_plugin_execution_request_revocation_list(
+            (revocation,),
+            created_by="deployment_gate",
+        )
+
+        assert revocation_list == repeated
+        assert isinstance(revocation_list, PluginExecutionRequestRevocationList)
+        assert (
+            revocation_list.schema
+            == "scpn_plugin_execution_request_revocation_list_v1"
+        )
+        assert revocation_list.request_hashes == (revocation.request_hash,)
+        assert revocation_list.revocation_hashes == (revocation.revocation_hash,)
+        assert revocation_list.revocation_count == 1
+        assert revocation_list.as_revoked_request_hashes() == (
+            revocation.request_hash,
+        )
+        assert len(revocation_list.revocation_list_hash) == 64
+
+    def test_execution_request_revocation_list_rejects_duplicate_request_hash(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-22",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        first = build_plugin_execution_request_revocation(
+            request,
+            revoked_by="deployment_gate",
+            revocation_reference="REV-2026-05-20-04",
+            revocation_reason="operator rotation",
+        )
+        second = build_plugin_execution_request_revocation(
+            request,
+            revoked_by="deployment_gate",
+            revocation_reference="REV-2026-05-20-05",
+            revocation_reason="operator rotation",
+        )
+
+        with pytest.raises(ValueError, match="duplicate request hashes"):
+            build_plugin_execution_request_revocation_list(
+                (second, first),
+                created_by="deployment_gate",
             )
 
     def test_execution_request_storage_bundle_is_deterministic(

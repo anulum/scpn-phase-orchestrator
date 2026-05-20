@@ -249,6 +249,11 @@ spo plugins revoke-execution-request REQUEST_JSON \
   --revocation-reason operator_rotation
 ```
 
+Multiple revocation artefacts can be consolidated with
+`build_plugin_execution_request_revocation_list()`. The resulting deterministic
+list exposes `as_revoked_request_hashes()`, which is the input shape expected by
+request validation and request-bound runtime execution.
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

@@ -28,12 +28,14 @@ __all__ = [
     "PluginExecutionApproval",
     "PluginExecutionRequest",
     "PluginExecutionRequestRevocation",
+    "PluginExecutionRequestRevocationList",
     "PluginExecutionRequestStorageManifest",
     "build_plugin_marketplace_catalog",
     "build_plugin_execution_plan",
     "build_plugin_execution_approval",
     "build_plugin_execution_request",
     "build_plugin_execution_request_revocation",
+    "build_plugin_execution_request_revocation_list",
     "build_plugin_execution_request_storage_manifest",
     "build_plugin_execution_request_storage_bundle",
     "build_rust_plugin_runtime_handoff",
@@ -448,6 +450,45 @@ class PluginExecutionRequestRevocation:
             raise ValueError("audit_record must be provided")
 
 
+@dataclass(frozen=True)
+class PluginExecutionRequestRevocationList:
+    """Deployment-owned aggregate of request revocation artefacts."""
+
+    schema: str
+    version: str
+    request_hashes: tuple[str, ...]
+    revocation_hashes: tuple[str, ...]
+    revocation_count: int
+    created_by: str
+    revocation_list_hash: str
+    audit_record: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if self.schema != "scpn_plugin_execution_request_revocation_list_v1":
+            raise ValueError(
+                "revocation list schema must be "
+                "scpn_plugin_execution_request_revocation_list_v1"
+            )
+        if self.version != "1.0.0":
+            raise ValueError("revocation list version must be 1.0.0")
+        if self.revocation_count != len(self.request_hashes):
+            raise ValueError("revocation count must match request hash count")
+        if self.revocation_count != len(self.revocation_hashes):
+            raise ValueError("revocation count must match revocation hash count")
+        _require_identifier(self.created_by, "revocation list creator")
+        _validate_sha256(self.revocation_list_hash, "revocation list hash")
+        if self.audit_record is None:
+            raise ValueError("audit_record must be provided")
+        for request_hash in self.request_hashes:
+            _validate_sha256(request_hash, "revoked request hash")
+        for revocation_hash in self.revocation_hashes:
+            _validate_sha256(revocation_hash, "revocation hash")
+
+    def as_revoked_request_hashes(self) -> tuple[str, ...]:
+        """Return the revoked request hash set for validation calls."""
+        return self.request_hashes
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -622,6 +663,54 @@ def build_plugin_execution_request_revocation(
         revocation_reason=revocation_reason,
         revoked=True,
         revocation_hash=str(audit_record["revocation_hash"]),
+        audit_record=audit_record,
+    )
+
+
+def build_plugin_execution_request_revocation_list(
+    revocations: tuple[PluginExecutionRequestRevocation, ...],
+    *,
+    created_by: str,
+) -> PluginExecutionRequestRevocationList:
+    """Build a deterministic deployment revocation-list artefact."""
+    _require_identifier(created_by, "revocation list creator")
+    if not revocations:
+        raise ValueError("revocation list requires at least one revocation")
+    records: list[dict[str, object]] = []
+    for revocation in revocations:
+        expected_record = dict(revocation.audit_record)
+        expected_record.pop("revocation_hash", None)
+        if _record_hash(expected_record) != revocation.revocation_hash:
+            raise ValueError("revocation audit record mismatch")
+        records.append(dict(revocation.audit_record))
+    records.sort(
+        key=lambda record: (
+            str(record["request_hash"]),
+            str(record["revocation_hash"]),
+        )
+    )
+    request_hashes = tuple(str(record["request_hash"]) for record in records)
+    if len(set(request_hashes)) != len(request_hashes):
+        raise ValueError("revocation list contains duplicate request hashes")
+    revocation_hashes = tuple(str(record["revocation_hash"]) for record in records)
+    audit_record = {
+        "schema": "scpn_plugin_execution_request_revocation_list_v1",
+        "version": "1.0.0",
+        "created_by": created_by,
+        "revocation_count": len(records),
+        "request_hashes": list(request_hashes),
+        "revocation_hashes": list(revocation_hashes),
+        "revocations": records,
+    }
+    audit_record["revocation_list_hash"] = _record_hash(audit_record)
+    return PluginExecutionRequestRevocationList(
+        schema="scpn_plugin_execution_request_revocation_list_v1",
+        version="1.0.0",
+        request_hashes=request_hashes,
+        revocation_hashes=revocation_hashes,
+        revocation_count=len(records),
+        created_by=created_by,
+        revocation_list_hash=str(audit_record["revocation_list_hash"]),
         audit_record=audit_record,
     )
 
