@@ -210,6 +210,14 @@ immediately before use. The validator recomputes the request hash, rejects
 tampered audit records, and accepts a deployment-owned revoked-request hash set
 so rotated approvals fail closed before plugin import.
 
+Deployment stores should persist request envelopes beside a
+`build_plugin_execution_request_storage_manifest()` record. The storage manifest
+binds the request hash, approval hash, target hash, storage URI, storage
+backend, retention policy, creator, and current revoked-request hash set into a
+deterministic manifest hash. `validate_plugin_execution_request_storage_manifest()`
+recomputes that manifest before use so request storage changes and approval
+rotation are visible in audit records.
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

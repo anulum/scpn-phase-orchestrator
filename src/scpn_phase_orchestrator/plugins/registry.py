@@ -26,10 +26,12 @@ __all__ = [
     "PluginExecutionPlan",
     "PluginExecutionApproval",
     "PluginExecutionRequest",
+    "PluginExecutionRequestStorageManifest",
     "build_plugin_marketplace_catalog",
     "build_plugin_execution_plan",
     "build_plugin_execution_approval",
     "build_plugin_execution_request",
+    "build_plugin_execution_request_storage_manifest",
     "build_rust_plugin_runtime_handoff",
     "build_rust_plugin_registry",
     "compatibility_report",
@@ -40,6 +42,7 @@ __all__ = [
     "execute_plugin_execution_request",
     "load_plugin_capability",
     "validate_plugin_execution_request",
+    "validate_plugin_execution_request_storage_manifest",
     "validate_plugin_manifest",
     "PluginRuntimeExecutionPolicy",
     "PluginRuntimeLoadPolicy",
@@ -339,6 +342,58 @@ class PluginExecutionRequest:
         )
 
 
+@dataclass(frozen=True)
+class PluginExecutionRequestStorageManifest:
+    """Deployment-owned storage manifest for an approved execution request."""
+
+    schema: str
+    version: str
+    request_hash: str
+    plan_hash: str
+    approval_hash: str
+    target_hash: str
+    plugin: str
+    kind: PluginKind
+    name: str
+    operator_identity: str
+    approval_reference: str
+    storage_uri: str
+    storage_backend: str
+    retention_policy: str
+    created_by: str
+    revoked_request_hashes: tuple[str, ...]
+    revocation_hash: str
+    manifest_hash: str
+    audit_record: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if self.schema != "scpn_plugin_execution_request_storage_manifest_v1":
+            raise ValueError(
+                "storage manifest schema must be "
+                "scpn_plugin_execution_request_storage_manifest_v1"
+            )
+        if self.version != "1.0.0":
+            raise ValueError("storage manifest version must be 1.0.0")
+        _validate_sha256(self.request_hash, "storage manifest request hash")
+        _validate_sha256(self.plan_hash, "storage manifest plan hash")
+        _validate_sha256(self.approval_hash, "storage manifest approval hash")
+        _validate_sha256(self.target_hash, "storage manifest target hash")
+        _validate_sha256(self.revocation_hash, "storage manifest revocation hash")
+        _validate_sha256(self.manifest_hash, "storage manifest hash")
+        _require_identifier(self.plugin, "plugin")
+        _require_identifier(self.name, "capability name")
+        if self.kind not in _VALID_KINDS:
+            raise ValueError(f"unsupported plugin capability kind: {self.kind}")
+        _require_non_empty(self.storage_uri, "storage URI")
+        _require_identifier(self.storage_backend, "storage backend")
+        _require_identifier(self.retention_policy, "retention policy")
+        _require_identifier(self.created_by, "storage manifest creator")
+        if self.audit_record is None:
+            raise ValueError("audit_record must be provided")
+        for revoked_hash in self.revoked_request_hashes:
+            _validate_sha256(revoked_hash, "revoked request hash")
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -395,6 +450,116 @@ def validate_plugin_execution_request(
     if request.audit_record != expected_record:
         raise ValueError("request audit record mismatch")
     return request
+
+
+def build_plugin_execution_request_storage_manifest(
+    request: PluginExecutionRequest,
+    *,
+    storage_uri: str,
+    storage_backend: str,
+    retention_policy: str,
+    created_by: str,
+    revoked_request_hashes: tuple[str, ...] = (),
+) -> PluginExecutionRequestStorageManifest:
+    """Build a deterministic storage manifest for an execution request."""
+    validate_plugin_execution_request(
+        request,
+        revoked_request_hashes=revoked_request_hashes,
+    )
+    _require_non_empty(storage_uri, "storage URI")
+    _require_identifier(storage_backend, "storage backend")
+    _require_identifier(retention_policy, "retention policy")
+    _require_identifier(created_by, "storage manifest creator")
+    normalised_revocations = tuple(
+        sorted(revoked_hash.lower() for revoked_hash in revoked_request_hashes)
+    )
+    for revoked_hash in normalised_revocations:
+        _validate_sha256(revoked_hash, "revoked request hash")
+    revocation_hash = _request_revocation_hash(normalised_revocations)
+    request_hash = str(request.audit_record["request_hash"])
+    audit_record = {
+        "schema": "scpn_plugin_execution_request_storage_manifest_v1",
+        "version": "1.0.0",
+        "request_hash": request_hash,
+        "plan_hash": request.plan_hash,
+        "approval_hash": request.approval_hash,
+        "target_hash": request.target_hash,
+        "plugin": request.plugin,
+        "kind": request.kind,
+        "name": request.name,
+        "operator_identity": request.operator_identity,
+        "approval_reference": request.approval_reference,
+        "storage_uri": storage_uri,
+        "storage_backend": storage_backend,
+        "retention_policy": retention_policy,
+        "created_by": created_by,
+        "revoked_request_hashes": list(normalised_revocations),
+        "revocation_hash": revocation_hash,
+    }
+    audit_record["manifest_hash"] = _record_hash(audit_record)
+    return PluginExecutionRequestStorageManifest(
+        schema="scpn_plugin_execution_request_storage_manifest_v1",
+        version="1.0.0",
+        request_hash=request_hash,
+        plan_hash=request.plan_hash,
+        approval_hash=request.approval_hash,
+        target_hash=request.target_hash,
+        plugin=request.plugin,
+        kind=request.kind,
+        name=request.name,
+        operator_identity=request.operator_identity,
+        approval_reference=request.approval_reference,
+        storage_uri=storage_uri,
+        storage_backend=storage_backend,
+        retention_policy=retention_policy,
+        created_by=created_by,
+        revoked_request_hashes=normalised_revocations,
+        revocation_hash=revocation_hash,
+        manifest_hash=str(audit_record["manifest_hash"]),
+        audit_record=audit_record,
+    )
+
+
+def validate_plugin_execution_request_storage_manifest(
+    request: PluginExecutionRequest,
+    manifest: PluginExecutionRequestStorageManifest,
+) -> PluginExecutionRequestStorageManifest:
+    """Validate that a storage manifest still matches its request envelope."""
+    request_hash = str(request.audit_record.get("request_hash", ""))
+    if manifest.request_hash != request_hash:
+        raise ValueError("storage manifest request hash mismatch")
+    if manifest.plan_hash != request.plan_hash:
+        raise ValueError("storage manifest plan hash mismatch")
+    if manifest.approval_hash != request.approval_hash:
+        raise ValueError("storage manifest approval hash mismatch")
+    if manifest.target_hash != request.target_hash:
+        raise ValueError("storage manifest target hash mismatch")
+    validate_plugin_execution_request(
+        request,
+        revoked_request_hashes=manifest.revoked_request_hashes,
+    )
+    expected = build_plugin_execution_request_storage_manifest(
+        request,
+        storage_uri=manifest.storage_uri,
+        storage_backend=manifest.storage_backend,
+        retention_policy=manifest.retention_policy,
+        created_by=manifest.created_by,
+        revoked_request_hashes=manifest.revoked_request_hashes,
+    )
+    if manifest.audit_record != expected.audit_record:
+        raise ValueError("storage manifest audit record mismatch")
+    return manifest
+
+
+def _request_revocation_hash(
+    revoked_request_hashes: tuple[str, ...],
+) -> str:
+    normalised_revocations = tuple(
+        sorted(revoked_hash.lower() for revoked_hash in revoked_request_hashes)
+    )
+    for revoked_hash in normalised_revocations:
+        _validate_sha256(revoked_hash, "revoked request hash")
+    return _record_hash({"revoked_request_hashes": list(normalised_revocations)})
 
 
 def compatibility_report(manifest: PluginManifest) -> PluginCompatibilityReport:

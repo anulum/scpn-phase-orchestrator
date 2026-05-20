@@ -250,6 +250,13 @@ tampered audit records or request hashes present in a deployment-owned revocatio
 set. Approval rotation therefore happens by revoking old request hashes before a
 new request envelope is consumed.
 
+Storage custody is represented by
+`build_plugin_execution_request_storage_manifest()`. The manifest records the
+request hash, approval hash, target hash, storage URI, backend, retention
+policy, manifest creator, revoked request hashes, and deterministic manifest
+hash. `validate_plugin_execution_request_storage_manifest()` rejects stale or
+tampered storage records before the request is handed to runtime code.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).
