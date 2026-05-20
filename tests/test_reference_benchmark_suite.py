@@ -39,6 +39,7 @@ from benchmarks.reference_suite import (
     benchmark_replay_policy_candidate_quality,
     benchmark_self_model_digital_twin,
     benchmark_semantic_retrieval_ranking_quality,
+    benchmark_sheaf_obstruction_domain_gate,
     benchmark_stl_closed_loop_plan_quality,
     benchmark_stuart_landau_reference,
     benchmark_temporal_causal_hypergraph_experiment_gate,
@@ -1367,6 +1368,49 @@ def test_information_geometry_control_gate_reports_thresholds_and_records() -> N
     assert all(record["proposal_action_count"] >= 1 for record in records)
 
 
+def test_sheaf_obstruction_domain_gate_shape() -> None:
+    out = benchmark_sheaf_obstruction_domain_gate()
+
+    assert out["suite"] == "sheaf_obstruction_domain_gate"
+    assert out["record_count"] == 3
+    assert out["summary_count"] == 3
+    assert out["top_residual_edge_count"] >= 9
+    assert out["critical_count"] >= 2
+    assert float(out["min_obstruction_delta"]) >= 0.1
+    assert out["non_actuating"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["sheaf_obstruction_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_sheaf_obstruction_domain_gate_reports_records() -> None:
+    out = benchmark_sheaf_obstruction_domain_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = json.loads(str(out["records_json"]))
+
+    assert thresholds == {
+        "min_critical_count": 2,
+        "min_demo_count": 3,
+        "min_obstruction_delta": 0.1,
+        "min_summary_count": 3,
+        "min_top_residual_edge_count": 9,
+        "require_deterministic_hash": True,
+        "require_non_actuating": True,
+    }
+    assert {record["domainpack"] for record in records} == {
+        "edge_consensus_nchannel",
+        "network_security",
+        "power_grid",
+    }
+    assert all(record["summary_present"] is True for record in records)
+    assert all(record["top_residual_edge_count"] == 3 for record in records)
+    assert all(
+        record["incident_obstruction_score"] > record["nominal_obstruction_score"]
+        for record in records
+    )
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -1450,6 +1494,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "replay_policy",
         "self_model_digital_twin",
         "semantic_retrieval",
+        "sheaf_obstruction_domains",
         "stl_closed_loop",
         "temporal_causal_hypergraph",
         "topos_semantic_binding",

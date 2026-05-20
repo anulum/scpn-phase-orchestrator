@@ -699,8 +699,11 @@ Speculative research watchlist:
   - Obstruction hardening foundation is in place:
     `build_sheaf_obstruction_summary()` classifies nominal/warning/critical
     obstruction severity and reports strongest residual edges for audit triage.
-  - Remaining scope: additional heterogeneous-domain demos and deeper
-    obstruction hardening.
+  - Reference-suite gates are in place:
+    `benchmark_sheaf_obstruction_domain_gate()` requires deterministic
+    obstruction-demo hashes, per-demo top-residual summaries, non-actuation,
+    critical incident coverage, and positive obstruction deltas.
+  - Remaining scope: additional heterogeneous-domain demos.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
   - Foundation is in place: deterministic review-only aggregation validates
     node-local policy deltas, clips update norms, rejects raw time-series

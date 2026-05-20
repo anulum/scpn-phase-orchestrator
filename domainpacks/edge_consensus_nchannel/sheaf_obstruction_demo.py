@@ -16,7 +16,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
-from scpn_phase_orchestrator.supervisor import SheafCoherenceSupervisor
+from scpn_phase_orchestrator.supervisor import (
+    SheafCoherenceSupervisor,
+    build_sheaf_obstruction_summary,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -86,6 +89,18 @@ def run_demo() -> dict[str, object]:
     maps = edge_consensus_restriction_maps()
     nominal = supervisor.assess(nominal_edge_consensus_state(), maps)
     stressed = supervisor.assess(stressed_edge_consensus_state(), maps)
+    nominal_summary = build_sheaf_obstruction_summary(
+        nominal,
+        warning_threshold=0.08,
+        critical_threshold=0.35,
+        top_k=3,
+    )
+    stressed_summary = build_sheaf_obstruction_summary(
+        stressed,
+        warning_threshold=0.08,
+        critical_threshold=0.35,
+        top_k=3,
+    )
     return {
         "domainpack": spec.name,
         "scenario": "heterogeneous_edge_gateway_obstruction",
@@ -93,6 +108,8 @@ def run_demo() -> dict[str, object]:
         "channels": list(CHANNELS),
         "nominal": nominal.to_audit_record(),
         "stressed": stressed.to_audit_record(),
+        "nominal_summary": nominal_summary.to_audit_record(),
+        "stressed_summary": stressed_summary.to_audit_record(),
         "obstruction_delta": (stressed.obstruction_score - nominal.obstruction_score),
         "actuating": False,
     }

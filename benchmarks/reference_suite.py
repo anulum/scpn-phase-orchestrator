@@ -438,6 +438,16 @@ class FederatedMetaOrchestratorThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class SheafObstructionBenchmarkThresholds(NamedTuple):
+    min_demo_count: int
+    min_summary_count: int
+    min_top_residual_edge_count: int
+    min_critical_count: int
+    min_obstruction_delta: float
+    require_non_actuating: bool
+    require_deterministic_hash: bool
+
+
 class ReferenceSuiteResult(TypedDict):
     metadata: dict[str, str]
     benchmarks: dict[str, BenchmarkRecord]
@@ -4370,6 +4380,83 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
     }
 
 
+def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
+    """Benchmark heterogeneous sheaf-obstruction demos and residual triage."""
+    thresholds = SheafObstructionBenchmarkThresholds(
+        min_demo_count=3,
+        min_summary_count=3,
+        min_top_residual_edge_count=9,
+        min_critical_count=2,
+        min_obstruction_delta=0.1,
+        require_non_actuating=True,
+        require_deterministic_hash=True,
+    )
+    module_paths = (
+        "domainpacks.edge_consensus_nchannel.sheaf_obstruction_demo",
+        "domainpacks.power_grid.sheaf_obstruction_demo",
+        "domainpacks.network_security.sheaf_obstruction_demo",
+    )
+
+    t0 = time.perf_counter()
+    demos = [_load_sheaf_obstruction_demo(module_path) for module_path in module_paths]
+    repeated = [
+        _load_sheaf_obstruction_demo(module_path) for module_path in module_paths
+    ]
+    elapsed = time.perf_counter() - t0
+
+    records = [_sheaf_obstruction_demo_record(demo) for demo in demos]
+    repeated_records = [_sheaf_obstruction_demo_record(demo) for demo in repeated]
+    summary_count = sum(int(record["summary_present"]) for record in records)
+    top_residual_edge_count = sum(
+        int(record["top_residual_edge_count"]) for record in records
+    )
+    critical_count = sum(
+        int(record["incident_severity"] == "critical") for record in records
+    )
+    min_obstruction_delta = min(
+        float(record["obstruction_delta"]) for record in records
+    )
+    non_actuating = int(all(record["actuating"] is False for record in records))
+    deterministic_hash = int(records == repeated_records)
+    acceptance_passed = int(
+        len(records) >= thresholds.min_demo_count
+        and summary_count >= thresholds.min_summary_count
+        and top_residual_edge_count >= thresholds.min_top_residual_edge_count
+        and critical_count >= thresholds.min_critical_count
+        and min_obstruction_delta >= thresholds.min_obstruction_delta
+        and non_actuating == int(thresholds.require_non_actuating)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "sheaf_obstruction_domain_gate",
+        "record_count": len(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(records) / elapsed if elapsed > 0.0 else 0.0,
+        "summary_count": summary_count,
+        "top_residual_edge_count": top_residual_edge_count,
+        "critical_count": critical_count,
+        "min_obstruction_delta": min_obstruction_delta,
+        "non_actuating": non_actuating,
+        "deterministic_hash": deterministic_hash,
+        "sheaf_obstruction_sha256": _stable_record_hash(records),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_critical_count": thresholds.min_critical_count,
+                "min_demo_count": thresholds.min_demo_count,
+                "min_obstruction_delta": thresholds.min_obstruction_delta,
+                "min_summary_count": thresholds.min_summary_count,
+                "min_top_residual_edge_count": (thresholds.min_top_residual_edge_count),
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -5622,6 +5709,92 @@ def _stable_record_hash(records: object) -> str:
     return sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _load_sheaf_obstruction_demo(module_path: str) -> Mapping[str, object]:
+    module = importlib.import_module(module_path)
+    payload = module.run_demo()
+    if not isinstance(payload, Mapping):
+        raise TypeError(f"{module_path}.run_demo() must return a mapping")
+    return payload
+
+
+def _sheaf_obstruction_demo_record(payload: Mapping[str, object]) -> dict[str, object]:
+    incident_key = _sheaf_incident_key(payload)
+    nominal = _mapping_at(payload, "nominal")
+    incident = _mapping_at(payload, incident_key)
+    summary_key = f"{incident_key}_summary"
+    summary = payload.get(summary_key)
+    if not isinstance(summary, Mapping):
+        raise ValueError(f"{summary_key} must be present for sheaf obstruction triage")
+    top_residual_edges = summary.get("top_residual_edges")
+    if not isinstance(top_residual_edges, list):
+        raise ValueError(f"{summary_key}.top_residual_edges must be a list")
+
+    nominal_score = float(nominal["obstruction_score"])
+    incident_score = float(incident["obstruction_score"])
+    obstruction_delta = float(payload["obstruction_delta"])
+    if obstruction_delta <= 0.0 or incident_score <= nominal_score:
+        raise ValueError("sheaf incident obstruction must exceed nominal obstruction")
+
+    return {
+        "domainpack": str(payload["domainpack"]),
+        "scenario": str(payload["scenario"]),
+        "node_count": len(_sequence_at(payload, "nodes")),
+        "channel_count": len(_sequence_at(payload, "channels")),
+        "incident_key": incident_key,
+        "nominal_obstruction_score": nominal_score,
+        "incident_obstruction_score": incident_score,
+        "obstruction_delta": obstruction_delta,
+        "incident_severity": str(summary["severity"]),
+        "top_residual_edge_count": len(top_residual_edges),
+        "nominal_edge_count": int(nominal["edge_count"]),
+        "incident_edge_count": int(incident["edge_count"]),
+        "nominal_kernel_dimension": int(nominal["kernel_dimension"]),
+        "incident_kernel_dimension": int(incident["kernel_dimension"]),
+        "summary_present": True,
+        "actuating": bool(payload["actuating"]),
+    }
+
+
+def _sheaf_incident_key(payload: Mapping[str, object]) -> str:
+    reserved = {
+        "actuating",
+        "channels",
+        "domainpack",
+        "nodes",
+        "nominal",
+        "nominal_summary",
+        "obstruction_delta",
+        "scenario",
+    }
+    incident_keys = [
+        key
+        for key, value in payload.items()
+        if key not in reserved
+        and not key.endswith("_summary")
+        and isinstance(value, Mapping)
+        and "obstruction_score" in value
+    ]
+    if len(incident_keys) != 1:
+        raise ValueError(
+            f"expected exactly one sheaf incident record, got {incident_keys!r}"
+        )
+    return incident_keys[0]
+
+
+def _mapping_at(payload: Mapping[str, object], key: str) -> Mapping[str, object]:
+    value = payload.get(key)
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{key} must be a mapping")
+    return value
+
+
+def _sequence_at(payload: Mapping[str, object], key: str) -> tuple[object, ...]:
+    value = payload.get(key)
+    if not isinstance(value, Iterable) or isinstance(value, (str, bytes)):
+        raise ValueError(f"{key} must be a non-string iterable")
+    return tuple(value)
+
+
 def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteResult:
     return {
         "metadata": build_benchmark_metadata(snapshot_date=snapshot_date),
@@ -5670,6 +5843,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "information_geometry_control": (
                 benchmark_information_geometry_control_gate()
             ),
+            "sheaf_obstruction_domains": benchmark_sheaf_obstruction_domain_gate(),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
