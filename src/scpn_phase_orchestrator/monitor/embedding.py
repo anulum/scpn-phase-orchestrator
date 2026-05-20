@@ -263,7 +263,8 @@ def delay_embed(
 
     indices = np.arange(dimension) * delay
     rows = np.arange(t_eff)[:, np.newaxis] + indices[np.newaxis, :]
-    return s[rows]
+    trajectory: FloatArray = np.asarray(s[rows], dtype=np.float64)
+    return trajectory
 
 
 def mutual_information(
