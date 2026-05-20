@@ -22,6 +22,16 @@ import numpy as np
 from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_time_series_csv,
 )
+from scpn_phase_orchestrator.autotune.learners import (
+    generate_hybrid_physics_proposal,
+    generate_ppo_like_proposal,
+    generate_sac_like_proposal,
+)
+from scpn_phase_orchestrator.autotune.reward import (
+    KnobPolicyCandidate,
+    PolicyProposalConfig,
+    RewardObservation,
+)
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
     Marking,
@@ -61,6 +71,13 @@ class AutoBindingFixture(NamedTuple):
     @property
     def sample_count(self) -> int:
         return max(0, len(self.csv_text.splitlines()) - 1)
+
+
+class ReplayLearnerBenchmarkThresholds(NamedTuple):
+    min_acceptance_rate: float
+    min_reward_improvement: float
+    max_unsafe_acceptances: int
+    require_non_actuating: bool
 
 
 class ReferenceSuiteResult(TypedDict):
@@ -280,6 +297,141 @@ def benchmark_auto_binding_proposal_quality() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
+    """Benchmark replay-only learner proposals against deterministic gates."""
+    thresholds = ReplayLearnerBenchmarkThresholds(
+        min_acceptance_rate=1.0,
+        min_reward_improvement=0.03,
+        max_unsafe_acceptances=0,
+        require_non_actuating=True,
+    )
+    seed_candidate = KnobPolicyCandidate(
+        K=0.2,
+        alpha=0.0,
+        zeta=0.05,
+        Psi=0.0,
+        channel_weights=(0.8, 0.2),
+        cross_channel_gains=(0.05,),
+    )
+    proposal_config = PolicyProposalConfig(
+        min_coherence=0.78,
+        min_reward=-0.25,
+        max_alternatives=2,
+    )
+    baseline_observation = _deterministic_replay_observation(seed_candidate)
+    baseline_coherence = baseline_observation.coherence
+
+    t0 = time.perf_counter()
+    learner_proposals = (
+        generate_ppo_like_proposal(
+            seed_candidate,
+            _deterministic_replay_observation,
+            seed_value=17,
+            proposal_config=proposal_config,
+        ),
+        generate_sac_like_proposal(
+            seed_candidate,
+            _deterministic_replay_observation,
+            seed_value=23,
+            proposal_config=proposal_config,
+        ),
+        generate_hybrid_physics_proposal(
+            seed_candidate,
+            _deterministic_replay_observation,
+            critical_coupling_estimate=0.72,
+            seed_value=31,
+            proposal_config=proposal_config,
+        ),
+    )
+    elapsed = time.perf_counter() - t0
+
+    learner_results: list[dict[str, float | int | str | bool]] = []
+    accepted_count = 0
+    unsafe_acceptances = 0
+    min_reward_improvement = np.inf
+    for proposal in learner_proposals:
+        policy_proposal = proposal.policy_search.proposal
+        selected = policy_proposal.selected
+        accepted = policy_proposal.accepted and selected is not None
+        accepted_count += int(accepted)
+        non_actuating = proposal.actuation_permitted is False
+        selected_reward = selected.reward if selected is not None else -np.inf
+        selected_coherence = (
+            selected.observation.coherence if selected is not None else 0.0
+        )
+        reward_improvement = selected_coherence - baseline_coherence
+        min_reward_improvement = min(min_reward_improvement, reward_improvement)
+        selected_unsafe = bool(selected.observation.unsafe) if selected else False
+        unsafe_acceptances += int(accepted and selected_unsafe)
+        learner_results.append(
+            {
+                "learner_kind": proposal.learner_kind,
+                "accepted": accepted,
+                "non_actuating": non_actuating,
+                "selected_reward": selected_reward,
+                "selected_coherence": selected_coherence,
+                "baseline_coherence": baseline_coherence,
+                "coherence_improvement": reward_improvement,
+                "unsafe_selected": selected_unsafe,
+                "candidate_count": len(proposal.policy_search.candidates),
+            }
+        )
+
+    acceptance_rate = accepted_count / len(learner_proposals)
+    threshold_passed = (
+        acceptance_rate >= thresholds.min_acceptance_rate
+        and min_reward_improvement >= thresholds.min_reward_improvement
+        and unsafe_acceptances <= thresholds.max_unsafe_acceptances
+        and all(result["non_actuating"] is True for result in learner_results)
+    )
+
+    return {
+        "suite": "replay_policy_candidate_quality",
+        "learner_count": len(learner_proposals),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(learner_proposals) / elapsed,
+        "accepted_learner_count": accepted_count,
+        "failed_learner_count": len(learner_proposals) - accepted_count,
+        "acceptance_rate": acceptance_rate,
+        "baseline_coherence": baseline_coherence,
+        "min_coherence_improvement": min_reward_improvement,
+        "unsafe_acceptance_count": unsafe_acceptances,
+        "non_actuating_proposals": int(
+            all(result["non_actuating"] is True for result in learner_results)
+        ),
+        "acceptance_passed": int(threshold_passed),
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_acceptance_rate": thresholds.min_acceptance_rate,
+                "min_reward_improvement": thresholds.min_reward_improvement,
+                "max_unsafe_acceptances": thresholds.max_unsafe_acceptances,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "learner_results_json": json.dumps(learner_results, sort_keys=True),
+    }
+
+
+def _deterministic_replay_observation(
+    candidate: KnobPolicyCandidate,
+) -> RewardObservation:
+    mean_k = float(np.asarray(candidate.K, dtype=np.float64).mean())
+    mean_channel_weight = (
+        float(np.mean(candidate.channel_weights)) if candidate.channel_weights else 0.0
+    )
+    coherence = float(
+        np.clip(0.68 + 0.44 * mean_k + 0.05 * mean_channel_weight, 0.0, 0.95)
+    )
+    unsafe = mean_k < 0.0 or abs(mean_k) > 1.2
+    return RewardObservation(
+        coherence=coherence,
+        previous_coherence=0.68,
+        unsafe=unsafe,
+        regime_changed=False,
+    )
+
+
 def _auto_binding_quality_fixtures() -> tuple[AutoBindingFixture, ...]:
     return (
         AutoBindingFixture(
@@ -495,6 +647,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
         "metadata": build_benchmark_metadata(snapshot_date=snapshot_date),
         "benchmarks": {
             "auto_binding": benchmark_auto_binding_proposal_quality(),
+            "replay_policy": benchmark_replay_policy_candidate_quality(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
             "petri_reachability": benchmark_petri_reachability(),

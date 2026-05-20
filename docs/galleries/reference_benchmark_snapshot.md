@@ -30,10 +30,11 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
 |----------|-------------------|------|-------|---------------|---------|---------------|
-| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.06027109699789435 | 66.3668026506925 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.16471287398599088 | 6071.17085507871 | final `R` = 1.0 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.31584654201287776 | 3166.094501548248 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.02358600898878649 | 211990.0828655307 | reachable markings = 4 |
+| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.05251737096114084 | 76.16527497082286 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
+| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 learners | 3 acceptance gates | 0.004264426999725401 | 703.4942795815659 | accepted learners = 3/3; min coherence improvement = 0.05827974999403174; unsafe acceptances = 0; non-actuating = yes |
+| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.16285745496861637 | 6140.339109392973 | final `R` = 1.0 |
+| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.29826523998053744 | 3352.7205518995524 | final mean amplitude = 3.6193922141707704 |
+| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.025786341982893646 | 193901.0970736734 | reachable markings = 4 |
 
 ## Auto-Binding Acceptance Gates
 
@@ -49,6 +50,20 @@ multiplier. The 2026-05-20 snapshot passed all four gates:
 | `industrial_sensor_chain` | 128 | 1.0 | 1.0 | 6.0 | yes |
 | `cardiac_rhythm_surrogate` | 160 | 1.0 | 1.0 | 4.5 | yes |
 | `power_grid_surrogate` | 192 | 1.0 | 1.0 | 6.0 | yes |
+
+## Replay-Policy Acceptance Gates
+
+The replay-policy benchmark evaluates deterministic PPO-like, SAC-like, and
+hybrid-physics learner proposals against a simulator-backed coherence surface.
+All proposals remain review-only (`actuation_permitted = false`) and must pass
+minimum acceptance rate, minimum coherence improvement, zero unsafe accepted
+candidates, and non-actuating output gates.
+
+| Learner proposal | Candidate count | Baseline coherence | Selected coherence | Coherence improvement | Accepted |
+|------------------|----------------:|-------------------:|-------------------:|----------------------:|----------|
+| `ppo_like_replay` | 15 | 0.793 | 0.8653832908831077 | 0.07238329088310769 | yes |
+| `sac_like_replay` | 15 | 0.793 | 0.8512797499940318 | 0.05827974999403174 | yes |
+| `hybrid_physics_replay` | 15 | 0.793 | 0.8581479119360509 | 0.06514791193605085 | yes |
 
 ## Use Policy
 

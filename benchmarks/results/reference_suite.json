@@ -15,8 +15,8 @@
       "suite": "auto_binding_synthetic_quality",
       "fixture_count": 4,
       "large_fixture_count": 4,
-      "wall_time_s": 0.06027109699789435,
-      "steps_per_second": 66.3668026506925,
+      "wall_time_s": 0.05251737096114084,
+      "steps_per_second": 76.16527497082286,
       "validation_error_count": 0,
       "extractor_coverage": 1.0,
       "expected_edge_recall": 1.0,
@@ -31,27 +31,43 @@
       "domain_acceptance_thresholds_json": "{\"cardiac_rhythm_surrogate\": {\"max_proposed_edge_multiplier\": 6.0, \"max_validation_errors\": 0, \"min_expected_edge_recall\": 1.0, \"min_extractor_coverage\": 1.0, \"min_sample_count\": 128}, \"industrial_sensor_chain\": {\"max_proposed_edge_multiplier\": 8.0, \"max_validation_errors\": 0, \"min_expected_edge_recall\": 1.0, \"min_extractor_coverage\": 1.0, \"min_sample_count\": 96}, \"phase_chain\": {\"max_proposed_edge_multiplier\": 8.0, \"max_validation_errors\": 0, \"min_expected_edge_recall\": 1.0, \"min_extractor_coverage\": 1.0, \"min_sample_count\": 96}, \"power_grid_surrogate\": {\"max_proposed_edge_multiplier\": 8.0, \"max_validation_errors\": 0, \"min_expected_edge_recall\": 1.0, \"min_extractor_coverage\": 1.0, \"min_sample_count\": 160}}",
       "domain_acceptance_results_json": "[{\"accepted\": true, \"domain\": \"phase_chain\", \"expected_edge_recall\": 1.0, \"extractor_coverage\": 1.0, \"proposed_edge_count\": 6, \"proposed_edge_multiplier\": 6.0, \"sample_count\": 128, \"source_column_count\": 3, \"validation_error_count\": 0}, {\"accepted\": true, \"domain\": \"industrial_sensor_chain\", \"expected_edge_recall\": 1.0, \"extractor_coverage\": 1.0, \"proposed_edge_count\": 6, \"proposed_edge_multiplier\": 6.0, \"sample_count\": 128, \"source_column_count\": 3, \"validation_error_count\": 0}, {\"accepted\": true, \"domain\": \"cardiac_rhythm_surrogate\", \"expected_edge_recall\": 1.0, \"extractor_coverage\": 1.0, \"proposed_edge_count\": 9, \"proposed_edge_multiplier\": 4.5, \"sample_count\": 160, \"source_column_count\": 4, \"validation_error_count\": 0}, {\"accepted\": true, \"domain\": \"power_grid_surrogate\", \"expected_edge_recall\": 1.0, \"extractor_coverage\": 1.0, \"proposed_edge_count\": 12, \"proposed_edge_multiplier\": 6.0, \"sample_count\": 192, \"source_column_count\": 4, \"validation_error_count\": 0}]"
     },
+    "replay_policy": {
+      "suite": "replay_policy_candidate_quality",
+      "learner_count": 3,
+      "wall_time_s": 0.004264426999725401,
+      "steps_per_second": 703.4942795815659,
+      "accepted_learner_count": 3,
+      "failed_learner_count": 0,
+      "acceptance_rate": 1.0,
+      "baseline_coherence": 0.793,
+      "min_coherence_improvement": 0.05827974999403174,
+      "unsafe_acceptance_count": 0,
+      "non_actuating_proposals": 1,
+      "acceptance_passed": 1,
+      "acceptance_thresholds_json": "{\"max_unsafe_acceptances\": 0, \"min_acceptance_rate\": 1.0, \"min_reward_improvement\": 0.03, \"require_non_actuating\": true}",
+      "learner_results_json": "[{\"accepted\": true, \"baseline_coherence\": 0.793, \"candidate_count\": 15, \"coherence_improvement\": 0.07238329088310769, \"learner_kind\": \"ppo_like_replay\", \"non_actuating\": true, \"selected_coherence\": 0.8653832908831077, \"selected_reward\": 0.045987924741706335, \"unsafe_selected\": false}, {\"accepted\": true, \"baseline_coherence\": 0.793, \"candidate_count\": 15, \"coherence_improvement\": 0.05827974999403174, \"learner_kind\": \"sac_like_replay\", \"non_actuating\": true, \"selected_coherence\": 0.8512797499940318, \"selected_reward\": 0.018004243518109142, \"unsafe_selected\": false}, {\"accepted\": true, \"baseline_coherence\": 0.793, \"candidate_count\": 15, \"coherence_improvement\": 0.06514791193605085, \"learner_kind\": \"hybrid_physics_replay\", \"non_actuating\": true, \"selected_coherence\": 0.8581479119360509, \"selected_reward\": 0.03163434231578084, \"unsafe_selected\": false}]"
+    },
     "kuramoto": {
       "suite": "kuramoto_reference_strogatz_2000",
       "n_oscillators": 64,
       "n_steps": 1000,
-      "wall_time_s": 0.16471287398599088,
-      "steps_per_second": 6071.17085507871,
+      "wall_time_s": 0.16285745496861637,
+      "steps_per_second": 6140.339109392973,
       "final_order_parameter": 1.0
     },
     "stuart_landau": {
       "suite": "stuart_landau_reference_pikovsky_2001",
       "n_oscillators": 64,
       "n_steps": 1000,
-      "wall_time_s": 0.31584654201287776,
-      "steps_per_second": 3166.094501548248,
+      "wall_time_s": 0.29826523998053744,
+      "steps_per_second": 3352.7205518995524,
       "final_mean_amplitude": 3.6193922141707704
     },
     "petri_reachability": {
       "suite": "petri_net_reachability",
       "n_steps": 5000,
-      "wall_time_s": 0.02358600898878649,
-      "steps_per_second": 211990.0828655307,
+      "wall_time_s": 0.025786341982893646,
+      "steps_per_second": 193901.0970736734,
       "reachable_markings": 4
     }
   }

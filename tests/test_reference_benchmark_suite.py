@@ -15,6 +15,7 @@ from benchmarks.reference_suite import (
     benchmark_auto_binding_proposal_quality,
     benchmark_kuramoto_reference,
     benchmark_petri_reachability,
+    benchmark_replay_policy_candidate_quality,
     benchmark_stuart_landau_reference,
     build_benchmark_metadata,
     run_reference_suite,
@@ -89,12 +90,49 @@ def test_auto_binding_proposal_quality_reports_domain_thresholds() -> None:
     assert all(record["validation_error_count"] == 0 for record in results)
 
 
+def test_replay_policy_candidate_quality_benchmark_shape() -> None:
+    out = benchmark_replay_policy_candidate_quality()
+
+    assert out["suite"] == "replay_policy_candidate_quality"
+    assert out["learner_count"] == 3
+    assert out["accepted_learner_count"] == 3
+    assert out["failed_learner_count"] == 0
+    assert out["acceptance_rate"] == 1.0
+    assert out["acceptance_passed"] == 1
+    assert out["unsafe_acceptance_count"] == 0
+    assert out["non_actuating_proposals"] == 1
+    assert float(out["min_coherence_improvement"]) >= 0.03
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_replay_policy_candidate_quality_reports_thresholds() -> None:
+    out = benchmark_replay_policy_candidate_quality()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    results = json.loads(str(out["learner_results_json"]))
+
+    assert thresholds == {
+        "max_unsafe_acceptances": 0,
+        "min_acceptance_rate": 1.0,
+        "min_reward_improvement": 0.03,
+        "require_non_actuating": True,
+    }
+    assert [record["learner_kind"] for record in results] == [
+        "ppo_like_replay",
+        "sac_like_replay",
+        "hybrid_physics_replay",
+    ]
+    assert all(record["accepted"] is True for record in results)
+    assert all(record["non_actuating"] is True for record in results)
+    assert all(record["unsafe_selected"] is False for record in results)
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
     assert out["metadata"]["snapshot_date"] == "2026-05-06"
     assert set(out["benchmarks"].keys()) == {
         "auto_binding",
+        "replay_policy",
         "kuramoto",
         "stuart_landau",
         "petri_reachability",

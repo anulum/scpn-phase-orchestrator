@@ -291,6 +291,12 @@ sessions do not treat them as abstract research labels.
     gains.
   - Optimise `R_good - penalty(R_bad, safety, regime churn)` and hybridise
     learned proposals with supervisor rules.
+  - Benchmark-gated replay learner evidence is in place:
+    `benchmarks/reference_suite.py` evaluates PPO-like, SAC-like, and
+    hybrid-physics replay proposals against deterministic simulator-backed
+    coherence gates. The snapshot records acceptance rate, minimum coherence
+    improvement, unsafe accepted candidates, and non-actuating status before
+    any policy can be considered for operator review.
   - Acceptance: PPO-like, gradient-based, or hybrid physics learners produce
     benchmarked, auditable policy candidates that remain non-actuating until
     explicit safety gates pass.
