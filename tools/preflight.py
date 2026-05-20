@@ -35,6 +35,11 @@ PYTEST_HEAVY_IGNORES = [
 
 PYTHON_GATES: list[tuple[str, list[str], Path]] = [
     (
+        "pre-commit",
+        ["pre-commit", "run", "--all-files"],
+        ROOT,
+    ),
+    (
         "ndarray-hygiene",
         [_PY, "tools/check_ndarray_type_hygiene.py"],
         ROOT,
