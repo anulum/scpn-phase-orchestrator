@@ -66,5 +66,37 @@ def test_audit_verification_keys_rejects_mismatched_keyring_id(
         audit_verification_keys()
 
 
+def test_audit_verification_keys_rejects_empty_current_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPO_AUDIT_KEY", "")
+    monkeypatch.delenv("SPO_AUDIT_KEYRING", raising=False)
+
+    with pytest.raises(ValueError, match="SPO_AUDIT_KEY must not be empty"):
+        audit_verification_keys()
+
+
+@pytest.mark.parametrize(
+    ("raw_keyring", "expected"),
+    [
+        ("", "SPO_AUDIT_KEYRING must not be empty"),
+        ("not json", "SPO_AUDIT_KEYRING must be JSON"),
+        ("[]", "SPO_AUDIT_KEYRING must be a JSON object"),
+        (json.dumps({"": "material"}), "key ids must be non-empty strings"),
+        (json.dumps({"key": ""}), "keys must be non-empty strings"),
+    ],
+)
+def test_audit_verification_keys_rejects_invalid_keyring_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+    raw_keyring: str,
+    expected: str,
+) -> None:
+    monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
+    monkeypatch.setenv("SPO_AUDIT_KEYRING", raw_keyring)
+
+    with pytest.raises(ValueError, match=expected):
+        audit_verification_keys()
+
+
 def test_signature_algorithm_is_hmac_sha256() -> None:
     assert SIGNATURE_ALGORITHM == "HMAC-SHA256"

@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.ssgf import free_energy as free_energy_mod
 from scpn_phase_orchestrator.ssgf.free_energy import (
     add_langevin_noise,
     boltzmann_weight,
@@ -59,6 +60,38 @@ class TestAddLangevinNoise:
         result = add_langevin_noise(z, temperature=-1.0, dt=0.01)
         np.testing.assert_array_equal(result, z)
 
+    def test_rust_langevin_path_used_without_rng(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: dict[str, object] = {}
+
+        def fake_langevin(flat, temperature, dt, seed):
+            calls["flat"] = tuple(float(value) for value in flat)
+            calls["temperature"] = temperature
+            calls["dt"] = dt
+            calls["seed"] = seed
+            return np.array([3.0, 4.0, 5.0, 6.0], dtype=np.float64)
+
+        monkeypatch.setattr(free_energy_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            free_energy_mod,
+            "_rust_langevin",
+            fake_langevin,
+            raising=False,
+        )
+        z = np.array([[1.0, 2.0], [2.5, 3.5]], dtype=np.float64)
+
+        result = add_langevin_noise(z, temperature=0.5, dt=0.25, rng=None)
+
+        np.testing.assert_allclose(result, [[3.0, 4.0], [5.0, 6.0]])
+        assert calls == {
+            "flat": (1.0, 2.0, 2.5, 3.5),
+            "temperature": 0.5,
+            "dt": 0.25,
+            "seed": 42,
+        }
+
 
 class TestBoltzmannWeight:
     def test_zero_energy_unity(self):
@@ -98,6 +131,28 @@ class TestBoltzmannWeight:
         assert np.isfinite(w)
         assert w > 1e100
 
+    def test_rust_boltzmann_path_used(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: dict[str, float] = {}
+
+        def fake_boltzmann(u_total, temperature):
+            calls["u_total"] = u_total
+            calls["temperature"] = temperature
+            return 0.125
+
+        monkeypatch.setattr(free_energy_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            free_energy_mod,
+            "_rust_boltzmann",
+            fake_boltzmann,
+            raising=False,
+        )
+
+        assert boltzmann_weight(2.0, temperature=8.0) == pytest.approx(0.125)
+        assert calls == {"u_total": 2.0, "temperature": 8.0}
+
 
 class TestEffectiveTemperature:
     def test_constant_cost_zero_temp(self):
@@ -126,6 +181,23 @@ class TestEffectiveTemperature:
     def test_zero_mean_returns_zero(self):
         costs = np.array([1.0, -1.0, 1.0, -1.0])
         assert effective_temperature(costs) == pytest.approx(0.0)
+
+    def test_rust_effective_temperature_path_uses_flattened_costs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: dict[str, object] = {}
+
+        def fake_teff(flat):
+            calls["flat"] = tuple(float(value) for value in flat)
+            return 2.5
+
+        monkeypatch.setattr(free_energy_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(free_energy_mod, "_rust_teff", fake_teff, raising=False)
+        costs = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
+
+        assert effective_temperature(costs) == pytest.approx(2.5)
+        assert calls == {"flat": (1.0, 2.0, 3.0, 4.0)}
 
 
 class TestFreeEnergyTypeHints:
