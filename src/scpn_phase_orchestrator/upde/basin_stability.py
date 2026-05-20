@@ -291,6 +291,8 @@ def steady_state_r(
     dt = _validate_positive_float(dt, name="dt")
     n_transient = _validate_integral(n_transient, name="n_transient", minimum=0)
     n_measure = _validate_integral(n_measure, name="n_measure", minimum=0)
+    if n_measure == 0:
+        return 0.0
     knm_flat = knm.ravel()
     backend_fn = _dispatch()
     if backend_fn is not None:
@@ -352,6 +354,8 @@ def _monte_carlo_R_finals(
 ) -> FloatArray:
     rng = np.random.default_rng(seed)
     R_finals = np.zeros(n_samples)
+    if n_measure == 0:
+        return R_finals
     backend_fn = _dispatch()
     for i in range(n_samples):
         phases_init = rng.uniform(0, 2 * np.pi, n)
