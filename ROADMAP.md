@@ -598,6 +598,10 @@ Near-term candidate tracks:
     from explicit audit JSONL files or a nested audit directory, with
     mutually exclusive source modes and no build, install, upload, or execution
     side effects.
+  - Packaging entry-point metadata is in place:
+    the installed package exposes `scpn-meta` as a narrow console script for
+    the review-only manifest exporter, matching the manifest metadata without
+    exposing live training or runtime actuation.
   - Package-manifest reference gates are in place:
     `benchmark_meta_transfer_package_manifest_quality()` verifies deterministic
     package and manifest hashes, training-summary coverage, digest linkage,

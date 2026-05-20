@@ -104,6 +104,7 @@ dev = [
 
 [project.scripts]
 spo = "scpn_phase_orchestrator.runtime.cli:main"
+scpn-meta = "scpn_phase_orchestrator.runtime.cli:meta_transfer_manifest"
 
 [project.urls]
 Homepage = "https://github.com/anulum/scpn-phase-orchestrator"

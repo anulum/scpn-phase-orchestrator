@@ -50,4 +50,9 @@ command accepts explicit audit JSONL files or one nested audit directory, never
 both, and still keeps `execution_permitted=false`; it does not build, install,
 upload, or execute `scpn-meta`.
 
+Installed packages also expose the same review-only command as `scpn-meta`.
+This console script is intentionally narrow: it points to the manifest exporter,
+not the full SPO runtime CLI, so packaging metadata matches the manifest without
+adding a live training or execution surface.
+
 ::: scpn_phase_orchestrator.meta.transfer
