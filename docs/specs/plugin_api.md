@@ -291,6 +291,10 @@ For stores that maintain multiple lifecycle decisions,
 artefacts into a deterministic list, rejects duplicate request hashes, and
 exposes `as_revoked_request_hashes()` for direct use with request validation.
 
+```bash
+spo plugins revocation-list REVOCATION_JSON --created-by deployment_gate
+```
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

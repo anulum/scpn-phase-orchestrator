@@ -254,6 +254,10 @@ Multiple revocation artefacts can be consolidated with
 list exposes `as_revoked_request_hashes()`, which is the input shape expected by
 request validation and request-bound runtime execution.
 
+```bash
+spo plugins revocation-list REVOCATION_JSON --created-by deployment_gate
+```
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

@@ -2412,6 +2412,105 @@ def test_plugins_revoke_execution_request_rejects_tampered_request(
     assert "request audit record mismatch" in result.output
 
 
+def _write_revocation_payload_from_cli(runner, tmp_path: Path) -> Path:
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revoke-execution-request",
+            str(request_path),
+            "--revoked-by",
+            "deployment_gate",
+            "--revocation-reference",
+            "REV-2026-05-20-03",
+            "--revocation-reason",
+            "operator rotation",
+        ],
+    )
+    assert result.exit_code == 0
+    revocation_path = tmp_path / "revocation.json"
+    revocation_path.write_text(result.output, encoding="utf-8")
+    return revocation_path
+
+
+def test_plugins_revocation_list_outputs_deterministic_list(
+    runner,
+    tmp_path: Path,
+):
+    revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    revocation_payload = json.loads(revocation_path.read_text(encoding="utf-8"))
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_execution_request_revocation_list_v1"
+    assert payload["created_by"] == "deployment_gate"
+    assert payload["revocation_count"] == 1
+    assert payload["request_hashes"] == [revocation_payload["request_hash"]]
+    assert payload["revocation_hashes"] == [revocation_payload["revocation_hash"]]
+    assert len(payload["revocation_list_hash"]) == 64
+
+
+def test_plugins_revocation_list_rejects_duplicate_request_hash(
+    runner,
+    tmp_path: Path,
+):
+    revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_path),
+            str(revocation_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "duplicate request hashes" in result.output
+
+
+def test_plugins_revocation_list_rejects_tampered_revocation(
+    runner,
+    tmp_path: Path,
+):
+    revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
+    payload = json.loads(revocation_path.read_text(encoding="utf-8"))
+    payload["revocation_hash"] = "0" * 64
+    revocation_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "revocation audit record mismatch" in result.output
+
+
 def _write_meta_audit_record(
     path: Path,
     *,

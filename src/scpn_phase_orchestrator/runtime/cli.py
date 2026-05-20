@@ -64,11 +64,13 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionApproval,
     PluginExecutionPlan,
     PluginExecutionRequest,
+    PluginExecutionRequestRevocation,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
     build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_execution_request_revocation,
+    build_plugin_execution_request_revocation_list,
     build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
@@ -694,6 +696,87 @@ def _load_request_from_payload(
     )
 
 
+def _load_revocation_from_payload(
+    revocation_payload: dict[str, object],
+) -> PluginExecutionRequestRevocation:
+    if (
+        revocation_payload.get("schema")
+        != "scpn_plugin_execution_request_revocation_v1"
+    ):
+        raise click.ClickException(
+            "revocation schema mismatch: expected "
+            "scpn_plugin_execution_request_revocation_v1"
+        )
+    request_hash = _require_sha256(
+        revocation_payload.get("request_hash"), "request_hash"
+    )
+    plan_hash = _require_sha256(revocation_payload.get("plan_hash"), "plan_hash")
+    approval_hash = _require_sha256(
+        revocation_payload.get("approval_hash"), "approval_hash"
+    )
+    target_hash = _require_sha256(
+        revocation_payload.get("target_hash"), "target_hash"
+    )
+    revocation_hash = _require_sha256(
+        revocation_payload.get("revocation_hash"), "revocation_hash"
+    )
+    plugin = revocation_payload.get("plugin")
+    kind = revocation_payload.get("kind")
+    name = revocation_payload.get("name")
+    operator_identity = revocation_payload.get("operator_identity")
+    approval_reference = revocation_payload.get("approval_reference")
+    revoked_by = revocation_payload.get("revoked_by")
+    revocation_reference = revocation_payload.get("revocation_reference")
+    revocation_reason = revocation_payload.get("revocation_reason")
+    revoked = revocation_payload.get("revoked")
+    version = revocation_payload.get("version")
+
+    for field_name, value in (
+        ("plugin", plugin),
+        ("kind", kind),
+        ("name", name),
+        ("operator_identity", operator_identity),
+        ("approval_reference", approval_reference),
+        ("revoked_by", revoked_by),
+        ("revocation_reference", revocation_reference),
+        ("revocation_reason", revocation_reason),
+        ("version", version),
+    ):
+        if not isinstance(value, str) or not value:
+            raise click.ClickException(
+                f"revocation schema mismatch: {field_name} must be non-empty"
+            )
+    if kind not in _PLUGIN_KIND_OPTIONS:
+        raise click.ClickException(
+            f"revocation schema mismatch: unsupported kind {kind!r}"
+        )
+    if revoked is not True:
+        raise click.ClickException("revocation schema mismatch: revoked must be true")
+
+    return PluginExecutionRequestRevocation(
+        schema="scpn_plugin_execution_request_revocation_v1",
+        version=str(version),
+        request_hash=request_hash,
+        plan_hash=plan_hash,
+        approval_hash=approval_hash,
+        target_hash=target_hash,
+        plugin=str(plugin),
+        kind=cast(
+            Literal["actuator", "bridge", "domainpack", "extractor", "monitor"],
+            str(kind),
+        ),
+        name=str(name),
+        operator_identity=str(operator_identity),
+        approval_reference=str(approval_reference),
+        revoked_by=str(revoked_by),
+        revocation_reference=str(revocation_reference),
+        revocation_reason=str(revocation_reason),
+        revoked=True,
+        revocation_hash=revocation_hash,
+        audit_record=revocation_payload,
+    )
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -1050,6 +1133,41 @@ def plugins_revoke_execution_request(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(json.dumps(revocation.audit_record, indent=2, sort_keys=True))
+
+
+@plugins_group.command("revocation-list")
+@click.argument(
+    "revocation_json",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Deployment component creating the revocation list.",
+)
+def plugins_revocation_list(
+    revocation_json: tuple[Path, ...],
+    created_by: str,
+) -> None:
+    """Emit a deterministic aggregate revocation list."""
+    revocations = tuple(
+        _load_revocation_from_payload(
+            _load_json_file(path, artifact="revocation")
+        )
+        for path in revocation_json
+    )
+
+    try:
+        revocation_list = build_plugin_execution_request_revocation_list(
+            revocations,
+            created_by=created_by,
+        )
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(json.dumps(revocation_list.audit_record, indent=2, sort_keys=True))
 
 
 @main.command("meta-transfer-manifest")
