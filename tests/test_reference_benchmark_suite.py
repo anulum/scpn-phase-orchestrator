@@ -18,6 +18,7 @@ from benchmarks.reference_suite import (
     benchmark_domain_formal_safety_exports,
     benchmark_formal_export_artifact_quality,
     benchmark_hybrid_cocompiler_review_gate,
+    benchmark_hybrid_operator_handoff_package_gate,
     benchmark_hybrid_target_readiness_gate,
     benchmark_kuramoto_reference,
     benchmark_meta_transfer_audit_corpus_quality,
@@ -677,6 +678,53 @@ def test_hybrid_target_readiness_gate_reports_thresholds_and_records() -> None:
     }
 
 
+def test_hybrid_operator_handoff_package_gate_benchmark_shape() -> None:
+    out = benchmark_hybrid_operator_handoff_package_gate()
+
+    assert out["suite"] == "hybrid_operator_handoff_package_gate"
+    assert out["package_count"] == 2
+    assert out["ready_package_count"] == 1
+    assert out["blocked_package_count"] == 1
+    assert out["blocked_reason_count"] == 1
+    assert out["operator_command_count"] == 8
+    assert out["non_executing"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["hash_chain_linked"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["ready_package_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_hybrid_operator_handoff_package_gate_reports_thresholds_and_records() -> None:
+    out = benchmark_hybrid_operator_handoff_package_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    packages = json.loads(str(out["packages_json"]))
+
+    assert thresholds == {
+        "min_blocked_package_count": 1,
+        "min_blocked_reason_count": 1,
+        "min_operator_command_count": 8,
+        "min_ready_package_count": 1,
+        "require_deterministic_hash": True,
+        "require_hash_chain_linked": True,
+        "require_non_executing": True,
+    }
+    assert [package["schema"] for package in packages] == [
+        "scpn_hybrid_operator_handoff_package_v1",
+        "scpn_hybrid_operator_handoff_package_v1",
+    ]
+    assert [package["status"] for package in packages] == [
+        "blocked",
+        "ready_not_executed",
+    ]
+    assert packages[0]["blocked_reasons"] == ["hybrid_operator_approval_missing"]
+    assert packages[1]["blocked_reasons"] == []
+    assert all(package["execution_permitted"] is False for package in packages)
+    assert all(package["qpu_execution_permitted"] is False for package in packages)
+    assert all(package["hardware_write_permitted"] is False for package in packages)
+    assert all(package["actuation_permitted"] is False for package in packages)
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -741,6 +789,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "domain_formal_export",
         "formal_export",
         "hybrid_cocompiler",
+        "hybrid_operator_handoff",
         "hybrid_target_readiness",
         "meta_transfer",
         "meta_transfer_corpus",

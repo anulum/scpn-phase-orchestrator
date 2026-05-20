@@ -24,6 +24,7 @@ import numpy as np
 from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
     audit_hybrid_target_readiness,
     build_hybrid_cocompiler_manifest,
+    build_hybrid_operator_handoff_package,
 )
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
 from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
@@ -225,6 +226,16 @@ class HybridTargetReadinessThresholds(NamedTuple):
     require_non_executing: bool
     require_deterministic_hash: bool
     require_component_hash_linked: bool
+
+
+class HybridOperatorHandoffThresholds(NamedTuple):
+    min_ready_package_count: int
+    min_blocked_package_count: int
+    min_blocked_reason_count: int
+    min_operator_command_count: int
+    require_non_executing: bool
+    require_deterministic_hash: bool
+    require_hash_chain_linked: bool
 
 
 class PluginEcosystemThresholds(NamedTuple):
@@ -1999,6 +2010,129 @@ def benchmark_hybrid_target_readiness_gate() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_hybrid_operator_handoff_package_gate() -> dict[str, float | int | str]:
+    """Benchmark non-executing hybrid operator handoff package gates."""
+    thresholds = HybridOperatorHandoffThresholds(
+        min_ready_package_count=1,
+        min_blocked_package_count=1,
+        min_blocked_reason_count=1,
+        min_operator_command_count=8,
+        require_non_executing=True,
+        require_deterministic_hash=True,
+        require_hash_chain_linked=True,
+    )
+    quantum_manifest = _hybrid_quantum_manifest()
+    neuromorphic_manifest = _hybrid_neuromorphic_manifest()
+
+    t0 = time.perf_counter()
+    hybrid_manifest = build_hybrid_cocompiler_manifest(
+        quantum_manifest,
+        neuromorphic_manifest,
+        n_channel_semantics=("Q_control", "S_spike", "audit"),
+    )
+    quantum_readiness = _hybrid_quantum_readiness_record(
+        manifest_sha256=str(quantum_manifest["manifest_sha256"]),
+    )
+    neuromorphic_readiness = _hybrid_neuromorphic_readiness_record(
+        manifest_sha256=str(neuromorphic_manifest["schedule_sha256"]),
+    )
+    blocked_readiness = audit_hybrid_target_readiness(
+        hybrid_manifest,
+        quantum_readiness,
+        neuromorphic_readiness,
+        hybrid_operator_approved=False,
+    )
+    ready_readiness = audit_hybrid_target_readiness(
+        hybrid_manifest,
+        quantum_readiness,
+        neuromorphic_readiness,
+        hybrid_operator_approved=True,
+    )
+    blocked_package = build_hybrid_operator_handoff_package(
+        hybrid_manifest,
+        blocked_readiness,
+    )
+    ready_package = build_hybrid_operator_handoff_package(
+        hybrid_manifest,
+        ready_readiness,
+    )
+    repeated_ready_package = build_hybrid_operator_handoff_package(
+        hybrid_manifest,
+        ready_readiness,
+    )
+    elapsed = time.perf_counter() - t0
+
+    packages = [blocked_package, ready_package]
+    ready_package_count = sum(
+        package["status"] == "ready_not_executed" for package in packages
+    )
+    blocked_package_count = sum(package["status"] == "blocked" for package in packages)
+    blocked_reason_count = sum(
+        len(package["blocked_reasons"])
+        for package in packages
+        if isinstance(package["blocked_reasons"], list)
+    )
+    operator_command_count = sum(
+        len(package["operator_commands"])
+        for package in packages
+        if isinstance(package["operator_commands"], list)
+    )
+    non_executing = all(
+        package["execution_permitted"] is False
+        and package["qpu_execution_permitted"] is False
+        and package["hardware_write_permitted"] is False
+        and package["actuation_permitted"] is False
+        for package in packages
+    )
+    deterministic_hash = int(
+        ready_package["package_sha256"] == repeated_ready_package["package_sha256"]
+    )
+    hash_chain_linked = int(
+        ready_package["hybrid_manifest_sha256"]
+        == hybrid_manifest["hybrid_manifest_sha256"]
+        and ready_package["hybrid_readiness_sha256"]
+        == ready_readiness["readiness_sha256"]
+    )
+    acceptance_passed = int(
+        ready_package_count >= thresholds.min_ready_package_count
+        and blocked_package_count >= thresholds.min_blocked_package_count
+        and blocked_reason_count >= thresholds.min_blocked_reason_count
+        and operator_command_count >= thresholds.min_operator_command_count
+        and non_executing == thresholds.require_non_executing
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and hash_chain_linked == int(thresholds.require_hash_chain_linked)
+    )
+
+    return {
+        "suite": "hybrid_operator_handoff_package_gate",
+        "package_count": len(packages),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(packages) / elapsed,
+        "ready_package_count": ready_package_count,
+        "blocked_package_count": blocked_package_count,
+        "blocked_reason_count": blocked_reason_count,
+        "operator_command_count": operator_command_count,
+        "non_executing": int(non_executing),
+        "deterministic_hash": deterministic_hash,
+        "hash_chain_linked": hash_chain_linked,
+        "ready_package_sha256": str(ready_package["package_sha256"]),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_blocked_package_count": thresholds.min_blocked_package_count,
+                "min_blocked_reason_count": thresholds.min_blocked_reason_count,
+                "min_operator_command_count": thresholds.min_operator_command_count,
+                "min_ready_package_count": thresholds.min_ready_package_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_hash_chain_linked": thresholds.require_hash_chain_linked,
+                "require_non_executing": thresholds.require_non_executing,
+            },
+            sort_keys=True,
+        ),
+        "packages_json": json.dumps(packages, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -3050,6 +3184,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
                 benchmark_neuromorphic_target_readiness_gate()
             ),
             "hybrid_target_readiness": benchmark_hybrid_target_readiness_gate(),
+            "hybrid_operator_handoff": (
+                benchmark_hybrid_operator_handoff_package_gate()
+            ),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

@@ -677,8 +677,9 @@ Speculative research watchlist:
   before any external operator handoff. Reference-suite gates now enforce
   component-hash linkage, ready/blocked evidence, deterministic hashes, and
   non-executing permissions. Deterministic external-operator handoff packages
-  now preserve the same hash chain with execution disabled. Real hybrid target
-  execution remains open.
+  now preserve the same hash chain with execution disabled, and reference-suite
+  gates enforce package hash linkage, blocked/ready package evidence, and
+  non-executing permissions. Real hybrid target execution remains open.
 - Value-alignment supervisor guard encoded as binding-spec objectives and Petri-net guard conditions.
   - Foundation is in place: value-alignment guard support exists.
   - Binding-spec templates are in place: `value_alignment` maps can be loaded
