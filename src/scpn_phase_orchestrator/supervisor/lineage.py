@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import hmac
 import json
 from collections.abc import Mapping, Sequence
 from hashlib import sha256
@@ -17,7 +18,10 @@ from typing import Any
 
 import numpy as np
 
-__all__ = ["build_autopoietic_lineage_sandbox"]
+__all__ = [
+    "build_autopoietic_lineage_sandbox",
+    "build_intergenerational_policy_inheritance",
+]
 
 
 def build_autopoietic_lineage_sandbox(
@@ -68,6 +72,7 @@ def build_autopoietic_lineage_sandbox(
     manifest: dict[str, object] = {
         "schema": "scpn_autopoietic_lineage_sandbox_v1",
         "parent_policy_sha256": _stable_hash(parent),
+        "parent_policy_genome": parent,
         "replay_corpus_sha256": _stable_hash(replays),
         "child_budget": child_budget,
         "child_candidate_count": len(child_candidates),
@@ -84,6 +89,60 @@ def build_autopoietic_lineage_sandbox(
         "child_candidates": child_candidates,
     }
     manifest["lineage_sha256"] = _stable_hash(manifest)
+    return manifest
+
+
+def build_intergenerational_policy_inheritance(
+    lineage_manifest: Mapping[str, object],
+    child_candidate: Mapping[str, object],
+    *,
+    signer_id: str,
+    signing_key: str,
+    objective_weights: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    """Build signed review metadata for inherited child-policy genomes.
+
+    The resulting manifest materialises the inherited policy genome from a
+    reviewed child diff, records replay-fitness components, and signs metadata
+    for operator review. It does not permit direct hot patches or actuation.
+    """
+
+    lineage = _validated_lineage_manifest(lineage_manifest)
+    child = _validated_review_child(child_candidate)
+    signer = _non_empty_string(signer_id, "signer_id")
+    key = _non_empty_string(signing_key, "signing_key")
+    weights = _validated_objective_weights(objective_weights)
+    parent_genome = _parent_genome_from_lineage(lineage)
+    inherited_genome = dict(parent_genome)
+    for diff in child["policy_diff"]:
+        inherited_genome[str(diff["knob"])] = float(diff["child_value"])
+    fitness = _multi_objective_fitness(child, weights)
+    signed_payload: dict[str, object] = {
+        "lineage_sha256": lineage["lineage_sha256"],
+        "child_sha256": child["child_sha256"],
+        "inherited_policy_genome": inherited_genome,
+        "multi_objective_replay_fitness": fitness,
+    }
+    metadata = {
+        "signer_id": signer,
+        "signature_algorithm": "hmac-sha256",
+        "signature_sha256": _signature(signed_payload, signer=signer, key=key),
+    }
+    manifest: dict[str, object] = {
+        "schema": "scpn_intergenerational_policy_inheritance_v1",
+        "lineage_sha256": lineage["lineage_sha256"],
+        "parent_policy_sha256": lineage["parent_policy_sha256"],
+        "child_sha256": child["child_sha256"],
+        "inherited_policy_genome": inherited_genome,
+        "policy_diff": child["policy_diff"],
+        "multi_objective_replay_fitness": fitness,
+        "signed_metadata": metadata,
+        "hot_patch_review_required": True,
+        "direct_hot_patch_permitted": False,
+        "merge_strategy": "reviewed_hot_patch_only",
+        "actuation_permitted": False,
+    }
+    manifest["inheritance_sha256"] = _stable_hash(manifest)
     return manifest
 
 
@@ -228,3 +287,127 @@ def _finite_non_negative(value: object, field: str) -> float:
 def _stable_hash(payload: Any) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _validated_lineage_manifest(manifest: Mapping[str, object]) -> dict[str, object]:
+    if not isinstance(manifest, Mapping):
+        raise ValueError("lineage_manifest must be a mapping")
+    data = dict(manifest)
+    if data.get("schema") != "scpn_autopoietic_lineage_sandbox_v1":
+        raise ValueError("lineage_manifest schema is unsupported")
+    for key in ("lineage_sha256", "parent_policy_sha256", "child_candidates"):
+        if key not in data:
+            raise ValueError(f"lineage_manifest.{key} is required")
+    if data.get("live_merge_permitted") is not False:
+        raise ValueError("lineage_manifest must disable live merge")
+    if data.get("actuation_permitted") is not False:
+        raise ValueError("lineage_manifest must disable actuation")
+    candidates = data["child_candidates"]
+    if not isinstance(candidates, list) or not candidates:
+        raise ValueError("lineage_manifest.child_candidates must be a non-empty list")
+    return data
+
+
+def _validated_review_child(candidate: Mapping[str, object]) -> dict[str, object]:
+    if not isinstance(candidate, Mapping):
+        raise ValueError("child_candidate must be a mapping")
+    child = dict(candidate)
+    if child.get("status") != "accepted_for_review":
+        raise ValueError("child_candidate must have status accepted_for_review")
+    if child.get("review_required") is not True:
+        raise ValueError("child_candidate must require review")
+    if child.get("live_merge_permitted") is not False:
+        raise ValueError("child_candidate must disable live merge")
+    if child.get("actuation_permitted") is not False:
+        raise ValueError("child_candidate must disable actuation")
+    if not isinstance(child.get("child_sha256"), str):
+        raise ValueError("child_candidate.child_sha256 is required")
+    diffs = child.get("policy_diff")
+    if not isinstance(diffs, list) or not diffs:
+        raise ValueError("child_candidate.policy_diff must be a non-empty list")
+    for index, diff in enumerate(diffs):
+        if not isinstance(diff, Mapping):
+            raise ValueError(f"child_candidate.policy_diff[{index}] must be a mapping")
+        _non_empty_string(diff.get("knob"), f"policy_diff[{index}].knob")
+        _finite_number(diff.get("parent_value"), f"policy_diff[{index}].parent_value")
+        _finite_number(diff.get("child_value"), f"policy_diff[{index}].child_value")
+        _finite_number(diff.get("delta"), f"policy_diff[{index}].delta")
+    return child
+
+
+def _parent_genome_from_lineage(manifest: Mapping[str, object]) -> dict[str, float]:
+    if "parent_policy_genome" in manifest:
+        return _validated_policy(manifest["parent_policy_genome"])
+    genome: dict[str, float] = {}
+    for candidate in manifest["child_candidates"]:
+        if not isinstance(candidate, Mapping):
+            raise ValueError("lineage child candidate must be a mapping")
+        diffs = candidate.get("policy_diff")
+        if not isinstance(diffs, list):
+            raise ValueError("lineage child candidate policy_diff must be a list")
+        for diff in diffs:
+            if not isinstance(diff, Mapping):
+                raise ValueError("lineage policy diff must be a mapping")
+            knob = _non_empty_string(diff.get("knob"), "policy_diff.knob")
+            genome[knob] = _finite_number(diff.get("parent_value"), "parent_value")
+    if not genome:
+        raise ValueError("lineage manifest does not contain parent genome evidence")
+    return dict(sorted(genome.items()))
+
+
+def _validated_objective_weights(
+    objective_weights: Mapping[str, object] | None,
+) -> dict[str, float]:
+    if objective_weights is None:
+        return {"reward": 0.5, "safety": 0.4, "simplicity": 0.1}
+    if not isinstance(objective_weights, Mapping):
+        raise ValueError("objective_weights must be a mapping")
+    weights = {
+        key: _finite_non_negative(value, f"objective_weights.{key}")
+        for key, value in objective_weights.items()
+        if isinstance(key, str) and key
+    }
+    required = {"reward", "safety", "simplicity"}
+    if set(weights) != required:
+        raise ValueError("objective_weights must contain reward, safety, simplicity")
+    total = sum(weights.values())
+    if total <= 0.0:
+        raise ValueError("objective_weights total must be positive")
+    return {key: weights[key] / total for key in sorted(weights)}
+
+
+def _multi_objective_fitness(
+    child: Mapping[str, object],
+    weights: Mapping[str, float],
+) -> dict[str, object]:
+    reward = _finite_number(child.get("replay_reward"), "child.replay_reward")
+    safety = _finite_number(child.get("safety_margin"), "child.safety_margin")
+    diff_count = len(child["policy_diff"])
+    simplicity = 1.0 / float(1 + diff_count)
+    score = (
+        reward * weights["reward"]
+        + safety * weights["safety"]
+        + simplicity * weights["simplicity"]
+    )
+    return {
+        "reward_component": reward,
+        "safety_component": safety,
+        "simplicity_component": simplicity,
+        "objective_weights": dict(weights),
+        "fitness_score": float(score),
+    }
+
+
+def _signature(payload: Mapping[str, object], *, signer: str, key: str) -> str:
+    body = json.dumps(
+        {"payload": payload, "signer_id": signer},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hmac.new(key.encode("utf-8"), body.encode("utf-8"), sha256).hexdigest()
+
+
+def _non_empty_string(value: object, field: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{field} must be a non-empty string")
+    return value

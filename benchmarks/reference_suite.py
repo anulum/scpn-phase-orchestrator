@@ -77,6 +77,7 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
 )
 from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_sandbox,
+    build_intergenerational_policy_inheritance,
 )
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
@@ -262,6 +263,15 @@ class AutopoieticLineageSandboxThresholds(NamedTuple):
     min_accepted_child_count: int
     min_rejected_child_count: int
     min_policy_diff_count: int
+    require_review_only: bool
+    require_deterministic_hash: bool
+
+
+class IntergenerationalInheritanceThresholds(NamedTuple):
+    min_manifest_count: int
+    min_signed_metadata_count: int
+    min_policy_gene_count: int
+    min_fitness_score: float
     require_review_only: bool
     require_deterministic_hash: bool
 
@@ -2407,6 +2417,130 @@ def benchmark_autopoietic_lineage_sandbox_gate() -> dict[str, float | int | str]
     }
 
 
+def benchmark_intergenerational_policy_inheritance_gate() -> (
+    dict[str, float | int | str]
+):
+    """Benchmark signed review-only intergenerational policy inheritance."""
+    thresholds = IntergenerationalInheritanceThresholds(
+        min_manifest_count=2,
+        min_signed_metadata_count=2,
+        min_policy_gene_count=3,
+        min_fitness_score=0.35,
+        require_review_only=True,
+        require_deterministic_hash=True,
+    )
+    parent_policy = {"K": 0.42, "alpha": 0.18, "zeta": 0.09}
+    replays = [
+        {
+            "replay_id": "nominal_grid_replay",
+            "reward": 0.82,
+            "safety_margin": 0.24,
+            "violations": [],
+        },
+        {
+            "replay_id": "disturbance_grid_replay",
+            "reward": 0.74,
+            "safety_margin": 0.18,
+            "violations": [],
+        },
+    ]
+
+    t0 = time.perf_counter()
+    lineage = build_autopoietic_lineage_sandbox(
+        parent_policy,
+        replays,
+        child_budget=2,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+    accepted_children = [
+        child
+        for child in lineage["child_candidates"]
+        if child["status"] == "accepted_for_review"
+    ]
+    inheritance_manifests = [
+        build_intergenerational_policy_inheritance(
+            lineage,
+            child,
+            signer_id="reference-suite-review-key",
+            signing_key="reference-suite-local-signing-key",
+            objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
+        )
+        for child in accepted_children
+    ]
+    repeated = build_intergenerational_policy_inheritance(
+        lineage,
+        accepted_children[0],
+        signer_id="reference-suite-review-key",
+        signing_key="reference-suite-local-signing-key",
+        objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
+    )
+    elapsed = time.perf_counter() - t0
+
+    manifest_count = len(inheritance_manifests)
+    signed_metadata_count = sum(
+        1 for manifest in inheritance_manifests if manifest["signed_metadata"]
+    )
+    policy_gene_count = min(
+        len(manifest["inherited_policy_genome"]) for manifest in inheritance_manifests
+    )
+    min_fitness_score = min(
+        float(manifest["multi_objective_replay_fitness"]["fitness_score"])
+        for manifest in inheritance_manifests
+    )
+    review_only = int(
+        all(
+            manifest["hot_patch_review_required"] is True
+            and manifest["direct_hot_patch_permitted"] is False
+            and manifest["actuation_permitted"] is False
+            and manifest["merge_strategy"] == "reviewed_hot_patch_only"
+            for manifest in inheritance_manifests
+        )
+    )
+    deterministic_hash = int(
+        inheritance_manifests[0]["inheritance_sha256"]
+        == repeated["inheritance_sha256"]
+    )
+    acceptance_passed = int(
+        manifest_count >= thresholds.min_manifest_count
+        and signed_metadata_count >= thresholds.min_signed_metadata_count
+        and policy_gene_count >= thresholds.min_policy_gene_count
+        and min_fitness_score >= thresholds.min_fitness_score
+        and review_only == int(thresholds.require_review_only)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "intergenerational_policy_inheritance_gate",
+        "manifest_count": manifest_count,
+        "wall_time_s": elapsed,
+        "steps_per_second": manifest_count / elapsed,
+        "signed_metadata_count": signed_metadata_count,
+        "policy_gene_count": policy_gene_count,
+        "min_fitness_score": min_fitness_score,
+        "review_only": review_only,
+        "deterministic_hash": deterministic_hash,
+        "inheritance_sha256": str(inheritance_manifests[0]["inheritance_sha256"]),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_fitness_score": thresholds.min_fitness_score,
+                "min_manifest_count": thresholds.min_manifest_count,
+                "min_policy_gene_count": thresholds.min_policy_gene_count,
+                "min_signed_metadata_count": thresholds.min_signed_metadata_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_review_only": thresholds.require_review_only,
+            },
+            sort_keys=True,
+        ),
+        "inheritance_manifests_json": json.dumps(
+            inheritance_manifests,
+            sort_keys=True,
+        ),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -3465,6 +3599,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
                 benchmark_value_alignment_replay_calibration_gate()
             ),
             "autopoietic_lineage": benchmark_autopoietic_lineage_sandbox_gate(),
+            "intergenerational_inheritance": (
+                benchmark_intergenerational_policy_inheritance_gate()
+            ),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

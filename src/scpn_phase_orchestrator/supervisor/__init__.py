@@ -81,6 +81,7 @@ from scpn_phase_orchestrator.supervisor.hierarchy_adapters import (
 )
 from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_sandbox,
+    build_intergenerational_policy_inheritance,
 )
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldPolicy,
@@ -226,6 +227,7 @@ __all__ = [
     "build_formal_verification_package",
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
+    "build_intergenerational_policy_inheritance",
     "build_morphogenetic_field_snapshot",
     "build_sheaf_obstruction_summary",
     "render_morphogenetic_field_svg",

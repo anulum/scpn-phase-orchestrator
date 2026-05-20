@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import pytest
 
-from scpn_phase_orchestrator.supervisor import build_autopoietic_lineage_sandbox
+from scpn_phase_orchestrator.supervisor import (
+    build_autopoietic_lineage_sandbox,
+    build_intergenerational_policy_inheritance,
+)
 
 
 def test_autopoietic_lineage_sandbox_is_deterministic_and_review_only() -> None:
@@ -118,4 +121,94 @@ def test_autopoietic_lineage_sandbox_rejects_invalid_resource_bounds() -> None:
             {"K": 0.1},
             [{"reward": 1.0}],
             mutation_step=0.0,
+        )
+
+
+def test_intergenerational_policy_inheritance_is_signed_and_review_only() -> None:
+    lineage = build_autopoietic_lineage_sandbox(
+        {"K": 0.42, "alpha": 0.18, "zeta": 0.09},
+        [{"replay_id": "nominal", "reward": 0.82, "safety_margin": 0.24}],
+        child_budget=2,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+    child = lineage["child_candidates"][0]
+
+    first = build_intergenerational_policy_inheritance(
+        lineage,
+        child,
+        signer_id="operator-review-key",
+        signing_key="local-test-key",
+        objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
+    )
+    second = build_intergenerational_policy_inheritance(
+        lineage,
+        child,
+        signer_id="operator-review-key",
+        signing_key="local-test-key",
+        objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
+    )
+
+    assert first == second
+    assert first["schema"] == "scpn_intergenerational_policy_inheritance_v1"
+    assert first["signed_metadata"]["signer_id"] == "operator-review-key"
+    assert len(str(first["signed_metadata"]["signature_sha256"])) == 64
+    assert len(str(first["inheritance_sha256"])) == 64
+    assert first["inherited_policy_genome"]["K"] == pytest.approx(0.44)
+    assert first["multi_objective_replay_fitness"]["fitness_score"] > 0.0
+    assert first["hot_patch_review_required"] is True
+    assert first["direct_hot_patch_permitted"] is False
+    assert first["actuation_permitted"] is False
+    assert first["merge_strategy"] == "reviewed_hot_patch_only"
+
+
+def test_intergenerational_policy_inheritance_rejects_unreviewed_children() -> None:
+    lineage = build_autopoietic_lineage_sandbox(
+        {"K": 0.42, "alpha": 0.18},
+        [
+            {
+                "replay_id": "unsafe",
+                "reward": 0.2,
+                "safety_margin": 0.01,
+                "violations": ["stl_margin_breach"],
+            }
+        ],
+        child_budget=1,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+
+    with pytest.raises(ValueError, match="accepted_for_review"):
+        build_intergenerational_policy_inheritance(
+            lineage,
+            lineage["child_candidates"][0],
+            signer_id="operator-review-key",
+            signing_key="local-test-key",
+        )
+
+
+def test_intergenerational_policy_inheritance_rejects_bad_signature_inputs() -> None:
+    lineage = build_autopoietic_lineage_sandbox(
+        {"K": 0.42},
+        [{"reward": 0.82, "safety_margin": 0.24}],
+        child_budget=1,
+        mutation_step=0.02,
+    )
+
+    with pytest.raises(ValueError, match="signer_id"):
+        build_intergenerational_policy_inheritance(
+            lineage,
+            lineage["child_candidates"][0],
+            signer_id="",
+            signing_key="local-test-key",
+        )
+
+    with pytest.raises(ValueError, match="signing_key"):
+        build_intergenerational_policy_inheritance(
+            lineage,
+            lineage["child_candidates"][0],
+            signer_id="operator-review-key",
+            signing_key="",
         )

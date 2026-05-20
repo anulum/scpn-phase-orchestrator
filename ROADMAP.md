@@ -788,6 +788,15 @@ Speculative research watchlist:
     candidates, and review-only gating.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
 - Intergenerational policy inheritance: signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches.
+  - Signed inheritance manifests are in place:
+    `build_intergenerational_policy_inheritance()` materialises inherited
+    policy genomes from accepted lineage children, records multi-objective
+    replay fitness, emits deterministic HMAC-SHA256 review metadata, and keeps
+    direct hot patches and actuation disabled.
+  - Intergenerational inheritance benchmark evidence is in place:
+    `benchmark_intergenerational_policy_inheritance_gate()` gates signed
+    metadata, inherited gene coverage, replay-fitness thresholds, deterministic
+    hashes, and reviewed-hot-patch-only merge semantics.
 - Sheaf-theoretic coherence manifold: obstruction-aware control primitive over a sheaf Laplacian with audit-visible cohomology dimensions.
 - Constitutional value-alignment guard: Pareto objective constraints in binding specs, counterfactual violation logs, and forced safe fallback path.
 - Strange-loop meta-orchestrator: self-referential supervisor channel that monitors and damps policy drift, over-control, or control-loop oscillation.

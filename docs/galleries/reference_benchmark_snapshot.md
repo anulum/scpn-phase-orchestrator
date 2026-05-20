@@ -30,27 +30,28 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Benchmark key | Suite ID | Record size | Wall time (s) | Steps/s | Acceptance |
 |---------------|----------|-------------|---------------|---------|------------|
-| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.0420650559826754 | 95.09080414982473 | 1 |
-| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.015785453957505524 | 190.0483830288319 | 1 |
-| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.010973992990329862 | 820.120808162597 | 1 |
-| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.223455803003162 | 43.176032494253036 | 1 |
-| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.26891054899897426 | 11.156126121372216 | 1 |
-| `formal_export` | `formal_export_artifact_quality` | n/a | 0.0005403989925980568 | 9252.422873628391 | 1 |
-| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.00026910100132226944 | 11148.230535222967 | 1 |
-| `domain_formal_export` | `domain_formal_safety_exports` | 3 | 0.00038915203185752034 | 23127.208040109006 | 1 |
-| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.00012541498290374875 | 7973.528974344813 | 1 |
-| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.00012014899402856827 | 16645.998713268065 | 1 |
-| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.00019102898659184575 | 10469.615295992842 | 1 |
-| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.00011127599282190204 | 17973.328741276775 | 1 |
-| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | 2 | 0.000122814963106066 | 16284.660675041292 | 1 |
-| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.00016526703257113695 | 18152.440649097338 | 1 |
-| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | 2 | 0.0003409140044823289 | 14666.45527687371 | 1 |
-| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.0018666079849936068 | 3214.386763710619 | 1 |
-| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.00037538399919867516 | 10655.755196115768 | 1 |
-| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | 2 | 0.0002545440220274031 | 11785.780613135094 | 1 |
-| `kuramoto` | `kuramoto_reference_strogatz_2000` | 64 | 0.12545688898535445 | 7970.865594449243 | n/a |
-| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 64 | 0.25918622000608593 | 3858.229808577474 | n/a |
-| `petri_reachability` | `petri_net_reachability` | n/a | 0.019371899019461125 | 258105.8261235499 | n/a |
+| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.04365835600765422 | 91.62049068679353 | 1 |
+| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.014098573010414839 | 212.78749259119007 | 1 |
+| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.011527169030159712 | 780.7641213946268 | 1 |
+| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.1727625819621608 | 44.183382389301414 | 1 |
+| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.2694264340098016 | 11.134764897979021 | 1 |
+| `formal_export` | `formal_export_artifact_quality` | n/a | 0.0006162719801068306 | 8113.300882401389 | 1 |
+| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.0003238169592805207 | 9264.493146577657 | 1 |
+| `domain_formal_export` | `domain_formal_safety_exports` | 3 | 0.00037571799475699663 | 23954.136148897887 | 1 |
+| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.00010862504132091999 | 9205.980387575797 | 1 |
+| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.00011853198520839214 | 16873.082792663787 | 1 |
+| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.00017095200018957257 | 11699.190403049712 | 1 |
+| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.00011312199058011174 | 17680.028345891085 | 1 |
+| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | 2 | 0.0001239309785887599 | 16138.0150691507 | 1 |
+| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.00017469999147579074 | 17172.296201375193 | 1 |
+| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | 2 | 0.0003398690023459494 | 14711.550525312538 | 1 |
+| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | 2 | 0.0002586429473012686 | 7732.66783752812 | 1 |
+| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.001993062032852322 | 3010.44317793423 | 1 |
+| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.00037746602902188897 | 10596.98010537537 | 1 |
+| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | 2 | 0.0002500229747965932 | 11998.89731109974 | 1 |
+| `kuramoto` | `kuramoto_reference_strogatz_2000` | 64 | 0.13324306695722044 | 7505.080923430441 | n/a |
+| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 64 | 0.25500432099215686 | 3921.50217733274 | n/a |
+| `petri_reachability` | `petri_net_reachability` | n/a | 0.0199123959755525 | 251099.86794852634 | n/a |
 
 ## Benchmark Record Details
 
@@ -59,8 +60,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `auto_binding`
 
 - Suite: `auto_binding_synthetic_quality`
-- Wall time (s): `0.0420650559826754`
-- Steps/s: `95.09080414982473`
+- Wall time (s): `0.04365835600765422`
+- Steps/s: `91.62049068679353`
 
 | Metric | Value |
 |--------|-------|
@@ -167,8 +168,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `semantic_retrieval`
 
 - Suite: `semantic_retrieval_ranking_quality`
-- Wall time (s): `0.015785453957505524`
-- Steps/s: `190.0483830288319`
+- Wall time (s): `0.014098573010414839`
+- Steps/s: `212.78749259119007`
 
 | Metric | Value |
 |--------|-------|
@@ -247,8 +248,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `replay_policy`
 
 - Suite: `replay_policy_candidate_quality`
-- Wall time (s): `0.010973992990329862`
-- Steps/s: `820.120808162597`
+- Wall time (s): `0.011527169030159712`
+- Steps/s: `780.7641213946268`
 
 | Metric | Value |
 |--------|-------|
@@ -433,8 +434,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `bayesian_posterior`
 
 - Suite: `bayesian_posterior_fit_quality`
-- Wall time (s): `2.223455803003162`
-- Steps/s: `43.176032494253036`
+- Wall time (s): `2.1727625819621608`
+- Steps/s: `44.183382389301414`
 
 | Metric | Value |
 |--------|-------|
@@ -464,8 +465,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `bayesian_backends`
 
 - Suite: `bayesian_backend_fail_closed`
-- Wall time (s): `0.26891054899897426`
-- Steps/s: `11.156126121372216`
+- Wall time (s): `0.2694264340098016`
+- Steps/s: `11.134764897979021`
 
 | Metric | Value |
 |--------|-------|
@@ -523,8 +524,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `formal_export`
 
 - Suite: `formal_export_artifact_quality`
-- Wall time (s): `0.0005403989925980568`
-- Steps/s: `9252.422873628391`
+- Wall time (s): `0.0006162719801068306`
+- Steps/s: `8113.300882401389`
 
 | Metric | Value |
 |--------|-------|
@@ -665,8 +666,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `stl_closed_loop`
 
 - Suite: `stl_closed_loop_plan_quality`
-- Wall time (s): `0.00026910100132226944`
-- Steps/s: `11148.230535222967`
+- Wall time (s): `0.0003238169592805207`
+- Steps/s: `9264.493146577657`
 
 | Metric | Value |
 |--------|-------|
@@ -816,8 +817,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `domain_formal_export`
 
 - Suite: `domain_formal_safety_exports`
-- Wall time (s): `0.00038915203185752034`
-- Steps/s: `23127.208040109006`
+- Wall time (s): `0.00037571799475699663`
+- Steps/s: `23954.136148897887`
 
 | Metric | Value |
 |--------|-------|
@@ -880,8 +881,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_cocompiler`
 
 - Suite: `hybrid_cocompiler_review_gate`
-- Wall time (s): `0.00012541498290374875`
-- Steps/s: `7973.528974344813`
+- Wall time (s): `0.00010862504132091999`
+- Steps/s: `9205.980387575797`
 
 | Metric | Value |
 |--------|-------|
@@ -922,8 +923,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `quantum_target_readiness`
 
 - Suite: `quantum_target_readiness_gate`
-- Wall time (s): `0.00012014899402856827`
-- Steps/s: `16645.998713268065`
+- Wall time (s): `0.00011853198520839214`
+- Steps/s: `16873.082792663787`
 
 | Metric | Value |
 |--------|-------|
@@ -1009,8 +1010,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `neuromorphic_target_readiness`
 
 - Suite: `neuromorphic_target_readiness_gate`
-- Wall time (s): `0.00019102898659184575`
-- Steps/s: `10469.615295992842`
+- Wall time (s): `0.00017095200018957257`
+- Steps/s: `11699.190403049712`
 
 | Metric | Value |
 |--------|-------|
@@ -1099,8 +1100,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_target_readiness`
 
 - Suite: `hybrid_target_readiness_gate`
-- Wall time (s): `0.00011127599282190204`
-- Steps/s: `17973.328741276775`
+- Wall time (s): `0.00011312199058011174`
+- Steps/s: `17680.028345891085`
 
 | Metric | Value |
 |--------|-------|
@@ -1196,8 +1197,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_operator_handoff`
 
 - Suite: `hybrid_operator_handoff_package_gate`
-- Wall time (s): `0.000122814963106066`
-- Steps/s: `16284.660675041292`
+- Wall time (s): `0.0001239309785887599`
+- Steps/s: `16138.0150691507`
 
 | Metric | Value |
 |--------|-------|
@@ -1306,8 +1307,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `value_alignment_replay_calibration`
 
 - Suite: `value_alignment_replay_calibration_gate`
-- Wall time (s): `0.00016526703257113695`
-- Steps/s: `18152.440649097338`
+- Wall time (s): `0.00017469999147579074`
+- Steps/s: `17172.296201375193`
 
 | Metric | Value |
 |--------|-------|
@@ -1432,8 +1433,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `autopoietic_lineage`
 
 - Suite: `autopoietic_lineage_sandbox_gate`
-- Wall time (s): `0.0003409140044823289`
-- Steps/s: `14666.45527687371`
+- Wall time (s): `0.0003398690023459494`
+- Steps/s: `14711.550525312538`
 
 | Metric | Value |
 |--------|-------|
@@ -1445,7 +1446,7 @@ Each record below is copied from the current JSON artefact using stable key orde
 | `policy_diff_count` | `5` |
 | `rejected_child_count` | `2` |
 | `review_only` | `1` |
-| `safe_lineage_sha256` | `a424dac5b9309917b1dda9d398b643787eb6129e2c759020defe49eaa184bd81` |
+| `safe_lineage_sha256` | `830da8db3a0227d276bb5d8fa97bfe046b10db00c9976338033d64676d1b0ca8` |
 
 `acceptance_thresholds_json`:
 
@@ -1535,11 +1536,16 @@ Each record below is copied from the current JSON artefact using stable key orde
       }
     ],
     "hot_patch_permitted": false,
-    "lineage_sha256": "a424dac5b9309917b1dda9d398b643787eb6129e2c759020defe49eaa184bd81",
+    "lineage_sha256": "830da8db3a0227d276bb5d8fa97bfe046b10db00c9976338033d64676d1b0ca8",
     "live_merge_permitted": false,
     "minimum_replay_reward": 0.7,
     "minimum_safety_margin": 0.1,
     "mutation_step": 0.02,
+    "parent_policy_genome": {
+      "K": 0.42,
+      "alpha": 0.18,
+      "zeta": 0.09
+    },
     "parent_policy_sha256": "a725a1a906e867e6ae8289fc1bdba209cda78b6a19caf97fe2fdbb5c5965f6a7",
     "rejected_child_count": 0,
     "replay_corpus_sha256": "a98f5ed7bfac6bcc3e1380cf7127e01c7eb7f59b862c2340f1d872bd11b3ce41",
@@ -1612,11 +1618,16 @@ Each record below is copied from the current JSON artefact using stable key orde
       }
     ],
     "hot_patch_permitted": false,
-    "lineage_sha256": "ad0abc8990e8ee3426f938b87e5cda6e17c795c216ac6af5ead2a6188f545cdd",
+    "lineage_sha256": "1f8de5037ca8057434f945387e7d83c91fc5fea255d4a28d737c5c9dfe46a132",
     "live_merge_permitted": false,
     "minimum_replay_reward": 0.7,
     "minimum_safety_margin": 0.1,
     "mutation_step": 0.04,
+    "parent_policy_genome": {
+      "K": 0.42,
+      "alpha": 0.18,
+      "zeta": 0.09
+    },
     "parent_policy_sha256": "a725a1a906e867e6ae8289fc1bdba209cda78b6a19caf97fe2fdbb5c5965f6a7",
     "rejected_child_count": 2,
     "replay_corpus_sha256": "6451329e3db6ba6957de16795cc4079d65aedcdc8ba22d266d93f3cae7eb0756",
@@ -1634,11 +1645,128 @@ Each record below is copied from the current JSON artefact using stable key orde
 ]
 ```
 
+### `intergenerational_inheritance`
+
+- Suite: `intergenerational_policy_inheritance_gate`
+- Wall time (s): `0.0002586429473012686`
+- Steps/s: `7732.66783752812`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `deterministic_hash` | `1` |
+| `inheritance_sha256` | `77c1a624ff98d783e167bcbd4762d5df66b45e362cd3e05bb738fb6c3a49eff2` |
+| `manifest_count` | `2` |
+| `min_fitness_score` | `0.5720000000000001` |
+| `policy_gene_count` | `3` |
+| `review_only` | `1` |
+| `signed_metadata_count` | `2` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_fitness_score": 0.35,
+  "min_manifest_count": 2,
+  "min_policy_gene_count": 3,
+  "min_signed_metadata_count": 2,
+  "require_deterministic_hash": true,
+  "require_review_only": true
+}
+```
+
+`inheritance_manifests_json`:
+
+```json
+[
+  {
+    "actuation_permitted": false,
+    "child_sha256": "f74caf8b231b798def8488ba05136354dc6863b964c930cebf65f5bbb52ad209",
+    "direct_hot_patch_permitted": false,
+    "hot_patch_review_required": true,
+    "inheritance_sha256": "77c1a624ff98d783e167bcbd4762d5df66b45e362cd3e05bb738fb6c3a49eff2",
+    "inherited_policy_genome": {
+      "K": 0.44,
+      "alpha": 0.18,
+      "zeta": 0.09
+    },
+    "lineage_sha256": "e3fbe6d49daf1949fa3c6f1cea9c4ad86a065ad867aefeb1818d13ec21e2c5c6",
+    "merge_strategy": "reviewed_hot_patch_only",
+    "multi_objective_replay_fitness": {
+      "fitness_score": 0.5720000000000001,
+      "objective_weights": {
+        "reward": 0.6,
+        "safety": 0.3,
+        "simplicity": 0.1
+      },
+      "reward_component": 0.78,
+      "safety_component": 0.18,
+      "simplicity_component": 0.5
+    },
+    "parent_policy_sha256": "a725a1a906e867e6ae8289fc1bdba209cda78b6a19caf97fe2fdbb5c5965f6a7",
+    "policy_diff": [
+      {
+        "child_value": 0.44,
+        "delta": 0.02,
+        "knob": "K",
+        "parent_value": 0.42
+      }
+    ],
+    "schema": "scpn_intergenerational_policy_inheritance_v1",
+    "signed_metadata": {
+      "signature_algorithm": "hmac-sha256",
+      "signature_sha256": "713b0a8203340ce321976e551a016e6b8d2e03a81bef414a7395323329d2fdb1",
+      "signer_id": "reference-suite-review-key"
+    }
+  },
+  {
+    "actuation_permitted": false,
+    "child_sha256": "7d6987df764895dd182850b39a1aa9bc097cb34c676fab8c5ff37e2e3a380df9",
+    "direct_hot_patch_permitted": false,
+    "hot_patch_review_required": true,
+    "inheritance_sha256": "42fa1cdeb427ff0ece034b2d5b70f13f373fbb33ee455d0296d583992cd80064",
+    "inherited_policy_genome": {
+      "K": 0.42,
+      "alpha": 0.13999999999999999,
+      "zeta": 0.09
+    },
+    "lineage_sha256": "e3fbe6d49daf1949fa3c6f1cea9c4ad86a065ad867aefeb1818d13ec21e2c5c6",
+    "merge_strategy": "reviewed_hot_patch_only",
+    "multi_objective_replay_fitness": {
+      "fitness_score": 0.5720000000000001,
+      "objective_weights": {
+        "reward": 0.6,
+        "safety": 0.3,
+        "simplicity": 0.1
+      },
+      "reward_component": 0.78,
+      "safety_component": 0.18,
+      "simplicity_component": 0.5
+    },
+    "parent_policy_sha256": "a725a1a906e867e6ae8289fc1bdba209cda78b6a19caf97fe2fdbb5c5965f6a7",
+    "policy_diff": [
+      {
+        "child_value": 0.13999999999999999,
+        "delta": -0.04,
+        "knob": "alpha",
+        "parent_value": 0.18
+      }
+    ],
+    "schema": "scpn_intergenerational_policy_inheritance_v1",
+    "signed_metadata": {
+      "signature_algorithm": "hmac-sha256",
+      "signature_sha256": "54928d9c550a46b03eef8ef9170a215c72f62732639f0f5d41ddf0185846ab4d",
+      "signer_id": "reference-suite-review-key"
+    }
+  }
+]
+```
+
 ### `meta_transfer_corpus`
 
 - Suite: `meta_transfer_audit_corpus_quality`
-- Wall time (s): `0.0018666079849936068`
-- Steps/s: `3214.386763710619`
+- Wall time (s): `0.001993062032852322`
+- Steps/s: `3010.44317793423`
 
 | Metric | Value |
 |--------|-------|
@@ -1739,8 +1867,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `meta_transfer`
 
 - Suite: `meta_transfer_package_manifest_quality`
-- Wall time (s): `0.00037538399919867516`
-- Steps/s: `10655.755196115768`
+- Wall time (s): `0.00037746602902188897`
+- Steps/s: `10596.98010537537`
 
 | Metric | Value |
 |--------|-------|
@@ -1816,8 +1944,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `plugin_ecosystem`
 
 - Suite: `plugin_ecosystem_catalog_quality`
-- Wall time (s): `0.0002545440220274031`
-- Steps/s: `11785.780613135094`
+- Wall time (s): `0.0002500229747965932`
+- Steps/s: `11998.89731109974`
 
 | Metric | Value |
 |--------|-------|
@@ -1883,8 +2011,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `kuramoto`
 
 - Suite: `kuramoto_reference_strogatz_2000`
-- Wall time (s): `0.12545688898535445`
-- Steps/s: `7970.865594449243`
+- Wall time (s): `0.13324306695722044`
+- Steps/s: `7505.080923430441`
 
 | Metric | Value |
 |--------|-------|
@@ -1895,8 +2023,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `stuart_landau`
 
 - Suite: `stuart_landau_reference_pikovsky_2001`
-- Wall time (s): `0.25918622000608593`
-- Steps/s: `3858.229808577474`
+- Wall time (s): `0.25500432099215686`
+- Steps/s: `3921.50217733274`
 
 | Metric | Value |
 |--------|-------|
@@ -1907,8 +2035,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `petri_reachability`
 
 - Suite: `petri_net_reachability`
-- Wall time (s): `0.019371899019461125`
-- Steps/s: `258105.8261235499`
+- Wall time (s): `0.0199123959755525`
+- Steps/s: `251099.86794852634`
 
 | Metric | Value |
 |--------|-------|

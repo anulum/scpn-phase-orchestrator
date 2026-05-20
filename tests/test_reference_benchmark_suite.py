@@ -21,6 +21,7 @@ from benchmarks.reference_suite import (
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_hybrid_operator_handoff_package_gate,
     benchmark_hybrid_target_readiness_gate,
+    benchmark_intergenerational_policy_inheritance_gate,
     benchmark_kuramoto_reference,
     benchmark_meta_transfer_audit_corpus_quality,
     benchmark_meta_transfer_package_manifest_quality,
@@ -808,6 +809,52 @@ def test_autopoietic_lineage_sandbox_gate_reports_thresholds_and_records() -> No
     assert all(manifest["actuation_permitted"] is False for manifest in manifests)
 
 
+def test_intergenerational_policy_inheritance_gate_benchmark_shape() -> None:
+    out = benchmark_intergenerational_policy_inheritance_gate()
+
+    assert out["suite"] == "intergenerational_policy_inheritance_gate"
+    assert out["manifest_count"] == 2
+    assert out["signed_metadata_count"] == 2
+    assert out["policy_gene_count"] == 3
+    assert float(out["min_fitness_score"]) >= 0.35
+    assert out["review_only"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["inheritance_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_intergenerational_policy_inheritance_gate_reports_signed_records() -> None:
+    out = benchmark_intergenerational_policy_inheritance_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    manifests = json.loads(str(out["inheritance_manifests_json"]))
+
+    assert thresholds == {
+        "min_fitness_score": 0.35,
+        "min_manifest_count": 2,
+        "min_policy_gene_count": 3,
+        "min_signed_metadata_count": 2,
+        "require_deterministic_hash": True,
+        "require_review_only": True,
+    }
+    assert [manifest["schema"] for manifest in manifests] == [
+        "scpn_intergenerational_policy_inheritance_v1",
+        "scpn_intergenerational_policy_inheritance_v1",
+    ]
+    assert all(
+        manifest["signed_metadata"]["signature_algorithm"] == "hmac-sha256"
+        for manifest in manifests
+    )
+    assert all(
+        manifest["direct_hot_patch_permitted"] is False for manifest in manifests
+    )
+    assert all(manifest["actuation_permitted"] is False for manifest in manifests)
+    assert all(
+        manifest["merge_strategy"] == "reviewed_hot_patch_only"
+        for manifest in manifests
+    )
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -875,6 +922,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "hybrid_cocompiler",
         "hybrid_operator_handoff",
         "hybrid_target_readiness",
+        "intergenerational_inheritance",
         "meta_transfer",
         "meta_transfer_corpus",
         "neuromorphic_target_readiness",
