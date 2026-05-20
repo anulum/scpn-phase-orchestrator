@@ -48,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   UPDE nodes, with canonical wire messages, digest checks, sequence
   watermarks, bounded circular phase correction, deterministic lossy-gossip
   replay, tests, and API documentation.
+- Added the plugin execution lifecycle stack: deterministic planning,
+  approval, request, revocation, revocation-list, storage-bundle,
+  storage-adapter, lifecycle-status, lifecycle-summary, and
+  lifecycle-policy-report artefacts with CLI surfaces, hash validation,
+  fail-closed revocation handling, and operator action queues.
 
 ### Changed
 
@@ -1569,7 +1574,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.11...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.11...v0.6.0
 [0.5.11]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.10...v0.5.11
 [0.5.10]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.8...v0.5.9
