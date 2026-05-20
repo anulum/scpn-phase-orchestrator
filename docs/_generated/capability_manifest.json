@@ -12,7 +12,7 @@
     "research_experimental_modules": 121,
     "runtime_serving_modules": 46,
     "rust_kernel_files": 91,
-    "test_files": 444
+    "test_files": 449
   },
   "documentation": {
     "public_pages": [
@@ -1161,6 +1161,7 @@
       "tests/test_binding_loader_security.py",
       "tests/test_binding_resolved.py",
       "tests/test_binding_spec_studio_paths.py",
+      "tests/test_binding_types.py",
       "tests/test_binding_validator.py",
       "tests/test_bold.py",
       "tests/test_boundary_observer.py",
@@ -1183,6 +1184,7 @@
       "tests/test_connectome.py",
       "tests/test_convergence_topology.py",
       "tests/test_coupling_est.py",
+      "tests/test_coupling_hodge.py",
       "tests/test_coupling_infer.py",
       "tests/test_coupling_knm.py",
       "tests/test_coupling_lags.py",
@@ -1232,6 +1234,7 @@
       "tests/test_ffi_integration.py",
       "tests/test_ffi_parity.py",
       "tests/test_formal_export.py",
+      "tests/test_formal_export_residual.py",
       "tests/test_free_energy.py",
       "tests/test_freq_id.py",
       "tests/test_fusion_core_bridge.py",
@@ -1375,6 +1378,7 @@
       "tests/test_policy_binding_fuzz.py",
       "tests/test_policy_diagnostics.py",
       "tests/test_policy_rules.py",
+      "tests/test_policy_rules_residual.py",
       "tests/test_policy_yaml_fuzzer.py",
       "tests/test_power_grid_causal_attribution_demo.py",
       "tests/test_power_grid_fep_hierarchy_demo.py",
@@ -1490,6 +1494,7 @@
       "tests/test_supervisor_alignment.py",
       "tests/test_supervisor_hierarchy.py",
       "tests/test_supervisor_hierarchy_adapters.py",
+      "tests/test_supervisor_hierarchy_residual.py",
       "tests/test_supervisor_modules.py",
       "tests/test_supervisor_policy.py",
       "tests/test_supervisor_regimes.py",
