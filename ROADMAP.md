@@ -672,8 +672,10 @@ Speculative research watchlist:
 - Hybrid neuromorphic-quantum co-compiler:
   deterministic hybrid manifests combine quantum compiler and neuromorphic
   schedule artefacts under shared N-channel audit semantics, component hashes,
-  parity status, and disabled execution gates. Real hybrid target execution
-  remains open.
+  parity status, disabled execution gates, and non-executing hybrid
+  target-readiness audits that link quantum and neuromorphic readiness hashes
+  before any external operator handoff. Real hybrid target execution remains
+  open.
 - Value-alignment supervisor guard encoded as binding-spec objectives and Petri-net guard conditions.
   - Foundation is in place: value-alignment guard support exists.
   - Binding-spec templates are in place: `value_alignment` maps can be loaded

@@ -32,6 +32,7 @@ assert _COCOMPILER_SPEC.loader is not None
 _COCOMPILER_MODULE = importlib.util.module_from_spec(_COCOMPILER_SPEC)
 _COCOMPILER_SPEC.loader.exec_module(_COCOMPILER_MODULE)
 build_hybrid_cocompiler_manifest = _COCOMPILER_MODULE.build_hybrid_cocompiler_manifest
+audit_hybrid_target_readiness = _COCOMPILER_MODULE.audit_hybrid_target_readiness
 
 
 def _quantum_manifest() -> dict[str, object]:
@@ -116,6 +117,51 @@ def _neuromorphic_manifest() -> dict[str, object]:
             "run Lava or PyNN simulator parity before hardware handoff",
         ],
         "schedule_sha256": "c" * 64,
+    }
+
+
+def _quantum_readiness(status: str = "ready_not_executed") -> dict[str, object]:
+    blocked_reasons = [] if status == "ready_not_executed" else ["operator_missing"]
+    return {
+        "schema": "scpn_quantum_target_readiness_v1",
+        "provider": "pennylane",
+        "target_backend": "pennylane_qasm",
+        "manifest_sha256": "b" * 64,
+        "status": status,
+        "blocked_reasons": blocked_reasons,
+        "credentials_configured": status == "ready_not_executed",
+        "operator_approved": status == "ready_not_executed",
+        "qpu_execution_permitted": False,
+        "actuation_permitted": False,
+        "operator_commands": [
+            "review quantum_compiler_manifest.json",
+            "run simulator parity outside SPO before target handoff",
+            "submit QPU job only from an approved external operator workflow",
+        ],
+        "readiness_sha256": "d" * 64,
+    }
+
+
+def _neuromorphic_readiness(status: str = "ready_not_executed") -> dict[str, object]:
+    blocked_reasons = [] if status == "ready_not_executed" else ["operator_missing"]
+    return {
+        "schema": "scpn_neuromorphic_target_readiness_v1",
+        "target_backend": "pynn",
+        "hardware_site": "brainscales_review_lane",
+        "manifest_sha256": "c" * 64,
+        "status": status,
+        "blocked_reasons": blocked_reasons,
+        "credentials_configured": status == "ready_not_executed",
+        "operator_approved": status == "ready_not_executed",
+        "external_simulator_parity_verified": status == "ready_not_executed",
+        "hardware_write_permitted": False,
+        "actuation_permitted": False,
+        "operator_commands": [
+            "review neuromorphic_schedule_manifest.json",
+            "run target simulator parity outside SPO before hardware handoff",
+            "submit neuromorphic hardware job only from an approved operator workflow",
+        ],
+        "readiness_sha256": "e" * 64,
     }
 
 
@@ -418,3 +464,102 @@ def test_hybrid_cocompiler_rejects_missing_component_hashes(missing_key: str) ->
 
     with pytest.raises(ValueError, match=f"{missing_key} must be a 64-character"):
         build_hybrid_cocompiler_manifest(quantum, neuromorphic)
+
+
+def test_hybrid_target_readiness_requires_component_readiness_and_approval() -> None:
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+
+    record = audit_hybrid_target_readiness(
+        hybrid,
+        _quantum_readiness(),
+        _neuromorphic_readiness(),
+        hybrid_operator_approved=False,
+    )
+
+    assert record["schema"] == "scpn_hybrid_target_readiness_v1"
+    assert record["status"] == "blocked"
+    assert record["blocked_reasons"] == ["hybrid_operator_approval_missing"]
+    assert record["quantum_readiness_sha256"] == "d" * 64
+    assert record["neuromorphic_readiness_sha256"] == "e" * 64
+    assert record["hybrid_manifest_sha256"] == hybrid["hybrid_manifest_sha256"]
+    assert record["qpu_execution_permitted"] is False
+    assert record["hardware_write_permitted"] is False
+    assert record["actuation_permitted"] is False
+    assert len(record["readiness_sha256"]) == 64
+
+
+def test_hybrid_target_readiness_ready_not_executed_is_deterministic() -> None:
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+
+    record = audit_hybrid_target_readiness(
+        hybrid,
+        _quantum_readiness(),
+        _neuromorphic_readiness(),
+        hybrid_operator_approved=True,
+    )
+    repeated = audit_hybrid_target_readiness(
+        hybrid,
+        _quantum_readiness(),
+        _neuromorphic_readiness(),
+        hybrid_operator_approved=True,
+    )
+
+    assert record == repeated
+    assert record["status"] == "ready_not_executed"
+    assert record["blocked_reasons"] == []
+    assert record["component_statuses"] == {
+        "hybrid": "co_simulation_parity_passed",
+        "neuromorphic": "ready_not_executed",
+        "quantum": "ready_not_executed",
+    }
+    assert record["operator_commands"] == [
+        "review hybrid_neuromorphic_quantum_cocompiler.json",
+        "verify quantum and neuromorphic readiness hashes before handoff",
+        "submit hybrid execution only from an approved external operator workflow",
+    ]
+
+
+def test_hybrid_target_readiness_blocks_component_or_hash_mismatch() -> None:
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    quantum = _quantum_readiness(status="blocked")
+    neuromorphic = _neuromorphic_readiness()
+    neuromorphic["manifest_sha256"] = "f" * 64
+
+    record = audit_hybrid_target_readiness(
+        hybrid,
+        quantum,
+        neuromorphic,
+        hybrid_operator_approved=True,
+    )
+
+    assert record["status"] == "blocked"
+    assert record["blocked_reasons"] == [
+        "quantum_target_readiness_not_ready",
+        "neuromorphic_manifest_hash_mismatch",
+    ]
+
+
+def test_hybrid_target_readiness_rejects_invalid_readiness_schema() -> None:
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    quantum = _quantum_readiness()
+    quantum["schema"] = "wrong"
+
+    with pytest.raises(ValueError, match="quantum_readiness"):
+        audit_hybrid_target_readiness(
+            hybrid,
+            quantum,
+            _neuromorphic_readiness(),
+            hybrid_operator_approved=True,
+        )

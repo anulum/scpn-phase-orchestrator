@@ -14,7 +14,7 @@ import json
 from collections.abc import Mapping, Sequence
 from hashlib import sha256
 
-__all__ = ["build_hybrid_cocompiler_manifest"]
+__all__ = ["audit_hybrid_target_readiness", "build_hybrid_cocompiler_manifest"]
 
 
 def build_hybrid_cocompiler_manifest(
@@ -87,6 +87,116 @@ def build_hybrid_cocompiler_manifest(
     return manifest
 
 
+def audit_hybrid_target_readiness(
+    hybrid_manifest: Mapping[str, object],
+    quantum_readiness: Mapping[str, object],
+    neuromorphic_readiness: Mapping[str, object],
+    *,
+    hybrid_operator_approved: bool = False,
+) -> dict[str, object]:
+    """Return non-executing hybrid target-readiness evidence.
+
+    The audit links the already review-only hybrid manifest to the independent
+    quantum and neuromorphic target-readiness records. It never submits work to
+    a QPU, simulator, neuromorphic backend, or actuator.
+    """
+    hybrid_manifest = _validate_manifest_mapping(
+        hybrid_manifest,
+        label="hybrid_manifest",
+    )
+    quantum_readiness = _validate_manifest_mapping(
+        quantum_readiness,
+        label="quantum_readiness",
+    )
+    neuromorphic_readiness = _validate_manifest_mapping(
+        neuromorphic_readiness,
+        label="neuromorphic_readiness",
+    )
+    if not isinstance(hybrid_operator_approved, bool):
+        raise ValueError("hybrid_operator_approved must be a bool")
+    _validate_manifest_kind(
+        hybrid_manifest,
+        expected="hybrid_neuromorphic_quantum_cocompiler",
+        label="hybrid manifest kind",
+    )
+    _validate_manifest_kind(
+        quantum_readiness,
+        expected="scpn_quantum_target_readiness_v1",
+        label="quantum_readiness schema",
+        key="schema",
+    )
+    _validate_manifest_kind(
+        neuromorphic_readiness,
+        expected="scpn_neuromorphic_target_readiness_v1",
+        label="neuromorphic_readiness schema",
+        key="schema",
+    )
+    _validate_permission_fields(
+        hybrid_manifest,
+        label="hybrid",
+        fields=(
+            "qpu_execution_permitted",
+            "hardware_write_permitted",
+            "actuation_permitted",
+        ),
+    )
+    _validate_permission_fields(
+        quantum_readiness,
+        label="quantum_readiness",
+        fields=("qpu_execution_permitted", "actuation_permitted"),
+    )
+    _validate_permission_fields(
+        neuromorphic_readiness,
+        label="neuromorphic_readiness",
+        fields=("hardware_write_permitted", "actuation_permitted"),
+    )
+    component_hashes = _validate_component_hash_mapping(
+        hybrid_manifest.get("component_hashes")
+    )
+    hybrid_sha = _hash_text(hybrid_manifest, "hybrid_manifest_sha256")
+    quantum_readiness_sha = _hash_text(quantum_readiness, "readiness_sha256")
+    neuromorphic_readiness_sha = _hash_text(
+        neuromorphic_readiness,
+        "readiness_sha256",
+    )
+    blocked_reasons = _hybrid_readiness_blocked_reasons(
+        hybrid_manifest,
+        quantum_readiness,
+        neuromorphic_readiness,
+        component_hashes,
+        hybrid_operator_approved=hybrid_operator_approved,
+    )
+    record: dict[str, object] = {
+        "schema": "scpn_hybrid_target_readiness_v1",
+        "status": "blocked" if blocked_reasons else "ready_not_executed",
+        "blocked_reasons": blocked_reasons,
+        "hybrid_manifest_sha256": hybrid_sha,
+        "quantum_readiness_sha256": quantum_readiness_sha,
+        "neuromorphic_readiness_sha256": neuromorphic_readiness_sha,
+        "component_manifest_hashes": component_hashes,
+        "component_statuses": {
+            "hybrid": hybrid_manifest.get("status"),
+            "quantum": quantum_readiness.get("status"),
+            "neuromorphic": neuromorphic_readiness.get("status"),
+        },
+        "hybrid_operator_approved": hybrid_operator_approved,
+        "qpu_execution_permitted": False,
+        "hardware_write_permitted": False,
+        "actuation_permitted": False,
+        "operator_commands": [
+            "review hybrid_neuromorphic_quantum_cocompiler.json",
+            "verify quantum and neuromorphic readiness hashes before handoff",
+            (
+                "submit hybrid execution only from an approved external "
+                "operator workflow"
+            ),
+        ],
+    }
+    canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
+    record["readiness_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
+    return record
+
+
 def _validate_manifest_mapping(
     manifest: Mapping[str, object],
     *,
@@ -102,8 +212,9 @@ def _validate_manifest_kind(
     *,
     expected: str,
     label: str,
+    key: str = "manifest_kind",
 ) -> None:
-    if manifest.get("manifest_kind") != expected:
+    if manifest.get(key) != expected:
         raise ValueError(f"{label} must be {expected}")
 
 
@@ -196,6 +307,59 @@ def _hash_text(manifest: Mapping[str, object], key: str) -> str:
     ):
         raise ValueError(f"{key} must be a 64-character SHA-256 hex string")
     return value
+
+
+def _validate_component_hash_mapping(value: object) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        raise ValueError("component_hashes must be a mapping")
+    return {
+        "quantum_manifest_sha256": _hash_text(value, "quantum_manifest_sha256"),
+        "neuromorphic_schedule_sha256": _hash_text(
+            value,
+            "neuromorphic_schedule_sha256",
+        ),
+    }
+
+
+def _hybrid_readiness_blocked_reasons(
+    hybrid_manifest: Mapping[str, object],
+    quantum_readiness: Mapping[str, object],
+    neuromorphic_readiness: Mapping[str, object],
+    component_hashes: Mapping[str, str],
+    *,
+    hybrid_operator_approved: bool,
+) -> list[str]:
+    reasons: list[str] = []
+    if hybrid_manifest.get("status") != "co_simulation_parity_passed":
+        reasons.append("hybrid_co_simulation_parity_not_passed")
+    if quantum_readiness.get("status") != "ready_not_executed":
+        reasons.append("quantum_target_readiness_not_ready")
+    if neuromorphic_readiness.get("status") != "ready_not_executed":
+        reasons.append("neuromorphic_target_readiness_not_ready")
+    if quantum_readiness.get("manifest_sha256") != component_hashes[
+        "quantum_manifest_sha256"
+    ]:
+        reasons.append("quantum_manifest_hash_mismatch")
+    if neuromorphic_readiness.get("manifest_sha256") != component_hashes[
+        "neuromorphic_schedule_sha256"
+    ]:
+        reasons.append("neuromorphic_manifest_hash_mismatch")
+    if not hybrid_operator_approved:
+        reasons.append("hybrid_operator_approval_missing")
+    for permission in (
+        "qpu_execution_permitted",
+        "hardware_write_permitted",
+        "actuation_permitted",
+    ):
+        if hybrid_manifest.get(permission) is not False:
+            reasons.append(f"hybrid {permission} must remain false")
+    for permission in ("qpu_execution_permitted", "actuation_permitted"):
+        if quantum_readiness.get(permission) is not False:
+            reasons.append(f"quantum_readiness {permission} must remain false")
+    for permission in ("hardware_write_permitted", "actuation_permitted"):
+        if neuromorphic_readiness.get(permission) is not False:
+            reasons.append(f"neuromorphic_readiness {permission} must remain false")
+    return reasons
 
 
 def _string_list(value: object, label: str) -> list[str]:
