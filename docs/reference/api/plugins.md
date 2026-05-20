@@ -144,6 +144,25 @@ the load hash and target hash, records argument count, keyword names, result
 type, and a deterministic execution hash. Argument payloads are intentionally
 not copied into the audit record.
 
+### Deterministic runtime execution plans (review only)
+
+`build_plugin_execution_plan()` is a planning-only stage and does **not** load
+modules, resolve callables, or execute any capability implementation.
+
+The plan uses schema `scpn_plugin_runtime_execution_plan_v1` and records
+immutable review metadata:
+
+- manifest compatibility state
+- sorted target set
+- deterministic target hashes
+- invocation shape only: positional argument count and keyword names
+- load/execution policy flags
+- blocked reasons and fallback status
+
+The plan builder is explicit fail-closed: incompatible manifests, unsupported
+kinds, out-of-package targets, disabled execution policy, or missing target-hash
+approval stop before loading or invocation.
+
 Deployments can also require a pre-approved target hash before import:
 
 ```python
@@ -181,5 +200,10 @@ needs the flattened capability registry instead of the marketplace catalogue.
 Use `--rust-runtime-handoff` when a runtime review job needs grouped dispatch
 records, target hashes, and explicit no-load policy. `--rust-registry` and
 `--rust-runtime-handoff` are mutually exclusive output modes.
+
+The `spo plugins plan-execution <plugin> <kind> <capability>` command emits the
+same deterministic plan JSON for operator sign-off, keeps argument payloads out
+of the audit record, and enforces `--require-target-hash-approval` before any
+future command can enable loading.
 
 ::: scpn_phase_orchestrator.plugins.registry

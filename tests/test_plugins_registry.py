@@ -18,9 +18,11 @@ import pytest
 from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginCompatibilityReport,
+    PluginExecutionPlan,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
     PluginRuntimeLoadPolicy,
+    build_plugin_execution_plan,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
     build_rust_plugin_runtime_handoff,
@@ -995,6 +997,106 @@ class TestPluginRuntimeLoading:
 
 
 class TestPluginRuntimeExecution:
+    def test_runtime_execution_plan_rejects_disabled_execution_policy_without_import(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def fail_import(_module: str) -> object:
+            raise AssertionError(
+                "disabled execution should be rejected before importing target"
+            )
+
+        monkeypatch.setattr(registry.importlib, "import_module", fail_import)
+
+        with pytest.raises(PermissionError, match="execution is disabled"):
+            build_plugin_execution_plan(_manifest(), "monitor", "frequency_drift")
+
+    def test_runtime_execution_plan_is_deterministic_without_importing_target(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def fail_import(_module: str) -> object:
+            raise AssertionError("execution plan build must not import targets")
+
+        monkeypatch.setattr(registry.importlib, "import_module", fail_import)
+
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=("value",),
+            kwargs={"scale": 3.5},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+
+        assert isinstance(plan, PluginExecutionPlan)
+        assert plan.argument_count == 1
+        assert plan.keyword_names == ("scale",)
+        assert len(plan.target_hash) == 64
+        assert len(plan.plan_hash) == 64
+        assert plan.audit_record["schema"] == "scpn_plugin_runtime_execution_plan_v1"
+
+    def test_runtime_execution_plan_can_require_preapproved_target_hash(
+        self,
+    ) -> None:
+        seed_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approved_hash = seed_plan.target_hash
+        approved_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                approved_target_hashes=(approved_hash,),
+                require_target_hash_approval=True,
+            ),
+        )
+
+        assert approved_plan.target_hash == approved_hash
+        assert approved_plan.audit_record["target_hash_approved"] is True
+        assert approved_plan.audit_record["approved_target_hashes"] == [approved_hash]
+
+    def test_runtime_execution_plan_does_not_leak_argument_values(
+        self,
+    ) -> None:
+        private_argument = "PRIVATE_ARGUMENT_XYZ_123"
+        private_keyword_value = "PRIVATE_KEYWORD_VALUE_456"
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(private_argument,),
+            kwargs={"multiplier": private_keyword_value},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+
+        assert plan.keyword_names == ("multiplier",)
+        assert plan.argument_count == 1
+        assert private_argument not in str(plan.audit_record)
+        assert private_keyword_value not in str(plan.audit_record)
+        assert "argument_count" in plan.audit_record
+        assert "keyword_names" in plan.audit_record
+        assert "argument_values" not in plan.audit_record
+
     def test_runtime_execution_is_disabled_by_default_without_importing_target(
         self,
         monkeypatch: pytest.MonkeyPatch,

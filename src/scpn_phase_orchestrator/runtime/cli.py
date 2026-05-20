@@ -58,9 +58,14 @@ from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.meta import CrossDomainMetaTransfer
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.plugins import (
+    PluginCapability,
+    PluginManifest,
+    PluginRuntimeExecutionPolicy,
+    build_plugin_execution_plan,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
     build_rust_plugin_runtime_handoff,
+    compatibility_report,
     discover_plugin_manifests,
 )
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
@@ -313,6 +318,65 @@ def _petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marki
     return PetriNet(places, transitions), Marking(tokens=dict(protocol.initial))
 
 
+_PLUGIN_KIND_OPTIONS: tuple[str, ...] = (
+    "actuator",
+    "bridge",
+    "domainpack",
+    "extractor",
+    "monitor",
+)
+
+
+def _find_discovered_plugin(
+    manifests: tuple[PluginManifest, ...],
+    plugin_name: str,
+) -> PluginManifest:
+    matches = tuple(manifest for manifest in manifests if manifest.name == plugin_name)
+    if not matches:
+        raise click.ClickException(f"plugin {plugin_name!r} is not discovered")
+    if len(matches) > 1:
+        raise click.ClickException(
+            f"multiple discovered plugin manifests matched {plugin_name!r}; "
+            "selection is ambiguous"
+        )
+    return matches[0]
+
+
+def _find_capability(
+    manifest: PluginManifest,
+    kind: str,
+    capability_name: str,
+) -> PluginCapability:
+    matches = tuple(
+        capability
+        for capability in manifest.capabilities
+        if capability.kind == kind and capability.name == capability_name
+    )
+    if not matches:
+        raise click.ClickException(
+            f"plugin {manifest.name!r} does not expose {kind}:{capability_name!r}"
+        )
+    if len(matches) > 1:
+        raise click.ClickException(
+            f"plugin {manifest.name!r} declares {kind}:{capability_name!r} "
+            "more than once"
+        )
+    return matches[0]
+
+
+def _normalize_approved_target_hashes(
+    approved_target_hashes: tuple[str, ...],
+) -> tuple[str, ...]:
+    normalized: list[str] = []
+    for approved_hash in approved_target_hashes:
+        if re.fullmatch(r"[0-9a-fA-F]{64}", approved_hash) is None:
+            raise click.ClickException(
+                f"approved target hash {approved_hash!r} is not a valid SHA-256 digest"
+            )
+        normalized.append(approved_hash.lower())
+    return tuple(dict.fromkeys(normalized))
+
+
 @main.group("plugins")
 def plugins_group() -> None:
     """Inspect extension plugin manifests."""
@@ -353,6 +417,67 @@ def plugins_catalog(
         builder = build_plugin_marketplace_catalog
     catalog = builder(manifests, include_incompatible=include_incompatible)
     click.echo(json.dumps(catalog, indent=2, sort_keys=True))
+
+
+@plugins_group.command("plan-execution")
+@click.argument("plugin_name")
+@click.argument("kind", type=click.Choice(_PLUGIN_KIND_OPTIONS))
+@click.argument("capability_name")
+@click.option(
+    "--approved-target-hash",
+    "approved_target_hashes",
+    multiple=True,
+    help="Approved runtime target hash(es) for this execution planning decision.",
+)
+@click.option(
+    "--require-target-hash-approval",
+    is_flag=True,
+    help="Fail unless the discovered capability target hash is approved.",
+)
+def plugins_plan_execution(
+    plugin_name: str,
+    kind: str,
+    capability_name: str,
+    approved_target_hashes: tuple[str, ...],
+    require_target_hash_approval: bool,
+) -> None:
+    """Emit a non-executing plan for a discovered plugin capability."""
+    manifests = discover_plugin_manifests()
+    manifest = _find_discovered_plugin(manifests, plugin_name)
+    compatibility = compatibility_report(manifest)
+    capability = _find_capability(manifest, kind, capability_name)
+    normalized_hashes = _normalize_approved_target_hashes(approved_target_hashes)
+
+    try:
+        plan = build_plugin_execution_plan(
+            manifest,
+            kind,
+            capability_name,
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                approved_target_hashes=normalized_hashes,
+                require_target_hash_approval=require_target_hash_approval,
+            ),
+        )
+    except (LookupError, PermissionError, TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    payload = {
+        **plan.audit_record,
+        "manifest": manifest.to_audit_record(),
+        "capability": {
+            "kind": capability.kind,
+            "name": capability.name,
+            "target": capability.target,
+            "version": capability.version,
+            "channels": list(capability.channels),
+            "knobs": list(capability.knobs),
+        },
+        "compatible": compatibility.compatible,
+        "compatibility_reasons": list(compatibility.reasons),
+    }
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @main.command("meta-transfer-manifest")

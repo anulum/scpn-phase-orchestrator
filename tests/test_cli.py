@@ -17,7 +17,12 @@ from click.testing import CliRunner
 
 import scpn_phase_orchestrator.runtime.cli as cli_module
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
-from scpn_phase_orchestrator.plugins import PluginCapability, PluginManifest
+from scpn_phase_orchestrator.plugins import (
+    PluginCapability,
+    PluginManifest,
+    PluginRuntimeExecutionPolicy,
+    build_plugin_execution_plan,
+)
 from scpn_phase_orchestrator.runtime.audit_stream import read_event_stream
 from scpn_phase_orchestrator.runtime.cli import main
 
@@ -1374,6 +1379,232 @@ def test_plugins_catalog_rejects_conflicting_rust_output_modes(runner) -> None:
 
     assert result.exit_code == 1
     assert "mutually exclusive" in result.output
+
+
+def _lookup_target_hash(
+    manifest: PluginManifest,
+    kind: str,
+    name: str,
+) -> str:
+    plan = build_plugin_execution_plan(
+        manifest,
+        kind,
+        name,
+        policy=PluginRuntimeExecutionPolicy(
+            loading_permitted=True,
+            execution_permitted=True,
+        ),
+    )
+    return plan.target_hash
+
+
+def test_plugins_plan_execution_outputs_non_executing_plan(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    target_hash = _lookup_target_hash(manifest, "actuator", "phase_driver")
+    result = runner.invoke(
+        main,
+        ["plugins", "plan-execution", "cli_plugin", "actuator", "phase_driver"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_runtime_execution_plan_v1"
+    assert payload["manifest"]["name"] == "cli_plugin"
+    assert payload["capability"]["kind"] == "actuator"
+    assert payload["capability"]["name"] == "phase_driver"
+    assert payload["target_hash"] == target_hash
+    assert payload["execution_permitted"] is True
+    assert payload["loading_permitted"] is True
+    assert payload["argument_count"] == 0
+    assert payload["keyword_names"] == []
+    assert payload["compatible"] is True
+
+
+def test_plugins_plan_execution_requires_approved_target_hash(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    target_hash = _lookup_target_hash(manifest, "actuator", "phase_driver")
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "plan-execution",
+            "cli_plugin",
+            "actuator",
+            "phase_driver",
+            "--require-target-hash-approval",
+            "--approved-target-hash",
+            target_hash,
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["target_hash_approved"] is True
+    assert payload["require_target_hash_approval"] is True
+    assert payload["execution_permitted"] is True
+
+
+def test_plugins_plan_execution_rejects_unapproved_target_hash(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "plan-execution",
+            "cli_plugin",
+            "actuator",
+            "phase_driver",
+            "--require-target-hash-approval",
+            "--approved-target-hash",
+            "0" * 64,
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "not approved" in result.output
+
+
+def test_plugins_plan_execution_fails_with_bad_target_hash_format(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "plan-execution",
+            "cli_plugin",
+            "actuator",
+            "phase_driver",
+            "--approved-target-hash",
+            "not-a-hash",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "not a valid SHA-256 digest" in result.output
+
+
+def test_plugins_plan_execution_fails_on_missing_plugin(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.0.1",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    result = runner.invoke(
+        main,
+        ["plugins", "plan-execution", "missing_plugin", "actuator", "phase_driver"],
+    )
+
+    assert result.exit_code == 1
+    assert "is not discovered" in result.output
+
+
+def test_plugins_plan_execution_fails_on_missing_capability(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.0.1",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    result = runner.invoke(
+        main,
+        ["plugins", "plan-execution", "cli_plugin", "actuator", "missing_capability"],
+    )
+
+    assert result.exit_code == 1
+    assert "does not expose actuator:'missing_capability'" in result.output
 
 
 def _write_meta_audit_record(

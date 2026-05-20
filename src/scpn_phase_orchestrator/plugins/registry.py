@@ -23,7 +23,9 @@ __all__ = [
     "PluginCapability",
     "PluginCompatibilityReport",
     "PluginManifest",
+    "PluginExecutionPlan",
     "build_plugin_marketplace_catalog",
+    "build_plugin_execution_plan",
     "build_rust_plugin_runtime_handoff",
     "build_rust_plugin_registry",
     "compatibility_report",
@@ -234,6 +236,19 @@ class ExecutedPluginCapability:
     audit_record: dict[str, object]
 
 
+@dataclass(frozen=True)
+class PluginExecutionPlan:
+    """Prepared plugin-capability invocation plan without executing it."""
+
+    manifest: PluginManifest
+    capability: PluginCapability
+    argument_count: int
+    keyword_names: tuple[str, ...]
+    target_hash: str
+    plan_hash: str
+    audit_record: dict[str, object]
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -352,6 +367,80 @@ def load_plugin_capability(
     )
 
 
+def build_plugin_execution_plan(
+    manifest: PluginManifest,
+    kind: PluginKind,
+    name: str,
+    *,
+    args: tuple[object, ...] = (),
+    kwargs: dict[str, object] | None = None,
+    policy: PluginRuntimeExecutionPolicy | None = None,
+) -> PluginExecutionPlan:
+    """Build a deterministic runtime invocation plan without executing it."""
+    if policy is None:
+        policy = PluginRuntimeExecutionPolicy()
+    if not policy.execution_permitted:
+        raise PermissionError("plugin runtime execution is disabled by policy")
+    if not isinstance(args, tuple):
+        raise TypeError("args must be a tuple")
+    if kwargs is None:
+        kwargs = {}
+    if not isinstance(kwargs, dict):
+        raise TypeError("kwargs must be a dictionary")
+    for key in kwargs:
+        _require_identifier(key, "plugin execution keyword")
+
+    validate_plugin_manifest(manifest)
+    _require_identifier(name, "capability name")
+    if kind not in _VALID_KINDS:
+        raise ValueError(f"unsupported plugin capability kind: {kind}")
+
+    capability = _select_capability(manifest, kind, name)
+    load_policy = policy.to_load_policy()
+    if kind not in load_policy.allowed_kinds:
+        raise ValueError(f"{kind} capability is not permitted by runtime load policy")
+
+    module_name, _attribute_path = _parse_target(capability.target)
+    if load_policy.require_package_target and not _target_within_package(
+        module_name,
+        manifest.package,
+    ):
+        raise ValueError(
+            f"capability target {capability.target!r} is outside plugin package "
+            f"{manifest.package!r}"
+        )
+
+    target_hash = _preimport_target_hash(
+        manifest=manifest,
+        capability=capability,
+        policy=policy,
+    )
+    _assert_execution_target_hash_approved(
+        manifest=manifest,
+        capability=capability,
+        policy=policy,
+    )
+
+    keyword_names = tuple(sorted(kwargs))
+    audit_record = _runtime_execution_plan_audit_record(
+        manifest=manifest,
+        capability=capability,
+        policy=policy,
+        target_hash=target_hash,
+        argument_count=len(args),
+        keyword_names=keyword_names,
+    )
+    return PluginExecutionPlan(
+        manifest=manifest,
+        capability=capability,
+        argument_count=len(args),
+        keyword_names=keyword_names,
+        target_hash=target_hash,
+        plan_hash=str(audit_record["plan_hash"]),
+        audit_record=audit_record,
+    )
+
+
 def execute_plugin_capability(
     manifest: PluginManifest,
     kind: PluginKind,
@@ -368,23 +457,16 @@ def execute_plugin_capability(
     shape without serialising argument values, so secrets and large payloads are
     not copied into the audit record.
     """
-    if policy is None:
-        policy = PluginRuntimeExecutionPolicy()
-    if not policy.execution_permitted:
-        raise PermissionError("plugin runtime execution is disabled by policy")
-    if not isinstance(args, tuple):
-        raise TypeError("args must be a tuple")
     if kwargs is None:
         kwargs = {}
-    if not isinstance(kwargs, dict):
-        raise TypeError("kwargs must be a dictionary")
-    for key in kwargs:
-        _require_identifier(key, "plugin execution keyword")
-
-    capability = _select_capability(manifest, kind, name)
-    _assert_execution_target_hash_approved(
-        manifest=manifest,
-        capability=capability,
+    if policy is None:
+        policy = PluginRuntimeExecutionPolicy()
+    plan = build_plugin_execution_plan(
+        manifest,
+        kind,
+        name,
+        args=args,
+        kwargs=kwargs,
         policy=policy,
     )
     loaded = load_plugin_capability(
@@ -403,6 +485,7 @@ def execute_plugin_capability(
         args=args,
         kwargs=kwargs,
         result=result,
+        plan_hash=plan.plan_hash,
     )
     return ExecutedPluginCapability(
         loaded=loaded,
@@ -694,6 +777,7 @@ def _runtime_execute_audit_record(
     args: tuple[object, ...],
     kwargs: dict[str, object],
     result: object,
+    plan_hash: str | None = None,
 ) -> dict[str, object]:
     record = {
         "schema": "scpn_plugin_runtime_execute_v1",
@@ -717,7 +801,47 @@ def _runtime_execute_audit_record(
         "keyword_names": sorted(kwargs),
         "result_type": type(result).__name__,
     }
+    if plan_hash is not None:
+        record["plan_hash"] = plan_hash
     record["execution_hash"] = _record_hash(record)
+    return record
+
+
+def _runtime_execution_plan_audit_record(
+    *,
+    manifest: PluginManifest,
+    capability: PluginCapability,
+    policy: PluginRuntimeExecutionPolicy,
+    target_hash: str,
+    argument_count: int,
+    keyword_names: tuple[str, ...],
+) -> dict[str, object]:
+    record = {
+        "schema": "scpn_plugin_runtime_execution_plan_v1",
+        "schema_version": "1.0.0",
+        "spo_version": __version__,
+        "plugin": manifest.name,
+        "plugin_version": manifest.version,
+        "package": manifest.package,
+        "kind": capability.kind,
+        "name": capability.name,
+        "target": capability.target,
+        "target_hash": target_hash,
+        "load_hash": target_hash,
+        "argument_count": argument_count,
+        "keyword_names": list(keyword_names),
+        "execution_permitted": policy.execution_permitted,
+        "loading_permitted": policy.loading_permitted,
+        "require_package_target": policy.require_package_target,
+        "allowed_kinds": list(policy.allowed_kinds),
+        "require_target_hash_approval": policy.require_target_hash_approval,
+        "approved_target_hashes": list(policy.approved_target_hashes),
+        "target_hash_approved": _execution_target_hash_approved(
+            target_hash=target_hash,
+            policy=policy,
+        ),
+    }
+    record["plan_hash"] = _record_hash(record)
     return record
 
 

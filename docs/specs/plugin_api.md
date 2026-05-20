@@ -178,6 +178,32 @@ This approval check happens before the implementation module is imported. It is
 the intended guard for promoting reviewed plugin metadata into an owned runtime
 path.
 
+## Review-only runtime execution planning
+
+Runtime planning is a separate non-executing boundary.
+`build_plugin_execution_plan()` builds deterministic metadata from manifest
+compatibility, invocation shape, and target-hash policy without importing any
+plugin module or invoking any target.
+
+The planning primitive records immutable audit-relevant shape rather than runtime
+state:
+
+- required capability identity and kind
+- compatible/incompatible status and rejection reasons
+- target hashes precomputed from manifest and policy
+- positional argument count and keyword argument names for each candidate call
+- policy flags that gate loading and execution
+
+Reviewers can approve execution using policy outputs and reviewed target hashes
+before any `load_plugin_capability`/`execute_plugin_capability` path is enabled.
+If an approved hash is missing or invalid, the surface must fail closed.
+
+No argument values are part of this plan output. Argument payloads are only
+handled at execution time and remain outside deterministic plan artifacts. The
+operator-facing command is
+`spo plugins plan-execution <plugin> <kind> <capability>` with optional
+`--approved-target-hash` and `--require-target-hash-approval` flags.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).
