@@ -609,13 +609,18 @@ Near-term candidate tracks:
   - Console entry-point invocation evidence is in place:
     the configured `scpn-meta` target is invoked directly in regression
     coverage and emits a review-only manifest with execution disabled.
+  - Non-publishing distribution evidence is in place:
+    `tools/check_meta_distribution.py` emits JSON release evidence for the
+    package name, version, `spo` entry point, narrow `scpn-meta` entry point,
+    importable Click command target, and disabled publication posture.
   - Package-manifest reference gates are in place:
     `benchmark_meta_transfer_package_manifest_quality()` verifies deterministic
     package and manifest hashes, training-summary coverage, digest linkage,
     public import metadata, and disabled execution on a synthetic multi-domain
     corpus.
   - Remaining scope: larger private or partner real audit-history corpora and
-    optional `scpn-meta` distribution publication evidence.
+    actual `scpn-meta` package publication, if the optional distribution is
+    released separately.
 - Quantum-native compiler target: deterministic OpenQASM 3 compiler manifests
   are in place for Qiskit/PennyLane handoff, with Z-frequency terms,
   symmetrised XY coupling terms, co-simulation parity evidence, SHA-256 hashes,
