@@ -472,6 +472,27 @@ def test_hierarchy_sync_ingestion_accepts_latest_same_source() -> None:
     assert forward.plan.to_audit_record() == reverse.plan.to_audit_record()
 
 
+def test_hierarchy_sync_ingestion_collapses_identical_duplicate_sequence_entries(
+) -> None:
+    duplicate_a = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.3, psi=0.0),
+        source_node="node-a",
+        sequence=7,
+    )
+    duplicate_b = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.3, psi=0.0),
+        source_node="node-a",
+        sequence=7,
+    )
+
+    ledger = ingest_hierarchy_sync_envelopes((duplicate_a, duplicate_b))
+
+    assert [envelope.source_node for envelope in ledger.accepted] == ["node-a"]
+    assert [record["reason"] for record in ledger.rejected] == [
+        "stale_or_duplicate_sequence",
+    ]
+
+
 def test_hierarchy_sync_ingestion_rejects_equal_sequence_conflicts() -> None:
     conflict_low = build_hierarchy_sync_envelope(
         ChildSupervisorSummary("edge-conflict-low", "power", R=0.2, psi=0.0),

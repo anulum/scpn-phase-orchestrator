@@ -99,6 +99,53 @@ def test_policy_engine_rejects_invalid_clock_increment(dt):
         engine.advance_clock(dt)
 
 
+def test_policy_engine_evaluates_compound_or_and_branching() -> None:
+    engine = PolicyEngine(
+        [
+            PolicyRule(
+                name="or_rule",
+                regimes=["NOMINAL"],
+                condition=CompoundCondition(
+                    [
+                        PolicyCondition("R", layer=0, op=">", threshold=0.8),
+                        PolicyCondition(
+                            "stability_proxy", layer=None, op="<", threshold=0.9
+                        ),
+                    ],
+                    logic="OR",
+                ),
+                actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+            ),
+            PolicyRule(
+                name="and_rule",
+                regimes=["NOMINAL"],
+                condition=CompoundCondition(
+                    [
+                        PolicyCondition("R", layer=0, op=">", threshold=0.8),
+                        PolicyCondition(
+                            "stability_proxy", layer=None, op="<", threshold=0.9
+                        ),
+                    ],
+                    logic="AND",
+                ),
+                actions=[
+                    PolicyAction(knob="alpha", scope="global", value=-0.2, ttl_s=2.0)
+                ],
+            ),
+        ]
+    )
+
+    actions = engine.evaluate(
+        Regime.NOMINAL,
+        _state([0.95]),
+        [0],
+        [],
+    )
+
+    assert [action.knob for action in actions] == ["K"]
+    assert [action.justification for action in actions] == ["policy rule: or_rule"]
+
+
 def test_no_fire_when_condition_unmet():
     engine = PolicyEngine([_rule(op=">", threshold=0.9)])
     actions = engine.evaluate(Regime.NOMINAL, _state([0.5]), [0], [])

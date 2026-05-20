@@ -963,3 +963,195 @@ def test_command_tables_remain_json_serialisable_for_operator_artifacts() -> Non
     assert "127.0.0.1:8501:8501" in rendered
     assert "docker build -t scpn-phase-orchestrator:local ." in rendered
     assert "network_opened" in rendered
+
+
+def test_service_process_manifest_blocks_on_validation_errors_and_renders_compose_yaml(
+) -> None:
+    result = _minimal_result()
+    warning_export = replace(
+        result.project_state.exports[0],
+        warnings=("binding validation failed",),
+    )
+    blocked_state = replace(
+        result.project_state,
+        exports=(warning_export,) + tuple(result.project_state.exports[1:]),
+    )
+
+    blocked_manifest = ui.build_service_process_manifest(blocked_state)
+    ready_manifest = ui.build_service_process_manifest(result.project_state)
+
+    assert blocked_manifest["overall_status"] == "blocked"
+    assert blocked_manifest["services"] == []
+    assert blocked_manifest["compose_yaml"] == ""
+    assert blocked_manifest["compose_yaml_sha256"] == ""
+    assert blocked_manifest["blocked_reasons"] == ["binding validation failed"]
+
+    assert ready_manifest["overall_status"] == "operator_ready"
+    assert ready_manifest["services"]
+    assert ready_manifest["compose_yaml_sha256"] == sha256(
+        ready_manifest["compose_yaml"].encode("utf-8")
+    ).hexdigest()
+    assert "services:" in ready_manifest["compose_yaml"]
+    assert "spo-studio-ui" in ready_manifest["compose_yaml"]
+    assert "spo-binding-validator" in ready_manifest["compose_yaml"]
+    assert "spo-connector-boundary" in ready_manifest["compose_yaml"]
+    assert "ports:" in ready_manifest["compose_yaml"]
+
+
+def test_build_command_table_skips_blocked_targets_from_readiness(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _minimal_result()
+    project_state = result.project_state
+
+    monkeypatch.setattr(
+        ui,
+        "build_deployment_readiness",
+        lambda _state: {
+            "project_name": project_state.project_name,
+            "overall_status": "review_ready",
+            "targets": (
+                {
+                    "target": "docker",
+                    "status": "ready",
+                    "required_artifacts": ("binding_spec.yaml",),
+                    "commands": ("echo docker-ready",),
+                    "operator_action": "ready for packaging",
+                },
+                {
+                    "target": "wasm",
+                    "status": "blocked",
+                    "required_artifacts": ("binding_spec.yaml",),
+                    "commands": ("echo wasm-blocked",),
+                    "operator_action": "resolve blocked reasons",
+                },
+            ),
+        },
+    )
+
+    commands = ui.build_command_table(project_state)
+    package = ui.build_package_materialisation_plan(project_state)
+
+    assert [row["command"] for row in commands] == ["echo docker-ready"]
+    assert package["blocked_targets"] == ["wasm"]
+    assert package["commands"][0]["target"] == "docker"
+
+
+def test_run_owned_live_adapter_routes_supported_transports_and_rejects_unknown(
+) -> None:
+    class _FakeResponse:
+        def __init__(self, transport: str):
+            self.transport = transport
+
+        def to_audit_record(self) -> dict[str, object]:
+            return {"accepted": True, "transport": self.transport}
+
+    class _RestAdapter:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        @classmethod
+        def for_contract(cls, _contract: object, name: str) -> _RestAdapter:
+            return cls(name)
+
+        def handle_post(
+            self,
+            envelope_record: dict[str, object],
+            headers: dict[str, str],
+        ) -> _FakeResponse:
+            return _FakeResponse("rest")
+
+        def to_audit_record(self) -> dict[str, object]:
+            return {"adapter": self.name}
+
+    class _GrpcAdapter:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        @classmethod
+        def for_contract(cls, _contract: object, name: str) -> _GrpcAdapter:
+            return cls(name)
+
+        def handle_unary(
+            self,
+            envelope_record: dict[str, object],
+            metadata: dict[str, str],
+        ) -> _FakeResponse:
+            return _FakeResponse("grpc")
+
+        def to_audit_record(self) -> dict[str, object]:
+            return {"adapter": self.name}
+
+    class _KafkaAdapter:
+        topic = "studio-topic"
+
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        @classmethod
+        def for_contract(cls, _contract: object, name: str) -> _KafkaAdapter:
+            return cls(name)
+
+        def handle_message(
+            self,
+            message: dict[str, object],
+            headers: dict[str, str],
+        ) -> _FakeResponse:
+            assert message["topic"] == self.topic
+            return _FakeResponse("kafka")
+
+        def to_audit_record(self) -> dict[str, object]:
+            return {"adapter": self.name}
+
+    class _HardwareAdapter:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        @classmethod
+        def for_contract(
+            cls,
+            _contract: object,
+            name: str,
+            device_ids: tuple[str, ...],
+        ) -> _HardwareAdapter:
+            assert "studio-review-device" in device_ids
+            return cls(name)
+
+        def handle_frame(
+            self,
+            frame: dict[str, object],
+            headers: dict[str, str],
+        ) -> _FakeResponse:
+            assert frame["device_id"] == "studio-review-device"
+            return _FakeResponse("hardware")
+
+        def to_audit_record(self) -> dict[str, object]:
+            return {"adapter": self.name}
+
+    with pytest.MonkeyPatch.context() as patch_ctx:
+        patch_ctx.setattr(ui, "DigitalTwinSyncRestAdapter", _RestAdapter)
+        patch_ctx.setattr(ui, "DigitalTwinSyncGrpcAdapter", _GrpcAdapter)
+        patch_ctx.setattr(ui, "DigitalTwinSyncKafkaAdapter", _KafkaAdapter)
+        patch_ctx.setattr(ui, "DigitalTwinSyncHardwareAdapter", _HardwareAdapter)
+
+        for transport in ("rest", "grpc", "kafka", "hardware"):
+            response, adapter = ui._run_owned_live_adapter(
+                contract=object(),
+                transport=transport,
+                envelope_record={"ok": True},
+            )
+            assert response["accepted"] is True
+            assert response["transport"] == transport
+            assert adapter["adapter"] in {
+                "studio-rest",
+                "studio-grpc",
+                "studio-kafka",
+                "studio-hardware",
+            }
+
+    with pytest.raises(ValueError, match="connector transport"):
+        ui._run_owned_live_adapter(
+            contract=object(),
+            transport="memory",
+            envelope_record={"ok": True},
+        )

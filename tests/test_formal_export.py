@@ -312,16 +312,184 @@ def test_formal_checker_availability_and_commands_fail_closed() -> None:
             status="ready_not_executed",
             execution_permitted=True,
         )
-    with pytest.raises(PolicyError, match="status must match"):
-        FormalCheckerAvailability(
-            property_name="mismatch",
-            checker="tlc",
+        with pytest.raises(PolicyError, match="status must match"):
+            FormalCheckerAvailability(
+                property_name="mismatch",
+                checker="tlc",
+                artifact_name="petri_supervisor_tla",
+                executable="tlc2.TLC",
+                command=("tlc2.TLC", "petri_supervisor_tla.tla"),
+                available=True,
+                status="missing_executable",
+            )
+
+
+def test_formal_checker_readiness_respects_explicit_executable_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prism_export = export_petri_net_prism(
+        _net(),
+        Marking(tokens={"warmup": 1}),
+        module_name="supervisor net",
+    )
+    tla_export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1}),
+        module_name="supervisor net",
+    )
+    package = build_formal_verification_package(
+        {
+            "petri_supervisor": prism_export,
+            "petri_supervisor_tla": tla_export,
+        },
+        (
+            FormalSafetyProperty(
+                name="petri_tokens_bounded",
+                artifact_name="petri_supervisor",
+                checker="prism",
+                expression='P>=1 [ G !"active_done" | F "active_done" ]',
+            ),
+            FormalSafetyProperty(
+                name="tla_type_ok",
+                artifact_name="petri_supervisor_tla",
+                checker="tlc",
+                expression="Safety",
+            ),
+        ),
+        package_name="spo-formal-readiness",
+    )
+
+    monkeypatch.setattr(
+        "scpn_phase_orchestrator.supervisor.formal_export.shutil.which",
+        lambda command: f"/host/bin/{command}",
+    )
+
+    explicit_only = audit_formal_checker_availability(
+        package,
+        executable_paths={"prism": "/ci/bin/prism"},
+    )
+    assert [record.to_audit_record() for record in explicit_only] == [
+        {
+            "property_name": "petri_tokens_bounded",
+            "checker": "prism",
+            "artifact_name": "petri_supervisor",
+            "executable": "prism",
+            "command": [
+                "prism",
+                "petri_supervisor.prism",
+                "-pf",
+                'P>=1 [ G !"active_done" | F "active_done" ]',
+            ],
+            "available": True,
+            "resolved_path": "/ci/bin/prism",
+            "status": "ready_not_executed",
+            "execution_permitted": False,
+        },
+        {
+            "property_name": "tla_type_ok",
+            "checker": "tlc",
+            "artifact_name": "petri_supervisor_tla",
+            "executable": "tlc2.TLC",
+            "command": [
+                "tlc2.TLC",
+                "petri_supervisor_tla.tla",
+                "-config",
+                "petri_supervisor_tla.cfg",
+            ],
+            "available": False,
+            "resolved_path": None,
+            "status": "missing_executable",
+            "execution_permitted": False,
+        },
+    ]
+
+    wildcard = audit_formal_checker_availability(
+        package,
+        executable_paths={"prism": "/ci/bin/prism", "tlc2.TLC": "/ci/bin/tlc"},
+    )
+    assert wildcard[1].resolved_path == "/ci/bin/tlc"
+    assert all(item.execution_permitted is False for item in wildcard)
+
+
+def test_formal_verification_package_validates_manifest_contracts() -> None:
+    prism_export = export_petri_net_prism(
+        _net(),
+        Marking(tokens={"warmup": 1}),
+        module_name="supervisor net",
+    )
+    tla_export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1}),
+        module_name="supervisor net",
+    )
+    properties = (
+        FormalSafetyProperty(
+            name="petri_tokens_bounded",
+            artifact_name="petri_supervisor",
+            checker="prism",
+            expression='P>=1 [ G !"active_done" | F "active_done" ]',
+        ),
+        FormalSafetyProperty(
+            name="tla_type_ok",
             artifact_name="petri_supervisor_tla",
-            executable="tlc2.TLC",
-            command=("tlc2.TLC", "petri_supervisor_tla.tla"),
-            available=True,
-            status="missing_executable",
+            checker="tlc",
+            expression="Safety",
+        ),
+    )
+
+    with pytest.raises(PolicyError, match="package_name"):
+        build_formal_verification_package(
+            {"petri_supervisor": prism_export, "petri_supervisor_tla": tla_export},
+            properties,
+            package_name="1-invalid",
         )
+
+    with pytest.raises(PolicyError, match="duplicate formal property"):
+        build_formal_verification_package(
+            {"petri_supervisor": prism_export, "petri_supervisor_tla": tla_export},
+            (properties[0], properties[0]),
+        )
+
+
+def test_formal_verification_package_hash_is_stable_across_artifact_ordering() -> None:
+    prism_export = export_petri_net_prism(
+        _net(),
+        Marking(tokens={"warmup": 1}),
+        module_name="supervisor net",
+    )
+    tla_export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1}),
+        module_name="supervisor net",
+    )
+    properties = (
+        FormalSafetyProperty(
+            name="petri_tokens_bounded",
+            artifact_name="petri_supervisor",
+            checker="prism",
+            expression='P>=1 [ G !"active_done" | F "active_done" ]',
+        ),
+        FormalSafetyProperty(
+            name="tla_type_ok",
+            artifact_name="petri_supervisor_tla",
+            checker="tlc",
+            expression="Safety",
+        ),
+    )
+
+    package_a = build_formal_verification_package(
+        {"petri_supervisor": prism_export, "petri_supervisor_tla": tla_export},
+        properties,
+        package_name="spo-formal-review",
+    )
+    package_b = build_formal_verification_package(
+        {"petri_supervisor_tla": tla_export, "petri_supervisor": prism_export},
+        properties,
+        package_name="spo-formal-review",
+    )
+
+    assert package_a.package_hash == package_b.package_hash
+    assert package_a.to_audit_record() == package_b.to_audit_record()
 
 
 @pytest.mark.parametrize(
