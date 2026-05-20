@@ -230,6 +230,8 @@ def recurrence_matrix(
     epsilon = _validate_epsilon(epsilon)
     t, d = int(traj.shape[0]), int(traj.shape[1])
     angular = _validate_metric(metric)
+    if t == 0:
+        return np.zeros((0, 0), dtype=bool)
     flat = traj.ravel()
 
     backend_fn = _dispatch("rm")
@@ -269,6 +271,8 @@ def cross_recurrence_matrix(
     if b.shape != a.shape:
         raise ValueError(f"trajectories must match: a={a.shape} b={b.shape}")
     angular = _validate_metric(metric)
+    if t == 0:
+        return np.zeros((0, 0), dtype=bool)
     a_flat = a.ravel()
     b_flat = b.ravel()
 
