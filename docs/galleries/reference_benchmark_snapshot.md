@@ -30,12 +30,13 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
 |----------|-------------------|------|-------|---------------|---------|---------------|
-| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.05773294600658119 | 69.28452948761745 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
-| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 learners | 3 acceptance gates | 0.003630557970609516 | 826.319266703885 | accepted learners = 3/3; min coherence improvement = 0.05827974999403174; unsafe acceptances = 0; non-actuating = yes |
-| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.821134733967483 | 34.02886038873835 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.15538862202083692 | 6435.477623747152 | final `R` = 1.0 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.29776544298511 | 3358.3480674418147 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.026004773972090334 | 192272.38834554987 | reachable markings = 4 |
+| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.062151318008545786 | 64.35905348700733 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
+| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 learners | 3 acceptance gates | 0.003719875996466726 | 806.4784962857658 | accepted learners = 3/3; min coherence improvement = 0.05827974999403174; unsafe acceptances = 0; non-actuating = yes |
+| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.6995518400217406 | 35.561458230499056 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
+| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.3196924260118976 | 9.384019626065061 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
+| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.15525008999975398 | 6441.220098497751 | final `R` = 1.0 |
+| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.30027531896485016 | 3330.277038576916 | final mean amplitude = 3.6193922141707704 |
+| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.026685682008974254 | 187366.39364579576 | reachable markings = 4 |
 
 ## Auto-Binding Acceptance Gates
 
@@ -85,6 +86,19 @@ at least 96 posterior rollout samples.
 | Finite audit record | 1 | required |
 | Zero-diagonal coupling | 1 | required |
 | Non-negative coupling | 1 | required |
+
+## Bayesian Backend Fail-Closed Gates
+
+The backend benchmark probes the shipped NumPy implementation and the reserved
+sampler names through the same `bayesian_upde_run()` execution path. NumPy must
+complete with samples; reserved names must fail closed until they have real,
+validated sampler implementations.
+
+| Backend | Available | Fail closed | Sample count |
+|---------|-----------|-------------|-------------:|
+| `numpy` | yes | no | 16 |
+| `numpyro` | no | yes | 0 |
+| `blackjax` | no | yes | 0 |
 
 ## Use Policy
 

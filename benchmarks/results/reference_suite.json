@@ -15,8 +15,8 @@
       "suite": "auto_binding_synthetic_quality",
       "fixture_count": 4,
       "large_fixture_count": 4,
-      "wall_time_s": 0.05773294600658119,
-      "steps_per_second": 69.28452948761745,
+      "wall_time_s": 0.062151318008545786,
+      "steps_per_second": 64.35905348700733,
       "validation_error_count": 0,
       "extractor_coverage": 1.0,
       "expected_edge_recall": 1.0,
@@ -34,8 +34,8 @@
     "replay_policy": {
       "suite": "replay_policy_candidate_quality",
       "learner_count": 3,
-      "wall_time_s": 0.003630557970609516,
-      "steps_per_second": 826.319266703885,
+      "wall_time_s": 0.003719875996466726,
+      "steps_per_second": 806.4784962857658,
       "accepted_learner_count": 3,
       "failed_learner_count": 0,
       "acceptance_rate": 1.0,
@@ -51,8 +51,8 @@
       "suite": "bayesian_posterior_fit_quality",
       "sample_count": 96,
       "rollout_sample_count": 128,
-      "wall_time_s": 2.821134733967483,
-      "steps_per_second": 34.02886038873835,
+      "wall_time_s": 2.6995518400217406,
+      "steps_per_second": 35.561458230499056,
       "residual_rmse": 3.904347277377099e-07,
       "omega_mean_abs_error": 0.007744271156763904,
       "knm_mean_abs_error": 0.029439030191471344,
@@ -63,27 +63,40 @@
       "acceptance_passed": 1,
       "acceptance_thresholds_json": "{\"max_credible_interval_width\": 0.01, \"max_knm_mean_abs_error\": 0.06, \"max_omega_mean_abs_error\": 0.03, \"max_residual_rmse\": 0.0025, \"min_rollout_sample_count\": 96}"
     },
+    "bayesian_backends": {
+      "suite": "bayesian_backend_fail_closed",
+      "backend_count": 3,
+      "wall_time_s": 0.3196924260118976,
+      "steps_per_second": 9.384019626065061,
+      "available_backend_count": 1,
+      "fail_closed_backend_count": 2,
+      "unexpected_reserved_success_count": 0,
+      "numpy_sample_count": 16,
+      "acceptance_passed": 1,
+      "acceptance_thresholds_json": "{\"max_unexpected_reserved_successes\": 0, \"min_available_backends\": 1, \"required_fail_closed_backends\": [\"blackjax\", \"numpyro\"]}",
+      "backend_results_json": "[{\"available\": true, \"backend\": \"numpy\", \"fail_closed\": false, \"kind\": \"bayesian_backend_status\", \"reason\": \"executed\", \"sample_count\": 16}, {\"available\": false, \"backend\": \"numpyro\", \"fail_closed\": true, \"kind\": \"bayesian_backend_status\", \"reason\": \"numpyro Bayesian UPDE backend is not implemented; use backend='numpy' for reproducible Monte Carlo propagation\", \"sample_count\": 0}, {\"available\": false, \"backend\": \"blackjax\", \"fail_closed\": true, \"kind\": \"bayesian_backend_status\", \"reason\": \"blackjax Bayesian UPDE backend is not implemented; use backend='numpy' for reproducible Monte Carlo propagation\", \"sample_count\": 0}]"
+    },
     "kuramoto": {
       "suite": "kuramoto_reference_strogatz_2000",
       "n_oscillators": 64,
       "n_steps": 1000,
-      "wall_time_s": 0.15538862202083692,
-      "steps_per_second": 6435.477623747152,
+      "wall_time_s": 0.15525008999975398,
+      "steps_per_second": 6441.220098497751,
       "final_order_parameter": 1.0
     },
     "stuart_landau": {
       "suite": "stuart_landau_reference_pikovsky_2001",
       "n_oscillators": 64,
       "n_steps": 1000,
-      "wall_time_s": 0.29776544298511,
-      "steps_per_second": 3358.3480674418147,
+      "wall_time_s": 0.30027531896485016,
+      "steps_per_second": 3330.277038576916,
       "final_mean_amplitude": 3.6193922141707704
     },
     "petri_reachability": {
       "suite": "petri_net_reachability",
       "n_steps": 5000,
-      "wall_time_s": 0.026004773972090334,
-      "steps_per_second": 192272.38834554987,
+      "wall_time_s": 0.026685682008974254,
+      "steps_per_second": 187366.39364579576,
       "reachable_markings": 4
     }
   }

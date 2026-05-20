@@ -16,7 +16,7 @@ benchmarked against this reproducible baseline.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from numbers import Real
 from typing import Literal, Protocol, TypeAlias, runtime_checkable
 
@@ -32,12 +32,14 @@ MethodName: TypeAlias = Literal["euler", "rk4", "rk45"]
 
 __all__ = [
     "BackendName",
+    "BayesianBackendStatus",
     "BayesianUPDEConfig",
     "BayesianUPDEResult",
     "FloatArray",
     "GaussianUPDEPosteriorFit",
     "GaussianArrayDistribution",
     "MethodName",
+    "audit_bayesian_backend_status",
     "bayesian_upde_run",
     "fit_gaussian_upde_posterior",
 ]
@@ -180,6 +182,29 @@ class BayesianUPDEResult:
                 "r_min": float(np.min(self.r_samples)),
                 "r_max": float(np.max(self.r_samples)),
             },
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class BayesianBackendStatus:
+    """Execution status for one Bayesian UPDE backend name."""
+
+    backend: str
+    available: bool
+    fail_closed: bool
+    reason: str
+    sample_count: int
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return JSON-safe backend availability diagnostics."""
+
+        return {
+            "kind": "bayesian_backend_status",
+            "backend": self.backend,
+            "available": self.available,
+            "fail_closed": self.fail_closed,
+            "reason": self.reason,
+            "sample_count": self.sample_count,
         }
 
 
@@ -366,6 +391,56 @@ def fit_gaussian_upde_posterior(
         dt=dt_value,
         ridge=ridge_value,
     )
+
+
+def audit_bayesian_backend_status(
+    phases: object,
+    *,
+    omega: object,
+    knm: object,
+    alpha: object,
+    zeta: float,
+    psi: float,
+    config: BayesianUPDEConfig | None = None,
+    backends: tuple[BackendName, ...] = ("numpy", "numpyro", "blackjax"),
+) -> tuple[BayesianBackendStatus, ...]:
+    """Probe Bayesian backend names without silently accepting unsupported ones."""
+
+    base_config = config or BayesianUPDEConfig(n_samples=8, seed=0, n_steps=1)
+    statuses: list[BayesianBackendStatus] = []
+    for backend in backends:
+        backend_config = replace(base_config, backend=backend)
+        try:
+            result = bayesian_upde_run(
+                phases,
+                omega=omega,
+                knm=knm,
+                alpha=alpha,
+                zeta=zeta,
+                psi=psi,
+                config=backend_config,
+            )
+        except NotImplementedError as exc:
+            statuses.append(
+                BayesianBackendStatus(
+                    backend=backend,
+                    available=False,
+                    fail_closed=True,
+                    reason=str(exc),
+                    sample_count=0,
+                )
+            )
+        else:
+            statuses.append(
+                BayesianBackendStatus(
+                    backend=backend,
+                    available=True,
+                    fail_closed=False,
+                    reason="executed",
+                    sample_count=result.sample_count,
+                )
+            )
+    return tuple(statuses)
 
 
 def _validate_non_negative_finite(value: object, *, name: str) -> float:

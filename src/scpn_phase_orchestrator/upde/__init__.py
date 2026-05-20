@@ -23,6 +23,7 @@ from typing import Any
 
 __all__ = [
     "BasinStabilityResult",
+    "BayesianBackendStatus",
     "BayesianUPDEConfig",
     "BayesianUPDEResult",
     "BifurcationDiagram",
@@ -57,6 +58,7 @@ __all__ = [
     "UPDEState",
     "VariationalPredictor",
     "VariationalState",
+    "audit_bayesian_backend_status",
     "basin_stability",
     "bayesian_upde_run",
     "check_stability",
@@ -89,9 +91,14 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "basin_stability": (".basin_stability", "basin_stability"),
     "multi_basin_stability": (".basin_stability", "multi_basin_stability"),
     "BayesianUPDEConfig": (".bayesian", "BayesianUPDEConfig"),
+    "BayesianBackendStatus": (".bayesian", "BayesianBackendStatus"),
     "BayesianUPDEResult": (".bayesian", "BayesianUPDEResult"),
     "GaussianArrayDistribution": (".bayesian", "GaussianArrayDistribution"),
     "GaussianUPDEPosteriorFit": (".bayesian", "GaussianUPDEPosteriorFit"),
+    "audit_bayesian_backend_status": (
+        ".bayesian",
+        "audit_bayesian_backend_status",
+    ),
     "bayesian_upde_run": (".bayesian", "bayesian_upde_run"),
     "fit_gaussian_upde_posterior": (".bayesian", "fit_gaussian_upde_posterior"),
     "BifurcationDiagram": (".bifurcation", "BifurcationDiagram"),

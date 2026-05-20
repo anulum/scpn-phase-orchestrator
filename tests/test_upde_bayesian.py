@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.upde import (
     BayesianUPDEConfig,
     GaussianArrayDistribution,
+    audit_bayesian_backend_status,
     bayesian_upde_run,
     fit_gaussian_upde_posterior,
 )
@@ -140,6 +141,32 @@ def test_bayesian_upde_rejects_invalid_distributions_and_backends() -> None:
             psi=0.0,
             config=BayesianUPDEConfig(backend="numpyro"),
         )
+
+
+def test_bayesian_backend_status_audits_reserved_fail_closed_names() -> None:
+    phases, omegas, knm, alpha = _base_problem()
+
+    statuses = audit_bayesian_backend_status(
+        phases,
+        omega=omegas,
+        knm=knm,
+        alpha=alpha,
+        zeta=0.0,
+        psi=0.0,
+        config=BayesianUPDEConfig(n_samples=8, seed=19, n_steps=2),
+    )
+    records = {status.backend: status for status in statuses}
+
+    assert set(records) == {"numpy", "numpyro", "blackjax"}
+    assert records["numpy"].available is True
+    assert records["numpy"].fail_closed is False
+    assert records["numpy"].sample_count == 8
+    for backend in ("numpyro", "blackjax"):
+        assert records[backend].available is False
+        assert records[backend].fail_closed is True
+        assert records[backend].sample_count == 0
+        assert backend in records[backend].reason
+        json.dumps(records[backend].to_audit_record(), allow_nan=False)
 
 
 def _posterior_fit_trajectory(

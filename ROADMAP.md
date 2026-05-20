@@ -311,8 +311,11 @@ sessions do not treat them as abstract research labels.
     zero-diagonal coupling enforcement, JSON-safe fit diagnostics, and
     reference-suite acceptance gates for residual quality, parameter recovery,
     uncertainty width, and posterior rollout sample count.
-  - Remaining scope: benchmarked NumPyro or BlackJAX samplers behind the
-    existing fail-closed backend names.
+  - Backend-name safety is benchmark-gated: `audit_bayesian_backend_status()`
+    proves NumPy execution and records deterministic fail-closed audit evidence
+    for reserved `numpyro` and `blackjax` sampler names.
+  - Remaining scope: implement, validate, and benchmark real NumPyro or
+    BlackJAX samplers before changing their fail-closed status.
 - Hierarchical and distributed orchestration:
   - Make nested orchestrators explicit: edge supervisors sync locally, report
     reduced aggregates upward, and escalate only bounded evidence.

@@ -24,6 +24,11 @@ finite-difference regression against the same UPDE coupling surface, enforces
 non-negative zero-diagonal coupling, emits JSON-safe diagnostics, and feeds the
 resulting Gaussian distributions directly into `bayesian_upde_run()`.
 
+`audit_bayesian_backend_status()` probes backend names through the same
+execution path. The NumPy backend must execute, while reserved sampler names
+such as `numpyro` and `blackjax` must fail closed with audit records until they
+have validated implementations and benchmark evidence.
+
 ## Minimal Example
 
 ```python
@@ -67,6 +72,8 @@ r_mean, r_sigma = result.r_plus_minus
 - `fit_gaussian_upde_posterior()` estimates Gaussian `omega` and `K_nm`
   distributions from finite phase trajectories with explicit ridge and
   uncertainty floors.
+- `audit_bayesian_backend_status()` records executable and fail-closed backend
+  state for release and safety-review evidence.
 - The existing UPDE kernel performs every rollout, so deterministic engine
   validation, phase wrapping, and backend dispatch semantics are preserved.
 - `BayesianUPDEResult.to_audit_record()` emits JSON-safe uncertainty

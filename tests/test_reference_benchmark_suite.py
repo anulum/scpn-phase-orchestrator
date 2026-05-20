@@ -13,6 +13,7 @@ import json
 from benchmarks.reference_suite import (
     BENCHMARK_COMMAND,
     benchmark_auto_binding_proposal_quality,
+    benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
     benchmark_kuramoto_reference,
     benchmark_petri_reachability,
@@ -157,12 +158,47 @@ def test_bayesian_posterior_fit_quality_reports_thresholds() -> None:
     }
 
 
+def test_bayesian_backend_fail_closed_benchmark_shape() -> None:
+    out = benchmark_bayesian_backend_fail_closed()
+
+    assert out["suite"] == "bayesian_backend_fail_closed"
+    assert out["backend_count"] == 3
+    assert out["available_backend_count"] == 1
+    assert out["fail_closed_backend_count"] == 2
+    assert out["unexpected_reserved_success_count"] == 0
+    assert out["numpy_sample_count"] == 16
+    assert out["acceptance_passed"] == 1
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_bayesian_backend_fail_closed_reports_thresholds_and_records() -> None:
+    out = benchmark_bayesian_backend_fail_closed()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    results = json.loads(str(out["backend_results_json"]))
+
+    assert thresholds == {
+        "max_unexpected_reserved_successes": 0,
+        "min_available_backends": 1,
+        "required_fail_closed_backends": ["blackjax", "numpyro"],
+    }
+    assert [record["backend"] for record in results] == [
+        "numpy",
+        "numpyro",
+        "blackjax",
+    ]
+    assert results[0]["available"] is True
+    assert results[0]["sample_count"] == 16
+    assert all(record["fail_closed"] is True for record in results[1:])
+    assert all(record["sample_count"] == 0 for record in results[1:])
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
     assert out["metadata"]["snapshot_date"] == "2026-05-06"
     assert set(out["benchmarks"].keys()) == {
         "auto_binding",
+        "bayesian_backends",
         "bayesian_posterior",
         "replay_policy",
         "kuramoto",

@@ -41,6 +41,7 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
 )
 from scpn_phase_orchestrator.upde.bayesian import (
     BayesianUPDEConfig,
+    audit_bayesian_backend_status,
     bayesian_upde_run,
     fit_gaussian_upde_posterior,
 )
@@ -91,6 +92,12 @@ class BayesianPosteriorFitThresholds(NamedTuple):
     max_knm_mean_abs_error: float
     max_credible_interval_width: float
     min_rollout_sample_count: int
+
+
+class BayesianBackendFailClosedThresholds(NamedTuple):
+    min_available_backends: int
+    required_fail_closed_backends: frozenset[str]
+    max_unexpected_reserved_successes: int
 
 
 class ReferenceSuiteResult(TypedDict):
@@ -502,6 +509,76 @@ def benchmark_bayesian_posterior_fit_quality() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_bayesian_backend_fail_closed() -> dict[str, float | int | str]:
+    """Benchmark reserved Bayesian sampler names against fail-closed gates."""
+    thresholds = BayesianBackendFailClosedThresholds(
+        min_available_backends=1,
+        required_fail_closed_backends=frozenset({"numpyro", "blackjax"}),
+        max_unexpected_reserved_successes=0,
+    )
+    phases, omega, knm, alpha, _ = _bayesian_backend_audit_fixture()
+
+    t0 = time.perf_counter()
+    statuses = audit_bayesian_backend_status(
+        phases,
+        omega=omega,
+        knm=knm,
+        alpha=alpha,
+        zeta=0.0,
+        psi=0.0,
+        config=BayesianUPDEConfig(n_samples=16, seed=83, n_steps=3),
+    )
+    elapsed = time.perf_counter() - t0
+
+    status_by_backend = {status.backend: status for status in statuses}
+    available_backends = sum(status.available for status in statuses)
+    fail_closed_backends = {
+        status.backend
+        for status in statuses
+        if status.fail_closed and not status.available
+    }
+    unexpected_reserved_successes = sum(
+        status.available
+        for status in statuses
+        if status.backend in thresholds.required_fail_closed_backends
+    )
+    acceptance_passed = int(
+        available_backends >= thresholds.min_available_backends
+        and thresholds.required_fail_closed_backends <= fail_closed_backends
+        and unexpected_reserved_successes
+        <= thresholds.max_unexpected_reserved_successes
+        and status_by_backend["numpy"].sample_count == 16
+    )
+
+    return {
+        "suite": "bayesian_backend_fail_closed",
+        "backend_count": len(statuses),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(statuses) / elapsed,
+        "available_backend_count": available_backends,
+        "fail_closed_backend_count": len(fail_closed_backends),
+        "unexpected_reserved_success_count": unexpected_reserved_successes,
+        "numpy_sample_count": status_by_backend["numpy"].sample_count,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "max_unexpected_reserved_successes": (
+                    thresholds.max_unexpected_reserved_successes
+                ),
+                "min_available_backends": thresholds.min_available_backends,
+                "required_fail_closed_backends": sorted(
+                    thresholds.required_fail_closed_backends
+                ),
+            },
+            sort_keys=True,
+        ),
+        "backend_results_json": json.dumps(
+            [status.to_audit_record() for status in statuses],
+            sort_keys=True,
+        ),
+    }
+
+
 def _deterministic_replay_observation(
     candidate: KnobPolicyCandidate,
 ) -> RewardObservation:
@@ -542,6 +619,17 @@ def _bayesian_posterior_fit_fixture() -> tuple[
         phase = engine.step(phase, omega, knm, zeta=0.0, psi=0.0, alpha=alpha)
         trajectory.append(phase.copy())
     return np.asarray(trajectory), omega, knm, alpha, dt
+
+
+def _bayesian_backend_audit_fixture() -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, float
+]:
+    phases = np.array([0.0, 0.4, 1.1, 1.9], dtype=float)
+    omega = np.array([0.9, 1.0, 1.08, 1.16], dtype=float)
+    knm = np.full((4, 4), 0.18, dtype=float)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros_like(knm)
+    return phases, omega, knm, alpha, 0.01
 
 
 def _audit_record_is_finite(value: object) -> bool:
@@ -773,6 +861,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "auto_binding": benchmark_auto_binding_proposal_quality(),
             "replay_policy": benchmark_replay_policy_candidate_quality(),
             "bayesian_posterior": benchmark_bayesian_posterior_fit_quality(),
+            "bayesian_backends": benchmark_bayesian_backend_fail_closed(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
             "petri_reachability": benchmark_petri_reachability(),
