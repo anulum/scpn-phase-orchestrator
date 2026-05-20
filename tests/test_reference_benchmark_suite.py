@@ -25,6 +25,7 @@ from benchmarks.reference_suite import (
     benchmark_kuramoto_reference,
     benchmark_meta_transfer_audit_corpus_quality,
     benchmark_meta_transfer_package_manifest_quality,
+    benchmark_morphogenetic_domain_demo_gate,
     benchmark_neuromorphic_target_readiness_gate,
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
@@ -894,6 +895,44 @@ def test_temporal_causal_hypergraph_experiment_gate_reports_baselines() -> None:
     assert all(manifest["actuation_permitted"] is False for manifest in manifests)
 
 
+def test_morphogenetic_domain_demo_gate_benchmark_shape() -> None:
+    out = benchmark_morphogenetic_domain_demo_gate()
+
+    assert out["suite"] == "morphogenetic_domain_demo_gate"
+    assert out["record_count"] == 3
+    assert out["total_grown_edges"] >= 6
+    assert out["total_shrunk_edges"] >= 6
+    assert out["non_actuating"] == 1
+    assert out["snapshot_rows"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["demo_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_morphogenetic_domain_demo_gate_reports_domain_records() -> None:
+    out = benchmark_morphogenetic_domain_demo_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = json.loads(str(out["demo_records_json"]))
+
+    assert thresholds == {
+        "min_demo_count": 3,
+        "min_total_grown_edges": 6,
+        "min_total_shrunk_edges": 6,
+        "require_deterministic_hash": True,
+        "require_non_actuating": True,
+        "require_snapshot_rows": True,
+    }
+    assert [record["domainpack"] for record in records] == [
+        "chemical_reactor",
+        "manufacturing_spc",
+        "robotic_cpg",
+    ]
+    assert all(record["actuating"] is False for record in records)
+    assert all(record["delta_norm"] > 0.0 for record in records)
+    assert all(record["snapshot_top_edge_count"] >= 6 for record in records)
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -964,6 +1003,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "intergenerational_inheritance",
         "meta_transfer",
         "meta_transfer_corpus",
+        "morphogenetic_domain_demos",
         "neuromorphic_target_readiness",
         "plugin_ecosystem",
         "quantum_target_readiness",

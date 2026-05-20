@@ -840,7 +840,23 @@ Speculative research watchlist:
     `domainpacks/network_security/morphogenetic_field_demo.py` emits a
     deterministic lateral-movement replay with grown defence/normal-traffic
     edges and shrunk attack-vector edges without live actuation.
-  - Remaining scope: additional domainpack demos and richer Studio UI rendering.
+  - Chemical-reactor domainpack demo is in place:
+    `domainpacks/chemical_reactor/morphogenetic_field_demo.py` emits a
+    deterministic thermal-stability stress replay with grown/shrunk
+    topology-field edges and snapshot rows without live actuation.
+  - Manufacturing-SPC domainpack demo is in place:
+    `domainpacks/manufacturing_spc/morphogenetic_field_demo.py` emits a
+    deterministic tool-wear and pressure-spike recovery replay with grown/shrunk
+    topology-field edges and snapshot rows without live actuation.
+  - Robotic-CPG domainpack demo is in place:
+    `domainpacks/robotic_cpg/morphogenetic_field_demo.py` emits a deterministic
+    gait phase-field replay with grown/shrunk topology-field edges and snapshot
+    rows without live actuation.
+  - Additional morphogenetic demo benchmark evidence is in place:
+    `benchmark_morphogenetic_domain_demo_gate()` gates the chemical-reactor,
+    manufacturing-SPC, and robotic-CPG demo payloads for non-actuation, snapshot
+    rows, grown/shrunk edge evidence, and deterministic JSON-safe records.
+  - Remaining scope: richer Studio UI rendering.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
   - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations.
   - Reporting integration is in place: `build_audit_report_summary()` and `spo report` summarise passive `integrated_information` audit records while preserving the engineering-proxy claim boundary.

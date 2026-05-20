@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import platform
 import sys
@@ -284,6 +285,15 @@ class TemporalCausalHypergraphThresholds(NamedTuple):
     min_accepted_hyperedge_count: int
     min_baseline_edge_count: int
     require_research_only: bool
+    require_deterministic_hash: bool
+
+
+class MorphogeneticDomainDemoThresholds(NamedTuple):
+    min_demo_count: int
+    min_total_grown_edges: int
+    min_total_shrunk_edges: int
+    require_non_actuating: bool
+    require_snapshot_rows: bool
     require_deterministic_hash: bool
 
 
@@ -2662,6 +2672,72 @@ def benchmark_temporal_causal_hypergraph_experiment_gate() -> (
     }
 
 
+def benchmark_morphogenetic_domain_demo_gate() -> dict[str, float | int | str]:
+    """Benchmark additional morphogenetic domainpack demo audit surfaces."""
+    thresholds = MorphogeneticDomainDemoThresholds(
+        min_demo_count=3,
+        min_total_grown_edges=6,
+        min_total_shrunk_edges=6,
+        require_non_actuating=True,
+        require_snapshot_rows=True,
+        require_deterministic_hash=True,
+    )
+
+    t0 = time.perf_counter()
+    demo_runners = _morphogenetic_demo_runners()
+    demos = [runner() for runner in demo_runners]
+    repeated = [runner() for runner in demo_runners]
+    elapsed = time.perf_counter() - t0
+
+    records = [_morphogenetic_demo_record(demo) for demo in demos]
+    repeated_records = [_morphogenetic_demo_record(demo) for demo in repeated]
+    demo_count = len(records)
+    total_grown_edges = sum(int(record["grown_edge_count"]) for record in records)
+    total_shrunk_edges = sum(int(record["shrunk_edge_count"]) for record in records)
+    non_actuating = int(all(record["actuating"] is False for record in records))
+    snapshot_rows = int(
+        all(
+            int(record["snapshot_heatmap_rows"]) == int(record["field_layers"])
+            for record in records
+        )
+    )
+    deterministic_hash = int(records == repeated_records)
+    acceptance_passed = int(
+        demo_count >= thresholds.min_demo_count
+        and total_grown_edges >= thresholds.min_total_grown_edges
+        and total_shrunk_edges >= thresholds.min_total_shrunk_edges
+        and non_actuating == int(thresholds.require_non_actuating)
+        and snapshot_rows == int(thresholds.require_snapshot_rows)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "morphogenetic_domain_demo_gate",
+        "record_count": demo_count,
+        "wall_time_s": elapsed,
+        "steps_per_second": demo_count / elapsed,
+        "total_grown_edges": total_grown_edges,
+        "total_shrunk_edges": total_shrunk_edges,
+        "non_actuating": non_actuating,
+        "snapshot_rows": snapshot_rows,
+        "deterministic_hash": deterministic_hash,
+        "demo_sha256": _stable_record_hash(records),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_demo_count": thresholds.min_demo_count,
+                "min_total_grown_edges": thresholds.min_total_grown_edges,
+                "min_total_shrunk_edges": thresholds.min_total_shrunk_edges,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_actuating": thresholds.require_non_actuating,
+                "require_snapshot_rows": thresholds.require_snapshot_rows,
+            },
+            sort_keys=True,
+        ),
+        "demo_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -3695,6 +3771,45 @@ def _power_grid_phase_csv(n_samples: int = 192, dt: float = 0.05) -> str:
     return "\n".join(rows)
 
 
+def _morphogenetic_demo_record(payload: Mapping[str, object]) -> dict[str, object]:
+    audit = payload["audit"]
+    snapshot = payload["snapshot"]
+    if not isinstance(audit, Mapping) or not isinstance(snapshot, Mapping):
+        raise ValueError("morphogenetic demo payload must include audit and snapshot")
+    field = audit["field"]
+    if not isinstance(field, Mapping):
+        raise ValueError("morphogenetic demo audit must include field mapping")
+    return {
+        "domainpack": str(payload["domainpack"]),
+        "scenario": str(payload["scenario"]),
+        "actuating": bool(payload["actuating"]),
+        "global_coherence": float(audit["global_coherence"]),
+        "delta_norm": float(audit["delta_norm"]),
+        "field_layers": int(field["shape"][0]),
+        "grown_edge_count": len(audit["grown_edges"]),
+        "shrunk_edge_count": len(audit["shrunk_edges"]),
+        "snapshot_heatmap_rows": len(snapshot["heatmap_rows"]),
+        "snapshot_top_edge_count": len(snapshot["top_edges"]),
+    }
+
+
+def _morphogenetic_demo_runners() -> tuple[object, ...]:
+    repo_root = ROOT.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+    modules = (
+        "domainpacks.chemical_reactor.morphogenetic_field_demo",
+        "domainpacks.manufacturing_spc.morphogenetic_field_demo",
+        "domainpacks.robotic_cpg.morphogenetic_field_demo",
+    )
+    return tuple(importlib.import_module(module).run_demo for module in modules)
+
+
+def _stable_record_hash(records: object) -> str:
+    canonical = json.dumps(records, sort_keys=True, separators=(",", ":"))
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteResult:
     return {
         "metadata": build_benchmark_metadata(snapshot_date=snapshot_date),
@@ -3726,6 +3841,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "temporal_causal_hypergraph": (
                 benchmark_temporal_causal_hypergraph_experiment_gate()
             ),
+            "morphogenetic_domain_demos": benchmark_morphogenetic_domain_demo_gate(),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

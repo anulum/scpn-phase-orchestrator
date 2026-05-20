@@ -141,7 +141,7 @@ into the active roadmap.
 | Sheaf-theoretic coherence manifold | obstruction-aware control primitive over a sheaf Laplacian with audit-visible cohomology dimensions |
 | Constitutional value-alignment guard | Pareto objective constraints in binding specs, counterfactual violation logs, and forced safe fallback path |
 | Strange-loop meta-orchestrator | monitor foundation is implemented; long-run drift scenarios and studio surfacing remain open |
-| Morphogenetic field topology | field foundation, dependency-free snapshot visualisation, passive SVG rendering, plus swarm-robotics split-flock, power-grid stressed-replay, traffic-flow corridor-spillback, plasma-control edge-localised, and network-security lateral-movement demos are implemented; additional domainpack demos and richer Studio UI rendering remain open |
+| Morphogenetic field topology | field foundation, dependency-free snapshot visualisation, passive SVG rendering, plus swarm-robotics split-flock, power-grid stressed-replay, traffic-flow corridor-spillback, plasma-control edge-localised, network-security lateral-movement, chemical-reactor thermal-stability, manufacturing-SPC tool-wear, and robotic-CPG gait demos are implemented with reference-suite gates; richer Studio UI rendering remains open |
 | Integrated-information monitor | monitor foundation, audit-report summary integration, and expanded deterministic approximation benchmark cases are implemented; broader empirical replay benchmark corpus remains open |
 | Topos-theoretic semantic binding | categorical validation prototype for binding and policy composition with explicit proof obligations |
 | Multiverse counterfactual simulator | vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation |
