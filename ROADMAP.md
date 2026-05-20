@@ -606,6 +606,9 @@ Near-term candidate tracks:
     packaging metadata tests verify both declared console scripts resolve to
     importable Click commands, including the narrow `scpn-meta` manifest
     exporter.
+  - Console entry-point invocation evidence is in place:
+    the configured `scpn-meta` target is invoked directly in regression
+    coverage and emits a review-only manifest with execution disabled.
   - Package-manifest reference gates are in place:
     `benchmark_meta_transfer_package_manifest_quality()` verifies deterministic
     package and manifest hashes, training-summary coverage, digest linkage,
