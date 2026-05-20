@@ -14,13 +14,18 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from shutil import which
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def _tracked_ignored_paths() -> list[str]:
+    git = which("git")
+    if git is None:
+        print("FAIL: could not inspect tracked ignored files: git not found")
+        raise SystemExit(1)
     result = subprocess.run(
-        ["git", "ls-files", "-ci", "--exclude-standard"],
+        [git, "ls-files", "-ci", "--exclude-standard"],
         cwd=ROOT,
         capture_output=True,
         text=True,
