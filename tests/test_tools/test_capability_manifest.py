@@ -120,7 +120,7 @@ def test_markdown_snapshot_is_readme_safe() -> None:
     snapshot = tool.render_markdown_snapshot(manifest)
 
     assert "do not edit counts by hand" in snapshot
-    assert "| Package version | 0.5.11 |" in snapshot
+    assert f"| Package version | {manifest['project']['version']} |" in snapshot
     assert "| Core Engine modules |" in snapshot
     assert "| Runtime/Serving modules |" in snapshot
     assert "Evidence boundary" in snapshot
