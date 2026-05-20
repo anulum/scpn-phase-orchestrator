@@ -19,6 +19,7 @@ from benchmarks.reference_suite import (
     benchmark_formal_export_artifact_quality,
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_kuramoto_reference,
+    benchmark_meta_transfer_package_manifest_quality,
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
     benchmark_replay_policy_candidate_quality,
@@ -134,6 +135,49 @@ def test_semantic_retrieval_ranking_quality_reports_thresholds() -> None:
     assert projection[0]["domainpack"] == "power_grid"
     assert projection[0]["ranking_features"]["source_priority"] == 1.0
     assert projection[0]["ranking_features"]["matched_term_count"] >= 1.0
+
+
+def test_meta_transfer_package_manifest_quality_benchmark_shape() -> None:
+    out = benchmark_meta_transfer_package_manifest_quality()
+
+    assert out["suite"] == "meta_transfer_package_manifest_quality"
+    assert out["record_count"] == 4
+    assert out["domain_count"] == 4
+    assert out["feature_key_count"] == 5
+    assert out["knob_count"] == 4
+    assert int(out["package_bytes"]) > 0
+    assert out["manifest_schema"] == "scpn_meta_package_manifest_v1"
+    assert out["package_name"] == "scpn-meta"
+    assert out["import_target"] == "scpn_phase_orchestrator.meta"
+    assert out["console_script"] == "scpn-meta"
+    assert out["package_digest_matches"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["package_sha256"])) == 64
+    assert len(str(out["manifest_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_meta_transfer_package_manifest_quality_reports_thresholds() -> None:
+    out = benchmark_meta_transfer_package_manifest_quality()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    manifest = json.loads(str(out["manifest_json"]))
+
+    assert thresholds == {
+        "min_domain_count": 4,
+        "min_feature_key_count": 5,
+        "min_knob_count": 4,
+        "min_record_count": 4,
+        "require_deterministic_hash": True,
+        "require_execution_disabled": True,
+        "require_package_digest_match": True,
+    }
+    assert manifest["execution_permitted"] is False
+    assert manifest["package_sha256"] == out["package_sha256"]
+    assert manifest["training_summary"]["record_count"] == 4
+    assert manifest["training_summary"]["domain_count"] == 4
+    assert manifest["training_summary"]["knob_keys"] == ["K", "Psi", "alpha", "zeta"]
 
 
 def test_replay_policy_candidate_quality_benchmark_shape() -> None:
@@ -495,6 +539,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "domain_formal_export",
         "formal_export",
         "hybrid_cocompiler",
+        "meta_transfer",
         "plugin_ecosystem",
         "replay_policy",
         "semantic_retrieval",

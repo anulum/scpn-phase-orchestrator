@@ -39,6 +39,10 @@ from scpn_phase_orchestrator.autotune.reward import (
 )
 from scpn_phase_orchestrator.binding.semantic import compile_symbolic_binding
 from scpn_phase_orchestrator.exceptions import PolicyError
+from scpn_phase_orchestrator.meta.transfer import (
+    CrossDomainMetaTransfer,
+    MetaPolicyRecord,
+)
 from scpn_phase_orchestrator.monitor.stl import (
     STLActionProjectionTemplate,
     synthesise_stl_closed_loop_plan,
@@ -210,6 +214,16 @@ class SemanticRetrievalThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class MetaPackageManifestThresholds(NamedTuple):
+    min_record_count: int
+    min_domain_count: int
+    min_feature_key_count: int
+    min_knob_count: int
+    require_package_digest_match: bool
+    require_execution_disabled: bool
+    require_deterministic_hash: bool
+
+
 class ReferenceSuiteResult(TypedDict):
     metadata: dict[str, str]
     benchmarks: dict[str, BenchmarkRecord]
@@ -226,6 +240,83 @@ def build_benchmark_metadata(*, snapshot_date: str | None = None) -> dict[str, s
         "numpy_version": np.__version__,
         "platform": platform.platform(),
         "executable": sys.executable,
+    }
+
+
+def benchmark_meta_transfer_package_manifest_quality() -> dict[str, float | int | str]:
+    """Benchmark meta-transfer package manifest readiness gates."""
+    thresholds = MetaPackageManifestThresholds(
+        min_record_count=4,
+        min_domain_count=4,
+        min_feature_key_count=5,
+        min_knob_count=4,
+        require_package_digest_match=True,
+        require_execution_disabled=True,
+        require_deterministic_hash=True,
+    )
+    records = _meta_transfer_package_records()
+    t0 = time.perf_counter()
+    model = CrossDomainMetaTransfer.fit(records)
+    package_payload = model.to_json_package()
+    manifest = model.to_package_manifest()
+    repeated_manifest = CrossDomainMetaTransfer.fit(records).to_package_manifest()
+    elapsed = time.perf_counter() - t0
+
+    manifest_record = manifest.to_audit_record()
+    repeated_record = repeated_manifest.to_audit_record()
+    package_sha256 = sha256(package_payload.encode("utf-8")).hexdigest()
+    package_digest_matches = int(manifest.package_sha256 == package_sha256)
+    execution_disabled = int(manifest.execution_permitted is False)
+    manifest_sha256 = sha256(
+        json.dumps(manifest_record, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    repeated_sha256 = sha256(
+        json.dumps(repeated_record, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    deterministic_hash = int(manifest_sha256 == repeated_sha256)
+    summary = manifest.training_summary
+    acceptance_passed = int(
+        summary.record_count >= thresholds.min_record_count
+        and summary.domain_count >= thresholds.min_domain_count
+        and len(summary.feature_keys) >= thresholds.min_feature_key_count
+        and len(summary.knob_keys) >= thresholds.min_knob_count
+        and package_digest_matches == int(thresholds.require_package_digest_match)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "meta_transfer_package_manifest_quality",
+        "record_count": summary.record_count,
+        "domain_count": summary.domain_count,
+        "feature_key_count": len(summary.feature_keys),
+        "knob_count": len(summary.knob_keys),
+        "package_bytes": len(package_payload.encode("utf-8")),
+        "wall_time_s": elapsed,
+        "steps_per_second": summary.record_count / elapsed,
+        "manifest_schema": str(manifest_record["schema"]),
+        "package_name": manifest.package_name,
+        "import_target": manifest.import_target,
+        "console_script": manifest.console_script,
+        "package_sha256": manifest.package_sha256,
+        "manifest_sha256": manifest_sha256,
+        "package_digest_matches": package_digest_matches,
+        "execution_disabled": execution_disabled,
+        "deterministic_hash": deterministic_hash,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_domain_count": thresholds.min_domain_count,
+                "min_feature_key_count": thresholds.min_feature_key_count,
+                "min_knob_count": thresholds.min_knob_count,
+                "min_record_count": thresholds.min_record_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_package_digest_match": thresholds.require_package_digest_match,
+            },
+            sort_keys=True,
+        ),
+        "manifest_json": json.dumps(manifest_record, sort_keys=True),
     }
 
 
@@ -2185,6 +2276,59 @@ def _semantic_retrieval_fixture(root: Path) -> tuple[Path, Path]:
     return domainpack_root, docs_root
 
 
+def _meta_transfer_package_records() -> tuple[MetaPolicyRecord, ...]:
+    return (
+        MetaPolicyRecord(
+            domain="power_grid",
+            features={
+                "coherence": 0.88,
+                "event_rate": 0.08,
+                "load_variance": 0.32,
+                "phase_spread": 0.11,
+                "safety_margin": 0.71,
+            },
+            knobs={"K": 0.42, "Psi": 0.02, "alpha": 0.01, "zeta": 0.06},
+            reward=0.91,
+        ),
+        MetaPolicyRecord(
+            domain="cardiac_rhythm",
+            features={
+                "coherence": 0.83,
+                "event_rate": 0.05,
+                "load_variance": 0.12,
+                "phase_spread": 0.16,
+                "safety_margin": 0.84,
+            },
+            knobs={"K": 0.35, "Psi": 0.01, "alpha": 0.0, "zeta": 0.08},
+            reward=0.94,
+        ),
+        MetaPolicyRecord(
+            domain="traffic_flow",
+            features={
+                "coherence": 0.74,
+                "event_rate": 0.18,
+                "load_variance": 0.44,
+                "phase_spread": 0.22,
+                "safety_margin": 0.62,
+            },
+            knobs={"K": 0.31, "Psi": 0.04, "alpha": 0.02, "zeta": 0.05},
+            reward=0.86,
+        ),
+        MetaPolicyRecord(
+            domain="manufacturing_spc",
+            features={
+                "coherence": 0.79,
+                "event_rate": 0.11,
+                "load_variance": 0.26,
+                "phase_spread": 0.14,
+                "safety_margin": 0.77,
+            },
+            knobs={"K": 0.38, "Psi": 0.03, "alpha": 0.01, "zeta": 0.07},
+            reward=0.89,
+        ),
+    )
+
+
 def _semantic_ranking_projection(
     records: list[dict[str, object]],
 ) -> list[dict[str, object]]:
@@ -2264,6 +2408,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "stl_closed_loop": benchmark_stl_closed_loop_plan_quality(),
             "domain_formal_export": benchmark_domain_formal_safety_exports(),
             "hybrid_cocompiler": benchmark_hybrid_cocompiler_review_gate(),
+            "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),

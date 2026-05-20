@@ -588,6 +588,11 @@ Near-term candidate tracks:
     `CrossDomainMetaTransfer.to_package_manifest()` binds the deterministic
     JSON package hash, training summary, public import target, and proposed
     `scpn-meta` console-script name while keeping execution disabled.
+  - Package-manifest reference gates are in place:
+    `benchmark_meta_transfer_package_manifest_quality()` verifies deterministic
+    package and manifest hashes, training-summary coverage, digest linkage,
+    public import metadata, and disabled execution on a synthetic multi-domain
+    corpus.
   - Remaining scope: larger real audit-history training corpora and actual
     optional `scpn-meta` distribution packaging.
 - Quantum-native compiler target: deterministic OpenQASM 3 compiler manifests
