@@ -84,6 +84,16 @@ production recommendation. Keep them behind explicit module boundaries and
 avoid making application behaviour depend on an auxiliary toolchain being
 installed.
 
+The implementation files with names such as `_hodge_go.py`,
+`_spectral_julia.py`, `_psychedelic_mojo.py`, and `_swarmalator_go.py` are
+private auxiliary backend shims. They are intentionally not documented as
+standalone user APIs. Their public contract is the owning reference function
+or class, for example `hodge_decomposition`, `spectral_eig`,
+`simulate_psychedelic_trajectory`, `swarmalator_step`, or the corresponding
+UPDE/monitor package page. If an auxiliary shim becomes a stable user-facing
+backend, promote it by adding an explicit public module, parity tests,
+benchmarks, and a dedicated reference section before exposing it in tutorials.
+
 ## JAX Path
 
 JAX is not a fallback for Rust. It is a separate execution mode for workloads

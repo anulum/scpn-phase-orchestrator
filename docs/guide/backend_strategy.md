@@ -128,6 +128,12 @@ criteria:
 If those criteria are not met, keep the backend under experiments, benchmarks,
 or explicit optional code paths.
 
+Private shim modules whose filenames start with an underscore are not public
+documentation targets. They exist to preserve the stable Python API while
+isolating auxiliary language calls and backend availability checks. Document
+the public dispatcher, parity expectation, and operational status instead of
+duplicating one API page per `_go`, `_julia`, or `_mojo` implementation file.
+
 ## Contribution Rules
 
 New backend code should answer these questions in the PR:

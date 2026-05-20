@@ -69,6 +69,40 @@ reason to weaken the mkdocstrings coverage gate. When touching such a module,
 add the module docstring in the same change instead of spreading generic
 one-line docstrings across unrelated code.
 
+## v0.6.0 Code-to-Documentation Reconciliation
+
+The v0.6.0 release preparation reconciled the changed source tree against the
+public documentation surface using `git diff --name-only v0.5.11..HEAD`.
+
+| Reconciliation item | Result |
+| --- | ---: |
+| Changed Python modules under `src/scpn_phase_orchestrator/` | 396 |
+| Changed public modules matched by reference, guide, tutorial, example, README, or changelog text | 232 |
+| Changed modules intentionally excluded as package initialisers, generated gRPC/protobuf stubs, or experimental accelerator implementation mirrors | 125 |
+| Residual unmatched changed modules after exclusions | 39 |
+
+The `39` residual modules are private auxiliary backend shims:
+
+- coupling shims: `_hodge_go`, `_hodge_julia`, `_hodge_mojo`,
+  `_spectral_go`, `_spectral_julia`, `_spectral_mojo`;
+- monitor shims: `_psychedelic_go`, `_psychedelic_julia`,
+  `_psychedelic_mojo`;
+- UPDE shims: `_basin_stability_*`, `_envelope_*`, `_geometric_*`,
+  `_hypergraph_*`, `_inertial_*`, `_market_*`, `_reduction_*`,
+  `_simplicial_*`, `_splitting_*`, and `_swarmalator_*` for Go, Julia, and
+  Mojo.
+
+These files are not standalone public APIs. They are implementation mirrors
+for the documented public dispatchers and are covered by:
+
+- [Backend Fallback Chain](../guide/backend_fallbacks.md), which defines the
+  fallback and demotion policy;
+- [Backend Strategy](../guide/backend_strategy.md), which defines support
+  tiers and promotion criteria;
+- the owning API pages for coupling, monitor, and UPDE functions.
+
+No release-blocking public documentation gaps remain from this reconciliation.
+
 ## API Coverage Summary
 
 | Package or surface | Public page | Detailed pages |
