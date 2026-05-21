@@ -32,6 +32,15 @@ FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE = 0.5
 
+try:
+    from spo_kernel import graph_walk_phase as _rust_graph_walk_phase
+    from spo_kernel import ring_phase as _rust_ring_phase
+    from spo_kernel import transition_quality as _rust_transition_quality
+
+    _HAS_RUST_SYMBOLIC = True
+except ModuleNotFoundError:  # pragma: no cover - optional Rust backend
+    _HAS_RUST_SYMBOLIC = False
+
 
 def _validate_n_states(value: object) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral):
@@ -118,17 +127,53 @@ class SymbolicExtractor(PhaseExtractor):
         indices = _validate_signal(signal)
         sample_rate = _validate_sample_rate(sample_rate)
         if self._mode == "ring":
-            thetas = TWO_PI * indices / self._n_states
+            if _HAS_RUST_SYMBOLIC:
+                thetas = np.fromiter(
+                    (
+                        float(_rust_ring_phase(int(index), self._n_states))
+                        for index in indices
+                    ),
+                    dtype=np.float64,
+                    count=len(indices),
+                )
+            else:
+                thetas = TWO_PI * indices / self._n_states
         else:
             # Graph-walk: cumulative phase from state transitions
             # Each step adds phase proportional to the transition distance
             if len(indices) < 2:
-                thetas = TWO_PI * indices.astype(np.float64) / self._n_states
+                if _HAS_RUST_SYMBOLIC:
+                    thetas = np.fromiter(
+                        (
+                            float(_rust_ring_phase(int(index), self._n_states))
+                            for index in indices
+                        ),
+                        dtype=np.float64,
+                        count=len(indices),
+                    )
+                else:
+                    thetas = TWO_PI * indices.astype(np.float64) / self._n_states
             else:
                 steps = np.abs(np.diff(indices)).astype(np.float64)
                 cumulative = np.concatenate([[0.0], np.cumsum(steps)])
                 total = cumulative[-1] if cumulative[-1] > 0 else 1.0
-                thetas = TWO_PI * cumulative / total
+                if _HAS_RUST_SYMBOLIC:
+                    walk_length = int(round(float(total)))
+                    thetas = np.fromiter(
+                        (
+                            float(
+                                _rust_graph_walk_phase(
+                                    int(round(float(position))),
+                                    walk_length,
+                                )
+                            )
+                            for position in cumulative
+                        ),
+                        dtype=np.float64,
+                        count=len(cumulative),
+                    )
+                else:
+                    thetas = TWO_PI * cumulative / total
 
         thetas = thetas % TWO_PI
         dt = 1.0 / sample_rate
@@ -164,6 +209,8 @@ class SymbolicExtractor(PhaseExtractor):
         if i == 0 or len(indices) < 2:
             return self._initial_transition_quality
         step = abs(int(indices[i]) - int(indices[i - 1]))
+        if _HAS_RUST_SYMBOLIC:
+            return float(_rust_transition_quality(int(step), self._n_states))
         if step == 0:
             return 0.2  # stalled
         if step == 1:
