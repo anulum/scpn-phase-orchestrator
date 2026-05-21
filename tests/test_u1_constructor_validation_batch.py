@@ -691,6 +691,11 @@ def test_u1_tcbo_observer_rejects_boolean_embed_delay() -> None:
         TCBOObserver(embed_delay=True)  # type: ignore[arg-type]
 
 
+def test_u1_tcbo_observer_rejects_boolean_window_size() -> None:
+    with pytest.raises(TypeError, match="positive integer"):
+        TCBOObserver(window_size=True)  # type: ignore[arg-type]
+
+
 def test_u1_tcbo_observer_observe_rejects_non_finite_phase() -> None:
     obs = TCBOObserver()
     with pytest.raises(ValueError, match="finite values"):
