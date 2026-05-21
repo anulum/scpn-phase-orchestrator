@@ -1186,6 +1186,65 @@ def _load_lifecycle_policy_report_payload(
     return policy_payload
 
 
+def _load_lifecycle_multistore_drilldown_payload(
+    drilldown_payload: dict[str, object],
+) -> dict[str, object]:
+    if (
+        drilldown_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_multistore_drilldown_v1"
+    ):
+        raise click.ClickException(
+            "multi-store drilldown schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_multistore_drilldown_v1"
+        )
+    _require_sha256(drilldown_payload.get("drilldown_hash"), "drilldown_hash")
+    policy_count = drilldown_payload.get("policy_count")
+    stores = drilldown_payload.get("stores")
+    global_flagged = drilldown_payload.get("global_flagged_request_hashes")
+    if not isinstance(policy_count, int) or policy_count < 1:
+        raise click.ClickException(
+            "multi-store drilldown schema mismatch: policy_count must be positive"
+        )
+    if not isinstance(stores, list) or not stores:
+        raise click.ClickException(
+            "multi-store drilldown schema mismatch: stores must be non-empty list"
+        )
+    if not isinstance(global_flagged, list) or not all(
+        isinstance(item, str) for item in global_flagged
+    ):
+        raise click.ClickException(
+            "multi-store drilldown schema mismatch: global_flagged_request_hashes "
+            "must be a string list"
+        )
+    for item in global_flagged:
+        _require_sha256(item, "global_flagged_request_hash")
+    for store in stores:
+        if not isinstance(store, dict):
+            raise click.ClickException(
+                "multi-store drilldown schema mismatch: store record must be object"
+            )
+        _require_sha256(store.get("store_hash"), "store_hash")
+        _require_sha256(store.get("policy_hash"), "policy_hash")
+        _require_sha256(store.get("summary_hash"), "summary_hash")
+        for field_name in (
+            "renewal_required_request_hashes",
+            "storage_missing_request_hashes",
+            "missing_adapter_request_hashes",
+            "external_write_followup_request_hashes",
+        ):
+            value = store.get(field_name)
+            if not isinstance(value, list) or not all(
+                isinstance(item, str) for item in value
+            ):
+                raise click.ClickException(
+                    f"multi-store drilldown schema mismatch: {field_name} "
+                    "must be a string list"
+                )
+            for item in value:
+                _require_sha256(item, field_name)
+    return drilldown_payload
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -2040,6 +2099,81 @@ def plugins_lifecycle_multistore_drilldown(
     }
     drilldown_payload["drilldown_hash"] = _record_hash(drilldown_payload)
     click.echo(json.dumps(drilldown_payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-orchestration")
+@click.argument(
+    "drilldown_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the remediation plan.",
+)
+def plugins_lifecycle_remediation_orchestration(
+    drilldown_json: Path,
+    created_by: str,
+) -> None:
+    """Emit a deterministic, priority-ordered cross-store remediation plan."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation orchestration schema mismatch: created_by must be non-empty"
+        )
+    drilldown = _load_lifecycle_multistore_drilldown_payload(
+        _load_json_file(drilldown_json, artifact="multi-store drilldown")
+    )
+    stores = cast(list[dict[str, object]], drilldown["stores"])
+    actions: list[dict[str, object]] = []
+    priority_map: dict[str, int] = {
+        "renew_approval": 1,
+        "persist_request": 2,
+        "register_storage_adapter": 3,
+        "confirm_external_write": 4,
+    }
+    for store in stores:
+        store_hash = _require_sha256(store.get("store_hash"), "store_hash")
+        policy_hash = _require_sha256(store.get("policy_hash"), "policy_hash")
+        summary_hash = _require_sha256(store.get("summary_hash"), "summary_hash")
+        for action_type, source_field in (
+            ("renew_approval", "renewal_required_request_hashes"),
+            ("persist_request", "storage_missing_request_hashes"),
+            ("register_storage_adapter", "missing_adapter_request_hashes"),
+            ("confirm_external_write", "external_write_followup_request_hashes"),
+        ):
+            request_hashes = cast(list[str], store[source_field])
+            for request_hash in request_hashes:
+                action: dict[str, object] = {
+                    "action_type": action_type,
+                    "priority": priority_map[action_type],
+                    "request_hash": request_hash,
+                    "store_hash": store_hash,
+                    "policy_hash": policy_hash,
+                    "summary_hash": summary_hash,
+                }
+                action["action_hash"] = _record_hash(action)
+                actions.append(action)
+    actions.sort(
+        key=lambda item: (
+            cast(int, item["priority"]),
+            str(item["request_hash"]),
+            str(item["store_hash"]),
+            str(item["action_type"]),
+        )
+    )
+    orchestration_payload: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_plan_v1",
+        "version": "1.0.0",
+        "drilldown_hash": _require_sha256(
+            drilldown.get("drilldown_hash"),
+            "drilldown_hash",
+        ),
+        "action_count": len(actions),
+        "actions": actions,
+        "created_by": created_by,
+    }
+    orchestration_payload["plan_hash"] = _record_hash(orchestration_payload)
+    click.echo(json.dumps(orchestration_payload, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

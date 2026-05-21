@@ -3312,6 +3312,206 @@ def test_plugins_lifecycle_multistore_drilldown_rejects_duplicate_policy_hash(
     assert "duplicate lifecycle policy hash" in result.output
 
 
+def test_plugins_lifecycle_remediation_orchestration_outputs_priority_plan(
+    runner,
+    tmp_path: Path,
+):
+    tmp_a = tmp_path / "a"
+    tmp_b = tmp_path / "b"
+    tmp_a.mkdir(parents=True, exist_ok=True)
+    tmp_b.mkdir(parents=True, exist_ok=True)
+    request_a = _write_request_payload_from_cli(runner, tmp_a)
+    request_b = _write_request_payload_from_cli(runner, tmp_b)
+
+    lifecycle_a = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_a),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    revocation_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revoke-execution-request",
+            str(request_b),
+            "--revoked-by",
+            "deployment_gate",
+            "--revocation-reference",
+            "REV-2026-05-21-ORCH",
+            "--revocation-reason",
+            "operator rotation",
+        ],
+    )
+    assert lifecycle_a.exit_code == 0
+    assert revocation_b.exit_code == 0
+    lifecycle_a_path = tmp_path / "lifecycle-a.json"
+    lifecycle_a_path.write_text(lifecycle_a.output, encoding="utf-8")
+    revocation_b_path = tmp_path / "revocation-b.json"
+    revocation_b_path.write_text(revocation_b.output, encoding="utf-8")
+    revocation_list_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert revocation_list_b.exit_code == 0
+    revocation_list_b_path = tmp_path / "revocation-list-b.json"
+    revocation_list_b_path.write_text(revocation_list_b.output, encoding="utf-8")
+    lifecycle_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_b),
+            "--revocation-list",
+            str(revocation_list_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle_b.exit_code == 0
+    lifecycle_b_path = tmp_path / "lifecycle-b.json"
+    lifecycle_b_path.write_text(lifecycle_b.output, encoding="utf-8")
+
+    summary_a = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_a_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    summary_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary_a.exit_code == 0
+    assert summary_b.exit_code == 0
+    summary_a_path = tmp_path / "summary-a.json"
+    summary_b_path = tmp_path / "summary-b.json"
+    summary_a_path.write_text(summary_a.output, encoding="utf-8")
+    summary_b_path.write_text(summary_b.output, encoding="utf-8")
+
+    policy_a = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_a_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    policy_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert policy_a.exit_code == 0
+    assert policy_b.exit_code == 0
+    policy_a_path = tmp_path / "policy-a.json"
+    policy_b_path = tmp_path / "policy-b.json"
+    policy_a_path.write_text(policy_a.output, encoding="utf-8")
+    policy_b_path.write_text(policy_b.output, encoding="utf-8")
+
+    drilldown = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-multistore-drilldown",
+            str(policy_a_path),
+            str(policy_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert drilldown.exit_code == 0
+    drilldown_path = tmp_path / "drilldown.json"
+    drilldown_path.write_text(drilldown.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-orchestration",
+            str(drilldown_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert (
+        payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_remediation_plan_v1"
+    )
+    assert payload["action_count"] == len(payload["actions"])
+    assert len(payload["plan_hash"]) == 64
+    priorities = [action["priority"] for action in payload["actions"]]
+    assert priorities == sorted(priorities)
+    for action in payload["actions"]:
+        assert len(action["action_hash"]) == 64
+
+
+def test_plugins_lifecycle_remediation_orchestration_rejects_bad_drilldown_schema(
+    runner,
+    tmp_path: Path,
+):
+    bad_path = tmp_path / "bad-drilldown.json"
+    bad_path.write_text(
+        json.dumps(
+            {
+                "schema": "scpn_plugin_execution_request_lifecycle_other_v1",
+                "version": "1.0.0",
+                "drilldown_hash": "0" * 64,
+                "policy_count": 1,
+                "stores": [],
+                "global_flagged_request_hashes": [],
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-orchestration",
+            str(bad_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "multi-store drilldown schema mismatch" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,
