@@ -681,6 +681,11 @@ def test_u1_tcbo_observer_rejects_boolean_beta() -> None:
         TCBOObserver(beta=True)  # type: ignore[arg-type]
 
 
+def test_u1_tcbo_observer_rejects_boolean_embed_dim() -> None:
+    with pytest.raises(TypeError, match="positive integer"):
+        TCBOObserver(embed_dim=True)  # type: ignore[arg-type]
+
+
 def test_u1_tcbo_observer_observe_rejects_non_finite_phase() -> None:
     obs = TCBOObserver()
     with pytest.raises(ValueError, match="finite values"):
