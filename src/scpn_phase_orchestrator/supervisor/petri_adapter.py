@@ -38,7 +38,7 @@ def _validate_context(ctx: object) -> dict[str, float]:
         )
     out: dict[str, float] = {}
     for metric, value in ctx.items():
-        if not isinstance(metric, str) or not metric:
+        if not isinstance(metric, str) or not metric.strip():
             raise PolicyError(
                 f"ctx metric names must be non-empty strings, got {metric!r}"
             )

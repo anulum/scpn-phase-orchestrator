@@ -257,3 +257,17 @@ def test_u1_petri_adapter_rejects_empty_mapping() -> None:
             initial_marking=Marking(tokens={"nominal": 1}),
             place_to_regime={},
         )
+
+
+def test_u1_petri_adapter_step_rejects_whitespace_ctx_metric() -> None:
+    net = PetriNet(
+        places=[Place("nominal")],
+        transitions=[Transition(name="noop", inputs=[], outputs=[])],
+    )
+    adapter = PetriNetAdapter(
+        net=net,
+        initial_marking=Marking(tokens={"nominal": 1}),
+        place_to_regime={"nominal": "nominal"},
+    )
+    with pytest.raises(Exception, match="non-empty strings"):
+        adapter.step({" ": 0.0})
