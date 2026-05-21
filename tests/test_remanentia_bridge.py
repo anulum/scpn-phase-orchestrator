@@ -215,6 +215,32 @@ class TestRemanentiaBridge:
         snap = bridge.snapshot()
         assert snap.n_memories == 11
 
+    def test_get_entity_count_uses_cached_value_on_invalid_status_schema(
+        self,
+        bridge: RemanentiaBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        bridge._last_entities = 9
+
+        def _bad_status(_path: str) -> dict:
+            return {"entities": "bad", "memories": 7}
+
+        monkeypatch.setattr(bridge, "_get", _bad_status)
+        assert bridge.get_entity_count() == 9
+
+    def test_novelty_score_uses_cached_value_on_invalid_recall_schema(
+        self,
+        bridge: RemanentiaBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        bridge._last_novelty_score = 0.33
+
+        def _bad_recall(_path: str, _payload: dict) -> dict:
+            return {"results": [{"score": "bad"}]}
+
+        monkeypatch.setattr(bridge, "_post", _bad_recall)
+        assert bridge.get_novelty_score("known query") == pytest.approx(0.33)
+
 
 class _EmptyRecallHandler(BaseHTTPRequestHandler):
     """Returns empty recall results."""

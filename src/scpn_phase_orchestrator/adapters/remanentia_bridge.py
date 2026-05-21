@@ -135,6 +135,46 @@ def _validated_query(query: object) -> str:
     return query
 
 
+def _validated_status_payload(payload: object) -> tuple[int, int]:
+    if not isinstance(payload, dict):
+        raise ValueError("status payload must be a mapping")
+    entities = payload.get("entities")
+    memories = payload.get("memories")
+    if (
+        not isinstance(entities, int)
+        or isinstance(entities, bool)
+        or entities < 0
+    ):
+        raise ValueError("status.entities must be a non-negative integer")
+    if (
+        not isinstance(memories, int)
+        or isinstance(memories, bool)
+        or memories < 0
+    ):
+        raise ValueError("status.memories must be a non-negative integer")
+    return entities, memories
+
+
+def _validated_recall_scores(payload: object) -> list[float]:
+    if not isinstance(payload, dict):
+        raise ValueError("recall payload must be a mapping")
+    results = payload.get("results")
+    if not isinstance(results, list):
+        raise ValueError("recall.results must be a list")
+    scores: list[float] = []
+    for index, item in enumerate(results):
+        if not isinstance(item, dict):
+            raise ValueError(f"recall.results[{index}] must be a mapping")
+        score = item.get("score")
+        if not isinstance(score, Real) or isinstance(score, bool):
+            raise ValueError(f"recall.results[{index}].score must be a real number")
+        score_f = float(score)
+        if not isfinite(score_f):
+            raise ValueError(f"recall.results[{index}].score must be finite")
+        scores.append(score_f)
+    return scores
+
+
 def _validated_agent_phases(agent_phases: object) -> dict[str, float] | None:
     if agent_phases is None:
         return None
@@ -278,12 +318,11 @@ class RemanentiaBridge:
         query = _validated_query(query)
         try:
             resp = self._post("/recall", {"query": query, "top_k": 5})
-            results = resp.get("results", [])
-            if not results:
+            scores = _validated_recall_scores(resp)
+            if not scores:
                 self._last_novelty_score = 1.0
                 return 1.0  # fully novel — no relevant memories
             # Novelty = 1 - mean relevance score
-            scores = [r.get("score", 0.0) for r in results]
             novelty = float(max(0.0, 1.0 - float(np.mean(scores))))
             self._last_novelty_score = novelty
             return novelty
@@ -301,11 +340,9 @@ class RemanentiaBridge:
         """Get number of entities in Remanentia's knowledge graph."""
         try:
             resp = self._get("/status")
-            entities = int(resp.get("entities", 0))
+            entities, memories = _validated_status_payload(resp)
             self._last_entities = entities
-            memories_raw = resp.get("memories", self._last_memories)
-            if isinstance(memories_raw, int) and not isinstance(memories_raw, bool):
-                self._last_memories = memories_raw
+            self._last_memories = memories
             return entities
         except BaseException as exc:
             if not self._is_transport_or_decode_error(exc):
@@ -363,11 +400,8 @@ class RemanentiaBridge:
         n_ent = self.get_entity_count()
         try:
             status = self._get("/status")
-            n_memories = status.get("memories", self._last_memories)
-            if not isinstance(n_memories, int) or isinstance(n_memories, bool):
-                raise ValueError("memories must be an integer")
-            if n_memories < 0:
-                raise ValueError("memories must be non-negative")
+            entities, n_memories = _validated_status_payload(status)
+            self._last_entities = entities
             self._last_memories = n_memories
         except BaseException as exc:
             if not self._is_transport_or_decode_error(exc):
