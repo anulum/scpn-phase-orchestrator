@@ -35,8 +35,6 @@ Payload: TypeAlias = dict[str, Any]
 SCHEMA_VERSION = 1
 STREAM_MAGIC = b"SPOA1\n"
 ZERO_HASH = "0" * 64
-_AUDIT_DESCRIPTOR_POOL = descriptor_pool.DescriptorPool()
-_AUDIT_DESCRIPTOR_POOL.AddSerializedFile(_timestamp_pb2.DESCRIPTOR.serialized_pb)
 
 __all__ = [
     "AuditStreamEvent",
@@ -139,63 +137,67 @@ class AuditStreamEvent:
                 )
 
 
+def _build_audit_envelope_file_proto() -> descriptor_pb2.FileDescriptorProto:
+    file_proto = descriptor_pb2.FileDescriptorProto()
+    file_proto.name = "audit.proto"
+    file_proto.package = "spo.audit"
+    file_proto.syntax = "proto3"
+    file_proto.dependency.append("google/protobuf/timestamp.proto")
+    message = file_proto.message_type.add()
+    message.name = "AuditEnvelope"
+
+    def add_field(
+        name: str,
+        number: int,
+        field_type: int,
+        type_name: str | None = None,
+    ) -> None:
+        field = message.field.add()
+        field_any = cast("Any", field)
+        field_any.name = name
+        field_any.number = number
+        field_any.label = descriptor_pb2.FieldDescriptorProto.LABEL_OPTIONAL
+        field_any.type = field_type
+        if type_name is not None:
+            field_any.type_name = type_name
+
+    add_field("schema_version", 1, descriptor_pb2.FieldDescriptorProto.TYPE_UINT32)
+    add_field("stream_id", 2, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field("sequence", 3, descriptor_pb2.FieldDescriptorProto.TYPE_UINT64)
+    add_field("event_type", 4, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field(
+        "recorded_at",
+        5,
+        descriptor_pb2.FieldDescriptorProto.TYPE_MESSAGE,
+        ".google.protobuf.Timestamp",
+    )
+    add_field("source", 6, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field("previous_hash", 7, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field("payload_json", 8, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field("payload_sha256", 9, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field("event_hash", 10, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field(
+        "signature_algorithm", 11, descriptor_pb2.FieldDescriptorProto.TYPE_STRING
+    )
+    add_field("signature_key_id", 12, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field("signature", 13, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    add_field("audit_mode", 14, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+    return file_proto
+
+
+_AUDIT_ENVELOPE_FILE_PROTO = _build_audit_envelope_file_proto()
+_AUDIT_ENVELOPE_FILE_PROTO_BYTES = _AUDIT_ENVELOPE_FILE_PROTO.SerializeToString()
+
+
 def _audit_envelope_class() -> type[Message]:
     _ = _timestamp_pb2.DESCRIPTOR
+    pool = descriptor_pool.DescriptorPool()
     try:
-        descriptor = _AUDIT_DESCRIPTOR_POOL.FindMessageTypeByName(
-            "spo.audit.AuditEnvelope"
-        )
-    except KeyError:
-        file_proto = descriptor_pb2.FileDescriptorProto()
-        file_proto.name = "audit.proto"
-        file_proto.package = "spo.audit"
-        file_proto.syntax = "proto3"
-        file_proto.dependency.append("google/protobuf/timestamp.proto")
-        message = file_proto.message_type.add()
-        message.name = "AuditEnvelope"
-
-        def add_field(
-            name: str,
-            number: int,
-            field_type: int,
-            type_name: str | None = None,
-        ) -> None:
-            field = message.field.add()
-            field_any = cast("Any", field)
-            field_any.name = name
-            field_any.number = number
-            field_any.label = descriptor_pb2.FieldDescriptorProto.LABEL_OPTIONAL
-            field_any.type = field_type
-            if type_name is not None:
-                field_any.type_name = type_name
-
-        add_field("schema_version", 1, descriptor_pb2.FieldDescriptorProto.TYPE_UINT32)
-        add_field("stream_id", 2, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        add_field("sequence", 3, descriptor_pb2.FieldDescriptorProto.TYPE_UINT64)
-        add_field("event_type", 4, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        add_field(
-            "recorded_at",
-            5,
-            descriptor_pb2.FieldDescriptorProto.TYPE_MESSAGE,
-            ".google.protobuf.Timestamp",
-        )
-        add_field("source", 6, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        add_field("previous_hash", 7, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        add_field("payload_json", 8, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        add_field("payload_sha256", 9, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        add_field("event_hash", 10, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        add_field(
-            "signature_algorithm", 11, descriptor_pb2.FieldDescriptorProto.TYPE_STRING
-        )
-        add_field(
-            "signature_key_id", 12, descriptor_pb2.FieldDescriptorProto.TYPE_STRING
-        )
-        add_field("signature", 13, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        add_field("audit_mode", 14, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        _AUDIT_DESCRIPTOR_POOL.Add(file_proto)
-        descriptor = _AUDIT_DESCRIPTOR_POOL.FindMessageTypeByName(
-            "spo.audit.AuditEnvelope"
-        )
+        pool.AddSerializedFile(_timestamp_pb2.DESCRIPTOR.serialized_pb)
+        pool.AddSerializedFile(_AUDIT_ENVELOPE_FILE_PROTO_BYTES)
+        descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
+    except Exception as exc:  # pragma: no cover - defensive fail-closed path
+        raise RuntimeError("failed to initialise audit envelope protobuf schema") from exc
     return message_factory.GetMessageClass(descriptor)
 
 

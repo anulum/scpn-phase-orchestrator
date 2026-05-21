@@ -20,6 +20,7 @@ from google.protobuf import descriptor_pool
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
     AuditStreamEvent,
+    _AuditEnvelope,
     read_event_stream,
     verify_event_stream_integrity,
 )
@@ -37,6 +38,27 @@ def test_audit_envelope_descriptor_is_not_registered_in_default_pool() -> None:
 
     with pytest.raises(KeyError):
         default_pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
+
+
+def test_audit_envelope_descriptor_contract_is_stable() -> None:
+    descriptor = _AuditEnvelope.DESCRIPTOR
+    assert descriptor.full_name == "spo.audit.AuditEnvelope"
+    assert [field.name for field in descriptor.fields] == [
+        "schema_version",
+        "stream_id",
+        "sequence",
+        "event_type",
+        "recorded_at",
+        "source",
+        "previous_hash",
+        "payload_json",
+        "payload_sha256",
+        "event_hash",
+        "signature_algorithm",
+        "signature_key_id",
+        "signature",
+        "audit_mode",
+    ]
 
 
 def _state() -> UPDEState:
