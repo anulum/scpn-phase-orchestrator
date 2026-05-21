@@ -694,6 +694,12 @@ def test_u1_tcbo_observer_observe_rejects_non_array_input() -> None:
         obs.observe([0.0, 0.1])  # type: ignore[arg-type]
 
 
+def test_u1_tcbo_observer_observe_rejects_non_vector_input() -> None:
+    obs = TCBOObserver()
+    with pytest.raises(ValueError, match="1D vector"):
+        obs.observe(np.zeros((2, 2), dtype=float))
+
+
 def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
     net = PetriNet(
         places=[Place("nominal")],
