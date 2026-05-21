@@ -201,3 +201,66 @@ class TestEntropyProdRustDispatch:
         )
         assert np.isfinite(rate)
         assert rate >= 0.0
+
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = entropy_prod_module.ACTIVE_BACKEND
+        previous_available = list(entropy_prod_module.AVAILABLE_BACKENDS)
+        previous_loader = entropy_prod_module._LOADERS["go"]
+        entropy_prod_module.ACTIVE_BACKEND = "go"
+        entropy_prod_module.AVAILABLE_BACKENDS = ["go", "python"]
+        entropy_prod_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            entropy_prod_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend = entropy_prod_module._dispatch()
+        finally:
+            entropy_prod_module.ACTIVE_BACKEND = previous_backend
+            entropy_prod_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(entropy_prod_module._LOADERS, "go", previous_loader)
+            entropy_prod_module._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = entropy_prod_module.ACTIVE_BACKEND
+        previous_available = list(entropy_prod_module.AVAILABLE_BACKENDS)
+        previous_loader = entropy_prod_module._LOADERS["go"]
+        entropy_prod_module.ACTIVE_BACKEND = "go"
+        entropy_prod_module.AVAILABLE_BACKENDS = ["go", "python"]
+        entropy_prod_module._BACKEND_CACHE.clear()
+        call_count = 0
+
+        def fake_backend(
+            _phases: np.ndarray,
+            _omegas: np.ndarray,
+            _knm: np.ndarray,
+            _alpha: float,
+            _dt: float,
+        ) -> float:
+            return 0.0
+
+        def loader():
+            nonlocal call_count
+            call_count += 1
+            return fake_backend
+
+        monkeypatch.setitem(entropy_prod_module._LOADERS, "go", loader)
+        try:
+            b1 = entropy_prod_module._dispatch()
+            b2 = entropy_prod_module._dispatch()
+        finally:
+            entropy_prod_module.ACTIVE_BACKEND = previous_backend
+            entropy_prod_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(entropy_prod_module._LOADERS, "go", previous_loader)
+            entropy_prod_module._BACKEND_CACHE.clear()
+
+        assert b1 is fake_backend
+        assert b2 is fake_backend
+        assert call_count == 1
