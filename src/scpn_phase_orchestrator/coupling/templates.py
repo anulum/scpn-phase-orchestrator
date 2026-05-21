@@ -50,7 +50,8 @@ class KnmTemplateSet:
         """Register a template, overwriting any existing one with the same name."""
         if not isinstance(template, KnmTemplate):
             raise TypeError(f"template must be KnmTemplate, got {template!r}")
-        if not template.name.strip():
+        normalized_name = template.name.strip()
+        if not normalized_name:
             raise ValueError("template name must be a non-empty string")
         if not isinstance(template.description, str) or not template.description.strip():
             raise ValueError("template description must be a non-empty string")
@@ -75,7 +76,7 @@ class KnmTemplateSet:
             float(np.max(template.alpha))
         ):
             raise ValueError("template alpha must contain finite real values")
-        self._templates[template.name] = template
+        self._templates[normalized_name] = template
 
     def get(self, name: str) -> KnmTemplate:
         """Retrieve a template by name. Raises KeyError if not found."""
