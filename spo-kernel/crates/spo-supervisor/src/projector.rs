@@ -39,6 +39,14 @@ pub struct ActionProjector {
 impl ActionProjector {
     #[must_use]
     pub fn new(rate_limits: HashMap<Knob, f64>, value_bounds: HashMap<Knob, (f64, f64)>) -> Self {
+        let rate_limits = rate_limits
+            .into_iter()
+            .filter(|(_, limit)| limit.is_finite() && *limit >= 0.0)
+            .collect();
+        let value_bounds = value_bounds
+            .into_iter()
+            .filter(|(_, (lo, hi))| lo.is_finite() && hi.is_finite() && lo <= hi)
+            .collect();
         Self {
             rate_limits,
             value_bounds,
@@ -255,6 +263,22 @@ mod tests {
         let proj = ActionProjector::new(rate_limits, HashMap::new());
         let result = proj.project(&make_action(Knob::K, 5.0), 0.0);
         assert!((result.value - 0.1).abs() < 1e-12);
+    }
+
+    #[test]
+    fn constructor_filters_invalid_limits_and_bounds() {
+        let mut rate_limits = HashMap::new();
+        rate_limits.insert(Knob::K, -1.0);
+        rate_limits.insert(Knob::Zeta, 0.2);
+        let mut bounds = HashMap::new();
+        bounds.insert(Knob::K, (1.0, -1.0));
+        bounds.insert(Knob::Zeta, (0.0, 1.0));
+        let proj = ActionProjector::new(rate_limits, bounds);
+        let action = make_action(Knob::K, 10.0);
+        let out = proj.project(&action, 0.0);
+        assert_eq!(out.value, 10.0);
+        let out2 = proj.project(&make_action(Knob::Zeta, 2.0), 0.0);
+        assert_eq!(out2.value, 0.2);
     }
 
     #[test]
