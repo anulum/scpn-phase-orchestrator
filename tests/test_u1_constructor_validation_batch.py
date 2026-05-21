@@ -178,6 +178,12 @@ def test_u1_knm_template_set_rejects_non_square_template() -> None:
         )
 
 
+def test_u1_knm_template_set_add_rejects_non_template_payload() -> None:
+    reg = KnmTemplateSet()
+    with pytest.raises(TypeError, match="template must be KnmTemplate"):
+        reg.add(object())  # type: ignore[arg-type]
+
+
 def test_u1_knm_template_set_rejects_blank_description() -> None:
     reg = KnmTemplateSet()
     with pytest.raises(ValueError, match="description"):
