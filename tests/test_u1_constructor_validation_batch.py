@@ -659,6 +659,20 @@ def test_u1_petri_adapter_step_rejects_non_finite_ctx_metric_value() -> None:
         adapter.step({"metric": float("nan")})
 
 
+def test_u1_petri_adapter_step_rejects_non_mapping_context() -> None:
+    net = PetriNet(
+        places=[Place("nominal")],
+        transitions=[],
+    )
+    adapter = PetriNetAdapter(
+        net=net,
+        initial_marking=Marking({"nominal": 1}),
+        place_to_regime={"nominal": "NOMINAL"},
+    )
+    with pytest.raises(Exception, match="ctx must be a mapping"):
+        adapter.step([("metric", 0.1)])  # type: ignore[arg-type]
+
+
 def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
     net = PetriNet(
         places=[Place("nominal")],
