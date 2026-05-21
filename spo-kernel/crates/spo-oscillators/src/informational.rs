@@ -22,17 +22,19 @@ pub fn event_phase(timestamps: &[f64]) -> (f64, f64, f64) {
     if timestamps.len() < 2 {
         return (0.0, 0.0, 0.0);
     }
+    if timestamps.iter().any(|t| !t.is_finite()) {
+        return (0.0, 0.0, 0.0);
+    }
+    if timestamps.windows(2).any(|w| {
+        let dt = w[1] - w[0];
+        !dt.is_finite() || dt <= 0.0
+    }) {
+        return (0.0, 0.0, 0.0);
+    }
 
     let intervals: Vec<f64> = timestamps
         .windows(2)
-        .filter_map(|w| {
-            let dt = w[1] - w[0];
-            if dt > 0.0 {
-                Some(dt)
-            } else {
-                None
-            }
-        })
+        .map(|w| w[1] - w[0])
         .collect();
 
     if intervals.is_empty() {
@@ -54,6 +56,9 @@ pub fn event_phase(timestamps: &[f64]) -> (f64, f64, f64) {
     // Cumulative phase via median frequency × total elapsed time
     let total_time: f64 =
         timestamps.last().copied().unwrap_or(0.0) - timestamps.first().copied().unwrap_or(0.0);
+    if !total_time.is_finite() || total_time <= 0.0 {
+        return (0.0, 0.0, 0.0);
+    }
     let omega_hz = omega_median / TAU;
     let cumulative = TAU * omega_hz * total_time;
     let theta = cumulative.rem_euclid(TAU);
@@ -133,8 +138,20 @@ mod tests {
     fn nan_in_timestamps_no_panic() {
         let timestamps = vec![0.0, 1.0, f64::NAN, 3.0, 4.0];
         let (theta, omega, quality) = event_phase(&timestamps);
-        assert!(theta.is_finite() || theta == 0.0);
-        assert!(omega.is_finite() || omega == 0.0);
-        assert!(quality.is_finite() || quality == 0.0);
+        assert_eq!((theta, omega, quality), (0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn infinite_in_timestamps_fail_closed() {
+        let timestamps = vec![0.0, 0.1, f64::INFINITY, 0.3];
+        let out = event_phase(&timestamps);
+        assert_eq!(out, (0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn repeated_timestamps_fail_closed() {
+        let timestamps = vec![0.0, 0.1, 0.1, 0.2];
+        let out = event_phase(&timestamps);
+        assert_eq!(out, (0.0, 0.0, 0.0));
     }
 }
