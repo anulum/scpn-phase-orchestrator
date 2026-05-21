@@ -256,6 +256,12 @@ def test_u1_geometry_carrier_decode_rejects_non_array_input() -> None:
         carrier.decode(z=[0.1, 0.2, 0.3, 0.4])  # type: ignore[arg-type]
 
 
+def test_u1_geometry_carrier_update_rejects_boolean_epsilon() -> None:
+    carrier = GeometryCarrier(4)
+    with pytest.raises(ValueError, match="finite positive real"):
+        carrier.update(cost=0.0, epsilon=True)  # type: ignore[arg-type]
+
+
 def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
     with pytest.raises(Exception, match="directory"):
         AuditLogger(tmp_path)
