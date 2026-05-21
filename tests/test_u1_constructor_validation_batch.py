@@ -209,6 +209,12 @@ def test_u1_boundary_observer_observe_rejects_negative_step() -> None:
         obs.observe({}, step=-1)
 
 
+def test_u1_boundary_observer_observe_rejects_boolean_step() -> None:
+    obs = BoundaryObserver([])
+    with pytest.raises(ValueError, match="non-negative integer"):
+        obs.observe({}, step=True)  # type: ignore[arg-type]
+
+
 def test_u1_boundary_observer_observe_rejects_bool_value() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(ValueError, match="finite float"):
