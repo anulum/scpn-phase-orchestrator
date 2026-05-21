@@ -116,9 +116,20 @@ pub fn project_value(
     hi: f64,
     rate_limit: Option<f64>,
 ) -> f64 {
+    if !proposed.is_finite()
+        || !previous.is_finite()
+        || lo.is_nan()
+        || hi.is_nan()
+        || lo > hi
+    {
+        return 0.0;
+    }
     let mut clamped = proposed.clamp(lo, hi);
 
     if let Some(rate_limit) = rate_limit {
+        if !rate_limit.is_finite() || rate_limit < 0.0 {
+            return previous.clamp(lo, hi);
+        }
         let delta = clamped - previous;
         if delta.abs() > rate_limit {
             clamped = previous + rate_limit * delta.signum();
@@ -307,5 +318,11 @@ mod tests {
         let results = proj.project_batch(&actions, &prev);
         assert_eq!(results[0].value, 1.0);
         assert_eq!(results[1].value, 0.0);
+    }
+
+    #[test]
+    fn project_value_non_finite_fail_closed() {
+        assert_eq!(project_value(f64::NAN, 0.0, -1.0, 1.0, None), 0.0);
+        assert_eq!(project_value(1.0, 0.0, 2.0, 1.0, None), 0.0);
     }
 }
