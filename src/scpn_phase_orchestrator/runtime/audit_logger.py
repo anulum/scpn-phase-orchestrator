@@ -305,6 +305,10 @@ class AuditLogger:
         if knm_r is not None:
             record["knm_r"] = knm_r.tolist()
         if epsilon is not None:
+            if isinstance(epsilon, bool) or not isinstance(epsilon, (int, float)):
+                raise AuditError(f"epsilon must be finite real, got {epsilon!r}")
+            if not isfinite(float(epsilon)):
+                raise AuditError(f"epsilon must be finite real, got {epsilon!r}")
             record["epsilon"] = epsilon
         if channel_runtime is not None:
             if not isinstance(channel_runtime, dict):

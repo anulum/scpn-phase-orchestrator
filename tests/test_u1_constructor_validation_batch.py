@@ -737,6 +737,23 @@ def test_u1_audit_logger_log_step_rejects_non_dict_channel_runtime(tmp_path) -> 
         logger._fh.close()
 
 
+def test_u1_audit_logger_log_step_rejects_non_finite_epsilon(tmp_path) -> None:
+    from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        state = UPDEState(
+            regime_id="nominal",
+            stability_proxy=0.0,
+            layers=[LayerState(0.0, 0.0)],
+            cross_layer_alignment=[],
+        )
+        with pytest.raises(Exception, match="epsilon must be finite real"):
+            logger.log_step(0, state, [], epsilon=float("inf"))
+    finally:
+        logger._fh.close()
+
+
 def test_u1_audit_logger_log_event_rejects_non_string_event_type(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
