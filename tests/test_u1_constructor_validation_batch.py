@@ -298,6 +298,11 @@ def test_u1_knm_template_set_get_rejects_whitespace_name() -> None:
         KnmTemplateSet().get("   ")
 
 
+def test_u1_knm_template_set_get_rejects_unknown_name() -> None:
+    with pytest.raises(KeyError, match="Unknown template"):
+        KnmTemplateSet().get("missing")
+
+
 def test_u1_knm_template_set_get_strips_lookup_name() -> None:
     reg = KnmTemplateSet()
     tpl = KnmTemplate(
