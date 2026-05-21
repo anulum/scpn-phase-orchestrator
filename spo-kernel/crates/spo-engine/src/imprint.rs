@@ -24,14 +24,17 @@ impl ImprintModel {
     /// # Errors
     /// Returns `InvalidConfig` if decay_rate is negative or saturation is non-positive.
     pub fn new(n: usize, decay_rate: f64, saturation: f64) -> SpoResult<Self> {
-        if decay_rate < 0.0 {
+        if n == 0 {
+            return Err(SpoError::InvalidConfig("n must be > 0".into()));
+        }
+        if !decay_rate.is_finite() || decay_rate < 0.0 {
             return Err(SpoError::InvalidConfig(format!(
-                "decay_rate must be non-negative, got {decay_rate}"
+                "decay_rate must be finite and non-negative, got {decay_rate}"
             )));
         }
-        if saturation <= 0.0 {
+        if !saturation.is_finite() || saturation <= 0.0 {
             return Err(SpoError::InvalidConfig(format!(
-                "saturation must be positive, got {saturation}"
+                "saturation must be finite and positive, got {saturation}"
             )));
         }
         Ok(Self {
@@ -48,6 +51,13 @@ impl ImprintModel {
     /// * `exposure` - Per-oscillator exposure intensities (length N).
     /// * `dt` - Integration timestep in seconds.
     pub fn update(&mut self, exposure: &[f64], dt: f64) {
+        if exposure.len() != self.m.len()
+            || !dt.is_finite()
+            || dt < 0.0
+            || exposure.iter().any(|v| !v.is_finite())
+        {
+            return;
+        }
         let decay = (-self.decay_rate * dt).exp();
         for (m_k, &e_k) in self.m.iter_mut().zip(exposure.iter()) {
             *m_k = (*m_k * decay + e_k * dt).clamp(0.0, self.saturation);
@@ -115,6 +125,11 @@ mod tests {
     #[test]
     fn zero_saturation_rejected() {
         assert!(ImprintModel::new(4, 0.1, 0.0).is_err());
+    }
+
+    #[test]
+    fn zero_nodes_rejected() {
+        assert!(ImprintModel::new(0, 0.1, 1.0).is_err());
     }
 
     #[test]
@@ -213,5 +228,14 @@ mod tests {
         let im = ImprintModel::new(2, 0.0, 10.0).unwrap();
         let mut alpha = vec![1.0; 5];
         assert!(im.modulate_lag(&mut alpha).is_err());
+    }
+
+    #[test]
+    fn update_ignores_non_finite_or_mismatched_exposure() {
+        let mut im = ImprintModel::new(2, 0.0, 10.0).unwrap();
+        im.update(&[1.0], 1.0);
+        assert_eq!(im.m, vec![0.0, 0.0]);
+        im.update(&[f64::NAN, 1.0], 1.0);
+        assert_eq!(im.m, vec![0.0, 0.0]);
     }
 }
