@@ -1,0 +1,1 @@
+{"text":"Rust hardening: InertialStepper step now validates vector/matrix shapes and rejects non-finite runtime state and parameters.", "source":"codex", "project":"SCPN-PHASE-ORCHESTRATOR"}

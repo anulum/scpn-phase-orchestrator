@@ -82,6 +82,39 @@ impl InertialStepper {
     ) -> SpoResult<()> {
         let n = self.n;
         let dt = self.dt;
+        if theta.len() != n
+            || omega_dot.len() != n
+            || power.len() != n
+            || inertia.len() != n
+            || damping.len() != n
+        {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected theta/omega_dot/power/inertia/damping length {n}, got {}/{}/{}/{}/{}",
+                theta.len(),
+                omega_dot.len(),
+                power.len(),
+                inertia.len(),
+                damping.len()
+            )));
+        }
+        if knm.len() != n * n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected knm length {} got {}",
+                n * n,
+                knm.len()
+            )));
+        }
+        if theta.iter().any(|v| !v.is_finite())
+            || omega_dot.iter().any(|v| !v.is_finite())
+            || power.iter().any(|v| !v.is_finite())
+            || knm.iter().any(|v| !v.is_finite())
+            || inertia.iter().any(|v| !v.is_finite())
+            || damping.iter().any(|v| !v.is_finite())
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "inertial inputs contain NaN/Inf".into(),
+            ));
+        }
 
         compute_derivative(
             n,
