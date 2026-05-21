@@ -35,3 +35,20 @@ Compatibility guarantees:
 Verification:
 - `tests/test_grpc_gen_aliases.py::test_top_level_grpc_aliases_resolve_to_runtime_modules`
 - `tests/test_grpc_gen_aliases.py::test_fallback_servicer_alias_registers_handlers`
+
+## `scpn_phase_orchestrator.grpc_gen.spo_pb2`
+
+Purpose:
+- Preserve the public protobuf message import path for generated SPO gRPC
+  bindings while runtime modules remain canonical.
+
+Canonical runtime source:
+- `scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2`
+
+Compatibility guarantees:
+1. Public path stability for generated protobuf message symbols.
+2. Runtime and public modules expose equivalent generated message contracts.
+3. Alias indirection is explicit and import-safe.
+
+Verification:
+- `tests/test_grpc_gen_aliases.py::test_top_level_grpc_aliases_resolve_to_runtime_modules`

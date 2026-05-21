@@ -96,6 +96,12 @@ def test_fallback_grpc_alias_module_script_executes_without_error() -> None:
     assert "_module" in result
 
 
+def test_spo_pb2_alias_module_script_executes_without_error() -> None:
+    module_path = "src/scpn_phase_orchestrator/grpc_gen/spo_pb2.py"
+    result = runpy.run_path(module_path, run_name="__main__")
+    assert "_module" in result
+
+
 def test_fallback_servicer_alias_registers_handlers() -> None:
     fallback_grpc = importlib.import_module(
         "scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback"
