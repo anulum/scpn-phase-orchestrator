@@ -451,6 +451,28 @@ def test_u1_audit_logger_log_step_rejects_non_list_actions(tmp_path) -> None:
         logger._fh.close()
 
 
+def test_u1_audit_logger_log_step_rejects_non_dict_channel_runtime(tmp_path) -> None:
+    from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        state = UPDEState(
+            regime_id="nominal",
+            stability_proxy=0.0,
+            layers=[LayerState(0.0, 0.0)],
+            cross_layer_alignment=[],
+        )
+        with pytest.raises(Exception, match="channel_runtime"):
+            logger.log_step(
+                0,
+                state,
+                [],
+                channel_runtime=["bad"],  # type: ignore[arg-type]
+            )
+    finally:
+        logger._fh.close()
+
+
 def test_u1_audit_logger_log_step_rejects_non_finite_phases_payload(tmp_path) -> None:
     from scpn_phase_orchestrator.actuation.mapper import ControlAction
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState

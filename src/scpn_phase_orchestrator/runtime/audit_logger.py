@@ -307,6 +307,10 @@ class AuditLogger:
         if epsilon is not None:
             record["epsilon"] = epsilon
         if channel_runtime is not None:
+            if not isinstance(channel_runtime, dict):
+                raise AuditError(
+                    "channel_runtime must be dict[str, object] when provided"
+                )
             record["channel_runtime"] = channel_runtime
         self._write_record(record)
 
