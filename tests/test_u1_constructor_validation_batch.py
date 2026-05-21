@@ -232,6 +232,12 @@ def test_u1_geometry_carrier_rejects_boolean_seed() -> None:
         GeometryCarrier(4, seed=True)  # type: ignore[arg-type]
 
 
+def test_u1_geometry_carrier_reset_rejects_boolean_seed() -> None:
+    carrier = GeometryCarrier(4)
+    with pytest.raises(TypeError, match="seed must be int or None"):
+        carrier.reset(seed=True)  # type: ignore[arg-type]
+
+
 def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
     with pytest.raises(Exception, match="directory"):
         AuditLogger(tmp_path)
