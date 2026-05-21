@@ -126,6 +126,15 @@ impl UPDEStepper {
                 ));
             }
         }
+        if omegas.iter().any(|w| !w.is_finite())
+            || knm.iter().any(|k| !k.is_finite())
+            || alpha.iter().any(|a| !a.is_finite())
+            || !self.modulator.is_finite()
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "omegas/knm/alpha/modulator contain NaN/Inf".into(),
+            ));
+        }
         if !zeta.is_finite() {
             return Err(SpoError::IntegrationDiverged("zeta is NaN/Inf".into()));
         }
