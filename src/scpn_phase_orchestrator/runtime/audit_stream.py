@@ -468,6 +468,10 @@ def iter_event_stream(
 
     poll_interval = _validate_poll_interval_s(poll_interval_s)
     path_obj = Path(path)
+    if not from_start and not path_obj.exists():
+        raise FileNotFoundError(
+            f"audit event stream path does not exist: {path_obj}"
+        )
     offset = 0
     if not from_start and path_obj.exists():
         offset = len(read_event_stream(path_obj))

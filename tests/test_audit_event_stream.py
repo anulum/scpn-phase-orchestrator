@@ -312,3 +312,23 @@ def test_tail_event_stream_rejects_invalid_max_events(max_events: object) -> Non
             max_events=max_events,  # type: ignore[arg-type]
             poll_interval_s=0.0,
         )
+
+
+def test_iter_event_stream_missing_path_requires_from_start() -> None:
+    with pytest.raises(FileNotFoundError, match="does not exist"):
+        iterator = iter_event_stream(
+            "nonexistent.spoa",
+            from_start=False,
+            poll_interval_s=0.0,
+        )
+        next(iterator)
+
+
+def test_tail_event_stream_missing_path_requires_from_start() -> None:
+    with pytest.raises(FileNotFoundError, match="does not exist"):
+        tail_event_stream(
+            "nonexistent.spoa",
+            from_start=False,
+            max_events=1,
+            poll_interval_s=0.0,
+        )
