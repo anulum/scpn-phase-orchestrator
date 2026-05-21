@@ -190,7 +190,7 @@ impl PetriNet {
             new.set(&arc.place, cur.saturating_sub(arc.weight));
         }
         for arc in &t.outputs {
-            new.set(&arc.place, new.get(&arc.place) + arc.weight);
+            new.set(&arc.place, new.get(&arc.place).saturating_add(arc.weight));
         }
         new
     }
@@ -525,5 +525,26 @@ mod tests {
         m.set("a", 2);
         let en = net.enabled(&m, &HashMap::new());
         assert_eq!(en.len(), 2);
+    }
+
+    #[test]
+    fn fire_saturates_output_token_addition() {
+        let net = PetriNet::new(
+            vec!["a".into()],
+            vec![Transition {
+                name: "loop".into(),
+                inputs: vec![],
+                outputs: vec![Arc {
+                    place: "a".into(),
+                    weight: 10,
+                }],
+                guard: None,
+            }],
+        )
+        .expect("valid");
+        let mut m = Marking::default();
+        m.set("a", u32::MAX - 5);
+        let m2 = net.fire(&m, 0);
+        assert_eq!(m2.get("a"), u32::MAX);
     }
 }
