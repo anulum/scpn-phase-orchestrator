@@ -21,7 +21,9 @@ from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
     AuditStreamEvent,
     _AuditEnvelope,
+    iter_event_stream,
     read_event_stream,
+    tail_event_stream,
     verify_event_stream_integrity,
 )
 from scpn_phase_orchestrator.runtime.cli import main
@@ -289,4 +291,24 @@ def test_audit_stream_event_rejects_signed_mode_without_signature_metadata() -> 
             signature="",
             audit_mode="signed",
             payload=payload,
+        )
+
+
+@pytest.mark.parametrize("poll_interval_s", [True, -0.1, float("nan"), float("inf"), "0.2"])
+def test_iter_event_stream_rejects_invalid_poll_interval(poll_interval_s: object) -> None:
+    with pytest.raises(ValueError, match="poll_interval_s"):
+        iterator = iter_event_stream(
+            "nonexistent.spoa",
+            poll_interval_s=poll_interval_s,  # type: ignore[arg-type]
+        )
+        next(iterator)
+
+
+@pytest.mark.parametrize("max_events", [0, -1, True, 1.5, "2"])
+def test_tail_event_stream_rejects_invalid_max_events(max_events: object) -> None:
+    with pytest.raises(ValueError, match="max_events"):
+        tail_event_stream(
+            "nonexistent.spoa",
+            max_events=max_events,  # type: ignore[arg-type]
+            poll_interval_s=0.0,
         )

@@ -449,6 +449,15 @@ def read_event_stream(path: str | Path) -> list[AuditStreamEvent]:
         return _read_events_from_handle(fh)
 
 
+def _validate_poll_interval_s(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError("poll_interval_s must be a finite non-negative real")
+    parsed = float(value)
+    if not parsed >= 0.0 or not parsed < float("inf"):
+        raise ValueError("poll_interval_s must be a finite non-negative real")
+    return parsed
+
+
 def iter_event_stream(
     path: str | Path,
     *,
@@ -457,6 +466,7 @@ def iter_event_stream(
 ) -> Iterator[AuditStreamEvent]:
     """Yield existing and newly appended stream events in order."""
 
+    poll_interval = _validate_poll_interval_s(poll_interval_s)
     path_obj = Path(path)
     offset = 0
     if not from_start and path_obj.exists():
@@ -465,7 +475,7 @@ def iter_event_stream(
         current = read_event_stream(path_obj) if path_obj.exists() else []
         yield from current[offset:]
         offset = len(current)
-        time.sleep(poll_interval_s)
+        time.sleep(poll_interval)
 
 
 def tail_event_stream(
@@ -482,11 +492,14 @@ def tail_event_stream(
 
     if max_events is None:
         raise ValueError("max_events is required for bounded tail_event_stream")
+    if isinstance(max_events, bool) or not isinstance(max_events, int) or max_events <= 0:
+        raise ValueError("max_events must be a positive integer")
+    poll_interval = _validate_poll_interval_s(poll_interval_s)
     events: list[AuditStreamEvent] = []
     for event in iter_event_stream(
         path,
         from_start=from_start,
-        poll_interval_s=poll_interval_s,
+        poll_interval_s=poll_interval,
     ):
         events.append(event)
         if len(events) >= max_events:
