@@ -121,16 +121,30 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object | None:
-    if ACTIVE_BACKEND == "python":
-        return None
-    backend_cache = _BACKEND_FN_CACHE.get(ACTIVE_BACKEND)
-    if backend_cache is None:
-        try:
-            backend_cache = _LOADERS[ACTIVE_BACKEND]()
-        except (ImportError, RuntimeError, OSError):
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    deduped: list[str] = []
+    for backend in ordered_backends:
+        if backend in deduped:
+            continue
+        deduped.append(backend)
+    for backend in deduped:
+        if backend == "python":
             return None
-        _BACKEND_FN_CACHE[ACTIVE_BACKEND] = backend_cache
-    return backend_cache.get(fn_name)
+        backend_cache = _BACKEND_FN_CACHE.get(backend)
+        if backend_cache is None:
+            loader = _LOADERS.get(backend)
+            if loader is None:
+                continue
+            try:
+                backend_cache = loader()
+            except (ImportError, RuntimeError, OSError):
+                continue
+            _BACKEND_FN_CACHE[backend] = backend_cache
+        fn = backend_cache.get(fn_name)
+        if fn is None:
+            continue
+        return fn
+    return None
 
 
 def _validate_trajectory(trajectory: object) -> FloatArray:

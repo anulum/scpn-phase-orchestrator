@@ -223,8 +223,10 @@ class TestKaplanYorkeDimension:
 class TestBackendDispatch:
     def test_dispatch_returns_none_when_active_loader_fails(self, monkeypatch):
         previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_available = list(dim_mod.AVAILABLE_BACKENDS)
         previous_loader = dim_mod._LOADERS["go"]
         dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod.AVAILABLE_BACKENDS = ["go", "python"]
         dim_mod._BACKEND_FN_CACHE.clear()
         monkeypatch.setitem(
             dim_mod._LOADERS,
@@ -235,6 +237,7 @@ class TestBackendDispatch:
             backend_fn = dim_mod._dispatch("ci")
         finally:
             dim_mod.ACTIVE_BACKEND = previous_backend
+            dim_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
             dim_mod._BACKEND_FN_CACHE.clear()
 
@@ -242,18 +245,50 @@ class TestBackendDispatch:
 
     def test_dispatch_returns_none_for_missing_backend_function(self, monkeypatch):
         previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_available = list(dim_mod.AVAILABLE_BACKENDS)
         previous_loader = dim_mod._LOADERS["go"]
         dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod.AVAILABLE_BACKENDS = ["go", "python"]
         dim_mod._BACKEND_FN_CACHE.clear()
         monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {"ky": lambda _x: 1.0})
         try:
             backend_fn = dim_mod._dispatch("ci")
         finally:
             dim_mod.ACTIVE_BACKEND = previous_backend
+            dim_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
             dim_mod._BACKEND_FN_CACHE.clear()
 
         assert backend_fn is None
+
+    def test_dispatch_falls_through_to_next_available_backend(self, monkeypatch):
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_available = list(dim_mod.AVAILABLE_BACKENDS)
+        previous_go = dim_mod._LOADERS["go"]
+        previous_rust = dim_mod._LOADERS["rust"]
+        dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod.AVAILABLE_BACKENDS = ["go", "rust", "python"]
+        dim_mod._BACKEND_FN_CACHE.clear()
+
+        def fake_ci(*_args):
+            return np.array([1.0], dtype=np.float64)
+
+        monkeypatch.setitem(
+            dim_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        monkeypatch.setitem(dim_mod._LOADERS, "rust", lambda: {"ci": fake_ci})
+        try:
+            backend_fn = dim_mod._dispatch("ci")
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            dim_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(dim_mod._LOADERS, "go", previous_go)
+            monkeypatch.setitem(dim_mod._LOADERS, "rust", previous_rust)
+            dim_mod._BACKEND_FN_CACHE.clear()
+
+        assert backend_fn is fake_ci
 
     def test_rust_loader_exposes_ci_and_ky_functions(self, monkeypatch):
         def fake_ci(*_args):
