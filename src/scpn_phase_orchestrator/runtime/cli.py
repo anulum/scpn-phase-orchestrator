@@ -6080,6 +6080,239 @@ def digital_twin_observability_bundle(
     click.echo(json.dumps(bundle_payload, indent=2, sort_keys=True))
 
 
+@main.command("digital-twin-grafana-dashboard-pack")
+@click.argument(
+    "observability_bundle_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--adapter-family",
+    required=True,
+    help="Adapter family label (for example: rest, grpc, kafka, hardware).",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Component creating Grafana dashboard pack artifact.",
+)
+def digital_twin_grafana_dashboard_pack(
+    observability_bundle_json: Path,
+    adapter_family: str,
+    created_by: str,
+) -> None:
+    """Emit deterministic Grafana dashboard pack from observability bundle."""
+    if not created_by:
+        raise click.ClickException(
+            "digital-twin grafana dashboard pack schema mismatch: "
+            "created_by must be non-empty"
+        )
+    if not adapter_family:
+        raise click.ClickException(
+            "digital-twin grafana dashboard pack schema mismatch: "
+            "adapter_family must be non-empty"
+        )
+    bundle = _load_json_file(
+        observability_bundle_json,
+        artifact="digital-twin observability bundle",
+    )
+    if bundle.get("schema") != "scpn_digital_twin_observability_bundle_v1":
+        raise click.ClickException(
+            "digital-twin grafana dashboard pack schema mismatch: "
+            "unexpected observability bundle schema"
+        )
+    bundle_hash = _require_sha256(bundle.get("bundle_hash"), "bundle_hash")
+    contract_hash = _require_sha256(bundle.get("contract_hash"), "contract_hash")
+    metric_prefix = bundle.get("prometheus_metric_prefix")
+    if not isinstance(metric_prefix, str) or not metric_prefix:
+        raise click.ClickException(
+            "digital-twin grafana dashboard pack schema mismatch: "
+            "prometheus_metric_prefix must be non-empty string"
+        )
+    panels = [
+        {
+            "title": "Sync Acceptance Ratio",
+            "kind": "timeseries",
+            "query_template": (
+                f"sum({metric_prefix}_digital_twin_sync_accepted_total{{contract_hash=\"{contract_hash}\"}}) / "
+                f"(sum({metric_prefix}_digital_twin_sync_accepted_total{{contract_hash=\"{contract_hash}\"}}) + "
+                f"sum({metric_prefix}_digital_twin_sync_rejected_total{{contract_hash=\"{contract_hash}\"}}))"
+            ),
+            "unit": "percentunit",
+        },
+        {
+            "title": "Twin Residual Max",
+            "kind": "timeseries",
+            "query_template": (
+                f"{metric_prefix}_digital_twin_max_abs_residual{{contract_hash=\"{contract_hash}\"}}"
+            ),
+            "unit": "none",
+        },
+        {
+            "title": "Unhealthy Adapter Count",
+            "kind": "stat",
+            "query_template": (
+                f"{metric_prefix}_digital_twin_unhealthy_adapter_count{{contract_hash=\"{contract_hash}\"}}"
+            ),
+            "unit": "short",
+        },
+        {
+            "title": "Twin Mismatch Reasons",
+            "kind": "barchart",
+            "query_template": (
+                f"sum by (reason) ({metric_prefix}_digital_twin_mismatch_reason_count{{contract_hash=\"{contract_hash}\"}})"
+            ),
+            "unit": "short",
+        },
+        {
+            "title": "Scheduler Overdue Actions",
+            "kind": "stat",
+            "query_template": "linked_bundle.replay_linkage.scheduler_overdue_count",
+            "unit": "short",
+        },
+    ]
+    for panel in panels:
+        panel["panel_hash"] = _record_hash(panel)
+    payload: dict[str, object] = {
+        "schema": "scpn_digital_twin_grafana_dashboard_pack_v1",
+        "version": "1.0.0",
+        "adapter_family": adapter_family,
+        "contract_hash": contract_hash,
+        "observability_bundle_hash": bundle_hash,
+        "panel_count": len(panels),
+        "panels": panels,
+        "created_by": created_by,
+    }
+    payload["dashboard_pack_hash"] = _record_hash(payload)
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@main.command("digital-twin-live-deployment-playbook")
+@click.argument(
+    "observability_bundle_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "grafana_dashboard_pack_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--environment-name",
+    required=True,
+    help="Deployment environment name (for example: prod-eu-west).",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Component creating live deployment playbook artifact.",
+)
+def digital_twin_live_deployment_playbook(
+    observability_bundle_json: Path,
+    grafana_dashboard_pack_json: Path,
+    environment_name: str,
+    created_by: str,
+) -> None:
+    """Emit deterministic live deployment playbook from observability artifacts."""
+    if not created_by:
+        raise click.ClickException(
+            "digital-twin live deployment playbook schema mismatch: "
+            "created_by must be non-empty"
+        )
+    if not environment_name:
+        raise click.ClickException(
+            "digital-twin live deployment playbook schema mismatch: "
+            "environment_name must be non-empty"
+        )
+    bundle = _load_json_file(
+        observability_bundle_json,
+        artifact="digital-twin observability bundle",
+    )
+    if bundle.get("schema") != "scpn_digital_twin_observability_bundle_v1":
+        raise click.ClickException(
+            "digital-twin live deployment playbook schema mismatch: "
+            "unexpected observability bundle schema"
+        )
+    dashboard_pack = _load_json_file(
+        grafana_dashboard_pack_json,
+        artifact="digital-twin grafana dashboard pack",
+    )
+    if dashboard_pack.get("schema") != "scpn_digital_twin_grafana_dashboard_pack_v1":
+        raise click.ClickException(
+            "digital-twin live deployment playbook schema mismatch: "
+            "unexpected grafana dashboard pack schema"
+        )
+    bundle_hash = _require_sha256(bundle.get("bundle_hash"), "bundle_hash")
+    dashboard_linked_bundle_hash = _require_sha256(
+        dashboard_pack.get("observability_bundle_hash"),
+        "observability_bundle_hash",
+    )
+    if bundle_hash != dashboard_linked_bundle_hash:
+        raise click.ClickException(
+            "digital-twin live deployment playbook schema mismatch: "
+            "observability_bundle_hash mismatch"
+        )
+    replay_linkage = bundle.get("replay_linkage")
+    if not isinstance(replay_linkage, dict):
+        raise click.ClickException(
+            "digital-twin live deployment playbook schema mismatch: "
+            "replay_linkage must be object"
+        )
+    overdue = replay_linkage.get("scheduler_overdue_count")
+    blocked = replay_linkage.get("scheduler_blocked_count")
+    if not isinstance(overdue, int) or overdue < 0:
+        raise click.ClickException(
+            "digital-twin live deployment playbook schema mismatch: "
+            "scheduler_overdue_count must be non-negative integer"
+        )
+    if not isinstance(blocked, int) or blocked < 0:
+        raise click.ClickException(
+            "digital-twin live deployment playbook schema mismatch: "
+            "scheduler_blocked_count must be non-negative integer"
+        )
+    rollout_gate = "blocked" if blocked > 0 else ("degraded" if overdue > 0 else "ready")
+    steps = [
+        {
+            "id": "publish-metrics",
+            "description": "Expose Prometheus text from digital-twin observability bundle.",
+            "command_template": "spo digital-twin-observability-bundle EVIDENCE_JSON --created-by OPERATOR",
+        },
+        {
+            "id": "publish-dashboards",
+            "description": "Deploy Grafana dashboard pack for adapter family.",
+            "command_template": (
+                "spo digital-twin-grafana-dashboard-pack OBS_BUNDLE_JSON "
+                "--adapter-family FAMILY --created-by OPERATOR"
+            ),
+        },
+        {
+            "id": "verify-scheduler-health",
+            "description": "Review overdue/blocked scheduler telemetry linkage.",
+            "command_template": (
+                "Inspect replay_linkage.scheduler_overdue_count and "
+                "replay_linkage.scheduler_blocked_count in observability bundle"
+            ),
+        },
+    ]
+    for step in steps:
+        step["step_hash"] = _record_hash(step)
+    payload: dict[str, object] = {
+        "schema": "scpn_digital_twin_live_deployment_playbook_v1",
+        "version": "1.0.0",
+        "environment_name": environment_name,
+        "contract_hash": _require_sha256(bundle.get("contract_hash"), "contract_hash"),
+        "observability_bundle_hash": bundle_hash,
+        "dashboard_pack_hash": _require_sha256(
+            dashboard_pack.get("dashboard_pack_hash"),
+            "dashboard_pack_hash",
+        ),
+        "rollout_gate": rollout_gate,
+        "step_count": len(steps),
+        "steps": steps,
+        "created_by": created_by,
+    }
+    payload["playbook_hash"] = _record_hash(payload)
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
 @main.group()
 def queuewaves() -> None:
     """QueueWaves — real-time cascade failure detector."""

@@ -5931,6 +5931,149 @@ def test_digital_twin_observability_bundle_rejects_bad_scheduler_dashboard_schem
     assert "unexpected scheduler dashboard schema" in result.output
 
 
+def test_digital_twin_grafana_dashboard_pack_and_live_playbook(
+    runner,
+    tmp_path: Path,
+):
+    bundle_payload = {
+        "schema": "scpn_digital_twin_observability_bundle_v1",
+        "version": "1.0.0",
+        "contract_hash": "1" * 64,
+        "status": "warning",
+        "accepted_count": 10,
+        "rejected_count": 2,
+        "prometheus_metric_prefix": "spo",
+        "prometheus_text": "spo_digital_twin_sync_accepted_total 10\n",
+        "replay_linkage": {
+            "scheduler_dashboard_present": True,
+            "scheduler_replay_present": True,
+            "scheduler_row_count": 5,
+            "scheduler_overdue_count": 1,
+            "scheduler_blocked_count": 0,
+            "scheduler_completed_count": 4,
+            "scheduler_replay_count": 5,
+            "scheduler_replay_blocked_count": 0,
+            "scheduler_replay_completed_count": 4,
+            "scheduler_dashboard_hash": "2" * 64,
+            "scheduler_replay_hash": "3" * 64,
+        },
+        "created_by": "operator_console",
+    }
+    bundle_payload["bundle_hash"] = hashlib.sha256(
+        json.dumps(bundle_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(
+        json.dumps(bundle_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    pack = runner.invoke(
+        main,
+        [
+            "digital-twin-grafana-dashboard-pack",
+            str(bundle_path),
+            "--adapter-family",
+            "kafka",
+            "--created-by",
+            "operator_console",
+        ],
+    )
+    assert pack.exit_code == 0
+    pack_payload = json.loads(pack.output)
+    assert pack_payload["schema"] == "scpn_digital_twin_grafana_dashboard_pack_v1"
+    assert pack_payload["panel_count"] == len(pack_payload["panels"])
+    assert len(pack_payload["dashboard_pack_hash"]) == 64
+    pack_path = tmp_path / "pack.json"
+    pack_path.write_text(pack.output, encoding="utf-8")
+
+    playbook = runner.invoke(
+        main,
+        [
+            "digital-twin-live-deployment-playbook",
+            str(bundle_path),
+            str(pack_path),
+            "--environment-name",
+            "prod-eu-west",
+            "--created-by",
+            "operator_console",
+        ],
+    )
+    assert playbook.exit_code == 0
+    playbook_payload = json.loads(playbook.output)
+    assert playbook_payload["schema"] == "scpn_digital_twin_live_deployment_playbook_v1"
+    assert playbook_payload["rollout_gate"] == "degraded"
+    assert playbook_payload["step_count"] == len(playbook_payload["steps"])
+    assert len(playbook_payload["playbook_hash"]) == 64
+
+
+def test_digital_twin_live_deployment_playbook_rejects_bundle_hash_mismatch(
+    runner,
+    tmp_path: Path,
+):
+    bundle_payload = {
+        "schema": "scpn_digital_twin_observability_bundle_v1",
+        "version": "1.0.0",
+        "contract_hash": "1" * 64,
+        "status": "healthy",
+        "accepted_count": 1,
+        "rejected_count": 0,
+        "prometheus_metric_prefix": "spo",
+        "prometheus_text": "x",
+        "replay_linkage": {
+            "scheduler_dashboard_present": False,
+            "scheduler_replay_present": False,
+            "scheduler_row_count": 0,
+            "scheduler_overdue_count": 0,
+            "scheduler_blocked_count": 0,
+            "scheduler_completed_count": 0,
+            "scheduler_replay_count": 0,
+            "scheduler_replay_blocked_count": 0,
+            "scheduler_replay_completed_count": 0,
+            "scheduler_dashboard_hash": None,
+            "scheduler_replay_hash": None,
+        },
+        "created_by": "operator_console",
+        "bundle_hash": "2" * 64,
+    }
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(
+        json.dumps(bundle_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    pack_payload = {
+        "schema": "scpn_digital_twin_grafana_dashboard_pack_v1",
+        "version": "1.0.0",
+        "adapter_family": "rest",
+        "contract_hash": "1" * 64,
+        "observability_bundle_hash": "3" * 64,
+        "panel_count": 0,
+        "panels": [],
+        "created_by": "operator_console",
+        "dashboard_pack_hash": "4" * 64,
+    }
+    pack_path = tmp_path / "pack.json"
+    pack_path.write_text(
+        json.dumps(pack_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "digital-twin-live-deployment-playbook",
+            str(bundle_path),
+            str(pack_path),
+            "--environment-name",
+            "prod-eu-west",
+            "--created-by",
+            "operator_console",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "observability_bundle_hash mismatch" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,
