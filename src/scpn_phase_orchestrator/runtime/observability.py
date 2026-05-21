@@ -58,6 +58,14 @@ class RuntimeMetricSnapshot:
     latency_ms: float
     step_idx: int | None = None
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.upde_state, UPDEState):
+            raise ValueError("upde_state must be a UPDEState instance")
+        _validated_regime(self.regime)
+        _validated_latency_ms(self.latency_ms)
+        if self.step_idx is not None:
+            _validated_step_idx(self.step_idx)
+
 
 class PrometheusEvidenceSource:
     """Protocol-like base for audit-record evidence exported as metrics."""

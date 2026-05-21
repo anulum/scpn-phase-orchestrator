@@ -92,6 +92,34 @@ def test_runtime_observability_records_invalid_step_idx_as_fail_closed() -> None
         )
 
 
+def test_runtime_metric_snapshot_rejects_invalid_constructor_contracts() -> None:
+    with pytest.raises(ValueError, match="upde_state"):
+        RuntimeMetricSnapshot(  # type: ignore[arg-type]
+            upde_state="not-state",
+            regime="nominal",
+            latency_ms=0.1,
+        )
+    with pytest.raises(ValueError, match="regime"):
+        RuntimeMetricSnapshot(
+            upde_state=_state(),
+            regime="",
+            latency_ms=0.1,
+        )
+    with pytest.raises(ValueError, match="latency_ms"):
+        RuntimeMetricSnapshot(
+            upde_state=_state(),
+            regime="nominal",
+            latency_ms=-0.1,
+        )
+    with pytest.raises(ValueError, match="step_idx"):
+        RuntimeMetricSnapshot(
+            upde_state=_state(),
+            regime="nominal",
+            latency_ms=0.1,
+            step_idx=True,
+        )
+
+
 def test_metrics_exporter_enforces_prometheus_prefix() -> None:
     with pytest.raises(
         ValueError,
