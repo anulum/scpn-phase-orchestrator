@@ -91,6 +91,14 @@ def test_u1_action_projector_rejects_non_finite_value_bounds() -> None:
         )
 
 
+def test_u1_action_projector_rejects_inverted_value_bounds() -> None:
+    with pytest.raises(ValueError, match="require lo <= hi"):
+        ActionProjector(
+            rate_limits={"K": 0.1},
+            value_bounds={"K": (1.0, 0.0)},
+        )
+
+
 def test_u1_action_projector_rejects_non_dict_rate_limits() -> None:
     with pytest.raises(TypeError, match="rate_limits must be a dict"):
         ActionProjector(  # type: ignore[arg-type]
