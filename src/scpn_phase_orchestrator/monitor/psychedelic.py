@@ -69,7 +69,7 @@ def _load_rust_fn() -> Callable[..., float]:
     return cast("Callable[..., float]", _rust)
 
 
-def _load_mojo_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
+def _load_mojo_fn() -> Callable[..., float]:
     from ..experimental.accelerators.monitor._psychedelic_mojo import (
         _ensure_exe,
         entropy_from_phases_mojo,
@@ -79,7 +79,7 @@ def _load_mojo_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
     return entropy_from_phases_mojo
 
 
-def _load_julia_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
+def _load_julia_fn() -> Callable[..., float]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._psychedelic_julia import (
@@ -89,7 +89,7 @@ def _load_julia_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
     return entropy_from_phases_julia
 
 
-def _load_go_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
+def _load_go_fn() -> Callable[..., float]:
     from ..experimental.accelerators.monitor._psychedelic_go import (
         _load_lib,
         entropy_from_phases_go,

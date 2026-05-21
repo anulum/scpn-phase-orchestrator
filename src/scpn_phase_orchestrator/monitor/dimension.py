@@ -60,7 +60,7 @@ def _load_rust_fns() -> dict[str, object]:
     }
 
 
-def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_mojo_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._dimension_mojo import (
         _ensure_exe,
         correlation_integral_mojo,
@@ -71,7 +71,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     return {"ci": correlation_integral_mojo, "ky": kaplan_yorke_dimension_mojo}
 
 
-def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_julia_fns() -> dict[str, object]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._dimension_julia import (
@@ -85,7 +85,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     }
 
 
-def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_go_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._dimension_go import (
         _load_lib,
         correlation_integral_go,

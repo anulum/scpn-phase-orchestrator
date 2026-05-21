@@ -50,7 +50,7 @@ def _load_rust_fns() -> dict[str, object]:
     }
 
 
-def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_mojo_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._itpc_mojo import (
         _ensure_exe,
         compute_itpc_mojo,
@@ -61,7 +61,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     return {"itpc": compute_itpc_mojo, "persistence": itpc_persistence_mojo}
 
 
-def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_julia_fns() -> dict[str, object]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._itpc_julia import (
@@ -72,7 +72,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     return {"itpc": compute_itpc_julia, "persistence": itpc_persistence_julia}
 
 
-def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_go_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._itpc_go import (
         _load_lib,
         compute_itpc_go,
