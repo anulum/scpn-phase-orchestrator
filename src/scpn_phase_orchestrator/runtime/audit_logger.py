@@ -51,6 +51,8 @@ class AuditLogger:
     def __init__(self, path: str | Path, *, event_stream: str | Path | None = None):
         if not str(path).strip():
             raise AuditError("audit path must be a non-empty path")
+        if event_stream is not None and not str(event_stream).strip():
+            raise AuditError("event_stream path must be non-empty when provided")
         self._path = Path(path)
         if self._path.exists() and self._path.is_dir():
             raise AuditError(f"audit path must be a file path, got directory {self._path}")
