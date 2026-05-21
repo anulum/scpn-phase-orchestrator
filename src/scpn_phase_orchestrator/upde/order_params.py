@@ -197,12 +197,22 @@ _HAS_RUST = ACTIVE_BACKEND == "rust"
 
 
 def _dispatch(fn_name: str) -> object:
-    if ACTIVE_BACKEND == "python" or (ACTIVE_BACKEND == "rust" and not _HAS_RUST):
-        return None
-    try:
-        return _load_backend(ACTIVE_BACKEND)[fn_name]
-    except (ImportError, RuntimeError, OSError, KeyError):
-        return None
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    seen: set[str] = set()
+    for backend in ordered_backends:
+        if backend in seen:
+            continue
+        seen.add(backend)
+        if backend == "python":
+            return None
+        try:
+            fn = _load_backend(backend).get(fn_name)
+        except (ImportError, RuntimeError, OSError):
+            continue
+        if fn is None:
+            continue
+        return fn
+    return None
 
 
 # ---------------------------------------------------------------------

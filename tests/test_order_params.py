@@ -318,16 +318,60 @@ class TestDispatcher:
 
         monkeypatch.setattr(op_mod, "_load_backend", broken_loader)
         monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(
-            op_mod,
-            "_order_parameter_probe_seconds",
-            lambda name: float("inf"),
-        )
 
-        active, available = op_mod._resolve_backends()
+    def test_dispatch_falls_back_to_next_backend_when_active_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        assert active == "python"
-        assert available == ["python"]
+        calls: dict[str, int] = {"rust": 0, "go": 0}
+
+        def _fail_rust() -> dict[str, object]:
+            calls["rust"] += 1
+            raise ImportError("rust unavailable")
+
+        def _ok_go() -> dict[str, object]:
+            calls["go"] += 1
+            return {
+                "order_parameter": lambda phases: (0.75, 0.0),
+                "plv": lambda a, b: 0.5,
+                "layer_coherence": lambda phases, idx: 0.25,
+            }
+
+        monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(op_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
+
+        fn = op_mod._dispatch("order_parameter")
+        assert fn is not None
+        assert fn(np.array([0.0, 1.0], dtype=np.float64)) == (0.75, 0.0)
+        assert calls == {"rust": 1, "go": 1}
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        calls: dict[str, int] = {"go": 0}
+
+        def _ok_go() -> dict[str, object]:
+            calls["go"] += 1
+            return {
+                "order_parameter": lambda phases: (0.5, 0.0),
+                "plv": lambda a, b: 0.5,
+                "layer_coherence": lambda phases, idx: 0.5,
+            }
+
+        monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(op_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(op_mod, "_LOADERS", {"go": _ok_go})
+
+        op_mod._dispatch("order_parameter")
+        op_mod._dispatch("plv")
+
+        assert calls["go"] == 1
 
     def test_dispatch_returns_none_when_active_backend_symbol_missing(
         self, monkeypatch
@@ -380,13 +424,27 @@ class TestDispatcher:
         assert active == "rust"
         assert available == ["rust", "python"]
 
-    def test_dispatch_ignores_rust_when_rust_flag_is_false(self, monkeypatch) -> None:
+    def test_dispatch_falls_through_when_active_backend_has_no_symbol(
+        self, monkeypatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
+        monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
+        monkeypatch.setattr(op_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(
+            op_mod,
+            "_load_backend",
+            lambda name: (
+                {}
+                if name == "rust"
+                else {"order_parameter": lambda phases: (0.3, 0.0)}
+            ),
+        )
 
-        assert op_mod._dispatch("order_parameter") is None
+        fn = op_mod._dispatch("order_parameter")
+        assert fn is not None
+        assert fn(np.array([0.0], dtype=np.float64)) == (0.3, 0.0)
 
     def test_dispatch_falls_back_when_active_backend_raises(self, monkeypatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
