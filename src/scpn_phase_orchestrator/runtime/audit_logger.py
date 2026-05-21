@@ -228,6 +228,10 @@ class AuditLogger:
         channel_runtime: dict[str, object] | None = None,
     ) -> None:
         """Write one simulation step to the audit log with optional full state."""
+        if isinstance(step, bool) or not isinstance(step, int):
+            raise AuditError(f"step must be a non-negative integer, got {step!r}")
+        if step < 0:
+            raise AuditError(f"step must be a non-negative integer, got {step!r}")
         record = {
             "ts": time.time(),
             "step": step,
