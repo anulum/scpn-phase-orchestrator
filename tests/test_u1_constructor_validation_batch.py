@@ -250,6 +250,12 @@ def test_u1_geometry_carrier_reset_rejects_boolean_seed() -> None:
         carrier.reset(seed=True)  # type: ignore[arg-type]
 
 
+def test_u1_geometry_carrier_decode_rejects_non_array_input() -> None:
+    carrier = GeometryCarrier(4)
+    with pytest.raises(TypeError, match="numpy.ndarray"):
+        carrier.decode(z=[0.1, 0.2, 0.3, 0.4])  # type: ignore[arg-type]
+
+
 def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
     with pytest.raises(Exception, match="directory"):
         AuditLogger(tmp_path)
