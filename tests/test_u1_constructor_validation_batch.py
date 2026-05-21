@@ -14,6 +14,7 @@ import numpy as np
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 
 
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
@@ -37,3 +38,8 @@ def test_u1_knm_template_set_rejects_non_square_template() -> None:
 def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
     with pytest.raises(TypeError, match="BoundaryDef"):
         BoundaryObserver([object()])  # type: ignore[list-item]
+
+
+def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
+    with pytest.raises(Exception, match="directory"):
+        AuditLogger(tmp_path)

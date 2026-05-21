@@ -48,7 +48,11 @@ class AuditLogger:
     """Append-only JSONL audit log for UPDE simulation steps."""
 
     def __init__(self, path: str | Path, *, event_stream: str | Path | None = None):
+        if not str(path).strip():
+            raise AuditError("audit path must be a non-empty path")
         self._path = Path(path)
+        if self._path.exists() and self._path.is_dir():
+            raise AuditError(f"audit path must be a file path, got directory {self._path}")
         self._prev_hash, self._sequence = self._load_previous_state()
         self._audit_key = os.environ.get("SPO_AUDIT_KEY")
         self._stream_id = _DEFAULT_STREAM_ID
