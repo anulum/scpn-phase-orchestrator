@@ -194,6 +194,7 @@ class TestPGBO:
         )
         assert pytest.approx(first.gauge_curvature) == second.gauge_curvature
         assert second_costs == first_costs
+
     def test_alignment_trend_empty(self):
         pgbo = PGBO()
         assert pgbo.alignment_trend() == 0.0

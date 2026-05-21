@@ -450,8 +450,7 @@ class TestCompilerManifestValidation:
 
         assert readiness["status"] == "blocked"
         assert (
-            "qpu_execution_permission_must_remain_false"
-            in readiness["blocked_reasons"]
+            "qpu_execution_permission_must_remain_false" in readiness["blocked_reasons"]
         )
         assert "actuation_permission_must_remain_false" in readiness["blocked_reasons"]
         assert readiness["qpu_execution_permitted"] is False

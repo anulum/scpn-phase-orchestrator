@@ -52,7 +52,6 @@ def test_require_finite_non_negative_normalises_numeric_input() -> None:
     "value",
     [-1, float("nan"), "not_a_number"],
 )
-
 def test_require_finite_non_negative_rejects_invalid_inputs(value: float) -> None:
     with pytest.raises(ValueError, match="must be finite and non-negative"):
         _require_finite_non_negative(value, "field")

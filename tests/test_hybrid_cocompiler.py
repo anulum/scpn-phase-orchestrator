@@ -662,8 +662,7 @@ def test_hybrid_pipeline_enforces_no_actuation_review_boundaries_end_to_end() ->
     assert manifest == repeated_manifest
     assert manifest["actuation_permitted"] is False
     assert (
-        "quantum actuation_permitted must remain false"
-        in manifest["blocked_reasons"]
+        "quantum actuation_permitted must remain false" in manifest["blocked_reasons"]
     )
     assert (
         "neuromorphic actuation_permitted must remain false"
@@ -700,6 +699,7 @@ def test_hybrid_pipeline_enforces_no_actuation_review_boundaries_end_to_end() ->
     assert package["qpu_execution_permitted"] is False
     assert package["hardware_write_permitted"] is False
     assert package["status"] == "blocked"
-    assert "execute only outside SPO from an approved operator workflow" in package[
-        "operator_commands"
-    ]
+    assert (
+        "execute only outside SPO from an approved operator workflow"
+        in package["operator_commands"]
+    )

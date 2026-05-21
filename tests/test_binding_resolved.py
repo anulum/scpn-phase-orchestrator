@@ -360,9 +360,8 @@ def test_resolved_binding_config_is_deterministic_across_channel_order(tmp_path)
     )
     summary_beta = resolved_binding_config(load_binding_spec(path_beta))
 
-    assert (
-        format_resolved_binding_config(summary_alpha)
-        == format_resolved_binding_config(summary_beta)
-    )
+    assert format_resolved_binding_config(
+        summary_alpha
+    ) == format_resolved_binding_config(summary_beta)
     assert summary_alpha["channels"] == summary_beta["channels"]
     assert summary_alpha["channel_algebra"] == summary_beta["channel_algebra"]

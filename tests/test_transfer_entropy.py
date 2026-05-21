@@ -218,9 +218,7 @@ def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
         assert bins == 6
         return 0.75
 
-    def fake_matrix(
-        flat: np.ndarray, n_osc: int, n_time: int, bins: int
-    ) -> np.ndarray:
+    def fake_matrix(flat: np.ndarray, n_osc: int, n_time: int, bins: int) -> np.ndarray:
         assert n_osc == 3
         assert n_time == 3
         assert bins == 6

@@ -988,9 +988,10 @@ def test_service_process_manifest_blocks_on_validation_errors_and_renders_compos
 
     assert ready_manifest["overall_status"] == "operator_ready"
     assert ready_manifest["services"]
-    assert ready_manifest["compose_yaml_sha256"] == sha256(
-        ready_manifest["compose_yaml"].encode("utf-8")
-    ).hexdigest()
+    assert (
+        ready_manifest["compose_yaml_sha256"]
+        == sha256(ready_manifest["compose_yaml"].encode("utf-8")).hexdigest()
+    )
     assert "services:" in ready_manifest["compose_yaml"]
     assert "spo-studio-ui" in ready_manifest["compose_yaml"]
     assert "spo-binding-validator" in ready_manifest["compose_yaml"]
@@ -1037,8 +1038,9 @@ def test_build_command_table_skips_blocked_targets_from_readiness(
     assert package["commands"][0]["target"] == "docker"
 
 
-def test_run_owned_live_adapter_routes_supported_transports_and_rejects_unknown(
-) -> None:
+def test_run_owned_live_adapter_routes_supported_transports_and_rejects_unknown() -> (
+    None
+):
     class _FakeResponse:
         def __init__(self, transport: str):
             self.transport = transport
@@ -1183,20 +1185,24 @@ def test_stable_json_payload_normalises_nested_values_and_is_deterministic() -> 
 
     canonical_a = ui._stable_json_payload(payload_a, "payload")
     canonical_b = ui._stable_json_payload(payload_b, "payload")
-    assert canonical_a == canonical_b == json.dumps(
-        {
-            "alpha": {
-                "flag": False,
-                "nested": [
-                    {"inner": "text", "items": [1, 2, 3], "value": 2.0},
-                    {"value": 2.0, "items": [1, 2, 3]},
-                ],
+    assert (
+        canonical_a
+        == canonical_b
+        == json.dumps(
+            {
+                "alpha": {
+                    "flag": False,
+                    "nested": [
+                        {"inner": "text", "items": [1, 2, 3], "value": 2.0},
+                        {"value": 2.0, "items": [1, 2, 3]},
+                    ],
+                },
+                "list": [0, {"z": -1}],
+                "zebra": 1,
             },
-            "list": [0, {"z": -1}],
-            "zebra": 1,
-        },
-        sort_keys=True,
-        separators=(",", ":"),
+            sort_keys=True,
+            separators=(",", ":"),
+        )
     )
 
 

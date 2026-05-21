@@ -615,8 +615,9 @@ def test_temporal_causal_hypergraph_experiment_blocks_without_baseline_win() -> 
         )
 
 
-def test_temporal_causal_hypergraph_experiment_rejects_negative_baseline_margin(
-) -> None:
+def test_temporal_causal_hypergraph_experiment_rejects_negative_baseline_margin() -> (
+    None
+):
     trace = {
         "driver": [0.0, 1.0, 2.0, 3.0],
         "response": [0.0, 0.0, 2.0, 6.0],
@@ -637,8 +638,9 @@ def test_temporal_causal_hypergraph_experiment_rejects_negative_baseline_margin(
         )
 
 
-def test_temporal_causal_hypergraph_experiment_rejects_non_finite_candidate_score(
-) -> None:
+def test_temporal_causal_hypergraph_experiment_rejects_non_finite_candidate_score() -> (
+    None
+):
     trace = {
         "driver": [0.0, 1.0, 2.0, 3.0],
         "response": [0.0, 0.0, 2.0, 6.0],

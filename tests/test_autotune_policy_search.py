@@ -201,8 +201,7 @@ class TestReplayPolicySearch:
         assert isinstance(candidate_records, list)
         assert any(isinstance(record["K"], list) for record in candidate_records)
         assert any(
-            isinstance(record["channel_weights"], list)
-            for record in candidate_records
+            isinstance(record["channel_weights"], list) for record in candidate_records
         )
 
     def test_evaluator_alias_accepts_candidate_to_observation_callable(self) -> None:

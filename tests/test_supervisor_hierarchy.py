@@ -472,8 +472,9 @@ def test_hierarchy_sync_ingestion_accepts_latest_same_source() -> None:
     assert forward.plan.to_audit_record() == reverse.plan.to_audit_record()
 
 
-def test_hierarchy_sync_ingestion_collapses_identical_duplicate_sequence_entries(
-) -> None:
+def test_hierarchy_sync_ingestion_collapses_identical_duplicate_sequence_entries() -> (
+    None
+):
     duplicate_a = build_hierarchy_sync_envelope(
         ChildSupervisorSummary("edge-a", "power", R=0.3, psi=0.0),
         source_node="node-a",

@@ -2259,9 +2259,10 @@ def test_plugins_persist_execution_request_writes_bundle(
     assert payload["schema"] == "scpn_plugin_execution_request_storage_bundle_v1"
     assert payload["storage_manifest"]["storage_backend"] == "local_file"
     assert payload["storage_manifest"]["created_by"] == "deployment_gate"
-    assert payload["storage_manifest"]["request_hash"] == payload["request"][
-        "request_hash"
-    ]
+    assert (
+        payload["storage_manifest"]["request_hash"]
+        == payload["request"]["request_hash"]
+    )
     assert len(payload["bundle_hash"]) == 64
 
 
@@ -2448,9 +2449,10 @@ def test_plugins_lifecycle_status_reports_stored_request(
     assert payload["request_hash"] == request_payload["request_hash"]
     assert payload["status"] == "stored"
     assert payload["revoked"] is False
-    assert payload["storage_manifest_hash"] == bundle_payload["storage_manifest"][
-        "manifest_hash"
-    ]
+    assert (
+        payload["storage_manifest_hash"]
+        == bundle_payload["storage_manifest"]["manifest_hash"]
+    )
     assert len(payload["lifecycle_hash"]) == 64
 
 
@@ -2649,9 +2651,10 @@ def test_plugins_lifecycle_policy_report_outputs_operator_dashboard(
         "register_storage_adapter": 1,
         "renew_approval": 0,
     }
-    assert payload["storage_missing_request_hashes"] == summary_payload[
-        "storage_missing_request_hashes"
-    ]
+    assert (
+        payload["storage_missing_request_hashes"]
+        == summary_payload["storage_missing_request_hashes"]
+    )
     assert len(payload["policy_hash"]) == 64
 
 

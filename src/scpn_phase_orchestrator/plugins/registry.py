@@ -492,8 +492,7 @@ class PluginExecutionRequestRevocation:
     def __post_init__(self) -> None:
         if self.schema != "scpn_plugin_execution_request_revocation_v1":
             raise ValueError(
-                "revocation schema must be "
-                "scpn_plugin_execution_request_revocation_v1"
+                "revocation schema must be scpn_plugin_execution_request_revocation_v1"
             )
         if self.version != "1.0.0":
             raise ValueError("revocation version must be 1.0.0")
@@ -582,8 +581,7 @@ class PluginExecutionRequestLifecycleRecord:
     def __post_init__(self) -> None:
         if self.schema != "scpn_plugin_execution_request_lifecycle_v1":
             raise ValueError(
-                "lifecycle schema must be "
-                "scpn_plugin_execution_request_lifecycle_v1"
+                "lifecycle schema must be scpn_plugin_execution_request_lifecycle_v1"
             )
         if self.version != "1.0.0":
             raise ValueError("lifecycle version must be 1.0.0")
@@ -1556,9 +1554,7 @@ def _validate_storage_manifest_audit_record(record: dict[str, object]) -> None:
         raise ValueError("storage bundle revoked_request_hashes must be a list")
     if not all(isinstance(item, str) for item in revoked_hashes):
         raise ValueError("storage bundle revoked request hashes must be strings")
-    if _request_revocation_hash(tuple(revoked_hashes)) != record.get(
-        "revocation_hash"
-    ):
+    if _request_revocation_hash(tuple(revoked_hashes)) != record.get("revocation_hash"):
         raise ValueError("storage bundle revocation hash mismatch")
 
 

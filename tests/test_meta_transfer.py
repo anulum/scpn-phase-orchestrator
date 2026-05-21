@@ -533,9 +533,7 @@ class TestMetaTransferBehaviour:
         tmp_path,
     ) -> None:
         root = tmp_path / "replays"
-        root_nested_file = (
-            root / "2026" / "run_a" / "nested" / "audit.jsonl"
-        )
+        root_nested_file = root / "2026" / "run_a" / "nested" / "audit.jsonl"
         root_nested_file.parent.mkdir(parents=True)
         top_level = root / "top.jsonl"
         top_level.write_text(
@@ -594,9 +592,10 @@ class TestMetaTransferBehaviour:
         assert first == second
         assert first.to_audit_record()["schema"] == "scpn_meta_package_manifest_v1"
         assert first.to_audit_record()["execution_permitted"] is False
-        assert first.package_sha256 == sha256(
-            model.to_json_package().encode("utf-8")
-        ).hexdigest()
+        assert (
+            first.package_sha256
+            == sha256(model.to_json_package().encode("utf-8")).hexdigest()
+        )
         assert first.package_name == "scpn-meta"
         assert first.console_script == "scpn-meta"
 

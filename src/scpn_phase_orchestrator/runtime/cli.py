@@ -487,9 +487,7 @@ def _load_plan_from_payload(
         )
     raw_keyword_names = plan_payload.get("keyword_names")
     if not isinstance(raw_keyword_names, list):
-        raise click.ClickException(
-            "plan schema mismatch: keyword_names must be a list"
-        )
+        raise click.ClickException("plan schema mismatch: keyword_names must be a list")
     if not all(isinstance(name, str) for name in raw_keyword_names):
         raise click.ClickException(
             "plan schema mismatch: keyword_names must contain strings"
@@ -610,8 +608,7 @@ def _load_request_from_payload(
 ) -> PluginExecutionRequest:
     if request_payload.get("schema") != "scpn_plugin_runtime_execution_request_v1":
         raise click.ClickException(
-            "request schema mismatch: expected "
-            "scpn_plugin_runtime_execution_request_v1"
+            "request schema mismatch: expected scpn_plugin_runtime_execution_request_v1"
         )
 
     plan_hash = _require_sha256(request_payload.get("plan_hash"), "plan_hash")
@@ -665,15 +662,13 @@ def _load_request_from_payload(
             "request schema mismatch: approved_target_hashes must be a string list"
         )
     if not isinstance(allowed_kinds, list) or not all(
-        isinstance(item, str) and item in _PLUGIN_KIND_OPTIONS
-        for item in allowed_kinds
+        isinstance(item, str) and item in _PLUGIN_KIND_OPTIONS for item in allowed_kinds
     ):
         raise click.ClickException(
             "request schema mismatch: allowed_kinds must be valid kind strings"
         )
     normalized_target_hashes = tuple(
-        _require_sha256(item, "approved_target_hash")
-        for item in approved_target_hashes
+        _require_sha256(item, "approved_target_hash") for item in approved_target_hashes
     )
 
     return PluginExecutionRequest(
@@ -724,9 +719,7 @@ def _load_revocation_from_payload(
     approval_hash = _require_sha256(
         revocation_payload.get("approval_hash"), "approval_hash"
     )
-    target_hash = _require_sha256(
-        revocation_payload.get("target_hash"), "target_hash"
-    )
+    target_hash = _require_sha256(revocation_payload.get("target_hash"), "target_hash")
     revocation_hash = _require_sha256(
         revocation_payload.get("revocation_hash"), "revocation_hash"
     )
@@ -908,8 +901,7 @@ def _load_storage_manifest_from_payload(
             "storage manifest revoked_request_hashes must be a string list"
         )
     normalized_revocations = tuple(
-        _require_sha256(item, "revoked request hash")
-        for item in revoked_request_hashes
+        _require_sha256(item, "revoked request hash") for item in revoked_request_hashes
     )
     return PluginExecutionRequestStorageManifest(
         schema="scpn_plugin_execution_request_storage_manifest_v1",
@@ -940,10 +932,7 @@ def _load_storage_manifest_from_payload(
 def _load_lifecycle_from_payload(
     lifecycle_payload: dict[str, object],
 ) -> PluginExecutionRequestLifecycleRecord:
-    if (
-        lifecycle_payload.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_v1"
-    ):
+    if lifecycle_payload.get("schema") != "scpn_plugin_execution_request_lifecycle_v1":
         raise click.ClickException(
             "lifecycle schema mismatch: expected "
             "scpn_plugin_execution_request_lifecycle_v1"
@@ -1088,9 +1077,7 @@ def _load_lifecycle_summary_from_payload(
         approved_request_hashes=hash_list(
             approved_request_hashes, "approved_request_hashes"
         ),
-        stored_request_hashes=hash_list(
-            stored_request_hashes, "stored_request_hashes"
-        ),
+        stored_request_hashes=hash_list(stored_request_hashes, "stored_request_hashes"),
         revoked_request_hashes=hash_list(
             revoked_request_hashes, "revoked_request_hashes"
         ),
@@ -1464,9 +1451,7 @@ def plugins_persist_execution_request(
     """Persist a validated execution request as a local storage bundle."""
     request_payload = _load_json_file(request_json, artifact="request")
     request = _load_request_from_payload(request_payload)
-    direct_revocations = _normalize_approved_target_hashes(
-        revoked_request_hashes
-    )
+    direct_revocations = _normalize_approved_target_hashes(revoked_request_hashes)
     revocation_list_hashes: tuple[str, ...] = ()
 
     try:
@@ -1782,9 +1767,7 @@ def plugins_revocation_list(
 ) -> None:
     """Emit a deterministic aggregate revocation list."""
     revocations = tuple(
-        _load_revocation_from_payload(
-            _load_json_file(path, artifact="revocation")
-        )
+        _load_revocation_from_payload(_load_json_file(path, artifact="revocation"))
         for path in revocation_json
     )
 

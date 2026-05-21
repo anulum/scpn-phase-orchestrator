@@ -1298,8 +1298,9 @@ def test_digital_twin_operator_evidence_rejects_invalid_residual_inputs() -> Non
         )
 
 
-def test_digital_twin_contract_unknown_capability_is_bidirectional_and_auditable(
-) -> None:
+def test_digital_twin_contract_unknown_capability_is_bidirectional_and_auditable() -> (
+    None
+):
     spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
     contract = build_digital_twin_binding_contract(
         spec,
@@ -1373,8 +1374,9 @@ def test_digital_twin_operator_evidence_respects_discrepancy_boundaries() -> Non
     assert critical.status == "critical"
 
 
-def test_digital_twin_operator_evidence_marks_contract_hash_mismatch_as_rejected(
-) -> None:
+def test_digital_twin_operator_evidence_marks_contract_hash_mismatch_as_rejected() -> (
+    None
+):
     spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
     contract = build_digital_twin_binding_contract(spec)
     contract_alt = build_digital_twin_binding_contract(

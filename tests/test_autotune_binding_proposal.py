@@ -352,8 +352,9 @@ def test_event_log_proposal_is_deterministic_for_duplicate_sources() -> None:
         "sensor_b",
         "sensor_z",
     )
-    assert first.binding.confidence_factors["event_density"] == (
-        second.binding.confidence_factors["event_density"]
+    assert (
+        first.binding.confidence_factors["event_density"]
+        == (second.binding.confidence_factors["event_density"])
     )
 
 

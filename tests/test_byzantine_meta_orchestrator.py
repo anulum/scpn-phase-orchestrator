@@ -294,8 +294,8 @@ def test_bft_meta_orchestrator_rejects_invalid_non_mapping_proposal() -> None:
     with pytest.raises(ValueError, match="proposal must be a mapping"):
         build_bft_meta_orchestrator_manifest([1, 2, 3], {"node-a": "alpha"}, quorum=1)
 
-def test_bft_meta_orchestrator_reports_missing_signing_keys_and_quorum_block(
-    ) -> None:
+
+def test_bft_meta_orchestrator_reports_missing_signing_keys_and_quorum_block() -> None:
     keyring = {"node-a": "alpha"}
     payload = {"policy": "hold", "actuation": False}
     parent_hash = "f" * 64
@@ -337,6 +337,7 @@ def test_sign_policy_proposal_is_deterministic_across_payload_key_order() -> Non
         "actuation": False,
         "knobs": {"K": 0.3},
     }
+
 
 def test_sign_policy_proposal_does_not_accept_nan_payload() -> None:
     keyring = {"node-a": "alpha"}

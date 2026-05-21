@@ -1309,9 +1309,7 @@ class TestPluginRuntimeExecution:
         with pytest.raises(PermissionError, match="revoked"):
             validate_plugin_execution_request(
                 request,
-                revoked_request_hashes=(
-                    str(request.audit_record["request_hash"]),
-                ),
+                revoked_request_hashes=(str(request.audit_record["request_hash"]),),
             )
 
     def test_execution_request_storage_manifest_is_deterministic(
@@ -1369,10 +1367,13 @@ class TestPluginRuntimeExecution:
         assert manifest.revoked_request_hashes == ()
         assert len(manifest.revocation_hash) == 64
         assert len(manifest.manifest_hash) == 64
-        assert validate_plugin_execution_request_storage_manifest(
-            request,
-            manifest,
-        ) is manifest
+        assert (
+            validate_plugin_execution_request_storage_manifest(
+                request,
+                manifest,
+            )
+            is manifest
+        )
 
     def test_execution_request_storage_manifest_rejects_tampering(
         self,
@@ -2237,19 +2238,17 @@ class TestPluginRuntimeExecution:
         assert revocation_list == repeated
         assert isinstance(revocation_list, PluginExecutionRequestRevocationList)
         assert (
-            revocation_list.schema
-            == "scpn_plugin_execution_request_revocation_list_v1"
+            revocation_list.schema == "scpn_plugin_execution_request_revocation_list_v1"
         )
         assert revocation_list.request_hashes == (revocation.request_hash,)
         assert revocation_list.revocation_hashes == (revocation.revocation_hash,)
         assert revocation_list.revocation_count == 1
-        assert revocation_list.as_revoked_request_hashes() == (
-            revocation.request_hash,
-        )
+        assert revocation_list.as_revoked_request_hashes() == (revocation.request_hash,)
         assert len(revocation_list.revocation_list_hash) == 64
-        assert validate_plugin_execution_request_revocation_list(
-            revocation_list
-        ) is revocation_list
+        assert (
+            validate_plugin_execution_request_revocation_list(revocation_list)
+            is revocation_list
+        )
 
     def test_execution_request_revocation_list_rejects_duplicate_request_hash(
         self,
@@ -2495,9 +2494,12 @@ class TestPluginRuntimeExecution:
         )
 
         assert output_path.exists()
-        assert validate_plugin_execution_request_storage_bundle(
-            json.loads(output_path.read_text(encoding="utf-8")),
-        ) == bundle
+        assert (
+            validate_plugin_execution_request_storage_bundle(
+                json.loads(output_path.read_text(encoding="utf-8")),
+            )
+            == bundle
+        )
         with pytest.raises(FileExistsError):
             write_plugin_execution_request_storage_bundle(
                 request,
@@ -2928,9 +2930,10 @@ class TestPluginRuntimeExecution:
         assert executed.result == 7.0
         assert executed.audit_record["schema"] == "scpn_plugin_runtime_execute_v1"
         assert executed.audit_record["plan_hash"] == request.plan_hash
-        assert executed.audit_record["request_hash"] == request.audit_record[
-            "request_hash"
-        ]
+        assert (
+            executed.audit_record["request_hash"]
+            == request.audit_record["request_hash"]
+        )
         assert executed.audit_record["approval_hash"] == request.approval_hash
         assert executed.audit_record["target_hash_approved"] is True
         assert executed.audit_record["operator_identity"] == "operator_alpha"
