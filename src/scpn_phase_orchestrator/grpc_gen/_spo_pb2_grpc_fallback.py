@@ -6,7 +6,22 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — gRPC generated-stub compatibility alias
 
-"""Compatibility alias for runtime ``_spo_pb2_grpc_fallback``."""
+"""Public compatibility alias for runtime fallback gRPC service stubs.
+
+This module keeps the historical import path stable:
+
+- ``scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback``
+
+while delegating implementation ownership to:
+
+- ``scpn_phase_orchestrator.runtime.grpc_gen._spo_pb2_grpc_fallback``
+
+Operational contract:
+
+1. Importing this module reuses runtime service stub definitions.
+2. Alias behaviour does not fork or mutate runtime handler contracts.
+3. Public callers receive the same symbol surface as runtime fallback stubs.
+"""
 
 from __future__ import annotations
 
