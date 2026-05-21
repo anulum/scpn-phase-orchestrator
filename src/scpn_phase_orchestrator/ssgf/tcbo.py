@@ -108,6 +108,14 @@ class TCBOObserver:
 
     def observe(self, phases: FloatArray) -> TCBOState:
         """Add phase snapshot, compute TCBO if enough history."""
+        if not isinstance(phases, np.ndarray):
+            raise TypeError(f"phases must be a numpy.ndarray, got {phases!r}")
+        if phases.ndim != 1:
+            raise ValueError(f"phases must be a 1D vector, got shape {phases.shape!r}")
+        if phases.size == 0:
+            raise ValueError("phases must be non-empty")
+        if not np.isfinite(phases).all():
+            raise ValueError("phases must contain only finite values")
         self._history.append(phases.copy())
         max_len = self._window_size + self._embed_dim * self._embed_delay
         if len(self._history) > max_len:

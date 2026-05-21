@@ -112,6 +112,12 @@ def test_u1_tcbo_observer_rejects_invalid_tau() -> None:
         TCBOObserver(tau_h1=1.5)
 
 
+def test_u1_tcbo_observer_observe_rejects_non_finite_phase() -> None:
+    obs = TCBOObserver()
+    with pytest.raises(ValueError, match="finite values"):
+        obs.observe(np.array([0.0, np.nan], dtype=float))
+
+
 def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
     net = PetriNet(
         places=[Place("nominal")],
