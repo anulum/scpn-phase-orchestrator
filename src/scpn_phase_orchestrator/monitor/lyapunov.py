@@ -91,13 +91,23 @@ _LOADERS: dict[str, Callable[[], LyapunovBackendFn]] = {
     "julia": _load_julia_fn,
     "go": _load_go_fn,
 }
+_BACKEND_CACHE: dict[str, LyapunovBackendFn] = {}
+
+
+def _load_backend(name: str) -> LyapunovBackendFn:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -111,7 +121,10 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 def _dispatch() -> LyapunovBackendFn | None:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()
+    try:
+        return _load_backend(ACTIVE_BACKEND)
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return None
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
@@ -439,22 +452,50 @@ def lyapunov_spectrum(
     # Rust PyO3 binding takes flat (N*N,) row-major k/alpha; the other
     # backends accept the 2-D forms directly.
     if ACTIVE_BACKEND == "rust":
+        try:
+            return np.asarray(
+                backend_fn(
+                    p,
+                    o,
+                    k.ravel(),
+                    a.ravel(),
+                    dt,
+                    n_steps,
+                    qr_interval,
+                    zeta,
+                    psi,
+                ),
+                dtype=np.float64,
+            )
+        except Exception:
+            return _lyapunov_spectrum_python(
+                p,
+                o,
+                k,
+                a,
+                float(dt),
+                int(n_steps),
+                int(qr_interval),
+                float(zeta),
+                float(psi),
+            )
+    try:
         return np.asarray(
             backend_fn(
                 p,
                 o,
-                k.ravel(),
-                a.ravel(),
-                dt,
-                n_steps,
-                qr_interval,
-                zeta,
-                psi,
+                k,
+                a,
+                float(dt),
+                int(n_steps),
+                int(qr_interval),
+                float(zeta),
+                float(psi),
             ),
             dtype=np.float64,
         )
-    return np.asarray(
-        backend_fn(
+    except Exception:
+        return _lyapunov_spectrum_python(
             p,
             o,
             k,
@@ -464,6 +505,4 @@ def lyapunov_spectrum(
             int(qr_interval),
             float(zeta),
             float(psi),
-        ),
-        dtype=np.float64,
-    )
+        )

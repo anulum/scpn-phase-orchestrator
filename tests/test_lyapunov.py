@@ -205,3 +205,61 @@ class TestLyapunovPipelineWiring:
             guard.evaluate(phases, knm)
         elapsed = (time.perf_counter() - t0) / 100
         assert elapsed < 0.001, f"evaluate(64) took {elapsed * 1000:.2f}ms, limit 1ms"
+
+
+class TestLyapunovRustDispatch:
+    def test_spectrum_uses_rust_backend_signature_when_active(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float, int, int, float, float]] = []
+
+        def _fake_backend(
+            p: np.ndarray,
+            o: np.ndarray,
+            k_flat: np.ndarray,
+            a_flat: np.ndarray,
+            dt: float,
+            n_steps: int,
+            qr_interval: int,
+            zeta: float,
+            psi: float,
+        ) -> np.ndarray:
+            calls.append((p, o, k_flat, a_flat, dt, n_steps, qr_interval, zeta, psi))
+            return np.array([3.0, 2.0, 1.0], dtype=np.float64)
+
+        monkeypatch.setattr(lyapunov_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: _fake_backend)
+        phases = np.array([0.0, 1.0, 2.0], dtype=np.float64)
+        omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
+        knm = _all_to_all(3, k=0.4)
+        alpha = np.zeros((3, 3), dtype=np.float64)
+
+        spec = lyapunov_mod.lyapunov_spectrum(
+            phases, omegas, knm, alpha, dt=0.01, n_steps=10, qr_interval=2
+        )
+        np.testing.assert_allclose(spec, [3.0, 2.0, 1.0], atol=1e-12)
+        assert len(calls) == 1
+        assert calls[0][2].ndim == 1
+        assert calls[0][3].ndim == 1
+
+    def test_spectrum_falls_back_to_python_when_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_backend(
+            *_args: object,
+            **_kwargs: object,
+        ) -> np.ndarray:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(lyapunov_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: _raising_backend)
+        phases = np.array([0.0, 1.0, 2.0], dtype=np.float64)
+        omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
+        knm = _all_to_all(3, k=0.4)
+        alpha = np.zeros((3, 3), dtype=np.float64)
+
+        spec = lyapunov_mod.lyapunov_spectrum(
+            phases, omegas, knm, alpha, dt=0.01, n_steps=10, qr_interval=2
+        )
+        assert spec.shape == (3,)
+        assert np.all(np.isfinite(spec))
