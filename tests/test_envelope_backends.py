@@ -279,6 +279,36 @@ class TestBackendLoaderContracts:
             "mod": (True, (4,)),
         }
 
+
+class TestDispatchFallbackChain:
+    def test_dispatch_falls_back_to_next_backend_when_active_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"rust": 0, "go": 0}
+
+        def _fail_rust() -> dict[str, object]:
+            calls["rust"] += 1
+            raise ImportError("rust unavailable")
+
+        def _ok_go() -> dict[str, object]:
+            calls["go"] += 1
+            return {
+                "extract": lambda amps, window: np.ascontiguousarray(
+                    amps, dtype=np.float64
+                ),
+                "mod": lambda env: 0.25,
+            }
+
+        monkeypatch.setattr(e_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(e_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(e_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(e_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
+
+        fn = e_mod._dispatch("mod")
+        assert fn is not None
+        assert float(fn(np.array([1.0], dtype=np.float64))) == 0.25
+        assert calls == {"rust": 1, "go": 1}
+
     def test_probe_returns_infinite_latency_for_broken_backend(
         self, monkeypatch
     ) -> None:
