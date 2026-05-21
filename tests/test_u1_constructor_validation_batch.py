@@ -376,6 +376,21 @@ def test_u1_boundary_observer_rejects_boolean_lower_bound() -> None:
         )
 
 
+def test_u1_boundary_observer_rejects_blank_boundary_name() -> None:
+    with pytest.raises(Exception, match="non-empty name and variable"):
+        BoundaryObserver(
+            [
+                BoundaryDef(
+                    name=" ",
+                    variable="x",
+                    lower=0.0,
+                    upper=1.0,
+                    severity="soft",
+                )
+            ]
+        )
+
+
 def test_u1_boundary_observer_observe_rejects_negative_step() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(ValueError, match="non-negative integer"):
