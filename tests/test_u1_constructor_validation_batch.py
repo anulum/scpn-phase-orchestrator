@@ -130,6 +130,15 @@ def test_u1_audit_logger_header_rejects_non_positive_dt(tmp_path) -> None:
         logger._fh.close()
 
 
+def test_u1_audit_logger_header_rejects_blank_method(tmp_path) -> None:
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        with pytest.raises(Exception, match="non-empty string"):
+            logger.log_header(n_oscillators=4, dt=0.1, method=" ")
+    finally:
+        logger._fh.close()
+
+
 def test_u1_audit_logger_header_rejects_boolean_seed(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
