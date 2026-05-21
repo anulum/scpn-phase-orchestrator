@@ -98,13 +98,23 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_CACHE: dict[str, dict[str, object]] = {}
+
+
+def _load_backend(name: str) -> dict[str, object]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -118,7 +128,10 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 def _dispatch(fn_name: str) -> object:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+    try:
+        return _load_backend(ACTIVE_BACKEND)[fn_name]
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return None
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
@@ -194,13 +207,16 @@ def phase_transfer_entropy(
     backend_fn = _dispatch("phase_te")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, FloatArray, int], float]", backend_fn)
-        return float(
-            fn(
-                np.ascontiguousarray(source_values, dtype=np.float64),
-                np.ascontiguousarray(target_values, dtype=np.float64),
-                bin_count,
+        try:
+            return float(
+                fn(
+                    np.ascontiguousarray(source_values, dtype=np.float64),
+                    np.ascontiguousarray(target_values, dtype=np.float64),
+                    bin_count,
+                )
             )
-        )
+        except Exception:
+            pass
 
     if len(source_values) < 3 or len(target_values) < 3:
         return 0.0
@@ -236,13 +252,16 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
     backend_fn = _dispatch("te_matrix")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int, int], FloatArray]", backend_fn)
-        flat = fn(
-            np.ascontiguousarray(series.ravel(), dtype=np.float64),
-            n_osc,
-            n_time,
-            bin_count,
-        )
-        return np.asarray(flat, dtype=np.float64).reshape(n_osc, n_osc)
+        try:
+            flat = fn(
+                np.ascontiguousarray(series.ravel(), dtype=np.float64),
+                n_osc,
+                n_time,
+                bin_count,
+            )
+            return np.asarray(flat, dtype=np.float64).reshape(n_osc, n_osc)
+        except Exception:
+            pass
 
     te: FloatArray = np.zeros((n_osc, n_osc), dtype=np.float64)
     for i in range(n_osc):

@@ -243,3 +243,55 @@ def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
     assert phase_value == 0.75
     assert matrix_value.shape == (3, 3)
     assert matrix_value[0, 1] == 1.0
+
+
+def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):
+    def raising_phase_te(_src: np.ndarray, _tgt: np.ndarray, _bins: int) -> float:
+        raise RuntimeError("boom")
+
+    previous = te_mod.ACTIVE_BACKEND
+    te_mod.ACTIVE_BACKEND = "rust"
+    monkeypatch.setattr(
+        te_mod,
+        "_dispatch",
+        lambda fn_name: raising_phase_te if fn_name == "phase_te" else None,
+    )
+    try:
+        source = np.linspace(0.0, 2 * np.pi, 64, endpoint=False)
+        target = np.roll(source, 1)
+        value = phase_transfer_entropy(source, target, n_bins=8)
+    finally:
+        te_mod.ACTIVE_BACKEND = previous
+
+    assert np.isfinite(value)
+    assert value >= 0.0
+
+
+def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
+    def raising_matrix(
+        _flat: np.ndarray, _n_osc: int, _n_time: int, _bins: int
+    ) -> np.ndarray:
+        raise RuntimeError("boom")
+
+    previous = te_mod.ACTIVE_BACKEND
+    te_mod.ACTIVE_BACKEND = "rust"
+    monkeypatch.setattr(
+        te_mod,
+        "_dispatch",
+        lambda fn_name: raising_matrix if fn_name == "te_matrix" else None,
+    )
+    try:
+        data = np.stack(
+            [
+                np.linspace(0.0, 2 * np.pi, 64, endpoint=False),
+                np.linspace(0.2, 2 * np.pi + 0.2, 64, endpoint=False),
+                np.linspace(0.4, 2 * np.pi + 0.4, 64, endpoint=False),
+            ]
+        )
+        value = transfer_entropy_matrix(data, n_bins=8)
+    finally:
+        te_mod.ACTIVE_BACKEND = previous
+
+    assert value.shape == (3, 3)
+    assert np.all(value >= 0.0)
+    np.testing.assert_array_equal(np.diag(value), 0.0)
