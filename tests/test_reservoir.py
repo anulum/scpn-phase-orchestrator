@@ -107,6 +107,13 @@ class TestRidgeReadout:
         preds = reservoir_predict(features, W_out)
         assert jnp.allclose(preds, targets, atol=1e-3)
 
+    def test_regularised_solve_handles_rank_deficient_features(self):
+        features = jnp.ones((10, 3), dtype=jnp.float32)
+        targets = jnp.ones((10, 1), dtype=jnp.float32)
+        W_out = ridge_readout(features, targets, alpha=1e-2)
+        assert W_out.shape == (3, 1)
+        assert jnp.isfinite(W_out).all()
+
 
 class TestReservoirPredict:
     def test_output_shape(self, key):
