@@ -314,3 +314,69 @@ class TestPoincarePipelineWiring:
         assert len(result.crossings) >= 0
         if len(result.crossings) > 1:
             assert result.mean_return_time > 0
+
+
+class TestPoincareBackendDispatch:
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = poincare_module.ACTIVE_BACKEND
+        previous_available = list(poincare_module.AVAILABLE_BACKENDS)
+        previous_loader = poincare_module._LOADERS["go"]
+        poincare_module.ACTIVE_BACKEND = "go"
+        poincare_module.AVAILABLE_BACKENDS = ["go", "python"]
+        poincare_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            poincare_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            fn = poincare_module._dispatch("section")
+        finally:
+            poincare_module.ACTIVE_BACKEND = previous_backend
+            poincare_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(poincare_module._LOADERS, "go", previous_loader)
+            poincare_module._BACKEND_CACHE.clear()
+
+        assert fn is None
+
+    def test_dispatch_uses_cached_backend_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = poincare_module.ACTIVE_BACKEND
+        previous_available = list(poincare_module.AVAILABLE_BACKENDS)
+        previous_loader = poincare_module._LOADERS["go"]
+        poincare_module.ACTIVE_BACKEND = "go"
+        poincare_module.AVAILABLE_BACKENDS = ["go", "python"]
+        poincare_module._BACKEND_CACHE.clear()
+        call_count = 0
+
+        def fake_section(
+            _traj_flat: np.ndarray,
+            _t: int,
+            _d: int,
+            _normal: np.ndarray,
+            _offset: float,
+            _direction_id: int,
+        ) -> tuple[np.ndarray, np.ndarray, int]:
+            return np.array([], dtype=np.float64), np.array([], dtype=np.float64), 0
+
+        def loader() -> dict[str, object]:
+            nonlocal call_count
+            call_count += 1
+            return {"section": fake_section}
+
+        monkeypatch.setitem(poincare_module._LOADERS, "go", loader)
+        try:
+            fn1 = poincare_module._dispatch("section")
+            fn2 = poincare_module._dispatch("section")
+        finally:
+            poincare_module.ACTIVE_BACKEND = previous_backend
+            poincare_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(poincare_module._LOADERS, "go", previous_loader)
+            poincare_module._BACKEND_CACHE.clear()
+
+        assert fn1 is fake_section
+        assert fn2 is fake_section
+        assert call_count == 1
