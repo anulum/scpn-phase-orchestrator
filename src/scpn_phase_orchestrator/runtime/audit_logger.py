@@ -238,6 +238,13 @@ class AuditLogger:
             raise AuditError(f"step must be a non-negative integer, got {step!r}")
         if not isinstance(upde_state, UPDEState):
             raise AuditError(f"upde_state must be UPDEState, got {upde_state!r}")
+        if not isinstance(actions, list):
+            raise AuditError(f"actions must be list[ControlAction], got {actions!r}")
+        for idx, action in enumerate(actions):
+            if not isinstance(action, ControlAction):
+                raise AuditError(
+                    f"actions[{idx}] must be ControlAction, got {action!r}"
+                )
         record = {
             "ts": time.time(),
             "step": step,
