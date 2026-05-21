@@ -52,6 +52,8 @@ class KnmTemplateSet:
             raise TypeError(f"template must be KnmTemplate, got {template!r}")
         if not template.name.strip():
             raise ValueError("template name must be a non-empty string")
+        if not isinstance(template.description, str) or not template.description.strip():
+            raise ValueError("template description must be a non-empty string")
         if template.knm.ndim != 2 or template.alpha.ndim != 2:
             raise ValueError("template knm/alpha must be 2D matrices")
         if template.knm.shape != template.alpha.shape:
