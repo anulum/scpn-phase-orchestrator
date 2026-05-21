@@ -289,3 +289,60 @@ class TestBasinStabilityEdgeSemantics:
                 n_measure=10,
                 R_thresholds=(),
             )
+
+
+class TestBasinDispatch:
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
+
+        previous_backend = basin_mod.ACTIVE_BACKEND
+        previous_available = list(basin_mod.AVAILABLE_BACKENDS)
+        previous_loader = basin_mod._LOADERS["go"]
+        basin_mod.ACTIVE_BACKEND = "go"
+        basin_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        monkeypatch.setitem(
+            basin_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend = basin_mod._dispatch()
+        finally:
+            basin_mod.ACTIVE_BACKEND = previous_backend
+            basin_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(basin_mod._LOADERS, "go", previous_loader)
+
+        assert backend is None
+
+    def test_dispatch_uses_next_available_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
+
+        previous_backend = basin_mod.ACTIVE_BACKEND
+        previous_available = list(basin_mod.AVAILABLE_BACKENDS)
+        previous_go = basin_mod._LOADERS["go"]
+        previous_rust = basin_mod._LOADERS["rust"]
+        basin_mod.ACTIVE_BACKEND = "go"
+        basin_mod.AVAILABLE_BACKENDS = ["go", "rust", "python"]
+
+        def fake_backend(*_args: object) -> float:
+            return 0.0
+
+        monkeypatch.setitem(
+            basin_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        monkeypatch.setitem(basin_mod._LOADERS, "rust", lambda: fake_backend)
+        try:
+            backend = basin_mod._dispatch()
+        finally:
+            basin_mod.ACTIVE_BACKEND = previous_backend
+            basin_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(basin_mod._LOADERS, "go", previous_go)
+            monkeypatch.setitem(basin_mod._LOADERS, "rust", previous_rust)
+
+        assert backend is fake_backend

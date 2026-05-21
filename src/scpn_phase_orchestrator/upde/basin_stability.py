@@ -148,9 +148,23 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., float] | None:
-    if ACTIVE_BACKEND == "python":
-        return None
-    return _LOADERS[ACTIVE_BACKEND]()
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    deduped: list[str] = []
+    for backend in ordered_backends:
+        if backend in deduped:
+            continue
+        deduped.append(backend)
+    for backend in deduped:
+        if backend == "python":
+            return None
+        loader = _LOADERS.get(backend)
+        if loader is None:
+            continue
+        try:
+            return loader()
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
+    return None
 
 
 def _validate_integral(value: object, *, name: str, minimum: int) -> int:
