@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
+from scpn_phase_orchestrator.oscillators import quality as quality_module
 from scpn_phase_orchestrator.oscillators.base import PhaseState
 from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 
@@ -218,3 +220,56 @@ class TestQualityScorerPipelineEndToEnd:
 # Pipeline wiring: PhaseQualityScorer → downweight_mask → K_nm modulation
 # → UPDEEngine → compute_order_parameter. Quality gates engine coupling.
 # Performance: downweight_mask(100)<50μs.
+
+
+class _FakeRustScorer:
+    def __init__(self, collapse_threshold: float = 0.1, min_quality: float = 0.3):
+        self.collapse_threshold = collapse_threshold
+        self.min_quality = min_quality
+        self.calls: list[tuple[str, list[float], list[float] | None]] = []
+
+    def score(self, qualities: list[float], amplitudes: list[float]) -> float:
+        self.calls.append(("score", qualities, amplitudes))
+        return 0.4242
+
+    def is_collapsed(self, qualities: list[float]) -> bool:
+        self.calls.append(("is_collapsed", qualities, None))
+        return True
+
+    def downweight_mask(self, qualities: list[float]) -> list[float]:
+        self.calls.append(("downweight_mask", qualities, None))
+        return [0.9 for _ in qualities]
+
+
+class TestRustQualityDispatch:
+    def test_default_paths_dispatch_to_rust(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setattr(quality_module, "_RustPhaseQualityScorer", _FakeRustScorer)
+        scorer = PhaseQualityScorer(collapse_threshold=0.2, min_quality=0.4)
+        states = [_ps(0.1, 2.0), _ps(0.9, 3.0)]
+
+        assert scorer.score(states) == 0.4242
+        assert scorer.detect_collapse(states, threshold=0.2) is True
+        mask = scorer.downweight_mask(states, min_quality=0.4)
+        np.testing.assert_allclose(mask, [0.9, 0.9], atol=1e-12)
+
+        rust = scorer._rust
+        assert rust is not None
+        assert [entry[0] for entry in rust.calls] == [
+            "score",
+            "is_collapsed",
+            "downweight_mask",
+        ]
+
+    def test_override_thresholds_stay_in_python(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setattr(quality_module, "_RustPhaseQualityScorer", _FakeRustScorer)
+        scorer = PhaseQualityScorer(collapse_threshold=0.2, min_quality=0.4)
+        states = [_ps(0.1, 1.0), _ps(0.9, 1.0), _ps(0.9, 1.0)]
+
+        assert scorer.detect_collapse(states, threshold=0.5) is False
+        np.testing.assert_allclose(
+            scorer.downweight_mask(states, min_quality=0.8), [0.0, 0.9, 0.9], atol=1e-12
+        )
+
+        rust = scorer._rust
+        assert rust is not None
+        assert rust.calls == []
