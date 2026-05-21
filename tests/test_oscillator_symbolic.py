@@ -326,31 +326,49 @@ def test_symbolic_extractor_uses_rust_ring_and_transition_quality_when_available
 ) -> None:
     import scpn_phase_orchestrator.oscillators.symbolic as symbolic_mod
 
-    ring_calls: list[tuple[int, int]] = []
-    quality_calls: list[tuple[int, int]] = []
+    ring_calls: list[tuple[list[int], int]] = []
+    quality_calls: list[tuple[list[int], int, float]] = []
 
-    def _ring_phase(state_index: int, n_states: int) -> float:
-        ring_calls.append((state_index, n_states))
-        return float(TWO_PI * (state_index % n_states) / n_states)
+    def _ring_phases(state_indices: np.ndarray, n_states: int) -> np.ndarray:
+        values = [int(item) for item in state_indices.tolist()]
+        ring_calls.append((values, n_states))
+        return np.asarray(
+            [TWO_PI * (state_index % n_states) / n_states for state_index in values],
+            dtype=np.float64,
+        )
 
-    def _transition_quality(step_size: int, n_states: int) -> float:
-        quality_calls.append((step_size, n_states))
-        if step_size == 0:
-            return 0.2
-        if step_size == 1:
-            return 1.0
-        return max(0.1, 1.0 - float(step_size - 1) / float(n_states))
+    def _transition_qualities(
+        state_indices: np.ndarray,
+        n_states: int,
+        initial_quality: float,
+    ) -> np.ndarray:
+        values = [int(item) for item in state_indices.tolist()]
+        quality_calls.append((values, n_states, initial_quality))
+        out = [initial_quality]
+        for lhs, rhs in zip(values, values[1:]):
+            step_size = abs(rhs - lhs)
+            if step_size == 0:
+                out.append(0.2)
+            elif step_size == 1:
+                out.append(1.0)
+            else:
+                out.append(max(0.1, 1.0 - float(step_size - 1) / float(n_states)))
+        return np.asarray(out, dtype=np.float64)
 
     monkeypatch.setattr(symbolic_mod, "_HAS_RUST_SYMBOLIC", True)
-    monkeypatch.setattr(symbolic_mod, "_rust_ring_phase", _ring_phase)
-    monkeypatch.setattr(symbolic_mod, "_rust_transition_quality", _transition_quality)
+    monkeypatch.setattr(symbolic_mod, "_rust_ring_phases", _ring_phases)
+    monkeypatch.setattr(
+        symbolic_mod, "_rust_transition_qualities", _transition_qualities
+    )
 
     ext = SymbolicExtractor(n_states=4, mode="ring")
     states = ext.extract(np.array([0, 1, 3]), sample_rate=1.0)
 
-    assert [state.theta for state in states] == pytest.approx([0.0, np.pi / 2, 3 * np.pi / 2])
-    assert ring_calls == [(0, 4), (1, 4), (3, 4)]
-    assert quality_calls == [(1, 4), (2, 4)]
+    assert [state.theta for state in states] == pytest.approx(
+        [0.0, np.pi / 2, 3 * np.pi / 2]
+    )
+    assert ring_calls == [([0, 1, 3], 4)]
+    assert quality_calls == [([0, 1, 3], 4, 0.5)]
 
 
 def test_symbolic_extractor_uses_rust_graph_walk_when_available(
@@ -358,22 +376,37 @@ def test_symbolic_extractor_uses_rust_graph_walk_when_available(
 ) -> None:
     import scpn_phase_orchestrator.oscillators.symbolic as symbolic_mod
 
-    graph_calls: list[tuple[int, int]] = []
+    graph_calls: list[tuple[list[int], int]] = []
 
-    def _graph_walk_phase(position: int, walk_length: int) -> float:
-        graph_calls.append((position, walk_length))
-        if walk_length <= 0:
-            return 0.0
-        return float(TWO_PI * (position % walk_length) / walk_length)
+    def _graph_walk_phases(state_indices: np.ndarray, n_states: int) -> np.ndarray:
+        values = [int(item) for item in state_indices.tolist()]
+        graph_calls.append((values, n_states))
+        cumulative = [0]
+        running = 0
+        for lhs, rhs in zip(values, values[1:]):
+            running += abs(rhs - lhs)
+            cumulative.append(running)
+        total = cumulative[-1] if cumulative and cumulative[-1] > 0 else 1
+        return np.asarray(
+            [TWO_PI * (position % total) / total for position in cumulative],
+            dtype=np.float64,
+        )
 
     monkeypatch.setattr(symbolic_mod, "_HAS_RUST_SYMBOLIC", True)
-    monkeypatch.setattr(symbolic_mod, "_rust_graph_walk_phase", _graph_walk_phase)
-    monkeypatch.setattr(symbolic_mod, "_rust_transition_quality", lambda *_args: 1.0)
+    monkeypatch.setattr(symbolic_mod, "_rust_graph_walk_phases", _graph_walk_phases)
+    monkeypatch.setattr(
+        symbolic_mod,
+        "_rust_transition_qualities",
+        lambda indices, _n, initial: np.asarray(
+            [initial] + [1.0] * max(0, len(indices) - 1),
+            dtype=np.float64,
+        ),
+    )
 
     ext = SymbolicExtractor(n_states=8, mode="graph")
     _ = ext.extract(np.array([0, 2, 5]), sample_rate=1.0)
 
-    assert graph_calls == [(0, 5), (2, 5), (5, 5)]
+    assert graph_calls == [([0, 2, 5], 8)]
 
 
 # Pipeline wiring: SymbolicExtractor → theta/omega → UPDEEngine

@@ -1558,6 +1558,19 @@ fn ring_phase(state_index: usize, n_states: usize) -> f64 {
 }
 
 #[pyfunction]
+fn ring_phases_rust<'py>(
+    py: Python<'py>,
+    state_indices: PyReadonlyArray1<'_, i64>,
+    n_states: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let indices = state_indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let phases = symbolic::ring_phases(indices, n_states);
+    Ok(PyArray1::from_vec(py, phases))
+}
+
+#[pyfunction]
 fn event_phase(timestamps: PyReadonlyArray1<'_, f64>) -> PyResult<(f64, f64, f64)> {
     let s = timestamps
         .as_slice()
@@ -1586,8 +1599,40 @@ fn graph_walk_phase(position: usize, walk_length: usize) -> f64 {
 }
 
 #[pyfunction]
+fn graph_walk_phases_rust<'py>(
+    py: Python<'py>,
+    state_indices: PyReadonlyArray1<'_, i64>,
+    n_states: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let indices = state_indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let phases = symbolic::graph_walk_phases(indices, n_states);
+    Ok(PyArray1::from_vec(py, phases))
+}
+
+#[pyfunction]
 fn transition_quality(step_size: usize, n_states: usize) -> f64 {
     symbolic::transition_quality(step_size, n_states)
+}
+
+#[pyfunction]
+fn transition_qualities_rust<'py>(
+    py: Python<'py>,
+    state_indices: PyReadonlyArray1<'_, i64>,
+    n_states: usize,
+    initial_quality: f64,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    if !initial_quality.is_finite() {
+        return Err(PyValueError::new_err(
+            "initial_quality must be a finite float",
+        ));
+    }
+    let indices = state_indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let qualities = symbolic::transition_qualities(indices, n_states, initial_quality);
+    Ok(PyArray1::from_vec(py, qualities))
 }
 
 #[pyfunction]
@@ -3601,10 +3646,13 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(plv, m)?)?;
     m.add_function(wrap_pyfunction!(compute_layer_coherence_rust, m)?)?;
     m.add_function(wrap_pyfunction!(ring_phase, m)?)?;
+    m.add_function(wrap_pyfunction!(ring_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(event_phase, m)?)?;
     m.add_function(wrap_pyfunction!(physical_extract, m)?)?;
     m.add_function(wrap_pyfunction!(graph_walk_phase, m)?)?;
+    m.add_function(wrap_pyfunction!(graph_walk_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(transition_quality, m)?)?;
+    m.add_function(wrap_pyfunction!(transition_qualities_rust, m)?)?;
     m.add_function(wrap_pyfunction!(layer_coherence, m)?)?;
     m.add_function(wrap_pyfunction!(pid_redundancy, m)?)?;
     m.add_function(wrap_pyfunction!(pid_synergy, m)?)?;

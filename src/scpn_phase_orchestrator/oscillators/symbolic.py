@@ -33,9 +33,11 @@ IntArray: TypeAlias = NDArray[np.int64]
 SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE = 0.5
 
 try:
-    from spo_kernel import graph_walk_phase as _rust_graph_walk_phase
-    from spo_kernel import ring_phase as _rust_ring_phase
-    from spo_kernel import transition_quality as _rust_transition_quality
+    from spo_kernel import (
+        graph_walk_phases_rust as _rust_graph_walk_phases,
+        ring_phases_rust as _rust_ring_phases,
+        transition_qualities_rust as _rust_transition_qualities,
+    )
 
     _HAS_RUST_SYMBOLIC = True
 except ModuleNotFoundError:  # pragma: no cover - optional Rust backend
@@ -128,13 +130,9 @@ class SymbolicExtractor(PhaseExtractor):
         sample_rate = _validate_sample_rate(sample_rate)
         if self._mode == "ring":
             if _HAS_RUST_SYMBOLIC:
-                thetas = np.fromiter(
-                    (
-                        float(_rust_ring_phase(int(index), self._n_states))
-                        for index in indices
-                    ),
+                thetas = np.asarray(
+                    _rust_ring_phases(indices, self._n_states),
                     dtype=np.float64,
-                    count=len(indices),
                 )
             else:
                 thetas = TWO_PI * indices / self._n_states
@@ -143,13 +141,9 @@ class SymbolicExtractor(PhaseExtractor):
             # Each step adds phase proportional to the transition distance
             if len(indices) < 2:
                 if _HAS_RUST_SYMBOLIC:
-                    thetas = np.fromiter(
-                        (
-                            float(_rust_ring_phase(int(index), self._n_states))
-                            for index in indices
-                        ),
+                    thetas = np.asarray(
+                        _rust_ring_phases(indices, self._n_states),
                         dtype=np.float64,
-                        count=len(indices),
                     )
                 else:
                     thetas = TWO_PI * indices.astype(np.float64) / self._n_states
@@ -158,19 +152,9 @@ class SymbolicExtractor(PhaseExtractor):
                 cumulative = np.concatenate([[0.0], np.cumsum(steps)])
                 total = cumulative[-1] if cumulative[-1] > 0 else 1.0
                 if _HAS_RUST_SYMBOLIC:
-                    walk_length = int(round(float(total)))
-                    thetas = np.fromiter(
-                        (
-                            float(
-                                _rust_graph_walk_phase(
-                                    int(round(float(position))),
-                                    walk_length,
-                                )
-                            )
-                            for position in cumulative
-                        ),
+                    thetas = np.asarray(
+                        _rust_graph_walk_phases(indices, self._n_states),
                         dtype=np.float64,
-                        count=len(cumulative),
                     )
                 else:
                     thetas = TWO_PI * cumulative / total
@@ -185,13 +169,27 @@ class SymbolicExtractor(PhaseExtractor):
             omegas[1:] = dtheta / dt
 
         states = []
+        rust_qualities: FloatArray | None = None
+        if _HAS_RUST_SYMBOLIC:
+            rust_qualities = np.asarray(
+                _rust_transition_qualities(
+                    indices,
+                    self._n_states,
+                    self._initial_transition_quality,
+                ),
+                dtype=np.float64,
+            )
         for i in range(len(thetas)):
             states.append(
                 PhaseState(
                     theta=float(thetas[i]),
                     omega=float(omegas[i]),
                     amplitude=1.0,
-                    quality=self._transition_quality(indices, i),
+                    quality=(
+                        float(rust_qualities[i])
+                        if rust_qualities is not None
+                        else self._transition_quality(indices, i)
+                    ),
                     channel="S",
                     node_id=self._node_id,
                 )
@@ -209,8 +207,6 @@ class SymbolicExtractor(PhaseExtractor):
         if i == 0 or len(indices) < 2:
             return self._initial_transition_quality
         step = abs(int(indices[i]) - int(indices[i - 1]))
-        if _HAS_RUST_SYMBOLIC:
-            return float(_rust_transition_quality(int(step), self._n_states))
         if step == 0:
             return 0.2  # stalled
         if step == 1:
