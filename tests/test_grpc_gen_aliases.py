@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import importlib
+import runpy
 import sys
 from types import ModuleType, SimpleNamespace
 from typing import Any
@@ -62,6 +63,7 @@ def test_top_level_grpc_aliases_resolve_to_runtime_modules() -> None:
 
 
 def test_fallback_message_alias_preserves_dataclass_contract() -> None:
+    sys.modules.pop("scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback", None)
     fallback = importlib.import_module(
         "scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback"
     )
@@ -76,6 +78,14 @@ def test_fallback_message_alias_preserves_dataclass_contract() -> None:
     assert response.step == 7
     assert response.layers[0].name == "P"
     assert response.layers[0].R == 0.8
+
+
+def test_fallback_alias_module_script_executes_without_error() -> None:
+    module_path = (
+        "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_fallback.py"
+    )
+    result = runpy.run_path(module_path, run_name="__main__")
+    assert "_module" in result
 
 
 def test_fallback_servicer_alias_registers_handlers() -> None:
