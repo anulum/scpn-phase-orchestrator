@@ -95,6 +95,13 @@ class TestSyncThreshold:
             abs=1e-4,
         )
 
+    def test_disconnected_graph_finite_threshold(self):
+        K = jnp.zeros((N, N))
+        omegas = jnp.linspace(-1.0, 1.0, N)
+        kc = sync_threshold(K, omegas)
+        assert kc.shape == ()
+        assert jnp.isfinite(kc)
+
 
 class TestNNSpectralPipelineWiring:
     """Pipeline: nn/ spectral → sync_threshold → KuramotoLayer."""
