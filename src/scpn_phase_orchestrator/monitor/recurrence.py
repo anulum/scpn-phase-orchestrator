@@ -141,13 +141,23 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_CACHE: dict[str, dict[str, object]] = {}
+
+
+def _load_backend(name: str) -> dict[str, object]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -173,7 +183,7 @@ def _dispatch(fn_name: str) -> object | None:
         if loader is None:
             continue
         try:
-            fn = loader()[fn_name]
+            fn = _load_backend(backend)[fn_name]
         except (ImportError, RuntimeError, OSError, KeyError):
             continue
         if fn is not None:
@@ -257,8 +267,11 @@ def recurrence_matrix(
             "Callable[[FloatArray, int, int, float, bool], ByteArray]",
             backend_fn,
         )
-        out = np.asarray(fn(flat, t, d, epsilon, angular), dtype=np.uint8)
-        return out.reshape(t, t).astype(bool)
+        try:
+            out = np.asarray(fn(flat, t, d, epsilon, angular), dtype=np.uint8)
+            return out.reshape(t, t).astype(bool)
+        except Exception:
+            pass
 
     if angular:
         diff = traj[:, np.newaxis, :] - traj[np.newaxis, :, :]
@@ -299,11 +312,14 @@ def cross_recurrence_matrix(
             "Callable[[FloatArray, FloatArray, int, int, float, bool], ByteArray]",
             backend_fn,
         )
-        out = np.asarray(
-            fn(a_flat, b_flat, t, d, epsilon, angular),
-            dtype=np.uint8,
-        )
-        return out.reshape(t, t).astype(bool)
+        try:
+            out = np.asarray(
+                fn(a_flat, b_flat, t, d, epsilon, angular),
+                dtype=np.uint8,
+            )
+            return out.reshape(t, t).astype(bool)
+        except Exception:
+            pass
 
     if angular:
         diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]

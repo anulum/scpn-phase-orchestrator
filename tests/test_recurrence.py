@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import recurrence as recurrence_module
 from scpn_phase_orchestrator.monitor.recurrence import (
     RQAResult,
     cross_recurrence_matrix,
@@ -302,3 +303,45 @@ class TestRecurrencePipelineWiring:
         assert isinstance(result, RQAResult)
         assert 0.0 <= result.recurrence_rate <= 1.0
         assert 0.0 <= result.determinism <= 1.0
+
+
+class TestRecurrenceBackendFallbacks:
+    def test_recurrence_matrix_backend_failure_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_rm(
+            _traj_flat: np.ndarray, _t: int, _d: int, _epsilon: float, _angular: bool
+        ) -> np.ndarray:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            recurrence_module,
+            "_dispatch",
+            lambda fn_name: _raising_rm if fn_name == "rm" else None,
+        )
+        traj = np.array([[0.0], [1.0]], dtype=np.float64)
+        R = recurrence_matrix(traj, epsilon=0.5, metric="euclidean")
+        np.testing.assert_array_equal(R, np.array([[True, False], [False, True]]))
+
+    def test_cross_recurrence_backend_failure_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_cross_rm(
+            _a_flat: np.ndarray,
+            _b_flat: np.ndarray,
+            _t: int,
+            _d: int,
+            _epsilon: float,
+            _angular: bool,
+        ) -> np.ndarray:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            recurrence_module,
+            "_dispatch",
+            lambda fn_name: _raising_cross_rm if fn_name == "cross_rm" else None,
+        )
+        traj_a = np.array([[0.0], [1.0]], dtype=np.float64)
+        traj_b = np.array([[0.0], [2.0]], dtype=np.float64)
+        CR = cross_recurrence_matrix(traj_a, traj_b, epsilon=0.5, metric="euclidean")
+        np.testing.assert_array_equal(CR, np.array([[True, False], [False, False]]))
