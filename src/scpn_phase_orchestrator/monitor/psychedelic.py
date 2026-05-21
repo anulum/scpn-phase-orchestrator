@@ -105,6 +105,7 @@ _LOADERS: dict[str, Callable[[], Callable[..., float]]] = {
     "julia": _load_julia_fn,
     "go": _load_go_fn,
 }
+_BACKEND_FN_CACHE: dict[str, Callable[..., float]] = {}
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
@@ -123,9 +124,28 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., float] | None:
-    if ACTIVE_BACKEND == "python":
-        return None
-    return _LOADERS[ACTIVE_BACKEND]()
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    deduped: list[str] = []
+    for backend in ordered_backends:
+        if backend in deduped:
+            continue
+        deduped.append(backend)
+    for backend in deduped:
+        if backend == "python":
+            return None
+        fn = _BACKEND_FN_CACHE.get(backend)
+        if fn is not None:
+            return fn
+        loader = _LOADERS.get(backend)
+        if loader is None:
+            continue
+        try:
+            loaded_fn = loader()
+        except (ImportError, RuntimeError, OSError):
+            continue
+        _BACKEND_FN_CACHE[backend] = loaded_fn
+        return loaded_fn
+    return None
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:

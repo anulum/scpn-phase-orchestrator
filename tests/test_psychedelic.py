@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import psychedelic as psychedelic_mod
 from scpn_phase_orchestrator.monitor.psychedelic import (
     entropy_from_phases,
     reduce_coupling,
@@ -270,3 +271,60 @@ class TestPsychedelicPipelineWiring:
         for rec in results:
             assert 0.0 <= rec["R"] <= 1.0
             assert rec["entropy"] >= 0.0
+
+
+class TestPsychedelicBackendDispatch:
+    def test_dispatch_falls_back_to_python_when_backend_loading_fails(
+        self, monkeypatch
+    ):
+        previous_backend = psychedelic_mod.ACTIVE_BACKEND
+        previous_available = list(psychedelic_mod.AVAILABLE_BACKENDS)
+        previous_loader = psychedelic_mod._LOADERS["go"]
+        psychedelic_mod.ACTIVE_BACKEND = "go"
+        psychedelic_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        psychedelic_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(
+            psychedelic_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            fn = psychedelic_mod._dispatch()
+        finally:
+            psychedelic_mod.ACTIVE_BACKEND = previous_backend
+            psychedelic_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(psychedelic_mod._LOADERS, "go", previous_loader)
+            psychedelic_mod._BACKEND_FN_CACHE.clear()
+
+        assert fn is None
+
+    def test_dispatch_caches_loaded_backend_function(self, monkeypatch):
+        previous_backend = psychedelic_mod.ACTIVE_BACKEND
+        previous_available = list(psychedelic_mod.AVAILABLE_BACKENDS)
+        previous_loader = psychedelic_mod._LOADERS["go"]
+        psychedelic_mod.ACTIVE_BACKEND = "go"
+        psychedelic_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        psychedelic_mod._BACKEND_FN_CACHE.clear()
+        call_count = 0
+
+        def fake_fn(_phases, _n_bins):
+            return 0.0
+
+        def fake_loader():
+            nonlocal call_count
+            call_count += 1
+            return fake_fn
+
+        monkeypatch.setitem(psychedelic_mod._LOADERS, "go", fake_loader)
+        try:
+            fn1 = psychedelic_mod._dispatch()
+            fn2 = psychedelic_mod._dispatch()
+        finally:
+            psychedelic_mod.ACTIVE_BACKEND = previous_backend
+            psychedelic_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(psychedelic_mod._LOADERS, "go", previous_loader)
+            psychedelic_mod._BACKEND_FN_CACHE.clear()
+
+        assert fn1 is fake_fn
+        assert fn2 is fake_fn
+        assert call_count == 1
