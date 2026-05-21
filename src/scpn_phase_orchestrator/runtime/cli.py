@@ -478,10 +478,8 @@ def _load_plan_from_payload(
     except click.ClickException as exc:
         raise click.ClickException(f"capability schema mismatch: {exc}") from exc
 
-    if (
-        not isinstance(plan_payload.get("argument_count"), int)
-        or plan_payload["argument_count"] < 0
-    ):
+    raw_argument_count = plan_payload.get("argument_count")
+    if not isinstance(raw_argument_count, int) or raw_argument_count < 0:
         raise click.ClickException(
             "plan schema mismatch: argument_count must be a non-negative integer"
         )
@@ -524,11 +522,11 @@ def _load_plan_from_payload(
     return PluginExecutionPlan(
         manifest=manifest,
         capability=capability,
-        argument_count=cast(int, plan_payload["argument_count"]),
+        argument_count=raw_argument_count,
         keyword_names=tuple(raw_keyword_names),
         target_hash=target_hash,
         plan_hash=plan_hash,
-        audit_record=cast(dict[str, object], audit_record),
+        audit_record=audit_record,
     ), audit_record
 
 
@@ -1264,7 +1262,7 @@ def plugins_plan_execution(
     try:
         plan = build_plugin_execution_plan(
             manifest,
-            kind,
+            capability.kind,
             capability_name,
             policy=PluginRuntimeExecutionPolicy(
                 loading_permitted=True,

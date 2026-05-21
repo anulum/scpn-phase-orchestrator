@@ -863,7 +863,7 @@ def build_plugin_execution_request_storage_manifest(
         _validate_sha256(revoked_hash, "revoked request hash")
     revocation_hash = _request_revocation_hash(normalised_revocations)
     request_hash = str(request.audit_record["request_hash"])
-    audit_record = {
+    audit_record: dict[str, object] = {
         "schema": "scpn_plugin_execution_request_storage_manifest_v1",
         "version": "1.0.0",
         "request_hash": request_hash,
@@ -1086,7 +1086,10 @@ def build_plugin_execution_request_lifecycle_record(
     if revocation_list is not None:
         validate_plugin_execution_request_revocation_list(revocation_list)
         revocation_list_hash = revocation_list.revocation_list_hash
-        for revocation in revocation_list.audit_record["revocations"]:
+        revocations = revocation_list.audit_record.get("revocations")
+        if not isinstance(revocations, (list, tuple)):
+            raise ValueError("revocation list revocations must be a sequence")
+        for revocation in revocations:
             if not isinstance(revocation, dict):
                 raise ValueError("revocation list revocations must be object records")
             if revocation.get("request_hash") == request_hash:
@@ -1877,12 +1880,26 @@ def build_plugin_execution_request(
             f"plugin runtime target hash {plan.target_hash} is not approved"
         )
 
-    allowed_kinds = tuple(plan.audit_record.get("allowed_kinds", ()))
-    if not allowed_kinds:
+    raw_allowed_kinds = plan.audit_record.get("allowed_kinds")
+    if not isinstance(raw_allowed_kinds, (list, tuple)):
+        raise ValueError("plan audit record allowed_kinds must be a sequence")
+    validated_allowed_kinds: list[PluginKind] = []
+    if not raw_allowed_kinds:
         raise ValueError("plan audit record is missing allowed_kinds")
-    for kind in allowed_kinds:
-        if kind not in _VALID_KINDS:
-            raise ValueError(f"unsupported runtime load kind: {kind}")
+    for raw_kind in raw_allowed_kinds:
+        if raw_kind == "domainpack":
+            validated_allowed_kinds.append("domainpack")
+        elif raw_kind == "extractor":
+            validated_allowed_kinds.append("extractor")
+        elif raw_kind == "monitor":
+            validated_allowed_kinds.append("monitor")
+        elif raw_kind == "actuator":
+            validated_allowed_kinds.append("actuator")
+        elif raw_kind == "bridge":
+            validated_allowed_kinds.append("bridge")
+        else:
+            raise ValueError(f"unsupported runtime load kind: {raw_kind}")
+    allowed_kinds: tuple[PluginKind, ...] = tuple(validated_allowed_kinds)
 
     require_package_target = bool(plan.audit_record.get("require_package_target", True))
     approved_target_hashes = (plan.target_hash,)
