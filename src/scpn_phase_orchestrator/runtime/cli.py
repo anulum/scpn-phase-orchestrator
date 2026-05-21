@@ -1322,6 +1322,67 @@ def _load_lifecycle_remediation_action_status_payload(
     return status_payload
 
 
+def _load_lifecycle_remediation_execution_dashboard_payload(
+    dashboard_payload: dict[str, object],
+) -> dict[str, object]:
+    if (
+        dashboard_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_execution_dashboard_v1"
+    ):
+        raise click.ClickException(
+            "remediation execution dashboard schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_remediation_execution_dashboard_v1"
+        )
+    _require_sha256(dashboard_payload.get("execution_hash"), "execution_hash")
+    _require_sha256(dashboard_payload.get("plan_hash"), "plan_hash")
+    action_count = dashboard_payload.get("action_count")
+    rows = dashboard_payload.get("rows")
+    if not isinstance(action_count, int) or action_count < 0:
+        raise click.ClickException(
+            "remediation execution dashboard schema mismatch: "
+            "action_count must be non-negative"
+        )
+    if not isinstance(rows, list):
+        raise click.ClickException(
+            "remediation execution dashboard schema mismatch: rows must be a list"
+        )
+    if action_count != len(rows):
+        raise click.ClickException(
+            "remediation execution dashboard schema mismatch: "
+            "action_count does not match rows"
+        )
+    for row in rows:
+        if not isinstance(row, dict):
+            raise click.ClickException(
+                "remediation execution dashboard schema mismatch: row must be object"
+            )
+        _require_sha256(row.get("action_hash"), "action_hash")
+        _require_sha256(row.get("request_hash"), "request_hash")
+        state = row.get("state")
+        if state not in {"pending", "in_progress", "completed", "blocked"}:
+            raise click.ClickException(
+                "remediation execution dashboard schema mismatch: unsupported state"
+            )
+        action_type = row.get("action_type")
+        if action_type not in {
+            "renew_approval",
+            "persist_request",
+            "register_storage_adapter",
+            "confirm_external_write",
+        }:
+            raise click.ClickException(
+                "remediation execution dashboard schema mismatch: "
+                "unsupported action_type"
+            )
+        priority = row.get("priority")
+        if not isinstance(priority, int) or priority < 1:
+            raise click.ClickException(
+                "remediation execution dashboard schema mismatch: "
+                "priority must be a positive integer"
+            )
+    return dashboard_payload
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -2442,6 +2503,95 @@ def plugins_lifecycle_remediation_execution_dashboard(
     }
     dashboard_payload["execution_hash"] = _record_hash(dashboard_payload)
     click.echo(json.dumps(dashboard_payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-deployment-handoff")
+@click.argument(
+    "execution_dashboard_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the deployment handoff.",
+)
+def plugins_lifecycle_remediation_deployment_handoff(
+    execution_dashboard_json: Path,
+    created_by: str,
+) -> None:
+    """Emit deterministic deployment handoff actions for unresolved remediation."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation deployment handoff schema mismatch: "
+            "created_by must be non-empty"
+        )
+    dashboard = _load_lifecycle_remediation_execution_dashboard_payload(
+        _load_json_file(
+            execution_dashboard_json,
+            artifact="remediation execution dashboard",
+        )
+    )
+    plan_hash = _require_sha256(dashboard.get("plan_hash"), "plan_hash")
+    rows = cast(list[dict[str, object]], dashboard["rows"])
+    unresolved_rows = [
+        row for row in rows if row["state"] in {"pending", "in_progress", "blocked"}
+    ]
+    command_templates = {
+        "renew_approval": (
+            "spo plugins approve-execution-plan PLAN_JSON "
+            "--operator-id OPERATOR_ID --approval-reference REF "
+            "--approval-reason REASON"
+        ),
+        "persist_request": (
+            "spo plugins persist-execution-request REQUEST_JSON OUTPUT_JSON "
+            "--storage-uri STORAGE_URI --created-by DEPLOYMENT_COMPONENT"
+        ),
+        "register_storage_adapter": (
+            "spo plugins storage-adapter-manifest REQUEST_JSON "
+            "--storage-uri STORAGE_URI --storage-backend BACKEND "
+            "--created-by DEPLOYMENT_COMPONENT"
+        ),
+        "confirm_external_write": (
+            "Record external storage/API write completion and emit "
+            "spo plugins lifecycle-remediation-action-status PLAN_JSON ACTION_HASH "
+            "--state completed --updated-by DEPLOYMENT_COMPONENT"
+        ),
+    }
+    handoff_actions: list[dict[str, object]] = []
+    for row in sorted(
+        unresolved_rows,
+        key=lambda item: (
+            cast(int, item["priority"]),
+            str(item["action_hash"]),
+        ),
+    ):
+        action_type = cast(str, row["action_type"])
+        handoff_action: dict[str, object] = {
+            "action_hash": row["action_hash"],
+            "request_hash": row["request_hash"],
+            "action_type": action_type,
+            "priority": row["priority"],
+            "state": row["state"],
+            "deployment_command_template": command_templates[action_type],
+        }
+        handoff_action["handoff_action_hash"] = _record_hash(handoff_action)
+        handoff_actions.append(handoff_action)
+    handoff_payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_deployment_handoff_v1"
+        ),
+        "version": "1.0.0",
+        "plan_hash": plan_hash,
+        "execution_hash": _require_sha256(
+            dashboard.get("execution_hash"), "execution_hash"
+        ),
+        "unresolved_action_count": len(unresolved_rows),
+        "handoff_actions": handoff_actions,
+        "created_by": created_by,
+    }
+    handoff_payload["handoff_hash"] = _record_hash(handoff_payload)
+    click.echo(json.dumps(handoff_payload, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

@@ -3738,6 +3738,169 @@ def test_plugins_lifecycle_remediation_execution_dashboard_rejects_plan_mismatch
     assert "status plan_hash does not match remediation plan" in result.output
 
 
+def test_plugins_lifecycle_remediation_deployment_handoff_outputs_unresolved_actions(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    lifecycle = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle.output, encoding="utf-8")
+    summary = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary.exit_code == 0
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(summary.output, encoding="utf-8")
+    policy = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert policy.exit_code == 0
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(policy.output, encoding="utf-8")
+    drilldown = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-multistore-drilldown",
+            str(policy_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert drilldown.exit_code == 0
+    drilldown_path = tmp_path / "drilldown.json"
+    drilldown_path.write_text(drilldown.output, encoding="utf-8")
+    plan = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-orchestration",
+            str(drilldown_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert plan.exit_code == 0
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(plan.output, encoding="utf-8")
+    plan_payload = json.loads(plan.output)
+    first_action_hash = plan_payload["actions"][0]["action_hash"]
+    status = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-action-status",
+            str(plan_path),
+            first_action_hash,
+            "--state",
+            "in_progress",
+            "--updated-by",
+            "deployment_gate",
+        ],
+    )
+    assert status.exit_code == 0
+    status_path = tmp_path / "status.json"
+    status_path.write_text(status.output, encoding="utf-8")
+    dashboard = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-execution-dashboard",
+            str(plan_path),
+            str(status_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert dashboard.exit_code == 0
+    dashboard_path = tmp_path / "execution-dashboard.json"
+    dashboard_path.write_text(dashboard.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-deployment-handoff",
+            str(dashboard_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert (
+        payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_remediation_deployment_handoff_v1"
+    )
+    assert payload["unresolved_action_count"] == len(payload["handoff_actions"])
+    assert len(payload["handoff_hash"]) == 64
+    for action in payload["handoff_actions"]:
+        assert len(action["handoff_action_hash"]) == 64
+        assert action["deployment_command_template"]
+
+
+def test_plugins_lifecycle_remediation_deployment_handoff_rejects_tampered_dashboard(
+    runner,
+    tmp_path: Path,
+):
+    bad_path = tmp_path / "bad-execution-dashboard.json"
+    bad_path.write_text(
+        json.dumps(
+            {
+                "schema": "scpn_plugin_execution_request_lifecycle_other_v1",
+                "version": "1.0.0",
+                "plan_hash": "0" * 64,
+                "execution_hash": "0" * 64,
+                "action_count": 0,
+                "rows": [],
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-deployment-handoff",
+            str(bad_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "remediation execution dashboard schema mismatch" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,
