@@ -221,6 +221,40 @@ class TestKaplanYorkeDimension:
 
 
 class TestBackendDispatch:
+    def test_dispatch_returns_none_when_active_loader_fails(self, monkeypatch):
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_loader = dim_mod._LOADERS["go"]
+        dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(
+            dim_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend_fn = dim_mod._dispatch("ci")
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
+            dim_mod._BACKEND_FN_CACHE.clear()
+
+        assert backend_fn is None
+
+    def test_dispatch_returns_none_for_missing_backend_function(self, monkeypatch):
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_loader = dim_mod._LOADERS["go"]
+        dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {"ky": lambda _x: 1.0})
+        try:
+            backend_fn = dim_mod._dispatch("ci")
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
+            dim_mod._BACKEND_FN_CACHE.clear()
+
+        assert backend_fn is None
+
     def test_rust_loader_exposes_ci_and_ky_functions(self, monkeypatch):
         def fake_ci(*_args):
             return np.array([0.0], dtype=np.float64)
@@ -265,6 +299,7 @@ class TestBackendDispatch:
         finally:
             dim_mod.ACTIVE_BACKEND = previous_backend
             monkeypatch.setitem(dim_mod._LOADERS, "rust", previous_loader)
+            dim_mod._BACKEND_FN_CACHE.clear()
 
         np.testing.assert_array_equal(C, np.array([0.25, 0.5, 1.0]))
         assert calls == [(3, 2, 17, 9)]
@@ -302,6 +337,7 @@ class TestBackendDispatch:
             dim_mod.ACTIVE_BACKEND = previous_backend
             monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
             monkeypatch.setattr(dim_mod, "_prepare_pair_indices", previous_prepare)
+            dim_mod._BACKEND_FN_CACHE.clear()
 
         np.testing.assert_array_equal(C, np.array([0.0, 0.5, 1.0]))
         assert len(calls) == 1

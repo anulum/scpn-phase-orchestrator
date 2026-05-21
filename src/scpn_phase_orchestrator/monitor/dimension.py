@@ -102,6 +102,7 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_FN_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
@@ -122,7 +123,14 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 def _dispatch(fn_name: str) -> object | None:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+    backend_cache = _BACKEND_FN_CACHE.get(ACTIVE_BACKEND)
+    if backend_cache is None:
+        try:
+            backend_cache = _LOADERS[ACTIVE_BACKEND]()
+        except (ImportError, RuntimeError, OSError):
+            return None
+        _BACKEND_FN_CACHE[ACTIVE_BACKEND] = backend_cache
+    return backend_cache.get(fn_name)
 
 
 def _validate_trajectory(trajectory: object) -> FloatArray:
