@@ -215,3 +215,16 @@ def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
             initial_marking=Marking(tokens={"nominal": 1}),
             place_to_regime={"nominal": 1},  # type: ignore[dict-item]
         )
+
+
+def test_u1_petri_adapter_rejects_empty_mapping() -> None:
+    net = PetriNet(
+        places=[Place("nominal")],
+        transitions=[Transition(name="noop", inputs=[], outputs=[])],
+    )
+    with pytest.raises(Exception, match="must not be empty"):
+        PetriNetAdapter(
+            net=net,
+            initial_marking=Marking(tokens={"nominal": 1}),
+            place_to_regime={},
+        )

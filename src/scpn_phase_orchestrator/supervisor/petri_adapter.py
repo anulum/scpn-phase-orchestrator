@@ -85,6 +85,8 @@ class PetriNetAdapter:
             )
         if not isinstance(place_to_regime, Mapping):
             raise PolicyError("place_to_regime must be a mapping")
+        if not place_to_regime:
+            raise PolicyError("place_to_regime must not be empty")
         if event_bus is not None and not isinstance(event_bus, EventBus):
             raise PolicyError(f"event_bus must be an EventBus, got {event_bus!r}")
         self._net = net
