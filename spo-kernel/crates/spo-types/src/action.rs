@@ -7,6 +7,7 @@
 // SCPN Phase Orchestrator — Action types
 
 use serde::{Deserialize, Serialize};
+use crate::error::{SpoError, SpoResult};
 
 /// Supervisor operating regime for closed-loop control decisions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -49,6 +50,37 @@ pub struct ControlAction {
     pub justification: String,
 }
 
+impl ControlAction {
+    /// Validate one emitted control command before actuation/serialisation.
+    ///
+    /// # Errors
+    /// Returns [`SpoError::InvalidConfig`] when `scope`/`justification` are
+    /// blank or when `value`/`ttl_s` are non-finite (and `ttl_s` negative).
+    pub fn validate(&self) -> SpoResult<()> {
+        if self.scope.trim().is_empty() {
+            return Err(SpoError::InvalidConfig(
+                "control action scope must not be blank".into(),
+            ));
+        }
+        if !self.value.is_finite() {
+            return Err(SpoError::InvalidConfig(
+                "control action value must be finite".into(),
+            ));
+        }
+        if !self.ttl_s.is_finite() || self.ttl_s < 0.0 {
+            return Err(SpoError::InvalidConfig(
+                "control action ttl_s must be finite and >= 0".into(),
+            ));
+        }
+        if self.justification.trim().is_empty() {
+            return Err(SpoError::InvalidConfig(
+                "control action justification must not be blank".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,6 +113,19 @@ mod tests {
         assert_eq!(a.knob, Knob::K);
         assert_eq!(a.scope, "global");
         assert_eq!(a.value, 0.05);
+        assert!(a.validate().is_ok());
+    }
+
+    #[test]
+    fn control_action_validation_rejects_invalid_fields() {
+        let invalid = ControlAction {
+            knob: Knob::K,
+            scope: " ".into(),
+            value: f64::NAN,
+            ttl_s: -1.0,
+            justification: "".into(),
+        };
+        assert!(invalid.validate().is_err());
     }
 
     #[test]
