@@ -62,6 +62,34 @@ impl SimplicialStepper {
         psi: f64,
         sigma2: f64,
     ) -> SpoResult<()> {
+        let n = self.n;
+        if phases.len() != n || omegas.len() != n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected phases and omegas length {n}, got {}/{}",
+                phases.len(),
+                omegas.len()
+            )));
+        }
+        if knm.len() != n * n || alpha.len() != n * n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected knm/alpha length {} got {}/{}",
+                n * n,
+                knm.len(),
+                alpha.len()
+            )));
+        }
+        if phases.iter().any(|v| !v.is_finite())
+            || omegas.iter().any(|v| !v.is_finite())
+            || knm.iter().any(|v| !v.is_finite())
+            || alpha.iter().any(|v| !v.is_finite())
+            || !zeta.is_finite()
+            || !psi.is_finite()
+            || !sigma2.is_finite()
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "simplicial step inputs contain NaN/Inf".into(),
+            ));
+        }
         let alpha_zero = alpha.iter().all(|&a| a == 0.0);
         self.compute_derivative(phases, omegas, knm, alpha, zeta, psi, sigma2, alpha_zero);
         for i in 0..self.n {
