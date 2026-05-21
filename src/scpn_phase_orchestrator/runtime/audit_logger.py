@@ -236,6 +236,8 @@ class AuditLogger:
             raise AuditError(f"step must be a non-negative integer, got {step!r}")
         if step < 0:
             raise AuditError(f"step must be a non-negative integer, got {step!r}")
+        if not isinstance(upde_state, UPDEState):
+            raise AuditError(f"upde_state must be UPDEState, got {upde_state!r}")
         record = {
             "ts": time.time(),
             "step": step,

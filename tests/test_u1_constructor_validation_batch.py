@@ -141,6 +141,15 @@ def test_u1_audit_logger_log_step_rejects_negative_step(tmp_path) -> None:
         logger._fh.close()
 
 
+def test_u1_audit_logger_log_step_rejects_non_upde_state(tmp_path) -> None:
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        with pytest.raises(Exception, match="UPDEState"):
+            logger.log_step(0, object(), [])
+    finally:
+        logger._fh.close()
+
+
 def test_u1_geometry_carrier_rejects_non_positive_latent_dim() -> None:
     with pytest.raises(ValueError, match="positive integer"):
         GeometryCarrier(n_oscillators=4, z_dim=0, lr=0.1)
