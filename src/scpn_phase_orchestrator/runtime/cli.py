@@ -3790,6 +3790,314 @@ def plugins_lifecycle_remediation_scheduler_runbook(
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
+@plugins_group.command("lifecycle-remediation-scheduler-automation-profile")
+@click.argument(
+    "scheduler_runbook_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--profile-name",
+    required=True,
+    help="Automation profile name.",
+)
+@click.option(
+    "--profile-version",
+    required=True,
+    help="Automation profile semantic version.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Component creating automation profile artifact.",
+)
+def plugins_lifecycle_remediation_scheduler_automation_profile(
+    scheduler_runbook_json: Path,
+    profile_name: str,
+    profile_version: str,
+    created_by: str,
+) -> None:
+    """Emit deterministic adapter automation profile from scheduler runbook."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler automation profile schema mismatch: "
+            "created_by must be non-empty"
+        )
+    if not profile_name:
+        raise click.ClickException(
+            "remediation scheduler automation profile schema mismatch: "
+            "profile_name must be non-empty"
+        )
+    if not profile_version:
+        raise click.ClickException(
+            "remediation scheduler automation profile schema mismatch: "
+            "profile_version must be non-empty"
+        )
+    runbook = _load_json_file(
+        scheduler_runbook_json,
+        artifact="remediation scheduler runbook",
+    )
+    if (
+        runbook.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_runbook_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler automation profile schema mismatch: "
+            "unexpected scheduler runbook schema"
+        )
+    _require_sha256(runbook.get("runbook_hash"), "runbook_hash")
+    groups = runbook.get("groups")
+    if not isinstance(groups, list):
+        raise click.ClickException(
+            "remediation scheduler automation profile schema mismatch: "
+            "groups must be a list"
+        )
+    automation_rules: list[dict[str, object]] = []
+    for group in groups:
+        if not isinstance(group, dict):
+            raise click.ClickException(
+                "remediation scheduler automation profile schema mismatch: "
+                "group must be object"
+            )
+        control_action = group.get("control_action")
+        if control_action not in {"dispatch", "monitor", "expedite", "escalate", "no_op"}:
+            raise click.ClickException(
+                "remediation scheduler automation profile schema mismatch: "
+                "unsupported control_action"
+            )
+        steps = group.get("steps")
+        if not isinstance(steps, list):
+            raise click.ClickException(
+                "remediation scheduler automation profile schema mismatch: "
+                "steps must be list"
+            )
+        for step in steps:
+            if not isinstance(step, dict):
+                raise click.ClickException(
+                    "remediation scheduler automation profile schema mismatch: "
+                    "step must be object"
+                )
+            action_hash = _require_sha256(step.get("action_hash"), "action_hash")
+            request_hash = _require_sha256(step.get("request_hash"), "request_hash")
+            action_type = step.get("action_type")
+            priority = step.get("priority")
+            if not isinstance(action_type, str) or not action_type:
+                raise click.ClickException(
+                    "remediation scheduler automation profile schema mismatch: "
+                    "action_type must be non-empty string"
+                )
+            if not isinstance(priority, int) or priority < 1:
+                raise click.ClickException(
+                    "remediation scheduler automation profile schema mismatch: "
+                    "priority must be positive integer"
+                )
+            automation_mode = (
+                "manual"
+                if control_action in {"escalate", "no_op"}
+                else "auto"
+            )
+            target_state = {
+                "dispatch": "in_progress",
+                "monitor": "in_progress",
+                "expedite": "in_progress",
+                "escalate": "blocked",
+                "no_op": "completed",
+            }[cast(str, control_action)]
+            rule: dict[str, object] = {
+                "control_action": control_action,
+                "action_hash": action_hash,
+                "request_hash": request_hash,
+                "action_type": action_type,
+                "priority": priority,
+                "automation_mode": automation_mode,
+                "target_state": target_state,
+                "capture_command_template": (
+                    "spo plugins lifecycle-remediation-scheduler-acknowledgement-capture "
+                    "AUTOMATION_PROFILE_JSON ADAPTER_HANDOFF_JSON ACTION_HASH "
+                    "--external-reference REF --acknowledged-by OPERATOR "
+                    "--captured-state STATE --note NOTE"
+                ),
+            }
+            rule["automation_rule_hash"] = _record_hash(rule)
+            automation_rules.append(rule)
+    profile_payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_scheduler_automation_profile_v1"
+        ),
+        "version": "1.0.0",
+        "profile_name": profile_name,
+        "profile_version": profile_version,
+        "plan_hash": _require_sha256(runbook.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(runbook.get("execution_hash"), "execution_hash"),
+        "runbook_hash": _require_sha256(runbook.get("runbook_hash"), "runbook_hash"),
+        "automation_rule_count": len(automation_rules),
+        "automation_rules": sorted(
+            automation_rules,
+            key=lambda item: (
+                cast(int, item["priority"]),
+                cast(str, item["control_action"]),
+                cast(str, item["action_hash"]),
+            ),
+        ),
+        "created_by": created_by,
+    }
+    profile_payload["automation_profile_hash"] = _record_hash(profile_payload)
+    click.echo(json.dumps(profile_payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-scheduler-acknowledgement-capture")
+@click.argument(
+    "automation_profile_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "adapter_handoff_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument("action_hash")
+@click.option(
+    "--external-reference",
+    required=True,
+    help="External scheduler run identifier.",
+)
+@click.option(
+    "--acknowledged-by",
+    required=True,
+    help="Operator or adapter acknowledging execution.",
+)
+@click.option(
+    "--captured-state",
+    required=True,
+    type=click.Choice(["in_progress", "completed", "blocked"]),
+    help="Captured execution state.",
+)
+@click.option(
+    "--note",
+    default="",
+    show_default=True,
+    help="Optional capture note.",
+)
+def plugins_lifecycle_remediation_scheduler_acknowledgement_capture(
+    automation_profile_json: Path,
+    adapter_handoff_json: Path,
+    action_hash: str,
+    external_reference: str,
+    acknowledged_by: str,
+    captured_state: str,
+    note: str,
+) -> None:
+    """Capture acknowledgement using automation profile and adapter handoff."""
+    if not external_reference:
+        raise click.ClickException(
+            "remediation scheduler acknowledgement capture schema mismatch: "
+            "external_reference must be non-empty"
+        )
+    if not acknowledged_by:
+        raise click.ClickException(
+            "remediation scheduler acknowledgement capture schema mismatch: "
+            "acknowledged_by must be non-empty"
+        )
+    profile = _load_json_file(
+        automation_profile_json,
+        artifact="remediation scheduler automation profile",
+    )
+    if (
+        profile.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler acknowledgement capture schema mismatch: "
+            "unexpected automation profile schema"
+        )
+    _require_sha256(profile.get("automation_profile_hash"), "automation_profile_hash")
+    normalized_action_hash = _require_sha256(action_hash, "action_hash")
+    rules = profile.get("automation_rules")
+    if not isinstance(rules, list):
+        raise click.ClickException(
+            "remediation scheduler acknowledgement capture schema mismatch: "
+            "automation_rules must be list"
+        )
+    rule = next(
+        (
+            item
+            for item in rules
+            if isinstance(item, dict)
+            and item.get("action_hash") == normalized_action_hash
+        ),
+        None,
+    )
+    if not isinstance(rule, dict):
+        raise click.ClickException(
+            "remediation scheduler acknowledgement capture schema mismatch: "
+            "action_hash not present in automation profile"
+        )
+    target_state = cast(str, rule.get("target_state"))
+    if target_state != captured_state and cast(str, rule.get("automation_mode")) == "auto":
+        raise click.ClickException(
+            "remediation scheduler acknowledgement capture schema mismatch: "
+            "captured_state does not match auto target_state"
+        )
+    adapter_handoff = _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
+        _load_json_file(
+            adapter_handoff_json,
+            artifact="remediation scheduler adapter handoff",
+        )
+    )
+    if _require_sha256(profile.get("plan_hash"), "plan_hash") != _require_sha256(
+        adapter_handoff.get("plan_hash"), "plan_hash"
+    ):
+        raise click.ClickException(
+            "remediation scheduler acknowledgement capture schema mismatch: "
+            "plan_hash mismatch between automation profile and adapter handoff"
+        )
+    entries = cast(list[dict[str, object]], adapter_handoff["entries"])
+    matched_entry = next(
+        (
+            entry
+            for entry in entries
+            if _require_sha256(entry.get("action_hash"), "action_hash")
+            == normalized_action_hash
+        ),
+        None,
+    )
+    if matched_entry is None:
+        raise click.ClickException(
+            "remediation scheduler acknowledgement capture schema mismatch: "
+            "action_hash not present in adapter handoff"
+        )
+    payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_scheduler_acknowledgement_capture_v1"
+        ),
+        "version": "1.0.0",
+        "automation_profile_hash": _require_sha256(
+            profile.get("automation_profile_hash"),
+            "automation_profile_hash",
+        ),
+        "adapter_handoff_hash": _require_sha256(
+            adapter_handoff.get("adapter_handoff_hash"),
+            "adapter_handoff_hash",
+        ),
+        "plan_hash": _require_sha256(profile.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(profile.get("execution_hash"), "execution_hash"),
+        "action_hash": normalized_action_hash,
+        "request_hash": _require_sha256(rule.get("request_hash"), "request_hash"),
+        "adapter_entry_hash": _require_sha256(
+            matched_entry.get("adapter_entry_hash"),
+            "adapter_entry_hash",
+        ),
+        "captured_state": captured_state,
+        "target_state": target_state,
+        "automation_mode": rule.get("automation_mode"),
+        "external_reference": external_reference,
+        "acknowledged_by": acknowledged_by,
+        "note": note,
+    }
+    payload["capture_hash"] = _record_hash(payload)
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
 @plugins_group.command("revoke-execution-request")
 @click.argument(
     "request_json",
