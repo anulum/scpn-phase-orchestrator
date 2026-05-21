@@ -707,6 +707,20 @@ def test_u1_petri_adapter_rejects_non_mapping_place_to_regime() -> None:
         )
 
 
+def test_u1_petri_adapter_rejects_invalid_event_bus_type() -> None:
+    net = PetriNet(
+        places=[Place("nominal")],
+        transitions=[],
+    )
+    with pytest.raises(Exception, match="event_bus must be an EventBus"):
+        PetriNetAdapter(
+            net=net,
+            initial_marking=Marking({"nominal": 1}),
+            place_to_regime={"nominal": "NOMINAL"},
+            event_bus=object(),  # type: ignore[arg-type]
+        )
+
+
 def test_u1_audit_logger_log_step_rejects_non_upde_state(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
