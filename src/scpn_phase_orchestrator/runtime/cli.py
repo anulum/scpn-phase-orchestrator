@@ -1931,6 +1931,117 @@ def plugins_lifecycle_multistore_dashboard(
     click.echo(json.dumps(dashboard_payload, indent=2, sort_keys=True))
 
 
+@plugins_group.command("lifecycle-multistore-drilldown")
+@click.argument(
+    "policy_json",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the cross-store drill-down.",
+)
+def plugins_lifecycle_multistore_drilldown(
+    policy_json: tuple[Path, ...],
+    created_by: str,
+) -> None:
+    """Emit deterministic per-store lifecycle queues with provenance hashes."""
+    if not created_by:
+        raise click.ClickException(
+            "multi-store drilldown schema mismatch: created_by must be non-empty"
+        )
+    policies = tuple(
+        _load_lifecycle_policy_report_payload(
+            _load_json_file(path, artifact="lifecycle policy")
+        )
+        for path in policy_json
+    )
+    if not policies:
+        raise click.ClickException(
+            "multi-store drilldown requires at least one policy report"
+        )
+    policy_hashes = tuple(
+        sorted(
+            _require_sha256(policy["policy_hash"], "policy_hash")
+            for policy in policies
+        )
+    )
+    if len(set(policy_hashes)) != len(policy_hashes):
+        raise click.ClickException("duplicate lifecycle policy hash")
+
+    per_store: list[dict[str, object]] = []
+    global_requests: set[str] = set()
+    for policy in sorted(
+        policies,
+        key=lambda item: str(item["policy_hash"]),
+    ):
+        policy_hash = _require_sha256(policy["policy_hash"], "policy_hash")
+        summary_hash = _require_sha256(policy["summary_hash"], "summary_hash")
+        request_count = policy["request_count"]
+        if not isinstance(request_count, int) or request_count < 1:
+            raise click.ClickException(
+                "lifecycle policy schema mismatch: "
+                "request_count must be a positive integer"
+            )
+        status_counts = policy.get("status_counts")
+        action_counts = policy.get("policy_action_counts")
+        if not isinstance(status_counts, dict) or not isinstance(action_counts, dict):
+            raise click.ClickException(
+                "lifecycle policy schema mismatch: status/action counts are malformed"
+            )
+        store_payload: dict[str, object] = {
+            "policy_hash": policy_hash,
+            "summary_hash": summary_hash,
+            "request_count": request_count,
+            "status_counts": dict(cast(dict[str, int], status_counts)),
+            "policy_action_counts": dict(cast(dict[str, int], action_counts)),
+            "renewal_required_request_hashes": sorted(
+                cast(list[str], policy["renewal_required_request_hashes"])
+            ),
+            "storage_missing_request_hashes": sorted(
+                cast(list[str], policy["storage_missing_request_hashes"])
+            ),
+            "missing_adapter_request_hashes": sorted(
+                cast(list[str], policy["missing_adapter_request_hashes"])
+            ),
+            "external_write_followup_request_hashes": sorted(
+                cast(list[str], policy["external_write_followup_request_hashes"])
+            ),
+        }
+        store_payload["store_hash"] = _record_hash(store_payload)
+        global_requests.update(
+            cast(list[str], store_payload["renewal_required_request_hashes"])
+        )
+        global_requests.update(
+            cast(list[str], store_payload["storage_missing_request_hashes"])
+        )
+        global_requests.update(
+            cast(list[str], store_payload["missing_adapter_request_hashes"])
+        )
+        global_requests.update(
+            cast(
+                list[str],
+                store_payload["external_write_followup_request_hashes"],
+            )
+        )
+        per_store.append(store_payload)
+
+    drilldown_payload: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_multistore_drilldown_v1",
+        "version": "1.0.0",
+        "policy_count": len(per_store),
+        "policy_hashes": list(policy_hashes),
+        "stores": per_store,
+        "global_flagged_request_hashes": sorted(global_requests),
+        "global_flagged_request_count": len(global_requests),
+        "created_by": created_by,
+    }
+    drilldown_payload["drilldown_hash"] = _record_hash(drilldown_payload)
+    click.echo(json.dumps(drilldown_payload, indent=2, sort_keys=True))
+
+
 @plugins_group.command("revoke-execution-request")
 @click.argument(
     "request_json",
