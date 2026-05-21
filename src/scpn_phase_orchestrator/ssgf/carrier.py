@@ -88,6 +88,8 @@ class GeometryCarrier:
             raise TypeError(f"lr must be a finite positive real, got {lr!r}")
         if float(lr) <= 0.0:
             raise ValueError(f"lr must be a finite positive real, got {lr!r}")
+        if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
+            raise TypeError(f"seed must be int or None, got {seed!r}")
         self._n = n_oscillators
         self._z_dim = z_dim
         self._lr = lr

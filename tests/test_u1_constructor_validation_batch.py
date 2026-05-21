@@ -227,6 +227,11 @@ def test_u1_boundary_observer_set_event_bus_rejects_none() -> None:
         obs.set_event_bus(None)  # type: ignore[arg-type]
 
 
+def test_u1_geometry_carrier_rejects_boolean_seed() -> None:
+    with pytest.raises(TypeError, match="seed must be int or None"):
+        GeometryCarrier(4, seed=True)  # type: ignore[arg-type]
+
+
 def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
     with pytest.raises(Exception, match="directory"):
         AuditLogger(tmp_path)
