@@ -217,7 +217,9 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 _RUST_CACHE: dict[str, Any] | None = None
-_PRIM_CACHE: Callable[[FloatArray, int], tuple[FloatArray, FloatArray]] | None = None
+_PRIM_CACHE: (
+    dict[str, Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]] | None
+) = {}
 
 
 def _rust_bundle() -> dict[str, Any]:
@@ -229,16 +231,28 @@ def _rust_bundle() -> dict[str, Any]:
 
 def _primitive() -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
     global _PRIM_CACHE
-    if ACTIVE_BACKEND == "python":
-        return _python_spectral_eig
-    if ACTIVE_BACKEND == "rust":
-        # Rust has direct-per-function fast paths; the primitive
-        # falls back to Python so derived users never accidentally
-        # double-compute.
-        return _python_spectral_eig
     if _PRIM_CACHE is None:
-        _PRIM_CACHE = _LOADERS[ACTIVE_BACKEND]()
-    return _PRIM_CACHE
+        _PRIM_CACHE = {}
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    seen: set[str] = set()
+    for backend in ordered_backends:
+        if backend in seen:
+            continue
+        seen.add(backend)
+        if backend in {"python", "rust"}:
+            if backend == "python":
+                return _python_spectral_eig
+            continue
+        cached = _PRIM_CACHE.get(backend)
+        if cached is not None:
+            return cached
+        try:
+            loaded = _LOADERS[backend]()
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
+        _PRIM_CACHE[backend] = loaded
+        return loaded
+    return _python_spectral_eig
 
 
 def spectral_eig(knm: FloatArray) -> tuple[FloatArray, FloatArray]:

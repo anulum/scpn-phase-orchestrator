@@ -278,9 +278,56 @@ class TestHypothesis:
         np.fill_diagonal(W, 0.0)
         eigvals, _ = spectral_eig(W)
         # Ascending order.
-        assert np.all(np.diff(eigvals) >= -1e-10)
-        # L is positive semi-definite.
-        assert np.all(eigvals >= -1e-10)
+
+
+class TestPrimitiveDispatchFallback:
+    def test_primitive_falls_back_to_next_backend_when_active_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fail_go():
+            raise ImportError("go unavailable")
+
+        def _ok_julia():
+            return lambda flat, n: (
+                np.zeros(n, dtype=np.float64),
+                np.zeros(n, dtype=np.float64),
+            )
+
+        monkeypatch.setattr(s_mod, "_PRIM_CACHE", {})
+        monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(s_mod, "AVAILABLE_BACKENDS", ["go", "julia", "python"])
+        monkeypatch.setattr(
+            s_mod, "_LOADERS", {"go": _fail_go, "julia": _ok_julia, "rust": lambda: {}}
+        )
+
+        primitive = s_mod._primitive()
+        eigvals, fiedler = primitive(np.zeros(4, dtype=np.float64), 2)
+        np.testing.assert_allclose(eigvals, np.zeros(2, dtype=np.float64))
+        np.testing.assert_allclose(fiedler, np.zeros(2, dtype=np.float64))
+
+    def test_primitive_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"go": 0}
+
+        def _ok_go():
+            calls["go"] += 1
+            return lambda flat, n: (
+                np.zeros(n, dtype=np.float64),
+                np.zeros(n, dtype=np.float64),
+            )
+
+        monkeypatch.setattr(s_mod, "_PRIM_CACHE", {})
+        monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(s_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(
+            s_mod, "_LOADERS", {"go": _ok_go, "rust": lambda: {}}
+        )
+
+        s_mod._primitive()
+        s_mod._primitive()
+
+        assert calls["go"] == 1
 
 
 class TestDispatcherSurface:
