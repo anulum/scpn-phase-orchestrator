@@ -15,6 +15,7 @@ from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
+from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
 
 
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
@@ -43,3 +44,8 @@ def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
 def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
     with pytest.raises(Exception, match="directory"):
         AuditLogger(tmp_path)
+
+
+def test_u1_geometry_carrier_rejects_non_positive_latent_dim() -> None:
+    with pytest.raises(ValueError, match="positive integer"):
+        GeometryCarrier(n_oscillators=4, z_dim=0, lr=0.1)

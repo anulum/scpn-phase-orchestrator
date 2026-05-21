@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -70,6 +72,22 @@ class GeometryCarrier:
         lr: float = 0.01,
         seed: int | None = None,
     ):
+        if isinstance(n_oscillators, bool) or not isinstance(n_oscillators, int):
+            raise TypeError(
+                f"n_oscillators must be a positive integer, got {n_oscillators!r}"
+            )
+        if n_oscillators <= 0:
+            raise ValueError(
+                f"n_oscillators must be a positive integer, got {n_oscillators!r}"
+            )
+        if isinstance(z_dim, bool) or not isinstance(z_dim, int):
+            raise TypeError(f"z_dim must be a positive integer, got {z_dim!r}")
+        if z_dim <= 0:
+            raise ValueError(f"z_dim must be a positive integer, got {z_dim!r}")
+        if isinstance(lr, bool) or not isinstance(lr, Real) or not isfinite(float(lr)):
+            raise TypeError(f"lr must be a finite positive real, got {lr!r}")
+        if float(lr) <= 0.0:
+            raise ValueError(f"lr must be a finite positive real, got {lr!r}")
         self._n = n_oscillators
         self._z_dim = z_dim
         self._lr = lr
