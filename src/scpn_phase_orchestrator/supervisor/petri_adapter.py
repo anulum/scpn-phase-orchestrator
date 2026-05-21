@@ -101,7 +101,7 @@ class PetriNetAdapter:
                 )
             if place not in net.place_names:
                 raise PolicyError(f"unknown place {place!r} in regime mapping")
-            key = regime_str.upper()
+            key = regime_str.strip().upper()
             if key not in _REGIME_LOOKUP:
                 raise PolicyError(f"unknown regime {regime_str!r} for place {place!r}")
             self._place_to_regime[place] = _REGIME_LOOKUP[key]
