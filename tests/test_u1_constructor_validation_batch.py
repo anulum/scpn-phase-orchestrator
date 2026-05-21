@@ -430,6 +430,12 @@ def test_u1_boundary_observer_observe_rejects_non_numeric_value() -> None:
         obs.observe({"R": "bad"})  # type: ignore[dict-item]
 
 
+def test_u1_boundary_observer_observe_rejects_blank_value_key() -> None:
+    obs = BoundaryObserver([])
+    with pytest.raises(ValueError, match="non-empty strings"):
+        obs.observe({" ": 0.1})
+
+
 def test_u1_boundary_observer_observe_rejects_non_dict_values() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(TypeError, match="dict\\[str, float\\]"):
