@@ -681,6 +681,19 @@ def test_u1_petri_adapter_rejects_non_petri_net() -> None:
         )
 
 
+def test_u1_petri_adapter_rejects_non_marking_initial_marking() -> None:
+    net = PetriNet(
+        places=[Place("nominal")],
+        transitions=[],
+    )
+    with pytest.raises(Exception, match="initial_marking must be a Marking"):
+        PetriNetAdapter(
+            net=net,
+            initial_marking=object(),  # type: ignore[arg-type]
+            place_to_regime={"nominal": "NOMINAL"},
+        )
+
+
 def test_u1_audit_logger_log_step_rejects_non_upde_state(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
