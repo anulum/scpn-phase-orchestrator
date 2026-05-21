@@ -51,6 +51,28 @@ pub struct ControlAction {
 }
 
 impl ControlAction {
+    /// Build and validate one control action command.
+    ///
+    /// # Errors
+    /// Returns [`SpoError::InvalidConfig`] when any validation check fails.
+    pub fn try_new(
+        knob: Knob,
+        scope: String,
+        value: f64,
+        ttl_s: f64,
+        justification: String,
+    ) -> SpoResult<Self> {
+        let action = Self {
+            knob,
+            scope,
+            value,
+            ttl_s,
+            justification,
+        };
+        action.validate()?;
+        Ok(action)
+    }
+
     /// Validate one emitted control command before actuation/serialisation.
     ///
     /// # Errors
@@ -126,6 +148,14 @@ mod tests {
             justification: "".into(),
         };
         assert!(invalid.validate().is_err());
+    }
+
+    #[test]
+    fn control_action_try_new_validates() {
+        let action = ControlAction::try_new(Knob::K, "global".into(), 0.1, 5.0, "ok".into());
+        assert!(action.is_ok());
+        let bad = ControlAction::try_new(Knob::K, "".into(), 0.1, 5.0, "ok".into());
+        assert!(bad.is_err());
     }
 
     #[test]
