@@ -22,9 +22,9 @@ impl PlasticityModel {
     /// # Errors
     /// Returns `InvalidConfig` when either rate is negative.
     pub fn new(lr: f64, decay: f64) -> SpoResult<Self> {
-        if lr < 0.0 || decay < 0.0 {
+        if !lr.is_finite() || !decay.is_finite() || lr < 0.0 || decay < 0.0 {
             return Err(SpoError::InvalidConfig(
-                "lr and decay must be non-negative".into(),
+                "lr and decay must be finite and non-negative".into(),
             ));
         }
         Ok(Self { lr, decay })
@@ -43,7 +43,15 @@ impl PlasticityModel {
         dt: f64,
     ) {
         let n = sin_theta.len();
-        if knm.len() != n * n {
+        if knm.len() != n * n
+            || cos_theta.len() != n
+            || !modulator.is_finite()
+            || !dt.is_finite()
+            || dt < 0.0
+            || sin_theta.iter().any(|v| !v.is_finite())
+            || cos_theta.iter().any(|v| !v.is_finite())
+            || knm.iter().any(|v| !v.is_finite())
+        {
             return;
         }
         let decay_factor = (-self.decay * dt).exp();
@@ -77,6 +85,22 @@ impl PlasticityModel {
         dt: f64,
     ) {
         let n = sin_theta.len();
+        if cos_theta.len() != n
+            || row_ptr.len() != n + 1
+            || col_indices.len() != knm_values.len()
+            || row_ptr.first().copied().unwrap_or_default() != 0
+            || row_ptr.last().copied().unwrap_or_default() != col_indices.len()
+            || row_ptr.windows(2).any(|w| w[1] < w[0])
+            || col_indices.iter().any(|&idx| idx >= n)
+            || !modulator.is_finite()
+            || !dt.is_finite()
+            || dt < 0.0
+            || sin_theta.iter().any(|v| !v.is_finite())
+            || cos_theta.iter().any(|v| !v.is_finite())
+            || knm_values.iter().any(|v| !v.is_finite())
+        {
+            return;
+        }
         let decay_factor = (-self.decay * dt).exp();
         for i in 0..n {
             let ci = cos_theta[i];
@@ -104,6 +128,7 @@ mod tests {
     fn negative_rates_are_rejected() {
         assert!(PlasticityModel::new(-0.1, 0.0).is_err());
         assert!(PlasticityModel::new(0.0, -0.1).is_err());
+        assert!(PlasticityModel::new(f64::NAN, 0.0).is_err());
     }
 
     #[test]
