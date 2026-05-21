@@ -64,17 +64,31 @@ class RedisStateStore:
         self._port = require_tcp_port(port, field="Redis port")
         self._db = require_non_negative_int(db, field="Redis db")
         self._key = require_non_empty_str(key, field="Redis key")
+        if not isinstance(ssl, bool):
+            raise ValueError("Redis ssl must be a bool")
         if password is not None:
             password = require_non_empty_str(password, field="Redis password")
-        self._ssl = bool(ssl)
+        self._ssl = ssl
         self._password = password
         self._ssl_ca_certs = _optional_path(ssl_ca_certs, "Redis TLS CA bundle")
         self._ssl_certfile = _optional_path(ssl_certfile, "Redis TLS certificate")
         self._ssl_keyfile = _optional_path(ssl_keyfile, "Redis TLS key")
+        if (self._ssl_certfile is None) != (self._ssl_keyfile is None):
+            raise ValueError(
+                "Redis TLS certificate and key must be provided together"
+            )
         if not self._ssl and self._host not in _LOOPBACK_HOSTS:
             raise ValueError(
                 "plaintext Redis connections are allowed only for loopback hosts"
             )
+        if self._host not in _LOOPBACK_HOSTS and self._password is None:
+            raise ValueError("remote Redis connections require password authentication")
+        if (
+            self._host not in _LOOPBACK_HOSTS
+            and self._ssl
+            and self._ssl_ca_certs is None
+        ):
+            raise ValueError("remote Redis TLS connections require a CA bundle")
         if client is not None:
             self._client = client
         elif not _HAS_REDIS:

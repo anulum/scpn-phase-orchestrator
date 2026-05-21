@@ -144,6 +144,32 @@ def test_plaintext_redis_is_rejected_for_non_loopback_hosts():
         RedisStateStore(host="redis.internal", ssl=False)
 
 
+def test_remote_redis_requires_password():
+    with pytest.raises(ValueError, match="require password authentication"):
+        RedisStateStore(
+            host="redis.internal",
+            ssl=True,
+            ssl_ca_certs="/etc/redis/ca.pem",
+        )
+
+
+def test_remote_tls_redis_requires_ca_bundle():
+    with pytest.raises(ValueError, match="require a CA bundle"):
+        RedisStateStore(host="redis.internal", password="secret-token", ssl=True)
+
+
+def test_ssl_flag_must_be_bool():
+    with pytest.raises(ValueError, match="ssl must be a bool"):
+        RedisStateStore(ssl="true", client=MagicMock())  # type: ignore[arg-type]
+
+
+def test_tls_cert_and_key_must_be_provided_together():
+    with pytest.raises(ValueError, match="provided together"):
+        RedisStateStore(ssl_certfile="/etc/redis/client.pem", client=MagicMock())
+    with pytest.raises(ValueError, match="provided together"):
+        RedisStateStore(ssl_keyfile="/etc/redis/client.key", client=MagicMock())
+
+
 def test_plaintext_redis_is_allowed_for_explicit_loopback_development_client():
     mock_client = MagicMock()
     store = RedisStateStore(host="127.0.0.1", ssl=False, client=mock_client)
