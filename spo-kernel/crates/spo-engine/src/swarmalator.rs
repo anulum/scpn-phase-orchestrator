@@ -70,6 +70,29 @@ impl SwarmalatorStepper {
         let n = self.n;
         let dim = self.dim;
         let dt = self.dt;
+        if pos.len() != n * dim || phases.len() != n || omegas.len() != n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected pos={}, phases={}, omegas={}; got pos={}, phases={}, omegas={}",
+                n * dim,
+                n,
+                n,
+                pos.len(),
+                phases.len(),
+                omegas.len()
+            )));
+        }
+        if pos.iter().any(|v| !v.is_finite())
+            || phases.iter().any(|v| !v.is_finite())
+            || omegas.iter().any(|v| !v.is_finite())
+            || !a.is_finite()
+            || !b.is_finite()
+            || !j.is_finite()
+            || !k.is_finite()
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "swarmalator inputs contain NaN/Inf".into(),
+            ));
+        }
         let inv_n = 1.0 / n as f64;
         let eps = 1e-6;
 
