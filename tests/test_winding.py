@@ -187,3 +187,60 @@ class TestWindingRustDispatch:
         history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
         w = winding_numbers(history)
         np.testing.assert_array_equal(w, [0, -1])
+
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = winding_module.ACTIVE_BACKEND
+        previous_available = list(winding_module.AVAILABLE_BACKENDS)
+        previous_loader = winding_module._LOADERS["go"]
+        winding_module.ACTIVE_BACKEND = "go"
+        winding_module.AVAILABLE_BACKENDS = ["go", "python"]
+        winding_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            winding_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend = winding_module._dispatch()
+        finally:
+            winding_module.ACTIVE_BACKEND = previous_backend
+            winding_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(winding_module._LOADERS, "go", previous_loader)
+            winding_module._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = winding_module.ACTIVE_BACKEND
+        previous_available = list(winding_module.AVAILABLE_BACKENDS)
+        previous_loader = winding_module._LOADERS["go"]
+        winding_module.ACTIVE_BACKEND = "go"
+        winding_module.AVAILABLE_BACKENDS = ["go", "python"]
+        winding_module._BACKEND_CACHE.clear()
+        call_count = 0
+
+        def fake_backend(_flat: np.ndarray, _t: int, _n: int) -> np.ndarray:
+            return np.array([0], dtype=np.int64)
+
+        def loader():
+            nonlocal call_count
+            call_count += 1
+            return fake_backend
+
+        monkeypatch.setitem(winding_module._LOADERS, "go", loader)
+        try:
+            b1 = winding_module._dispatch()
+            b2 = winding_module._dispatch()
+        finally:
+            winding_module.ACTIVE_BACKEND = previous_backend
+            winding_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(winding_module._LOADERS, "go", previous_loader)
+            winding_module._BACKEND_CACHE.clear()
+
+        assert b1 is fake_backend
+        assert b2 is fake_backend
+        assert call_count == 1
