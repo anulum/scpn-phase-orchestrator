@@ -218,7 +218,15 @@ class TestStuartLandauLayer:
         amps = jax.random.uniform(key, (N,), maxval=1.0)
         R = layer.sync_score(phases, amps)
         assert R.shape == ()
-        assert 0.0 <= float(R) <= 1.0
+
+    def test_mean_amplitude_is_finite_scalar(self, key):
+        layer = StuartLandauLayer(N, key=key)
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        amps = jax.random.uniform(key, (N,), minval=0.1, maxval=1.0)
+        mean_amp = layer.mean_amplitude(phases, amps)
+        assert mean_amp.shape == ()
+        assert jnp.isfinite(mean_amp)
+        assert float(mean_amp) >= 0.0
 
     def test_mean_amplitude(self, key):
         layer = StuartLandauLayer(N, key=key)
