@@ -181,6 +181,9 @@ impl RuleEngine {
 
     /// Evaluate all rules against regime + metric context. Returns fired actions.
     pub fn evaluate(&mut self, regime: &str, ctx: &HashMap<String, f64>) -> Vec<FiredAction> {
+        if regime.trim().is_empty() {
+            return Vec::new();
+        }
         let regime_upper = regime.to_uppercase();
         let mut actions = Vec::new();
 
@@ -483,6 +486,19 @@ mod tests {
         let ctx: HashMap<String, f64> = [("stability_proxy".into(), f64::INFINITY)].into();
 
         assert!(eng.evaluate("degraded", &ctx).is_empty());
+    }
+
+    #[test]
+    fn blank_regime_fail_closes() {
+        let mut eng = RuleEngine::new(vec![simple_rule(
+            "boost",
+            "DEGRADED",
+            "stability_proxy",
+            GuardOp::Lt,
+            0.5,
+        )]);
+        let ctx: HashMap<String, f64> = [("stability_proxy".into(), 0.2)].into();
+        assert!(eng.evaluate(" ", &ctx).is_empty());
     }
 
     #[test]
