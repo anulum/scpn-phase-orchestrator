@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from math import isfinite
 from typing import TYPE_CHECKING
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
@@ -45,6 +46,31 @@ class BoundaryObserver:
     """Check measured values against boundary definitions."""
 
     def __init__(self, boundary_defs: list[BoundaryDef]):
+        if not isinstance(boundary_defs, list):
+            raise TypeError("boundary_defs must be a list[BoundaryDef]")
+        for idx, bdef in enumerate(boundary_defs):
+            if not isinstance(bdef, BoundaryDef):
+                raise TypeError(f"boundary_defs[{idx}] must be BoundaryDef, got {bdef!r}")
+            if not bdef.name.strip() or not bdef.variable.strip():
+                raise ValueError(
+                    f"boundary_defs[{idx}] requires non-empty name and variable"
+                )
+            if bdef.lower is not None and not isfinite(float(bdef.lower)):
+                raise ValueError(
+                    f"boundary_defs[{idx}] lower bound must be finite, got {bdef.lower!r}"
+                )
+            if bdef.upper is not None and not isfinite(float(bdef.upper)):
+                raise ValueError(
+                    f"boundary_defs[{idx}] upper bound must be finite, got {bdef.upper!r}"
+                )
+            if (
+                bdef.lower is not None
+                and bdef.upper is not None
+                and float(bdef.lower) > float(bdef.upper)
+            ):
+                raise ValueError(
+                    f"boundary_defs[{idx}] requires lower <= upper, got {bdef.lower!r}>{bdef.upper!r}"
+                )
         self._defs = boundary_defs
         self._event_bus: EventBus | None = None
         self._step = 0
