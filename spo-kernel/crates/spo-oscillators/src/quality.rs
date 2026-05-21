@@ -34,10 +34,19 @@ impl PhaseQualityScorer {
         if qualities.is_empty() {
             return 0.0;
         }
+        if !self.collapse_threshold.is_finite() || !self.min_quality.is_finite() {
+            return 0.0;
+        }
         let n = qualities.len().min(amplitudes.len());
         let (wsum, total_w) = (0..n).fold((0.0, 0.0), |(ws, tw), i| {
-            let w = amplitudes[i].max(1e-12);
-            (ws + qualities[i] * w, tw + w)
+            let q = qualities[i];
+            let amp = amplitudes[i];
+            if !q.is_finite() || !amp.is_finite() {
+                return (ws, tw);
+            }
+            let q = q.clamp(0.0, 1.0);
+            let w = amp.max(1e-12);
+            (ws + q * w, tw + w)
         });
         if total_w <= 0.0 {
             return 0.0;
@@ -51,9 +60,12 @@ impl PhaseQualityScorer {
         if qualities.is_empty() {
             return true;
         }
+        if !self.collapse_threshold.is_finite() {
+            return true;
+        }
         let below = qualities
             .iter()
-            .filter(|&&q| q < self.collapse_threshold)
+            .filter(|&&q| !q.is_finite() || q < self.collapse_threshold)
             .count();
         below > qualities.len() / 2
     }
@@ -61,9 +73,18 @@ impl PhaseQualityScorer {
     /// Weight array: qualities above min_quality pass through, others zeroed.
     #[must_use]
     pub fn downweight_mask(&self, qualities: &[f64]) -> Vec<f64> {
+        if !self.min_quality.is_finite() {
+            return vec![0.0; qualities.len()];
+        }
         qualities
             .iter()
-            .map(|&q| if q >= self.min_quality { q } else { 0.0 })
+            .map(|&q| {
+                if q.is_finite() && q >= self.min_quality {
+                    q.clamp(0.0, 1.0)
+                } else {
+                    0.0
+                }
+            })
             .collect()
     }
 }
@@ -119,5 +140,24 @@ mod tests {
         assert_eq!(mask[1], 0.5);
         assert_eq!(mask[2], 0.3);
         assert_eq!(mask[3], 0.9);
+    }
+
+    #[test]
+    fn score_ignores_non_finite_inputs() {
+        let s = PhaseQualityScorer::default();
+        let q = vec![0.8, f64::NAN, 0.2];
+        let a = vec![1.0, 1.0, f64::INFINITY];
+        assert!((s.score(&q, &a) - 0.8).abs() < 1e-12);
+    }
+
+    #[test]
+    fn non_finite_thresholds_fail_closed() {
+        let s = PhaseQualityScorer {
+            collapse_threshold: f64::NAN,
+            min_quality: f64::INFINITY,
+        };
+        assert_eq!(s.score(&[0.5], &[1.0]), 0.0);
+        assert!(s.is_collapsed(&[0.9, 0.8]));
+        assert_eq!(s.downweight_mask(&[0.9, 0.8]), vec![0.0, 0.0]);
     }
 }
