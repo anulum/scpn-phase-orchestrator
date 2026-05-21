@@ -93,8 +93,39 @@ impl StuartLandauStepper {
         alpha: &[f64],
         epsilon: f64,
     ) -> SpoResult<()> {
-        #[allow(unused_variables)]
         let n = self.n;
+        let dim = 2 * n;
+        if state.len() != dim || omegas.len() != n || mu.len() != n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected state={dim}, omegas={n}, mu={n}; got state={}, omegas={}, mu={}",
+                state.len(),
+                omegas.len(),
+                mu.len()
+            )));
+        }
+        if knm.len() != n * n || knm_r.len() != n * n || alpha.len() != n * n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected knm/knm_r/alpha length {} got {}/{}/{}",
+                n * n,
+                knm.len(),
+                knm_r.len(),
+                alpha.len()
+            )));
+        }
+        if state.iter().any(|v| !v.is_finite())
+            || omegas.iter().any(|v| !v.is_finite())
+            || mu.iter().any(|v| !v.is_finite())
+            || knm.iter().any(|v| !v.is_finite())
+            || knm_r.iter().any(|v| !v.is_finite())
+            || alpha.iter().any(|v| !v.is_finite())
+            || !zeta.is_finite()
+            || !psi.is_finite()
+            || !epsilon.is_finite()
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "stuart-landau inputs contain NaN/Inf".into(),
+            ));
+        }
         let alpha_zero = alpha.iter().all(|&a| a == 0.0);
         match self.method {
             Method::RK45 => {
