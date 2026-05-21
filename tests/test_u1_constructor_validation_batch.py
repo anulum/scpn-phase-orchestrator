@@ -41,6 +41,14 @@ def test_u1_action_projector_rejects_blank_rate_limit_knob() -> None:
         ActionProjector(rate_limits={" ": 0.1}, value_bounds={"K": (0.0, 1.0)})
 
 
+def test_u1_action_projector_rejects_boolean_rate_limit_value() -> None:
+    with pytest.raises(TypeError, match="must be finite real"):
+        ActionProjector(
+            rate_limits={"K": True},  # type: ignore[dict-item]
+            value_bounds={"K": (0.0, 1.0)},
+        )
+
+
 def test_u1_action_projector_rejects_non_dict_rate_limits() -> None:
     with pytest.raises(TypeError, match="rate_limits must be a dict"):
         ActionProjector(  # type: ignore[arg-type]
