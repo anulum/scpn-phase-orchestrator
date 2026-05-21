@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import winding as winding_module
 from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
 from tests.typing_contracts import assert_precise_ndarray_hint
 
@@ -158,3 +159,31 @@ class TestWindingPipelineWiring:
         assert w.shape == (n,)
         # Faster omegas should have more windings
         assert w[1] > w[2], "ω=4 should wind more than ω=1"
+
+
+class TestWindingRustDispatch:
+    def test_winding_uses_backend_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[np.ndarray, int, int]] = []
+
+        def _fake_backend(flat: np.ndarray, t: int, n: int) -> np.ndarray:
+            calls.append((flat, t, n))
+            return np.array([1, -1], dtype=np.int64)
+
+        monkeypatch.setattr(winding_module, "_dispatch", lambda: _fake_backend)
+        history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
+        w = winding_numbers(history)
+        np.testing.assert_array_equal(w, [1, -1])
+        assert len(calls) == 1
+
+    def test_winding_falls_back_when_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_backend(_flat: np.ndarray, _t: int, _n: int) -> np.ndarray:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(winding_module, "_dispatch", lambda: _raising_backend)
+        history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
+        w = winding_numbers(history)
+        np.testing.assert_array_equal(w, [1, -2])
