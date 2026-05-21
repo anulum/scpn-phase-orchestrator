@@ -135,6 +135,10 @@ class CyberneticClosure:
         self, phases: FloatArray, n_outer_steps: int
     ) -> tuple[FloatArray, list[ClosureState]]:
         """Run n outer steps, return final W and history."""
+        if not isinstance(phases, np.ndarray):
+            raise TypeError(f"phases must be numpy.ndarray, got {phases!r}")
+        if phases.ndim != 1:
+            raise ValueError(f"phases must be 1D vector, got shape {phases.shape!r}")
         if isinstance(n_outer_steps, bool) or not isinstance(n_outer_steps, int):
             raise TypeError(
                 f"n_outer_steps must be a non-negative integer, got {n_outer_steps!r}"

@@ -144,6 +144,13 @@ def test_u1_cybernetic_closure_run_rejects_negative_outer_steps() -> None:
         closure.run(np.zeros(4, dtype=float), -1)
 
 
+def test_u1_cybernetic_closure_run_rejects_non_vector_phases() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    closure = CyberneticClosure(carrier=carrier)
+    with pytest.raises(ValueError, match="1D vector"):
+        closure.run(np.zeros((2, 2), dtype=float), 0)
+
+
 def test_u1_cybernetic_closure_step_rejects_mismatched_phase_length() -> None:
     carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
     closure = CyberneticClosure(carrier=carrier)
