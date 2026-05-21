@@ -129,13 +129,23 @@ _LOADERS: dict[str, Callable[[], tuple[_MarketFn, _MarketFn]]] = {
     "julia": _load_julia_fn,
     "go": _load_go_fn,
 }
+_BACKEND_CACHE: dict[str, tuple[_MarketFn, _MarketFn]] = {}
+
+
+def _load_backend(name: str) -> tuple[_MarketFn, _MarketFn]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -147,9 +157,19 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> tuple[_MarketFn, _MarketFn] | None:
-    if ACTIVE_BACKEND == "python":
-        return None
-    return _LOADERS[ACTIVE_BACKEND]()
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    seen: set[str] = set()
+    for backend in ordered_backends:
+        if backend in seen:
+            continue
+        seen.add(backend)
+        if backend == "python":
+            continue
+        try:
+            return _load_backend(backend)
+        except (ImportError, RuntimeError, OSError):
+            continue
+    return None
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:

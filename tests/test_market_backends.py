@@ -145,3 +145,61 @@ class TestHypothesisParity:
         ref = _plv_backend("python", seed, T=T, N=N, W=W)
         got = _plv_backend("go", seed, T=T, N=N, W=W)
         assert np.max(np.abs(got - ref)) < TOL
+
+
+class TestDispatchFallbackChain:
+    def test_dispatch_falls_back_to_next_backend_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"rust": 0, "go": 0}
+
+        def _fail_rust():
+            calls["rust"] += 1
+            raise ImportError("missing rust backend")
+
+        def _ok_go():
+            calls["go"] += 1
+            return (
+                lambda phases_flat, t, n: np.full(t, 0.5, dtype=np.float64),
+                lambda phases_flat, t, n, window: np.zeros(
+                    ((t - window + 1), n, n), dtype=np.float64
+                ),
+            )
+
+        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(m_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(m_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
+
+        phases = np.zeros((6, 2), dtype=np.float64)
+        op = m_mod.market_order_parameter(phases)
+        assert op.shape == (6,)
+        assert np.allclose(op, 0.5)
+        assert calls == {"rust": 1, "go": 1}
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"go": 0}
+
+        def _ok_go():
+            calls["go"] += 1
+            return (
+                lambda phases_flat, t, n: np.full(t, 0.25, dtype=np.float64),
+                lambda phases_flat, t, n, window: np.zeros(
+                    ((t - window + 1), n, n), dtype=np.float64
+                ),
+            )
+
+        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(m_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(m_mod, "_LOADERS", {"go": _ok_go})
+
+        phases = np.zeros((7, 3), dtype=np.float64)
+        first = m_mod.market_order_parameter(phases)
+        second = m_mod.market_order_parameter(phases)
+
+        assert np.allclose(first, 0.25)
+        assert np.allclose(second, 0.25)
+        assert calls["go"] == 1
