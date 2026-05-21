@@ -145,6 +145,7 @@ def _extract_1d_python(amps: FloatArray, window: int) -> FloatArray:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
