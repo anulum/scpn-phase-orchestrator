@@ -164,5 +164,23 @@ class TestJIT:
         assert jnp.allclose(f1, f2, atol=1e-6)
 
 
+class TestSigma2Activation:
+    def test_sigma2_changes_dynamics(self, key):
+        k1, k2, k3 = jax.random.split(key, 3)
+        phases = jax.random.uniform(k1, (N,), maxval=2.0 * jnp.pi)
+        layer_zero = SimplicialKuramotoLayer(
+            N, n_steps=20, dt=DT, sigma2_init=0.0, key=k2
+        )
+        layer_active = SimplicialKuramotoLayer(
+            N, n_steps=20, dt=DT, sigma2_init=1.0, key=k3
+        )
+        out_zero = layer_zero(phases)
+        out_active = layer_active(phases)
+        assert out_zero.shape == out_active.shape
+        assert jnp.isfinite(out_zero).all()
+        assert jnp.isfinite(out_active).all()
+        assert not jnp.allclose(out_zero, out_active, atol=1e-7)
+
+
 # Pipeline wiring: SimplicialKuramotoLayer uses simplicial_forward internally
 # with order_parameter. TestComparison and TestGrad exercise the full pipeline.
