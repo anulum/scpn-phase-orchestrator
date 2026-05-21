@@ -194,6 +194,14 @@ class AuditLogger:
             raise AuditError(f"method must be a non-empty string, got {method!r}")
         if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
             raise AuditError(f"seed must be integer or None, got {seed!r}")
+        if binding_config is not None and not isinstance(binding_config, dict):
+            raise AuditError(
+                f"binding_config must be dict[str, object] or None, got {binding_config!r}"
+            )
+        if binding_summary is not None and not isinstance(binding_summary, dict):
+            raise AuditError(
+                f"binding_summary must be dict[str, object] or None, got {binding_summary!r}"
+            )
         record: dict = {
             "header": True,
             "n_oscillators": n_oscillators,

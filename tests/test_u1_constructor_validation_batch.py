@@ -161,6 +161,15 @@ def test_u1_audit_logger_header_rejects_boolean_seed(tmp_path) -> None:
         logger._fh.close()
 
 
+def test_u1_audit_logger_header_rejects_non_dict_binding_config(tmp_path) -> None:
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        with pytest.raises(Exception, match="binding_config"):
+            logger.log_header(n_oscillators=4, dt=0.1, binding_config=["bad"])  # type: ignore[arg-type]
+    finally:
+        logger._fh.close()
+
+
 def test_u1_audit_logger_log_step_rejects_negative_step(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
