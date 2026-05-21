@@ -74,6 +74,15 @@ def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
         AuditLogger(tmp_path)
 
 
+def test_u1_audit_logger_header_rejects_non_positive_dt(tmp_path) -> None:
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        with pytest.raises(Exception, match="finite positive real"):
+            logger.log_header(n_oscillators=4, dt=0.0)
+    finally:
+        logger._fh.close()
+
+
 def test_u1_geometry_carrier_rejects_non_positive_latent_dim() -> None:
     with pytest.raises(ValueError, match="positive integer"):
         GeometryCarrier(n_oscillators=4, z_dim=0, lr=0.1)

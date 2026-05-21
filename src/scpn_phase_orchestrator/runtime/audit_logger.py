@@ -21,6 +21,7 @@ import hmac
 import json
 import os
 import time
+from math import isfinite
 from pathlib import Path
 
 import numpy as np
@@ -175,6 +176,20 @@ class AuditLogger:
         binding_summary: dict[str, object] | None = None,
     ) -> None:
         """Engine configuration record for replay reconstruction."""
+        if isinstance(n_oscillators, bool) or not isinstance(n_oscillators, int):
+            raise AuditError(
+                f"n_oscillators must be a positive integer, got {n_oscillators!r}"
+            )
+        if n_oscillators <= 0:
+            raise AuditError(
+                f"n_oscillators must be a positive integer, got {n_oscillators!r}"
+            )
+        if isinstance(dt, bool) or not isinstance(dt, (int, float)) or not isfinite(float(dt)):
+            raise AuditError(f"dt must be a finite positive real, got {dt!r}")
+        if float(dt) <= 0.0:
+            raise AuditError(f"dt must be a finite positive real, got {dt!r}")
+        if not isinstance(method, str) or not method.strip():
+            raise AuditError(f"method must be a non-empty string, got {method!r}")
         record: dict = {
             "header": True,
             "n_oscillators": n_oscillators,
