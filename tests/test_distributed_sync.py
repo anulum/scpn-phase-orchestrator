@@ -141,3 +141,32 @@ def test_phase_sync_config_rejects_unphysical_limits() -> None:
             n_oscillators=2,
             max_phase_step_rad=0.0,
         )
+    with pytest.raises(ValueError, match="n_oscillators"):
+        DistributedSyncConfig(node_id="edge-a", n_oscillators=True)
+    with pytest.raises(ValueError, match="protocol_version"):
+        DistributedSyncConfig(node_id="edge-a", n_oscillators=2, protocol_version=0)
+
+
+def test_phase_sync_message_rejects_invalid_scalar_contracts() -> None:
+    with pytest.raises(ValueError, match="sequence"):
+        PhaseSyncMessage(
+            node_id="edge-a",
+            sequence=True,
+            phases=(0.1, 0.2),
+            wall_time_s=1.0,
+        )
+    with pytest.raises(ValueError, match="protocol_version"):
+        PhaseSyncMessage(
+            node_id="edge-a",
+            sequence=1,
+            phases=(0.1, 0.2),
+            wall_time_s=1.0,
+            protocol_version=True,
+        )
+    with pytest.raises(ValueError, match="wall_time_s"):
+        PhaseSyncMessage(
+            node_id="edge-a",
+            sequence=1,
+            phases=(0.1, 0.2),
+            wall_time_s=-1.0,
+        )

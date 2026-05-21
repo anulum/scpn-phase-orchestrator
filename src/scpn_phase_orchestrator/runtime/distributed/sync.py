@@ -58,9 +58,17 @@ class DistributedSyncConfig:
 
     def __post_init__(self) -> None:
         _node_id(self.node_id)
-        if self.n_oscillators <= 0:
+        if (
+            isinstance(self.n_oscillators, bool)
+            or not isinstance(self.n_oscillators, int)
+            or self.n_oscillators <= 0
+        ):
             raise ValueError("n_oscillators must be positive")
-        if self.protocol_version <= 0:
+        if (
+            isinstance(self.protocol_version, bool)
+            or not isinstance(self.protocol_version, int)
+            or self.protocol_version <= 0
+        ):
             raise ValueError("protocol_version must be positive")
         if not math.isfinite(self.phase_blend) or not (0.0 <= self.phase_blend <= 1.0):
             raise ValueError("phase_blend must be finite and in [0, 1]")
@@ -89,12 +97,25 @@ class PhaseSyncMessage:
 
     def __post_init__(self) -> None:
         _node_id(self.node_id)
-        if self.sequence <= 0:
+        if (
+            isinstance(self.sequence, bool)
+            or not isinstance(self.sequence, int)
+            or self.sequence <= 0
+        ):
             raise ValueError("sequence must be positive")
-        if self.protocol_version <= 0:
+        if (
+            isinstance(self.protocol_version, bool)
+            or not isinstance(self.protocol_version, int)
+            or self.protocol_version <= 0
+        ):
             raise ValueError("protocol_version must be positive")
-        if not math.isfinite(self.wall_time_s):
-            raise ValueError("wall_time_s must be finite")
+        if (
+            not isinstance(self.wall_time_s, (int, float))
+            or isinstance(self.wall_time_s, bool)
+            or not math.isfinite(self.wall_time_s)
+            or self.wall_time_s < 0.0
+        ):
+            raise ValueError("wall_time_s must be finite and non-negative")
         phases = _phase_tuple(self.phases, "phases")
         object.__setattr__(self, "phases", phases)
         digest = self.digest or _message_digest(
