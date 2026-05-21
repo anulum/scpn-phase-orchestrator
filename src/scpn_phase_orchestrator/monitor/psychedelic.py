@@ -108,11 +108,20 @@ _LOADERS: dict[str, Callable[[], Callable[..., float]]] = {
 _BACKEND_FN_CACHE: dict[str, Callable[..., float]] = {}
 
 
+def _load_backend(name: str) -> Callable[..., float]:
+    cached = _BACKEND_FN_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_FN_CACHE[name] = loaded
+    return loaded
+
+
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -133,17 +142,10 @@ def _dispatch() -> Callable[..., float] | None:
     for backend in deduped:
         if backend == "python":
             return None
-        fn = _BACKEND_FN_CACHE.get(backend)
-        if fn is not None:
-            return fn
-        loader = _LOADERS.get(backend)
-        if loader is None:
-            continue
         try:
-            loaded_fn = loader()
+            loaded_fn = _load_backend(backend)
         except (ImportError, RuntimeError, OSError):
             continue
-        _BACKEND_FN_CACHE[backend] = loaded_fn
         return loaded_fn
     return None
 
