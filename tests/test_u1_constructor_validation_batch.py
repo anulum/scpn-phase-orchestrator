@@ -310,3 +310,17 @@ def test_u1_petri_adapter_step_rejects_whitespace_ctx_metric() -> None:
     )
     with pytest.raises(Exception, match="non-empty strings"):
         adapter.step({" ": 0.0})
+
+
+def test_u1_petri_adapter_step_rejects_boolean_ctx_value() -> None:
+    net = PetriNet(
+        places=[Place("nominal")],
+        transitions=[Transition(name="noop", inputs=[], outputs=[])],
+    )
+    adapter = PetriNetAdapter(
+        net=net,
+        initial_marking=Marking(tokens={"nominal": 1}),
+        place_to_regime={"nominal": "nominal"},
+    )
+    with pytest.raises(Exception, match="finite real"):
+        adapter.step({"stability_proxy": True})  # type: ignore[dict-item]
