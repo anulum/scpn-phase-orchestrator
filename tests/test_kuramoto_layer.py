@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ tests")
@@ -332,6 +333,14 @@ class TestKuramotoLayer:
         batched = jax.vmap(layer)
         out = batched(batch)
         assert out.shape == (4, N)
+
+    def test_masked_layer_path(self, key):
+        mask = np.eye(N, dtype=np.float32)
+        layer = KuramotoLayer(N, n_steps=10, dt=DT, mask=mask, key=key)
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        out = layer(phases)
+        assert out.shape == (N,)
+        assert jnp.isfinite(out).all()
 
 
 # --- Simplicial (3-body) Kuramoto ---
