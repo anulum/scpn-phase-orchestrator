@@ -672,6 +672,15 @@ def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
         )
 
 
+def test_u1_petri_adapter_rejects_non_petri_net() -> None:
+    with pytest.raises(Exception, match="net must be a PetriNet"):
+        PetriNetAdapter(  # type: ignore[arg-type]
+            net=object(),
+            initial_marking=Marking({"nominal": 1}),
+            place_to_regime={"nominal": "NOMINAL"},
+        )
+
+
 def test_u1_audit_logger_log_step_rejects_non_upde_state(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
