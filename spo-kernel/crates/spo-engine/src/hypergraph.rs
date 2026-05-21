@@ -68,6 +68,44 @@ impl HypergraphStepper {
         zeta: f64,
         psi: f64,
     ) -> SpoResult<()> {
+        let n = self.n;
+        if phases.len() != n || omegas.len() != n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected phases and omegas length {n}, got {}/{}",
+                phases.len(),
+                omegas.len()
+            )));
+        }
+        if knm.len() != n * n || alpha.len() != n * n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected knm/alpha length {} got {}/{}",
+                n * n,
+                knm.len(),
+                alpha.len()
+            )));
+        }
+        if edges
+            .iter()
+            .any(|edge| edge.nodes.is_empty() || edge.nodes.iter().any(|&idx| idx >= n))
+        {
+            return Err(SpoError::InvalidDimension(
+                "hyperedge contains empty or out-of-range nodes".into(),
+            ));
+        }
+        if phases.iter().any(|v| !v.is_finite())
+            || omegas.iter().any(|v| !v.is_finite())
+            || knm.iter().any(|v| !v.is_finite())
+            || alpha.iter().any(|v| !v.is_finite())
+            || edges
+                .iter()
+                .any(|edge| !edge.strength.is_finite())
+            || !zeta.is_finite()
+            || !psi.is_finite()
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "hypergraph step inputs contain NaN/Inf".into(),
+            ));
+        }
         self.compute_derivative(phases, omegas, edges, knm, alpha, zeta, psi);
         for i in 0..self.n {
             phases[i] = (phases[i] + self.dt * self.deriv_buf[i]).rem_euclid(TAU);
