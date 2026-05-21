@@ -76,7 +76,12 @@ class KnmTemplateSet:
             float(np.max(template.alpha))
         ):
             raise ValueError("template alpha must contain finite real values")
-        self._templates[normalized_name] = template
+        self._templates[normalized_name] = KnmTemplate(
+            name=normalized_name,
+            knm=template.knm,
+            alpha=template.alpha,
+            description=template.description,
+        )
 
     def get(self, name: str) -> KnmTemplate:
         """Retrieve a template by name. Raises KeyError if not found."""
