@@ -342,3 +342,66 @@ class TestRecurrenceBackendFallbacks:
         traj_b = np.array([[0.0], [2.0]], dtype=np.float64)
         CR = cross_recurrence_matrix(traj_a, traj_b, epsilon=0.5, metric="euclidean")
         np.testing.assert_array_equal(CR, np.array([[True, False], [False, False]]))
+
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = recurrence_module.ACTIVE_BACKEND
+        previous_available = list(recurrence_module.AVAILABLE_BACKENDS)
+        previous_loader = recurrence_module._LOADERS["go"]
+        recurrence_module.ACTIVE_BACKEND = "go"
+        recurrence_module.AVAILABLE_BACKENDS = ["go", "python"]
+        recurrence_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            recurrence_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            fn = recurrence_module._dispatch("rm")
+        finally:
+            recurrence_module.ACTIVE_BACKEND = previous_backend
+            recurrence_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(recurrence_module._LOADERS, "go", previous_loader)
+            recurrence_module._BACKEND_CACHE.clear()
+
+        assert fn is None
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = recurrence_module.ACTIVE_BACKEND
+        previous_available = list(recurrence_module.AVAILABLE_BACKENDS)
+        previous_loader = recurrence_module._LOADERS["go"]
+        recurrence_module.ACTIVE_BACKEND = "go"
+        recurrence_module.AVAILABLE_BACKENDS = ["go", "python"]
+        recurrence_module._BACKEND_CACHE.clear()
+        call_count = 0
+
+        def fake_rm(
+            _traj_flat: np.ndarray,
+            _t: int,
+            _d: int,
+            _epsilon: float,
+            _angular: bool,
+        ) -> np.ndarray:
+            return np.array([1], dtype=np.uint8)
+
+        def loader() -> dict[str, object]:
+            nonlocal call_count
+            call_count += 1
+            return {"rm": fake_rm}
+
+        monkeypatch.setitem(recurrence_module._LOADERS, "go", loader)
+        try:
+            fn1 = recurrence_module._dispatch("rm")
+            fn2 = recurrence_module._dispatch("rm")
+        finally:
+            recurrence_module.ACTIVE_BACKEND = previous_backend
+            recurrence_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(recurrence_module._LOADERS, "go", previous_loader)
+            recurrence_module._BACKEND_CACHE.clear()
+
+        assert fn1 is fake_rm
+        assert fn2 is fake_rm
+        assert call_count == 1

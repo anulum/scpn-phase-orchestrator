@@ -179,15 +179,15 @@ def _dispatch(fn_name: str) -> object | None:
     for backend in deduped:
         if backend == "python":
             return None
-        loader = _LOADERS.get(backend)
-        if loader is None:
+        if backend not in _LOADERS:
             continue
         try:
-            fn = _load_backend(backend)[fn_name]
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(backend).get(fn_name)
+        except (ImportError, RuntimeError, OSError):
             continue
-        if fn is not None:
-            return fn
+        if fn is None:
+            continue
+        return fn
     return None
 
 
