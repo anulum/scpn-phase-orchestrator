@@ -8,7 +8,7 @@
 
 use std::collections::VecDeque;
 
-use spo_types::{Regime, UPDEState};
+use spo_types::{Regime, SpoError, SpoResult, UPDEState};
 
 use crate::boundaries::BoundaryState;
 use crate::events::{EventBus, EventKind, RegimeEvent};
@@ -43,6 +43,11 @@ pub struct RegimeManager {
 impl RegimeManager {
     #[must_use]
     pub fn new(hysteresis: f64, cooldown_steps: u64) -> Self {
+        let hysteresis = if hysteresis.is_finite() && hysteresis >= 0.0 {
+            hysteresis
+        } else {
+            0.0
+        };
         Self {
             current: Regime::Nominal,
             hysteresis,
@@ -54,6 +59,19 @@ impl RegimeManager {
             transition_log: VecDeque::new(),
             event_bus: None,
         }
+    }
+
+    /// Build a regime manager with strict input validation.
+    ///
+    /// # Errors
+    /// Returns [`SpoError::InvalidConfig`] when `hysteresis` is non-finite or negative.
+    pub fn try_new(hysteresis: f64, cooldown_steps: u64) -> SpoResult<Self> {
+        if !hysteresis.is_finite() || hysteresis < 0.0 {
+            return Err(SpoError::InvalidConfig(
+                "hysteresis must be finite and >= 0".into(),
+            ));
+        }
+        Ok(Self::new(hysteresis, cooldown_steps))
     }
 
     #[must_use]
@@ -253,6 +271,13 @@ mod tests {
         bs.hard_violations.push("test violation".into());
         let regime = rm.evaluate(&make_state(0.9), &bs);
         assert_eq!(regime, Regime::Critical);
+    }
+
+    #[test]
+    fn try_new_rejects_invalid_hysteresis() {
+        assert!(RegimeManager::try_new(f64::NAN, 1).is_err());
+        assert!(RegimeManager::try_new(-0.1, 1).is_err());
+        assert!(RegimeManager::try_new(0.05, 1).is_ok());
     }
 
     #[test]
