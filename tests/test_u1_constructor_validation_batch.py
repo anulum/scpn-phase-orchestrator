@@ -510,6 +510,15 @@ def test_u1_audit_logger_log_event_rejects_blank_event_type(tmp_path) -> None:
         logger._fh.close()
 
 
+def test_u1_audit_logger_log_event_rejects_non_dict_data(tmp_path) -> None:
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        with pytest.raises(Exception, match="data must be dict"):
+            logger.log_event("evt", ["bad"])  # type: ignore[arg-type]
+    finally:
+        logger._fh.close()
+
+
 def test_u1_audit_logger_log_step_rejects_non_finite_phases_payload(tmp_path) -> None:
     from scpn_phase_orchestrator.actuation.mapper import ControlAction
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
