@@ -676,6 +676,11 @@ def test_u1_tcbo_observer_rejects_boolean_tau() -> None:
         TCBOObserver(tau_h1=True)  # type: ignore[arg-type]
 
 
+def test_u1_tcbo_observer_rejects_boolean_beta() -> None:
+    with pytest.raises(TypeError, match="finite real values"):
+        TCBOObserver(beta=True)  # type: ignore[arg-type]
+
+
 def test_u1_tcbo_observer_observe_rejects_non_finite_phase() -> None:
     obs = TCBOObserver()
     with pytest.raises(ValueError, match="finite values"):
