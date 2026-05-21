@@ -316,6 +316,12 @@ class AuditLogger:
 
     def log_event(self, event_type: str, data: dict) -> None:
         """Write a named event with arbitrary data to the audit log."""
+        if not isinstance(event_type, str) or not event_type.strip():
+            raise AuditError(
+                f"event_type must be a non-empty string, got {event_type!r}"
+            )
+        if not isinstance(data, dict):
+            raise AuditError(f"data must be dict[str, object], got {data!r}")
         record = {"ts": time.time(), "event": event_type, **data}
         self._write_record(record)
 
