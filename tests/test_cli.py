@@ -5558,6 +5558,234 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_capture_rejects
     assert "captured_state does not match auto target_state" in result.output
 
 
+def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration(
+    runner,
+    tmp_path: Path,
+):
+    profile_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1",
+        "version": "1.0.0",
+        "profile_name": "airflow-default",
+        "profile_version": "1.0.0",
+        "plan_hash": "1" * 64,
+        "execution_hash": "2" * 64,
+        "runbook_hash": "3" * 64,
+        "automation_rule_count": 2,
+        "automation_rules": [
+            {
+                "control_action": "dispatch",
+                "action_hash": "4" * 64,
+                "request_hash": "5" * 64,
+                "action_type": "persist_request",
+                "priority": 1,
+                "automation_mode": "auto",
+                "target_state": "in_progress",
+                "capture_command_template": "x",
+                "automation_rule_hash": "6" * 64,
+            },
+            {
+                "control_action": "escalate",
+                "action_hash": "7" * 64,
+                "request_hash": "8" * 64,
+                "action_type": "confirm_external_write",
+                "priority": 2,
+                "automation_mode": "manual",
+                "target_state": "blocked",
+                "capture_command_template": "x",
+                "automation_rule_hash": "9" * 64,
+            },
+        ],
+        "created_by": "operator_console",
+    }
+    profile_payload["automation_profile_hash"] = hashlib.sha256(
+        json.dumps(profile_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    profile_path = tmp_path / "profile.json"
+    profile_path.write_text(
+        json.dumps(profile_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    retry_profile = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-retry-profile",
+            str(profile_path),
+            "--max-attempts",
+            "4",
+            "--base-delay-seconds",
+            "20",
+            "--backoff-multiplier",
+            "2.0",
+            "--created-by",
+            "operator_console",
+        ],
+    )
+    assert retry_profile.exit_code == 0
+    retry_payload = json.loads(retry_profile.output)
+    assert (
+        retry_payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1"
+    )
+    assert retry_payload["retry_rule_count"] == 2
+    assert len(retry_payload["retry_profile_hash"]) == 64
+    retry_profile_path = tmp_path / "retry-profile.json"
+    retry_profile_path.write_text(retry_profile.output, encoding="utf-8")
+
+    capture_a = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1",
+        "version": "1.0.0",
+        "automation_profile_hash": retry_payload["automation_profile_hash"],
+        "adapter_handoff_hash": "a" * 64,
+        "plan_hash": "1" * 64,
+        "execution_hash": "2" * 64,
+        "action_hash": "4" * 64,
+        "request_hash": "5" * 64,
+        "adapter_entry_hash": "b" * 64,
+        "captured_state": "blocked",
+        "target_state": "in_progress",
+        "automation_mode": "auto",
+        "external_reference": "run-1",
+        "acknowledged_by": "operator",
+        "note": "",
+    }
+    capture_a["capture_hash"] = hashlib.sha256(
+        json.dumps(capture_a, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    capture_a_path = tmp_path / "capture-a.json"
+    capture_a_path.write_text(
+        json.dumps(capture_a, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    capture_b = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1",
+        "version": "1.0.0",
+        "automation_profile_hash": retry_payload["automation_profile_hash"],
+        "adapter_handoff_hash": "c" * 64,
+        "plan_hash": "1" * 64,
+        "execution_hash": "2" * 64,
+        "action_hash": "7" * 64,
+        "request_hash": "8" * 64,
+        "adapter_entry_hash": "d" * 64,
+        "captured_state": "blocked",
+        "target_state": "blocked",
+        "automation_mode": "manual",
+        "external_reference": "run-2",
+        "acknowledged_by": "operator",
+        "note": "",
+    }
+    capture_b["capture_hash"] = hashlib.sha256(
+        json.dumps(capture_b, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    capture_b_path = tmp_path / "capture-b.json"
+    capture_b_path.write_text(
+        json.dumps(capture_b, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    orchestration = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-retry-orchestration",
+            str(retry_profile_path),
+            str(capture_a_path),
+            str(capture_b_path),
+            "--created-by",
+            "operator_console",
+        ],
+    )
+    assert orchestration.exit_code == 0
+    orchestration_payload = json.loads(orchestration.output)
+    assert (
+        orchestration_payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_orchestration_v1"
+    )
+    assert orchestration_payload["retry_entry_count"] == 1
+    assert orchestration_payload["retry_entries"][0]["action_hash"] == "4" * 64
+    assert orchestration_payload["retry_entries"][0]["next_delay_seconds"] == 20
+    assert len(orchestration_payload["retry_orchestration_hash"]) == 64
+
+
+def test_plugins_lifecycle_remediation_scheduler_retry_orchestration_rejects_duplicate_capture(
+    runner,
+    tmp_path: Path,
+):
+    retry_profile_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1",
+        "version": "1.0.0",
+        "plan_hash": "1" * 64,
+        "execution_hash": "2" * 64,
+        "automation_profile_hash": "3" * 64,
+        "retry_rule_count": 1,
+        "retry_rules": [
+            {
+                "action_hash": "4" * 64,
+                "request_hash": "5" * 64,
+                "automation_mode": "auto",
+                "control_action": "dispatch",
+                "target_state": "in_progress",
+                "policy_mode": "retry_enabled",
+                "max_attempts": 3,
+                "base_delay_seconds": 30,
+                "backoff_multiplier": 2.0,
+                "retry_rule_hash": "6" * 64,
+            }
+        ],
+        "created_by": "operator_console",
+    }
+    retry_profile_payload["retry_profile_hash"] = hashlib.sha256(
+        json.dumps(retry_profile_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    retry_profile_path = tmp_path / "retry-profile.json"
+    retry_profile_path.write_text(
+        json.dumps(retry_profile_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    capture_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1",
+        "version": "1.0.0",
+        "automation_profile_hash": "3" * 64,
+        "adapter_handoff_hash": "7" * 64,
+        "plan_hash": "1" * 64,
+        "execution_hash": "2" * 64,
+        "action_hash": "4" * 64,
+        "request_hash": "5" * 64,
+        "adapter_entry_hash": "8" * 64,
+        "captured_state": "blocked",
+        "target_state": "in_progress",
+        "automation_mode": "auto",
+        "external_reference": "run",
+        "acknowledged_by": "operator",
+        "note": "",
+    }
+    capture_payload["capture_hash"] = hashlib.sha256(
+        json.dumps(capture_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    capture_a = tmp_path / "capture-a.json"
+    capture_b = tmp_path / "capture-b.json"
+    capture_blob = json.dumps(capture_payload, indent=2, sort_keys=True)
+    capture_a.write_text(capture_blob, encoding="utf-8")
+    capture_b.write_text(capture_blob, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-retry-orchestration",
+            str(retry_profile_path),
+            str(capture_a),
+            str(capture_b),
+            "--created-by",
+            "operator_console",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "duplicate capture action_hash" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,

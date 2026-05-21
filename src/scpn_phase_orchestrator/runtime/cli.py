@@ -4098,6 +4098,297 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_capture(
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
+@plugins_group.command("lifecycle-remediation-scheduler-retry-profile")
+@click.argument(
+    "automation_profile_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--max-attempts",
+    default=3,
+    show_default=True,
+    type=int,
+    help="Maximum retry attempts for eligible automated actions.",
+)
+@click.option(
+    "--base-delay-seconds",
+    default=30,
+    show_default=True,
+    type=int,
+    help="Base delay in seconds before first retry.",
+)
+@click.option(
+    "--backoff-multiplier",
+    default=2.0,
+    show_default=True,
+    type=float,
+    help="Retry backoff multiplier.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Component creating retry profile artifact.",
+)
+def plugins_lifecycle_remediation_scheduler_retry_profile(
+    automation_profile_json: Path,
+    max_attempts: int,
+    base_delay_seconds: int,
+    backoff_multiplier: float,
+    created_by: str,
+) -> None:
+    """Emit deterministic retry/backoff policy profile from automation profile."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler retry profile schema mismatch: "
+            "created_by must be non-empty"
+        )
+    if max_attempts < 1:
+        raise click.ClickException(
+            "remediation scheduler retry profile schema mismatch: "
+            "max_attempts must be positive"
+        )
+    if base_delay_seconds < 1:
+        raise click.ClickException(
+            "remediation scheduler retry profile schema mismatch: "
+            "base_delay_seconds must be positive"
+        )
+    if backoff_multiplier < 1.0:
+        raise click.ClickException(
+            "remediation scheduler retry profile schema mismatch: "
+            "backoff_multiplier must be >= 1.0"
+        )
+    profile = _load_json_file(
+        automation_profile_json,
+        artifact="remediation scheduler automation profile",
+    )
+    if (
+        profile.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler retry profile schema mismatch: "
+            "unexpected automation profile schema"
+        )
+    automation_profile_hash = _require_sha256(
+        profile.get("automation_profile_hash"),
+        "automation_profile_hash",
+    )
+    rules = profile.get("automation_rules")
+    if not isinstance(rules, list):
+        raise click.ClickException(
+            "remediation scheduler retry profile schema mismatch: "
+            "automation_rules must be list"
+        )
+    retry_rules: list[dict[str, object]] = []
+    for rule in rules:
+        if not isinstance(rule, dict):
+            raise click.ClickException(
+                "remediation scheduler retry profile schema mismatch: rule must be object"
+            )
+        action_hash = _require_sha256(rule.get("action_hash"), "action_hash")
+        request_hash = _require_sha256(rule.get("request_hash"), "request_hash")
+        automation_mode = rule.get("automation_mode")
+        control_action = rule.get("control_action")
+        if automation_mode not in {"auto", "manual"}:
+            raise click.ClickException(
+                "remediation scheduler retry profile schema mismatch: unsupported automation_mode"
+            )
+        if control_action not in {"dispatch", "monitor", "expedite", "escalate", "no_op"}:
+            raise click.ClickException(
+                "remediation scheduler retry profile schema mismatch: unsupported control_action"
+            )
+        policy_mode = (
+            "retry_enabled"
+            if automation_mode == "auto" and control_action in {"dispatch", "expedite"}
+            else "retry_disabled"
+        )
+        retry_rule: dict[str, object] = {
+            "action_hash": action_hash,
+            "request_hash": request_hash,
+            "automation_mode": automation_mode,
+            "control_action": control_action,
+            "target_state": rule.get("target_state"),
+            "policy_mode": policy_mode,
+            "max_attempts": max_attempts if policy_mode == "retry_enabled" else 0,
+            "base_delay_seconds": (
+                base_delay_seconds if policy_mode == "retry_enabled" else 0
+            ),
+            "backoff_multiplier": (
+                backoff_multiplier if policy_mode == "retry_enabled" else 1.0
+            ),
+        }
+        retry_rule["retry_rule_hash"] = _record_hash(retry_rule)
+        retry_rules.append(retry_rule)
+    payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_scheduler_retry_profile_v1"
+        ),
+        "version": "1.0.0",
+        "plan_hash": _require_sha256(profile.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(profile.get("execution_hash"), "execution_hash"),
+        "automation_profile_hash": automation_profile_hash,
+        "retry_rule_count": len(retry_rules),
+        "retry_rules": sorted(
+            retry_rules,
+            key=lambda item: (
+                cast(str, item["policy_mode"]),
+                cast(str, item["action_hash"]),
+            ),
+        ),
+        "created_by": created_by,
+    }
+    payload["retry_profile_hash"] = _record_hash(payload)
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-scheduler-retry-orchestration")
+@click.argument(
+    "retry_profile_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "acknowledgement_capture_json",
+    nargs=-1,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Component creating retry orchestration artifact.",
+)
+def plugins_lifecycle_remediation_scheduler_retry_orchestration(
+    retry_profile_json: Path,
+    acknowledgement_capture_json: tuple[Path, ...],
+    created_by: str,
+) -> None:
+    """Emit deterministic retry queue from captured acknowledgements and policy."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler retry orchestration schema mismatch: "
+            "created_by must be non-empty"
+        )
+    retry_profile = _load_json_file(
+        retry_profile_json,
+        artifact="remediation scheduler retry profile",
+    )
+    if (
+        retry_profile.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler retry orchestration schema mismatch: "
+            "unexpected retry profile schema"
+        )
+    retry_profile_hash = _require_sha256(
+        retry_profile.get("retry_profile_hash"),
+        "retry_profile_hash",
+    )
+    retry_rules = retry_profile.get("retry_rules")
+    if not isinstance(retry_rules, list):
+        raise click.ClickException(
+            "remediation scheduler retry orchestration schema mismatch: "
+            "retry_rules must be list"
+        )
+    retry_rule_by_action_hash: dict[str, dict[str, object]] = {}
+    for rule in retry_rules:
+        if not isinstance(rule, dict):
+            raise click.ClickException(
+                "remediation scheduler retry orchestration schema mismatch: rule must be object"
+            )
+        action_hash = _require_sha256(rule.get("action_hash"), "action_hash")
+        if action_hash in retry_rule_by_action_hash:
+            raise click.ClickException(
+                "remediation scheduler retry orchestration schema mismatch: duplicate rule action_hash"
+            )
+        retry_rule_by_action_hash[action_hash] = rule
+
+    capture_by_action_hash: dict[str, dict[str, object]] = {}
+    for path in acknowledgement_capture_json:
+        capture = _load_json_file(
+            path,
+            artifact="remediation scheduler acknowledgement capture",
+        )
+        if (
+            capture.get("schema")
+            != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1"
+        ):
+            raise click.ClickException(
+                "remediation scheduler retry orchestration schema mismatch: "
+                "unexpected acknowledgement capture schema"
+            )
+        action_hash = _require_sha256(capture.get("action_hash"), "action_hash")
+        if action_hash in capture_by_action_hash:
+            raise click.ClickException(
+                "remediation scheduler retry orchestration schema mismatch: duplicate capture action_hash"
+            )
+        if _require_sha256(capture.get("plan_hash"), "plan_hash") != _require_sha256(
+            retry_profile.get("plan_hash"), "plan_hash"
+        ):
+            raise click.ClickException(
+                "remediation scheduler retry orchestration schema mismatch: plan_hash mismatch"
+            )
+        capture_by_action_hash[action_hash] = capture
+
+    retry_entries: list[dict[str, object]] = []
+    for action_hash, capture in sorted(capture_by_action_hash.items()):
+        rule = retry_rule_by_action_hash.get(action_hash)
+        if rule is None:
+            raise click.ClickException(
+                "remediation scheduler retry orchestration schema mismatch: "
+                "capture action_hash missing from retry profile"
+            )
+        state = capture.get("captured_state")
+        if state == "completed":
+            continue
+        if cast(str, rule["policy_mode"]) != "retry_enabled":
+            continue
+        max_attempts = cast(int, rule["max_attempts"])
+        base_delay_seconds = cast(int, rule["base_delay_seconds"])
+        backoff_multiplier = cast(float, rule["backoff_multiplier"])
+        attempt = 1
+        next_delay_seconds = int(base_delay_seconds * (backoff_multiplier ** (attempt - 1)))
+        entry: dict[str, object] = {
+            "action_hash": action_hash,
+            "request_hash": _require_sha256(capture.get("request_hash"), "request_hash"),
+            "capture_hash": _require_sha256(capture.get("capture_hash"), "capture_hash"),
+            "capture_state": state,
+            "attempt": attempt,
+            "max_attempts": max_attempts,
+            "next_delay_seconds": next_delay_seconds,
+            "external_reference": capture.get("external_reference"),
+            "retry_command_template": (
+                "spo plugins lifecycle-remediation-scheduler-acknowledgement-capture "
+                "AUTOMATION_PROFILE_JSON ADAPTER_HANDOFF_JSON ACTION_HASH "
+                "--external-reference REF --acknowledged-by OPERATOR "
+                "--captured-state STATE --note NOTE"
+            ),
+        }
+        entry["retry_entry_hash"] = _record_hash(entry)
+        retry_entries.append(entry)
+    payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_scheduler_retry_orchestration_v1"
+        ),
+        "version": "1.0.0",
+        "plan_hash": _require_sha256(retry_profile.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(retry_profile.get("execution_hash"), "execution_hash"),
+        "retry_profile_hash": retry_profile_hash,
+        "retry_entry_count": len(retry_entries),
+        "retry_entries": sorted(
+            retry_entries,
+            key=lambda item: (
+                cast(int, item["next_delay_seconds"]),
+                cast(str, item["action_hash"]),
+            ),
+        ),
+        "created_by": created_by,
+    }
+    payload["retry_orchestration_hash"] = _record_hash(payload)
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
 @plugins_group.command("revoke-execution-request")
 @click.argument(
     "request_json",
