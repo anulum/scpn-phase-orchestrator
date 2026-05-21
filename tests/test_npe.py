@@ -13,6 +13,7 @@ from typing import Any, get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import npe as npe_module
 from scpn_phase_orchestrator.monitor.npe import compute_npe, phase_distance_matrix
 from tests.typing_contracts import assert_precise_ndarray_hint
 
@@ -167,3 +168,71 @@ class TestNPEPipelineWiring:
 
         npe = compute_npe(phases)
         assert npe < 0.3, f"Synced engine phases → NPE should be low, got {npe}"
+
+
+class TestNPERustDispatch:
+    def test_phase_distance_uses_backend_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[np.ndarray] = []
+
+        def _fake_pdm(phases: np.ndarray) -> np.ndarray:
+            calls.append(phases)
+            return np.array([0.0, 1.0, 1.0, 0.0], dtype=np.float64)
+
+        monkeypatch.setattr(
+            npe_module,
+            "_dispatch",
+            lambda fn_name: _fake_pdm if fn_name == "phase_distance_matrix" else None,
+        )
+        D = phase_distance_matrix(np.array([0.0, 1.0], dtype=np.float64))
+        np.testing.assert_allclose(D, np.array([[0.0, 1.0], [1.0, 0.0]]), atol=1e-12)
+        assert len(calls) == 1
+
+    def test_phase_distance_falls_back_when_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_pdm(_phases: np.ndarray) -> np.ndarray:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            npe_module,
+            "_dispatch",
+            lambda fn_name: _raising_pdm if fn_name == "phase_distance_matrix" else None,
+        )
+        phases = np.array([0.1, 2 * np.pi - 0.1], dtype=np.float64)
+        D = phase_distance_matrix(phases)
+        assert D.shape == (2, 2)
+        assert D[0, 1] < 0.3
+
+    def test_compute_npe_uses_backend_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[np.ndarray, float]] = []
+
+        def _fake_npe(phases: np.ndarray, radius: float) -> float:
+            calls.append((phases, radius))
+            return 0.55
+
+        monkeypatch.setattr(
+            npe_module,
+            "_dispatch",
+            lambda fn_name: _fake_npe if fn_name == "compute_npe" else None,
+        )
+        npe = compute_npe(np.array([0.0, 1.0, 2.0], dtype=np.float64), max_radius=1.5)
+        assert npe == pytest.approx(0.55, abs=1e-12)
+        assert len(calls) == 1
+
+    def test_compute_npe_falls_back_when_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_npe(_phases: np.ndarray, _radius: float) -> float:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            npe_module,
+            "_dispatch",
+            lambda fn_name: _raising_npe if fn_name == "compute_npe" else None,
+        )
+        npe = compute_npe(np.array([0.0, 1.0, 2.0], dtype=np.float64), max_radius=1.5)
+        assert 0.0 <= npe <= 1.0

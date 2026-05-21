@@ -96,13 +96,23 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_CACHE: dict[str, dict[str, object]] = {}
+
+
+def _load_backend(name: str) -> dict[str, object]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -116,7 +126,10 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 def _dispatch(fn_name: str) -> object:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+    try:
+        return _load_backend(ACTIVE_BACKEND)[fn_name]
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return None
 
 
 def _validate_phases(phases: object) -> FloatArray:
@@ -156,8 +169,11 @@ def phase_distance_matrix(phases: FloatArray) -> FloatArray:
     backend_fn = _dispatch("phase_distance_matrix")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray], FloatArray]", backend_fn)
-        flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
-        return np.asarray(flat, dtype=np.float64).reshape(n, n)
+        try:
+            flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
+            return np.asarray(flat, dtype=np.float64).reshape(n, n)
+        except Exception:
+            pass
 
     diff = phases[:, np.newaxis] - phases[np.newaxis, :]
     return np.asarray(np.abs(np.arctan2(np.sin(diff), np.cos(diff))), dtype=np.float64)
@@ -181,12 +197,15 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
     backend_fn = _dispatch("compute_npe")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, float], float]", backend_fn)
-        return float(
-            fn(
-                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                radius,
+        try:
+            return float(
+                fn(
+                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                    radius,
+                )
             )
-        )
+        except Exception:
+            pass
 
     dist = phase_distance_matrix(phases)
     triu_idx = np.triu_indices(n, k=1)
