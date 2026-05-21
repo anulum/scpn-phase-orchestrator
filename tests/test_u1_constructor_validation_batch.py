@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — U1 constructor validation batch tests
+
+from __future__ import annotations
+
+import pytest
+
+from scpn_phase_orchestrator.actuation.constraints import ActionProjector
+
+
+def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
+    with pytest.raises(ValueError, match="finite >= 0"):
+        ActionProjector(rate_limits={"K": float("nan")}, value_bounds={"K": (0.0, 1.0)})
