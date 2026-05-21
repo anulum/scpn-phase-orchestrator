@@ -28,6 +28,14 @@ def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
         ActionProjector(rate_limits={"K": float("nan")}, value_bounds={"K": (0.0, 1.0)})
 
 
+def test_u1_action_projector_rejects_non_dict_rate_limits() -> None:
+    with pytest.raises(TypeError, match="rate_limits must be a dict"):
+        ActionProjector(  # type: ignore[arg-type]
+            rate_limits=[("K", 0.1)],
+            value_bounds={"K": (0.0, 1.0)},
+        )
+
+
 def test_u1_action_projector_rejects_non_finite_previous_value() -> None:
     projector = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 1.0)})
     action = ControlAction(
