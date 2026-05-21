@@ -119,6 +119,8 @@ class BoundaryObserver:
         for name, value in values.items():
             if not isinstance(name, str) or not name.strip():
                 raise ValueError(f"value keys must be non-empty strings, got {name!r}")
+            if isinstance(value, bool):
+                raise ValueError(f"values[{name!r}] must be finite float, got {value!r}")
             if not isfinite(float(value)):
                 raise ValueError(f"values[{name!r}] must be finite float, got {value!r}")
         for bdef in self._defs:

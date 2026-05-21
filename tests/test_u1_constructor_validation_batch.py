@@ -88,6 +88,12 @@ def test_u1_boundary_observer_observe_rejects_negative_step() -> None:
         obs.observe({}, step=-1)
 
 
+def test_u1_boundary_observer_observe_rejects_bool_value() -> None:
+    obs = BoundaryObserver([])
+    with pytest.raises(ValueError, match="finite float"):
+        obs.observe({"R": True})  # type: ignore[dict-item]
+
+
 def test_u1_boundary_observer_set_event_bus_rejects_wrong_type() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(TypeError, match="EventBus"):
