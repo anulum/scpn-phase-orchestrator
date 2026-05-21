@@ -335,3 +335,95 @@ class TestEmbeddingPipelineWiring:
         assert result.dimension >= 1
         assert result.trajectory.ndim == 2
         assert result.trajectory.shape[1] == result.dimension
+
+
+class TestEmbeddingBackendFallbacks:
+    def test_delay_embed_backend_failure_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_de(_signal: np.ndarray, _delay: int, _dimension: int) -> np.ndarray:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            em_mod,
+            "_dispatch",
+            lambda fn_name: _raising_de if fn_name == "de" else None,
+        )
+        emb = delay_embed(np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64), 1, 2)
+        np.testing.assert_array_equal(emb, [[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
+
+    def test_mutual_information_backend_failure_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_mi(_signal: np.ndarray, _lag: int, _n_bins: int) -> float:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            em_mod,
+            "_dispatch",
+            lambda fn_name: _raising_mi if fn_name == "mi" else None,
+        )
+        mi = mutual_information(np.array([0.0, 1.0, 0.0, 1.0], dtype=np.float64), 1, 2)
+        assert np.isfinite(mi)
+        assert mi >= 0.0
+
+    def test_nearest_neighbor_backend_failure_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_nn(
+            _embedded: np.ndarray, _t: int, _m: int
+        ) -> tuple[np.ndarray, np.ndarray]:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            em_mod,
+            "_dispatch",
+            lambda fn_name: _raising_nn if fn_name == "nn" else None,
+        )
+        dist, idx = nearest_neighbor_distances(np.array([[0.0], [1.0], [3.0]]))
+        np.testing.assert_allclose(dist, [1.0, 1.0, 2.0])
+        np.testing.assert_array_equal(idx, [1, 0, 1])
+
+    def test_optimal_delay_rust_failure_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_optimal_delay(_signal: np.ndarray, _max_lag: int, _n_bins: int) -> int:
+            raise RuntimeError("boom")
+
+        previous = em_mod.ACTIVE_BACKEND
+        em_mod.ACTIVE_BACKEND = "rust"
+        monkeypatch.setattr(
+            em_mod,
+            "_load_backend",
+            lambda name: {"optimal_delay": _raising_optimal_delay},
+        )
+        try:
+            tau = optimal_delay(np.sin(np.linspace(0.0, 6 * np.pi, 400)), max_lag=40)
+        finally:
+            em_mod.ACTIVE_BACKEND = previous
+        assert tau >= 1
+
+    def test_optimal_dimension_rust_failure_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_optimal_dimension(
+            _signal: np.ndarray, _delay: int, _max_dim: int, _rtol: float, _atol: float
+        ) -> int:
+            raise RuntimeError("boom")
+
+        previous = em_mod.ACTIVE_BACKEND
+        em_mod.ACTIVE_BACKEND = "rust"
+        monkeypatch.setattr(
+            em_mod,
+            "_load_backend",
+            lambda name: {"optimal_dimension": _raising_optimal_dimension},
+        )
+        try:
+            dim = optimal_dimension(
+                np.sin(np.linspace(0.0, 8 * np.pi, 600)),
+                delay=2,
+                max_dim=5,
+            )
+        finally:
+            em_mod.ACTIVE_BACKEND = previous
+        assert 1 <= dim <= 5

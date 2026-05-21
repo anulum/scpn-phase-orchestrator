@@ -141,13 +141,23 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_CACHE: dict[str, dict[str, object]] = {}
+
+
+def _load_backend(name: str) -> dict[str, object]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -170,7 +180,10 @@ def _dispatch(fn_name: str) -> object | None:
     for name in AVAILABLE_BACKENDS:
         if name == "python":
             return None
-        fn = _LOADERS[name]()[fn_name]
+        try:
+            fn = _load_backend(name)[fn_name]
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
         if fn is not None:
             return fn
     return None
@@ -256,10 +269,13 @@ def delay_embed(
     backend_fn = _dispatch("de")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
-        return np.asarray(
-            fn(s, delay, dimension),
-            dtype=np.float64,
-        ).reshape(t_eff, dimension)
+        try:
+            return np.asarray(
+                fn(s, delay, dimension),
+                dtype=np.float64,
+            ).reshape(t_eff, dimension)
+        except Exception:
+            pass
 
     indices = np.arange(dimension) * delay
     rows = np.arange(t_eff)[:, np.newaxis] + indices[np.newaxis, :]
@@ -282,7 +298,10 @@ def mutual_information(
     backend_fn = _dispatch("mi")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], float]", backend_fn)
-        return float(fn(s, lag, n_bins))
+        try:
+            return float(fn(s, lag, n_bins))
+        except Exception:
+            pass
 
     t_total = s.size - lag
     x = s[:t_total]
@@ -319,11 +338,14 @@ def nearest_neighbor_distances(
             "Callable[[FloatArray, int, int], tuple[FloatArray, IntArray]]",
             backend_fn,
         )
-        dist, idx = fn(e, t, m)
-        return (
-            np.asarray(dist, dtype=np.float64),
-            np.asarray(idx, dtype=np.int64),
-        )
+        try:
+            dist, idx = fn(e, t, m)
+            return (
+                np.asarray(dist, dtype=np.float64),
+                np.asarray(idx, dtype=np.int64),
+            )
+        except Exception:
+            pass
 
     nn_dist = np.full(t, np.inf)
     nn_idx = np.zeros(t, dtype=np.int64)
@@ -348,11 +370,14 @@ def optimal_delay(
     n_bins = _validate_int_at_least(n_bins, name="n_bins", minimum=2)
 
     if ACTIVE_BACKEND == "rust":
-        fn = cast(
-            "Callable[[FloatArray, int, int], int]",
-            _LOADERS["rust"]()["optimal_delay"],
-        )
-        return int(fn(s, max_lag, n_bins))
+        try:
+            fn = cast(
+                "Callable[[FloatArray, int, int], int]",
+                _load_backend("rust")["optimal_delay"],
+            )
+            return int(fn(s, max_lag, n_bins))
+        except Exception:
+            pass
 
     max_lag = min(max_lag, s.size // 2)
     mi_values = np.array([mutual_information(s, lag, n_bins) for lag in range(max_lag)])
@@ -380,13 +405,16 @@ def optimal_dimension(
         return 1
 
     if ACTIVE_BACKEND == "rust":
-        fn = cast(
-            "Callable[..., int]",
-            _LOADERS["rust"]()["optimal_dimension"],
-        )
-        return int(
-            fn(s, delay, max_dim, rtol, atol),
-        )
+        try:
+            fn = cast(
+                "Callable[..., int]",
+                _load_backend("rust")["optimal_dimension"],
+            )
+            return int(
+                fn(s, delay, max_dim, rtol, atol),
+            )
+        except Exception:
+            pass
 
     for m in range(1, max_dim + 1):
         t_next = s.size - m * delay
