@@ -32,6 +32,12 @@ pub fn estimate_coupling(phases: &[f64], omegas: &[f64], n: usize, t: usize, dt:
     if t < 3 || n == 0 {
         return vec![0.0; n * n];
     }
+    if phases.len() != n * t || omegas.len() != n || !dt.is_finite() || dt <= 0.0 {
+        return vec![0.0; n * n];
+    }
+    if phases.iter().any(|v| !v.is_finite()) || omegas.iter().any(|v| !v.is_finite()) {
+        return vec![0.0; n * n];
+    }
     let t_eff = t - 1;
     let dphase = unwrapped_deriv(phases, n, t, dt);
     let mut knm = vec![0.0; n * n];
