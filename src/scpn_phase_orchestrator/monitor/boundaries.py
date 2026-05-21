@@ -105,9 +105,18 @@ class BoundaryObserver:
         Missing variables are ignored. Unknown severities are logged and
         treated as hard violations so safety-critical callers fail closed.
         """
+        if not isinstance(values, dict):
+            raise TypeError(f"values must be dict[str, float], got {values!r}")
         if step is not None:
+            if isinstance(step, bool) or not isinstance(step, int) or step < 0:
+                raise ValueError(f"step must be a non-negative integer, got {step!r}")
             self._step = step
         state = BoundaryState()
+        for name, value in values.items():
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError(f"value keys must be non-empty strings, got {name!r}")
+            if not isfinite(float(value)):
+                raise ValueError(f"values[{name!r}] must be finite float, got {value!r}")
         for bdef in self._defs:
             val = values.get(bdef.variable)
             if val is None:
