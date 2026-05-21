@@ -258,6 +258,58 @@ class TestBasinStabilityEdgeSemantics:
         assert result.n_converged == result.n_samples
         assert result.S_B == 1.0
 
+
+class TestDispatchFallbackChain:
+    def test_dispatch_falls_back_to_next_backend_when_active_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
+
+        calls: dict[str, int] = {"rust": 0, "go": 0}
+
+        def _fail_rust():
+            calls["rust"] += 1
+            raise ImportError("rust unavailable")
+
+        def _ok_go():
+            calls["go"] += 1
+            return lambda *args, **kwargs: 0.5
+
+        monkeypatch.setattr(basin_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(basin_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(
+            basin_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"]
+        )
+        monkeypatch.setattr(
+            basin_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go}
+        )
+
+        fn = basin_mod._dispatch()
+        assert fn is not None
+        assert float(fn()) == 0.5
+        assert calls == {"rust": 1, "go": 1}
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
+
+        calls: dict[str, int] = {"go": 0}
+
+        def _ok_go():
+            calls["go"] += 1
+            return lambda *args, **kwargs: 0.25
+
+        monkeypatch.setattr(basin_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(basin_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(basin_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(basin_mod, "_LOADERS", {"go": _ok_go})
+
+        basin_mod._dispatch()
+        basin_mod._dispatch()
+
+        assert calls["go"] == 1
+
     def test_steady_state_zero_measure_shortcuts_without_backend(self, monkeypatch):
         import scpn_phase_orchestrator.upde.basin_stability as basin_mod
 
@@ -300,8 +352,10 @@ class TestBasinDispatch:
         previous_backend = basin_mod.ACTIVE_BACKEND
         previous_available = list(basin_mod.AVAILABLE_BACKENDS)
         previous_loader = basin_mod._LOADERS["go"]
+        previous_cache = dict(basin_mod._BACKEND_CACHE)
         basin_mod.ACTIVE_BACKEND = "go"
         basin_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        basin_mod._BACKEND_CACHE.clear()
         monkeypatch.setitem(
             basin_mod._LOADERS,
             "go",
@@ -313,6 +367,7 @@ class TestBasinDispatch:
             basin_mod.ACTIVE_BACKEND = previous_backend
             basin_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(basin_mod._LOADERS, "go", previous_loader)
+            basin_mod._BACKEND_CACHE = previous_cache
 
         assert backend is None
 
@@ -325,8 +380,10 @@ class TestBasinDispatch:
         previous_available = list(basin_mod.AVAILABLE_BACKENDS)
         previous_go = basin_mod._LOADERS["go"]
         previous_rust = basin_mod._LOADERS["rust"]
+        previous_cache = dict(basin_mod._BACKEND_CACHE)
         basin_mod.ACTIVE_BACKEND = "go"
         basin_mod.AVAILABLE_BACKENDS = ["go", "rust", "python"]
+        basin_mod._BACKEND_CACHE.clear()
 
         def fake_backend(*_args: object) -> float:
             return 0.0
@@ -344,5 +401,6 @@ class TestBasinDispatch:
             basin_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(basin_mod._LOADERS, "go", previous_go)
             monkeypatch.setitem(basin_mod._LOADERS, "rust", previous_rust)
+            basin_mod._BACKEND_CACHE = previous_cache
 
         assert backend is fake_backend
