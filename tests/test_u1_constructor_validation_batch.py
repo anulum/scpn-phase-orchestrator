@@ -36,6 +36,11 @@ def test_u1_action_projector_rejects_non_dict_value_bounds() -> None:
         )
 
 
+def test_u1_action_projector_rejects_blank_rate_limit_knob() -> None:
+    with pytest.raises(ValueError, match="knob name must be non-empty str"):
+        ActionProjector(rate_limits={" ": 0.1}, value_bounds={"K": (0.0, 1.0)})
+
+
 def test_u1_action_projector_rejects_non_dict_rate_limits() -> None:
     with pytest.raises(TypeError, match="rate_limits must be a dict"):
         ActionProjector(  # type: ignore[arg-type]
