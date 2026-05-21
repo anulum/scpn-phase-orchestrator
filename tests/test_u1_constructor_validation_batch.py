@@ -184,6 +184,19 @@ def test_u1_knm_template_set_add_rejects_non_template_payload() -> None:
         reg.add(object())  # type: ignore[arg-type]
 
 
+def test_u1_knm_template_set_add_rejects_blank_template_name() -> None:
+    reg = KnmTemplateSet()
+    with pytest.raises(ValueError, match="template name must be a non-empty string"):
+        reg.add(
+            KnmTemplate(
+                name=" ",
+                knm=np.ones((2, 2), dtype=float),
+                alpha=np.ones((2, 2), dtype=float),
+                description="ok",
+            )
+        )
+
+
 def test_u1_knm_template_set_rejects_blank_description() -> None:
     reg = KnmTemplateSet()
     with pytest.raises(ValueError, match="description"):
