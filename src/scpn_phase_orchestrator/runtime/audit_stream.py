@@ -68,6 +68,76 @@ class AuditStreamEvent:
     audit_mode: str
     payload: Payload
 
+    def __post_init__(self) -> None:
+        if isinstance(self.schema_version, bool) or not isinstance(
+            self.schema_version, int
+        ):
+            raise ValueError("schema_version must be an integer")
+        if self.schema_version <= 0:
+            raise ValueError("schema_version must be positive")
+        if not isinstance(self.stream_id, str) or not self.stream_id:
+            raise ValueError("stream_id must be a non-empty string")
+        if any(ord(char) < 32 for char in self.stream_id):
+            raise ValueError("stream_id must not contain control characters")
+        if isinstance(self.sequence, bool) or not isinstance(self.sequence, int):
+            raise ValueError("sequence must be an integer")
+        if self.sequence <= 0:
+            raise ValueError("sequence must be positive")
+        if (
+            isinstance(self.recorded_at_unix_ns, bool)
+            or not isinstance(self.recorded_at_unix_ns, int)
+            or self.recorded_at_unix_ns < 0
+        ):
+            raise ValueError("recorded_at_unix_ns must be a non-negative integer")
+        if not isinstance(self.event_type, str) or not self.event_type:
+            raise ValueError("event_type must be a non-empty string")
+        if not isinstance(self.source, str) or not self.source:
+            raise ValueError("source must be a non-empty string")
+        for field_name in ("previous_hash", "payload_sha256", "event_hash"):
+            value = getattr(self, field_name)
+            if (
+                not isinstance(value, str)
+                or len(value) != 64
+                or any(ch not in "0123456789abcdef" for ch in value)
+            ):
+                raise ValueError(f"{field_name} must be a lowercase 64-char hex digest")
+        if not isinstance(self.payload_json, str) or not self.payload_json:
+            raise ValueError("payload_json must be a non-empty string")
+        if not isinstance(self.payload, dict):
+            raise ValueError("payload must be a JSON object mapping")
+        if _canonical_json(self.payload) != self.payload_json:
+            raise ValueError("payload_json must match canonical JSON encoding of payload")
+        computed_payload_hash = hashlib.sha256(self.payload_json.encode()).hexdigest()
+        if computed_payload_hash != self.payload_sha256:
+            raise ValueError("payload_sha256 mismatch for payload_json")
+        if not isinstance(self.audit_mode, str) or not self.audit_mode:
+            raise ValueError("audit_mode must be a non-empty string")
+        if not isinstance(self.signature_algorithm, str):
+            raise ValueError("signature_algorithm must be a string")
+        if not isinstance(self.signature_key_id, str):
+            raise ValueError("signature_key_id must be a string")
+        if not isinstance(self.signature, str):
+            raise ValueError("signature must be a string")
+        is_signed = self.audit_mode == "signed"
+        if is_signed:
+            if self.signature_algorithm != SIGNATURE_ALGORITHM:
+                raise ValueError("signed audit_mode requires expected signature_algorithm")
+            if (
+                len(self.signature_key_id) != 16
+                or any(ch not in "0123456789abcdef" for ch in self.signature_key_id)
+            ):
+                raise ValueError("signed audit_mode requires 16-char lowercase key id")
+            if (
+                len(self.signature) != 64
+                or any(ch not in "0123456789abcdef" for ch in self.signature)
+            ):
+                raise ValueError("signed audit_mode requires 64-char lowercase signature")
+        else:
+            if self.signature_algorithm or self.signature_key_id or self.signature:
+                raise ValueError(
+                    "unsigned audit_mode must not include signature metadata"
+                )
+
 
 def _audit_envelope_class() -> type[Message]:
     _ = _timestamp_pb2.DESCRIPTOR

@@ -19,6 +19,7 @@ from google.protobuf import descriptor_pool
 
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
+    AuditStreamEvent,
     read_event_stream,
     verify_event_stream_integrity,
 )
@@ -220,3 +221,50 @@ def test_spo_watch_replays_protobuf_stream_from_start(tmp_path) -> None:
     assert "#1 header" in result.output
     assert "#2 step step=0 regime=nominal stability=0.8200" in result.output
     assert "stream integrity: OK (2 events)" in result.output
+
+
+def test_audit_stream_event_rejects_payload_hash_mismatch() -> None:
+    payload = {"event": "operator_note", "step": 1}
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    with pytest.raises(ValueError, match="payload_sha256 mismatch"):
+        AuditStreamEvent(
+            schema_version=1,
+            stream_id="spo-audit",
+            sequence=1,
+            event_type="operator_note",
+            recorded_at_unix_ns=1,
+            source="runtime",
+            previous_hash="0" * 64,
+            payload_json=payload_json,
+            payload_sha256="f" * 64,
+            event_hash="1" * 64,
+            signature_algorithm="",
+            signature_key_id="",
+            signature="",
+            audit_mode="unsigned-development",
+            payload=payload,
+        )
+
+
+def test_audit_stream_event_rejects_signed_mode_without_signature_metadata() -> None:
+    payload = {"event": "operator_note", "step": 1}
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+    with pytest.raises(ValueError, match="signed audit_mode requires expected signature_algorithm"):
+        AuditStreamEvent(
+            schema_version=1,
+            stream_id="spo-audit",
+            sequence=1,
+            event_type="operator_note",
+            recorded_at_unix_ns=1,
+            source="runtime",
+            previous_hash="0" * 64,
+            payload_json=payload_json,
+            payload_sha256=payload_hash,
+            event_hash="1" * 64,
+            signature_algorithm="",
+            signature_key_id="",
+            signature="",
+            audit_mode="signed",
+            payload=payload,
+        )
