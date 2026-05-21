@@ -79,6 +79,19 @@ impl LIFEnsemble {
         if params.tau_mem <= 0.0 {
             return Err(SpoError::InvalidConfig("tau_mem must be > 0".into()));
         }
+        if !params.dt.is_finite()
+            || params.dt <= 0.0
+            || !params.resistance.is_finite()
+            || !params.v_rest.is_finite()
+            || !params.v_reset.is_finite()
+            || !params.v_threshold.is_finite()
+            || !params.noise_std.is_finite()
+            || params.refractory_period < 0
+        {
+            return Err(SpoError::InvalidConfig(
+                "LIF params must be finite, dt>0, refractory_period>=0".into(),
+            ));
+        }
         let n_total = n_layers * neurons_per_layer;
         Ok(Self {
             n_layers,
@@ -110,6 +123,14 @@ impl LIFEnsemble {
                 self.n_layers,
                 currents.len()
             )));
+        }
+        if n_substeps == 0 {
+            return Err(SpoError::InvalidConfig("n_substeps must be > 0".into()));
+        }
+        if currents.iter().any(|c| !c.is_finite()) {
+            return Err(SpoError::InvalidConfig(
+                "currents must be finite per layer".into(),
+            ));
         }
         let npl = self.neurons_per_layer;
         let r_dt = self.r_dt;
@@ -231,6 +252,24 @@ mod tests {
     fn mismatched_current_count_rejected() {
         let mut e = LIFEnsemble::new(2, 4, LIFParams::default()).unwrap();
         assert!(matches!(e.step(&[1.0], 1), Err(SpoError::InvalidConfig(_))));
+    }
+
+    #[test]
+    fn zero_substeps_rejected() {
+        let mut e = LIFEnsemble::new(1, 2, LIFParams::default()).unwrap();
+        assert!(matches!(
+            e.step(&[1.0], 0),
+            Err(SpoError::InvalidConfig(_))
+        ));
+    }
+
+    #[test]
+    fn non_finite_current_rejected() {
+        let mut e = LIFEnsemble::new(1, 2, LIFParams::default()).unwrap();
+        assert!(matches!(
+            e.step(&[f64::NAN], 1),
+            Err(SpoError::InvalidConfig(_))
+        ));
     }
 
     #[test]
