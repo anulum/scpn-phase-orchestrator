@@ -179,6 +179,28 @@ class TestMessageDataclasses:
         assert cr.name == ""
         assert cr.n_oscillators == 0
 
+    def test_step_request_rejects_non_positive_or_bool_steps(self):
+        with pytest.raises(ValueError, match="n_steps"):
+            StepRequest(n_steps=0)
+        with pytest.raises(ValueError, match="n_steps"):
+            StepRequest(n_steps=True)  # type: ignore[arg-type]
+
+    def test_stream_request_rejects_invalid_constructor_contract(self):
+        with pytest.raises(ValueError, match="max_steps"):
+            StreamRequest(max_steps=0)
+        with pytest.raises(ValueError, match="interval_s"):
+            StreamRequest(interval_s=-0.1)
+
+    def test_state_response_rejects_non_layer_entries(self):
+        with pytest.raises(ValueError, match="layers"):
+            StateResponse(layers=[object()])  # type: ignore[list-item]
+
+    def test_config_response_rejects_negative_counts(self):
+        with pytest.raises(ValueError, match="n_oscillators"):
+            ConfigResponse(n_oscillators=-1)
+        with pytest.raises(ValueError, match="n_layers"):
+            ConfigResponse(n_layers=-1)
+
 
 # Pipeline wiring is proven by TestStep and TestStreamPhases above:
 # gRPC servicer wraps SimulationState which drives UPDEEngine internally.

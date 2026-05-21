@@ -21,6 +21,8 @@ wire compatibility, descriptors, or validation beyond dataclass construction.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import isfinite
+from numbers import Real
 
 __all__ = [
     "ConfigRequest",
@@ -47,6 +49,14 @@ class StepRequest:
 
     n_steps: int = 1
 
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.n_steps, int)
+            or isinstance(self.n_steps, bool)
+            or self.n_steps <= 0
+        ):
+            raise ValueError("n_steps must be a positive integer")
+
 
 @dataclass
 class ResetRequest:
@@ -61,6 +71,21 @@ class StreamRequest:
 
     max_steps: int = 100
     interval_s: float = 0.05
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.max_steps, int)
+            or isinstance(self.max_steps, bool)
+            or self.max_steps <= 0
+        ):
+            raise ValueError("max_steps must be a positive integer")
+        if (
+            not isinstance(self.interval_s, Real)
+            or isinstance(self.interval_s, bool)
+            or not isfinite(float(self.interval_s))
+            or float(self.interval_s) < 0.0
+        ):
+            raise ValueError("interval_s must be a finite non-negative real")
 
 
 @dataclass
@@ -78,6 +103,24 @@ class LayerState:
     R: float = 0.0
     psi: float = 0.0
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str):
+            raise ValueError("name must be a string")
+        if any(ord(char) < 32 for char in self.name):
+            raise ValueError("name must not contain control characters")
+        if (
+            not isinstance(self.R, Real)
+            or isinstance(self.R, bool)
+            or not isfinite(float(self.R))
+        ):
+            raise ValueError("R must be a finite real")
+        if (
+            not isinstance(self.psi, Real)
+            or isinstance(self.psi, bool)
+            or not isfinite(float(self.psi))
+        ):
+            raise ValueError("psi must be a finite real")
+
 
 @dataclass
 class StateResponse:
@@ -90,6 +133,37 @@ class StateResponse:
     mean_amplitude: float = 0.0
     layers: list[LayerState] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.step, int)
+            or isinstance(self.step, bool)
+            or self.step < 0
+        ):
+            raise ValueError("step must be a non-negative integer")
+        if (
+            not isinstance(self.R_global, Real)
+            or isinstance(self.R_global, bool)
+            or not isfinite(float(self.R_global))
+        ):
+            raise ValueError("R_global must be a finite real")
+        if not isinstance(self.regime, str):
+            raise ValueError("regime must be a string")
+        if any(ord(char) < 32 for char in self.regime):
+            raise ValueError("regime must not contain control characters")
+        if not isinstance(self.amplitude_mode, bool):
+            raise ValueError("amplitude_mode must be a bool")
+        if (
+            not isinstance(self.mean_amplitude, Real)
+            or isinstance(self.mean_amplitude, bool)
+            or not isfinite(float(self.mean_amplitude))
+        ):
+            raise ValueError("mean_amplitude must be a finite real")
+        if not isinstance(self.layers, list):
+            raise ValueError("layers must be a list of LayerState")
+        for item in self.layers:
+            if not isinstance(item, LayerState):
+                raise ValueError("layers must be a list of LayerState")
+
 
 @dataclass
 class ConfigResponse:
@@ -101,3 +175,24 @@ class ConfigResponse:
     amplitude_mode: bool = False
     sample_period_s: float = 0.0
     control_period_s: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str):
+            raise ValueError("name must be a string")
+        if any(ord(char) < 32 for char in self.name):
+            raise ValueError("name must not contain control characters")
+        for field_name in ("n_oscillators", "n_layers"):
+            value = getattr(self, field_name)
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                raise ValueError(f"{field_name} must be a non-negative integer")
+        if not isinstance(self.amplitude_mode, bool):
+            raise ValueError("amplitude_mode must be a bool")
+        for field_name in ("sample_period_s", "control_period_s"):
+            value = getattr(self, field_name)
+            if (
+                not isinstance(value, Real)
+                or isinstance(value, bool)
+                or not isfinite(float(value))
+                or float(value) < 0.0
+            ):
+                raise ValueError(f"{field_name} must be a finite non-negative real")
