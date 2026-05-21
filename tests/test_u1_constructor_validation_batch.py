@@ -506,6 +506,15 @@ def test_u1_audit_logger_header_rejects_non_positive_dt(tmp_path) -> None:
         logger._fh.close()
 
 
+def test_u1_audit_logger_header_rejects_boolean_dt(tmp_path) -> None:
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        with pytest.raises(Exception, match="finite positive real"):
+            logger.log_header(n_oscillators=4, dt=True)  # type: ignore[arg-type]
+    finally:
+        logger._fh.close()
+
+
 def test_u1_audit_logger_header_rejects_boolean_n_oscillators(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
