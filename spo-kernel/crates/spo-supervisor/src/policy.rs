@@ -31,10 +31,13 @@ impl SupervisorPolicy {
         upde_state: &UPDEState,
         boundary: &BoundaryState,
     ) -> Vec<ControlAction> {
+        if upde_state.validate().is_err() {
+            return vec![];
+        }
         let proposed = self.manager.evaluate(upde_state, boundary);
         let regime = self.manager.transition(proposed);
 
-        match regime {
+        let actions = match regime {
             Regime::Nominal => vec![],
             Regime::Degraded => vec![ControlAction {
                 knob: Knob::K,
@@ -69,7 +72,11 @@ impl SupervisorPolicy {
                 ttl_s: 15.0,
                 justification: "recovery: gradual coupling restore".into(),
             }],
-        }
+        };
+        actions
+            .into_iter()
+            .filter(|a| a.validate().is_ok())
+            .collect()
     }
 }
 
@@ -199,5 +206,21 @@ mod tests {
             regime: Regime::Nominal,
         };
         assert_eq!(worst_layer(&state), None);
+    }
+
+    #[test]
+    fn invalid_state_fail_closes_without_actions() {
+        let mut sp = SupervisorPolicy::new(RegimeManager::default());
+        let bad = UPDEState {
+            layers: vec![LayerState {
+                r: f64::NAN,
+                psi: 0.0,
+            }],
+            channel_metrics: vec![],
+            cross_layer_alignment: vec![],
+            stability_proxy: 0.0,
+            regime: Regime::Nominal,
+        };
+        assert!(sp.decide(&bad, &empty_boundary()).is_empty());
     }
 }
