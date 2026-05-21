@@ -244,6 +244,33 @@ impl UPDEState {
         }
         Ok(())
     }
+
+    /// Validates the full UPDE state payload used by supervisor logic.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SpoError::InvalidConfig`] when layer/channel/alignment values
+    /// are non-finite or when channel metrics are duplicated/invalid.
+    pub fn validate(&self) -> SpoResult<()> {
+        for (idx, layer) in self.layers.iter().enumerate() {
+            if !layer.r.is_finite() || !(0.0..=1.0).contains(&layer.r) || !layer.psi.is_finite() {
+                return Err(SpoError::InvalidConfig(format!(
+                    "layer[{idx}] has invalid r/psi values"
+                )));
+            }
+        }
+        if self
+            .cross_layer_alignment
+            .iter()
+            .any(|v| !v.is_finite())
+            || !self.stability_proxy.is_finite()
+        {
+            return Err(SpoError::InvalidConfig(
+                "cross-layer alignment and stability_proxy must be finite".into(),
+            ));
+        }
+        self.validate_channel_metrics()
+    }
 }
 
 #[cfg(test)]
@@ -255,6 +282,21 @@ mod tests {
         let json = serde_json::to_string(&Channel::S).expect("serialise channel");
         let c: Channel = serde_json::from_str(&json).expect("deserialise channel");
         assert_eq!(c, Channel::S);
+    }
+
+    #[test]
+    fn upde_state_validate_rejects_non_finite_layer_values() {
+        let state = UPDEState {
+            layers: vec![LayerState {
+                r: f64::NAN,
+                psi: 0.0,
+            }],
+            channel_metrics: vec![],
+            cross_layer_alignment: vec![0.1],
+            stability_proxy: 0.3,
+            regime: Regime::Nominal,
+        };
+        assert!(state.validate().is_err());
     }
 
     #[test]
