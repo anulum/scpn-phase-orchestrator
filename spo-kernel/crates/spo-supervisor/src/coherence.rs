@@ -17,6 +17,17 @@ pub struct CoherenceMonitor {
 impl CoherenceMonitor {
     #[must_use]
     pub fn new(good_layers: Vec<usize>, bad_layers: Vec<usize>) -> Self {
+        let mut good_seen = std::collections::BTreeSet::new();
+        let good_layers: Vec<usize> = good_layers
+            .into_iter()
+            .filter(|idx| good_seen.insert(*idx))
+            .collect();
+        let good_set: std::collections::BTreeSet<usize> = good_layers.iter().copied().collect();
+        let mut bad_seen = std::collections::BTreeSet::new();
+        let bad_layers: Vec<usize> = bad_layers
+            .into_iter()
+            .filter(|idx| !good_set.contains(idx) && bad_seen.insert(*idx))
+            .collect();
         Self {
             good_layers,
             bad_layers,
@@ -39,6 +50,9 @@ impl CoherenceMonitor {
     /// Lachaux et al. 1999 — PLV ≥ 0.9 indicates phase-locking.
     #[must_use]
     pub fn detect_phase_lock(&self, upde_state: &UPDEState, threshold: f64) -> Vec<(usize, usize)> {
+        if !threshold.is_finite() {
+            return vec![];
+        }
         let n = upde_state.layers.len();
         let cla = &upde_state.cross_layer_alignment;
         if cla.len() != n * n {
@@ -143,5 +157,20 @@ mod tests {
         let cm = CoherenceMonitor::new(vec![0], vec![1]);
         let state = make_state_with_cla(&[0.9, 0.8], vec![0.0, 0.95]);
         assert!(cm.detect_phase_lock(&state, 0.9).is_empty());
+    }
+
+    #[test]
+    fn new_deduplicates_and_enforces_disjoint_partitions() {
+        let cm = CoherenceMonitor::new(vec![0, 0, 1], vec![1, 2, 2]);
+        let state = make_state(&[0.9, 0.3, 0.1]);
+        assert!((cm.compute_r_good(&state) - 0.6).abs() < 1e-12);
+        assert!((cm.compute_r_bad(&state) - 0.1).abs() < 1e-12);
+    }
+
+    #[test]
+    fn detect_phase_lock_rejects_non_finite_threshold() {
+        let cm = CoherenceMonitor::new(vec![0], vec![1]);
+        let state = make_state_with_cla(&[0.9, 0.8], vec![0.0, 0.95, 0.95, 0.0]);
+        assert!(cm.detect_phase_lock(&state, f64::NAN).is_empty());
     }
 }
