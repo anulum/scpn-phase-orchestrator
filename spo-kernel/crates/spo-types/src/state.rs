@@ -224,6 +224,31 @@ pub struct LayerState {
     pub psi: f64,
 }
 
+impl LayerState {
+    /// Build and validate one layer coherence summary.
+    ///
+    /// # Errors
+    /// Returns [`SpoError::InvalidConfig`] when `r`/`psi` are non-finite or `r` is outside [0, 1].
+    pub fn try_new(r: f64, psi: f64) -> SpoResult<Self> {
+        let layer = Self { r, psi };
+        layer.validate()?;
+        Ok(layer)
+    }
+
+    /// Validate one layer coherence summary.
+    ///
+    /// # Errors
+    /// Returns [`SpoError::InvalidConfig`] when `r`/`psi` are non-finite or `r` is outside [0, 1].
+    pub fn validate(&self) -> SpoResult<()> {
+        if !self.r.is_finite() || !(0.0..=1.0).contains(&self.r) || !self.psi.is_finite() {
+            return Err(SpoError::InvalidConfig(
+                "layer state has invalid r/psi values".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Runtime UPDE state summary exchanged with supervisor logic.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UPDEState {
@@ -300,7 +325,7 @@ impl UPDEState {
     /// are non-finite or when channel metrics are duplicated/invalid.
     pub fn validate(&self) -> SpoResult<()> {
         for (idx, layer) in self.layers.iter().enumerate() {
-            if !layer.r.is_finite() || !(0.0..=1.0).contains(&layer.r) || !layer.psi.is_finite() {
+            if layer.validate().is_err() {
                 return Err(SpoError::InvalidConfig(format!(
                     "layer[{idx}] has invalid r/psi values"
                 )));
@@ -344,6 +369,12 @@ mod tests {
             regime: Regime::Nominal,
         };
         assert!(state.validate().is_err());
+    }
+
+    #[test]
+    fn layer_state_try_new_validates() {
+        assert!(LayerState::try_new(0.5, 0.1).is_ok());
+        assert!(LayerState::try_new(1.5, 0.1).is_err());
     }
 
     #[test]
