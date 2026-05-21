@@ -262,6 +262,19 @@ def test_u1_knm_template_set_add_rejects_shape_mismatch() -> None:
         )
 
 
+def test_u1_knm_template_set_add_rejects_non_finite_knm() -> None:
+    reg = KnmTemplateSet()
+    with pytest.raises(ValueError, match="contain only finite values"):
+        reg.add(
+            KnmTemplate(
+                name="non_finite_knm",
+                knm=np.array([[1.0, 0.0], [0.0, np.nan]], dtype=float),
+                alpha=np.ones((2, 2), dtype=float),
+                description="ok",
+            )
+        )
+
+
 def test_u1_knm_template_set_get_rejects_blank_name() -> None:
     with pytest.raises(KeyError, match="non-empty string"):
         KnmTemplateSet().get("")
