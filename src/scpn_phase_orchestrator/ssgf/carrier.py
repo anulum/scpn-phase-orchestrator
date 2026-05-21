@@ -114,6 +114,12 @@ class GeometryCarrier:
         """Map z → coupling matrix W (n × n, non-negative, zero diagonal)."""
         if z is None:
             z = self._z
+        if not isinstance(z, np.ndarray):
+            raise TypeError(f"z must be numpy.ndarray, got {z!r}")
+        if z.ndim != 1 or z.shape[0] != self._z_dim:
+            raise ValueError(f"z must be 1D vector of length {self._z_dim}, got {z.shape!r}")
+        if not np.isfinite(z).all():
+            raise ValueError("z must contain only finite values")
         if _HAS_RUST:
             zv = np.ascontiguousarray(z, dtype=np.float64)
             av = np.ascontiguousarray(self._A.ravel(), dtype=np.float64)
