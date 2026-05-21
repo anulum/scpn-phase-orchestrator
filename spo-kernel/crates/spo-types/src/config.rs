@@ -105,9 +105,9 @@ impl CouplingConfig {
     /// # Errors
     /// Returns `InvalidConfig` if base_strength is non-finite or decay_alpha is negative/non-finite.
     pub fn validate(&self) -> SpoResult<()> {
-        if !self.base_strength.is_finite() {
+        if !self.base_strength.is_finite() || self.base_strength < 0.0 {
             return Err(SpoError::InvalidConfig(format!(
-                "base_strength must be finite, got {}",
+                "base_strength must be finite and non-negative, got {}",
                 self.base_strength
             )));
         }
@@ -174,6 +174,13 @@ mod tests {
     fn nan_base_strength_rejected() {
         let mut c = CouplingConfig::default();
         c.base_strength = f64::NAN;
+        assert!(c.validate().is_err());
+    }
+
+    #[test]
+    fn negative_base_strength_rejected() {
+        let mut c = CouplingConfig::default();
+        c.base_strength = -0.1;
         assert!(c.validate().is_err());
     }
 
