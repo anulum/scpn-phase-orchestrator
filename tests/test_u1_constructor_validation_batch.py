@@ -265,6 +265,23 @@ def test_u1_audit_logger_log_step_rejects_non_action_entries(tmp_path) -> None:
         logger._fh.close()
 
 
+def test_u1_audit_logger_log_step_rejects_non_list_actions(tmp_path) -> None:
+    from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        state = UPDEState(
+            regime_id="nominal",
+            stability_proxy=0.0,
+            layers=[LayerState(0.0, 0.0)],
+            cross_layer_alignment=[],
+        )
+        with pytest.raises(Exception, match="actions must be list"):
+            logger.log_step(0, state, {})  # type: ignore[arg-type]
+    finally:
+        logger._fh.close()
+
+
 def test_u1_geometry_carrier_rejects_non_positive_latent_dim() -> None:
     with pytest.raises(ValueError, match="positive integer"):
         GeometryCarrier(n_oscillators=4, z_dim=0, lr=0.1)
