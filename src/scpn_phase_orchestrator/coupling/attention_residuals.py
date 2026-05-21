@@ -220,13 +220,23 @@ _LOADERS: dict[str, Callable[[], _BackendFn]] = {
     "julia": _load_julia,
     "go": _load_go,
 }
+_BACKEND_CACHE: dict[str, _BackendFn] = {}
+
+
+def _load_backend(name: str) -> _BackendFn:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -235,6 +245,22 @@ def _resolve_backends() -> tuple[str, list[str]]:
 
 
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+
+
+def _dispatch_backend() -> _BackendFn | None:
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    seen: set[str] = set()
+    for backend in ordered_backends:
+        if backend in seen:
+            continue
+        seen.add(backend)
+        if backend == "python":
+            return None
+        try:
+            return _load_backend(backend)
+        except (ImportError, RuntimeError, OSError):
+            continue
+    return None
 
 
 # ---------------------------------------------------------------------
@@ -470,8 +496,8 @@ def attnres_modulate(
     wv_flat = np.ascontiguousarray(w_v.ravel(), dtype=np.float64)
     wo_flat = np.ascontiguousarray(w_o.ravel(), dtype=np.float64)
 
-    if ACTIVE_BACKEND != "python":
-        backend_fn = _LOADERS[ACTIVE_BACKEND]()
+    backend_fn = _dispatch_backend()
+    if backend_fn is not None:
         out = backend_fn(
             knm_flat,
             theta64,

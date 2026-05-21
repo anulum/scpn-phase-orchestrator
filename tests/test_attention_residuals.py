@@ -487,6 +487,51 @@ class TestDispatcher:
 
         np.testing.assert_array_equal(out, knm.ravel())
 
+    def test_dispatch_falls_back_to_next_backend_when_active_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"rust": 0, "go": 0}
+
+        def _fail_rust():
+            calls["rust"] += 1
+            raise ImportError("rust unavailable")
+
+        def _ok_go():
+            calls["go"] += 1
+            return lambda *args: np.asarray(args[0], dtype=np.float64)
+
+        monkeypatch.setattr(attnres_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(attnres_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(
+            attnres_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"]
+        )
+        monkeypatch.setattr(
+            attnres_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go}
+        )
+
+        backend = attnres_mod._dispatch_backend()
+        assert backend is not None
+        assert calls == {"rust": 1, "go": 1}
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"go": 0}
+
+        def _ok_go():
+            calls["go"] += 1
+            return lambda *args: np.asarray(args[0], dtype=np.float64)
+
+        monkeypatch.setattr(attnres_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(attnres_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(attnres_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(attnres_mod, "_LOADERS", {"go": _ok_go})
+
+        attnres_mod._dispatch_backend()
+        attnres_mod._dispatch_backend()
+
+        assert calls["go"] == 1
+
 
 def test_python_reference_lambda_zero_returns_independent_identity_copy() -> None:
     knm = _symmetric_knm(5, seed=17)
