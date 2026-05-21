@@ -249,6 +249,13 @@ class TestSynapseChannelBridgeAsync:
         await bridge.listen_once()  # should not raise
 
     @pytest.mark.asyncio
+    async def test_listen_once_invalid_json(self) -> None:
+        bridge = self._make_bridge()
+        bridge._ws = AsyncMock()
+        bridge._ws.recv = AsyncMock(return_value="{invalid")
+        await bridge.listen_once()  # should not raise
+
+    @pytest.mark.asyncio
     async def test_close(self) -> None:
         bridge = self._make_bridge()
         bridge._ws = AsyncMock()

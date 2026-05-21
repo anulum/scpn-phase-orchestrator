@@ -25,6 +25,8 @@ Requires: Remanentia API running at http://localhost:8001
 from __future__ import annotations
 
 import json
+import logging
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from math import isfinite
@@ -37,6 +39,7 @@ from numpy.typing import NDArray
 
 __all__ = ["RemanentiaBridge", "CoherenceMemorySnapshot"]
 FloatArray: TypeAlias = NDArray[np.float64]
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -177,6 +180,22 @@ class RemanentiaBridge:
         self._timeout = _validated_timeout(timeout)
         self._last_R = 0.0
         self._last_regime = "unknown"
+        self._last_novelty_score = 0.5
+        self._last_entities = 0
+        self._last_memories = 0
+
+    @staticmethod
+    def _is_transport_or_decode_error(exc: BaseException) -> bool:
+        return isinstance(
+            exc,
+            (
+                urllib.error.URLError,
+                TimeoutError,
+                OSError,
+                ValueError,
+                json.JSONDecodeError,
+            ),
+        )
 
     def _open(self, req: urllib.request.Request) -> dict:
         """Execute a urllib request, enforcing http(s) scheme."""
@@ -210,7 +229,10 @@ class RemanentiaBridge:
         try:
             resp = self._get("/health")
             return resp.get("status") == "ok"
-        except Exception:
+        except BaseException as exc:
+            if not self._is_transport_or_decode_error(exc):
+                raise
+            logger.warning("remanentia.health_check_failed: %s", type(exc).__name__)
             return False
 
     def report_coherence(
@@ -230,15 +252,20 @@ class RemanentiaBridge:
         self._last_R = R
         self._last_regime = regime
         # Store as a reasoning trace that Remanentia can index
-        import contextlib
-
-        with contextlib.suppress(Exception):
+        try:
             self._post(
                 "/recall",
                 {
                     "query": f"SPO coherence report: R={R:.3f} regime={regime}",
                     "top_k": 0,
                 },
+            )
+        except BaseException as exc:
+            if not self._is_transport_or_decode_error(exc):
+                raise
+            logger.warning(
+                "remanentia.report_coherence_trace_failed: %s",
+                type(exc).__name__,
             )
 
     def get_novelty_score(self, query: str) -> float:
@@ -253,20 +280,42 @@ class RemanentiaBridge:
             resp = self._post("/recall", {"query": query, "top_k": 5})
             results = resp.get("results", [])
             if not results:
+                self._last_novelty_score = 1.0
                 return 1.0  # fully novel — no relevant memories
             # Novelty = 1 - mean relevance score
             scores = [r.get("score", 0.0) for r in results]
-            return float(max(0.0, 1.0 - float(np.mean(scores))))
-        except Exception:
-            return 0.5  # unknown — conservative default
+            novelty = float(max(0.0, 1.0 - float(np.mean(scores))))
+            self._last_novelty_score = novelty
+            return novelty
+        except BaseException as exc:
+            if not self._is_transport_or_decode_error(exc):
+                raise
+            logger.warning(
+                "remanentia.get_novelty_score_failed: %s; using_last=%.6f",
+                type(exc).__name__,
+                self._last_novelty_score,
+            )
+            return self._last_novelty_score
 
     def get_entity_count(self) -> int:
         """Get number of entities in Remanentia's knowledge graph."""
         try:
             resp = self._get("/status")
-            return int(resp.get("entities", 0))
-        except Exception:
-            return 0
+            entities = int(resp.get("entities", 0))
+            self._last_entities = entities
+            memories_raw = resp.get("memories", self._last_memories)
+            if isinstance(memories_raw, int) and not isinstance(memories_raw, bool):
+                self._last_memories = memories_raw
+            return entities
+        except BaseException as exc:
+            if not self._is_transport_or_decode_error(exc):
+                raise
+            logger.warning(
+                "remanentia.get_entity_count_failed: %s; using_last=%d",
+                type(exc).__name__,
+                self._last_entities,
+            )
+            return self._last_entities
 
     def trigger_consolidation(self, force: bool = False) -> bool:
         """Trigger memory consolidation in Remanentia.
@@ -278,7 +327,13 @@ class RemanentiaBridge:
         try:
             resp = self._post("/consolidate", {"force": force})
             return resp.get("status") == "ok"
-        except Exception:
+        except BaseException as exc:
+            if not self._is_transport_or_decode_error(exc):
+                raise
+            logger.warning(
+                "remanentia.trigger_consolidation_failed: %s",
+                type(exc).__name__,
+            )
             return False
 
     def novelty_to_coupling_delta(
@@ -308,15 +363,27 @@ class RemanentiaBridge:
         n_ent = self.get_entity_count()
         try:
             status = self._get("/status")
-            n_mem = status.get("memories", 0)
-        except Exception:
-            n_mem = 0
+            n_memories = status.get("memories", self._last_memories)
+            if not isinstance(n_memories, int) or isinstance(n_memories, bool):
+                raise ValueError("memories must be an integer")
+            if n_memories < 0:
+                raise ValueError("memories must be non-negative")
+            self._last_memories = n_memories
+        except BaseException as exc:
+            if not self._is_transport_or_decode_error(exc):
+                raise
+            logger.warning(
+                "remanentia.snapshot_status_failed: %s; using_last=%d",
+                type(exc).__name__,
+                self._last_memories,
+            )
+            n_memories = self._last_memories
 
         return CoherenceMemorySnapshot(
             R_global=self._last_R,
             regime=self._last_regime,
             n_entities=n_ent,
-            n_memories=n_mem,
-            novelty_score=0.5,
+            n_memories=n_memories,
+            novelty_score=self._last_novelty_score,
             consolidation_suggested=self._last_R > 0.8,
         )

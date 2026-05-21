@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import math
 import threading
 from collections.abc import Callable
@@ -36,6 +37,7 @@ except ImportError:
     HAS_WEBSOCKETS = False
 
 __all__ = ["VisualizerStreamer"]
+logger = logging.getLogger(__name__)
 
 
 def _validate_host(host: str) -> str:
@@ -116,7 +118,11 @@ class VisualizerStreamer:
             send_coro = client.send(message)
             try:
                 send_task = asyncio.run_coroutine_threadsafe(send_coro, self._loop)
-            except Exception:
+            except (RuntimeError, TypeError) as exc:
+                logger.warning(
+                    "visualizer.broadcast_submission_failed: %s",
+                    type(exc).__name__,
+                )
                 if hasattr(send_coro, "close"):
                     send_coro.close()
                 self._clients.discard(client)

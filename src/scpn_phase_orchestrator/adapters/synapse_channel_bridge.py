@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 from dataclasses import dataclass, field
 from math import isfinite
@@ -44,6 +45,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["SynapseChannelBridge", "AgentState"]
+logger = logging.getLogger(__name__)
 
 TWO_PI = 2.0 * np.pi
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -220,7 +222,11 @@ class SynapseChannelBridge:
             self._process_message(msg)
         except asyncio.TimeoutError:
             return  # no message within timeout — normal
-        except Exception:
+        except json.JSONDecodeError:
+            logger.warning("synapse.listen_once_invalid_json")
+            return
+        except (ConnectionError, OSError, RuntimeError) as exc:
+            logger.warning("synapse.listen_once_transport_error: %s", type(exc).__name__)
             return  # connection error — caller should retry
 
     def _process_message(self, msg: dict) -> None:

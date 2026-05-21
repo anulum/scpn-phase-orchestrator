@@ -104,6 +104,13 @@ def test_stream_rejects_invalid_max_steps():
         list(svc.StreamPhases(req, _FakeContext()))
 
 
+def test_stream_rejects_zero_max_steps():
+    svc = _make_servicer()
+    req = StreamRequest(max_steps=0, interval_s=0.0)
+    with pytest.raises(PermissionError, match="max_steps"):
+        list(svc.StreamPhases(req, _FakeContext()))
+
+
 def test_stream_rejects_invalid_interval():
     svc = _make_servicer()
     req = StreamRequest(max_steps=1, interval_s=float("nan"))

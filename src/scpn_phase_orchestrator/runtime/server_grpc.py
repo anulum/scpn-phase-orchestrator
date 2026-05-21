@@ -244,7 +244,9 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
     def StreamPhases(self, request: Any, context: Any) -> Iterator[StateResponse]:
         """Read-only observer: streams snapshots without advancing simulation."""
         self._authorise(context)
-        max_steps = getattr(request, "max_steps", 100) or 100
+        max_steps = getattr(request, "max_steps", None)
+        if max_steps is None:
+            max_steps = 100
         interval = getattr(request, "interval_s", 0.05)
         try:
             max_steps = _validate_positive_int(max_steps, "max_steps")

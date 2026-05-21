@@ -191,6 +191,30 @@ class TestRemanentiaBridge:
         assert snap.n_entities == 0
         assert snap.n_memories == 0
 
+    def test_novelty_score_offline_uses_last_known_value(
+        self,
+        bridge: RemanentiaBridge,
+    ) -> None:
+        baseline = bridge.get_novelty_score("known query")
+        bridge._url = "http://127.0.0.1:1"
+        assert bridge.get_novelty_score("known query") == baseline
+
+    def test_snapshot_uses_cached_memories_on_transport_error(
+        self,
+        bridge: RemanentiaBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        bridge._last_memories = 11
+
+        def _raise_status(path: str) -> dict:
+            if path == "/status":
+                raise OSError("offline")
+            return {"status": "ok", "entities": 42, "memories": 11}
+
+        monkeypatch.setattr(bridge, "_get", _raise_status)
+        snap = bridge.snapshot()
+        assert snap.n_memories == 11
+
 
 class _EmptyRecallHandler(BaseHTTPRequestHandler):
     """Returns empty recall results."""
