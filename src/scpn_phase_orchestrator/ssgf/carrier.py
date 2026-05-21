@@ -137,6 +137,15 @@ class GeometryCarrier:
         If cost_fn is provided, uses finite differences on z.
         Otherwise records cost for external gradient computation.
         """
+        if isinstance(cost, bool) or not isinstance(cost, Real) or not isfinite(float(cost)):
+            raise TypeError(f"cost must be finite real, got {cost!r}")
+        if (
+            isinstance(epsilon, bool)
+            or not isinstance(epsilon, Real)
+            or not isfinite(float(epsilon))
+            or float(epsilon) <= 0.0
+        ):
+            raise ValueError(f"epsilon must be a finite positive real, got {epsilon!r}")
         self._step += 1
         grad: FloatArray = np.zeros(self._z_dim)
 

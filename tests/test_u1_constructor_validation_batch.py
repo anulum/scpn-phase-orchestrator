@@ -88,6 +88,12 @@ def test_u1_geometry_carrier_rejects_non_positive_latent_dim() -> None:
         GeometryCarrier(n_oscillators=4, z_dim=0, lr=0.1)
 
 
+def test_u1_geometry_carrier_update_rejects_non_positive_epsilon() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    with pytest.raises(ValueError, match="finite positive real"):
+        carrier.update(cost=0.1, epsilon=0.0)
+
+
 def test_u1_cybernetic_closure_rejects_negative_max_steps() -> None:
     carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
     with pytest.raises(ValueError, match="non-negative integer"):
