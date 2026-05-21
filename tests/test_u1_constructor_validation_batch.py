@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
@@ -18,6 +17,8 @@ from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
 from scpn_phase_orchestrator.ssgf.closure import CyberneticClosure
 from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver
+from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
+from scpn_phase_orchestrator.supervisor.petri_net import Marking, PetriNet, Place, Transition
 
 
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
@@ -62,3 +63,16 @@ def test_u1_cybernetic_closure_rejects_negative_max_steps() -> None:
 def test_u1_tcbo_observer_rejects_invalid_tau() -> None:
     with pytest.raises(ValueError, match="within \\[0, 1\\]"):
         TCBOObserver(tau_h1=1.5)
+
+
+def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
+    net = PetriNet(
+        places=[Place("nominal")],
+        transitions=[Transition(name="noop", inputs=[], outputs=[])],
+    )
+    with pytest.raises(Exception, match="non-empty string"):
+        PetriNetAdapter(
+            net=net,
+            initial_marking=Marking(tokens={"nominal": 1}),
+            place_to_regime={"nominal": 1},  # type: ignore[dict-item]
+        )
