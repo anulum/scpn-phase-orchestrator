@@ -38,6 +38,28 @@ def _digital_twin_result() -> ui.StudioReplayResult:
     )
 
 
+def test_validate_candidate_binding_yaml_maps_expected_load_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _raise_value_error(_path: Path) -> object:
+        raise ValueError("invalid yaml")
+
+    monkeypatch.setattr(ui, "load_binding_spec", _raise_value_error)
+    errors = ui._validate_candidate_binding_yaml("name: candidate\n")
+    assert errors == ["candidate binding failed to load: ValueError"]
+
+
+def test_validate_candidate_binding_yaml_propagates_unexpected_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _raise_runtime_error(_path: Path) -> object:
+        raise RuntimeError("unexpected failure domain")
+
+    monkeypatch.setattr(ui, "load_binding_spec", _raise_runtime_error)
+    with pytest.raises(RuntimeError, match="unexpected failure domain"):
+        ui._validate_candidate_binding_yaml("name: candidate\n")
+
+
 def test_replay_result_audit_record_and_domainpack_discovery_are_stable(
     tmp_path: Path,
 ) -> None:

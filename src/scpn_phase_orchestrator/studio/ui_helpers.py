@@ -32,7 +32,7 @@ from scpn_phase_orchestrator.binding.digital_twin import (
     build_digital_twin_binding_contract,
     build_digital_twin_sync_envelope,
 )
-from scpn_phase_orchestrator.binding.loader import load_binding_spec
+from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.runtime.server import SimulationState
@@ -2124,7 +2124,7 @@ def _validate_candidate_binding_yaml(candidate_yaml: str) -> list[str]:
         spec_path.write_text(candidate_yaml, encoding="utf-8")
         try:
             spec = load_binding_spec(spec_path)
-        except Exception as exc:
+        except (BindingLoadError, ValueError, TypeError, OSError) as exc:
             return [f"candidate binding failed to load: {type(exc).__name__}"]
         return list(validate_binding_spec(spec))
 
