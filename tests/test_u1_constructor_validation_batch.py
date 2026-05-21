@@ -688,6 +688,12 @@ def test_u1_tcbo_observer_observe_rejects_boolean_phase_vector() -> None:
         obs.observe(np.array([True, False], dtype=bool))
 
 
+def test_u1_tcbo_observer_observe_rejects_non_array_input() -> None:
+    obs = TCBOObserver()
+    with pytest.raises(TypeError, match="numpy.ndarray"):
+        obs.observe([0.0, 0.1])  # type: ignore[arg-type]
+
+
 def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
     net = PetriNet(
         places=[Place("nominal")],
