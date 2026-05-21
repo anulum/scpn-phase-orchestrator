@@ -356,6 +356,11 @@ def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
         BoundaryObserver([object()])  # type: ignore[list-item]
 
 
+def test_u1_boundary_observer_rejects_non_list_boundary_defs() -> None:
+    with pytest.raises(TypeError, match="list\\[BoundaryDef\\]"):
+        BoundaryObserver({})  # type: ignore[arg-type]
+
+
 def test_u1_boundary_observer_rejects_boolean_lower_bound() -> None:
     with pytest.raises(Exception, match="must be < upper"):
         BoundaryObserver(
