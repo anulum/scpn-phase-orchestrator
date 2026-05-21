@@ -40,6 +40,19 @@ def test_u1_action_projector_rejects_non_finite_previous_value() -> None:
         projector.project(action, float("inf"))
 
 
+def test_u1_action_projector_rejects_boolean_previous_value() -> None:
+    projector = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 1.0)})
+    action = ControlAction(
+        knob="K",
+        value=0.5,
+        scope="global",
+        ttl_s=1.0,
+        justification="u1-test",
+    )
+    with pytest.raises(TypeError, match="finite real scalar"):
+        projector.project(action, True)  # type: ignore[arg-type]
+
+
 def test_u1_action_projector_rejects_non_action_payload() -> None:
     projector = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 1.0)})
     with pytest.raises(TypeError, match="ControlAction"):
