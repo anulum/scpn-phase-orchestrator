@@ -95,8 +95,56 @@ impl SparseUPDEStepper {
         psi: f64,
         alpha_values: &[f64],
     ) -> SpoResult<()> {
-        #[allow(unused_variables)]
         let n = self.n;
+        if phases.len() != n || omegas.len() != n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected {n}, got phases={} omegas={}",
+                phases.len(),
+                omegas.len()
+            )));
+        }
+        if row_ptr.len() != n + 1 {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected row_ptr length {} got {}",
+                n + 1,
+                row_ptr.len()
+            )));
+        }
+        if col_indices.len() != knm_values.len() || col_indices.len() != alpha_values.len() {
+            return Err(SpoError::InvalidDimension(format!(
+                "sparse edge arrays must match: col_indices={} knm_values={} alpha_values={}",
+                col_indices.len(),
+                knm_values.len(),
+                alpha_values.len()
+            )));
+        }
+        if row_ptr.first().copied().unwrap_or_default() != 0
+            || row_ptr.last().copied().unwrap_or_default() != col_indices.len()
+        {
+            return Err(SpoError::InvalidDimension(
+                "row_ptr must start at 0 and end at col_indices length".into(),
+            ));
+        }
+        if row_ptr.windows(2).any(|w| w[1] < w[0]) {
+            return Err(SpoError::InvalidDimension(
+                "row_ptr must be monotonic non-decreasing".into(),
+            ));
+        }
+        if col_indices.iter().any(|&idx| idx >= n) {
+            return Err(SpoError::InvalidDimension(
+                "col_indices contains out-of-range index".into(),
+            ));
+        }
+        if phases.iter().chain(omegas).any(|v| !v.is_finite())
+            || knm_values.iter().any(|v| !v.is_finite())
+            || alpha_values.iter().any(|v| !v.is_finite())
+            || !zeta.is_finite()
+            || !psi.is_finite()
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "sparse step inputs contain NaN/Inf".into(),
+            ));
+        }
         let alpha_zero = alpha_values.iter().all(|&a| a == 0.0);
         match self.method {
             Method::RK45 => {
