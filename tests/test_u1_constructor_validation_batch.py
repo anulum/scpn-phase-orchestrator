@@ -341,6 +341,19 @@ def test_u1_audit_logger_log_step_rejects_negative_step(tmp_path) -> None:
         logger._fh.close()
 
 
+def test_u1_audit_logger_log_step_rejects_boolean_step(tmp_path) -> None:
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        with pytest.raises(Exception, match="non-negative integer"):
+            logger.log_step(
+                True,  # type: ignore[arg-type]
+                object(),  # type: ignore[arg-type]
+                [],
+            )
+    finally:
+        logger._fh.close()
+
+
 def test_u1_petri_adapter_step_rejects_blank_ctx_metric_name() -> None:
     net = PetriNet(
         places=[Place("nominal")],
