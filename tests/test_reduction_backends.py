@@ -301,3 +301,66 @@ class TestOptionalLoaderSuccessPaths:
 
         monkeypatch.setitem(sys.modules, "spo_kernel", None)
         importlib.reload(r_mod)
+
+
+class TestDispatchFallbackChain:
+    def test_dispatch_falls_back_to_python_when_loader_fails(self, monkeypatch):
+        previous_backend = r_mod.ACTIVE_BACKEND
+        previous_available = list(r_mod.AVAILABLE_BACKENDS)
+        previous_loader = r_mod._LOADERS["go"]
+        r_mod.ACTIVE_BACKEND = "go"
+        r_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        r_mod._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            r_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend = r_mod._dispatch()
+        finally:
+            r_mod.ACTIVE_BACKEND = previous_backend
+            r_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(r_mod._LOADERS, "go", previous_loader)
+            r_mod._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_uses_cached_loader_once(self, monkeypatch):
+        previous_backend = r_mod.ACTIVE_BACKEND
+        previous_available = list(r_mod.AVAILABLE_BACKENDS)
+        previous_loader = r_mod._LOADERS["go"]
+        r_mod.ACTIVE_BACKEND = "go"
+        r_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        r_mod._BACKEND_CACHE.clear()
+        call_count = 0
+
+        def fake_backend(
+            z_re: float,
+            z_im: float,
+            _omega_0: float,
+            _delta: float,
+            _k_coupling: float,
+            _dt: float,
+            _n_steps: int,
+        ) -> tuple[float, float, float, float]:
+            return z_re, z_im, 0.0, 0.0
+
+        def loader():
+            nonlocal call_count
+            call_count += 1
+            return fake_backend
+
+        monkeypatch.setitem(r_mod._LOADERS, "go", loader)
+        try:
+            b1 = r_mod._dispatch()
+            b2 = r_mod._dispatch()
+        finally:
+            r_mod.ACTIVE_BACKEND = previous_backend
+            r_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(r_mod._LOADERS, "go", previous_loader)
+            r_mod._BACKEND_CACHE.clear()
+
+        assert b1 is fake_backend
+        assert b2 is fake_backend
+        assert call_count == 1
