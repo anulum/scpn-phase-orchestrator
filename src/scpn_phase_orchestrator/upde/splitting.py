@@ -193,9 +193,20 @@ def _splitting_probe_seconds(name: str) -> float:
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
-    if ACTIVE_BACKEND == "python":
-        return None
-    return _load_backend(ACTIVE_BACKEND)
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    deduped: list[str] = []
+    for backend in ordered_backends:
+        if backend in deduped:
+            continue
+        deduped.append(backend)
+    for backend in deduped:
+        if backend == "python":
+            return None
+        try:
+            return _load_backend(backend)
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
+    return None
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
