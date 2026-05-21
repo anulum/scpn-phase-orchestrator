@@ -1245,6 +1245,83 @@ def _load_lifecycle_multistore_drilldown_payload(
     return drilldown_payload
 
 
+def _load_lifecycle_remediation_plan_payload(
+    plan_payload: dict[str, object],
+) -> dict[str, object]:
+    if (
+        plan_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_plan_v1"
+    ):
+        raise click.ClickException(
+            "remediation plan schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_remediation_plan_v1"
+        )
+    _require_sha256(plan_payload.get("plan_hash"), "plan_hash")
+    _require_sha256(plan_payload.get("drilldown_hash"), "drilldown_hash")
+    action_count = plan_payload.get("action_count")
+    actions = plan_payload.get("actions")
+    if not isinstance(action_count, int) or action_count < 0:
+        raise click.ClickException(
+            "remediation plan schema mismatch: action_count must be non-negative"
+        )
+    if not isinstance(actions, list):
+        raise click.ClickException(
+            "remediation plan schema mismatch: actions must be a list"
+        )
+    if action_count != len(actions):
+        raise click.ClickException(
+            "remediation plan schema mismatch: action_count does not match actions"
+        )
+    for action in actions:
+        if not isinstance(action, dict):
+            raise click.ClickException(
+                "remediation plan schema mismatch: action must be an object"
+            )
+        _require_sha256(action.get("action_hash"), "action_hash")
+        _require_sha256(action.get("request_hash"), "request_hash")
+        _require_sha256(action.get("store_hash"), "store_hash")
+        _require_sha256(action.get("policy_hash"), "policy_hash")
+        _require_sha256(action.get("summary_hash"), "summary_hash")
+        action_type = action.get("action_type")
+        if action_type not in {
+            "renew_approval",
+            "persist_request",
+            "register_storage_adapter",
+            "confirm_external_write",
+        }:
+            raise click.ClickException(
+                "remediation plan schema mismatch: unsupported action_type"
+            )
+        priority = action.get("priority")
+        if not isinstance(priority, int) or priority < 1:
+            raise click.ClickException(
+                "remediation plan schema mismatch: priority must be a positive integer"
+            )
+    return plan_payload
+
+
+def _load_lifecycle_remediation_action_status_payload(
+    status_payload: dict[str, object],
+) -> dict[str, object]:
+    if (
+        status_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_action_status_v1"
+    ):
+        raise click.ClickException(
+            "remediation action status schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_remediation_action_status_v1"
+        )
+    _require_sha256(status_payload.get("status_hash"), "status_hash")
+    _require_sha256(status_payload.get("action_hash"), "action_hash")
+    _require_sha256(status_payload.get("plan_hash"), "plan_hash")
+    state = status_payload.get("state")
+    if state not in {"pending", "in_progress", "completed", "blocked"}:
+        raise click.ClickException(
+            "remediation action status schema mismatch: unsupported state"
+        )
+    return status_payload
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -2174,6 +2251,197 @@ def plugins_lifecycle_remediation_orchestration(
     }
     orchestration_payload["plan_hash"] = _record_hash(orchestration_payload)
     click.echo(json.dumps(orchestration_payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-action-status")
+@click.argument(
+    "plan_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument("action_hash")
+@click.option(
+    "--state",
+    type=click.Choice(["pending", "in_progress", "completed", "blocked"]),
+    required=True,
+    help="Execution state for the remediation action.",
+)
+@click.option(
+    "--updated-by",
+    required=True,
+    help="Operator or deployment component updating the action state.",
+)
+@click.option(
+    "--note",
+    default="",
+    show_default=False,
+    help="Optional operator note for this state transition.",
+)
+def plugins_lifecycle_remediation_action_status(
+    plan_json: Path,
+    action_hash: str,
+    state: str,
+    updated_by: str,
+    note: str,
+) -> None:
+    """Emit a deterministic remediation action status record."""
+    if not updated_by:
+        raise click.ClickException(
+            "remediation action status schema mismatch: updated_by must be non-empty"
+        )
+    action_hash = _require_sha256(action_hash, "action_hash")
+    plan = _load_lifecycle_remediation_plan_payload(
+        _load_json_file(plan_json, artifact="remediation plan")
+    )
+    actions = cast(list[dict[str, object]], plan["actions"])
+    selected: dict[str, object] | None = None
+    for action in actions:
+        if action["action_hash"] == action_hash:
+            selected = action
+            break
+    if selected is None:
+        raise click.ClickException(
+            "action_hash is not part of the remediation plan"
+        )
+    status_payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_action_status_v1"
+        ),
+        "version": "1.0.0",
+        "plan_hash": _require_sha256(plan["plan_hash"], "plan_hash"),
+        "action_hash": action_hash,
+        "request_hash": selected["request_hash"],
+        "store_hash": selected["store_hash"],
+        "action_type": selected["action_type"],
+        "priority": selected["priority"],
+        "state": state,
+        "updated_by": updated_by,
+        "note": note,
+    }
+    status_payload["status_hash"] = _record_hash(status_payload)
+    click.echo(json.dumps(status_payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-execution-dashboard")
+@click.argument(
+    "plan_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "status_json",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the execution dashboard.",
+)
+def plugins_lifecycle_remediation_execution_dashboard(
+    plan_json: Path,
+    status_json: tuple[Path, ...],
+    created_by: str,
+) -> None:
+    """Emit a deterministic closed-loop dashboard for remediation execution."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation dashboard schema mismatch: created_by must be non-empty"
+        )
+    plan = _load_lifecycle_remediation_plan_payload(
+        _load_json_file(plan_json, artifact="remediation plan")
+    )
+    statuses = tuple(
+        _load_lifecycle_remediation_action_status_payload(
+            _load_json_file(path, artifact="remediation action status")
+        )
+        for path in status_json
+    )
+    plan_hash = _require_sha256(plan["plan_hash"], "plan_hash")
+    actions = cast(list[dict[str, object]], plan["actions"])
+    action_by_hash = {
+        _require_sha256(action["action_hash"], "action_hash"): action
+        for action in actions
+    }
+    status_by_hash: dict[str, dict[str, object]] = {}
+    for status_record in statuses:
+        status_plan_hash = _require_sha256(status_record["plan_hash"], "plan_hash")
+        if status_plan_hash != plan_hash:
+            raise click.ClickException(
+                "status plan_hash does not match remediation plan"
+            )
+        action_hash = _require_sha256(status_record["action_hash"], "action_hash")
+        if action_hash not in action_by_hash:
+            raise click.ClickException(
+                "status action_hash is not part of remediation plan"
+            )
+        if action_hash in status_by_hash:
+            raise click.ClickException(
+                "duplicate remediation action status for action_hash"
+            )
+        status_by_hash[action_hash] = status_record
+    state_counts = {
+        "pending": 0,
+        "in_progress": 0,
+        "completed": 0,
+        "blocked": 0,
+    }
+    unresolved: list[str] = []
+    resolved: list[str] = []
+    execution_rows: list[dict[str, object]] = []
+    for action in sorted(
+        actions,
+        key=lambda item: (
+            cast(int, item["priority"]),
+            str(item["request_hash"]),
+            str(item["action_hash"]),
+        ),
+    ):
+        action_hash = _require_sha256(action["action_hash"], "action_hash")
+        status = status_by_hash.get(action_hash)
+        if status is None:
+            state = "pending"
+            status_hash: str | None = None
+            updated_by: str | None = None
+            note = ""
+        else:
+            state = cast(str, status["state"])
+            status_hash = _require_sha256(status["status_hash"], "status_hash")
+            updated_by = str(status["updated_by"])
+            note = str(status.get("note", ""))
+        state_counts[state] += 1
+        if state in {"completed"}:
+            resolved.append(action_hash)
+        else:
+            unresolved.append(action_hash)
+        execution_rows.append(
+            {
+                "action_hash": action_hash,
+                "request_hash": action["request_hash"],
+                "action_type": action["action_type"],
+                "priority": action["priority"],
+                "state": state,
+                "status_hash": status_hash,
+                "updated_by": updated_by,
+                "note": note,
+            }
+        )
+    dashboard_payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_execution_dashboard_v1"
+        ),
+        "version": "1.0.0",
+        "plan_hash": plan_hash,
+        "action_count": len(actions),
+        "state_counts": state_counts,
+        "resolved_action_hashes": sorted(resolved),
+        "unresolved_action_hashes": sorted(unresolved),
+        "rows": execution_rows,
+        "created_by": created_by,
+    }
+    dashboard_payload["execution_hash"] = _record_hash(dashboard_payload)
+    click.echo(json.dumps(dashboard_payload, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

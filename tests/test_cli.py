@@ -3512,6 +3512,232 @@ def test_plugins_lifecycle_remediation_orchestration_rejects_bad_drilldown_schem
     assert "multi-store drilldown schema mismatch" in result.output
 
 
+def test_plugins_lifecycle_remediation_execution_dashboard_tracks_action_states(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    lifecycle = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle.output, encoding="utf-8")
+    summary = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary.exit_code == 0
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(summary.output, encoding="utf-8")
+    policy = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert policy.exit_code == 0
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(policy.output, encoding="utf-8")
+    drilldown = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-multistore-drilldown",
+            str(policy_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert drilldown.exit_code == 0
+    drilldown_path = tmp_path / "drilldown.json"
+    drilldown_path.write_text(drilldown.output, encoding="utf-8")
+    plan = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-orchestration",
+            str(drilldown_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert plan.exit_code == 0
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(plan.output, encoding="utf-8")
+    plan_payload = json.loads(plan.output)
+    first_action_hash = plan_payload["actions"][0]["action_hash"]
+    status = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-action-status",
+            str(plan_path),
+            first_action_hash,
+            "--state",
+            "completed",
+            "--updated-by",
+            "deployment_gate",
+            "--note",
+            "executed in maintenance window",
+        ],
+    )
+    assert status.exit_code == 0
+    status_path = tmp_path / "status.json"
+    status_path.write_text(status.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-execution-dashboard",
+            str(plan_path),
+            str(status_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert (
+        payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_remediation_execution_dashboard_v1"
+    )
+    assert payload["action_count"] == len(plan_payload["actions"])
+    assert payload["state_counts"]["completed"] == 1
+    assert payload["state_counts"]["pending"] == payload["action_count"] - 1
+    assert first_action_hash in payload["resolved_action_hashes"]
+    assert len(payload["execution_hash"]) == 64
+
+
+def test_plugins_lifecycle_remediation_execution_dashboard_rejects_plan_mismatch(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    lifecycle = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle.output, encoding="utf-8")
+    summary = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary.exit_code == 0
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(summary.output, encoding="utf-8")
+    policy = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert policy.exit_code == 0
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(policy.output, encoding="utf-8")
+    drilldown = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-multistore-drilldown",
+            str(policy_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert drilldown.exit_code == 0
+    drilldown_path = tmp_path / "drilldown.json"
+    drilldown_path.write_text(drilldown.output, encoding="utf-8")
+    plan = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-orchestration",
+            str(drilldown_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert plan.exit_code == 0
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(plan.output, encoding="utf-8")
+    plan_payload = json.loads(plan.output)
+    first_action_hash = plan_payload["actions"][0]["action_hash"]
+    status = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-action-status",
+            str(plan_path),
+            first_action_hash,
+            "--state",
+            "completed",
+            "--updated-by",
+            "deployment_gate",
+        ],
+    )
+    assert status.exit_code == 0
+    status_payload = json.loads(status.output)
+    status_payload["plan_hash"] = "0" * 64
+    status_path = tmp_path / "status.json"
+    status_path.write_text(
+        json.dumps(status_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-execution-dashboard",
+            str(plan_path),
+            str(status_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "status plan_hash does not match remediation plan" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,
