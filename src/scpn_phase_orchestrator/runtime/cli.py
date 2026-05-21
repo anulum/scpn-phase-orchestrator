@@ -1596,6 +1596,50 @@ def _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
     return handoff_payload
 
 
+def _load_lifecycle_remediation_scheduler_acknowledgement_payload(
+    acknowledgement_payload: dict[str, object],
+) -> dict[str, object]:
+    if (
+        acknowledgement_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler acknowledgement schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1"
+        )
+    _require_sha256(
+        acknowledgement_payload.get("acknowledgement_hash"),
+        "acknowledgement_hash",
+    )
+    _require_sha256(
+        acknowledgement_payload.get("adapter_handoff_hash"),
+        "adapter_handoff_hash",
+    )
+    _require_sha256(acknowledgement_payload.get("telemetry_hash"), "telemetry_hash")
+    _require_sha256(acknowledgement_payload.get("plan_hash"), "plan_hash")
+    _require_sha256(acknowledgement_payload.get("execution_hash"), "execution_hash")
+    _require_sha256(
+        acknowledgement_payload.get("adapter_entry_hash"),
+        "adapter_entry_hash",
+    )
+    _require_sha256(acknowledgement_payload.get("entry_hash"), "entry_hash")
+    _require_sha256(acknowledgement_payload.get("action_hash"), "action_hash")
+    _require_sha256(acknowledgement_payload.get("request_hash"), "request_hash")
+    state = acknowledgement_payload.get("state")
+    if state not in {"in_progress", "completed", "blocked"}:
+        raise click.ClickException(
+            "remediation scheduler acknowledgement schema mismatch: unsupported state"
+        )
+    for field_name in ("acknowledged_by", "external_reference"):
+        value = acknowledgement_payload.get(field_name)
+        if not isinstance(value, str) or not value:
+            raise click.ClickException(
+                "remediation scheduler acknowledgement schema mismatch: "
+                f"{field_name} must be non-empty"
+            )
+    return acknowledgement_payload
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -3222,6 +3266,262 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement(
     }
     payload["acknowledgement_hash"] = _record_hash(payload)
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-scheduler-acknowledgement-replay")
+@click.argument(
+    "adapter_handoff_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "acknowledgement_json",
+    nargs=-1,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Component creating acknowledgement replay manifest.",
+)
+def plugins_lifecycle_remediation_scheduler_acknowledgement_replay(
+    adapter_handoff_json: Path,
+    acknowledgement_json: tuple[Path, ...],
+    created_by: str,
+) -> None:
+    """Emit deterministic replay manifest from scheduler acknowledgements."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler acknowledgement replay schema mismatch: "
+            "created_by must be non-empty"
+        )
+    handoff = _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
+        _load_json_file(
+            adapter_handoff_json,
+            artifact="remediation scheduler adapter handoff",
+        )
+    )
+    handoff_hash = _require_sha256(
+        handoff.get("adapter_handoff_hash"),
+        "adapter_handoff_hash",
+    )
+    entries = cast(list[dict[str, object]], handoff["entries"])
+    entry_by_adapter_hash: dict[str, dict[str, object]] = {}
+    for entry in entries:
+        adapter_entry_hash = _require_sha256(
+            entry.get("adapter_entry_hash"),
+            "adapter_entry_hash",
+        )
+        entry_by_adapter_hash[adapter_entry_hash] = entry
+
+    replay_rows: list[dict[str, object]] = []
+    seen_adapter_entry_hashes: set[str] = set()
+    for path in acknowledgement_json:
+        payload = _load_lifecycle_remediation_scheduler_acknowledgement_payload(
+            _load_json_file(path, artifact="remediation scheduler acknowledgement")
+        )
+        payload_handoff_hash = _require_sha256(
+            payload.get("adapter_handoff_hash"),
+            "adapter_handoff_hash",
+        )
+        if payload_handoff_hash != handoff_hash:
+            raise click.ClickException(
+                "remediation scheduler acknowledgement replay schema mismatch: "
+                "adapter_handoff_hash mismatch"
+            )
+        adapter_entry_hash = _require_sha256(
+            payload.get("adapter_entry_hash"),
+            "adapter_entry_hash",
+        )
+        if adapter_entry_hash in seen_adapter_entry_hashes:
+            raise click.ClickException(
+                "remediation scheduler acknowledgement replay schema mismatch: "
+                "duplicate adapter_entry_hash acknowledgement"
+            )
+        handoff_entry = entry_by_adapter_hash.get(adapter_entry_hash)
+        if handoff_entry is None:
+            raise click.ClickException(
+                "remediation scheduler acknowledgement replay schema mismatch: "
+                "acknowledgement adapter_entry_hash missing from handoff"
+            )
+        seen_adapter_entry_hashes.add(adapter_entry_hash)
+        replay_row: dict[str, object] = {
+            "acknowledgement_hash": _require_sha256(
+                payload.get("acknowledgement_hash"),
+                "acknowledgement_hash",
+            ),
+            "adapter_entry_hash": adapter_entry_hash,
+            "entry_hash": handoff_entry["entry_hash"],
+            "action_hash": handoff_entry["action_hash"],
+            "request_hash": handoff_entry["request_hash"],
+            "state": payload["state"],
+            "external_reference": payload["external_reference"],
+            "acknowledged_by": payload["acknowledged_by"],
+            "note": payload.get("note", ""),
+        }
+        replay_row["replay_row_hash"] = _record_hash(replay_row)
+        replay_rows.append(replay_row)
+
+    state_counts: dict[str, int] = {"in_progress": 0, "completed": 0, "blocked": 0}
+    for row in replay_rows:
+        state_counts[cast(str, row["state"])] += 1
+
+    replay_payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_scheduler_acknowledgement_replay_v1"
+        ),
+        "version": "1.0.0",
+        "adapter_handoff_hash": handoff_hash,
+        "plan_hash": _require_sha256(handoff.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(handoff.get("execution_hash"), "execution_hash"),
+        "telemetry_hash": _require_sha256(handoff.get("telemetry_hash"), "telemetry_hash"),
+        "acknowledgement_count": len(replay_rows),
+        "state_counts": state_counts,
+        "rows": sorted(
+            replay_rows,
+            key=lambda item: (
+                cast(str, item["state"]),
+                cast(str, item["adapter_entry_hash"]),
+            ),
+        ),
+        "created_by": created_by,
+    }
+    replay_payload["replay_hash"] = _record_hash(replay_payload)
+    click.echo(json.dumps(replay_payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-scheduler-execution-dashboard")
+@click.argument(
+    "scheduler_telemetry_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "acknowledgement_replay_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Component creating external scheduler execution dashboard.",
+)
+def plugins_lifecycle_remediation_scheduler_execution_dashboard(
+    scheduler_telemetry_json: Path,
+    acknowledgement_replay_json: Path,
+    created_by: str,
+) -> None:
+    """Emit deterministic live execution dashboard across scheduler adapters."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler execution dashboard schema mismatch: "
+            "created_by must be non-empty"
+        )
+    telemetry = _load_lifecycle_remediation_scheduler_telemetry_payload(
+        _load_json_file(
+            scheduler_telemetry_json,
+            artifact="remediation scheduler telemetry",
+        )
+    )
+    replay = _load_json_file(
+        acknowledgement_replay_json,
+        artifact="remediation scheduler acknowledgement replay",
+    )
+    if (
+        replay.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler execution dashboard schema mismatch: "
+            "unexpected acknowledgement replay schema"
+        )
+    _require_sha256(replay.get("replay_hash"), "replay_hash")
+    telemetry_hash = _require_sha256(telemetry.get("telemetry_hash"), "telemetry_hash")
+    replay_telemetry_hash = _require_sha256(replay.get("telemetry_hash"), "telemetry_hash")
+    if replay_telemetry_hash != telemetry_hash:
+        raise click.ClickException(
+            "remediation scheduler execution dashboard schema mismatch: "
+            "telemetry_hash mismatch"
+        )
+    replay_rows = cast(list[dict[str, object]], replay.get("rows", []))
+    ack_state_by_action_hash: dict[str, str] = {}
+    for row in replay_rows:
+        action_hash = _require_sha256(row.get("action_hash"), "action_hash")
+        state = row.get("state")
+        if state not in {"in_progress", "completed", "blocked"}:
+            raise click.ClickException(
+                "remediation scheduler execution dashboard schema mismatch: "
+                "unsupported replay state"
+            )
+        if action_hash in ack_state_by_action_hash:
+            raise click.ClickException(
+                "remediation scheduler execution dashboard schema mismatch: "
+                "duplicate replay action_hash"
+            )
+        ack_state_by_action_hash[action_hash] = cast(str, state)
+
+    telemetry_rows = cast(list[dict[str, object]], telemetry["rows"])
+    rows: list[dict[str, object]] = []
+    dashboard_counts: dict[str, int] = {
+        "pending": 0,
+        "in_progress": 0,
+        "completed": 0,
+        "blocked": 0,
+        "overdue": 0,
+    }
+    for row in sorted(
+        telemetry_rows,
+        key=lambda item: (
+            cast(int, item["priority"]),
+            cast(int, item["schedule_epoch"]),
+            str(item["action_hash"]),
+        ),
+    ):
+        action_hash = _require_sha256(row.get("action_hash"), "action_hash")
+        telemetry_state = cast(str, row["state"])
+        ack_state = ack_state_by_action_hash.get(action_hash)
+        effective_state = ack_state if ack_state is not None else telemetry_state
+        if effective_state not in {"pending", "in_progress", "completed", "blocked"}:
+            raise click.ClickException(
+                "remediation scheduler execution dashboard schema mismatch: "
+                "unsupported effective state"
+            )
+        overdue = bool(row["overdue"]) and effective_state != "completed"
+        dashboard_counts[effective_state] += 1
+        if overdue:
+            dashboard_counts["overdue"] += 1
+        output_row: dict[str, object] = {
+            "entry_hash": row["entry_hash"],
+            "action_hash": action_hash,
+            "request_hash": row["request_hash"],
+            "action_type": row["action_type"],
+            "priority": row["priority"],
+            "schedule_epoch": row["schedule_epoch"],
+            "telemetry_state": telemetry_state,
+            "acknowledgement_state": ack_state,
+            "effective_state": effective_state,
+            "overdue": overdue,
+        }
+        output_row["dashboard_row_hash"] = _record_hash(output_row)
+        rows.append(output_row)
+
+    dashboard_payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_scheduler_execution_dashboard_v1"
+        ),
+        "version": "1.0.0",
+        "plan_hash": _require_sha256(telemetry.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(telemetry.get("execution_hash"), "execution_hash"),
+        "handoff_hash": _require_sha256(telemetry.get("handoff_hash"), "handoff_hash"),
+        "scheduler_hash": _require_sha256(telemetry.get("scheduler_hash"), "scheduler_hash"),
+        "telemetry_hash": telemetry_hash,
+        "replay_hash": _require_sha256(replay.get("replay_hash"), "replay_hash"),
+        "row_count": len(rows),
+        "state_counts": dashboard_counts,
+        "rows": rows,
+        "created_by": created_by,
+    }
+    dashboard_payload["dashboard_hash"] = _record_hash(dashboard_payload)
+    click.echo(json.dumps(dashboard_payload, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

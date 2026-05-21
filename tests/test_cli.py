@@ -4600,6 +4600,309 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_rejects_unknown
     assert "entry_hash not present in adapter handoff" in result.output
 
 
+def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_and_execution_dashboard(
+    runner,
+    tmp_path: Path,
+):
+    lifecycle = runner.invoke(
+        main,
+        ["plugins", "lifecycle-status", str(_write_request_payload_from_cli(runner, tmp_path))],
+    )
+    assert lifecycle.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle.output, encoding="utf-8")
+    summary = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary.exit_code == 0
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(summary.output, encoding="utf-8")
+    policy = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert policy.exit_code == 0
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(policy.output, encoding="utf-8")
+    drilldown = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-multistore-drilldown",
+            str(policy_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert drilldown.exit_code == 0
+    drilldown_path = tmp_path / "drilldown.json"
+    drilldown_path.write_text(drilldown.output, encoding="utf-8")
+    plan = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-orchestration",
+            str(drilldown_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert plan.exit_code == 0
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(plan.output, encoding="utf-8")
+    execution_dashboard = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-execution-dashboard",
+            str(plan_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert execution_dashboard.exit_code == 0
+    execution_dashboard_path = tmp_path / "execution-dashboard.json"
+    execution_dashboard_path.write_text(
+        execution_dashboard.output, encoding="utf-8"
+    )
+    handoff = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-deployment-handoff",
+            str(execution_dashboard_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert handoff.exit_code == 0
+    handoff_path = tmp_path / "handoff.json"
+    handoff_path.write_text(handoff.output, encoding="utf-8")
+    queue = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-queue",
+            str(handoff_path),
+            "--window-start-epoch",
+            "1700000000",
+            "--window-duration-seconds",
+            "3600",
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+    assert queue.exit_code == 0
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(queue.output, encoding="utf-8")
+    telemetry = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-telemetry",
+            str(queue_path),
+            "--as-of-epoch",
+            "1700000100",
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+    assert telemetry.exit_code == 0
+    telemetry_path = tmp_path / "telemetry.json"
+    telemetry_path.write_text(telemetry.output, encoding="utf-8")
+    adapter_handoff = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-adapter-handoff",
+            str(telemetry_path),
+            "--adapter-name",
+            "airflow",
+            "--adapter-endpoint",
+            "airflow://cluster-a",
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+    assert adapter_handoff.exit_code == 0
+    adapter_handoff_path = tmp_path / "adapter-handoff.json"
+    adapter_handoff_path.write_text(adapter_handoff.output, encoding="utf-8")
+    adapter_payload = json.loads(adapter_handoff.output)
+    first = adapter_payload["entries"][0]["adapter_entry_hash"]
+    second = adapter_payload["entries"][1]["adapter_entry_hash"]
+
+    ack_a = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-acknowledgement",
+            str(adapter_handoff_path),
+            first,
+            "--state",
+            "completed",
+            "--acknowledged-by",
+            "airflow_worker",
+            "--external-reference",
+            "airflow-run-0001",
+        ],
+    )
+    assert ack_a.exit_code == 0
+    ack_a_path = tmp_path / "ack-a.json"
+    ack_a_path.write_text(ack_a.output, encoding="utf-8")
+    ack_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-acknowledgement",
+            str(adapter_handoff_path),
+            second,
+            "--state",
+            "blocked",
+            "--acknowledged-by",
+            "airflow_worker",
+            "--external-reference",
+            "airflow-run-0002",
+            "--note",
+            "quota",
+        ],
+    )
+    assert ack_b.exit_code == 0
+    ack_b_path = tmp_path / "ack-b.json"
+    ack_b_path.write_text(ack_b.output, encoding="utf-8")
+
+    replay = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-acknowledgement-replay",
+            str(adapter_handoff_path),
+            str(ack_a_path),
+            str(ack_b_path),
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+    assert replay.exit_code == 0
+    replay_payload = json.loads(replay.output)
+    assert (
+        replay_payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
+    )
+    assert replay_payload["acknowledgement_count"] == 2
+    assert replay_payload["state_counts"]["completed"] == 1
+    assert replay_payload["state_counts"]["blocked"] == 1
+    replay_path = tmp_path / "replay.json"
+    replay_path.write_text(replay.output, encoding="utf-8")
+
+    dashboard = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-execution-dashboard",
+            str(telemetry_path),
+            str(replay_path),
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+    assert dashboard.exit_code == 0
+    dashboard_payload = json.loads(dashboard.output)
+    assert (
+        dashboard_payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
+    )
+    assert dashboard_payload["row_count"] == len(dashboard_payload["rows"])
+    assert dashboard_payload["state_counts"]["completed"] >= 1
+    assert dashboard_payload["state_counts"]["blocked"] >= 1
+    assert len(dashboard_payload["dashboard_hash"]) == 64
+
+
+def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_rejects_hash_mismatch(
+    runner,
+    tmp_path: Path,
+):
+    adapter_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1",
+        "version": "1.0.0",
+        "plan_hash": "1" * 64,
+        "execution_hash": "2" * 64,
+        "telemetry_hash": "3" * 64,
+        "adapter_name": "airflow",
+        "adapter_endpoint": "airflow://cluster-a",
+        "entry_count": 1,
+        "entries": [
+            {
+                "adapter_entry_hash": "4" * 64,
+                "entry_hash": "5" * 64,
+                "action_hash": "6" * 64,
+                "request_hash": "7" * 64,
+            }
+        ],
+        "created_by": "deployment_scheduler",
+    }
+    adapter_payload["adapter_handoff_hash"] = hashlib.sha256(
+        json.dumps(adapter_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    adapter_path = tmp_path / "adapter.json"
+    adapter_path.write_text(
+        json.dumps(adapter_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    ack_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1",
+        "version": "1.0.0",
+        "adapter_handoff_hash": "8" * 64,
+        "telemetry_hash": "3" * 64,
+        "plan_hash": "1" * 64,
+        "execution_hash": "2" * 64,
+        "adapter_entry_hash": "4" * 64,
+        "entry_hash": "5" * 64,
+        "action_hash": "6" * 64,
+        "request_hash": "7" * 64,
+        "state": "completed",
+        "acknowledged_by": "worker",
+        "external_reference": "ref-1",
+        "note": "",
+    }
+    ack_payload["acknowledgement_hash"] = hashlib.sha256(
+        json.dumps(ack_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    ack_path = tmp_path / "ack.json"
+    ack_path.write_text(
+        json.dumps(ack_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-acknowledgement-replay",
+            str(adapter_path),
+            str(ack_path),
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "adapter_handoff_hash mismatch" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,
