@@ -19,6 +19,8 @@ are enforced.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -67,6 +69,19 @@ class CyberneticClosure:
         cost_weights: tuple[float, ...] = (1.0, 0.5, 0.1, 0.1),
         max_steps: int = 0,
     ):
+        if not isinstance(carrier, GeometryCarrier):
+            raise TypeError(f"carrier must be GeometryCarrier, got {carrier!r}")
+        if not isinstance(cost_weights, tuple) or not cost_weights:
+            raise TypeError("cost_weights must be a non-empty tuple of finite reals")
+        for weight in cost_weights:
+            if isinstance(weight, bool) or not isinstance(weight, Real):
+                raise TypeError("cost_weights must be a tuple of finite reals")
+            if not isfinite(float(weight)):
+                raise ValueError("cost_weights must be finite reals")
+        if isinstance(max_steps, bool) or not isinstance(max_steps, int):
+            raise TypeError(f"max_steps must be a non-negative integer, got {max_steps!r}")
+        if max_steps < 0:
+            raise ValueError(f"max_steps must be a non-negative integer, got {max_steps!r}")
         self._carrier = carrier
         self._weights = cost_weights
         self._max_steps = max_steps
