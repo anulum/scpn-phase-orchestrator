@@ -17,6 +17,23 @@ Compatibility guarantees:
 
 Verification:
 - `tests/test_grpc_gen_aliases.py::test_top_level_grpc_aliases_resolve_to_runtime_modules`
+
+## `scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc`
+
+Purpose:
+- Preserve the public generated gRPC service import path for SPO service
+  stubs and servicer wiring.
+
+Canonical runtime source:
+- `scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2_grpc`
+
+Compatibility guarantees:
+1. Public and runtime gRPC symbols are equivalent by contract.
+2. Service-method naming and route shape are not mutated in alias layer.
+3. Public import path remains stable across refactors.
+
+Verification:
+- `tests/test_grpc_gen_aliases.py::test_top_level_grpc_aliases_resolve_to_runtime_modules`
 - `tests/test_grpc_gen_aliases.py::test_fallback_message_alias_preserves_dataclass_contract`
 
 ## `scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback`
