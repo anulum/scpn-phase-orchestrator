@@ -119,6 +119,12 @@ def test_u1_geometry_carrier_decode_rejects_wrong_shape() -> None:
         carrier.decode(np.zeros((2, 1), dtype=float))
 
 
+def test_u1_geometry_carrier_reset_rejects_non_integer_seed() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    with pytest.raises(TypeError, match="int or None"):
+        carrier.reset(seed="bad")  # type: ignore[arg-type]
+
+
 def test_u1_cybernetic_closure_rejects_negative_max_steps() -> None:
     carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
     with pytest.raises(ValueError, match="non-negative integer"):

@@ -177,6 +177,8 @@ class GeometryCarrier:
 
     def reset(self, seed: int | None = None) -> None:
         """Reinitialize the latent vector and reset the outer-step counter."""
+        if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
+            raise TypeError(f"seed must be int or None, got {seed!r}")
         rng = np.random.default_rng(seed)
         self._z = rng.normal(0, 0.1, self._z_dim)
         self._step = 0
