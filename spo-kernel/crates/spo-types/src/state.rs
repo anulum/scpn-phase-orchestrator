@@ -168,6 +168,53 @@ pub struct PhaseState {
     pub node_id: String,
 }
 
+impl PhaseState {
+    /// Build and validate one node-level phase state.
+    ///
+    /// # Errors
+    /// Returns [`SpoError::InvalidConfig`] when numeric fields are non-finite
+    /// or node_id is blank.
+    pub fn try_new(
+        theta: f64,
+        omega: f64,
+        amplitude: f64,
+        quality: f64,
+        channel: Channel,
+        node_id: String,
+    ) -> SpoResult<Self> {
+        let state = Self {
+            theta,
+            omega,
+            amplitude,
+            quality,
+            channel,
+            node_id,
+        };
+        state.validate()?;
+        Ok(state)
+    }
+
+    /// Validate one node-level phase state.
+    ///
+    /// # Errors
+    /// Returns [`SpoError::InvalidConfig`] when numeric fields are non-finite,
+    /// quality is outside [0, 1], or node_id is blank.
+    pub fn validate(&self) -> SpoResult<()> {
+        if !self.theta.is_finite()
+            || !self.omega.is_finite()
+            || !self.amplitude.is_finite()
+            || !self.quality.is_finite()
+            || !(0.0..=1.0).contains(&self.quality)
+            || self.node_id.trim().is_empty()
+        {
+            return Err(SpoError::InvalidConfig(
+                "phase state contains invalid numeric fields or node id".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Per-layer phase-coherence summary.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayerState {
@@ -335,6 +382,12 @@ mod tests {
         };
         assert_eq!(ps.theta, 1.0);
         assert_eq!(ps.channel, Channel::P);
+    }
+
+    #[test]
+    fn phase_state_try_new_validates() {
+        assert!(PhaseState::try_new(0.1, 1.0, 0.9, 0.8, Channel::P, "n1".into()).is_ok());
+        assert!(PhaseState::try_new(0.1, 1.0, 0.9, 1.2, Channel::P, "n1".into()).is_err());
     }
 
     #[test]
