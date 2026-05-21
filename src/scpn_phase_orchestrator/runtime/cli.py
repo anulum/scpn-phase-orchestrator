@@ -3524,6 +3524,272 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
     click.echo(json.dumps(dashboard_payload, indent=2, sort_keys=True))
 
 
+@plugins_group.command("lifecycle-remediation-scheduler-control-plan")
+@click.argument(
+    "scheduler_execution_dashboard_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator component creating interactive control plan artifact.",
+)
+def plugins_lifecycle_remediation_scheduler_control_plan(
+    scheduler_execution_dashboard_json: Path,
+    created_by: str,
+) -> None:
+    """Emit deterministic interactive control actions from scheduler dashboard."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler control plan schema mismatch: "
+            "created_by must be non-empty"
+        )
+    dashboard = _load_json_file(
+        scheduler_execution_dashboard_json,
+        artifact="remediation scheduler execution dashboard",
+    )
+    if (
+        dashboard.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler control plan schema mismatch: "
+            "unexpected scheduler execution dashboard schema"
+        )
+    dashboard_hash = _require_sha256(dashboard.get("dashboard_hash"), "dashboard_hash")
+    rows = dashboard.get("rows")
+    if not isinstance(rows, list):
+        raise click.ClickException(
+            "remediation scheduler control plan schema mismatch: rows must be a list"
+        )
+    control_actions: list[dict[str, object]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise click.ClickException(
+                "remediation scheduler control plan schema mismatch: row must be object"
+            )
+        action_hash = _require_sha256(row.get("action_hash"), "action_hash")
+        effective_state = row.get("effective_state")
+        if effective_state not in {"pending", "in_progress", "completed", "blocked"}:
+            raise click.ClickException(
+                "remediation scheduler control plan schema mismatch: "
+                "unsupported effective_state"
+            )
+        overdue = bool(row.get("overdue", False))
+        if effective_state == "completed":
+            action = "no_op"
+            reason = "already_completed"
+        elif effective_state == "blocked":
+            action = "escalate"
+            reason = "blocked_requires_operator_intervention"
+        elif overdue:
+            action = "expedite"
+            reason = "overdue_action_requires_priority_bump"
+        elif effective_state == "in_progress":
+            action = "monitor"
+            reason = "execution_in_progress_track_progress"
+        else:
+            action = "dispatch"
+            reason = "ready_for_dispatch"
+        control_row: dict[str, object] = {
+            "action_hash": action_hash,
+            "request_hash": _require_sha256(row.get("request_hash"), "request_hash"),
+            "action_type": row.get("action_type"),
+            "priority": row.get("priority"),
+            "effective_state": effective_state,
+            "overdue": overdue,
+            "control_action": action,
+            "reason": reason,
+            "operator_command_template": (
+                "spo plugins lifecycle-remediation-action-status PLAN_JSON ACTION_HASH "
+                "--state STATE --updated-by OPERATOR --note NOTE"
+            ),
+        }
+        control_row["control_row_hash"] = _record_hash(control_row)
+        control_actions.append(control_row)
+    control_counts: dict[str, int] = {
+        "dispatch": 0,
+        "monitor": 0,
+        "expedite": 0,
+        "escalate": 0,
+        "no_op": 0,
+    }
+    for item in control_actions:
+        control_counts[cast(str, item["control_action"])] += 1
+    payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_scheduler_control_plan_v1"
+        ),
+        "version": "1.0.0",
+        "plan_hash": _require_sha256(dashboard.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(dashboard.get("execution_hash"), "execution_hash"),
+        "dashboard_hash": dashboard_hash,
+        "control_action_count": len(control_actions),
+        "control_counts": control_counts,
+        "control_actions": sorted(
+            control_actions,
+            key=lambda item: (
+                cast(int, item["priority"]),
+                cast(str, item["control_action"]),
+                cast(str, item["action_hash"]),
+            ),
+        ),
+        "created_by": created_by,
+    }
+    payload["control_plan_hash"] = _record_hash(payload)
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-scheduler-runbook")
+@click.argument(
+    "scheduler_control_plan_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "scheduler_adapter_handoff_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator component creating scheduler runbook artifact.",
+)
+def plugins_lifecycle_remediation_scheduler_runbook(
+    scheduler_control_plan_json: Path,
+    scheduler_adapter_handoff_json: Path,
+    created_by: str,
+) -> None:
+    """Emit deterministic operator runbook grouped by control action and adapter."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler runbook schema mismatch: "
+            "created_by must be non-empty"
+        )
+    control_plan = _load_json_file(
+        scheduler_control_plan_json,
+        artifact="remediation scheduler control plan",
+    )
+    if (
+        control_plan.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_control_plan_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler runbook schema mismatch: "
+            "unexpected scheduler control plan schema"
+        )
+    _require_sha256(control_plan.get("control_plan_hash"), "control_plan_hash")
+    adapter_handoff = _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
+        _load_json_file(
+            scheduler_adapter_handoff_json,
+            artifact="remediation scheduler adapter handoff",
+        )
+    )
+    plan_hash = _require_sha256(control_plan.get("plan_hash"), "plan_hash")
+    adapter_plan_hash = _require_sha256(adapter_handoff.get("plan_hash"), "plan_hash")
+    if plan_hash != adapter_plan_hash:
+        raise click.ClickException(
+            "remediation scheduler runbook schema mismatch: plan_hash mismatch"
+        )
+    control_actions = control_plan.get("control_actions")
+    if not isinstance(control_actions, list):
+        raise click.ClickException(
+            "remediation scheduler runbook schema mismatch: "
+            "control_actions must be a list"
+        )
+    adapter_entries = cast(list[dict[str, object]], adapter_handoff["entries"])
+    adapter_by_action_hash: dict[str, dict[str, object]] = {}
+    for entry in adapter_entries:
+        action_hash = _require_sha256(entry.get("action_hash"), "action_hash")
+        if action_hash in adapter_by_action_hash:
+            raise click.ClickException(
+                "remediation scheduler runbook schema mismatch: duplicate action_hash in adapter handoff"
+            )
+        adapter_by_action_hash[action_hash] = entry
+    groups: dict[str, list[dict[str, object]]] = {
+        "dispatch": [],
+        "monitor": [],
+        "expedite": [],
+        "escalate": [],
+        "no_op": [],
+    }
+    for action in control_actions:
+        if not isinstance(action, dict):
+            raise click.ClickException(
+                "remediation scheduler runbook schema mismatch: control action must be object"
+            )
+        action_hash = _require_sha256(action.get("action_hash"), "action_hash")
+        control_action = action.get("control_action")
+        if control_action not in groups:
+            raise click.ClickException(
+                "remediation scheduler runbook schema mismatch: unsupported control_action"
+            )
+        adapter_entry = adapter_by_action_hash.get(action_hash)
+        runbook_step: dict[str, object] = {
+            "action_hash": action_hash,
+            "request_hash": _require_sha256(action.get("request_hash"), "request_hash"),
+            "control_action": control_action,
+            "reason": action.get("reason"),
+            "priority": action.get("priority"),
+            "action_type": action.get("action_type"),
+            "adapter_entry_hash": (
+                adapter_entry.get("adapter_entry_hash") if adapter_entry is not None else None
+            ),
+            "adapter_name": (
+                cast(dict[str, object], adapter_entry["adapter_target"]).get("adapter_name")
+                if adapter_entry is not None
+                else None
+            ),
+            "adapter_endpoint": (
+                cast(dict[str, object], adapter_entry["adapter_target"]).get("adapter_endpoint")
+                if adapter_entry is not None
+                else None
+            ),
+            "acknowledgement_command_template": (
+                adapter_entry.get("acknowledgement_command_template")
+                if adapter_entry is not None
+                else None
+            ),
+        }
+        runbook_step["runbook_step_hash"] = _record_hash(runbook_step)
+        groups[cast(str, control_action)].append(runbook_step)
+    ordered_groups: list[dict[str, object]] = []
+    for name in ("escalate", "expedite", "dispatch", "monitor", "no_op"):
+        items = sorted(
+            groups[name],
+            key=lambda item: (
+                cast(int, item["priority"]),
+                cast(str, item["action_hash"]),
+            ),
+        )
+        ordered_groups.append(
+            {
+                "control_action": name,
+                "step_count": len(items),
+                "steps": items,
+            }
+        )
+    payload: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_runbook_v1",
+        "version": "1.0.0",
+        "plan_hash": plan_hash,
+        "execution_hash": _require_sha256(control_plan.get("execution_hash"), "execution_hash"),
+        "control_plan_hash": _require_sha256(
+            control_plan.get("control_plan_hash"),
+            "control_plan_hash",
+        ),
+        "adapter_handoff_hash": _require_sha256(
+            adapter_handoff.get("adapter_handoff_hash"),
+            "adapter_handoff_hash",
+        ),
+        "group_count": len(ordered_groups),
+        "groups": ordered_groups,
+        "created_by": created_by,
+    }
+    payload["runbook_hash"] = _record_hash(payload)
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
 @plugins_group.command("revoke-execution-request")
 @click.argument(
     "request_json",
