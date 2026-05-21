@@ -124,6 +124,14 @@ class CyberneticClosure:
         self, phases: FloatArray, n_outer_steps: int
     ) -> tuple[FloatArray, list[ClosureState]]:
         """Run n outer steps, return final W and history."""
+        if isinstance(n_outer_steps, bool) or not isinstance(n_outer_steps, int):
+            raise TypeError(
+                f"n_outer_steps must be a non-negative integer, got {n_outer_steps!r}"
+            )
+        if n_outer_steps < 0:
+            raise ValueError(
+                f"n_outer_steps must be a non-negative integer, got {n_outer_steps!r}"
+            )
         states = []
         W = self._carrier.decode()
         for _ in range(n_outer_steps):

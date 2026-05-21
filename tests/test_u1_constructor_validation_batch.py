@@ -100,6 +100,13 @@ def test_u1_cybernetic_closure_rejects_negative_max_steps() -> None:
         CyberneticClosure(carrier=carrier, max_steps=-1)
 
 
+def test_u1_cybernetic_closure_run_rejects_negative_outer_steps() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    closure = CyberneticClosure(carrier=carrier)
+    with pytest.raises(ValueError, match="non-negative integer"):
+        closure.run(np.zeros(4, dtype=float), -1)
+
+
 def test_u1_tcbo_observer_rejects_invalid_tau() -> None:
     with pytest.raises(ValueError, match="within \\[0, 1\\]"):
         TCBOObserver(tau_h1=1.5)
