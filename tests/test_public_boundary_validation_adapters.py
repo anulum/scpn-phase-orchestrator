@@ -8,11 +8,13 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.adapters.gaian_mesh_bridge import PeerState
 from scpn_phase_orchestrator.adapters.remanentia_bridge import CoherenceMemorySnapshot
 from scpn_phase_orchestrator.adapters.synapse_channel_bridge import AgentState
+from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import SynapseSnapshot
 
 
 def test_peer_state_rejects_invalid_node_id_control_characters() -> None:
@@ -64,3 +66,30 @@ def test_agent_state_wraps_phase_values_into_two_pi() -> None:
     assert 0.0 <= state.phase_p < 2.0 * 3.141592653589793
     assert 0.0 <= state.phase_i < 2.0 * 3.141592653589793
     assert 0.0 <= state.phase_s < 2.0 * 3.141592653589793
+
+
+def test_synapse_snapshot_rejects_shape_mismatch_between_matrices() -> None:
+    with pytest.raises(ValueError, match=r"gap_coupling must have shape \(2, 2\)"):
+        SynapseSnapshot(
+            knm_delta=np.zeros((2, 2)),
+            gap_coupling=np.zeros((3, 3)),
+            astrocyte_modulation=np.zeros(2),
+            mean_weight_change=0.0,
+            mean_conductance=0.0,
+            mean_ca=0.0,
+        )
+
+
+def test_synapse_snapshot_rejects_negative_astrocyte_modulation() -> None:
+    with pytest.raises(
+        ValueError,
+        match="astrocyte_modulation must contain only non-negative values",
+    ):
+        SynapseSnapshot(
+            knm_delta=np.zeros((2, 2)),
+            gap_coupling=np.zeros((2, 2)),
+            astrocyte_modulation=np.array([0.1, -0.2]),
+            mean_weight_change=0.0,
+            mean_conductance=0.0,
+            mean_ca=0.0,
+        )

@@ -115,6 +115,35 @@ class SynapseSnapshot:
     mean_conductance: float
     mean_ca: float
 
+    def __post_init__(self) -> None:
+        n = _validate_n_oscillators(self.knm_delta.shape[0])
+        self.knm_delta = _validate_square_matrix(self.knm_delta, "knm_delta", n)
+        self.gap_coupling = _validate_nonnegative_square_matrix(
+            self.gap_coupling,
+            "gap_coupling",
+            n,
+        )
+        self.astrocyte_modulation = _validate_nonnegative_vector(
+            self.astrocyte_modulation,
+            "astrocyte_modulation",
+            n,
+        )
+        self.mean_weight_change = _validate_positive_scale(
+            "mean_weight_change_or_zero",
+            max(float(self.mean_weight_change), np.finfo(np.float64).eps),
+        )
+        self.mean_conductance = _validate_positive_scale(
+            "mean_conductance_or_zero",
+            max(float(self.mean_conductance), np.finfo(np.float64).eps),
+        )
+        self.mean_ca = _validate_positive_scale(
+            "mean_ca_or_zero",
+            max(float(self.mean_ca), np.finfo(np.float64).eps),
+        )
+        self.mean_weight_change = max(float(self.mean_weight_change), 0.0)
+        self.mean_conductance = max(float(self.mean_conductance), 0.0)
+        self.mean_ca = max(float(self.mean_ca), 0.0)
+
 
 class SynapseCouplingBridge:
     """Map sc-neurocore synapse dynamics to SPO coupling parameters.
