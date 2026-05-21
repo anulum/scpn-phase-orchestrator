@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 
 import pytest
 
@@ -257,6 +258,66 @@ def test_input_validation_fail_closed() -> None:
                 }
             ],
             stl_spec=" ",
+            trace={"R": [0.95]},
+        )
+
+
+def test_stl_evaluation_validation_errors_are_mapped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _raise_value_error(
+        self: object, trace: Mapping[str, Sequence[object]]
+    ) -> float:
+        del self, trace
+        raise ValueError("invalid trace payload")
+
+    monkeypatch.setattr(
+        "scpn_phase_orchestrator.supervisor.evolutionary_search.STLMonitor.evaluate",
+        _raise_value_error,
+    )
+    with pytest.raises(
+        ValueError, match="stl_spec and trace must be valid for offline monitoring"
+    ):
+        run_offline_evolutionary_supervisor_search(
+            {"K": 0.1},
+            [
+                {
+                    "replay_id": "r1",
+                    "reward": 0.5,
+                    "safety_margin": 0.1,
+                    "violations": [],
+                }
+            ],
+            stl_spec="always (R >= 0.8)",
+            trace={"R": [0.95]},
+        )
+
+
+def test_stl_evaluation_unexpected_runtime_errors_propagate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _raise_runtime_error(
+        self: object, trace: Mapping[str, Sequence[object]]
+    ) -> float:
+        del self, trace
+        raise RuntimeError("unexpected evaluator fault")
+
+    monkeypatch.setattr(
+        "scpn_phase_orchestrator.supervisor.evolutionary_search.STLMonitor.evaluate",
+        _raise_runtime_error,
+    )
+    with pytest.raises(RuntimeError, match="unexpected evaluator fault"):
+        run_offline_evolutionary_supervisor_search(
+            {"K": 0.1},
+            [
+                {
+                    "replay_id": "r1",
+                    "reward": 0.5,
+                    "safety_margin": 0.1,
+                    "violations": [],
+                }
+            ],
+            stl_spec="always (R >= 0.8)",
             trace={"R": [0.95]},
         )
 

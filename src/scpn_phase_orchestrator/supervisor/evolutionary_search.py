@@ -318,7 +318,7 @@ def _validate_and_evaluate_stl(
     monitor = STLMonitor(validated_spec)
     try:
         robustness = monitor.evaluate(validated_trace)
-    except Exception as exc:
+    except (ValueError, TypeError, KeyError, ArithmeticError) as exc:
         raise ValueError(
             "stl_spec and trace must be valid for offline monitoring"
         ) from exc
