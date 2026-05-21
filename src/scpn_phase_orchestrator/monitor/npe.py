@@ -124,12 +124,23 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object:
-    if ACTIVE_BACKEND == "python":
-        return None
-    try:
-        return _load_backend(ACTIVE_BACKEND)[fn_name]
-    except (ImportError, RuntimeError, OSError, KeyError):
-        return None
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    deduped: list[str] = []
+    for backend in ordered_backends:
+        if backend in deduped:
+            continue
+        deduped.append(backend)
+    for backend in deduped:
+        if backend == "python":
+            return None
+        try:
+            fn = _load_backend(backend).get(fn_name)
+        except (ImportError, RuntimeError, OSError):
+            continue
+        if fn is None:
+            continue
+        return fn
+    return None
 
 
 def _validate_phases(phases: object) -> FloatArray:

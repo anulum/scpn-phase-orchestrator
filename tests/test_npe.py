@@ -238,3 +238,60 @@ class TestNPERustDispatch:
         )
         npe = compute_npe(np.array([0.0, 1.0, 2.0], dtype=np.float64), max_radius=1.5)
         assert 0.0 <= npe <= 1.0
+
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = npe_module.ACTIVE_BACKEND
+        previous_available = list(npe_module.AVAILABLE_BACKENDS)
+        previous_loader = npe_module._LOADERS["go"]
+        npe_module.ACTIVE_BACKEND = "go"
+        npe_module.AVAILABLE_BACKENDS = ["go", "python"]
+        npe_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            npe_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            fn = npe_module._dispatch("compute_npe")
+        finally:
+            npe_module.ACTIVE_BACKEND = previous_backend
+            npe_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
+            npe_module._BACKEND_CACHE.clear()
+
+        assert fn is None
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = npe_module.ACTIVE_BACKEND
+        previous_available = list(npe_module.AVAILABLE_BACKENDS)
+        previous_loader = npe_module._LOADERS["go"]
+        npe_module.ACTIVE_BACKEND = "go"
+        npe_module.AVAILABLE_BACKENDS = ["go", "python"]
+        npe_module._BACKEND_CACHE.clear()
+        call_count = 0
+
+        def fake_compute_npe(_phases: np.ndarray, _radius: float) -> float:
+            return 0.0
+
+        def loader() -> dict[str, object]:
+            nonlocal call_count
+            call_count += 1
+            return {"compute_npe": fake_compute_npe}
+
+        monkeypatch.setitem(npe_module._LOADERS, "go", loader)
+        try:
+            fn1 = npe_module._dispatch("compute_npe")
+            fn2 = npe_module._dispatch("compute_npe")
+        finally:
+            npe_module.ACTIVE_BACKEND = previous_backend
+            npe_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
+            npe_module._BACKEND_CACHE.clear()
+
+        assert fn1 is fake_compute_npe
+        assert fn2 is fake_compute_npe
+        assert call_count == 1
