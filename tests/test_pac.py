@@ -318,6 +318,66 @@ class TestPACPipelineWiring:
     """Verify PAC analysis wires into the UPDE engine pipeline and
     measures performance for both Python and Rust paths."""
 
+
+class TestDispatchFallbackChain:
+    def test_dispatch_falls_back_to_next_backend_when_active_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"rust": 0, "go": 0}
+
+        def _fail_rust() -> dict[str, object]:
+            calls["rust"] += 1
+            raise ImportError("rust unavailable")
+
+        def _ok_go() -> dict[str, object]:
+            calls["go"] += 1
+            return {
+                "modulation_index": lambda theta, amp, n_bins: 0.5,
+                "pac_matrix": lambda phases, amps, t, n, n_bins: np.zeros(
+                    n * n, dtype=np.float64
+                ),
+            }
+
+        monkeypatch.setattr(pac_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(pac_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(pac_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(pac_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
+
+        fn = pac_mod._dispatch("modulation_index")
+        assert fn is not None
+        assert float(
+            fn(
+                np.array([0.0], dtype=np.float64),
+                np.array([1.0], dtype=np.float64),
+                18,
+            )
+        ) == 0.5
+        assert calls == {"rust": 1, "go": 1}
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"go": 0}
+
+        def _ok_go() -> dict[str, object]:
+            calls["go"] += 1
+            return {
+                "modulation_index": lambda theta, amp, n_bins: 0.25,
+                "pac_matrix": lambda phases, amps, t, n, n_bins: np.zeros(
+                    n * n, dtype=np.float64
+                ),
+            }
+
+        monkeypatch.setattr(pac_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(pac_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(pac_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(pac_mod, "_LOADERS", {"go": _ok_go})
+
+        pac_mod._dispatch("modulation_index")
+        pac_mod._dispatch("pac_matrix")
+
+        assert calls["go"] == 1
+
     def test_engine_phases_to_pac_matrix(self) -> None:
         """UPDEEngine → phases trajectory → PAC matrix: proves PAC
         accepts engine output (not decorative)."""
