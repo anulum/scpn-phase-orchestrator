@@ -58,3 +58,12 @@ Contract:
 
 Verification:
 - `tests/test_coverage_batch1_low20.py::test_nn_ude_residual_and_layer_shape_contract`
+
+## `scpn_phase_orchestrator.nn.theta_neuron`
+
+Contract:
+1. Theta-neuron stepping returns bounded phase vectors with stable shape.
+2. Theta layer forward path preserves oscillator count.
+
+Verification:
+- `tests/test_coverage_batch1_low20.py::test_nn_theta_neuron_step_and_layer_contract`

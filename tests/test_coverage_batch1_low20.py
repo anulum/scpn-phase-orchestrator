@@ -55,6 +55,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     _scheduled_scalar,
 )
 from scpn_phase_orchestrator.nn.ude import CouplingResidual, UDEKuramotoLayer
+from scpn_phase_orchestrator.nn.theta_neuron import ThetaNeuronLayer, theta_neuron_step
 from scpn_phase_orchestrator.upde.jax_engine import (
     _validate_array,
     _validate_finite_float,
@@ -238,6 +239,17 @@ def test_nn_ude_residual_and_layer_shape_contract() -> None:
     assert jnp.isfinite(value)
     layer = UDEKuramotoLayer(n=3, n_steps=2, dt=0.01, key=jax.random.PRNGKey(9))
     phases = jnp.array([0.1, 0.2, 0.3], dtype=jnp.float32)
+    final = layer(phases)
+    assert final.shape == phases.shape
+
+
+def test_nn_theta_neuron_step_and_layer_contract() -> None:
+    phases = jnp.array([0.1, 0.3], dtype=jnp.float32)
+    eta = jnp.array([0.2, 0.1], dtype=jnp.float32)
+    K = jnp.array([[0.0, 0.1], [0.1, 0.0]], dtype=jnp.float32)
+    stepped = theta_neuron_step(phases, eta, K, 0.01)
+    assert stepped.shape == phases.shape
+    layer = ThetaNeuronLayer(n=2, n_steps=2, dt=0.01, key=jax.random.PRNGKey(13))
     final = layer(phases)
     assert final.shape == phases.shape
 
