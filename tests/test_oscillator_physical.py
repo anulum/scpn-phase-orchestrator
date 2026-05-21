@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.oscillators import physical as physical_module
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 
 TWO_PI = 2.0 * np.pi
@@ -166,6 +167,49 @@ def test_rust_python_parity():
     np.testing.assert_allclose(r_omega, p_omega, rtol=0.01)
     np.testing.assert_allclose(r_amp, p_amp, rtol=1e-6)
     assert r_quality > 0.5
+
+
+def test_extract_uses_rust_kernel_when_available(monkeypatch: pytest.MonkeyPatch):
+    calls: list[tuple[np.ndarray, np.ndarray, float]] = []
+
+    def _fake_rust_extract(
+        real: np.ndarray, imag: np.ndarray, sample_rate: float
+    ) -> tuple[float, float, float, float]:
+        calls.append((real, imag, sample_rate))
+        return (0.25, 12.5, 0.75, 0.95)
+
+    monkeypatch.setattr(physical_module, "_rust_physical_extract", _fake_rust_extract)
+    fs = 1000.0
+    t = np.arange(0, 0.2, 1.0 / fs)
+    signal = np.sin(TWO_PI * 7.0 * t)
+
+    states = PhysicalExtractor().extract(signal, fs)
+    assert states[0].theta == pytest.approx(0.25, abs=1e-12)
+    assert states[0].omega == pytest.approx(12.5, abs=1e-12)
+    assert states[0].amplitude == pytest.approx(0.75, abs=1e-12)
+    assert states[0].quality == pytest.approx(0.95, abs=1e-12)
+    assert len(calls) == 1
+
+
+def test_extract_falls_back_to_python_when_rust_raises(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raising_rust_extract(
+        _real: np.ndarray, _imag: np.ndarray, _sample_rate: float
+    ) -> tuple[float, float, float, float]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(
+        physical_module, "_rust_physical_extract", _raising_rust_extract
+    )
+    fs = 1000.0
+    t = np.arange(0, 0.5, 1.0 / fs)
+    signal = np.sin(TWO_PI * 10.0 * t)
+
+    states = PhysicalExtractor().extract(signal, fs)
+    assert 0.0 <= states[0].theta < TWO_PI
+    assert states[0].omega == pytest.approx(TWO_PI * 10.0, rel=0.05)
+    assert states[0].quality > 0.5
 
 
 class TestPhysicalExtractorPipelineEndToEnd:

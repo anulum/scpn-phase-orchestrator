@@ -23,7 +23,6 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
@@ -31,6 +30,11 @@ __all__ = ["PhysicalExtractor"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 ComplexArray: TypeAlias = NDArray[np.complex128]
+
+try:
+    from spo_kernel import physical_extract as _rust_physical_extract
+except ImportError:  # pragma: no cover - optional runtime acceleration path
+    _rust_physical_extract = None
 
 
 def _validate_node_id(value: object) -> str:
@@ -81,24 +85,21 @@ class PhysicalExtractor(PhaseExtractor):
 
         analytic = hilbert(signal)
 
-        if _HAS_RUST:  # pragma: no cover
-            from spo_kernel import physical_extract
-
-            theta, omega, amplitude, quality = physical_extract(
-                np.ascontiguousarray(np.real(analytic)),
-                np.ascontiguousarray(np.imag(analytic)),
-                sample_rate,
-            )
+        if _rust_physical_extract is not None:  # pragma: no cover
+            try:
+                theta, omega, amplitude, quality = _rust_physical_extract(
+                    np.ascontiguousarray(np.real(analytic)),
+                    np.ascontiguousarray(np.imag(analytic)),
+                    sample_rate,
+                )
+            except Exception:
+                theta, omega, amplitude, quality = self._python_extract(
+                    signal, analytic, sample_rate
+                )
         else:
-            inst_phase = np.angle(analytic) % TWO_PI
-            inst_amp = np.abs(analytic)
-            unwrapped = np.unwrap(np.angle(analytic))
-            inst_freq = np.gradient(unwrapped) * sample_rate / TWO_PI
-
-            theta = float(inst_phase[-1])
-            omega = float(np.median(inst_freq)) * TWO_PI  # rad/s
-            amplitude = float(np.mean(inst_amp))
-            quality = self._envelope_quality(signal, analytic)
+            theta, omega, amplitude, quality = self._python_extract(
+                signal, analytic, sample_rate
+            )
 
         return [
             PhaseState(
@@ -116,6 +117,23 @@ class PhysicalExtractor(PhaseExtractor):
         if not phase_states:
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))
+
+    def _python_extract(
+        self,
+        signal: FloatArray,
+        analytic: ComplexArray,
+        sample_rate: float,
+    ) -> tuple[float, float, float, float]:
+        inst_phase = np.angle(analytic) % TWO_PI
+        inst_amp = np.abs(analytic)
+        unwrapped = np.unwrap(np.angle(analytic))
+        inst_freq = np.gradient(unwrapped) * sample_rate / TWO_PI
+
+        theta = float(inst_phase[-1])
+        omega = float(np.median(inst_freq)) * TWO_PI  # rad/s
+        amplitude = float(np.mean(inst_amp))
+        quality = self._envelope_quality(signal, analytic)
+        return theta, omega, amplitude, quality
 
     @staticmethod
     def _envelope_quality(signal: FloatArray, analytic: ComplexArray) -> float:
