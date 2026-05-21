@@ -267,6 +267,67 @@ def test_resolve_channel_uses_explicit_family_binding():
     assert _resolve_channel("events", families, osc_idx=0) == "I"
 
 
+def test_symbolic_path_is_batched_into_single_extract_call(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _BatchProbeSymbolicExtractor:
+        calls: list[np.ndarray] = []
+
+        def __init__(self, n_states: int, node_id: str):
+            self.n_states = n_states
+            self.node_id = node_id
+
+        def extract(self, signal: np.ndarray, sample_rate: float):
+            _BatchProbeSymbolicExtractor.calls.append(np.asarray(signal, dtype=np.int64))
+            return [
+                type(
+                    "State",
+                    (),
+                    {"theta": float((int(idx) % self.n_states) * (2.0 * np.pi / self.n_states))},
+                )()
+                for idx in np.asarray(signal, dtype=np.int64)
+            ]
+
+    layers = [
+        HierarchyLayer(
+            name="Lsym",
+            index=0,
+            oscillator_ids=["s0", "s1", "s2", "s3"],
+            family="symb",
+        ),
+    ]
+    families = {
+        "symb": OscillatorFamily(
+            channel="S",
+            extractor_type="ring",
+            config={"n_states": 7},
+        ),
+    }
+    spec = BindingSpec(
+        name="test-symbolic-batch",
+        version="1.0.0",
+        safety_tier="research",
+        sample_period_s=0.01,
+        control_period_s=0.1,
+        layers=layers,
+        oscillator_families=families,
+        coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
+        drivers=DriverSpec(physical={}, informational={}, symbolic={}),
+        objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
+        boundaries=[],
+        actuators=[],
+    )
+    monkeypatch.setattr(
+        "scpn_phase_orchestrator.oscillators.init_phases.SymbolicExtractor",
+        _BatchProbeSymbolicExtractor,
+    )
+
+    phases = extract_initial_phases(spec, np.array([1.0, 2.0, 3.0, 4.0]), seed=42)
+    assert phases.shape == (4,)
+    assert len(_BatchProbeSymbolicExtractor.calls) == 1
+    assert _BatchProbeSymbolicExtractor.calls[0].shape == (4,)
+
+
 class TestInitPhasesPipelineWiring:
     """Pipeline: extract_initial_phases → engine simulation."""
 

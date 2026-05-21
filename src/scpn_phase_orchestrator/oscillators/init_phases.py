@@ -101,9 +101,18 @@ def extract_initial_phases(
     t = np.linspace(0, 1.0, 256)
 
     families = spec.oscillator_families
+    physical_extractor = PhysicalExtractor(node_id="init_physical")
+    informational_extractor = InformationalExtractor(node_id="init_informational")
+    symbolic_n_states = _get_n_states(families)
+    symbolic_extractor = SymbolicExtractor(
+        n_states=symbolic_n_states,
+        node_id="init_symbolic",
+    )
+    symbolic_pending: list[tuple[int, int]] = []
+
     osc_idx = 0
     for layer in spec.layers:
-        for osc_id in layer.oscillator_ids:
+        for _osc_id in layer.oscillator_ids:
             omega = omegas[osc_idx]
             family = _resolve_family(layer.family, families, osc_idx)
             channel = family.channel if family is not None else "P"
@@ -111,28 +120,32 @@ def extract_initial_phases(
 
             if channel == "P" or extractor_type in _PHYSICAL_EXTRACTORS:
                 signal = np.sin(omega * TWO_PI * t) + rng.normal(0, 0.1, len(t))
-                p_ext = PhysicalExtractor(node_id=osc_id)
-                states = p_ext.extract(signal, sample_rate=256.0)
+                states = physical_extractor.extract(signal, sample_rate=256.0)
                 phases[osc_idx] = states[-1].theta if states else rng.uniform(0, TWO_PI)
 
             elif channel == "I" or extractor_type in _INFORMATIONAL_EXTRACTORS:
                 n_events = max(3, int(omega * 10))
                 timestamps = np.sort(rng.uniform(0, 1.0, n_events))
-                i_ext = InformationalExtractor(node_id=osc_id)
-                states = i_ext.extract(timestamps, sample_rate=1.0)
+                states = informational_extractor.extract(timestamps, sample_rate=1.0)
                 phases[osc_idx] = states[-1].theta if states else rng.uniform(0, TWO_PI)
 
             elif channel == "S" or extractor_type in _SYMBOLIC_EXTRACTORS:
-                n_states = _get_n_states(families)
-                state_idx = rng.integers(0, n_states)
-                s_ext = SymbolicExtractor(n_states=n_states, node_id=osc_id)
-                states = s_ext.extract(np.array([state_idx]), sample_rate=1.0)
-                phases[osc_idx] = states[0].theta if states else rng.uniform(0, TWO_PI)
+                state_idx = int(rng.integers(0, symbolic_n_states))
+                symbolic_pending.append((osc_idx, state_idx))
 
             else:
                 phases[osc_idx] = rng.uniform(0, TWO_PI)
 
             osc_idx += 1
+
+    if symbolic_pending:
+        symbolic_indices = np.array(
+            [state_idx for _, state_idx in symbolic_pending],
+            dtype=np.int64,
+        )
+        symbolic_states = symbolic_extractor.extract(symbolic_indices, sample_rate=1.0)
+        for (phase_idx, _), state in zip(symbolic_pending, symbolic_states, strict=True):
+            phases[phase_idx] = state.theta
 
     return phases
 
