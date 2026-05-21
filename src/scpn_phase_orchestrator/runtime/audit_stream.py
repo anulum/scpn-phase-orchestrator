@@ -336,7 +336,7 @@ class EventStreamWriter:
 
     def __init__(self, path: str | Path, *, stream_id: str = "spo-audit") -> None:
         self._path = Path(path)
-        self._stream_id = stream_id
+        self._stream_id = _validate_stream_id(stream_id)
         self._sequence = 0
         self._previous_hash = ZERO_HASH
         self._audit_key = os.environ.get("SPO_AUDIT_KEY")
@@ -456,6 +456,16 @@ def _validate_poll_interval_s(value: object) -> float:
     if not parsed >= 0.0 or not parsed < float("inf"):
         raise ValueError("poll_interval_s must be a finite non-negative real")
     return parsed
+
+
+def _validate_stream_id(value: object) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError("stream_id must be a non-empty string")
+    if len(value) > 128:
+        raise ValueError("stream_id must be at most 128 characters")
+    if any(ord(char) < 32 for char in value):
+        raise ValueError("stream_id must not contain control characters")
+    return value
 
 
 def iter_event_stream(

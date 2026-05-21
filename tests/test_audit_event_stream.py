@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
     AuditStreamEvent,
     _AuditEnvelope,
+    EventStreamWriter,
     iter_event_stream,
     read_event_stream,
     tail_event_stream,
@@ -331,4 +332,16 @@ def test_tail_event_stream_missing_path_requires_from_start() -> None:
             from_start=False,
             max_events=1,
             poll_interval_s=0.0,
+        )
+
+
+@pytest.mark.parametrize("stream_id", ["", "bad\nid", "a" * 129, True])
+def test_event_stream_writer_rejects_invalid_stream_id(
+    tmp_path,
+    stream_id: object,
+) -> None:
+    with pytest.raises(ValueError, match="stream_id"):
+        EventStreamWriter(
+            tmp_path / "audit.spoa",
+            stream_id=stream_id,  # type: ignore[arg-type]
         )
