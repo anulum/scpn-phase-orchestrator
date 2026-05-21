@@ -89,6 +89,7 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_FN_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
@@ -120,12 +121,17 @@ def _dispatch(fn_name: str) -> object | None:
         loader = _LOADERS.get(backend)
         if loader is None:
             continue
-        try:
-            fn = loader()[fn_name]
-        except (ImportError, RuntimeError, OSError, KeyError):
+        backend_cache = _BACKEND_FN_CACHE.get(backend)
+        if backend_cache is None:
+            try:
+                backend_cache = loader()
+            except (ImportError, RuntimeError, OSError):
+                continue
+            _BACKEND_FN_CACHE[backend] = backend_cache
+        fn = backend_cache.get(fn_name)
+        if fn is None:
             continue
-        if fn is not None:
-            return fn
+        return fn
     return None
 
 

@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import itpc as itpc_mod
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 
 
@@ -174,3 +175,55 @@ class TestITPCPipelineWiring:
         assert itpc.shape == (n_time,)
         assert np.all(itpc >= 0.0)
         assert np.all(itpc <= 1.0 + 1e-10)
+
+
+class TestITPCBackendDispatch:
+    def test_dispatch_skips_failing_active_backend(self, monkeypatch):
+        previous_backend = itpc_mod.ACTIVE_BACKEND
+        previous_loader = itpc_mod._LOADERS["go"]
+        previous_available = list(itpc_mod.AVAILABLE_BACKENDS)
+        itpc_mod.ACTIVE_BACKEND = "go"
+        itpc_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        itpc_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(
+            itpc_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            fn = itpc_mod._dispatch("itpc")
+        finally:
+            itpc_mod.ACTIVE_BACKEND = previous_backend
+            itpc_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(itpc_mod._LOADERS, "go", previous_loader)
+            itpc_mod._BACKEND_FN_CACHE.clear()
+
+        assert fn is None
+
+    def test_dispatch_uses_cached_backend_functions(self, monkeypatch):
+        previous_backend = itpc_mod.ACTIVE_BACKEND
+        previous_loader = itpc_mod._LOADERS["go"]
+        previous_available = list(itpc_mod.AVAILABLE_BACKENDS)
+        call_count = 0
+
+        def loader() -> dict[str, object]:
+            nonlocal call_count
+            call_count += 1
+            return {"itpc": lambda _x, _n_trials, _n_tp: np.array([0.5])}
+
+        itpc_mod.ACTIVE_BACKEND = "go"
+        itpc_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        itpc_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(itpc_mod._LOADERS, "go", loader)
+        try:
+            fn1 = itpc_mod._dispatch("itpc")
+            fn2 = itpc_mod._dispatch("itpc")
+        finally:
+            itpc_mod.ACTIVE_BACKEND = previous_backend
+            itpc_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(itpc_mod._LOADERS, "go", previous_loader)
+            itpc_mod._BACKEND_FN_CACHE.clear()
+
+        assert fn1 is not None
+        assert fn2 is not None
+        assert call_count == 1
