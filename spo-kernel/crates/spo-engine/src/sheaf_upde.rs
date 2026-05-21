@@ -44,6 +44,12 @@ impl SheafUPDEStepper {
     /// # Errors
     /// Propagates config validation errors.
     pub fn new(n: usize, d: usize, config: IntegrationConfig) -> SpoResult<Self> {
+        if n == 0 || d == 0 {
+            return Err(SpoError::InvalidDimension(
+                "n and d must both be > 0".into(),
+            ));
+        }
+        config.validate()?;
         let size = n * d;
         let last_dt = config.dt;
         Ok(Self {
@@ -104,6 +110,16 @@ impl SheafUPDEStepper {
         if restriction_maps.len() != self.n * self.n * self.d * self.d {
             return Err(SpoError::InvalidDimension(
                 "Restriction map size mismatch".into(),
+            ));
+        }
+        if phases.iter().any(|v| !v.is_finite())
+            || omegas.iter().any(|v| !v.is_finite())
+            || restriction_maps.iter().any(|v| !v.is_finite())
+            || psi.iter().any(|v| !v.is_finite())
+            || !zeta.is_finite()
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "sheaf UPDE inputs contain NaN/Inf".into(),
             ));
         }
 
