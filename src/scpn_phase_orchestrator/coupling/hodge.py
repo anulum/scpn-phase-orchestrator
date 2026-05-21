@@ -187,6 +187,58 @@ def _validate_coupling_matrix(value: object, *, expected_n: int) -> FloatArray:
     return matrix
 
 
+def _python_decomposition(k: FloatArray, phases: FloatArray) -> HodgeTuple:
+    diff = phases[np.newaxis, :] - phases[:, np.newaxis]
+    cos_diff = np.cos(diff)
+    k_sym = 0.5 * (k + k.T)
+    k_anti = 0.5 * (k - k.T)
+    total = np.sum(k * cos_diff, axis=1)
+    gradient = np.sum(k_sym * cos_diff, axis=1)
+    curl = np.sum(k_anti * cos_diff, axis=1)
+    harmonic = total - gradient - curl
+    return (
+        gradient.astype(np.float64),
+        curl.astype(np.float64),
+        harmonic.astype(np.float64),
+    )
+
+
+def _normalise_backend_output(
+    output: HodgeTuple,
+    *,
+    expected_n: int,
+) -> HodgeTuple:
+    gradient, curl, harmonic = (
+        np.asarray(output[0], dtype=np.float64),
+        np.asarray(output[1], dtype=np.float64),
+        np.asarray(output[2], dtype=np.float64),
+    )
+    expected_shape = (expected_n,)
+    if (
+        gradient.shape != expected_shape
+        or curl.shape != expected_shape
+        or harmonic.shape != expected_shape
+    ):
+        raise ValueError("Hodge backend returned vectors with invalid shape")
+    if not (
+        np.all(np.isfinite(gradient))
+        and np.all(np.isfinite(curl))
+        and np.all(np.isfinite(harmonic))
+    ):
+        raise ValueError("Hodge backend returned non-finite values")
+    return gradient, curl, harmonic
+
+
+def _backend_matches_reference(
+    backend_output: HodgeTuple,
+    reference: HodgeTuple,
+) -> bool:
+    return all(
+        np.allclose(actual, expected, rtol=1e-10, atol=1e-12)
+        for actual, expected in zip(backend_output, reference, strict=True)
+    )
+
+
 def hodge_decomposition(knm: FloatArray, phases: FloatArray) -> HodgeResult:
     """Decompose coupling dynamics into gradient / curl / harmonic
     per-oscillator contributions."""
@@ -199,21 +251,20 @@ def hodge_decomposition(knm: FloatArray, phases: FloatArray) -> HodgeResult:
     k = _validate_coupling_matrix(knm, expected_n=n)
     k_flat = np.ascontiguousarray(k.ravel())
 
+    reference = _python_decomposition(k, phases)
     backend_fn = _dispatch()
     if backend_fn is not None:
-        g, c, h = backend_fn(k_flat, phases, n)
-        return HodgeResult(gradient=g, curl=c, harmonic=h)
+        backend_output = _normalise_backend_output(
+            backend_fn(k_flat, phases, n),
+            expected_n=n,
+        )
+        if _backend_matches_reference(backend_output, reference):
+            g, c, h = backend_output
+            return HodgeResult(gradient=g, curl=c, harmonic=h)
 
-    diff = phases[np.newaxis, :] - phases[:, np.newaxis]
-    cos_diff = np.cos(diff)
-    k_sym = 0.5 * (k + k.T)
-    k_anti = 0.5 * (k - k.T)
-    total = np.sum(k * cos_diff, axis=1)
-    gradient = np.sum(k_sym * cos_diff, axis=1)
-    curl = np.sum(k_anti * cos_diff, axis=1)
-    harmonic = total - gradient - curl
+    gradient, curl, harmonic = reference
     return HodgeResult(
-        gradient=gradient.astype(np.float64),
-        curl=curl.astype(np.float64),
-        harmonic=harmonic.astype(np.float64),
+        gradient=gradient,
+        curl=curl,
+        harmonic=harmonic,
     )

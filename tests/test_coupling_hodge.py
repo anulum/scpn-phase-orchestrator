@@ -115,6 +115,36 @@ class TestHodgeBackendDispatch:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        calls = 0
+
+        def fake_backend(knm_flat: np.ndarray, phases: np.ndarray, n: int) -> tuple:
+            nonlocal calls
+            calls += 1
+            k = knm_flat.reshape(n, n)
+            diff = phases[np.newaxis, :] - phases[:, np.newaxis]
+            cos_diff = np.cos(diff)
+            gradient = np.sum(0.5 * (k + k.T) * cos_diff, axis=1)
+            curl = np.sum(0.5 * (k - k.T) * cos_diff, axis=1)
+            harmonic = np.sum(k * cos_diff, axis=1) - gradient - curl
+            return gradient, curl, harmonic
+
+        monkeypatch.setattr(hodge, "_dispatch", lambda: fake_backend)
+
+        phases = np.array([0.3, -0.2])
+        result = hodge_decomposition(
+            np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64),
+            phases,
+        )
+
+        assert calls == 1
+        np.testing.assert_allclose(result.gradient, np.cos(phases[::-1] - phases))
+        np.testing.assert_allclose(result.curl, np.array([0.0, 0.0]))
+        np.testing.assert_allclose(result.harmonic, np.array([0.0, 0.0]))
+
+    def test_invalid_backend_result_falls_back_to_python_reference(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         def fake_backend(knm_flat: np.ndarray, phases: np.ndarray, n: int) -> tuple:
             return (
                 np.full(n, 1.0, dtype=np.float64),
@@ -130,9 +160,10 @@ class TestHodgeBackendDispatch:
             phases,
         )
 
-        np.testing.assert_array_equal(result.gradient, np.array([1.0, 1.0]))
-        np.testing.assert_array_equal(result.curl, np.array([2.0, 2.0]))
-        np.testing.assert_array_equal(result.harmonic, np.array([3.0, 3.0]))
+        expected = np.array([np.cos(-0.5), np.cos(0.5)])
+        np.testing.assert_allclose(result.gradient, expected)
+        np.testing.assert_allclose(result.curl, np.array([0.0, 0.0]))
+        np.testing.assert_allclose(result.harmonic, np.array([0.0, 0.0]))
 
 
 class TestHodgeValidation:
