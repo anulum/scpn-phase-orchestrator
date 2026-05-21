@@ -295,6 +295,56 @@ def test_audit_stream_event_rejects_signed_mode_without_signature_metadata() -> 
         )
 
 
+@pytest.mark.parametrize("event_type", ["bad\ntype", "a" * 129])
+def test_audit_stream_event_rejects_invalid_event_type_label(event_type: str) -> None:
+    payload = {"event": "operator_note", "step": 1}
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+    with pytest.raises(ValueError, match="event_type"):
+        AuditStreamEvent(
+            schema_version=1,
+            stream_id="spo-audit",
+            sequence=1,
+            event_type=event_type,
+            recorded_at_unix_ns=1,
+            source="runtime",
+            previous_hash="0" * 64,
+            payload_json=payload_json,
+            payload_sha256=payload_hash,
+            event_hash="1" * 64,
+            signature_algorithm="",
+            signature_key_id="",
+            signature="",
+            audit_mode="unsigned-development",
+            payload=payload,
+        )
+
+
+@pytest.mark.parametrize("source", ["bad\nsource", "a" * 129])
+def test_audit_stream_event_rejects_invalid_source_label(source: str) -> None:
+    payload = {"event": "operator_note", "step": 1}
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+    with pytest.raises(ValueError, match="source"):
+        AuditStreamEvent(
+            schema_version=1,
+            stream_id="spo-audit",
+            sequence=1,
+            event_type="operator_note",
+            recorded_at_unix_ns=1,
+            source=source,
+            previous_hash="0" * 64,
+            payload_json=payload_json,
+            payload_sha256=payload_hash,
+            event_hash="1" * 64,
+            signature_algorithm="",
+            signature_key_id="",
+            signature="",
+            audit_mode="unsigned-development",
+            payload=payload,
+        )
+
+
 @pytest.mark.parametrize("poll_interval_s", [True, -0.1, float("nan"), float("inf"), "0.2"])
 def test_iter_event_stream_rejects_invalid_poll_interval(poll_interval_s: object) -> None:
     with pytest.raises(ValueError, match="poll_interval_s"):

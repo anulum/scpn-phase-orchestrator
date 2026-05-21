@@ -35,6 +35,7 @@ Payload: TypeAlias = dict[str, Any]
 SCHEMA_VERSION = 1
 STREAM_MAGIC = b"SPOA1\n"
 ZERO_HASH = "0" * 64
+_AUDIT_LABEL_MAX_LEN = 128
 
 __all__ = [
     "AuditStreamEvent",
@@ -89,8 +90,20 @@ class AuditStreamEvent:
             raise ValueError("recorded_at_unix_ns must be a non-negative integer")
         if not isinstance(self.event_type, str) or not self.event_type:
             raise ValueError("event_type must be a non-empty string")
+        if len(self.event_type) > _AUDIT_LABEL_MAX_LEN:
+            raise ValueError(
+                f"event_type must be at most {_AUDIT_LABEL_MAX_LEN} characters"
+            )
+        if any(ord(char) < 32 for char in self.event_type):
+            raise ValueError("event_type must not contain control characters")
         if not isinstance(self.source, str) or not self.source:
             raise ValueError("source must be a non-empty string")
+        if len(self.source) > _AUDIT_LABEL_MAX_LEN:
+            raise ValueError(
+                f"source must be at most {_AUDIT_LABEL_MAX_LEN} characters"
+            )
+        if any(ord(char) < 32 for char in self.source):
+            raise ValueError("source must not contain control characters")
         for field_name in ("previous_hash", "payload_sha256", "event_hash"):
             value = getattr(self, field_name)
             if (
