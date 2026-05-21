@@ -26,10 +26,11 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
-__all__ = ["SymbolicExtractor"]
+__all__ = ["SymbolicExtractor", "SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
+SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE = 0.5
 
 
 def _validate_n_states(value: object) -> int:
@@ -70,6 +71,15 @@ def _validate_sample_rate(value: object) -> float:
     return sample_rate
 
 
+def _validate_initial_transition_quality(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("initial_transition_quality must be a finite float in [0, 1]")
+    quality = float(value)
+    if not isfinite(quality) or quality < 0.0 or quality > 1.0:
+        raise ValueError("initial_transition_quality must be a finite float in [0, 1]")
+    return quality
+
+
 class SymbolicExtractor(PhaseExtractor):
     """Phase extraction from discrete symbolic state sequences.
 
@@ -77,12 +87,21 @@ class SymbolicExtractor(PhaseExtractor):
     theta = 2*pi*s/N (ring-phase) or via graph-walk position.
     """
 
-    def __init__(self, n_states: int, node_id: str = "sym", mode: str = "ring"):
+    def __init__(
+        self,
+        n_states: int,
+        node_id: str = "sym",
+        mode: str = "ring",
+        *,
+        initial_transition_quality: float = SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE,
+    ):
         """
         Args:
             n_states: total number of discrete states N
             node_id: identifier for generated PhaseState objects
             mode: "ring" for ring-phase, "graph" for graph-walk phase
+            initial_transition_quality: quality assigned when no transition
+                evidence exists yet (first sample / insufficient history)
         """
         n_states = _validate_n_states(n_states)
         if mode not in ("ring", "graph"):
@@ -90,6 +109,9 @@ class SymbolicExtractor(PhaseExtractor):
         self._n_states = n_states
         self._node_id = _validate_node_id(node_id)
         self._mode = mode
+        self._initial_transition_quality = _validate_initial_transition_quality(
+            initial_transition_quality
+        )
 
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Map discrete state indices to phases on the unit circle."""
@@ -140,7 +162,7 @@ class SymbolicExtractor(PhaseExtractor):
     def _transition_quality(self, indices: IntArray, i: int) -> float:
         """Quality based on transition regularity: penalise repeated or large jumps."""
         if i == 0 or len(indices) < 2:
-            return 0.5
+            return self._initial_transition_quality
         step = abs(int(indices[i]) - int(indices[i - 1]))
         if step == 0:
             return 0.2  # stalled

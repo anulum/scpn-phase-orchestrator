@@ -125,6 +125,15 @@ class TestTransitionQuality:
         states = ext.extract(np.array([0, 1]), sample_rate=1.0)
         assert states[0].quality == pytest.approx(0.5)
 
+    def test_first_state_quality_respects_explicit_policy_override(self):
+        ext = SymbolicExtractor(
+            n_states=4,
+            mode="ring",
+            initial_transition_quality=0.8,
+        )
+        states = ext.extract(np.array([0, 1]), sample_rate=1.0)
+        assert states[0].quality == pytest.approx(0.8)
+
     def test_large_jump_penalised(self):
         """Jump of size 3 with N=8 → quality = max(0.1, 1-(3-1)/8) = 0.75."""
         ext = SymbolicExtractor(n_states=8, mode="ring")
@@ -180,6 +189,19 @@ class TestSymbolicExtractorMetadata:
     def test_invalid_mode_rejected(self):
         with pytest.raises(ValueError, match="mode must be"):
             SymbolicExtractor(n_states=4, mode="invalid")
+
+    @pytest.mark.parametrize(
+        "initial_transition_quality",
+        [True, -0.1, 1.1, float("nan"), float("inf"), "0.5"],
+    )
+    def test_invalid_initial_transition_quality_rejected(
+        self, initial_transition_quality: object
+    ):
+        with pytest.raises(ValueError, match="initial_transition_quality"):
+            SymbolicExtractor(
+                n_states=4,
+                initial_transition_quality=initial_transition_quality,  # type: ignore[arg-type]
+            )
 
     def test_quality_score_empty(self):
         assert SymbolicExtractor(n_states=4).quality_score([]) == 0.0
