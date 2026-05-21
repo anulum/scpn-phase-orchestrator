@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.oscillators import informational as informational_module
 from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
 
 TWO_PI = 2.0 * np.pi
@@ -251,3 +252,34 @@ class TestInformationalPipelineEndToEnd:
 # Pipeline wiring: InformationalExtractor → theta/omega → UPDEEngine
 # → compute_order_parameter. Event timestamp input, quality-gated.
 # Performance: extract(100)<600μs.
+
+
+class TestInformationalRustDispatch:
+    def test_extract_uses_rust_event_phase_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        calls: list[np.ndarray] = []
+
+        def _fake_event_phase(signal: np.ndarray) -> tuple[float, float, float]:
+            calls.append(np.asarray(signal, dtype=np.float64))
+            return (0.125, 42.0, 0.875)
+
+        monkeypatch.setattr(informational_module, "_rust_event_phase", _fake_event_phase)
+        states = InformationalExtractor().extract(np.array([0.0, 0.2, 0.5, 1.0]), 0.0)
+        assert states[0].theta == pytest.approx(0.125, abs=1e-12)
+        assert states[0].omega == pytest.approx(42.0, abs=1e-12)
+        assert states[0].quality == pytest.approx(0.875, abs=1e-12)
+        assert len(calls) == 1
+
+    def test_extract_falls_back_to_python_when_rust_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        def _raising_event_phase(_signal: np.ndarray) -> tuple[float, float, float]:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            informational_module, "_rust_event_phase", _raising_event_phase
+        )
+        states = InformationalExtractor().extract(np.array([0.0, 0.1, 0.2, 0.3]), 0.0)
+        assert states[0].omega == pytest.approx(TWO_PI * 10.0, rel=0.01)
+        assert 0.0 <= states[0].quality <= 1.0

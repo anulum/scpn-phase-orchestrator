@@ -28,6 +28,11 @@ __all__ = ["InformationalExtractor"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
+try:
+    from spo_kernel import event_phase as _rust_event_phase
+except ImportError:  # pragma: no cover - optional runtime acceleration path
+    _rust_event_phase = None
+
 
 def _validate_node_id(value: object) -> str:
     if not isinstance(value, str) or not value.strip():
@@ -95,6 +100,25 @@ class InformationalExtractor(PhaseExtractor):
                     node_id=self._node_id,
                 )
             ]
+
+        if _rust_event_phase is not None:
+            try:
+                theta, omega_median, quality = _rust_event_phase(signal)
+                inst_freq = 1.0 / intervals  # Hz (amplitude is mean frequency)
+                amplitude = float(np.mean(inst_freq))
+                return [
+                    PhaseState(
+                        theta=float(theta),
+                        omega=float(omega_median),
+                        amplitude=amplitude,
+                        quality=float(quality),
+                        channel="I",
+                        node_id=self._node_id,
+                    )
+                ]
+            except Exception:
+                # Preserve validated Python semantics on optional-kernel failures.
+                pass
 
         inst_freq = 1.0 / intervals  # Hz
         omega_median = float(np.median(inst_freq)) * TWO_PI  # rad/s
