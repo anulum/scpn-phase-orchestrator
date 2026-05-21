@@ -249,6 +249,19 @@ def test_u1_knm_template_set_add_rejects_non_2d_alpha() -> None:
         )
 
 
+def test_u1_knm_template_set_add_rejects_shape_mismatch() -> None:
+    reg = KnmTemplateSet()
+    with pytest.raises(ValueError, match="must have identical shapes"):
+        reg.add(
+            KnmTemplate(
+                name="shape_mismatch",
+                knm=np.ones((2, 2), dtype=float),
+                alpha=np.ones((3, 3), dtype=float),
+                description="ok",
+            )
+        )
+
+
 def test_u1_knm_template_set_get_rejects_blank_name() -> None:
     with pytest.raises(KeyError, match="non-empty string"):
         KnmTemplateSet().get("")
