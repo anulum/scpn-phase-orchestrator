@@ -645,6 +645,13 @@ def test_u1_cybernetic_closure_run_rejects_non_vector_phases() -> None:
         closure.run(np.zeros((2, 2), dtype=float), 0)
 
 
+def test_u1_cybernetic_closure_run_rejects_boolean_phase_vector() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    closure = CyberneticClosure(carrier=carrier)
+    with pytest.raises(ValueError, match="boolean dtype"):
+        closure.run(np.array([True, False, True, False], dtype=bool), 0)
+
+
 def test_u1_cybernetic_closure_step_rejects_mismatched_phase_length() -> None:
     carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
     closure = CyberneticClosure(carrier=carrier)
