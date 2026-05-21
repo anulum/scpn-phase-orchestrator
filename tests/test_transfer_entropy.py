@@ -294,3 +294,58 @@ def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
     assert value.shape == (3, 3)
     assert np.all(value >= 0.0)
     np.testing.assert_array_equal(np.diag(value), 0.0)
+
+
+def test_dispatch_falls_back_to_python_when_loader_fails(monkeypatch):
+    previous_backend = te_mod.ACTIVE_BACKEND
+    previous_available = list(te_mod.AVAILABLE_BACKENDS)
+    previous_loader = te_mod._LOADERS["go"]
+    te_mod.ACTIVE_BACKEND = "go"
+    te_mod.AVAILABLE_BACKENDS = ["go", "python"]
+    te_mod._BACKEND_CACHE.clear()
+    monkeypatch.setitem(
+        te_mod._LOADERS,
+        "go",
+        lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+    )
+    try:
+        fn = te_mod._dispatch("phase_te")
+    finally:
+        te_mod.ACTIVE_BACKEND = previous_backend
+        te_mod.AVAILABLE_BACKENDS = previous_available
+        monkeypatch.setitem(te_mod._LOADERS, "go", previous_loader)
+        te_mod._BACKEND_CACHE.clear()
+
+    assert fn is None
+
+
+def test_dispatch_uses_cached_loader_once(monkeypatch):
+    previous_backend = te_mod.ACTIVE_BACKEND
+    previous_available = list(te_mod.AVAILABLE_BACKENDS)
+    previous_loader = te_mod._LOADERS["go"]
+    te_mod.ACTIVE_BACKEND = "go"
+    te_mod.AVAILABLE_BACKENDS = ["go", "python"]
+    te_mod._BACKEND_CACHE.clear()
+    call_count = 0
+
+    def fake_phase_te(_src: np.ndarray, _tgt: np.ndarray, _bins: int) -> float:
+        return 0.0
+
+    def loader() -> dict[str, object]:
+        nonlocal call_count
+        call_count += 1
+        return {"phase_te": fake_phase_te}
+
+    monkeypatch.setitem(te_mod._LOADERS, "go", loader)
+    try:
+        fn1 = te_mod._dispatch("phase_te")
+        fn2 = te_mod._dispatch("phase_te")
+    finally:
+        te_mod.ACTIVE_BACKEND = previous_backend
+        te_mod.AVAILABLE_BACKENDS = previous_available
+        monkeypatch.setitem(te_mod._LOADERS, "go", previous_loader)
+        te_mod._BACKEND_CACHE.clear()
+
+    assert fn1 is fake_phase_te
+    assert fn2 is fake_phase_te
+    assert call_count == 1
