@@ -74,6 +74,11 @@ impl IntegrationConfig {
                 self.rtol
             )));
         }
+        if self.method == Method::RK45 && self.rtol < self.atol {
+            return Err(SpoError::InvalidConfig(
+                "for RK45, rtol must be >= atol".into(),
+            ));
+        }
         Ok(())
     }
 }
@@ -188,5 +193,18 @@ mod tests {
         let c2: IntegrationConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(c2.dt, c.dt);
         assert_eq!(c2.method, c.method);
+    }
+
+    #[test]
+    fn rk45_rejects_rtol_below_atol() {
+        let mut c = IntegrationConfig {
+            method: Method::RK45,
+            atol: 1e-4,
+            rtol: 1e-6,
+            ..IntegrationConfig::default()
+        };
+        assert!(c.validate().is_err());
+        c.rtol = 1e-3;
+        assert!(c.validate().is_ok());
     }
 }
