@@ -95,6 +95,13 @@ class TestDetectChimera:
         assert jnp.all(coh)
         assert not jnp.any(incoh)
 
+    def test_threshold_masks_disjoint(self, key, ring_K):
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        coh, incoh = detect_chimera(
+            phases, ring_K, coherent_threshold=0.8, incoherent_threshold=0.3
+        )
+        assert not jnp.any(coh & incoh)
+
 
 class TestNNChimeraPipelineWiring:
     """Pipeline: KuramotoLayer → phases → chimera_index."""
