@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib
 from types import SimpleNamespace
 
+import jax
 import jax.numpy as jnp
 import pytest
 
@@ -53,6 +54,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     _prefixed_float_metrics,
     _scheduled_scalar,
 )
+from scpn_phase_orchestrator.nn.ude import CouplingResidual, UDEKuramotoLayer
 from scpn_phase_orchestrator.upde.jax_engine import (
     _validate_array,
     _validate_finite_float,
@@ -227,6 +229,17 @@ def test_nn_oim_coloring_violations_zero_for_disconnected_graph() -> None:
     adjacency = jnp.zeros((3, 3), dtype=jnp.float32)
     violations = coloring_violations(colors, adjacency)
     assert float(violations) == 0.0
+
+
+def test_nn_ude_residual_and_layer_shape_contract() -> None:
+    key = jax.random.PRNGKey(7)
+    residual = CouplingResidual(hidden=4, key=key)
+    value = residual(jnp.array(0.25, dtype=jnp.float32))
+    assert jnp.isfinite(value)
+    layer = UDEKuramotoLayer(n=3, n_steps=2, dt=0.01, key=jax.random.PRNGKey(9))
+    phases = jnp.array([0.1, 0.2, 0.3], dtype=jnp.float32)
+    final = layer(phases)
+    assert final.shape == phases.shape
 
 
 def test_nn_supervisor_validation_helpers_and_json_paths() -> None:

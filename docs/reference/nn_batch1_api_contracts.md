@@ -49,3 +49,12 @@ Contract:
 Verification:
 - `tests/test_coverage_batch1_low20.py::test_nn_oim_energy_and_violation_paths`
 - `tests/test_coverage_batch1_low20.py::test_nn_oim_coloring_violations_zero_for_disconnected_graph`
+
+## `scpn_phase_orchestrator.nn.ude`
+
+Contract:
+1. Residual coupling module must emit finite scalar corrections.
+2. UDE layer forward path preserves oscillator vector shape.
+
+Verification:
+- `tests/test_coverage_batch1_low20.py::test_nn_ude_residual_and_layer_shape_contract`
