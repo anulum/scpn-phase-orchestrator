@@ -965,8 +965,7 @@ def test_command_tables_remain_json_serialisable_for_operator_artifacts() -> Non
     assert "network_opened" in rendered
 
 
-def test_service_process_manifest_blocks_on_validation_errors_and_renders_compose_yaml(
-) -> None:
+def test_service_manifest_blocks_validation_errors_and_renders_compose_yaml() -> None:
     result = _minimal_result()
     warning_export = replace(
         result.project_state.exports[0],

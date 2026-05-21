@@ -56,8 +56,7 @@ def test_itpc_persistence_falls_back_to_python_when_persistence_kernel_missing(
     assert result == pytest.approx(expected)
 
 
-def test_itpc_persistence_filters_pause_indices_and_returns_mean_of_valid_positions(
-) -> None:
+def test_itpc_persistence_filters_pause_indices_and_means_valid_positions() -> None:
     phases = np.array(
         [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
         dtype=np.float64,
