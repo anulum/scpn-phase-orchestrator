@@ -104,6 +104,7 @@ def _load_backend(name: str) -> LyapunovBackendFn:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
