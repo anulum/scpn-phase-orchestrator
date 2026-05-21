@@ -98,6 +98,17 @@ class CyberneticClosure:
 
         Returns (new_W, closure_state).
         """
+        if not isinstance(phases, np.ndarray):
+            raise TypeError(f"phases must be numpy.ndarray, got {phases!r}")
+        if phases.ndim != 1:
+            raise ValueError(f"phases must be 1D vector, got shape {phases.shape!r}")
+        n_osc = self._carrier.decode().shape[0]
+        if phases.shape[0] != n_osc:
+            raise ValueError(
+                f"phases length must match oscillator count {n_osc}, got {phases.shape[0]}"
+            )
+        if not np.isfinite(phases).all():
+            raise ValueError("phases must contain only finite values")
         self._step += 1
         W_before = self._carrier.decode()
         costs_before = compute_ssgf_costs(W_before, phases, weights=self._weights)
