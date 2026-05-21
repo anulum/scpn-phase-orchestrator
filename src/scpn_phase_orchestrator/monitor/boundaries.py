@@ -77,6 +77,10 @@ class BoundaryObserver:
 
     def set_event_bus(self, event_bus: EventBus) -> None:
         """Attach an event bus for posting boundary_breach events."""
+        from scpn_phase_orchestrator.supervisor.events import EventBus as _EventBus
+
+        if not isinstance(event_bus, _EventBus):
+            raise TypeError(f"event_bus must be EventBus, got {event_bus!r}")
         self._event_bus = event_bus
 
     def observe(

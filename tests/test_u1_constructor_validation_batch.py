@@ -69,6 +69,12 @@ def test_u1_boundary_observer_observe_rejects_negative_step() -> None:
         obs.observe({}, step=-1)
 
 
+def test_u1_boundary_observer_set_event_bus_rejects_wrong_type() -> None:
+    obs = BoundaryObserver([])
+    with pytest.raises(TypeError, match="EventBus"):
+        obs.set_event_bus(object())  # type: ignore[arg-type]
+
+
 def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
     with pytest.raises(Exception, match="directory"):
         AuditLogger(tmp_path)
