@@ -55,11 +55,15 @@ class BoundaryObserver:
                 raise ValueError(
                     f"boundary_defs[{idx}] requires non-empty name and variable"
                 )
-            if bdef.lower is not None and not isfinite(float(bdef.lower)):
+            if bdef.lower is not None and (
+                isinstance(bdef.lower, bool) or not isfinite(float(bdef.lower))
+            ):
                 raise ValueError(
                     f"boundary_defs[{idx}] lower bound must be finite, got {bdef.lower!r}"
                 )
-            if bdef.upper is not None and not isfinite(float(bdef.upper)):
+            if bdef.upper is not None and (
+                isinstance(bdef.upper, bool) or not isfinite(float(bdef.upper))
+            ):
                 raise ValueError(
                     f"boundary_defs[{idx}] upper bound must be finite, got {bdef.upper!r}"
                 )

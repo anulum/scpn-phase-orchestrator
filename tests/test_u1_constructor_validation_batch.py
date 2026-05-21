@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.ssgf.closure import CyberneticClosure
 from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import Marking, PetriNet, Place, Transition
+from scpn_phase_orchestrator.binding.types import BoundaryDef
 
 
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
@@ -173,6 +174,21 @@ def test_u1_knm_template_set_add_strips_tabbed_storage_name() -> None:
 def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
     with pytest.raises(TypeError, match="BoundaryDef"):
         BoundaryObserver([object()])  # type: ignore[list-item]
+
+
+def test_u1_boundary_observer_rejects_boolean_lower_bound() -> None:
+    with pytest.raises(Exception, match="must be < upper"):
+        BoundaryObserver(
+            [
+                BoundaryDef(
+                    name="n",
+                    variable="x",
+                    lower=True,  # type: ignore[arg-type]
+                    upper=1.0,
+                    severity="soft",
+                )
+            ]
+        )
 
 
 def test_u1_boundary_observer_observe_rejects_negative_step() -> None:
