@@ -284,6 +284,14 @@ class AuditLogger:
             if omegas is None or knm is None or alpha is None:
                 msg = "omegas, knm, alpha required when phases is provided"
                 raise AuditError(msg)
+            for name, arr in (
+                ("phases", phases),
+                ("omegas", omegas),
+                ("knm", knm),
+                ("alpha", alpha),
+            ):
+                if not np.isfinite(arr).all():
+                    raise AuditError(f"{name} must contain only finite values")
             record["phases"] = phases.tolist()
             record["omegas"] = omegas.tolist()
             record["knm"] = knm.tolist()
