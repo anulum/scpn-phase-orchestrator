@@ -117,6 +117,14 @@ impl PetriNet {
             if t.name.is_empty() {
                 return Err("transition names must not be empty".into());
             }
+            if let Some(guard) = &t.guard {
+                if guard.metric.trim().is_empty() || !guard.threshold.is_finite() {
+                    return Err(format!(
+                        "transition {:?} has invalid guard metric/threshold",
+                        t.name
+                    ));
+                }
+            }
             for arc in t.inputs.iter().chain(t.outputs.iter()) {
                 if arc.weight == 0 {
                     return Err(format!(
@@ -376,6 +384,27 @@ mod tests {
                 }],
                 outputs: vec![],
                 guard: None,
+            }],
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn blank_guard_metric_rejected() {
+        let result = PetriNet::new(
+            vec!["a".into()],
+            vec![Transition {
+                name: "bad".into(),
+                inputs: vec![Arc {
+                    place: "a".into(),
+                    weight: 1,
+                }],
+                outputs: vec![],
+                guard: Some(Guard {
+                    metric: " ".into(),
+                    op: GuardOp::Gt,
+                    threshold: 0.1,
+                }),
             }],
         );
         assert!(result.is_err());
