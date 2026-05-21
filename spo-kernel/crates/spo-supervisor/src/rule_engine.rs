@@ -138,6 +138,9 @@ impl RuleEngine {
     }
 
     pub fn advance_clock(&mut self, dt: f64) {
+        if !dt.is_finite() || dt < 0.0 {
+            return;
+        }
         self.clock += dt;
     }
 
@@ -407,6 +410,16 @@ mod tests {
             stability_proxy: 0.42,
             regime: Regime::Nominal,
         }
+    }
+
+    #[test]
+    fn advance_clock_ignores_non_finite_and_negative_dt() {
+        let mut eng = RuleEngine::new(vec![]);
+        eng.advance_clock(1.25);
+        let before = eng.clock();
+        eng.advance_clock(f64::NAN);
+        eng.advance_clock(-0.5);
+        assert_eq!(eng.clock(), before);
     }
 
     #[test]
