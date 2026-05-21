@@ -140,6 +140,11 @@ def test_u1_audit_logger_rejects_blank_event_stream_path(tmp_path) -> None:
         AuditLogger(tmp_path / "audit.jsonl", event_stream=" ")
 
 
+def test_u1_audit_logger_rejects_non_path_type() -> None:
+    with pytest.raises(Exception, match="str or Path"):
+        AuditLogger(123)  # type: ignore[arg-type]
+
+
 def test_u1_audit_logger_header_rejects_non_positive_dt(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:

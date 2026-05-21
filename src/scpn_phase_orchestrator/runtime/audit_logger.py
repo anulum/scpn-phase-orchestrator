@@ -49,6 +49,12 @@ class AuditLogger:
     """Append-only JSONL audit log for UPDE simulation steps."""
 
     def __init__(self, path: str | Path, *, event_stream: str | Path | None = None):
+        if not isinstance(path, (str, Path)):
+            raise AuditError(f"audit path must be str or Path, got {path!r}")
+        if event_stream is not None and not isinstance(event_stream, (str, Path)):
+            raise AuditError(
+                f"event_stream path must be str, Path, or None, got {event_stream!r}"
+            )
         if not str(path).strip():
             raise AuditError("audit path must be a non-empty path")
         if event_stream is not None and not str(event_stream).strip():
