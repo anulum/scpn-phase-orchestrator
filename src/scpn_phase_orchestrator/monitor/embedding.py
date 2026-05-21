@@ -175,9 +175,12 @@ def _dispatch(fn_name: str) -> object | None:
     MI kernel), we fall through to the next available backend in the
     chain rather than crashing or silently diverging.
     """
-    if ACTIVE_BACKEND == "python":
-        return None
-    for name in AVAILABLE_BACKENDS:
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    seen: set[str] = set()
+    for name in ordered_backends:
+        if name in seen:
+            continue
+        seen.add(name)
         if name == "python":
             return None
         try:

@@ -431,3 +431,55 @@ class TestEmbeddingBackendFallbacks:
         finally:
             em_mod.ACTIVE_BACKEND = previous
         assert 1 <= dim <= 5
+
+
+class TestDispatchFallbackChain:
+    def test_dispatch_prefers_active_backend_before_available_order(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"go": 0, "julia": 0}
+
+        def _go_backend() -> dict[str, object]:
+            calls["go"] += 1
+            return {"de": None, "mi": None, "nn": None}
+
+        def _julia_backend() -> dict[str, object]:
+            calls["julia"] += 1
+            return {"de": lambda signal, delay, dim: np.zeros(6, dtype=np.float64)}
+
+        monkeypatch.setattr(em_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["julia", "go", "python"])
+        monkeypatch.setattr(
+            em_mod, "_LOADERS", {"go": _go_backend, "julia": _julia_backend}
+        )
+
+        fn = em_mod._dispatch("de")
+        assert fn is not None
+        assert calls == {"go": 1, "julia": 1}
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"go": 0}
+
+        def _go_backend() -> dict[str, object]:
+            calls["go"] += 1
+            return {
+                "de": lambda signal, delay, dim: np.zeros(6, dtype=np.float64),
+                "mi": lambda signal, lag, n_bins: 0.0,
+                "nn": lambda emb: (
+                    np.zeros(1, dtype=np.float64),
+                    np.zeros(1, dtype=np.int64),
+                ),
+            }
+
+        monkeypatch.setattr(em_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(em_mod, "_LOADERS", {"go": _go_backend})
+
+        em_mod._dispatch("de")
+        em_mod._dispatch("mi")
+
+        assert calls["go"] == 1
