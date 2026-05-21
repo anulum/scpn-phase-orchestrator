@@ -38,3 +38,14 @@ Contract:
 Verification:
 - `tests/test_coverage_batch1_low20.py::test_nn_inverse_window_and_symmetry_helpers`
 - `tests/test_coverage_batch1_low20.py::test_nn_inverse_window_helper_rejects_empty_window`
+
+## `scpn_phase_orchestrator.nn.oim`
+
+Contract:
+1. OIM stepping keeps phase vectors shape-stable.
+2. Soft colouring extraction returns one label per oscillator.
+3. Continuous energy/violation helpers return finite non-negative outputs.
+
+Verification:
+- `tests/test_coverage_batch1_low20.py::test_nn_oim_energy_and_violation_paths`
+- `tests/test_coverage_batch1_low20.py::test_nn_oim_coloring_violations_zero_for_disconnected_graph`

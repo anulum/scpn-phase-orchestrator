@@ -222,6 +222,13 @@ def test_nn_oim_energy_and_violation_paths() -> None:
     assert jnp.isfinite(energy)
 
 
+def test_nn_oim_coloring_violations_zero_for_disconnected_graph() -> None:
+    colors = jnp.array([0, 0, 0], dtype=jnp.int32)
+    adjacency = jnp.zeros((3, 3), dtype=jnp.float32)
+    violations = coloring_violations(colors, adjacency)
+    assert float(violations) == 0.0
+
+
 def test_nn_supervisor_validation_helpers_and_json_paths() -> None:
     assert _positive_int(3, "field") == 3
     assert _positive_float(0.5, "field") == 0.5
