@@ -18,6 +18,8 @@ owner.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -46,6 +48,27 @@ class KnmTemplateSet:
 
     def add(self, template: KnmTemplate) -> None:
         """Register a template, overwriting any existing one with the same name."""
+        if not isinstance(template, KnmTemplate):
+            raise TypeError(f"template must be KnmTemplate, got {template!r}")
+        if not template.name.strip():
+            raise ValueError("template name must be a non-empty string")
+        if template.knm.ndim != 2 or template.alpha.ndim != 2:
+            raise ValueError("template knm/alpha must be 2D matrices")
+        if template.knm.shape != template.alpha.shape:
+            raise ValueError("template knm and alpha must have identical shapes")
+        if template.knm.shape[0] != template.knm.shape[1]:
+            raise ValueError("template knm must be square")
+        if not np.isfinite(template.knm).all() or not np.isfinite(template.alpha).all():
+            raise ValueError("template knm/alpha must contain only finite values")
+        if any(
+            isinstance(v, bool) or not isinstance(v, Real)
+            for v in (float(np.min(template.knm)), float(np.max(template.knm)))
+        ):
+            raise ValueError("template knm must contain numeric real values")
+        if not isfinite(float(np.min(template.alpha))) or not isfinite(
+            float(np.max(template.alpha))
+        ):
+            raise ValueError("template alpha must contain finite real values")
         self._templates[template.name] = template
 
     def get(self, name: str) -> KnmTemplate:

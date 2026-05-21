@@ -9,10 +9,25 @@
 from __future__ import annotations
 
 import pytest
+import numpy as np
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
+from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 
 
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
     with pytest.raises(ValueError, match="finite >= 0"):
         ActionProjector(rate_limits={"K": float("nan")}, value_bounds={"K": (0.0, 1.0)})
+
+
+def test_u1_knm_template_set_rejects_non_square_template() -> None:
+    reg = KnmTemplateSet()
+    with pytest.raises(ValueError, match="square"):
+        reg.add(
+            KnmTemplate(
+                name="bad",
+                knm=np.ones((2, 3), dtype=float),
+                alpha=np.ones((2, 3), dtype=float),
+                description="invalid",
+            )
+        )
