@@ -76,6 +76,8 @@ class ActionProjector:
         """Clamp action value to bounds and rate limit relative to *previous_value*."""
         if not isinstance(action, ControlAction):
             raise TypeError(f"action must be ControlAction, got {action!r}")
+        if not isfinite(float(action.value)):
+            raise ValueError(f"action.value must be finite real, got {action.value!r}")
         if isinstance(previous_value, bool) or not isinstance(previous_value, Real):
             raise TypeError(
                 f"previous_value must be a finite real scalar, got {previous_value!r}"

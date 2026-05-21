@@ -46,6 +46,19 @@ def test_u1_action_projector_rejects_non_action_payload() -> None:
         projector.project(object(), 0.0)  # type: ignore[arg-type]
 
 
+def test_u1_action_projector_rejects_non_finite_action_value() -> None:
+    projector = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 1.0)})
+    action = ControlAction(
+        knob="K",
+        value=float("nan"),
+        scope="global",
+        ttl_s=1.0,
+        justification="u1-test",
+    )
+    with pytest.raises(ValueError, match="action.value must be finite real"):
+        projector.project(action, 0.0)
+
+
 def test_u1_knm_template_set_rejects_non_square_template() -> None:
     reg = KnmTemplateSet()
     with pytest.raises(ValueError, match="square"):
