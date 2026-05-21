@@ -74,6 +74,14 @@ class ActionProjector:
 
     def project(self, action: ControlAction, previous_value: float) -> ControlAction:
         """Clamp action value to bounds and rate limit relative to *previous_value*."""
+        if isinstance(previous_value, bool) or not isinstance(previous_value, Real):
+            raise TypeError(
+                f"previous_value must be a finite real scalar, got {previous_value!r}"
+            )
+        if not isfinite(float(previous_value)):
+            raise ValueError(
+                f"previous_value must be a finite real scalar, got {previous_value!r}"
+            )
         lo, hi = self._value_bounds.get(action.knob, (float("-inf"), float("inf")))
         clamped = max(lo, min(action.value, hi))
 

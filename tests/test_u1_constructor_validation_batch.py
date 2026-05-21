@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 import numpy as np
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
+from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
@@ -24,6 +25,19 @@ from scpn_phase_orchestrator.supervisor.petri_net import Marking, PetriNet, Plac
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
     with pytest.raises(ValueError, match="finite >= 0"):
         ActionProjector(rate_limits={"K": float("nan")}, value_bounds={"K": (0.0, 1.0)})
+
+
+def test_u1_action_projector_rejects_non_finite_previous_value() -> None:
+    projector = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 1.0)})
+    action = ControlAction(
+        knob="K",
+        value=0.5,
+        scope="global",
+        ttl_s=1.0,
+        justification="u1-test",
+    )
+    with pytest.raises(ValueError, match="finite real scalar"):
+        projector.project(action, float("inf"))
 
 
 def test_u1_knm_template_set_rejects_non_square_template() -> None:
