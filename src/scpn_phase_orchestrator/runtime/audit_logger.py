@@ -192,6 +192,8 @@ class AuditLogger:
             raise AuditError(f"dt must be a finite positive real, got {dt!r}")
         if not isinstance(method, str) or not method.strip():
             raise AuditError(f"method must be a non-empty string, got {method!r}")
+        if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
+            raise AuditError(f"seed must be integer or None, got {seed!r}")
         record: dict = {
             "header": True,
             "n_oscillators": n_oscillators,
