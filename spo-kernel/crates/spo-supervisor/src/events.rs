@@ -44,6 +44,7 @@ pub struct EventBus {
 impl EventBus {
     #[must_use]
     pub fn new(max_history: usize) -> Self {
+        let max_history = max_history.max(1);
         Self {
             history: VecDeque::with_capacity(max_history),
             max_history,
@@ -114,6 +115,15 @@ mod tests {
         bus.post(RegimeEvent::new(EventKind::Manual, 1, String::new()));
         bus.clear();
         assert_eq!(bus.count(), 0);
+    }
+
+    #[test]
+    fn bus_zero_capacity_is_clamped_to_one() {
+        let mut bus = EventBus::new(0);
+        bus.post(RegimeEvent::new(EventKind::Manual, 1, String::new()));
+        bus.post(RegimeEvent::new(EventKind::Manual, 2, String::new()));
+        assert_eq!(bus.count(), 1);
+        assert_eq!(bus.history().front().expect("not empty").step, 2);
     }
 
     #[test]
