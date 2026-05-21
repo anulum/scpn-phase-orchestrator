@@ -259,3 +259,56 @@ def test_large_phase_values_do_not_change_symmetry_identity(
     assert np.all(np.isfinite(result.gradient))
     assert np.all(np.isfinite(result.curl))
     assert np.all(np.isfinite(result.harmonic))
+
+
+class TestDispatchFallbackChain:
+    def test_dispatch_falls_back_to_next_backend_when_active_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"rust": 0, "go": 0}
+
+        def _fail_rust():
+            calls["rust"] += 1
+            raise ImportError("rust unavailable")
+
+        def _ok_go():
+            calls["go"] += 1
+            return lambda knm_flat, phases, n: (
+                np.ones(n, dtype=np.float64),
+                np.zeros(n, dtype=np.float64),
+                np.zeros(n, dtype=np.float64),
+            )
+
+        monkeypatch.setattr(hodge, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(hodge, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(hodge, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(hodge, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
+
+        backend = hodge._dispatch()
+        assert backend is not None
+        got = backend(np.zeros(4, dtype=np.float64), np.zeros(2, dtype=np.float64), 2)
+        np.testing.assert_allclose(got[0], np.ones(2, dtype=np.float64))
+        assert calls == {"rust": 1, "go": 1}
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, int] = {"go": 0}
+
+        def _ok_go():
+            calls["go"] += 1
+            return lambda knm_flat, phases, n: (
+                np.zeros(n, dtype=np.float64),
+                np.zeros(n, dtype=np.float64),
+                np.zeros(n, dtype=np.float64),
+            )
+
+        monkeypatch.setattr(hodge, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(hodge, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(hodge, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(hodge, "_LOADERS", {"go": _ok_go})
+
+        hodge._dispatch()
+        hodge._dispatch()
+
+        assert calls["go"] == 1
