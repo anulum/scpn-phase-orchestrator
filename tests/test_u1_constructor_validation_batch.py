@@ -198,6 +198,15 @@ def test_u1_audit_logger_header_rejects_non_dict_binding_config(tmp_path) -> Non
         logger._fh.close()
 
 
+def test_u1_audit_logger_header_rejects_non_bool_amplitude_mode(tmp_path) -> None:
+    logger = AuditLogger(tmp_path / "audit.jsonl")
+    try:
+        with pytest.raises(Exception, match="amplitude_mode must be bool"):
+            logger.log_header(n_oscillators=4, dt=0.1, amplitude_mode=1)  # type: ignore[arg-type]
+    finally:
+        logger._fh.close()
+
+
 def test_u1_audit_logger_log_step_rejects_negative_step(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
