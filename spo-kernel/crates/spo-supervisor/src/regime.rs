@@ -187,6 +187,9 @@ pub fn classify_regime_from_summary(
     hard_violation_count: usize,
     hysteresis: f64,
 ) -> Regime {
+    if !mean_r.is_finite() || !hysteresis.is_finite() || hysteresis < 0.0 {
+        return Regime::Critical;
+    }
     if hard_violation_count > 0 {
         return Regime::Critical;
     }
@@ -262,6 +265,18 @@ mod tests {
         let rm = RegimeManager::default();
         let regime = rm.evaluate(&make_state(0.1), &empty_boundary());
         assert_eq!(regime, Regime::Critical);
+    }
+
+    #[test]
+    fn non_finite_summary_inputs_fail_closed_to_critical() {
+        assert_eq!(
+            classify_regime_from_summary(Regime::Nominal, f64::NAN, 0, 0.05),
+            Regime::Critical
+        );
+        assert_eq!(
+            classify_regime_from_summary(Regime::Nominal, 0.8, 0, f64::NAN),
+            Regime::Critical
+        );
     }
 
     #[test]
