@@ -1383,6 +1383,70 @@ def _load_lifecycle_remediation_execution_dashboard_payload(
     return dashboard_payload
 
 
+def _load_lifecycle_remediation_deployment_handoff_payload(
+    handoff_payload: dict[str, object],
+) -> dict[str, object]:
+    if (
+        handoff_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_deployment_handoff_v1"
+    ):
+        raise click.ClickException(
+            "remediation deployment handoff schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_remediation_deployment_handoff_v1"
+        )
+    _require_sha256(handoff_payload.get("handoff_hash"), "handoff_hash")
+    _require_sha256(handoff_payload.get("plan_hash"), "plan_hash")
+    _require_sha256(handoff_payload.get("execution_hash"), "execution_hash")
+    unresolved_count = handoff_payload.get("unresolved_action_count")
+    handoff_actions = handoff_payload.get("handoff_actions")
+    if not isinstance(unresolved_count, int) or unresolved_count < 0:
+        raise click.ClickException(
+            "remediation deployment handoff schema mismatch: "
+            "unresolved_action_count must be non-negative"
+        )
+    if not isinstance(handoff_actions, list):
+        raise click.ClickException(
+            "remediation deployment handoff schema mismatch: "
+            "handoff_actions must be a list"
+        )
+    if unresolved_count != len(handoff_actions):
+        raise click.ClickException(
+            "remediation deployment handoff schema mismatch: "
+            "unresolved_action_count does not match handoff_actions"
+        )
+    for action in handoff_actions:
+        if not isinstance(action, dict):
+            raise click.ClickException(
+                "remediation deployment handoff schema mismatch: action must be object"
+            )
+        _require_sha256(action.get("handoff_action_hash"), "handoff_action_hash")
+        _require_sha256(action.get("action_hash"), "action_hash")
+        _require_sha256(action.get("request_hash"), "request_hash")
+        action_type = action.get("action_type")
+        if action_type not in {
+            "renew_approval",
+            "persist_request",
+            "register_storage_adapter",
+            "confirm_external_write",
+        }:
+            raise click.ClickException(
+                "remediation deployment handoff schema mismatch: unsupported action_type"
+            )
+        priority = action.get("priority")
+        if not isinstance(priority, int) or priority < 1:
+            raise click.ClickException(
+                "remediation deployment handoff schema mismatch: "
+                "priority must be a positive integer"
+            )
+        template = action.get("deployment_command_template")
+        if not isinstance(template, str) or not template:
+            raise click.ClickException(
+                "remediation deployment handoff schema mismatch: "
+                "deployment_command_template must be non-empty"
+            )
+    return handoff_payload
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -2592,6 +2656,100 @@ def plugins_lifecycle_remediation_deployment_handoff(
     }
     handoff_payload["handoff_hash"] = _record_hash(handoff_payload)
     click.echo(json.dumps(handoff_payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-scheduler-queue")
+@click.argument(
+    "handoff_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--window-start-epoch",
+    required=True,
+    type=int,
+    help="Scheduler window start as Unix epoch seconds (UTC).",
+)
+@click.option(
+    "--window-duration-seconds",
+    default=3600,
+    show_default=True,
+    type=int,
+    help="Scheduler execution window length in seconds.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Scheduler component creating the queue payload.",
+)
+def plugins_lifecycle_remediation_scheduler_queue(
+    handoff_json: Path,
+    window_start_epoch: int,
+    window_duration_seconds: int,
+    created_by: str,
+) -> None:
+    """Emit a deterministic scheduler queue from remediation deployment handoff."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler queue schema mismatch: created_by must be non-empty"
+        )
+    if window_start_epoch < 0:
+        raise click.ClickException(
+            "remediation scheduler queue schema mismatch: "
+            "window_start_epoch must be non-negative"
+        )
+    if window_duration_seconds < 1:
+        raise click.ClickException(
+            "remediation scheduler queue schema mismatch: "
+            "window_duration_seconds must be positive"
+        )
+    handoff = _load_lifecycle_remediation_deployment_handoff_payload(
+        _load_json_file(handoff_json, artifact="remediation deployment handoff")
+    )
+    actions = cast(list[dict[str, object]], handoff["handoff_actions"])
+    if len(actions) > window_duration_seconds:
+        raise click.ClickException(
+            "remediation scheduler queue schema mismatch: unresolved action count "
+            "exceeds scheduler window duration"
+        )
+    queue_entries: list[dict[str, object]] = []
+    for index, action in enumerate(
+        sorted(
+            actions,
+            key=lambda item: (
+                cast(int, item["priority"]),
+                str(item["handoff_action_hash"]),
+            ),
+        )
+    ):
+        schedule_epoch = window_start_epoch + index
+        entry: dict[str, object] = {
+            "handoff_action_hash": action["handoff_action_hash"],
+            "action_hash": action["action_hash"],
+            "request_hash": action["request_hash"],
+            "action_type": action["action_type"],
+            "priority": action["priority"],
+            "schedule_epoch": schedule_epoch,
+            "scheduler_command_template": action["deployment_command_template"],
+        }
+        entry["entry_hash"] = _record_hash(entry)
+        queue_entries.append(entry)
+    queue_payload: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1",
+        "version": "1.0.0",
+        "plan_hash": _require_sha256(handoff.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(
+            handoff.get("execution_hash"),
+            "execution_hash",
+        ),
+        "handoff_hash": _require_sha256(handoff.get("handoff_hash"), "handoff_hash"),
+        "window_start_epoch": window_start_epoch,
+        "window_duration_seconds": window_duration_seconds,
+        "queue_entry_count": len(queue_entries),
+        "queue_entries": queue_entries,
+        "created_by": created_by,
+    }
+    queue_payload["scheduler_hash"] = _record_hash(queue_payload)
+    click.echo(json.dumps(queue_payload, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")
