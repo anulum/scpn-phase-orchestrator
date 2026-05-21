@@ -29,6 +29,16 @@ impl ActiveInferenceAgent {
         if n_hidden == 0 {
             return Err(SpoError::InvalidConfig("n_hidden > 0".into()));
         }
+        if !target_r.is_finite() || !(0.0..=1.0).contains(&target_r) {
+            return Err(SpoError::InvalidConfig(
+                "target_r must be finite and in [0, 1]".into(),
+            ));
+        }
+        if !lr.is_finite() || lr <= 0.0 {
+            return Err(SpoError::InvalidConfig(
+                "lr must be finite and > 0".into(),
+            ));
+        }
         Ok(Self {
             n_hidden,
             target_r,
@@ -41,7 +51,7 @@ impl ActiveInferenceAgent {
 
     pub fn control(&mut self, phases: &[f64]) -> (f64, f64) {
         let n = phases.len();
-        if n == 0 {
+        if n == 0 || phases.iter().any(|v| !v.is_finite()) {
             return (0.0, 0.0);
         }
         let nh = self.n_hidden;
@@ -86,5 +96,23 @@ impl ActiveInferenceAgent {
     }
     pub fn reset(&mut self) {
         self.state.fill(0.0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_rejects_invalid_target_and_lr() {
+        assert!(ActiveInferenceAgent::new(2, f64::NAN, 0.1).is_err());
+        assert!(ActiveInferenceAgent::new(2, 1.2, 0.1).is_err());
+        assert!(ActiveInferenceAgent::new(2, 0.5, 0.0).is_err());
+    }
+
+    #[test]
+    fn control_fail_closes_on_non_finite_phase_input() {
+        let mut agent = ActiveInferenceAgent::new(2, 0.7, 0.05).expect("valid");
+        assert_eq!(agent.control(&[f64::NAN, 0.1]), (0.0, 0.0));
     }
 }
