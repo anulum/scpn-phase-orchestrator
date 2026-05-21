@@ -211,7 +211,19 @@ class TestLyapunovRustDispatch:
     def test_spectrum_uses_rust_backend_signature_when_active(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        calls: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float, int, int, float, float]] = []
+        calls: list[
+            tuple[
+                np.ndarray,
+                np.ndarray,
+                np.ndarray,
+                np.ndarray,
+                float,
+                int,
+                int,
+                float,
+                float,
+            ]
+        ] = []
 
         def _fake_backend(
             p: np.ndarray,

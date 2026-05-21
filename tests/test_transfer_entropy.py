@@ -224,21 +224,20 @@ def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
         assert bins == 6
         return np.arange(n_osc * n_osc, dtype=np.float64).reshape((n_osc, n_osc))
 
-    def fake_loader():
-        return {"phase_te": fake_phase_te, "te_matrix": fake_matrix}
+    def fake_dispatch(fn_name: str):
+        if fn_name == "phase_te":
+            return fake_phase_te
+        if fn_name == "te_matrix":
+            return fake_matrix
+        return None
 
-    monkeypatch.setitem(te_mod._LOADERS, "rust", fake_loader)
-    previous = te_mod.ACTIVE_BACKEND
-    te_mod.ACTIVE_BACKEND = "rust"
-    try:
-        source = np.linspace(0.0, 1.0, 3)
-        target = np.linspace(0.1, 1.1, 3)
-        phase_value = phase_transfer_entropy(source, target, n_bins=6)
-        matrix_value = transfer_entropy_matrix(
-            np.stack([source, target, np.array([0.2, 0.4, 0.6])]), n_bins=6
-        )
-    finally:
-        te_mod.ACTIVE_BACKEND = previous
+    monkeypatch.setattr(te_mod, "_dispatch", fake_dispatch)
+    source = np.linspace(0.0, 1.0, 3)
+    target = np.linspace(0.1, 1.1, 3)
+    phase_value = phase_transfer_entropy(source, target, n_bins=6)
+    matrix_value = transfer_entropy_matrix(
+        np.stack([source, target, np.array([0.2, 0.4, 0.6])]), n_bins=6
+    )
 
     assert phase_value == 0.75
     assert matrix_value.shape == (3, 3)

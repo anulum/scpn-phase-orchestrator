@@ -87,7 +87,7 @@ def _load_rust_fns() -> dict[str, object]:
     }
 
 
-def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_mojo_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._embedding_mojo import (
         _ensure_exe,
         delay_embed_mojo,
@@ -103,7 +103,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     }
 
 
-def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_julia_fns() -> dict[str, object]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._embedding_julia import (
@@ -119,7 +119,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     }
 
 
-def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_go_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._embedding_go import (
         _load_lib,
         delay_embed_go,
@@ -275,7 +275,7 @@ def delay_embed(
                 dtype=np.float64,
             ).reshape(t_eff, dimension)
         except Exception:
-            pass
+            backend_fn = None
 
     indices = np.arange(dimension) * delay
     rows = np.arange(t_eff)[:, np.newaxis] + indices[np.newaxis, :]
@@ -301,7 +301,7 @@ def mutual_information(
         try:
             return float(fn(s, lag, n_bins))
         except Exception:
-            pass
+            backend_fn = None
 
     t_total = s.size - lag
     x = s[:t_total]
@@ -345,7 +345,7 @@ def nearest_neighbor_distances(
                 np.asarray(idx, dtype=np.int64),
             )
         except Exception:
-            pass
+            backend_fn = None
 
     nn_dist = np.full(t, np.inf)
     nn_idx = np.zeros(t, dtype=np.int64)
@@ -377,7 +377,7 @@ def optimal_delay(
             )
             return int(fn(s, max_lag, n_bins))
         except Exception:
-            pass
+            max_lag = int(max_lag)
 
     max_lag = min(max_lag, s.size // 2)
     mi_values = np.array([mutual_information(s, lag, n_bins) for lag in range(max_lag)])
@@ -414,7 +414,7 @@ def optimal_dimension(
                 fn(s, delay, max_dim, rtol, atol),
             )
         except Exception:
-            pass
+            max_dim = int(max_dim)
 
     for m in range(1, max_dim + 1):
         t_next = s.size - m * delay

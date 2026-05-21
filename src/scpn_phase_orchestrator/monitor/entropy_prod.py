@@ -60,7 +60,7 @@ def _load_rust_fn() -> Callable[..., float]:
     return cast("Callable[..., float]", _rust)
 
 
-def _load_mojo_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
+def _load_mojo_fn() -> Callable[..., float]:
     from ..experimental.accelerators.monitor._entropy_prod_mojo import (
         _ensure_exe,
         entropy_production_rate_mojo,
@@ -70,7 +70,7 @@ def _load_mojo_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
     return entropy_production_rate_mojo
 
 
-def _load_julia_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
+def _load_julia_fn() -> Callable[..., float]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._entropy_prod_julia import (
@@ -80,7 +80,7 @@ def _load_julia_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
     return entropy_production_rate_julia
 
 
-def _load_go_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
+def _load_go_fn() -> Callable[..., float]:
     from ..experimental.accelerators.monitor._entropy_prod_go import (
         _load_lib,
         entropy_production_rate_go,
@@ -215,7 +215,7 @@ def entropy_production_rate(
         try:
             return float(backend_fn(phases, omegas, knm, alpha, dt))
         except Exception:
-            pass
+            backend_fn = None
 
     diff = phases[np.newaxis, :] - phases[:, np.newaxis]
     coupling = np.sum(knm * np.sin(diff), axis=1)

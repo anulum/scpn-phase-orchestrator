@@ -198,7 +198,9 @@ class TestNPERustDispatch:
         monkeypatch.setattr(
             npe_module,
             "_dispatch",
-            lambda fn_name: _raising_pdm if fn_name == "phase_distance_matrix" else None,
+            lambda fn_name: (
+                _raising_pdm if fn_name == "phase_distance_matrix" else None
+            ),
         )
         phases = np.array([0.1, 2 * np.pi - 0.1], dtype=np.float64)
         D = phase_distance_matrix(phases)

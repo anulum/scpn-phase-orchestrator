@@ -101,7 +101,7 @@ def _load_rust_fns() -> dict[str, object]:
     return {"section": _rust_section, "phase": _rust_phase}
 
 
-def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_mojo_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._poincare_mojo import (
         _ensure_exe,
         phase_poincare_mojo,
@@ -112,7 +112,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     return {"section": poincare_section_mojo, "phase": phase_poincare_mojo}
 
 
-def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_julia_fns() -> dict[str, object]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._poincare_julia import (
@@ -123,7 +123,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     return {"section": poincare_section_julia, "phase": phase_poincare_julia}
 
 
-def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_go_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._poincare_go import (
         _load_lib,
         phase_poincare_go,
@@ -304,7 +304,7 @@ def poincare_section(
             )
             return _assemble_result(cr_flat, times, n_cr, d)
         except Exception:
-            pass
+            direction_id = int(direction_id)
 
     n = norm_vec / norm_mag
     signed_dist = traj @ n - offset
@@ -376,7 +376,7 @@ def phase_poincare(
             )
             return _assemble_result(cr_flat, times, n_cr, n)
         except Exception:
-            pass
+            oscillator_idx = int(oscillator_idx)
 
     target = np.unwrap(phases[:, oscillator_idx])
     shifted = (target - section_phase) % (2 * np.pi)

@@ -59,7 +59,7 @@ def _load_rust_fns() -> dict[str, object]:
     }
 
 
-def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+def _load_mojo_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._te_mojo import (
         _ensure_exe,
         phase_te_mojo,
@@ -70,7 +70,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
     return {"phase_te": phase_te_mojo, "te_matrix": te_matrix_mojo}
 
 
-def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+def _load_julia_fns() -> dict[str, object]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._te_julia import (
@@ -81,7 +81,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
     return {"phase_te": phase_te_julia, "te_matrix": te_matrix_julia}
 
 
-def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+def _load_go_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._te_go import (
         _load_lib,
         phase_te_go,
@@ -216,7 +216,7 @@ def phase_transfer_entropy(
                 )
             )
         except Exception:
-            pass
+            bin_count = int(bin_count)
 
     if len(source_values) < 3 or len(target_values) < 3:
         return 0.0
@@ -261,7 +261,7 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
             )
             return np.asarray(flat, dtype=np.float64).reshape(n_osc, n_osc)
         except Exception:
-            pass
+            n_time = int(n_time)
 
     te: FloatArray = np.zeros((n_osc, n_osc), dtype=np.float64)
     for i in range(n_osc):

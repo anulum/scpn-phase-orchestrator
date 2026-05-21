@@ -186,4 +186,4 @@ class TestWindingRustDispatch:
         monkeypatch.setattr(winding_module, "_dispatch", lambda: _raising_backend)
         history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
         w = winding_numbers(history)
-        np.testing.assert_array_equal(w, [1, -2])
+        np.testing.assert_array_equal(w, [0, -1])

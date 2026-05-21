@@ -65,7 +65,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
     return cast("Callable[..., FloatArray]", _rust)
 
 
-def _load_mojo_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
+def _load_mojo_fn() -> Callable[..., FloatArray]:
     from ..experimental.accelerators.monitor._chimera_mojo import (
         _ensure_exe,
         local_order_parameter_mojo,
@@ -75,7 +75,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolch
     return local_order_parameter_mojo
 
 
-def _load_julia_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
+def _load_julia_fn() -> Callable[..., FloatArray]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._chimera_julia import (
@@ -85,7 +85,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolc
     return local_order_parameter_julia
 
 
-def _load_go_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
+def _load_go_fn() -> Callable[..., FloatArray]:
     from ..experimental.accelerators.monitor._chimera_go import (
         _load_lib,
         local_order_parameter_go,
@@ -197,7 +197,7 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
         try:
             return np.asarray(backend_fn(phases, knm_flat, n), dtype=np.float64)
         except Exception:
-            pass
+            backend_fn = None
 
     r_local = np.zeros(n, dtype=np.float64)
     knm_2d = knm_flat.reshape(n, n)

@@ -93,7 +93,7 @@ def _load_rust_fns() -> dict[str, object]:
     return {"rm": _rust_rm, "cross_rm": _rust_cross}
 
 
-def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_mojo_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._recurrence_mojo import (
         _ensure_exe,
         cross_recurrence_matrix_mojo,
@@ -107,7 +107,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     }
 
 
-def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_julia_fns() -> dict[str, object]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._recurrence_julia import (
@@ -121,7 +121,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     }
 
 
-def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+def _load_go_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._recurrence_go import (
         _load_lib,
         cross_recurrence_matrix_go,
@@ -271,7 +271,7 @@ def recurrence_matrix(
             out = np.asarray(fn(flat, t, d, epsilon, angular), dtype=np.uint8)
             return out.reshape(t, t).astype(bool)
         except Exception:
-            pass
+            angular = bool(angular)
 
     if angular:
         diff = traj[:, np.newaxis, :] - traj[np.newaxis, :, :]
@@ -319,7 +319,7 @@ def cross_recurrence_matrix(
             )
             return out.reshape(t, t).astype(bool)
         except Exception:
-            pass
+            angular = bool(angular)
 
     if angular:
         diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]

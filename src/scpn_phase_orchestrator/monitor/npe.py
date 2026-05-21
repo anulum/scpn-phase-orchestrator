@@ -48,7 +48,7 @@ def _load_rust_fns() -> dict[str, object]:
     return {"phase_distance_matrix": rust_pdm, "compute_npe": rust_npe}
 
 
-def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+def _load_mojo_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._npe_mojo import (
         _ensure_exe,
         compute_npe_mojo,
@@ -62,7 +62,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
     }
 
 
-def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+def _load_julia_fns() -> dict[str, object]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._npe_julia import (
@@ -76,7 +76,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
     }
 
 
-def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+def _load_go_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._npe_go import (
         _load_lib,
         compute_npe_go,
@@ -173,7 +173,7 @@ def phase_distance_matrix(phases: FloatArray) -> FloatArray:
             flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
             return np.asarray(flat, dtype=np.float64).reshape(n, n)
         except Exception:
-            pass
+            backend_fn = None
 
     diff = phases[:, np.newaxis] - phases[np.newaxis, :]
     return np.asarray(np.abs(np.arctan2(np.sin(diff), np.cos(diff))), dtype=np.float64)
@@ -205,7 +205,7 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
                 )
             )
         except Exception:
-            pass
+            backend_fn = None
 
     dist = phase_distance_matrix(phases)
     triu_idx = np.triu_indices(n, k=1)

@@ -30,7 +30,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 try:
     from spo_kernel import event_phase as _rust_event_phase
-except ImportError:  # pragma: no cover - optional runtime acceleration path
+except ImportError:
     _rust_event_phase = None
 
 
@@ -118,7 +118,7 @@ class InformationalExtractor(PhaseExtractor):
                 ]
             except Exception:
                 # Preserve validated Python semantics on optional-kernel failures.
-                pass
+                quality = 0.0
 
         inst_freq = 1.0 / intervals  # Hz
         omega_median = float(np.median(inst_freq)) * TWO_PI  # rad/s

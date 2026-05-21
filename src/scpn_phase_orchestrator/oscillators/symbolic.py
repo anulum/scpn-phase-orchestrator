@@ -35,12 +35,16 @@ SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE = 0.5
 try:
     from spo_kernel import (
         graph_walk_phases_rust as _rust_graph_walk_phases,
+    )
+    from spo_kernel import (
         ring_phases_rust as _rust_ring_phases,
+    )
+    from spo_kernel import (
         transition_qualities_rust as _rust_transition_qualities,
     )
 
     _HAS_RUST_SYMBOLIC = True
-except ModuleNotFoundError:  # pragma: no cover - optional Rust backend
+except (ImportError, ModuleNotFoundError):
     _HAS_RUST_SYMBOLIC = False
 
 
@@ -104,7 +108,9 @@ class SymbolicExtractor(PhaseExtractor):
         node_id: str = "sym",
         mode: str = "ring",
         *,
-        initial_transition_quality: float = SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE,
+        initial_transition_quality: float = (
+            SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE
+        ),
     ):
         """
         Args:

@@ -341,7 +341,9 @@ class TestEmbeddingBackendFallbacks:
     def test_delay_embed_backend_failure_falls_back_to_python(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def _raising_de(_signal: np.ndarray, _delay: int, _dimension: int) -> np.ndarray:
+        def _raising_de(
+            _signal: np.ndarray, _delay: int, _dimension: int
+        ) -> np.ndarray:
             raise RuntimeError("boom")
 
         monkeypatch.setattr(
@@ -387,7 +389,9 @@ class TestEmbeddingBackendFallbacks:
     def test_optimal_delay_rust_failure_falls_back_to_python(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def _raising_optimal_delay(_signal: np.ndarray, _max_lag: int, _n_bins: int) -> int:
+        def _raising_optimal_delay(
+            _signal: np.ndarray, _max_lag: int, _n_bins: int
+        ) -> int:
             raise RuntimeError("boom")
 
         previous = em_mod.ACTIVE_BACKEND

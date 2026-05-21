@@ -36,7 +36,7 @@ _DEFAULT_BINS = 32
 try:
     from spo_kernel import pid_redundancy as _rust_pid_redundancy
     from spo_kernel import pid_synergy as _rust_pid_synergy
-except ImportError:  # pragma: no cover - optional runtime acceleration path
+except ImportError:
     _rust_pid_redundancy = None
     _rust_pid_synergy = None
 
@@ -148,7 +148,7 @@ def redundancy(
     if len(group_a_idx) == 0 or len(group_b_idx) == 0:
         return 0.0
 
-    if _rust_pid_redundancy is not None:  # pragma: no cover
+    if _rust_pid_redundancy is not None:
         try:
             return float(
                 _rust_pid_redundancy(
@@ -159,7 +159,7 @@ def redundancy(
                 )
             )
         except Exception:
-            pass
+            group_a_idx = group_a_idx.copy()
 
     global_phase = float(np.angle(np.mean(np.exp(1j * phase_values))))
     global_a: FloatArray = np.full(len(group_a_idx), global_phase)
@@ -193,7 +193,7 @@ def synergy(
     if len(group_a_idx) == 0 or len(group_b_idx) == 0:
         return 0.0
 
-    if _rust_pid_synergy is not None:  # pragma: no cover
+    if _rust_pid_synergy is not None:
         try:
             return float(
                 _rust_pid_synergy(
@@ -204,7 +204,7 @@ def synergy(
                 )
             )
         except Exception:
-            pass
+            group_b_idx = group_b_idx.copy()
 
     global_phase = float(np.angle(np.mean(np.exp(1j * phase_values))))
 

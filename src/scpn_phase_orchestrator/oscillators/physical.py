@@ -33,7 +33,7 @@ ComplexArray: TypeAlias = NDArray[np.complex128]
 
 try:
     from spo_kernel import physical_extract as _rust_physical_extract
-except ImportError:  # pragma: no cover - optional runtime acceleration path
+except ImportError:
     _rust_physical_extract = None
 
 
@@ -85,7 +85,7 @@ class PhysicalExtractor(PhaseExtractor):
 
         analytic = hilbert(signal)
 
-        if _rust_physical_extract is not None:  # pragma: no cover
+        if _rust_physical_extract is not None:
             try:
                 theta, omega, amplitude, quality = _rust_physical_extract(
                     np.ascontiguousarray(np.real(analytic)),

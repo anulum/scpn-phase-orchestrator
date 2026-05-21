@@ -49,7 +49,7 @@ def _load_rust_fn() -> Callable[..., IntArray]:
     return cast("Callable[..., IntArray]", _rust)
 
 
-def _load_mojo_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
+def _load_mojo_fn() -> Callable[..., IntArray]:
     from ..experimental.accelerators.monitor._winding_mojo import (
         _ensure_exe,
         winding_numbers_mojo,
@@ -59,7 +59,7 @@ def _load_mojo_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchai
     return winding_numbers_mojo
 
 
-def _load_julia_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
+def _load_julia_fn() -> Callable[..., IntArray]:
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._winding_julia import (
@@ -69,7 +69,7 @@ def _load_julia_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolcha
     return winding_numbers_julia
 
 
-def _load_go_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
+def _load_go_fn() -> Callable[..., IntArray]:
     from ..experimental.accelerators.monitor._winding_go import (
         _load_lib,
         winding_numbers_go,
@@ -159,7 +159,7 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
         try:
             return np.asarray(backend_fn(flat, t, n), dtype=np.int64)
         except Exception:
-            pass
+            n = int(n)
 
     # Unwrap via cumulative phase increments to handle wrap-around correctly.
     dtheta = np.diff(phases_history, axis=0)

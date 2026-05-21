@@ -108,19 +108,16 @@ class TestRecurrenceMatrix:
 
         import scpn_phase_orchestrator.monitor.recurrence as rec_mod
 
-        previous_backend = rec_mod.ACTIVE_BACKEND
-        previous_loader = rec_mod._LOADERS["go"]
-        rec_mod.ACTIVE_BACKEND = "go"
-        monkeypatch.setitem(rec_mod._LOADERS, "go", lambda: {"rm": fake_rm})
-        try:
-            R = recurrence_matrix(
-                np.array([[0.0], [1.0]]),
-                epsilon=0.5,
-                metric="angular",
-            )
-        finally:
-            rec_mod.ACTIVE_BACKEND = previous_backend
-            monkeypatch.setitem(rec_mod._LOADERS, "go", previous_loader)
+        monkeypatch.setattr(
+            rec_mod,
+            "_dispatch",
+            lambda fn_name: fake_rm if fn_name == "rm" else None,
+        )
+        R = recurrence_matrix(
+            np.array([[0.0], [1.0]]),
+            epsilon=0.5,
+            metric="angular",
+        )
 
         np.testing.assert_array_equal(R, np.array([[True, False], [False, True]]))
         assert calls == [(2, 2, 0.5, True)]

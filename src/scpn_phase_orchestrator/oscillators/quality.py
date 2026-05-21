@@ -29,7 +29,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 try:
     from spo_kernel import PyPhaseQualityScorer as _RustPhaseQualityScorer
-except ImportError:  # pragma: no cover - optional runtime acceleration path
+except ImportError:
     _RustPhaseQualityScorer = None
 
 
@@ -98,6 +98,9 @@ class PhaseQualityScorer:
             raise ValueError("min_quality must be in [0, 1]")
         qualities = np.array([ps.quality for ps in phase_states])
         if self._rust is not None and min_quality == self._min_quality:
-            return np.asarray(self._rust.downweight_mask(qualities.tolist()), dtype=np.float64)
+            return np.asarray(
+                self._rust.downweight_mask(qualities.tolist()),
+                dtype=np.float64,
+            )
         mask = np.where(qualities >= min_quality, qualities, 0.0)
         return mask.astype(np.float64)
