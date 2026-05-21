@@ -119,7 +119,7 @@ class BoundaryObserver:
         for name, value in values.items():
             if not isinstance(name, str) or not name.strip():
                 raise ValueError(f"value keys must be non-empty strings, got {name!r}")
-            if isinstance(value, bool):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise ValueError(f"values[{name!r}] must be finite float, got {value!r}")
             if not isfinite(float(value)):
                 raise ValueError(f"values[{name!r}] must be finite float, got {value!r}")
