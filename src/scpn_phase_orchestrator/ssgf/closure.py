@@ -102,6 +102,8 @@ class CyberneticClosure:
             raise TypeError(f"phases must be numpy.ndarray, got {phases!r}")
         if phases.ndim != 1:
             raise ValueError(f"phases must be 1D vector, got shape {phases.shape!r}")
+        if np.issubdtype(phases.dtype, np.bool_):
+            raise ValueError("phases must not use boolean dtype")
         n_osc = self._carrier.decode().shape[0]
         if phases.shape[0] != n_osc:
             raise ValueError(
@@ -139,6 +141,8 @@ class CyberneticClosure:
             raise TypeError(f"phases must be numpy.ndarray, got {phases!r}")
         if phases.ndim != 1:
             raise ValueError(f"phases must be 1D vector, got shape {phases.shape!r}")
+        if np.issubdtype(phases.dtype, np.bool_):
+            raise ValueError("phases must not use boolean dtype")
         if isinstance(n_outer_steps, bool) or not isinstance(n_outer_steps, int):
             raise TypeError(
                 f"n_outer_steps must be a non-negative integer, got {n_outer_steps!r}"

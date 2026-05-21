@@ -652,6 +652,13 @@ def test_u1_cybernetic_closure_step_rejects_mismatched_phase_length() -> None:
         closure.step(np.zeros(3, dtype=float))
 
 
+def test_u1_cybernetic_closure_step_rejects_boolean_phase_vector() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    closure = CyberneticClosure(carrier=carrier)
+    with pytest.raises(ValueError, match="boolean dtype"):
+        closure.step(np.array([True, False, True, False], dtype=bool))
+
+
 def test_u1_tcbo_observer_rejects_invalid_tau() -> None:
     with pytest.raises(ValueError, match="within \\[0, 1\\]"):
         TCBOObserver(tau_h1=1.5)
