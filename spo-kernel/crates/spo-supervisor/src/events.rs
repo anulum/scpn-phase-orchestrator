@@ -9,6 +9,7 @@
 use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
+use spo_types::{SpoError, SpoResult};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EventKind {
@@ -30,6 +31,19 @@ impl RegimeEvent {
     #[must_use]
     pub fn new(kind: EventKind, step: u64, detail: String) -> Self {
         Self { kind, step, detail }
+    }
+
+    /// Build an event with strict payload validation.
+    ///
+    /// # Errors
+    /// Returns [`SpoError::InvalidConfig`] when `detail` is blank.
+    pub fn try_new(kind: EventKind, step: u64, detail: String) -> SpoResult<Self> {
+        if detail.trim().is_empty() {
+            return Err(SpoError::InvalidConfig(
+                "event detail must not be blank".into(),
+            ));
+        }
+        Ok(Self { kind, step, detail })
     }
 }
 
@@ -89,6 +103,11 @@ mod tests {
         assert_eq!(e.kind, EventKind::RegimeTransition);
         assert_eq!(e.step, 5);
         assert_eq!(e.detail, "a->b");
+    }
+
+    #[test]
+    fn event_try_new_rejects_blank_detail() {
+        assert!(RegimeEvent::try_new(EventKind::Manual, 1, " ".into()).is_err());
     }
 
     #[test]
