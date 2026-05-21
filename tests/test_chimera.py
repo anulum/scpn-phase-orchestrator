@@ -139,6 +139,67 @@ def test_local_order_parameter_falls_back_when_backend_raises(
     assert np.all(local <= 1.0)
 
 
+def test_dispatch_falls_back_to_python_when_loader_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    previous_backend = chimera_module.ACTIVE_BACKEND
+    previous_available = list(chimera_module.AVAILABLE_BACKENDS)
+    previous_loader = chimera_module._LOADERS["go"]
+    chimera_module.ACTIVE_BACKEND = "go"
+    chimera_module.AVAILABLE_BACKENDS = ["go", "python"]
+    chimera_module._BACKEND_CACHE.clear()
+    monkeypatch.setitem(
+        chimera_module._LOADERS,
+        "go",
+        lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+    )
+    try:
+        backend = chimera_module._dispatch()
+    finally:
+        chimera_module.ACTIVE_BACKEND = previous_backend
+        chimera_module.AVAILABLE_BACKENDS = previous_available
+        monkeypatch.setitem(chimera_module._LOADERS, "go", previous_loader)
+        chimera_module._BACKEND_CACHE.clear()
+
+    assert backend is None
+
+
+def test_dispatch_uses_cached_loader_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    previous_backend = chimera_module.ACTIVE_BACKEND
+    previous_available = list(chimera_module.AVAILABLE_BACKENDS)
+    previous_loader = chimera_module._LOADERS["go"]
+    chimera_module.ACTIVE_BACKEND = "go"
+    chimera_module.AVAILABLE_BACKENDS = ["go", "python"]
+    chimera_module._BACKEND_CACHE.clear()
+    call_count = 0
+
+    def fake_backend(
+        _phases: np.ndarray, _knm_flat: np.ndarray, n: int
+    ) -> np.ndarray:
+        return np.zeros(n, dtype=np.float64)
+
+    def loader():
+        nonlocal call_count
+        call_count += 1
+        return fake_backend
+
+    monkeypatch.setitem(chimera_module._LOADERS, "go", loader)
+    try:
+        b1 = chimera_module._dispatch()
+        b2 = chimera_module._dispatch()
+    finally:
+        chimera_module.ACTIVE_BACKEND = previous_backend
+        chimera_module.AVAILABLE_BACKENDS = previous_available
+        monkeypatch.setitem(chimera_module._LOADERS, "go", previous_loader)
+        chimera_module._BACKEND_CACHE.clear()
+
+    assert b1 is fake_backend
+    assert b2 is fake_backend
+    assert call_count == 1
+
+
 class TestChimeraPipelineWiring:
     """Pipeline: engine phases → detect_chimera → chimera_index."""
 
