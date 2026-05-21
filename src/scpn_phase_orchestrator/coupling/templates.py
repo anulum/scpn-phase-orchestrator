@@ -56,6 +56,10 @@ class KnmTemplateSet:
             raise ValueError("template description must be a non-empty string")
         if template.knm.ndim != 2 or template.alpha.ndim != 2:
             raise ValueError("template knm/alpha must be 2D matrices")
+        if not np.issubdtype(template.knm.dtype, np.floating) or not np.issubdtype(
+            template.alpha.dtype, np.floating
+        ):
+            raise ValueError("template knm/alpha must use floating-point dtypes")
         if template.knm.shape != template.alpha.shape:
             raise ValueError("template knm and alpha must have identical shapes")
         if template.knm.shape[0] != template.knm.shape[1]:

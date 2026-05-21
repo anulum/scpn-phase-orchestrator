@@ -72,6 +72,19 @@ def test_u1_knm_template_set_rejects_blank_description() -> None:
         )
 
 
+def test_u1_knm_template_set_rejects_non_float_dtype() -> None:
+    reg = KnmTemplateSet()
+    with pytest.raises(ValueError, match="floating-point dtypes"):
+        reg.add(
+            KnmTemplate(
+                name="bad_dtype",
+                knm=np.ones((2, 2), dtype=object),
+                alpha=np.ones((2, 2), dtype=object),
+                description="invalid",
+            )
+        )
+
+
 def test_u1_knm_template_set_get_rejects_blank_name() -> None:
     with pytest.raises(KeyError, match="non-empty string"):
         KnmTemplateSet().get("")
