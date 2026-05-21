@@ -1447,6 +1447,77 @@ def _load_lifecycle_remediation_deployment_handoff_payload(
     return handoff_payload
 
 
+def _load_lifecycle_remediation_scheduler_queue_payload(
+    queue_payload: dict[str, object],
+) -> dict[str, object]:
+    if (
+        queue_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1"
+    ):
+        raise click.ClickException(
+            "remediation scheduler queue schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1"
+        )
+    _require_sha256(queue_payload.get("scheduler_hash"), "scheduler_hash")
+    _require_sha256(queue_payload.get("plan_hash"), "plan_hash")
+    _require_sha256(queue_payload.get("execution_hash"), "execution_hash")
+    _require_sha256(queue_payload.get("handoff_hash"), "handoff_hash")
+    queue_entry_count = queue_payload.get("queue_entry_count")
+    queue_entries = queue_payload.get("queue_entries")
+    if not isinstance(queue_entry_count, int) or queue_entry_count < 0:
+        raise click.ClickException(
+            "remediation scheduler queue schema mismatch: "
+            "queue_entry_count must be non-negative"
+        )
+    if not isinstance(queue_entries, list):
+        raise click.ClickException(
+            "remediation scheduler queue schema mismatch: queue_entries must be a list"
+        )
+    if queue_entry_count != len(queue_entries):
+        raise click.ClickException(
+            "remediation scheduler queue schema mismatch: "
+            "queue_entry_count does not match queue_entries"
+        )
+    for entry in queue_entries:
+        if not isinstance(entry, dict):
+            raise click.ClickException(
+                "remediation scheduler queue schema mismatch: entry must be object"
+            )
+        _require_sha256(entry.get("entry_hash"), "entry_hash")
+        _require_sha256(entry.get("handoff_action_hash"), "handoff_action_hash")
+        _require_sha256(entry.get("action_hash"), "action_hash")
+        _require_sha256(entry.get("request_hash"), "request_hash")
+        action_type = entry.get("action_type")
+        if action_type not in {
+            "renew_approval",
+            "persist_request",
+            "register_storage_adapter",
+            "confirm_external_write",
+        }:
+            raise click.ClickException(
+                "remediation scheduler queue schema mismatch: unsupported action_type"
+            )
+        priority = entry.get("priority")
+        if not isinstance(priority, int) or priority < 1:
+            raise click.ClickException(
+                "remediation scheduler queue schema mismatch: "
+                "priority must be a positive integer"
+            )
+        schedule_epoch = entry.get("schedule_epoch")
+        if not isinstance(schedule_epoch, int) or schedule_epoch < 0:
+            raise click.ClickException(
+                "remediation scheduler queue schema mismatch: "
+                "schedule_epoch must be non-negative integer"
+            )
+        template = entry.get("scheduler_command_template")
+        if not isinstance(template, str) or not template:
+            raise click.ClickException(
+                "remediation scheduler queue schema mismatch: "
+                "scheduler_command_template must be non-empty"
+            )
+    return queue_payload
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -2750,6 +2821,139 @@ def plugins_lifecycle_remediation_scheduler_queue(
     }
     queue_payload["scheduler_hash"] = _record_hash(queue_payload)
     click.echo(json.dumps(queue_payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-remediation-scheduler-telemetry")
+@click.argument(
+    "scheduler_queue_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "action_status_json",
+    nargs=-1,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--as-of-epoch",
+    required=True,
+    type=int,
+    help="Telemetry snapshot epoch seconds (UTC).",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Scheduler component creating telemetry payload.",
+)
+def plugins_lifecycle_remediation_scheduler_telemetry(
+    scheduler_queue_json: Path,
+    action_status_json: tuple[Path, ...],
+    as_of_epoch: int,
+    created_by: str,
+) -> None:
+    """Emit deterministic operator telemetry for scheduler remediation queue."""
+    if not created_by:
+        raise click.ClickException(
+            "remediation scheduler telemetry schema mismatch: "
+            "created_by must be non-empty"
+        )
+    if as_of_epoch < 0:
+        raise click.ClickException(
+            "remediation scheduler telemetry schema mismatch: "
+            "as_of_epoch must be non-negative"
+        )
+    queue = _load_lifecycle_remediation_scheduler_queue_payload(
+        _load_json_file(scheduler_queue_json, artifact="remediation scheduler queue")
+    )
+    status_by_action_hash: dict[str, dict[str, object]] = {}
+    for path in action_status_json:
+        status = _load_lifecycle_remediation_action_status_payload(
+            _load_json_file(path, artifact="remediation action status")
+        )
+        action_hash = status.action_hash
+        if action_hash in status_by_action_hash:
+            raise click.ClickException(
+                "remediation scheduler telemetry schema mismatch: "
+                "duplicate action status action_hash"
+            )
+        status_by_action_hash[action_hash] = {
+            "state": status.state,
+            "status_hash": status.status_hash,
+            "updated_by": status.updated_by,
+            "note": status.note,
+        }
+
+    queue_entries = cast(list[dict[str, object]], queue["queue_entries"])
+    state_counts: dict[str, int] = {
+        "pending": 0,
+        "in_progress": 0,
+        "completed": 0,
+        "blocked": 0,
+        "overdue": 0,
+    }
+    rows: list[dict[str, object]] = []
+    overdue_action_hashes: list[str] = []
+    for entry in sorted(
+        queue_entries,
+        key=lambda item: (
+            cast(int, item["schedule_epoch"]),
+            cast(int, item["priority"]),
+            str(item["action_hash"]),
+        ),
+    ):
+        action_hash = _require_sha256(entry.get("action_hash"), "action_hash")
+        schedule_epoch = cast(int, entry["schedule_epoch"])
+        status_record = status_by_action_hash.get(action_hash)
+        if status_record is None:
+            state = "pending"
+            status_hash: str | None = None
+            updated_by: str | None = None
+            note = ""
+        else:
+            state = cast(str, status_record["state"])
+            status_hash = _require_sha256(status_record["status_hash"], "status_hash")
+            updated_by = cast(str, status_record["updated_by"])
+            note = cast(str, status_record["note"])
+        overdue = state in {"pending", "in_progress", "blocked"} and (
+            schedule_epoch < as_of_epoch
+        )
+        state_counts[state] += 1
+        if overdue:
+            state_counts["overdue"] += 1
+            overdue_action_hashes.append(action_hash)
+        row: dict[str, object] = {
+            "entry_hash": entry["entry_hash"],
+            "handoff_action_hash": entry["handoff_action_hash"],
+            "action_hash": action_hash,
+            "request_hash": entry["request_hash"],
+            "action_type": entry["action_type"],
+            "priority": entry["priority"],
+            "schedule_epoch": schedule_epoch,
+            "state": state,
+            "overdue": overdue,
+            "status_hash": status_hash,
+            "updated_by": updated_by,
+            "note": note,
+        }
+        rows.append(row)
+    telemetry_payload: dict[str, object] = {
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_"
+            "remediation_scheduler_telemetry_v1"
+        ),
+        "version": "1.0.0",
+        "plan_hash": _require_sha256(queue.get("plan_hash"), "plan_hash"),
+        "execution_hash": _require_sha256(queue.get("execution_hash"), "execution_hash"),
+        "handoff_hash": _require_sha256(queue.get("handoff_hash"), "handoff_hash"),
+        "scheduler_hash": _require_sha256(queue.get("scheduler_hash"), "scheduler_hash"),
+        "as_of_epoch": as_of_epoch,
+        "queue_entry_count": len(queue_entries),
+        "state_counts": state_counts,
+        "overdue_action_hashes": sorted(overdue_action_hashes),
+        "rows": rows,
+        "created_by": created_by,
+    }
+    telemetry_payload["telemetry_hash"] = _record_hash(telemetry_payload)
+    click.echo(json.dumps(telemetry_payload, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

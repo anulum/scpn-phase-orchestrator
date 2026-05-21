@@ -4146,6 +4146,235 @@ def test_plugins_lifecycle_remediation_scheduler_queue_rejects_window_overflow(
     assert "exceeds scheduler window duration" in result.output
 
 
+def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
+    runner,
+    tmp_path: Path,
+):
+    lifecycle = runner.invoke(
+        main,
+        ["plugins", "lifecycle-status", str(_write_request_payload_from_cli(runner, tmp_path))],
+    )
+    assert lifecycle.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle.output, encoding="utf-8")
+    summary = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary.exit_code == 0
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(summary.output, encoding="utf-8")
+    policy = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert policy.exit_code == 0
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(policy.output, encoding="utf-8")
+    drilldown = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-multistore-drilldown",
+            str(policy_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert drilldown.exit_code == 0
+    drilldown_path = tmp_path / "drilldown.json"
+    drilldown_path.write_text(drilldown.output, encoding="utf-8")
+    plan = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-orchestration",
+            str(drilldown_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert plan.exit_code == 0
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(plan.output, encoding="utf-8")
+    plan_payload = json.loads(plan.output)
+    first_action_hash = plan_payload["actions"][0]["action_hash"]
+    status = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-action-status",
+            str(plan_path),
+            first_action_hash,
+            "--state",
+            "completed",
+            "--updated-by",
+            "deployment_gate",
+        ],
+    )
+    assert status.exit_code == 0
+    status_path = tmp_path / "status.json"
+    status_path.write_text(status.output, encoding="utf-8")
+    execution_dashboard = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-execution-dashboard",
+            str(plan_path),
+            str(status_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert execution_dashboard.exit_code == 0
+    execution_dashboard_path = tmp_path / "execution-dashboard.json"
+    execution_dashboard_path.write_text(
+        execution_dashboard.output, encoding="utf-8"
+    )
+    handoff = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-deployment-handoff",
+            str(execution_dashboard_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert handoff.exit_code == 0
+    handoff_path = tmp_path / "handoff.json"
+    handoff_path.write_text(handoff.output, encoding="utf-8")
+    queue = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-queue",
+            str(handoff_path),
+            "--window-start-epoch",
+            "1700000000",
+            "--window-duration-seconds",
+            "3600",
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+    assert queue.exit_code == 0
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(queue.output, encoding="utf-8")
+
+    telemetry = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-telemetry",
+            str(queue_path),
+            str(status_path),
+            "--as-of-epoch",
+            "1700000100",
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+    assert telemetry.exit_code == 0
+    payload = json.loads(telemetry.output)
+    assert (
+        payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_telemetry_v1"
+    )
+    assert payload["queue_entry_count"] == len(payload["rows"])
+    assert len(payload["telemetry_hash"]) == 64
+    assert payload["state_counts"]["completed"] >= 1
+    assert payload["state_counts"]["overdue"] >= 1
+    for row in payload["rows"]:
+        if row["state"] == "completed":
+            assert row["overdue"] is False
+
+
+def test_plugins_lifecycle_remediation_scheduler_telemetry_rejects_duplicate_status(
+    runner,
+    tmp_path: Path,
+):
+    queue_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1",
+        "version": "1.0.0",
+        "plan_hash": "1" * 64,
+        "execution_hash": "2" * 64,
+        "handoff_hash": "3" * 64,
+        "window_start_epoch": 1700000000,
+        "window_duration_seconds": 3600,
+        "queue_entries": [
+            {
+                "entry_hash": "4" * 64,
+                "handoff_action_hash": "5" * 64,
+                "action_hash": "6" * 64,
+                "request_hash": "7" * 64,
+                "action_type": "renew_approval",
+                "priority": 1,
+                "schedule_epoch": 1700000000,
+                "scheduler_command_template": "spo plugins approve-execution-plan PLAN_JSON",
+            }
+        ],
+        "queue_entry_count": 1,
+        "created_by": "deployment_scheduler",
+    }
+    queue_payload["scheduler_hash"] = hashlib.sha256(
+        json.dumps(queue_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps(queue_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    status_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_action_status_v1",
+        "version": "1.0.0",
+        "plan_hash": "1" * 64,
+        "action_hash": "6" * 64,
+        "request_hash": "7" * 64,
+        "state": "pending",
+        "updated_by": "deployment_scheduler",
+        "note": "",
+    }
+    status_payload["status_hash"] = hashlib.sha256(
+        json.dumps(status_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    status_path_a = tmp_path / "status-a.json"
+    status_path_b = tmp_path / "status-b.json"
+    status_blob = json.dumps(status_payload, indent=2, sort_keys=True)
+    status_path_a.write_text(status_blob, encoding="utf-8")
+    status_path_b.write_text(status_blob, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-scheduler-telemetry",
+            str(queue_path),
+            str(status_path_a),
+            str(status_path_b),
+            "--as-of-epoch",
+            "1700000200",
+            "--created-by",
+            "deployment_scheduler",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "duplicate action status action_hash" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,
