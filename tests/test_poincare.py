@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import poincare as poincare_module
 from scpn_phase_orchestrator.monitor.poincare import (
     PoincareResult,
     phase_poincare,
@@ -114,6 +115,56 @@ class TestPoincareSection:
 
         assert result.crossings.shape == (1, 1)
 
+    def test_section_uses_backend_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[np.ndarray, int, int, np.ndarray, float, int]] = []
+
+        def _fake_section(
+            traj_flat: np.ndarray,
+            t: int,
+            d: int,
+            normal: np.ndarray,
+            offset: float,
+            direction_id: int,
+        ) -> tuple[np.ndarray, np.ndarray, int]:
+            calls.append((traj_flat, t, d, normal, offset, direction_id))
+            cr = np.array([0.0], dtype=np.float64)
+            times = np.array([0.5], dtype=np.float64)
+            return cr, times, 1
+
+        monkeypatch.setattr(
+            poincare_module,
+            "_dispatch",
+            lambda _fn_name: _fake_section,
+        )
+        result = poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
+        assert result.crossings.shape == (1, 1)
+        assert result.crossing_times.shape == (1,)
+        assert len(calls) == 1
+
+    def test_section_falls_back_when_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_section(
+            _traj_flat: np.ndarray,
+            _t: int,
+            _d: int,
+            _normal: np.ndarray,
+            _offset: float,
+            _direction_id: int,
+        ) -> tuple[np.ndarray, np.ndarray, int]:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            poincare_module,
+            "_dispatch",
+            lambda _fn_name: _raising_section,
+        )
+        result = poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
+        assert result.crossings.shape == (1, 1)
+        assert result.crossing_times.shape == (1,)
+
 
 class TestReturnTimes:
     def test_returns_array(self):
@@ -185,6 +236,53 @@ class TestPhasePoincare:
     def test_accepts_array_like_phase_history(self) -> None:
         result = phase_poincare([[0.0], [2.0 * np.pi + 0.1]])
 
+        assert result.crossings.shape[1] == 1
+
+    def test_phase_uses_backend_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[np.ndarray, int, int, int, float]] = []
+
+        def _fake_phase(
+            phases_flat: np.ndarray,
+            t: int,
+            n: int,
+            oscillator_idx: int,
+            section_phase: float,
+        ) -> tuple[np.ndarray, np.ndarray, int]:
+            calls.append((phases_flat, t, n, oscillator_idx, section_phase))
+            cr = np.array([0.1, 0.2], dtype=np.float64)
+            times = np.array([0.25], dtype=np.float64)
+            return cr, times, 1
+
+        monkeypatch.setattr(
+            poincare_module,
+            "_dispatch",
+            lambda _fn_name: _fake_phase,
+        )
+        result = phase_poincare([[0.0, 0.0], [0.2, 0.3]], oscillator_idx=0)
+        assert result.crossings.shape == (1, 2)
+        assert result.crossing_times.shape == (1,)
+        assert len(calls) == 1
+
+    def test_phase_falls_back_when_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_phase(
+            _phases_flat: np.ndarray,
+            _t: int,
+            _n: int,
+            _oscillator_idx: int,
+            _section_phase: float,
+        ) -> tuple[np.ndarray, np.ndarray, int]:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            poincare_module,
+            "_dispatch",
+            lambda _fn_name: _raising_phase,
+        )
+        result = phase_poincare([[0.0], [2.0 * np.pi + 0.1]], oscillator_idx=0)
         assert result.crossings.shape[1] == 1
 
 

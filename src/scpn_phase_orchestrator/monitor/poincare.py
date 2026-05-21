@@ -140,13 +140,23 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_CACHE: dict[str, dict[str, object]] = {}
+
+
+def _load_backend(name: str) -> dict[str, object]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -160,7 +170,10 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 def _dispatch(fn_name: str) -> object | None:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+    try:
+        return _load_backend(ACTIVE_BACKEND)[fn_name]
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return None
 
 
 def _validate_state_history(value: object, *, name: str) -> FloatArray:
@@ -280,15 +293,18 @@ def poincare_section(
             "tuple[FloatArray, FloatArray, int]]",
             backend_fn,
         )
-        cr_flat, times, n_cr = fn(
-            traj.ravel(),
-            t,
-            d,
-            norm_vec,
-            offset,
-            int(direction_id),
-        )
-        return _assemble_result(cr_flat, times, n_cr, d)
+        try:
+            cr_flat, times, n_cr = fn(
+                traj.ravel(),
+                t,
+                d,
+                norm_vec,
+                offset,
+                int(direction_id),
+            )
+            return _assemble_result(cr_flat, times, n_cr, d)
+        except Exception:
+            pass
 
     n = norm_vec / norm_mag
     signed_dist = traj @ n - offset
@@ -350,14 +366,17 @@ def phase_poincare(
             "tuple[FloatArray, FloatArray, int]]",
             backend_fn,
         )
-        cr_flat, times, n_cr = fn(
-            phases.ravel(),
-            t,
-            n,
-            oscillator_idx,
-            section_phase,
-        )
-        return _assemble_result(cr_flat, times, n_cr, n)
+        try:
+            cr_flat, times, n_cr = fn(
+                phases.ravel(),
+                t,
+                n,
+                oscillator_idx,
+                section_phase,
+            )
+            return _assemble_result(cr_flat, times, n_cr, n)
+        except Exception:
+            pass
 
     target = np.unwrap(phases[:, oscillator_idx])
     shifted = (target - section_phase) % (2 * np.pi)
