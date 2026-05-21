@@ -113,6 +113,12 @@ def test_u1_geometry_carrier_update_rejects_non_positive_epsilon() -> None:
         carrier.update(cost=0.1, epsilon=0.0)
 
 
+def test_u1_geometry_carrier_update_rejects_non_callable_cost_fn() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    with pytest.raises(TypeError, match="callable or None"):
+        carrier.update(cost=0.1, cost_fn=1.0)  # type: ignore[arg-type]
+
+
 def test_u1_geometry_carrier_decode_rejects_wrong_shape() -> None:
     carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
     with pytest.raises(ValueError, match="length 2"):

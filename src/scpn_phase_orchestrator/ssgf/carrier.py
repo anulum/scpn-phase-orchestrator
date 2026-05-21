@@ -152,6 +152,8 @@ class GeometryCarrier:
             or float(epsilon) <= 0.0
         ):
             raise ValueError(f"epsilon must be a finite positive real, got {epsilon!r}")
+        if cost_fn is not None and not callable(cost_fn):
+            raise TypeError(f"cost_fn must be callable or None, got {cost_fn!r}")
         self._step += 1
         grad: FloatArray = np.zeros(self._z_dim)
 
