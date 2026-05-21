@@ -114,6 +114,8 @@ class TCBOObserver:
             raise ValueError(f"phases must be a 1D vector, got shape {phases.shape!r}")
         if phases.size == 0:
             raise ValueError("phases must be non-empty")
+        if np.issubdtype(phases.dtype, np.bool_):
+            raise ValueError("phases must not use boolean dtype")
         if not np.isfinite(phases).all():
             raise ValueError("phases must contain only finite values")
         self._history.append(phases.copy())
