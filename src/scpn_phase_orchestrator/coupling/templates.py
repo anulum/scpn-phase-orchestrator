@@ -81,8 +81,9 @@ class KnmTemplateSet:
         """Retrieve a template by name. Raises KeyError if not found."""
         if not isinstance(name, str) or not name.strip():
             raise KeyError(f"template name must be a non-empty string, got {name!r}")
+        normalized = name.strip()
         try:
-            return self._templates[name]
+            return self._templates[normalized]
         except KeyError:
             available = ", ".join(sorted(self._templates)) or "(none)"
             msg = f"Unknown template {name!r}; available: {available}"

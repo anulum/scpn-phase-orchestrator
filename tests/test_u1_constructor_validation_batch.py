@@ -95,6 +95,18 @@ def test_u1_knm_template_set_get_rejects_whitespace_name() -> None:
         KnmTemplateSet().get("   ")
 
 
+def test_u1_knm_template_set_get_strips_lookup_name() -> None:
+    reg = KnmTemplateSet()
+    tpl = KnmTemplate(
+        name="k",
+        knm=np.ones((2, 2), dtype=float),
+        alpha=np.ones((2, 2), dtype=float),
+        description="ok",
+    )
+    reg.add(tpl)
+    assert reg.get(" k ") is tpl
+
+
 def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
     with pytest.raises(TypeError, match="BoundaryDef"):
         BoundaryObserver([object()])  # type: ignore[list-item]
