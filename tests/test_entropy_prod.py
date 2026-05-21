@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import entropy_prod as entropy_prod_module
 from scpn_phase_orchestrator.monitor.entropy_prod import entropy_production_rate
 
 
@@ -149,3 +150,54 @@ class TestEntropyProdPipelineWiring:
         )
         assert rate >= 0.0
         assert np.isfinite(rate)
+
+
+class TestEntropyProdRustDispatch:
+    def test_entropy_production_uses_backend_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[np.ndarray, np.ndarray, np.ndarray, float, float]] = []
+
+        def _fake_backend(
+            phases: np.ndarray,
+            omegas: np.ndarray,
+            knm: np.ndarray,
+            alpha: float,
+            dt: float,
+        ) -> float:
+            calls.append((phases, omegas, knm, alpha, dt))
+            return 0.777
+
+        monkeypatch.setattr(entropy_prod_module, "_dispatch", lambda: _fake_backend)
+        rate = entropy_production_rate(
+            np.array([0.0, 1.0], dtype=np.float64),
+            np.array([1.0, 2.0], dtype=np.float64),
+            np.array([[0.0, 0.5], [0.5, 0.0]], dtype=np.float64),
+            alpha=1.0,
+            dt=0.01,
+        )
+        assert rate == pytest.approx(0.777, abs=1e-12)
+        assert len(calls) == 1
+
+    def test_entropy_production_falls_back_when_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _raising_backend(
+            _phases: np.ndarray,
+            _omegas: np.ndarray,
+            _knm: np.ndarray,
+            _alpha: float,
+            _dt: float,
+        ) -> float:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(entropy_prod_module, "_dispatch", lambda: _raising_backend)
+        rate = entropy_production_rate(
+            np.array([0.0, 1.0], dtype=np.float64),
+            np.array([1.0, 2.0], dtype=np.float64),
+            np.array([[0.0, 0.5], [0.5, 0.0]], dtype=np.float64),
+            alpha=1.0,
+            dt=0.01,
+        )
+        assert np.isfinite(rate)
+        assert rate >= 0.0

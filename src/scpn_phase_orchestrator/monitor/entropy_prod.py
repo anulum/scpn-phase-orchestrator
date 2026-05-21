@@ -96,13 +96,23 @@ _LOADERS: dict[str, Callable[[], Callable[..., float]]] = {
     "julia": _load_julia_fn,
     "go": _load_go_fn,
 }
+_BACKEND_CACHE: dict[str, Callable[..., float]] = {}
+
+
+def _load_backend(name: str) -> Callable[..., float]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -116,7 +126,10 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 def _dispatch() -> Callable[..., float] | None:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()
+    try:
+        return _load_backend(ACTIVE_BACKEND)
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return None
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
@@ -199,7 +212,10 @@ def entropy_production_rate(
         return 0.0
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return float(backend_fn(phases, omegas, knm, alpha, dt))
+        try:
+            return float(backend_fn(phases, omegas, knm, alpha, dt))
+        except Exception:
+            pass
 
     diff = phases[np.newaxis, :] - phases[:, np.newaxis]
     coupling = np.sum(knm * np.sin(diff), axis=1)
