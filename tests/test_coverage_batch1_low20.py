@@ -200,6 +200,13 @@ def test_nn_inverse_window_and_symmetry_helpers() -> None:
     assert float(sym[0, 1]) == pytest.approx(float(sym[1, 0]))
 
 
+def test_nn_inverse_window_helper_handles_oversized_window() -> None:
+    observed = jnp.array([[0.0, 0.1], [0.2, 0.3], [0.4, 0.5]], dtype=jnp.float32)
+    starts, targets = _build_windows(observed, 8)
+    assert starts.shape == (0, 2)
+    assert targets.shape == (0, 8, 2)
+
+
 def test_nn_oim_energy_and_violation_paths() -> None:
     phases = jnp.array([0.0, 2.1, 4.2], dtype=jnp.float32)
     adjacency = jnp.array(
