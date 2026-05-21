@@ -130,6 +130,11 @@ class TestBOLDFromNeural:
         bold_1hz = bold_from_neural(impulse, DT, dt_bold=1.0)
         assert bold_2hz.shape[0] == 2 * bold_1hz.shape[0]
 
+    def test_dt_bold_smaller_than_dt_uses_no_downsample(self):
+        neural = jnp.ones((128, N), dtype=jnp.float32) * 0.1
+        bold = bold_from_neural(neural, DT, dt_bold=DT * 0.25)
+        assert bold.shape == neural.shape
+
 
 class TestBOLDPipelineWiring:
     """Verify BOLD generator wires into the Kuramoto→BOLD pipeline:
