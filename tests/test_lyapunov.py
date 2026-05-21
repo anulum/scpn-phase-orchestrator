@@ -275,3 +275,70 @@ class TestLyapunovRustDispatch:
         )
         assert spec.shape == (3,)
         assert np.all(np.isfinite(spec))
+
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = lyapunov_mod.ACTIVE_BACKEND
+        previous_available = list(lyapunov_mod.AVAILABLE_BACKENDS)
+        previous_loader = lyapunov_mod._LOADERS["go"]
+        lyapunov_mod.ACTIVE_BACKEND = "go"
+        lyapunov_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        lyapunov_mod._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            lyapunov_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend = lyapunov_mod._dispatch()
+        finally:
+            lyapunov_mod.ACTIVE_BACKEND = previous_backend
+            lyapunov_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(lyapunov_mod._LOADERS, "go", previous_loader)
+            lyapunov_mod._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = lyapunov_mod.ACTIVE_BACKEND
+        previous_available = list(lyapunov_mod.AVAILABLE_BACKENDS)
+        previous_loader = lyapunov_mod._LOADERS["go"]
+        lyapunov_mod.ACTIVE_BACKEND = "go"
+        lyapunov_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        lyapunov_mod._BACKEND_CACHE.clear()
+        call_count = 0
+
+        def fake_backend(
+            _phases: np.ndarray,
+            _omegas: np.ndarray,
+            _knm: np.ndarray,
+            _alpha: np.ndarray,
+            _dt: float,
+            _n_steps: int,
+            _qr_interval: int,
+            _zeta: float,
+            _psi: float,
+        ) -> np.ndarray:
+            return np.zeros(3, dtype=np.float64)
+
+        def loader():
+            nonlocal call_count
+            call_count += 1
+            return fake_backend
+
+        monkeypatch.setitem(lyapunov_mod._LOADERS, "go", loader)
+        try:
+            b1 = lyapunov_mod._dispatch()
+            b2 = lyapunov_mod._dispatch()
+        finally:
+            lyapunov_mod.ACTIVE_BACKEND = previous_backend
+            lyapunov_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(lyapunov_mod._LOADERS, "go", previous_loader)
+            lyapunov_mod._BACKEND_CACHE.clear()
+
+        assert b1 is fake_backend
+        assert b2 is fake_backend
+        assert call_count == 1

@@ -119,12 +119,20 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> LyapunovBackendFn | None:
-    if ACTIVE_BACKEND == "python":
-        return None
-    try:
-        return _load_backend(ACTIVE_BACKEND)
-    except (ImportError, RuntimeError, OSError, KeyError):
-        return None
+    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    deduped: list[str] = []
+    for backend in ordered_backends:
+        if backend in deduped:
+            continue
+        deduped.append(backend)
+    for backend in deduped:
+        if backend == "python":
+            return None
+        try:
+            return _load_backend(backend)
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
+    return None
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
