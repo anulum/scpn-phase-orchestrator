@@ -133,7 +133,20 @@ class VisualizerStreamer:
 
     def _make_send_cleanup_callback(self, client: Any) -> Callable[[Any], None]:
         def _cleanup_send_result(send_result: Any) -> None:
-            if send_result.cancelled() or send_result.exception() is not None:
+            try:
+                cancelled = bool(send_result.cancelled())
+            except (AttributeError, RuntimeError, TypeError):
+                self._clients.discard(client)
+                return
+            if cancelled:
+                self._clients.discard(client)
+                return
+            try:
+                failed = send_result.exception() is not None
+            except (RuntimeError, TypeError):
+                self._clients.discard(client)
+                return
+            if failed:
                 self._clients.discard(client)
 
         return _cleanup_send_result

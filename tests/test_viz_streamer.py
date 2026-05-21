@@ -422,6 +422,25 @@ def test_send_cleanup_callback_discards_cancelled_send_result():
     assert client not in visualizer._clients
 
 
+def test_send_cleanup_callback_discards_client_when_exception_probe_raises():
+    """Malformed future objects must fail closed during exception probing."""
+
+    class RaisingFuture:
+        def cancelled(self) -> bool:
+            return False
+
+        def exception(self, timeout: float | None = None):
+            raise RuntimeError("future exception probe failed")
+
+    client = object()
+    visualizer = VisualizerStreamer()
+    visualizer._clients.add(client)
+
+    visualizer._make_send_cleanup_callback(client)(RaisingFuture())
+
+    assert client not in visualizer._clients
+
+
 def test_handler_removes_client_after_normal_close():
     """A normally closed WebSocket must leave no stale client registration."""
 
