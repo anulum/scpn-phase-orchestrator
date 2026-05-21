@@ -14,3 +14,15 @@ Contract:
 
 Verification:
 - `tests/test_coverage_batch1_low20.py::test_nn_supervisor_validation_helpers_and_json_paths`
+
+## `scpn_phase_orchestrator.nn.functional`
+
+Contract:
+1. Masked and unmasked Kuramoto/Winfree stepping keep phase vectors bounded on
+   `[0, 2π)` and preserve expected tensor shapes.
+2. SAF helper paths operate on finite coupling/frequency arrays without
+   producing non-finite outputs.
+
+Verification:
+- `tests/test_coverage_batch1_low20.py::test_nn_functional_masked_and_winfree_paths`
+- `tests/test_coverage_batch1_low20.py::test_nn_functional_plv_and_laplacian_shapes`

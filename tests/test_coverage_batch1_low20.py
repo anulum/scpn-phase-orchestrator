@@ -27,9 +27,11 @@ from scpn_phase_orchestrator.apps.queuewaves.config import (
 from scpn_phase_orchestrator.apps.queuewaves.server import create_app
 from scpn_phase_orchestrator.nn import runtime as nn_runtime
 from scpn_phase_orchestrator.nn.functional import (
+    coupling_laplacian,
     kuramoto_forward_masked,
     kuramoto_step_masked,
     order_parameter,
+    plv,
     saf_loss,
     winfree_forward,
 )
@@ -165,6 +167,16 @@ def test_nn_functional_masked_and_winfree_paths() -> None:
     k_small = jnp.array([[0.0, 0.2], [0.2, 0.0]], dtype=jnp.float32)
     o_small = jnp.array([0.1, 0.4], dtype=jnp.float32)
     assert jnp.isfinite(saf_loss(k_small, o_small, 0.5))
+
+
+def test_nn_functional_plv_and_laplacian_shapes() -> None:
+    trajectory = jnp.array([[0.0, 0.2], [0.1, 0.3], [0.2, 0.4]], dtype=jnp.float32)
+    plv_matrix = plv(trajectory)
+    assert plv_matrix.shape == (2, 2)
+    k = jnp.array([[0.0, 1.0], [1.0, 0.0]], dtype=jnp.float32)
+    lap = coupling_laplacian(k)
+    assert lap.shape == (2, 2)
+    assert jnp.isfinite(lap).all()
 
 
 def test_nn_inverse_window_and_symmetry_helpers() -> None:
