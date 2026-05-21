@@ -201,12 +201,40 @@ _LOADERS: dict[str, Callable[[], Any]] = {
     "go": _load_go_primitive,
 }
 
+_PRIMITIVE_CACHE: dict[
+    str, Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]
+] = {}
+_PRIM_CACHE: (
+    dict[str, Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]] | None
+) = _PRIMITIVE_CACHE
+
+
+def _load_primitive_backend(
+    name: str,
+) -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
+    global _PRIM_CACHE
+    if _PRIM_CACHE is None:
+        _PRIM_CACHE = {}
+    cached = _PRIM_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _PRIM_CACHE[name] = loaded
+    return loaded
+
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    global _RUST_CACHE, _PRIM_CACHE
+    _RUST_CACHE = None
+    if _PRIM_CACHE is not None:
+        _PRIM_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            if name == "rust":
+                _LOADERS[name]()
+            else:
+                _load_primitive_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -217,11 +245,6 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 _RUST_CACHE: dict[str, Any] | None = None
-_PRIM_CACHE: (
-    dict[str, Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]] | None
-) = {}
-
-
 def _rust_bundle() -> dict[str, Any]:
     global _RUST_CACHE
     if _RUST_CACHE is None:
@@ -230,9 +253,6 @@ def _rust_bundle() -> dict[str, Any]:
 
 
 def _primitive() -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
-    global _PRIM_CACHE
-    if _PRIM_CACHE is None:
-        _PRIM_CACHE = {}
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -243,14 +263,10 @@ def _primitive() -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
             if backend == "python":
                 return _python_spectral_eig
             continue
-        cached = _PRIM_CACHE.get(backend)
-        if cached is not None:
-            return cached
         try:
-            loaded = _LOADERS[backend]()
+            loaded = _load_primitive_backend(backend)
         except (ImportError, RuntimeError, OSError, KeyError):
             continue
-        _PRIM_CACHE[backend] = loaded
         return loaded
     return _python_spectral_eig
 
