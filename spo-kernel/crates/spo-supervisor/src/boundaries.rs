@@ -35,14 +35,40 @@ pub struct BoundaryState {
 pub struct BoundaryObserver;
 
 impl BoundaryObserver {
+    fn is_valid_def(def: &BoundaryDef) -> bool {
+        if def.name.trim().is_empty() || def.variable.trim().is_empty() {
+            return false;
+        }
+        if def.lower.is_some_and(|v| !v.is_finite()) || def.upper.is_some_and(|v| !v.is_finite())
+        {
+            return false;
+        }
+        if let (Some(lo), Some(hi)) = (def.lower, def.upper) {
+            return lo <= hi;
+        }
+        true
+    }
+
     #[must_use]
     pub fn observe(defs: &[BoundaryDef], values: &HashMap<String, f64>) -> BoundaryState {
         let mut state = BoundaryState::default();
 
         for bdef in defs {
+            if !Self::is_valid_def(bdef) {
+                continue;
+            }
             let val = match values.get(&bdef.variable) {
-                Some(&v) => v,
+                Some(&v) if v.is_finite() => v,
                 None => continue,
+                Some(_) => {
+                    let msg = format!(
+                        "{}: {} is non-finite and treated as hard violation",
+                        bdef.name, bdef.variable
+                    );
+                    state.violations.push(msg.clone());
+                    state.hard_violations.push(msg);
+                    continue;
+                }
             };
 
             let mut violated = false;
@@ -166,5 +192,30 @@ mod tests {
         values.insert("x".into(), 1.5);
         let state = BoundaryObserver::observe(&[def], &values);
         assert_eq!(state.violations.len(), 1);
+    }
+
+    #[test]
+    fn invalid_definition_is_ignored() {
+        let def = BoundaryDef {
+            name: " ".into(),
+            variable: "x".into(),
+            lower: Some(2.0),
+            upper: Some(1.0),
+            severity: Severity::Hard,
+        };
+        let mut values = HashMap::new();
+        values.insert("x".into(), 3.0);
+        let state = BoundaryObserver::observe(&[def], &values);
+        assert!(state.violations.is_empty());
+    }
+
+    #[test]
+    fn non_finite_observed_value_is_hard_violation() {
+        let defs = vec![r_boundary()];
+        let mut values = HashMap::new();
+        values.insert("R".into(), f64::NAN);
+        let state = BoundaryObserver::observe(&defs, &values);
+        assert_eq!(state.hard_violations.len(), 1);
+        assert_eq!(state.soft_violations.len(), 0);
     }
 }
