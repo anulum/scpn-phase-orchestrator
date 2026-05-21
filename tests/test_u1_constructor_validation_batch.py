@@ -40,6 +40,12 @@ def test_u1_action_projector_rejects_non_finite_previous_value() -> None:
         projector.project(action, float("inf"))
 
 
+def test_u1_action_projector_rejects_non_action_payload() -> None:
+    projector = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 1.0)})
+    with pytest.raises(TypeError, match="ControlAction"):
+        projector.project(object(), 0.0)  # type: ignore[arg-type]
+
+
 def test_u1_knm_template_set_rejects_non_square_template() -> None:
     reg = KnmTemplateSet()
     with pytest.raises(ValueError, match="square"):
