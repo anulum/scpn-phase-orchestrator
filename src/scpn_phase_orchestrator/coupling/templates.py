@@ -73,6 +73,8 @@ class KnmTemplateSet:
 
     def get(self, name: str) -> KnmTemplate:
         """Retrieve a template by name. Raises KeyError if not found."""
+        if not isinstance(name, str) or not name.strip():
+            raise KeyError(f"template name must be a non-empty string, got {name!r}")
         try:
             return self._templates[name]
         except KeyError:
