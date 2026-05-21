@@ -419,3 +419,16 @@ def test_u1_petri_adapter_accepts_whitespace_wrapped_regime_name() -> None:
         place_to_regime={"nominal": " nominal "},
     )
     assert adapter.step({"stability_proxy": 0.0}).value == "nominal"
+
+
+def test_u1_petri_adapter_accepts_whitespace_wrapped_place_key() -> None:
+    net = PetriNet(
+        places=[Place("nominal")],
+        transitions=[Transition(name="noop", inputs=[], outputs=[])],
+    )
+    adapter = PetriNetAdapter(
+        net=net,
+        initial_marking=Marking(tokens={"nominal": 1}),
+        place_to_regime={" nominal ": "nominal"},
+    )
+    assert adapter.step({"stability_proxy": 0.0}).value == "nominal"
