@@ -1816,6 +1816,121 @@ def plugins_lifecycle_renewal_queue(
     click.echo(json.dumps(queue_payload, indent=2, sort_keys=True))
 
 
+@plugins_group.command("lifecycle-multistore-dashboard")
+@click.argument(
+    "policy_json",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the multi-store dashboard.",
+)
+def plugins_lifecycle_multistore_dashboard(
+    policy_json: tuple[Path, ...],
+    created_by: str,
+) -> None:
+    """Emit a deterministic aggregate dashboard across policy reports."""
+    if not created_by:
+        raise click.ClickException(
+            "multi-store dashboard schema mismatch: created_by must be non-empty"
+        )
+    policies = tuple(
+        _load_lifecycle_policy_report_payload(
+            _load_json_file(path, artifact="lifecycle policy")
+        )
+        for path in policy_json
+    )
+    policy_hashes = tuple(
+        sorted(
+            _require_sha256(policy["policy_hash"], "policy_hash")
+            for policy in policies
+        )
+    )
+    if len(set(policy_hashes)) != len(policy_hashes):
+        raise click.ClickException("duplicate lifecycle policy hash")
+    summary_hashes = tuple(
+        sorted(
+            _require_sha256(policy["summary_hash"], "summary_hash")
+            for policy in policies
+        )
+    )
+    unique_requests: set[str] = set()
+    action_totals: dict[str, int] = {
+        "confirm_external_write": 0,
+        "persist_request": 0,
+        "register_storage_adapter": 0,
+        "renew_approval": 0,
+    }
+    renewal_required: set[str] = set()
+    storage_missing: set[str] = set()
+    missing_adapters: set[str] = set()
+    external_followup: set[str] = set()
+
+    for policy in policies:
+        request_count = policy["request_count"]
+        if not isinstance(request_count, int):
+            raise click.ClickException(
+                "lifecycle policy schema mismatch: request_count must be an integer"
+            )
+        unique_requests.update(
+            cast(list[str], policy["renewal_required_request_hashes"])
+        )
+        unique_requests.update(
+            cast(list[str], policy["storage_missing_request_hashes"])
+        )
+        unique_requests.update(
+            cast(list[str], policy["missing_adapter_request_hashes"])
+        )
+        unique_requests.update(
+            cast(list[str], policy["external_write_followup_request_hashes"])
+        )
+        policy_actions = policy.get("policy_action_counts")
+        if not isinstance(policy_actions, dict):
+            raise click.ClickException(
+                "lifecycle policy schema mismatch: policy_action_counts is malformed"
+            )
+        for key in action_totals:
+            value = policy_actions.get(key, 0)
+            if not isinstance(value, int) or value < 0:
+                raise click.ClickException(
+                    "lifecycle policy schema mismatch: "
+                    "policy_action_counts is malformed"
+                )
+            action_totals[key] += value
+        renewal_required.update(
+            cast(list[str], policy["renewal_required_request_hashes"])
+        )
+        storage_missing.update(
+            cast(list[str], policy["storage_missing_request_hashes"])
+        )
+        missing_adapters.update(
+            cast(list[str], policy["missing_adapter_request_hashes"])
+        )
+        external_followup.update(
+            cast(list[str], policy["external_write_followup_request_hashes"])
+        )
+
+    dashboard_payload: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_multistore_dashboard_v1",
+        "version": "1.0.0",
+        "policy_count": len(policies),
+        "policy_hashes": list(policy_hashes),
+        "summary_hashes": list(summary_hashes),
+        "aggregated_policy_action_counts": action_totals,
+        "renewal_required_request_hashes": sorted(renewal_required),
+        "storage_missing_request_hashes": sorted(storage_missing),
+        "missing_adapter_request_hashes": sorted(missing_adapters),
+        "external_write_followup_request_hashes": sorted(external_followup),
+        "unique_flagged_request_count": len(unique_requests),
+        "created_by": created_by,
+    }
+    dashboard_payload["dashboard_hash"] = _record_hash(dashboard_payload)
+    click.echo(json.dumps(dashboard_payload, indent=2, sort_keys=True))
+
+
 @plugins_group.command("revoke-execution-request")
 @click.argument(
     "request_json",

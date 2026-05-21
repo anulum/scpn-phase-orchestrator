@@ -2865,6 +2865,242 @@ def test_plugins_lifecycle_renewal_queue_rejects_policy_summary_mismatch(
     assert "summary_hash does not match lifecycle summary" in result.output
 
 
+def test_plugins_lifecycle_multistore_dashboard_aggregates_policy_reports(
+    runner,
+    tmp_path: Path,
+):
+    tmp_a = tmp_path / "a"
+    tmp_b = tmp_path / "b"
+    tmp_a.mkdir(parents=True, exist_ok=True)
+    tmp_b.mkdir(parents=True, exist_ok=True)
+    request_a = _write_request_payload_from_cli(runner, tmp_a)
+    request_b = _write_request_payload_from_cli(runner, tmp_b)
+
+    lifecycle_a = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_a),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    revocation_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revoke-execution-request",
+            str(request_b),
+            "--revoked-by",
+            "deployment_gate",
+            "--revocation-reference",
+            "REV-2026-05-21-MS",
+            "--revocation-reason",
+            "operator rotation",
+        ],
+    )
+    assert revocation_b.exit_code == 0
+    revocation_b_path = tmp_path / "revocation-b.json"
+    revocation_b_path.write_text(revocation_b.output, encoding="utf-8")
+    revocation_list_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert revocation_list_b.exit_code == 0
+    revocation_list_b_path = tmp_path / "revocation-list-b.json"
+    revocation_list_b_path.write_text(revocation_list_b.output, encoding="utf-8")
+    lifecycle_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_b),
+            "--revocation-list",
+            str(revocation_list_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle_a.exit_code == 0
+    assert lifecycle_b.exit_code == 0
+    lifecycle_a_path = tmp_path / "lifecycle-a.json"
+    lifecycle_b_path = tmp_path / "lifecycle-b.json"
+    lifecycle_a_path.write_text(lifecycle_a.output, encoding="utf-8")
+    lifecycle_b_path.write_text(lifecycle_b.output, encoding="utf-8")
+
+    summary_a = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_a_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    summary_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary_a.exit_code == 0
+    assert summary_b.exit_code == 0
+    summary_a_path = tmp_path / "summary-a.json"
+    summary_b_path = tmp_path / "summary-b.json"
+    summary_a_path.write_text(summary_a.output, encoding="utf-8")
+    summary_b_path.write_text(summary_b.output, encoding="utf-8")
+
+    policy_a = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_a_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    policy_b = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert policy_a.exit_code == 0
+    assert policy_b.exit_code == 0
+    policy_a_path = tmp_path / "policy-a.json"
+    policy_b_path = tmp_path / "policy-b.json"
+    policy_a_path.write_text(policy_a.output, encoding="utf-8")
+    policy_b_path.write_text(policy_b.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-multistore-dashboard",
+            str(policy_a_path),
+            str(policy_b_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    policy_a_payload = json.loads(policy_a_path.read_text(encoding="utf-8"))
+    policy_b_payload = json.loads(policy_b_path.read_text(encoding="utf-8"))
+    payload = json.loads(result.output)
+    assert (
+        payload["schema"]
+        == "scpn_plugin_execution_request_lifecycle_multistore_dashboard_v1"
+    )
+    assert payload["policy_count"] == 2
+    assert payload["policy_hashes"] == sorted(
+        [policy_a_payload["policy_hash"], policy_b_payload["policy_hash"]]
+    )
+    expected_action_counts = {
+        key: policy_a_payload["policy_action_counts"][key]
+        + policy_b_payload["policy_action_counts"][key]
+        for key in (
+            "confirm_external_write",
+            "persist_request",
+            "register_storage_adapter",
+            "renew_approval",
+        )
+    }
+    assert payload["aggregated_policy_action_counts"] == expected_action_counts
+    expected_unique = set(policy_a_payload["renewal_required_request_hashes"])
+    expected_unique.update(policy_a_payload["storage_missing_request_hashes"])
+    expected_unique.update(policy_a_payload["missing_adapter_request_hashes"])
+    expected_unique.update(
+        policy_a_payload["external_write_followup_request_hashes"]
+    )
+    expected_unique.update(policy_b_payload["renewal_required_request_hashes"])
+    expected_unique.update(policy_b_payload["storage_missing_request_hashes"])
+    expected_unique.update(policy_b_payload["missing_adapter_request_hashes"])
+    expected_unique.update(
+        policy_b_payload["external_write_followup_request_hashes"]
+    )
+    assert payload["unique_flagged_request_count"] == len(expected_unique)
+    assert len(payload["dashboard_hash"]) == 64
+
+
+def test_plugins_lifecycle_multistore_dashboard_rejects_duplicate_policy_hash(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    lifecycle_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle_result.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle_result.output, encoding="utf-8")
+    summary_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary_result.exit_code == 0
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(summary_result.output, encoding="utf-8")
+    policy_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert policy_result.exit_code == 0
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(policy_result.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-multistore-dashboard",
+            str(policy_path),
+            str(policy_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "duplicate lifecycle policy hash" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,
