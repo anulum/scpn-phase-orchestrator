@@ -104,6 +104,26 @@ def _validate_non_negative_real(value: Any, field: str) -> float:
     return value_f
 
 
+def _resolve_stream_max_steps(request: Any) -> int:
+    raw_max_steps = getattr(request, "max_steps", None)
+    if raw_max_steps is None:
+        return 100
+    if not isinstance(raw_max_steps, int) or isinstance(raw_max_steps, bool):
+        raise ValueError("max_steps must be a positive integer")
+    if raw_max_steps < 0:
+        raise ValueError("max_steps must be a positive integer")
+    if raw_max_steps == 0:
+        list_fields = getattr(request, "ListFields", None)
+        if callable(list_fields):
+            populated = list_fields()
+            for descriptor, _value in populated:
+                if getattr(descriptor, "name", None) == "max_steps":
+                    raise ValueError("max_steps must be a positive integer")
+            return 100
+        raise ValueError("max_steps must be a positive integer")
+    return raw_max_steps
+
+
 def _log_state_rpc(
     rpc: str,
     response: StateResponse,
@@ -244,9 +264,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
     def StreamPhases(self, request: Any, context: Any) -> Iterator[StateResponse]:
         """Read-only observer: streams snapshots without advancing simulation."""
         self._authorise(context)
-        max_steps = getattr(request, "max_steps", None)
-        if max_steps is None:
-            max_steps = 100
+        max_steps = _resolve_stream_max_steps(request)
         interval = getattr(request, "interval_s", 0.05)
         try:
             max_steps = _validate_positive_int(max_steps, "max_steps")

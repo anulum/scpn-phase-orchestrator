@@ -104,11 +104,28 @@ def test_stream_rejects_invalid_max_steps():
         list(svc.StreamPhases(req, _FakeContext()))
 
 
-def test_stream_rejects_zero_max_steps():
+def test_stream_rejects_zero_max_steps_for_non_protobuf_requests():
     svc = _make_servicer()
-    req = StreamRequest(max_steps=0, interval_s=0.0)
+    req = type("StreamRequest", (), {"max_steps": 0, "interval_s": 0.0})()
     with pytest.raises(PermissionError, match="max_steps"):
         list(svc.StreamPhases(req, _FakeContext()))
+
+
+def test_stream_treats_unset_protobuf_zero_max_steps_as_default():
+    svc = _make_servicer()
+
+    class _Descriptor:
+        name = "interval_s"
+
+    class _ProtoLikeRequest:
+        max_steps = 0
+        interval_s = 0.0
+
+        def ListFields(self):
+            return [(_Descriptor(), 0.0)]
+
+    results = list(svc.StreamPhases(_ProtoLikeRequest(), _FakeContext()))
+    assert len(results) == 100
 
 
 def test_stream_rejects_invalid_interval():
