@@ -1151,6 +1151,41 @@ def _load_storage_adapter_from_payload(
     )
 
 
+def _load_lifecycle_policy_report_payload(
+    policy_payload: dict[str, object],
+) -> dict[str, object]:
+    if (
+        policy_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_policy_v1"
+    ):
+        raise click.ClickException(
+            "lifecycle policy schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_policy_v1"
+        )
+    _require_sha256(policy_payload.get("summary_hash"), "summary_hash")
+    _require_sha256(policy_payload.get("policy_hash"), "policy_hash")
+    request_count = policy_payload.get("request_count")
+    if not isinstance(request_count, int) or request_count < 1:
+        raise click.ClickException(
+            "lifecycle policy schema mismatch: request_count must be a positive integer"
+        )
+    for field_name in (
+        "renewal_required_request_hashes",
+        "missing_adapter_request_hashes",
+        "external_write_followup_request_hashes",
+    ):
+        value = policy_payload.get(field_name)
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) for item in value
+        ):
+            raise click.ClickException(
+                f"lifecycle policy schema mismatch: {field_name} must be a string list"
+            )
+        for item in value:
+            _require_sha256(item, field_name)
+    return policy_payload
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -1702,6 +1737,83 @@ def plugins_lifecycle_policy_report(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(json.dumps(report.audit_record, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-renewal-queue")
+@click.argument(
+    "summary_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--policy-report",
+    "policy_report_path",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Lifecycle policy report JSON to add adapter/write follow-up queues.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the renewal queue.",
+)
+def plugins_lifecycle_renewal_queue(
+    summary_json: Path,
+    policy_report_path: Path | None,
+    created_by: str,
+) -> None:
+    """Emit a deterministic renewal/follow-up queue for lifecycle operations."""
+    summary = _load_lifecycle_summary_from_payload(
+        _load_json_file(summary_json, artifact="lifecycle summary")
+    )
+    policy_payload: dict[str, object] | None = None
+    if policy_report_path is not None:
+        policy_payload = _load_lifecycle_policy_report_payload(
+            _load_json_file(policy_report_path, artifact="lifecycle policy")
+        )
+        if policy_payload["summary_hash"] != summary.summary_hash:
+            raise click.ClickException(
+                "lifecycle policy summary_hash does not match lifecycle summary"
+            )
+        if policy_payload["request_count"] != summary.request_count:
+            raise click.ClickException(
+                "lifecycle policy request_count does not match lifecycle summary"
+            )
+
+    renewal_hashes = tuple(sorted(summary.renewal_required_request_hashes))
+    storage_missing_hashes = tuple(sorted(summary.storage_missing_request_hashes))
+    missing_adapter_hashes: tuple[str, ...] = ()
+    external_followup_hashes: tuple[str, ...] = ()
+    if policy_payload is not None:
+        missing_adapter_hashes = tuple(
+            sorted(
+                cast(
+                    list[str],
+                    policy_payload["missing_adapter_request_hashes"],
+                )
+            )
+        )
+        external_followup_hashes = tuple(
+            sorted(
+                cast(
+                    list[str],
+                    policy_payload["external_write_followup_request_hashes"],
+                )
+            )
+        )
+
+    queue_payload: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_renewal_queue_v1",
+        "version": "1.0.0",
+        "summary_hash": summary.summary_hash,
+        "request_count": summary.request_count,
+        "renewal_required_request_hashes": list(renewal_hashes),
+        "storage_missing_request_hashes": list(storage_missing_hashes),
+        "missing_adapter_request_hashes": list(missing_adapter_hashes),
+        "external_write_followup_request_hashes": list(external_followup_hashes),
+        "created_by": created_by,
+    }
+    queue_payload["queue_hash"] = _record_hash(queue_payload)
+    click.echo(json.dumps(queue_payload, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")
