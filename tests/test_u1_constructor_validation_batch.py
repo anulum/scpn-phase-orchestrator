@@ -700,6 +700,12 @@ def test_u1_tcbo_observer_observe_rejects_non_vector_input() -> None:
         obs.observe(np.zeros((2, 2), dtype=float))
 
 
+def test_u1_tcbo_observer_observe_rejects_empty_input() -> None:
+    obs = TCBOObserver()
+    with pytest.raises(ValueError, match="non-empty"):
+        obs.observe(np.array([], dtype=float))
+
+
 def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
     net = PetriNet(
         places=[Place("nominal")],
