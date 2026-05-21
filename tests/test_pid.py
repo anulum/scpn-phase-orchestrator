@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import pid as pid_module
 from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
 from tests.typing_contracts import assert_precise_ndarray_hint
 
@@ -185,3 +186,79 @@ class TestPIDPipelineWiring:
 
         assert r1 == pytest.approx(r2, abs=0.0)
         assert s1 == pytest.approx(s2, abs=0.0)
+
+
+class TestPIDRustDispatch:
+    def test_redundancy_uses_rust_kernel_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        calls: list[tuple[np.ndarray, list[int], list[int], int]] = []
+
+        def _fake_rust_red(
+            phases: np.ndarray,
+            group_a: list[int],
+            group_b: list[int],
+            n_bins: int,
+        ) -> float:
+            calls.append((phases, group_a, group_b, n_bins))
+            return 0.42
+
+        monkeypatch.setattr(pid_module, "_rust_pid_redundancy", _fake_rust_red)
+        phases = np.linspace(0.0, 2 * np.pi, 16, dtype=np.float64)
+        val = redundancy(phases, [0, 1, 2], [3, 4, 5], n_bins=8)
+        assert val == pytest.approx(0.42, abs=1e-12)
+        assert len(calls) == 1
+
+    def test_redundancy_falls_back_when_rust_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        def _raising_rust_red(
+            _phases: np.ndarray,
+            _group_a: list[int],
+            _group_b: list[int],
+            _n_bins: int,
+        ) -> float:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(pid_module, "_rust_pid_redundancy", _raising_rust_red)
+        phases = np.linspace(0.0, 2 * np.pi, 16, dtype=np.float64)
+        val = redundancy(phases, [0, 1, 2], [3, 4, 5], n_bins=8)
+        assert np.isfinite(val)
+        assert val >= 0.0
+
+    def test_synergy_uses_rust_kernel_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        calls: list[tuple[np.ndarray, list[int], list[int], int]] = []
+
+        def _fake_rust_syn(
+            phases: np.ndarray,
+            group_a: list[int],
+            group_b: list[int],
+            n_bins: int,
+        ) -> float:
+            calls.append((phases, group_a, group_b, n_bins))
+            return 0.37
+
+        monkeypatch.setattr(pid_module, "_rust_pid_synergy", _fake_rust_syn)
+        phases = np.linspace(0.0, 2 * np.pi, 16, dtype=np.float64)
+        val = synergy(phases, [0, 1, 2], [3, 4, 5], n_bins=8)
+        assert val == pytest.approx(0.37, abs=1e-12)
+        assert len(calls) == 1
+
+    def test_synergy_falls_back_when_rust_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        def _raising_rust_syn(
+            _phases: np.ndarray,
+            _group_a: list[int],
+            _group_b: list[int],
+            _n_bins: int,
+        ) -> float:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(pid_module, "_rust_pid_synergy", _raising_rust_syn)
+        phases = np.linspace(0.0, 2 * np.pi, 16, dtype=np.float64)
+        val = synergy(phases, [0, 1, 2], [3, 4, 5], n_bins=8)
+        assert np.isfinite(val)
+        assert val >= 0.0

@@ -23,8 +23,6 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
-
 __all__ = ["redundancy", "synergy"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -34,6 +32,13 @@ IntArray: TypeAlias = NDArray[np.int64]
 # Circular MI estimate via binned phase histograms
 
 _DEFAULT_BINS = 32
+
+try:
+    from spo_kernel import pid_redundancy as _rust_pid_redundancy
+    from spo_kernel import pid_synergy as _rust_pid_synergy
+except ImportError:  # pragma: no cover - optional runtime acceleration path
+    _rust_pid_redundancy = None
+    _rust_pid_synergy = None
 
 
 def _validate_n_bins(value: object) -> int:
@@ -143,17 +148,18 @@ def redundancy(
     if len(group_a_idx) == 0 or len(group_b_idx) == 0:
         return 0.0
 
-    if _HAS_RUST:  # pragma: no cover
-        from spo_kernel import pid_redundancy as _rust_red
-
-        return float(
-            _rust_red(
-                np.ascontiguousarray(phase_values.ravel()),
-                group_a_idx.tolist(),
-                group_b_idx.tolist(),
-                bin_count,
+    if _rust_pid_redundancy is not None:  # pragma: no cover
+        try:
+            return float(
+                _rust_pid_redundancy(
+                    np.ascontiguousarray(phase_values.ravel()),
+                    group_a_idx.tolist(),
+                    group_b_idx.tolist(),
+                    bin_count,
+                )
             )
-        )
+        except Exception:
+            pass
 
     global_phase = float(np.angle(np.mean(np.exp(1j * phase_values))))
     global_a: FloatArray = np.full(len(group_a_idx), global_phase)
@@ -187,17 +193,18 @@ def synergy(
     if len(group_a_idx) == 0 or len(group_b_idx) == 0:
         return 0.0
 
-    if _HAS_RUST:  # pragma: no cover
-        from spo_kernel import pid_synergy as _rust_syn
-
-        return float(
-            _rust_syn(
-                np.ascontiguousarray(phase_values.ravel()),
-                group_a_idx.tolist(),
-                group_b_idx.tolist(),
-                bin_count,
+    if _rust_pid_synergy is not None:  # pragma: no cover
+        try:
+            return float(
+                _rust_pid_synergy(
+                    np.ascontiguousarray(phase_values.ravel()),
+                    group_a_idx.tolist(),
+                    group_b_idx.tolist(),
+                    bin_count,
+                )
             )
-        )
+        except Exception:
+            pass
 
     global_phase = float(np.angle(np.mean(np.exp(1j * phase_values))))
 
