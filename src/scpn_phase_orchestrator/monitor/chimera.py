@@ -101,13 +101,23 @@ _LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
     "julia": _load_julia_fn,
     "go": _load_go_fn,
 }
+_BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
+
+
+def _load_backend(name: str) -> Callable[..., FloatArray]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
@@ -121,7 +131,10 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 def _dispatch() -> Callable[..., FloatArray] | None:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()
+    try:
+        return _load_backend(ACTIVE_BACKEND)
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return None
 
 
 @dataclass(frozen=True)
@@ -181,7 +194,10 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
 
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return np.asarray(backend_fn(phases, knm_flat, n), dtype=np.float64)
+        try:
+            return np.asarray(backend_fn(phases, knm_flat, n), dtype=np.float64)
+        except Exception:
+            pass
 
     r_local = np.zeros(n, dtype=np.float64)
     knm_2d = knm_flat.reshape(n, n)

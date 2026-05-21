@@ -9,8 +9,14 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
-from scpn_phase_orchestrator.monitor.chimera import ChimeraState, detect_chimera
+from scpn_phase_orchestrator.monitor import chimera as chimera_module
+from scpn_phase_orchestrator.monitor.chimera import (
+    ChimeraState,
+    detect_chimera,
+    local_order_parameter,
+)
 
 
 def _uniform_knm(n: int, strength: float = 1.0) -> np.ndarray:
@@ -96,6 +102,41 @@ def test_dataclass_fields():
     assert state.coherent_indices == [0, 1]
     assert state.incoherent_indices == [3]
     assert state.chimera_index == 0.25
+
+
+def test_local_order_parameter_uses_backend_when_available(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    calls: list[tuple[np.ndarray, np.ndarray, int]] = []
+
+    def _fake_backend(phases: np.ndarray, knm_flat: np.ndarray, n: int) -> np.ndarray:
+        calls.append((phases, knm_flat, n))
+        return np.ones(n, dtype=np.float64)
+
+    monkeypatch.setattr(chimera_module, "_dispatch", lambda: _fake_backend)
+    phases = np.array([0.0, 0.2, 0.4], dtype=np.float64)
+    knm = _uniform_knm(3)
+    local = local_order_parameter(phases, knm)
+    np.testing.assert_allclose(local, np.ones(3), atol=1e-12)
+    assert len(calls) == 1
+
+
+def test_local_order_parameter_falls_back_when_backend_raises(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def _raising_backend(
+        _phases: np.ndarray, _knm_flat: np.ndarray, _n: int
+    ) -> np.ndarray:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(chimera_module, "_dispatch", lambda: _raising_backend)
+    phases = np.array([0.0, 0.2, 0.4], dtype=np.float64)
+    knm = _uniform_knm(3)
+    local = local_order_parameter(phases, knm)
+    assert local.shape == (3,)
+    assert np.all(np.isfinite(local))
+    assert np.all(local >= 0.0)
+    assert np.all(local <= 1.0)
 
 
 class TestChimeraPipelineWiring:
