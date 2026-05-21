@@ -17,6 +17,7 @@ from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
 from scpn_phase_orchestrator.ssgf.closure import CyberneticClosure
+from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver
 
 
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
@@ -56,3 +57,8 @@ def test_u1_cybernetic_closure_rejects_negative_max_steps() -> None:
     carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
     with pytest.raises(ValueError, match="non-negative integer"):
         CyberneticClosure(carrier=carrier, max_steps=-1)
+
+
+def test_u1_tcbo_observer_rejects_invalid_tau() -> None:
+    with pytest.raises(ValueError, match="within \\[0, 1\\]"):
+        TCBOObserver(tau_h1=1.5)

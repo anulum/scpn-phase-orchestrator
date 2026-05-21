@@ -25,6 +25,8 @@ or make safety-critical decisions by itself.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -74,6 +76,24 @@ class TCBOObserver:
         window_size: int = 50,
         beta: float = 8.0,
     ):
+        if any(
+            isinstance(v, bool) or not isinstance(v, Real)
+            for v in (tau_h1, beta)
+        ) or not isfinite(float(tau_h1)) or not isfinite(float(beta)):
+            raise TypeError("tau_h1 and beta must be finite real values")
+        if not 0.0 <= float(tau_h1) <= 1.0:
+            raise ValueError(f"tau_h1 must be within [0, 1], got {tau_h1!r}")
+        if float(beta) <= 0.0:
+            raise ValueError(f"beta must be > 0, got {beta!r}")
+        for name, value in (
+            ("embed_dim", embed_dim),
+            ("embed_delay", embed_delay),
+            ("window_size", window_size),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be a positive integer, got {value!r}")
+            if value <= 0:
+                raise ValueError(f"{name} must be a positive integer, got {value!r}")
         self._tau_h1 = tau_h1
         self._embed_dim = embed_dim
         self._embed_delay = embed_delay
