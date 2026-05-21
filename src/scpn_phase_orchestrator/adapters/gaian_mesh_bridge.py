@@ -45,6 +45,18 @@ class PeerState:
     psi: float
     timestamp: float
 
+    def __post_init__(self) -> None:
+        self.node_id = require_non_empty_str(self.node_id, field="node_id")
+        if any(ord(char) < 32 for char in self.node_id):
+            raise ValueError("node_id must not contain control characters")
+        self.R = _require_unit_interval(self.R, field="R")
+        self.psi = _require_finite_real(self.psi, field="psi", positive=False)
+        self.timestamp = _require_finite_real(
+            self.timestamp,
+            field="timestamp",
+            positive=False,
+        )
+
 
 def _require_finite_real(
     value: object,

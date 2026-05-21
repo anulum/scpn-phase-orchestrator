@@ -50,6 +50,28 @@ class CoherenceMemorySnapshot:
     novelty_score: float
     consolidation_suggested: bool
 
+    def __post_init__(self) -> None:
+        self.R_global = _validated_unit_interval(self.R_global, name="R_global")
+        self.regime = _validated_label(self.regime, name="regime")
+        if (
+            not isinstance(self.n_entities, int)
+            or isinstance(self.n_entities, bool)
+            or self.n_entities < 0
+        ):
+            raise ValueError("n_entities must be a non-negative integer")
+        if (
+            not isinstance(self.n_memories, int)
+            or isinstance(self.n_memories, bool)
+            or self.n_memories < 0
+        ):
+            raise ValueError("n_memories must be a non-negative integer")
+        self.novelty_score = _validated_unit_interval(
+            self.novelty_score,
+            name="novelty_score",
+        )
+        if not isinstance(self.consolidation_suggested, bool):
+            raise ValueError("consolidation_suggested must be a bool")
+
 
 def _validated_remanentia_url(remanentia_url: object) -> str:
     if not isinstance(remanentia_url, str) or not remanentia_url.strip():

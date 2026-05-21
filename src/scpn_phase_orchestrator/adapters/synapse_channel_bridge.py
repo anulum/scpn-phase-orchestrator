@@ -35,6 +35,8 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
+from math import isfinite
+from numbers import Real
 from typing import Any, TypeAlias
 from urllib.parse import urlparse
 
@@ -94,6 +96,71 @@ class AgentState:
     phase_p: float = 0.0  # P-channel: heartbeat rhythm
     phase_i: float = 0.0  # I-channel: task cadence
     phase_s: float = 0.0  # S-channel: topic alignment
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.last_heartbeat, Real)
+            or isinstance(self.last_heartbeat, bool)
+            or not isfinite(float(self.last_heartbeat))
+            or float(self.last_heartbeat) < 0.0
+        ):
+            raise ValueError("last_heartbeat must be a finite non-negative real")
+        self.last_heartbeat = float(self.last_heartbeat)
+
+        if not isinstance(self.heartbeat_intervals, list):
+            raise ValueError("heartbeat_intervals must be a list of finite positives")
+        validated_intervals: list[float] = []
+        for item in self.heartbeat_intervals:
+            if (
+                not isinstance(item, Real)
+                or isinstance(item, bool)
+                or not isfinite(float(item))
+                or float(item) <= 0.0
+            ):
+                raise ValueError(
+                    "heartbeat_intervals must be a list of finite positives"
+                )
+            validated_intervals.append(float(item))
+        self.heartbeat_intervals = validated_intervals
+
+        if not isinstance(self.task_events, list):
+            raise ValueError("task_events must be a list of finite non-negative reals")
+        validated_events: list[float] = []
+        for item in self.task_events:
+            if (
+                not isinstance(item, Real)
+                or isinstance(item, bool)
+                or not isfinite(float(item))
+                or float(item) < 0.0
+            ):
+                raise ValueError(
+                    "task_events must be a list of finite non-negative reals"
+                )
+            validated_events.append(float(item))
+        self.task_events = validated_events
+
+        if (
+            not isinstance(self.message_count, int)
+            or isinstance(self.message_count, bool)
+            or self.message_count < 0
+        ):
+            raise ValueError("message_count must be a non-negative integer")
+
+        if self.current_task is not None:
+            if not isinstance(self.current_task, str) or not self.current_task:
+                raise ValueError("current_task must be None or a non-empty string")
+            if any(ord(char) < 32 for char in self.current_task):
+                raise ValueError("current_task must not contain control characters")
+
+        for field_name in ("phase_p", "phase_i", "phase_s"):
+            raw_value = getattr(self, field_name)
+            if (
+                not isinstance(raw_value, Real)
+                or isinstance(raw_value, bool)
+                or not isfinite(float(raw_value))
+            ):
+                raise ValueError(f"{field_name} must be finite")
+            setattr(self, field_name, float(raw_value) % TWO_PI)
 
 
 class SynapseChannelBridge:
