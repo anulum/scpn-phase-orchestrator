@@ -86,6 +86,7 @@ impl ActionProjector {
     ) -> Vec<ControlAction> {
         actions
             .iter()
+            .filter(|a| a.validate().is_ok())
             .map(|a| {
                 let prev = previous_values.get(&a.knob).copied().unwrap_or(0.0);
                 self.project(a, prev)
@@ -318,6 +319,15 @@ mod tests {
         let results = proj.project_batch(&actions, &prev);
         assert_eq!(results[0].value, 1.0);
         assert_eq!(results[1].value, 0.0);
+    }
+
+    #[test]
+    fn batch_projection_skips_invalid_actions() {
+        let proj = ActionProjector::new(HashMap::new(), HashMap::new());
+        let mut bad = make_action(Knob::K, 1.0);
+        bad.scope = String::new();
+        let results = proj.project_batch(&[bad], &HashMap::new());
+        assert!(results.is_empty());
     }
 
     #[test]
