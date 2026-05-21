@@ -5786,6 +5786,151 @@ def test_plugins_lifecycle_remediation_scheduler_retry_orchestration_rejects_dup
     assert "duplicate capture action_hash" in result.output
 
 
+def test_digital_twin_observability_bundle_outputs_prometheus_and_replay_linkage(
+    runner,
+    tmp_path: Path,
+):
+    evidence_payload = {
+        "contract_hash": "1" * 64,
+        "accepted_count": 7,
+        "rejected_count": 2,
+        "adapter_count": 3,
+        "unhealthy_adapter_count": 1,
+        "latest_sequence": 42,
+        "max_abs_twin_residual": 0.125,
+        "status": "warning",
+        "capability_counts": {"push": 2, "pull": 1},
+        "direction_counts": {"inbound": 5, "outbound": 4},
+        "mismatch_reasons": ["shape_mismatch", "shape_mismatch", "stale_sequence"],
+    }
+    evidence_path = tmp_path / "evidence.json"
+    evidence_path.write_text(
+        json.dumps(evidence_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    replay_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1",
+        "version": "1.0.0",
+        "adapter_handoff_hash": "2" * 64,
+        "plan_hash": "3" * 64,
+        "execution_hash": "4" * 64,
+        "telemetry_hash": "5" * 64,
+        "acknowledgement_count": 2,
+        "state_counts": {"in_progress": 0, "completed": 1, "blocked": 1},
+        "rows": [
+            {"action_hash": "6" * 64, "state": "completed"},
+            {"action_hash": "7" * 64, "state": "blocked"},
+        ],
+        "created_by": "deployment_scheduler",
+    }
+    replay_payload["replay_hash"] = hashlib.sha256(
+        json.dumps(replay_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    replay_path = tmp_path / "replay.json"
+    replay_path.write_text(
+        json.dumps(replay_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    dashboard_payload = {
+        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1",
+        "version": "1.0.0",
+        "plan_hash": "3" * 64,
+        "execution_hash": "4" * 64,
+        "handoff_hash": "8" * 64,
+        "scheduler_hash": "9" * 64,
+        "telemetry_hash": "5" * 64,
+        "replay_hash": replay_payload["replay_hash"],
+        "row_count": 2,
+        "state_counts": {
+            "pending": 0,
+            "in_progress": 0,
+            "completed": 1,
+            "blocked": 1,
+            "overdue": 1,
+        },
+        "rows": [
+            {"action_hash": "6" * 64, "effective_state": "completed", "overdue": False},
+            {"action_hash": "7" * 64, "effective_state": "blocked", "overdue": True},
+        ],
+        "created_by": "deployment_scheduler",
+    }
+    dashboard_payload["dashboard_hash"] = hashlib.sha256(
+        json.dumps(dashboard_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    dashboard_path = tmp_path / "dashboard.json"
+    dashboard_path.write_text(
+        json.dumps(dashboard_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "digital-twin-observability-bundle",
+            str(evidence_path),
+            "--scheduler-dashboard-json",
+            str(dashboard_path),
+            "--scheduler-replay-json",
+            str(replay_path),
+            "--created-by",
+            "operator_console",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_digital_twin_observability_bundle_v1"
+    assert "spo_digital_twin_sync_accepted_total" in payload["prometheus_text"]
+    assert payload["replay_linkage"]["scheduler_row_count"] == 2
+    assert payload["replay_linkage"]["scheduler_overdue_count"] == 1
+    assert payload["replay_linkage"]["scheduler_replay_count"] == 2
+    assert len(payload["bundle_hash"]) == 64
+
+
+def test_digital_twin_observability_bundle_rejects_bad_scheduler_dashboard_schema(
+    runner,
+    tmp_path: Path,
+):
+    evidence_payload = {
+        "contract_hash": "1" * 64,
+        "accepted_count": 1,
+        "rejected_count": 0,
+        "adapter_count": 1,
+        "unhealthy_adapter_count": 0,
+        "latest_sequence": 1,
+        "max_abs_twin_residual": 0.01,
+        "status": "healthy",
+        "capability_counts": {"push": 1},
+        "direction_counts": {"inbound": 1},
+        "mismatch_reasons": [],
+    }
+    evidence_path = tmp_path / "evidence.json"
+    evidence_path.write_text(
+        json.dumps(evidence_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    bad_dashboard = tmp_path / "bad-dashboard.json"
+    bad_dashboard.write_text(
+        json.dumps({"schema": "not_expected"}, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "digital-twin-observability-bundle",
+            str(evidence_path),
+            "--scheduler-dashboard-json",
+            str(bad_dashboard),
+            "--created-by",
+            "operator_console",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "unexpected scheduler dashboard schema" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,

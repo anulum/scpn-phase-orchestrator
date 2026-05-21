@@ -98,6 +98,7 @@ from scpn_phase_orchestrator.runtime.audit_stream import (
     read_event_stream,
     verify_event_stream_integrity,
 )
+from scpn_phase_orchestrator.runtime.observability import RuntimeObservability
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.scaffold.llm import (
     LLMScaffoldProvider,
@@ -5914,6 +5915,169 @@ def explain(
         wrote = True
     if not wrote:
         click.echo(render_markdown(explanation), nl=False)
+
+
+@main.command("digital-twin-observability-bundle")
+@click.argument(
+    "operator_evidence_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--scheduler-dashboard-json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Optional scheduler execution dashboard JSON for replay linkage.",
+)
+@click.option(
+    "--scheduler-replay-json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Optional scheduler acknowledgement replay JSON for replay linkage.",
+)
+@click.option(
+    "--metric-prefix",
+    default="spo",
+    show_default=True,
+    help="Prometheus metric prefix for rendered observability text.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator component creating the observability bundle artifact.",
+)
+def digital_twin_observability_bundle(
+    operator_evidence_json: Path,
+    scheduler_dashboard_json: Path | None,
+    scheduler_replay_json: Path | None,
+    metric_prefix: str,
+    created_by: str,
+) -> None:
+    """Bundle digital-twin Prometheus telemetry with replay linkage evidence."""
+    if not created_by:
+        raise click.ClickException(
+            "digital-twin observability bundle schema mismatch: "
+            "created_by must be non-empty"
+        )
+    evidence = _load_json_file(
+        operator_evidence_json,
+        artifact="digital-twin operator evidence",
+    )
+    observability = RuntimeObservability(metric_prefix=metric_prefix)
+    try:
+        prometheus_text = observability.digital_twin_prometheus_text(evidence)
+    except ValueError as exc:
+        raise click.ClickException(
+            f"digital-twin observability bundle schema mismatch: {exc}"
+        ) from exc
+
+    replay_linkage: dict[str, object] = {
+        "scheduler_dashboard_present": scheduler_dashboard_json is not None,
+        "scheduler_replay_present": scheduler_replay_json is not None,
+        "scheduler_row_count": 0,
+        "scheduler_overdue_count": 0,
+        "scheduler_blocked_count": 0,
+        "scheduler_completed_count": 0,
+        "scheduler_replay_count": 0,
+        "scheduler_replay_blocked_count": 0,
+        "scheduler_replay_completed_count": 0,
+        "scheduler_dashboard_hash": None,
+        "scheduler_replay_hash": None,
+    }
+
+    if scheduler_dashboard_json is not None:
+        dashboard = _load_json_file(
+            scheduler_dashboard_json,
+            artifact="remediation scheduler execution dashboard",
+        )
+        if (
+            dashboard.get("schema")
+            != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
+        ):
+            raise click.ClickException(
+                "digital-twin observability bundle schema mismatch: "
+                "unexpected scheduler dashboard schema"
+            )
+        dashboard_hash = _require_sha256(dashboard.get("dashboard_hash"), "dashboard_hash")
+        rows = dashboard.get("rows")
+        if not isinstance(rows, list):
+            raise click.ClickException(
+                "digital-twin observability bundle schema mismatch: "
+                "scheduler dashboard rows must be list"
+            )
+        blocked_count = 0
+        completed_count = 0
+        overdue_count = 0
+        for row in rows:
+            if not isinstance(row, dict):
+                raise click.ClickException(
+                    "digital-twin observability bundle schema mismatch: "
+                    "scheduler dashboard row must be object"
+                )
+            state = row.get("effective_state")
+            if state == "blocked":
+                blocked_count += 1
+            if state == "completed":
+                completed_count += 1
+            if bool(row.get("overdue", False)):
+                overdue_count += 1
+        replay_linkage["scheduler_row_count"] = len(rows)
+        replay_linkage["scheduler_overdue_count"] = overdue_count
+        replay_linkage["scheduler_blocked_count"] = blocked_count
+        replay_linkage["scheduler_completed_count"] = completed_count
+        replay_linkage["scheduler_dashboard_hash"] = dashboard_hash
+
+    if scheduler_replay_json is not None:
+        replay = _load_json_file(
+            scheduler_replay_json,
+            artifact="remediation scheduler acknowledgement replay",
+        )
+        if (
+            replay.get("schema")
+            != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
+        ):
+            raise click.ClickException(
+                "digital-twin observability bundle schema mismatch: "
+                "unexpected scheduler replay schema"
+            )
+        replay_hash = _require_sha256(replay.get("replay_hash"), "replay_hash")
+        replay_rows = replay.get("rows")
+        if not isinstance(replay_rows, list):
+            raise click.ClickException(
+                "digital-twin observability bundle schema mismatch: "
+                "scheduler replay rows must be list"
+            )
+        replay_blocked = 0
+        replay_completed = 0
+        for row in replay_rows:
+            if not isinstance(row, dict):
+                raise click.ClickException(
+                    "digital-twin observability bundle schema mismatch: "
+                    "scheduler replay row must be object"
+                )
+            state = row.get("state")
+            if state == "blocked":
+                replay_blocked += 1
+            if state == "completed":
+                replay_completed += 1
+        replay_linkage["scheduler_replay_count"] = len(replay_rows)
+        replay_linkage["scheduler_replay_blocked_count"] = replay_blocked
+        replay_linkage["scheduler_replay_completed_count"] = replay_completed
+        replay_linkage["scheduler_replay_hash"] = replay_hash
+
+    bundle_payload: dict[str, object] = {
+        "schema": "scpn_digital_twin_observability_bundle_v1",
+        "version": "1.0.0",
+        "contract_hash": _require_sha256(evidence.get("contract_hash"), "contract_hash"),
+        "status": str(evidence.get("status")),
+        "accepted_count": int(evidence.get("accepted_count", 0)),
+        "rejected_count": int(evidence.get("rejected_count", 0)),
+        "prometheus_metric_prefix": metric_prefix,
+        "prometheus_text": prometheus_text,
+        "replay_linkage": replay_linkage,
+        "created_by": created_by,
+    }
+    bundle_payload["bundle_hash"] = _record_hash(bundle_payload)
+    click.echo(json.dumps(bundle_payload, indent=2, sort_keys=True))
 
 
 @main.group()
