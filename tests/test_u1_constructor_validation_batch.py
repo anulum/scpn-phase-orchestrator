@@ -77,6 +77,11 @@ def test_u1_knm_template_set_get_rejects_blank_name() -> None:
         KnmTemplateSet().get("")
 
 
+def test_u1_knm_template_set_get_rejects_whitespace_name() -> None:
+    with pytest.raises(KeyError, match="non-empty string"):
+        KnmTemplateSet().get("   ")
+
+
 def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
     with pytest.raises(TypeError, match="BoundaryDef"):
         BoundaryObserver([object()])  # type: ignore[list-item]
