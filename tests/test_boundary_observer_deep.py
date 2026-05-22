@@ -9,10 +9,10 @@
 from __future__ import annotations
 
 import logging
-from unittest.mock import MagicMock
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver, BoundaryState
+from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 
 # ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -163,9 +163,9 @@ class TestEventBus:
     def test_set_event_bus(self):
         """set_event_bus stores the bus for later use."""
         obs = BoundaryObserver([])
-        mock_bus = MagicMock()
-        obs.set_event_bus(mock_bus)
-        assert obs._event_bus is mock_bus
+        bus = EventBus()
+        obs.set_event_bus(bus)
+        assert obs._event_bus is bus
 
     def test_no_event_bus_no_post(self):
         """Without event bus, violations do not raise errors."""
@@ -177,11 +177,13 @@ class TestEventBus:
     def test_event_bus_receives_boundary_breach(self):
         """When violations occur and event bus is set, a RegimeEvent is posted."""
         obs = BoundaryObserver([_hard_def("T_cap", "T", upper=100.0)])
-        mock_bus = MagicMock()
-        obs.set_event_bus(mock_bus)
+        bus = EventBus()
+        events: list[RegimeEvent] = []
+        bus.subscribe(events.append)
+        obs.set_event_bus(bus)
         obs.observe({"T": 200.0}, step=5)
-        mock_bus.post.assert_called_once()
-        event = mock_bus.post.call_args[0][0]
+        assert len(events) == 1
+        event = events[0]
         assert event.kind == "boundary_breach"
         assert event.step == 5
         assert "T_cap" in event.detail
@@ -189,10 +191,12 @@ class TestEventBus:
     def test_event_bus_not_called_when_no_violations(self):
         """No violations → event bus not called."""
         obs = BoundaryObserver([_hard_def("T_cap", "T", upper=100.0)])
-        mock_bus = MagicMock()
-        obs.set_event_bus(mock_bus)
+        bus = EventBus()
+        events: list[RegimeEvent] = []
+        bus.subscribe(events.append)
+        obs.set_event_bus(bus)
         obs.observe({"T": 50.0})
-        mock_bus.post.assert_not_called()
+        assert events == []
 
     def test_event_bus_detail_joins_multiple_violations(self):
         """Multiple violations are joined with '; ' in the event detail."""
@@ -201,10 +205,12 @@ class TestEventBus:
             _hard_def("T_cap", "T", upper=100.0),
         ]
         obs = BoundaryObserver(defs)
-        mock_bus = MagicMock()
-        obs.set_event_bus(mock_bus)
+        bus = EventBus()
+        events: list[RegimeEvent] = []
+        bus.subscribe(events.append)
+        obs.set_event_bus(bus)
         obs.observe({"R": 0.0, "T": 200.0})
-        event = mock_bus.post.call_args[0][0]
+        event = events[0]
         assert "; " in event.detail
 
 
