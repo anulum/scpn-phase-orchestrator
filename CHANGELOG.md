@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Removed generic coverage bucket test files in favour of dedicated
-  module-owned test surfaces and lowered the coverage gate to 60% while the
-  suite is rebuilt around per-module production tests.
+- Removed generic coverage, integration, smoke, and fallback catch-all test
+  files in favour of dedicated module-owned test surfaces and lowered the
+  coverage gate to 60% while the suite is rebuilt around per-module production
+  tests.
 
 ## [0.6.1] - 2026-05-21
 

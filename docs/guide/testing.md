@@ -1,6 +1,6 @@
 # Testing Guide
 
-SCPN Phase Orchestrator ships with **3,100+ tests** at 99%+ line coverage. The suite includes unit tests, integration tests, and — critically — **hypothesis-driven property-based tests** that prove mathematical invariants hold across hundreds of random inputs per test.
+SCPN Phase Orchestrator is rebuilding its Python test surface around dedicated module-owned tests. The current coverage gate is 60% while generic bucket tests are removed; each production module must regain coverage through its own focused unit, property, parity, or pipeline tests.
 
 ## Running Tests
 
@@ -172,7 +172,7 @@ Dedicated validation for auxiliary engines:
 
 CI runs the full suite on Python 3.10 (without Rust kernel) and Python 3.12 (with Rust kernel). The Python fallback uses pure-NumPy integrators; the Rust path uses `spo-kernel` via PyO3. Tests handle both paths — see `test_degenerate_edges.py::TestUPDEZeroDt` for the pattern.
 
-Coverage gate: **95% minimum**, currently at **99%+**.
+Coverage gate: **60% minimum** while generic bucket tests are removed and dedicated module-owned test surfaces are rebuilt. The target remains to raise the gate only with per-module production tests.
 
 ## Convergence & Topology Tests (`test_convergence_topology.py`)
 
