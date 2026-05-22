@@ -131,7 +131,7 @@ class AuditStreamEvent:
             raise ValueError("signature_key_id must be a string")
         if not isinstance(self.signature, str):
             raise ValueError("signature must be a string")
-        is_signed = self.audit_mode == "signed"
+        is_signed = self.audit_mode in {"signed", "hmac-signed"}
         if is_signed:
             if self.signature_algorithm != SIGNATURE_ALGORITHM:
                 raise ValueError(
