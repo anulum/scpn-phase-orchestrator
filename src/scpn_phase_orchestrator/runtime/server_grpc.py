@@ -264,13 +264,13 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
     def StreamPhases(self, request: Any, context: Any) -> Iterator[StateResponse]:
         """Read-only observer: streams snapshots without advancing simulation."""
         self._authorise(context)
-        max_steps = _resolve_stream_max_steps(request)
-        interval = getattr(request, "interval_s", 0.05)
         try:
+            max_steps = _resolve_stream_max_steps(request)
             max_steps = _validate_positive_int(max_steps, "max_steps")
         except ValueError as exc:
             code = grpc.StatusCode.INVALID_ARGUMENT if grpc is not None else None
             self._abort(context, code, str(exc))
+        interval = getattr(request, "interval_s", 0.05)
         try:
             interval = _validate_non_negative_real(interval, "interval_s")
         except ValueError as exc:
