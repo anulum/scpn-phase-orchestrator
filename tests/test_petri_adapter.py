@@ -221,12 +221,12 @@ def test_empty_marking_gives_nominal():
 
 
 def test_unmapped_place_defaults_nominal():
-    places = [Place("unknown_place")]
+    places = [Place("unknown_place"), Place("mapped_place")]
     net = PetriNet(places, [])
     adapter = PetriNetAdapter(
         net,
         Marking(tokens={"unknown_place": 1}),
-        {},
+        {"mapped_place": "RECOVERY"},
     )
     assert adapter._active_regime() == Regime.NOMINAL
 
