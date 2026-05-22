@@ -39,8 +39,7 @@ impl BoundaryObserver {
         if def.name.trim().is_empty() || def.variable.trim().is_empty() {
             return false;
         }
-        if def.lower.is_some_and(|v| !v.is_finite()) || def.upper.is_some_and(|v| !v.is_finite())
-        {
+        if def.lower.is_some_and(|v| !v.is_finite()) || def.upper.is_some_and(|v| !v.is_finite()) {
             return false;
         }
         if let (Some(lo), Some(hi)) = (def.lower, def.upper) {
