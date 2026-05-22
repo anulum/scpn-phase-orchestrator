@@ -115,7 +115,11 @@ class TestKnmTemplateSet:
         alpha = np.zeros((3, 3))
         t = KnmTemplate(name="test", knm=knm, alpha=alpha, description="d")
         ts.add(t)
-        assert ts.get("test") is t
+        stored = ts.get("test")
+        assert stored.name == "test"
+        assert np.array_equal(stored.knm, knm)
+        assert np.array_equal(stored.alpha, alpha)
+        assert stored.description == "d"
 
     def test_get_missing_raises(self) -> None:
         ts = KnmTemplateSet()
@@ -126,8 +130,8 @@ class TestKnmTemplateSet:
         ts = KnmTemplateSet()
         knm = np.eye(2)
         alpha = np.zeros((2, 2))
-        ts.add(KnmTemplate("a", knm, alpha, ""))
-        ts.add(KnmTemplate("b", knm, alpha, ""))
+        ts.add(KnmTemplate("a", knm, alpha, "template a"))
+        ts.add(KnmTemplate("b", knm, alpha, "template b"))
         assert sorted(ts.list_names()) == ["a", "b"]
 
     def test_empty_list(self) -> None:
