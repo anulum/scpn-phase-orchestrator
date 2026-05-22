@@ -4151,6 +4151,8 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
             "plugins",
             "lifecycle-status",
             str(_write_request_payload_from_cli(runner, tmp_path)),
+            "--created-by",
+            "deployment_gate",
         ],
     )
     assert lifecycle.exit_code == 0
@@ -4218,21 +4220,21 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
             str(plan_path),
             first_action_hash,
             "--state",
-            "completed",
+            "pending",
             "--updated-by",
             "deployment_gate",
         ],
     )
     assert status.exit_code == 0
-    status_path = tmp_path / "status.json"
-    status_path.write_text(status.output, encoding="utf-8")
+    initial_status_path = tmp_path / "initial-status.json"
+    initial_status_path.write_text(status.output, encoding="utf-8")
     execution_dashboard = runner.invoke(
         main,
         [
             "plugins",
             "lifecycle-remediation-execution-dashboard",
             str(plan_path),
-            str(status_path),
+            str(initial_status_path),
             "--created-by",
             "deployment_gate",
         ],
@@ -4270,6 +4272,24 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
     assert queue.exit_code == 0
     queue_path = tmp_path / "queue.json"
     queue_path.write_text(queue.output, encoding="utf-8")
+    queue_payload = json.loads(queue.output)
+    queued_action_hash = queue_payload["queue_entries"][0]["action_hash"]
+    completed_status = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-action-status",
+            str(plan_path),
+            queued_action_hash,
+            "--state",
+            "completed",
+            "--updated-by",
+            "deployment_gate",
+        ],
+    )
+    assert completed_status.exit_code == 0
+    completed_status_path = tmp_path / "completed-status.json"
+    completed_status_path.write_text(completed_status.output, encoding="utf-8")
 
     telemetry = runner.invoke(
         main,
@@ -4277,7 +4297,7 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
             "plugins",
             "lifecycle-remediation-scheduler-telemetry",
             str(queue_path),
-            str(status_path),
+            str(completed_status_path),
             "--as-of-epoch",
             "1700000100",
             "--created-by",
