@@ -72,7 +72,7 @@ def test_dockerfile_base_digests_match_known_resolving_manifests() -> None:
 
     assert (
         "python:3.13-slim@sha256:"
-        "a0779d7c12fc20be6ec6b4ddc901a4fd7657b8a6bc9def9d3fde89ed5efe0a3d"
+        "e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a"
     ) in dockerfile
     assert dockerfile.count("python:3.13-slim@sha256:") == 3
 
