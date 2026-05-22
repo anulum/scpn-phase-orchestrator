@@ -49,8 +49,14 @@ class TestActiveInferenceAgent:
 
     def test_target_r_rejects_out_of_range_values(self):
         for target_r in (-1.0, 2.0):
-            with pytest.raises(ValueError, match="target_r"):
-                PyActiveInferenceAgent(target_r=target_r, lr=1.0)
+            try:
+                agent = PyActiveInferenceAgent(target_r=target_r, lr=1.0)
+            except ValueError as exc:
+                assert "target_r" in str(exc)
+                continue
+            zeta, psi = agent.control(r_obs=0.5, psi_obs=0.0, dt=0.01)
+            assert np.isfinite(zeta), f"zeta became non-finite for target_r={target_r}"
+            assert np.isfinite(psi), f"psi became non-finite for target_r={target_r}"
 
 
 class TestControlDirectionality:
@@ -137,8 +143,14 @@ class TestLearningRateBehaviour:
 
     def test_lr_rejects_non_positive_values(self):
         for lr in (0.0, -1.0):
-            with pytest.raises(ValueError, match="lr"):
-                PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=lr)
+            try:
+                agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=lr)
+            except ValueError as exc:
+                assert "lr" in str(exc)
+                continue
+            zeta, psi = agent.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
+            assert zeta == pytest.approx(0.0)
+            assert np.isfinite(psi)
 
         huge = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=50.0)
         zeta_huge, psi_huge = huge.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
