@@ -258,10 +258,10 @@ class TestPhysicalExtractor:
         assert quality == 0.0
 
     def test_extract_python_path(self, monkeypatch):
-        """Force Python fallback by patching _HAS_RUST to False."""
+        """Force Python fallback by disabling the optional Rust extractor."""
         import scpn_phase_orchestrator.oscillators.physical as phys_mod
 
-        monkeypatch.setattr(phys_mod, "_HAS_RUST", False)
+        monkeypatch.setattr(phys_mod, "_rust_physical_extract", None)
         ext = PhysicalExtractor(node_id="py_test")
         t = np.arange(0, 0.5, 1.0 / 1000)
         signal = np.sin(TWO_PI * 10.0 * t)
