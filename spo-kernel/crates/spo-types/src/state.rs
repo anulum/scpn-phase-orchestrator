@@ -331,10 +331,7 @@ impl UPDEState {
                 )));
             }
         }
-        if self
-            .cross_layer_alignment
-            .iter()
-            .any(|v| !v.is_finite())
+        if self.cross_layer_alignment.iter().any(|v| !v.is_finite())
             || !self.stability_proxy.is_finite()
         {
             return Err(SpoError::InvalidConfig(
