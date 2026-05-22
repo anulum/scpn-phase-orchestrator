@@ -149,10 +149,13 @@ def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> No
         captured["matrix_bins"] = n_bins
         return np.arange(n_osc * n_osc, dtype=np.float64)
 
+    kernels = {"phase_te": phase_te, "te_matrix": te_matrix}
+    monkeypatch.setattr(te_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setitem(te_mod._BACKEND_CACHE, "rust", kernels)
     monkeypatch.setitem(
         te_mod._LOADERS,
         "rust",
-        lambda: {"phase_te": phase_te, "te_matrix": te_matrix},
+        lambda: kernels,
     )
     previous = _force("rust")
     try:
