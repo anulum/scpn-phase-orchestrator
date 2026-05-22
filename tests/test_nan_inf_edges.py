@@ -152,25 +152,21 @@ class TestBoundaryNanInf:
         ]
         return BoundaryObserver(defs)
 
-    def test_nan_value_no_violation(self) -> None:
-        """NaN comparison returns False, so NaN values should not trigger violation."""
+    def test_nan_value_rejected(self) -> None:
+        """NaN observed values are rejected before boundary comparison."""
         obs = self._make_observer()
-        state = obs.observe({"T": float("nan")})
-        # NaN < 0.0 → False, NaN > 100.0 → False → no violation
-        assert len(state.violations) == 0
+        with pytest.raises(ValueError, match="finite float"):
+            obs.observe({"T": float("nan")})
 
-    def test_inf_value_triggers_violation(self) -> None:
+    def test_inf_value_rejected(self) -> None:
         obs = self._make_observer()
-        state = obs.observe({"T": float("inf")})
-        # inf > 100.0 → True
-        assert len(state.violations) == 1
-        assert len(state.hard_violations) == 1
+        with pytest.raises(ValueError, match="finite float"):
+            obs.observe({"T": float("inf")})
 
-    def test_neg_inf_triggers_violation(self) -> None:
+    def test_neg_inf_value_rejected(self) -> None:
         obs = self._make_observer()
-        state = obs.observe({"T": float("-inf")})
-        # -inf < 0.0 → True
-        assert len(state.violations) == 1
+        with pytest.raises(ValueError, match="finite float"):
+            obs.observe({"T": float("-inf")})
 
     def test_missing_variable_ignored(self) -> None:
         obs = self._make_observer()
