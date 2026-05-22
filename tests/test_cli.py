@@ -4658,6 +4658,8 @@ def test_plugins_lifecycle_scheduler_replay_and_execution_dashboard(
             "plugins",
             "lifecycle-status",
             str(_write_request_payload_from_cli(runner, tmp_path)),
+            "--created-by",
+            "deployment_gate",
         ],
     )
     assert lifecycle.exit_code == 0
@@ -4715,12 +4717,31 @@ def test_plugins_lifecycle_scheduler_replay_and_execution_dashboard(
     assert plan.exit_code == 0
     plan_path = tmp_path / "plan.json"
     plan_path.write_text(plan.output, encoding="utf-8")
+    plan_payload = json.loads(plan.output)
+    first_action_hash = plan_payload["actions"][0]["action_hash"]
+    status = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-action-status",
+            str(plan_path),
+            first_action_hash,
+            "--state",
+            "pending",
+            "--updated-by",
+            "deployment_gate",
+        ],
+    )
+    assert status.exit_code == 0
+    status_path = tmp_path / "status.json"
+    status_path.write_text(status.output, encoding="utf-8")
     execution_dashboard = runner.invoke(
         main,
         [
             "plugins",
             "lifecycle-remediation-execution-dashboard",
             str(plan_path),
+            str(status_path),
             "--created-by",
             "deployment_gate",
         ],
