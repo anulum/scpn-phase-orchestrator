@@ -336,7 +336,9 @@ class TestDispatcherFallthroughForRust:
             }
 
         sig = _signal(12, t=64)
+        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
         monkeypatch.setitem(em_mod._LOADERS, "rust", rust_loader)
+        monkeypatch.setitem(em_mod._BACKEND_CACHE, "rust", rust_loader())
         prev = _force("rust")
         try:
             tau = optimal_delay(sig, max_lag=11, n_bins=9)
