@@ -6,8 +6,8 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Action types
 
-use serde::{Deserialize, Serialize};
 use crate::error::{SpoError, SpoResult};
+use serde::{Deserialize, Serialize};
 
 /// Supervisor operating regime for closed-loop control decisions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
