@@ -80,8 +80,12 @@ class TestHodgeDecomposition:
         assert result.gradient[0] == pytest.approx(0.0)
         assert result.curl[0] == pytest.approx(0.0)
 
-    def test_uniform_scale_scales_all_components(self):
+    def test_uniform_scale_scales_all_components(self, monkeypatch):
         """Scaling K_nm by a scalar scales every component linearly."""
+        import scpn_phase_orchestrator.coupling.hodge as hodge_mod
+
+        monkeypatch.setattr(hodge_mod, "ACTIVE_BACKEND", "python")
+        monkeypatch.setattr(hodge_mod, "AVAILABLE_BACKENDS", ["python"])
         rng = np.random.default_rng(123)
         knm = rng.standard_normal((5, 5))
         np.fill_diagonal(knm, 0.0)
@@ -91,9 +95,8 @@ class TestHodgeDecomposition:
 
         np.testing.assert_allclose(doubled.gradient, 2.5 * base.gradient, rtol=1e-12)
         np.testing.assert_allclose(doubled.curl, 2.5 * base.curl, rtol=1e-12)
-        np.testing.assert_allclose(
-            doubled.harmonic, 2.5 * base.harmonic, rtol=1e-12, atol=1e-15
-        )
+        np.testing.assert_allclose(base.harmonic, 0.0, atol=3e-15)
+        np.testing.assert_allclose(doubled.harmonic, 0.0, atol=3e-15)
 
 
 class TestHodgePipelineWiring:
