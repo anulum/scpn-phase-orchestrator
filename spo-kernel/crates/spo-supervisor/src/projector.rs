@@ -117,12 +117,7 @@ pub fn project_value(
     hi: f64,
     rate_limit: Option<f64>,
 ) -> f64 {
-    if !proposed.is_finite()
-        || !previous.is_finite()
-        || lo.is_nan()
-        || hi.is_nan()
-        || lo > hi
-    {
+    if !proposed.is_finite() || !previous.is_finite() || lo.is_nan() || hi.is_nan() || lo > hi {
         return 0.0;
     }
     let mut clamped = proposed.clamp(lo, hi);
