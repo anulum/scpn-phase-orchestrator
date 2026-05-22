@@ -47,13 +47,10 @@ class TestActiveInferenceAgent:
         agent.target_r = 0.3
         assert agent.target_r == 0.3
 
-    def test_target_r_allows_out_of_range_but_remains_finite(self):
-        """`target_r` currently accepts out-of-domain values; control remains finite."""
-        for target_r in (-1.0, 0.0, 1.0, 2.0):
-            agent = PyActiveInferenceAgent(target_r=target_r, lr=1.0)
-            zeta, psi = agent.control(r_obs=0.5, psi_obs=0.0, dt=0.01)
-            assert np.isfinite(zeta), f"zeta became non-finite for target_r={target_r}"
-            assert np.isfinite(psi), f"psi became non-finite for target_r={target_r}"
+    def test_target_r_rejects_out_of_range_values(self):
+        for target_r in (-1.0, 2.0):
+            with pytest.raises(ValueError, match="target_r"):
+                PyActiveInferenceAgent(target_r=target_r, lr=1.0)
 
 
 class TestControlDirectionality:
@@ -62,7 +59,7 @@ class TestControlDirectionality:
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
         zeta, _ = agent.control(r_obs=0.5, psi_obs=0.0, dt=0.01)
         # At the target, |error|=0 → agent output magnitude is bounded
-        # by the adaptation term only; should be well under the strong
+        # by the adaptation term only; should be well under the larger
         # zeta produced by error=±0.4.
         zeta_away, _ = agent.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
         assert abs(zeta) < abs(zeta_away)
@@ -138,19 +135,14 @@ class TestLearningRateBehaviour:
         zeta_high, _ = high.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
         assert abs(zeta_high) >= abs(zeta_low)
 
-    def test_lr_extremes_are_stable(self):
-        """Negative and zero learning rates should not produce non-finite output."""
-        zero = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=0.0)
-        negative = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=-1.0)
+    def test_lr_rejects_non_positive_values(self):
+        for lr in (0.0, -1.0):
+            with pytest.raises(ValueError, match="lr"):
+                PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=lr)
+
         huge = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=50.0)
-        zeta_zero, psi_zero = zero.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
-        zeta_negative, psi_negative = negative.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
         zeta_huge, psi_huge = huge.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
-        assert zeta_zero == pytest.approx(0.0)
-        assert zeta_negative == pytest.approx(0.0)
         assert zeta_huge == pytest.approx(5.0)
-        assert np.isfinite(psi_zero)
-        assert np.isfinite(psi_negative)
         assert np.isfinite(psi_huge)
 
 
