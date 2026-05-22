@@ -61,6 +61,15 @@ def _validate_positive_scale(name: str, value: float) -> float:
     return result
 
 
+def _validate_nonnegative_real(name: str, value: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real number")
+    result = float(value)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be a finite non-negative real number")
+    return result
+
+
 def _finite_array(value: FloatArray, name: str) -> FloatArray:
     try:
         array = np.asarray(value, dtype=np.float64)
@@ -128,21 +137,18 @@ class SynapseSnapshot:
             "astrocyte_modulation",
             n,
         )
-        self.mean_weight_change = _validate_positive_scale(
-            "mean_weight_change_or_zero",
-            max(float(self.mean_weight_change), np.finfo(np.float64).eps),
+        self.mean_weight_change = _validate_nonnegative_real(
+            "mean_weight_change",
+            self.mean_weight_change,
         )
-        self.mean_conductance = _validate_positive_scale(
-            "mean_conductance_or_zero",
-            max(float(self.mean_conductance), np.finfo(np.float64).eps),
+        self.mean_conductance = _validate_nonnegative_real(
+            "mean_conductance",
+            self.mean_conductance,
         )
-        self.mean_ca = _validate_positive_scale(
-            "mean_ca_or_zero",
-            max(float(self.mean_ca), np.finfo(np.float64).eps),
+        self.mean_ca = _validate_nonnegative_real(
+            "mean_ca",
+            self.mean_ca,
         )
-        self.mean_weight_change = max(float(self.mean_weight_change), 0.0)
-        self.mean_conductance = max(float(self.mean_conductance), 0.0)
-        self.mean_ca = max(float(self.mean_ca), 0.0)
 
 
 class SynapseCouplingBridge:
