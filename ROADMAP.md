@@ -1,5 +1,10 @@
 # Roadmap
 
+> Canonical open-item source: `docs/roadmap.md` contains the consolidated
+> open-item register. This root roadmap preserves historical release context
+> and completed milestone evidence only; do not add new active backlog rows
+> here unless they are also represented in `docs/roadmap.md`.
+
 ## v0.1 (released)
 
 - Core scaffold with src layout and CLI
@@ -94,21 +99,12 @@
 - ~~Stable public API freeze discipline slice: top-level manifest, docs, and
   regression test guard `scpn_phase_orchestrator.__all__` drift~~ (done —
   `docs/specs/public_api_manifest.txt`, `tests/test_public_api_manifest.py`)
-  - Remaining before v1.0 tag: classify any future public API manifest changes
-    in release notes with semantic-versioning impact.
-
 ### Deferred track (documented, not current focus)
 
-- Typed-array contract sweep (Python type precision):
-  - The latest maintenance sweep shows zero non-parameterized `NDArray` signature sites in `src/` (import-only `NDArray` usage remains).
-  - One runtime `np.ndarray` check remains (`visualization/streamer.py`) and is intentionally excluded from this sweep.
-  - Track this item as verified, rather than active backlog unless future untyped array annotations are reintroduced.
-- Test-hardening maintenance track:
-  - Broad superficial-assertion cleanup is registered as long-running quality debt, not an active feature-track blocker.
-  - Use the local internal audit ledger as the candidate source.
-  - Remediate weak shape/type/existence-only assertions opportunistically when touching the related module or feature.
-  - Prefer behavioural, invariant, error-semantic, parity, or pipeline-effect checks that would fail under a plausible wrong implementation.
-  - Do not spend multi-session sweeps on this track unless explicitly prioritised over feature/module roadmap work.
+Deferred and maintenance items are consolidated in
+`docs/roadmap.md` under the canonical open-item register and deferred
+maintenance track. This root file intentionally does not duplicate active
+maintenance scope.
 
 ### v1.0 adoption and credibility track
 
