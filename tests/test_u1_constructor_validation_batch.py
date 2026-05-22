@@ -318,7 +318,11 @@ def test_u1_knm_template_set_get_strips_lookup_name() -> None:
         description="ok",
     )
     reg.add(tpl)
-    assert reg.get(" k ") is tpl
+    stored = reg.get(" k ")
+    assert stored.name == "k"
+    np.testing.assert_array_equal(stored.knm, tpl.knm)
+    np.testing.assert_array_equal(stored.alpha, tpl.alpha)
+    assert stored.description == tpl.description
 
 
 def test_u1_knm_template_set_add_strips_storage_name() -> None:
