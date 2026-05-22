@@ -165,7 +165,7 @@ def test_runtime_observability_prometheus_text_stable_and_escape_safe() -> None:
     runtime_obs = RuntimeObservability()
     snapshot = RuntimeMetricSnapshot(
         upde_state=_state(),
-        regime='nomi\n"al',
+        regime='nomi"\\al',
         latency_ms=1.25,
         step_idx=7,
     )
@@ -174,7 +174,7 @@ def test_runtime_observability_prometheus_text_stable_and_escape_safe() -> None:
     text_b = runtime_obs.prometheus_text(snapshot)
 
     assert text_a == text_b
-    assert 'regime="nomi\\n\\"al"' in text_a
+    assert 'regime="nomi\\"\\\\al"' in text_a
 
 
 def test_runtime_observability_rejects_nonfinite_latency_ms() -> None:
