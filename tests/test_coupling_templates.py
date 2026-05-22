@@ -14,7 +14,7 @@ import pytest
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 
 
-def _tpl(name, n=3, fill=0.0, desc=""):
+def _tpl(name, n=3, fill=0.0, desc="test template"):
     knm = np.full((n, n), fill)
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
