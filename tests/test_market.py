@@ -195,6 +195,7 @@ class TestMarketDispatchSurface:
                 lambda *args: np.zeros((0,), dtype=np.float64),
             )
 
+        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(
             m_mod,
             "_LOADERS",
@@ -218,6 +219,7 @@ class TestMarketDispatchSurface:
         def loader_b() -> tuple:
             raise RuntimeError("go unavailable")
 
+        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(
             m_mod,
             "_LOADERS",
