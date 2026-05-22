@@ -2480,7 +2480,7 @@ class TestPluginRuntimeExecution:
         request = build_plugin_execution_request(plan, approval)
         manifest = build_plugin_execution_request_storage_manifest(
             request,
-            storage_uri=f"file://{tmp_path / 'request.json'}",
+            storage_uri=(tmp_path / "request.json").as_uri(),
             storage_backend="local_file",
             retention_policy="retain_until_revoked",
             created_by="deployment_gate",

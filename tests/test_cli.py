@@ -2246,7 +2246,7 @@ def test_plugins_persist_execution_request_writes_bundle(
             str(request_path),
             str(output_path),
             "--storage-uri",
-            f"file://{output_path}",
+            output_path.as_uri(),
             "--created-by",
             "deployment_gate",
         ],
@@ -2278,7 +2278,7 @@ def test_plugins_persist_execution_request_rejects_existing_bundle(
         str(request_path),
         str(output_path),
         "--storage-uri",
-        f"file://{output_path}",
+        output_path.as_uri(),
         "--created-by",
         "deployment_gate",
     ]
