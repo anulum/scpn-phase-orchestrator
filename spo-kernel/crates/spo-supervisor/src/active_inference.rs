@@ -35,9 +35,7 @@ impl ActiveInferenceAgent {
             ));
         }
         if !lr.is_finite() || lr <= 0.0 {
-            return Err(SpoError::InvalidConfig(
-                "lr must be finite and > 0".into(),
-            ));
+            return Err(SpoError::InvalidConfig("lr must be finite and > 0".into()));
         }
         Ok(Self {
             n_hidden,
