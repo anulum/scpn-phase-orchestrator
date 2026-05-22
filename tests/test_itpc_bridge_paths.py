@@ -143,6 +143,7 @@ class TestPythonFallbackEdgeCases:
         def _broken() -> dict:
             raise ImportError("simulated toolchain missing")
 
+        monkeypatch.delitem(it_mod._BACKEND_FN_CACHE, "rust", raising=False)
         monkeypatch.setitem(it_mod._LOADERS, "rust", _broken)
         first, available = it_mod._resolve_backends()
         assert "rust" not in available
