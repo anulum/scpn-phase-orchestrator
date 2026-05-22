@@ -20,6 +20,20 @@ from scpn_phase_orchestrator.adapters.gaian_mesh_bridge import (
 )
 
 
+def _unchecked_peer_state(
+    node_id: object,
+    r_value: object,
+    psi: object,
+    timestamp: object,
+) -> PeerState:
+    peer = object.__new__(PeerState)
+    peer.node_id = node_id  # type: ignore[assignment]
+    peer.R = r_value  # type: ignore[assignment]
+    peer.psi = psi  # type: ignore[assignment]
+    peer.timestamp = timestamp  # type: ignore[assignment]
+    return peer
+
+
 @pytest.fixture()
 def node():
     """Create a mesh node on a random port, stop after test."""
@@ -176,11 +190,31 @@ class TestComputeMeshDrive:
     @pytest.mark.parametrize(
         "peer",
         [
-            PeerState(node_id="", R=1.0, psi=0.0, timestamp=0.0),
-            PeerState(node_id="bad-r", R=np.nan, psi=0.0, timestamp=0.0),
-            PeerState(node_id="bad-r-high", R=1.1, psi=0.0, timestamp=0.0),
-            PeerState(node_id="bad-psi", R=1.0, psi=np.inf, timestamp=0.0),
-            PeerState(node_id="bad-time", R=1.0, psi=0.0, timestamp=np.nan),
+            _unchecked_peer_state(node_id="", r_value=1.0, psi=0.0, timestamp=0.0),
+            _unchecked_peer_state(
+                node_id="bad-r",
+                r_value=np.nan,
+                psi=0.0,
+                timestamp=0.0,
+            ),
+            _unchecked_peer_state(
+                node_id="bad-r-high",
+                r_value=1.1,
+                psi=0.0,
+                timestamp=0.0,
+            ),
+            _unchecked_peer_state(
+                node_id="bad-psi",
+                r_value=1.0,
+                psi=np.inf,
+                timestamp=0.0,
+            ),
+            _unchecked_peer_state(
+                node_id="bad-time",
+                r_value=1.0,
+                psi=0.0,
+                timestamp=np.nan,
+            ),
         ],
     )
     def test_invalid_peer_state_is_ignored(

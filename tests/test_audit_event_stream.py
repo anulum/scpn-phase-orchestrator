@@ -20,8 +20,8 @@ from google.protobuf import descriptor_pool
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
     AuditStreamEvent,
-    _AuditEnvelope,
     EventStreamWriter,
+    _AuditEnvelope,
     iter_event_stream,
     read_event_stream,
     tail_event_stream,
@@ -275,7 +275,9 @@ def test_audit_stream_event_rejects_signed_mode_without_signature_metadata() -> 
     payload = {"event": "operator_note", "step": 1}
     payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
     payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
-    with pytest.raises(ValueError, match="signed audit_mode requires expected signature_algorithm"):
+    with pytest.raises(
+        ValueError, match="signed audit_mode requires expected signature_algorithm"
+    ):
         AuditStreamEvent(
             schema_version=1,
             stream_id="spo-audit",
@@ -345,8 +347,12 @@ def test_audit_stream_event_rejects_invalid_source_label(source: str) -> None:
         )
 
 
-@pytest.mark.parametrize("poll_interval_s", [True, -0.1, float("nan"), float("inf"), "0.2"])
-def test_iter_event_stream_rejects_invalid_poll_interval(poll_interval_s: object) -> None:
+@pytest.mark.parametrize(
+    "poll_interval_s", [True, -0.1, float("nan"), float("inf"), "0.2"]
+)
+def test_iter_event_stream_rejects_invalid_poll_interval(
+    poll_interval_s: object,
+) -> None:
     with pytest.raises(ValueError, match="poll_interval_s"):
         iterator = iter_event_stream(
             "nonexistent.spoa",

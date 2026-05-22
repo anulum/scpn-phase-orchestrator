@@ -345,7 +345,7 @@ def test_symbolic_extractor_uses_rust_ring_and_transition_quality_when_available
         values = [int(item) for item in state_indices.tolist()]
         quality_calls.append((values, n_states, initial_quality))
         out = [initial_quality]
-        for lhs, rhs in zip(values, values[1:]):
+        for lhs, rhs in zip(values, values[1:], strict=False):
             step_size = abs(rhs - lhs)
             if step_size == 0:
                 out.append(0.2)
@@ -383,7 +383,7 @@ def test_symbolic_extractor_uses_rust_graph_walk_when_available(
         graph_calls.append((values, n_states))
         cumulative = [0]
         running = 0
-        for lhs, rhs in zip(values, values[1:]):
+        for lhs, rhs in zip(values, values[1:], strict=False):
             running += abs(rhs - lhs)
             cumulative.append(running)
         total = cumulative[-1] if cumulative and cumulative[-1] > 0 else 1

@@ -71,7 +71,7 @@ class GeometryCarrier:
         z_dim: int = 8,
         lr: float = 0.01,
         seed: int | None = None,
-    ):
+    ) -> None:
         if isinstance(n_oscillators, bool) or not isinstance(n_oscillators, int):
             raise TypeError(
                 f"n_oscillators must be a positive integer, got {n_oscillators!r}"
@@ -90,17 +90,20 @@ class GeometryCarrier:
             raise ValueError(f"lr must be a finite positive real, got {lr!r}")
         if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
             raise TypeError(f"seed must be int or None, got {seed!r}")
-        self._n = n_oscillators
-        self._z_dim = z_dim
-        self._lr = lr
+        self._n: int = n_oscillators
+        self._z_dim: int = z_dim
+        self._lr: float = float(lr)
         self._rng = np.random.default_rng(seed)
-        self._z: FloatArray = self._rng.normal(0, 0.1, z_dim)
+        self._z: FloatArray = np.asarray(
+            self._rng.normal(0, 0.1, z_dim),
+            dtype=np.float64,
+        )
         # Decoder: W = softplus(A @ z) reshaped to (n, n), zero diagonal
         # A is a fixed random projection (n*n × z_dim)
         self._A: FloatArray = self._rng.normal(
             0, 1.0 / np.sqrt(z_dim), (n_oscillators * n_oscillators, z_dim)
         )
-        self._step = 0
+        self._step: int = 0
 
     @property
     def z(self) -> FloatArray:
@@ -119,7 +122,9 @@ class GeometryCarrier:
         if not isinstance(z, np.ndarray):
             raise TypeError(f"z must be numpy.ndarray, got {z!r}")
         if z.ndim != 1 or z.shape[0] != self._z_dim:
-            raise ValueError(f"z must be 1D vector of length {self._z_dim}, got {z.shape!r}")
+            raise ValueError(
+                f"z must be 1D vector of length {self._z_dim}, got {z.shape!r}"
+            )
         if not np.isfinite(z).all():
             raise ValueError("z must contain only finite values")
         if _HAS_RUST:
@@ -145,7 +150,11 @@ class GeometryCarrier:
         If cost_fn is provided, uses finite differences on z.
         Otherwise records cost for external gradient computation.
         """
-        if isinstance(cost, bool) or not isinstance(cost, Real) or not isfinite(float(cost)):
+        if (
+            isinstance(cost, bool)
+            or not isinstance(cost, Real)
+            or not isfinite(float(cost))
+        ):
             raise TypeError(f"cost must be finite real, got {cost!r}")
         if (
             isinstance(epsilon, bool)
@@ -184,5 +193,5 @@ class GeometryCarrier:
         if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
             raise TypeError(f"seed must be int or None, got {seed!r}")
         rng = np.random.default_rng(seed)
-        self._z = rng.normal(0, 0.1, self._z_dim)
+        self._z = np.asarray(rng.normal(0, 0.1, self._z_dim), dtype=np.float64)
         self._step = 0

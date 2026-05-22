@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal, TypeAlias, cast
 
@@ -428,7 +429,7 @@ def _load_json_file(path: Path, *, artifact: str = "plan") -> dict[str, object]:
     return payload
 
 
-def _record_hash(record: dict[str, object]) -> str:
+def _record_hash(record: Mapping[str, object]) -> str:
     canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -1431,7 +1432,8 @@ def _load_lifecycle_remediation_deployment_handoff_payload(
             "confirm_external_write",
         }:
             raise click.ClickException(
-                "remediation deployment handoff schema mismatch: unsupported action_type"
+                "remediation deployment handoff schema mismatch: "
+                "unsupported action_type"
             )
         priority = action.get("priority")
         if not isinstance(priority, int) or priority < 1:
@@ -1557,9 +1559,8 @@ def _load_lifecycle_remediation_scheduler_telemetry_payload(
 def _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
     handoff_payload: dict[str, object],
 ) -> dict[str, object]:
-    if (
-        handoff_payload.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
+    if handoff_payload.get("schema") != (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
     ):
         raise click.ClickException(
             "remediation scheduler adapter handoff schema mismatch: expected "
@@ -1578,7 +1579,8 @@ def _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
         )
     if not isinstance(entries, list):
         raise click.ClickException(
-            "remediation scheduler adapter handoff schema mismatch: entries must be list"
+            "remediation scheduler adapter handoff schema mismatch: entries must be "
+            "list"
         )
     if entry_count != len(entries):
         raise click.ClickException(
@@ -1588,7 +1590,8 @@ def _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
     for entry in entries:
         if not isinstance(entry, dict):
             raise click.ClickException(
-                "remediation scheduler adapter handoff schema mismatch: entry must be object"
+                "remediation scheduler adapter handoff schema mismatch: entry must be "
+                "object"
             )
         _require_sha256(entry.get("adapter_entry_hash"), "adapter_entry_hash")
         _require_sha256(entry.get("entry_hash"), "entry_hash")
@@ -1600,9 +1603,8 @@ def _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
 def _load_lifecycle_remediation_scheduler_acknowledgement_payload(
     acknowledgement_payload: dict[str, object],
 ) -> dict[str, object]:
-    if (
-        acknowledgement_payload.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1"
+    if acknowledgement_payload.get("schema") != (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1"
     ):
         raise click.ClickException(
             "remediation scheduler acknowledgement schema mismatch: expected "
@@ -2300,8 +2302,7 @@ def plugins_lifecycle_multistore_dashboard(
     )
     policy_hashes = tuple(
         sorted(
-            _require_sha256(policy["policy_hash"], "policy_hash")
-            for policy in policies
+            _require_sha256(policy["policy_hash"], "policy_hash") for policy in policies
         )
     )
     if len(set(policy_hashes)) != len(policy_hashes):
@@ -2419,8 +2420,7 @@ def plugins_lifecycle_multistore_drilldown(
         )
     policy_hashes = tuple(
         sorted(
-            _require_sha256(policy["policy_hash"], "policy_hash")
-            for policy in policies
+            _require_sha256(policy["policy_hash"], "policy_hash") for policy in policies
         )
     )
     if len(set(policy_hashes)) != len(policy_hashes):
@@ -2618,13 +2618,10 @@ def plugins_lifecycle_remediation_action_status(
             selected = action
             break
     if selected is None:
-        raise click.ClickException(
-            "action_hash is not part of the remediation plan"
-        )
+        raise click.ClickException("action_hash is not part of the remediation plan")
     status_payload: dict[str, object] = {
         "schema": (
-            "scpn_plugin_execution_request_lifecycle_"
-            "remediation_action_status_v1"
+            "scpn_plugin_execution_request_lifecycle_remediation_action_status_v1"
         ),
         "version": "1.0.0",
         "plan_hash": _require_sha256(plan["plan_hash"], "plan_hash"),
@@ -2747,8 +2744,7 @@ def plugins_lifecycle_remediation_execution_dashboard(
         )
     dashboard_payload: dict[str, object] = {
         "schema": (
-            "scpn_plugin_execution_request_lifecycle_"
-            "remediation_execution_dashboard_v1"
+            "scpn_plugin_execution_request_lifecycle_remediation_execution_dashboard_v1"
         ),
         "version": "1.0.0",
         "plan_hash": plan_hash,
@@ -2836,8 +2832,7 @@ def plugins_lifecycle_remediation_deployment_handoff(
         handoff_actions.append(handoff_action)
     handoff_payload: dict[str, object] = {
         "schema": (
-            "scpn_plugin_execution_request_lifecycle_"
-            "remediation_deployment_handoff_v1"
+            "scpn_plugin_execution_request_lifecycle_remediation_deployment_handoff_v1"
         ),
         "version": "1.0.0",
         "plan_hash": plan_hash,
@@ -2928,7 +2923,9 @@ def plugins_lifecycle_remediation_scheduler_queue(
         entry["entry_hash"] = _record_hash(entry)
         queue_entries.append(entry)
     queue_payload: dict[str, object] = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": _require_sha256(handoff.get("plan_hash"), "plan_hash"),
         "execution_hash": _require_sha256(
@@ -2992,17 +2989,17 @@ def plugins_lifecycle_remediation_scheduler_telemetry(
         status = _load_lifecycle_remediation_action_status_payload(
             _load_json_file(path, artifact="remediation action status")
         )
-        action_hash = status.action_hash
+        action_hash = _require_sha256(status.get("action_hash"), "action_hash")
         if action_hash in status_by_action_hash:
             raise click.ClickException(
                 "remediation scheduler telemetry schema mismatch: "
                 "duplicate action status action_hash"
             )
         status_by_action_hash[action_hash] = {
-            "state": status.state,
-            "status_hash": status.status_hash,
-            "updated_by": status.updated_by,
-            "note": status.note,
+            "state": status["state"],
+            "status_hash": status["status_hash"],
+            "updated_by": status.get("updated_by", ""),
+            "note": status.get("note", ""),
         }
 
     queue_entries = cast(list[dict[str, object]], queue["queue_entries"])
@@ -3060,14 +3057,17 @@ def plugins_lifecycle_remediation_scheduler_telemetry(
         rows.append(row)
     telemetry_payload: dict[str, object] = {
         "schema": (
-            "scpn_plugin_execution_request_lifecycle_"
-            "remediation_scheduler_telemetry_v1"
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_telemetry_v1"
         ),
         "version": "1.0.0",
         "plan_hash": _require_sha256(queue.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(queue.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            queue.get("execution_hash"), "execution_hash"
+        ),
         "handoff_hash": _require_sha256(queue.get("handoff_hash"), "handoff_hash"),
-        "scheduler_hash": _require_sha256(queue.get("scheduler_hash"), "scheduler_hash"),
+        "scheduler_hash": _require_sha256(
+            queue.get("scheduler_hash"), "scheduler_hash"
+        ),
         "as_of_epoch": as_of_epoch,
         "queue_entry_count": len(queue_entries),
         "state_counts": state_counts,
@@ -3129,7 +3129,9 @@ def plugins_lifecycle_remediation_scheduler_adapter_handoff(
     )
     rows = cast(list[dict[str, object]], telemetry["rows"])
     active_rows = [
-        row for row in rows if cast(str, row["state"]) in {"pending", "in_progress", "blocked"}
+        row
+        for row in rows
+        if cast(str, row["state"]) in {"pending", "in_progress", "blocked"}
     ]
     entries: list[dict[str, object]] = []
     for row in sorted(
@@ -3168,8 +3170,12 @@ def plugins_lifecycle_remediation_scheduler_adapter_handoff(
         ),
         "version": "1.0.0",
         "plan_hash": _require_sha256(telemetry.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(telemetry.get("execution_hash"), "execution_hash"),
-        "telemetry_hash": _require_sha256(telemetry.get("telemetry_hash"), "telemetry_hash"),
+        "execution_hash": _require_sha256(
+            telemetry.get("execution_hash"), "execution_hash"
+        ),
+        "telemetry_hash": _require_sha256(
+            telemetry.get("telemetry_hash"), "telemetry_hash"
+        ),
         "adapter_name": adapter_name,
         "adapter_endpoint": adapter_endpoint,
         "entry_count": len(entries),
@@ -3236,7 +3242,11 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement(
     normalized_entry_hash = _require_sha256(entry_hash, "entry_hash")
     entries = cast(list[dict[str, object]], handoff["entries"])
     matched = next(
-        (entry for entry in entries if entry["adapter_entry_hash"] == normalized_entry_hash),
+        (
+            entry
+            for entry in entries
+            if entry["adapter_entry_hash"] == normalized_entry_hash
+        ),
         None,
     )
     if matched is None:
@@ -3253,9 +3263,13 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement(
         "adapter_handoff_hash": _require_sha256(
             handoff.get("adapter_handoff_hash"), "adapter_handoff_hash"
         ),
-        "telemetry_hash": _require_sha256(handoff.get("telemetry_hash"), "telemetry_hash"),
+        "telemetry_hash": _require_sha256(
+            handoff.get("telemetry_hash"), "telemetry_hash"
+        ),
         "plan_hash": _require_sha256(handoff.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(handoff.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            handoff.get("execution_hash"), "execution_hash"
+        ),
         "adapter_entry_hash": normalized_entry_hash,
         "entry_hash": matched["entry_hash"],
         "action_hash": matched["action_hash"],
@@ -3374,8 +3388,12 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_replay(
         "version": "1.0.0",
         "adapter_handoff_hash": handoff_hash,
         "plan_hash": _require_sha256(handoff.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(handoff.get("execution_hash"), "execution_hash"),
-        "telemetry_hash": _require_sha256(handoff.get("telemetry_hash"), "telemetry_hash"),
+        "execution_hash": _require_sha256(
+            handoff.get("execution_hash"), "execution_hash"
+        ),
+        "telemetry_hash": _require_sha256(
+            handoff.get("telemetry_hash"), "telemetry_hash"
+        ),
         "acknowledgement_count": len(replay_rows),
         "state_counts": state_counts,
         "rows": sorted(
@@ -3426,9 +3444,8 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
         acknowledgement_replay_json,
         artifact="remediation scheduler acknowledgement replay",
     )
-    if (
-        replay.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
+    if replay.get("schema") != (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
     ):
         raise click.ClickException(
             "remediation scheduler execution dashboard schema mismatch: "
@@ -3436,7 +3453,9 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
         )
     _require_sha256(replay.get("replay_hash"), "replay_hash")
     telemetry_hash = _require_sha256(telemetry.get("telemetry_hash"), "telemetry_hash")
-    replay_telemetry_hash = _require_sha256(replay.get("telemetry_hash"), "telemetry_hash")
+    replay_telemetry_hash = _require_sha256(
+        replay.get("telemetry_hash"), "telemetry_hash"
+    )
     if replay_telemetry_hash != telemetry_hash:
         raise click.ClickException(
             "remediation scheduler execution dashboard schema mismatch: "
@@ -3447,7 +3466,11 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
     for row in replay_rows:
         action_hash = _require_sha256(row.get("action_hash"), "action_hash")
         state = row.get("state")
-        if state not in {"in_progress", "completed", "blocked"}:
+        if not isinstance(state, str) or state not in {
+            "in_progress",
+            "completed",
+            "blocked",
+        }:
             raise click.ClickException(
                 "remediation scheduler execution dashboard schema mismatch: "
                 "unsupported replay state"
@@ -3457,7 +3480,7 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
                 "remediation scheduler execution dashboard schema mismatch: "
                 "duplicate replay action_hash"
             )
-        ack_state_by_action_hash[action_hash] = cast(str, state)
+        ack_state_by_action_hash[action_hash] = state
 
     telemetry_rows = cast(list[dict[str, object]], telemetry["rows"])
     rows: list[dict[str, object]] = []
@@ -3511,9 +3534,13 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
         ),
         "version": "1.0.0",
         "plan_hash": _require_sha256(telemetry.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(telemetry.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            telemetry.get("execution_hash"), "execution_hash"
+        ),
         "handoff_hash": _require_sha256(telemetry.get("handoff_hash"), "handoff_hash"),
-        "scheduler_hash": _require_sha256(telemetry.get("scheduler_hash"), "scheduler_hash"),
+        "scheduler_hash": _require_sha256(
+            telemetry.get("scheduler_hash"), "scheduler_hash"
+        ),
         "telemetry_hash": telemetry_hash,
         "replay_hash": _require_sha256(replay.get("replay_hash"), "replay_hash"),
         "row_count": len(rows),
@@ -3549,9 +3576,8 @@ def plugins_lifecycle_remediation_scheduler_control_plan(
         scheduler_execution_dashboard_json,
         artifact="remediation scheduler execution dashboard",
     )
-    if (
-        dashboard.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
+    if dashboard.get("schema") != (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
     ):
         raise click.ClickException(
             "remediation scheduler control plan schema mismatch: "
@@ -3624,7 +3650,9 @@ def plugins_lifecycle_remediation_scheduler_control_plan(
         ),
         "version": "1.0.0",
         "plan_hash": _require_sha256(dashboard.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(dashboard.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            dashboard.get("execution_hash"), "execution_hash"
+        ),
         "dashboard_hash": dashboard_hash,
         "control_action_count": len(control_actions),
         "control_counts": control_counts,
@@ -3671,9 +3699,8 @@ def plugins_lifecycle_remediation_scheduler_runbook(
         scheduler_control_plan_json,
         artifact="remediation scheduler control plan",
     )
-    if (
-        control_plan.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_control_plan_v1"
+    if control_plan.get("schema") != (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_control_plan_v1"
     ):
         raise click.ClickException(
             "remediation scheduler runbook schema mismatch: "
@@ -3704,7 +3731,8 @@ def plugins_lifecycle_remediation_scheduler_runbook(
         action_hash = _require_sha256(entry.get("action_hash"), "action_hash")
         if action_hash in adapter_by_action_hash:
             raise click.ClickException(
-                "remediation scheduler runbook schema mismatch: duplicate action_hash in adapter handoff"
+                "remediation scheduler runbook schema mismatch: "
+                "duplicate action_hash in adapter handoff"
             )
         adapter_by_action_hash[action_hash] = entry
     groups: dict[str, list[dict[str, object]]] = {
@@ -3717,13 +3745,15 @@ def plugins_lifecycle_remediation_scheduler_runbook(
     for action in control_actions:
         if not isinstance(action, dict):
             raise click.ClickException(
-                "remediation scheduler runbook schema mismatch: control action must be object"
+                "remediation scheduler runbook schema mismatch: control action must be "
+                "object"
             )
         action_hash = _require_sha256(action.get("action_hash"), "action_hash")
         control_action = action.get("control_action")
         if control_action not in groups:
             raise click.ClickException(
-                "remediation scheduler runbook schema mismatch: unsupported control_action"
+                "remediation scheduler runbook schema mismatch: unsupported "
+                "control_action"
             )
         adapter_entry = adapter_by_action_hash.get(action_hash)
         runbook_step: dict[str, object] = {
@@ -3734,15 +3764,21 @@ def plugins_lifecycle_remediation_scheduler_runbook(
             "priority": action.get("priority"),
             "action_type": action.get("action_type"),
             "adapter_entry_hash": (
-                adapter_entry.get("adapter_entry_hash") if adapter_entry is not None else None
+                adapter_entry.get("adapter_entry_hash")
+                if adapter_entry is not None
+                else None
             ),
             "adapter_name": (
-                cast(dict[str, object], adapter_entry["adapter_target"]).get("adapter_name")
+                cast(dict[str, object], adapter_entry["adapter_target"]).get(
+                    "adapter_name"
+                )
                 if adapter_entry is not None
                 else None
             ),
             "adapter_endpoint": (
-                cast(dict[str, object], adapter_entry["adapter_target"]).get("adapter_endpoint")
+                cast(dict[str, object], adapter_entry["adapter_target"]).get(
+                    "adapter_endpoint"
+                )
                 if adapter_entry is not None
                 else None
             ),
@@ -3771,10 +3807,14 @@ def plugins_lifecycle_remediation_scheduler_runbook(
             }
         )
     payload: dict[str, object] = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_runbook_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_runbook_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": plan_hash,
-        "execution_hash": _require_sha256(control_plan.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            control_plan.get("execution_hash"), "execution_hash"
+        ),
         "control_plan_hash": _require_sha256(
             control_plan.get("control_plan_hash"),
             "control_plan_hash",
@@ -3860,7 +3900,13 @@ def plugins_lifecycle_remediation_scheduler_automation_profile(
                 "group must be object"
             )
         control_action = group.get("control_action")
-        if control_action not in {"dispatch", "monitor", "expedite", "escalate", "no_op"}:
+        if control_action not in {
+            "dispatch",
+            "monitor",
+            "expedite",
+            "escalate",
+            "no_op",
+        }:
             raise click.ClickException(
                 "remediation scheduler automation profile schema mismatch: "
                 "unsupported control_action"
@@ -3892,9 +3938,7 @@ def plugins_lifecycle_remediation_scheduler_automation_profile(
                     "priority must be positive integer"
                 )
             automation_mode = (
-                "manual"
-                if control_action in {"escalate", "no_op"}
-                else "auto"
+                "manual" if control_action in {"escalate", "no_op"} else "auto"
             )
             target_state = {
                 "dispatch": "in_progress",
@@ -3912,7 +3956,8 @@ def plugins_lifecycle_remediation_scheduler_automation_profile(
                 "automation_mode": automation_mode,
                 "target_state": target_state,
                 "capture_command_template": (
-                    "spo plugins lifecycle-remediation-scheduler-acknowledgement-capture "
+                    "spo plugins "
+                    "lifecycle-remediation-scheduler-acknowledgement-capture "
                     "AUTOMATION_PROFILE_JSON ADAPTER_HANDOFF_JSON ACTION_HASH "
                     "--external-reference REF --acknowledged-by OPERATOR "
                     "--captured-state STATE --note NOTE"
@@ -3929,7 +3974,9 @@ def plugins_lifecycle_remediation_scheduler_automation_profile(
         "profile_name": profile_name,
         "profile_version": profile_version,
         "plan_hash": _require_sha256(runbook.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(runbook.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            runbook.get("execution_hash"), "execution_hash"
+        ),
         "runbook_hash": _require_sha256(runbook.get("runbook_hash"), "runbook_hash"),
         "automation_rule_count": len(automation_rules),
         "automation_rules": sorted(
@@ -4002,9 +4049,8 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_capture(
         automation_profile_json,
         artifact="remediation scheduler automation profile",
     )
-    if (
-        profile.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
+    if profile.get("schema") != (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
     ):
         raise click.ClickException(
             "remediation scheduler acknowledgement capture schema mismatch: "
@@ -4033,7 +4079,10 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_capture(
             "action_hash not present in automation profile"
         )
     target_state = cast(str, rule.get("target_state"))
-    if target_state != captured_state and cast(str, rule.get("automation_mode")) == "auto":
+    if (
+        target_state != captured_state
+        and cast(str, rule.get("automation_mode")) == "auto"
+    ):
         raise click.ClickException(
             "remediation scheduler acknowledgement capture schema mismatch: "
             "captured_state does not match auto target_state"
@@ -4081,7 +4130,9 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_capture(
             "adapter_handoff_hash",
         ),
         "plan_hash": _require_sha256(profile.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(profile.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            profile.get("execution_hash"), "execution_hash"
+        ),
         "action_hash": normalized_action_hash,
         "request_hash": _require_sha256(rule.get("request_hash"), "request_hash"),
         "adapter_entry_hash": _require_sha256(
@@ -4162,9 +4213,8 @@ def plugins_lifecycle_remediation_scheduler_retry_profile(
         automation_profile_json,
         artifact="remediation scheduler automation profile",
     )
-    if (
-        profile.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
+    if profile.get("schema") != (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
     ):
         raise click.ClickException(
             "remediation scheduler retry profile schema mismatch: "
@@ -4184,7 +4234,8 @@ def plugins_lifecycle_remediation_scheduler_retry_profile(
     for rule in rules:
         if not isinstance(rule, dict):
             raise click.ClickException(
-                "remediation scheduler retry profile schema mismatch: rule must be object"
+                "remediation scheduler retry profile schema mismatch: "
+                "rule must be object"
             )
         action_hash = _require_sha256(rule.get("action_hash"), "action_hash")
         request_hash = _require_sha256(rule.get("request_hash"), "request_hash")
@@ -4192,11 +4243,19 @@ def plugins_lifecycle_remediation_scheduler_retry_profile(
         control_action = rule.get("control_action")
         if automation_mode not in {"auto", "manual"}:
             raise click.ClickException(
-                "remediation scheduler retry profile schema mismatch: unsupported automation_mode"
+                "remediation scheduler retry profile schema mismatch: unsupported "
+                "automation_mode"
             )
-        if control_action not in {"dispatch", "monitor", "expedite", "escalate", "no_op"}:
+        if control_action not in {
+            "dispatch",
+            "monitor",
+            "expedite",
+            "escalate",
+            "no_op",
+        }:
             raise click.ClickException(
-                "remediation scheduler retry profile schema mismatch: unsupported control_action"
+                "remediation scheduler retry profile schema mismatch: unsupported "
+                "control_action"
             )
         policy_mode = (
             "retry_enabled"
@@ -4227,7 +4286,9 @@ def plugins_lifecycle_remediation_scheduler_retry_profile(
         ),
         "version": "1.0.0",
         "plan_hash": _require_sha256(profile.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(profile.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            profile.get("execution_hash"), "execution_hash"
+        ),
         "automation_profile_hash": automation_profile_hash,
         "retry_rule_count": len(retry_rules),
         "retry_rules": sorted(
@@ -4273,9 +4334,8 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
         retry_profile_json,
         artifact="remediation scheduler retry profile",
     )
-    if (
-        retry_profile.get("schema")
-        != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1"
+    if retry_profile.get("schema") != (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1"
     ):
         raise click.ClickException(
             "remediation scheduler retry orchestration schema mismatch: "
@@ -4295,12 +4355,14 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
     for rule in retry_rules:
         if not isinstance(rule, dict):
             raise click.ClickException(
-                "remediation scheduler retry orchestration schema mismatch: rule must be object"
+                "remediation scheduler retry orchestration schema mismatch: "
+                "rule must be object"
             )
         action_hash = _require_sha256(rule.get("action_hash"), "action_hash")
         if action_hash in retry_rule_by_action_hash:
             raise click.ClickException(
-                "remediation scheduler retry orchestration schema mismatch: duplicate rule action_hash"
+                "remediation scheduler retry orchestration schema mismatch: duplicate "
+                "rule action_hash"
             )
         retry_rule_by_action_hash[action_hash] = rule
 
@@ -4310,9 +4372,8 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
             path,
             artifact="remediation scheduler acknowledgement capture",
         )
-        if (
-            capture.get("schema")
-            != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1"
+        if capture.get("schema") != (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1"
         ):
             raise click.ClickException(
                 "remediation scheduler retry orchestration schema mismatch: "
@@ -4321,13 +4382,15 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
         action_hash = _require_sha256(capture.get("action_hash"), "action_hash")
         if action_hash in capture_by_action_hash:
             raise click.ClickException(
-                "remediation scheduler retry orchestration schema mismatch: duplicate capture action_hash"
+                "remediation scheduler retry orchestration schema mismatch: duplicate "
+                "capture action_hash"
             )
         if _require_sha256(capture.get("plan_hash"), "plan_hash") != _require_sha256(
             retry_profile.get("plan_hash"), "plan_hash"
         ):
             raise click.ClickException(
-                "remediation scheduler retry orchestration schema mismatch: plan_hash mismatch"
+                "remediation scheduler retry orchestration schema mismatch: plan_hash "
+                "mismatch"
             )
         capture_by_action_hash[action_hash] = capture
 
@@ -4348,11 +4411,17 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
         base_delay_seconds = cast(int, rule["base_delay_seconds"])
         backoff_multiplier = cast(float, rule["backoff_multiplier"])
         attempt = 1
-        next_delay_seconds = int(base_delay_seconds * (backoff_multiplier ** (attempt - 1)))
+        next_delay_seconds = int(
+            base_delay_seconds * (backoff_multiplier ** (attempt - 1))
+        )
         entry: dict[str, object] = {
             "action_hash": action_hash,
-            "request_hash": _require_sha256(capture.get("request_hash"), "request_hash"),
-            "capture_hash": _require_sha256(capture.get("capture_hash"), "capture_hash"),
+            "request_hash": _require_sha256(
+                capture.get("request_hash"), "request_hash"
+            ),
+            "capture_hash": _require_sha256(
+                capture.get("capture_hash"), "capture_hash"
+            ),
             "capture_state": state,
             "attempt": attempt,
             "max_attempts": max_attempts,
@@ -4374,7 +4443,9 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
         ),
         "version": "1.0.0",
         "plan_hash": _require_sha256(retry_profile.get("plan_hash"), "plan_hash"),
-        "execution_hash": _require_sha256(retry_profile.get("execution_hash"), "execution_hash"),
+        "execution_hash": _require_sha256(
+            retry_profile.get("execution_hash"), "execution_hash"
+        ),
         "retry_profile_hash": retry_profile_hash,
         "retry_entry_count": len(retry_entries),
         "retry_entries": sorted(
@@ -5989,15 +6060,16 @@ def digital_twin_observability_bundle(
             scheduler_dashboard_json,
             artifact="remediation scheduler execution dashboard",
         )
-        if (
-            dashboard.get("schema")
-            != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
+        if dashboard.get("schema") != (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
         ):
             raise click.ClickException(
                 "digital-twin observability bundle schema mismatch: "
                 "unexpected scheduler dashboard schema"
             )
-        dashboard_hash = _require_sha256(dashboard.get("dashboard_hash"), "dashboard_hash")
+        dashboard_hash = _require_sha256(
+            dashboard.get("dashboard_hash"), "dashboard_hash"
+        )
         rows = dashboard.get("rows")
         if not isinstance(rows, list):
             raise click.ClickException(
@@ -6031,9 +6103,8 @@ def digital_twin_observability_bundle(
             scheduler_replay_json,
             artifact="remediation scheduler acknowledgement replay",
         )
-        if (
-            replay.get("schema")
-            != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
+        if replay.get("schema") != (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
         ):
             raise click.ClickException(
                 "digital-twin observability bundle schema mismatch: "
@@ -6064,13 +6135,28 @@ def digital_twin_observability_bundle(
         replay_linkage["scheduler_replay_completed_count"] = replay_completed
         replay_linkage["scheduler_replay_hash"] = replay_hash
 
+    accepted_count = evidence.get("accepted_count", 0)
+    rejected_count = evidence.get("rejected_count", 0)
+    if not isinstance(accepted_count, int) or isinstance(accepted_count, bool):
+        raise click.ClickException(
+            "digital-twin observability bundle schema mismatch: "
+            "accepted_count must be an integer"
+        )
+    if not isinstance(rejected_count, int) or isinstance(rejected_count, bool):
+        raise click.ClickException(
+            "digital-twin observability bundle schema mismatch: "
+            "rejected_count must be an integer"
+        )
+
     bundle_payload: dict[str, object] = {
         "schema": "scpn_digital_twin_observability_bundle_v1",
         "version": "1.0.0",
-        "contract_hash": _require_sha256(evidence.get("contract_hash"), "contract_hash"),
+        "contract_hash": _require_sha256(
+            evidence.get("contract_hash"), "contract_hash"
+        ),
         "status": str(evidence.get("status")),
-        "accepted_count": int(evidence.get("accepted_count", 0)),
-        "rejected_count": int(evidence.get("rejected_count", 0)),
+        "accepted_count": accepted_count,
+        "rejected_count": rejected_count,
         "prometheus_metric_prefix": metric_prefix,
         "prometheus_text": prometheus_text,
         "replay_linkage": replay_linkage,
@@ -6133,9 +6219,12 @@ def digital_twin_grafana_dashboard_pack(
             "title": "Sync Acceptance Ratio",
             "kind": "timeseries",
             "query_template": (
-                f"sum({metric_prefix}_digital_twin_sync_accepted_total{{contract_hash=\"{contract_hash}\"}}) / "
-                f"(sum({metric_prefix}_digital_twin_sync_accepted_total{{contract_hash=\"{contract_hash}\"}}) + "
-                f"sum({metric_prefix}_digital_twin_sync_rejected_total{{contract_hash=\"{contract_hash}\"}}))"
+                f"sum({metric_prefix}_digital_twin_sync_accepted_total"
+                f'{{contract_hash="{contract_hash}"}}) / '
+                f"(sum({metric_prefix}_digital_twin_sync_accepted_total"
+                f'{{contract_hash="{contract_hash}"}}) + '
+                f"sum({metric_prefix}_digital_twin_sync_rejected_total"
+                f'{{contract_hash="{contract_hash}"}}))'
             ),
             "unit": "percentunit",
         },
@@ -6143,7 +6232,7 @@ def digital_twin_grafana_dashboard_pack(
             "title": "Twin Residual Max",
             "kind": "timeseries",
             "query_template": (
-                f"{metric_prefix}_digital_twin_max_abs_residual{{contract_hash=\"{contract_hash}\"}}"
+                f'{metric_prefix}_digital_twin_max_abs_residual{{contract_hash="{contract_hash}"}}'
             ),
             "unit": "none",
         },
@@ -6151,7 +6240,7 @@ def digital_twin_grafana_dashboard_pack(
             "title": "Unhealthy Adapter Count",
             "kind": "stat",
             "query_template": (
-                f"{metric_prefix}_digital_twin_unhealthy_adapter_count{{contract_hash=\"{contract_hash}\"}}"
+                f'{metric_prefix}_digital_twin_unhealthy_adapter_count{{contract_hash="{contract_hash}"}}'
             ),
             "unit": "short",
         },
@@ -6159,7 +6248,9 @@ def digital_twin_grafana_dashboard_pack(
             "title": "Twin Mismatch Reasons",
             "kind": "barchart",
             "query_template": (
-                f"sum by (reason) ({metric_prefix}_digital_twin_mismatch_reason_count{{contract_hash=\"{contract_hash}\"}})"
+                f"sum by (reason) "
+                f"({metric_prefix}_digital_twin_mismatch_reason_count"
+                f'{{contract_hash="{contract_hash}"}})'
             ),
             "unit": "short",
         },
@@ -6268,12 +6359,19 @@ def digital_twin_live_deployment_playbook(
             "digital-twin live deployment playbook schema mismatch: "
             "scheduler_blocked_count must be non-negative integer"
         )
-    rollout_gate = "blocked" if blocked > 0 else ("degraded" if overdue > 0 else "ready")
+    rollout_gate = (
+        "blocked" if blocked > 0 else ("degraded" if overdue > 0 else "ready")
+    )
     steps = [
         {
             "id": "publish-metrics",
-            "description": "Expose Prometheus text from digital-twin observability bundle.",
-            "command_template": "spo digital-twin-observability-bundle EVIDENCE_JSON --created-by OPERATOR",
+            "description": (
+                "Expose Prometheus text from digital-twin observability bundle."
+            ),
+            "command_template": (
+                "spo digital-twin-observability-bundle EVIDENCE_JSON "
+                "--created-by OPERATOR"
+            ),
         },
         {
             "id": "publish-dashboards",

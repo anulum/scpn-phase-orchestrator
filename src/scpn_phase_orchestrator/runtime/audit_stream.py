@@ -117,7 +117,9 @@ class AuditStreamEvent:
         if not isinstance(self.payload, dict):
             raise ValueError("payload must be a JSON object mapping")
         if _canonical_json(self.payload) != self.payload_json:
-            raise ValueError("payload_json must match canonical JSON encoding of payload")
+            raise ValueError(
+                "payload_json must match canonical JSON encoding of payload"
+            )
         computed_payload_hash = hashlib.sha256(self.payload_json.encode()).hexdigest()
         if computed_payload_hash != self.payload_sha256:
             raise ValueError("payload_sha256 mismatch for payload_json")
@@ -132,17 +134,19 @@ class AuditStreamEvent:
         is_signed = self.audit_mode == "signed"
         if is_signed:
             if self.signature_algorithm != SIGNATURE_ALGORITHM:
-                raise ValueError("signed audit_mode requires expected signature_algorithm")
-            if (
-                len(self.signature_key_id) != 16
-                or any(ch not in "0123456789abcdef" for ch in self.signature_key_id)
+                raise ValueError(
+                    "signed audit_mode requires expected signature_algorithm"
+                )
+            if len(self.signature_key_id) != 16 or any(
+                ch not in "0123456789abcdef" for ch in self.signature_key_id
             ):
                 raise ValueError("signed audit_mode requires 16-char lowercase key id")
-            if (
-                len(self.signature) != 64
-                or any(ch not in "0123456789abcdef" for ch in self.signature)
+            if len(self.signature) != 64 or any(
+                ch not in "0123456789abcdef" for ch in self.signature
             ):
-                raise ValueError("signed audit_mode requires 64-char lowercase signature")
+                raise ValueError(
+                    "signed audit_mode requires 64-char lowercase signature"
+                )
         else:
             if self.signature_algorithm or self.signature_key_id or self.signature:
                 raise ValueError(
@@ -210,7 +214,9 @@ def _audit_envelope_class() -> type[Message]:
         pool.AddSerializedFile(_AUDIT_ENVELOPE_FILE_PROTO_BYTES)
         descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
     except Exception as exc:  # pragma: no cover - defensive fail-closed path
-        raise RuntimeError("failed to initialise audit envelope protobuf schema") from exc
+        raise RuntimeError(
+            "failed to initialise audit envelope protobuf schema"
+        ) from exc
     return message_factory.GetMessageClass(descriptor)
 
 
@@ -492,9 +498,7 @@ def iter_event_stream(
     poll_interval = _validate_poll_interval_s(poll_interval_s)
     path_obj = Path(path)
     if not from_start and not path_obj.exists():
-        raise FileNotFoundError(
-            f"audit event stream path does not exist: {path_obj}"
-        )
+        raise FileNotFoundError(f"audit event stream path does not exist: {path_obj}")
     offset = 0
     if not from_start and path_obj.exists():
         offset = len(read_event_stream(path_obj))
@@ -519,7 +523,11 @@ def tail_event_stream(
 
     if max_events is None:
         raise ValueError("max_events is required for bounded tail_event_stream")
-    if isinstance(max_events, bool) or not isinstance(max_events, int) or max_events <= 0:
+    if (
+        isinstance(max_events, bool)
+        or not isinstance(max_events, int)
+        or max_events <= 0
+    ):
         raise ValueError("max_events must be a positive integer")
     poll_interval = _validate_poll_interval_s(poll_interval_s)
     events: list[AuditStreamEvent] = []

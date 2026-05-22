@@ -502,12 +502,8 @@ class TestDispatcher:
 
         monkeypatch.setattr(attnres_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(attnres_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(
-            attnres_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"]
-        )
-        monkeypatch.setattr(
-            attnres_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go}
-        )
+        monkeypatch.setattr(attnres_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(attnres_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
 
         backend = attnres_mod._dispatch_backend()
         assert backend is not None

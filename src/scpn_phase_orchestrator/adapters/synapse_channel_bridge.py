@@ -226,7 +226,9 @@ class SynapseChannelBridge:
             logger.warning("synapse.listen_once_invalid_json")
             return
         except (ConnectionError, OSError, RuntimeError) as exc:
-            logger.warning("synapse.listen_once_transport_error: %s", type(exc).__name__)
+            logger.warning(
+                "synapse.listen_once_transport_error: %s", type(exc).__name__
+            )
             return  # connection error — caller should retry
 
     def _process_message(self, msg: dict) -> None:

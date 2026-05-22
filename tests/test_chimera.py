@@ -175,9 +175,7 @@ def test_dispatch_uses_cached_loader_once(
     chimera_module._BACKEND_CACHE.clear()
     call_count = 0
 
-    def fake_backend(
-        _phases: np.ndarray, _knm_flat: np.ndarray, n: int
-    ) -> np.ndarray:
+    def fake_backend(_phases: np.ndarray, _knm_flat: np.ndarray, n: int) -> np.ndarray:
         return np.zeros(n, dtype=np.float64)
 
     def loader():

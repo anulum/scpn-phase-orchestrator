@@ -218,7 +218,9 @@ def _load_primitive_backend(
     cached = _PRIM_CACHE.get(name)
     if cached is not None:
         return cached
-    loaded = _LOADERS[name]()
+    loaded = cast(
+        Callable[[FloatArray, int], tuple[FloatArray, FloatArray]], _LOADERS[name]()
+    )
     _PRIM_CACHE[name] = loaded
     return loaded
 
@@ -245,6 +247,8 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 _RUST_CACHE: dict[str, Any] | None = None
+
+
 def _rust_bundle() -> dict[str, Any]:
     global _RUST_CACHE
     if _RUST_CACHE is None:

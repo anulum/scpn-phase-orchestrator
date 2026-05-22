@@ -53,7 +53,10 @@ class KnmTemplateSet:
         normalized_name = template.name.strip()
         if not normalized_name:
             raise ValueError("template name must be a non-empty string")
-        if not isinstance(template.description, str) or not template.description.strip():
+        if (
+            not isinstance(template.description, str)
+            or not template.description.strip()
+        ):
             raise ValueError("template description must be a non-empty string")
         if template.knm.ndim != 2 or template.alpha.ndim != 2:
             raise ValueError("template knm/alpha must be 2D matrices")

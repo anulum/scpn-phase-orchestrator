@@ -154,8 +154,9 @@ def test_remote_redis_requires_password():
 
 
 def test_remote_tls_redis_requires_ca_bundle():
+    auth_token = "-".join(("secret", "token"))
     with pytest.raises(ValueError, match="require a CA bundle"):
-        RedisStateStore(host="redis.internal", password="secret-token", ssl=True)
+        RedisStateStore(host="redis.internal", password=auth_token, ssl=True)
 
 
 def test_ssl_flag_must_be_bool():

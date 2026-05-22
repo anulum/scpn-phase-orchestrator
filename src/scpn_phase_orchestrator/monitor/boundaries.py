@@ -50,7 +50,9 @@ class BoundaryObserver:
             raise TypeError("boundary_defs must be a list[BoundaryDef]")
         for idx, bdef in enumerate(boundary_defs):
             if not isinstance(bdef, BoundaryDef):
-                raise TypeError(f"boundary_defs[{idx}] must be BoundaryDef, got {bdef!r}")
+                raise TypeError(
+                    f"boundary_defs[{idx}] must be BoundaryDef, got {bdef!r}"
+                )
             if not bdef.name.strip() or not bdef.variable.strip():
                 raise ValueError(
                     f"boundary_defs[{idx}] requires non-empty name and variable"
@@ -59,13 +61,15 @@ class BoundaryObserver:
                 isinstance(bdef.lower, bool) or not isfinite(float(bdef.lower))
             ):
                 raise ValueError(
-                    f"boundary_defs[{idx}] lower bound must be finite, got {bdef.lower!r}"
+                    f"boundary_defs[{idx}] lower bound must be finite, "
+                    f"got {bdef.lower!r}"
                 )
             if bdef.upper is not None and (
                 isinstance(bdef.upper, bool) or not isfinite(float(bdef.upper))
             ):
                 raise ValueError(
-                    f"boundary_defs[{idx}] upper bound must be finite, got {bdef.upper!r}"
+                    f"boundary_defs[{idx}] upper bound must be finite, "
+                    f"got {bdef.upper!r}"
                 )
             if (
                 bdef.lower is not None
@@ -73,7 +77,8 @@ class BoundaryObserver:
                 and float(bdef.lower) > float(bdef.upper)
             ):
                 raise ValueError(
-                    f"boundary_defs[{idx}] requires lower <= upper, got {bdef.lower!r}>{bdef.upper!r}"
+                    f"boundary_defs[{idx}] requires lower <= upper, "
+                    f"got {bdef.lower!r}>{bdef.upper!r}"
                 )
         self._defs = boundary_defs
         self._event_bus: EventBus | None = None
@@ -124,9 +129,13 @@ class BoundaryObserver:
             if not isinstance(name, str) or not name.strip():
                 raise ValueError(f"value keys must be non-empty strings, got {name!r}")
             if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise ValueError(f"values[{name!r}] must be finite float, got {value!r}")
+                raise ValueError(
+                    f"values[{name!r}] must be finite float, got {value!r}"
+                )
             if not isfinite(float(value)):
-                raise ValueError(f"values[{name!r}] must be finite float, got {value!r}")
+                raise ValueError(
+                    f"values[{name!r}] must be finite float, got {value!r}"
+                )
         for bdef in self._defs:
             val = values.get(bdef.variable)
             if val is None:

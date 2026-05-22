@@ -79,9 +79,13 @@ class CyberneticClosure:
             if not isfinite(float(weight)):
                 raise ValueError("cost_weights must be finite reals")
         if isinstance(max_steps, bool) or not isinstance(max_steps, int):
-            raise TypeError(f"max_steps must be a non-negative integer, got {max_steps!r}")
+            raise TypeError(
+                f"max_steps must be a non-negative integer, got {max_steps!r}"
+            )
         if max_steps < 0:
-            raise ValueError(f"max_steps must be a non-negative integer, got {max_steps!r}")
+            raise ValueError(
+                f"max_steps must be a non-negative integer, got {max_steps!r}"
+            )
         self._carrier = carrier
         self._weights = cost_weights
         self._max_steps = max_steps
@@ -107,7 +111,8 @@ class CyberneticClosure:
         n_osc = self._carrier.decode().shape[0]
         if phases.shape[0] != n_osc:
             raise ValueError(
-                f"phases length must match oscillator count {n_osc}, got {phases.shape[0]}"
+                "phases length must match oscillator count "
+                f"{n_osc}, got {phases.shape[0]}"
             )
         if not np.isfinite(phases).all():
             raise ValueError("phases must contain only finite values")

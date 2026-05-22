@@ -32,10 +32,7 @@ pub fn event_phase(timestamps: &[f64]) -> (f64, f64, f64) {
         return (0.0, 0.0, 0.0);
     }
 
-    let intervals: Vec<f64> = timestamps
-        .windows(2)
-        .map(|w| w[1] - w[0])
-        .collect();
+    let intervals: Vec<f64> = timestamps.windows(2).map(|w| w[1] - w[0]).collect();
 
     if intervals.is_empty() {
         return (0.0, 0.0, 0.0);

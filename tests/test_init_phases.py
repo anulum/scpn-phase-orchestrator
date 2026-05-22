@@ -278,12 +278,18 @@ def test_symbolic_path_is_batched_into_single_extract_call(
             self.node_id = node_id
 
         def extract(self, signal: np.ndarray, sample_rate: float):
-            _BatchProbeSymbolicExtractor.calls.append(np.asarray(signal, dtype=np.int64))
+            _BatchProbeSymbolicExtractor.calls.append(
+                np.asarray(signal, dtype=np.int64)
+            )
             return [
                 type(
                     "State",
                     (),
-                    {"theta": float((int(idx) % self.n_states) * (2.0 * np.pi / self.n_states))},
+                    {
+                        "theta": float(
+                            (int(idx) % self.n_states) * (2.0 * np.pi / self.n_states)
+                        )
+                    },
                 )()
                 for idx in np.asarray(signal, dtype=np.int64)
             ]

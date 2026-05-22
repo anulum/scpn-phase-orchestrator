@@ -141,10 +141,12 @@ def extract_initial_phases(
     if symbolic_pending:
         symbolic_indices = np.array(
             [state_idx for _, state_idx in symbolic_pending],
-            dtype=np.int64,
+            dtype=np.float64,
         )
         symbolic_states = symbolic_extractor.extract(symbolic_indices, sample_rate=1.0)
-        for (phase_idx, _), state in zip(symbolic_pending, symbolic_states, strict=True):
+        for (phase_idx, _), state in zip(
+            symbolic_pending, symbolic_states, strict=True
+        ):
             phases[phase_idx] = state.theta
 
     return phases

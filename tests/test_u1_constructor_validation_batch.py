@@ -8,10 +8,12 @@
 
 from __future__ import annotations
 
-import pytest
 import numpy as np
+import pytest
+
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.binding.types import BoundaryDef
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
@@ -19,8 +21,12 @@ from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
 from scpn_phase_orchestrator.ssgf.closure import CyberneticClosure
 from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
-from scpn_phase_orchestrator.supervisor.petri_net import Marking, PetriNet, Place, Transition
-from scpn_phase_orchestrator.binding.types import BoundaryDef
+from scpn_phase_orchestrator.supervisor.petri_net import (
+    Marking,
+    PetriNet,
+    Place,
+    Transition,
+)
 
 
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
@@ -673,7 +679,7 @@ def test_u1_petri_adapter_step_rejects_non_mapping_context() -> None:
         adapter.step([("metric", 0.1)])  # type: ignore[arg-type]
 
 
-def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
+def test_u1_petri_adapter_rejects_integer_regime_mapping_value() -> None:
     net = PetriNet(
         places=[Place("nominal")],
         transitions=[],

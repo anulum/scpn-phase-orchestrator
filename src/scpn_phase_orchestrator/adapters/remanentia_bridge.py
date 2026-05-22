@@ -140,17 +140,9 @@ def _validated_status_payload(payload: object) -> tuple[int, int]:
         raise ValueError("status payload must be a mapping")
     entities = payload.get("entities")
     memories = payload.get("memories")
-    if (
-        not isinstance(entities, int)
-        or isinstance(entities, bool)
-        or entities < 0
-    ):
+    if not isinstance(entities, int) or isinstance(entities, bool) or entities < 0:
         raise ValueError("status.entities must be a non-negative integer")
-    if (
-        not isinstance(memories, int)
-        or isinstance(memories, bool)
-        or memories < 0
-    ):
+    if not isinstance(memories, int) or isinstance(memories, bool) or memories < 0:
         raise ValueError("status.memories must be a non-negative integer")
     return entities, memories
 

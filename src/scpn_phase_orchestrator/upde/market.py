@@ -157,6 +157,8 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> tuple[_MarketFn, _MarketFn] | None:
+    if ACTIVE_BACKEND == "python":
+        return None
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -305,6 +307,8 @@ def market_plv(phases: FloatArray, window: int = 50) -> FloatArray:
     phases = _validate_phase_matrix(phases)
     window = _validate_positive_int(window, name="window")
     T, N = phases.shape
+    if window > T or N == 0:
+        return np.empty((0, N, N), dtype=np.float64)
     flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     dispatched = _dispatch()
     if dispatched is not None:

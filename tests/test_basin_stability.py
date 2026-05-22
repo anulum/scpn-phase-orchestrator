@@ -277,12 +277,8 @@ class TestDispatchFallbackChain:
 
         monkeypatch.setattr(basin_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(basin_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(
-            basin_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"]
-        )
-        monkeypatch.setattr(
-            basin_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go}
-        )
+        monkeypatch.setattr(basin_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(basin_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
 
         fn = basin_mod._dispatch()
         assert fn is not None

@@ -42,17 +42,26 @@ class ActionProjector:
             raise TypeError("value_bounds must be a dict[str, tuple[float, float]]")
         for knob, limit in rate_limits.items():
             if not isinstance(knob, str) or not knob.strip():
-                raise ValueError(f"rate-limit knob name must be non-empty str, got {knob!r}")
+                raise ValueError(
+                    f"rate-limit knob name must be non-empty str, got {knob!r}"
+                )
             if isinstance(limit, bool) or not isinstance(limit, Real):
-                raise TypeError(f"rate limit for {knob!r} must be finite real, got {limit!r}")
+                raise TypeError(
+                    f"rate limit for {knob!r} must be finite real, got {limit!r}"
+                )
             if not isfinite(float(limit)) or float(limit) < 0.0:
-                raise ValueError(f"rate limit for {knob!r} must be finite >= 0, got {limit!r}")
+                raise ValueError(
+                    f"rate limit for {knob!r} must be finite >= 0, got {limit!r}"
+                )
         for knob, bounds in value_bounds.items():
             if not isinstance(knob, str) or not knob.strip():
-                raise ValueError(f"value-bound knob name must be non-empty str, got {knob!r}")
+                raise ValueError(
+                    f"value-bound knob name must be non-empty str, got {knob!r}"
+                )
             if not isinstance(bounds, tuple) or len(bounds) != 2:
                 raise TypeError(
-                    f"value bounds for {knob!r} must be a 2-tuple (lo, hi), got {bounds!r}"
+                    f"value bounds for {knob!r} must be a 2-tuple "
+                    f"(lo, hi), got {bounds!r}"
                 )
             lo, hi = bounds
             if any(isinstance(v, bool) or not isinstance(v, Real) for v in (lo, hi)):

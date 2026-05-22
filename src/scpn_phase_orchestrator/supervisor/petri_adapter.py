@@ -94,11 +94,14 @@ class PetriNetAdapter:
         self._place_to_regime: dict[str, Regime] = {}
         for place, regime_str in place_to_regime.items():
             if not isinstance(place, str) or not place.strip():
-                raise PolicyError(f"place mapping key must be non-empty string, got {place!r}")
+                raise PolicyError(
+                    f"place mapping key must be non-empty string, got {place!r}"
+                )
             place_key = place.strip()
             if not isinstance(regime_str, str) or not regime_str.strip():
                 raise PolicyError(
-                    f"regime mapping value for place {place!r} must be non-empty string, got {regime_str!r}"
+                    f"regime mapping value for place {place!r} must be "
+                    f"non-empty string, got {regime_str!r}"
                 )
             if place_key not in net.place_names:
                 raise PolicyError(f"unknown place {place!r} in regime mapping")

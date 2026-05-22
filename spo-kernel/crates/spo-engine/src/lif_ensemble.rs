@@ -257,10 +257,7 @@ mod tests {
     #[test]
     fn zero_substeps_rejected() {
         let mut e = LIFEnsemble::new(1, 2, LIFParams::default()).unwrap();
-        assert!(matches!(
-            e.step(&[1.0], 0),
-            Err(SpoError::InvalidConfig(_))
-        ));
+        assert!(matches!(e.step(&[1.0], 0), Err(SpoError::InvalidConfig(_))));
     }
 
     #[test]

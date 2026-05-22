@@ -246,9 +246,7 @@ class TestPIDRustDispatch:
         assert val == pytest.approx(0.37, abs=1e-12)
         assert len(calls) == 1
 
-    def test_synergy_falls_back_when_rust_raises(
-        self, monkeypatch: pytest.MonkeyPatch
-    ):
+    def test_synergy_falls_back_when_rust_raises(self, monkeypatch: pytest.MonkeyPatch):
         def _raising_rust_syn(
             _phases: np.ndarray,
             _group_a: list[int],

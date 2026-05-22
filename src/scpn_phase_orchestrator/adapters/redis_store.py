@@ -74,9 +74,7 @@ class RedisStateStore:
         self._ssl_certfile = _optional_path(ssl_certfile, "Redis TLS certificate")
         self._ssl_keyfile = _optional_path(ssl_keyfile, "Redis TLS key")
         if (self._ssl_certfile is None) != (self._ssl_keyfile is None):
-            raise ValueError(
-                "Redis TLS certificate and key must be provided together"
-            )
+            raise ValueError("Redis TLS certificate and key must be provided together")
         if not self._ssl and self._host not in _LOOPBACK_HOSTS:
             raise ValueError(
                 "plaintext Redis connections are allowed only for loopback hosts"

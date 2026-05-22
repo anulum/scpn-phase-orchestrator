@@ -345,13 +345,16 @@ class TestDispatchFallbackChain:
 
         fn = pac_mod._dispatch("modulation_index")
         assert fn is not None
-        assert float(
-            fn(
-                np.array([0.0], dtype=np.float64),
-                np.array([1.0], dtype=np.float64),
-                18,
+        assert (
+            float(
+                fn(
+                    np.array([0.0], dtype=np.float64),
+                    np.array([1.0], dtype=np.float64),
+                    18,
+                )
             )
-        ) == 0.5
+            == 0.5
+        )
         assert calls == {"rust": 1, "go": 1}
 
     def test_dispatch_uses_cached_loader_once(

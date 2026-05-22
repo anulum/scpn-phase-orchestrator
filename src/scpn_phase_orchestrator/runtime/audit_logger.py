@@ -61,7 +61,9 @@ class AuditLogger:
             raise AuditError("event_stream path must be non-empty when provided")
         self._path = Path(path)
         if self._path.exists() and self._path.is_dir():
-            raise AuditError(f"audit path must be a file path, got directory {self._path}")
+            raise AuditError(
+                f"audit path must be a file path, got directory {self._path}"
+            )
         self._prev_hash, self._sequence = self._load_previous_state()
         self._audit_key = os.environ.get("SPO_AUDIT_KEY")
         self._stream_id = _DEFAULT_STREAM_ID
@@ -192,7 +194,11 @@ class AuditLogger:
             raise AuditError(
                 f"n_oscillators must be a positive integer, got {n_oscillators!r}"
             )
-        if isinstance(dt, bool) or not isinstance(dt, (int, float)) or not isfinite(float(dt)):
+        if (
+            isinstance(dt, bool)
+            or not isinstance(dt, (int, float))
+            or not isfinite(float(dt))
+        ):
             raise AuditError(f"dt must be a finite positive real, got {dt!r}")
         if float(dt) <= 0.0:
             raise AuditError(f"dt must be a finite positive real, got {dt!r}")
@@ -201,16 +207,16 @@ class AuditLogger:
         if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
             raise AuditError(f"seed must be integer or None, got {seed!r}")
         if isinstance(amplitude_mode, bool) is False:
-            raise AuditError(
-                f"amplitude_mode must be bool, got {amplitude_mode!r}"
-            )
+            raise AuditError(f"amplitude_mode must be bool, got {amplitude_mode!r}")
         if binding_config is not None and not isinstance(binding_config, dict):
             raise AuditError(
-                f"binding_config must be dict[str, object] or None, got {binding_config!r}"
+                "binding_config must be dict[str, object] or None, "
+                f"got {binding_config!r}"
             )
         if binding_summary is not None and not isinstance(binding_summary, dict):
             raise AuditError(
-                f"binding_summary must be dict[str, object] or None, got {binding_summary!r}"
+                "binding_summary must be dict[str, object] or None, "
+                f"got {binding_summary!r}"
             )
         record: dict = {
             "header": True,

@@ -436,9 +436,7 @@ class TestDispatcher:
             op_mod,
             "_load_backend",
             lambda name: (
-                {}
-                if name == "rust"
-                else {"order_parameter": lambda phases: (0.3, 0.0)}
+                {} if name == "rust" else {"order_parameter": lambda phases: (0.3, 0.0)}
             ),
         )
 

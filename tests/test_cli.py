@@ -2773,8 +2773,7 @@ def test_plugins_lifecycle_renewal_queue_outputs_deterministic_followups(
     policy_payload = json.loads(policy_path.read_text(encoding="utf-8"))
     payload = json.loads(result.output)
     assert (
-        payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_renewal_queue_v1"
+        payload["schema"] == "scpn_plugin_execution_request_lifecycle_renewal_queue_v1"
     )
     assert payload["summary_hash"] == summary_payload["summary_hash"]
     assert payload["request_count"] == summary_payload["request_count"]
@@ -3027,15 +3026,11 @@ def test_plugins_lifecycle_multistore_dashboard_aggregates_policy_reports(
     expected_unique = set(policy_a_payload["renewal_required_request_hashes"])
     expected_unique.update(policy_a_payload["storage_missing_request_hashes"])
     expected_unique.update(policy_a_payload["missing_adapter_request_hashes"])
-    expected_unique.update(
-        policy_a_payload["external_write_followup_request_hashes"]
-    )
+    expected_unique.update(policy_a_payload["external_write_followup_request_hashes"])
     expected_unique.update(policy_b_payload["renewal_required_request_hashes"])
     expected_unique.update(policy_b_payload["storage_missing_request_hashes"])
     expected_unique.update(policy_b_payload["missing_adapter_request_hashes"])
-    expected_unique.update(
-        policy_b_payload["external_write_followup_request_hashes"]
-    )
+    expected_unique.update(policy_b_payload["external_write_followup_request_hashes"])
     assert payload["unique_flagged_request_count"] == len(expected_unique)
     assert len(payload["dashboard_hash"]) == 64
 
@@ -4002,9 +3997,7 @@ def test_plugins_lifecycle_remediation_scheduler_queue_outputs_deterministic_ent
     )
     assert execution_dashboard.exit_code == 0
     execution_dashboard_path = tmp_path / "execution-dashboard.json"
-    execution_dashboard_path.write_text(
-        execution_dashboard.output, encoding="utf-8"
-    )
+    execution_dashboard_path.write_text(execution_dashboard.output, encoding="utf-8")
     handoff = runner.invoke(
         main,
         [
@@ -4095,7 +4088,9 @@ def test_plugins_lifecycle_remediation_scheduler_queue_rejects_window_overflow(
     tmp_path: Path,
 ):
     handoff_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_deployment_handoff_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_deployment_handoff_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "1" * 64,
         "execution_hash": "2" * 64,
@@ -4106,16 +4101,16 @@ def test_plugins_lifecycle_remediation_scheduler_queue_rejects_window_overflow(
     for index in range(2):
         action = {
             "handoff_action_hash": hashlib.sha256(
-                f"handoff-{index}".encode("utf-8")
+                f"handoff-{index}".encode()
             ).hexdigest(),
-            "action_hash": hashlib.sha256(f"action-{index}".encode("utf-8")).hexdigest(),
-            "request_hash": hashlib.sha256(
-                f"request-{index}".encode("utf-8")
-            ).hexdigest(),
+            "action_hash": hashlib.sha256(f"action-{index}".encode()).hexdigest(),
+            "request_hash": hashlib.sha256(f"request-{index}".encode()).hexdigest(),
             "action_type": "renew_approval",
             "priority": index + 1,
             "state": "pending",
-            "deployment_command_template": "spo plugins approve-execution-plan PLAN_JSON",
+            "deployment_command_template": (
+                "spo plugins approve-execution-plan PLAN_JSON"
+            ),
         }
         handoff_payload["handoff_actions"].append(action)
     handoff_payload["handoff_hash"] = hashlib.sha256(
@@ -4152,7 +4147,11 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
 ):
     lifecycle = runner.invoke(
         main,
-        ["plugins", "lifecycle-status", str(_write_request_payload_from_cli(runner, tmp_path))],
+        [
+            "plugins",
+            "lifecycle-status",
+            str(_write_request_payload_from_cli(runner, tmp_path)),
+        ],
     )
     assert lifecycle.exit_code == 0
     lifecycle_path = tmp_path / "lifecycle.json"
@@ -4240,9 +4239,7 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
     )
     assert execution_dashboard.exit_code == 0
     execution_dashboard_path = tmp_path / "execution-dashboard.json"
-    execution_dashboard_path.write_text(
-        execution_dashboard.output, encoding="utf-8"
-    )
+    execution_dashboard_path.write_text(execution_dashboard.output, encoding="utf-8")
     handoff = runner.invoke(
         main,
         [
@@ -4307,7 +4304,9 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_rejects_duplicate_sta
     tmp_path: Path,
 ):
     queue_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "1" * 64,
         "execution_hash": "2" * 64,
@@ -4323,7 +4322,9 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_rejects_duplicate_sta
                 "action_type": "renew_approval",
                 "priority": 1,
                 "schedule_epoch": 1700000000,
-                "scheduler_command_template": "spo plugins approve-execution-plan PLAN_JSON",
+                "scheduler_command_template": (
+                    "spo plugins approve-execution-plan PLAN_JSON"
+                ),
             }
         ],
         "queue_entry_count": 1,
@@ -4338,7 +4339,9 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_rejects_duplicate_sta
         encoding="utf-8",
     )
     status_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_action_status_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_action_status_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "1" * 64,
         "action_hash": "6" * 64,
@@ -4381,7 +4384,11 @@ def test_plugins_lifecycle_remediation_scheduler_adapter_handoff_and_acknowledge
 ):
     lifecycle = runner.invoke(
         main,
-        ["plugins", "lifecycle-status", str(_write_request_payload_from_cli(runner, tmp_path))],
+        [
+            "plugins",
+            "lifecycle-status",
+            str(_write_request_payload_from_cli(runner, tmp_path)),
+        ],
     )
     assert lifecycle.exit_code == 0
     lifecycle_path = tmp_path / "lifecycle.json"
@@ -4450,9 +4457,7 @@ def test_plugins_lifecycle_remediation_scheduler_adapter_handoff_and_acknowledge
     )
     assert execution_dashboard.exit_code == 0
     execution_dashboard_path = tmp_path / "execution-dashboard.json"
-    execution_dashboard_path.write_text(
-        execution_dashboard.output, encoding="utf-8"
-    )
+    execution_dashboard_path.write_text(execution_dashboard.output, encoding="utf-8")
     handoff = runner.invoke(
         main,
         [
@@ -4515,15 +4520,16 @@ def test_plugins_lifecycle_remediation_scheduler_adapter_handoff_and_acknowledge
     )
     assert adapter_handoff.exit_code == 0
     adapter_handoff_payload = json.loads(adapter_handoff.output)
-    assert (
-        adapter_handoff_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
+    assert adapter_handoff_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
     )
     assert adapter_handoff_payload["entry_count"] == len(
         adapter_handoff_payload["entries"]
     )
     assert len(adapter_handoff_payload["adapter_handoff_hash"]) == 64
-    first_adapter_entry_hash = adapter_handoff_payload["entries"][0]["adapter_entry_hash"]
+    first_adapter_entry_hash = adapter_handoff_payload["entries"][0][
+        "adapter_entry_hash"
+    ]
     adapter_handoff_path = tmp_path / "adapter-handoff.json"
     adapter_handoff_path.write_text(adapter_handoff.output, encoding="utf-8")
 
@@ -4546,21 +4552,22 @@ def test_plugins_lifecycle_remediation_scheduler_adapter_handoff_and_acknowledge
     )
     assert acknowledgement.exit_code == 0
     acknowledgement_payload = json.loads(acknowledgement.output)
-    assert (
-        acknowledgement_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1"
+    assert acknowledgement_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1"
     )
     assert acknowledgement_payload["adapter_entry_hash"] == first_adapter_entry_hash
     assert acknowledgement_payload["state"] == "completed"
     assert len(acknowledgement_payload["acknowledgement_hash"]) == 64
 
 
-def test_plugins_lifecycle_remediation_scheduler_acknowledgement_rejects_unknown_entry_hash(
+def test_plugins_lifecycle_scheduler_ack_rejects_unknown_entry_hash(
     runner,
     tmp_path: Path,
 ):
     adapter_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "1" * 64,
         "execution_hash": "2" * 64,
@@ -4600,13 +4607,17 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_rejects_unknown
     assert "entry_hash not present in adapter handoff" in result.output
 
 
-def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_and_execution_dashboard(
+def test_plugins_lifecycle_scheduler_replay_and_execution_dashboard(
     runner,
     tmp_path: Path,
 ):
     lifecycle = runner.invoke(
         main,
-        ["plugins", "lifecycle-status", str(_write_request_payload_from_cli(runner, tmp_path))],
+        [
+            "plugins",
+            "lifecycle-status",
+            str(_write_request_payload_from_cli(runner, tmp_path)),
+        ],
     )
     assert lifecycle.exit_code == 0
     lifecycle_path = tmp_path / "lifecycle.json"
@@ -4675,9 +4686,7 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_and_exec
     )
     assert execution_dashboard.exit_code == 0
     execution_dashboard_path = tmp_path / "execution-dashboard.json"
-    execution_dashboard_path.write_text(
-        execution_dashboard.output, encoding="utf-8"
-    )
+    execution_dashboard_path.write_text(execution_dashboard.output, encoding="utf-8")
     handoff = runner.invoke(
         main,
         [
@@ -4797,9 +4806,8 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_and_exec
     )
     assert replay.exit_code == 0
     replay_payload = json.loads(replay.output)
-    assert (
-        replay_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
+    assert replay_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
     )
     assert replay_payload["acknowledgement_count"] == 2
     assert replay_payload["state_counts"]["completed"] == 1
@@ -4820,9 +4828,8 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_and_exec
     )
     assert dashboard.exit_code == 0
     dashboard_payload = json.loads(dashboard.output)
-    assert (
-        dashboard_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
+    assert dashboard_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
     )
     assert dashboard_payload["row_count"] == len(dashboard_payload["rows"])
     assert dashboard_payload["state_counts"]["completed"] >= 1
@@ -4830,12 +4837,14 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_and_exec
     assert len(dashboard_payload["dashboard_hash"]) == 64
 
 
-def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_rejects_hash_mismatch(
+def test_plugins_lifecycle_scheduler_replay_rejects_hash_mismatch(
     runner,
     tmp_path: Path,
 ):
     adapter_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "1" * 64,
         "execution_hash": "2" * 64,
@@ -4863,7 +4872,9 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_replay_rejects_
     )
 
     ack_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1"
+        ),
         "version": "1.0.0",
         "adapter_handoff_hash": "8" * 64,
         "telemetry_hash": "3" * 64,
@@ -4909,7 +4920,11 @@ def test_plugins_lifecycle_remediation_scheduler_control_plan_and_runbook(
 ):
     lifecycle = runner.invoke(
         main,
-        ["plugins", "lifecycle-status", str(_write_request_payload_from_cli(runner, tmp_path))],
+        [
+            "plugins",
+            "lifecycle-status",
+            str(_write_request_payload_from_cli(runner, tmp_path)),
+        ],
     )
     assert lifecycle.exit_code == 0
     lifecycle_path = tmp_path / "lifecycle.json"
@@ -4978,9 +4993,7 @@ def test_plugins_lifecycle_remediation_scheduler_control_plan_and_runbook(
     )
     assert execution_dashboard.exit_code == 0
     execution_dashboard_path = tmp_path / "execution-dashboard.json"
-    execution_dashboard_path.write_text(
-        execution_dashboard.output, encoding="utf-8"
-    )
+    execution_dashboard_path.write_text(execution_dashboard.output, encoding="utf-8")
     handoff = runner.invoke(
         main,
         [
@@ -5104,9 +5117,8 @@ def test_plugins_lifecycle_remediation_scheduler_control_plan_and_runbook(
     )
     assert control_plan.exit_code == 0
     control_payload = json.loads(control_plan.output)
-    assert (
-        control_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_control_plan_v1"
+    assert control_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_control_plan_v1"
     )
     assert control_payload["control_action_count"] == len(
         control_payload["control_actions"]
@@ -5141,7 +5153,9 @@ def test_plugins_lifecycle_remediation_scheduler_runbook_rejects_plan_hash_misma
     tmp_path: Path,
 ):
     control_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_control_plan_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_control_plan_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "1" * 64,
         "execution_hash": "2" * 64,
@@ -5166,7 +5180,9 @@ def test_plugins_lifecycle_remediation_scheduler_runbook_rejects_plan_hash_misma
         encoding="utf-8",
     )
     adapter_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "9" * 64,
         "execution_hash": "2" * 64,
@@ -5208,7 +5224,11 @@ def test_plugins_lifecycle_remediation_scheduler_automation_profile_and_capture(
 ):
     lifecycle = runner.invoke(
         main,
-        ["plugins", "lifecycle-status", str(_write_request_payload_from_cli(runner, tmp_path))],
+        [
+            "plugins",
+            "lifecycle-status",
+            str(_write_request_payload_from_cli(runner, tmp_path)),
+        ],
     )
     assert lifecycle.exit_code == 0
     lifecycle_path = tmp_path / "lifecycle.json"
@@ -5277,9 +5297,7 @@ def test_plugins_lifecycle_remediation_scheduler_automation_profile_and_capture(
     )
     assert execution_dashboard.exit_code == 0
     execution_dashboard_path = tmp_path / "execution-dashboard.json"
-    execution_dashboard_path.write_text(
-        execution_dashboard.output, encoding="utf-8"
-    )
+    execution_dashboard_path.write_text(execution_dashboard.output, encoding="utf-8")
     handoff = runner.invoke(
         main,
         [
@@ -5434,9 +5452,8 @@ def test_plugins_lifecycle_remediation_scheduler_automation_profile_and_capture(
     )
     assert profile.exit_code == 0
     profile_payload = json.loads(profile.output)
-    assert (
-        profile_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
+    assert profile_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
     )
     assert profile_payload["automation_rule_count"] == len(
         profile_payload["automation_rules"]
@@ -5465,20 +5482,21 @@ def test_plugins_lifecycle_remediation_scheduler_automation_profile_and_capture(
     )
     assert capture.exit_code == 0
     capture_payload = json.loads(capture.output)
-    assert (
-        capture_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1"
+    assert capture_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1"
     )
     assert capture_payload["action_hash"] == rule["action_hash"]
     assert len(capture_payload["capture_hash"]) == 64
 
 
-def test_plugins_lifecycle_remediation_scheduler_acknowledgement_capture_rejects_auto_state_mismatch(
+def test_plugins_lifecycle_scheduler_capture_rejects_auto_state_mismatch(
     runner,
     tmp_path: Path,
 ):
     profile_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
+        ),
         "version": "1.0.0",
         "profile_name": "airflow-default",
         "profile_version": "1.0.0",
@@ -5510,7 +5528,9 @@ def test_plugins_lifecycle_remediation_scheduler_acknowledgement_capture_rejects
         encoding="utf-8",
     )
     adapter_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "1" * 64,
         "execution_hash": "2" * 64,
@@ -5563,7 +5583,9 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
     tmp_path: Path,
 ):
     profile_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
+        ),
         "version": "1.0.0",
         "profile_name": "airflow-default",
         "profile_version": "1.0.0",
@@ -5624,9 +5646,8 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
     )
     assert retry_profile.exit_code == 0
     retry_payload = json.loads(retry_profile.output)
-    assert (
-        retry_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1"
+    assert retry_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1"
     )
     assert retry_payload["retry_rule_count"] == 2
     assert len(retry_payload["retry_profile_hash"]) == 64
@@ -5634,7 +5655,9 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
     retry_profile_path.write_text(retry_profile.output, encoding="utf-8")
 
     capture_a = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1"
+        ),
         "version": "1.0.0",
         "automation_profile_hash": retry_payload["automation_profile_hash"],
         "adapter_handoff_hash": "a" * 64,
@@ -5659,7 +5682,9 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
         encoding="utf-8",
     )
     capture_b = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1"
+        ),
         "version": "1.0.0",
         "automation_profile_hash": retry_payload["automation_profile_hash"],
         "adapter_handoff_hash": "c" * 64,
@@ -5698,9 +5723,8 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
     )
     assert orchestration.exit_code == 0
     orchestration_payload = json.loads(orchestration.output)
-    assert (
-        orchestration_payload["schema"]
-        == "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_orchestration_v1"
+    assert orchestration_payload["schema"] == (
+        "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_orchestration_v1"
     )
     assert orchestration_payload["retry_entry_count"] == 1
     assert orchestration_payload["retry_entries"][0]["action_hash"] == "4" * 64
@@ -5708,12 +5732,14 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
     assert len(orchestration_payload["retry_orchestration_hash"]) == 64
 
 
-def test_plugins_lifecycle_remediation_scheduler_retry_orchestration_rejects_duplicate_capture(
+def test_plugins_lifecycle_scheduler_retry_rejects_duplicate_capture(
     runner,
     tmp_path: Path,
 ):
     retry_profile_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "1" * 64,
         "execution_hash": "2" * 64,
@@ -5744,7 +5770,9 @@ def test_plugins_lifecycle_remediation_scheduler_retry_orchestration_rejects_dup
         encoding="utf-8",
     )
     capture_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_capture_v1"
+        ),
         "version": "1.0.0",
         "automation_profile_hash": "3" * 64,
         "adapter_handoff_hash": "7" * 64,
@@ -5809,7 +5837,9 @@ def test_digital_twin_observability_bundle_outputs_prometheus_and_replay_linkage
         encoding="utf-8",
     )
     replay_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_replay_v1"
+        ),
         "version": "1.0.0",
         "adapter_handoff_hash": "2" * 64,
         "plan_hash": "3" * 64,
@@ -5832,7 +5862,9 @@ def test_digital_twin_observability_bundle_outputs_prometheus_and_replay_linkage
         encoding="utf-8",
     )
     dashboard_payload = {
-        "schema": "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1",
+        "schema": (
+            "scpn_plugin_execution_request_lifecycle_remediation_scheduler_execution_dashboard_v1"
+        ),
         "version": "1.0.0",
         "plan_hash": "3" * 64,
         "execution_hash": "4" * 64,

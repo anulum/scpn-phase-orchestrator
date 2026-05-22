@@ -81,17 +81,13 @@ def test_fallback_message_alias_preserves_dataclass_contract() -> None:
 
 
 def test_fallback_alias_module_script_executes_without_error() -> None:
-    module_path = (
-        "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_fallback.py"
-    )
+    module_path = "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_fallback.py"
     result = runpy.run_path(module_path, run_name="__main__")
     assert "_module" in result
 
 
 def test_fallback_grpc_alias_module_script_executes_without_error() -> None:
-    module_path = (
-        "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_grpc_fallback.py"
-    )
+    module_path = "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_grpc_fallback.py"
     result = runpy.run_path(module_path, run_name="__main__")
     assert "_module" in result
 

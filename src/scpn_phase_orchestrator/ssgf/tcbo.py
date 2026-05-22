@@ -76,10 +76,11 @@ class TCBOObserver:
         window_size: int = 50,
         beta: float = 8.0,
     ):
-        if any(
-            isinstance(v, bool) or not isinstance(v, Real)
-            for v in (tau_h1, beta)
-        ) or not isfinite(float(tau_h1)) or not isfinite(float(beta)):
+        if (
+            any(isinstance(v, bool) or not isinstance(v, Real) for v in (tau_h1, beta))
+            or not isfinite(float(tau_h1))
+            or not isfinite(float(beta))
+        ):
             raise TypeError("tau_h1 and beta must be finite real values")
         if not 0.0 <= float(tau_h1) <= 1.0:
             raise ValueError(f"tau_h1 must be within [0, 1], got {tau_h1!r}")

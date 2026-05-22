@@ -96,9 +96,7 @@ impl HypergraphStepper {
             || omegas.iter().any(|v| !v.is_finite())
             || knm.iter().any(|v| !v.is_finite())
             || alpha.iter().any(|v| !v.is_finite())
-            || edges
-                .iter()
-                .any(|edge| !edge.strength.is_finite())
+            || edges.iter().any(|edge| !edge.strength.is_finite())
             || !zeta.is_finite()
             || !psi.is_finite()
         {

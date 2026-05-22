@@ -21,6 +21,20 @@ from scpn_phase_orchestrator.adapters.gaian_mesh_bridge import (
 )
 
 
+def _unchecked_peer_state(
+    node_id: object,
+    r_value: object,
+    psi: object,
+    timestamp: object,
+) -> PeerState:
+    peer = object.__new__(PeerState)
+    peer.node_id = node_id  # type: ignore[assignment]
+    peer.R = r_value  # type: ignore[assignment]
+    peer.psi = psi  # type: ignore[assignment]
+    peer.timestamp = timestamp  # type: ignore[assignment]
+    return peer
+
+
 def _unused_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
@@ -168,7 +182,7 @@ class TestGaianMesh:
             ),
             (
                 [
-                    PeerState("invalid", float("nan"), 0.0, time.time()),
+                    _unchecked_peer_state("invalid", float("nan"), 0.0, time.time()),
                     PeerState("valid", 0.7, np.pi, time.time()),
                 ],
                 0.7,
@@ -176,8 +190,8 @@ class TestGaianMesh:
             ),
             (
                 [
-                    PeerState("", 1.0, 0.0, time.time()),
-                    PeerState("bad_time", 1.0, 0.0, float("nan")),
+                    _unchecked_peer_state("", 1.0, 0.0, time.time()),
+                    _unchecked_peer_state("bad_time", 1.0, 0.0, float("nan")),
                     PeerState("good", 0.5, np.pi / 2, time.time()),
                 ],
                 0.5,

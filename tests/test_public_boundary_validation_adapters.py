@@ -28,7 +28,9 @@ def test_peer_state_rejects_non_unit_interval_r() -> None:
 
 
 def test_coherence_memory_snapshot_rejects_invalid_novelty_score() -> None:
-    with pytest.raises(ValueError, match=r"novelty_score must be a finite float in \[0, 1\]"):
+    with pytest.raises(
+        ValueError, match=r"novelty_score must be a finite float in \[0, 1\]"
+    ):
         CoherenceMemorySnapshot(
             R_global=0.7,
             regime="nominal",
@@ -52,7 +54,9 @@ def test_coherence_memory_snapshot_rejects_non_bool_consolidation_flag() -> None
 
 
 def test_agent_state_rejects_negative_message_count() -> None:
-    with pytest.raises(ValueError, match="message_count must be a non-negative integer"):
+    with pytest.raises(
+        ValueError, match="message_count must be a non-negative integer"
+    ):
         AgentState(message_count=-1)
 
 

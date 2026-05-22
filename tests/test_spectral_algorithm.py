@@ -320,9 +320,7 @@ class TestPrimitiveDispatchFallback:
         monkeypatch.setattr(s_mod, "_PRIM_CACHE", {})
         monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "go")
         monkeypatch.setattr(s_mod, "AVAILABLE_BACKENDS", ["go", "python"])
-        monkeypatch.setattr(
-            s_mod, "_LOADERS", {"go": _ok_go, "rust": lambda: {}}
-        )
+        monkeypatch.setattr(s_mod, "_LOADERS", {"go": _ok_go, "rust": lambda: {}})
 
         s_mod._primitive()
         s_mod._primitive()

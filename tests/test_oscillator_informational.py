@@ -264,7 +264,9 @@ class TestInformationalRustDispatch:
             calls.append(np.asarray(signal, dtype=np.float64))
             return (0.125, 42.0, 0.875)
 
-        monkeypatch.setattr(informational_module, "_rust_event_phase", _fake_event_phase)
+        monkeypatch.setattr(
+            informational_module, "_rust_event_phase", _fake_event_phase
+        )
         states = InformationalExtractor().extract(np.array([0.0, 0.2, 0.5, 1.0]), 0.0)
         assert states[0].theta == pytest.approx(0.125, abs=1e-12)
         assert states[0].omega == pytest.approx(42.0, abs=1e-12)
