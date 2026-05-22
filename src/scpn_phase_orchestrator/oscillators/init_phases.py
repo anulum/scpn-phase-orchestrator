@@ -18,7 +18,7 @@ to seeded random phases for unsupported channel families.
 from __future__ import annotations
 
 from numbers import Integral
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -141,9 +141,12 @@ def extract_initial_phases(
     if symbolic_pending:
         symbolic_indices = np.array(
             [state_idx for _, state_idx in symbolic_pending],
-            dtype=np.float64,
+            dtype=np.int64,
         )
-        symbolic_states = symbolic_extractor.extract(symbolic_indices, sample_rate=1.0)
+        symbolic_states = symbolic_extractor.extract(
+            cast(FloatArray, symbolic_indices),
+            sample_rate=1.0,
+        )
         for (phase_idx, _), state in zip(
             symbolic_pending, symbolic_states, strict=True
         ):

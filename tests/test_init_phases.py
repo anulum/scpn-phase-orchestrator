@@ -332,6 +332,7 @@ def test_symbolic_path_is_batched_into_single_extract_call(
     assert phases.shape == (4,)
     assert len(_BatchProbeSymbolicExtractor.calls) == 1
     assert _BatchProbeSymbolicExtractor.calls[0].shape == (4,)
+    assert np.issubdtype(_BatchProbeSymbolicExtractor.calls[0].dtype, np.integer)
 
 
 class TestInitPhasesPipelineWiring:

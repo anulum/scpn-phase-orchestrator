@@ -356,9 +356,12 @@ def test_symbolic_extractor_uses_rust_ring_and_transition_quality_when_available
         return np.asarray(out, dtype=np.float64)
 
     monkeypatch.setattr(symbolic_mod, "_HAS_RUST_SYMBOLIC", True)
-    monkeypatch.setattr(symbolic_mod, "_rust_ring_phases", _ring_phases)
+    monkeypatch.setattr(symbolic_mod, "_rust_ring_phases", _ring_phases, raising=False)
     monkeypatch.setattr(
-        symbolic_mod, "_rust_transition_qualities", _transition_qualities
+        symbolic_mod,
+        "_rust_transition_qualities",
+        _transition_qualities,
+        raising=False,
     )
 
     ext = SymbolicExtractor(n_states=4, mode="ring")
@@ -393,7 +396,12 @@ def test_symbolic_extractor_uses_rust_graph_walk_when_available(
         )
 
     monkeypatch.setattr(symbolic_mod, "_HAS_RUST_SYMBOLIC", True)
-    monkeypatch.setattr(symbolic_mod, "_rust_graph_walk_phases", _graph_walk_phases)
+    monkeypatch.setattr(
+        symbolic_mod,
+        "_rust_graph_walk_phases",
+        _graph_walk_phases,
+        raising=False,
+    )
     monkeypatch.setattr(
         symbolic_mod,
         "_rust_transition_qualities",
@@ -401,6 +409,7 @@ def test_symbolic_extractor_uses_rust_graph_walk_when_available(
             [initial] + [1.0] * max(0, len(indices) - 1),
             dtype=np.float64,
         ),
+        raising=False,
     )
 
     ext = SymbolicExtractor(n_states=8, mode="graph")
