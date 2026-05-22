@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 import types
 from typing import get_type_hints
@@ -182,8 +183,17 @@ def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> No
 class TestRustParity:
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
-        if "rust" not in AVAILABLE_BACKENDS:
+        try:
+            rust_spec = importlib.util.find_spec("spo_kernel")
+        except (ImportError, ValueError):
+            rust_spec = None
+        if rust_spec is None:
             pytest.skip("Rust backend not built")
+        te_mod._BACKEND_CACHE.pop("rust", None)
+        try:
+            te_mod._load_rust_fns()
+        except (ImportError, RuntimeError, OSError):
+            pytest.skip("Rust transfer-entropy backend not built")
 
     @given(
         n=st.integers(min_value=50, max_value=400),
