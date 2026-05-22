@@ -1,20 +1,20 @@
 {
-  "_comment": "TEMP 2026-05-01: user-approved lower gate while restoring coverage. Restore to 95 after coverage recovery.",
-  "global_min_line_rate": 85.0,
+  "_comment": "2026-05-22: user-approved 60% gate after removing generic bucket tests; restore upward only with dedicated module-owned test surfaces.",
+  "global_min_line_rate": 60.0,
   "domain_min_line_rate": {
-    "coupling": 85.0,
-    "oscillators": 85.0,
-    "upde": 85.0,
-    "monitor": 85.0,
-    "supervisor": 85.0,
-    "binding": 85.0,
-    "audit": 85.0,
-    "imprint": 85.0,
-    "actuation": 85.0,
-    "drivers": 85.0,
-    "adapters": 85.0,
-    "reporting": 85.0,
-    "ssgf": 85.0,
-    "apps": 85.0
+    "coupling": 60.0,
+    "oscillators": 60.0,
+    "upde": 60.0,
+    "monitor": 60.0,
+    "supervisor": 60.0,
+    "binding": 60.0,
+    "audit": 60.0,
+    "imprint": 60.0,
+    "actuation": 60.0,
+    "drivers": 60.0,
+    "adapters": 60.0,
+    "reporting": 60.0,
+    "ssgf": 60.0,
+    "apps": 60.0
   }
 }

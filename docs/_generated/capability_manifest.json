@@ -12,7 +12,7 @@
     "research_experimental_modules": 121,
     "runtime_serving_modules": 46,
     "rust_kernel_files": 91,
-    "test_files": 490
+    "test_files": 482
   },
   "documentation": {
     "public_pages": [
@@ -1183,7 +1183,6 @@
       "tests/test_actuation_constraints_deep.py",
       "tests/test_actuation_mapper.py",
       "tests/test_adapters.py",
-      "tests/test_adapters_coverage.py",
       "tests/test_adapters_network_validation.py",
       "tests/test_adapters_slice_c.py",
       "tests/test_adjoint.py",
@@ -1243,7 +1242,6 @@
       "tests/test_coherence_monitor_config_validation.py",
       "tests/test_compat.py",
       "tests/test_compat_deep.py",
-      "tests/test_config_validation_misc.py",
       "tests/test_connectome.py",
       "tests/test_convergence_topology.py",
       "tests/test_coupling_est.py",
@@ -1255,10 +1253,6 @@
       "tests/test_coupling_modules.py",
       "tests/test_coupling_prior.py",
       "tests/test_coupling_templates.py",
-      "tests/test_coverage_100.py",
-      "tests/test_coverage_final.py",
-      "tests/test_coverage_gaps.py",
-      "tests/test_coverage_sprint2_4.py",
       "tests/test_degenerate_edges.py",
       "tests/test_delay.py",
       "tests/test_delay_config_validation.py",
@@ -1452,7 +1446,6 @@
       "tests/test_plasma_control_morphogenetic_field_demo.py",
       "tests/test_plasma_topology_demo.py",
       "tests/test_plasticity.py",
-      "tests/test_plots_coverage.py",
       "tests/test_plugins_registry.py",
       "tests/test_poincare.py",
       "tests/test_poincare_algorithm.py",
@@ -1628,7 +1621,6 @@
       "tests/test_transfer_entropy_backends.py",
       "tests/test_transfer_entropy_stability.py",
       "tests/test_type_ignore_justifications.py",
-      "tests/test_u1_constructor_validation_batch.py",
       "tests/test_ude_kuramoto.py",
       "tests/test_upde_bayesian.py",
       "tests/test_upde_engine.py",

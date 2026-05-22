@@ -297,7 +297,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 60
 
 [tool.bandit]
 exclude_dirs = ["tests"]
