@@ -130,6 +130,12 @@ def test_rust_itpc_dispatch_uses_contiguous_flattened_input(
         return np.array([0.25, 0.5, 0.75], dtype=np.float64)
 
     monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setitem(
+        it_mod._BACKEND_FN_CACHE,
+        "rust",
+        {"itpc": fake_rust_itpc, "persistence": lambda *_args: 0.0},
+    )
     monkeypatch.setitem(
         it_mod._LOADERS,
         "rust",
@@ -164,6 +170,12 @@ def test_rust_persistence_dispatch_uses_contiguous_arrays(
         return 0.875
 
     monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setitem(
+        it_mod._BACKEND_FN_CACHE,
+        "rust",
+        {"itpc": lambda *_args: np.array([]), "persistence": fake_rust_persistence},
+    )
     monkeypatch.setitem(
         it_mod._LOADERS,
         "rust",
@@ -199,6 +211,12 @@ def test_non_rust_dispatch_flattens_inputs_and_preserves_backend_result(
         return np.array([0.125, 0.25, 0.5], dtype=np.float64)
 
     monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+    monkeypatch.setitem(
+        it_mod._BACKEND_FN_CACHE,
+        "go",
+        {"itpc": fake_itpc, "persistence": lambda *_args: 0.0},
+    )
     monkeypatch.setitem(
         it_mod._LOADERS,
         "go",
@@ -230,6 +248,12 @@ def test_non_rust_persistence_dispatch_passes_pause_indices(
         return 0.625
 
     monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "mojo")
+    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["mojo", "python"])
+    monkeypatch.setitem(
+        it_mod._BACKEND_FN_CACHE,
+        "mojo",
+        {"itpc": lambda *_args: np.array([]), "persistence": fake_persistence},
+    )
     monkeypatch.setitem(
         it_mod._LOADERS,
         "mojo",
