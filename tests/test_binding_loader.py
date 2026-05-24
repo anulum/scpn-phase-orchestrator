@@ -332,6 +332,15 @@ def test_loader_helper_type_guards_cover_optional_scalars_and_collections():
         loader_mod._require_number("nan", "decay_alpha")
 
 
+def test_loader_rejects_non_finite_numeric_values(tmp_path):
+    data = {**_SPEC_DATA, "sample_period_s": float("nan")}
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(BindingLoadError, match="finite number"):
+        load_binding_spec(p)
+
+
 def test_loader_rejects_invalid_channel_group_id(tmp_path):
     """Invalid channel-group identifiers must fail during parser ingestion."""
     data = {

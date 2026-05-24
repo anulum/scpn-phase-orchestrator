@@ -17,6 +17,7 @@ so later runtime code receives structured values rather than raw YAML objects.
 from __future__ import annotations
 
 import json
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
@@ -101,7 +102,10 @@ def _require_int(value: object, context: str) -> int:
 def _require_number(value: object, context: str) -> float:
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise _expected("number", context, value)
-    return float(value)
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise BindingLoadError(f"expected finite number in {context}")
+    return parsed
 
 
 def _require_bool(value: object, context: str) -> bool:
