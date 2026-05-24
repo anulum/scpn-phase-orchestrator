@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
+from scpn_phase_orchestrator.upde.reduction import OAState, OttAntonsenReduction
 
 
 @pytest.mark.parametrize("field", ["omega_0", "delta", "K", "dt"])
@@ -64,3 +64,47 @@ def test_oa_reduction_normalises_accepted_numpy_scalars() -> None:
     assert pytest.approx(0.1) == reducer._delta
     assert pytest.approx(1.0) == reducer._K
     assert pytest.approx(0.01) == reducer._dt
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"z": complex(1.2, 0.0), "R": 0.8, "psi": 0.0, "K_c": 0.2}, "z"),
+        ({"z": complex(0.8, 0.0), "R": 1.2, "psi": 0.0, "K_c": 0.2}, "R"),
+        ({"z": complex(0.8, 0.0), "R": np.nan, "psi": 0.0, "K_c": 0.2}, "R"),
+        ({"z": complex(0.8, 0.0), "R": 0.8, "psi": np.inf, "K_c": 0.2}, "psi"),
+        ({"z": complex(0.8, 0.0), "R": 0.8, "psi": 0.0, "K_c": -0.1}, "K_c"),
+    ],
+)
+def test_oa_state_rejects_non_physical_order_parameter_boundary(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        OAState(**kwargs)
+
+
+def test_oa_state_accepts_unit_disk_boundary() -> None:
+    state = OAState(z=complex(1.0, 0.0), R=1.0, psi=0.0, K_c=0.0)
+
+    assert state.z == complex(1.0, 0.0)
+    assert pytest.approx(1.0) == state.R
+    assert pytest.approx(0.0) == state.K_c
+
+
+@pytest.mark.parametrize("z0", [complex(1.01, 0.0), complex(0.8, 0.8)])
+def test_oa_reduction_rejects_initial_state_outside_unit_disk(z0: complex) -> None:
+    reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0)
+
+    with pytest.raises(ValueError, match="unit disk"):
+        reducer.run(z0, n_steps=1)
+
+
+def test_predict_from_oscillators_rejects_boolean_frequency_aliases() -> None:
+    reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0)
+
+    with pytest.raises(ValueError, match="boolean"):
+        reducer.predict_from_oscillators(
+            np.array([0.9, True, 1.1], dtype=object),
+            K=1.0,
+        )

@@ -81,6 +81,18 @@ if "OAState" not in globals():
         psi: float
         K_c: float
 
+        def __post_init__(self) -> None:
+            z = _validate_finite_complex(self.z, name="z")
+            r = _validate_unit_interval(self.R, name="R")
+            psi = _validate_finite_real(self.psi, name="psi")
+            k_c = _validate_finite_real(self.K_c, name="K_c")
+            if k_c < 0.0:
+                raise ValueError(f"K_c must be non-negative, got {k_c}")
+            object.__setattr__(self, "z", z)
+            object.__setattr__(self, "R", r)
+            object.__setattr__(self, "psi", psi)
+            object.__setattr__(self, "K_c", k_c)
+
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
@@ -215,10 +227,14 @@ def _validate_finite_complex(value: object, *, name: str) -> complex:
     coerced = complex(value)
     if not np.isfinite(coerced.real) or not np.isfinite(coerced.imag):
         raise ValueError(f"{name} must be a finite complex scalar, got {value!r}")
+    if abs(coerced) > 1.0 + 1e-12:
+        raise ValueError(f"{name} must lie on the OA unit disk, got {value!r}")
     return coerced
 
 
 def _validate_frequency_sample(value: object, *, name: str) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -230,6 +246,21 @@ def _validate_frequency_sample(value: object, *, name: str) -> FloatArray:
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        arr = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
+
+
+def _validate_unit_interval(value: object, *, name: str) -> float:
+    coerced = _validate_finite_real(value, name=name)
+    if coerced < 0.0 or coerced > 1.0 + 1e-12:
+        raise ValueError(f"{name} must lie in [0, 1], got {value!r}")
+    return min(1.0, coerced)
 
 
 def _oa_deriv(
