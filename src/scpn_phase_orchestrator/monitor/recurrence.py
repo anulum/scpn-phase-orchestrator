@@ -340,6 +340,12 @@ class RQAResult:
             self.max_vertical,
             name="max_vertical",
         )
+        if self.avg_diagonal > self.max_diagonal + 1e-12:
+            raise ValueError("avg_diagonal must not exceed max_diagonal")
+        if self.max_diagonal == 0 and self.entropy_diagonal > 0.0:
+            raise ValueError("entropy_diagonal requires at least one diagonal line")
+        if self.trapping_time > self.max_vertical + 1e-12:
+            raise ValueError("trapping_time must not exceed max_vertical")
 
 
 def recurrence_matrix(

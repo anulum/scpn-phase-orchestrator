@@ -231,6 +231,12 @@ class TestRQA:
             ({"laminarity": 1.1}, "laminarity"),
             ({"trapping_time": -0.1}, "trapping_time"),
             ({"max_vertical": -1}, "max_vertical"),
+            ({"avg_diagonal": 3.0, "max_diagonal": 2}, "avg_diagonal"),
+            (
+                {"avg_diagonal": 0.0, "entropy_diagonal": 0.1, "max_diagonal": 0},
+                "entropy_diagonal",
+            ),
+            ({"trapping_time": 3.0, "max_vertical": 2}, "trapping_time"),
         ],
     )
     def test_rejects_invalid_public_rqa_result_values(
