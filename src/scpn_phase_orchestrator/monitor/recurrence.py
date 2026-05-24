@@ -285,7 +285,13 @@ def _backend_recurrence_matrix(value: object, *, t: int, name: str) -> BoolArray
         raise ValueError(f"{name} backend output must contain only finite values")
     if not np.all((numeric == 0.0) | (numeric == 1.0)):
         raise ValueError(f"{name} backend output must contain only 0/1 values")
-    return numeric.reshape(t, t).astype(bool)
+    matrix = numeric.reshape(t, t).astype(bool)
+    if name == "recurrence_matrix":
+        if not np.all(np.diag(matrix)):
+            raise ValueError("recurrence_matrix backend output must have true diagonal")
+        if not np.array_equal(matrix, matrix.T):
+            raise ValueError("recurrence_matrix backend output must be symmetric")
+    return matrix
 
 
 @dataclass

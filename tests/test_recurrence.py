@@ -129,6 +129,8 @@ class TestRecurrenceMatrix:
             np.array([1, 0, 1], dtype=np.uint8),
             np.array([1, 0, 0, 2], dtype=np.uint8),
             np.array([1, 0, 0, np.nan], dtype=np.float64),
+            np.array([0, 0, 0, 1], dtype=np.uint8),
+            np.array([1, 1, 0, 1], dtype=np.uint8),
         ],
     )
     def test_backend_invalid_matrix_payload_falls_back_to_python(
