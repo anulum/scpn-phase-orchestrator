@@ -131,6 +131,18 @@ def test_step_shape_mismatch_raises():
         engine.step(ok_phases, ok_omegas, ok_knm, 0.0, 0.0, np.zeros((5, 5)))
 
 
+def test_step_rejects_self_coupling_diagonal():
+    engine = UPDEEngine(n_oscillators=3, dt=0.01)
+    phases = np.array([0.0, 0.5, 1.0])
+    omegas = np.ones(3)
+    knm = np.zeros((3, 3))
+    knm[1, 1] = 0.2
+    alpha = np.zeros((3, 3))
+
+    with pytest.raises(ValueError, match="self-coupling"):
+        engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+
 def test_rk45_produces_valid_phases():
     n = 8
     rng = np.random.default_rng(42)

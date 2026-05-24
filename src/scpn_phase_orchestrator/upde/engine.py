@@ -342,6 +342,8 @@ class UPDEEngine:
                 raise ValueError(f"{name}.shape={arr.shape}, expected {shape}")
             if not np.all(np.isfinite(arr)):
                 raise ValueError(f"{name} contains NaN/Inf")
+        if not np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=1e-15):
+            raise ValueError("knm self-coupling diagonal must be zero")
 
     def _validate_rust_output(self, result: object) -> FloatArray:
         output = np.asarray(result)
