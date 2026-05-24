@@ -368,7 +368,7 @@ def _assemble_result(
     n_cr: int,
     dim: int,
 ) -> PoincareResult:
-    if not isinstance(n_cr, Integral):
+    if isinstance(n_cr, bool) or not isinstance(n_cr, Integral):
         raise ValueError("n_cr must be an integer")
     n_cr = int(n_cr)
     if n_cr < 0:

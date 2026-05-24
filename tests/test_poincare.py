@@ -174,6 +174,7 @@ class TestPoincareSection:
             (np.array([np.nan], dtype=np.float64), np.array([0.5]), 1),
             (np.array([0.0], dtype=np.float64), np.array([np.inf]), 1),
             (np.array([0.0], dtype=np.float64), np.array([], dtype=np.float64), 1),
+            (np.array([0.0], dtype=np.float64), np.array([0.5]), True),
         ],
     )
     def test_section_falls_back_when_backend_returns_invalid_payload(
