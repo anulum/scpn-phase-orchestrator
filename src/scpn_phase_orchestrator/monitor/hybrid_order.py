@@ -206,6 +206,12 @@ def _validate_quantum_state(
     if not np.isclose(trace, 1.0, atol=1e-12, rtol=1e-10):
         density = density / trace
 
+    eigenvalues = np.linalg.eigvalsh(density)
+    if not np.all(np.isfinite(eigenvalues)):
+        raise ValueError("density matrix eigenvalues must be finite")
+    if float(np.min(eigenvalues)) < -1e-12:
+        raise ValueError("density matrix must be positive semidefinite")
+
     n_qubits = _qubit_count_from_dimension(density.shape[0])
     return n_qubits, density
 

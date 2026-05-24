@@ -80,6 +80,21 @@ def test_hybrid_order_density_matrix_matches_statevector_path() -> None:
     )
 
 
+def test_hybrid_order_rejects_non_positive_semidefinite_density_matrix() -> None:
+    from scpn_phase_orchestrator.monitor.hybrid_order import (
+        compute_hybrid_entanglement_order_parameter,
+    )
+
+    invalid_density = np.diag(np.array([1.2, -0.2, 0.0, 0.0], dtype=np.complex128))
+
+    with pytest.raises(ValueError, match="positive semidefinite"):
+        compute_hybrid_entanglement_order_parameter(
+            phases=np.array([0.0, 1.0], dtype=np.float64),
+            quantum_state=invalid_density,
+            bipartition=((0,), (1,)),
+        )
+
+
 def test_hybrid_order_audit_record_json_safe_and_deterministic_hash() -> None:
     from scpn_phase_orchestrator.monitor.hybrid_order import (
         compute_hybrid_entanglement_order_parameter,
