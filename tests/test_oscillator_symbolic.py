@@ -321,9 +321,10 @@ class TestSymbolicPipelineEndToEnd:
         for _ in range(100):
             ext.extract(seq, sample_rate=1.0)
         elapsed = (time.perf_counter() - t0) / 100
-        # CI shared runners and high-load machines can be 4-5x slower.
+        # CI shared runners and locally loaded workstations can be slower.
         load = os.getloadavg()[0] if hasattr(os, "getloadavg") else 0.0
-        budget = 50e-3 if (os.getenv("CI") or load > 10) else 5e-3
+        load_threshold = max(2.0, float(os.cpu_count() or 1) / 4.0)
+        budget = 50e-3 if (os.getenv("CI") or load > load_threshold) else 5e-3
         assert elapsed < budget, f"extract(1000) took {elapsed * 1e3:.2f}ms"
 
 
