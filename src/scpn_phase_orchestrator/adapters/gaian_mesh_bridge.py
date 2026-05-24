@@ -108,6 +108,29 @@ def _valid_peer_state(peer: PeerState, *, now: float, timeout_s: float) -> bool:
     )
 
 
+def _decode_peer_state_payload(
+    payload: object,
+    *,
+    local_node_id: str,
+    timestamp: float,
+) -> PeerState | None:
+    if not isinstance(payload, dict):
+        return None
+
+    peer_id = payload.get("node_id")
+    if not isinstance(peer_id, str) or not peer_id or peer_id == local_node_id:
+        return None
+    if "R" not in payload or "psi" not in payload:
+        return None
+
+    return PeerState(
+        node_id=peer_id,
+        R=payload["R"],
+        psi=payload["psi"],
+        timestamp=timestamp,
+    )
+
+
 def _validated_peer_addresses(
     peer_addresses: list[tuple[str, int]] | None,
 ) -> list[tuple[str, int]]:
@@ -279,18 +302,13 @@ class GaianMeshNode:
             try:
                 data, addr = self._sock.recvfrom(1024)
                 msg = json.loads(data.decode("utf-8"))
-
-                if not isinstance(msg, dict):
-                    continue
-
-                peer_id = msg.get("node_id")
-                if isinstance(peer_id, str) and peer_id and peer_id != self.node_id:
-                    self._peers[peer_id] = PeerState(
-                        node_id=peer_id,
-                        R=float(msg.get("R", 0.0)),
-                        psi=float(msg.get("psi", 0.0)),
-                        timestamp=time.time(),
-                    )
+                peer_state = _decode_peer_state_payload(
+                    msg,
+                    local_node_id=self.node_id,
+                    timestamp=time.time(),
+                )
+                if peer_state is not None:
+                    self._peers[peer_state.node_id] = peer_state
             except (
                 TimeoutError,
                 OSError,

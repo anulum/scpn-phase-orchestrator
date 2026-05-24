@@ -224,6 +224,8 @@ class TestGaianMesh:
             (b"{",),
             (b"not-json",),
             (b"1",),
+            (json.dumps({"node_id": "missing-r", "psi": 0.0}).encode(),),
+            (json.dumps({"node_id": "missing-psi", "R": 0.4}).encode(),),
             (json.dumps({"node_id": 1, "R": "bad", "psi": "bad"}).encode(),),
         ],
     )

@@ -314,6 +314,63 @@ class TestPrometheusAdapter:
             with pytest.raises(ValueError):
                 adapter.fetch_metric("up", 0, 10, 1)
 
+    @pytest.mark.parametrize(
+        "body",
+        [
+            [],
+            {"status": "success"},
+            {"status": "success", "data": []},
+            {"status": "success", "data": {"result": {}}},
+            {"status": "success", "data": {"result": [{}]}},
+            {"status": "success", "data": {"result": [{"values": [["bad"]]}]}},
+            {
+                "status": "success",
+                "data": {"result": [{"values": [[1, "nan"]]}]},
+            },
+        ],
+    )
+    def test_fetch_metric_rejects_malformed_response_shape(self, body: object):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        encoded = json.dumps(body).encode()
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = encoded
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            with pytest.raises(ValueError, match="Prometheus"):
+                adapter.fetch_metric("up", 0, 10, 1)
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {"status": "success", "data": {"result": [{}]}},
+            {"status": "success", "data": {"result": [{"value": ["bad"]}]}},
+            {"status": "success", "data": {"result": [{"value": [1, "inf"]}]}},
+        ],
+    )
+    def test_fetch_instant_rejects_malformed_response_shape(self, body: object):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        encoded = json.dumps(body).encode()
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = encoded
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            with pytest.raises(ValueError, match="Prometheus"):
+                adapter.fetch_instant("up")
+
 
 # Salvaged module-specific behavioural contracts from deleted sprint file.
 

@@ -18,8 +18,9 @@ or mutate orchestration state.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from math import isfinite
-from typing import TypeAlias
+from typing import Any, TypeAlias
 from urllib.error import URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
@@ -72,19 +73,18 @@ class PrometheusAdapter:
         req = Request(url, headers={"Accept": "application/json"})
         try:
             with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
-                body = json.loads(resp.read())
+                body = _load_response_body(resp.read())
         except (URLError, OSError):
             raise ConnectionError("Prometheus query failed") from None
 
         if body.get("status") != "success":
             raise ValueError(f"Prometheus returned status={body.get('status')}")
 
-        results = body.get("data", {}).get("result", [])
+        results = _response_results(body)
         if not results:
             return np.array([], dtype=np.float64)
 
-        # First result series: extract values (timestamp, value pairs)
-        values = [float(v[1]) for v in results[0].get("values", [])]
+        values = _range_values(results[0])
         result: FloatArray = np.array(values, dtype=np.float64)
         return result
 
@@ -96,18 +96,18 @@ class PrometheusAdapter:
         req = Request(url, headers={"Accept": "application/json"})
         try:
             with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
-                body = json.loads(resp.read())
+                body = _load_response_body(resp.read())
         except (URLError, OSError):
             raise ConnectionError("Prometheus query failed") from None
 
         if body.get("status") != "success":
             raise ValueError(f"Prometheus returned status={body.get('status')}")
 
-        results = body.get("data", {}).get("result", [])
+        results = _response_results(body)
         if not results:
             raise ValueError("Prometheus returned empty result set")
 
-        return float(results[0]["value"][1])
+        return _instant_value(results[0])
 
 
 def _require_query_text(query: str) -> str:
@@ -129,3 +129,54 @@ def _require_finite_float(value: float, field_name: str) -> float:
     if not isfinite(parsed):
         raise ValueError(f"Prometheus {field_name} must be finite")
     return parsed
+
+
+def _load_response_body(raw: bytes) -> Mapping[str, Any]:
+    try:
+        body = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Prometheus returned malformed JSON") from exc
+    if not isinstance(body, Mapping):
+        raise ValueError("Prometheus response must be a JSON object")
+    return body
+
+
+def _response_results(body: Mapping[str, Any]) -> Sequence[Any]:
+    data = body.get("data")
+    if not isinstance(data, Mapping):
+        raise ValueError("Prometheus response data must be an object")
+    results = data.get("result")
+    if not isinstance(results, list):
+        raise ValueError("Prometheus response result must be a list")
+    return results
+
+
+def _require_sample_pair(sample: object, *, field_name: str) -> Sequence[Any]:
+    if (
+        not isinstance(sample, Sequence)
+        or isinstance(sample, (bytes, str))
+        or len(sample) != 2
+    ):
+        raise ValueError(f"Prometheus {field_name} must contain sample pairs")
+    return sample
+
+
+def _range_values(series: object) -> list[float]:
+    if not isinstance(series, Mapping):
+        raise ValueError("Prometheus result series must be an object")
+    samples = series.get("values")
+    if not isinstance(samples, list):
+        raise ValueError("Prometheus range result values must be a list")
+
+    values: list[float] = []
+    for sample in samples:
+        pair = _require_sample_pair(sample, field_name="range result values")
+        values.append(_require_finite_float(pair[1], "sample value"))
+    return values
+
+
+def _instant_value(series: object) -> float:
+    if not isinstance(series, Mapping):
+        raise ValueError("Prometheus result series must be an object")
+    pair = _require_sample_pair(series.get("value"), field_name="instant result value")
+    return _require_finite_float(pair[1], "sample value")
