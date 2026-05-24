@@ -237,9 +237,14 @@ def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
         assert n_osc == 3
         assert n_time == 3
         assert bins == 6
-        matrix = np.arange(n_osc * n_osc, dtype=np.float64).reshape((n_osc, n_osc))
-        np.fill_diagonal(matrix, 0.0)
-        return matrix
+        return np.array(
+            [
+                [0.0, 1.0, 1.25],
+                [0.5, 0.0, 1.5],
+                [0.75, 1.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
 
     def fake_dispatch(fn_name: str):
         if fn_name == "phase_te":
@@ -281,9 +286,13 @@ def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):
 
     assert np.isfinite(value)
     assert value >= 0.0
+    assert value <= np.log(8.0) + 1e-12
 
 
-@pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, True, np.bool_(True)])
+@pytest.mark.parametrize(
+    "backend_value",
+    [-0.1, np.nan, np.inf, True, np.bool_(True), np.log(8.0) + 1.0],
+)
 def test_phase_te_backend_invalid_scalar_falls_back_to_python(
     monkeypatch, backend_value: float
 ):
@@ -306,6 +315,7 @@ def test_phase_te_backend_invalid_scalar_falls_back_to_python(
 
     assert np.isfinite(value)
     assert value >= 0.0
+    assert value <= np.log(8.0) + 1e-12
 
 
 def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
@@ -335,6 +345,7 @@ def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
 
     assert value.shape == (3, 3)
     assert np.all(value >= 0.0)
+    assert np.all(value <= np.log(8.0) + 1e-12)
     np.testing.assert_array_equal(np.diag(value), 0.0)
 
 
@@ -345,6 +356,7 @@ def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
         np.array([[0.0, 1.0], [2.0, 0.0]], dtype=np.float64),
         np.array([[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
         np.array([[0.0, np.nan, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+        np.array([[0.0, np.log(8.0) + 1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
         np.eye(3, dtype=np.float64),
         np.array([[False, True, False], [False, False, False], [False, False, False]]),
         np.array(
@@ -382,6 +394,7 @@ def test_te_matrix_backend_invalid_payload_falls_back_to_python(
 
     assert value.shape == (3, 3)
     assert np.all(value >= 0.0)
+    assert np.all(value <= np.log(8.0) + 1e-12)
     np.testing.assert_array_equal(np.diag(value), 0.0)
 
 

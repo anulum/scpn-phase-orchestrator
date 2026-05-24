@@ -148,9 +148,14 @@ def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> No
         captured["matrix_flat_contiguous"] = flat.flags.c_contiguous
         captured["matrix_shape"] = (n_osc, n_time)
         captured["matrix_bins"] = n_bins
-        matrix = np.arange(n_osc * n_osc, dtype=np.float64).reshape(n_osc, n_osc)
-        np.fill_diagonal(matrix, 0.0)
-        return matrix.ravel()
+        return np.array(
+            [
+                [0.0, 1.0, 1.25],
+                [0.5, 0.0, 1.5],
+                [0.75, 1.0, 0.0],
+            ],
+            dtype=np.float64,
+        ).ravel()
 
     kernels = {"phase_te": phase_te, "te_matrix": te_matrix}
     monkeypatch.setattr(te_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
@@ -179,8 +184,14 @@ def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> No
         "matrix_shape": (3, 5),
         "matrix_bins": 5,
     }
-    expected = np.arange(9, dtype=np.float64).reshape(3, 3)
-    np.fill_diagonal(expected, 0.0)
+    expected = np.array(
+        [
+            [0.0, 1.0, 1.25],
+            [0.5, 0.0, 1.5],
+            [0.75, 1.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
     np.testing.assert_array_equal(matrix, expected)
 
 

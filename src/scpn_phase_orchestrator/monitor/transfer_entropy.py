@@ -200,7 +200,12 @@ def _validate_n_bins(value: object) -> int:
     return int(value)
 
 
-def _validate_te_scalar(value: object, *, name: str = "transfer entropy") -> float:
+def _validate_te_scalar(
+    value: object,
+    *,
+    name: str = "transfer entropy",
+    max_entropy: float | None = None,
+) -> float:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
     if isinstance(value, bool) or not isinstance(value, Real):
@@ -211,10 +216,17 @@ def _validate_te_scalar(value: object, *, name: str = "transfer entropy") -> flo
         raise ValueError(f"{name} must be a finite non-negative scalar") from exc
     if not np.isfinite(result) or result < -1e-12:
         raise ValueError(f"{name} must be finite and non-negative, got {value!r}")
+    if max_entropy is not None and result > max_entropy + 1e-12:
+        raise ValueError(f"{name} must not exceed log(n_bins)")
     return max(result, 0.0)
 
 
-def _validate_te_matrix(value: object, *, n_osc: int) -> FloatArray:
+def _validate_te_matrix(
+    value: object,
+    *,
+    n_osc: int,
+    max_entropy: float,
+) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("transfer entropy matrix must not contain boolean values")
     try:
@@ -230,6 +242,8 @@ def _validate_te_matrix(value: object, *, n_osc: int) -> FloatArray:
         raise ValueError("transfer entropy matrix must contain only finite values")
     if np.any(matrix < -1e-12):
         raise ValueError("transfer entropy matrix must be non-negative")
+    if np.any(matrix > max_entropy + 1e-12):
+        raise ValueError("transfer entropy matrix entries must not exceed log(n_bins)")
     if not np.allclose(np.diag(matrix), 0.0, rtol=0.0, atol=1e-12):
         raise ValueError("transfer entropy matrix diagonal must be zero")
     return np.ascontiguousarray(np.maximum(matrix, 0.0), dtype=np.float64)
@@ -271,6 +285,7 @@ def phase_transfer_entropy(
                     bin_count,
                 ),
                 name="backend transfer entropy",
+                max_entropy=float(np.log(bin_count)),
             )
         except Exception:
             bin_count = int(bin_count)
@@ -297,7 +312,10 @@ def phase_transfer_entropy(
     h_y_yt = _conditional_entropy(tgt_next, tgt_binned, bin_count)
     joint_cond: IntArray = tgt_binned * bin_count + src_binned
     h_y_yt_x = _conditional_entropy(tgt_next, joint_cond, bin_count * bin_count)
-    return _validate_te_scalar(h_y_yt - h_y_yt_x)
+    return _validate_te_scalar(
+        h_y_yt - h_y_yt_x,
+        max_entropy=float(np.log(bin_count)),
+    )
 
 
 def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> FloatArray:
@@ -316,7 +334,11 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
                 n_time,
                 bin_count,
             )
-            return _validate_te_matrix(flat, n_osc=n_osc)
+            return _validate_te_matrix(
+                flat,
+                n_osc=n_osc,
+                max_entropy=float(np.log(bin_count)),
+            )
         except Exception:
             n_time = int(n_time)
 
