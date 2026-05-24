@@ -103,7 +103,8 @@ class TestEntropyProductionRate:
         phases = np.array([0.0, 1.0])
         omegas = np.array([1.0, 2.0])
         knm = _all_to_all(2)
-        assert entropy_production_rate(phases, omegas, knm, alpha=1.0, dt=-0.01) == 0.0
+        with pytest.raises(ValueError, match="dt must be non-negative"):
+            entropy_production_rate(phases, omegas, knm, alpha=1.0, dt=-0.01)
 
     def test_alpha_scaling(self):
         """Doubling alpha changes the coupling contribution."""
@@ -114,6 +115,33 @@ class TestEntropyProductionRate:
         r2 = entropy_production_rate(phases, omegas, knm, alpha=2.0, dt=0.01)
         # With omegas=0, dθ/dt = (α/N)·coupling, so r scales as α²
         assert r2 == pytest.approx(4.0 * r1, rel=1e-10)
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("phases", np.array([0.0, True], dtype=object), "phases"),
+            ("omegas", np.array([1.0, False], dtype=object), "omegas"),
+            ("knm", np.array([[0.0, True], [1.0, 0.0]], dtype=object), "knm"),
+        ],
+    )
+    def test_rejects_mixed_boolean_alias_arrays(
+        self, field: str, bad_value: object, match: str
+    ) -> None:
+        kwargs: dict[str, object] = {
+            "phases": np.zeros(2),
+            "omegas": np.ones(2),
+            "knm": np.zeros((2, 2)),
+        }
+        kwargs[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            entropy_production_rate(
+                kwargs["phases"],
+                kwargs["omegas"],
+                kwargs["knm"],
+                alpha=1.0,
+                dt=0.01,
+            )
 
 
 class TestEntropyProdPipelineWiring:
@@ -199,6 +227,31 @@ class TestEntropyProdRustDispatch:
             alpha=1.0,
             dt=0.01,
         )
+        assert np.isfinite(rate)
+        assert rate >= 0.0
+
+    @pytest.mark.parametrize("backend_rate", [-0.1, np.nan, np.inf])
+    def test_entropy_production_falls_back_when_backend_returns_invalid_rate(
+        self, monkeypatch: pytest.MonkeyPatch, backend_rate: float
+    ) -> None:
+        def _invalid_backend(
+            _phases: np.ndarray,
+            _omegas: np.ndarray,
+            _knm: np.ndarray,
+            _alpha: float,
+            _dt: float,
+        ) -> float:
+            return backend_rate
+
+        monkeypatch.setattr(entropy_prod_module, "_dispatch", lambda: _invalid_backend)
+        rate = entropy_production_rate(
+            np.array([0.0, 1.0], dtype=np.float64),
+            np.array([1.0, 2.0], dtype=np.float64),
+            np.array([[0.0, 0.5], [0.5, 0.0]], dtype=np.float64),
+            alpha=1.0,
+            dt=0.01,
+        )
+
         assert np.isfinite(rate)
         assert rate >= 0.0
 

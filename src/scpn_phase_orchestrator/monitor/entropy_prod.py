@@ -141,6 +141,14 @@ def _dispatch() -> Callable[..., float] | None:
     return None
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _validate_finite_float(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
@@ -152,7 +160,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -172,7 +180,7 @@ def _validate_matrix(
     expected_shape: tuple[int, int],
 ) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -183,6 +191,13 @@ def _validate_matrix(
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_entropy_rate(value: object, *, name: str = "entropy rate") -> float:
+    rate = _validate_finite_float(value, name=name)
+    if rate < -1e-12:
+        raise ValueError(f"{name} must be non-negative, got {value!r}")
+    return max(rate, 0.0)
 
 
 def entropy_production_rate(
@@ -217,16 +232,21 @@ def entropy_production_rate(
     knm = _validate_matrix(knm, name="knm", expected_shape=(n, n))
     alpha = _validate_finite_float(alpha, name="alpha")
     dt = _validate_finite_float(dt, name="dt")
-    if n == 0 or dt <= 0.0:
+    if dt < 0.0:
+        raise ValueError(f"dt must be non-negative, got {dt!r}")
+    if n == 0 or dt == 0.0:
         return 0.0
     backend_fn = _dispatch()
     if backend_fn is not None:
         try:
-            return float(backend_fn(phases, omegas, knm, alpha, dt))
+            return _validate_entropy_rate(
+                backend_fn(phases, omegas, knm, alpha, dt),
+                name="backend entropy rate",
+            )
         except Exception:
             backend_fn = None
 
     diff = phases[np.newaxis, :] - phases[:, np.newaxis]
     coupling = np.sum(knm * np.sin(diff), axis=1)
     dtheta_dt = omegas + (alpha / n) * coupling
-    return float(np.sum(dtheta_dt**2) * dt)
+    return _validate_entropy_rate(np.sum(dtheta_dt**2) * dt)
