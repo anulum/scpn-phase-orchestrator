@@ -139,7 +139,10 @@ class TestNPE:
         with pytest.raises(ValueError, match=match):
             compute_npe(phases)
 
-    @pytest.mark.parametrize("max_radius", [False, np.nan, np.inf, "1.0", -0.1])
+    @pytest.mark.parametrize(
+        "max_radius",
+        [False, np.nan, np.inf, "1.0", -0.1, np.pi + 1e-6],
+    )
     def test_rejects_invalid_max_radius(self, max_radius: Any) -> None:
         with pytest.raises(ValueError, match="max_radius"):
             compute_npe(np.array([0.0, 1.0, 2.0]), max_radius=max_radius)

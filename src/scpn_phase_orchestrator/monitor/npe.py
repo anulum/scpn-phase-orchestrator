@@ -205,6 +205,8 @@ def _validate_max_radius(max_radius: float | None) -> float:
         raise ValueError(
             f"max_radius must be finite and non-negative, got {max_radius!r}"
         )
+    if radius > np.pi + 1e-12:
+        raise ValueError(f"max_radius must not exceed pi, got {max_radius!r}")
     return radius
 
 
