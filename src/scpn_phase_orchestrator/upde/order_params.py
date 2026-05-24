@@ -163,6 +163,24 @@ def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
     return values
 
 
+def _layer_indices(layer_mask: BoolArray | IntArray, n_phases: int) -> IntArray:
+    mask = np.asarray(layer_mask)
+    if mask.dtype == bool:
+        flattened = mask.ravel()
+        if flattened.size != n_phases:
+            raise ValueError("layer_mask boolean length must match phases length")
+        return np.flatnonzero(flattened).astype(np.int64)
+    try:
+        indices = mask.astype(np.int64, copy=True).ravel()
+    except (TypeError, ValueError) as exc:
+        raise ValueError("layer_mask indices must be integers") from exc
+    if indices.size > 0 and (
+        np.any(indices < 0) or np.any(indices >= n_phases)
+    ):
+        raise ValueError("layer_mask indices must reference existing oscillators")
+    return indices
+
+
 def _python_order_parameter(phases: FloatArray) -> tuple[float, float]:
     with np.errstate(invalid="ignore"):
         z = np.mean(np.exp(1j * phases))
@@ -281,11 +299,7 @@ def compute_layer_coherence(
     phases = _validate_phases("phases", phases)
     if phases.size == 0:
         return 0.0
-    mask = np.asarray(layer_mask)
-    if mask.dtype == bool:
-        indices = np.flatnonzero(mask).astype(np.int64)
-    else:
-        indices = mask.astype(np.int64)
+    indices = _layer_indices(layer_mask, phases.size)
     if indices.size == 0:
         return 0.0
     backend_fn = _dispatch("layer_coherence")

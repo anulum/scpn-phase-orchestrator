@@ -231,6 +231,18 @@ class TestLayerCoherence:
         r = compute_layer_coherence(phases, np.array([0], dtype=np.int64))
         assert r == pytest.approx(1.0, abs=1e-12)
 
+    def test_bool_mask_length_must_match_phase_vector(self) -> None:
+        phases = np.array([0.0, 0.5, 1.0])
+
+        with pytest.raises(ValueError, match="layer_mask"):
+            compute_layer_coherence(phases, np.array([True, False]))
+
+    def test_integer_indices_must_reference_existing_oscillators(self) -> None:
+        phases = np.array([0.0, 0.5, 1.0])
+
+        with pytest.raises(ValueError, match="layer_mask"):
+            compute_layer_coherence(phases, np.array([0, 3], dtype=np.int64))
+
     @pytest.mark.parametrize(
         "phases",
         [np.array([0.0, np.nan]), np.array([0.0, np.inf]), np.array([True, False])],
