@@ -170,8 +170,9 @@ def _validate_backend_winding(value: object, *, n: int, t: int) -> IntArray:
         raise ValueError("backend winding output must contain only finite values")
     if not np.all(np.equal(numeric, np.floor(numeric))):
         raise ValueError("backend winding output must contain integer values")
-    if np.any(np.abs(numeric) > t):
-        raise ValueError("backend winding output exceeds trajectory length bound")
+    max_abs_winding = int(np.ceil(max(t - 1, 0) / 2.0))
+    if np.any(np.abs(numeric) > max_abs_winding):
+        raise ValueError("backend winding output exceeds wrapped-increment bound")
     return np.ascontiguousarray(numeric.astype(np.int64), dtype=np.int64)
 
 
