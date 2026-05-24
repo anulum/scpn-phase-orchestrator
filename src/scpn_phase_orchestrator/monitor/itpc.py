@@ -141,9 +141,17 @@ def _dispatch(fn_name: str) -> object | None:
     return None
 
 
+def _contains_boolean_alias(raw: np.ndarray) -> bool:
+    if raw.dtype == np.bool_:
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, bool) for value in raw.flat)
+
+
 def _validate_phases_trials(phases_trials: object) -> FloatArray:
     raw = np.asarray(phases_trials)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(raw):
         raise ValueError("phases_trials must not contain boolean values")
     try:
         phases = raw.astype(np.float64, copy=True)
@@ -170,6 +178,39 @@ def _validate_pause_indices(pause_indices: object) -> IntArray:
     return np.ascontiguousarray(flat, dtype=np.int64)
 
 
+def _validate_itpc_values(value: object, *, n_timepoints: int) -> FloatArray:
+    try:
+        itpc = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("ITPC output must be numeric") from exc
+    if itpc.shape != (n_timepoints,):
+        raise ValueError(
+            f"ITPC output shape {itpc.shape} does not match ({n_timepoints},)"
+        )
+    if not np.all(np.isfinite(itpc)):
+        raise ValueError("ITPC output must contain only finite values")
+    tolerance = 1e-12
+    if np.any(itpc < -tolerance) or np.any(itpc > 1.0 + tolerance):
+        raise ValueError("ITPC output must lie in [0, 1]")
+    return np.ascontiguousarray(np.clip(itpc, 0.0, 1.0), dtype=np.float64)
+
+
+def _validate_persistence_value(value: object) -> float:
+    try:
+        scalar = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("ITPC persistence output must be numeric") from exc
+    if scalar.shape != ():
+        raise ValueError("ITPC persistence output must be scalar")
+    score = float(scalar)
+    if not np.isfinite(score):
+        raise ValueError("ITPC persistence output must be finite")
+    tolerance = 1e-12
+    if score < -tolerance or score > 1.0 + tolerance:
+        raise ValueError("ITPC persistence output must lie in [0, 1]")
+    return min(1.0, max(0.0, score))
+
+
 def compute_itpc(phases_trials: object) -> FloatArray:
     """Inter-Trial Phase Coherence at each time point.
 
@@ -191,18 +232,26 @@ def compute_itpc(phases_trials: object) -> FloatArray:
 
     backend_fn = _dispatch("itpc")
     if backend_fn is not None:
-        if ACTIVE_BACKEND == "rust":
-            fn_rust = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
-            flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-            return np.asarray(fn_rust(flat, n_trials, n_tp), dtype=np.float64)
-        fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
-        return np.asarray(
-            fn(phases.ravel(), int(n_trials), int(n_tp)),
-            dtype=np.float64,
-        )
+        try:
+            if ACTIVE_BACKEND == "rust":
+                fn_rust = cast(
+                    "Callable[[FloatArray, int, int], FloatArray]",
+                    backend_fn,
+                )
+                flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
+                return _validate_itpc_values(
+                    fn_rust(flat, n_trials, n_tp), n_timepoints=n_tp
+                )
+            fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
+            return _validate_itpc_values(
+                fn(phases.ravel(), int(n_trials), int(n_tp)),
+                n_timepoints=n_tp,
+            )
+        except Exception:
+            backend_fn = None
 
     result: FloatArray = np.abs(np.mean(np.exp(1j * phases), axis=0))
-    return result
+    return _validate_itpc_values(result, n_timepoints=n_tp)
 
 
 def itpc_persistence(
@@ -234,24 +283,29 @@ def itpc_persistence(
 
     backend_fn = _dispatch("persistence")
     if backend_fn is not None:
-        if ACTIVE_BACKEND == "rust":
-            fn_rust = cast(
-                "Callable[[FloatArray, int, int, IntArray], float]",
-                backend_fn,
-            )
-            return float(
-                fn_rust(
-                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                    n_trials,
-                    n_tp,
-                    np.ascontiguousarray(pause_idx, dtype=np.int64),
+        try:
+            if ACTIVE_BACKEND == "rust":
+                fn_rust = cast(
+                    "Callable[[FloatArray, int, int, IntArray], float]",
+                    backend_fn,
                 )
+                return _validate_persistence_value(
+                    fn_rust(
+                        np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                        n_trials,
+                        n_tp,
+                        np.ascontiguousarray(pause_idx, dtype=np.int64),
+                    )
+                )
+            fn = cast("Callable[[FloatArray, int, int, IntArray], float]", backend_fn)
+            return _validate_persistence_value(
+                fn(phases.ravel(), int(n_trials), int(n_tp), pause_idx)
             )
-        fn = cast("Callable[[FloatArray, int, int, IntArray], float]", backend_fn)
-        return float(fn(phases.ravel(), int(n_trials), int(n_tp), pause_idx))
+        except Exception:
+            backend_fn = None
 
     itpc_full = compute_itpc(phases)
     valid = pause_idx[(pause_idx >= 0) & (pause_idx < itpc_full.size)]
     if valid.size == 0:
         return 0.0
-    return float(np.mean(itpc_full[valid]))
+    return _validate_persistence_value(np.mean(itpc_full[valid]))
