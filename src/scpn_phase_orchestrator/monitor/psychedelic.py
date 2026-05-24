@@ -219,9 +219,22 @@ def _validate_step_count(value: object, *, name: str) -> int:
     return int(value)
 
 
-def _validate_reduction_schedule(values: list[float]) -> list[float]:
+def _validate_reduction_schedule(values: object) -> list[float]:
+    if isinstance(values, (bool, np.bool_)):
+        raise TypeError("reduction_schedule must be a 1-D sequence of values in [0, 1]")
+    try:
+        raw = np.asarray(values, dtype=object)
+    except (TypeError, ValueError) as exc:
+        raise TypeError(
+            "reduction_schedule must be a 1-D sequence of values in [0, 1]"
+        ) from exc
+    if raw.ndim != 1:
+        raise ValueError(
+            "reduction_schedule must be a 1-D sequence of values in [0, 1]"
+        )
     return [
-        _validate_unit_interval(value, name="reduction_schedule") for value in values
+        _validate_unit_interval(value, name="reduction_schedule")
+        for value in raw.tolist()
     ]
 
 
