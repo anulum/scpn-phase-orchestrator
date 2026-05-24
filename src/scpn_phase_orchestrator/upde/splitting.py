@@ -250,6 +250,20 @@ def _validate_state_array(
     return np.ascontiguousarray(arr, dtype=np.float64)
 
 
+def _validate_backend_output(value: object, *, n: int) -> FloatArray:
+    try:
+        output = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("backend output must be a finite phase vector") from exc
+    if output.shape != (n,):
+        raise ValueError(f"backend output shape {output.shape} does not match {(n,)}")
+    if not np.all(np.isfinite(output)):
+        raise ValueError("backend output must contain only finite phases")
+    if np.any(output < 0.0) or np.any(output >= TWO_PI):
+        raise ValueError("backend output phases must be in [0, 2*pi)")
+    return np.ascontiguousarray(output, dtype=np.float64)
+
+
 def _coupling_deriv(
     theta: FloatArray,
     knm: FloatArray,
@@ -405,16 +419,19 @@ class SplittingEngine:
         # negative dt (symplectic-reversibility checks) falls back
         # to the Python reference.
         if backend_fn is not None:
-            return backend_fn(
-                phases64,
-                omegas64,
-                knm_flat,
-                alpha_flat,
-                self._n,
-                float(zeta),
-                float(psi),
-                float(self._dt),
-                int(n_steps),
+            return _validate_backend_output(
+                backend_fn(
+                    phases64,
+                    omegas64,
+                    knm_flat,
+                    alpha_flat,
+                    self._n,
+                    float(zeta),
+                    float(psi),
+                    float(self._dt),
+                    int(n_steps),
+                ),
+                n=self._n,
             )
         return _python_run(
             phases64,

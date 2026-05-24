@@ -149,6 +149,35 @@ class TestSplittingEngine:
                 n_steps=0,
             )
 
+    def test_accelerated_backend_phase_domain_is_rejected(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.splitting as split_mod
+
+        def malformed_backend(
+            _phases,
+            _omegas,
+            _knm_flat,
+            _alpha_flat,
+            _n,
+            _zeta,
+            _psi,
+            _dt,
+            _n_steps,
+        ):
+            return np.array([0.0, 2.0 * np.pi], dtype=np.float64)
+
+        monkeypatch.setattr(split_mod, "_dispatch", lambda: malformed_backend)
+
+        eng = SplittingEngine(2, dt=0.01)
+        with pytest.raises(ValueError, match="backend output phases"):
+            eng.step(
+                np.zeros(2),
+                np.ones(2),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
+                np.zeros((2, 2)),
+            )
+
 
 class TestSplittingDispatch:
     def test_dispatch_falls_back_to_python_when_loader_fails(
