@@ -190,6 +190,8 @@ def _layer_indices(layer_mask: BoolArray | IntArray, n_phases: int) -> IntArray:
         raise ValueError("layer_mask indices must be integers") from exc
     if indices.size > 0 and (np.any(indices < 0) or np.any(indices >= n_phases)):
         raise ValueError("layer_mask indices must reference existing oscillators")
+    if np.unique(indices).size != indices.size:
+        raise ValueError("layer_mask indices must not repeat oscillators")
     return indices
 
 

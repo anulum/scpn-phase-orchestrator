@@ -305,6 +305,12 @@ class TestLayerCoherence:
         with pytest.raises(ValueError, match="layer_mask"):
             compute_layer_coherence(phases, np.array([0, 3], dtype=np.int64))
 
+    def test_integer_indices_must_not_repeat_oscillators(self) -> None:
+        phases = np.array([0.0, np.pi, np.pi])
+
+        with pytest.raises(ValueError, match="layer_mask"):
+            compute_layer_coherence(phases, np.array([0, 0, 1], dtype=np.int64))
+
     def test_layer_indices_must_not_truncate_float_values(self) -> None:
         phases = np.array([0.0, 0.5, 1.0])
 
