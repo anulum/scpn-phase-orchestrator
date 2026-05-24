@@ -181,6 +181,25 @@ class TestIntegratedInformationContracts:
                 ),
                 "n_bins": 4,
             },
+            {
+                "phi": 0.5,
+                "normalised_phi": 0.0,
+                "total_integration": 0.5,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, 0.5], [0.5, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [
+                    [0.0, np.log(4.0) + 1.0],
+                    [np.log(4.0) + 1.0, 0.0],
+                ],
+                "n_bins": 4,
+            },
         ],
     )
     def test_result_record_rejects_invalid_invariants(

@@ -78,8 +78,23 @@ class IntegratedInformationResult:
             self.total_integration,
             name="total_integration",
         )
+        max_information = float(np.log(n_bins))
+        if np.any(pairwise_mi > max_information + 1e-12):
+            raise ValueError("pairwise_mi entries must not exceed log(n_bins)")
+        if phi > max_information + 1e-12:
+            raise ValueError("phi must not exceed log(n_bins)")
+        if total_integration > max_information + 1e-12:
+            raise ValueError("total_integration must not exceed log(n_bins)")
         if phi > total_integration + 1e-12:
             raise ValueError("phi must not exceed total_integration")
+        expected_normalised_phi = _normalise_phi(phi, n_bins)
+        if not np.isclose(
+            normalised_phi,
+            expected_normalised_phi,
+            rtol=1e-12,
+            atol=1e-12,
+        ):
+            raise ValueError("normalised_phi must match phi/log(n_bins)")
         object.__setattr__(self, "phi", phi)
         object.__setattr__(self, "normalised_phi", normalised_phi)
         object.__setattr__(self, "total_integration", total_integration)
