@@ -23,6 +23,11 @@ from scpn_phase_orchestrator.adapters.neurocore_bridge import (
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 
+class _MalformedRustEnsemble:
+    def step(self, _layer_currents: np.ndarray, _n_substeps: int) -> np.ndarray:
+        return np.array([1.0, np.nan])
+
+
 def _make_state(r_values: list[float]) -> UPDEState:
     layers = [LayerState(R=r, psi=0.0) for r in r_values]
     return UPDEState(
@@ -65,6 +70,14 @@ class TestNeurocoreBridge:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
         with pytest.raises(ValueError, match="state.layers|layer 0 R"):
             bridge.step(_make_state(r_values), n_substeps=10)
+
+    def test_rust_step_rejects_malformed_backend_rates(self):
+        bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
+        bridge._backend = "rust"
+        bridge._rust_ensemble = _MalformedRustEnsemble()
+
+        with pytest.raises(ValueError, match="rates"):
+            bridge.step(_make_state([0.8, 0.6]), n_substeps=10)
 
     def test_high_coherence_higher_rate(self):
         bridge = NeurocoreBridge(

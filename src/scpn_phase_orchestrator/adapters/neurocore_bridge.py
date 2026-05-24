@@ -239,7 +239,10 @@ class NeurocoreBridge:
 
     def _step_rust(self, layer_currents: FloatArray, n_substeps: int) -> FloatArray:
         """Delegate to Rust PyLIFEnsemble — fastest path."""
-        return np.asarray(self._rust_ensemble.step(layer_currents, n_substeps))
+        return _require_rate_vector(
+            self._rust_ensemble.step(layer_currents, n_substeps),
+            n_layers=self._n_layers,
+        )
 
     def _step_numpy(self, currents: FloatArray, n_substeps: int) -> None:
         """Vectorised LIF Euler-Maruyama integration over all neurons."""
