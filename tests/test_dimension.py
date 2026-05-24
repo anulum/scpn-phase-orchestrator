@@ -89,6 +89,7 @@ class TestCorrelationIntegral:
             np.array([0.0, np.nan], dtype=np.float64),
             np.array([[0.0], [np.inf]], dtype=np.float64),
             np.zeros((2, 3, 4), dtype=np.float64),
+            np.array([0.0, True], dtype=object),
             [["not-a-point"]],
         ],
     )
@@ -103,6 +104,7 @@ class TestCorrelationIntegral:
             np.array([np.inf], dtype=np.float64),
             np.array([-0.1], dtype=np.float64),
             np.zeros((1, 1), dtype=np.float64),
+            np.array([0.1, True], dtype=object),
             ["not-epsilon"],
         ],
     )
@@ -212,12 +214,109 @@ class TestKaplanYorkeDimension:
             np.array([0.1, np.nan], dtype=np.float64),
             np.array([0.1, np.inf], dtype=np.float64),
             np.zeros((2, 2), dtype=np.float64),
+            np.array([0.1, True], dtype=object),
             ["not-an-exponent"],
         ],
     )
     def test_rejects_invalid_spectrum(self, lyapunov_exponents: Any) -> None:
         with pytest.raises(ValueError, match="lyapunov_exponents"):
             kaplan_yorke_dimension(lyapunov_exponents)
+
+
+class TestCorrelationDimensionResult:
+    def test_normalises_valid_record(self) -> None:
+        result = CorrelationDimensionResult(
+            D2=np.float64(1.25),
+            epsilons=[0.1, 1.0],
+            C_eps=[0.25, 0.75],
+            slope=[1.25],
+            scaling_range=(0.1, 1.0),
+        )
+
+        assert result.D2 == 1.25
+        assert isinstance(result.epsilons, np.ndarray)
+        assert isinstance(result.C_eps, np.ndarray)
+        assert isinstance(result.slope, np.ndarray)
+        assert result.scaling_range == (0.1, 1.0)
+
+    @pytest.mark.parametrize("D2", [np.nan, np.inf, -0.1, True, "1.0"])
+    def test_rejects_invalid_dimension(self, D2: Any) -> None:
+        with pytest.raises(ValueError, match="D2"):
+            CorrelationDimensionResult(
+                D2=D2,
+                epsilons=[0.1, 1.0],
+                C_eps=[0.25, 0.75],
+                slope=[1.25],
+                scaling_range=(0.1, 1.0),
+            )
+
+    @pytest.mark.parametrize(
+        "epsilons",
+        [
+            [0.1, True],
+            [np.nan, 1.0],
+            [[0.1, 1.0]],
+        ],
+    )
+    def test_rejects_invalid_epsilons(self, epsilons: Any) -> None:
+        with pytest.raises(ValueError, match="epsilons"):
+            CorrelationDimensionResult(
+                D2=1.0,
+                epsilons=epsilons,
+                C_eps=[0.25, 0.75],
+                slope=[1.25],
+                scaling_range=(0.1, 1.0),
+            )
+
+    @pytest.mark.parametrize(
+        "C_eps",
+        [
+            [0.25],
+            [0.25, np.nan],
+            [0.25, 1.1],
+            [0.75, 0.25],
+        ],
+    )
+    def test_rejects_invalid_correlation_integral(self, C_eps: Any) -> None:
+        with pytest.raises(ValueError, match="C_eps"):
+            CorrelationDimensionResult(
+                D2=1.0,
+                epsilons=[0.1, 1.0],
+                C_eps=C_eps,
+                slope=[1.25],
+                scaling_range=(0.1, 1.0),
+            )
+
+    @pytest.mark.parametrize("slope", [[1.0, 2.0, 3.0], [np.nan], [[1.0]]])
+    def test_rejects_invalid_slope(self, slope: Any) -> None:
+        with pytest.raises(ValueError, match="slope"):
+            CorrelationDimensionResult(
+                D2=1.0,
+                epsilons=[0.1, 1.0],
+                C_eps=[0.25, 0.75],
+                slope=slope,
+                scaling_range=(0.1, 1.0),
+            )
+
+    @pytest.mark.parametrize(
+        "scaling_range",
+        [
+            (1.0, 0.1),
+            (0.1, np.nan),
+            (-0.1, 1.0),
+            (0.1,),
+            [0.1, 1.0],
+        ],
+    )
+    def test_rejects_invalid_scaling_range(self, scaling_range: Any) -> None:
+        with pytest.raises(ValueError, match="scaling_range"):
+            CorrelationDimensionResult(
+                D2=1.0,
+                epsilons=[0.1, 1.0],
+                C_eps=[0.25, 0.75],
+                slope=[1.25],
+                scaling_range=scaling_range,
+            )
 
 
 class TestBackendDispatch:
@@ -260,6 +359,75 @@ class TestBackendDispatch:
             dim_mod._BACKEND_FN_CACHE.clear()
 
         assert backend_fn is None
+
+    @pytest.mark.parametrize(
+        "backend_output",
+        [
+            np.array([0.5], dtype=np.float64),
+            np.array([0.5, np.nan], dtype=np.float64),
+            np.array([0.5, 1.1], dtype=np.float64),
+            np.array([0.5, 0.4], dtype=np.float64),
+        ],
+    )
+    def test_invalid_correlation_integral_backend_payload_falls_back(
+        self,
+        monkeypatch,
+        backend_output: np.ndarray,
+    ) -> None:
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_available = list(dim_mod.AVAILABLE_BACKENDS)
+        previous_loader = dim_mod._LOADERS["go"]
+
+        def fake_ci(*_args: object, **_kwargs: object) -> np.ndarray:
+            return backend_output
+
+        dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        dim_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {"ci": fake_ci})
+        try:
+            C = correlation_integral(
+                np.array([[0.0], [1.0], [2.0]], dtype=np.float64),
+                np.array([0.5, 1.5], dtype=np.float64),
+                max_pairs=10,
+            )
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            dim_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
+            dim_mod._BACKEND_FN_CACHE.clear()
+
+        np.testing.assert_allclose(C, [0.0, 2.0 / 3.0])
+
+    @pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, 4.0])
+    def test_invalid_kaplan_yorke_backend_payload_falls_back(
+        self,
+        monkeypatch,
+        backend_value: float,
+    ) -> None:
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_available = list(dim_mod.AVAILABLE_BACKENDS)
+        previous_loader = dim_mod._LOADERS["go"]
+        le = np.array([0.5, -1.0, -2.0], dtype=np.float64)
+
+        def fake_ky(*_args: object, **_kwargs: object) -> float:
+            return float(backend_value)
+
+        dim_mod.ACTIVE_BACKEND = "python"
+        expected = kaplan_yorke_dimension(le)
+        dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod.AVAILABLE_BACKENDS = ["go", "python"]
+        dim_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {"ky": fake_ky})
+        try:
+            got = kaplan_yorke_dimension(le)
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            dim_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
+            dim_mod._BACKEND_FN_CACHE.clear()
+
+        assert got == expected
 
     def test_dispatch_falls_through_to_next_available_backend(self, monkeypatch):
         previous_backend = dim_mod.ACTIVE_BACKEND

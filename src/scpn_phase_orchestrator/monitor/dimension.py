@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from numbers import Integral
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -150,9 +150,17 @@ def _dispatch(fn_name: str) -> object | None:
     return None
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _validate_trajectory(trajectory: object) -> FloatArray:
     raw = np.asarray(trajectory)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(trajectory):
         raise ValueError("trajectory must not contain boolean values")
     try:
         traj = raw.astype(np.float64, copy=True)
@@ -169,7 +177,7 @@ def _validate_trajectory(trajectory: object) -> FloatArray:
 
 def _validate_epsilons(epsilons: object) -> FloatArray:
     raw = np.asarray(epsilons)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(epsilons):
         raise ValueError("epsilons must not contain boolean values")
     try:
         eps = raw.astype(np.float64, copy=True)
@@ -193,7 +201,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
     raw = np.asarray(lyapunov_exponents)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(lyapunov_exponents):
         raise ValueError("lyapunov_exponents must not contain boolean values")
     try:
         le = raw.astype(np.float64, copy=True)
@@ -206,6 +214,41 @@ def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
     if not np.all(np.isfinite(le)):
         raise ValueError("lyapunov_exponents must contain only finite values")
     return np.ascontiguousarray(le, dtype=np.float64)
+
+
+def _validate_non_negative_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
+    result = float(value)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative, got {value!r}")
+    return result
+
+
+def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
+    try:
+        ci = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("correlation integral output must be numeric") from exc
+    if ci.shape != (expected_size,):
+        raise ValueError(
+            f"correlation integral output shape {ci.shape} does not match "
+            f"({expected_size},)"
+        )
+    if not np.all(np.isfinite(ci)):
+        raise ValueError("correlation integral output must contain only finite values")
+    if np.any((ci < -1e-12) | (ci > 1.0 + 1e-12)):
+        raise ValueError("correlation integral output must lie in [0, 1]")
+    if ci.size > 1 and np.any(np.diff(ci) < -1e-12):
+        raise ValueError("correlation integral output must be monotonic in epsilon")
+    return np.ascontiguousarray(np.clip(ci, 0.0, 1.0), dtype=np.float64)
+
+
+def _validate_ky_dimension(value: object, *, n_exponents: int) -> float:
+    dimension = _validate_non_negative_float(value, name="kaplan_yorke_dimension")
+    if dimension > n_exponents + 1e-12:
+        raise ValueError("kaplan_yorke_dimension must not exceed spectrum length")
+    return min(dimension, float(n_exponents))
 
 
 @dataclass
@@ -225,6 +268,36 @@ class CorrelationDimensionResult:
     C_eps: FloatArray
     slope: FloatArray
     scaling_range: tuple[float, float]
+
+    def __post_init__(self) -> None:
+        d2 = _validate_non_negative_float(self.D2, name="D2")
+        epsilons = _validate_epsilons(self.epsilons)
+        try:
+            c_eps = _validate_ci_values(self.C_eps, expected_size=int(epsilons.size))
+        except ValueError as exc:
+            raise ValueError(f"C_eps {exc}") from exc
+        try:
+            slope = np.asarray(self.slope, dtype=np.float64)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("slope must be a finite one-dimensional array") from exc
+        if slope.ndim != 1:
+            raise ValueError("slope must be one-dimensional")
+        if not np.all(np.isfinite(slope)):
+            raise ValueError("slope must contain only finite values")
+        if slope.size not in {max(int(epsilons.size) - 1, 0), 1}:
+            raise ValueError("slope length must match epsilon intervals")
+        if not isinstance(self.scaling_range, tuple) or len(self.scaling_range) != 2:
+            raise ValueError("scaling_range must contain two finite values")
+        lo = _validate_non_negative_float(self.scaling_range[0], name="scaling_range")
+        hi = _validate_non_negative_float(self.scaling_range[1], name="scaling_range")
+        if hi < lo:
+            raise ValueError("scaling_range upper bound must be >= lower bound")
+
+        self.D2 = d2
+        self.epsilons = epsilons
+        self.C_eps = c_eps
+        self.slope = np.ascontiguousarray(slope, dtype=np.float64)
+        self.scaling_range = (lo, hi)
 
 
 def _prepare_pair_indices(
@@ -293,17 +366,20 @@ def correlation_integral(
             "Callable[[FloatArray, int, int, FloatArray, int, int], FloatArray]",
             backend_fn,
         )
-        return np.asarray(
-            fn_rust(
-                np.ascontiguousarray(traj.ravel(), dtype=np.float64),
-                t,
-                d,
-                eps_sorted,
-                max_pairs,
-                seed,
-            ),
-            dtype=np.float64,
-        )
+        try:
+            return _validate_ci_values(
+                fn_rust(
+                    np.ascontiguousarray(traj.ravel(), dtype=np.float64),
+                    t,
+                    d,
+                    eps_sorted,
+                    max_pairs,
+                    seed,
+                ),
+                expected_size=int(eps_sorted.size),
+            )
+        except Exception:
+            backend_fn = None
 
     pair_result = _prepare_pair_indices(t, max_pairs, seed)
     if pair_result is None:
@@ -316,24 +392,30 @@ def correlation_integral(
             "FloatArray]",
             backend_fn,
         )
-        return np.asarray(
-            fn(
-                np.ascontiguousarray(traj.ravel(), dtype=np.float64),
-                t,
-                d,
-                idx_i,
-                idx_j,
-                eps_sorted,
-            ),
-            dtype=np.float64,
-        )
+        try:
+            return _validate_ci_values(
+                fn(
+                    np.ascontiguousarray(traj.ravel(), dtype=np.float64),
+                    t,
+                    d,
+                    idx_i,
+                    idx_j,
+                    eps_sorted,
+                ),
+                expected_size=int(eps_sorted.size),
+            )
+        except Exception:
+            backend_fn = None
 
     diffs = traj[idx_i] - traj[idx_j]
     dists = np.sqrt(np.sum(diffs**2, axis=1))
     n_pairs_actual = len(dists)
     if n_pairs_actual == 0:
         return np.zeros(eps_sorted.size, dtype=np.float64)
-    return np.array([np.sum(dists < eps) / n_pairs_actual for eps in eps_sorted])
+    return _validate_ci_values(
+        np.array([np.sum(dists < eps) / n_pairs_actual for eps in eps_sorted]),
+        expected_size=int(eps_sorted.size),
+    )
 
 
 def correlation_dimension(
@@ -454,7 +536,13 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray], float]", backend_fn)
         le_sorted = np.sort(le)[::-1]
-        return float(fn(np.ascontiguousarray(le_sorted, dtype=np.float64)))
+        try:
+            return _validate_ky_dimension(
+                fn(np.ascontiguousarray(le_sorted, dtype=np.float64)),
+                n_exponents=int(le_sorted.size),
+            )
+        except Exception:
+            backend_fn = None
 
     le_sorted = np.sort(le)[::-1]
     cumsum = np.cumsum(le_sorted)
