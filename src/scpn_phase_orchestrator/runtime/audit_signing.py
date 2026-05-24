@@ -29,6 +29,10 @@ __all__ = [
 ]
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
 def key_id_for_secret(key_material: str) -> str:
     """Return the audit key identifier stored in signed audit metadata."""
 
@@ -59,9 +63,11 @@ def audit_verification_keys() -> dict[str, str]:
     if keyring_json == "":
         raise ValueError("SPO_AUDIT_KEYRING must not be empty")
     try:
-        loaded = json.loads(keyring_json)
+        loaded = json.loads(keyring_json, parse_constant=_reject_json_constant)
     except json.JSONDecodeError as exc:
         raise ValueError("SPO_AUDIT_KEYRING must be JSON") from exc
+    except ValueError as exc:
+        raise ValueError("SPO_AUDIT_KEYRING must contain only finite JSON") from exc
     if not isinstance(loaded, dict):
         raise ValueError("SPO_AUDIT_KEYRING must be a JSON object")
     for key_id, key_value in loaded.items():

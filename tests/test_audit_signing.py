@@ -76,6 +76,16 @@ def test_audit_verification_keys_rejects_empty_current_key(
         audit_verification_keys()
 
 
+def test_audit_verification_keys_rejects_non_finite_keyring_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
+    monkeypatch.setenv("SPO_AUDIT_KEYRING", '{"abc": NaN}')
+
+    with pytest.raises(ValueError, match="finite JSON"):
+        audit_verification_keys()
+
+
 @pytest.mark.parametrize(
     ("raw_keyring", "expected"),
     [
