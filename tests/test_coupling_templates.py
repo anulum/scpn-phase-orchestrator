@@ -72,6 +72,26 @@ class TestKnmTemplateSetRegistry:
         np.testing.assert_array_equal(retrieved.knm, knm)
         assert retrieved.description == "symmetric"
 
+    def test_registered_template_matrices_are_alias_safe_snapshots(self):
+        ts = KnmTemplateSet()
+        knm = np.array([[0.0, 0.5], [0.5, 0.0]])
+        alpha = np.array([[0.0, 0.2], [-0.2, 0.0]])
+        ts.add(KnmTemplate("snap", knm=knm, alpha=alpha, description="snapshot"))
+
+        knm[0, 1] = 9.0
+        alpha[0, 1] = 9.0
+        retrieved = ts.get("snap")
+
+        np.testing.assert_allclose(retrieved.knm, [[0.0, 0.5], [0.5, 0.0]])
+        np.testing.assert_allclose(retrieved.alpha, [[0.0, 0.2], [-0.2, 0.0]])
+
+        retrieved.knm[0, 1] = 7.0
+        retrieved.alpha[0, 1] = 7.0
+        fresh = ts.get("snap")
+
+        np.testing.assert_allclose(fresh.knm, [[0.0, 0.5], [0.5, 0.0]])
+        np.testing.assert_allclose(fresh.alpha, [[0.0, 0.2], [-0.2, 0.0]])
+
     def test_list_names_ordering(self):
         ts = KnmTemplateSet()
         ts.add(_tpl("beta"))

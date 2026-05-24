@@ -30,6 +30,10 @@ __all__ = ["KnmTemplate", "KnmTemplateSet"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _matrix_copy(matrix: FloatArray) -> FloatArray:
+    return np.array(matrix, dtype=np.float64, copy=True)
+
+
 @dataclass(frozen=True)
 class KnmTemplate:
     """Named K_nm coupling matrix with associated phase-lag matrix."""
@@ -81,8 +85,8 @@ class KnmTemplateSet:
             raise ValueError("template alpha must contain finite real values")
         self._templates[normalized_name] = KnmTemplate(
             name=normalized_name,
-            knm=template.knm,
-            alpha=template.alpha,
+            knm=_matrix_copy(template.knm),
+            alpha=_matrix_copy(template.alpha),
             description=template.description,
         )
 
@@ -92,7 +96,13 @@ class KnmTemplateSet:
             raise KeyError(f"template name must be a non-empty string, got {name!r}")
         normalized = name.strip()
         try:
-            return self._templates[normalized]
+            template = self._templates[normalized]
+            return KnmTemplate(
+                name=template.name,
+                knm=_matrix_copy(template.knm),
+                alpha=_matrix_copy(template.alpha),
+                description=template.description,
+            )
         except KeyError:
             available = ", ".join(sorted(self._templates)) or "(none)"
             msg = f"Unknown template {name!r}; available: {available}"
