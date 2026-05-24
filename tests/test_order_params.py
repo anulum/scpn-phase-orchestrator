@@ -89,13 +89,39 @@ class TestOrderParameter:
 
     @pytest.mark.parametrize(
         "phases",
-        [np.array([0.0, np.nan]), np.array([0.0, np.inf]), np.array([True, False])],
+        [
+            np.array([0.0, np.nan]),
+            np.array([0.0, np.inf]),
+            np.array([True, False]),
+            np.array([0.0, True], dtype=object),
+        ],
     )
     def test_rejects_invalid_phase_values(self, phases: np.ndarray) -> None:
         with pytest.raises(ValueError, match="phases"):
             compute_order_parameter(phases)
 
-    def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
+    @pytest.mark.parametrize("backend_r", [-0.1, 1.1])
+    def test_backend_material_order_parameter_bound_violation_is_rejected(
+        self, monkeypatch, backend_r: float
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_order(phases: np.ndarray) -> tuple[float, float]:
+            return backend_r, float(phases[0])
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(
+            op_mod,
+            "_load_backend",
+            lambda name: {"order_parameter": fake_order},
+        )
+
+        with pytest.raises(ValueError, match="coherence magnitude"):
+            op_mod.compute_order_parameter(np.array([0.25], dtype=np.float64))
+
+    def test_backend_order_parameter_roundoff_overrun_is_clamped(
+        self, monkeypatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         def fake_order(phases: np.ndarray) -> tuple[float, float]:
@@ -176,6 +202,8 @@ class TestPLV:
             (np.zeros(2), np.array([0.0, np.inf]), "phases_b"),
             (np.array([True, False]), np.zeros(2), "phases_a"),
             (np.zeros(2), np.array([True, False]), "phases_b"),
+            (np.array([0.0, True], dtype=object), np.zeros(2), "phases_a"),
+            (np.zeros(2), np.array([0.0, False], dtype=object), "phases_b"),
         ],
     )
     def test_rejects_invalid_plv_values(
@@ -184,7 +212,25 @@ class TestPLV:
         with pytest.raises(ValueError, match=match):
             compute_plv(a, b)
 
-    def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
+    @pytest.mark.parametrize("backend_plv", [-0.1, 1.1])
+    def test_backend_material_plv_bound_violation_is_rejected(
+        self, monkeypatch, backend_plv: float
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_plv(a: np.ndarray, b: np.ndarray) -> float:
+            return backend_plv
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_load_backend", lambda name: {"plv": fake_plv})
+
+        with pytest.raises(ValueError, match="coherence magnitude"):
+            op_mod.compute_plv(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.array([0.0, 0.1], dtype=np.float64),
+            )
+
+    def test_backend_plv_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         def fake_plv(a: np.ndarray, b: np.ndarray) -> float:
@@ -259,15 +305,58 @@ class TestLayerCoherence:
         with pytest.raises(ValueError, match="layer_mask"):
             compute_layer_coherence(phases, np.array([0, 3], dtype=np.int64))
 
+    def test_layer_indices_must_not_truncate_float_values(self) -> None:
+        phases = np.array([0.0, 0.5, 1.0])
+
+        with pytest.raises(ValueError, match="layer_mask indices must be integers"):
+            compute_layer_coherence(phases, np.array([0.0, 1.5]))
+
+    def test_layer_indices_reject_mixed_boolean_aliases(self) -> None:
+        phases = np.array([0.0, 0.5, 1.0])
+
+        with pytest.raises(
+            ValueError, match="layer_mask indices must not contain boolean values"
+        ):
+            compute_layer_coherence(phases, np.array([0, True], dtype=object))
+
     @pytest.mark.parametrize(
         "phases",
-        [np.array([0.0, np.nan]), np.array([0.0, np.inf]), np.array([True, False])],
+        [
+            np.array([0.0, np.nan]),
+            np.array([0.0, np.inf]),
+            np.array([True, False]),
+            np.array([0.0, True], dtype=object),
+        ],
     )
     def test_rejects_invalid_layer_phase_values(self, phases: np.ndarray) -> None:
         with pytest.raises(ValueError, match="phases"):
             compute_layer_coherence(phases, np.array([0], dtype=np.int64))
 
-    def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
+    @pytest.mark.parametrize("backend_r", [-0.1, 1.1])
+    def test_backend_material_layer_coherence_bound_violation_is_rejected(
+        self, monkeypatch, backend_r: float
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_layer(phases: np.ndarray, indices: np.ndarray) -> float:
+            return backend_r
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(
+            op_mod,
+            "_load_backend",
+            lambda name: {"layer_coherence": fake_layer},
+        )
+
+        with pytest.raises(ValueError, match="coherence magnitude"):
+            op_mod.compute_layer_coherence(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.array([0, 1], dtype=np.int64),
+            )
+
+    def test_backend_layer_coherence_roundoff_overrun_is_clamped(
+        self, monkeypatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         def fake_layer(phases: np.ndarray, indices: np.ndarray) -> float:

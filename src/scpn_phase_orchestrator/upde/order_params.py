@@ -136,10 +136,20 @@ def _load_backend(name: str) -> dict[str, object]:
     return loaded
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        values = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in values.flat)
+
+
 def _unit_interval(value: float) -> float:
     """Preserve the physical bound of coherence magnitudes."""
     if not np.isfinite(value):
         raise ValueError("coherence magnitude must be finite")
+    if value < -1e-12 or value > 1.0 + 1e-12:
+        raise ValueError("coherence magnitude must lie in [0, 1]")
     return float(np.clip(value, 0.0, 1.0))
 
 
@@ -152,7 +162,7 @@ def _mean_phase(value: float) -> float:
 
 def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
     raw = np.asarray(phases)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(phases):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         values = raw.astype(np.float64, copy=True).ravel()
@@ -170,6 +180,10 @@ def _layer_indices(layer_mask: BoolArray | IntArray, n_phases: int) -> IntArray:
         if flattened.size != n_phases:
             raise ValueError("layer_mask boolean length must match phases length")
         return np.flatnonzero(flattened).astype(np.int64)
+    if _contains_boolean_alias(layer_mask):
+        raise ValueError("layer_mask indices must not contain boolean values")
+    if not np.issubdtype(mask.dtype, np.integer):
+        raise ValueError("layer_mask indices must be integers")
     try:
         indices = mask.astype(np.int64, copy=True).ravel()
     except (TypeError, ValueError) as exc:
