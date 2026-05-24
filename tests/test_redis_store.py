@@ -85,8 +85,26 @@ def test_save_state_rejects_non_json_payload():
     mock.set.assert_not_called()
 
 
+def test_save_state_rejects_non_finite_json_numbers():
+    store, mock = _make_store()
+    with pytest.raises(ValueError, match="JSON"):
+        store.save_state({"R": float("nan")})
+    mock.set.assert_not_called()
+
+
 @pytest.mark.parametrize("payload", ["[1, 2, 3]", '"string"', "42"])
 def test_load_state_rejects_non_object_json_payload(payload: str):
+    store, mock = _make_store()
+    mock.get.return_value = payload
+    with pytest.raises(ValueError, match="Redis payload"):
+        store.load_state()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    ['{"R": NaN}', '{"R": Infinity}', '{"R": -Infinity}'],
+)
+def test_load_state_rejects_non_finite_json_numbers(payload: str):
     store, mock = _make_store()
     mock.get.return_value = payload
     with pytest.raises(ValueError, match="Redis payload"):

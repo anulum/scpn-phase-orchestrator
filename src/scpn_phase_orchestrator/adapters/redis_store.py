@@ -18,6 +18,8 @@ manage simulation lifecycle or background synchronization.
 from __future__ import annotations
 
 import json
+from math import isfinite
+from numbers import Real
 from pathlib import Path
 from typing import Any
 
@@ -117,7 +119,7 @@ class RedisStateStore:
         if not isinstance(sim_state, dict):
             raise ValueError("sim_state must be a JSON-serializable dict")
         try:
-            payload = json.dumps(sim_state)
+            payload = json.dumps(sim_state, allow_nan=False)
         except (TypeError, ValueError) as exc:
             raise ValueError("sim_state must be JSON serializable") from exc
         self._client.set(self._key, payload)
@@ -128,11 +130,12 @@ class RedisStateStore:
         if raw is None:
             return None
         try:
-            result = json.loads(raw)
-        except (TypeError, json.JSONDecodeError) as exc:
+            result = json.loads(raw, parse_constant=_reject_json_constant)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
             raise ValueError("Redis payload must be a JSON object") from exc
         if not isinstance(result, dict):
             raise ValueError("Redis payload must be a JSON object")
+        _require_finite_json_numbers(result)
         return result
 
     def delete_state(self) -> None:
@@ -149,3 +152,22 @@ def _optional_path(value: str | Path | None, field: str) -> str | None:
     if value is None:
         return None
     return require_non_empty_str(str(value), field=field)
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
+def _require_finite_json_numbers(value: object) -> None:
+    if isinstance(value, dict):
+        for item in value.values():
+            _require_finite_json_numbers(item)
+        return
+    if isinstance(value, list):
+        for item in value:
+            _require_finite_json_numbers(item)
+        return
+    if isinstance(value, bool):
+        return
+    if isinstance(value, Real) and not isfinite(float(value)):
+        raise ValueError("Redis payload must contain only finite JSON numbers")
