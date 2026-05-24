@@ -108,3 +108,18 @@ def test_cli_auto_coupling_estimation_outputs_json(tmp_path) -> None:
     assert payload["shape"] == [3, 240]
     assert payload["diagnostics"]["edge_count"] >= 1
     assert payload["knm"][0][1] > payload["knm"][1][0]
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        CouplingInferenceConfig(threshold_quantile=True),
+        CouplingInferenceConfig(threshold_quantile=False),
+        CouplingInferenceConfig(threshold_absolute=True),
+        CouplingInferenceConfig(threshold_absolute=np.nan),
+        CouplingInferenceConfig(min_timesteps=4.5),  # type: ignore[arg-type]
+    ],
+)
+def test_inference_rejects_invalid_threshold_and_timestep_config(config) -> None:
+    with pytest.raises((TypeError, ValueError), match="threshold|min_timesteps"):
+        infer_coupling_from_timeseries(_directed_phase_series(), config=config)

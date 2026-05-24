@@ -16,6 +16,7 @@ closed instead of accidentally receiving a weaker substitute.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Real
 from typing import Literal, TypeAlias
 
 import numpy as np
@@ -47,6 +48,19 @@ __all__ = [
     "auto_coupling_estimation",
     "infer_coupling_from_timeseries",
 ]
+
+
+def _validate_optional_finite_real(
+    value: object | None, *, name: str
+) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"{name} must be a finite real value")
+    resolved = float(value)
+    if not np.isfinite(resolved):
+        raise ValueError(f"{name} must be finite")
+    return resolved
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,14 +181,25 @@ def _validate_config(config: CouplingInferenceConfig) -> CouplingInferenceConfig
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if config.n_bins < 2:
         raise ValueError("n_bins must be greater than or equal to 2")
-    if config.threshold_quantile is not None and not (
-        0.0 <= config.threshold_quantile <= 1.0
-    ):
+
+    threshold_quantile = _validate_optional_finite_real(
+        config.threshold_quantile, name="threshold_quantile"
+    )
+    if threshold_quantile is not None and not (0.0 <= threshold_quantile <= 1.0):
         raise ValueError("threshold_quantile must lie in [0, 1]")
-    if config.threshold_absolute is not None and config.threshold_absolute < 0.0:
+
+    threshold_absolute = _validate_optional_finite_real(
+        config.threshold_absolute, name="threshold_absolute"
+    )
+    if threshold_absolute is not None and threshold_absolute < 0.0:
         raise ValueError("threshold_absolute must be non-negative")
+
     if config.normalisation not in {"max", "none"}:
         raise ValueError("normalisation must be one of: max, none")
+    if isinstance(config.min_timesteps, bool) or not isinstance(
+        config.min_timesteps, int
+    ):
+        raise TypeError("min_timesteps must be an integer at least 4")
     if config.min_timesteps < 4:
         raise ValueError("min_timesteps must be at least 4")
     return config
