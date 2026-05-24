@@ -187,9 +187,17 @@ def _dispatch(fn_name: str) -> object | None:
     return None
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _validate_state_history(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -206,7 +214,7 @@ def _validate_state_history(value: object, *, name: str) -> FloatArray:
 
 def _validate_normal(normal: object, *, expected_dim: int) -> FloatArray:
     raw = np.asarray(normal)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(normal):
         raise ValueError("normal must not contain boolean values")
     try:
         normal_vec = raw.astype(np.float64, copy=True)
@@ -249,6 +257,110 @@ class PoincareResult:
     mean_return_time: float
     std_return_time: float
 
+    def __post_init__(self) -> None:
+        crossings = _validate_crossings(self.crossings)
+        crossing_times = _validate_crossing_times(
+            self.crossing_times,
+            expected_count=int(crossings.shape[0]),
+        )
+        return_times_array = _validate_return_times(
+            self.return_times,
+            crossing_times=crossing_times,
+        )
+        mean_return_time = _validate_finite_real(
+            self.mean_return_time,
+            name="mean_return_time",
+        )
+        std_return_time = _validate_finite_real(
+            self.std_return_time,
+            name="std_return_time",
+        )
+        if mean_return_time < 0.0:
+            raise ValueError("mean_return_time must be non-negative")
+        if std_return_time < 0.0:
+            raise ValueError("std_return_time must be non-negative")
+        expected_mean = (
+            float(np.mean(return_times_array)) if return_times_array.size else 0.0
+        )
+        expected_std = (
+            float(np.std(return_times_array)) if return_times_array.size else 0.0
+        )
+        if not np.isclose(mean_return_time, expected_mean, rtol=1e-12, atol=1e-12):
+            raise ValueError("mean_return_time must match return_times")
+        if not np.isclose(std_return_time, expected_std, rtol=1e-12, atol=1e-12):
+            raise ValueError("std_return_time must match return_times")
+
+        self.crossings = crossings
+        self.crossing_times = crossing_times
+        self.return_times = return_times_array
+        self.mean_return_time = mean_return_time
+        self.std_return_time = std_return_time
+
+
+def _validate_crossings(value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("crossings must not contain boolean values")
+    try:
+        crossings = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("crossings must be a finite two-dimensional array") from exc
+    if crossings.ndim != 2:
+        raise ValueError(f"crossings must be two-dimensional, got {crossings.shape}")
+    if not np.all(np.isfinite(crossings)):
+        raise ValueError("crossings must contain only finite values")
+    return np.ascontiguousarray(crossings, dtype=np.float64)
+
+
+def _validate_crossing_times(value: object, *, expected_count: int) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("crossing_times must not contain boolean values")
+    try:
+        crossing_times = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "crossing_times must be a finite one-dimensional array"
+        ) from exc
+    if crossing_times.ndim != 1:
+        raise ValueError("crossing_times must be one-dimensional")
+    if crossing_times.shape != (expected_count,):
+        raise ValueError(
+            f"crossing_times shape {crossing_times.shape} does not match "
+            f"({expected_count},)"
+        )
+    if not np.all(np.isfinite(crossing_times)):
+        raise ValueError("crossing_times must contain only finite values")
+    if crossing_times.size > 1 and np.any(np.diff(crossing_times) < -1e-12):
+        raise ValueError("crossing_times must be monotonically non-decreasing")
+    return np.ascontiguousarray(crossing_times, dtype=np.float64)
+
+
+def _validate_return_times(
+    value: object,
+    *,
+    crossing_times: FloatArray,
+) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("return_times must not contain boolean values")
+    try:
+        return_times_array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("return_times must be a finite one-dimensional array") from exc
+    if return_times_array.ndim != 1:
+        raise ValueError("return_times must be one-dimensional")
+    expected = np.diff(crossing_times)
+    if return_times_array.shape != expected.shape:
+        raise ValueError(
+            f"return_times shape {return_times_array.shape} does not match "
+            f"{expected.shape}"
+        )
+    if not np.all(np.isfinite(return_times_array)):
+        raise ValueError("return_times must contain only finite values")
+    if np.any(return_times_array < -1e-12):
+        raise ValueError("return_times must be non-negative")
+    if not np.allclose(return_times_array, expected, rtol=1e-12, atol=1e-12):
+        raise ValueError("return_times must match crossing_times differences")
+    return np.ascontiguousarray(np.maximum(return_times_array, 0.0), dtype=np.float64)
+
 
 def _assemble_result(
     crossings_flat: FloatArray,
@@ -256,6 +368,18 @@ def _assemble_result(
     n_cr: int,
     dim: int,
 ) -> PoincareResult:
+    if not isinstance(n_cr, Integral):
+        raise ValueError("n_cr must be an integer")
+    n_cr = int(n_cr)
+    if n_cr < 0:
+        raise ValueError("n_cr must be non-negative")
+    if dim < 1:
+        raise ValueError("dim must be positive")
+    crossings_flat = _validate_state_history(crossings_flat, name="crossings_flat")
+    crossings_flat = crossings_flat.ravel()
+    times = _validate_state_history(times, name="times").ravel()
+    if n_cr > times.size or n_cr * dim > crossings_flat.size:
+        raise ValueError("n_cr exceeds backend crossing payload size")
     if n_cr == 0:
         return PoincareResult(
             crossings=np.empty((0, dim)),

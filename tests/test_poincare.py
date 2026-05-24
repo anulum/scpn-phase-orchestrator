@@ -68,6 +68,7 @@ class TestPoincareSection:
         [
             (np.array([[0.0], [np.nan]], dtype=np.float64), "trajectory"),
             (np.array([[0.0], [np.inf]], dtype=np.float64), "trajectory"),
+            (np.array([[0.0], [True]], dtype=object), "trajectory"),
             ([["not-a-state"]], "trajectory"),
         ],
     )
@@ -84,6 +85,7 @@ class TestPoincareSection:
         [
             (np.array([1.0, 0.0]), "normal shape"),
             (np.array([np.nan]), "normal"),
+            (np.array([True], dtype=object), "normal"),
             ([["not-a-normal"]], "normal"),
         ],
     )
@@ -165,6 +167,42 @@ class TestPoincareSection:
         assert result.crossings.shape == (1, 1)
         assert result.crossing_times.shape == (1,)
 
+    @pytest.mark.parametrize(
+        ("crossings", "times", "n_cr"),
+        [
+            (np.array([], dtype=np.float64), np.array([], dtype=np.float64), -1),
+            (np.array([np.nan], dtype=np.float64), np.array([0.5]), 1),
+            (np.array([0.0], dtype=np.float64), np.array([np.inf]), 1),
+            (np.array([0.0], dtype=np.float64), np.array([], dtype=np.float64), 1),
+        ],
+    )
+    def test_section_falls_back_when_backend_returns_invalid_payload(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        crossings: np.ndarray,
+        times: np.ndarray,
+        n_cr: int,
+    ) -> None:
+        def _invalid_section(
+            _traj_flat: np.ndarray,
+            _t: int,
+            _d: int,
+            _normal: np.ndarray,
+            _offset: float,
+            _direction_id: int,
+        ) -> tuple[np.ndarray, np.ndarray, int]:
+            return crossings, times, n_cr
+
+        monkeypatch.setattr(
+            poincare_module,
+            "_dispatch",
+            lambda _fn_name: _invalid_section,
+        )
+        result = poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
+
+        assert result.crossings.shape == (1, 1)
+        assert result.crossing_times.shape == (1,)
+
 
 class TestReturnTimes:
     def test_returns_array(self):
@@ -216,6 +254,7 @@ class TestPhasePoincare:
         [
             np.array([[0.0], [np.nan]], dtype=np.float64),
             np.array([[0.0], [np.inf]], dtype=np.float64),
+            np.array([[0.0], [True]], dtype=object),
             [["not-a-phase"]],
         ],
     )
@@ -284,6 +323,74 @@ class TestPhasePoincare:
         )
         result = phase_poincare([[0.0], [2.0 * np.pi + 0.1]], oscillator_idx=0)
         assert result.crossings.shape[1] == 1
+
+    def test_phase_falls_back_when_backend_returns_invalid_payload(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _invalid_phase(
+            _phases_flat: np.ndarray,
+            _t: int,
+            _n: int,
+            _oscillator_idx: int,
+            _section_phase: float,
+        ) -> tuple[np.ndarray, np.ndarray, int]:
+            return np.array([0.0]), np.array([], dtype=np.float64), 1
+
+        monkeypatch.setattr(
+            poincare_module,
+            "_dispatch",
+            lambda _fn_name: _invalid_phase,
+        )
+        result = phase_poincare([[0.0], [2.0 * np.pi + 0.1]], oscillator_idx=0)
+
+        assert result.crossings.shape[1] == 1
+
+
+class TestPoincareResultValidation:
+    def test_normalizes_public_result_record(self) -> None:
+        result = PoincareResult(
+            crossings=[[0.0], [1.0], [2.0]],
+            crossing_times=[0.5, 2.5, 5.5],
+            return_times=[2.0, 3.0],
+            mean_return_time=2.5,
+            std_return_time=0.5,
+        )
+
+        assert result.crossings.dtype == np.float64
+        np.testing.assert_allclose(result.return_times, [2.0, 3.0])
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"crossings": [0.0, 1.0]}, "crossings must be two-dimensional"),
+            ({"crossings": [[0.0], [np.nan]]}, "crossings"),
+            ({"crossings": [[0.0], [True]]}, "crossings"),
+            ({"crossing_times": [0.0]}, "crossing_times shape"),
+            ({"crossing_times": [2.0, 1.0]}, "crossing_times must be"),
+            ({"crossing_times": [0.0, np.inf]}, "crossing_times"),
+            ({"return_times": [1.0, 2.0]}, "return_times shape"),
+            ({"return_times": [-1.0]}, "return_times must be non-negative"),
+            ({"return_times": [3.0]}, "return_times must match"),
+            ({"mean_return_time": -1.0}, "mean_return_time must be non-negative"),
+            ({"mean_return_time": 3.0}, "mean_return_time must match"),
+            ({"std_return_time": -1.0}, "std_return_time must be non-negative"),
+            ({"std_return_time": 1.0}, "std_return_time must match"),
+        ],
+    )
+    def test_rejects_invalid_public_result_record_values(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {
+            "crossings": [[0.0], [1.0]],
+            "crossing_times": [0.5, 2.5],
+            "return_times": [2.0],
+            "mean_return_time": 2.0,
+            "std_return_time": 0.0,
+        }
+        base.update(kwargs)
+
+        with pytest.raises(ValueError, match=match):
+            PoincareResult(**base)
 
 
 class TestPoincarePipelineWiring:
