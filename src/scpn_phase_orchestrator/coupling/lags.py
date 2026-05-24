@@ -17,7 +17,7 @@ scales before using the resulting lags in closed-loop runs.
 
 from __future__ import annotations
 
-from numbers import Real
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -58,6 +58,42 @@ def _validate_positive_real(value: object, *, name: str) -> float:
     if not np.isfinite(resolved) or resolved <= 0.0:
         raise ValueError(f"{name} must be a finite positive real")
     return resolved
+
+
+def _validate_n_layers(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("n_layers must be a positive integer")
+    resolved = int(value)
+    if resolved <= 0:
+        raise ValueError("n_layers must be a positive integer")
+    return resolved
+
+
+def _validate_lag_entry(
+    indices: tuple[int, int], lag: object, *, n_layers: int
+) -> tuple[int, int, float]:
+    if not isinstance(indices, tuple) or len(indices) != 2:
+        raise ValueError("lag index must be a pair of layer indices")
+    i, j = indices
+    if (
+        isinstance(i, bool)
+        or isinstance(j, bool)
+        or not isinstance(i, Integral)
+        or not isinstance(j, Integral)
+    ):
+        raise ValueError("lag index must contain integer layer indices")
+    i = int(i)
+    j = int(j)
+    if i == j:
+        raise ValueError("lag index must not target the alpha diagonal")
+    if not (0 <= i < n_layers and 0 <= j < n_layers):
+        raise ValueError("lag index must be within n_layers")
+    if isinstance(lag, bool) or not isinstance(lag, Real):
+        raise ValueError("lag estimate must be a finite real")
+    lag_value = float(lag)
+    if not np.isfinite(lag_value):
+        raise ValueError("lag estimate must be a finite real")
+    return i, j, lag_value
 
 
 class LagModel:
@@ -103,8 +139,13 @@ class LagModel:
         alpha[i,j] = 2*pi*carrier_freq_hz*lag[i,j], antisymmetric.
         ``carrier_freq_hz`` defaults to 1.0 for backward compatibility.
         """
+        n_layers = _validate_n_layers(n_layers)
+        carrier_freq_hz = _validate_positive_real(
+            carrier_freq_hz, name="carrier_freq_hz"
+        )
         alpha: FloatArray = np.zeros((n_layers, n_layers), dtype=np.float64)
-        for (i, j), lag in lag_estimates.items():
+        for indices, lag in lag_estimates.items():
+            i, j, lag = _validate_lag_entry(indices, lag, n_layers=n_layers)
             offset = 2.0 * np.pi * carrier_freq_hz * lag
             alpha[i, j] = offset
             alpha[j, i] = -offset

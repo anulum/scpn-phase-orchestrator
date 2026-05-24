@@ -73,6 +73,35 @@ def test_alpha_matrix_diagonal_zero():
     np.testing.assert_allclose(np.diag(alpha), 0.0, atol=1e-15)
 
 
+def test_alpha_matrix_rejects_negative_layer_indices():
+    model = LagModel()
+    with pytest.raises(ValueError, match="lag index"):
+        model.build_alpha_matrix({(-1, 1): 0.1}, n_layers=3)
+
+
+@pytest.mark.parametrize("indices", [(0, 3), (1, 1), (True, 1)])
+def test_alpha_matrix_rejects_invalid_layer_indices(indices):
+    model = LagModel()
+    with pytest.raises(ValueError, match="lag index"):
+        model.build_alpha_matrix({indices: 0.1}, n_layers=3)
+
+
+@pytest.mark.parametrize("lag", [np.nan, np.inf, True, "0.1"])
+def test_alpha_matrix_rejects_invalid_lag_values(lag):
+    model = LagModel()
+    with pytest.raises(ValueError, match="lag estimate"):
+        model.build_alpha_matrix({(0, 1): lag}, n_layers=3)
+
+
+@pytest.mark.parametrize("carrier_freq_hz", [0.0, -1.0, np.nan, True])
+def test_alpha_matrix_rejects_invalid_carrier_frequency(carrier_freq_hz):
+    model = LagModel()
+    with pytest.raises(ValueError, match="carrier_freq_hz"):
+        model.build_alpha_matrix(
+            {(0, 1): 0.1}, n_layers=3, carrier_freq_hz=carrier_freq_hz
+        )
+
+
 def test_estimate_from_distances_antisymmetric():
     distances = np.array([[0.0, 1.0, 2.0], [1.0, 0.0, 1.5], [2.0, 1.5, 0.0]])
     alpha = LagModel.estimate_from_distances(distances, speed=1.0)
