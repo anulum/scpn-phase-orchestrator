@@ -59,6 +59,16 @@ def test_switch_template():
     np.testing.assert_allclose(cs2.knm, alt_knm)
 
 
+def test_switch_template_rejects_self_coupling_diagonal():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=4, base_strength=0.1, decay_alpha=0.1)
+    template = np.zeros((4, 4))
+    template[1, 1] = 0.2
+
+    with pytest.raises(ValueError, match="self-coupling"):
+        builder.switch_template(cs, "bad", {"bad": template})
+
+
 def test_switch_to_missing_template_raises():
     builder = CouplingBuilder()
     cs = builder.build(n_layers=4, base_strength=0.1, decay_alpha=0.1)

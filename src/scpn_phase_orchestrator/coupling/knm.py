@@ -371,6 +371,8 @@ class CouplingBuilder:
             )
         if not np.all(np.isfinite(template)):
             raise ValueError("template values must be finite")
+        if not np.allclose(np.diag(template), 0.0, rtol=0.0, atol=1e-15):
+            raise ValueError("template self-coupling diagonal must be zero")
         return CouplingState(
             knm=template.copy(),
             alpha=state.alpha.copy(),
