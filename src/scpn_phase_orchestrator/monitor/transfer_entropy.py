@@ -28,6 +28,7 @@ coupling from source to target.
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -146,9 +147,17 @@ def _dispatch(fn_name: str) -> object:
     return None
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         phases = raw.astype(np.float64, copy=True)
@@ -163,7 +172,7 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 
 def _validate_phase_series(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         series = raw.astype(np.float64, copy=True)
@@ -189,6 +198,37 @@ def _validate_n_bins(value: object) -> int:
     if value < 2:
         raise ValueError("n_bins must be greater than or equal to 2")
     return int(value)
+
+
+def _validate_te_scalar(value: object, *, name: str = "transfer entropy") -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative scalar")
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite non-negative scalar") from exc
+    if not np.isfinite(result) or result < -1e-12:
+        raise ValueError(f"{name} must be finite and non-negative, got {value!r}")
+    return max(result, 0.0)
+
+
+def _validate_te_matrix(value: object, *, n_osc: int) -> FloatArray:
+    try:
+        matrix = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("transfer entropy matrix must be numeric") from exc
+    if matrix.size != n_osc * n_osc:
+        raise ValueError(
+            "transfer entropy matrix size must match oscillator count squared"
+        )
+    matrix = matrix.reshape(n_osc, n_osc)
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("transfer entropy matrix must contain only finite values")
+    if np.any(matrix < -1e-12):
+        raise ValueError("transfer entropy matrix must be non-negative")
+    if not np.allclose(np.diag(matrix), 0.0, rtol=0.0, atol=1e-12):
+        raise ValueError("transfer entropy matrix diagonal must be zero")
+    return np.ascontiguousarray(np.maximum(matrix, 0.0), dtype=np.float64)
 
 
 def _conditional_entropy(
@@ -220,12 +260,13 @@ def phase_transfer_entropy(
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, FloatArray, int], float]", backend_fn)
         try:
-            return float(
+            return _validate_te_scalar(
                 fn(
                     np.ascontiguousarray(source_values, dtype=np.float64),
                     np.ascontiguousarray(target_values, dtype=np.float64),
                     bin_count,
-                )
+                ),
+                name="backend transfer entropy",
             )
         except Exception:
             bin_count = int(bin_count)
@@ -252,7 +293,7 @@ def phase_transfer_entropy(
     h_y_yt = _conditional_entropy(tgt_next, tgt_binned, bin_count)
     joint_cond: IntArray = tgt_binned * bin_count + src_binned
     h_y_yt_x = _conditional_entropy(tgt_next, joint_cond, bin_count * bin_count)
-    return max(0.0, h_y_yt - h_y_yt_x)
+    return _validate_te_scalar(h_y_yt - h_y_yt_x)
 
 
 def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> FloatArray:
@@ -271,7 +312,7 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
                 n_time,
                 bin_count,
             )
-            return np.asarray(flat, dtype=np.float64).reshape(n_osc, n_osc)
+            return _validate_te_matrix(flat, n_osc=n_osc)
         except Exception:
             n_time = int(n_time)
 

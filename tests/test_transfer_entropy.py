@@ -108,6 +108,16 @@ class TestTransferEntropy:
             (np.array([0.0, 1.0, 2.0]), np.array([0.0, np.inf, 2.0]), "target"),
             (np.array([True, False, True]), np.array([0.0, 1.0, 2.0]), "source"),
             (np.array([0.0, 1.0, 2.0]), np.array([True, False, True]), "target"),
+            (
+                np.array([0.0, True, 2.0], dtype=object),
+                np.array([0.0, 1.0, 2.0]),
+                "source",
+            ),
+            (
+                np.array([0.0, 1.0, 2.0]),
+                np.array([0.0, False, 2.0], dtype=object),
+                "target",
+            ),
         ],
     )
     def test_phase_te_rejects_non_vector_or_non_finite_inputs(
@@ -133,6 +143,11 @@ class TestTransferEntropy:
 
     def test_matrix_rejects_boolean_phase_series(self):
         series = np.array([[True, False, True], [False, True, False]])
+        with pytest.raises(ValueError, match="phase_series"):
+            transfer_entropy_matrix(series)
+
+    def test_matrix_rejects_mixed_boolean_alias_phase_series(self):
+        series = np.array([[0.0, True, 2.0], [0.1, 1.1, 2.1]], dtype=object)
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
@@ -222,7 +237,9 @@ def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
         assert n_osc == 3
         assert n_time == 3
         assert bins == 6
-        return np.arange(n_osc * n_osc, dtype=np.float64).reshape((n_osc, n_osc))
+        matrix = np.arange(n_osc * n_osc, dtype=np.float64).reshape((n_osc, n_osc))
+        np.fill_diagonal(matrix, 0.0)
+        return matrix
 
     def fake_dispatch(fn_name: str):
         if fn_name == "phase_te":
@@ -266,6 +283,31 @@ def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):
     assert value >= 0.0
 
 
+@pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf])
+def test_phase_te_backend_invalid_scalar_falls_back_to_python(
+    monkeypatch, backend_value: float
+):
+    def invalid_phase_te(_src: np.ndarray, _tgt: np.ndarray, _bins: int) -> float:
+        return backend_value
+
+    previous = te_mod.ACTIVE_BACKEND
+    te_mod.ACTIVE_BACKEND = "rust"
+    monkeypatch.setattr(
+        te_mod,
+        "_dispatch",
+        lambda fn_name: invalid_phase_te if fn_name == "phase_te" else None,
+    )
+    try:
+        source = np.linspace(0.0, 2 * np.pi, 64, endpoint=False)
+        target = np.roll(source, 1)
+        value = phase_transfer_entropy(source, target, n_bins=8)
+    finally:
+        te_mod.ACTIVE_BACKEND = previous
+
+    assert np.isfinite(value)
+    assert value >= 0.0
+
+
 def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
     def raising_matrix(
         _flat: np.ndarray, _n_osc: int, _n_time: int, _bins: int
@@ -278,6 +320,48 @@ def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
         te_mod,
         "_dispatch",
         lambda fn_name: raising_matrix if fn_name == "te_matrix" else None,
+    )
+    try:
+        data = np.stack(
+            [
+                np.linspace(0.0, 2 * np.pi, 64, endpoint=False),
+                np.linspace(0.2, 2 * np.pi + 0.2, 64, endpoint=False),
+                np.linspace(0.4, 2 * np.pi + 0.4, 64, endpoint=False),
+            ]
+        )
+        value = transfer_entropy_matrix(data, n_bins=8)
+    finally:
+        te_mod.ACTIVE_BACKEND = previous
+
+    assert value.shape == (3, 3)
+    assert np.all(value >= 0.0)
+    np.testing.assert_array_equal(np.diag(value), 0.0)
+
+
+@pytest.mark.parametrize(
+    "backend_value",
+    [
+        np.array([0.0, 1.0, 2.0], dtype=np.float64),
+        np.array([[0.0, 1.0], [2.0, 0.0]], dtype=np.float64),
+        np.array([[0.0, -1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+        np.array([[0.0, np.nan, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+        np.eye(3, dtype=np.float64),
+    ],
+)
+def test_te_matrix_backend_invalid_payload_falls_back_to_python(
+    monkeypatch, backend_value: np.ndarray
+):
+    def invalid_matrix(
+        _flat: np.ndarray, _n_osc: int, _n_time: int, _bins: int
+    ) -> np.ndarray:
+        return backend_value
+
+    previous = te_mod.ACTIVE_BACKEND
+    te_mod.ACTIVE_BACKEND = "rust"
+    monkeypatch.setattr(
+        te_mod,
+        "_dispatch",
+        lambda fn_name: invalid_matrix if fn_name == "te_matrix" else None,
     )
     try:
         data = np.stack(
