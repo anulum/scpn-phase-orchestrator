@@ -73,6 +73,7 @@ class TestRedundancy:
             np.array([0.0, np.nan]),
             np.array([True, False]),
             np.array([0.0, True], dtype=object),
+            np.array([0.0, np.bool_(True)], dtype=object),
             [0.0, True],
         ],
     )
@@ -82,7 +83,16 @@ class TestRedundancy:
 
     @pytest.mark.parametrize(
         "group",
-        [[0.5], [True], np.array([0, True], dtype=object), [-1], [3], np.array([[0]])],
+        [
+            [0.5],
+            [True],
+            [np.bool_(True)],
+            np.array([0, True], dtype=object),
+            np.array([0, np.bool_(True)], dtype=object),
+            [-1],
+            [3],
+            np.array([[0]]),
+        ],
     )
     def test_rejects_invalid_group_indices(self, group):
         phases = np.array([0.0, 1.0, 2.0])
@@ -128,6 +138,7 @@ class TestSynergy:
             np.array([0.0, np.nan]),
             np.array([True, False]),
             np.array([0.0, True], dtype=object),
+            np.array([0.0, np.bool_(True)], dtype=object),
             [0.0, True],
         ],
     )
@@ -137,7 +148,16 @@ class TestSynergy:
 
     @pytest.mark.parametrize(
         "group",
-        [[0.5], [True], np.array([0, True], dtype=object), [-1], [3], np.array([[0]])],
+        [
+            [0.5],
+            [True],
+            [np.bool_(True)],
+            np.array([0, True], dtype=object),
+            np.array([0, np.bool_(True)], dtype=object),
+            [-1],
+            [3],
+            np.array([[0]]),
+        ],
     )
     def test_rejects_invalid_group_indices(self, group):
         phases = np.array([0.0, 1.0, 2.0])
@@ -212,7 +232,9 @@ class TestPIDPipelineWiring:
 
 
 class TestPIDRustDispatch:
-    @pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, [0.5]])
+    @pytest.mark.parametrize(
+        "backend_value", [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True)]
+    )
     def test_redundancy_invalid_rust_payload_falls_back(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -287,7 +309,9 @@ class TestPIDRustDispatch:
         assert val == pytest.approx(0.37, abs=1e-12)
         assert len(calls) == 1
 
-    @pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, [0.5]])
+    @pytest.mark.parametrize(
+        "backend_value", [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True)]
+    )
     def test_synergy_invalid_rust_payload_falls_back(
         self,
         monkeypatch: pytest.MonkeyPatch,

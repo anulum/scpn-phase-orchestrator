@@ -51,10 +51,11 @@ def _validate_n_bins(value: object) -> int:
 
 
 def _contains_boolean_alias(value: object) -> bool:
-    raw = np.asarray(value, dtype=object)
-    if raw.dtype == np.bool_:
-        return True
-    return any(isinstance(item, bool) for item in raw.flat)
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _validate_phases(value: object) -> FloatArray:
@@ -93,6 +94,8 @@ def _validate_group_indices(value: object, *, name: str, n_phases: int) -> IntAr
 
 
 def _validate_pid_scalar(value: object, *, name: str) -> float:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not be a boolean value")
     try:
         scalar = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
