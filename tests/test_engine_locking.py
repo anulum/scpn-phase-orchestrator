@@ -28,10 +28,12 @@ def sl_engine() -> StuartLandauEngine:
 
 
 def _upde_inputs(n: int, rng: np.random.Generator):
+    knm = rng.uniform(0.1, 0.5, (n, n))
+    np.fill_diagonal(knm, 0.0)
     return (
         rng.uniform(0.0, 2.0 * np.pi, n),
         rng.uniform(0.5, 1.5, n),
-        rng.uniform(0.1, 0.5, (n, n)),
+        knm,
         0.0,
         0.0,
         np.zeros((n, n)),
@@ -108,6 +110,8 @@ class TestStuartLandauEngineLocking:
         mu = np.full(n, 0.1)
         knm = rng.uniform(0.1, 0.3, (n, n))
         knm_r = rng.uniform(0.05, 0.15, (n, n))
+        np.fill_diagonal(knm, 0.0)
+        np.fill_diagonal(knm_r, 0.0)
         alpha = np.zeros((n, n))
 
         errors: list[Exception] = []
