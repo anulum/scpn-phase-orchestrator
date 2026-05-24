@@ -111,7 +111,9 @@ class TestUniversalPrior:
         prior = UniversalPrior()
 
         monkeypatch.setattr(prior_module, "_HAS_RUST", True)
-        monkeypatch.setattr(prior_module, "_rust_log_prob", lambda *args: np.nan)
+        monkeypatch.setattr(
+            prior_module, "_rust_log_prob", lambda *args: np.nan, raising=False
+        )
 
         with pytest.raises(ValueError, match="Rust prior log-probability"):
             prior.log_probability(0.47, 0.25)
