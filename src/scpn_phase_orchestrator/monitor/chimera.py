@@ -18,7 +18,9 @@ in the boundary band in between.
 
 Compute surface:
 
-* :func:`local_order_parameter` — ``(N,)`` per-oscillator ``R_i`` vector.
+* :func:`local_order_parameter` — ``(N,)`` per-oscillator ``R_i`` vector;
+  the coupling diagonal must be zero so self-coupling is never counted as a
+  neighbour.
 * :func:`detect_chimera` — classification wrapper returning
   :class:`ChimeraState`.
 """
@@ -230,6 +232,8 @@ def _validate_chimera_inputs(
         raise ValueError(f"knm shape {knm_array.shape} does not match {(n, n)}")
     if not np.all(np.isfinite(knm_array)):
         raise ValueError("knm must contain only finite values")
+    if not np.allclose(np.diag(knm_array), 0.0, rtol=0.0, atol=1e-15):
+        raise ValueError("knm self-coupling diagonal must be zero")
     return (
         np.ascontiguousarray(phases_array, dtype=np.float64),
         np.ascontiguousarray(knm_array, dtype=np.float64),
@@ -260,7 +264,8 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
     """Per-oscillator local order parameter.
 
     ``R_i = |⟨exp(i(θ_j − θ_i))⟩_{j ∈ N(i)}|`` with ``N(i) =
-    {j : K_ij > 0}``. Zero when oscillator ``i`` has no neighbours.
+    {j : K_ij > 0}`` and a required zero self-coupling diagonal. Zero
+    when oscillator ``i`` has no neighbours.
     """
     phases, knm = _validate_chimera_inputs(phases, knm)
     n = int(phases.size)
@@ -295,7 +300,8 @@ def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
 
     Args:
         phases: ``(N,)`` oscillator phases.
-        knm: ``(N, N)`` coupling matrix. ``K_ij > 0`` defines neighbours.
+        knm: ``(N, N)`` coupling matrix. ``K_ij > 0`` defines neighbours;
+            diagonal self-coupling must be zero.
 
     Returns:
         :class:`ChimeraState` with coherent / incoherent index lists and

@@ -132,6 +132,7 @@ def test_chimera_state_rejects_invalid_public_record(payload: dict[str, Any]) ->
         (np.zeros(2), np.array([[0.0, True], [0.0, 0.0]], dtype=object), "knm"),
         (np.zeros(2), np.zeros((2, 3)), "knm"),
         (np.zeros(2), np.array([[0.0, np.inf], [0.0, 0.0]]), "knm"),
+        (np.zeros(2), np.array([[1.0, 0.0], [0.0, 0.0]]), "self-coupling"),
     ],
 )
 def test_rejects_invalid_chimera_inputs(
