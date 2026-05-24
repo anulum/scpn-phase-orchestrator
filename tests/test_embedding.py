@@ -57,6 +57,7 @@ class TestDelayEmbed:
         [
             np.array([0.0, np.nan], dtype=np.float64),
             np.array([0.0, np.inf], dtype=np.float64),
+            np.array([0.0, True], dtype=object),
             ["not-a-signal"],
         ],
     )
@@ -125,6 +126,7 @@ class TestMutualInformationContracts:
         [
             np.array([0.0, np.nan], dtype=np.float64),
             np.array([0.0, np.inf], dtype=np.float64),
+            np.array([0.0, True], dtype=object),
             ["not-a-signal"],
         ],
     )
@@ -154,6 +156,7 @@ class TestNearestNeighborContracts:
         [
             np.array([[0.0], [np.nan]], dtype=np.float64),
             np.array([[0.0], [np.inf]], dtype=np.float64),
+            np.array([[0.0], [True]], dtype=object),
             [["not-a-point"]],
         ],
     )
@@ -192,6 +195,54 @@ class TestValidationBoundarySemantics:
     def test_validate_non_negative_real_rejects_boolean(self) -> None:
         with pytest.raises(ValueError, match="finite non-negative real"):
             em_mod._validate_non_negative_real(np.bool_(True), name="atol")
+
+
+class TestEmbeddingResultBoundary:
+    def test_normalises_valid_record(self) -> None:
+        result = EmbeddingResult(
+            trajectory=[[0.0, 1.0], [1.0, 2.0]],
+            delay=np.int64(1),
+            dimension=np.int64(2),
+            T_effective=np.int64(2),
+        )
+
+        assert result.delay == 1
+        assert result.dimension == 2
+        assert result.T_effective == 2
+        np.testing.assert_array_equal(result.trajectory, [[0.0, 1.0], [1.0, 2.0]])
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {
+                "trajectory": [[0.0, 1.0]],
+                "delay": 1,
+                "dimension": 2,
+                "T_effective": 2,
+            },
+            {
+                "trajectory": [[0.0, np.nan]],
+                "delay": 1,
+                "dimension": 2,
+                "T_effective": 1,
+            },
+            {
+                "trajectory": [[0.0, True]],
+                "delay": 1,
+                "dimension": 2,
+                "T_effective": 1,
+            },
+            {
+                "trajectory": [[0.0, 1.0]],
+                "delay": False,
+                "dimension": 2,
+                "T_effective": 1,
+            },
+        ],
+    )
+    def test_rejects_invalid_record(self, payload: dict[str, Any]) -> None:
+        with pytest.raises(ValueError):
+            EmbeddingResult(**payload)
 
 
 class TestOptimalDelay:
@@ -338,6 +389,31 @@ class TestEmbeddingPipelineWiring:
 
 
 class TestEmbeddingBackendFallbacks:
+    @pytest.mark.parametrize(
+        "backend_output",
+        [
+            np.array([0.0, 1.0], dtype=np.float64),
+            np.array([[0.0, np.nan], [1.0, 2.0], [2.0, 3.0]], dtype=np.float64),
+            np.zeros((2, 3), dtype=np.float64),
+        ],
+    )
+    def test_invalid_delay_embed_backend_payload_falls_back_to_python(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_output: np.ndarray,
+    ) -> None:
+        monkeypatch.setattr(
+            em_mod,
+            "_dispatch",
+            lambda fn_name: (
+                (lambda *_args: backend_output) if fn_name == "de" else None
+            ),
+        )
+
+        emb = delay_embed(np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64), 1, 2)
+
+        np.testing.assert_array_equal(emb, [[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
+
     def test_delay_embed_backend_failure_falls_back_to_python(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -369,6 +445,23 @@ class TestEmbeddingBackendFallbacks:
         assert np.isfinite(mi)
         assert mi >= 0.0
 
+    @pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, [0.5]])
+    def test_invalid_mutual_information_backend_payload_falls_back_to_python(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_value: Any,
+    ) -> None:
+        monkeypatch.setattr(
+            em_mod,
+            "_dispatch",
+            lambda fn_name: (lambda *_args: backend_value) if fn_name == "mi" else None,
+        )
+
+        mi = mutual_information(np.array([0.0, 1.0, 0.0, 1.0], dtype=np.float64), 1, 2)
+
+        assert np.isfinite(mi)
+        assert mi >= 0.0
+
     def test_nearest_neighbor_backend_failure_falls_back_to_python(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -383,6 +476,43 @@ class TestEmbeddingBackendFallbacks:
             lambda fn_name: _raising_nn if fn_name == "nn" else None,
         )
         dist, idx = nearest_neighbor_distances(np.array([[0.0], [1.0], [3.0]]))
+        np.testing.assert_allclose(dist, [1.0, 1.0, 2.0])
+        np.testing.assert_array_equal(idx, [1, 0, 1])
+
+    @pytest.mark.parametrize(
+        ("distances", "indices"),
+        [
+            (np.array([1.0], dtype=np.float64), np.array([1], dtype=np.int64)),
+            (
+                np.array([1.0, np.nan, 2.0], dtype=np.float64),
+                np.array([1, 0, 1], dtype=np.int64),
+            ),
+            (
+                np.array([1.0, 1.0, 2.0], dtype=np.float64),
+                np.array([0, 0, 1], dtype=np.int64),
+            ),
+            (
+                np.array([1.0, 1.0, 2.0], dtype=np.float64),
+                np.array([1, 0, 3], dtype=np.int64),
+            ),
+        ],
+    )
+    def test_invalid_nearest_neighbor_backend_payload_falls_back_to_python(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        distances: np.ndarray,
+        indices: np.ndarray,
+    ) -> None:
+        monkeypatch.setattr(
+            em_mod,
+            "_dispatch",
+            lambda fn_name: (
+                (lambda *_args: (distances, indices)) if fn_name == "nn" else None
+            ),
+        )
+
+        dist, idx = nearest_neighbor_distances(np.array([[0.0], [1.0], [3.0]]))
+
         np.testing.assert_allclose(dist, [1.0, 1.0, 2.0])
         np.testing.assert_array_equal(idx, [1, 0, 1])
 

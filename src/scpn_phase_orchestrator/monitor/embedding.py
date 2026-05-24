@@ -202,11 +202,37 @@ class EmbeddingResult:
     dimension: int
     T_effective: int
 
+    def __post_init__(self) -> None:
+        trajectory = _validate_embedded(self.trajectory)
+        delay = _validate_int_at_least(self.delay, name="delay", minimum=1)
+        dimension = _validate_int_at_least(self.dimension, name="dimension", minimum=1)
+        t_effective = _validate_int_at_least(
+            self.T_effective,
+            name="T_effective",
+            minimum=0,
+        )
+        if trajectory.shape != (t_effective, dimension):
+            raise ValueError(
+                f"trajectory shape {trajectory.shape} does not match "
+                f"(T_effective={t_effective}, dimension={dimension})"
+            )
+        self.trajectory = trajectory
+        self.delay = delay
+        self.dimension = dimension
+        self.T_effective = t_effective
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    if raw.dtype == np.bool_:
+        return True
+    return any(isinstance(value, bool) for value in raw.flat)
+
 
 def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
-    raw = np.asarray(signal)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(signal):
         raise ValueError(f"{name} must not contain boolean values")
+    raw = np.asarray(signal)
     try:
         array = raw.astype(np.float64, copy=True).ravel()
     except (TypeError, ValueError) as exc:
@@ -219,9 +245,9 @@ def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
 
 
 def _validate_embedded(embedded: object) -> FloatArray:
-    raw = np.asarray(embedded)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(embedded):
         raise ValueError("embedded must not contain boolean values")
+    raw = np.asarray(embedded)
     try:
         array = np.atleast_2d(raw.astype(np.float64, copy=True))
     except (TypeError, ValueError) as exc:
@@ -253,6 +279,68 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
     return result
 
 
+def _validate_delay_embedding_output(
+    value: object,
+    *,
+    t_effective: int,
+    dimension: int,
+) -> FloatArray:
+    try:
+        embedded = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("delay embedding output must be numeric") from exc
+    if embedded.shape == (t_effective * dimension,):
+        embedded = embedded.reshape(t_effective, dimension)
+    if embedded.shape != (t_effective, dimension):
+        raise ValueError(
+            f"delay embedding output shape {embedded.shape} does not match "
+            f"({t_effective}, {dimension})"
+        )
+    if not np.all(np.isfinite(embedded)):
+        raise ValueError("delay embedding output must contain only finite values")
+    return np.ascontiguousarray(embedded, dtype=np.float64)
+
+
+def _validate_non_negative_scalar(value: object, *, name: str) -> float:
+    try:
+        scalar = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if scalar.shape != ():
+        raise ValueError(f"{name} must be scalar")
+    result = float(scalar)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return result
+
+
+def _validate_nn_output(
+    distances: object,
+    indices: object,
+    *,
+    n_points: int,
+) -> tuple[FloatArray, IntArray]:
+    try:
+        dist = np.asarray(distances, dtype=np.float64)
+        idx = np.asarray(indices, dtype=np.int64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("nearest-neighbor backend output must be numeric") from exc
+    if dist.shape != (n_points,) or idx.shape != (n_points,):
+        raise ValueError(
+            "nearest-neighbor backend output shape must match number of points"
+        )
+    if not np.all(np.isfinite(dist)) or np.any(dist < 0.0):
+        raise ValueError("nearest-neighbor distances must be finite and non-negative")
+    if np.any(idx < 0) or np.any(idx >= n_points):
+        raise ValueError("nearest-neighbor indices must be in range")
+    if n_points > 1 and np.any(idx == np.arange(n_points, dtype=np.int64)):
+        raise ValueError("nearest-neighbor indices must not point to self")
+    return (
+        np.ascontiguousarray(dist, dtype=np.float64),
+        np.ascontiguousarray(idx, dtype=np.int64),
+    )
+
+
 def delay_embed(
     signal: object,
     delay: object,
@@ -274,17 +362,22 @@ def delay_embed(
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
         try:
-            return np.asarray(
+            return _validate_delay_embedding_output(
                 fn(s, delay, dimension),
-                dtype=np.float64,
-            ).reshape(t_eff, dimension)
+                t_effective=t_eff,
+                dimension=dimension,
+            )
         except Exception:
             backend_fn = None
 
     indices = np.arange(dimension) * delay
     rows = np.arange(t_eff)[:, np.newaxis] + indices[np.newaxis, :]
     trajectory: FloatArray = np.asarray(s[rows], dtype=np.float64)
-    return trajectory
+    return _validate_delay_embedding_output(
+        trajectory,
+        t_effective=t_eff,
+        dimension=dimension,
+    )
 
 
 def mutual_information(
@@ -303,7 +396,10 @@ def mutual_information(
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], float]", backend_fn)
         try:
-            return float(fn(s, lag, n_bins))
+            return _validate_non_negative_scalar(
+                fn(s, lag, n_bins),
+                name="mutual_information",
+            )
         except Exception:
             backend_fn = None
 
@@ -324,7 +420,7 @@ def mutual_information(
         for j in range(n_bins):
             if p_xy[i, j] > 0 and p_x[i] > 0 and p_y[j] > 0:
                 mi += p_xy[i, j] * np.log(p_xy[i, j] / (p_x[i] * p_y[j]))
-    return float(mi)
+    return _validate_non_negative_scalar(mi, name="mutual_information")
 
 
 def nearest_neighbor_distances(
@@ -344,10 +440,7 @@ def nearest_neighbor_distances(
         )
         try:
             dist, idx = fn(e, t, m)
-            return (
-                np.asarray(dist, dtype=np.float64),
-                np.asarray(idx, dtype=np.int64),
-            )
+            return _validate_nn_output(dist, idx, n_points=t)
         except Exception:
             backend_fn = None
 
@@ -360,7 +453,7 @@ def nearest_neighbor_distances(
         j = int(np.argmin(dists))
         nn_dist[i] = dists[j]
         nn_idx[i] = j
-    return nn_dist, nn_idx
+    return _validate_nn_output(nn_dist, nn_idx, n_points=t)
 
 
 def optimal_delay(
