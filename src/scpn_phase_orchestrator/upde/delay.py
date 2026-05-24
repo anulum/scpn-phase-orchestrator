@@ -83,6 +83,22 @@ def _validate_state_array(
     return np.ascontiguousarray(arr, dtype=np.float64)
 
 
+def _validate_phase_output(value: object, *, n_oscillators: int) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("delayed engine output must be a finite phase vector") from exc
+    if arr.shape != (n_oscillators,):
+        raise ValueError(
+            f"delayed engine output shape {arr.shape} does not match ({n_oscillators},)"
+        )
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("delayed engine output must contain only finite values")
+    if np.any(arr < 0.0) or np.any(arr >= TWO_PI):
+        raise ValueError("delayed engine output phases must be in [0, 2*pi)")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
 def _contains_boolean_alias(value: object) -> bool:
     try:
         arr = np.asarray(value, dtype=object)
@@ -208,21 +224,24 @@ class DelayedEngine:
         zeta = _validate_finite_float(zeta, name="zeta")
         psi = _validate_finite_float(psi, name="psi")
         if _HAS_RUST:
-            result: FloatArray = np.asarray(
-                _rust_delayed_run(
-                    phases64,
-                    omegas64,
-                    knm64.ravel(),
-                    alpha64.ravel(),
-                    self._n,
-                    zeta,
-                    psi,
-                    self._dt,
-                    self._delay_steps,
-                    n_steps,
+            try:
+                return _validate_phase_output(
+                    _rust_delayed_run(
+                        phases64,
+                        omegas64,
+                        knm64.ravel(),
+                        alpha64.ravel(),
+                        self._n,
+                        zeta,
+                        psi,
+                        self._dt,
+                        self._delay_steps,
+                        n_steps,
+                    ),
+                    n_oscillators=self._n,
                 )
-            )
-            return np.asarray(result, dtype=np.float64)
+            except Exception as exc:
+                _fallback_reason = exc
         p = phases64.copy()
         for i in range(n_steps):
             p = self.step(p, omegas64, knm64, zeta, psi, alpha64, step_idx=i)

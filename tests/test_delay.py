@@ -214,6 +214,27 @@ def test_rust_path_is_used_when_flagged(monkeypatch):
     assert call["alpha_size"] == 4
 
 
+def test_rust_path_invalid_output_falls_back_to_python(monkeypatch):
+    def fake_rust_run(*_args: object) -> np.ndarray:
+        return np.array([0.0, np.nan], dtype=np.float64)
+
+    monkeypatch.setattr(delay_mod, "_HAS_RUST", True)
+    monkeypatch.setattr(delay_mod, "_rust_delayed_run", fake_rust_run, raising=False)
+    eng = delay_mod.DelayedEngine(2, dt=0.01, delay_steps=2)
+
+    phases = np.array([0.4, 1.1], dtype=np.float64)
+    omegas = np.ones(2, dtype=np.float64)
+    knm = np.array([[0.0, 0.5], [0.2, 0.0]], dtype=np.float64)
+    alpha = np.full((2, 2), 0.01, dtype=np.float64)
+
+    out = eng.run(phases, omegas, knm, 0.2, 0.3, alpha, n_steps=4)
+
+    assert out.shape == (2,)
+    assert np.all(np.isfinite(out))
+    assert np.all(out >= 0.0)
+    assert np.all(out < 2 * np.pi)
+
+
 class TestDelayedEnginePipelineEndToEnd:
     """Full pipeline: CouplingBuilder → DelayedEngine → R → RegimeManager."""
 
