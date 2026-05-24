@@ -158,6 +158,27 @@ class TestApplyHandshakes:
         result = builder.apply_handshakes(base, spec_path)
         assert result.active_template == "scpn_handshakes"
 
+    def test_rejects_self_coupling_entry(self, tmp_path):
+        builder = CouplingBuilder()
+        base = builder.build_scpn_physics()
+        spec_path = tmp_path / "self_coupling.json"
+        spec_path.write_text(
+            json.dumps(
+                {
+                    "matrix": [
+                        {
+                            "from_layer": 4,
+                            "to_layer": 4,
+                            "coupling_strength": 0.2,
+                        }
+                    ]
+                }
+            )
+        )
+
+        with pytest.raises(ValueError, match="self-coupling"):
+            builder.apply_handshakes(base, spec_path)
+
     def test_preserves_alpha(self, tmp_path):
         builder = CouplingBuilder()
         base = builder.build_scpn_physics()

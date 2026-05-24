@@ -309,6 +309,8 @@ class CouplingBuilder:
                 name="to_layer",
                 n_layers=n_layers,
             )
+            if fr == to:
+                raise ValueError("handshake self-coupling entries are not physical")
             strength = _validate_finite_float(
                 entry.get("coupling_strength"),
                 name="coupling_strength",
