@@ -130,9 +130,17 @@ def _dispatch() -> Callable[..., IntArray] | None:
     return None
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _validate_phase_history(phases_history: object) -> FloatArray:
     raw = np.asarray(phases_history)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(phases_history):
         raise ValueError("phases_history must not contain boolean values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -140,7 +148,29 @@ def _validate_phase_history(phases_history: object) -> FloatArray:
         raise ValueError("phases_history must be a numeric array") from exc
     if not np.all(np.isfinite(array)):
         raise ValueError("phases_history must contain only finite values")
+    if array.ndim > 2:
+        raise ValueError(f"phases_history must be 1D or 2D, got shape {array.shape}")
     return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_backend_winding(value: object, *, n: int, t: int) -> IntArray:
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("backend winding output must be array-like") from exc
+    if array.shape != (n,):
+        raise ValueError(f"backend winding output shape {array.shape} must be ({n},)")
+    try:
+        numeric = array.astype(np.float64, copy=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("backend winding output must be numeric") from exc
+    if not np.all(np.isfinite(numeric)):
+        raise ValueError("backend winding output must contain only finite values")
+    if not np.all(np.equal(numeric, np.floor(numeric))):
+        raise ValueError("backend winding output must contain integer values")
+    if np.any(np.abs(numeric) > t):
+        raise ValueError("backend winding output exceeds trajectory length bound")
+    return np.ascontiguousarray(numeric.astype(np.int64), dtype=np.int64)
 
 
 def winding_numbers(phases_history: FloatArray) -> IntArray:
@@ -166,7 +196,7 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     backend_fn = _dispatch()
     if backend_fn is not None:
         try:
-            return np.asarray(backend_fn(flat, t, n), dtype=np.int64)
+            return _validate_backend_winding(backend_fn(flat, t, n), n=n, t=t)
         except Exception:
             n = int(n)
 

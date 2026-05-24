@@ -120,6 +120,14 @@ class TestWindingNumbers:
         with pytest.raises(ValueError, match="phases_history"):
             winding_numbers([["not-a-phase"]])
 
+    def test_rejects_mixed_boolean_alias_history(self) -> None:
+        with pytest.raises(ValueError, match="phases_history"):
+            winding_numbers(np.array([[0.0, True], [1.0, 2.0]], dtype=object))
+
+    def test_rejects_rank_three_history(self) -> None:
+        with pytest.raises(ValueError, match="phases_history must be 1D or 2D"):
+            winding_numbers(np.zeros((2, 2, 2), dtype=np.float64))
+
     def test_accepts_array_like_history(self) -> None:
         history = np.column_stack(
             [
@@ -186,6 +194,27 @@ class TestWindingRustDispatch:
         monkeypatch.setattr(winding_module, "_dispatch", lambda: _raising_backend)
         history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
         w = winding_numbers(history)
+        np.testing.assert_array_equal(w, [0, -1])
+
+    @pytest.mark.parametrize(
+        "backend_output",
+        [
+            np.array([1], dtype=np.int64),
+            np.array([1.5, -1.0], dtype=np.float64),
+            np.array([1.0, np.nan], dtype=np.float64),
+            np.array([100, 0], dtype=np.int64),
+        ],
+    )
+    def test_winding_falls_back_when_backend_returns_invalid_payload(
+        self, monkeypatch: pytest.MonkeyPatch, backend_output: np.ndarray
+    ) -> None:
+        def _invalid_backend(_flat: np.ndarray, _t: int, _n: int) -> np.ndarray:
+            return backend_output
+
+        monkeypatch.setattr(winding_module, "_dispatch", lambda: _invalid_backend)
+        history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
+        w = winding_numbers(history)
+
         np.testing.assert_array_equal(w, [0, -1])
 
     def test_dispatch_falls_back_to_python_when_loader_fails(
