@@ -152,7 +152,18 @@ class TestCorrelationDimension:
         result = correlation_dimension(traj, n_epsilons=20)
         assert len(result.epsilons) == 20
         assert len(result.C_eps) == 20
+        assert len(result.slope) == len(result.epsilons) - 1
         assert result.scaling_range[0] <= result.scaling_range[1]
+
+    def test_sparse_positive_correlation_grid_preserves_slope_contract(self):
+        """Sparse early ε values keep the public result arrays aligned."""
+        rng = np.random.default_rng(97)
+        traj = rng.standard_normal((100, 2))
+        result = correlation_dimension(traj)
+
+        assert result.D2 >= 0.0
+        assert len(result.slope) == len(result.epsilons) - 1
+        assert np.all(np.isfinite(result.slope))
 
     @pytest.mark.parametrize("n_epsilons", [False, 1, 0, -1, 2.5, "10"])
     def test_rejects_invalid_n_epsilons(self, n_epsilons: Any) -> None:

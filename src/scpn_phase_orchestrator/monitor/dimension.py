@@ -459,18 +459,22 @@ def correlation_dimension(
             scaling_range=(float(epsilons[0]), float(epsilons[-1])),
         )
 
+    valid_indices = np.flatnonzero(valid)
+    first_valid = int(valid_indices[0])
     log_eps = np.log(epsilons[valid])
     log_C = np.log(C_eps[valid])
     slopes = np.diff(log_C) / np.diff(log_eps)
+    full_slopes = np.zeros(len(epsilons) - 1, dtype=np.float64)
+    full_slopes[first_valid : first_valid + len(slopes)] = slopes
 
     window = min(5, len(slopes))
     if window < 2:
-        D2 = float(slopes[0]) if len(slopes) > 0 else 0.0
+        D2 = max(0.0, float(slopes[0])) if len(slopes) > 0 else 0.0
         return CorrelationDimensionResult(
             D2=D2,
             epsilons=epsilons,
             C_eps=C_eps,
-            slope=slopes,
+            slope=full_slopes,
             scaling_range=(float(epsilons[0]), float(epsilons[-1])),
         )
 
@@ -482,7 +486,7 @@ def correlation_dimension(
             best_var = v
             best_start = i
 
-    D2 = float(np.mean(slopes[best_start : best_start + window]))
+    D2 = max(0.0, float(np.mean(slopes[best_start : best_start + window])))
     eps_valid = epsilons[valid]
     scaling_lo = float(eps_valid[best_start])
     scaling_hi = float(eps_valid[min(best_start + window, len(eps_valid) - 1)])
@@ -491,7 +495,7 @@ def correlation_dimension(
         D2=D2,
         epsilons=epsilons,
         C_eps=C_eps,
-        slope=slopes,
+        slope=full_slopes,
         scaling_range=(scaling_lo, scaling_hi),
     )
 
