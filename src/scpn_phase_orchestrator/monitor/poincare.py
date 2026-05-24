@@ -329,8 +329,8 @@ def _validate_crossing_times(value: object, *, expected_count: int) -> FloatArra
         )
     if not np.all(np.isfinite(crossing_times)):
         raise ValueError("crossing_times must contain only finite values")
-    if crossing_times.size > 1 and np.any(np.diff(crossing_times) < -1e-12):
-        raise ValueError("crossing_times must be monotonically non-decreasing")
+    if crossing_times.size > 1 and np.any(np.diff(crossing_times) <= 1e-12):
+        raise ValueError("crossing_times must be strictly increasing")
     return np.ascontiguousarray(crossing_times, dtype=np.float64)
 
 

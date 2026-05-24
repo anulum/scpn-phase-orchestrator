@@ -368,6 +368,14 @@ class TestPoincareResultValidation:
             ({"crossings": [[0.0], [True]]}, "crossings"),
             ({"crossing_times": [0.0]}, "crossing_times shape"),
             ({"crossing_times": [2.0, 1.0]}, "crossing_times must be"),
+            (
+                {
+                    "crossing_times": [0.5, 0.5],
+                    "return_times": [0.0],
+                    "mean_return_time": 0.0,
+                },
+                "crossing_times must be",
+            ),
             ({"crossing_times": [0.0, np.inf]}, "crossing_times"),
             ({"return_times": [1.0, 2.0]}, "return_times shape"),
             ({"return_times": [-1.0]}, "return_times must be non-negative"),
