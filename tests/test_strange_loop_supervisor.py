@@ -50,8 +50,12 @@ class TestStrangeLoopValidation:
     def test_rejects_invalid_constructor_values(self) -> None:
         with pytest.raises(ValueError, match="history_size"):
             StrangeLoopSupervisor(history_size=1)
+        with pytest.raises(ValueError, match="history_size"):
+            StrangeLoopSupervisor(history_size=np.bool_(True))
         with pytest.raises(ValueError, match="damping_gain"):
             StrangeLoopSupervisor(damping_gain=0.0)
+        with pytest.raises(ValueError, match="damping_gain"):
+            StrangeLoopSupervisor(damping_gain=True)
         with pytest.raises(ValueError, match="ttl_s"):
             StrangeLoopSupervisor(ttl_s=float("inf"))
 
@@ -59,6 +63,8 @@ class TestStrangeLoopValidation:
         supervisor = StrangeLoopSupervisor()
         with pytest.raises(ValueError, match="finite"):
             supervisor.observe([_action("K", float("nan"))])
+        with pytest.raises(ValueError, match="finite"):
+            supervisor.observe([_action("K", np.bool_(True))])
 
 
 class TestStrangeLoopAssessment:

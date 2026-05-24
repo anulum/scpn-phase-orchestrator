@@ -20,6 +20,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from math import isfinite
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -87,23 +88,26 @@ class StrangeLoopSupervisor:
         damping_gain: float = 0.05,
         ttl_s: float = 3.0,
     ) -> None:
-        if history_size < 2:
-            raise ValueError("history_size must be >= 2")
-        for name, value in {
-            "drift_threshold": drift_threshold,
-            "oscillation_threshold": oscillation_threshold,
-            "overcontrol_threshold": overcontrol_threshold,
-            "damping_gain": damping_gain,
-            "ttl_s": ttl_s,
-        }.items():
-            if not isfinite(value) or value <= 0.0:
-                raise ValueError(f"{name} must be finite and > 0")
-        self._history: deque[FloatArray] = deque(maxlen=history_size)
-        self._drift_threshold = float(drift_threshold)
-        self._oscillation_threshold = float(oscillation_threshold)
-        self._overcontrol_threshold = float(overcontrol_threshold)
-        self._damping_gain = float(damping_gain)
-        self._ttl_s = float(ttl_s)
+        if (
+            isinstance(history_size, (bool, np.bool_))
+            or not isinstance(history_size, Integral)
+            or history_size < 2
+        ):
+            raise ValueError("history_size must be an integer >= 2")
+        self._history: deque[FloatArray] = deque(maxlen=int(history_size))
+        self._drift_threshold: float = _require_positive_real(
+            drift_threshold, name="drift_threshold"
+        )
+        self._oscillation_threshold: float = _require_positive_real(
+            oscillation_threshold, name="oscillation_threshold"
+        )
+        self._overcontrol_threshold: float = _require_positive_real(
+            overcontrol_threshold, name="overcontrol_threshold"
+        )
+        self._damping_gain: float = _require_positive_real(
+            damping_gain, name="damping_gain"
+        )
+        self._ttl_s: float = _require_positive_real(ttl_s, name="ttl_s")
         self.last_assessment: StrangeLoopAssessment | None = None
 
     def observe(self, actions: list[ControlAction]) -> StrangeLoopAssessment:
@@ -182,10 +186,25 @@ def _actions_to_vector(actions: list[ControlAction]) -> FloatArray:
     for action in actions:
         if action.knob not in _KNOB_INDEX:
             continue
-        if not isfinite(action.value):
+        if (
+            isinstance(action.value, (bool, np.bool_))
+            or not isinstance(action.value, Real)
+            or not isfinite(action.value)
+        ):
             raise ValueError("action values must be finite")
         vector[_KNOB_INDEX[action.knob]] += float(action.value)
     return vector
+
+
+def _require_positive_real(value: object, *, name: str) -> float:
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, Real)
+        or not isfinite(value)
+        or value <= 0.0
+    ):
+        raise ValueError(f"{name} must be finite and > 0")
+    return float(value)
 
 
 def _control_coherence(matrix: FloatArray) -> float:
