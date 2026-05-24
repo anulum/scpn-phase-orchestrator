@@ -208,11 +208,12 @@ class TestCriticalCoupling:
             critical_coupling(omegas, knm)
 
     @_python
-    def test_accepts_frequency_vector_shorter_than_layer_matrix(self):
+    def test_rejects_frequency_vector_shorter_than_layer_matrix(self):
         W = np.ones((4, 4), dtype=np.float64)
         np.fill_diagonal(W, 0.0)
 
-        assert critical_coupling(np.array([5.0, 10.0]), W) == pytest.approx(1.25)
+        with pytest.raises(ValueError, match="omegas"):
+            critical_coupling(np.array([5.0, 10.0]), W)
 
     @_python
     def test_rejects_mixed_boolean_frequency_alias(self):
@@ -610,10 +611,9 @@ class TestValidationBoundaries:
         assert [call[0] for call in calls] == ["fv", "fvec", "sg", "kc", "scr"]
 
     @_python
-    def test_critical_coupling_empty_graph_returns_inf(self):
-        kc = critical_coupling(np.array([0.0, 1.0]), np.zeros((0, 0)))
-
-        assert kc == float("inf")
+    def test_critical_coupling_empty_graph_rejects_frequency_mismatch(self):
+        with pytest.raises(ValueError, match="omegas"):
+            critical_coupling(np.array([0.0, 1.0]), np.zeros((0, 0)))
 
     def test_spectral_eig_accepts_integer_matrices_as_floats(self):
         knm = np.array(
