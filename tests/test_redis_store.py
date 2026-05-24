@@ -208,3 +208,43 @@ class TestRedisStorePipelineWiring:
         loaded = store.load_state()
         assert loaded["R"] == pytest.approx(r)
         assert loaded["step"] == 100
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestRedisStore:
+    def test_save_load_with_mock(self):
+        from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
+
+        mock_client = MagicMock()
+        store = RedisStateStore(client=mock_client, key="test:state")
+
+        store.save_state({"R": 0.5})
+        mock_client.set.assert_called_once()
+
+        mock_client.get.return_value = b'{"R": 0.5}'
+        result = store.load_state()
+        assert result == {"R": 0.5}
+
+    def test_load_missing(self):
+        from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
+
+        mock_client = MagicMock()
+        mock_client.get.return_value = None
+        store = RedisStateStore(client=mock_client)
+        assert store.load_state() is None
+        mock_client.get.assert_called_once_with("spo:sim_state")
+
+    def test_delete_state(self):
+        from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
+
+        mock_client = MagicMock()
+        store = RedisStateStore(client=mock_client, key="test:key")
+        store.delete_state()
+        mock_client.delete.assert_called_once_with("test:key")
+
+    def test_key_property(self):
+        from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
+
+        mock_client = MagicMock()
+        store = RedisStateStore(client=mock_client, key="my:key")
+        assert store.key == "my:key"

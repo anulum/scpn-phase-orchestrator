@@ -11,7 +11,8 @@ from __future__ import annotations
 import io
 import json
 from typing import get_type_hints
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 
 import numpy as np
 import pytest
@@ -134,3 +135,245 @@ class TestFetchInstant:
 
 # Pipeline wiring: PrometheusAdapter is an input adapter — tests above verify
 # fetch_metric/fetch_instant that feed monitoring data into SPO.
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestPrometheusAdapter:
+    def test_fetch_metric_rejects_invalid_query_and_range(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with pytest.raises(ValueError, match="non-empty string"):
+            adapter.fetch_metric("  ", 0, 10, 1)
+        with pytest.raises(ValueError, match="end must be >= start"):
+            adapter.fetch_metric("up", 10, 0, 1)
+        with pytest.raises(ValueError, match="step must be positive"):
+            adapter.fetch_metric("up", 0, 10, 0)
+
+    def test_fetch_instant_rejects_invalid_query(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with pytest.raises(ValueError, match="non-empty string"):
+            adapter.fetch_instant("")
+
+    def test_fetch_metric_url_encodes_query_text(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        mock_response = json.dumps(
+            {
+                "status": "success",
+                "data": {"resultType": "matrix", "result": []},
+            }
+        ).encode()
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = mock_response
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            adapter.fetch_metric(
+                'sum(rate(http_requests_total{job="api"}[5m]))',
+                0,
+                60,
+                5,
+            )
+
+            request_arg = mock_urlopen.call_args.args[0]
+            encoded = (
+                "query=sum%28rate%28http_requests_total%7Bjob%3D%22api%22%7D"
+                "%5B5m%5D%29%29"
+            )
+            assert encoded in request_arg.full_url
+
+    def test_fetch_metric_success(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        mock_response = json.dumps(
+            {
+                "status": "success",
+                "data": {
+                    "resultType": "matrix",
+                    "result": [{"values": [[1, "0.5"], [2, "0.8"], [3, "0.3"]]}],
+                },
+            }
+        ).encode()
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = mock_response
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            result = adapter.fetch_metric("up", 0, 10, 1)
+            assert len(result) == 3
+            np.testing.assert_allclose(result, [0.5, 0.8, 0.3])
+
+    def test_fetch_metric_empty(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        mock_response = json.dumps(
+            {"status": "success", "data": {"resultType": "matrix", "result": []}}
+        ).encode()
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = mock_response
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            result = adapter.fetch_metric("up", 0, 10, 1)
+            np.testing.assert_array_equal(result, np.array([], dtype=np.float64))
+            request_arg = mock_urlopen.call_args.args[0]
+            assert request_arg.full_url == (
+                "http://localhost:9090/api/v1/query_range?"
+                "query=up&start=0.0&end=10.0&step=1.0"
+            )
+            assert request_arg.headers["Accept"] == "application/json"
+
+    def test_fetch_metric_network_error(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                side_effect=URLError("connection refused"),
+            ),
+            pytest.raises(ConnectionError),
+        ):
+            adapter.fetch_metric("up", 0, 10, 1)
+
+    def test_fetch_metric_network_error_does_not_leak_endpoint_or_query(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://metrics.internal:9090/private")
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                side_effect=URLError(
+                    "http://metrics.internal:9090/private/api/v1/query_range"
+                    "?query=tenant_secret"
+                ),
+            ),
+            pytest.raises(ConnectionError) as excinfo,
+        ):
+            adapter.fetch_metric("tenant_secret", 0, 10, 1)
+        msg = str(excinfo.value)
+        assert msg == "Prometheus query failed"
+        assert "metrics.internal" not in msg
+        assert "tenant_secret" not in msg
+        assert excinfo.value.__cause__ is None
+
+    def test_fetch_instant_network_error_does_not_leak_endpoint_or_query(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://metrics.internal:9090/private")
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                side_effect=URLError(
+                    "http://metrics.internal:9090/private/api/v1/query"
+                    "?query=tenant_secret"
+                ),
+            ),
+            pytest.raises(ConnectionError) as excinfo,
+        ):
+            adapter.fetch_instant("tenant_secret")
+        msg = str(excinfo.value)
+        assert msg == "Prometheus query failed"
+        assert "metrics.internal" not in msg
+        assert "tenant_secret" not in msg
+        assert excinfo.value.__cause__ is None
+
+    def test_fetch_metric_bad_json(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = b"not json"
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            with pytest.raises(ValueError):
+                adapter.fetch_metric("up", 0, 10, 1)
+
+
+# Salvaged module-specific behavioural contracts from deleted sprint file.
+
+
+
+def _mock_resp(body: dict):
+    data = json.dumps(body).encode()
+    resp = io.BytesIO(data)
+    resp.__enter__ = lambda s: s
+    resp.__exit__ = lambda s, *a: None
+    resp.read = lambda: data
+    return resp
+
+
+# ---------------------------------------------------------------------------
+# Prometheus adapter: error handling
+# ---------------------------------------------------------------------------
+
+
+class TestPrometheusErrorHandling:
+    """Verify that PrometheusAdapter raises correct exceptions
+    for connection failures and API errors."""
+
+    def test_connection_refused_raises_connection_error(self):
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                side_effect=URLError("refused"),
+            ),
+            pytest.raises(ConnectionError),
+        ):
+            adapter.fetch_instant("up")
+
+    def test_api_error_status_raises_value_error(self):
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                return_value=_mock_resp({"status": "error"}),
+            ),
+            pytest.raises(ValueError, match="status="),
+        ):
+            adapter.fetch_instant("up")
+
+    def test_successful_response_returns_data(self):
+        """Valid Prometheus response must be parsed correctly."""
+        adapter = PrometheusAdapter("http://localhost:9090")
+        body = {
+            "status": "success",
+            "data": {"resultType": "vector", "result": [{"value": [1234, "0.5"]}]},
+        }
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+            return_value=_mock_resp(body),
+        ):
+            result = adapter.fetch_instant("up")
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# NPE: normalised phase entropy
+# ---------------------------------------------------------------------------

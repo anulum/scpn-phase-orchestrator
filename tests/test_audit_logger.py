@@ -428,3 +428,23 @@ class TestAuditHeader:
 # Pipeline wiring: AuditLogger tested via hash chain integrity, SHA-256
 # verification, and concurrent write safety. TestAuditHashChain and
 # TestAuditDataIntegrity prove the audit pipeline.
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+    def test_log_step_phases_without_omegas_raises(self, tmp_path):
+        log = tmp_path / "bad.jsonl"
+        logger = AuditLogger(log)
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.5,
+            regime_id="NOMINAL",
+        )
+        with pytest.raises(RuntimeError, match="omegas"):
+            logger.log_step(0, state, [], phases=np.zeros(4))
+        logger.close()
+
+
+# ──────────────────────────────────────────────────────────────────────
+# audit/replay.py: SL chained with single entry, verify_determinism_sl divergence
+# ──────────────────────────────────────────────────────────────────────

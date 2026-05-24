@@ -153,3 +153,34 @@ class TestSwarmalatorPipelineWiring:
         _, final_ph, _, _ = engine.run(pos, phases, omegas, k=2.0, n_steps=200)
         r, _ = compute_order_parameter(final_ph)
         assert 0.0 <= r <= 1.0
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestSwarmalator3D:
+    """Verify that the swarmalator engine works in 3D mode
+    and produces physically valid output."""
+
+    def test_3d_step_shape_and_finiteness(self):
+        from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
+
+        eng = SwarmalatorEngine(4, dt=0.01, dim=3)
+        rng = np.random.default_rng(42)
+        positions = rng.uniform(-1, 1, (4, 3))
+        phases = rng.uniform(0, 2 * np.pi, 4)
+        omegas = rng.normal(0, 0.5, 4)
+        new_pos, new_ph = eng.step(positions, phases, omegas)
+        assert new_pos.shape == (4, 3)
+        assert new_ph.shape == (4,)
+        assert np.all(np.isfinite(new_pos))
+        assert np.all(np.isfinite(new_ph))
+
+    def test_3d_phases_advance(self):
+        """Non-zero omegas must advance phases."""
+        from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
+
+        eng = SwarmalatorEngine(4, dt=0.01, dim=3)
+        positions = np.zeros((4, 3))
+        phases = np.zeros(4)
+        omegas = np.array([1.0, 2.0, 3.0, 4.0])
+        _, new_ph = eng.step(positions, phases, omegas)
+        assert not np.allclose(new_ph, 0.0), "Non-zero omegas must advance phases"

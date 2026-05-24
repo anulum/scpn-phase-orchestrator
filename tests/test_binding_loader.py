@@ -730,3 +730,86 @@ class TestPipelineWiring:
         assert elapsed_ms < 10.0, (
             f"load_binding_spec took {elapsed_ms:.2f}ms, expected < 10ms"
         )
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestBindingLoader:
+    def test_json_parse_error(self, tmp_path):
+        p = tmp_path / "bad.json"
+        p.write_text("{invalid json", encoding="utf-8")
+        with pytest.raises(BindingLoadError, match="JSON parse"):
+            load_binding_spec(p)
+
+    def test_yaml_parse_error(self, tmp_path):
+        p = tmp_path / "bad.yaml"
+        p.write_text(":\n  - :\n    -:", encoding="utf-8")
+        with pytest.raises(BindingLoadError, match="YAML parse"):
+            load_binding_spec(p)
+
+    def test_non_dict_top_level(self, tmp_path):
+        p = tmp_path / "list.json"
+        p.write_text("[1,2,3]", encoding="utf-8")
+        with pytest.raises(BindingLoadError, match="expected mapping"):
+            load_binding_spec(p)
+
+    def test_protocol_net_loading(self, tmp_path):
+        data = {
+            "name": "pnet",
+            "version": "1.0.0",
+            "safety_tier": "research",
+            "sample_period_s": 0.01,
+            "control_period_s": 0.1,
+            "layers": [{"name": "L1", "index": 0, "oscillator_ids": ["a"]}],
+            "oscillator_families": {
+                "p": {"channel": "P", "extractor_type": "hilbert"},
+            },
+            "coupling": {"base_strength": 0.5, "decay_alpha": 0.3},
+            "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+            "objectives": {"good_layers": [0], "bad_layers": []},
+            "protocol_net": {
+                "places": ["warmup", "nominal"],
+                "initial": {"warmup": 1},
+                "place_regime": {"warmup": "NOMINAL"},
+                "transitions": [
+                    {
+                        "name": "start",
+                        "inputs": [{"place": "warmup", "weight": 1}],
+                        "outputs": [{"place": "nominal"}],
+                        "guard": "R > 0.5",
+                    },
+                ],
+            },
+        }
+        p = tmp_path / "spec.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        spec = load_binding_spec(p)
+        assert spec.protocol_net is not None
+        assert len(spec.protocol_net.transitions) == 1
+
+    def test_amplitude_loading(self, tmp_path):
+        data = {
+            "name": "amp",
+            "version": "1.0.0",
+            "safety_tier": "research",
+            "sample_period_s": 0.01,
+            "control_period_s": 0.1,
+            "layers": [{"name": "L1", "index": 0, "oscillator_ids": ["a"]}],
+            "oscillator_families": {
+                "p": {"channel": "P", "extractor_type": "hilbert"},
+            },
+            "coupling": {"base_strength": 0.5, "decay_alpha": 0.3},
+            "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+            "objectives": {"good_layers": [0], "bad_layers": []},
+            "amplitude": {"mu": 1.0, "epsilon": 0.5},
+        }
+        p = tmp_path / "spec.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        spec = load_binding_spec(p)
+        assert spec.amplitude is not None
+        assert spec.amplitude.mu == 1.0
+
+
+# ──────────────────────────────────────────────────────────────────────
+# binding/validator.py: boundary lower > upper, actuator scope mismatch,
+#                        imprint validation, amplitude validation
+# ──────────────────────────────────────────────────────────────────────

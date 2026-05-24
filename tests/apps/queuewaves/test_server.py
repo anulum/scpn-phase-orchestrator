@@ -26,6 +26,11 @@ import numpy as np
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
+from scpn_phase_orchestrator.apps.queuewaves import server as server_mod
+from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
+    PipelineSnapshot,
+    ServiceSnapshot,
+)
 from scpn_phase_orchestrator.apps.queuewaves.server import create_app
 
 
@@ -266,3 +271,99 @@ def test_production_template_server_requires_request_api_key(
 
     assert missing.status_code == 401
     assert present.status_code == 200
+
+
+# Salvaged module-specific behavioural contracts from deleted bucket files.
+
+
+def _dummy_snapshot(tick: int = 1) -> PipelineSnapshot:
+    return PipelineSnapshot(
+        tick=tick,
+        timestamp=1000.0,
+        r_good=0.85,
+        r_bad=0.15,
+        regime="NOMINAL",
+        services=[
+            ServiceSnapshot(
+                name="svc-a",
+                layer="micro",
+                phase=1.0,
+                omega=2.0,
+                amplitude=1.0,
+                imprint=0.1,
+            ),
+        ],
+        plv_matrix=[[1.0, 0.5], [0.5, 1.0]],
+        layer_states=[{"R": 0.85, "psi": 0.0}],
+        boundary_violations=[],
+        actions=[],
+    )
+
+
+def test_root_uses_fallback_when_dashboard_missing(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_is_dir = server_mod.Path.is_dir
+    original_exists = server_mod.Path.exists
+
+    def patched_is_dir(path: Path) -> bool:
+        if path.name == "static" and path.parent.name == "queuewaves":
+            return False
+        return original_is_dir(path)
+
+    def patched_exists(path: Path) -> bool:
+        if path.name == "index.html" and path.parent.name == "static":
+            return False
+        return original_exists(path)
+
+    monkeypatch.setattr(server_mod.Path, "is_dir", patched_is_dir)
+    monkeypatch.setattr(server_mod.Path, "exists", patched_exists)
+
+    app = create_app(minimal_config)
+    client = TestClient(app)
+    r = client.get("/")
+    assert r.status_code == 200
+
+
+def test_pipeline_loop_scrape_failure(minimal_config: QueueWavesConfig):
+    """Scrape failure logs a warning but loop continues."""
+    with patch(
+        "scpn_phase_orchestrator.apps.queuewaves.server.PrometheusCollector"
+    ) as MockCollector:
+        mock_instance = MockCollector.return_value
+        mock_instance.close = AsyncMock()
+        mock_instance.scrape = AsyncMock(side_effect=ConnectionError("down"))
+        mock_instance.get_signal_arrays = MagicMock(return_value={})
+
+        app = create_app(minimal_config)
+        client = TestClient(app)
+        # App starts despite scrape errors
+        r = client.get("/api/v1/health")
+        assert r.status_code == 200
+
+class TestRunServer:
+    def test_run_server_calls_uvicorn(self, tmp_path, monkeypatch):
+        import yaml
+
+        from scpn_phase_orchestrator.apps.queuewaves import server as srv_mod
+
+        cfg_data = {
+            "prometheus_url": "http://localhost:9090",
+            "services": [
+                {"name": "svc-a", "promql": "up", "layer": "micro"},
+            ],
+            "scrape_interval_s": 1.0,
+            "buffer_length": 16,
+        }
+        cfg_path = tmp_path / "config.yaml"
+        cfg_path.write_text(yaml.dump(cfg_data), encoding="utf-8")
+
+        mock_uvicorn_run = MagicMock()
+        monkeypatch.setattr("uvicorn.run", mock_uvicorn_run)
+
+        srv_mod.run_server(str(cfg_path), host="0.0.0.0", port=9999)
+        mock_uvicorn_run.assert_called_once()
+        call_kwargs = mock_uvicorn_run.call_args
+        assert call_kwargs.kwargs["host"] == "0.0.0.0"
+        assert call_kwargs.kwargs["port"] == 9999

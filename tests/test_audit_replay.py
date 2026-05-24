@@ -869,3 +869,78 @@ def test_cli_replay_verify_no_header(tmp_path):
     result = runner.invoke(main, ["replay", str(log), "--verify"])
     assert result.exit_code == 1
     assert "no header" in result.output
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+    def test_sl_chained_single_entry(self, tmp_path):
+        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+        engine = StuartLandauEngine(2, dt=0.01)
+        entries = [
+            {"header": True, "n_oscillators": 2, "dt": 0.01, "amplitude_mode": True},
+            {
+                "step": 0,
+                "phases": [0.1, 0.2, 0.8, 0.9],
+                "omegas": [1.0, 1.0],
+                "knm": [[0, 0.3], [0.3, 0]],
+                "alpha": [[0, 0], [0, 0]],
+            },
+        ]
+        log = tmp_path / "sl_single.jsonl"
+        log.write_text(
+            "\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8"
+        )
+        re = ReplayEngine(log)
+        loaded = re.load()
+        passed, n = re.verify_determinism_sl_chained(engine, loaded)
+        assert passed
+        assert n == 0
+
+    def test_sl_chained_detects_divergence(self, tmp_path):
+        n = 2
+        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+        engine = StuartLandauEngine(n, dt=0.01)
+        state = np.array([0.1, 0.2, 0.8, 0.9])
+        omegas = np.ones(n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        mu = np.ones(n)
+        knm_r = 0.1 * np.ones((n, n))
+        np.fill_diagonal(knm_r, 0.0)
+
+        entries = [
+            {"header": True, "n_oscillators": n, "dt": 0.01, "amplitude_mode": True}
+        ]
+        for i in range(3):
+            entries.append(
+                {
+                    "step": i,
+                    "phases": state.tolist(),
+                    "omegas": omegas.tolist(),
+                    "knm": knm.tolist(),
+                    "alpha": alpha.tolist(),
+                    "mu": mu.tolist(),
+                    "knm_r": knm_r.tolist(),
+                    "zeta": 0.0,
+                    "psi_drive": 0.0,
+                }
+            )
+            state = engine.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
+
+        # Tamper
+        entries[2]["phases"][0] += 5.0
+        log = tmp_path / "sl_tamper.jsonl"
+        log.write_text(
+            "\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8"
+        )
+        re = ReplayEngine(log)
+        loaded = re.load()
+        passed, n_v = re.verify_determinism_sl_chained(engine, loaded)
+        assert not passed
+
+
+# ──────────────────────────────────────────────────────────────────────
+# binding/loader.py: protocol_net parsing, JSON parse error, YAML error
+# ──────────────────────────────────────────────────────────────────────

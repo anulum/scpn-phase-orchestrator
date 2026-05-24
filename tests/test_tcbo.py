@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 from typing import get_type_hints
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -140,3 +141,55 @@ class TestTCBOPipelineWiring:
 
         assert isinstance(state, TCBOState)
         assert 0.0 <= state.p_h1 <= 1.0
+
+
+# Salvaged module-specific behavioural contracts from deleted sprint file.
+
+
+class TestTCBOBehavioural:
+    """Verify TCBO handles edge cases: short history, degenerate phases,
+    and empty persistence diagrams."""
+
+    def test_short_history_does_not_crash(self):
+        obs = TCBOObserver(window_size=3, embed_dim=3, embed_delay=2)
+        for _ in range(9):
+            state = obs.observe(np.array([0.0, 1.0]))
+        assert hasattr(state, "p_h1")
+
+    def test_degenerate_phases_bounded_p_h1(self):
+        obs = TCBOObserver(window_size=10, embed_dim=2, embed_delay=1)
+        for _ in range(15):
+            state = obs.observe(np.zeros(4))
+        assert 0.0 <= state.p_h1 <= 1.0
+        assert state.method in ("ripser", "plv_approx")
+
+    @pytest.mark.skipif(not _HAS_RIPSER, reason="ripser not installed")
+    def test_ripser_empty_h1_gives_zero(self):
+        obs = TCBOObserver(window_size=10, embed_dim=2, embed_delay=1)
+        for _ in range(15):
+            obs.observe(np.array([0.1, 0.2, 0.3]))
+        mock_result = {"dgms": [np.array([[0, 1]]), np.array([]).reshape(0, 2)]}
+        with patch(
+            "scpn_phase_orchestrator.ssgf.tcbo._ripser", return_value=mock_result
+        ):
+            state = obs.observe(np.array([0.1, 0.2, 0.3]))
+        assert state.p_h1 == 0.0
+        assert state.method == "ripser"
+
+    @pytest.mark.skipif(not _HAS_RIPSER, reason="ripser not installed")
+    def test_ripser_infinite_lifetimes_gives_zero(self):
+        obs = TCBOObserver(window_size=10, embed_dim=2, embed_delay=1)
+        for _ in range(15):
+            obs.observe(np.array([0.1, 0.2, 0.3]))
+        h1 = np.array([[0.0, np.inf], [0.5, np.inf]])
+        mock_result = {"dgms": [np.array([[0, 1]]), h1]}
+        with patch(
+            "scpn_phase_orchestrator.ssgf.tcbo._ripser", return_value=mock_result
+        ):
+            state = obs.observe(np.array([0.1, 0.2, 0.3]))
+        assert state.p_h1 == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Policy engine: metric extraction wiring
+# ---------------------------------------------------------------------------

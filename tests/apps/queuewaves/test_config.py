@@ -552,3 +552,43 @@ def test_load_config_rejects_invalid_values(
 def test_direct_config_constructors_validate(factory: Callable[[], object]) -> None:
     with pytest.raises(ValueError):
         factory()
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestQueueWavesConfigFormat:
+    """Verify alert sink configuration parsing."""
+
+    def test_slack_format_parsed(self, tmp_path):
+        import yaml
+
+        from scpn_phase_orchestrator.apps.queuewaves.config import load_config
+
+        cfg = {
+            "prometheus_url": "http://localhost:9090",
+            "services": [{"name": "svc", "promql": "up", "layer": "micro"}],
+            "alert_sinks": [
+                {"url": "https://hooks.slack.com/test", "format": "slack"},
+            ],
+        }
+        p = tmp_path / "cfg.yaml"
+        p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+        result = load_config(p)
+        assert len(result.alert_sinks) == 1
+        assert result.alert_sinks[0].format == "slack"
+
+    def test_generic_format_default(self, tmp_path):
+        import yaml
+
+        from scpn_phase_orchestrator.apps.queuewaves.config import load_config
+
+        cfg = {
+            "prometheus_url": "http://localhost:9090",
+            "services": [{"name": "svc", "promql": "up", "layer": "micro"}],
+            "alert_sinks": [
+                {"url": "https://example.com/webhook"},
+            ],
+        }
+        p = tmp_path / "cfg.yaml"
+        p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+        result = load_config(p)
+        assert result.alert_sinks[0].format == "generic"

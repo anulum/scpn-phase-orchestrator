@@ -307,3 +307,46 @@ class TestPGBOPipelineWiring:
         assert isinstance(snap, PGBOSnapshot)
         assert -1.0 <= snap.phase_geometry_alignment <= 1.0
         assert np.isfinite(snap.gauge_curvature)
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestPgboValidation:
+    def test_rejects_empty_cost_weights(self) -> None:
+        with pytest.raises(ValueError, match="at least one weight"):
+            PGBO(cost_weights=())
+
+    def test_rejects_negative_cost_weight(self) -> None:
+        with pytest.raises(ValueError, match="cost_weights must be non-negative"):
+            PGBO(cost_weights=(1.0, -0.2, 0.1))
+
+    def test_accepts_zero_cost_weight(self) -> None:
+        PGBO(cost_weights=(1.0, 0.0, 0.1))
+
+
+# Salvaged module-specific behavioural contracts from deleted sprint file.
+class TestPGBOAlignment:
+    """Verify that PGBO measures phase-geometry alignment with
+    correct range and discriminatory power."""
+
+    def test_alignment_in_range(self):
+        pgbo = PGBO()
+        rng = np.random.default_rng(123)
+        phases = rng.uniform(0, 2 * np.pi, 8)
+        W = rng.uniform(0.1, 2.0, (8, 8))
+        np.fill_diagonal(W, 0.0)
+        snap = pgbo.observe(phases, W)
+        assert -1.0 <= snap.phase_geometry_alignment <= 1.0
+
+    def test_synchronised_phases_high_alignment(self):
+        """Nearly identical phases with uniform coupling → high alignment."""
+        pgbo = PGBO()
+        phases = np.full(8, 0.5)  # synchronised
+        W = np.ones((8, 8)) * 0.5
+        np.fill_diagonal(W, 0.0)
+        snap = pgbo.observe(phases, W)
+        assert snap.phase_geometry_alignment >= -1.0  # structural check
+
+
+# ---------------------------------------------------------------------------
+# TCBO: topological complexity-based observer
+# ---------------------------------------------------------------------------

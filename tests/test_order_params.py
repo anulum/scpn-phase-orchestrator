@@ -549,3 +549,77 @@ class TestDispatcher:
         assert 0.0 <= psi < TWO_PI
         assert plv == pytest.approx(1.0, abs=1e-12)
         assert layer == pytest.approx(0.0, abs=1e-12)
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestOrderParameterEdgeCases:
+    """Verify order parameter functions handle edge cases with defined behaviour,
+    not just "doesn't crash"."""
+
+    def test_empty_phases_returns_zero_r_and_psi(self):
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        r, psi = compute_order_parameter(np.array([]))
+        assert r == 0.0 and psi == 0.0, "Empty phases must give R=0, Ψ=0"
+
+    def test_single_phase_returns_r_one(self):
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        r, psi = compute_order_parameter(np.array([1.23]))
+        assert abs(r - 1.0) < 1e-10, "Single oscillator must have R=1"
+        assert abs(psi - 1.23) < 1e-10, "Single oscillator Ψ must equal its phase"
+
+    def test_plv_empty_either_side_returns_zero(self):
+        from scpn_phase_orchestrator.upde.order_params import compute_plv
+
+        assert compute_plv(np.array([]), np.array([1.0])) == 0.0
+        assert compute_plv(np.array([1.0]), np.array([])) == 0.0
+
+    def test_plv_identical_phases_returns_one(self):
+        from scpn_phase_orchestrator.upde.order_params import compute_plv
+
+        phases = np.array([0.5, 0.5, 0.5, 0.5])
+        plv = compute_plv(phases, phases)
+        assert abs(plv - 1.0) < 1e-10, "PLV of identical phases must be 1"
+
+    def test_plv_anti_phase_returns_one(self):
+        """PLV measures consistency of phase difference, not alignment.
+        Anti-phase (π offset) has a consistent difference → PLV = 1."""
+        from scpn_phase_orchestrator.upde.order_params import compute_plv
+
+        a = np.array([0.0, 0.5, 1.0, 1.5])
+        b = a + np.pi
+        plv = compute_plv(a, b)
+        assert abs(plv - 1.0) < 1e-10, f"Anti-phase PLV should be 1, got {plv:.4f}"
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestOrderParamsPythonPath:
+    def test_compute_order_parameter_python(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
+        phases = np.zeros(8)
+        r, psi = op_mod.compute_order_parameter(phases)
+        np.testing.assert_allclose(r, 1.0, atol=1e-10)
+
+    def test_compute_plv_python(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
+        a = np.zeros(10)
+        b = np.zeros(10)
+        plv = op_mod.compute_plv(a, b)
+        np.testing.assert_allclose(plv, 1.0, atol=1e-10)
+
+    def test_compute_plv_size_mismatch(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
+        with pytest.raises(ValueError, match="equal-length"):
+            op_mod.compute_plv(np.zeros(5), np.zeros(3))
+
+
+# ──────────────────────────────────────────────────────────────────────
+# knm.py: force Python fallback for build()
+# ──────────────────────────────────────────────────────────────────────

@@ -518,3 +518,139 @@ class TestPACBackendDispatchFallbacks:
         got = modulation_index(theta, amp, n_bins=18)
         ref = pac_mod._modulation_index_python(theta, amp, 18)
         assert got == ref
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestPACModulationIndexGuards:
+    """Verify PAC modulation_index rejects invalid n_bins and produces
+    bounded results for valid inputs."""
+
+    def test_nbins_below_2_returns_zero(self):
+        from scpn_phase_orchestrator.upde.pac import modulation_index
+
+        theta = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+        amp = np.array([1.0, 2.0, 3.0, 2.0, 1.0])
+        assert modulation_index(theta, amp, n_bins=1) == 0.0
+        assert modulation_index(theta, amp, n_bins=0) == 0.0
+
+    def test_uniform_amplitude_gives_low_mi(self):
+        """Constant amplitude across all phases → no modulation → MI near 0."""
+        from scpn_phase_orchestrator.upde.pac import modulation_index
+
+        theta = np.linspace(0, 2 * np.pi, 200, endpoint=False)
+        amp = np.ones(200)
+        mi = modulation_index(theta, amp, n_bins=18)
+        assert mi < 0.1, f"Uniform amplitude should give MI near 0, got {mi:.4f}"
+
+    def test_mi_in_unit_interval(self):
+        """MI must always be in [0, 1] regardless of input."""
+        from scpn_phase_orchestrator.upde.pac import modulation_index
+
+        rng = np.random.default_rng(42)
+        theta = rng.uniform(0, 2 * np.pi, 500)
+        amp = rng.exponential(1.0, 500)
+        mi = modulation_index(theta, amp, n_bins=18)
+        assert 0.0 <= mi <= 1.0, f"MI must be in [0, 1], got {mi:.4f}"
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestPACPythonPath:
+    def test_modulation_index_python(self, monkeypatch):
+        """Block spo_kernel import so Python KL-divergence path runs."""
+        import scpn_phase_orchestrator.upde.pac as pac_mod
+
+        _has_attr = hasattr(__builtins__, "__import__")
+        original_import = __builtins__.__import__ if _has_attr else __import__
+
+        def _block_spo(name, *args, **kwargs):
+            if name == "spo_kernel":
+                raise ImportError("blocked")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr("builtins.__import__", _block_spo)
+
+        rng = np.random.default_rng(42)
+        theta = rng.uniform(0, TWO_PI, 200)
+        amp = 1.0 + 0.5 * np.cos(theta)
+        mi = pac_mod.modulation_index(theta, amp)
+        assert 0.0 <= mi <= 1.0
+        assert mi > 0.0  # correlated signal → nonzero MI
+
+    def test_modulation_index_empty(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.pac as pac_mod
+
+        _has_attr = hasattr(__builtins__, "__import__")
+        original_import = __builtins__.__import__ if _has_attr else __import__
+
+        def _block_spo(name, *args, **kwargs):
+            if name == "spo_kernel":
+                raise ImportError("blocked")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr("builtins.__import__", _block_spo)
+        assert pac_mod.modulation_index(np.array([]), np.array([])) == 0.0
+
+    def test_modulation_index_zero_amplitude(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.pac as pac_mod
+
+        _has_attr = hasattr(__builtins__, "__import__")
+        original_import = __builtins__.__import__ if _has_attr else __import__
+
+        def _block_spo(name, *args, **kwargs):
+            if name == "spo_kernel":
+                raise ImportError("blocked")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr("builtins.__import__", _block_spo)
+        theta = np.linspace(0, TWO_PI, 100)
+        amp = np.zeros(100)
+        assert pac_mod.modulation_index(theta, amp) == 0.0
+
+    def test_pac_matrix_python(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.pac as pac_mod
+
+        _has_attr = hasattr(__builtins__, "__import__")
+        original_import = __builtins__.__import__ if _has_attr else __import__
+
+        def _block_spo(name, *args, **kwargs):
+            if name == "spo_kernel":
+                raise ImportError("blocked")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr("builtins.__import__", _block_spo)
+
+        rng = np.random.default_rng(7)
+        n, T = 3, 50
+        phases = rng.uniform(0, TWO_PI, (T, n))
+        amps = np.abs(rng.standard_normal((T, n))) + 0.1
+        mat = pac_mod.pac_matrix(phases, amps)
+        assert mat.shape == (n, n)
+        assert np.all(mat >= 0.0)
+
+    def test_pac_matrix_dim_mismatch(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.pac as pac_mod
+
+        _has_attr = hasattr(__builtins__, "__import__")
+        original_import = __builtins__.__import__ if _has_attr else __import__
+
+        def _block_spo(name, *args, **kwargs):
+            if name == "spo_kernel":
+                raise ImportError("blocked")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr("builtins.__import__", _block_spo)
+
+        with pytest.raises(ValueError, match="2-D"):
+            pac_mod.pac_matrix(np.zeros(10), np.zeros(10))
+
+    def test_pac_gate(self):
+        from scpn_phase_orchestrator.upde.pac import pac_gate
+
+        assert pac_gate(0.5) is True
+        assert pac_gate(0.2) is False
+        assert pac_gate(0.3, threshold=0.3) is True
+
+
+# ──────────────────────────────────────────────────────────────────────
+# order_params.py: force Python fallback for compute_order_parameter, compute_plv
+# ──────────────────────────────────────────────────────────────────────

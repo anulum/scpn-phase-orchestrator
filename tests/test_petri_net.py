@@ -16,6 +16,7 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
     Marking,
     PetriNet,
     Place,
+    PolicyError,
     Transition,
     parse_guard,
 )
@@ -397,3 +398,27 @@ class TestPetriNetPipelineEndToEnd:
 
 # Pipeline wiring: PetriNet tested via UPDEEngine → R → Guard evaluation
 # → enabled(). Supervisor FSM component. Performance: <10μs.
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestPetriNetGuard:
+    def test_guard_missing_metric(self):
+        g = Guard(metric="x", op=">", threshold=0.5)
+        assert g.evaluate({}) is False
+
+    def test_guard_unknown_op(self):
+        with pytest.raises(PolicyError, match="operator must be one of"):
+            Guard(metric="x", op="!=", threshold=0.5)
+
+    def test_place_names_property(self):
+        from scpn_phase_orchestrator.supervisor.petri_net import Arc, Transition
+
+        places = [Place("a"), Place("b")]
+        trans = [Transition("t", inputs=[Arc("a")], outputs=[Arc("b")])]
+        net = PetriNet(places, trans)
+        assert net.place_names == frozenset({"a", "b"})
+
+
+# ──────────────────────────────────────────────────────────────────────
+# quantum_control_bridge.py: circuit and statevector imports fail
+# ──────────────────────────────────────────────────────────────────────

@@ -481,3 +481,102 @@ class TestSecureModbusAdapter:
             adapter.read_register(7)
         with pytest.raises(ConnectionError, match="Modbus write error at address 9"):
             adapter.write_register(9, 123)
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestSampleBufferBehavioural:
+    def test_push_and_get(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
+
+        buf = SampleBuffer(capacity=10, n_channels=2)
+        data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float64)
+        buf.push(data)
+        recent = buf.get_recent(3)
+        assert recent.shape == (2, 3)
+        np.testing.assert_array_equal(recent, data)
+
+    def test_get_recent_empty(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
+
+        buf = SampleBuffer(capacity=10, n_channels=2)
+        recent = buf.get_recent(5)
+        assert recent.shape == (2, 0)
+        np.testing.assert_array_equal(recent, np.zeros((2, 0)))
+        assert buf.write_idx == 0
+        assert buf.count == 0
+
+    def test_wrap_around(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
+
+        buf = SampleBuffer(capacity=4, n_channels=1)
+        for i in range(6):
+            buf.push(np.array([[float(i)]]))
+        recent = buf.get_recent(4)
+        assert recent.shape == (1, 4)
+        np.testing.assert_array_equal(recent[0], [2, 3, 4, 5])
+
+    def test_get_more_than_available(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
+
+        buf = SampleBuffer(capacity=10, n_channels=1)
+        buf.push(np.array([[1.0, 2.0]]))
+        recent = buf.get_recent(5)
+        assert recent.shape == (1, 2)
+        np.testing.assert_array_equal(recent, [[1.0, 2.0]])
+        assert buf.write_idx == 2
+        assert buf.count == 2
+
+
+class TestSimulatedBoardAdapter:
+    def test_start_stop(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
+
+        adapter = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
+        adapter.start()
+        assert adapter._running
+        adapter.stop()
+        assert not adapter._running
+
+    def test_properties(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
+
+        adapter = SimulatedBoardAdapter(n_channels=8, sample_rate=512)
+        assert adapter.sample_rate == 512
+        assert adapter.n_channels == 8
+
+    def test_get_channel_data(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
+
+        adapter = SimulatedBoardAdapter(n_channels=4)
+        adapter.start()
+        data = adapter.get_channel_data(0, n_samples=100)
+        assert data.shape == (100,)
+        assert np.all(np.abs(data) <= 1.0)
+        expected_t = np.arange(100, dtype=np.float64) / adapter.sample_rate
+        np.testing.assert_allclose(
+            data,
+            np.sin(2.0 * np.pi * adapter._freqs[0] * expected_t),
+            atol=1e-12,
+        )
+        assert adapter._t == pytest.approx(100 / adapter.sample_rate)
+
+    def test_get_all_eeg(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
+
+        adapter = SimulatedBoardAdapter(n_channels=4)
+        adapter.start()
+        data = adapter.get_all_eeg(n_samples=100)
+        assert data.shape == (4, 100)
+        expected_t = np.arange(100, dtype=np.float64) / adapter.sample_rate
+        expected = np.array(
+            [np.sin(2.0 * np.pi * freq * expected_t) for freq in adapter._freqs]
+        )
+        np.testing.assert_allclose(data, expected, atol=1e-12)
+        assert adapter._t == pytest.approx(100 / adapter.sample_rate)
+
+    def test_custom_frequencies(self):
+        from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
+
+        freqs = np.array([10.0, 20.0])
+        adapter = SimulatedBoardAdapter(n_channels=2, frequencies=freqs)
+        np.testing.assert_array_equal(adapter._freqs, freqs)

@@ -253,3 +253,48 @@ def test_metrics_endpoint_is_default_runtime_observability_surface():
     assert "spo_r_global" in response.text
     assert "spo_stability_proxy" in response.text
     assert "spo_step" in response.text
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestServerResetWithImprint:
+    """Verify that SimulationState.reset() correctly reinitialises
+    all state including imprint."""
+
+    def test_reset_zeros_step_and_preserves_imprint(self):
+        from pathlib import Path
+
+        from scpn_phase_orchestrator.binding.loader import load_binding_spec
+        from scpn_phase_orchestrator.runtime.server import SimulationState
+
+        spec = load_binding_spec(
+            Path(__file__).parent.parent
+            / "domainpacks"
+            / "metaphysics_demo"
+            / "binding_spec.yaml"
+        )
+        sim = SimulationState(spec)
+        sim.step()
+        sim.step()
+        result = sim.reset()
+        assert result["step"] == 0, "Reset must zero step counter"
+        assert sim.imprint_state is not None, "Imprint must survive reset"
+
+    def test_reset_resets_phases(self):
+        """After reset, next step must start from initial conditions."""
+        from pathlib import Path
+
+        from scpn_phase_orchestrator.binding.loader import load_binding_spec
+        from scpn_phase_orchestrator.runtime.server import SimulationState
+
+        spec = load_binding_spec(
+            Path(__file__).parent.parent
+            / "domainpacks"
+            / "metaphysics_demo"
+            / "binding_spec.yaml"
+        )
+        sim = SimulationState(spec)
+        for _ in range(10):
+            sim.step()
+        sim.reset()
+        result = sim.step()
+        assert result["step"] == 1, "First step after reset must be 1"

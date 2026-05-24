@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+import yaml
 
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     CompoundCondition,
@@ -19,6 +20,7 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyRule,
     PolicySTLResult,
     PolicySTLSpec,
+    _extract_metric,
     evaluate_policy_stl_specs,
     load_policy_rules,
     load_policy_stl_specs,
@@ -28,7 +30,7 @@ from scpn_phase_orchestrator.supervisor.regimes import Regime
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 
-def _state(rs: list[float], stability: float | None = None) -> UPDEState:
+def _make_upde(rs: list[float], stability: float | None = None) -> UPDEState:
     stab = stability if stability is not None else sum(rs) / max(len(rs), 1)
     return UPDEState(
         layers=[LayerState(R=r, psi=0.0) for r in rs],
@@ -37,6 +39,8 @@ def _state(rs: list[float], stability: float | None = None) -> UPDEState:
         regime_id="test",
     )
 
+
+_state = _make_upde
 
 def _rich_state() -> UPDEState:
     return UPDEState(
@@ -1155,8 +1159,6 @@ class TestPolicyRulesPipelineWiring:
     def test_engine_r_triggers_policy_rule(self):
         """UPDEEngine → R → UPDEState → PolicyEngine.evaluate → actions.
         Proves policy rules consume engine state and produce control."""
-        import numpy as np
-
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import (
             compute_order_parameter,
@@ -1196,3 +1198,338 @@ class TestPolicyRulesPipelineWiring:
         state = _state([r], stability=r)
         actions = engine.evaluate(Regime.NOMINAL, state, [0], [])
         assert len(actions) >= 1, "Rule should fire for R < 0.99"
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestPolicyRules:
+    def test_extract_r_bad(self):
+        cond = PolicyCondition(metric="R_bad", layer=0, op=">", threshold=0.5)
+        state = _make_upde([0.8, 0.6])
+        val = _extract_metric(cond, state, [0], [1])
+        assert val == pytest.approx(0.6)
+
+    def test_extract_r_bad_none_when_out_of_range(self):
+        cond = PolicyCondition(metric="R_bad", layer=5, op=">", threshold=0.5)
+        state = _make_upde([0.8])
+        val = _extract_metric(cond, state, [0], [])
+        assert val is None
+
+    def test_extract_r_good_none_when_no_layer(self):
+        cond = PolicyCondition(metric="R_good", layer=None, op=">", threshold=0.5)
+        state = _make_upde([0.8])
+        val = _extract_metric(cond, state, [0], [])
+        assert val is None
+
+    def test_extract_pac_max(self):
+        cond = PolicyCondition(metric="pac_max", layer=None, op=">", threshold=0.1)
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.5,
+            regime_id="NOMINAL",
+            pac_max=0.3,
+        )
+        val = _extract_metric(cond, state, [0], [])
+        assert val == pytest.approx(0.3)
+
+    def test_extract_mean_amplitude(self):
+        cond = PolicyCondition(
+            metric="mean_amplitude", layer=None, op=">", threshold=0.1
+        )
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.5,
+            regime_id="NOMINAL",
+            mean_amplitude=0.7,
+        )
+        val = _extract_metric(cond, state, [], [])
+        assert val == pytest.approx(0.7)
+
+    def test_extract_subcritical_fraction(self):
+        cond = PolicyCondition(
+            metric="subcritical_fraction", layer=None, op="<", threshold=0.5
+        )
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.5,
+            regime_id="NOMINAL",
+            subcritical_fraction=0.2,
+        )
+        val = _extract_metric(cond, state, [], [])
+        assert val == pytest.approx(0.2)
+
+    def test_extract_amplitude_spread(self):
+        cond = PolicyCondition(
+            metric="amplitude_spread", layer=0, op="<", threshold=1.0
+        )
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0, amplitude_spread=0.3)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.5,
+            regime_id="NOMINAL",
+        )
+        val = _extract_metric(cond, state, [], [])
+        assert val == pytest.approx(0.3)
+
+    def test_extract_mean_amplitude_layer(self):
+        cond = PolicyCondition(
+            metric="mean_amplitude_layer", layer=0, op=">", threshold=0.0
+        )
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0, mean_amplitude=0.6)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.5,
+            regime_id="NOMINAL",
+        )
+        val = _extract_metric(cond, state, [], [])
+        assert val == pytest.approx(0.6)
+
+    def test_extract_unknown_metric(self):
+        cond = PolicyCondition(metric="bogus", layer=None, op=">", threshold=0.0)
+        state = _make_upde([0.5])
+        assert _extract_metric(cond, state, [], []) is None
+
+    def test_eval_single_unknown_op(self):
+        cond = PolicyCondition(
+            metric="stability_proxy",
+            layer=None,
+            op="!=",
+            threshold=0.5,
+        )
+        state = _make_upde([0.5])
+        assert PolicyEngine._eval_single(cond, state, [], []) is False
+
+    def test_compound_or_condition(self):
+        cc = CompoundCondition(
+            conditions=[
+                PolicyCondition(
+                    metric="stability_proxy",
+                    layer=None,
+                    op=">",
+                    threshold=0.9,
+                ),
+                PolicyCondition(
+                    metric="stability_proxy",
+                    layer=None,
+                    op="<",
+                    threshold=0.1,
+                ),
+            ],
+            logic="OR",
+        )
+        state = _make_upde([0.05])
+        engine = PolicyEngine(
+            [
+                PolicyRule(
+                    name="condition_probe",
+                    regimes=["NOMINAL"],
+                    condition=cc,
+                    actions=[
+                        PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0),
+                    ],
+                )
+            ]
+        )
+        assert engine._check_condition(cc, state, [], []) is True
+
+    def test_compound_and_condition_fails(self):
+        cc = CompoundCondition(
+            conditions=[
+                PolicyCondition(
+                    metric="stability_proxy",
+                    layer=None,
+                    op=">",
+                    threshold=0.0,
+                ),
+                PolicyCondition(
+                    metric="stability_proxy",
+                    layer=None,
+                    op=">",
+                    threshold=0.9,
+                ),
+            ],
+            logic="AND",
+        )
+        state = _make_upde([0.5])
+        engine = PolicyEngine(
+            [
+                PolicyRule(
+                    name="condition_probe",
+                    regimes=["NOMINAL"],
+                    condition=cc,
+                    actions=[
+                        PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0),
+                    ],
+                )
+            ]
+        )
+        assert engine._check_condition(cc, state, [], []) is False
+
+    def test_cooldown_prevents_repeated_fire(self):
+        rule = PolicyRule(
+            name="test",
+            regimes=["NOMINAL"],
+            condition=PolicyCondition(
+                metric="stability_proxy", layer=None, op=">", threshold=0.0
+            ),
+            actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
+            cooldown_s=100.0,
+        )
+        engine = PolicyEngine([rule])
+        state = _make_upde([0.5])
+        a1 = engine.evaluate(Regime.NOMINAL, state, [0], [])
+        assert len(a1) == 1
+        a2 = engine.evaluate(Regime.NOMINAL, state, [0], [])
+        assert len(a2) == 0
+
+    def test_max_fires_limit(self):
+        rule = PolicyRule(
+            name="limited",
+            regimes=["NOMINAL"],
+            condition=PolicyCondition(
+                metric="stability_proxy", layer=None, op=">", threshold=0.0
+            ),
+            actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
+            max_fires=2,
+        )
+        engine = PolicyEngine([rule])
+        state = _make_upde([0.5])
+        engine.evaluate(Regime.NOMINAL, state, [], [])
+        engine.evaluate(Regime.NOMINAL, state, [], [])
+        a3 = engine.evaluate(Regime.NOMINAL, state, [], [])
+        assert len(a3) == 0
+
+    def test_load_compound_rules(self, tmp_path):
+        data = {
+            "rules": [
+                {
+                    "name": "compound_test",
+                    "regime": ["NOMINAL"],
+                    "conditions": [
+                        {"metric": "stability_proxy", "op": ">", "threshold": 0.0},
+                        {"metric": "stability_proxy", "op": "<", "threshold": 1.0},
+                    ],
+                    "logic": "AND",
+                    "actions": [
+                        {"knob": "K", "scope": "global", "value": 0.1, "ttl_s": 5.0},
+                    ],
+                },
+            ],
+        }
+        path = tmp_path / "policy.yaml"
+        path.write_text(yaml.dump(data), encoding="utf-8")
+        rules = load_policy_rules(path)
+        assert len(rules) == 1
+        assert isinstance(rules[0].condition, CompoundCondition)
+
+    def test_load_empty_rules(self, tmp_path):
+        path = tmp_path / "empty.yaml"
+        path.write_text("not_rules: true\n", encoding="utf-8")
+        rules = load_policy_rules(path)
+        assert rules == []
+
+    def test_extract_r_layer_out_of_bounds(self):
+        cond = PolicyCondition(metric="R", layer=99, op=">", threshold=0.0)
+        state = _make_upde([0.5])
+        assert _extract_metric(cond, state, [], []) is None
+
+    def test_extract_amplitude_spread_out_of_bounds(self):
+        cond = PolicyCondition(
+            metric="amplitude_spread", layer=99, op="<", threshold=1.0
+        )
+        state = _make_upde([0.5])
+        assert _extract_metric(cond, state, [], []) is None
+
+    def test_extract_mean_amplitude_layer_out_of_bounds(self):
+        cond = PolicyCondition(
+            metric="mean_amplitude_layer", layer=99, op=">", threshold=0.0
+        )
+        state = _make_upde([0.5])
+        assert _extract_metric(cond, state, [], []) is None
+
+
+# ──────────────────────────────────────────────────────────────────────
+# supervisor/policy.py: petri_adapter path
+# ──────────────────────────────────────────────────────────────────────
+
+
+# Salvaged module-specific behavioural contracts from deleted sprint file.
+class TestPolicyMetricExtraction:
+    """Verify that the policy engine correctly extracts non-standard
+    metrics (boundary_violation_count, imprint_mean) from UPDEState
+    and uses them in rule evaluation."""
+
+    def _make_state(self, **overrides):
+        defaults = {
+            "layers": [LayerState(R=0.5, psi=0.0)],
+            "cross_layer_alignment": np.eye(1),
+            "stability_proxy": 0.5,
+            "regime_id": "nominal",
+        }
+        defaults.update(overrides)
+        return UPDEState(**defaults)
+
+    def test_boundary_violation_count_triggers_action(self):
+        """boundary_violation_count > 0 → actions when count=2."""
+        from scpn_phase_orchestrator.supervisor.policy_rules import PolicyAction
+
+        rule = PolicyRule(
+            name="test_boundary",
+            regimes=["NOMINAL"],
+            condition=PolicyCondition(
+                metric="boundary_violation_count",
+                layer=None,
+                op=">",
+                threshold=0.0,
+            ),
+            actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
+        )
+        engine = PolicyEngine([rule])
+        state = self._make_state(boundary_violation_count=2)
+        actions = engine.evaluate(Regime.NOMINAL, state, [0], [])
+        assert len(actions) > 0, "Rule should fire when boundary_violation_count=2 > 0"
+
+    def test_boundary_violation_count_zero_no_action(self):
+        from scpn_phase_orchestrator.supervisor.policy_rules import PolicyAction
+
+        rule = PolicyRule(
+            name="test_boundary",
+            regimes=["NOMINAL"],
+            condition=PolicyCondition(
+                metric="boundary_violation_count",
+                layer=None,
+                op=">",
+                threshold=0.0,
+            ),
+            actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
+        )
+        engine = PolicyEngine([rule])
+        state = self._make_state(boundary_violation_count=0)
+        actions = engine.evaluate(Regime.NOMINAL, state, [0], [])
+        assert len(actions) == 0, "Rule should not fire when count=0"
+
+    def test_imprint_mean_triggers_action(self):
+        from scpn_phase_orchestrator.supervisor.policy_rules import PolicyAction
+
+        rule = PolicyRule(
+            name="test_imprint",
+            regimes=["NOMINAL"],
+            condition=PolicyCondition(
+                metric="imprint_mean",
+                layer=None,
+                op=">",
+                threshold=0.5,
+            ),
+            actions=[PolicyAction(knob="zeta", scope="global", value=0.05, ttl_s=5.0)],
+        )
+        engine = PolicyEngine([rule])
+        state = self._make_state(imprint_mean=0.8)
+        actions = engine.evaluate(Regime.NOMINAL, state, [0], [])
+        assert len(actions) > 0, "Rule should fire when imprint_mean=0.8 > 0.5"
+
+
+# ---------------------------------------------------------------------------
+# Engine variants: delayed, torus, simplicial — pipeline wiring
+# ---------------------------------------------------------------------------

@@ -189,3 +189,37 @@ class TestMetricsExporterPipelineWiring:
         text = exp.export(state, "nominal", 0.5)
         assert "spo_r_global" in text
         assert str(round(r, 6))[:4] in text
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestMetricsExporter:
+    def test_export(self):
+        from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+        exporter = MetricsExporter(prefix="test")
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=1.0), LayerState(R=0.7, psi=2.0)],
+            cross_layer_alignment=np.eye(2),
+            stability_proxy=0.6,
+            regime_id=0,
+        )
+        text = exporter.export(state, "nominal", 1.5)
+        assert "test_r_global" in text
+        assert "test_latency_ms" in text
+        assert "nominal" in text
+
+    def test_exposition_lines(self):
+        from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+        exporter = MetricsExporter()
+        state = UPDEState(
+            layers=[LayerState(R=0.4, psi=0.0)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.4,
+            regime_id=0,
+        )
+        lines = exporter.exposition_lines(state, "recovery", 2.0)
+        assert any("recovery" in line for line in lines)
+        assert any("layer_count" in line for line in lines)

@@ -10,14 +10,21 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
+
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
     AmplitudeSpec,
+    BindingSpec,
     BoundaryDef,
     ChannelGroupSpec,
     ChannelSpec,
+    CouplingSpec,
     CrossChannelCouplingSpec,
+    DriverSpec,
+    HierarchyLayer,
     ImprintSpec,
+    ObjectivePartition,
     OscillatorFamily,
 )
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
@@ -100,8 +107,6 @@ def test_empty_layers_error(sample_binding_spec):
 
 
 def test_objective_references_missing_layer(sample_binding_spec):
-    from scpn_phase_orchestrator.binding.types import ObjectivePartition
-
     bad_obj = ObjectivePartition(good_layers=[0, 99], bad_layers=[])
     bad = replace(sample_binding_spec, objectives=bad_obj)
     errors = validate_binding_spec(bad)
@@ -156,8 +161,6 @@ def test_actuator_limits_must_be_finite(sample_binding_spec):
 
 
 def test_empty_objectives_error(sample_binding_spec):
-    from scpn_phase_orchestrator.binding.types import ObjectivePartition
-
     bad_obj = ObjectivePartition(good_layers=[], bad_layers=[])
     bad = replace(sample_binding_spec, objectives=bad_obj)
     errors = validate_binding_spec(bad)
@@ -215,8 +218,6 @@ def test_valid_knobs_accepted(sample_binding_spec):
 
 def test_multiple_errors_all_reported(sample_binding_spec):
     """Multiple simultaneous violations must all be reported (not fail-fast)."""
-    from scpn_phase_orchestrator.binding.types import ObjectivePartition
-
     bad = replace(
         sample_binding_spec,
         name="",
@@ -501,3 +502,121 @@ def test_amplitude_fields_must_be_finite(sample_binding_spec):
 # Pipeline wiring: binding validator tested via schema enforcement, required field
 # validation, and type checking. TestValidationLogic (above) proves the validator
 # gates pipeline inputs.
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestBoundaryInvertedLimitsValidation:
+    """Verify that the binding validator catches inverted boundary limits
+    and related constraint violations."""
+
+    def _make_spec_with_boundary(self, lower, upper, severity="hard"):
+        bdef = BoundaryDef(
+            name="test_bound",
+            variable="R",
+            lower=min(lower, upper),
+            upper=max(lower, upper),
+            severity=severity,
+        )
+        # Force inversion via frozen dataclass bypass
+        if lower > upper:
+            object.__setattr__(bdef, "lower", lower)
+            object.__setattr__(bdef, "upper", upper)
+        return BindingSpec(
+            name="test",
+            version="1.0.0",
+            safety_tier="research",
+            sample_period_s=0.01,
+            control_period_s=0.1,
+            layers=[HierarchyLayer(name="L1", index=0, oscillator_ids=["o1"])],
+            oscillator_families={},
+            coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
+            drivers=DriverSpec(physical={}, informational={}, symbolic={}),
+            objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
+            boundaries=[bdef],
+            actuators=[],
+        )
+
+    def test_inverted_boundary_reports_error(self):
+        """lower > upper must produce a validation error with both values reported."""
+        from scpn_phase_orchestrator.binding.validator import validate_binding_spec
+
+        spec = self._make_spec_with_boundary(lower=0.8, upper=0.2)
+        errors = validate_binding_spec(spec)
+        assert any(
+            "lower (0.8)" in e and "must be <= upper (0.2)" in e for e in errors
+        ), f"Expected inverted-limits error, got: {errors}"
+
+    def test_valid_boundary_no_errors(self):
+        """Correct boundaries produce no validation errors related to limits."""
+        from scpn_phase_orchestrator.binding.validator import validate_binding_spec
+
+        spec = self._make_spec_with_boundary(lower=0.2, upper=0.8)
+        errors = validate_binding_spec(spec)
+        limit_errors = [e for e in errors if "lower" in e and "upper" in e]
+        assert len(limit_errors) == 0, (
+            f"Valid boundary should not produce errors: {limit_errors}"
+        )
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestBindingValidatorExtras:
+    def test_boundary_lower_gt_upper(self, sample_binding_spec):
+        from scpn_phase_orchestrator.binding.types import BoundaryDef
+
+        with pytest.raises(ValueError, match="lower.*upper"):
+            BoundaryDef(name="inv", variable="R", lower=0.9, upper=0.1, severity="hard")
+
+    def test_actuator_scope_unknown(self, sample_binding_spec):
+        from scpn_phase_orchestrator.binding.types import ActuatorMapping
+
+        bad_act = [
+            ActuatorMapping(
+                name="bad_scope", knob="K", scope="layer_99", limits=(0.0, 1.0)
+            ),
+        ]
+        bad = replace(sample_binding_spec, actuators=bad_act)
+        errors = validate_binding_spec(bad)
+        assert any("scope" in e for e in errors)
+
+    def test_invalid_extractor_type(self, sample_binding_spec):
+        from scpn_phase_orchestrator.binding.types import OscillatorFamily
+
+        bad_fam = {
+            "x": OscillatorFamily(
+                channel="P",
+                extractor_type="quantum",
+                config={},
+            ),
+        }
+        bad = replace(sample_binding_spec, oscillator_families=bad_fam)
+        errors = validate_binding_spec(bad)
+        assert any("extractor_type" in e for e in errors)
+
+    def test_imprint_negative_decay(self, sample_binding_spec):
+        imprint = ImprintSpec(decay_rate=-0.1, saturation=1.0, modulates=["K"])
+        bad = replace(sample_binding_spec, imprint_model=imprint)
+        errors = validate_binding_spec(bad)
+        assert any("decay_rate" in e for e in errors)
+
+    def test_imprint_zero_saturation(self, sample_binding_spec):
+        imprint = ImprintSpec(decay_rate=0.1, saturation=0.0, modulates=["K"])
+        bad = replace(sample_binding_spec, imprint_model=imprint)
+        errors = validate_binding_spec(bad)
+        assert any("saturation" in e for e in errors)
+
+    def test_amplitude_non_finite_mu(self, sample_binding_spec):
+        amp = AmplitudeSpec(mu=float("inf"), epsilon=1.0)
+        bad = replace(sample_binding_spec, amplitude=amp)
+        errors = validate_binding_spec(bad)
+        assert any("mu" in e for e in errors)
+
+    def test_amplitude_negative_epsilon(self, sample_binding_spec):
+        amp = AmplitudeSpec(mu=1.0, epsilon=-0.1)
+        bad = replace(sample_binding_spec, amplitude=amp)
+        errors = validate_binding_spec(bad)
+        assert any("epsilon" in e for e in errors)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# stuart_landau.py: rk45 path
+# ──────────────────────────────────────────────────────────────────────

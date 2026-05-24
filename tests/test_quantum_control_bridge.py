@@ -770,3 +770,23 @@ class TestQuantumBridgePipelineWiring:
             )
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestQuantumControlBridgeImportExportContracts:
+    def test_import_export_roundtrip(self):
+        bridge = QuantumControlBridge(4)
+        artifact = {"phases": [0.1, 0.2, 0.3, 0.4], "fidelity": 0.9}
+        state = bridge.import_artifact(artifact)
+        exported = bridge.export_artifact(state)
+        assert exported["fidelity"] == state.stability_proxy
+
+    def test_import_knm_non_square_error(self):
+        bridge = QuantumControlBridge(4)
+        with pytest.raises(ValueError, match="square"):
+            bridge.import_knm(np.ones((3, 4)))
+
+
+# ──────────────────────────────────────────────────────────────────────
+# audit/logger.py: phases without omegas raises ValueError
+# ──────────────────────────────────────────────────────────────────────

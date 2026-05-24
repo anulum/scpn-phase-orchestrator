@@ -8,8 +8,10 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -20,7 +22,18 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
     Place,
     Transition,
 )
-from scpn_phase_orchestrator.supervisor.regimes import Regime
+from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+
+def _make_upde(rs: list[float]) -> UPDEState:
+    return UPDEState(
+        layers=[LayerState(R=r, psi=0.0) for r in rs],
+        cross_layer_alignment=np.zeros((len(rs), len(rs))),
+        stability_proxy=sum(rs) / max(len(rs), 1),
+        regime_id="test",
+    )
 
 
 def _protocol_net():
@@ -298,11 +311,6 @@ def test_multiple_marked_priority():
 
 def test_supervisor_fires_petri_transition():
     """End-to-end: SupervisorPolicy → PetriNetAdapter → RegimeManager."""
-    from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
-    from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
-    from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
-    from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
-
     bus = EventBus()
     rm = RegimeManager(event_bus=bus)
     adapter = PetriNetAdapter(
@@ -326,5 +334,44 @@ def test_supervisor_fires_petri_transition():
     assert any(e.kind == "petri_transition" for e in bus.history)
 
 
+def _make_upde(rs: list[float]) -> UPDEState:
+    return UPDEState(
+        layers=[LayerState(R=r, psi=0.0) for r in rs],
+        cross_layer_alignment=np.zeros((len(rs), len(rs))),
+        stability_proxy=sum(rs) / max(len(rs), 1),
+        regime_id="test",
+    )
+
+
 # Pipeline wiring is proven by test_supervisor_fires_petri_transition above:
 # SupervisorPolicy → PetriNetAdapter → RegimeManager → EventBus.
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestSupervisorPolicyPetriPath:
+    def test_petri_adapter_path(self):
+        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+        from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
+        from scpn_phase_orchestrator.supervisor.petri_net import (
+            Arc,
+            Transition,
+        )
+
+        places = [Place("a"), Place("b")]
+        trans = [
+            Transition("t", inputs=[Arc("a")], outputs=[Arc("b")]),
+        ]
+        net = PetriNet(places, trans)
+        adapter = PetriNetAdapter(
+            net, Marking(tokens={"a": 1}), {"a": "NOMINAL", "b": "NOMINAL"}
+        )
+        mgr = RegimeManager(cooldown_steps=0)
+        policy = SupervisorPolicy(mgr, petri_adapter=adapter)
+        state = _make_upde([0.9])
+        actions = policy.decide(state, BoundaryState(), petri_ctx={"R": 0.9})
+        assert isinstance(actions, list)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# petri_net.py: Guard with missing metric and unknown op
+# ──────────────────────────────────────────────────────────────────────

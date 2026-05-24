@@ -13,6 +13,16 @@ import pytest
 
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 
+TWO_PI = 2.0 * np.pi
+
+
+def _py_engine(n: int, dt: float = 0.01, method: str = "euler", **kwargs):
+    from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+    engine = UPDEEngine(n_oscillators=n, dt=dt, method=method, **kwargs)
+    engine._use_rust = False
+    return engine
+
 
 def test_build_symmetric():
     state = CouplingBuilder().build(8, 0.45, 0.3)
@@ -273,3 +283,62 @@ class TestCouplingKnmPipelineEndToEnd:
 # Pipeline wiring: CouplingBuilder → build/build_scpn_physics → UPDEEngine(RK4)
 # → compute_order_parameter → RegimeManager. Template switching proves
 # topology-dependent dynamics. Performance: build(100)<10ms, SCPN physics<5ms.
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+class TestCouplingBuilderPythonPath:
+    def test_build_python(self, monkeypatch):
+        import scpn_phase_orchestrator.coupling.knm as knm_mod
+
+        monkeypatch.setattr(knm_mod, "_HAS_RUST", False)
+
+        builder = CouplingBuilder()
+        state = builder.build(4, 0.5, 0.3)
+        assert state.knm.shape == (4, 4)
+        assert np.all(np.diag(state.knm) == 0.0), (
+            "Diagonal must be zero (no self-coupling)"
+        )
+        assert state.active_template == "default"
+        # Symmetry contract
+        np.testing.assert_allclose(state.knm, state.knm.T, atol=1e-14)
+        # Non-negativity
+        assert np.all(state.knm >= 0.0), "K_nm must be non-negative"
+        # Decay: K_01 > K_03 (closer oscillators have stronger coupling)
+        assert state.knm[0, 1] >= state.knm[0, 3]
+
+    def test_build_with_amplitude_python(self, monkeypatch):
+        import scpn_phase_orchestrator.coupling.knm as knm_mod
+
+        monkeypatch.setattr(knm_mod, "_HAS_RUST", False)
+
+        builder = CouplingBuilder()
+        state = builder.build_with_amplitude(4, 0.5, 0.3, 0.2, 0.1)
+        assert state.knm_r is not None
+        assert state.knm_r.shape == (4, 4)
+        assert np.all(np.diag(state.knm_r) == 0.0)
+        np.testing.assert_allclose(state.knm_r, state.knm_r.T, atol=1e-14)
+
+    def test_python_engine_wires_into_order_parameter(self, monkeypatch):
+        """Pipeline wiring: Python-path engine output must be valid input
+        to compute_order_parameter — proving the module isn't decorative."""
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        n = 8
+        engine = _py_engine(n, dt=0.01)
+        rng = np.random.default_rng(99)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = np.ones(n)
+        knm = 0.5 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        for _ in range(200):
+            phases = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        r, psi = compute_order_parameter(phases)
+        assert 0.0 <= r <= 1.0, f"R={r} out of [0,1]"
+        assert 0.0 <= psi < TWO_PI, f"Ψ={psi} out of [0,2π)"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# cli.py: non-research safety tier, no-oscillators, amplitude mode,
+#          Psi action, policy_rules, queuewaves check, scaffold bad name
+# ──────────────────────────────────────────────────────────────────────

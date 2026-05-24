@@ -342,3 +342,18 @@ class TestLyapunovRustDispatch:
         assert b1 is fake_backend
         assert b2 is fake_backend
         assert call_count == 1
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestLyapunovGuardValidation:
+    def test_rejects_zero_basin_threshold(self) -> None:
+        with pytest.raises(ValueError, match="basin_threshold must be positive"):
+            LyapunovGuard(basin_threshold=0.0)
+
+    def test_rejects_negative_basin_threshold(self) -> None:
+        with pytest.raises(ValueError, match="basin_threshold must be positive"):
+            LyapunovGuard(basin_threshold=-0.5)
+
+    def test_default_basin_threshold_is_half_pi(self) -> None:
+        m = LyapunovGuard()
+        assert abs(m._basin_threshold - np.pi / 2.0) < 1e-12

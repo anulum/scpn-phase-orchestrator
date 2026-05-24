@@ -295,3 +295,35 @@ class TestNPERustDispatch:
         assert fn1 is fake_compute_npe
         assert fn2 is fake_compute_npe
         assert call_count == 1
+
+
+# Salvaged module-specific behavioural contracts from deleted sprint file.
+class TestNPEPhysicsContracts:
+    """Verify NPE (normalised phase entropy) satisfies
+    information-theoretic bounds."""
+
+    def test_identical_phases_zero_entropy(self):
+        """All phases identical → no disorder → NPE = 0."""
+        assert compute_npe(np.array([1.0, 1.0, 1.0])) == 0.0
+
+    def test_two_phases_zero(self):
+        assert compute_npe(np.array([0.0, 1.0])) == 0.0
+
+    def test_uniform_phases_high_entropy(self):
+        """Uniformly spread phases → maximum disorder → NPE near 1."""
+        phases = np.linspace(0, 2 * np.pi, 64, endpoint=False)
+        npe = compute_npe(phases)
+        assert npe > 0.8, f"Uniform phases should give NPE near 1, got {npe:.3f}"
+
+    def test_npe_bounded_zero_to_one(self):
+        """NPE must always be in [0, 1]."""
+        rng = np.random.default_rng(42)
+        for _ in range(10):
+            phases = rng.uniform(0, 2 * np.pi, rng.integers(3, 100))
+            npe = compute_npe(phases)
+            assert 0.0 <= npe <= 1.0 + 1e-10, f"NPE={npe} outside [0,1]"
+
+
+# ---------------------------------------------------------------------------
+# PGBO: phase-geometry-binding observer
+# ---------------------------------------------------------------------------

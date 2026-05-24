@@ -400,3 +400,74 @@ class TestSNNPipelineWiring:
 
         actions = bridge.spike_rates_to_actions(rates, layer_assignments=[0, 1, 2, 3])
         assert isinstance(actions, list)
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestSNNControllerBridge:
+    def test_upde_to_current(self):
+        from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+        bridge = SNNControllerBridge(n_neurons=100)
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=i * 0.1) for i in range(4)],
+            cross_layer_alignment=np.eye(4),
+            stability_proxy=0.5,
+            regime_id=0,
+        )
+        currents = bridge.upde_state_to_input_current(state)
+        assert currents.shape == (4,)
+        assert np.all(np.isfinite(currents))
+        np.testing.assert_allclose(currents, [0.5, 0.5, 0.5, 0.5])
+        np.testing.assert_allclose(
+            bridge.upde_state_to_input_current(state, i_scale=2.5),
+            [1.25, 1.25, 1.25, 1.25],
+        )
+
+    def test_spike_rates_to_actions(self):
+        from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
+
+        bridge = SNNControllerBridge()
+        rates = np.array([10.0, 50.0, 100.0, 200.0])
+        actions = bridge.spike_rates_to_actions(rates, layer_assignments=[0, 1, 2, 3])
+        assert [action.scope for action in actions] == ["layer_2", "layer_3"]
+        assert [action.knob for action in actions] == ["K", "K"]
+        np.testing.assert_allclose([action.value for action in actions], [0.05, 0.15])
+        assert [action.ttl_s for action in actions] == [5.0, 5.0]
+        assert actions[0].justification == "SNN group 2: 100.0 Hz"
+        assert actions[1].justification == "SNN group 3: 200.0 Hz"
+
+    def test_lif_rate_estimate_monotonic(self):
+        """Higher input current → higher firing rate (LIF model property)."""
+        from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
+
+        bridge = SNNControllerBridge()
+        currents = np.array([0.5, 1.0, 1.5, 2.0])
+        rates = bridge.lif_rate_estimate(currents)
+        assert rates.shape == (4,)
+        assert np.all(rates >= 0.0), "Firing rates must be non-negative"
+        # Monotonicity: higher current → higher or equal rate
+        for i in range(len(rates) - 1):
+            assert rates[i + 1] >= rates[i] - 1e-10, (
+                f"LIF rate not monotonic: I={currents[i]:.1f}→{rates[i]:.1f}, "
+                f"I={currents[i + 1]:.1f}→{rates[i + 1]:.1f}"
+            )
+
+    def test_build_numpy_network_returns_valid_object(self):
+        from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
+
+        bridge = SNNControllerBridge()
+        net = bridge.build_numpy_network(4)
+        assert net is not None
+        assert net.n_layers == 4
+        assert net.synapse == 0.01
+        np.testing.assert_array_equal(net.input_node, np.zeros(4))
+        np.testing.assert_array_equal(net.output_node, np.zeros(4))
+        assert net.ensemble.n_neurons == bridge.n_neurons
+        assert net.ensemble.encoders.shape == (bridge.n_neurons, 4)
+        assert set(np.unique(net.ensemble.encoders)) == {-1.0, 1.0}
+        assert np.all(net.ensemble.alpha > 0.0)
+
+    def test_snn_bridge_pipeline_wiring(self):
+        """End-to-end: UPDEState → SNN currents → rates → actions.
+        Verifies the full adapter pipeline, not just individual methods."""

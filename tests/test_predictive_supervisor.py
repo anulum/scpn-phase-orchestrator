@@ -721,3 +721,44 @@ class TestFEPHierarchyInPredictiveCoverage:
             pytest.approx(0.0),
             pytest.approx(np.pi),
         )
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestPredictiveSupervisorBehavioural:
+    """Verify that predictive supervisor makes future predictions
+    with valid fields and sensible structure."""
+
+    def _make_supervisor(self, n=8):
+        from scpn_phase_orchestrator.supervisor.predictive import PredictiveSupervisor
+
+        return PredictiveSupervisor(
+            n_oscillators=n,
+            dt=0.01,
+            horizon=5,
+            divergence_threshold=0.01,
+        )
+
+    def test_prediction_has_required_fields(self):
+        ps = self._make_supervisor()
+        phases = np.linspace(0, 2 * np.pi, 8, endpoint=False)
+        omegas = np.random.default_rng(0).normal(0, 5, 8)
+        knm = np.ones((8, 8)) * 0.01
+        np.fill_diagonal(knm, 0)
+        alpha = np.zeros((8, 8))
+        pred = ps.predict(phases, omegas, knm, alpha)
+        assert hasattr(pred, "will_degrade")
+        assert hasattr(pred, "will_critical")
+        assert isinstance(pred.will_degrade, bool)
+        assert isinstance(pred.will_critical, bool)
+
+    def test_stable_system_not_predicted_critical(self):
+        """Strong coupling + low omegas → should not predict critical."""
+        ps = self._make_supervisor()
+        phases = np.zeros(8)  # synchronised
+        omegas = np.zeros(8)  # no drift
+        knm = np.ones((8, 8)) * 2.0  # strong coupling
+        np.fill_diagonal(knm, 0)
+        alpha = np.zeros((8, 8))
+        pred = ps.predict(phases, omegas, knm, alpha)
+        # Synchronised with strong coupling should not predict degradation
+        assert not pred.will_critical

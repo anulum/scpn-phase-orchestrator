@@ -452,3 +452,18 @@ def test_sindy_single_timestep_returns_zero_equations():
 # autotune/pipeline.py). These tests pin the contract every consumer
 # relies on: zero-coupling must sparsify, the threshold must suppress
 # weak terms, and invalid constructor arguments must fail loudly.
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestSindyValidation:
+    def test_rejects_negative_threshold(self) -> None:
+        with pytest.raises(ValueError, match="threshold must be non-negative"):
+            PhaseSINDy(threshold=-0.01)
+
+    def test_rejects_zero_max_iter(self) -> None:
+        with pytest.raises(ValueError, match="max_iter must be >= 1"):
+            PhaseSINDy(max_iter=0)
+
+    def test_rejects_negative_max_iter(self) -> None:
+        with pytest.raises(ValueError, match="max_iter must be >= 1"):
+            PhaseSINDy(max_iter=-3)

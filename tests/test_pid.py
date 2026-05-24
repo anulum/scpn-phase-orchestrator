@@ -260,3 +260,57 @@ class TestPIDRustDispatch:
         val = synergy(phases, [0, 1, 2], [3, 4, 5], n_bins=8)
         assert np.isfinite(val)
         assert val >= 0.0
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestPIDInformationTheory:
+    """Verify circular entropy and mutual information edge cases
+    satisfy information-theoretic bounds."""
+
+    def test_circular_entropy_empty_is_zero(self):
+        from scpn_phase_orchestrator.monitor.pid import _circular_entropy
+
+        assert _circular_entropy(np.array([])) == 0.0
+
+    def test_circular_entropy_single_value_nonnegative(self):
+        from scpn_phase_orchestrator.monitor.pid import _circular_entropy
+
+        result = _circular_entropy(np.array([100.0]))
+        assert result >= 0.0
+
+    def test_circular_entropy_uniform_higher_than_peaked(self):
+        """Uniformly spread phases should have higher entropy than clustered."""
+        from scpn_phase_orchestrator.monitor.pid import _circular_entropy
+
+        uniform = np.linspace(0, 2 * np.pi, 100, endpoint=False)
+        clustered = np.random.default_rng(0).normal(1.0, 0.01, 100)
+        h_uniform = _circular_entropy(uniform)
+        h_clustered = _circular_entropy(clustered)
+        assert h_uniform > h_clustered, (
+            f"H_uniform={h_uniform:.3f} should > H_clustered={h_clustered:.3f}"
+        )
+
+    def test_joint_entropy_empty_is_zero(self):
+        from scpn_phase_orchestrator.monitor.pid import _joint_entropy_2d
+
+        assert _joint_entropy_2d(np.array([]), np.array([])) == 0.0
+
+    def test_mutual_information_empty_is_zero(self):
+        from scpn_phase_orchestrator.monitor.pid import _mutual_information_paired
+
+        assert _mutual_information_paired(np.array([]), np.array([])) == 0.0
+
+    def test_mutual_information_mismatched_lengths_is_zero(self):
+        from scpn_phase_orchestrator.monitor.pid import _mutual_information_paired
+
+        assert _mutual_information_paired(np.array([1.0]), np.array([1.0, 2.0])) == 0.0
+
+    def test_mutual_information_nonnegative(self):
+        """MI must be non-negative for any valid inputs."""
+        from scpn_phase_orchestrator.monitor.pid import _mutual_information_paired
+
+        rng = np.random.default_rng(42)
+        a = rng.uniform(0, 2 * np.pi, 200)
+        b = rng.uniform(0, 2 * np.pi, 200)
+        mi = _mutual_information_paired(a, b)
+        assert mi >= -1e-10, f"MI must be non-negative, got {mi}"

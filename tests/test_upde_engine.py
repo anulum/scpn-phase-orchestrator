@@ -16,6 +16,12 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 TWO_PI = 2.0 * np.pi
 
 
+def _py_engine(n: int, dt: float = 0.01, method: str = "euler", **kwargs):
+    engine = UPDEEngine(n_oscillators=n, dt=dt, method=method, **kwargs)
+    engine._use_rust = False
+    return engine
+
+
 def test_identical_phases_stay_synchronised(sample_knm, sample_omegas):
     n = 8
     engine = UPDEEngine(n_oscillators=n, dt=0.01)
@@ -193,3 +199,225 @@ def test_rk45_exhausted_retries_returns_valid_phases():
     assert np.all(np.isfinite(result))
     assert np.all(result >= 0.0)
     assert np.all(result < TWO_PI)
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestUPDEEngineInputValidation:
+    """Verify that UPDEEngine rejects invalid inputs with clear error messages
+    and that RK45 handles extreme conditions gracefully."""
+
+    def test_alpha_nan_raises_with_message(self):
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+        eng = UPDEEngine(2, dt=0.01)
+        with pytest.raises(ValueError, match="alpha contains NaN"):
+            eng.step(
+                np.array([0.1, 0.2]),
+                np.array([1.0, 1.0]),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
+                np.array([[0.0, float("nan")], [0.0, 0.0]]),
+            )
+
+    def test_alpha_inf_also_rejected(self):
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+        eng = UPDEEngine(2, dt=0.01)
+        with pytest.raises(ValueError, match="alpha contains NaN"):
+            eng.step(
+                np.array([0.1, 0.2]),
+                np.array([1.0, 1.0]),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
+                np.array([[0.0, float("inf")], [0.0, 0.0]]),
+            )
+
+    def test_rk45_extreme_coupling_remains_finite(self):
+        """RK45 with extremely tight tolerances and large coupling must
+        exhaust retries gracefully (fallback to Euler) and return finite phases."""
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+        eng = UPDEEngine(4, dt=1.0, method="rk45", atol=1e-15, rtol=1e-15)
+        phases = np.array([0.0, np.pi / 2, np.pi, 3 * np.pi / 2])
+        omegas = np.array([100.0, 200.0, 300.0, 400.0])
+        knm = np.full((4, 4), 1000.0)
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((4, 4))
+
+        result = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        assert result.shape == (4,)
+        assert np.all(np.isfinite(result)), (
+            f"RK45 fallback must return finite phases: {result}"
+        )
+        # Phases must have changed (omegas are non-zero)
+        assert not np.allclose(result, phases), (
+            "Extreme conditions should still advance phases"
+        )
+
+
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+
+
+class TestUPDEEnginePythonPath:
+    def test_euler_step(self):
+        n = 4
+        engine = _py_engine(n, dt=0.01)
+        rng = np.random.default_rng(0)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = np.ones(n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        result = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        assert result.shape == (n,)
+        assert np.all(result >= 0.0)
+        assert np.all(result < TWO_PI)
+
+    def test_euler_with_zeta(self):
+        n = 4
+        engine = _py_engine(n, dt=0.01)
+        phases = np.zeros(n)
+        omegas = np.zeros(n)
+        knm = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+        result = engine.step(phases, omegas, knm, 1.0, np.pi / 2, alpha)
+        assert np.all(result > 0.0)
+
+    def test_rk4_step(self):
+        n = 4
+        engine = _py_engine(n, dt=0.01, method="rk4")
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = rng.uniform(0.5, 2.0, n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        result = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        assert result.shape == (n,)
+        assert np.all(np.isfinite(result))
+        assert not np.allclose(result, phases), "RK4 must advance phases"
+
+    def test_rk45_step(self):
+        n = 4
+        engine = _py_engine(n, dt=0.01, method="rk45")
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = rng.uniform(0.5, 2.0, n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        result = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        assert result.shape == (n,)
+        assert np.all(np.isfinite(result))
+        assert engine.last_dt > 0.0
+        assert not np.allclose(result, phases), "RK45 must advance phases"
+
+    def test_rk45_with_zeta(self):
+        n = 4
+        engine = _py_engine(n, dt=0.01, method="rk45")
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = rng.uniform(0.5, 2.0, n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        result = engine.step(phases, omegas, knm, 0.5, 1.0, alpha)
+        assert np.all(np.isfinite(result))
+
+    def test_run_euler(self):
+        n = 4
+        engine = _py_engine(n, dt=0.01)
+        rng = np.random.default_rng(0)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = np.ones(n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        result = engine.run(phases, omegas, knm, 0.0, 0.0, alpha, 10)
+        assert result.shape == (n,)
+        assert np.all(result >= 0.0)
+        assert np.all(result < TWO_PI)
+
+    def test_run_rk4(self):
+        n = 4
+        engine = _py_engine(n, dt=0.01, method="rk4")
+        phases = np.zeros(n)
+        omegas = np.ones(n)
+        knm = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+        result = engine.run(phases, omegas, knm, 0.0, 0.0, alpha, 5)
+        assert result.shape == (n,)
+        # With ω=1 and no coupling, phases should advance by ~5*dt*ω = 0.05
+        expected = (phases + 5 * 0.01 * omegas) % TWO_PI
+        np.testing.assert_allclose(result, expected, atol=1e-4)
+
+    def test_run_rk45(self):
+        """RK45 adaptive: phases must advance and stay finite."""
+        n = 4
+        engine = _py_engine(n, dt=0.01, method="rk45")
+        phases = np.zeros(n)
+        omegas = np.ones(n)
+        knm = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+        result = engine.run(phases, omegas, knm, 0.0, 0.0, alpha, 5)
+        assert result.shape == (n,)
+        assert np.all(np.isfinite(result))
+        assert not np.allclose(result, phases), "RK45 run must advance phases"
+
+    def test_python_euler_matches_analytical_free_rotation(self):
+        """Without coupling, Euler: θ(t) = θ₀ + ω·dt·n_steps (analytical)."""
+        n = 4
+        engine = _py_engine(n, dt=0.01)
+        phases = np.array([0.0, 1.0, 2.0, 3.0])
+        omegas = np.array([1.0, 2.0, 3.0, 4.0])
+        knm = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+        result = engine.run(phases, omegas, knm, 0.0, 0.0, alpha, 100)
+        expected = (phases + 100 * 0.01 * omegas) % TWO_PI
+        np.testing.assert_allclose(result, expected, atol=1e-10)
+
+    def test_python_rk4_euler_agree_for_zero_coupling(self):
+        """RK4 and Euler must agree for free rotation (no coupling)."""
+        n = 4
+        phases = np.array([0.5, 1.5, 2.5, 3.5])
+        omegas = np.array([1.0, 1.5, 2.0, 0.5])
+        knm = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+        r_euler = _py_engine(n, dt=0.01).run(phases, omegas, knm, 0.0, 0.0, alpha, 50)
+        r_rk4 = _py_engine(n, dt=0.01, method="rk4").run(
+            phases, omegas, knm, 0.0, 0.0, alpha, 50
+        )
+        np.testing.assert_allclose(r_euler, r_rk4, atol=1e-6)
+
+
+class TestUPDEEngineValidation:
+    def test_nan_zeta_raises(self):
+        engine = _py_engine(4, dt=0.01)
+        with pytest.raises(ValueError, match="finite"):
+            engine.step(
+                np.zeros(4),
+                np.ones(4),
+                np.zeros((4, 4)),
+                float("nan"),
+                0.0,
+                np.zeros((4, 4)),
+            )
+
+    def test_inf_psi_raises(self):
+        engine = _py_engine(4, dt=0.01)
+        with pytest.raises(ValueError, match="finite"):
+            engine.step(
+                np.zeros(4),
+                np.ones(4),
+                np.zeros((4, 4)),
+                0.0,
+                float("inf"),
+                np.zeros((4, 4)),
+            )
+
+
+# ──────────────────────────────────────────────────────────────────────
+# physical.py: force Python fallback path for extract()
+# ──────────────────────────────────────────────────────────────────────

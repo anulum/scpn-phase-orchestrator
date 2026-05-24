@@ -287,3 +287,35 @@ class TestEVSPipelineWiring:
         result = mon.evaluate(trajectory, list(range(80, 100)), 10.0, 20.0)
         assert isinstance(result, evs_mod.EVSResult)
         assert isinstance(result.is_entrained, bool)
+
+
+# Salvaged module-specific behavioural contracts from deleted broad tests.
+class TestEVSBehavioural:
+    """Verify EVSMonitor produces structured results with valid fields."""
+
+    def test_single_trial_returns_result(self):
+        from scpn_phase_orchestrator.monitor.evs import EVSMonitor
+
+        m = EVSMonitor()
+        phases = np.random.default_rng(0).uniform(0, 2 * np.pi, (1, 100))
+        result = m.evaluate(
+            phases,
+            pause_indices=[50],
+            target_freq=10.0,
+            control_freq=20.0,
+        )
+        assert hasattr(result, "is_entrained")
+        assert isinstance(result.is_entrained, bool)
+
+    def test_multi_trial_aggregation(self):
+        from scpn_phase_orchestrator.monitor.evs import EVSMonitor
+
+        m = EVSMonitor()
+        phases = np.random.default_rng(1).uniform(0, 2 * np.pi, (5, 200))
+        result = m.evaluate(
+            phases,
+            pause_indices=[100],
+            target_freq=10.0,
+            control_freq=20.0,
+        )
+        assert hasattr(result, "is_entrained")
