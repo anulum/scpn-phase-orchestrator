@@ -10,7 +10,7 @@
 
 Covers: non-negativity, zero at synchronised fixed points, analytical
 identity against the explicit sum form, scaling with ``dt`` and
-``alpha``, input-edge cases (``n=0``, ``dt≤0``), and Hypothesis
+``alpha``, input-edge cases (``n=0``, ``dt=0``), and Hypothesis
 property testing.
 """
 
@@ -141,12 +141,12 @@ class TestEdgeCases:
         )
 
     @_python
-    def test_non_positive_dt_returns_zero(self):
+    def test_zero_dt_returns_zero_and_negative_dt_fails_closed(self):
         phases = np.zeros(3)
         omegas = np.ones(3)
         knm = np.zeros((3, 3))
         assert entropy_production_rate(phases, omegas, knm, 0.5, 0.0) == 0.0
-        assert (
+        with pytest.raises(ValueError, match="dt must be non-negative"):
             entropy_production_rate(
                 phases,
                 omegas,
@@ -154,8 +154,6 @@ class TestEdgeCases:
                 0.5,
                 -0.1,
             )
-            == 0.0
-        )
 
 
 class TestInputValidation:
