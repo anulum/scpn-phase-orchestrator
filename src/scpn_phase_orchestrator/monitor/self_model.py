@@ -174,7 +174,7 @@ def compute_self_model_error(
         channel_count=channel_count,
     )
 
-    phase_errors = predicted - observed
+    phase_errors = _wrapped_phase_errors(predicted, observed)
     channel_rmse = tuple(
         float(np.sqrt(np.mean(np.square(errors)))) for errors in phase_errors
     )
@@ -342,6 +342,13 @@ def _coerce_channel_matrix(values: object, *, name: str) -> FloatArray:
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain finite values")
     return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _wrapped_phase_errors(predicted: FloatArray, observed: FloatArray) -> FloatArray:
+    return np.asarray(
+        np.arctan2(np.sin(predicted - observed), np.cos(predicted - observed)),
+        dtype=np.float64,
+    )
 
 
 def _coerce_order_vector(values: object, *, name: str) -> FloatArray:

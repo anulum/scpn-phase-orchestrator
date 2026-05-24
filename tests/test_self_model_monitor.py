@@ -124,7 +124,7 @@ def test_self_model_error_weighted_metrics() -> None:
         dtype=np.float64,
     )
     predicted = np.array(
-        [[1.0, 1.0], [10.0, 10.0]],
+        [[1.0, 1.0], [2.0, 2.0]],
         dtype=np.float64,
     )
     result = compute_self_model_error(
@@ -133,11 +133,25 @@ def test_self_model_error_weighted_metrics() -> None:
         channel_weights=(1.0, 3.0),
     )
 
-    assert result.weighted_rmse == pytest.approx(
-        np.sqrt(0.25 * 1.0**2 + 0.75 * 10.0**2)
+    assert result.weighted_rmse == pytest.approx(np.sqrt(0.25 * 1.0**2 + 0.75 * 2.0**2))
+    assert result.weighted_mae == pytest.approx(0.25 * 1.0 + 0.75 * 2.0)
+    assert result.weighted_max_abs_error == pytest.approx(0.75 * 2.0)
+
+
+def test_self_model_error_wraps_phase_residuals_across_branch_cut() -> None:
+    observed = np.array([[np.pi - 0.05]], dtype=np.float64)
+    predicted = np.array([[-np.pi + 0.05]], dtype=np.float64)
+
+    result = compute_self_model_error(
+        observed,
+        predicted,
+        tolerance=0.2,
+        max_abs_tolerance=0.2,
     )
-    assert result.weighted_mae == pytest.approx(0.25 * 1.0 + 0.75 * 10.0)
-    assert result.weighted_max_abs_error == pytest.approx(0.75 * 10.0)
+
+    assert result.overall_max_abs_error == pytest.approx(0.1, abs=1e-12)
+    assert result.overall_rmse == pytest.approx(0.1, abs=1e-12)
+    assert result.breached is False
 
 
 def test_self_model_error_channel_labels_default_and_explicit() -> None:
