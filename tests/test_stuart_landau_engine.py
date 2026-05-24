@@ -98,6 +98,12 @@ class TestShapeValidation:
         with pytest.raises(ValueError, match="zeta and psi must be finite"):
             eng.step(_make_state(4), omegas, mu, knm, knm, np.nan, 0.0, alpha)
 
+    def test_negative_epsilon_raises(self) -> None:
+        eng = _make_engine(4)
+        omegas, mu, knm, alpha = _zeros(4)
+        with pytest.raises(ValueError, match="epsilon"):
+            eng.step(_make_state(4), omegas, mu, knm, knm, 0.0, 0.0, alpha, -0.1)
+
 
 class TestAmplitudeInvariants:
     def test_amplitudes_nonnegative(self) -> None:

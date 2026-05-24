@@ -78,6 +78,13 @@ def _validate_finite_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _validate_nonnegative_float(value: object, *, name: str) -> float:
+    coerced = _validate_finite_float(value, name=name)
+    if coerced < 0.0:
+        raise ValueError(f"{name} must be non-negative, got {value!r}")
+    return coerced
+
+
 def _validate_phase_drive_float(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"zeta and psi must be finite; {name} got {value!r}")
@@ -314,7 +321,7 @@ class StuartLandauEngine:
         )
         zeta = _validate_phase_drive_float(zeta, name="zeta")
         psi = _validate_phase_drive_float(psi, name="psi")
-        epsilon = _validate_finite_float(epsilon, name="epsilon")
+        epsilon = _validate_nonnegative_float(epsilon, name="epsilon")
         return state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon
 
     def _derivative(self, state: FloatArray, p: _Params) -> FloatArray:
