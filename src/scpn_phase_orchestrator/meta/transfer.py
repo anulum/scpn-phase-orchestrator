@@ -37,6 +37,21 @@ _KNOB_ORDER = ("K", "alpha", "zeta", "Psi")
 _PACKAGE_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
+def _loads_meta_json(payload: str) -> Any:
+    try:
+        return json.loads(payload, parse_constant=_reject_json_constant)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise ValueError(
+            "meta-transfer JSON must contain only finite JSON numbers"
+        ) from exc
+
+
 @dataclass(frozen=True)
 class MetaPolicyRecord:
     """One replay-derived domain policy example."""
@@ -271,7 +286,7 @@ class CrossDomainMetaTransfer:
     @classmethod
     def from_json_package(cls, payload: str) -> CrossDomainMetaTransfer:
         """Restore a packaged meta-transfer model."""
-        data = json.loads(payload)
+        data = _loads_meta_json(payload)
         if not isinstance(data, dict):
             raise ValueError("package must be a JSON object")
         if data.get("schema") != "scpn_meta_transfer_package_v1":
@@ -301,7 +316,7 @@ def records_from_audit_jsonl(path: str | Path) -> tuple[MetaPolicyRecord, ...]:
             stripped = line.strip()
             if not stripped:
                 continue
-            payload = json.loads(stripped)
+            payload = _loads_meta_json(stripped)
             records.append(_record_from_payload(payload, line_number))
     return tuple(records)
 

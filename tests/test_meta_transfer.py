@@ -164,7 +164,7 @@ class TestMetaTransferBehaviour:
                     {"knob": "K", "value": 0.04},
                     {"knob": "alpha", "value": 0.02},
                     {"knob": "unknown", "value": 1.0},
-                    {"knob": "zeta", "value": float("nan")},
+                    {"knob": "zeta", "value": "not-a-number"},
                 ],
                 "reward": 0.5,
             },
@@ -348,6 +348,14 @@ class TestMetaTransferBehaviour:
         with pytest.raises(ValueError, match="schema"):
             CrossDomainMetaTransfer.from_json_package('{"schema":"wrong"}')
 
+    def test_json_package_rejects_non_finite_json_constants(self) -> None:
+        payload = (
+            '{"schema":"scpn_meta_transfer_package_v1",'
+            '"records":[{"domain":"bad","features":{"R":NaN},"knobs":{"K":0.1}}]}'
+        )
+        with pytest.raises(ValueError, match="finite JSON"):
+            CrossDomainMetaTransfer.from_json_package(payload)
+
     @pytest.mark.parametrize(
         ("payload", "expected_error"),
         [
@@ -526,6 +534,19 @@ class TestMetaTransferBehaviour:
         )
 
         with pytest.raises(json.JSONDecodeError):
+            records_from_audit_jsonl(audit_path)
+
+    def test_records_from_audit_jsonl_rejects_non_finite_json_constants(
+        self,
+        tmp_path,
+    ) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text(
+            '{"domain":"bad","features":{"R":NaN},"knobs":{"K":0.1}}\n',
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="finite JSON"):
             records_from_audit_jsonl(audit_path)
 
     def test_records_from_audit_directory_handles_nested_custom_pattern(
