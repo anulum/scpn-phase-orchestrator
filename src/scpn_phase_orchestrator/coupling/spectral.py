@@ -138,10 +138,9 @@ def _validate_gamma_max(value: object) -> float:
 def _validate_non_negative_scalar(
     value: object, *, name: str, allow_infinite: bool = False
 ) -> float:
-    try:
-        resolved = float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a non-negative scalar") from exc
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a non-negative scalar")
+    resolved = float(value)
     if allow_infinite and np.isposinf(resolved):
         return resolved
     if not np.isfinite(resolved) or resolved < -1e-10:
@@ -196,12 +195,10 @@ def _validate_spectral_output(
     *,
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
-    try:
-        eigvals_raw, fiedler_raw = value  # type: ignore[misc]
-    except (TypeError, ValueError) as exc:
-        raise ValueError(
-            "spectral primitive output must be (eigvals, fiedler)"
-        ) from exc
+    if not isinstance(value, tuple) or len(value) != 2:
+        raise ValueError("spectral primitive output must be (eigvals, fiedler)")
+    eigvals_raw = value[0]
+    fiedler_raw = value[1]
     try:
         eigvals = np.asarray(eigvals_raw, dtype=np.float64)
         fiedler = np.asarray(fiedler_raw, dtype=np.float64)
