@@ -120,6 +120,42 @@ def test_validate_symbolic_binding_functor_fails_schema_obligation_on_modified()
     assert schema_obligation["status"] == "failed"
 
 
+@pytest.mark.parametrize("layer_index", [True, -1])
+def test_invalid_layer_indexes_do_not_create_categorical_objects(
+    layer_index: object,
+) -> None:
+    artifacts = compile_symbolic_binding(
+        "A 2 layer biological prompt",
+        name="test_topos_symbolic_invalid_layer_index",
+        oscillators_per_layer=2,
+        dry_run_steps=1,
+    )
+    first_layer = replace(
+        artifacts.binding_spec.layers[0],
+        index=layer_index,
+        name=f"layer_{layer_index}",
+    )
+    mutated = replace(
+        artifacts,
+        binding_spec=replace(
+            artifacts.binding_spec,
+            layers=[first_layer, *artifacts.binding_spec.layers[1:]],
+        ),
+    )
+
+    report = validate_symbolic_binding_functor(mutated)
+    payload = report.to_audit_record()
+    index_obligation = _find_obligation(
+        payload,
+        "layer_indexes_are_non_negative_integers",
+    )
+
+    assert report.passed is False
+    assert index_obligation["status"] == "failed"
+    assert "non-negative integer" in index_obligation["evidence"]
+    assert all(obj["name"] != f"layer_{layer_index}" for obj in payload["objects"])
+
+
 def test_retrieval_evidence_creates_evidence_morphisms_when_present():
     artifacts = compile_symbolic_binding(
         "A 1 layer cardiac rhythm prompt",

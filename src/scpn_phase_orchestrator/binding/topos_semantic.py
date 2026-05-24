@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from numbers import Integral
 from typing import Any
 
 from scpn_phase_orchestrator.binding.semantic import (
@@ -202,6 +203,7 @@ def _collect_layer_objects_and_morphisms(
     morphisms: list[SymbolicBindingMorphism] = []
     layer_indices: set[int] = set()
     map_ok = True
+    invalid_index_evidence: list[str] = []
 
     if not spec.layers:
         _add_obligation(
@@ -220,28 +222,30 @@ def _collect_layer_objects_and_morphisms(
         )
 
     for layer in spec.layers:
-        if layer.index in layer_indices:
+        if (
+            isinstance(layer.index, bool)
+            or not isinstance(layer.index, Integral)
+            or layer.index < 0
+        ):
+            map_ok = False
+            invalid_index_evidence.append(
+                f"layer index must be a non-negative integer, got {layer.index!r}"
+            )
+            continue
+
+        layer_index = int(layer.index)
+        if layer_index in layer_indices:
             map_ok = False
             _add_obligation(
                 obligations,
                 name="layer_indexes_unique",
                 passed=False,
-                evidence=f"layer index {layer.index} is duplicated",
+                evidence=f"layer index {layer_index} is duplicated",
             )
             continue
 
-        if not isinstance(layer.index, int):
-            map_ok = False
-            _add_obligation(
-                obligations,
-                name="layer_indexes_are_integers",
-                passed=False,
-                evidence=f"layer index must be an integer, got {layer.index!r}",
-            )
-            continue
-
-        layer_indices.add(layer.index)
-        canonical = f"{_LAYER_NAME_PREFIX}{layer.index}"
+        layer_indices.add(layer_index)
+        canonical = f"{_LAYER_NAME_PREFIX}{layer_index}"
         if layer.name != canonical:
             map_ok = False
             _add_obligation(
@@ -249,7 +253,7 @@ def _collect_layer_objects_and_morphisms(
                 name="layer_indexes_map_to_stable_object_names",
                 passed=False,
                 evidence=(
-                    f"layer index {layer.index} should map to canonical name "
+                    f"layer index {layer_index} should map to canonical name "
                     f"{canonical!r}; got {layer.name!r}"
                 ),
             )
@@ -259,20 +263,30 @@ def _collect_layer_objects_and_morphisms(
                 name=canonical,
                 kind="layer",
                 detail=(
-                    f"index={layer.index}, name={layer.name}, "
+                    f"index={layer_index}, name={layer.name}, "
                     f"oscs={len(layer.oscillator_ids)}"
                 ),
             )
         )
         morphisms.append(
             SymbolicBindingMorphism(
-                source=f"index:{layer.index}",
+                source=f"index:{layer_index}",
                 target=canonical,
                 label="index_to_stable_layer_name",
             )
         )
 
     if spec.layers:
+        _add_obligation(
+            obligations,
+            name="layer_indexes_are_non_negative_integers",
+            passed=not invalid_index_evidence,
+            evidence=(
+                "all layer indexes are non-negative integers"
+                if not invalid_index_evidence
+                else "; ".join(invalid_index_evidence)
+            ),
+        )
         _add_obligation(
             obligations,
             name="layer_indexes_map_to_stable_object_names",
@@ -314,9 +328,11 @@ def _collect_evidence_objects_and_morphisms(
 
     layer_targets = sorted(
         [
-            f"{_LAYER_NAME_PREFIX}{layer.index}"
+            f"{_LAYER_NAME_PREFIX}{int(layer.index)}"
             for layer in artifacts.binding_spec.layers
-            if isinstance(layer.index, int)
+            if not isinstance(layer.index, bool)
+            and isinstance(layer.index, Integral)
+            and layer.index >= 0
         ]
     )
 
