@@ -23,7 +23,7 @@ actuation, dosage advice, or patient-state decisions.
 from __future__ import annotations
 
 from collections.abc import Callable
-from numbers import Real
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -150,10 +150,17 @@ def _dispatch() -> Callable[..., float] | None:
     return None
 
 
-def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
-    raw = np.asarray(value)
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
     if raw.dtype == np.bool_:
+        return True
+    return any(isinstance(item, bool) for item in raw.flat)
+
+
+def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    raw = np.asarray(value)
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -168,9 +175,9 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 def _validate_coupling_matrix(
     value: object, *, name: str, expected_n: int | None = None
 ) -> FloatArray:
-    raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    raw = np.asarray(value)
     try:
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -198,7 +205,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_n_bins(value: object) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if value < 2:
         raise ValueError("n_bins must be greater than or equal to 2")
@@ -206,7 +213,7 @@ def _validate_n_bins(value: object) -> int:
 
 
 def _validate_step_count(value: object, *, name: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be a non-negative integer")
     if value < 0:
         raise ValueError(f"{name} must be a non-negative integer")
@@ -217,6 +224,39 @@ def _validate_reduction_schedule(values: list[float]) -> list[float]:
     return [
         _validate_unit_interval(value, name="reduction_schedule") for value in values
     ]
+
+
+def _validate_reduced_coupling(
+    value: object, *, expected_shape: tuple[int, int]
+) -> FloatArray:
+    try:
+        reduced = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("reduced coupling matrix must be numeric") from exc
+    if reduced.shape != expected_shape:
+        raise ValueError(
+            f"reduced coupling matrix shape {reduced.shape} does not match "
+            f"{expected_shape}"
+        )
+    if not np.all(np.isfinite(reduced)):
+        raise ValueError("reduced coupling matrix must contain only finite values")
+    return np.ascontiguousarray(reduced, dtype=np.float64)
+
+
+def _validate_entropy_value(value: object, *, n_bins: int) -> float:
+    try:
+        scalar = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("entropy output must be numeric") from exc
+    if scalar.shape != ():
+        raise ValueError("entropy output must be scalar")
+    entropy = float(scalar)
+    if not np.isfinite(entropy) or entropy < 0.0:
+        raise ValueError("entropy output must be finite and non-negative")
+    upper = float(np.log(n_bins))
+    if entropy > upper + 1e-12:
+        raise ValueError("entropy output exceeds log(n_bins)")
+    return min(entropy, upper)
 
 
 def reduce_coupling(knm: FloatArray, reduction_factor: float) -> FloatArray:
@@ -233,8 +273,10 @@ def reduce_coupling(knm: FloatArray, reduction_factor: float) -> FloatArray:
     factor = _validate_unit_interval(reduction_factor, name="reduction_factor")
     if _HAS_RUST_REDUCE:
         flat = np.ascontiguousarray(k.ravel())
-        return np.asarray(_rust_reduce(flat, factor)).reshape(k.shape)
-    return k * (1.0 - factor)
+        return _validate_reduced_coupling(
+            _rust_reduce(flat, factor), expected_shape=k.shape
+        )
+    return _validate_reduced_coupling(k * (1.0 - factor), expected_shape=k.shape)
 
 
 def entropy_from_phases(phases: FloatArray, n_bins: int = 36) -> float:
@@ -253,7 +295,13 @@ def entropy_from_phases(phases: FloatArray, n_bins: int = 36) -> float:
         return 0.0
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return float(backend_fn(phase_values, bin_count))
+        try:
+            return _validate_entropy_value(
+                backend_fn(phase_values, bin_count),
+                n_bins=bin_count,
+            )
+        except Exception:
+            backend_fn = None
 
     wrapped = phase_values % (2.0 * np.pi)
     counts, _ = np.histogram(
@@ -266,7 +314,7 @@ def entropy_from_phases(phases: FloatArray, n_bins: int = 36) -> float:
         return 0.0
     probs = counts / total
     probs = probs[probs > 0]
-    return float(-np.sum(probs * np.log(probs)))
+    return _validate_entropy_value(-np.sum(probs * np.log(probs)), n_bins=bin_count)
 
 
 def simulate_psychedelic_trajectory(

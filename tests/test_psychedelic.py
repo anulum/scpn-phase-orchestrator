@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from typing import Any, get_type_hints
 
 import numpy as np
 import pytest
@@ -62,6 +62,7 @@ def test_reduce_coupling_half():
     [
         (np.ones(4), "knm must be a finite 2-D matrix"),
         (np.array([[0.0, np.nan], [1.0, 0.0]]), "knm"),
+        (np.array([[0.0, True], [1.0, 0.0]], dtype=object), "knm"),
     ],
 )
 def test_reduce_coupling_rejects_invalid_coupling_matrix(knm, match):
@@ -73,6 +74,27 @@ def test_reduce_coupling_rejects_invalid_coupling_matrix(knm, match):
 def test_reduce_coupling_rejects_invalid_reduction_factor(reduction_factor):
     with pytest.raises((TypeError, ValueError), match="reduction_factor"):
         reduce_coupling(np.eye(3), reduction_factor)
+
+
+@pytest.mark.parametrize(
+    "backend_output",
+    [
+        np.array([0.0], dtype=np.float64),
+        np.array([[0.0, 1.0]], dtype=np.float64),
+        np.array([[0.0, np.nan], [1.0, 0.0]], dtype=np.float64),
+    ],
+)
+def test_reduce_coupling_rejects_invalid_rust_reduce_output(
+    monkeypatch: pytest.MonkeyPatch,
+    backend_output: np.ndarray,
+) -> None:
+    monkeypatch.setattr(psychedelic_mod, "_HAS_RUST_REDUCE", True)
+    monkeypatch.setattr(
+        psychedelic_mod, "_rust_reduce", lambda *_args: backend_output, raising=False
+    )
+
+    with pytest.raises(ValueError, match="reduced coupling"):
+        reduce_coupling(np.eye(2), 0.5)
 
 
 def test_entropy_uniform_phases_high():
@@ -94,7 +116,14 @@ def test_entropy_empty_phases():
     assert entropy_from_phases(np.array([])) == 0.0
 
 
-@pytest.mark.parametrize("phases", [np.array([[0.0, 1.0]]), np.array([0.0, np.inf])])
+@pytest.mark.parametrize(
+    "phases",
+    [
+        np.array([[0.0, 1.0]]),
+        np.array([0.0, np.inf]),
+        np.array([0.0, True], dtype=object),
+    ],
+)
 def test_entropy_rejects_non_vector_or_non_finite_phases(phases):
     with pytest.raises(ValueError, match="phases"):
         entropy_from_phases(phases)
@@ -104,6 +133,29 @@ def test_entropy_rejects_non_vector_or_non_finite_phases(phases):
 def test_entropy_rejects_invalid_bin_counts(n_bins):
     with pytest.raises((TypeError, ValueError), match="n_bins"):
         entropy_from_phases(np.linspace(0.0, 1.0, 8), n_bins=n_bins)
+
+
+def test_entropy_accepts_numpy_integer_bin_count() -> None:
+    ent = entropy_from_phases(np.linspace(0.0, 1.0, 8), n_bins=np.int64(4))
+
+    assert 0.0 <= ent <= np.log(4)
+
+
+@pytest.mark.parametrize(
+    "backend_value", [-0.1, np.nan, np.inf, [0.5], np.log(4) + 1.0]
+)
+def test_entropy_invalid_backend_payload_falls_back(
+    monkeypatch: pytest.MonkeyPatch,
+    backend_value: Any,
+) -> None:
+    phases = np.linspace(0.0, 1.0, 16)
+    monkeypatch.setattr(
+        psychedelic_mod, "_dispatch", lambda: lambda *_args: backend_value
+    )
+
+    ent = entropy_from_phases(phases, n_bins=4)
+
+    assert 0.0 <= ent <= np.log(4)
 
 
 def test_simulate_trajectory_returns_correct_length():
