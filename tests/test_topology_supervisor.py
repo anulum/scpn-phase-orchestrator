@@ -197,6 +197,34 @@ class TestHigherOrderTopologySupervisor:
                 _zero_knm(4),
                 (Hyperedge((True, 2, 3), strength=0.1),),
             )
+        with pytest.raises(ValueError, match="strength"):
+            supervisor.mutate(
+                np.zeros(3),
+                _zero_knm(3),
+                (Hyperedge((0, 1, 2), strength=True),),
+            )
+
+    @pytest.mark.parametrize(
+        ("phases", "knm", "match"),
+        [
+            ([False, True, False], _zero_knm(3), "phases"),
+            (
+                np.zeros(3),
+                [[False, True, False], [True, False, True], [False, True, False]],
+                "knm",
+            ),
+        ],
+    )
+    def test_rejects_boolean_phase_or_coupling_aliases(
+        self,
+        phases: object,
+        knm: object,
+        match: str,
+    ) -> None:
+        supervisor = HigherOrderTopologySupervisor()
+
+        with pytest.raises(ValueError, match=match):
+            supervisor.mutate(phases, knm)
 
     def test_max_new_simplices_limits_candidate_additions(self) -> None:
         phases = np.array([0.0, 0.0, 0.0, np.pi, np.pi, np.pi], dtype=np.float64)

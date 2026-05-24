@@ -152,6 +152,8 @@ class HigherOrderTopologySupervisor:
 
 
 def _validate_phases(phases: FloatArray) -> FloatArray:
+    if _contains_boolean_alias(phases):
+        raise ValueError("phases must not contain boolean values")
     arr = np.asarray(phases, dtype=np.float64)
     if arr.ndim != 1:
         raise ValueError("phases must be a one-dimensional array")
@@ -163,6 +165,8 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
 
 
 def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
+    if _contains_boolean_alias(knm):
+        raise ValueError("knm must not contain boolean values")
     arr = np.asarray(knm, dtype=np.float64)
     if arr.shape != (n, n):
         raise ValueError(f"knm must have shape ({n}, {n})")
@@ -193,6 +197,8 @@ def _canonical_hyperedges(hyperedges: tuple[Hyperedge, ...]) -> tuple[Hyperedge,
     for edge in hyperedges:
         if not isinstance(edge, Hyperedge):
             raise ValueError("hyperedges must be Hyperedge instances")
+        if isinstance(edge.strength, bool):
+            raise ValueError("hyperedge strength must be finite and non-negative")
         canonical.append(
             Hyperedge(nodes=tuple(sorted(edge.nodes)), strength=float(edge.strength))
         )
@@ -201,6 +207,11 @@ def _canonical_hyperedges(hyperedges: tuple[Hyperedge, ...]) -> tuple[Hyperedge,
 
 def _order_parameter(phases: FloatArray) -> float:
     return float(np.abs(np.mean(np.exp(1j * phases))))
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
 
 
 def _pairwise_phase_alignment(phases: FloatArray) -> FloatArray:
