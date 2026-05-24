@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from numbers import Real
+from numbers import Integral, Real
 from typing import Any
 
 from scpn_phase_orchestrator.supervisor.policy_rules import (
@@ -28,6 +28,7 @@ _SCHEMA_VERSION = "0.1.0"
 _PROOF_BOUNDARY = "categorical_validation_prototype_not_formal_topos_proof"
 _MAX_COMPOUND_CONDITIONS = 32
 _ALLOWED_LOGICS = ("AND", "OR")
+_ALLOWED_CONDITION_OPS = (">", ">=", "<", "<=", "==")
 
 __all__ = [
     "PolicyCompositionMorphism",
@@ -136,6 +137,8 @@ def _build_report_hash(record: dict[str, object]) -> str:
 
 def _as_action_label(action: PolicyAction) -> str:
     """Create a deterministic action label for morphism naming."""
+    if not isinstance(action, PolicyAction):
+        raise ValueError("policy actions must be PolicyAction objects")
     value = _as_finite_real(action.value, "policy action value")
     ttl = _as_finite_real(action.ttl_s, "policy action ttl_s", allow_negative=False)
     if not isinstance(action.knob, str) or not action.knob:
@@ -169,6 +172,25 @@ def _normalised_logic(raw_logic: str) -> str:
     if logic not in _ALLOWED_LOGICS:
         raise ValueError("compound condition logic must be AND or OR")
     return logic
+
+
+def _validate_policy_condition(condition: PolicyCondition) -> None:
+    """Validate an atomic policy predicate used in a composition obligation."""
+    if not isinstance(condition, PolicyCondition):
+        raise ValueError("condition members must be PolicyCondition")
+    if not isinstance(condition.metric, str) or not condition.metric.strip():
+        raise ValueError("policy condition metric must be a non-empty string")
+    if condition.op not in _ALLOWED_CONDITION_OPS:
+        raise ValueError("policy condition op must be one of >, >=, <, <=, ==")
+    if condition.layer is not None and (
+        isinstance(condition.layer, bool)
+        or not isinstance(condition.layer, Integral)
+        or condition.layer < 0
+    ):
+        raise ValueError(
+            "policy condition layer must be a non-negative integer or None"
+        )
+    _as_finite_real(condition.threshold, "policy condition threshold")
 
 
 def _is_non_empty_str_list(value: Any) -> tuple[bool, tuple[str, ...], str | None]:
@@ -302,6 +324,8 @@ def validate_policy_composition_category(
                     raise ValueError(
                         "compound condition members must be PolicyCondition"
                     )
+                for cond in cond_conditions:
+                    _validate_policy_condition(cond)
                 _add_obligation(
                     obligations,
                     name=f"rule.{rule.name}.condition",
@@ -310,6 +334,7 @@ def validate_policy_composition_category(
                 )
             elif isinstance(rule.condition, PolicyCondition):
                 cond_logic = "ATOMIC"
+                _validate_policy_condition(rule.condition)
                 _add_obligation(
                     obligations,
                     name=f"rule.{rule.name}.condition",

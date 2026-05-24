@@ -172,6 +172,110 @@ def test_duplicate_rule_names_or_invalid_compound_logic_cannot_pass():
     )
 
 
+@pytest.mark.parametrize(
+    ("condition", "evidence"),
+    [
+        (
+            PolicyCondition(metric="", layer=0, op=">", threshold=0.1),
+            "metric",
+        ),
+        (
+            PolicyCondition(metric="R", layer=True, op=">", threshold=0.1),
+            "layer",
+        ),
+        (
+            PolicyCondition(metric="R", layer=-1, op=">", threshold=0.1),
+            "layer",
+        ),
+        (
+            PolicyCondition(metric="R", layer=0, op="!=", threshold=0.1),
+            "op",
+        ),
+        (
+            PolicyCondition(metric="R", layer=0, op=">", threshold=True),
+            "threshold",
+        ),
+        (
+            PolicyCondition(metric="R", layer=0, op=">", threshold=float("nan")),
+            "threshold",
+        ),
+    ],
+)
+def test_invalid_atomic_condition_contracts_cannot_pass(
+    condition: PolicyCondition,
+    evidence: str,
+) -> None:
+    report = topos_policy.validate_policy_composition_category(
+        [
+            _rule(
+                "broken",
+                ["NOMINAL"],
+                condition,
+                actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+            )
+        ]
+    )
+
+    condition_obligation = next(
+        item
+        for item in report.to_audit_record()["obligation_records"]
+        if item["name"] == "rule.broken.condition"
+    )
+    assert report.passed is False
+    assert condition_obligation["status"] == "failed"
+    assert evidence in str(condition_obligation["evidence"])
+
+
+def test_invalid_compound_condition_member_contract_cannot_pass() -> None:
+    report = topos_policy.validate_policy_composition_category(
+        [
+            _rule(
+                "compound_broken",
+                ["NOMINAL"],
+                CompoundCondition(
+                    logic="AND",
+                    conditions=[
+                        PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                        PolicyCondition(metric="R", layer=True, op=">", threshold=0.2),
+                    ],
+                ),
+                actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+            )
+        ]
+    )
+
+    condition_obligation = next(
+        item
+        for item in report.to_audit_record()["obligation_records"]
+        if item["name"] == "rule.compound_broken.condition"
+    )
+    assert report.passed is False
+    assert condition_obligation["status"] == "failed"
+    assert "layer" in str(condition_obligation["evidence"])
+
+
+def test_invalid_action_member_contract_cannot_pass() -> None:
+    report = topos_policy.validate_policy_composition_category(
+        [
+            _rule(
+                "bad_action",
+                ["NOMINAL"],
+                PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                actions=[object()],
+            )
+        ]
+    )
+
+    action_obligation = next(
+        item
+        for item in report.to_audit_record()["obligation_records"]
+        if item["name"] == "rule.bad_action.actions"
+    )
+    assert report.passed is False
+    assert action_obligation["status"] == "failed"
+    assert "PolicyAction" in str(action_obligation["evidence"])
+
+
 def test_validation_report_does_not_emit_control_actions(monkeypatch):
     class SpyControlAction:
         def __init__(self, *args, **kwargs):
