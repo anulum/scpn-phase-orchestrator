@@ -375,6 +375,7 @@ def _validate_partition_side(value: object, *, name: str) -> tuple[int, ...]:
     if isinstance(value, (str, bytes)):
         raise ValueError(f"{name} groups must contain integer indices")
     try:
+        # type ignore: arbitrary user iterables are validated item-by-item below.
         items = cast("tuple[object, ...]", tuple(value))  # type: ignore[arg-type]
     except TypeError as exc:
         raise ValueError(f"{name} groups must contain integer indices") from exc
