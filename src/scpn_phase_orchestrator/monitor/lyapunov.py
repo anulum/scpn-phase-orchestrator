@@ -256,6 +256,11 @@ class LyapunovGuard:
             basin_threshold,
             name="basin_threshold",
         )
+        if basin_threshold > np.pi:
+            raise ValueError(
+                f"basin_threshold must be <= pi for geodesic phase distance, "
+                f"got {basin_threshold!r}"
+            )
         self._basin_threshold = basin_threshold
         self._prev_V: float | None = None
 

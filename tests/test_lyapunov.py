@@ -412,3 +412,7 @@ class TestLyapunovGuardValidation:
     def test_default_basin_threshold_is_half_pi(self) -> None:
         m = LyapunovGuard()
         assert abs(m._basin_threshold - np.pi / 2.0) < 1e-12
+
+    def test_rejects_basin_threshold_above_geodesic_phase_limit(self) -> None:
+        with pytest.raises(ValueError, match="basin_threshold must be <= pi"):
+            LyapunovGuard(basin_threshold=np.pi + 1e-6)
