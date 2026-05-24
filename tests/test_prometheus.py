@@ -318,9 +318,7 @@ class TestPrometheusAdapter:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://localhost:9090")
-        raw = (
-            b'{"status":"success","data":{"result":[{"values":[[1,NaN]]}]}}'
-        )
+        raw = b'{"status":"success","data":{"result":[{"values":[[1,NaN]]}]}}'
         with patch(
             "scpn_phase_orchestrator.adapters.prometheus.urlopen"
         ) as mock_urlopen:
@@ -392,7 +390,6 @@ class TestPrometheusAdapter:
 
 
 # Salvaged module-specific behavioural contracts from deleted sprint file.
-
 
 
 def _mock_resp(body: dict):

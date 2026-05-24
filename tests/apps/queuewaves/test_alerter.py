@@ -184,6 +184,7 @@ def test_async_send_with_sink_post_failure():
         sent = await alerter.send([_anomaly()])
         assert len(sent) == 1
 
+
 def test_async_send_failure_log_does_not_leak_sink_url(caplog, monkeypatch):
     """Webhook failures must not echo sink URLs or HTTP exception details."""
 

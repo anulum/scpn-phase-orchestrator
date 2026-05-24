@@ -165,6 +165,7 @@ class TestCLIRun:
         result = runner.invoke(main, ["report", str(log)])
         assert result.exit_code == 0
 
+
 class TestCLIQueuewavesCheck:
     def test_queuewaves_check_with_anomalies(self, tmp_path):
         cfg = {
@@ -205,6 +206,7 @@ class TestCLIQueuewavesCheck:
         result = runner.invoke(main, ["queuewaves", "check", "--config", str(path)])
         assert result.exit_code == 0
         assert "No anomalies detected" in result.output
+
 
 class TestCLIReplay:
     def test_replay_sl_chained(self, tmp_path):

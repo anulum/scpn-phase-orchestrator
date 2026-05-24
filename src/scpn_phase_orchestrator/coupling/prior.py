@@ -87,9 +87,7 @@ class UniversalPrior:
         decay_alpha_mean: float = _DECAY_ALPHA_MEAN,
         decay_alpha_std: float = _DECAY_ALPHA_STD,
     ):
-        self._K_base_mean = _validate_finite_real(
-            K_base_mean, name="K_base_mean"
-        )
+        self._K_base_mean = _validate_finite_real(K_base_mean, name="K_base_mean")
         self._K_base_std = _validate_positive_real(K_base_std, name="K_base_std")
         self._decay_alpha_mean = _validate_finite_real(
             decay_alpha_mean, name="decay_alpha_mean"

@@ -10,6 +10,7 @@
 Validation contracts for BoundaryObserver construction, observation, and event-bus
 wiring.
 """
+
 from __future__ import annotations
 
 import pytest

@@ -159,6 +159,7 @@ def test_get_signal_arrays_requires_min_4():
     assert "a" in arrays
     assert len(arrays["a"]) == 4
 
+
 def test_scrape_successful_response():
     """Mock httpx response to exercise the successful scrape code path."""
 

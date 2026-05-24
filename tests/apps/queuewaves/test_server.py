@@ -342,6 +342,7 @@ def test_pipeline_loop_scrape_failure(minimal_config: QueueWavesConfig):
         r = client.get("/api/v1/health")
         assert r.status_code == 200
 
+
 class TestRunServer:
     def test_run_server_calls_uvicorn(self, tmp_path, monkeypatch):
         import yaml

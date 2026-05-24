@@ -174,9 +174,7 @@ def _layer_indices(layer_mask: BoolArray | IntArray, n_phases: int) -> IntArray:
         indices = mask.astype(np.int64, copy=True).ravel()
     except (TypeError, ValueError) as exc:
         raise ValueError("layer_mask indices must be integers") from exc
-    if indices.size > 0 and (
-        np.any(indices < 0) or np.any(indices >= n_phases)
-    ):
+    if indices.size > 0 and (np.any(indices < 0) or np.any(indices >= n_phases)):
         raise ValueError("layer_mask indices must reference existing oscillators")
     return indices
 

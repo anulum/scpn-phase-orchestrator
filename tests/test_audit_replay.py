@@ -870,8 +870,7 @@ def test_cli_replay_verify_no_header(tmp_path):
     assert result.exit_code == 1
     assert "no header" in result.output
 
-
-# Salvaged module-specific behavioural contracts from deleted mixed tests.
+    # Salvaged module-specific behavioural contracts from deleted mixed tests.
     def test_sl_chained_single_entry(self, tmp_path):
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 

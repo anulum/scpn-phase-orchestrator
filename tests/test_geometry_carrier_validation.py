@@ -41,6 +41,7 @@ def test_u1_geometry_carrier_update_rejects_boolean_epsilon() -> None:
     with pytest.raises(ValueError, match="finite positive real"):
         carrier.update(cost=0.0, epsilon=True)  # type: ignore[arg-type]
 
+
 def test_u1_geometry_carrier_rejects_non_positive_latent_dim() -> None:
     with pytest.raises(ValueError, match="positive integer"):
         GeometryCarrier(n_oscillators=4, z_dim=0, lr=0.1)

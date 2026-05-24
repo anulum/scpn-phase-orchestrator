@@ -8,6 +8,7 @@
 
 """
 Validation contracts for TCBOObserver constructor and phase-observation boundaries."""
+
 from __future__ import annotations
 
 import numpy as np

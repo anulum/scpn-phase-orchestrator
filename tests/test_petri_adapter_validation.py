@@ -154,6 +154,7 @@ def test_u1_petri_adapter_rejects_unknown_place_in_mapping() -> None:
             place_to_regime={"missing": "NOMINAL"},
         )
 
+
 def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
     net = PetriNet(
         places=[Place("nominal")],

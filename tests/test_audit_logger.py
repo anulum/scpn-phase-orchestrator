@@ -433,13 +433,11 @@ class TestAuditHeader:
         assert "seed" not in record
         assert "amplitude_mode" not in record
 
+    # Pipeline wiring: AuditLogger tested via hash chain integrity, SHA-256
+    # verification, and concurrent write safety. TestAuditHashChain and
+    # TestAuditDataIntegrity prove the audit pipeline.
 
-# Pipeline wiring: AuditLogger tested via hash chain integrity, SHA-256
-# verification, and concurrent write safety. TestAuditHashChain and
-# TestAuditDataIntegrity prove the audit pipeline.
-
-
-# Salvaged module-specific behavioural contracts from deleted mixed tests.
+    # Salvaged module-specific behavioural contracts from deleted mixed tests.
     def test_log_step_phases_without_omegas_raises(self, tmp_path):
         log = tmp_path / "bad.jsonl"
         logger = AuditLogger(log)

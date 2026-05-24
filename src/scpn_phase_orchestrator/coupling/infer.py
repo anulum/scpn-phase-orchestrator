@@ -50,9 +50,7 @@ __all__ = [
 ]
 
 
-def _validate_optional_finite_real(
-    value: object | None, *, name: str
-) -> float | None:
+def _validate_optional_finite_real(value: object | None, *, name: str) -> float | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, Real):

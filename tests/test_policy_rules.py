@@ -42,6 +42,7 @@ def _make_upde(rs: list[float], stability: float | None = None) -> UPDEState:
 
 _state = _make_upde
 
+
 def _rich_state() -> UPDEState:
     return UPDEState(
         layers=[

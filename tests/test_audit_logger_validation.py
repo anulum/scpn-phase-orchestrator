@@ -10,6 +10,7 @@
 Validation contracts for AuditLogger path, header, step, event, and finite-array
 payload boundaries.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -156,6 +157,7 @@ def test_u1_audit_logger_log_step_rejects_boolean_step(tmp_path) -> None:
             )
     finally:
         logger._fh.close()
+
 
 def test_u1_audit_logger_log_step_rejects_non_upde_state(tmp_path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
