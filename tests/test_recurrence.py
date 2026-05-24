@@ -65,6 +65,7 @@ class TestRecurrenceMatrix:
         [
             (np.array([0.0, np.nan], dtype=np.float64), "trajectory"),
             (np.array([[0.0], [np.inf]], dtype=np.float64), "trajectory"),
+            (np.array([0.0, True], dtype=object), "trajectory"),
             ([["not-a-state"]], "trajectory"),
         ],
     )
@@ -121,6 +122,31 @@ class TestRecurrenceMatrix:
 
         np.testing.assert_array_equal(R, np.array([[True, False], [False, True]]))
         assert calls == [(2, 2, 0.5, True)]
+
+    @pytest.mark.parametrize(
+        "backend_output",
+        [
+            np.array([1, 0, 1], dtype=np.uint8),
+            np.array([1, 0, 0, 2], dtype=np.uint8),
+            np.array([1, 0, 0, np.nan], dtype=np.float64),
+        ],
+    )
+    def test_backend_invalid_matrix_payload_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch, backend_output: np.ndarray
+    ) -> None:
+        def fake_rm(_traj_flat, _t, _d, _epsilon, _angular):
+            return backend_output
+
+        import scpn_phase_orchestrator.monitor.recurrence as rec_mod
+
+        monkeypatch.setattr(
+            rec_mod,
+            "_dispatch",
+            lambda fn_name: fake_rm if fn_name == "rm" else None,
+        )
+        R = recurrence_matrix(np.array([[0.0], [1.0]]), epsilon=0.5)
+
+        np.testing.assert_array_equal(R, np.array([[True, False], [False, True]]))
 
 
 class TestRQA:
@@ -185,6 +211,44 @@ class TestRQA:
         assert isinstance(result.max_diagonal, int)
         assert isinstance(result.max_vertical, int)
 
+    @pytest.mark.parametrize("line_min", [False, 0, -1, 1.5, "2"])
+    def test_rejects_invalid_line_minimum(self, line_min: Any) -> None:
+        with pytest.raises(ValueError, match="l_min"):
+            rqa(np.zeros(4), epsilon=0.1, l_min=line_min)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"recurrence_rate": -0.1}, "recurrence_rate"),
+            ({"recurrence_rate": 1.1}, "recurrence_rate"),
+            ({"determinism": np.nan}, "determinism"),
+            ({"avg_diagonal": -0.1}, "avg_diagonal"),
+            ({"max_diagonal": -1}, "max_diagonal"),
+            ({"max_diagonal": 1.5}, "max_diagonal"),
+            ({"entropy_diagonal": np.inf}, "entropy_diagonal"),
+            ({"laminarity": 1.1}, "laminarity"),
+            ({"trapping_time": -0.1}, "trapping_time"),
+            ({"max_vertical": -1}, "max_vertical"),
+        ],
+    )
+    def test_rejects_invalid_public_rqa_result_values(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {
+            "recurrence_rate": 0.5,
+            "determinism": 0.4,
+            "avg_diagonal": 2.0,
+            "max_diagonal": 3,
+            "entropy_diagonal": 0.1,
+            "laminarity": 0.2,
+            "trapping_time": 1.5,
+            "max_vertical": 2,
+        }
+        base.update(kwargs)
+
+        with pytest.raises(ValueError, match=match):
+            RQAResult(**base)
+
 
 class TestCrossRecurrence:
     def test_identical_trajectories(self):
@@ -243,6 +307,8 @@ class TestCrossRecurrence:
         [
             (np.array([0.0, np.nan]), np.zeros(2), "traj_a"),
             (np.zeros(2), np.array([0.0, np.inf]), "traj_b"),
+            (np.array([0.0, True], dtype=object), np.zeros(2), "traj_a"),
+            (np.zeros(2), np.array([0.0, False], dtype=object), "traj_b"),
             ([["not-a-state"]], np.zeros((1, 1)), "traj_a"),
         ],
     )
@@ -269,6 +335,21 @@ class TestCrossRecurrence:
                 epsilon=0.1,
                 metric=metric,
             )
+
+    def test_cross_backend_invalid_matrix_payload_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_cross_rm(_a_flat, _b_flat, _t, _d, _epsilon, _angular):
+            return np.array([1, 0, 0, 2], dtype=np.uint8)
+
+        monkeypatch.setattr(
+            recurrence_module,
+            "_dispatch",
+            lambda fn_name: fake_cross_rm if fn_name == "cross_rm" else None,
+        )
+        CR = cross_recurrence_matrix(np.array([0.0, 1.0]), np.array([0.0, 2.0]), 0.5)
+
+        np.testing.assert_array_equal(CR, np.array([[True, False], [False, False]]))
 
 
 class TestRecurrencePipelineWiring:

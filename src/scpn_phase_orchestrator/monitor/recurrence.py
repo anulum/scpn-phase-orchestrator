@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from numbers import Real
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -192,9 +192,17 @@ def _dispatch(fn_name: str) -> object | None:
     return None
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _validate_trajectory(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         trajectory = raw.astype(np.float64, copy=True)
@@ -224,6 +232,62 @@ def _validate_metric(metric: object) -> bool:
     return metric == "angular"
 
 
+def _validate_line_min(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be an integer >= 1, got {value!r}")
+    result = int(value)
+    if result < 1:
+        raise ValueError(f"{name} must be >= 1, got {result}")
+    return result
+
+
+def _validate_unit_interval(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real in [0, 1], got {value!r}")
+    result = float(value)
+    if not np.isfinite(result) or result < 0.0 or result > 1.0:
+        raise ValueError(f"{name} must be in [0, 1], got {value!r}")
+    return result
+
+
+def _validate_non_negative_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
+    result = float(value)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative, got {value!r}")
+    return result
+
+
+def _validate_non_negative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"{name} must be non-negative, got {result}")
+    return result
+
+
+def _backend_recurrence_matrix(value: object, *, t: int, name: str) -> BoolArray:
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} backend output must be array-like") from exc
+    if array.size != t * t:
+        raise ValueError(
+            f"{name} backend output size must be {t * t}, got {array.size}"
+        )
+    try:
+        numeric = array.astype(np.float64, copy=False).ravel()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} backend output must be numeric") from exc
+    if not np.all(np.isfinite(numeric)):
+        raise ValueError(f"{name} backend output must contain only finite values")
+    if not np.all((numeric == 0.0) | (numeric == 1.0)):
+        raise ValueError(f"{name} backend output must contain only 0/1 values")
+    return numeric.reshape(t, t).astype(bool)
+
+
 @dataclass
 class RQAResult:
     """Standard RQA measures from Marwan et al. 2007."""
@@ -236,6 +300,40 @@ class RQAResult:
     laminarity: float
     trapping_time: float
     max_vertical: int
+
+    def __post_init__(self) -> None:
+        self.recurrence_rate = _validate_unit_interval(
+            self.recurrence_rate,
+            name="recurrence_rate",
+        )
+        self.determinism = _validate_unit_interval(
+            self.determinism,
+            name="determinism",
+        )
+        self.avg_diagonal = _validate_non_negative_float(
+            self.avg_diagonal,
+            name="avg_diagonal",
+        )
+        self.max_diagonal = _validate_non_negative_int(
+            self.max_diagonal,
+            name="max_diagonal",
+        )
+        self.entropy_diagonal = _validate_non_negative_float(
+            self.entropy_diagonal,
+            name="entropy_diagonal",
+        )
+        self.laminarity = _validate_unit_interval(
+            self.laminarity,
+            name="laminarity",
+        )
+        self.trapping_time = _validate_non_negative_float(
+            self.trapping_time,
+            name="trapping_time",
+        )
+        self.max_vertical = _validate_non_negative_int(
+            self.max_vertical,
+            name="max_vertical",
+        )
 
 
 def recurrence_matrix(
@@ -269,8 +367,9 @@ def recurrence_matrix(
             backend_fn,
         )
         try:
-            out = np.asarray(fn(flat, t, d, epsilon, angular), dtype=np.uint8)
-            return out.reshape(t, t).astype(bool)
+            return _backend_recurrence_matrix(
+                fn(flat, t, d, epsilon, angular), t=t, name="recurrence_matrix"
+            )
         except Exception:
             angular = bool(angular)
 
@@ -314,11 +413,11 @@ def cross_recurrence_matrix(
             backend_fn,
         )
         try:
-            out = np.asarray(
+            return _backend_recurrence_matrix(
                 fn(a_flat, b_flat, t, d, epsilon, angular),
-                dtype=np.uint8,
+                t=t,
+                name="cross_recurrence_matrix",
             )
-            return out.reshape(t, t).astype(bool)
         except Exception:
             angular = bool(angular)
 
@@ -376,6 +475,8 @@ def _rqa_from_matrix(
 ) -> RQAResult:
     """Shared line-analysis path — consumed by both :func:`rqa` and
     :func:`cross_rqa` after the dispatched matrix is obtained."""
+    l_min = _validate_line_min(l_min, name="l_min")
+    v_min = _validate_line_min(v_min, name="v_min")
     t = R.shape[0]
     if exclude_main_diag:
         R = R.copy()
