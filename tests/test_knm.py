@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import dataclasses
+import sys
+import types
 
 import numpy as np
 import pytest
@@ -80,6 +82,28 @@ def test_alpha_initialized_to_zero():
     builder = CouplingBuilder()
     cs = builder.build(n_layers=5, base_strength=0.3, decay_alpha=0.2)
     np.testing.assert_allclose(cs.alpha, 0.0)
+
+
+def test_invalid_rust_build_output_falls_back_to_numpy(monkeypatch):
+    import scpn_phase_orchestrator.coupling.knm as knm_mod
+
+    class BadRustBuilder:
+        def build(self, n_layers: int, _base_strength: float, _decay_alpha: float):
+            knm = np.full((n_layers, n_layers), np.nan, dtype=np.float64)
+            alpha = np.zeros((n_layers, n_layers), dtype=np.float64)
+            return {"n": n_layers, "knm": knm.ravel(), "alpha": alpha.ravel()}
+
+    fake_spo = types.ModuleType("spo_kernel")
+    fake_spo.PyCouplingBuilder = BadRustBuilder
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+    monkeypatch.setattr(knm_mod, "_HAS_RUST", True)
+
+    state = CouplingBuilder().build(n_layers=4, base_strength=0.5, decay_alpha=0.3)
+
+    assert state.knm.shape == (4, 4)
+    assert np.all(np.isfinite(state.knm))
+    np.testing.assert_allclose(np.diag(state.knm), 0.0, atol=1e-15)
+    np.testing.assert_allclose(state.knm, state.knm.T, atol=1e-14)
 
 
 def test_coupling_state_frozen():

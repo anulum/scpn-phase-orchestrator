@@ -136,6 +136,35 @@ def _loads_knm_json(payload: str) -> Any:
         raise ValueError("K_nm JSON must contain only finite JSON numbers") from exc
 
 
+def _validate_coupling_output(
+    knm: object,
+    alpha: object,
+    *,
+    n_layers: int,
+) -> tuple[FloatArray, FloatArray]:
+    try:
+        knm_array = np.asarray(knm, dtype=np.float64).reshape(n_layers, n_layers)
+        alpha_array = np.asarray(alpha, dtype=np.float64).reshape(n_layers, n_layers)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("coupling builder output must match requested shape") from exc
+    if not np.all(np.isfinite(knm_array)):
+        raise ValueError("coupling builder output K_nm must contain only finite values")
+    if not np.all(np.isfinite(alpha_array)):
+        raise ValueError(
+            "coupling builder output alpha must contain only finite values"
+        )
+    if np.any(knm_array < 0.0):
+        raise ValueError("coupling builder output K_nm must be non-negative")
+    if not np.allclose(knm_array, knm_array.T, rtol=1e-12, atol=1e-12):
+        raise ValueError("coupling builder output K_nm must be symmetric")
+    if not np.allclose(np.diag(knm_array), 0.0, rtol=0.0, atol=1e-15):
+        raise ValueError("coupling builder output K_nm diagonal must be zero")
+    return (
+        np.ascontiguousarray(knm_array, dtype=np.float64),
+        np.ascontiguousarray(alpha_array, dtype=np.float64),
+    )
+
+
 @dataclass(frozen=True)
 class CouplingState:
     """Immutable snapshot of phase/amplitude coupling matrices and template."""
@@ -192,13 +221,19 @@ class CouplingBuilder:
         if _HAS_RUST:  # pragma: no cover
             from spo_kernel import PyCouplingBuilder
 
-            d = PyCouplingBuilder().build(n_layers, base_strength, decay_alpha)
-            n = d["n"]
-            rust_knm = np.asarray(d["knm"], dtype=np.float64).reshape(n, n)
-            rust_alpha = np.asarray(d["alpha"], dtype=np.float64).reshape(n, n)
-            return CouplingState(
-                knm=rust_knm, alpha=rust_alpha, active_template="default"
-            )
+            try:
+                d = PyCouplingBuilder().build(n_layers, base_strength, decay_alpha)
+                n = _validate_positive_int(d["n"], name="rust n_layers")
+                if n != n_layers:
+                    raise ValueError("Rust coupling output layer count mismatch")
+                rust_knm, rust_alpha = _validate_coupling_output(
+                    d["knm"], d["alpha"], n_layers=n_layers
+                )
+                return CouplingState(
+                    knm=rust_knm, alpha=rust_alpha, active_template="default"
+                )
+            except Exception as exc:
+                _fallback_reason = exc
         idx = np.arange(n_layers)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
         knm = base_strength * np.exp(-decay_alpha * dist)
