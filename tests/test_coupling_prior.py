@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.coupling.prior as prior_module
 from scpn_phase_orchestrator.coupling.prior import CouplingPrior, UniversalPrior
 
 
@@ -105,6 +106,15 @@ class TestUniversalPrior:
         lp1 = prior.log_probability(0.47 + 0.1, 0.25)
         lp2 = prior.log_probability(0.47 - 0.1, 0.25)
         assert abs(lp1 - lp2) < 1e-10
+
+    def test_log_probability_rejects_non_finite_rust_result(self, monkeypatch):
+        prior = UniversalPrior()
+
+        monkeypatch.setattr(prior_module, "_HAS_RUST", True)
+        monkeypatch.setattr(prior_module, "_rust_log_prob", lambda *args: np.nan)
+
+        with pytest.raises(ValueError, match="Rust prior log-probability"):
+            prior.log_probability(0.47, 0.25)
 
     def test_custom_prior(self):
         prior = UniversalPrior(K_base_mean=1.0, K_base_std=0.2)

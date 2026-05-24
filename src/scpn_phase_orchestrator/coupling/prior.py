@@ -161,7 +161,7 @@ class UniversalPrior:
         if not np.isfinite(K_base) or not np.isfinite(decay_alpha):
             raise ValueError("K_base and decay_alpha must be finite real values")
         if _HAS_RUST:
-            return float(
+            log_prob = float(
                 _rust_log_prob(
                     K_base,
                     decay_alpha,
@@ -171,6 +171,11 @@ class UniversalPrior:
                     self._decay_alpha_std,
                 )
             )
+            if not np.isfinite(log_prob):
+                raise ValueError(
+                    "Rust prior log-probability must be a finite real value"
+                )
+            return log_prob
         lp_K = -0.5 * ((K_base - self._K_base_mean) / self._K_base_std) ** 2
         lp_a = (
             -0.5 * ((decay_alpha - self._decay_alpha_mean) / self._decay_alpha_std) ** 2
