@@ -136,6 +136,14 @@ def _dispatch() -> LyapunovBackendFn | None:
     return None
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _validate_finite_real(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
@@ -170,7 +178,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -190,7 +198,7 @@ def _validate_matrix(
     expected_shape: tuple[int, int],
 ) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -211,6 +219,25 @@ class LyapunovState:
     dV_dt: float
     in_basin: bool
     max_phase_diff: float
+
+    def __post_init__(self) -> None:
+        v_value = _validate_finite_real(self.V, name="V")
+        dv_dt_value = _validate_finite_real(self.dV_dt, name="dV_dt")
+        if not isinstance(self.in_basin, bool):
+            raise ValueError(f"in_basin must be a boolean flag, got {self.in_basin!r}")
+        max_phase_diff = _validate_non_negative_real(
+            self.max_phase_diff,
+            name="max_phase_diff",
+        )
+        if max_phase_diff > np.pi:
+            raise ValueError(
+                f"max_phase_diff must be <= pi for geodesic phase distance, "
+                f"got {self.max_phase_diff!r}"
+            )
+
+        self.V = v_value
+        self.dV_dt = dv_dt_value
+        self.max_phase_diff = max_phase_diff
 
 
 class LyapunovGuard:

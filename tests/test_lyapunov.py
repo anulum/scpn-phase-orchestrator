@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor import lyapunov as lyapunov_mod
-from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard
+from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard, LyapunovState
 
 
 def _all_to_all(n: int, k: float = 1.0) -> np.ndarray:
@@ -131,9 +131,15 @@ class TestLyapunovFunction:
             (np.array([0.0, np.inf]), np.zeros((2, 2)), "phases"),
             ([["not-a-phase"]], np.zeros((1, 1)), "phases"),
             (np.array([True, False]), np.zeros((2, 2)), "phases"),
+            (np.array([0.0, True], dtype=object), np.zeros((2, 2)), "phases"),
             (np.zeros(2), np.zeros((2, 1)), "knm shape"),
             (np.zeros(2), np.array([[0.0, np.nan], [0.0, 0.0]]), "knm"),
             (np.zeros(2), np.array([[False, True], [True, False]]), "knm"),
+            (
+                np.zeros(2),
+                np.array([[0.0, True], [1.0, 0.0]], dtype=object),
+                "knm",
+            ),
         ],
     )
     def test_evaluate_rejects_invalid_inputs(
@@ -205,6 +211,48 @@ class TestLyapunovPipelineWiring:
             guard.evaluate(phases, knm)
         elapsed = (time.perf_counter() - t0) / 100
         assert elapsed < 0.001, f"evaluate(64) took {elapsed * 1000:.2f}ms, limit 1ms"
+
+
+class TestLyapunovStateValidation:
+    def test_normalizes_public_monitor_record(self) -> None:
+        state = LyapunovState(
+            V=np.float64(-1.0),
+            dV_dt=np.float64(-0.1),
+            in_basin=True,
+            max_phase_diff=np.float64(0.25),
+        )
+
+        assert state.V == -1.0
+        assert state.dV_dt == -0.1
+        assert state.in_basin is True
+        assert state.max_phase_diff == 0.25
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"V": np.nan}, "V"),
+            ({"V": False}, "V"),
+            ({"dV_dt": np.inf}, "dV_dt"),
+            ({"dV_dt": False}, "dV_dt"),
+            ({"in_basin": 1}, "in_basin must be a boolean flag"),
+            ({"max_phase_diff": -0.1}, "max_phase_diff must be non-negative"),
+            ({"max_phase_diff": np.pi + 0.1}, "max_phase_diff must be <= pi"),
+            ({"max_phase_diff": np.nan}, "max_phase_diff"),
+        ],
+    )
+    def test_rejects_invalid_public_monitor_record_values(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {
+            "V": -1.0,
+            "dV_dt": 0.0,
+            "in_basin": True,
+            "max_phase_diff": 0.25,
+        }
+        base.update(kwargs)
+
+        with pytest.raises(ValueError, match=match):
+            LyapunovState(**base)
 
 
 class TestLyapunovRustDispatch:

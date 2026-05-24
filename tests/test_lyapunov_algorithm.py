@@ -252,11 +252,19 @@ class TestInputValidation:
         ("field", "bad_value", "match"),
         [
             ("phases", np.array([0.0, np.nan]), "phases_init"),
+            ("phases", np.array([0.0, True], dtype=object), "phases_init"),
             ("omegas", np.array([1.0, np.inf]), "omegas"),
+            ("omegas", np.array([1.0, False], dtype=object), "omegas"),
             ("knm", np.zeros((2, 1)), "knm shape"),
             ("knm", np.array([[0.0, np.nan], [0.0, 0.0]]), "knm"),
+            ("knm", np.array([[0.0, True], [1.0, 0.0]], dtype=object), "knm"),
             ("alpha", np.zeros((2, 1)), "alpha shape"),
             ("alpha", np.array([[0.0, np.inf], [0.0, 0.0]]), "alpha"),
+            (
+                "alpha",
+                np.array([[0.0, False], [0.0, 0.0]], dtype=object),
+                "alpha",
+            ),
         ],
     )
     def test_rejects_invalid_array_inputs(
