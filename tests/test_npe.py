@@ -327,3 +327,83 @@ class TestNPEPhysicsContracts:
 # ---------------------------------------------------------------------------
 # PGBO: phase-geometry-binding observer
 # ---------------------------------------------------------------------------
+
+
+class TestNPEBoundaryHardening:
+    def test_phase_distance_rejects_mixed_boolean_aliases(self) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            phase_distance_matrix(np.array([0.0, True], dtype=object))
+
+    @pytest.mark.parametrize(
+        "backend_output",
+        [
+            np.array([0.0, 1.0, 1.0], dtype=np.float64),
+            np.array([[0.0, np.nan], [np.nan, 0.0]], dtype=np.float64),
+            np.array([[0.0, 4.0], [4.0, 0.0]], dtype=np.float64),
+            np.array([[0.0, 0.1], [0.2, 0.0]], dtype=np.float64),
+            np.array([[0.1, 0.2], [0.2, 0.0]], dtype=np.float64),
+        ],
+    )
+    def test_invalid_backend_matrix_falls_back(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_output: np.ndarray,
+    ) -> None:
+        previous_backend = npe_module.ACTIVE_BACKEND
+        previous_available = list(npe_module.AVAILABLE_BACKENDS)
+        previous_loader = npe_module._LOADERS["go"]
+
+        def fake_phase_distance_matrix(*_args: object, **_kwargs: object) -> np.ndarray:
+            return backend_output
+
+        npe_module.ACTIVE_BACKEND = "go"
+        npe_module.AVAILABLE_BACKENDS = ["go", "python"]
+        npe_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            npe_module._LOADERS,
+            "go",
+            lambda: {"phase_distance_matrix": fake_phase_distance_matrix},
+        )
+        try:
+            distances = phase_distance_matrix(np.array([0.0, np.pi], dtype=np.float64))
+        finally:
+            npe_module.ACTIVE_BACKEND = previous_backend
+            npe_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
+            npe_module._BACKEND_CACHE.clear()
+
+        np.testing.assert_allclose(distances, [[0.0, np.pi], [np.pi, 0.0]])
+
+    @pytest.mark.parametrize("backend_value", [-0.1, 1.1, np.nan, np.inf, True])
+    def test_invalid_backend_score_falls_back(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_value: Any,
+    ) -> None:
+        previous_backend = npe_module.ACTIVE_BACKEND
+        previous_available = list(npe_module.AVAILABLE_BACKENDS)
+        previous_loader = npe_module._LOADERS["go"]
+        phases = np.array([0.0, 0.5, 1.5], dtype=np.float64)
+
+        def fake_compute_npe(*_args: object, **_kwargs: object) -> Any:
+            return backend_value
+
+        npe_module.ACTIVE_BACKEND = "python"
+        expected = compute_npe(phases)
+        npe_module.ACTIVE_BACKEND = "go"
+        npe_module.AVAILABLE_BACKENDS = ["go", "python"]
+        npe_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            npe_module._LOADERS,
+            "go",
+            lambda: {"compute_npe": fake_compute_npe},
+        )
+        try:
+            got = compute_npe(phases)
+        finally:
+            npe_module.ACTIVE_BACKEND = previous_backend
+            npe_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
+            npe_module._BACKEND_CACHE.clear()
+
+        assert got == expected

@@ -144,9 +144,17 @@ def _dispatch(fn_name: str) -> object:
     return None
 
 
+def _contains_boolean_alias(raw: np.ndarray) -> bool:
+    if raw.dtype == np.bool_:
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, bool) for value in raw.flat)
+
+
 def _validate_phases(phases: object) -> FloatArray:
     raw = np.asarray(phases)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(raw):
         raise ValueError("phases must not contain boolean values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -157,6 +165,30 @@ def _validate_phases(phases: object) -> FloatArray:
     if not np.all(np.isfinite(array)):
         raise ValueError("phases must contain only finite values")
     return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_distance_matrix(value: object, *, n_phases: int) -> FloatArray:
+    try:
+        matrix = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phase distance matrix must be numeric") from exc
+    if matrix.shape != (n_phases, n_phases):
+        raise ValueError(
+            f"phase distance matrix shape {matrix.shape} does not match "
+            f"({n_phases}, {n_phases})"
+        )
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("phase distance matrix must contain only finite values")
+    tolerance = 1e-12
+    if np.any(matrix < -tolerance) or np.any(matrix > np.pi + tolerance):
+        raise ValueError("phase distance matrix entries must lie in [0, pi]")
+    if not np.allclose(matrix, matrix.T, rtol=0.0, atol=1e-10):
+        raise ValueError("phase distance matrix must be symmetric")
+    if not np.allclose(np.diag(matrix), 0.0, rtol=0.0, atol=1e-10):
+        raise ValueError("phase distance matrix diagonal must be zero")
+    matrix = np.clip(matrix, 0.0, np.pi)
+    np.fill_diagonal(matrix, 0.0)
+    return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
 def _validate_max_radius(max_radius: float | None) -> float:
@@ -174,6 +206,18 @@ def _validate_max_radius(max_radius: float | None) -> float:
     return radius
 
 
+def _validate_npe_value(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"NPE must be a finite real scalar in [0, 1], got {value!r}")
+    score = float(value)
+    if not np.isfinite(score):
+        raise ValueError(f"NPE must be finite, got {value!r}")
+    tolerance = 1e-12
+    if score < -tolerance or score > 1.0 + tolerance:
+        raise ValueError(f"NPE must lie in [0, 1], got {value!r}")
+    return min(1.0, max(0.0, score))
+
+
 def phase_distance_matrix(phases: FloatArray) -> FloatArray:
     """Pairwise circular distance matrix ``d[i, j] ∈ [0, π]``."""
     phases = _validate_phases(phases)
@@ -183,12 +227,15 @@ def phase_distance_matrix(phases: FloatArray) -> FloatArray:
         fn = cast("Callable[[FloatArray], FloatArray]", backend_fn)
         try:
             flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
-            return np.asarray(flat, dtype=np.float64).reshape(n, n)
+            return _validate_distance_matrix(flat, n_phases=n)
         except Exception:
             backend_fn = None
 
     diff = phases[:, np.newaxis] - phases[np.newaxis, :]
-    return np.asarray(np.abs(np.arctan2(np.sin(diff), np.cos(diff))), dtype=np.float64)
+    return _validate_distance_matrix(
+        np.abs(np.arctan2(np.sin(diff), np.cos(diff))),
+        n_phases=n,
+    )
 
 
 def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
@@ -210,11 +257,11 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, float], float]", backend_fn)
         try:
-            return float(
+            return _validate_npe_value(
                 fn(
                     np.ascontiguousarray(phases.ravel(), dtype=np.float64),
                     radius,
-                )
+                ),
             )
         except Exception:
             backend_fn = None
@@ -261,4 +308,4 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
     max_entropy = np.log(len(probs)) if len(probs) > 1 else 1.0
     if max_entropy < 1e-15:
         return 0.0
-    return entropy / max_entropy
+    return _validate_npe_value(entropy / max_entropy)
