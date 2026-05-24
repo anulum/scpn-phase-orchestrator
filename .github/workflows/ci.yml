@@ -180,7 +180,7 @@ jobs:
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - name: Run hierarchy transport boundary smoke tests
         run: |
-          pytest tests/test_hierarchy_transport_demos.py tests/test_hierarchy_transport_smoke.py \
+          pytest tests/test_hierarchy_transport_demos.py tests/test_hierarchy_transport_domainpack_workflow.py \
             --maxfail=1 --tb=short
 
   security:
