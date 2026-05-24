@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.coupling import spectral as spectral_module
 from scpn_phase_orchestrator.coupling.spectral import (
@@ -132,6 +133,10 @@ class TestCriticalCoupling:
         kc = critical_coupling(omegas, np.zeros((3, 3)))
         assert kc == float("inf")
 
+    def test_rejects_frequency_vector_length_mismatch(self):
+        with pytest.raises(ValueError, match="omegas"):
+            critical_coupling(np.array([1.0, 2.0]), _chain_knm(3))
+
 
 class TestFiedlerPartition:
     def test_two_groups(self):
@@ -178,6 +183,15 @@ class TestSpectralPrimitiveContract:
         )
         assert fiedler.shape == (4,)
 
+    def test_invalid_rust_fiedler_value_is_rejected(self, monkeypatch):
+        monkeypatch.setattr(spectral_module, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(
+            spectral_module, "_rust_bundle", lambda: {"fv": lambda *_: -1.0}
+        )
+
+        with pytest.raises(ValueError, match="Fiedler value"):
+            fiedler_value(_chain_knm(4))
+
 
 class TestConvergenceRate:
     def test_positive_for_synced(self):
@@ -195,6 +209,10 @@ class TestConvergenceRate:
 
     def test_empty(self):
         assert sync_convergence_rate(np.zeros((0, 0)), np.array([])) == 0.0
+
+    def test_rejects_negative_gamma_max(self):
+        with pytest.raises(ValueError, match="gamma_max"):
+            sync_convergence_rate(_complete_knm(4), np.ones(4), gamma_max=-0.1)
 
 
 class TestSpectralPipelineWiring:

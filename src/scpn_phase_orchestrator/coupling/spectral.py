@@ -130,7 +130,37 @@ def _validate_gamma_max(value: object) -> float:
     gamma = float(value)
     if not np.isfinite(gamma):
         raise ValueError("gamma_max must be finite")
+    if gamma < 0.0:
+        raise ValueError("gamma_max must be non-negative")
     return gamma
+
+
+def _validate_non_negative_scalar(
+    value: object, *, name: str, allow_infinite: bool = False
+) -> float:
+    try:
+        resolved = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a non-negative scalar") from exc
+    if allow_infinite and np.isposinf(resolved):
+        return resolved
+    if not np.isfinite(resolved) or resolved < -1e-10:
+        raise ValueError(f"{name} must be a finite non-negative scalar")
+    return max(resolved, 0.0)
+
+
+def _validate_rust_fiedler_vector(value: object, *, n: int) -> FloatArray:
+    try:
+        vector = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Fiedler vector must be numeric") from exc
+    if vector.shape != (n,):
+        raise ValueError(f"Fiedler vector shape {vector.shape} must be ({n},)")
+    if not np.all(np.isfinite(vector)):
+        raise ValueError("Fiedler vector must contain only finite values")
+    if n > 1 and np.linalg.norm(vector) <= 1e-10:
+        raise ValueError("Fiedler vector must be non-zero")
+    return np.ascontiguousarray(vector, dtype=np.float64)
 
 
 def graph_laplacian(knm: FloatArray) -> FloatArray:
@@ -364,7 +394,9 @@ def fiedler_value(knm: FloatArray) -> float:
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
-        return float(_rust_bundle()["fv"](flat, n))
+        return _validate_non_negative_scalar(
+            _rust_bundle()["fv"](flat, n), name="Fiedler value"
+        )
     eigvals, _ = _spectral_eig_checked(flat, n)
     return float(eigvals[1]) if n > 1 else 0.0
 
@@ -376,7 +408,7 @@ def fiedler_vector(knm: FloatArray) -> FloatArray:
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
-        return np.asarray(_rust_bundle()["fvec"](flat, n))
+        return _validate_rust_fiedler_vector(_rust_bundle()["fvec"](flat, n), n=n)
     _, fiedler = _spectral_eig_checked(flat, n)
     return fiedler
 
@@ -388,11 +420,15 @@ def critical_coupling(omegas: FloatArray, knm: FloatArray) -> float:
     (``λ₂ ≈ 0``)."""
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
-    omegas = _validate_omega_vector(omegas)
+    omegas = _validate_omegas(omegas, expected_n=n)
     if ACTIVE_BACKEND == "rust":
         flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         o = np.ascontiguousarray(omegas, dtype=np.float64)
-        return float(_rust_bundle()["kc"](o, flat, n))
+        return _validate_non_negative_scalar(
+            _rust_bundle()["kc"](o, flat, n),
+            name="critical coupling",
+            allow_infinite=True,
+        )
     lambda2 = fiedler_value(knm)
     if lambda2 < 1e-12:
         return float("inf")
@@ -424,7 +460,9 @@ def spectral_gap(knm: FloatArray) -> float:
         return 0.0
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
-        return float(_rust_bundle()["sg"](flat, n))
+        return _validate_non_negative_scalar(
+            _rust_bundle()["sg"](flat, n), name="spectral gap"
+        )
     eigvals, _ = _spectral_eig_checked(flat, n)
     return float(eigvals[2] - eigvals[1])
 
@@ -446,7 +484,10 @@ def sync_convergence_rate(
     if ACTIVE_BACKEND == "rust":
         flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         o = np.ascontiguousarray(omegas, dtype=np.float64)
-        return float(_rust_bundle()["scr"](flat, o, n, gamma_max))
+        return _validate_non_negative_scalar(
+            _rust_bundle()["scr"](flat, o, n, gamma_max),
+            name="sync convergence rate",
+        )
     lambda2 = fiedler_value(knm)
     pos_vals = knm[knm > 0]
     k_eff = float(np.mean(pos_vals)) if pos_vals.size > 0 else 0.0
