@@ -146,7 +146,7 @@ def _contains_boolean_alias(raw: np.ndarray) -> bool:
         return True
     if raw.dtype != object:
         return False
-    return any(isinstance(value, bool) for value in raw.flat)
+    return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
 
 
 def _validate_phases_trials(phases_trials: object) -> FloatArray:
@@ -179,6 +179,8 @@ def _validate_pause_indices(pause_indices: object) -> IntArray:
 
 
 def _validate_itpc_values(value: object, *, n_timepoints: int) -> FloatArray:
+    if _contains_boolean_alias(np.asarray(value)):
+        raise ValueError("ITPC output must not contain boolean values")
     try:
         itpc = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -196,6 +198,8 @@ def _validate_itpc_values(value: object, *, n_timepoints: int) -> FloatArray:
 
 
 def _validate_persistence_value(value: object) -> float:
+    if _contains_boolean_alias(np.asarray(value)):
+        raise ValueError("ITPC persistence output must not contain boolean values")
     try:
         scalar = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

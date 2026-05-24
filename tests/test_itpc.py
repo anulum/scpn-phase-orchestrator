@@ -61,6 +61,7 @@ def test_1d_input_returns_scalar_one():
         (np.array([[0.0, np.inf]], dtype=np.float64), "phases_trials"),
         (np.zeros((2, 3, 4), dtype=np.float64), "phases_trials"),
         (np.array([[0.0, True]], dtype=object), "phases_trials"),
+        (np.array([[0.0, np.bool_(True)]], dtype=object), "phases_trials"),
         ([["not-a-phase"]], "phases_trials"),
     ],
 )
@@ -118,6 +119,7 @@ def test_persistence_out_of_bounds_indices_ignored():
         np.array([[0.0, np.inf]], dtype=np.float64),
         np.zeros((2, 3, 4), dtype=np.float64),
         np.array([[0.0, True]], dtype=object),
+        np.array([[0.0, np.bool_(True)]], dtype=object),
         [["not-a-phase"]],
     ],
 )
@@ -237,6 +239,8 @@ class TestITPCBackendDispatch:
             np.array([0.5, np.nan], dtype=np.float64),
             np.array([0.5, 1.1], dtype=np.float64),
             np.array([-0.1, 0.5], dtype=np.float64),
+            np.array([True, False], dtype=np.bool_),
+            np.array([0.5, np.bool_(True)], dtype=object),
         ],
     )
     def test_invalid_itpc_backend_payload_falls_back(
@@ -268,7 +272,10 @@ class TestITPCBackendDispatch:
 
         np.testing.assert_allclose(result, expected)
 
-    @pytest.mark.parametrize("backend_value", [-0.1, 1.1, np.nan, np.inf, [0.5]])
+    @pytest.mark.parametrize(
+        "backend_value",
+        [-0.1, 1.1, np.nan, np.inf, [0.5], True, np.bool_(True)],
+    )
     def test_invalid_persistence_backend_payload_falls_back(
         self,
         monkeypatch,
