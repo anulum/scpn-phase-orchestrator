@@ -305,14 +305,17 @@ def _validate_bins(n_bins: int) -> int:
 
 
 def _contains_boolean_alias(value: object) -> bool:
-    raw = np.asarray(value, dtype=object)
-    if raw.dtype == np.bool_:
-        return True
-    return any(isinstance(item, bool) for item in raw.flat)
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _validate_non_negative_scalar(value: object, *, name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not be a boolean value")
+    if not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real")
     scalar = float(value)
     if not np.isfinite(scalar) or scalar < 0.0:
@@ -328,6 +331,8 @@ def _validate_unit_interval_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_pairwise_mi(value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("pairwise_mi must not contain boolean values")
     try:
         matrix = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -375,7 +380,7 @@ def _validate_partition_side(value: object, *, name: str) -> tuple[int, ...]:
         raise ValueError(f"{name} groups must contain integer indices") from exc
     indices: list[int] = []
     for item in items:
-        if isinstance(item, bool) or not isinstance(item, Integral):
+        if isinstance(item, (bool, np.bool_)) or not isinstance(item, Integral):
             raise ValueError(f"{name} groups must contain integer indices")
         index = int(item)
         if index < 0:
@@ -468,6 +473,8 @@ def _cross_partition_mean(
 
 
 def _normalise_phi(phi: float, n_bins: int) -> float:
+    if n_bins <= 1:
+        return 0.0
     scale = float(np.log(n_bins))
     if scale <= 0.0:
         return 0.0

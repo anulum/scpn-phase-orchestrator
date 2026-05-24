@@ -139,6 +139,48 @@ class TestIntegratedInformationContracts:
                 "pairwise_mi": [[0.0, np.nan], [np.nan, 0.0]],
                 "n_bins": 4,
             },
+            {
+                "phi": np.bool_(True),
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, 0.0], [0.0, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": np.bool_(False),
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, 0.0], [0.0, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((np.bool_(False),), (1,)),
+                "pairwise_mi": [[0.0, 0.0], [0.0, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": np.array([[False, True], [True, False]], dtype=bool),
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": np.array(
+                    [[0.0, np.bool_(True)], [np.bool_(True), 0.0]], dtype=object
+                ),
+                "n_bins": 4,
+            },
         ],
     )
     def test_result_record_rejects_invalid_invariants(
