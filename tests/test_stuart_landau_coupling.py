@@ -86,7 +86,7 @@ class TestTemplateSwitchWithAmplitude:
     def test_switch_preserves_knm_r(self):
         builder = CouplingBuilder()
         cs = builder.build_with_amplitude(4, 0.5, 0.3, 0.3, 0.3)
-        templates = {"custom": np.eye(4)}
+        templates = {"custom": np.ones((4, 4)) - np.eye(4)}
         switched = builder.switch_template(cs, "custom", templates)
         assert switched.knm_r is not None
         np.testing.assert_allclose(switched.knm_r, cs.knm_r)
