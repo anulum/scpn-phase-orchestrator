@@ -162,7 +162,7 @@ class TestTransitionQuality:
 class TestSymbolicExtractorMetadata:
     """Verify channel, node_id, and construction constraints."""
 
-    def test_extract_signal_type_hint_matches_discrete_integer_contract(self):
+    def test_extract_signal_type_hint_includes_discrete_integer_contract(self):
         hint = get_type_hints(SymbolicExtractor.extract)["signal"]
         assert_precise_ndarray_hint(hint)
         assert "int64" in str(hint)

@@ -315,6 +315,7 @@ class TestPhaseExtractorContract:
 
         symbolic_hint = get_type_hints(SymbolicExtractor.extract)["signal"]
         assert_precise_ndarray_hint(symbolic_hint)
+        assert "float64" in str(symbolic_hint)
         assert "int64" in str(symbolic_hint)
 
         result_hint = get_type_hints(PhaseQualityScorer.downweight_mask)["return"]
