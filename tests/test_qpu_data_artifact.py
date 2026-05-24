@@ -488,6 +488,32 @@ def test_read_qpu_data_artifact_rejects_malformed_json_file(tmp_path: Path) -> N
         read_qpu_data_artifact(path)
 
 
+def test_read_qpu_data_artifact_rejects_non_finite_json_constants(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "non-finite-qpu-data-artifact.json"
+    path.write_text('{"metadata": NaN}', encoding="utf-8")
+    with pytest.raises(ValueError, match="finite JSON"):
+        read_qpu_data_artifact(path)
+
+
+def test_emit_qpu_data_artifact_rejects_non_finite_metadata() -> None:
+    with pytest.raises(ValueError, match="finite JSON"):
+        emit_qpu_data_artifact(
+            domain="unit",
+            source_name="unit-fixture",
+            source_mode="curated",
+            K_nm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+            omega=np.array([1.0, 1.2]),
+            theta0=np.array([0.0, 0.5]),
+            layer_assignments=["a", "b"],
+            normalization="unit canonical scaling",
+            extraction_method="unit-test",
+            replay_id="unit:replay:1",
+            metadata={"quality_score": float("nan")},
+        )
+
+
 def test_emit_qpu_data_artifact_rejects_non_serialisable_metadata() -> None:
     with pytest.raises(TypeError, match="not JSON serializable"):
         emit_qpu_data_artifact(

@@ -64,8 +64,22 @@ def _array_sha256(array: FloatArray) -> str:
 
 
 def _json_sha256(payload: Mapping[str, Any]) -> str:
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    try:
+        encoded = json.dumps(
+            payload,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    except ValueError as exc:
+        raise ValueError(
+            "artifact payload must contain only finite JSON numbers"
+        ) from exc
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _finite_float_array(name: str, value: Any, *, ndim: int) -> FloatArray:
@@ -226,7 +240,12 @@ class QPUDataArtifact:
 
     def to_json(self, *, indent: int | None = 2) -> str:
         """Serialise to JSON."""
-        return json.dumps(self.to_dict(), indent=indent, sort_keys=True)
+        return json.dumps(
+            self.to_dict(),
+            allow_nan=False,
+            indent=indent,
+            sort_keys=True,
+        )
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> QPUDataArtifact:
@@ -266,7 +285,15 @@ class QPUDataArtifact:
     @classmethod
     def from_json(cls, payload: str) -> QPUDataArtifact:
         """Load and validate an artifact from JSON."""
-        return cls.from_dict(json.loads(payload))
+        try:
+            decoded = json.loads(payload, parse_constant=_reject_json_constant)
+        except json.JSONDecodeError:
+            raise
+        except ValueError as exc:
+            raise ValueError(
+                "artifact payload must contain only finite JSON numbers"
+            ) from exc
+        return cls.from_dict(decoded)
 
 
 def _layer_assignments(spec: BindingSpec) -> list[str]:
