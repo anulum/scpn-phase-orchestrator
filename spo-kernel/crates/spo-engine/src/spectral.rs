@@ -10,13 +10,13 @@
 //!
 //! Uses the cyclic Jacobi eigenvalue algorithm (Golub & Van Loan 2013, §8.4)
 //! for symmetric matrices. No external linear algebra dependency.
+//! Asymmetric measured couplings are reduced to undirected reciprocal
+//! magnitude weights before degrees are computed.
 //!
 //! References:
 //! - Dörfler & Bullo 2014, Automatica 50(6):1539-1564.
 //! - Fiedler 1973, Czech. Math. J. 23:298-305 (algebraic connectivity).
 //! - Golub & Van Loan 2013, Matrix Computations, 4th ed., §8.4.
-
-use rayon::prelude::*;
 
 /// Spectral decomposition result: sorted eigenvalues + eigenvectors.
 pub struct SpectralResult {
@@ -27,9 +27,10 @@ pub struct SpectralResult {
     pub eigenvectors: Vec<f64>,
 }
 
-/// Compute the combinatorial graph Laplacian L = D - |W|.
+/// Compute the combinatorial graph Laplacian L = D - A.
 ///
-/// D = diag(row sums of |W|), diagonal of W is zeroed first.
+/// A_ij = (|W_ij| + |W_ji|) / 2 for i != j, A_ii = 0.
+/// D = diag(row sums of A).
 ///
 /// # Arguments
 /// * `knm` - row-major N×N coupling matrix
@@ -40,18 +41,19 @@ pub struct SpectralResult {
 #[must_use]
 pub fn graph_laplacian(knm: &[f64], n: usize) -> Vec<f64> {
     let mut l = vec![0.0; n * n];
-    l.par_chunks_mut(n).enumerate().for_each(|(i, row)| {
-        let offset = i * n;
-        let mut degree = 0.0;
-        for j in 0..n {
-            if i != j {
-                let w = knm[offset + j].abs();
-                row[j] = -w;
-                degree += w;
-            }
+    let mut degree = vec![0.0; n];
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let w = 0.5 * (knm[i * n + j].abs() + knm[j * n + i].abs());
+            l[i * n + j] = -w;
+            l[j * n + i] = -w;
+            degree[i] += w;
+            degree[j] += w;
         }
-        row[i] = degree;
-    });
+    }
+    for i in 0..n {
+        l[i * n + i] = degree[i];
+    }
     l
 }
 

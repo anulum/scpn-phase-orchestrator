@@ -7,8 +7,14 @@
 # SCPN Phase Orchestrator — Spectral graph analysis for coupling networks
 
 """Symmetric eigendecomposition of the combinatorial graph
-Laplacian ``L = D − |W|`` exposed through a 5-backend fallback
+Laplacian ``L = D − A`` exposed through a 5-backend fallback
 chain per ``feedback_module_standard_attnres.md``.
+
+For asymmetric measured coupling, the undirected adjacency is the
+reciprocal magnitude average ``A = (|W| + |Wᵀ|) / 2`` with zeroed
+diagonal. Degrees are then computed from ``A``. This preserves the
+combinatorial Laplacian contract: symmetric positive-semidefinite
+``L``, zero row sums, and ``1 ∈ ker L``.
 
 Primitive
 ---------
@@ -128,13 +134,20 @@ def _validate_gamma_max(value: object) -> float:
 
 
 def graph_laplacian(knm: FloatArray) -> FloatArray:
-    """Combinatorial graph Laplacian ``L = D − |W|`` with zero
-    diagonal on ``W``."""
+    """Combinatorial graph Laplacian ``L = D − A``.
+
+    ``A`` is the reciprocal undirected magnitude adjacency
+    ``(|W| + |Wᵀ|) / 2`` with zero diagonal, so asymmetric measured
+    couplings produce one symmetric edge weight before node degrees
+    are computed.
+    """
     knm = _validate_coupling_matrix(knm)
     w = np.abs(knm)
     np.fill_diagonal(w, 0.0)
-    degrees = w.sum(axis=1)
-    return cast("FloatArray", np.diag(degrees) - w)
+    adjacency = 0.5 * (w + w.T)
+    np.fill_diagonal(adjacency, 0.0)
+    degrees = adjacency.sum(axis=1)
+    return cast("FloatArray", np.diag(degrees) - adjacency)
 
 
 def _python_spectral_eig(

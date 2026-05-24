@@ -31,29 +31,25 @@ fn spectral_eig(
     mut out_eigvals: List[Float64],
     mut out_fiedler: List[Float64],
 ) raises -> Int:
-    # Build L = D − |W| (column-major) with zeroed diagonal.
+    # Build L = D − A where A_ij is the reciprocal undirected
+    # magnitude weight (|W_ij| + |W_ji|) / 2 and A_ii = 0.
     # LAPACK ``dsyev_`` expects column-major; since L is symmetric,
     # row-major and column-major are equivalent.
     var L = List[Float64](capacity=n * n)
     for _ in range(n * n):
         L.append(0.0)
+    var degree = List[Float64](capacity=n)
     for i in range(n):
-        var deg: Float64 = 0.0
-        for j in range(n):
-            if i == j:
-                continue
-            var w = abs(knm_flat[i * n + j])
-            L[i * n + j] = -w
-            deg += w
-        L[i * n + i] = deg
-    # Explicit symmetrisation: average L[i,j] and L[j,i].
-    # Floating-point asymmetry in the input would make dsyev's
-    # "upper-triangle" and "lower-triangle" interpretations diverge.
+        degree.append(0.0)
     for i in range(n):
         for j in range(i + 1, n):
-            var avg = 0.5 * (L[i * n + j] + L[j * n + i])
-            L[i * n + j] = avg
-            L[j * n + i] = avg
+            var w = 0.5 * (abs(knm_flat[i * n + j]) + abs(knm_flat[j * n + i]))
+            L[i * n + j] = -w
+            L[j * n + i] = -w
+            degree[i] += w
+            degree[j] += w
+    for i in range(n):
+        L[i * n + i] = degree[i]
 
     # LAPACK FFI (pattern validated in _lapack_test.mojo).
     var lib = OwnedDLHandle(

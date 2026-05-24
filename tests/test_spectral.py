@@ -52,6 +52,30 @@ class TestGraphLaplacian:
         expected = n * np.eye(n) - np.ones((n, n))
         np.testing.assert_allclose(L, expected)
 
+    def test_asymmetric_coupling_uses_reciprocal_magnitude_weights(self):
+        """Directed measurement asymmetry is reduced to one undirected
+        reciprocal coupling before constructing node degrees."""
+        knm = np.array(
+            [
+                [0.0, 2.0, 0.0],
+                [6.0, 0.0, 4.0],
+                [8.0, 0.0, 0.0],
+            ]
+        )
+
+        L = graph_laplacian(knm)
+
+        expected = np.array(
+            [
+                [8.0, -4.0, -4.0],
+                [-4.0, 6.0, -2.0],
+                [-4.0, -2.0, 6.0],
+            ]
+        )
+        np.testing.assert_allclose(L, expected)
+        np.testing.assert_allclose(L, L.T)
+        np.testing.assert_allclose(L.sum(axis=1), 0.0, atol=1e-12)
+
 
 class TestFiedlerValue:
     def test_chain_4(self):

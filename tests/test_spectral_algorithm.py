@@ -74,6 +74,27 @@ class TestGraphLaplacian:
         L = graph_laplacian(W)
         assert L[0, 0] == 1.0  # |−1| contributes to degree
 
+    @_python
+    def test_asymmetric_coupling_preserves_undirected_spectrum(self):
+        """The spectral primitive operates on reciprocal undirected
+        magnitude weights, so reversing the measurement direction does
+        not change the Laplacian spectrum."""
+        W = np.array(
+            [
+                [0.0, 2.0, 0.0],
+                [6.0, 0.0, 4.0],
+                [8.0, 0.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
+
+        eigvals, _ = spectral_eig(W)
+        reversed_eigvals, _ = spectral_eig(W.T)
+
+        np.testing.assert_allclose(eigvals, [0.0, 8.0, 12.0], atol=1e-10)
+        np.testing.assert_allclose(reversed_eigvals, eigvals, atol=1e-12)
+        assert fiedler_value(W) == pytest.approx(fiedler_value(W.T), abs=1e-12)
+
     @pytest.mark.parametrize(
         ("knm", "match"),
         [

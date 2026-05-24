@@ -6,11 +6,11 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Spectral graph eigendecomposition (Go port)
 
-// Package main builds ``libspectral.so`` — symmetric eigendecomposition
-// of the combinatorial graph Laplacian via ``gonum.org/v1/gonum/mat``.
+// Package main builds libspectral.so for symmetric eigendecomposition
+// of the combinatorial graph Laplacian via gonum.org/v1/gonum/mat.
 //
 // The exported C ABI returns both the eigenvalue vector and the
-// Fiedler eigenvector (``λ₂``-eigenvector) through caller-preallocated
+// Fiedler eigenvector, the lambda-2 eigenvector, through caller-preallocated
 // output buffers.
 //
 // Build with::
@@ -33,28 +33,26 @@ func spectralEig(
 	outEigvals []float64,
 	outFiedler []float64,
 ) int {
-	// Build L = D - |W| with zeroed diagonal.
+	// Build L = D - A, where A_ij is the reciprocal undirected
+	// magnitude weight (|W_ij| + |W_ji|) / 2 and A_ii = 0.
 	data := make([]float64, n*n)
+	degree := make([]float64, n)
 	for i := 0; i < n; i++ {
-		sum := 0.0
-		for j := 0; j < n; j++ {
-			if i == j {
-				continue
-			}
-			w := math.Abs(knmFlat[i*n+j])
+		for j := i + 1; j < n; j++ {
+			w := 0.5 * (math.Abs(knmFlat[i*n+j]) + math.Abs(knmFlat[j*n+i]))
 			data[i*n+j] = -w
-			sum += w
+			data[j*n+i] = -w
+			degree[i] += w
+			degree[j] += w
 		}
-		data[i*n+i] = sum
 	}
-	// Symmetrise explicitly — the (i, j) vs (j, i) paths may differ
-	// by a tiny amount in the input knm, and gonum's EigenSym panics
-	// on non-symmetric input.
+	for i := 0; i < n; i++ {
+		data[i*n+i] = degree[i]
+	}
 	sym := mat.NewSymDense(n, nil)
 	for i := 0; i < n; i++ {
 		for j := i; j < n; j++ {
-			v := 0.5 * (data[i*n+j] + data[j*n+i])
-			sym.SetSym(i, j, v)
+			sym.SetSym(i, j, data[i*n+j])
 		}
 	}
 

@@ -77,6 +77,17 @@ def _problem(seed: int, n: int = 6):
     return W
 
 
+def _asymmetric_problem() -> np.ndarray:
+    return np.array(
+        [
+            [0.0, 2.0, 0.0],
+            [6.0, 0.0, 4.0],
+            [8.0, 0.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
+
+
 def _run_backend(backend: str, seed: int, n: int = 6):
     if backend not in s_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
@@ -109,6 +120,33 @@ class TestEigenvalueParity:
         _, _, _, ref = _run_backend("python", 3, n=5)
         _, _, _, got = _run_backend("mojo", 3, n=5)
         assert np.max(np.abs(got - ref)) < TOL_MOJO
+
+
+class TestAsymmetricReciprocalCouplingParity:
+    """Backend contract for asymmetric measured coupling: every backend
+    must reduce reciprocal magnitudes before Laplacian degree construction."""
+
+    def _check(self, backend: str, tol: float) -> None:
+        if backend not in s_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"backend {backend!r} unavailable")
+        W = _asymmetric_problem()
+        with _force("python"):
+            ref, _ = spectral_eig(W)
+        with _force(backend):
+            got, _ = spectral_eig(W)
+        np.testing.assert_allclose(got, ref, atol=tol)
+
+    def test_rust(self):
+        self._check("rust", TOL_LAPACK)
+
+    def test_julia(self):
+        self._check("julia", TOL_LAPACK)
+
+    def test_go(self):
+        self._check("go", TOL_GONUM)
+
+    def test_mojo(self):
+        self._check("mojo", TOL_MOJO)
 
 
 class TestFiedlerValueParity:

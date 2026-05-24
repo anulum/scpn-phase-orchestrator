@@ -8,8 +8,9 @@
 
 """
 spectral.jl — symmetric eigendecomposition of the combinatorial
-graph Laplacian ``L = D − W`` where ``D`` is the diagonal degree
-matrix of ``|W|`` with zeroed diagonal.
+graph Laplacian ``L = D − A`` where ``A`` is the reciprocal
+undirected magnitude adjacency ``(|W| + |W'|) / 2`` with zeroed
+diagonal.
 
 ``spectral_eig(knm_flat, n) -> (eigvals::Vector{Float64},
 fiedler::Vector{Float64})``
@@ -34,14 +35,13 @@ function spectral_eig(knm_flat::AbstractVector{Float64}, n::Integer)
     for i in 1:n
         W[i, i] = 0.0
     end
-    degrees = vec(sum(W, dims=2))
-    L = Diagonal(degrees) - W
-    # Force symmetry before eigen — floating-point roundoff in the
-    # reshape + subtraction can leave a minuscule asymmetry that
-    # flips eig() onto the non-symmetric (slower, different-rounding)
-    # path and breaks LAPACK-parity with NumPy / Mojo.
-    Lsym = Symmetric(0.5 * (L + L'))
-    F = eigen(Lsym)
+    A = 0.5 * (W + W')
+    for i in 1:n
+        A[i, i] = 0.0
+    end
+    degrees = vec(sum(A, dims=2))
+    L = Diagonal(degrees) - A
+    F = eigen(Symmetric(L))
     eigvals = Vector{Float64}(F.values)
     # Second smallest eigenvector (columns are eigenvectors,
     # Julia is 1-based, so column index 2).
