@@ -17,6 +17,7 @@ scales before using the resulting lags in closed-loop runs.
 
 from __future__ import annotations
 
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -27,16 +28,50 @@ __all__ = ["LagModel"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
+def _validate_distances(value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("distances must not contain boolean values")
+    try:
+        distances = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "distances must be a finite non-negative square matrix"
+        ) from exc
+    if distances.ndim != 2 or distances.shape[0] != distances.shape[1]:
+        raise ValueError("distances must be a finite non-negative square matrix")
+    if not np.all(np.isfinite(distances)):
+        raise ValueError("distances must contain only finite values")
+    if np.any(distances < 0.0):
+        raise ValueError("distances must be non-negative")
+    return np.ascontiguousarray(distances, dtype=np.float64)
+
+
+def _validate_positive_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real")
+    resolved = float(value)
+    if not np.isfinite(resolved) or resolved <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real")
+    return resolved
+
+
 class LagModel:
     """Phase-lag estimation and alpha matrix construction."""
 
     @staticmethod
-    def estimate_from_distances(distances: FloatArray, speed: float) -> FloatArray:
+    def estimate_from_distances(distances: object, speed: float) -> FloatArray:
         """Build antisymmetric alpha matrix from pairwise distances and speed.
 
         alpha[i,j] = 2*pi * distances[i,j] / speed.
         Matches the Rust ``LagModel::estimate_from_distances`` algorithm.
         """
+        distances = _validate_distances(distances)
+        speed = _validate_positive_real(speed, name="speed")
         n = distances.shape[0]
         alpha: FloatArray = np.zeros((n, n), dtype=np.float64)
         for i in range(n):

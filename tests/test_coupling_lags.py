@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.coupling.lags import LagModel
 
@@ -93,6 +94,21 @@ def test_estimate_from_distances_matches_rust():
     expected = 2.0 * np.pi * 1.0 / 1.0
     np.testing.assert_allclose(alpha[0, 1], expected, atol=1e-12)
     np.testing.assert_allclose(alpha[1, 0], -expected, atol=1e-12)
+
+
+def test_estimate_from_distances_rejects_invalid_speed():
+    distances = np.array([[0.0, 1.0], [1.0, 0.0]])
+
+    with pytest.raises(ValueError, match="speed"):
+        LagModel.estimate_from_distances(distances, speed=0.0)
+
+
+def test_estimate_from_distances_rejects_invalid_distances():
+    with pytest.raises(ValueError, match="distances"):
+        LagModel.estimate_from_distances([[0.0, -1.0], [-1.0, 0.0]], speed=1.0)
+
+    with pytest.raises(ValueError, match="distances"):
+        LagModel.estimate_from_distances([[0.0, True], [1.0, 0.0]], speed=1.0)
 
 
 class TestLagPipelineWiring:
