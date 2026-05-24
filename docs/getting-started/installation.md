@@ -37,7 +37,7 @@ minimal domainpack, runs `spo run`, and reports the generated audit log.
 | `fusion` | `scpn-fusion-core` | Fusion equilibrium adapter |
 | `queuewaves` | `fastapi`, `uvicorn`, `httpx`, `websockets` | QueueWaves cascade detector server |
 | `nengo` | *(none -- pure-numpy LIF engine)* | Nengo-style SNN integration |
-| `lava` | `lava-nc` | Intel Lava neuromorphic backend |
+| `lava` | *(none -- external runtime managed outside SPO)* | Lava schedule handoff and optional operator-managed runtime integration |
 | `otel` | `opentelemetry-api`, `opentelemetry-sdk` | OpenTelemetry tracing adapter |
 | `plot` | `matplotlib` | Coherence plots and reporting |
 | `notebook` | `jupyter`, `nbconvert`, `matplotlib` | Notebook demos |

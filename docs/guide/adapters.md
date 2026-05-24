@@ -99,8 +99,11 @@ telemetry = bridge.export_state(upde_state)
 ### SNNControllerBridge
 
 Spiking neural network controller with three backends: pure-numpy LIF (always
-available), Nengo (optional), Lava (optional). Converts `UPDEState` R-values
-to LIF input currents, spike rates to `ControlAction` objects.
+available), Nengo-style pure-numpy schedules, and Lava schedule handoff.
+`lava-nc` is intentionally not installed by SPO extras because current
+upstream releases pin a vulnerable `asteval` range; live Lava runtimes must be
+managed by the external operator environment. Converts `UPDEState` R-values to
+LIF input currents and spike rates to `ControlAction` objects.
 
 ```python
 from scpn_phase_orchestrator.adapters import SNNControllerBridge
