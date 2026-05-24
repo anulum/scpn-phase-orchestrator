@@ -57,6 +57,7 @@ class TestPhaseDistanceMatrix:
             (np.array([0.0, np.nan], dtype=np.float64), "phases"),
             (np.array([0.0, np.inf], dtype=np.float64), "phases"),
             (np.array([True, False]), "phases"),
+            (np.array([0.0, np.bool_(True)], dtype=object), "phases"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
@@ -127,6 +128,7 @@ class TestNPE:
             (np.array([0.0, np.nan], dtype=np.float64), "phases"),
             (np.array([0.0, np.inf], dtype=np.float64), "phases"),
             (np.array([True, False]), "phases"),
+            (np.array([0.0, np.bool_(True)], dtype=object), "phases"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
@@ -342,6 +344,8 @@ class TestNPEBoundaryHardening:
             np.array([[0.0, 4.0], [4.0, 0.0]], dtype=np.float64),
             np.array([[0.0, 0.1], [0.2, 0.0]], dtype=np.float64),
             np.array([[0.1, 0.2], [0.2, 0.0]], dtype=np.float64),
+            np.array([[False, True], [True, False]], dtype=np.bool_),
+            np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object),
         ],
     )
     def test_invalid_backend_matrix_falls_back(

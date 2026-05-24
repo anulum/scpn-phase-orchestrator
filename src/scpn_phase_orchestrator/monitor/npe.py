@@ -149,7 +149,7 @@ def _contains_boolean_alias(raw: np.ndarray) -> bool:
         return True
     if raw.dtype != object:
         return False
-    return any(isinstance(value, bool) for value in raw.flat)
+    return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
 
 
 def _validate_phases(phases: object) -> FloatArray:
@@ -168,6 +168,8 @@ def _validate_phases(phases: object) -> FloatArray:
 
 
 def _validate_distance_matrix(value: object, *, n_phases: int) -> FloatArray:
+    if _contains_boolean_alias(np.asarray(value)):
+        raise ValueError("phase distance matrix must not contain boolean values")
     try:
         matrix = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
