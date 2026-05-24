@@ -33,6 +33,11 @@ __all__ = [
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
 class GeometryConstraint(ABC):
     """Base class for K_nm matrix geometry constraints."""
 
@@ -65,8 +70,13 @@ def validate_knm(knm: FloatArray, *, atol: float = 1e-12) -> None:
 
     Raises ValueError with a specific message on the first violation found.
     """
+    if _contains_boolean_alias(knm):
+        raise ValueError("Knm must not contain boolean values")
+    knm = np.asarray(knm, dtype=np.float64)
     if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
         raise ValueError(f"Knm must be square, got shape {knm.shape}")
+    if not np.all(np.isfinite(knm)):
+        raise ValueError("Knm must contain only finite values")
     if not np.allclose(knm, knm.T, atol=atol):
         raise ValueError("Knm is not symmetric")
     if np.any(knm < -atol):

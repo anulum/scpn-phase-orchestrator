@@ -68,6 +68,16 @@ class TestValidateKnmShape:
         m = np.array([[0.0, 0.5], [0.5, 0.0]])
         validate_knm(m)  # Should not raise
 
+    def test_boolean_coupling_alias_rejected(self):
+        m = np.array([[False, True], [True, False]], dtype=bool)
+        with pytest.raises(ValueError, match="boolean"):
+            validate_knm(m)
+
+    def test_non_finite_coupling_rejected(self):
+        m = np.array([[0.0, np.nan], [np.nan, 0.0]])
+        with pytest.raises(ValueError, match="finite"):
+            validate_knm(m)
+
 
 # ── validate_knm: symmetry check ───────────────────────────────────────
 
