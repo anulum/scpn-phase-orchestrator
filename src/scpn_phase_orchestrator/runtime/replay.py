@@ -47,6 +47,38 @@ _UPDE_REPLAY_FIELDS = frozenset(("phases", "omegas", "knm", "alpha"))
 _SL_REPLAY_FIELDS = frozenset(("phases", "omegas", "knm", "alpha"))
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
+def _parse_audit_json(line: str) -> dict:
+    try:
+        decoded = json.loads(line, parse_constant=_reject_json_constant)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise ValueError(
+            "audit replay JSON must contain only finite JSON numbers"
+        ) from exc
+    if not isinstance(decoded, dict):
+        raise ValueError("audit replay JSON line must be an object")
+    return decoded
+
+
+def _canonical_audit_json(entry: dict) -> str:
+    try:
+        return json.dumps(
+            entry,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "audit replay JSON must contain only finite JSON numbers"
+        ) from exc
+
+
 def _layer_records(step_data: dict) -> list[dict]:
     layers = step_data.get("layers", [])
     if not isinstance(layers, list):
@@ -115,7 +147,7 @@ class ReplayEngine:
             for line in fh:
                 line = line.strip()
                 if line:
-                    entries.append(json.loads(line))
+                    entries.append(_parse_audit_json(line))
         return entries
 
     def replay_step(self, step_data: dict) -> UPDEState:
@@ -222,7 +254,10 @@ class ReplayEngine:
                     return False, verified
                 continue
             without_hash = {k: v for k, v in entry.items() if k != "_hash"}
-            json_line = json.dumps(without_hash, separators=(",", ":"), sort_keys=True)
+            try:
+                json_line = _canonical_audit_json(without_hash)
+            except ValueError:
+                return False, verified
             expected = hashlib.sha256((prev + json_line).encode()).hexdigest()
             if expected != stored:
                 return False, verified
