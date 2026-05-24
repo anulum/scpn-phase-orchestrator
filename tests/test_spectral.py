@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import numpy as np
 
+from scpn_phase_orchestrator.coupling import spectral as spectral_module
 from scpn_phase_orchestrator.coupling.spectral import (
     critical_coupling,
     fiedler_partition,
     fiedler_value,
     fiedler_vector,
     graph_laplacian,
+    spectral_eig,
     spectral_gap,
     sync_convergence_rate,
 )
@@ -156,6 +158,25 @@ class TestSpectralGap:
     def test_two_nodes(self):
         knm = np.array([[0.0, 1.0], [1.0, 0.0]])
         assert spectral_gap(knm) == 0.0  # only 2 eigenvalues
+
+
+class TestSpectralPrimitiveContract:
+    def test_invalid_optional_primitive_payload_falls_back_to_python(self, monkeypatch):
+        knm = _chain_knm(4)
+
+        def invalid_primitive(_flat: np.ndarray, n: int):
+            return np.array([0.0, -1.0, 2.0, 3.0]), np.ones(n)
+
+        monkeypatch.setattr(spectral_module, "_primitive", lambda: invalid_primitive)
+
+        eigvals, fiedler = spectral_eig(knm)
+
+        np.testing.assert_allclose(
+            eigvals,
+            np.linalg.eigvalsh(graph_laplacian(knm)),
+            atol=1e-12,
+        )
+        assert fiedler.shape == (4,)
 
 
 class TestConvergenceRate:

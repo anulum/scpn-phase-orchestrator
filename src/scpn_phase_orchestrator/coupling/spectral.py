@@ -161,6 +161,53 @@ def _python_spectral_eig(
     return eigvals, fiedler
 
 
+def _validate_spectral_output(
+    value: object,
+    *,
+    n: int,
+) -> tuple[FloatArray, FloatArray]:
+    try:
+        eigvals_raw, fiedler_raw = value  # type: ignore[misc]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "spectral primitive output must be (eigvals, fiedler)"
+        ) from exc
+    try:
+        eigvals = np.asarray(eigvals_raw, dtype=np.float64)
+        fiedler = np.asarray(fiedler_raw, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("spectral primitive output must be numeric") from exc
+    if eigvals.shape != (n,):
+        raise ValueError(f"spectral eigenvalue shape {eigvals.shape} must be ({n},)")
+    if fiedler.shape != (n,):
+        raise ValueError(f"spectral fiedler shape {fiedler.shape} must be ({n},)")
+    if not np.all(np.isfinite(eigvals)) or not np.all(np.isfinite(fiedler)):
+        raise ValueError("spectral primitive output must contain only finite values")
+    tolerance = 1e-10
+    if np.any(eigvals < -tolerance):
+        raise ValueError("spectral eigenvalues must be non-negative")
+    if np.any(np.diff(eigvals) < -tolerance):
+        raise ValueError("spectral eigenvalues must be sorted ascending")
+    if n > 1 and np.linalg.norm(fiedler) <= tolerance:
+        raise ValueError("spectral fiedler vector must be non-zero")
+    return (
+        np.ascontiguousarray(np.maximum(eigvals, 0.0), dtype=np.float64),
+        np.ascontiguousarray(fiedler, dtype=np.float64),
+    )
+
+
+def _spectral_eig_checked(
+    knm_flat: FloatArray, n: int
+) -> tuple[FloatArray, FloatArray]:
+    primitive = _primitive()
+    try:
+        return _validate_spectral_output(primitive(knm_flat, n), n=n)
+    except Exception:
+        if primitive is _python_spectral_eig:
+            raise
+    return _validate_spectral_output(_python_spectral_eig(knm_flat, n), n=n)
+
+
 def _load_rust_bundle() -> dict[str, Any]:
     from spo_kernel import (
         critical_coupling_rust,
@@ -307,7 +354,7 @@ def spectral_eig(knm: FloatArray) -> tuple[FloatArray, FloatArray]:
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
-    return _primitive()(flat, n)
+    return _spectral_eig_checked(flat, n)
 
 
 def fiedler_value(knm: FloatArray) -> float:
@@ -318,7 +365,7 @@ def fiedler_value(knm: FloatArray) -> float:
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
         return float(_rust_bundle()["fv"](flat, n))
-    eigvals, _ = _primitive()(flat, n)
+    eigvals, _ = _spectral_eig_checked(flat, n)
     return float(eigvals[1]) if n > 1 else 0.0
 
 
@@ -330,7 +377,7 @@ def fiedler_vector(knm: FloatArray) -> FloatArray:
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
         return np.asarray(_rust_bundle()["fvec"](flat, n))
-    _, fiedler = _primitive()(flat, n)
+    _, fiedler = _spectral_eig_checked(flat, n)
     return fiedler
 
 
@@ -378,7 +425,7 @@ def spectral_gap(knm: FloatArray) -> float:
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
         return float(_rust_bundle()["sg"](flat, n))
-    eigvals, _ = _primitive()(flat, n)
+    eigvals, _ = _spectral_eig_checked(flat, n)
     return float(eigvals[2] - eigvals[1])
 
 
