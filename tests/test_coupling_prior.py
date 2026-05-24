@@ -142,3 +142,20 @@ class TestCouplingPriorPipelineWiring:
             phases = eng.step(phases, omegas, cs.knm, 0.0, 0.0, cs.alpha)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"K_base_std": 0.0},
+        {"K_base_std": -0.1},
+        {"decay_alpha_std": 0.0},
+        {"decay_alpha_std": -0.1},
+        {"K_base_mean": np.nan},
+        {"decay_alpha_mean": np.inf},
+        {"K_base_std": True},
+    ],
+)
+def test_universal_prior_rejects_invalid_hyperparameters(kwargs):
+    with pytest.raises((TypeError, ValueError), match="prior"):
+        UniversalPrior(**kwargs)

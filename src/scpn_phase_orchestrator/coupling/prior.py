@@ -44,6 +44,23 @@ _DECAY_ALPHA_MEAN = 0.25
 _DECAY_ALPHA_STD = 0.07
 
 
+def _validate_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"{name} prior hyperparameter must be a finite real")
+
+    resolved = float(value)
+    if not np.isfinite(resolved):
+        raise ValueError(f"{name} prior hyperparameter must be finite")
+    return resolved
+
+
+def _validate_positive_real(value: object, *, name: str) -> float:
+    resolved = _validate_finite_real(value, name=name)
+    if resolved <= 0.0:
+        raise ValueError(f"{name} prior hyperparameter must be positive")
+    return resolved
+
+
 @dataclass
 class CouplingPrior:
     """Coupling configuration: base strength, decay, and K_c estimate."""
@@ -70,10 +87,16 @@ class UniversalPrior:
         decay_alpha_mean: float = _DECAY_ALPHA_MEAN,
         decay_alpha_std: float = _DECAY_ALPHA_STD,
     ):
-        self._K_base_mean = K_base_mean
-        self._K_base_std = K_base_std
-        self._decay_alpha_mean = decay_alpha_mean
-        self._decay_alpha_std = decay_alpha_std
+        self._K_base_mean = _validate_finite_real(
+            K_base_mean, name="K_base_mean"
+        )
+        self._K_base_std = _validate_positive_real(K_base_std, name="K_base_std")
+        self._decay_alpha_mean = _validate_finite_real(
+            decay_alpha_mean, name="decay_alpha_mean"
+        )
+        self._decay_alpha_std = _validate_positive_real(
+            decay_alpha_std, name="decay_alpha_std"
+        )
 
     def sample(
         self,
