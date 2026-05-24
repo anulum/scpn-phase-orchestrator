@@ -43,6 +43,21 @@ _TWO_PI = 2.0 * math.pi
 _PROTOCOL_KIND = "spo.phase_sync"
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
+def _loads_phase_sync_json(payload: str) -> Any:
+    try:
+        return json.loads(payload, parse_constant=_reject_json_constant)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise ValueError(
+            "phase-sync wire JSON must contain only finite JSON numbers"
+        ) from exc
+
+
 @dataclass(frozen=True)
 class DistributedSyncConfig:
     """Safety envelope for phase-vector gossip synchronisation."""
@@ -185,9 +200,9 @@ class PhaseSyncMessage:
     def from_wire(cls, payload: bytes | str | Mapping[str, Any]) -> PhaseSyncMessage:
         """Decode and validate a canonical wire message."""
         if isinstance(payload, bytes):
-            decoded = json.loads(payload.decode("utf-8"))
+            decoded = _loads_phase_sync_json(payload.decode("utf-8"))
         elif isinstance(payload, str):
-            decoded = json.loads(payload)
+            decoded = _loads_phase_sync_json(payload)
         elif isinstance(payload, Mapping):
             decoded = dict(payload)
         else:

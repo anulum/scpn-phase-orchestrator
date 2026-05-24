@@ -132,6 +132,23 @@ def test_phase_gossip_fails_closed_on_tampered_wire_message() -> None:
     assert "digest" in result.reason
 
 
+def test_phase_sync_message_rejects_non_finite_wire_json_constants() -> None:
+    payload = (
+        '{"kind":"spo.phase_sync","protocol_version":1,"node_id":"edge-b",'
+        '"sequence":1,"wall_time_s":1.0,"n_oscillators":2,'
+        '"phases":[0.2,NaN],"digest":"bad"}'
+    )
+
+    with pytest.raises(ValueError, match="finite JSON"):
+        PhaseSyncMessage.from_wire(payload)
+
+    node = PhaseGossipNode(DistributedSyncConfig(node_id="edge-a", n_oscillators=2))
+    result = node.ingest(payload.encode("utf-8"))
+
+    assert not result.accepted
+    assert "finite JSON" in result.reason
+
+
 def test_phase_sync_config_rejects_unphysical_limits() -> None:
     with pytest.raises(ValueError, match="phase_blend"):
         DistributedSyncConfig(node_id="edge-a", n_oscillators=2, phase_blend=1.5)
