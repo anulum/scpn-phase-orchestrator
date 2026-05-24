@@ -118,6 +118,11 @@ def test_eligibility_rejects_invalid_phases(phases, match):
         compute_eligibility(phases)
 
 
+def test_eligibility_rejects_mixed_boolean_phase_alias():
+    with pytest.raises(ValueError, match="phases must not contain boolean"):
+        compute_eligibility([True, 0.5])
+
+
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     [
@@ -153,6 +158,24 @@ def test_three_factor_rejects_invalid_arrays(kwargs, match):
         three_factor_update(
             kwargs["knm"],
             kwargs["eligibility"],
+            modulator=1.0,
+            phase_gate=True,
+        )
+
+
+def test_three_factor_rejects_mixed_boolean_matrix_aliases():
+    with pytest.raises(ValueError, match="knm must not contain boolean"):
+        three_factor_update(
+            [[0.0, True], [0.0, 0.0]],
+            np.ones((2, 2)),
+            modulator=1.0,
+            phase_gate=True,
+        )
+
+    with pytest.raises(ValueError, match="eligibility must not contain boolean"):
+        three_factor_update(
+            np.zeros((2, 2)),
+            [[0.0, True], [0.0, 0.0]],
             modulator=1.0,
             phase_gate=True,
         )

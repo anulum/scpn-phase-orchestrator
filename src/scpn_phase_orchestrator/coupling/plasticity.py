@@ -27,7 +27,14 @@ __all__ = ["compute_eligibility", "three_factor_update"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -43,6 +50,8 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_square_matrix(value: object, *, name: str) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
