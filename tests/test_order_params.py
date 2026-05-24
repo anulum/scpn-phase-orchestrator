@@ -202,6 +202,22 @@ class TestPLV:
 
         assert val == 1.0
 
+    def test_backend_non_finite_plv_is_rejected(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_plv(a: np.ndarray, b: np.ndarray) -> float:
+            return float("nan")
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(op_mod, "_load_backend", lambda name: {"plv": fake_plv})
+
+        with pytest.raises(ValueError, match="coherence magnitude"):
+            op_mod.compute_plv(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.array([0.0, 0.1], dtype=np.float64),
+            )
+
 
 # ---------------------------------------------------------------------
 # compute_layer_coherence
@@ -272,6 +288,29 @@ class TestLayerCoherence:
         )
 
         assert r == 1.0
+
+    def test_backend_non_finite_layer_coherence_is_rejected(
+        self,
+        monkeypatch,
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_layer(phases: np.ndarray, indices: np.ndarray) -> float:
+            return float("nan")
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            op_mod,
+            "_load_backend",
+            lambda name: {"layer_coherence": fake_layer},
+        )
+
+        with pytest.raises(ValueError, match="coherence magnitude"):
+            op_mod.compute_layer_coherence(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.array([0, 1], dtype=np.int64),
+            )
 
 
 # ---------------------------------------------------------------------

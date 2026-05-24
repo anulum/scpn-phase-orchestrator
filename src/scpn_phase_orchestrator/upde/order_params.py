@@ -139,7 +139,7 @@ def _load_backend(name: str) -> dict[str, object]:
 def _unit_interval(value: float) -> float:
     """Preserve the physical bound of coherence magnitudes."""
     if not np.isfinite(value):
-        return value
+        raise ValueError("coherence magnitude must be finite")
     return float(np.clip(value, 0.0, 1.0))
 
 
