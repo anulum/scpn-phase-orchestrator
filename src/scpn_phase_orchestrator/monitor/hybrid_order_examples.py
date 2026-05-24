@@ -18,6 +18,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -31,6 +32,9 @@ AllowedDomains = ("quantum_simulation", "power_grid", "cardiac_rhythm")
 
 
 def _ensure_float64_vector(values: object, *, label: str) -> FloatArray:
+    raw = np.asarray(values)
+    if _contains_boolean_alias(raw):
+        raise ValueError(f"{label} must not contain boolean values")
     try:
         arr = np.asarray(values, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -43,6 +47,24 @@ def _ensure_float64_vector(values: object, *, label: str) -> FloatArray:
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{label} must contain only finite values")
     return arr
+
+
+def _contains_boolean_alias(values: object) -> bool:
+    arr = np.asarray(values)
+    if arr.dtype == np.bool_:
+        return True
+    if arr.dtype == object:
+        return any(isinstance(value, (bool, np.bool_)) for value in arr.flat)
+    return False
+
+
+def _ensure_finite_real(value: object, *, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{label} must be a finite real value")
+    scalar = float(value)
+    if not math.isfinite(scalar):
+        raise ValueError(f"{label} must be finite")
+    return scalar
 
 
 def _summary(values: FloatArray) -> dict[str, float]:
@@ -129,6 +151,11 @@ def _validate_state_candidate(
         )
     if not np.all(np.isfinite(np.abs(candidate.amplitudes))):
         raise ValueError(f"candidate {candidate.state_id} amplitudes must be finite")
+    amplitude_norm = float(np.linalg.norm(candidate.amplitudes))
+    if not math.isfinite(amplitude_norm) or amplitude_norm <= 0.0:
+        raise ValueError(
+            f"candidate {candidate.state_id} amplitudes must have non-zero norm"
+        )
     if candidate.non_actuating is not True:
         raise ValueError(f"candidate {candidate.state_id} must set non_actuating=True")
     if candidate.execution_disabled is not True:
@@ -137,17 +164,29 @@ def _validate_state_candidate(
         )
     if candidate.claim_boundary != HybridBoundary:
         raise ValueError(f"candidate {candidate.state_id} has invalid claim_boundary")
-    if not math.isfinite(candidate.entanglement_entropy):
+    entanglement_entropy = _ensure_finite_real(
+        candidate.entanglement_entropy,
+        label=f"candidate {candidate.state_id} entanglement_entropy",
+    )
+    if entanglement_entropy < 0.0:
         raise ValueError(
-            f"candidate {candidate.state_id} entanglement_entropy must be finite"
+            f"candidate {candidate.state_id} entanglement_entropy must be non-negative"
         )
-    if not math.isfinite(candidate.order_metric_r):
+    order_metric_r = _ensure_finite_real(
+        candidate.order_metric_r,
+        label=f"candidate {candidate.state_id} order_metric_r",
+    )
+    if not 0.0 <= order_metric_r <= 1.0:
         raise ValueError(
-            f"candidate {candidate.state_id} order_metric_r must be finite"
+            f"candidate {candidate.state_id} order_metric_r must lie in [0, 1]"
         )
-    if not math.isfinite(candidate.order_metric_psi):
+    order_metric_psi = _ensure_finite_real(
+        candidate.order_metric_psi,
+        label=f"candidate {candidate.state_id} order_metric_psi",
+    )
+    if not 0.0 <= order_metric_psi <= 1.0:
         raise ValueError(
-            f"candidate {candidate.state_id} order_metric_psi must be finite"
+            f"candidate {candidate.state_id} order_metric_psi must lie in [0, 1]"
         )
     if not candidate.objective_labels:
         raise ValueError(f"candidate {candidate.state_id} requires objective labels")
@@ -172,6 +211,9 @@ def _validate_bipartition(
         raise ValueError(f"{scenario_id} bipartition must be a pair of tuples")
     left, right = bipartition
     merged = left + right
+    if any(isinstance(i, bool) or not isinstance(i, Integral) for i in merged):
+        raise ValueError(f"{scenario_id} bipartition indices must be integers")
+    merged = tuple(int(i) for i in merged)
     if len(merged) != qubit_count:
         raise ValueError(f"{scenario_id} bipartition must cover all qubits")
     if len(set(merged)) != qubit_count:
@@ -185,18 +227,23 @@ def _validate_scenario(scenario: HybridOrderScenario) -> None:
         raise ValueError("invalid scenario domain")
     if not isinstance(scenario.scenario_id, str) or not scenario.scenario_id.strip():
         raise ValueError("scenario_id must be a non-empty string")
-    if scenario.qubit_count < 2:
+    if (
+        isinstance(scenario.qubit_count, bool)
+        or not isinstance(scenario.qubit_count, Integral)
+        or scenario.qubit_count < 2
+    ):
         raise ValueError("qubit_count must be at least two")
+    qubit_count = int(scenario.qubit_count)
 
     phases = _ensure_float64_vector(
         scenario.phases, label=f"{scenario.scenario_id}.phases"
     )
-    if phases.size != scenario.qubit_count:
+    if phases.size != qubit_count:
         raise ValueError(f"{scenario.scenario_id} requires len(phases)=qubit_count")
 
     _validate_bipartition(
         scenario.bipartition,
-        qubit_count=scenario.qubit_count,
+        qubit_count=qubit_count,
         scenario_id=scenario.scenario_id,
     )
 
@@ -230,7 +277,7 @@ def _validate_scenario(scenario: HybridOrderScenario) -> None:
         _validate_state_candidate(
             candidate,
             scenario_id=scenario.scenario_id,
-            qubit_count=scenario.qubit_count,
+            qubit_count=qubit_count,
         )
 
     if not scenario.objective_labels:
@@ -251,8 +298,10 @@ def _compute_scenario_hash(scenario: HybridOrderScenario) -> str:
     payload = {
         "domain": scenario.domain,
         "scenario_id": scenario.scenario_id,
-        "qubit_count": scenario.qubit_count,
-        "bipartition": [list(part) for part in scenario.bipartition],
+        "qubit_count": int(scenario.qubit_count),
+        "bipartition": [
+            [int(index) for index in part] for part in scenario.bipartition
+        ],
         "phases": [float(v) for v in scenario.phases.tolist()],
         "state_candidates": [
             {
@@ -286,8 +335,10 @@ def _to_record(scenario: HybridOrderScenario) -> dict[str, object]:
         "domain": scenario.domain,
         "scenario_id": scenario.scenario_id,
         "scenario_hash": scenario.scenario_hash,
-        "qubit_count": scenario.qubit_count,
-        "bipartition": [list(part) for part in scenario.bipartition],
+        "qubit_count": int(scenario.qubit_count),
+        "bipartition": [
+            [int(index) for index in part] for part in scenario.bipartition
+        ],
         "phases": [float(v) for v in scenario.phases.tolist()],
         "phases_summary": _summary(
             _ensure_float64_vector(scenario.phases, label="phases")

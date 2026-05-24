@@ -193,13 +193,36 @@ def test_flags_and_boundaries() -> None:
     [
         lambda scenario: setattr(scenario, "domain", "invalid_domain"),
         lambda scenario: scenario.phases.__setitem__(0, float("nan")),
+        lambda scenario: setattr(
+            scenario,
+            "phases",
+            np.array([0.1, True], dtype=object),
+        ),
         lambda scenario: setattr(scenario, "qubit_count", 4),
+        lambda scenario: setattr(scenario, "qubit_count", True),
+        lambda scenario: setattr(scenario, "bipartition", ((0,), (np.bool_(True),))),
         lambda scenario: setattr(scenario, "non_actuating", False),
         lambda scenario: setattr(scenario, "scenario_hash", "bad_hash"),
         lambda scenario: setattr(
             scenario.state_candidates[0],
             "candidate_type",
             "unknown",
+        ),
+        lambda scenario: setattr(
+            scenario.state_candidates[0],
+            "entanglement_entropy",
+            -0.1,
+        ),
+        lambda scenario: setattr(scenario.state_candidates[0], "order_metric_r", 1.1),
+        lambda scenario: setattr(
+            scenario.state_candidates[0],
+            "order_metric_psi",
+            True,
+        ),
+        lambda scenario: setattr(
+            scenario.state_candidates[0],
+            "amplitudes",
+            np.zeros(4, dtype=np.complex128),
         ),
     ],
 )
@@ -219,3 +242,11 @@ def test_rejects_malformed_scenarios(
 
     with pytest.raises(ValueError):
         _validate_scenario(mutated)
+
+
+def test_accepts_numpy_integer_qubit_scenario_contracts() -> None:
+    scenario = _build_valid_scenario()
+    scenario.qubit_count = np.int64(2)
+    scenario.bipartition = ((np.int64(0),), (np.int64(1),))
+
+    _validate_scenario(scenario)
