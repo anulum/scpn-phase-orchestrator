@@ -21,7 +21,7 @@ import json
 from dataclasses import dataclass
 from numbers import Integral, Real
 from pathlib import Path
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -121,6 +121,19 @@ def _validate_layer_index(value: object, *, name: str, n_layers: int) -> int:
     if index > n_layers:
         raise ValueError(f"{name} must be in [1, {n_layers}], got {value!r}")
     return index
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
+def _loads_knm_json(payload: str) -> Any:
+    try:
+        return json.loads(payload, parse_constant=_reject_json_constant)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise ValueError("K_nm JSON must contain only finite JSON numbers") from exc
 
 
 @dataclass(frozen=True)
@@ -277,7 +290,7 @@ class CouplingBuilder:
         Negative values are preserved (inhibitory coupling).
         """
         path = Path(handshakes_path)
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = _loads_knm_json(path.read_text(encoding="utf-8"))
         matrix = data.get("matrix")
         if not isinstance(matrix, list):
             raise ValueError("handshake matrix must be a list")

@@ -179,7 +179,7 @@ class TestApplyHandshakes:
                 "to_layer",
             ),
             (
-                {"from_layer": 1, "to_layer": 2, "coupling_strength": np.nan},
+                {"from_layer": 1, "to_layer": 2, "coupling_strength": "bad"},
                 "coupling_strength",
             ),
             (
@@ -195,6 +195,18 @@ class TestApplyHandshakes:
         spec_path.write_text(json.dumps({"matrix": [entry]}))
 
         with pytest.raises(ValueError, match=match):
+            builder.apply_handshakes(base, spec_path)
+
+    def test_rejects_non_finite_json_constants(self, tmp_path):
+        builder = CouplingBuilder()
+        base = builder.build_scpn_physics()
+        spec_path = tmp_path / "bad_handshakes.json"
+        spec_path.write_text(
+            '{"matrix":[{"from_layer":1,"to_layer":2,"coupling_strength":NaN}]}',
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="finite JSON"):
             builder.apply_handshakes(base, spec_path)
 
 
