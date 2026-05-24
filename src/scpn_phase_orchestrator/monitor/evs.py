@@ -19,7 +19,7 @@ must match the trial axis before evidence is reported.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from numbers import Real
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -50,6 +50,19 @@ class EVSResult:
     persistence_score: float
     specificity_ratio: float
     is_entrained: bool
+
+    def __post_init__(self) -> None:
+        itpc_value = _validate_unit_threshold(self.itpc_value, name="itpc_value")
+        persistence_score = _validate_unit_threshold(
+            self.persistence_score,
+            name="persistence_score",
+        )
+        specificity_ratio = _validate_specificity_ratio(self.specificity_ratio)
+        if not isinstance(self.is_entrained, bool):
+            raise TypeError("is_entrained must be a bool")
+        object.__setattr__(self, "itpc_value", itpc_value)
+        object.__setattr__(self, "persistence_score", persistence_score)
+        object.__setattr__(self, "specificity_ratio", specificity_ratio)
 
 
 class EVSMonitor:
@@ -183,6 +196,15 @@ def _validate_positive_real(value: object, *, name: str) -> float:
     return scalar
 
 
+def _validate_specificity_ratio(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError("specificity_ratio must be a real value")
+    scalar = float(value)
+    if np.isnan(scalar) or scalar < 0.0:
+        raise ValueError("specificity_ratio must be non-negative")
+    return scalar
+
+
 def _validate_real(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a finite real value")
@@ -194,7 +216,7 @@ def _validate_real(value: object, *, name: str) -> float:
 
 def _validate_phase_trials(value: object) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(raw):
         raise ValueError("phases_trials must not contain boolean values")
     try:
         phases = raw.astype(np.float64, copy=True)
@@ -215,17 +237,27 @@ def _validate_phase_trials(value: object) -> FloatArray:
 
 
 def _validate_pause_indices(value: list[int] | IntArray) -> IntArray:
+    if _contains_boolean_alias(value):
+        raise TypeError("pause_indices must contain integer indices, not booleans")
     raw = np.asarray(value)
     if raw.ndim != 1:
         raise ValueError("pause_indices must be a 1-D integer index array")
-    if raw.dtype == np.bool_:
-        raise TypeError("pause_indices must contain integer indices, not booleans")
-    try:
-        numeric = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise TypeError("pause_indices must contain integer indices") from exc
+    if not all(isinstance(index, Integral) for index in raw.flat):
+        raise TypeError("pause_indices must contain integer indices")
+    numeric = np.asarray(value, dtype=np.float64)
     if not np.all(np.isfinite(numeric)):
         raise ValueError("pause_indices must contain finite integer indices")
-    if not np.all(numeric == np.floor(numeric)):
-        raise TypeError("pause_indices must contain integer indices")
     return numeric.astype(np.int64)
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    if isinstance(value, (bool, np.bool_)):
+        return True
+    if isinstance(value, (list, tuple)):
+        return any(_contains_boolean_alias(item) for item in value)
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        return True
+    if raw.dtype == object:
+        return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+    return False

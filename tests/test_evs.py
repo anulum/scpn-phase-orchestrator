@@ -99,6 +99,7 @@ def test_constructor_rejects_invalid_thresholds(kwargs, match):
         (np.empty((0, 4)), "phases_trials"),
         (np.array([[0.0, np.nan], [1.0, 2.0]]), "phases_trials"),
         (np.array([[True, False], [False, True]]), "phases_trials"),
+        (np.array([[0.0, True], [1.0, 2.0]], dtype=object), "phases_trials"),
         (np.array([[0.0, "not-a-phase"]], dtype=object), "phases_trials"),
     ],
 )
@@ -109,7 +110,7 @@ def test_evaluate_rejects_invalid_phase_trials(phases, match):
 
 @pytest.mark.parametrize(
     "pause_indices",
-    [[0.5], [True], np.array([[0, 1]]), ["not-an-index"], [math.inf]],
+    [[0.5], [True], [0, True], np.array([[0, 1]]), ["not-an-index"], [math.inf]],
 )
 def test_evaluate_rejects_invalid_pause_indices(pause_indices):
     phases = _entrained_phases(n_trials=4, n_time=8)
@@ -238,6 +239,27 @@ def test_evs_result_is_frozen():
     mutable = cast(Any, r)
     with pytest.raises(AttributeError):
         mutable.itpc_value = 0.1
+
+
+@pytest.mark.parametrize(
+    ("args", "match"),
+    [
+        ((-0.1, 0.6, 2.0, True), "itpc_value"),
+        ((0.8, 1.1, 2.0, True), "persistence_score"),
+        ((0.8, 0.6, -0.1, True), "specificity_ratio"),
+        ((0.8, 0.6, math.nan, True), "specificity_ratio"),
+        ((0.8, 0.6, 2.0, 1), "is_entrained"),
+    ],
+)
+def test_evs_result_rejects_invalid_physics_scores(args, match):
+    with pytest.raises((TypeError, ValueError), match=match):
+        EVSResult(*args)
+
+
+def test_evs_result_accepts_infinite_specificity_for_zero_control_itpc():
+    result = EVSResult(0.8, 0.6, math.inf, True)
+
+    assert math.isinf(result.specificity_ratio)
 
 
 def test_high_specificity_threshold_rejects_broadband():
