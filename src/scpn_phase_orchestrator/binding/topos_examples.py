@@ -97,9 +97,18 @@ class ToposDomainObligation:
         ]
         payload["binding_spec_name"] = self.binding_spec.name
         payload["binding_spec_signature"] = _binding_signature(self.binding_spec)
-        payload_bytes = json.dumps(
-            payload, sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
+        try:
+            payload_json = json.dumps(
+                payload,
+                allow_nan=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        except ValueError as exc:
+            raise ValueError(
+                "topos example hash payload must contain only finite JSON numbers"
+            ) from exc
+        payload_bytes = payload_json.encode("utf-8")
         return hashlib.sha256(payload_bytes).hexdigest()
 
     def _validate(self) -> None:

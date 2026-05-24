@@ -10,9 +10,19 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
+from scpn_phase_orchestrator.binding.semantic import compile_symbolic_binding
 from scpn_phase_orchestrator.binding.topos_examples import (
     BOUNDARY_TAG,
+    ToposDomainObligation,
+    ToposProofObligation,
     build_topos_domain_obligation_examples,
+)
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    PolicyAction,
+    PolicyCondition,
+    PolicyRule,
 )
 
 EXPECTED_DOMAINS = ("power_grid", "cardiac_rhythm", "cyber_industrial")
@@ -106,3 +116,53 @@ def test_expected_domains_are_present():
     example_domains = {example["domain"] for example in examples}
     for expected in EXPECTED_DOMAINS:
         assert expected in example_domains
+
+
+def test_non_finite_policy_numbers_are_rejected_from_example_hash():
+    artifacts = compile_symbolic_binding(
+        "A 1 layer power grid symbolic control prompt",
+        name="topos_non_finite_policy_payload",
+        oscillators_per_layer=1,
+        dry_run_steps=1,
+        retrieval_root=None,
+        docs_root=None,
+    )
+    example = ToposDomainObligation(
+        domain="power_grid",
+        symbolic_prompt="A 1 layer power grid symbolic control prompt",
+        binding_spec=artifacts.binding_spec,
+        policy_rules=(
+            PolicyRule(
+                name="non_finite_action",
+                regimes=["CRITICAL"],
+                condition=PolicyCondition(
+                    metric="R",
+                    layer=0,
+                    op="<",
+                    threshold=0.5,
+                ),
+                actions=[
+                    PolicyAction(
+                        knob="K",
+                        scope="global",
+                        value=float("nan"),
+                        ttl_s=1.0,
+                    )
+                ],
+            ),
+        ),
+        obligations=(
+            ToposProofObligation(
+                name="power_grid_finite_policy_payload",
+                description="Policy payloads must remain finite for stable hashes.",
+            ),
+        ),
+        binding_object_count=1,
+        policy_object_count=1,
+        non_actuating=True,
+        proof_boundary=BOUNDARY_TAG,
+        passed=True,
+    )
+
+    with pytest.raises(ValueError, match="finite JSON"):
+        example.to_audit_record()
