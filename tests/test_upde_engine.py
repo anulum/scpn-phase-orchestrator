@@ -444,3 +444,19 @@ class TestUPDEEngineValidation:
 # ──────────────────────────────────────────────────────────────────────
 # physical.py: force Python fallback path for extract()
 # ──────────────────────────────────────────────────────────────────────
+
+
+def test_rust_output_outside_phase_domain_is_rejected():
+    class BadRust:
+        def step(self, *_args):
+            return np.array([0.0, 2.0 * np.pi])
+
+    engine = UPDEEngine(n_oscillators=2, dt=0.01)
+    engine._rust = BadRust()
+    phases = np.zeros(2)
+    omegas = np.ones(2)
+    knm = np.zeros((2, 2))
+    alpha = np.zeros((2, 2))
+
+    with pytest.raises(ValueError, match="Rust output phases"):
+        engine.step(phases, omegas, knm, 0.0, 0.0, alpha)

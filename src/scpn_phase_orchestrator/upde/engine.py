@@ -363,6 +363,8 @@ class UPDEEngine:
                 raise ValueError("Rust output contains NaN/Inf")
         except TypeError as exc:
             raise ValueError("Rust output must be finite") from exc
+        if np.any(output < 0.0) or np.any(output >= TWO_PI):
+            raise ValueError("Rust output phases must be in [0, 2*pi)")
         return np.asarray(output, dtype=np.float64)
 
     def _derivative(
