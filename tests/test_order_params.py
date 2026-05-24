@@ -114,6 +114,23 @@ class TestOrderParameter:
         assert r == 1.0
         assert psi == 0.25
 
+    def test_backend_non_finite_mean_phase_is_rejected(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_order(phases: np.ndarray) -> tuple[float, float]:
+            return 0.5, float("nan")
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            op_mod,
+            "_load_backend",
+            lambda name: {"order_parameter": fake_order},
+        )
+
+        with pytest.raises(ValueError, match="mean phase"):
+            op_mod.compute_order_parameter(np.array([0.25], dtype=np.float64))
+
 
 # ---------------------------------------------------------------------
 # compute_plv

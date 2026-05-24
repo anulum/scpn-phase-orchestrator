@@ -143,6 +143,13 @@ def _unit_interval(value: float) -> float:
     return float(np.clip(value, 0.0, 1.0))
 
 
+def _mean_phase(value: float) -> float:
+    """Preserve the physical phase domain for mean phase outputs."""
+    if not np.isfinite(value):
+        raise ValueError("mean phase must be finite")
+    return float(value % TWO_PI)
+
+
 def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
     raw = np.asarray(phases)
     if raw.dtype == np.bool_:
@@ -159,7 +166,7 @@ def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
 def _python_order_parameter(phases: FloatArray) -> tuple[float, float]:
     with np.errstate(invalid="ignore"):
         z = np.mean(np.exp(1j * phases))
-    return _unit_interval(float(np.abs(z))), float(np.angle(z) % TWO_PI)
+    return _unit_interval(float(np.abs(z))), _mean_phase(float(np.angle(z)))
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
@@ -235,7 +242,7 @@ def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
         fn = cast("Callable[[FloatArray], tuple[float, float]]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         r, psi = fn(p)
-        return _unit_interval(float(r)), float(psi)
+        return _unit_interval(float(r)), _mean_phase(float(psi))
 
     return _python_order_parameter(phases)
 
