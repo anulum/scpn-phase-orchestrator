@@ -93,7 +93,7 @@ class TestTraceSyncTransition:
 
 
 class TestTraceSyncTransitionCoverage:
-    """Target uncovered lines: 143-150 (K_critical interpolation)."""
+    """Validate K_critical interpolation when the response crosses threshold."""
 
     def test_k_critical_interpolation(self):
         """Force a clear R threshold crossing to exercise interpolation."""
