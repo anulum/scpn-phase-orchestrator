@@ -234,6 +234,8 @@ def _validate_reduced_coupling(
         reduced = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError("reduced coupling matrix must be numeric") from exc
+    if reduced.ndim == 1 and reduced.size == expected_shape[0] * expected_shape[1]:
+        reduced = reduced.reshape(expected_shape)
     if reduced.shape != expected_shape:
         raise ValueError(
             f"reduced coupling matrix shape {reduced.shape} does not match "

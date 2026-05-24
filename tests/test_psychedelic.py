@@ -99,6 +99,23 @@ def test_reduce_coupling_rejects_invalid_rust_reduce_output(
         reduce_coupling(np.eye(2), 0.5)
 
 
+def test_reduce_coupling_accepts_flat_backend_matrix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Backend flat n*n payloads are restored to the public matrix contract."""
+    monkeypatch.setattr(psychedelic_mod, "_HAS_RUST_REDUCE", True)
+    monkeypatch.setattr(
+        psychedelic_mod,
+        "_rust_reduce",
+        lambda flat, factor: flat * (1.0 - factor),
+        raising=False,
+    )
+
+    result = reduce_coupling(np.eye(3), 0.25)
+
+    np.testing.assert_allclose(result, np.eye(3) * 0.75)
+
+
 def test_entropy_uniform_phases_high():
     """Uniformly distributed phases should have near-maximal entropy."""
     phases = np.linspace(0, 2 * np.pi, 360, endpoint=False)
