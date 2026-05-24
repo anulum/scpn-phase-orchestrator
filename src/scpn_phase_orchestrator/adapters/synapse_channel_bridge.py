@@ -38,7 +38,7 @@ import time
 from dataclasses import dataclass, field
 from math import isfinite
 from numbers import Real
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, cast
 from urllib.parse import urlparse
 
 import numpy as np
@@ -279,8 +279,8 @@ class SynapseChannelBridge:
         if message is None:
             return
 
-        sender = message["sender"]
-        msg_type = message["type"]
+        sender = cast(str, message["sender"])
+        msg_type = cast(str, message["type"])
         now = time.time()
 
         if sender not in self._agent_idx:
