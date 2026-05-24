@@ -201,6 +201,8 @@ def _validate_n_bins(value: object) -> int:
 
 
 def _validate_te_scalar(value: object, *, name: str = "transfer entropy") -> float:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not be a boolean value")
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative scalar")
     try:
@@ -213,6 +215,8 @@ def _validate_te_scalar(value: object, *, name: str = "transfer entropy") -> flo
 
 
 def _validate_te_matrix(value: object, *, n_osc: int) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("transfer entropy matrix must not contain boolean values")
     try:
         matrix = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
