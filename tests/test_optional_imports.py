@@ -56,10 +56,12 @@ class TestJaxEngineImportGuard:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         eng = UPDEEngine(4, dt=0.01)
+        knm = np.ones((4, 4)) * 0.3
+        np.fill_diagonal(knm, 0.0)
         result = eng.step(
             np.array([0.0, 0.5, 1.0, 1.5]),
             np.ones(4),
-            np.ones((4, 4)) * 0.3,
+            knm,
             0.0,
             0.0,
             np.zeros((4, 4)),
