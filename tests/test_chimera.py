@@ -185,6 +185,8 @@ def test_local_order_parameter_falls_back_when_backend_raises(
         np.array([0.5, np.nan], dtype=np.float64),
         np.array([0.5, 1.1], dtype=np.float64),
         np.array([-0.1, 0.5], dtype=np.float64),
+        np.array([True, False], dtype=np.bool_),
+        np.array([0.5, np.bool_(True)], dtype=object),
     ],
 )
 def test_local_order_parameter_invalid_backend_payload_falls_back(

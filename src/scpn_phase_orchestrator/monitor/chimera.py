@@ -61,7 +61,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
             np.ascontiguousarray(knm_flat, dtype=np.float64),
             int(n),
         )
-        return np.asarray(local, dtype=np.float64)
+        return cast("FloatArray", np.asarray(local))
 
     return cast("Callable[..., FloatArray]", _rust)
 
@@ -194,12 +194,12 @@ def _validate_index_list(indices: object, *, name: str) -> list[int]:
     return normalised
 
 
-def _contains_boolean_alias(raw: np.ndarray) -> bool:
-    if raw.dtype == np.bool_:
-        return True
-    if raw.dtype != object:
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
         return False
-    return any(isinstance(value, bool) for value in raw.flat)
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _validate_chimera_inputs(
@@ -237,6 +237,8 @@ def _validate_chimera_inputs(
 
 
 def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("local order parameter output must not contain boolean values")
     try:
         local = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

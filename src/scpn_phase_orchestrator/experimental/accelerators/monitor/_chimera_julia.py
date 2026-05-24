@@ -50,6 +50,5 @@ def local_order_parameter_julia(
             np.ascontiguousarray(phases.ravel(), dtype=np.float64),
             np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64),
             int(n),
-        ),
-        dtype=np.float64,
+        )
     )
