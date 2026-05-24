@@ -9,12 +9,13 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, get_type_hints
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -160,6 +161,11 @@ class TestTransitionQuality:
 
 class TestSymbolicExtractorMetadata:
     """Verify channel, node_id, and construction constraints."""
+
+    def test_extract_signal_type_hint_matches_discrete_integer_contract(self):
+        hint = get_type_hints(SymbolicExtractor.extract)["signal"]
+        assert_precise_ndarray_hint(hint)
+        assert "int64" in str(hint)
 
     def test_channel_is_S(self):
         ext = SymbolicExtractor(n_states=4, node_id="sym_q")

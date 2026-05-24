@@ -130,7 +130,7 @@ class SymbolicExtractor(PhaseExtractor):
             initial_transition_quality
         )
 
-    def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
+    def extract(self, signal: IntArray, sample_rate: float) -> list[PhaseState]:
         """Map discrete state indices to phases on the unit circle."""
         indices = _validate_signal(signal)
         sample_rate = _validate_sample_rate(sample_rate)

@@ -307,12 +307,15 @@ class TestPhaseExtractorContract:
             (PhaseExtractor.extract, "signal"),
             (PhysicalExtractor.extract, "signal"),
             (InformationalExtractor.extract, "signal"),
-            (SymbolicExtractor.extract, "signal"),
             (extract_initial_phases, "omegas"),
         ]:
             hint = get_type_hints(fn)[param]
             assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
+
+        symbolic_hint = get_type_hints(SymbolicExtractor.extract)["signal"]
+        assert_precise_ndarray_hint(symbolic_hint)
+        assert "int64" in str(symbolic_hint)
 
         result_hint = get_type_hints(PhaseQualityScorer.downweight_mask)["return"]
         assert_precise_ndarray_hint(result_hint)
