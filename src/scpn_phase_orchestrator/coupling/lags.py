@@ -64,7 +64,7 @@ class LagModel:
     """Phase-lag estimation and alpha matrix construction."""
 
     @staticmethod
-    def estimate_from_distances(distances: object, speed: float) -> FloatArray:
+    def estimate_from_distances(distances: FloatArray, speed: float) -> FloatArray:
         """Build antisymmetric alpha matrix from pairwise distances and speed.
 
         alpha[i,j] = 2*pi * distances[i,j] / speed.
