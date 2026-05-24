@@ -274,6 +274,11 @@ def phase_transfer_entropy(
     bin_count = _validate_n_bins(n_bins)
     source_values = _validate_phase_vector(source, name="source")
     target_values = _validate_phase_vector(target, name="target")
+    n_samples = min(len(source_values), len(target_values))
+    if n_samples < 3:
+        return 0.0
+    source_values = source_values[:n_samples]
+    target_values = target_values[:n_samples]
     backend_fn = _dispatch("phase_te")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, FloatArray, int], float]", backend_fn)
@@ -290,9 +295,7 @@ def phase_transfer_entropy(
         except Exception:
             bin_count = int(bin_count)
 
-    if len(source_values) < 3 or len(target_values) < 3:
-        return 0.0
-    n = min(len(source_values), len(target_values)) - 1
+    n = n_samples - 1
     bins = np.linspace(0, 2 * np.pi, bin_count + 1)
     src_binned: IntArray = np.clip(
         np.digitize(source_values[:n] % (2 * np.pi), bins) - 1,

@@ -76,6 +76,30 @@ class TestTransferEntropy:
         finally:
             te_mod.ACTIVE_BACKEND = previous
 
+    def test_backend_receives_shortest_equal_length_series_for_mismatch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
+
+        def fake_phase_te(src: np.ndarray, tgt: np.ndarray, _bins: int) -> float:
+            calls.append((src.shape, tgt.shape))
+            return 0.25
+
+        monkeypatch.setattr(
+            te_mod,
+            "_dispatch",
+            lambda fn_name: fake_phase_te if fn_name == "phase_te" else None,
+        )
+
+        result = phase_transfer_entropy(
+            np.array([0.0, 0.4, 0.8, 1.2, 1.6], dtype=np.float64),
+            np.array([0.0, 0.25, 0.5], dtype=np.float64),
+            n_bins=12,
+        )
+
+        assert result == pytest.approx(0.25, abs=1e-12)
+        assert calls == [((3,), (3,))]
+
     def test_short_signal_source_is_rejected_as_zero_regardless_of_target(self) -> None:
         previous = te_mod.ACTIVE_BACKEND
         te_mod.ACTIVE_BACKEND = "python"
