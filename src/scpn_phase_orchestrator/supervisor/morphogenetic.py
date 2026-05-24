@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from html import escape
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -215,7 +216,7 @@ def build_morphogenetic_field_snapshot(
     The snapshot is dependency-free and audit-oriented: it exposes summary
     statistics, ASCII heatmap rows, and the strongest non-diagonal field edges.
     """
-    if top_k < 0:
+    if isinstance(top_k, (bool, np.bool_)) or not isinstance(top_k, int) or top_k < 0:
         raise ValueError("top_k must be non-negative")
     _require_non_empty(palette, "palette")
     source_state = (
@@ -247,7 +248,11 @@ def render_morphogenetic_field_svg(
     The renderer is passive: it produces a review artefact from an already
     computed field and does not mutate policy, coupling, or actuation state.
     """
-    if cell_size < 8:
+    if (
+        isinstance(cell_size, (bool, np.bool_))
+        or not isinstance(cell_size, int)
+        or cell_size < 8
+    ):
         raise ValueError("cell_size must be at least 8")
     _require_non_empty(title, "title")
     source_state = (
@@ -314,6 +319,8 @@ def render_morphogenetic_field_svg(
 
 
 def _validate_phases(phases: FloatArray) -> FloatArray:
+    if _contains_boolean_alias(phases):
+        raise ValueError("phases must not contain boolean values")
     arr = np.asarray(phases, dtype=np.float64)
     if arr.ndim != 1:
         raise ValueError("phases must be a one-dimensional array")
@@ -325,6 +332,8 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
 
 
 def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
+    if _contains_boolean_alias(knm):
+        raise ValueError("knm must not contain boolean values")
     arr = np.asarray(knm, dtype=np.float64)
     if arr.shape != (n, n):
         raise ValueError(f"knm must have shape ({n}, {n})")
@@ -336,6 +345,8 @@ def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
 
 
 def _validate_field(field: FloatArray, n: int) -> FloatArray:
+    if _contains_boolean_alias(field):
+        raise ValueError("field must not contain boolean values")
     arr = np.asarray(field, dtype=np.float64)
     if arr.shape != (n, n):
         raise ValueError(f"field must have shape ({n}, {n})")
@@ -347,6 +358,8 @@ def _validate_field(field: FloatArray, n: int) -> FloatArray:
 
 
 def _validate_square_field(field: FloatArray) -> FloatArray:
+    if _contains_boolean_alias(field):
+        raise ValueError("field must not contain boolean values")
     arr = np.asarray(field, dtype=np.float64)
     if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
         raise ValueError("field must be a square matrix")
@@ -432,15 +445,34 @@ def _top_field_edges(
 
 
 def _require_unit_interval(value: float, name: str) -> None:
-    if not np.isfinite(value) or value < 0.0 or value > 1.0:
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, Real)
+        or not np.isfinite(value)
+        or value < 0.0
+        or value > 1.0
+    ):
         raise ValueError(f"{name} must be finite and in [0, 1]")
 
 
 def _require_non_negative(value: float, name: str) -> None:
-    if not np.isfinite(value) or value < 0.0:
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, Real)
+        or not np.isfinite(value)
+        or value < 0.0
+    ):
         raise ValueError(f"{name} must be finite and non-negative")
 
 
 def _require_non_empty(value: str, name: str) -> None:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{name} must be a non-empty string")
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        arr = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)

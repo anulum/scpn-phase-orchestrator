@@ -37,10 +37,14 @@ class TestMorphogeneticPolicyValidation:
         assert morphogenetic_module.MorphogeneticFieldPolicy is MorphogeneticFieldPolicy
         with pytest.raises(ValueError, match="growth_rate"):
             MorphogeneticFieldPolicy(growth_rate=1.2)
+        with pytest.raises(ValueError, match="growth_rate"):
+            MorphogeneticFieldPolicy(growth_rate=np.bool_(True))
         with pytest.raises(ValueError, match="coherence_target"):
             MorphogeneticFieldPolicy(coherence_target=-0.1)
         with pytest.raises(ValueError, match="max_delta"):
             MorphogeneticFieldPolicy(max_delta=-0.1)
+        with pytest.raises(ValueError, match="max_delta"):
+            MorphogeneticFieldPolicy(max_delta=True)
 
 
 class TestMorphogeneticTopologySupervisor:
@@ -359,10 +363,22 @@ class TestMorphogeneticTopologySupervisor:
                 "phases must be finite",
             ),
             (
+                np.array([0.0, True], dtype=object),
+                np.zeros((2, 2), dtype=np.float64),
+                None,
+                "phases must not contain boolean values",
+            ),
+            (
                 np.zeros(2, dtype=np.float64),
                 np.array([[0.0, np.inf], [0.0, 0.0]], dtype=np.float64),
                 None,
                 "knm must be finite",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.array([[0.0, np.bool_(True)], [0.0, 0.0]], dtype=object),
+                None,
+                "knm must not contain boolean values",
             ),
             (
                 np.zeros(2, dtype=np.float64),
@@ -377,6 +393,14 @@ class TestMorphogeneticTopologySupervisor:
                     np.array([[0.0, np.nan], [0.0, 0.0]], dtype=np.float64)
                 ),
                 "field must be finite",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                MorphogeneticFieldState(
+                    np.array([[0.0, True], [0.0, 0.0]], dtype=object)
+                ),
+                "field must not contain boolean values",
             ),
             (
                 np.zeros(2, dtype=np.float64),
@@ -420,6 +444,10 @@ class TestMorphogeneticTopologySupervisor:
             (
                 np.array([[0.0, np.inf], [0.0, 0.0]], dtype=np.float64),
                 "field must be finite",
+            ),
+            (
+                np.array([[0.0, np.bool_(True)], [0.0, 0.0]], dtype=object),
+                "field must not contain boolean values",
             ),
             (
                 np.array([[0.0, -0.1], [0.0, 0.0]], dtype=np.float64),
