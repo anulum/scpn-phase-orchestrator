@@ -34,6 +34,8 @@ _SUPPORTED_DOMAINS: Final[tuple[str, ...]] = (
 
 
 def _ensure_float64_vector(values: Iterable[float], *, label: str) -> FloatArray:
+    if isinstance(values, (bool, np.bool_)) or _contains_boolean_alias(values):
+        raise ValueError(f"{label} must contain numeric values")
     arr = np.asarray(tuple(values), dtype=np.float64)
     if arr.ndim != 1:
         raise ValueError(f"{label} must be a 1D array, got ndim={arr.ndim}")
@@ -62,7 +64,7 @@ def _distribution_summary(values: FloatArray) -> dict[str, float]:
 
 
 def _ensure_positive_finite_scalar(value: object, *, label: str) -> float:
-    if isinstance(value, bool):
+    if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{label} must not be a boolean")
     if not isinstance(value, (int, float, np.floating)):
         raise ValueError(f"{label} must be a numeric value")
@@ -79,6 +81,14 @@ def _validate_domain(domain: str) -> str:
     if domain not in _SUPPORTED_DOMAINS:
         raise ValueError(f"unsupported domain '{domain}'")
     return domain
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
 @dataclass(frozen=True)
@@ -191,6 +201,7 @@ def _compute_scenario_hash(
     }
     payload = json.dumps(
         canonical,
+        allow_nan=False,
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
@@ -220,7 +231,9 @@ def _validate_control_gradient(control_gradient: tuple[tuple[str, float], ...]) 
     for knob_name, knob_value in control_gradient:
         if not isinstance(knob_name, str) or not knob_name.strip():
             raise ValueError("control_gradient keys must be non-empty strings")
-        if not isinstance(knob_value, (int, float, np.floating)):
+        if isinstance(knob_value, (bool, np.bool_)) or not isinstance(
+            knob_value, (int, float, np.floating)
+        ):
             raise ValueError("control_gradient values must be finite numbers")
         if not math.isfinite(float(knob_value)):
             raise ValueError("control_gradient values must be finite")
@@ -318,7 +331,9 @@ def _validate_scenario_record(record: dict[str, object]) -> None:
     if not isinstance(record["target_distribution"], list | tuple):
         raise ValueError("record target_distribution must be a sequence")
     max_step_raw = record["max_step"]
-    if not isinstance(max_step_raw, int | float) or isinstance(max_step_raw, bool):
+    if not isinstance(max_step_raw, int | float) or isinstance(
+        max_step_raw, (bool, np.bool_)
+    ):
         raise ValueError("record max_step must be numeric")
     current_distribution = _ensure_float64_vector(
         record["current_distribution"],
@@ -341,6 +356,8 @@ def _validate_scenario_record(record: dict[str, object]) -> None:
         knob, value = item
         if not isinstance(knob, str):
             raise ValueError("record control_gradient knobs must be strings")
+        if isinstance(value, (bool, np.bool_)):
+            raise ValueError("record control_gradient values must be numeric")
         control_gradient.append((knob, float(value)))
 
     scenario = InformationGeometryScenario(

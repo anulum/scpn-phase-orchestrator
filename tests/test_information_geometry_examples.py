@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
     DistributionPair,
     InformationGeometryBoundary,
     InformationGeometryScenario,
+    _compute_scenario_hash,
     _validate_control_gradient,
     _validate_information_geometry_scenario,
     _validate_scenario_record,
@@ -185,6 +186,46 @@ def test_rejects_malformed_scenarios() -> None:
 
     with pytest.raises(ValueError, match="non-empty"):
         _validate_control_gradient(())
+
+
+def test_rejects_boolean_alias_distribution_values() -> None:
+    with pytest.raises(ValueError, match="current_distribution"):
+        _validate_information_geometry_scenario(
+            _bad_scenario(
+                distributions=DistributionPair(
+                    current_distribution=np.array([True, 0.3, 0.7], dtype=object),
+                    target_distribution=np.array([0.4, 0.2, 0.4], dtype=np.float64),
+                )
+            )
+        )
+
+
+def test_rejects_boolean_alias_control_gradient_and_max_step() -> None:
+    with pytest.raises(ValueError, match="control_gradient"):
+        _validate_information_geometry_scenario(
+            _bad_scenario(control_gradient=(("K", np.bool_(True)),))
+        )
+
+    with pytest.raises(ValueError, match="max_step"):
+        _validate_information_geometry_scenario(_bad_scenario(max_step=np.bool_(True)))
+
+
+def test_scenario_hash_rejects_non_finite_canonical_payload() -> None:
+    scenario = _bad_scenario(control_gradient=(("K", float("nan")),))
+
+    with pytest.raises(ValueError):
+        _compute_scenario_hash(
+            domain=scenario.domain,
+            scenario_id=scenario.scenario_id,
+            distributions=scenario.distributions,
+            objective_labels=scenario.objective_labels,
+            control_gradient=scenario.control_gradient,
+            knob_hints=scenario.knob_hints,
+            max_step=scenario.max_step,
+            non_actuating=scenario.non_actuating,
+            execution_disabled=scenario.execution_disabled,
+            claim_boundary=scenario.claim_boundary,
+        )
 
 
 def test_rejects_records_with_invalid_hash_and_malformed_shapes() -> None:
