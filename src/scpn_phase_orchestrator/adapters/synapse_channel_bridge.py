@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 
 TWO_PI = 2.0 * np.pi
 FloatArray: TypeAlias = NDArray[np.float64]
+SynapseMessage: TypeAlias = dict[str, object]
 
 
 def _validate_hub_uri(hub_uri: str) -> str:
@@ -84,6 +85,33 @@ def _validate_agents(agents: list[str] | None) -> list[str]:
         validated.append(agent)
 
     return validated
+
+
+def _normalise_hub_message(value: object) -> SynapseMessage | None:
+    """Return a safe hub message object or ``None`` for malformed payloads."""
+    if not isinstance(value, dict):
+        return None
+
+    sender = value.get("sender")
+    msg_type = value.get("type")
+    if not isinstance(sender, str) or not sender:
+        return None
+    if not isinstance(msg_type, str) or not msg_type:
+        return None
+    if any(ord(char) < 32 for char in sender + msg_type):
+        return None
+
+    message: SynapseMessage = {"sender": sender, "type": msg_type}
+    payload = value.get("payload")
+    if msg_type == "claim_granted" and payload is None:
+        return None
+    if payload is not None:
+        if not isinstance(payload, str) or not payload:
+            return None
+        if any(ord(char) < 32 for char in payload):
+            return None
+        message["payload"] = payload
+    return message
 
 
 @dataclass
@@ -231,9 +259,13 @@ class SynapseChannelBridge:
             )
             return  # connection error — caller should retry
 
-    def _process_message(self, msg: dict) -> None:
-        sender = msg.get("sender", "")
-        msg_type = msg.get("type", "")
+    def _process_message(self, msg: object) -> None:
+        message = _normalise_hub_message(msg)
+        if message is None:
+            return
+
+        sender = message["sender"]
+        msg_type = message["type"]
         now = time.time()
 
         if sender not in self._agent_idx:
@@ -254,7 +286,7 @@ class SynapseChannelBridge:
             if len(state.task_events) > 20:
                 state.task_events.pop(0)
             if msg_type == "claim_granted":
-                state.current_task = msg.get("payload", "")
+                state.current_task = str(message.get("payload", ""))
             else:
                 state.current_task = None
 

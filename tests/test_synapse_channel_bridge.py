@@ -117,6 +117,29 @@ class TestSynapseChannelBridge:
         )
         assert bridge._states["Agent-C"].current_task == "fix_bug_42"
 
+    @pytest.mark.parametrize(
+        "message",
+        [
+            [],
+            "not-object",
+            {"sender": "Agent-C"},
+            {"type": "claim_granted"},
+            {"sender": "Agent-C", "type": "claim_granted"},
+            {"sender": "Agent-C", "type": "claim_granted", "payload": 42},
+            {"sender": "Agent-C", "type": "claim_granted", "payload": "bad\ntask"},
+            {"sender": "Agent-C", "type": 3, "payload": "task"},
+        ],
+    )
+    def test_process_message_ignores_malformed_hub_payloads(
+        self,
+        message: object,
+    ) -> None:
+        bridge = self._make_bridge()
+        bridge._process_message(message)
+        state = bridge._states["Agent-C"]
+        assert state.current_task is None
+        assert state.task_events == []
+
     def test_process_release(self) -> None:
         bridge = self._make_bridge()
         bridge._states["Agent-C"].current_task = "fix_bug_42"
@@ -254,6 +277,14 @@ class TestSynapseChannelBridgeAsync:
         bridge._ws = AsyncMock()
         bridge._ws.recv = AsyncMock(return_value="{invalid")
         await bridge.listen_once()  # should not raise
+
+    @pytest.mark.asyncio
+    async def test_listen_once_non_object_json_is_ignored(self) -> None:
+        bridge = self._make_bridge()
+        bridge._ws = AsyncMock()
+        bridge._ws.recv = AsyncMock(return_value='["not", "a", "message"]')
+        await bridge.listen_once()
+        assert bridge.get_agent_summary()["Agent-A"]["messages"] == 0
 
     @pytest.mark.asyncio
     async def test_close(self) -> None:
