@@ -70,6 +70,8 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -79,6 +81,14 @@ def _validate_state_array(
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        arr = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
 
 
 class DelayBuffer:
@@ -100,9 +110,10 @@ class DelayBuffer:
 
     def get_delayed(self, delay_steps: int) -> FloatArray | None:
         """Return phases from `delay_steps` ago, or None if not enough history."""
-        if delay_steps < 1 or delay_steps > len(self._buffer):
+        delay = _validate_positive_int(delay_steps, name="delay_steps")
+        if delay > len(self._buffer):
             return None
-        return self._buffer[-delay_steps]
+        return self._buffer[-delay]
 
     @property
     def length(self) -> int:

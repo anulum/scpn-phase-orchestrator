@@ -34,8 +34,8 @@ class TestDelayBuffer:
         buf = DelayBuffer(2, max_delay_steps=3)
         p = np.array([1.0, 2.0])
         buf.push(p)
-        # delay_steps=0 is invalid → returns None
-        assert buf.get_delayed(0) is None
+        with pytest.raises(ValueError, match="delay_steps"):
+            buf.get_delayed(0)
 
     def test_not_enough_history(self):
         buf = DelayBuffer(2, max_delay_steps=5)
