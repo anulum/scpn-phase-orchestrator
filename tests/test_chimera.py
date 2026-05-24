@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -104,6 +106,43 @@ def test_dataclass_fields():
     assert state.chimera_index == 0.25
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"coherent_indices": [0, 0], "incoherent_indices": [], "chimera_index": 0.0},
+        {"coherent_indices": [True], "incoherent_indices": [], "chimera_index": 0.0},
+        {"coherent_indices": [-1], "incoherent_indices": [], "chimera_index": 0.0},
+        {"coherent_indices": [1], "incoherent_indices": [1], "chimera_index": 0.0},
+        {"coherent_indices": [], "incoherent_indices": [], "chimera_index": -0.1},
+        {"coherent_indices": [], "incoherent_indices": [], "chimera_index": np.nan},
+        {"coherent_indices": [], "incoherent_indices": [], "chimera_index": True},
+    ],
+)
+def test_chimera_state_rejects_invalid_public_record(payload: dict[str, Any]) -> None:
+    with pytest.raises(ValueError):
+        ChimeraState(**payload)
+
+
+@pytest.mark.parametrize(
+    ("phases", "knm", "match"),
+    [
+        (np.array([0.0, True], dtype=object), np.zeros((2, 2)), "phases"),
+        (np.zeros((1, 2)), np.zeros((2, 2)), "phases"),
+        (np.array([0.0, np.nan]), np.zeros((2, 2)), "phases"),
+        (np.zeros(2), np.array([[0.0, True], [0.0, 0.0]], dtype=object), "knm"),
+        (np.zeros(2), np.zeros((2, 3)), "knm"),
+        (np.zeros(2), np.array([[0.0, np.inf], [0.0, 0.0]]), "knm"),
+    ],
+)
+def test_rejects_invalid_chimera_inputs(
+    phases: Any,
+    knm: Any,
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        local_order_parameter(phases, knm)
+
+
 def test_local_order_parameter_uses_backend_when_available(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -137,6 +176,35 @@ def test_local_order_parameter_falls_back_when_backend_raises(
     assert np.all(np.isfinite(local))
     assert np.all(local >= 0.0)
     assert np.all(local <= 1.0)
+
+
+@pytest.mark.parametrize(
+    "backend_output",
+    [
+        np.array([0.5], dtype=np.float64),
+        np.array([0.5, np.nan], dtype=np.float64),
+        np.array([0.5, 1.1], dtype=np.float64),
+        np.array([-0.1, 0.5], dtype=np.float64),
+    ],
+)
+def test_local_order_parameter_invalid_backend_payload_falls_back(
+    monkeypatch: pytest.MonkeyPatch,
+    backend_output: np.ndarray,
+) -> None:
+    def _fake_backend(
+        _phases: np.ndarray,
+        _knm_flat: np.ndarray,
+        _n: int,
+    ) -> np.ndarray:
+        return backend_output
+
+    monkeypatch.setattr(chimera_module, "_dispatch", lambda: _fake_backend)
+    phases = np.array([0.0, 0.0], dtype=np.float64)
+    knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+
+    local = local_order_parameter(phases, knm)
+
+    np.testing.assert_allclose(local, [1.0, 1.0])
 
 
 def test_dispatch_falls_back_to_python_when_loader_fails(

@@ -25,8 +25,9 @@ Compute surface:
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -154,13 +155,59 @@ class ChimeraState:
     incoherent_indices: list[int] = field(default_factory=list)
     chimera_index: float = 0.0
 
+    def __post_init__(self) -> None:
+        coherent = _validate_index_list(self.coherent_indices, name="coherent_indices")
+        incoherent = _validate_index_list(
+            self.incoherent_indices,
+            name="incoherent_indices",
+        )
+        overlap = set(coherent).intersection(incoherent)
+        if overlap:
+            raise ValueError("coherent_indices and incoherent_indices must be disjoint")
+        if isinstance(self.chimera_index, bool) or not isinstance(
+            self.chimera_index,
+            Real,
+        ):
+            raise ValueError("chimera_index must be a finite real scalar in [0, 1]")
+        chimera_index = float(self.chimera_index)
+        if not np.isfinite(chimera_index) or not 0.0 <= chimera_index <= 1.0:
+            raise ValueError("chimera_index must be finite and lie in [0, 1]")
+        object.__setattr__(self, "coherent_indices", coherent)
+        object.__setattr__(self, "incoherent_indices", incoherent)
+        object.__setattr__(self, "chimera_index", chimera_index)
+
+
+def _validate_index_list(indices: object, *, name: str) -> list[int]:
+    if isinstance(indices, (str, bytes)) or not isinstance(indices, Iterable):
+        raise ValueError(f"{name} must be a sequence of non-negative integer indices")
+    values = list(indices)
+    normalised: list[int] = []
+    for value in values:
+        if isinstance(value, bool) or not isinstance(value, Integral):
+            raise ValueError(f"{name} must contain only integer indices")
+        index = int(value)
+        if index < 0:
+            raise ValueError(f"{name} must contain only non-negative indices")
+        normalised.append(index)
+    if len(set(normalised)) != len(normalised):
+        raise ValueError(f"{name} must not contain duplicate indices")
+    return normalised
+
+
+def _contains_boolean_alias(raw: np.ndarray) -> bool:
+    if raw.dtype == np.bool_:
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, bool) for value in raw.flat)
+
 
 def _validate_chimera_inputs(
     phases: object,
     knm: object,
 ) -> tuple[FloatArray, FloatArray]:
     raw_phases = np.asarray(phases)
-    if raw_phases.dtype == np.bool_:
+    if _contains_boolean_alias(raw_phases):
         raise ValueError("phases must not contain boolean values")
     try:
         phases_array = raw_phases.astype(np.float64, copy=True)
@@ -173,7 +220,7 @@ def _validate_chimera_inputs(
 
     n = int(phases_array.size)
     raw_knm = np.asarray(knm)
-    if raw_knm.dtype == np.bool_:
+    if _contains_boolean_alias(raw_knm):
         raise ValueError("knm must not contain boolean values")
     try:
         knm_array = raw_knm.astype(np.float64, copy=True)
@@ -187,6 +234,24 @@ def _validate_chimera_inputs(
         np.ascontiguousarray(phases_array, dtype=np.float64),
         np.ascontiguousarray(knm_array, dtype=np.float64),
     )
+
+
+def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
+    try:
+        local = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("local order parameter output must be numeric") from exc
+    if local.shape != (n_oscillators,):
+        raise ValueError(
+            f"local order parameter shape {local.shape} does not match "
+            f"({n_oscillators},)"
+        )
+    if not np.all(np.isfinite(local)):
+        raise ValueError("local order parameter must contain only finite values")
+    tolerance = 1e-12
+    if np.any(local < -tolerance) or np.any(local > 1.0 + tolerance):
+        raise ValueError("local order parameter must lie in [0, 1]")
+    return np.ascontiguousarray(np.clip(local, 0.0, 1.0), dtype=np.float64)
 
 
 def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
@@ -204,7 +269,9 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
     backend_fn = _dispatch()
     if backend_fn is not None:
         try:
-            return np.asarray(backend_fn(phases, knm_flat, n), dtype=np.float64)
+            return _validate_local_order(
+                backend_fn(phases, knm_flat, n), n_oscillators=n
+            )
         except Exception:
             backend_fn = None
 
@@ -218,7 +285,7 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
             r_local[i] = 0.0
             continue
         r_local[i] = float(np.abs(np.mean(unit[i, mask])))
-    return r_local
+    return _validate_local_order(r_local, n_oscillators=n)
 
 
 def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
