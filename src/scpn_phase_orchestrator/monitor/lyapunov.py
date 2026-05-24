@@ -422,6 +422,20 @@ def _lyapunov_spectrum_python(
     return np.sort(exponents)[::-1]
 
 
+def _validate_spectrum_output(value: object, *, n: int) -> FloatArray:
+    try:
+        spectrum = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Lyapunov spectrum output must be numeric") from exc
+    if spectrum.shape != (n,):
+        raise ValueError(f"Lyapunov spectrum shape {spectrum.shape} must be ({n},)")
+    if not np.all(np.isfinite(spectrum)):
+        raise ValueError("Lyapunov spectrum output must contain only finite values")
+    if np.any(np.diff(spectrum) > 1e-12):
+        raise ValueError("Lyapunov spectrum output must be sorted descending")
+    return np.ascontiguousarray(spectrum, dtype=np.float64)
+
+
 def lyapunov_spectrum(
     phases_init: object,
     omegas: object,
@@ -479,22 +493,25 @@ def lyapunov_spectrum(
     psi = _validate_finite_real(psi, name="psi")
     backend_fn = _dispatch()
     if backend_fn is None:
-        return _lyapunov_spectrum_python(
-            p,
-            o,
-            k,
-            a,
-            float(dt),
-            int(n_steps),
-            int(qr_interval),
-            float(zeta),
-            float(psi),
+        return _validate_spectrum_output(
+            _lyapunov_spectrum_python(
+                p,
+                o,
+                k,
+                a,
+                float(dt),
+                int(n_steps),
+                int(qr_interval),
+                float(zeta),
+                float(psi),
+            ),
+            n=n,
         )
     # Rust PyO3 binding takes flat (N*N,) row-major k/alpha; the other
     # backends accept the 2-D forms directly.
     if ACTIVE_BACKEND == "rust":
         try:
-            return np.asarray(
+            return _validate_spectrum_output(
                 backend_fn(
                     p,
                     o,
@@ -506,22 +523,25 @@ def lyapunov_spectrum(
                     zeta,
                     psi,
                 ),
-                dtype=np.float64,
+                n=n,
             )
         except Exception:
-            return _lyapunov_spectrum_python(
-                p,
-                o,
-                k,
-                a,
-                float(dt),
-                int(n_steps),
-                int(qr_interval),
-                float(zeta),
-                float(psi),
+            return _validate_spectrum_output(
+                _lyapunov_spectrum_python(
+                    p,
+                    o,
+                    k,
+                    a,
+                    float(dt),
+                    int(n_steps),
+                    int(qr_interval),
+                    float(zeta),
+                    float(psi),
+                ),
+                n=n,
             )
     try:
-        return np.asarray(
+        return _validate_spectrum_output(
             backend_fn(
                 p,
                 o,
@@ -533,17 +553,20 @@ def lyapunov_spectrum(
                 float(zeta),
                 float(psi),
             ),
-            dtype=np.float64,
+            n=n,
         )
     except Exception:
-        return _lyapunov_spectrum_python(
-            p,
-            o,
-            k,
-            a,
-            float(dt),
-            int(n_steps),
-            int(qr_interval),
-            float(zeta),
-            float(psi),
+        return _validate_spectrum_output(
+            _lyapunov_spectrum_python(
+                p,
+                o,
+                k,
+                a,
+                float(dt),
+                int(n_steps),
+                int(qr_interval),
+                float(zeta),
+                float(psi),
+            ),
+            n=n,
         )
