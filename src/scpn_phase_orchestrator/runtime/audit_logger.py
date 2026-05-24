@@ -87,7 +87,7 @@ class AuditLogger:
                 stripped = line.strip()
                 if not stripped:
                     continue
-                record = json.loads(stripped)
+                record = _loads_audit_json(stripped)
                 stored = record.get("_hash")
                 if isinstance(stored, str) and len(stored) == 64:
                     previous = stored
@@ -104,7 +104,7 @@ class AuditLogger:
                 stripped = line.strip()
                 if not stripped:
                     continue
-                record = json.loads(stripped)
+                record = _loads_audit_json(stripped)
                 if not isinstance(record.get("_signature"), dict):
                     msg = (
                         "SPO_AUDIT_KEY configured but existing audit log "
@@ -119,11 +119,11 @@ class AuditLogger:
         else:
             clean["_audit_mode"] = "unsigned-development"
             clean["_payload_hash"] = _payload_hash(clean)
-        json_line = json.dumps(clean, separators=(",", ":"), sort_keys=True)
+        json_line = _dumps_audit_json(clean, compact=True)
         digest = hashlib.sha256((self._prev_hash + json_line).encode()).hexdigest()
         self._prev_hash = digest
         stored = {**clean, "_hash": digest}
-        self._fh.write(json.dumps(stored, sort_keys=True) + "\n")
+        self._fh.write(_dumps_audit_json(stored) + "\n")
         if self._event_stream is not None:
             self._event_stream.write(stored)
 
@@ -154,9 +154,7 @@ class AuditLogger:
         }
         signature = hmac.new(
             key.encode(),
-            json.dumps(
-                signing_material, separators=(",", ":"), sort_keys=True
-            ).encode(),
+            _dumps_audit_json(signing_material, compact=True).encode(),
             hashlib.sha256,
         ).hexdigest()
         return {
@@ -366,5 +364,35 @@ def _payload_without_audit_metadata(record: dict) -> dict:
 
 def _payload_hash(record: dict) -> str:
     payload = _payload_without_audit_metadata(record)
-    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    payload_json = _dumps_audit_json(payload, compact=True)
     return hashlib.sha256(payload_json.encode()).hexdigest()
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
+def _loads_audit_json(payload: str) -> dict:
+    try:
+        decoded = json.loads(payload, parse_constant=_reject_json_constant)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise AuditError("audit payload must contain only finite JSON numbers") from exc
+    if not isinstance(decoded, dict):
+        raise AuditError("audit payload must be a JSON object")
+    return decoded
+
+
+def _dumps_audit_json(payload: dict, *, compact: bool = False) -> str:
+    try:
+        if compact:
+            return json.dumps(
+                payload,
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        return json.dumps(payload, allow_nan=False, sort_keys=True)
+    except (TypeError, ValueError) as exc:
+        raise AuditError("audit payload must contain only finite JSON values") from exc

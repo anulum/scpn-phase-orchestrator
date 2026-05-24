@@ -220,6 +220,15 @@ class TestAuditDataIntegrity:
         assert record["to"] == "critical"
         assert record["step"] == 99
 
+    def test_event_rejects_non_finite_payload_numbers(self, tmp_path):
+        """Audit event payloads must not write non-standard JSON constants."""
+        log_path = tmp_path / "audit.jsonl"
+        with (
+            AuditLogger(log_path) as logger,
+            pytest.raises(AuditError, match="finite JSON"),
+        ):
+            logger.log_event("operator_note", {"value": float("nan")})
+
     def test_full_state_replay_fields_round_trip(self, tmp_path):
         """When phases/omegas/knm/alpha are provided, they must be
         preserved exactly for deterministic replay."""
