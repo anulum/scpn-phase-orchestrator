@@ -313,6 +313,10 @@ class StuartLandauEngine:
             shape=(n, n),
             finite_message="knm_r contains NaN/Inf",
         )
+        if not np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=1e-15):
+            raise ValueError("knm self-coupling diagonal must be zero")
+        if not np.allclose(np.diag(knm_r), 0.0, rtol=0.0, atol=1e-15):
+            raise ValueError("knm_r self-coupling diagonal must be zero")
         alpha = _validate_state_array(
             alpha,
             name="alpha",

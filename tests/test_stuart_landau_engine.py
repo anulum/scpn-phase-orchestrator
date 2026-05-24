@@ -104,6 +104,19 @@ class TestShapeValidation:
         with pytest.raises(ValueError, match="epsilon"):
             eng.step(_make_state(4), omegas, mu, knm, knm, 0.0, 0.0, alpha, -0.1)
 
+    @pytest.mark.parametrize("matrix_name", ["knm", "knm_r"])
+    def test_self_coupling_diagonal_raises(self, matrix_name: str) -> None:
+        eng = _make_engine(4)
+        omegas, mu, knm, alpha = _zeros(4)
+        knm_r = np.zeros((4, 4))
+        if matrix_name == "knm":
+            knm[2, 2] = 0.2
+        else:
+            knm_r[2, 2] = 0.2
+
+        with pytest.raises(ValueError, match="self-coupling"):
+            eng.step(_make_state(4), omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
+
 
 class TestAmplitudeInvariants:
     def test_amplitudes_nonnegative(self) -> None:
