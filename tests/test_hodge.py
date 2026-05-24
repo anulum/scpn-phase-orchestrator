@@ -98,6 +98,19 @@ class TestHodgeDecomposition:
         np.testing.assert_allclose(base.harmonic, 0.0, atol=3e-15)
         np.testing.assert_allclose(doubled.harmonic, 0.0, atol=3e-15)
 
+    def test_boolean_phase_alias_is_rejected(self):
+        knm = np.zeros((2, 2), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="phases must not contain boolean"):
+            hodge_decomposition(knm, [True, 0.5])
+
+    def test_boolean_coupling_alias_is_rejected(self):
+        phases = np.array([0.0, 0.5], dtype=np.float64)
+        knm = [[0.0, True], [0.0, 0.0]]
+
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            hodge_decomposition(knm, phases)
+
 
 class TestHodgePipelineWiring:
     """Pipeline: engine phases → Hodge decomposition → coupling analysis."""

@@ -174,7 +174,14 @@ class HodgeResult:
     harmonic: FloatArray
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -190,6 +197,8 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_coupling_matrix(value: object, *, expected_n: int) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("knm must not contain boolean values")
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError("knm must not contain boolean values")
