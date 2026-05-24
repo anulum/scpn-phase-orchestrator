@@ -44,7 +44,7 @@ def _load_rust_fn() -> Callable[..., IntArray]:
 
     def _rust(phases_flat: FloatArray, t: int, n: int) -> IntArray:
         # Rust FFI takes the flat array and infers T from length.
-        return np.asarray(_rust_wind(phases_flat, int(n)), dtype=np.int64)
+        return cast("IntArray", np.asarray(_rust_wind(phases_flat, int(n))))
 
     return cast("Callable[..., IntArray]", _rust)
 
@@ -154,6 +154,8 @@ def _validate_phase_history(phases_history: object) -> FloatArray:
 
 
 def _validate_backend_winding(value: object, *, n: int, t: int) -> IntArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("backend winding output must not contain boolean values")
     try:
         array = np.asarray(value)
     except (TypeError, ValueError) as exc:

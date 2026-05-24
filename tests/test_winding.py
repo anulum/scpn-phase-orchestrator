@@ -203,6 +203,8 @@ class TestWindingRustDispatch:
             np.array([1.5, -1.0], dtype=np.float64),
             np.array([1.0, np.nan], dtype=np.float64),
             np.array([100, 0], dtype=np.int64),
+            np.array([True, False], dtype=np.bool_),
+            np.array([1, np.bool_(False)], dtype=object),
         ],
     )
     def test_winding_falls_back_when_backend_returns_invalid_payload(

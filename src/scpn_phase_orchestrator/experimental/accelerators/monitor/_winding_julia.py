@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -45,11 +45,13 @@ def winding_numbers_julia(
     """Compute oscillator winding numbers through the Julia backend."""
 
     jl = _ensure()
-    return np.asarray(
-        jl.winding_numbers(
-            np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
-            int(t),
-            int(n),
+    return cast(
+        "IntArray",
+        np.asarray(
+            jl.winding_numbers(
+                np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
+                int(t),
+                int(n),
+            )
         ),
-        dtype=np.int64,
     )
