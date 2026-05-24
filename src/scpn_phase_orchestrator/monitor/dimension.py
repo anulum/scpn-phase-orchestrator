@@ -226,6 +226,8 @@ def _validate_non_negative_float(value: object, *, name: str) -> float:
 
 
 def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("correlation integral output must not contain boolean values")
     try:
         ci = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -245,6 +247,8 @@ def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
 
 
 def _validate_ky_dimension(value: object, *, n_exponents: int) -> float:
+    if isinstance(value, (bool, np.bool_)):
+        raise ValueError("kaplan_yorke_dimension must not be a boolean value")
     dimension = _validate_non_negative_float(value, name="kaplan_yorke_dimension")
     if dimension > n_exponents + 1e-12:
         raise ValueError("kaplan_yorke_dimension must not exceed spectrum length")

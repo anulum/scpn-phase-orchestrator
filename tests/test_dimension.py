@@ -272,6 +272,7 @@ class TestCorrelationDimensionResult:
         "C_eps",
         [
             [0.25],
+            [0.25, True],
             [0.25, np.nan],
             [0.25, 1.1],
             [0.75, 0.25],
@@ -367,6 +368,8 @@ class TestBackendDispatch:
             np.array([0.5, np.nan], dtype=np.float64),
             np.array([0.5, 1.1], dtype=np.float64),
             np.array([0.5, 0.4], dtype=np.float64),
+            np.array([True, False], dtype=np.bool_),
+            np.array([0.5, np.bool_(True)], dtype=object),
         ],
     )
     def test_invalid_correlation_integral_backend_payload_falls_back(
@@ -399,19 +402,22 @@ class TestBackendDispatch:
 
         np.testing.assert_allclose(C, [0.0, 2.0 / 3.0])
 
-    @pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, 4.0])
+    @pytest.mark.parametrize(
+        "backend_value",
+        [-0.1, np.nan, np.inf, 4.0, True, np.bool_(True)],
+    )
     def test_invalid_kaplan_yorke_backend_payload_falls_back(
         self,
         monkeypatch,
-        backend_value: float,
+        backend_value: object,
     ) -> None:
         previous_backend = dim_mod.ACTIVE_BACKEND
         previous_available = list(dim_mod.AVAILABLE_BACKENDS)
         previous_loader = dim_mod._LOADERS["go"]
         le = np.array([0.5, -1.0, -2.0], dtype=np.float64)
 
-        def fake_ky(*_args: object, **_kwargs: object) -> float:
-            return float(backend_value)
+        def fake_ky(*_args: object, **_kwargs: object) -> object:
+            return backend_value
 
         dim_mod.ACTIVE_BACKEND = "python"
         expected = kaplan_yorke_dimension(le)
