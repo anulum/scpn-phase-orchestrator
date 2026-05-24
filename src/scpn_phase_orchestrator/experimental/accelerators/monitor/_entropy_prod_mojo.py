@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._entropy_prod_validation import validate_entropy_prod_backend_inputs
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["_ensure_exe", "entropy_production_rate_mojo"]
@@ -59,6 +61,13 @@ def entropy_production_rate_mojo(
 ) -> float:
     """Compute the entropy-production-rate monitor through the Mojo backend."""
 
+    phases, omegas, knm, alpha, dt = validate_entropy_prod_backend_inputs(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        dt,
+    )
     n = int(phases.size)
     if n == 0 or dt <= 0.0:
         return 0.0

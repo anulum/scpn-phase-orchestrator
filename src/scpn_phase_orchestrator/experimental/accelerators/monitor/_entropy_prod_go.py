@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._entropy_prod_validation import validate_entropy_prod_backend_inputs
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["entropy_production_rate_go"]
@@ -59,6 +61,13 @@ def entropy_production_rate_go(
 ) -> float:
     """Compute the entropy-production-rate monitor through the Go backend."""
 
+    phases, omegas, knm, alpha, dt = validate_entropy_prod_backend_inputs(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        dt,
+    )
     lib = _load_lib()
     n = int(phases.size)
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

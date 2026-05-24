@@ -195,3 +195,81 @@ class TestCrossBackendConsistency:
             assert abs(got - ref) <= tolerances[backend], (
                 f"{backend} diverged: {got} vs {ref}"
             )
+
+
+@pytest.mark.parametrize(
+    ("name", "backend"),
+    [
+        ("go", entropy_production_rate_go),
+        ("julia", entropy_production_rate_julia),
+        ("mojo", entropy_production_rate_mojo),
+    ],
+)
+class TestEntropyProductionAdapterContracts:
+    """Backend adapters reject invalid monitor inputs before polyglot execution."""
+
+    def test_rejects_boolean_alias_arrays_before_runtime(
+        self,
+        name: str,
+        backend,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        if name == "go":
+            monkeypatch.setattr(_entropy_prod_go, "_load_lib", lambda: None)
+        elif name == "julia":
+            monkeypatch.setattr(_entropy_prod_julia, "_ensure", lambda: None)
+        else:
+            monkeypatch.setattr(_entropy_prod_mojo, "_run", lambda _payload: 0.0)
+
+        with pytest.raises(ValueError, match="phases must not contain boolean values"):
+            backend(
+                np.array([0.0, np.bool_(True)], dtype=object),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                1.0,
+                0.01,
+            )
+
+    def test_rejects_shape_mismatch_before_runtime(
+        self,
+        name: str,
+        backend,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        if name == "go":
+            monkeypatch.setattr(_entropy_prod_go, "_load_lib", lambda: None)
+        elif name == "julia":
+            monkeypatch.setattr(_entropy_prod_julia, "_ensure", lambda: None)
+        else:
+            monkeypatch.setattr(_entropy_prod_mojo, "_run", lambda _payload: 0.0)
+
+        with pytest.raises(ValueError, match="omegas shape"):
+            backend(
+                np.zeros(2),
+                np.zeros(1),
+                np.zeros((2, 2)),
+                1.0,
+                0.01,
+            )
+
+    def test_rejects_boolean_scalar_before_runtime(
+        self,
+        name: str,
+        backend,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        if name == "go":
+            monkeypatch.setattr(_entropy_prod_go, "_load_lib", lambda: None)
+        elif name == "julia":
+            monkeypatch.setattr(_entropy_prod_julia, "_ensure", lambda: None)
+        else:
+            monkeypatch.setattr(_entropy_prod_mojo, "_run", lambda _payload: 0.0)
+
+        with pytest.raises(ValueError, match="alpha must be a finite real"):
+            backend(
+                np.zeros(2),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                np.bool_(True),
+                0.01,
+            )

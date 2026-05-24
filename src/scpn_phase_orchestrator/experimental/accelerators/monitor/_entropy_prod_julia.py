@@ -16,6 +16,8 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._entropy_prod_validation import validate_entropy_prod_backend_inputs
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["entropy_production_rate_julia"]
@@ -46,6 +48,13 @@ def entropy_production_rate_julia(
 ) -> float:
     """Compute the entropy-production-rate monitor through the Julia backend."""
 
+    phases, omegas, knm, alpha, dt = validate_entropy_prod_backend_inputs(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        dt,
+    )
     jl = _ensure()
     return float(
         jl.entropy_production_rate(
