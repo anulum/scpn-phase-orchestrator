@@ -230,7 +230,7 @@ def _validate_gradient(
 def _as_float_array(
     values: FloatArray | list[float] | tuple[float, ...], name: str
 ) -> FloatArray:
-    if isinstance(values, bool):
+    if isinstance(values, (bool, np.bool_)) or _contains_boolean_alias(values):
         raise ValueError(f"{name} must contain numeric values")
     array = np.asarray(values, dtype=np.float64)
     if not isinstance(array, np.ndarray):
@@ -242,8 +242,16 @@ def _as_float_array(
     return np.array(array, dtype=np.float64, copy=True)
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _as_finite_real(value: object, name: str, *, allow_non_positive: bool) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real")
     number = float(value)
     if not np.isfinite(number):

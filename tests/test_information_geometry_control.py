@@ -142,6 +142,39 @@ def test_invalid_inputs_fail_closed() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("current_distribution", "target_distribution", "coupling_gradient", "message"),
+    [
+        ([True, 1.0], [0.5, 0.5], None, "current_distribution"),
+        ([np.bool_(True), 1.0], [0.5, 0.5], None, "current_distribution"),
+        ([0.5, 0.5], [False, 1.0], None, "target_distribution"),
+        ([0.5, 0.5], [0.5, 0.5], [True, 0.0], "coupling_gradient"),
+    ],
+)
+def test_boolean_alias_inputs_fail_closed(
+    current_distribution: list[object],
+    target_distribution: list[object],
+    coupling_gradient: list[object] | None,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        propose_information_geometry_control(
+            current_distribution,
+            target_distribution,
+            coupling_gradient=coupling_gradient,
+            max_step=0.1,
+        )
+
+
+def test_boolean_alias_max_step_fails_closed() -> None:
+    with pytest.raises(ValueError, match="max_step"):
+        propose_information_geometry_control(
+            [0.5, 0.5],
+            [0.2, 0.8],
+            max_step=np.bool_(True),
+        )
+
+
 def test_control_actions_are_review_only_and_required_boundary_fields() -> None:
     proposal = propose_information_geometry_control(
         [0.6, 0.4],
