@@ -28,6 +28,7 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _entropy_prod_go,
     _entropy_prod_julia,
     _entropy_prod_mojo,
+    _entropy_prod_validation,
 )
 from scpn_phase_orchestrator.monitor import entropy_prod as ep_mod
 from scpn_phase_orchestrator.monitor.entropy_prod import (
@@ -68,6 +69,17 @@ def _problem(seed: int, n: int = 6):
     knm = rng.uniform(0.3, 0.9, size=(n, n))
     np.fill_diagonal(knm, 0.0)
     return phases, omegas, knm
+
+
+def test__entropy_prod_validation_rejects_boolean_alias_inputs() -> None:
+    with pytest.raises(ValueError, match="knm must not contain boolean values"):
+        _entropy_prod_validation.validate_entropy_prod_backend_inputs(
+            np.zeros(2),
+            np.ones(2),
+            np.array([[0.0, True], [0.0, 0.0]], dtype=object),
+            1.0,
+            0.01,
+        )
 
 
 def test_backend_array_contracts_are_parameterised() -> None:
