@@ -61,6 +61,17 @@ class TestEstimateCoupling:
         with pytest.raises(ValueError, match="3 timesteps"):
             estimate_coupling(np.ones((3, 2)), np.ones(3), dt=0.01)
 
+    @pytest.mark.parametrize("dt", [0.0, -0.01, np.nan, np.inf, True])
+    def test_rejects_invalid_timestep(self, dt):
+        phases = np.ones((3, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="dt"):
+            estimate_coupling(phases, np.ones(3), dt=dt)
+
+    def test_rejects_frequency_vector_length_mismatch(self):
+        phases = np.ones((3, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="omegas"):
+            estimate_coupling(phases, np.ones(2), dt=0.01)
+
     def test_finite_values(self):
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (5, 200))
@@ -140,6 +151,17 @@ class TestHarmonicCoupling:
 
         with pytest.raises(ValueError, match="Need >= 3 timesteps, got 2"):
             estimate_coupling_harmonics(phases, np.ones(3), dt=0.01)
+
+    @pytest.mark.parametrize("dt", [0.0, -0.01, np.nan, np.inf, True])
+    def test_harmonic_estimator_rejects_invalid_timestep(self, dt):
+        phases = np.ones((3, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="dt"):
+            estimate_coupling_harmonics(phases, np.ones(3), dt=dt)
+
+    def test_harmonic_estimator_rejects_frequency_vector_length_mismatch(self):
+        phases = np.ones((3, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="omegas"):
+            estimate_coupling_harmonics(phases, np.ones(2), dt=0.01)
 
 
 class TestCouplingEstPipelineWiring:

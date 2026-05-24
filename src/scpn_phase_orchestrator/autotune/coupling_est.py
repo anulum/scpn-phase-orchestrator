@@ -19,6 +19,7 @@ runtime actuation or binding updates.
 from __future__ import annotations
 
 import contextlib
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -27,6 +28,43 @@ from numpy.typing import NDArray
 __all__ = ["estimate_coupling"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _validate_inputs(
+    phases: object,
+    omegas: object,
+    dt: object,
+) -> tuple[FloatArray, FloatArray, float]:
+    if isinstance(dt, bool) or not isinstance(dt, Real):
+        raise ValueError("dt must be a finite positive real")
+    dt_value = float(dt)
+    if not np.isfinite(dt_value) or dt_value <= 0.0:
+        raise ValueError("dt must be a finite positive real")
+
+    phases_array = np.atleast_2d(np.asarray(phases, dtype=np.float64))
+    if phases_array.ndim != 2:
+        raise ValueError("phases must be a finite 2-D trajectory matrix")
+    if not np.all(np.isfinite(phases_array)):
+        raise ValueError("phases must contain only finite values")
+
+    omegas_array = np.asarray(omegas, dtype=np.float64)
+    if omegas_array.ndim != 1:
+        raise ValueError("omegas must be a finite 1-D frequency vector")
+    if not np.all(np.isfinite(omegas_array)):
+        raise ValueError("omegas must contain only finite values")
+    if omegas_array.size != phases_array.shape[0]:
+        raise ValueError("omegas length must match oscillator count")
+
+    return phases_array, omegas_array, dt_value
+
+
+def _validate_n_harmonics(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("n_harmonics must be a positive integer")
+    resolved = int(value)
+    if resolved <= 0:
+        raise ValueError("n_harmonics must be a positive integer")
+    return resolved
 
 
 def estimate_coupling(
@@ -48,7 +86,7 @@ def estimate_coupling(
     Returns:
         (n_oscillators, n_oscillators) estimated coupling matrix K_ij.
     """
-    phases = np.atleast_2d(phases)
+    phases, omegas, dt = _validate_inputs(phases, omegas, dt)
     n, T = phases.shape
     if T < 3:
         raise ValueError(f"Need >= 3 timesteps, got {T}")
@@ -96,7 +134,8 @@ def estimate_coupling_harmonics(
     Returns dict with keys 'sin_1', 'cos_1', 'sin_2', 'cos_2', ...
     each an (n, n) matrix of coefficients.
     """
-    phases = np.atleast_2d(phases)
+    phases, omegas, dt = _validate_inputs(phases, omegas, dt)
+    n_harmonics = _validate_n_harmonics(n_harmonics)
     n, T = phases.shape
     if T < 3:
         raise ValueError(f"Need >= 3 timesteps, got {T}")
