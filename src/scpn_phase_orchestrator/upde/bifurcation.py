@@ -68,6 +68,14 @@ __all__ = [
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        arr = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
+
+
 @dataclass
 class BifurcationPoint:
     """One sampled point on a Kuramoto synchronisation branch."""
@@ -76,6 +84,17 @@ class BifurcationPoint:
     R: float
     stable: bool
 
+    def __post_init__(self) -> None:
+        k_value = _validate_finite_float(self.K, name="K")
+        if k_value < 0.0:
+            raise ValueError(f"K must be non-negative, got {self.K!r}")
+        r_value = _validate_unit_interval(self.R, name="R")
+        if not isinstance(self.stable, bool):
+            raise ValueError(f"stable must be a boolean flag, got {self.stable!r}")
+
+        self.K = k_value
+        self.R = r_value
+
 
 @dataclass
 class BifurcationDiagram:
@@ -83,6 +102,22 @@ class BifurcationDiagram:
 
     points: list[BifurcationPoint] = field(default_factory=list)
     K_critical: float | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.points, list):
+            raise ValueError("points must be a list of BifurcationPoint records")
+        for idx, point in enumerate(self.points):
+            if not isinstance(point, BifurcationPoint):
+                raise ValueError(
+                    f"points[{idx}] must be a BifurcationPoint, got {point!r}"
+                )
+        if self.K_critical is not None:
+            k_critical = _validate_finite_float(self.K_critical, name="K_critical")
+            if k_critical < 0.0:
+                raise ValueError(
+                    f"K_critical must be non-negative, got {self.K_critical!r}"
+                )
+            self.K_critical = k_critical
 
     @property
     def K_values(self) -> FloatArray:
@@ -119,7 +154,16 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _validate_unit_interval(value: object, *, name: str) -> float:
+    coerced = _validate_finite_float(value, name=name)
+    if coerced < 0.0 or coerced > 1.0:
+        raise ValueError(f"{name} must be in [0, 1], got {value!r}")
+    return coerced
+
+
 def _validate_omegas(value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("omegas must not contain boolean values")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -134,6 +178,8 @@ def _validate_omegas(value: object) -> FloatArray:
 
 
 def _validate_matrix(value: object, *, name: str, n: int) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -157,6 +203,8 @@ def _validate_k_range(value: object) -> tuple[float, float]:
     start, stop = value
     start = _validate_finite_float(start, name="K_range")
     stop = _validate_finite_float(stop, name="K_range")
+    if start < 0.0:
+        raise ValueError("K_range start must be non-negative")
     if stop <= start:
         raise ValueError("K_range stop must be greater than start")
     return start, stop

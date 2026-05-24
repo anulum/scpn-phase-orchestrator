@@ -28,6 +28,27 @@ class TestBifurcationPoint:
         assert p.K == 1.0
         assert p.R == 0.5
 
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"K": -0.1}, "K must be non-negative"),
+            ({"K": np.nan}, "K must be a finite real"),
+            ({"K": False}, "K must be a finite real"),
+            ({"R": -0.1}, "R must be in \\[0, 1\\]"),
+            ({"R": 1.1}, "R must be in \\[0, 1\\]"),
+            ({"R": np.inf}, "R must be a finite real"),
+            ({"R": False}, "R must be a finite real"),
+            ({"stable": 1}, "stable must be a boolean flag"),
+        ],
+    )
+    def test_rejects_invalid_physical_sample_values(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {"K": 1.0, "R": 0.5, "stable": True}
+        base.update(kwargs)
+        with pytest.raises(ValueError, match=match):
+            BifurcationPoint(**base)
+
 
 class TestBifurcationDiagram:
     def test_empty(self):
@@ -44,6 +65,24 @@ class TestBifurcationDiagram:
         )
         np.testing.assert_array_equal(d.K_values, [0.0, 2.0])
         np.testing.assert_array_equal(d.R_values, [0.01, 0.8])
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"points": (BifurcationPoint(K=1.0, R=0.5, stable=True),)}, "points"),
+            ({"points": [object()]}, "points\\[0\\]"),
+            ({"K_critical": -1.0}, "K_critical must be non-negative"),
+            ({"K_critical": np.nan}, "K_critical must be a finite real"),
+            ({"K_critical": False}, "K_critical must be a finite real"),
+        ],
+    )
+    def test_rejects_invalid_diagram_record_values(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {"points": [], "K_critical": None}
+        base.update(kwargs)
+        with pytest.raises(ValueError, match=match):
+            BifurcationDiagram(**base)
 
 
 class TestTraceSyncTransition:
@@ -190,8 +229,11 @@ class TestInputValidation:
         [
             ("omegas", np.zeros((3, 1), dtype=np.float64), "omegas shape"),
             ("omegas", np.array([0.0, np.nan], dtype=np.float64), "omegas"),
+            ("omegas", np.array([True, False, True]), "omegas"),
             ("knm_template", np.zeros((3, 2), dtype=np.float64), "knm_template"),
+            ("knm_template", np.eye(3, dtype=bool), "knm_template"),
             ("alpha", np.zeros((2, 3), dtype=np.float64), "alpha"),
+            ("alpha", np.eye(3, dtype=bool), "alpha"),
         ],
     )
     def test_trace_rejects_invalid_arrays(
@@ -216,6 +258,7 @@ class TestInputValidation:
     @pytest.mark.parametrize(
         ("field", "bad_value"),
         [
+            ("K_range", (-0.1, 1.0)),
             ("K_range", (1.0, 1.0)),
             ("K_range", (0.0, np.nan)),
             ("n_points", False),
@@ -251,7 +294,9 @@ class TestInputValidation:
         ("field", "bad_value"),
         [
             ("omegas", np.zeros((3, 1), dtype=np.float64)),
+            ("omegas", np.array([True, False, True])),
             ("knm_template", np.zeros((3, 2), dtype=np.float64)),
+            ("knm_template", np.eye(3, dtype=bool)),
             ("dt", 0.0),
             ("n_transient", -1),
             ("n_measure", -1),
