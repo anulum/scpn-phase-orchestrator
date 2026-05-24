@@ -52,6 +52,21 @@ FloatArray: TypeAlias = NDArray[np.float64]
 SynapseMessage: TypeAlias = dict[str, object]
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
+def _loads_hub_json(payload: str) -> Any:
+    try:
+        return json.loads(payload, parse_constant=_reject_json_constant)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise ValueError(
+            "Synapse hub JSON must contain only finite JSON numbers"
+        ) from exc
+
+
 def _validate_hub_uri(hub_uri: str) -> str:
     """Validate Synapse hub websocket endpoint configuration."""
     if not isinstance(hub_uri, str) or not hub_uri:
@@ -246,11 +261,11 @@ class SynapseChannelBridge:
             return
         try:
             raw = await asyncio.wait_for(self._ws.recv(), timeout=1.0)
-            msg = json.loads(raw)
+            msg = _loads_hub_json(raw)
             self._process_message(msg)
         except asyncio.TimeoutError:
             return  # no message within timeout — normal
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, ValueError):
             logger.warning("synapse.listen_once_invalid_json")
             return
         except (ConnectionError, OSError, RuntimeError) as exc:
