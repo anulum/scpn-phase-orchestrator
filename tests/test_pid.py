@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from typing import Any, get_type_hints
 
 import numpy as np
 import pytest
@@ -68,13 +68,22 @@ class TestRedundancy:
 
     @pytest.mark.parametrize(
         "phases",
-        [np.array([[0.0, 1.0]]), np.array([0.0, np.nan]), np.array([True, False])],
+        [
+            np.array([[0.0, 1.0]]),
+            np.array([0.0, np.nan]),
+            np.array([True, False]),
+            np.array([0.0, True], dtype=object),
+            [0.0, True],
+        ],
     )
     def test_rejects_invalid_phase_vector(self, phases):
         with pytest.raises(ValueError, match="phases"):
             redundancy(phases, [0], [1])
 
-    @pytest.mark.parametrize("group", [[0.5], [True], [-1], [3], np.array([[0]])])
+    @pytest.mark.parametrize(
+        "group",
+        [[0.5], [True], np.array([0, True], dtype=object), [-1], [3], np.array([[0]])],
+    )
     def test_rejects_invalid_group_indices(self, group):
         phases = np.array([0.0, 1.0, 2.0])
         with pytest.raises((TypeError, ValueError, IndexError), match="group_a"):
@@ -85,6 +94,12 @@ class TestRedundancy:
         phases = np.array([0.0, 1.0, 2.0])
         with pytest.raises((TypeError, ValueError), match="n_bins"):
             redundancy(phases, [0], [1], n_bins=n_bins)
+
+    def test_accepts_numpy_integer_bin_count(self):
+        phases = np.array([0.0, 1.0, 2.0])
+        r = redundancy(phases, [0], [1], n_bins=np.int64(4))
+
+        assert r >= 0.0
 
     def test_synchronized_phases_low_redundancy(self):
         """All phases identical → flat histogram → low entropy → low MI."""
@@ -109,13 +124,21 @@ class TestSynergy:
 
     @pytest.mark.parametrize(
         "phases",
-        [np.array([0.0, np.nan]), np.array([True, False])],
+        [
+            np.array([0.0, np.nan]),
+            np.array([True, False]),
+            np.array([0.0, True], dtype=object),
+            [0.0, True],
+        ],
     )
     def test_rejects_invalid_phase_vector(self, phases: np.ndarray) -> None:
         with pytest.raises(ValueError, match="phases"):
             synergy(phases, [0], [1])
 
-    @pytest.mark.parametrize("group", [[0.5], [True], [-1], [3], np.array([[0]])])
+    @pytest.mark.parametrize(
+        "group",
+        [[0.5], [True], np.array([0, True], dtype=object), [-1], [3], np.array([[0]])],
+    )
     def test_rejects_invalid_group_indices(self, group):
         phases = np.array([0.0, 1.0, 2.0])
         with pytest.raises((TypeError, ValueError, IndexError), match="group_b"):
@@ -189,6 +212,24 @@ class TestPIDPipelineWiring:
 
 
 class TestPIDRustDispatch:
+    @pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, [0.5]])
+    def test_redundancy_invalid_rust_payload_falls_back(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_value: Any,
+    ):
+        monkeypatch.setattr(
+            pid_module,
+            "_rust_pid_redundancy",
+            lambda *_args: backend_value,
+        )
+        phases = np.linspace(0.0, 2 * np.pi, 16, dtype=np.float64)
+
+        val = redundancy(phases, [0, 1, 2], [3, 4, 5], n_bins=8)
+
+        assert np.isfinite(val)
+        assert val >= 0.0
+
     def test_redundancy_uses_rust_kernel_when_available(
         self, monkeypatch: pytest.MonkeyPatch
     ):
@@ -245,6 +286,22 @@ class TestPIDRustDispatch:
         val = synergy(phases, [0, 1, 2], [3, 4, 5], n_bins=8)
         assert val == pytest.approx(0.37, abs=1e-12)
         assert len(calls) == 1
+
+    @pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, [0.5]])
+    def test_synergy_invalid_rust_payload_falls_back(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_value: Any,
+    ):
+        monkeypatch.setattr(
+            pid_module, "_rust_pid_synergy", lambda *_args: backend_value
+        )
+        phases = np.linspace(0.0, 2 * np.pi, 16, dtype=np.float64)
+
+        val = synergy(phases, [0, 1, 2], [3, 4, 5], n_bins=8)
+
+        assert np.isfinite(val)
+        assert val >= 0.0
 
     def test_synergy_falls_back_when_rust_raises(self, monkeypatch: pytest.MonkeyPatch):
         def _raising_rust_syn(

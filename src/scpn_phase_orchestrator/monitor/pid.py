@@ -18,6 +18,7 @@ reassigning oscillators.
 
 from __future__ import annotations
 
+from numbers import Integral
 from typing import TypeAlias
 
 import numpy as np
@@ -42,17 +43,24 @@ except ImportError:
 
 
 def _validate_n_bins(value: object) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if value < 2:
         raise ValueError("n_bins must be greater than or equal to 2")
     return int(value)
 
 
-def _validate_phases(value: object) -> FloatArray:
-    raw = np.asarray(value)
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
     if raw.dtype == np.bool_:
+        return True
+    return any(isinstance(item, bool) for item in raw.flat)
+
+
+def _validate_phases(value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
         raise ValueError("phases must not contain boolean values")
+    raw = np.asarray(value)
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -68,7 +76,7 @@ def _validate_group_indices(value: object, *, name: str, n_phases: int) -> IntAr
     raw = np.asarray(value)
     if raw.ndim != 1:
         raise ValueError(f"{name} must be a 1-D integer index array")
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise TypeError(f"{name} must contain integer indices, not booleans")
     try:
         numeric = np.asarray(value, dtype=np.float64)
@@ -82,6 +90,19 @@ def _validate_group_indices(value: object, *, name: str, n_phases: int) -> IntAr
     if indices.size > 0 and (np.any(indices < 0) or np.any(indices >= n_phases)):
         raise IndexError(f"{name} indices must be within [0, {n_phases})")
     return indices
+
+
+def _validate_pid_scalar(value: object, *, name: str) -> float:
+    try:
+        scalar = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if scalar.shape != ():
+        raise ValueError(f"{name} must be scalar")
+    result = float(scalar)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return result
 
 
 def _circular_entropy(phases: FloatArray, n_bins: int = _DEFAULT_BINS) -> float:
@@ -150,13 +171,14 @@ def redundancy(
 
     if _rust_pid_redundancy is not None:
         try:
-            return float(
+            return _validate_pid_scalar(
                 _rust_pid_redundancy(
                     np.ascontiguousarray(phase_values.ravel()),
                     group_a_idx.tolist(),
                     group_b_idx.tolist(),
                     bin_count,
-                )
+                ),
+                name="redundancy",
             )
         except Exception:
             group_a_idx = group_a_idx.copy()
@@ -167,7 +189,7 @@ def redundancy(
 
     mi_a = _mutual_information_paired(phase_values[group_a_idx], global_a, bin_count)
     mi_b = _mutual_information_paired(phase_values[group_b_idx], global_b, bin_count)
-    return min(mi_a, mi_b)
+    return _validate_pid_scalar(min(mi_a, mi_b), name="redundancy")
 
 
 def synergy(
@@ -195,13 +217,14 @@ def synergy(
 
     if _rust_pid_synergy is not None:
         try:
-            return float(
+            return _validate_pid_scalar(
                 _rust_pid_synergy(
                     np.ascontiguousarray(phase_values.ravel()),
                     group_a_idx.tolist(),
                     group_b_idx.tolist(),
                     bin_count,
-                )
+                ),
+                name="synergy",
             )
         except Exception:
             group_b_idx = group_b_idx.copy()
@@ -220,4 +243,6 @@ def synergy(
     mi_b = _mutual_information_paired(phase_values[group_b_idx], global_b, bin_count)
     i_red = min(mi_a, mi_b)
 
-    return max(0.0, mi_joint - mi_a - mi_b + i_red)
+    return _validate_pid_scalar(
+        max(0.0, mi_joint - mi_a - mi_b + i_red), name="synergy"
+    )
