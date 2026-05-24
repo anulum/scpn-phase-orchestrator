@@ -86,6 +86,10 @@ class TestGraphLaplacian:
         with pytest.raises(ValueError, match=match):
             graph_laplacian(knm)
 
+    def test_rejects_mixed_boolean_coupling_alias(self):
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            graph_laplacian([[0.0, True], [1.0, 0.0]])
+
 
 class TestFiedlerValue:
     @_python
@@ -188,6 +192,14 @@ class TestCriticalCoupling:
         np.fill_diagonal(W, 0.0)
 
         assert critical_coupling(np.array([5.0, 10.0]), W) == pytest.approx(1.25)
+
+    @_python
+    def test_rejects_mixed_boolean_frequency_alias(self):
+        W = np.ones((2, 2), dtype=np.float64)
+        np.fill_diagonal(W, 0.0)
+
+        with pytest.raises(ValueError, match="omegas must not contain boolean"):
+            critical_coupling([True, 1.0], W)
 
 
 class TestFiedlerPartition:

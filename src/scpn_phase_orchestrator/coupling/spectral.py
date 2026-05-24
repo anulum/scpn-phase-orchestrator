@@ -68,7 +68,14 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
 def _validate_coupling_matrix(knm: object) -> FloatArray:
+    if _contains_boolean_alias(knm):
+        raise ValueError("knm must not contain boolean values")
     raw = np.asarray(knm)
     if raw.dtype == np.bool_:
         raise ValueError("knm must not contain boolean values")
@@ -93,6 +100,8 @@ def _validate_omegas(omegas: object, *, expected_n: int) -> FloatArray:
 
 
 def _validate_omega_vector(omegas: object) -> FloatArray:
+    if _contains_boolean_alias(omegas):
+        raise ValueError("omegas must not contain boolean values")
     raw = np.asarray(omegas)
     if raw.dtype == np.bool_:
         raise ValueError("omegas must not contain boolean values")
