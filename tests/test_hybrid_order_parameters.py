@@ -157,16 +157,23 @@ def test_hybrid_order_classical_order_consistency() -> None:
     "bad_input",
     [
         {"phases": np.array([0.0, np.nan])},
+        {"phases": np.array([0.0, True], dtype=object)},
+        {"quantum_state": np.array([1.0, False, 0.0, 0.0], dtype=object)},
         {"quantum_state": np.array([1.0, 2.0, 3.0], dtype=np.complex128)},
         {"bipartition": ((0, 0), (1,))},
         {"bipartition": ((0,), (0, 1))},
         {"bipartition": ((0, 1),)},
+        {"bipartition": ((0,), (np.bool_(True),))},
         {
             "quantum_state": np.array([[1.0, 0.0], [1.0, 0.0]], dtype=np.complex128),
         },
         {
             "quantum_state": np.array([1, 0, 0, 0], dtype=np.complex128),
             "qubit_count": 3,
+        },
+        {
+            "quantum_state": np.array([1, 0, 0, 0], dtype=np.complex128),
+            "qubit_count": True,
         },
     ],
 )
@@ -193,3 +200,19 @@ def test_hybrid_order_invalid_inputs_fail_closed(bad_input: dict[str, object]) -
             bipartition=defaults.get("bipartition"),
             qubit_count=defaults.get("qubit_count"),
         )
+
+
+def test_hybrid_order_accepts_numpy_integer_qubit_contracts() -> None:
+    from scpn_phase_orchestrator.monitor.hybrid_order import (
+        compute_hybrid_entanglement_order_parameter,
+    )
+
+    result = compute_hybrid_entanglement_order_parameter(
+        phases=np.array([0.0, 1.0], dtype=np.float64),
+        quantum_state=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128),
+        qubit_count=np.int64(2),
+        bipartition=((np.int64(0),), (np.int64(1),)),
+    )
+
+    assert result.qubit_count == 2
+    assert result.bipartition == ((0,), (1,))

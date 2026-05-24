@@ -200,7 +200,7 @@ into the active roadmap.
 | Integrated-information monitor | monitor foundation, audit-report summary integration, expanded deterministic approximation benchmark cases, and physiology/infrastructure/cyber-industrial empirical replay corpus gates are implemented; richer Studio UI rendering remains open |
 | Topos-theoretic semantic binding | symbolic-binding functor validation, policy-composition category validation, deterministic domain obligation examples, and reference-suite proof-boundary gates are implemented; richer Studio UI surfacing and optional external categorical proof-tool export remain open |
 | Multiverse counterfactual simulator | deterministic vectorised branch rollouts, domain scenario fixtures, and fail-closed non-actuating branch-risk gates are implemented with reference-suite evidence; optional JAX acceleration, larger scenario corpora, and Studio surfacing remain open |
-| Entanglement-aware hybrid order parameters | dependency-free quantum co-simulation monitor now reports bipartition Von Neumann entanglement entropy, normalised entropy, participation ratio, classical `R`/`Psi`, deterministic domain scenarios, and reference-suite gates without QPU execution; richer simulator backends and Studio surfacing remain open |
+| Entanglement-aware hybrid order parameters | dependency-free quantum co-simulation monitor now rejects boolean aliases at phase, state, qubit-count, and bipartition boundaries and reports bipartition Von Neumann entanglement entropy, normalised entropy, participation ratio, classical `R`/`Psi`, deterministic domain scenarios, and reference-suite gates without QPU execution; richer simulator backends and Studio surfacing remain open |
 
 Priority order for the first implementation tranche:
 

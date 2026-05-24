@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from hashlib import sha256
+from numbers import Integral
 
 import numpy as np
 from numpy.typing import NDArray
@@ -98,8 +99,13 @@ def compute_hybrid_entanglement_order_parameter(
     if qubit_count is None:
         qubit_count = n_qubits
     else:
-        if not isinstance(qubit_count, int) or qubit_count < 1:
+        if (
+            isinstance(qubit_count, bool)
+            or not isinstance(qubit_count, Integral)
+            or qubit_count < 1
+        ):
             raise ValueError("qubit_count must be a positive integer")
+        qubit_count = int(qubit_count)
         if qubit_count != n_qubits:
             raise ValueError("qubit_count is inconsistent with quantum_state size")
 
@@ -145,21 +151,33 @@ def compute_hybrid_entanglement_order_parameter(
 
 
 def _require_finite_float_array(values: object, *, name: str) -> FloatArray:
+    raw = np.asarray(values)
+    if _contains_boolean_alias(raw):
+        raise ValueError(f"{name} must not contain boolean values")
     try:
         array = np.asarray(values, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
-    if array.dtype == np.bool_:
-        raise ValueError(f"{name} must be numeric")
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain finite values")
     return np.asarray(array, dtype=np.float64)
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    array = np.asarray(value)
+    if array.dtype == np.bool_:
+        return True
+    if array.dtype == object:
+        return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+    return False
 
 
 def _validate_quantum_state(
     quantum_state: object,
 ) -> tuple[int, NDArray[np.complex128]]:
     raw_state = np.asarray(quantum_state)
+    if _contains_boolean_alias(raw_state):
+        raise ValueError("quantum_state must not contain boolean values")
 
     if raw_state.ndim == 0:
         raise ValueError("quantum_state must be a vector or density matrix")
@@ -173,9 +191,6 @@ def _validate_quantum_state(
         raise ValueError("quantum_state must be a vector or density matrix")
     if raw_state.shape[0] != raw_state.shape[1]:
         raise ValueError("density matrix must be square")
-    if raw_state.dtype == np.bool_:
-        raise ValueError("quantum_state must be numeric")
-
     density = raw_state.astype(np.complex128, copy=True)
     if not np.all(np.isfinite(density)):
         raise ValueError("quantum_state must contain finite values")
@@ -198,8 +213,8 @@ def _validate_quantum_state(
 def _normalise_statevector(
     vector: NDArray[np.generic],
 ) -> tuple[int, ComplexArray]:
-    if vector.dtype == np.bool_:
-        raise ValueError("quantum_state must be numeric")
+    if _contains_boolean_alias(vector):
+        raise ValueError("quantum_state must not contain boolean values")
     vector_complex = np.asarray(vector, dtype=np.complex128)
     if not np.all(np.isfinite(vector_complex)):
         raise ValueError("quantum_state must contain finite values")
@@ -243,17 +258,19 @@ def _validate_bipartition(
     left_indices: list[int] = []
     right_indices: list[int] = []
     for idx in left_raw:
-        if isinstance(idx, bool) or not isinstance(idx, int):
+        if isinstance(idx, bool) or not isinstance(idx, Integral):
             raise ValueError("bipartition indices must be integers")
+        idx = int(idx)
         if idx < 0 or idx >= n_qubits:
             raise ValueError("bipartition index out of range")
-        left_indices.append(int(idx))
+        left_indices.append(idx)
     for idx in right_raw:
-        if isinstance(idx, bool) or not isinstance(idx, int):
+        if isinstance(idx, bool) or not isinstance(idx, Integral):
             raise ValueError("bipartition indices must be integers")
+        idx = int(idx)
         if idx < 0 or idx >= n_qubits:
             raise ValueError("bipartition index out of range")
-        right_indices.append(int(idx))
+        right_indices.append(idx)
 
     if not left_indices or not right_indices:
         raise ValueError("bipartition groups must be non-empty")
