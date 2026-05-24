@@ -5,7 +5,7 @@
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.6.1 |
+| Package version | 0.6.2 |
 | Public API exports | 22 |
 | Python package modules | 417 |
 | Core Engine modules | 224 |
@@ -14,8 +14,8 @@
 | Research/Experimental modules | 121 |
 | Domainpack files | 36 |
 | Rust kernel files | 91 |
-| Optional extras | 14 |
-| Python test files | 470 |
+| Optional extras | 15 |
+| Python test files | 509 |
 | Public documentation pages | 170 |
 | GitHub Actions workflows | 10 |
 

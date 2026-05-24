@@ -7,12 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-05-24
+
 ### Changed
 
 - Removed generic coverage, integration, smoke, and fallback catch-all test
   files in favour of dedicated module-owned test surfaces and lowered the
   coverage gate to 60% while the suite is rebuilt around per-module production
   tests.
+- Rebuilt physics and mathematics regression coverage around module-specific
+  behavioural contracts for UPDE, Stuart-Landau, splitting, Hodge, plasticity,
+  coupling lags, K_nm geometry, spectral coupling, E/I balance, universal
+  priors, causal coupling inference, and bifurcation interpolation.
+
+### Fixed
+
+- Hardened numerical boundary validation for phase-domain outputs, zero
+  self-coupling diagonals, finite coherence/order-parameter calculations,
+  boolean numeric aliases, prior hyperparameters, and transfer-entropy coupling
+  inference scalar configuration.
 
 ## [0.6.1] - 2026-05-21
 
@@ -1585,7 +1598,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.11...v0.6.0
 [0.5.11]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.10...v0.5.11
