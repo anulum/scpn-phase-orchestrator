@@ -175,6 +175,14 @@ def _dispatch() -> Callable[..., float] | None:
     return None
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        arr = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
+
+
 def _validate_integral(value: object, *, name: str, minimum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
@@ -205,6 +213,8 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_vector(value: object, *, name: str, shape: tuple[int, ...]) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -221,6 +231,8 @@ def _validate_omegas(value: object) -> FloatArray:
 
 
 def _validate_nonempty_vector(value: object, *, name: str) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -361,6 +373,26 @@ class BasinStabilityResult:
     n_converged: int
     R_final: FloatArray
     R_threshold: float
+
+    def __post_init__(self) -> None:
+        s_b = _validate_unit_interval(self.S_B, name="S_B")
+        n_samples = _validate_integral(self.n_samples, name="n_samples", minimum=0)
+        n_converged = _validate_integral(
+            self.n_converged, name="n_converged", minimum=0
+        )
+        if n_converged > n_samples:
+            raise ValueError("n_converged must be <= n_samples")
+
+        r_final = _validate_vector(self.R_final, name="R_final", shape=(n_samples,))
+        if np.any((r_final < 0.0) | (r_final > 1.0 + 1e-12)):
+            raise ValueError("R_final values must lie in [0, 1]")
+        r_threshold = _validate_unit_interval(self.R_threshold, name="R_threshold")
+
+        self.S_B = s_b
+        self.n_samples = n_samples
+        self.n_converged = n_converged
+        self.R_final = r_final
+        self.R_threshold = r_threshold
 
 
 def _monte_carlo_R_finals(

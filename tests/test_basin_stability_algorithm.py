@@ -529,6 +529,115 @@ class TestInputValidation:
                 R_thresholds=R_thresholds,
             )
 
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("phases_init", np.array([True, False, True])),
+            ("omegas", np.array([True, False, True])),
+            ("knm", np.eye(3, dtype=bool)),
+            ("alpha", np.eye(3, dtype=bool)),
+        ],
+    )
+    def test_steady_state_rejects_boolean_alias_arrays(
+        self, field: str, bad_value: np.ndarray
+    ) -> None:
+        values = {
+            "phases_init": np.zeros(3, dtype=np.float64),
+            "omegas": np.ones(3, dtype=np.float64),
+            "knm": np.zeros((3, 3), dtype=np.float64),
+            "alpha": np.zeros((3, 3), dtype=np.float64),
+        }
+        values[field] = bad_value
+
+        with pytest.raises(
+            ValueError, match=f"{field} must not contain boolean values"
+        ):
+            steady_state_r(
+                values["phases_init"],
+                values["omegas"],
+                values["knm"],
+                alpha=values["alpha"],
+                n_transient=1,
+                n_measure=1,
+            )
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("omegas", np.array([True, False, True])),
+            ("knm", np.eye(3, dtype=bool)),
+            ("alpha", np.eye(3, dtype=bool)),
+        ],
+    )
+    def test_basin_stability_rejects_boolean_alias_arrays(
+        self, field: str, bad_value: np.ndarray
+    ) -> None:
+        kwargs = {
+            "omegas": np.ones(3, dtype=np.float64),
+            "knm": np.zeros((3, 3), dtype=np.float64),
+            "alpha": np.zeros((3, 3), dtype=np.float64),
+        }
+        kwargs[field] = bad_value
+
+        with pytest.raises(
+            ValueError, match=f"{field} must not contain boolean values"
+        ):
+            basin_stability(
+                kwargs["omegas"],
+                kwargs["knm"],
+                alpha=kwargs["alpha"],
+                n_transient=1,
+                n_measure=1,
+                n_samples=1,
+                seed=1,
+            )
+
+
+class TestBasinStabilityResultValidation:
+    def test_normalizes_public_record_values(self) -> None:
+        result = BasinStabilityResult(
+            S_B=0.5,
+            n_samples=2,
+            n_converged=1,
+            R_final=[0.25, 0.75],
+            R_threshold=0.5,
+        )
+
+        assert result.S_B == 0.5
+        assert result.n_samples == 2
+        assert result.n_converged == 1
+        assert result.R_final.dtype == np.float64
+        np.testing.assert_allclose(result.R_final, [0.25, 0.75])
+        assert result.R_threshold == 0.5
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"S_B": 1.2}, "S_B must be in \\[0, 1\\]"),
+            ({"n_samples": -1}, "n_samples must be an integer >= 0"),
+            ({"n_converged": 3}, "n_converged must be <= n_samples"),
+            ({"R_final": [0.25]}, "R_final shape"),
+            ({"R_final": [0.25, np.nan]}, "R_final must contain only finite values"),
+            ({"R_final": [0.25, 1.25]}, "R_final values must lie in"),
+            ({"R_final": [True, False]}, "R_final must not contain boolean values"),
+            ({"R_threshold": -0.1}, "R_threshold must be in \\[0, 1\\]"),
+        ],
+    )
+    def test_rejects_invalid_public_record_values(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {
+            "S_B": 0.5,
+            "n_samples": 2,
+            "n_converged": 1,
+            "R_final": [0.25, 0.75],
+            "R_threshold": 0.5,
+        }
+        base.update(kwargs)
+
+        with pytest.raises(ValueError, match=match):
+            BasinStabilityResult(**base)
+
 
 class TestBackendLoaderContracts:
     def test_rust_loader_wraps_flat_arrays_as_contiguous_kernel_inputs(
