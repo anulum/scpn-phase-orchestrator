@@ -17,7 +17,7 @@ benchmarked against this reproducible baseline.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from numbers import Real
+from numbers import Integral, Real
 from typing import Literal, Protocol, TypeAlias, runtime_checkable
 
 import numpy as np
@@ -83,10 +83,17 @@ class GaussianArrayDistribution:
     def sample(self, rng: np.random.Generator, n_samples: int) -> FloatArray:
         """Draw finite Gaussian samples with optional support guards applied."""
 
+        if not isinstance(rng, np.random.Generator):
+            raise TypeError("rng must be a numpy.random.Generator")
+        sample_count = _validate_positive_integer(
+            n_samples,
+            name="n_samples",
+            minimum=1,
+        )
         draws = rng.normal(
             loc=np.asarray(self.mean, dtype=np.float64),
             scale=np.asarray(self.std, dtype=np.float64),
-            size=(n_samples, *self.shape),
+            size=(sample_count, *self.shape),
         )
         samples = np.asarray(draws, dtype=np.float64)
         if self.non_negative:
@@ -113,12 +120,11 @@ class BayesianUPDEConfig:
     rtol: float = 1e-3
 
     def __post_init__(self) -> None:
-        if isinstance(self.n_samples, bool) or self.n_samples < 2:
-            raise ValueError("n_samples must be a non-boolean integer >= 2")
-        if isinstance(self.n_steps, bool) or self.n_steps < 1:
-            raise ValueError("n_steps must be a non-boolean integer >= 1")
-        if isinstance(self.n_substeps, bool) or self.n_substeps < 1:
-            raise ValueError("n_substeps must be a non-boolean integer >= 1")
+        _validate_positive_integer(self.n_samples, name="n_samples", minimum=2)
+        _validate_positive_integer(self.n_steps, name="n_steps", minimum=1)
+        _validate_positive_integer(self.n_substeps, name="n_substeps", minimum=1)
+        if self.seed is not None:
+            _validate_positive_integer(self.seed, name="seed", minimum=0)
         _validate_positive_finite(self.dt, name="dt")
         _validate_positive_finite(self.atol, name="atol")
         _validate_positive_finite(self.rtol, name="rtol")
@@ -126,8 +132,10 @@ class BayesianUPDEConfig:
             raise ValueError("method must be one of: euler, rk4, rk45")
         if self.backend not in {"numpy", "numpyro", "blackjax"}:
             raise ValueError("backend must be one of: numpy, numpyro, blackjax")
-        if not (0.0 < self.credible_interval < 1.0):
-            raise ValueError("credible_interval must lie in (0, 1)")
+        _validate_open_unit_interval(
+            self.credible_interval,
+            name="credible_interval",
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -255,6 +263,8 @@ class GaussianUPDEPosteriorFit:
 
 
 def _as_finite_array(value: object, *, name: str) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
     try:
         array = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -264,6 +274,14 @@ def _as_finite_array(value: object, *, name: str) -> FloatArray:
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
 def _validate_square(array: FloatArray, *, name: str) -> None:
@@ -277,6 +295,29 @@ def _validate_positive_finite(value: object, *, name: str) -> float:
     coerced = float(value)
     if not np.isfinite(coerced) or coerced <= 0.0:
         raise ValueError(f"{name} must be positive finite real")
+    return coerced
+
+
+def _validate_positive_integer(
+    value: object,
+    *,
+    name: str,
+    minimum: int,
+) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a non-boolean integer >= {minimum}")
+    coerced = int(value)
+    if coerced < minimum:
+        raise ValueError(f"{name} must be a non-boolean integer >= {minimum}")
+    return coerced
+
+
+def _validate_open_unit_interval(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must lie in (0, 1)")
+    coerced = float(value)
+    if not np.isfinite(coerced) or not (0.0 < coerced < 1.0):
+        raise ValueError(f"{name} must lie in (0, 1)")
     return coerced
 
 

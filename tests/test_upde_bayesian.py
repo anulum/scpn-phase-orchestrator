@@ -129,6 +129,8 @@ def test_bayesian_upde_rejects_invalid_distributions_and_backends() -> None:
 
     with pytest.raises(ValueError, match="std must have shape"):
         GaussianArrayDistribution(omegas, np.ones((2, 2)))
+    with pytest.raises(ValueError, match="boolean"):
+        GaussianArrayDistribution([1.0, True, 1.2], np.ones(3))
     with pytest.raises(ValueError, match="n_samples"):
         BayesianUPDEConfig(n_samples=1)
     with pytest.raises(NotImplementedError, match="numpyro"):
@@ -141,6 +143,36 @@ def test_bayesian_upde_rejects_invalid_distributions_and_backends() -> None:
             psi=0.0,
             config=BayesianUPDEConfig(backend="numpyro"),
         )
+
+
+def test_bayesian_config_rejects_non_integral_controls() -> None:
+    with pytest.raises(ValueError, match="n_samples"):
+        BayesianUPDEConfig(n_samples=8.0)
+    with pytest.raises(ValueError, match="n_steps"):
+        BayesianUPDEConfig(n_steps=1.5)
+    with pytest.raises(ValueError, match="n_substeps"):
+        BayesianUPDEConfig(n_substeps=True)
+    with pytest.raises(ValueError, match="seed"):
+        BayesianUPDEConfig(seed=True)
+    with pytest.raises(ValueError, match="credible_interval"):
+        BayesianUPDEConfig(credible_interval="0.9")
+
+
+def test_gaussian_distribution_sample_rejects_invalid_sample_boundary() -> None:
+    phases, omegas, _, _ = _base_problem()
+    distribution = GaussianArrayDistribution(omegas, np.full_like(omegas, 0.01))
+    rng = np.random.default_rng(17)
+
+    with pytest.raises(ValueError, match="n_samples"):
+        distribution.sample(rng, 0)
+    with pytest.raises(ValueError, match="n_samples"):
+        distribution.sample(rng, 2.5)
+    with pytest.raises(TypeError, match="Generator"):
+        distribution.sample(object(), 2)
+
+    samples = distribution.sample(rng, 3)
+    assert samples.shape == (3, phases.size)
+    assert np.all(np.isfinite(samples))
 
 
 def test_bayesian_backend_status_audits_reserved_fail_closed_names() -> None:
@@ -275,3 +307,9 @@ def test_fit_gaussian_upde_posterior_rejects_invalid_config() -> None:
         fit_gaussian_upde_posterior(trajectory, dt=0.02, alpha=alpha, ridge=-1.0)
     with pytest.raises(ValueError, match="alpha"):
         fit_gaussian_upde_posterior(trajectory, dt=0.02, alpha=np.zeros((2, 2)))
+    with pytest.raises(ValueError, match="boolean"):
+        fit_gaussian_upde_posterior(trajectory, dt=0.02, alpha=np.eye(3, dtype=bool))
+    with pytest.raises(ValueError, match="boolean"):
+        bool_trajectory = trajectory.copy().astype(object)
+        bool_trajectory[1, 1] = True
+        fit_gaussian_upde_posterior(bool_trajectory, dt=0.02, alpha=alpha)
