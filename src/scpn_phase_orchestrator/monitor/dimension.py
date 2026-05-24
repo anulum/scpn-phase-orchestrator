@@ -190,6 +190,15 @@ def _validate_epsilons(epsilons: object) -> FloatArray:
     return np.ascontiguousarray(np.sort(eps), dtype=np.float64)
 
 
+def _validate_dimension_result_epsilons(epsilons: object) -> FloatArray:
+    eps = _validate_epsilons(epsilons)
+    if np.any(eps <= 0.0):
+        raise ValueError("epsilons must be positive for log-log scaling")
+    if eps.size > 1 and np.any(np.diff(eps) <= 0.0):
+        raise ValueError("epsilons must be strictly increasing for log-log scaling")
+    return eps
+
+
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
@@ -275,7 +284,7 @@ class CorrelationDimensionResult:
 
     def __post_init__(self) -> None:
         d2 = _validate_non_negative_float(self.D2, name="D2")
-        epsilons = _validate_epsilons(self.epsilons)
+        epsilons = _validate_dimension_result_epsilons(self.epsilons)
         try:
             c_eps = _validate_ci_values(self.C_eps, expected_size=int(epsilons.size))
         except ValueError as exc:

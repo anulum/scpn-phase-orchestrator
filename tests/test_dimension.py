@@ -279,6 +279,20 @@ class TestCorrelationDimensionResult:
                 scaling_range=(0.1, 1.0),
             )
 
+    @pytest.mark.parametrize("epsilons", [[0.0, 1.0], [0.1, 0.1]])
+    def test_rejects_non_positive_or_duplicate_log_scale_epsilons(
+        self,
+        epsilons: list[float],
+    ) -> None:
+        with pytest.raises(ValueError, match="epsilons"):
+            CorrelationDimensionResult(
+                D2=1.0,
+                epsilons=epsilons,
+                C_eps=[0.25, 0.75],
+                slope=[1.25],
+                scaling_range=(0.1, 1.0),
+            )
+
     @pytest.mark.parametrize(
         "C_eps",
         [
