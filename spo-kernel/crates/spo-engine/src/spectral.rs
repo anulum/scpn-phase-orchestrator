@@ -313,6 +313,27 @@ mod tests {
     }
 
     #[test]
+    fn test_laplacian_asymmetric_reciprocal_weights() {
+        let knm = vec![0.0, 2.0, 0.0, 6.0, 0.0, 4.0, 8.0, 0.0, 0.0];
+        let expected = vec![8.0, -4.0, -4.0, -4.0, 6.0, -2.0, -4.0, -2.0, 6.0];
+        let l = graph_laplacian(&knm, 3);
+
+        for (idx, (&actual, &target)) in l.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (actual - target).abs() < 1e-12,
+                "L[{}] = {} (expected {})",
+                idx,
+                actual,
+                target
+            );
+        }
+        for i in 0..3 {
+            let row_sum: f64 = (0..3).map(|j| l[i * 3 + j]).sum();
+            assert!(row_sum.abs() < 1e-12, "row {} sum = {}", i, row_sum);
+        }
+    }
+
+    #[test]
     fn test_fiedler_value_connected() {
         // Complete graph K_4 with weight 1: λ₂ = N = 4
         let knm = uniform_knm(4, 1.0);
