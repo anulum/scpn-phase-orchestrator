@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.binding.semantic import (
     compile_symbolic_binding,
 )
 from scpn_phase_orchestrator.binding.topos_semantic import (
+    _build_report_hash,
     validate_symbolic_binding_functor,
 )
 
@@ -166,3 +167,8 @@ def test_report_is_json_safe_for_valid_artifacts():
         and isinstance(item["evidence"], str)
         for item in payload["obligation_records"]
     )
+
+
+def test_report_hash_rejects_non_finite_audit_payload_numbers():
+    with pytest.raises(ValueError, match="finite JSON"):
+        _build_report_hash({"report_hash": "", "object_count": float("nan")})

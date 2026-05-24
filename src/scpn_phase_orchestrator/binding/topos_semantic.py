@@ -128,7 +128,17 @@ def _build_report_hash(record: dict[str, Any]) -> str:
 
     payload = dict(record)
     payload.pop("report_hash", None)
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    try:
+        encoded = json.dumps(
+            payload,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "report payload must contain only finite JSON numbers"
+        ) from exc
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
