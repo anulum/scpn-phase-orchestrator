@@ -14,6 +14,7 @@ and are explicitly not theoretical IIT claims.
 
 from __future__ import annotations
 
+from numbers import Integral, Real
 from typing import Any, TypeAlias
 
 import numpy as np
@@ -64,9 +65,13 @@ def build_infrastructure_integrated_information_replays(
 
 
 def _validate_replay_parameters(*, n_samples: int, n_bins: int) -> None:
-    if isinstance(n_samples, bool) or not isinstance(n_samples, int) or n_samples < 32:
+    if (
+        isinstance(n_samples, bool)
+        or not isinstance(n_samples, Integral)
+        or n_samples < 32
+    ):
         raise ValueError("n_samples must be an integer >= 32")
-    if isinstance(n_bins, bool) or not isinstance(n_bins, int) or n_bins < 2:
+    if isinstance(n_bins, bool) or not isinstance(n_bins, Integral) or n_bins < 2:
         raise ValueError("n_bins must be an integer >= 2")
 
 
@@ -108,16 +113,11 @@ def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
             raise ValueError("minimum_partition must be a pair of index lists")
         if any(not isinstance(part, list) for part in record["minimum_partition"]):
             raise ValueError("minimum_partition entries must be lists")
-        if not isinstance(record["phi"], float) or not np.isfinite(record["phi"]):
-            raise ValueError("phi must be finite float")
-        if not isinstance(record["normalised_phi"], float) or not np.isfinite(
-            record["normalised_phi"]
-        ):
-            raise ValueError("normalised_phi must be finite float")
-        if not isinstance(record["total_integration"], float) or not np.isfinite(
-            record["total_integration"]
-        ):
-            raise ValueError("total_integration must be finite float")
+        _validate_record_metrics(record)
+        _validate_minimum_partition(
+            record["minimum_partition"],
+            n_oscillators=int(record["n_oscillators"]),
+        )
 
     case_by_name = {record["case_name"]: record for record in records}
     for key in (
@@ -143,6 +143,70 @@ def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
         raise ValueError(
             "traffic platoon recovery integration must exceed spillback fragmentation"
         )
+
+
+def _validate_record_metrics(record: dict[str, Any]) -> None:
+    phi = _validate_non_negative_real(record["phi"], name="phi")
+    normalised_phi = _validate_unit_interval(
+        record["normalised_phi"],
+        name="normalised_phi",
+    )
+    total_integration = _validate_non_negative_real(
+        record["total_integration"],
+        name="total_integration",
+    )
+    if phi > total_integration + 1e-12:
+        raise ValueError("phi must not exceed total_integration")
+    record["phi"] = phi
+    record["normalised_phi"] = normalised_phi
+    record["total_integration"] = total_integration
+
+
+def _validate_non_negative_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real")
+    scalar = float(value)
+    if not np.isfinite(scalar) or scalar < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return scalar
+
+
+def _validate_unit_interval(value: object, *, name: str) -> float:
+    scalar = _validate_non_negative_real(value, name=name)
+    if scalar > 1.0:
+        raise ValueError(f"{name} must lie in [0, 1]")
+    return scalar
+
+
+def _validate_minimum_partition(value: object, *, n_oscillators: int) -> None:
+    if not isinstance(value, list) or len(value) != 2:
+        raise ValueError("minimum_partition must be a pair of index lists")
+    left = _validate_partition_side(value[0])
+    right = _validate_partition_side(value[1])
+    if not left or not right:
+        raise ValueError("minimum_partition groups must be non-empty")
+    if set(left).intersection(right):
+        raise ValueError("minimum_partition groups must be disjoint")
+    if set(left).union(right) != set(range(n_oscillators)):
+        raise ValueError("minimum_partition must cover all oscillators")
+
+
+def _validate_partition_side(value: object) -> tuple[int, ...]:
+    if not isinstance(value, list):
+        raise ValueError("minimum_partition entries must be lists")
+    indices: list[int] = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, Integral):
+            raise ValueError("minimum_partition groups must contain integer indices")
+        index = int(item)
+        if index < 0:
+            raise ValueError(
+                "minimum_partition groups must contain non-negative indices",
+            )
+        indices.append(index)
+    if len(set(indices)) != len(indices):
+        raise ValueError("minimum_partition groups must not contain duplicate indices")
+    return tuple(indices)
 
 
 def _build_record(
