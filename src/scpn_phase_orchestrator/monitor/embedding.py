@@ -223,10 +223,11 @@ class EmbeddingResult:
 
 
 def _contains_boolean_alias(value: object) -> bool:
-    raw = np.asarray(value, dtype=object)
-    if raw.dtype == np.bool_:
-        return True
-    return any(isinstance(value, bool) for value in raw.flat)
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
@@ -285,6 +286,8 @@ def _validate_delay_embedding_output(
     t_effective: int,
     dimension: int,
 ) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("delay embedding output must not contain boolean values")
     try:
         embedded = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -302,6 +305,8 @@ def _validate_delay_embedding_output(
 
 
 def _validate_non_negative_scalar(value: object, *, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not be a boolean value")
     try:
         scalar = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -320,6 +325,10 @@ def _validate_nn_output(
     *,
     n_points: int,
 ) -> tuple[FloatArray, IntArray]:
+    if _contains_boolean_alias(distances):
+        raise ValueError("nearest-neighbor distances must not contain boolean values")
+    if _contains_boolean_alias(indices):
+        raise ValueError("nearest-neighbor indices must not contain boolean values")
     try:
         dist = np.asarray(distances, dtype=np.float64)
         idx = np.asarray(indices, dtype=np.int64)

@@ -58,6 +58,7 @@ class TestDelayEmbed:
             np.array([0.0, np.nan], dtype=np.float64),
             np.array([0.0, np.inf], dtype=np.float64),
             np.array([0.0, True], dtype=object),
+            np.array([0.0, np.bool_(True)], dtype=object),
             ["not-a-signal"],
         ],
     )
@@ -127,6 +128,7 @@ class TestMutualInformationContracts:
             np.array([0.0, np.nan], dtype=np.float64),
             np.array([0.0, np.inf], dtype=np.float64),
             np.array([0.0, True], dtype=object),
+            np.array([0.0, np.bool_(True)], dtype=object),
             ["not-a-signal"],
         ],
     )
@@ -157,6 +159,7 @@ class TestNearestNeighborContracts:
             np.array([[0.0], [np.nan]], dtype=np.float64),
             np.array([[0.0], [np.inf]], dtype=np.float64),
             np.array([[0.0], [True]], dtype=object),
+            np.array([[0.0], [np.bool_(True)]], dtype=object),
             [["not-a-point"]],
         ],
     )
@@ -228,6 +231,12 @@ class TestEmbeddingResultBoundary:
             },
             {
                 "trajectory": [[0.0, True]],
+                "delay": 1,
+                "dimension": 2,
+                "T_effective": 1,
+            },
+            {
+                "trajectory": [[0.0, np.bool_(True)]],
                 "delay": 1,
                 "dimension": 2,
                 "T_effective": 1,
@@ -336,7 +345,7 @@ class TestAutoEmbed:
         assert np.std(emb[:, 1]) > 0.3
 
 
-class TestEmbeddingCoverage:
+class TestOptimalDimensionBoundary:
     def test_optimal_dimension_short_signal(self):
         """Signal too short for higher m → returns early."""
         signal = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
@@ -394,6 +403,7 @@ class TestEmbeddingBackendFallbacks:
         [
             np.array([0.0, 1.0], dtype=np.float64),
             np.array([[0.0, np.nan], [1.0, 2.0], [2.0, 3.0]], dtype=np.float64),
+            np.array([[0.0, np.bool_(True)], [1.0, 2.0], [2.0, 3.0]], dtype=object),
             np.zeros((2, 3), dtype=np.float64),
         ],
     )
@@ -445,7 +455,9 @@ class TestEmbeddingBackendFallbacks:
         assert np.isfinite(mi)
         assert mi >= 0.0
 
-    @pytest.mark.parametrize("backend_value", [-0.1, np.nan, np.inf, [0.5]])
+    @pytest.mark.parametrize(
+        "backend_value", [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True)]
+    )
     def test_invalid_mutual_information_backend_payload_falls_back_to_python(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -494,6 +506,14 @@ class TestEmbeddingBackendFallbacks:
             (
                 np.array([1.0, 1.0, 2.0], dtype=np.float64),
                 np.array([1, 0, 3], dtype=np.int64),
+            ),
+            (
+                np.array([True, False, True], dtype=np.bool_),
+                np.array([1, 0, 1], dtype=np.int64),
+            ),
+            (
+                np.array([1.0, 1.0, 1.0], dtype=np.float64),
+                np.array([np.bool_(True), 0, 1], dtype=object),
             ),
         ],
     )
