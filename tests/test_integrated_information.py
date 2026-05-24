@@ -68,12 +68,85 @@ class TestIntegratedInformationContracts:
         with pytest.raises(ValueError, match="phase_series"):
             integrated_information(phases)
 
+    def test_mixed_boolean_alias_phase_series_is_rejected(self) -> None:
+        phases = np.array([[0.0, True], [1.0, 2.0]], dtype=object)
+
+        with pytest.raises(ValueError, match="phase_series"):
+            integrated_information(phases)
+
     @pytest.mark.parametrize("n_bins", [False, 1, 1.5])
     def test_invalid_bin_count_is_rejected(self, n_bins: Any) -> None:
         phases = np.zeros((2, 8), dtype=np.float64)
 
         with pytest.raises(ValueError, match="n_bins"):
             integrated_information(phases, n_bins=n_bins)
+
+    def test_numpy_integer_bin_count_is_accepted(self) -> None:
+        phases = np.zeros((2, 8), dtype=np.float64)
+
+        result = integrated_information(phases, n_bins=np.int64(4))
+
+        assert result.n_bins == 4
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {
+                "phi": -0.1,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, 0.0], [0.0, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 1.1,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, 0.0], [0.0, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.5,
+                "normalised_phi": 0.1,
+                "total_integration": 0.1,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, 0.1], [0.1, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (0,)),
+                "pairwise_mi": [[0.0, 0.0], [0.0, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, 0.2], [0.1, 0.0]],
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, np.nan], [np.nan, 0.0]],
+                "n_bins": 4,
+            },
+        ],
+    )
+    def test_result_record_rejects_invalid_invariants(
+        self,
+        payload: dict[str, Any],
+    ) -> None:
+        with pytest.raises(ValueError):
+            IntegratedInformationResult(**payload)
 
 
 class TestIntegratedInformationBehaviour:

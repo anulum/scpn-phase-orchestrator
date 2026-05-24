@@ -17,7 +17,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import combinations
-from typing import Any, TypeAlias
+from numbers import Integral, Real
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -60,6 +61,31 @@ class IntegratedInformationResult:
     minimum_partition: Partition
     pairwise_mi: FloatArray
     n_bins: int
+
+    def __post_init__(self) -> None:
+        n_bins = _validate_bins(self.n_bins)
+        pairwise_mi = _validate_pairwise_mi(self.pairwise_mi)
+        partition = _validate_partition(
+            self.minimum_partition,
+            n_oscillators=int(pairwise_mi.shape[0]),
+        )
+        phi = _validate_non_negative_scalar(self.phi, name="phi")
+        normalised_phi = _validate_unit_interval_scalar(
+            self.normalised_phi,
+            name="normalised_phi",
+        )
+        total_integration = _validate_non_negative_scalar(
+            self.total_integration,
+            name="total_integration",
+        )
+        if phi > total_integration + 1e-12:
+            raise ValueError("phi must not exceed total_integration")
+        object.__setattr__(self, "phi", phi)
+        object.__setattr__(self, "normalised_phi", normalised_phi)
+        object.__setattr__(self, "total_integration", total_integration)
+        object.__setattr__(self, "minimum_partition", partition)
+        object.__setattr__(self, "pairwise_mi", pairwise_mi)
+        object.__setattr__(self, "n_bins", n_bins)
 
     def to_audit_record(self) -> dict[str, Any]:
         """Return a JSON-serialisable audit record."""
@@ -246,10 +272,10 @@ def benchmark_integrated_information_approximations(
 
 
 def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
-    raw = np.asarray(phase_series)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(phase_series):
         msg = "phase_series must not contain boolean values"
         raise ValueError(msg)
+    raw = np.asarray(phase_series)
     phases = raw.astype(np.float64, copy=True)
     if phases.ndim != 2:
         msg = "phase_series must have shape (n_oscillators, n_samples)"
@@ -268,7 +294,7 @@ def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
 
 
 def _validate_bins(n_bins: int) -> int:
-    if isinstance(n_bins, bool) or int(n_bins) != n_bins:
+    if isinstance(n_bins, bool) or not isinstance(n_bins, Integral):
         msg = "n_bins must be an integer"
         raise ValueError(msg)
     bins = int(n_bins)
@@ -276,6 +302,88 @@ def _validate_bins(n_bins: int) -> int:
         msg = "n_bins must be at least 2"
         raise ValueError(msg)
     return bins
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    if raw.dtype == np.bool_:
+        return True
+    return any(isinstance(item, bool) for item in raw.flat)
+
+
+def _validate_non_negative_scalar(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real")
+    scalar = float(value)
+    if not np.isfinite(scalar) or scalar < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return scalar
+
+
+def _validate_unit_interval_scalar(value: object, *, name: str) -> float:
+    scalar = _validate_non_negative_scalar(value, name=name)
+    if scalar > 1.0:
+        raise ValueError(f"{name} must lie in [0, 1]")
+    return scalar
+
+
+def _validate_pairwise_mi(value: object) -> FloatArray:
+    try:
+        matrix = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("pairwise_mi must be a numeric matrix") from exc
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError("pairwise_mi must be a square matrix")
+    if matrix.shape[0] < 2:
+        raise ValueError("pairwise_mi must contain at least two oscillators")
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("pairwise_mi must contain only finite values")
+    if np.any(matrix < -1e-12):
+        raise ValueError("pairwise_mi must be non-negative")
+    if not np.allclose(matrix, matrix.T, rtol=0.0, atol=1e-12):
+        raise ValueError("pairwise_mi must be symmetric")
+    if not np.allclose(np.diag(matrix), 0.0, rtol=0.0, atol=1e-12):
+        raise ValueError("pairwise_mi diagonal must be zero")
+    matrix = np.maximum(matrix, 0.0)
+    np.fill_diagonal(matrix, 0.0)
+    return np.ascontiguousarray(matrix, dtype=np.float64)
+
+
+def _validate_partition(value: object, *, n_oscillators: int) -> Partition:
+    if not isinstance(value, tuple) or len(value) != 2:
+        raise ValueError("minimum_partition must contain two index groups")
+    left_raw = value[0]
+    right_raw = value[1]
+    left = _validate_partition_side(left_raw, name="minimum_partition")
+    right = _validate_partition_side(right_raw, name="minimum_partition")
+    if not left or not right:
+        raise ValueError("minimum_partition groups must be non-empty")
+    if set(left).intersection(right):
+        raise ValueError("minimum_partition groups must be disjoint")
+    expected = set(range(n_oscillators))
+    if set(left).union(right) != expected:
+        raise ValueError("minimum_partition must cover every oscillator exactly once")
+    return left, right
+
+
+def _validate_partition_side(value: object, *, name: str) -> tuple[int, ...]:
+    if isinstance(value, (str, bytes)):
+        raise ValueError(f"{name} groups must contain integer indices")
+    try:
+        items = cast("tuple[object, ...]", tuple(value))  # type: ignore[arg-type]
+    except TypeError as exc:
+        raise ValueError(f"{name} groups must contain integer indices") from exc
+    indices: list[int] = []
+    for item in items:
+        if isinstance(item, bool) or not isinstance(item, Integral):
+            raise ValueError(f"{name} groups must contain integer indices")
+        index = int(item)
+        if index < 0:
+            raise ValueError(f"{name} groups must contain non-negative indices")
+        indices.append(index)
+    if len(set(indices)) != len(indices):
+        raise ValueError(f"{name} groups must not contain duplicates")
+    return tuple(indices)
 
 
 def _pairwise_mi_matrix(phases: FloatArray, n_bins: int) -> FloatArray:
