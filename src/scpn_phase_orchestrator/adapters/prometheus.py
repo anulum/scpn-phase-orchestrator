@@ -31,6 +31,10 @@ from numpy.typing import NDArray
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
+
+
 class PrometheusAdapter:
     """Fetch time-series metrics from a Prometheus endpoint."""
 
@@ -133,9 +137,13 @@ def _require_finite_float(value: float, field_name: str) -> float:
 
 def _load_response_body(raw: bytes) -> Mapping[str, Any]:
     try:
-        body = json.loads(raw)
+        body = json.loads(raw, parse_constant=_reject_json_constant)
     except json.JSONDecodeError as exc:
         raise ValueError("Prometheus returned malformed JSON") from exc
+    except ValueError as exc:
+        raise ValueError(
+            "Prometheus JSON must contain only finite JSON numbers"
+        ) from exc
     if not isinstance(body, Mapping):
         raise ValueError("Prometheus response must be a JSON object")
     return body

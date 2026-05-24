@@ -314,6 +314,25 @@ class TestPrometheusAdapter:
             with pytest.raises(ValueError):
                 adapter.fetch_metric("up", 0, 10, 1)
 
+    def test_fetch_metric_rejects_non_finite_json_constants(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        raw = (
+            b'{"status":"success","data":{"result":[{"values":[[1,NaN]]}]}}'
+        )
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = raw
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            with pytest.raises(ValueError, match="finite JSON"):
+                adapter.fetch_metric("up", 0, 10, 1)
+
     @pytest.mark.parametrize(
         "body",
         [
