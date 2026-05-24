@@ -76,6 +76,13 @@ class TestSheafCoherenceContracts:
         with pytest.raises(ValueError, match="finite"):
             sheaf_coherence(states, maps)
 
+    def test_boolean_alias_node_states_are_rejected(self) -> None:
+        states = np.array([[0.0], [np.bool_(True)]], dtype=object)
+        maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="node_states must not contain boolean"):
+            sheaf_coherence(states, maps)
+
     def test_non_finite_restrictions_are_rejected_by_coherence_and_laplacian(
         self,
     ) -> None:
@@ -88,6 +95,20 @@ class TestSheafCoherenceContracts:
         with pytest.raises(ValueError, match="finite"):
             sheaf_laplacian(maps)
 
+    def test_boolean_alias_restriction_maps_are_rejected(self) -> None:
+        states = np.zeros((2, 1), dtype=np.float64)
+        maps = np.zeros((2, 2, 1, 1), dtype=object)
+        maps[0, 1, 0, 0] = True
+
+        with pytest.raises(
+            ValueError, match="restriction_maps must not contain boolean"
+        ):
+            sheaf_coherence(states, maps)
+        with pytest.raises(
+            ValueError, match="restriction_maps must not contain boolean"
+        ):
+            sheaf_laplacian(maps)
+
     def test_negative_tolerance_is_rejected(self) -> None:
         states = np.zeros((2, 1), dtype=np.float64)
         maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
@@ -95,7 +116,7 @@ class TestSheafCoherenceContracts:
         with pytest.raises(ValueError, match="tolerance"):
             sheaf_coherence(states, maps, tolerance=-1.0)
 
-    @pytest.mark.parametrize("tolerance", [True, "1e-8", object()])
+    @pytest.mark.parametrize("tolerance", [True, np.bool_(True), "1e-8", object()])
     def test_malformed_tolerance_is_rejected(self, tolerance: object) -> None:
         states = np.zeros((2, 1), dtype=np.float64)
         maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
@@ -338,9 +359,11 @@ class TestSheafCoherenceBehaviour:
         [
             ({"warning_threshold": -0.1}, "tolerance"),
             ({"warning_threshold": True}, "tolerance"),
+            ({"warning_threshold": np.bool_(True)}, "tolerance"),
             ({"warning_threshold": 0.5, "critical_threshold": 0.1}, "critical"),
             ({"top_k": -1}, "top_k"),
             ({"top_k": True}, "top_k"),
+            ({"top_k": np.bool_(True)}, "top_k"),
             ({"top_k": 1.5}, "top_k"),
         ],
     )

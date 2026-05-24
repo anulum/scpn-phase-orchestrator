@@ -187,6 +187,8 @@ def sheaf_laplacian(
     tolerance: float = 1e-8,
 ) -> FloatArray:
     """Build the block sheaf Laplacian from directed restriction maps."""
+    if _contains_boolean_alias(restriction_maps):
+        raise ValueError("restriction_maps must not contain boolean values")
     maps = np.asarray(restriction_maps, dtype=np.float64)
     if (
         maps.ndim != 4
@@ -242,6 +244,8 @@ def _restriction_residuals(
 
 
 def _validate_node_states(node_states: FloatArray) -> FloatArray:
+    if _contains_boolean_alias(node_states):
+        raise ValueError("node_states must not contain boolean values")
     states = np.asarray(node_states, dtype=np.float64)
     if states.ndim != 2:
         raise ValueError("node_states must have shape (N, D)")
@@ -256,6 +260,8 @@ def _validate_restriction_maps(
     restriction_maps: FloatArray,
     state_shape: tuple[int, int],
 ) -> FloatArray:
+    if _contains_boolean_alias(restriction_maps):
+        raise ValueError("restriction_maps must not contain boolean values")
     maps = np.asarray(restriction_maps, dtype=np.float64)
     n_nodes, n_channels = state_shape
     expected = (n_nodes, n_nodes, n_channels, n_channels)
@@ -267,7 +273,7 @@ def _validate_restriction_maps(
 
 
 def _validate_tolerance(tolerance: float) -> float:
-    if isinstance(tolerance, bool) or not isinstance(tolerance, Real):
+    if isinstance(tolerance, (bool, np.bool_)) or not isinstance(tolerance, Real):
         raise ValueError("tolerance must be a finite real number")
     value = float(tolerance)
     if not np.isfinite(value) or value < 0.0:
@@ -276,9 +282,21 @@ def _validate_tolerance(tolerance: float) -> float:
 
 
 def _validate_top_k(top_k: int) -> int:
-    if isinstance(top_k, bool) or not isinstance(top_k, Integral) or top_k < 0:
+    if (
+        isinstance(top_k, (bool, np.bool_))
+        or not isinstance(top_k, Integral)
+        or top_k < 0
+    ):
         raise ValueError("top_k must be a non-negative integer")
     return int(top_k)
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
 def _kernel_dimension(laplacian: FloatArray, tolerance: float) -> int:
