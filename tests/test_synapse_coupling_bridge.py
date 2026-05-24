@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
 from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import (
@@ -31,6 +32,30 @@ class TestInitialState:
     def test_snapshot_type(self) -> None:
         bridge = SynapseCouplingBridge(n_oscillators=3)
         assert isinstance(bridge.snapshot(), SynapseSnapshot)
+
+
+class TestSynapseSnapshotBoundary:
+    @pytest.mark.parametrize(
+        "knm_delta",
+        [
+            [[0.0, 1.0]],
+            [],
+            "not-a-matrix",
+        ],
+    )
+    def test_rejects_malformed_knm_delta_without_attribute_errors(
+        self,
+        knm_delta: object,
+    ) -> None:
+        with pytest.raises(ValueError, match="knm_delta"):
+            SynapseSnapshot(
+                knm_delta=knm_delta,  # type: ignore[arg-type]
+                gap_coupling=np.zeros((1, 1)),
+                astrocyte_modulation=np.zeros(1),
+                mean_weight_change=0.0,
+                mean_conductance=0.0,
+                mean_ca=0.0,
+            )
 
 
 class TestSTDP:

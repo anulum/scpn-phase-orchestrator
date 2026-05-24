@@ -125,7 +125,11 @@ class SynapseSnapshot:
     mean_ca: float
 
     def __post_init__(self) -> None:
-        n = _validate_n_oscillators(self.knm_delta.shape[0])
+        raw_knm_delta = _finite_array(self.knm_delta, "knm_delta")
+        if raw_knm_delta.ndim != 2 or raw_knm_delta.shape[0] != raw_knm_delta.shape[1]:
+            raise ValueError("knm_delta must be a square matrix")
+        n = _validate_n_oscillators(raw_knm_delta.shape[0])
+        self.knm_delta = raw_knm_delta.copy()
         self.knm_delta = _validate_square_matrix(self.knm_delta, "knm_delta", n)
         self.gap_coupling = _validate_nonnegative_square_matrix(
             self.gap_coupling,
