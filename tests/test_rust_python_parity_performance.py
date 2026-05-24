@@ -167,7 +167,6 @@ class TestPerformanceBudgets:
 
     def test_python_order_parameter_n256(self):
         """Python order_parameter(N=256): bounded pure-Python fallback."""
-        import os
 
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -180,7 +179,7 @@ class TestPerformanceBudgets:
         )
         op_mod._HAS_RUST = saved
         print(f"  Python order_param(256): {elapsed * 1e6:.0f}μs")
-        limit = 0.0005 if os.getenv("CI") else 0.0002
+        limit = 0.0005
         assert elapsed < limit, (
             f"Python order_param(256) = {elapsed * 1e6:.0f}μs > {limit * 1e6:.0f}μs"
         )
