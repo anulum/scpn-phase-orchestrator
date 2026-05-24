@@ -76,6 +76,14 @@ class TestComputeEIBalance:
         with pytest.raises(ValueError, match="indices"):
             compute_ei_balance(knm, [-1], [2, 3])
 
+    def test_boolean_coupling_alias_is_rejected(self):
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            compute_ei_balance([[0.0, True], [1.0, 0.0]], [0], [1])
+
+    def test_non_finite_coupling_is_rejected(self):
+        with pytest.raises(ValueError, match="knm must contain only finite"):
+            compute_ei_balance([[0.0, np.nan], [1.0, 0.0]], [0], [1])
+
     def test_returns_dataclass(self):
         knm = _uniform_knm(4)
         bal = compute_ei_balance(knm, [0, 1], [2, 3])
@@ -120,6 +128,12 @@ class TestAdjustEIRatio:
         knm = _uniform_knm(4)
         with pytest.raises(ValueError, match="indices"):
             adjust_ei_ratio(knm, [0, 1], [-1], target_ratio=1.0)
+
+    @pytest.mark.parametrize("target_ratio", [0.0, -1.0, np.nan, True])
+    def test_invalid_target_ratio_is_rejected(self, target_ratio):
+        knm = _uniform_knm(4)
+        with pytest.raises((TypeError, ValueError), match="target_ratio"):
+            adjust_ei_ratio(knm, [0, 1], [2, 3], target_ratio=target_ratio)
 
     def test_optional_rust_paths_preserve_contract(self, monkeypatch):
         calls = []

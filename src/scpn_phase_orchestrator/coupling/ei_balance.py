@@ -17,6 +17,7 @@ the same shape and summary contract for examples and deterministic tests.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -37,6 +38,34 @@ except ImportError:
 __all__ = ["EIBalance", "compute_ei_balance", "adjust_ei_ratio"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
+def _validate_knm(value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("knm must not contain boolean values")
+    try:
+        knm = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("knm must be a finite square matrix") from exc
+    if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
+        raise ValueError("knm must be a finite square matrix")
+    if not np.all(np.isfinite(knm)):
+        raise ValueError("knm must contain only finite values")
+    return np.ascontiguousarray(knm, dtype=np.float64)
+
+
+def _validate_target_ratio(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError("target_ratio must be a finite positive real")
+    target_ratio = float(value)
+    if not np.isfinite(target_ratio) or target_ratio <= 0.0:
+        raise ValueError("target_ratio must be a finite positive real")
+    return target_ratio
 
 
 @dataclass
@@ -77,7 +106,7 @@ def compute_ei_balance(
     ratio < 1: inhibition-dominated (desynchronization risk)
     ratio ≈ 1: balanced (optimal for metastability)
     """
-    knm = np.asarray(knm, dtype=np.float64)
+    knm = _validate_knm(knm)
     n = knm.shape[0]
     excitatory_indices = _validate_indices(excitatory_indices, n, "excitatory")
     inhibitory_indices = _validate_indices(inhibitory_indices, n, "inhibitory")
@@ -130,7 +159,8 @@ def adjust_ei_ratio(
     Returns modified knm with inhibitory rows scaled so that
     E_strength / I_strength ≈ target_ratio.
     """
-    knm = np.asarray(knm, dtype=np.float64)
+    knm = _validate_knm(knm)
+    target_ratio = _validate_target_ratio(target_ratio)
     n = knm.shape[0]
     excitatory_indices = _validate_indices(excitatory_indices, n, "excitatory")
     inhibitory_indices = _validate_indices(inhibitory_indices, n, "inhibitory")
