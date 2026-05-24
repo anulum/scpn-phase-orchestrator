@@ -167,6 +167,12 @@ def _validated_recall_scores(payload: object) -> list[float]:
     return scores
 
 
+def _validated_response_payload(payload: object, *, name: str) -> dict:
+    if not isinstance(payload, dict):
+        raise ValueError(f"{name} payload must be a mapping")
+    return payload
+
+
 def _validated_agent_phases(agent_phases: object) -> dict[str, float] | None:
     if agent_phases is None:
         return None
@@ -239,8 +245,10 @@ class RemanentiaBridge:
                 "Refusing request: only http:// and https:// URLs are allowed"
             )
         with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # nosec B310
-            result: dict = json.loads(resp.read())
-            return result
+            return _validated_response_payload(
+                json.loads(resp.read()),
+                name="response",
+            )
 
     def _get(self, path: str) -> dict:
         """GET request to Remanentia API."""
@@ -259,7 +267,7 @@ class RemanentiaBridge:
     def health_check(self) -> bool:
         """Check if Remanentia is running."""
         try:
-            resp = self._get("/health")
+            resp = _validated_response_payload(self._get("/health"), name="health")
             return resp.get("status") == "ok"
         except BaseException as exc:
             if not self._is_transport_or_decode_error(exc):
@@ -354,7 +362,10 @@ class RemanentiaBridge:
         if not isinstance(force, bool):
             raise ValueError("force must be a bool")
         try:
-            resp = self._post("/consolidate", {"force": force})
+            resp = _validated_response_payload(
+                self._post("/consolidate", {"force": force}),
+                name="consolidate",
+            )
             return resp.get("status") == "ok"
         except BaseException as exc:
             if not self._is_transport_or_decode_error(exc):

@@ -78,6 +78,14 @@ class TestRemanentiaBridge:
         bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         assert bad.health_check() is False
 
+    def test_health_check_malformed_payload_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        monkeypatch.setattr(bridge, "_get", lambda _path: ["not", "a", "mapping"])
+        assert bridge.health_check() is False
+
     @pytest.mark.parametrize("url", ["", " ", "file:///etc/passwd", True])
     def test_constructor_rejects_malformed_url(self, url: object) -> None:
         with pytest.raises(ValueError, match="remanentia_url"):
@@ -181,6 +189,14 @@ class TestRemanentiaBridge:
     def test_consolidation_offline(self) -> None:
         bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         assert bad.trigger_consolidation() is False
+
+    def test_consolidation_malformed_payload_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        monkeypatch.setattr(bridge, "_post", lambda _path, _payload: ["bad"])
+        assert bridge.trigger_consolidation() is False
 
     def test_snapshot_offline(self) -> None:
         bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
