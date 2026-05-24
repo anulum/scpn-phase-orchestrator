@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.engine import UPDEEngine, upde_run
 
 TWO_PI = 2.0 * np.pi
 
@@ -141,6 +141,17 @@ def test_step_rejects_self_coupling_diagonal():
 
     with pytest.raises(ValueError, match="self-coupling"):
         engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+
+def test_upde_run_rejects_self_coupling_diagonal():
+    phases = np.array([0.0, 0.5, 1.0])
+    omegas = np.ones(3)
+    knm = np.zeros((3, 3))
+    knm[0, 0] = 0.2
+    alpha = np.zeros((3, 3))
+
+    with pytest.raises(ValueError, match="self-coupling"):
+        upde_run(phases, omegas, knm, alpha, 0.0, 0.0, 0.01, 1)
 
 
 def test_rk45_produces_valid_phases():

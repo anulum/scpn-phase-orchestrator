@@ -165,6 +165,11 @@ def _dispatch() -> Callable[..., FloatArray] | None:
     return None
 
 
+def _validate_zero_self_coupling(knm: FloatArray) -> None:
+    if not np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=1e-15):
+        raise ValueError("knm self-coupling diagonal must be zero")
+
+
 def upde_run(
     phases: FloatArray,
     omegas: FloatArray,
@@ -192,6 +197,7 @@ def upde_run(
     o = np.ascontiguousarray(omegas, dtype=np.float64)
     k = np.ascontiguousarray(knm, dtype=np.float64)
     a = np.ascontiguousarray(alpha, dtype=np.float64)
+    _validate_zero_self_coupling(k)
     backend_fn = _dispatch()
     if backend_fn is None:
         return upde_run_python(
