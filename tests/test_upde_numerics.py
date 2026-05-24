@@ -49,6 +49,41 @@ class TestIntegrationConfig:
         cfg = IntegrationConfig(dt=0.001, max_dt=0.01)
         assert cfg.dt < cfg.max_dt
 
+    @pytest.mark.parametrize(
+        ("field", "value", "match"),
+        [
+            ("dt", 0.0, "dt"),
+            ("dt", True, "dt"),
+            ("dt", float("nan"), "dt"),
+            ("max_dt", -0.1, "max_dt"),
+            ("substeps", 0, "substeps"),
+            ("substeps", 1.5, "substeps"),
+            ("substeps", False, "substeps"),
+            ("method", "bogus", "method"),
+            ("method", 1, "method"),
+            ("atol", 0.0, "atol"),
+            ("rtol", float("inf"), "rtol"),
+        ],
+    )
+    def test_rejects_invalid_solver_controls(
+        self,
+        field: str,
+        value: object,
+        match: str,
+    ) -> None:
+        params = {
+            "dt": 0.001,
+            "substeps": 1,
+            "method": "euler",
+            "max_dt": 0.01,
+            "atol": 1e-6,
+            "rtol": 1e-3,
+        }
+        params[field] = value
+
+        with pytest.raises(ValueError, match=match):
+            IntegrationConfig(**params)
+
 
 # ---------------------------------------------------------------------------
 # CFL stability check: the core numerical safety contract
@@ -99,6 +134,34 @@ class TestStabilityCheck:
         """Pure natural frequency (K=0) can still cause instability."""
         assert check_stability(dt=0.5, max_omega=10.0, max_coupling=0.0) is False
         assert check_stability(dt=0.1, max_omega=10.0, max_coupling=0.0) is True
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"dt": 0.0, "max_omega": 1.0, "max_coupling": 0.0}, "dt"),
+            ({"dt": True, "max_omega": 1.0, "max_coupling": 0.0}, "dt"),
+            ({"dt": 0.1, "max_omega": -1.0, "max_coupling": 0.0}, "max_omega"),
+            (
+                {"dt": 0.1, "max_omega": float("nan"), "max_coupling": 0.0},
+                "max_omega",
+            ),
+            (
+                {"dt": 0.1, "max_omega": 1.0, "max_coupling": -0.1},
+                "max_coupling",
+            ),
+            (
+                {"dt": 0.1, "max_omega": 1.0, "max_coupling": False},
+                "max_coupling",
+            ),
+        ],
+    )
+    def test_check_stability_rejects_invalid_bounds(
+        self,
+        kwargs: dict[str, object],
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            check_stability(**kwargs)
 
     def test_stability_agrees_with_actual_euler_step(self):
         """Cross-validate: when check_stability says stable, an actual Euler step
