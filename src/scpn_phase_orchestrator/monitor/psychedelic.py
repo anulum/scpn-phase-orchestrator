@@ -58,12 +58,10 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 def _load_rust_fn() -> Callable[..., float]:
     from spo_kernel import entropy_from_phases_rust
 
-    def _rust(phases: FloatArray, n_bins: int) -> float:
-        return float(
-            entropy_from_phases_rust(
-                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                int(n_bins),
-            )
+    def _rust(phases: FloatArray, n_bins: int) -> object:
+        return entropy_from_phases_rust(
+            np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+            int(n_bins),
         )
 
     return cast("Callable[..., float]", _rust)
@@ -151,10 +149,11 @@ def _dispatch() -> Callable[..., float] | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
-    raw = np.asarray(value, dtype=object)
-    if raw.dtype == np.bool_:
-        return True
-    return any(isinstance(item, bool) for item in raw.flat)
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
@@ -196,7 +195,7 @@ def _validate_coupling_matrix(
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a finite real value in [0, 1]")
     scalar = float(value)
     if not np.isfinite(scalar) or scalar < 0.0 or scalar > 1.0:
@@ -229,6 +228,8 @@ def _validate_reduction_schedule(values: list[float]) -> list[float]:
 def _validate_reduced_coupling(
     value: object, *, expected_shape: tuple[int, int]
 ) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("reduced coupling matrix must not contain boolean values")
     try:
         reduced = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -244,6 +245,8 @@ def _validate_reduced_coupling(
 
 
 def _validate_entropy_value(value: object, *, n_bins: int) -> float:
+    if _contains_boolean_alias(value):
+        raise ValueError("entropy output must not be a boolean value")
     try:
         scalar = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

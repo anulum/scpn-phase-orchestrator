@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -41,9 +41,10 @@ def entropy_from_phases_julia(phases: FloatArray, n_bins: int) -> float:
     """Compute phase-distribution entropy through the Julia backend."""
 
     jl = _ensure()
-    return float(
+    return cast(
+        "float",
         jl.entropy_from_phases(
             np.ascontiguousarray(phases.ravel(), dtype=np.float64),
             int(n_bins),
-        )
+        ),
     )

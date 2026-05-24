@@ -82,6 +82,8 @@ def test_reduce_coupling_rejects_invalid_reduction_factor(reduction_factor):
         np.array([0.0], dtype=np.float64),
         np.array([[0.0, 1.0]], dtype=np.float64),
         np.array([[0.0, np.nan], [1.0, 0.0]], dtype=np.float64),
+        np.array([[False, True], [True, False]], dtype=np.bool_),
+        np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object),
     ],
 )
 def test_reduce_coupling_rejects_invalid_rust_reduce_output(
@@ -142,7 +144,8 @@ def test_entropy_accepts_numpy_integer_bin_count() -> None:
 
 
 @pytest.mark.parametrize(
-    "backend_value", [-0.1, np.nan, np.inf, [0.5], np.log(4) + 1.0]
+    "backend_value",
+    [-0.1, np.nan, np.inf, [0.5], np.log(4) + 1.0, True, np.bool_(True)],
 )
 def test_entropy_invalid_backend_payload_falls_back(
     monkeypatch: pytest.MonkeyPatch,
