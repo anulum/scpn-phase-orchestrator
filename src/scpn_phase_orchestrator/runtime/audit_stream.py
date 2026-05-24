@@ -224,7 +224,19 @@ _AuditEnvelope = _audit_envelope_class()
 
 
 def _canonical_json(payload: Payload) -> str:
-    return json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    try:
+        return json.dumps(
+            payload,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    except ValueError as exc:
+        raise ValueError("payload must contain only finite JSON numbers") from exc
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _encode_varint(value: int) -> bytes:
@@ -326,7 +338,7 @@ def _event_type_for_payload(payload: Payload) -> str:
 def _message_to_event(message: Message) -> AuditStreamEvent:
     envelope = cast("Any", message)
     payload_json = str(envelope.payload_json)
-    payload = json.loads(payload_json)
+    payload = json.loads(payload_json, parse_constant=_reject_json_constant)
     recorded_at = envelope.recorded_at
     recorded_at_unix_ns = int(recorded_at.seconds) * 1_000_000_000 + int(
         recorded_at.nanos

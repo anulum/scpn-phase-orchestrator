@@ -137,6 +137,16 @@ def test_event_stream_unsigned_development_mode_is_explicit(
     assert events[0].signature == ""
 
 
+def test_event_stream_writer_rejects_non_finite_payload_numbers(tmp_path) -> None:
+    stream_path = tmp_path / "audit.spoa"
+    writer = EventStreamWriter(stream_path)
+    try:
+        with pytest.raises(ValueError, match="finite JSON"):
+            writer.write({"event": "operator_note", "R": float("nan")})
+    finally:
+        writer.close()
+
+
 def test_event_stream_integrity_verifies_hmac_signed_envelopes(
     tmp_path, monkeypatch
 ) -> None:
