@@ -165,7 +165,8 @@ def test_auto_bind_csv_outputs_valid_yaml(runner, tmp_path):
     )
 
     assert result.exit_code == 0
-    assert 'name: "grid_replay"' in result.output
+    payload = yaml.safe_load(result.output)
+    assert payload["name"] == "grid_replay"
     spec_path = tmp_path / "binding_spec.yaml"
     spec_path.write_text(result.output, encoding="utf-8")
     spec = load_binding_spec(spec_path)
