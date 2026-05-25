@@ -43,6 +43,7 @@ CORE_PACKAGES = frozenset(
 )
 RUNTIME_PACKAGES = frozenset(
     {
+        "api",
         "apps",
         "artifacts",
         "audit",
