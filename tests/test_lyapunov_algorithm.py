@@ -347,3 +347,14 @@ class TestInputValidation:
 
         assert spec.shape == (2,)
         assert np.all(np.isfinite(spec))
+
+    def test_rejects_self_coupling_diagonal_before_backend_dispatch(self) -> None:
+        with pytest.raises(ValueError, match="knm diagonal"):
+            lyapunov_spectrum(
+                np.array([0.0, 0.1]),
+                np.array([1.0, 1.0]),
+                np.array([[0.2, 0.1], [0.1, 0.0]]),
+                np.zeros((2, 2)),
+                n_steps=10,
+                qr_interval=2,
+            )

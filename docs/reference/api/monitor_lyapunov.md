@@ -51,6 +51,13 @@ The driver contributes only to the diagonal, because
 `∂/∂θ_i [ζ sin(Ψ − θ_i)] = −ζ cos(Ψ − θ_i)` and the off-diagonal
 cross-derivatives vanish.
 
+The public API rejects non-zero `K_ii` before backend dispatch. A
+diagonal coupling entry is a self-interaction, not a physical
+oscillator pair. Leaving it in the variational path would add a
+spurious `sin(-α_ii)` self-torque and would make the observer's
+Lyapunov potential/basin check depend on an interaction that the
+Kuramoto graph interpretation does not permit.
+
 ### 1.2 Benettin 1980 QR algorithm
 
 The Lyapunov spectrum `{λ_1, …, λ_N}` quantifies the exponential
@@ -494,7 +501,8 @@ backend. Classes:
   `N ∈ [2, 6]` and random seeds; sorting and finiteness must
   hold for every draw.
 * `TestInputValidation` — empty phases → empty spectrum;
-  `qr_interval = 0` must raise through the Rust FFI.
+  `qr_interval = 0` must raise through the Rust FFI; non-zero
+  `K_ii` is rejected before backend dispatch.
 
 ### 7.2 `tests/test_lyapunov_backends.py` — cross-backend parity
 

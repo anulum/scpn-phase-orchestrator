@@ -211,6 +211,15 @@ def _validate_matrix(
     return np.ascontiguousarray(array, dtype=np.float64)
 
 
+def _validate_zero_diagonal(matrix: FloatArray, *, name: str) -> None:
+    diagonal = np.diag(matrix)
+    if np.any(np.abs(diagonal) > 1e-12):
+        raise ValueError(
+            f"{name} diagonal must be zero; Kuramoto self-coupling is not a "
+            "physical pair interaction"
+        )
+
+
 @dataclass
 class LyapunovState:
     """Lyapunov function V, dV/dt, basin membership, and max phase diff."""
@@ -269,6 +278,7 @@ class LyapunovGuard:
         phases = _validate_vector(phases, name="phases")
         n = len(phases)
         knm = _validate_matrix(knm, name="knm", expected_shape=(n, n))
+        _validate_zero_diagonal(knm, name="knm")
         if n == 0:
             return LyapunovState(V=0.0, dV_dt=0.0, in_basin=True, max_phase_diff=0.0)
 
@@ -481,6 +491,7 @@ def lyapunov_spectrum(
     if o.shape != p.shape:
         raise ValueError(f"omegas shape {o.shape} does not match {p.shape}")
     k = _validate_matrix(knm, name="knm", expected_shape=(n, n))
+    _validate_zero_diagonal(k, name="knm")
     a = _validate_matrix(alpha, name="alpha", expected_shape=(n, n))
     dt = _validate_positive_real(dt, name="dt")
     n_steps = _validate_int_at_least(n_steps, name="n_steps", minimum=0)

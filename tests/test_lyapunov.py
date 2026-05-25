@@ -158,6 +158,13 @@ class TestLyapunovFunction:
 
         assert isinstance(state.V, float)
 
+    def test_evaluate_rejects_self_coupling_diagonal(self) -> None:
+        guard = LyapunovGuard()
+        knm = np.array([[0.2, 1.0], [1.0, 0.0]], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="knm diagonal"):
+            guard.evaluate(np.array([0.0, 0.1]), knm)
+
     def test_wrapping_phase_diff(self):
         # Phases near 0 and 2π should have small diff, not large
         phases = np.array([0.1, 2 * np.pi - 0.1])
