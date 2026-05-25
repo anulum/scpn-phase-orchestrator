@@ -132,32 +132,20 @@ def test_control_period_ge_sample_period(sample_binding_spec):
 
 
 def test_actuator_limits_ordering(sample_binding_spec):
-    bad_actuators = [
-        ActuatorMapping(name="inv", knob="K", scope="global", limits=(1.0, 0.0)),
-    ]
-    bad = replace(sample_binding_spec, actuators=bad_actuators)
-    errors = validate_binding_spec(bad)
-    assert any("limits" in e and "lo <= hi" in e for e in errors)
+    with pytest.raises(ValueError, match="limits require lower <= upper"):
+        ActuatorMapping(name="inv", knob="K", scope="global", limits=(1.0, 0.0))
 
 
 def test_actuator_limits_must_be_finite(sample_binding_spec):
-    bad_actuators = [
+    with pytest.raises(ValueError, match="limits must be finite reals"):
         ActuatorMapping(
             name="inf", knob="K", scope="global", limits=(float("inf"), 1.0)
-        ),
-    ]
-    bad = replace(sample_binding_spec, actuators=bad_actuators)
-    errors = validate_binding_spec(bad)
-    assert any("limits" in e and "finite" in e for e in errors)
+        )
 
-    bad_actuators = [
+    with pytest.raises(ValueError, match="limits must be finite reals"):
         ActuatorMapping(
             name="nan", knob="K", scope="global", limits=(0.0, float("nan"))
-        ),
-    ]
-    bad = replace(sample_binding_spec, actuators=bad_actuators)
-    errors = validate_binding_spec(bad)
-    assert any("limits" in e and "finite" in e for e in errors)
+        )
 
 
 def test_empty_objectives_error(sample_binding_spec):

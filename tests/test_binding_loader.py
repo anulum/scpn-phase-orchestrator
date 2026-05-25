@@ -435,7 +435,7 @@ def test_loader_validate_control_period_and_channels(tmp_path):
             },
         ],
         "actuators": [
-            {"name": "a", "knob": "bogus", "scope": "global", "limits": [1.0, 0.0]},
+            {"name": "a", "knob": "bogus", "scope": "global", "limits": [0.0, 1.0]},
         ],
     }
     p = tmp_path / "spec.json"
@@ -446,7 +446,20 @@ def test_loader_validate_control_period_and_channels(tmp_path):
     assert any("channel" in e for e in errors)
     assert any("severity" in e for e in errors)
     assert any("knob" in e for e in errors)
-    assert any("limits" in e for e in errors)
+
+
+def test_loader_rejects_inverted_actuator_limits(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "actuators": [
+            {"name": "a", "knob": "K", "scope": "global", "limits": [1.0, 0.0]},
+        ],
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="limits require lower <= upper"):
+        load_binding_spec(p)
 
 
 def test_loader_rejects_non_string_name_after_structural_parse(tmp_path):
