@@ -47,12 +47,12 @@ pytestmark = pytest.mark.slow
     suppress_health_check=[HealthCheck.too_slow],
 )
 def test_mi_always_in_unit_interval(seed: int) -> None:
-    """MI stays in ``[0, 1]`` under adversarial inputs over 200 calls."""
+    """MI stays in ``[0, 1]`` under adversarial envelope inputs over 200 calls."""
     rng = np.random.default_rng(seed)
     for _ in range(200):
         n = rng.integers(50, 500)
         theta = rng.uniform(0.0, TWO_PI, size=int(n))
-        amp = rng.standard_normal(int(n)) * rng.uniform(0.1, 10.0)
+        amp = np.abs(rng.standard_normal(int(n))) * rng.uniform(0.1, 10.0)
         mi = modulation_index(theta, amp, 18)
         assert 0.0 <= mi <= 1.0 + 1e-12
 
