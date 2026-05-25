@@ -633,7 +633,7 @@ def saf_order_parameter(
     """
     N = K.shape[0]
     if solver == "auto":
-        solver = "eigh" if N <= exact_size_limit else "cg"
+        solver = "eigh" if exact_size_limit >= N else "cg"
     if solver == "cg":
         return _saf_order_parameter_cg(K, omegas, eps, cg_tol, cg_maxiter)
     if solver != "eigh":

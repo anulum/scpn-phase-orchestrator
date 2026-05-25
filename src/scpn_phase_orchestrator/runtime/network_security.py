@@ -106,9 +106,13 @@ class TokenBucketRateLimiter:
                 raise ValueError("now must be a finite real timestamp")
             timestamp = float(now)
         with self._lock:
-            tokens, updated_at = self._buckets.get(key, (float(self._capacity), timestamp))
+            tokens, updated_at = self._buckets.get(
+                key, (float(self._capacity), timestamp)
+            )
             elapsed = max(0.0, timestamp - updated_at)
-            tokens = min(float(self._capacity), tokens + elapsed * self._refill_per_second)
+            tokens = min(
+                float(self._capacity), tokens + elapsed * self._refill_per_second
+            )
             if tokens < 1.0:
                 self._buckets[key] = (tokens, timestamp)
                 return False

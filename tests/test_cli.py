@@ -291,27 +291,36 @@ def test_demo_real_data_heartbeat_downloads_and_auto_binds_review_only(
     monkeypatch,
 ):
     class _Response:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
+        status = 200
 
         def read(self, _size):
             return (
-                "Time,msgid,rr_ms,hr_bpm\n"
-                "01:22:59.835205Z,237,800,75\n"
-                "01:23:00.635205Z,238,810,74\n"
-                "01:23:01.445205Z,239,790,76\n"
-                "01:23:02.235205Z,240,805,75\n"
-            ).encode("utf-8")
+                b"Time,msgid,rr_ms,hr_bpm\n"
+                b"01:22:59.835205Z,237,800,75\n"
+                b"01:23:00.635205Z,238,810,74\n"
+                b"01:23:01.445205Z,239,790,76\n"
+                b"01:23:02.235205Z,240,805,75\n"
+            )
 
-    def fake_urlopen(url, timeout):
-        assert "physionet.org" in url
-        assert timeout == 20
-        return _Response()
+    class _HTTPSConnection:
+        def __init__(self, host, port=None, timeout=None):
+            assert host == "physionet.org"
+            assert port is None
+            assert timeout == 20
+            self.closed = False
 
-    monkeypatch.setattr(cli_module, "urlopen", fake_urlopen)
+        def request(self, method, path, headers):
+            assert method == "GET"
+            assert "/files/respiratory-heartrate-dataset/" in path
+            assert headers["User-Agent"].startswith("scpn-phase-orchestrator")
+
+        def getresponse(self):
+            return _Response()
+
+        def close(self):
+            self.closed = True
+
+    monkeypatch.setattr(cli_module.http.client, "HTTPSConnection", _HTTPSConnection)
 
     result = runner.invoke(
         main,
@@ -323,7 +332,7 @@ def test_demo_real_data_heartbeat_downloads_and_auto_binds_review_only(
     assert "PhysioNet" in result.output
     assert "Proposal mode: review_only" in result.output
     assert "Replay status: proposal_only" in result.output
-    assert "name: \"heartbeat_coherence_demo\"" in result.output
+    assert "name: heartbeat_coherence_demo" in result.output
 
 
 def test_auto_bind_rejects_bad_source_with_scrubbed_error(runner, tmp_path):

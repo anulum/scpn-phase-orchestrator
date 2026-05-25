@@ -23,13 +23,13 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0+unknown"
 
+from scpn_phase_orchestrator.api import Orchestrator, OrchestratorState
 from scpn_phase_orchestrator.artifacts.qpu_data import (
     QPUDataArtifact,
     compile_domain_to_qpu_artifact,
     emit_qpu_data_artifact,
     validate_qpu_data_artifact,
 )
-from scpn_phase_orchestrator.api import Orchestrator, OrchestratorState
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.exceptions import SPOError

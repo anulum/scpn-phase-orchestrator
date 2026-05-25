@@ -16,10 +16,10 @@ then per-step rate limits relative to the previous actuator value.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import replace
 from math import isfinite
 from numbers import Real
-from typing import Iterable
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.binding.types import ActuatorMapping

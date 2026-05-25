@@ -20,13 +20,14 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import http.client
 import io
 import json
 import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal, TypeAlias, cast
-from urllib.request import urlopen
+from urllib.parse import urlparse
 
 import click
 import numpy as np
@@ -6665,7 +6666,9 @@ def demo(domain: str, dataset: str | None, target: str, steps: int, port: int) -
         # Try relative to cwd.
         spec_path = _contained_domainpack_spec(Path("domainpacks"), domain)
     if not spec_path.exists():
-        listing_root = domainpack_dir if domainpack_dir.exists() else Path("domainpacks")
+        listing_root = (
+            domainpack_dir if domainpack_dir.exists() else Path("domainpacks")
+        )
         available = sorted(
             d.name
             for d in listing_root.iterdir()
@@ -6721,7 +6724,9 @@ def _run_real_data_demo(*, dataset: str, target: str, steps: int, port: int) -> 
     click.echo(f"  Target: {target}")
     click.echo(f"  Rows used: {record['source']['sample_count']}")
     click.echo(f"  Sample rate: {provenance['sample_rate_hz']:.6g} Hz")
-    click.echo(f"  Inferred channels: {', '.join(record['binding']['inferred_channels'])}")
+    click.echo(
+        f"  Inferred channels: {', '.join(record['binding']['inferred_channels'])}"
+    )
     click.echo(f"  Proposal mode: {record['metadata']['proposal_mode']}")
     click.echo(f"  Replay status: {record['runtime']['replay_status']}")
     click.echo(f"  Initial R: {record['runtime']['R']:.6f}")
@@ -6755,8 +6760,31 @@ def _load_demo_dataset(dataset: str) -> tuple[str, str]:
 
 
 def _download_text(url: str, *, max_bytes: int) -> str:
-    with urlopen(url, timeout=20) as response:
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise click.ClickException("dataset URL must be an absolute HTTPS URL")
+    path = parsed.path or "/"
+    if parsed.query:
+        path = f"{path}?{parsed.query}"
+    connection = http.client.HTTPSConnection(
+        parsed.hostname,
+        parsed.port,
+        timeout=20,
+    )
+    try:
+        connection.request(
+            "GET",
+            path,
+            headers={"User-Agent": "scpn-phase-orchestrator-demo/1"},
+        )
+        response = connection.getresponse()
+        if response.status < 200 or response.status >= 300:
+            raise click.ClickException(
+                f"demo dataset download failed with HTTP {response.status}"
+            )
         payload = response.read(max_bytes + 1)
+    finally:
+        connection.close()
     if len(payload) > max_bytes:
         raise click.ClickException("demo dataset is too large")
     return payload.decode("utf-8")
@@ -6768,26 +6796,28 @@ def _normalise_heartbeat_csv(raw: str, *, max_rows: int) -> str:
     if reader.fieldnames is None or not required.issubset(set(reader.fieldnames)):
         raise click.ClickException("heartbeat dataset must include rr_ms and hr_bpm")
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["time_s", "rr_ms", "hr_bpm"])
+    writer = csv.DictWriter(output, fieldnames=["time", "rr_ms", "hr_bpm"])
     writer.writeheader()
-    elapsed = 0.0
-    rows = 0
+    samples: list[tuple[float, float]] = []
     for row in reader:
         rr_ms = _finite_csv_float(row.get("rr_ms"), "rr_ms")
         hr_bpm = _finite_csv_float(row.get("hr_bpm"), "hr_bpm")
+        samples.append((rr_ms, hr_bpm))
+        if len(samples) >= max_rows:
+            break
+    if len(samples) < 3:
+        raise click.ClickException("heartbeat dataset must contain at least 3 rows")
+    sample_period_s = float(np.median([rr_ms for rr_ms, _hr_bpm in samples])) / 1000.0
+    if not np.isfinite(sample_period_s) or sample_period_s <= 0.0:
+        raise click.ClickException("heartbeat dataset has invalid RR interval timing")
+    for index, (rr_ms, hr_bpm) in enumerate(samples):
         writer.writerow(
             {
-                "time_s": f"{elapsed:.6f}",
+                "time": f"{index * sample_period_s:.6f}",
                 "rr_ms": f"{rr_ms:.9g}",
                 "hr_bpm": f"{hr_bpm:.9g}",
             }
         )
-        elapsed += rr_ms / 1000.0
-        rows += 1
-        if rows >= max_rows:
-            break
-    if rows < 3:
-        raise click.ClickException("heartbeat dataset must contain at least 3 rows")
     return output.getvalue()
 
 
@@ -6795,7 +6825,9 @@ def _finite_csv_float(value: object, field: str) -> float:
     try:
         number = float(value)
     except (TypeError, ValueError) as exc:
-        raise click.ClickException(f"heartbeat dataset has non-numeric {field}") from exc
+        raise click.ClickException(
+            f"heartbeat dataset has non-numeric {field}"
+        ) from exc
     if not np.isfinite(number):
         raise click.ClickException(f"heartbeat dataset has non-finite {field}")
     return number

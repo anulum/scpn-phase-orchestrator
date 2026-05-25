@@ -585,9 +585,7 @@ def _binding_yaml(
             "decay_alpha": 0.3,
             "templates": _coupling_templates(initial_coupling_proposal),
         },
-        "cross_channel_couplings": _cross_channel_couplings(
-            initial_coupling_proposal
-        ),
+        "cross_channel_couplings": _cross_channel_couplings(initial_coupling_proposal),
         "drivers": {
             "physical": {"zeta": 0.0, "psi": 0.0},
             "informational": {"zeta": 0.02},
@@ -734,4 +732,3 @@ def _project_state(
 
 def _bounded_confidence(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
-
