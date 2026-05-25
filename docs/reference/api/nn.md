@@ -84,6 +84,14 @@ Masked (sparse) variants append `_masked` and take an additional
 Winfree coupling: dθ_i/dt = ω_i + K · Q(θ_i) · Σ P(θ_j) where
 Q is the sensitivity function and P is the pulse function.
 
+Use Winfree dynamics when the observed coupling is pulse-driven rather than a
+smooth sinusoidal pull. Typical cases include biological pacemakers, circadian
+or neural populations with event-like signalling, flashing or firing oscillator
+ensembles, endocrine or chemical pulse trains, and sensor networks where one
+unit perturbs another through brief impulses. The model is the right API choice
+when the phase response curve and pulse waveform are part of the hypothesis,
+not just incidental numerical details.
+
 ### Simplicial (3-body) model
 
 | Function | Signature |
@@ -94,6 +102,23 @@ Q is the sensitivity function and P is the pulse function.
 
 The `sigma2` parameter controls the 3-body interaction strength.
 When sigma2=0, reduces to standard Kuramoto.
+
+Use simplicial dynamics when pairwise edges are not enough to represent the
+interaction mechanism. The 3-body term models triadic or group constraints:
+neural assemblies whose synchrony depends on co-active triplets, social or
+multi-agent triads, reaction loops, power-network group modes, and topology
+extracted from simplicial complexes or hypergraphs. This surface is intended
+for regressions where cluster states, abrupt synchronization transitions, or
+learned coupling cannot be explained by pairwise Kuramoto alone.
+
+Winfree and simplicial models answer different modelling questions. Winfree
+changes the timing law from smooth coupling to pulse-response coupling.
+Simplicial Kuramoto changes the interaction topology from pairwise edges to
+group terms. Combining them conceptually is useful for event-driven systems
+with group structure, for example spiking neural assemblies, biological tissue
+motifs, swarm coordination with triadic constraints, or industrial networks
+whose failure modes depend on triangular dependencies rather than isolated
+links.
 
 ### Stuart-Landau model
 

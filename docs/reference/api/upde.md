@@ -47,7 +47,7 @@ output (order parameters, monitors, supervisor).
 | SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | High-N scalability ($O(N \log N)$) |
 | SheafUPDEEngine | $\vec{\theta} \in \mathbb{R}^{N \times D}$ | Cellular Sheaf | Multi-dimensional block coupling |
 | StuartLandauEngine | [θ,r] ∈ R^{2N} | Stuart-Landau | Amplitude dynamics |
-| SimplicialEngine | θ ∈ [0,2π)^N | 3-body Kuramoto | Explosive sync |
+| SimplicialEngine | θ ∈ [0,2π)^N | 3-body Kuramoto | Triadic/group synchronization |
 | InertialEngine | [θ,ω̇] ∈ R^{2N} | Swing equation | Power grids |
 | SwarmalatorEngine | [x,θ] ∈ R^{(D+1)N} | Position + phase | Swarm robotics |
 | StochasticInjector | θ ∈ [0,2π)^N | Euler-Maruyama | Noise resonance |
@@ -111,6 +111,13 @@ Higher-order interactions beyond pairwise coupling. The 3-body term
 σ₂/N² Σ_{j,k} sin(θ_j + θ_k - 2θ_i) produces explosive (first-order)
 synchronization transitions not achievable with pairwise coupling alone.
 Vectorized via trig identity: 2·S_i·C_i where S = Σsin(Δθ), C = Σcos(Δθ).
+
+Use this engine when the physical or learned topology contains group effects
+that cannot be decomposed into independent pairwise edges. Practical examples
+include neural assemblies with co-active triplets, multi-agent coordination
+under triangular constraints, reaction loops, power-network group modes, and
+simplicial-complex or hypergraph-derived topology where synchronization
+thresholds depend on 3-body motifs.
 
 Gambuzza et al. 2023, Nature Physics; Tang et al. 2025.
 **Detailed documentation:** [Simplicial (3-body) — detailed reference](upde_simplicial.md)
