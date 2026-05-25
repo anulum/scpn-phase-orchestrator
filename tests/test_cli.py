@@ -6939,6 +6939,7 @@ def _write_rich_cli_run_spec(tmp_path: Path) -> Path:
             {"name": "zeta", "knob": "zeta", "scope": "global", "limits": [0.0, 0.5]},
             {"name": "k0", "knob": "K", "scope": "layer_0", "limits": [-0.2, 0.2]},
         ],
+        "policy": "policy.yaml",
         "imprint_model": {
             "decay_rate": 0.01,
             "saturation": 2.0,
@@ -6973,7 +6974,7 @@ def _write_rich_cli_run_spec(tmp_path: Path) -> Path:
                 "rules": [
                     {
                         "name": "set_psi",
-                        "regime": ["NOMINAL"],
+                        "regime": ["NOMINAL", "DEGRADED"],
                         "condition": {
                             "metric": "stability_proxy",
                             "op": ">",
@@ -6988,7 +6989,7 @@ def _write_rich_cli_run_spec(tmp_path: Path) -> Path:
                     },
                     {
                         "name": "pulse_zeta",
-                        "regime": ["NOMINAL"],
+                        "regime": ["NOMINAL", "DEGRADED"],
                         "condition": {
                             "metric": "stability_proxy",
                             "op": ">",
@@ -7003,7 +7004,7 @@ def _write_rich_cli_run_spec(tmp_path: Path) -> Path:
                     },
                     {
                         "name": "layer_boost",
-                        "regime": ["NOMINAL"],
+                        "regime": ["NOMINAL", "DEGRADED"],
                         "condition": {
                             "metric": "stability_proxy",
                             "op": ">",
