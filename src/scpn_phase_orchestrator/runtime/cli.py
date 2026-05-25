@@ -18,12 +18,15 @@ is invoked for that runtime path.
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import json
 import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal, TypeAlias, cast
+from urllib.request import urlopen
 
 import click
 import numpy as np
@@ -148,6 +151,14 @@ from scpn_phase_orchestrator.upde.pac import modulation_index
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 FloatArray: TypeAlias = NDArray[np.float64]
+_PHYSIONET_HEARTBEAT_URL = (
+    "https://physionet.org/files/respiratory-heartrate-dataset/1.0.0/"
+    "HRM_rawData/HRB/3.txt"
+)
+_PHYSIONET_HEARTBEAT_CITATION = (
+    "Guy et al. (2024), Respiratory and heart rate monitoring dataset from "
+    "aeration study, PhysioNet, doi:10.13026/e4dt-f689"
+)
 
 
 @click.group()
@@ -6629,21 +6640,35 @@ def generate(
     default="minimal_domain",
     help="Domainpack to demo (default: minimal_domain).",
 )
+@click.option(
+    "--dataset",
+    default=None,
+    help="Real-data demo dataset alias/path/URL. Use heartbeat.csv for PhysioNet HRB.",
+)
+@click.option(
+    "--target",
+    default="coherence",
+    type=click.Choice(["coherence"]),
+    help="Review target for real-data demo.",
+)
 @click.option("--steps", default=100, help="Number of simulation steps.")
 @click.option("--port", default=8000, help="Server port.")
-def demo(domain: str, steps: int, port: int) -> None:
+def demo(domain: str, dataset: str | None, target: str, steps: int, port: int) -> None:
     """Run a self-contained demo: simulate + print live coherence."""
+    if dataset is not None:
+        _run_real_data_demo(dataset=dataset, target=target, steps=steps, port=port)
+        return
+
     domainpack_dir = Path(__file__).parent.parent.parent / "domainpacks"
-    spec_path = domainpack_dir / domain / "binding_spec.yaml"
+    spec_path = _contained_domainpack_spec(domainpack_dir, domain)
     if not spec_path.exists():
-        # Try relative to cwd
-        spec_path = Path("domainpacks") / domain / "binding_spec.yaml"
+        # Try relative to cwd.
+        spec_path = _contained_domainpack_spec(Path("domainpacks"), domain)
     if not spec_path.exists():
+        listing_root = domainpack_dir if domainpack_dir.exists() else Path("domainpacks")
         available = sorted(
             d.name
-            for d in (
-                domainpack_dir if domainpack_dir.exists() else Path("domainpacks")
-            ).iterdir()
+            for d in listing_root.iterdir()
             if d.is_dir() and (d / "binding_spec.yaml").exists()
         )
         click.echo(f"Domainpack '{domain}' not found.", err=True)
@@ -6674,3 +6699,115 @@ def demo(domain: str, steps: int, port: int) -> None:
     click.echo("  Open http://localhost:8000 (dashboard)")
     click.echo("  Open http://localhost:3000 (Grafana)")
     click.echo("  Open http://localhost:9090 (Prometheus)")
+
+
+def _run_real_data_demo(*, dataset: str, target: str, steps: int, port: int) -> None:
+    if steps < 1:
+        raise click.BadParameter("steps must be positive")
+    if target != "coherence":
+        raise click.BadParameter("only target=coherence is supported")
+    csv_text, source = _load_demo_dataset(dataset)
+    proposal = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=None,
+        project_name="heartbeat_coherence_demo",
+    )
+    record = proposal.to_audit_record()
+    provenance = record["binding"]["provenance"]
+    click.echo("SPO Real-Data Demo — heartbeat coherence")
+    click.echo(f"  Dataset: {dataset}")
+    click.echo(f"  Source: {source}")
+    click.echo(f"  Citation: {_PHYSIONET_HEARTBEAT_CITATION}")
+    click.echo(f"  Target: {target}")
+    click.echo(f"  Rows used: {record['source']['sample_count']}")
+    click.echo(f"  Sample rate: {provenance['sample_rate_hz']:.6g} Hz")
+    click.echo(f"  Inferred channels: {', '.join(record['binding']['inferred_channels'])}")
+    click.echo(f"  Proposal mode: {record['metadata']['proposal_mode']}")
+    click.echo(f"  Replay status: {record['runtime']['replay_status']}")
+    click.echo(f"  Initial R: {record['runtime']['R']:.6f}")
+    click.echo(f"  Initial K: {record['runtime']['K']:.6f}")
+    click.echo("-" * 40)
+    click.echo("Review-only binding YAML:")
+    click.echo(proposal.binding.yaml_text, nl=False)
+    click.echo("-" * 40)
+    click.echo("Dashboard/replay path:")
+    click.echo(
+        "  spo auto-bind time-series-csv heartbeat.csv "
+        "--project-name heartbeat_coherence_demo --json-out"
+    )
+    click.echo(f"  spo demo --dataset heartbeat.csv --target coherence --steps {steps}")
+    click.echo("  cd deploy && docker compose up")
+    click.echo(f"  Open http://localhost:{port} (dashboard)")
+
+
+def _load_demo_dataset(dataset: str) -> tuple[str, str]:
+    if dataset == "heartbeat.csv":
+        raw = _download_text(_PHYSIONET_HEARTBEAT_URL, max_bytes=512_000)
+        return _normalise_heartbeat_csv(raw, max_rows=256), _PHYSIONET_HEARTBEAT_URL
+    path = Path(dataset)
+    if path.exists() and path.is_file():
+        return path.read_text(encoding="utf-8"), str(path)
+    if dataset.startswith(("https://", "http://")):
+        return _download_text(dataset, max_bytes=512_000), dataset
+    raise click.BadParameter(
+        "dataset must be heartbeat.csv, an existing local CSV path, or an http(s) URL"
+    )
+
+
+def _download_text(url: str, *, max_bytes: int) -> str:
+    with urlopen(url, timeout=20) as response:
+        payload = response.read(max_bytes + 1)
+    if len(payload) > max_bytes:
+        raise click.ClickException("demo dataset is too large")
+    return payload.decode("utf-8")
+
+
+def _normalise_heartbeat_csv(raw: str, *, max_rows: int) -> str:
+    reader = csv.DictReader(io.StringIO(raw))
+    required = {"rr_ms", "hr_bpm"}
+    if reader.fieldnames is None or not required.issubset(set(reader.fieldnames)):
+        raise click.ClickException("heartbeat dataset must include rr_ms and hr_bpm")
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["time_s", "rr_ms", "hr_bpm"])
+    writer.writeheader()
+    elapsed = 0.0
+    rows = 0
+    for row in reader:
+        rr_ms = _finite_csv_float(row.get("rr_ms"), "rr_ms")
+        hr_bpm = _finite_csv_float(row.get("hr_bpm"), "hr_bpm")
+        writer.writerow(
+            {
+                "time_s": f"{elapsed:.6f}",
+                "rr_ms": f"{rr_ms:.9g}",
+                "hr_bpm": f"{hr_bpm:.9g}",
+            }
+        )
+        elapsed += rr_ms / 1000.0
+        rows += 1
+        if rows >= max_rows:
+            break
+    if rows < 3:
+        raise click.ClickException("heartbeat dataset must contain at least 3 rows")
+    return output.getvalue()
+
+
+def _finite_csv_float(value: object, field: str) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(f"heartbeat dataset has non-numeric {field}") from exc
+    if not np.isfinite(number):
+        raise click.ClickException(f"heartbeat dataset has non-finite {field}")
+    return number
+
+
+def _contained_domainpack_spec(domainpack_root: Path, domain: str) -> Path:
+    if not isinstance(domain, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", domain):
+        raise click.BadParameter("domain must match [A-Za-z0-9_-]+")
+    root = domainpack_root.resolve()
+    spec_path = (root / domain / "binding_spec.yaml").resolve()
+    try:
+        spec_path.relative_to(root)
+    except ValueError as exc:
+        raise click.BadParameter("domain resolves outside domainpack root") from exc
+    return spec_path

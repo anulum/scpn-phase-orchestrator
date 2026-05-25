@@ -21,7 +21,7 @@ import json
 import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
@@ -51,6 +51,16 @@ _NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$")
 _MAX_LAYERS = 256
 _MAX_OSCILLATORS_PER_LAYER = 256
 _MAX_DRY_RUN_STEPS = 256
+_MAX_PROMPT_CHARS = 4000
+_PROMPT_INJECTION_PATTERNS = (
+    re.compile(r"\bignore\s+(all\s+)?previous\s+instructions\b", re.IGNORECASE),
+    re.compile(r"\bdisregard\s+(all\s+)?previous\s+instructions\b", re.IGNORECASE),
+    re.compile(r"\breveal\s+(the\s+)?system\s+prompt\b", re.IGNORECASE),
+    re.compile(r"\bdeveloper\s+instructions\b", re.IGNORECASE),
+    re.compile(r"\bexfiltrat(e|ion)\b", re.IGNORECASE),
+    re.compile(r"\bleak\s+(credentials|secrets|api\s+keys)\b", re.IGNORECASE),
+    re.compile(r"\bprint\s+(credentials|secrets|api\s+keys)\b", re.IGNORECASE),
+)
 
 
 @dataclass(frozen=True)
@@ -330,6 +340,12 @@ class SemanticDomainCompiler:
             "compiler": "symbolic_binding_v0",
             "schema_valid": not validation_errors,
             "validation_errors": validation_errors,
+            "intent_boundary": {
+                "sanitised": True,
+                "max_chars": _MAX_PROMPT_CHARS,
+                "llm_execution": False,
+            },
+            "review_gate": _review_gate_record(),
             "confidence": confidence,
             "confidence_factors": {
                 "domain_keywords": len(matched_keywords),
@@ -351,6 +367,7 @@ class SemanticDomainCompiler:
                 "target_place": "validated",
             },
         }
+        _validate_generated_audit_schema(audit_record)
         return GeneratedBindingArtifacts(
             binding_spec=spec,
             binding_yaml=binding_yaml,
@@ -400,7 +417,7 @@ def _validate_compilation_inputs(
     retrieval_root: str | Path | None,
     docs_root: str | Path | None,
 ) -> tuple[str, str, int, int, Path | None, Path | None]:
-    prompt_value = _as_str(prompt, "prompt")
+    prompt_value = _as_prompt(prompt)
     name_value = _as_name(name)
     oscillators = _as_positive_int(
         oscillators_per_layer,
@@ -436,6 +453,21 @@ def _as_str(value: object, field_name: str) -> str:
     if not isinstance(value, str):
         raise TypeError(f"{field_name} must be a string")
     return value
+
+
+def _as_prompt(value: object) -> str:
+    prompt = _as_str(value, "prompt").replace("\r\n", "\n").replace("\r", "\n")
+    if len(prompt) > _MAX_PROMPT_CHARS:
+        raise ValueError(f"prompt must be <= {_MAX_PROMPT_CHARS} characters")
+    for char in prompt:
+        codepoint = ord(char)
+        if codepoint < 32 and char not in "\n\t":
+            raise ValueError("prompt contains unsupported control characters")
+    normalised = " ".join(prompt.split())
+    for pattern in _PROMPT_INJECTION_PATTERNS:
+        if pattern.search(normalised):
+            raise ValueError("prompt contains instruction-injection markers")
+    return normalised
 
 
 def _as_name(value: object) -> str:
@@ -867,6 +899,48 @@ def _review_notebook_execution_evidence(
         "total_checks": len(checks),
         "checks": checks,
     }
+
+
+def _review_gate_record() -> dict[str, Any]:
+    return {
+        "status": "required",
+        "non_actuating": True,
+        "manual_review_required": True,
+        "auto_execution_enabled": False,
+        "required_artifacts": [
+            "binding_spec.yaml",
+            "policy.yaml",
+            "review_notebook.ipynb",
+            "audit.json",
+        ],
+    }
+
+
+def _validate_generated_audit_schema(audit_record: Mapping[str, Any]) -> None:
+    required = {
+        "compiler": str,
+        "schema_valid": bool,
+        "validation_errors": list,
+        "intent_boundary": dict,
+        "review_gate": dict,
+        "confidence": float,
+        "confidence_factors": dict,
+        "retrieval_evidence": list,
+        "notebook_execution": dict,
+    }
+    for key, expected_type in required.items():
+        value = audit_record.get(key)
+        if not isinstance(value, expected_type):
+            raise ValueError(f"generated audit schema invalid: {key}")
+    review_gate = audit_record["review_gate"]
+    if review_gate.get("non_actuating") is not True:
+        raise ValueError(
+            "generated audit schema invalid: review gate must be non-actuating"
+        )
+    if review_gate.get("manual_review_required") is not True:
+        raise ValueError("generated audit schema invalid: manual review required")
+    if review_gate.get("auto_execution_enabled") is not False:
+        raise ValueError("generated audit schema invalid: auto execution disabled")
 
 
 def _dry_run_order_parameter(spec: BindingSpec, steps: int) -> float:

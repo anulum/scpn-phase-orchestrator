@@ -146,6 +146,12 @@ def test_guard_missing_metric():
     assert not g.evaluate({"R": 0.7})
 
 
+def test_guard_rejects_non_finite_context_value():
+    g = Guard("R", ">", 0.5)
+    with pytest.raises(ValueError, match="context metric"):
+        g.evaluate({"R": float("nan")})
+
+
 def test_enabled_transitions():
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
@@ -153,6 +159,22 @@ def test_enabled_transitions():
     enabled = net.enabled(m, ctx)
     assert len(enabled) == 1
     assert enabled[0].name == "start"
+
+
+def test_enabled_rejects_unknown_context_metric():
+    net = _simple_net()
+    m = Marking(tokens={"warmup": 1})
+
+    with pytest.raises(ValueError, match="unknown guard context metric"):
+        net.enabled(m, {"stability_proxy": 0.8, "untrusted": 1.0})
+
+
+def test_step_rejects_boolean_context_value():
+    net = _simple_net()
+    m = Marking(tokens={"warmup": 1})
+
+    with pytest.raises(ValueError, match="context metric"):
+        net.step(m, {"stability_proxy": True})
 
 
 def test_no_enabled_guard_fails():

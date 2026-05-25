@@ -442,6 +442,10 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
                 limits=_require_number_pair(
                     _require(a, "limits", "actuators[]"), "actuators[].limits"
                 ),
+                rate_limit_per_step=_optional_number(
+                    a.get("rate_limit_per_step"),
+                    "actuators[].rate_limit_per_step",
+                ),
             )
         )
 

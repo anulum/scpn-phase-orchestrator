@@ -177,7 +177,13 @@ def _validate_omegas(value: object) -> FloatArray:
     return np.ascontiguousarray(arr, dtype=np.float64)
 
 
-def _validate_matrix(value: object, *, name: str, n: int) -> FloatArray:
+def _validate_matrix(
+    value: object,
+    *,
+    name: str,
+    n: int,
+    require_zero_diagonal: bool = False,
+) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -188,6 +194,10 @@ def _validate_matrix(value: object, *, name: str, n: int) -> FloatArray:
         raise ValueError(f"{name} shape {arr.shape} does not match ({n}, {n})")
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} must contain only finite values")
+    if require_zero_diagonal and not np.allclose(np.diag(arr), 0.0, atol=1e-12):
+        raise ValueError(
+            f"{name} diagonal must be zero; self-coupling K_ii is not physical"
+        )
     return np.ascontiguousarray(arr, dtype=np.float64)
 
 
@@ -275,7 +285,12 @@ def trace_sync_transition(
     if knm_template is None:
         knm_template = _default_coupling(n)
     else:
-        knm_template = _validate_matrix(knm_template, name="knm_template", n=n)
+        knm_template = _validate_matrix(
+            knm_template,
+            name="knm_template",
+            n=n,
+            require_zero_diagonal=True,
+        )
     if alpha is None:
         alpha = np.zeros((n, n), dtype=np.float64)
     else:
@@ -379,7 +394,12 @@ def find_critical_coupling(
     if knm_template is None:
         knm_template = _default_coupling(n)
     else:
-        knm_template = _validate_matrix(knm_template, name="knm_template", n=n)
+        knm_template = _validate_matrix(
+            knm_template,
+            name="knm_template",
+            n=n,
+            require_zero_diagonal=True,
+        )
 
     alpha = np.zeros((n, n))
     rng = np.random.default_rng(seed)

@@ -91,6 +91,27 @@ class TestAuditHashChain:
             )
             prev_hash = record["_hash"]
 
+    def test_header_record_seeds_following_step_hash_chain(self, tmp_path):
+        """A forged prepended header must invalidate the following step hash."""
+        log_path = tmp_path / "audit.jsonl"
+        with AuditLogger(log_path) as logger:
+            logger.log_header(n_oscillators=2, dt=0.01, method="rk4", seed=7)
+            logger.log_step(0, _sample_state(), [])
+
+        header, step = [
+            json.loads(line)
+            for line in log_path.read_text(encoding="utf-8").strip().splitlines()
+        ]
+
+        assert header["header"] is True
+        assert header["_previous_hash"] == "0" * 64
+        assert step["_previous_hash"] == header["_hash"]
+
+        clean_step = {k: v for k, v in step.items() if k != "_hash"}
+        json_line = json.dumps(clean_step, separators=(",", ":"), sort_keys=True)
+        expected = hashlib.sha256((header["_hash"] + json_line).encode()).hexdigest()
+        assert step["_hash"] == expected
+
     def test_hash_excludes_hash_field_itself(self, tmp_path):
         """The _hash field must not be included in the hash computation
         (otherwise the hash would be self-referential)."""

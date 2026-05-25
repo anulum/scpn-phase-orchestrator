@@ -14,6 +14,7 @@ from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.binding.types import ActuatorMapping
 
 
 def _action(knob: str = "K", value: float = 5.0) -> ControlAction:
@@ -89,6 +90,44 @@ class TestActionProjectorRateLimits:
         )
         result = proj.project(_action(value=100.0), previous_value=0.0)
         assert result.value == 100.0
+
+    def test_projector_uses_binding_spec_actuator_rate_limit(self):
+        proj = ActionProjector.from_actuator_mappings(
+            [
+                ActuatorMapping(
+                    name="global_coupling",
+                    knob="K",
+                    scope="global",
+                    limits=(0.0, 2.0),
+                    rate_limit_per_step=0.125,
+                )
+            ]
+        )
+
+        result = proj.project(_action(value=1.0), previous_value=0.25)
+
+        assert result.value == pytest.approx(0.375)
+
+    def test_projector_rejects_conflicting_binding_rate_limits(self):
+        actuators = [
+            ActuatorMapping(
+                name="global_coupling",
+                knob="K",
+                scope="global",
+                limits=(0.0, 2.0),
+                rate_limit_per_step=0.1,
+            ),
+            ActuatorMapping(
+                name="local_coupling",
+                knob="K",
+                scope="layer_0",
+                limits=(0.0, 2.0),
+                rate_limit_per_step=0.2,
+            ),
+        ]
+
+        with pytest.raises(ValueError, match="conflicting rate limits"):
+            ActionProjector.from_actuator_mappings(actuators)
 
 
 class TestActionProjectorIdentityPreservation:

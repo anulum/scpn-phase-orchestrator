@@ -174,6 +174,23 @@ class TestTraceSyncTransitionCoverage:
         )
         assert len(diag.points) == 5
 
+    def test_trace_rejects_self_coupling_diagonal(self):
+        """K_ii is not a physical pair interaction in the Kuramoto graph."""
+        n = 4
+        omegas = np.linspace(-0.5, 0.5, n)
+        knm = np.ones((n, n)) * 0.5
+        knm[1, 1] = 0.25
+
+        with pytest.raises(ValueError, match="diagonal must be zero"):
+            trace_sync_transition(
+                omegas,
+                knm_template=knm,
+                K_range=(0.0, 2.0),
+                n_points=3,
+                n_transient=0,
+                n_measure=1,
+            )
+
     def test_r_values_bounded(self):
         omegas = np.linspace(-1, 1, 6)
         diag = trace_sync_transition(
@@ -323,6 +340,19 @@ class TestInputValidation:
 
         with pytest.raises(ValueError, match=field):
             find_critical_coupling(omegas, **kwargs)
+
+    def test_find_rejects_self_coupling_diagonal(self) -> None:
+        """Binary-search K_c uses the same zero-self-coupling graph contract."""
+        knm = np.zeros((3, 3), dtype=np.float64)
+        knm[0, 0] = 0.1
+
+        with pytest.raises(ValueError, match="diagonal must be zero"):
+            find_critical_coupling(
+                np.array([-0.2, 0.0, 0.2]),
+                knm_template=knm,
+                n_transient=0,
+                n_measure=1,
+            )
 
 
 class TestFindCriticalCoupling:

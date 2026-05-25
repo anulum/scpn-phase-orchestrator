@@ -10,7 +10,7 @@
 
 The module provides production-mode environment detection, validated
 non-negative integer environment parsing, and a thread-safe per-identity
-fixed-window rate limiter. Helpers are intentionally local and dependency-free:
+token-bucket rate limiter. Helpers are intentionally local and dependency-free:
 they do not configure servers, store credentials, or perform authentication by
 themselves.
 """
@@ -20,10 +20,15 @@ from __future__ import annotations
 import os
 import threading
 import time
-from math import isfinite
+from math import ceil, isfinite
 from numbers import Real
 
-__all__ = ["FixedWindowRateLimiter", "env_int", "is_production_mode"]
+__all__ = [
+    "FixedWindowRateLimiter",
+    "TokenBucketRateLimiter",
+    "env_int",
+    "is_production_mode",
+]
 
 
 def _validated_identifier(value: str, label: str) -> str:
@@ -58,20 +63,37 @@ def env_int(name: str, default: int) -> int:
     return value
 
 
-class FixedWindowRateLimiter:
-    """Thread-safe per-identity fixed-window rate limiter."""
+class TokenBucketRateLimiter:
+    """Thread-safe per-identity token-bucket rate limiter."""
 
-    def __init__(self, limit_per_minute: int) -> None:
+    def __init__(
+        self,
+        limit_per_minute: int,
+        *,
+        burst_capacity: int | None = None,
+    ) -> None:
         if not isinstance(limit_per_minute, int) or isinstance(limit_per_minute, bool):
             raise ValueError("limit_per_minute must be an integer >= 1")
         if limit_per_minute < 1:
             raise ValueError("limit_per_minute must be >= 1")
+        if burst_capacity is None:
+            burst = max(1, min(limit_per_minute, ceil(limit_per_minute / 10)))
+        else:
+            if not isinstance(burst_capacity, int) or isinstance(burst_capacity, bool):
+                raise ValueError("burst_capacity must be an integer >= 1")
+            if burst_capacity < 1:
+                raise ValueError("burst_capacity must be >= 1")
+            if burst_capacity > limit_per_minute:
+                raise ValueError("burst_capacity must be <= limit_per_minute")
+            burst = burst_capacity
         self._limit = limit_per_minute
+        self._capacity = burst
+        self._refill_per_second = limit_per_minute / 60.0
         self._lock = threading.Lock()
-        self._windows: dict[str, tuple[int, int]] = {}
+        self._buckets: dict[str, tuple[float, float]] = {}
 
     def allow(self, identity: str, now: float | None = None) -> bool:
-        """Return True if *identity* has capacity in the current minute."""
+        """Return True if *identity* has at least one available token."""
         key = _validated_identifier(identity, "identity")
         if now is None:
             timestamp = time.time()
@@ -83,13 +105,16 @@ class FixedWindowRateLimiter:
             ):
                 raise ValueError("now must be a finite real timestamp")
             timestamp = float(now)
-        window = int(timestamp // 60)
         with self._lock:
-            current_window, count = self._windows.get(key, (window, 0))
-            if current_window != window:
-                current_window, count = window, 0
-            if count >= self._limit:
-                self._windows[key] = (current_window, count)
+            tokens, updated_at = self._buckets.get(key, (float(self._capacity), timestamp))
+            elapsed = max(0.0, timestamp - updated_at)
+            tokens = min(float(self._capacity), tokens + elapsed * self._refill_per_second)
+            if tokens < 1.0:
+                self._buckets[key] = (tokens, timestamp)
                 return False
-            self._windows[key] = (current_window, count + 1)
+            self._buckets[key] = (tokens - 1.0, timestamp)
             return True
+
+
+class FixedWindowRateLimiter(TokenBucketRateLimiter):
+    """Backward-compatible name for the production token-bucket limiter."""

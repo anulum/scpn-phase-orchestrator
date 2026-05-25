@@ -30,6 +30,92 @@ class TestSecureModbusAdapterTLS:
         with pytest.raises(ConnectionError, match="key not found"):
             SecureModbusAdapter("localhost", 802, cert, tmp_path / "no.key")
 
+    def test_missing_ca_bundle_raises_without_full_path(self, tmp_path):
+        from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
+
+        cert = tmp_path / "client.pem"
+        key = tmp_path / "client.key"
+        ca = tmp_path / "private" / "root-ca.pem"
+        cert.write_text("dummy-cert")
+        key.write_text("dummy-key")
+
+        with pytest.raises(ConnectionError) as excinfo:
+            SecureModbusAdapter("localhost", 802, cert, key, ca)
+
+        msg = str(excinfo.value)
+        assert "root-ca.pem" in msg
+        assert "private" not in msg
+        assert str(tmp_path) not in msg
+
+    def test_default_tls_context_uses_system_trust_and_requires_server_auth(
+        self,
+        tmp_path,
+    ):
+        cert = tmp_path / "client.pem"
+        key = tmp_path / "client.key"
+        cert.write_text("dummy-cert")
+        key.write_text("dummy-key")
+
+        mock_client = MagicMock()
+        mock_client.connect.return_value = True
+
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
+            mock_ctx = MagicMock()
+            mock_ssl.SSLContext.return_value = mock_ctx
+            mock_ssl.PROTOCOL_TLS_CLIENT = 2
+            mock_ssl.Purpose.SERVER_AUTH = object()
+            mock_ssl.CERT_REQUIRED = object()
+            mock_ssl.SSLError = Exception
+
+            from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
+
+            SecureModbusAdapter("localhost", 802, cert, key)
+
+            mock_ctx.load_default_certs.assert_called_once_with(
+                mock_ssl.Purpose.SERVER_AUTH
+            )
+            assert mock_ctx.check_hostname is True
+            assert mock_ctx.verify_mode is mock_ssl.CERT_REQUIRED
+
+    def test_tls_context_uses_explicit_ca_bundle_when_configured(self, tmp_path):
+        cert = tmp_path / "client.pem"
+        key = tmp_path / "client.key"
+        ca = tmp_path / "ca.pem"
+        cert.write_text("dummy-cert")
+        key.write_text("dummy-key")
+        ca.write_text("dummy-ca")
+
+        mock_client = MagicMock()
+        mock_client.connect.return_value = True
+
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
+            mock_ctx = MagicMock()
+            mock_ssl.SSLContext.return_value = mock_ctx
+            mock_ssl.PROTOCOL_TLS_CLIENT = 2
+            mock_ssl.CERT_REQUIRED = object()
+            mock_ssl.SSLError = Exception
+
+            from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
+
+            SecureModbusAdapter("localhost", 802, cert, key, ca)
+
+            mock_ctx.load_verify_locations.assert_called_once_with(cafile=str(ca))
+            mock_ctx.load_default_certs.assert_not_called()
+            assert mock_ctx.check_hostname is True
+            assert mock_ctx.verify_mode is mock_ssl.CERT_REQUIRED
+
     def test_pymodbus_missing_raises(self, tmp_path):
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
@@ -256,6 +342,34 @@ class TestSecureModbusAdapterTLS:
             adapter = SecureModbusAdapter("localhost", 802, cert, key)
             with pytest.raises(ValueError, match="bad state"):
                 adapter.validate_connection()
+
+    def test_context_manager_closes_client(self, tmp_path):
+        cert = tmp_path / "client.pem"
+        key = tmp_path / "client.key"
+        cert.write_text("dummy-cert")
+        key.write_text("dummy-key")
+
+        mock_client = MagicMock()
+        mock_client.connect.return_value = True
+
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
+            mock_ctx = MagicMock()
+            mock_ssl.SSLContext.return_value = mock_ctx
+            mock_ssl.PROTOCOL_TLS_CLIENT = 2
+            mock_ssl.SSLError = Exception
+
+            from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
+
+            with SecureModbusAdapter("localhost", 802, cert, key):
+                pass
+
+            mock_client.close.assert_called_once_with()
 
     def test_connection_failure_raises(self, tmp_path):
         cert = tmp_path / "client.pem"

@@ -15,6 +15,7 @@ import pytest
 
 from scpn_phase_orchestrator.runtime.network_security import (
     FixedWindowRateLimiter,
+    TokenBucketRateLimiter,
     env_int,
     is_production_mode,
 )
@@ -92,16 +93,25 @@ def test_env_int_rejects_malformed_default(
         env_int("SPO_RATE_LIMIT_PER_MINUTE", cast(int, default))
 
 
-def test_rate_limiter_allows_until_limit_then_blocks() -> None:
-    limiter = FixedWindowRateLimiter(limit_per_minute=2)
+def test_rate_limiter_uses_token_bucket_burst_capacity() -> None:
+    limiter = TokenBucketRateLimiter(limit_per_minute=60, burst_capacity=2)
 
     assert limiter.allow("client-a", now=10.0) is True
     assert limiter.allow("client-a", now=11.0) is True
-    assert limiter.allow("client-a", now=12.0) is False
+    assert limiter.allow("client-a", now=11.5) is False
+    assert limiter.allow("client-a", now=12.0) is True
+
+
+def test_compat_rate_limiter_does_not_allow_full_minute_burst() -> None:
+    limiter = FixedWindowRateLimiter(limit_per_minute=60)
+
+    allowed = sum(1 for _ in range(60) if limiter.allow("client-a", now=10.0))
+
+    assert allowed < 60
 
 
 def test_rate_limiter_is_per_identity() -> None:
-    limiter = FixedWindowRateLimiter(limit_per_minute=1)
+    limiter = TokenBucketRateLimiter(limit_per_minute=1, burst_capacity=1)
 
     assert limiter.allow("client-a", now=10.0) is True
     assert limiter.allow("client-a", now=11.0) is False
@@ -109,7 +119,7 @@ def test_rate_limiter_is_per_identity() -> None:
 
 
 def test_rate_limiter_resets_on_new_window() -> None:
-    limiter = FixedWindowRateLimiter(limit_per_minute=1)
+    limiter = TokenBucketRateLimiter(limit_per_minute=60, burst_capacity=1)
 
     assert limiter.allow("client-a", now=59.0) is True
     assert limiter.allow("client-a", now=59.5) is False
@@ -141,3 +151,19 @@ def test_rate_limiter_rejects_non_positive_limit() -> None:
 def test_rate_limiter_rejects_malformed_limit(limit: object) -> None:
     with pytest.raises(ValueError, match="limit_per_minute"):
         FixedWindowRateLimiter(limit_per_minute=cast(int, limit))
+
+
+@pytest.mark.parametrize("burst_capacity", [0, True, 2.5, "2"])
+def test_rate_limiter_rejects_malformed_burst_capacity(
+    burst_capacity: object,
+) -> None:
+    with pytest.raises(ValueError, match="burst_capacity"):
+        TokenBucketRateLimiter(
+            limit_per_minute=10,
+            burst_capacity=cast(int, burst_capacity),
+        )
+
+
+def test_rate_limiter_rejects_burst_above_minute_limit() -> None:
+    with pytest.raises(ValueError, match="burst_capacity"):
+        TokenBucketRateLimiter(limit_per_minute=2, burst_capacity=3)

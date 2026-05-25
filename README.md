@@ -197,9 +197,69 @@ spo validate domainpacks/minimal_domain/binding_spec.yaml
 # Run a domain simulation
 spo run domainpacks/queuewaves/binding_spec.yaml --steps 1000
 
+# Run a real-data review demo from PhysioNet heart-rate-belt data
+spo demo --dataset heartbeat.csv --target coherence --steps 100
+
 # Replay from audit log
 spo replay audit.jsonl --output report.json
 ```
+
+Python applications can use the high-level facade without invoking Click:
+
+```python
+from scpn import Orchestrator
+
+orch = Orchestrator.from_yaml("domainpacks/minimal_domain/binding_spec.yaml")
+state = orch.run(steps=100, seed=42)
+print(state.order_parameter)
+```
+
+## Reference Benchmarks
+
+SPO keeps reference benchmarks as reproducible evidence, not as marketing
+claims. The checked-in snapshot is dated `2026-05-20` and was generated with:
+
+```bash
+PYTHONPATH=src python benchmarks/reference_suite.py
+```
+
+The snapshot is published at
+[`docs/galleries/reference_benchmark_snapshot.md`](docs/galleries/reference_benchmark_snapshot.md).
+It records the command, Python/Numpy versions, platform metadata, acceptance
+flags, and steps/s values for each suite. Selected reference suites:
+
+| Suite | Reference contract | Snapshot steps/s |
+|-------|--------------------|-----------------:|
+| `kuramoto_reference_strogatz_2000` | Kuramoto/Strogatz synchronisation reference | `6941.27` |
+| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau limit-cycle reference | `3722.04` |
+| `petri_net_reachability` | Petri-net reachability reference | `244900` |
+
+Physics invariants are also executable as focused tests:
+
+```bash
+PYTHONPATH=src pytest tests/test_physics_benchmarks.py
+```
+
+Those tests cover Strogatz/Kuramoto synchronisation, weak-coupling
+desynchronisation, coupling monotonicity, external-drive entrainment,
+Stuart-Landau limit cycles, subcritical decay, amplitude consensus, and
+zero-coupling independence.
+
+## Hardware Integration Boundary
+
+Real hardware access is adapter-scoped and opt-in:
+
+| Surface | Status | Safety boundary |
+|---------|--------|-----------------|
+| BrainFlow sensor input | Optional real EEG/PPG/EMG read adapter | requires `brainflow`; no actuation writes |
+| Modbus/TLS SCADA | Optional real PLC/DCS read/write adapter | mutual TLS client certs plus mandatory server verification |
+| Plain Modbus TCP | Lab/isolated-network adapter | not for production writes across routable networks |
+| Quantum/neuromorphic targets | Review artefact generation | execution and hardware writes remain disabled |
+
+Hardware deployment details are documented in
+[`docs/guide/adapters.md`](docs/guide/adapters.md). Quantum and neuromorphic
+compiler outputs are intentionally handoff artefacts until a verified external
+hardware execution pipeline is attached.
 
 For development, clone the repo and install in editable mode:
 

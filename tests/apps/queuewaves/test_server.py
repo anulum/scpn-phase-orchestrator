@@ -179,6 +179,27 @@ def test_websocket_closes_on_too_large_message(
     assert exc_info.value.code == 1009
 
 
+def test_websocket_rejects_non_keepalive_content(
+    minimal_config: QueueWavesConfig,
+) -> None:
+    app = create_app(minimal_config)
+    client = TestClient(app)
+    with client.websocket_connect("/ws/stream") as ws:
+        ws.send_text('{"type":"actuate","K":9}')
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            ws.receive_text()
+    assert exc_info.value.code == 1003
+
+
+def test_websocket_accepts_json_keepalive(
+    minimal_config: QueueWavesConfig,
+) -> None:
+    app = create_app(minimal_config)
+    client = TestClient(app)
+    with client.websocket_connect("/ws/stream") as ws:
+        ws.send_text('{"type":"ping"}')
+
+
 def test_state_history_empty(client: TestClient) -> None:
     r = client.get("/api/v1/state/history?n=10")
     assert r.status_code == 200

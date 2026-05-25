@@ -11,8 +11,8 @@
 ``create_app`` wires configured collection, phase computation, anomaly
 detection, alert dispatch, REST endpoints, and a read-only WebSocket stream into
 one ASGI app. Production mode requires an API key and rate limits requests
-before exposing state. Incoming WebSocket messages are ignored except for size
-and keepalive handling; the server does not accept remote actuation commands.
+before exposing state. Incoming WebSocket messages must be explicit keepalives;
+the server does not accept remote actuation commands.
 """
 
 import asyncio
@@ -294,7 +294,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
 
     @app.websocket("/ws/stream")
     async def ws_stream(websocket: WebSocket) -> None:
-        """Read-only observer stream. Incoming messages are ignored (keepalive only)."""
+        """Read-only observer stream with keepalive-only inbound messages."""
         if api_key is not None and websocket.headers.get("x-api-key") != api_key:
             await websocket.close(code=1008, reason="Invalid or missing X-API-Key")
             return
@@ -311,12 +311,29 @@ def create_app(cfg: QueueWavesConfig) -> object:
                 if len(msg) > 1024:
                     await websocket.close(code=1009, reason="Message too large")
                     break
+                if not _is_keepalive_message(msg):
+                    await websocket.close(code=1003, reason="Unsupported message")
+                    break
         except WebSocketDisconnect:
             pass
         finally:
             ws_clients.discard(websocket)
 
     return app
+
+
+def _is_keepalive_message(msg: str) -> bool:
+    if msg in {"", "ping", "pong"}:
+        return True
+    try:
+        payload = json.loads(msg)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if set(payload) - {"type"}:
+        return False
+    return payload.get("type") in {"ping", "pong"}
 
 
 def run_server(config_path: str, host: str = "127.0.0.1", port: int = 8080) -> None:

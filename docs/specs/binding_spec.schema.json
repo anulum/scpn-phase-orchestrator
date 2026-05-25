@@ -149,6 +149,10 @@
             "items": { "type": "number" },
             "minItems": 2,
             "maxItems": 2
+          },
+          "rate_limit_per_step": {
+            "type": "number",
+            "minimum": 0
           }
         }
       }

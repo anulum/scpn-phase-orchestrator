@@ -221,8 +221,11 @@ instant = prom.fetch_instant("up")
 
 ## Production Defaults (Auth + Rate Limits)
 
-- Modbus/TLS: use mutual-TLS certificates and CA verification
-  (`SecureModbusAdapter` with `ca_cert_path` set).
+- Modbus/TLS: use mutual-TLS certificates. `SecureModbusAdapter` always keeps
+  server verification enabled; pass `ca_cert_path` for a deployment CA bundle,
+  or omit it only when the operating-system trust store contains the server CA.
+- Plain Modbus TCP (`ModbusAdapter`) is a local-lab or isolated-network adapter.
+  Do not use it for production writes across routable networks.
 - QueueWaves network endpoints: use `security.mode: production`,
   `api_key_env`, and positive `security.rate_limit_per_minute`.
 - Prometheus access: terminate auth at a reverse proxy and inject
@@ -239,13 +242,15 @@ from scpn_phase_orchestrator.adapters import RedisStateStore
 from scpn_phase_orchestrator.runtime.network_security import FixedWindowRateLimiter, env_int
 
 # Strictly parse transport schema before constructing adapters.
-modbus = SecureModbusAdapter(
+with SecureModbusAdapter(
     host="plc.internal.example",
     port=802,
-    tls_cert_path=Path("/etc/scad/pki/client.pem"),
-    tls_key_path=Path("/etc/scad/pki/client.key"),
-    ca_cert_path=Path("/etc/scad/pki/ca.pem"),
-)
+    tls_cert_path=Path("/etc/scada/pki/client.pem"),
+    tls_key_path=Path("/etc/scada/pki/client.key"),
+    ca_cert_path=Path("/etc/scada/pki/ca.pem"),
+) as modbus:
+    if not modbus.validate_connection():
+        raise RuntimeError("Modbus/TLS connection is not active")
 
 store = RedisStateStore(
     host="redis.internal.example",

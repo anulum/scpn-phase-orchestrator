@@ -118,6 +118,7 @@ class AuditLogger:
             clean = self._attach_signature_metadata(clean)
         else:
             clean["_audit_mode"] = "unsigned-development"
+            clean["_previous_hash"] = self._prev_hash
             clean["_payload_hash"] = _payload_hash(clean)
         json_line = _dumps_audit_json(clean, compact=True)
         digest = hashlib.sha256((self._prev_hash + json_line).encode()).hexdigest()

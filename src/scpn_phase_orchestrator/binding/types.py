@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from math import isfinite
+from numbers import Real
 
 from scpn_phase_orchestrator.exceptions import ValidationError
 
@@ -190,6 +192,42 @@ class ActuatorMapping:
     knob: str
     scope: str
     limits: tuple[float, float]
+    rate_limit_per_step: float | None = None
+
+    def __post_init__(self) -> None:
+        lo, hi = self.limits
+        if any(
+            isinstance(value, bool) or not isinstance(value, Real)
+            for value in self.limits
+        ):
+            raise TypeError(
+                f"ActuatorMapping {self.name!r}: limits must be finite reals"
+            )
+        if not isfinite(float(lo)) or not isfinite(float(hi)):
+            raise ValueError(
+                f"ActuatorMapping {self.name!r}: limits must be finite reals"
+            )
+        if float(lo) > float(hi):
+            raise ValueError(
+                f"ActuatorMapping {self.name!r}: limits require lower <= upper"
+            )
+        if self.rate_limit_per_step is None:
+            return
+        if isinstance(self.rate_limit_per_step, bool) or not isinstance(
+            self.rate_limit_per_step, Real
+        ):
+            raise TypeError(
+                f"ActuatorMapping {self.name!r}: rate_limit_per_step must be a "
+                "finite non-negative real"
+            )
+        if (
+            not isfinite(float(self.rate_limit_per_step))
+            or float(self.rate_limit_per_step) < 0.0
+        ):
+            raise ValueError(
+                f"ActuatorMapping {self.name!r}: rate_limit_per_step must be "
+                "finite and non-negative"
+            )
 
 
 @dataclass(frozen=True)

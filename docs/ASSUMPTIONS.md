@@ -43,14 +43,27 @@ See [references.bib](references.bib) for full bibliographic entries.
 
 ## Rate Limits (Actuation)
 
-| Constant | Value | Provenance | Used in |
-|----------|-------|------------|---------|
-| K rate limit | 0.1/step | Empirical. Prevents coupling shock; documented in `knobs_K_alpha_zeta_Psi.md`. | `actuation/constraints.py` |
-| alpha rate limit | 0.05/step | Empirical. Lag changes beyond this destabilise transients. | `actuation/constraints.py` |
-| zeta rate limit | 0.2/step | Empirical. Driver strength can change faster than coupling. | `actuation/constraints.py` |
-| K range | [0, 5.0] | Empirical. Upper bound avoids numerical overflow in coupling sum. | `actuation/constraints.py` |
-| alpha range | [−π, π] | Derived. Full Sakaguchi–Kuramoto lag range [sakaguchi1986]. | `actuation/constraints.py` |
-| zeta range | [0, 2.0] | Empirical. Driver beyond 2.0 suppresses intrinsic dynamics. | `actuation/constraints.py` |
+Actuator slew limits are binding-spec configuration, not process-wide constants.
+Each `actuators[]` entry may declare `rate_limit_per_step`; omitting it means
+the knob is bounded by `limits` but not slew-limited by `ActionProjector`.
+Bindings with multiple actuator records for the same knob must use identical
+`limits` and identical `rate_limit_per_step` values because the floating
+projector is knob-indexed.
+
+Recommended derivation order:
+
+1. Use measured actuator slew-rate limits where a hardware or simulator adapter
+   exposes a physical limit.
+2. Use stability analysis for mathematical knobs. For Kuramoto coupling `K`,
+   choose a per-step increment that keeps the one-step phase-velocity change
+   below the configured numerical stability margin.
+3. Use empirical simulation calibration only when neither physical nor analytic
+   limits are available, and record the provenance in the domainpack README.
+
+| Field | Provenance | Used in |
+|-------|------------|---------|
+| `actuators[].rate_limit_per_step` | Binding-specific physical, analytic, or calibrated slew limit. | `actuation/constraints.py` |
+| `actuators[].limits` | Binding-specific physical or mathematical actuator bounds. | `actuation/constraints.py` |
 
 ## Imprint Model
 

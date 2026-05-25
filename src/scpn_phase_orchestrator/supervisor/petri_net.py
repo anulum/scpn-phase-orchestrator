@@ -18,6 +18,7 @@ adapter modules own those boundaries.
 from __future__ import annotations
 
 import operator
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from math import isfinite
 from numbers import Integral, Real
@@ -108,11 +109,12 @@ class Guard:
             _validate_finite_real(self.threshold, name="threshold"),
         )
 
-    def evaluate(self, ctx: dict[str, float]) -> bool:
+    def evaluate(self, ctx: Mapping[str, float]) -> bool:
         """Return True if the guard condition is satisfied by *ctx*."""
         val = ctx.get(self.metric)
         if val is None:
             return False
+        val = _validate_finite_real(val, name=f"context metric {self.metric!r}")
         fn = _OPS.get(self.op)
         if fn is None:
             return False
@@ -193,6 +195,9 @@ class PetriNet:
     ) -> None:
         self._place_names = frozenset(p.name for p in places)
         self._transitions = transitions
+        self._guard_metrics = frozenset(
+            t.guard.metric for t in transitions if t.guard is not None
+        )
         self._validate()
 
     def _validate(self) -> None:
@@ -213,8 +218,28 @@ class PetriNet:
         """All transitions in firing-priority order."""
         return list(self._transitions)
 
-    def enabled(self, marking: Marking, ctx: dict[str, float]) -> list[Transition]:
+    @property
+    def guard_metrics(self) -> frozenset[str]:
+        """Whitelisted context metric names used by transition guards."""
+        return self._guard_metrics
+
+    def _validated_context(self, ctx: Mapping[str, float]) -> dict[str, float]:
+        if not isinstance(ctx, Mapping):
+            raise PolicyError(f"ctx must be a mapping, got {ctx!r}")
+        validated: dict[str, float] = {}
+        for metric, value in ctx.items():
+            metric = _validate_name(metric, kind="metric")
+            if metric not in self._guard_metrics:
+                raise PolicyError(f"unknown guard context metric {metric!r}")
+            validated[metric] = _validate_finite_real(
+                value,
+                name=f"context metric {metric!r}",
+            )
+        return validated
+
+    def enabled(self, marking: Marking, ctx: Mapping[str, float]) -> list[Transition]:
         """Return all transitions whose input arcs and guards are satisfied."""
+        ctx = self._validated_context(ctx)
         result = []
         for t in self._transitions:
             if t.guard is not None and not t.guard.evaluate(ctx):
@@ -233,9 +258,10 @@ class PetriNet:
         return new
 
     def step(
-        self, marking: Marking, ctx: dict[str, float]
+        self, marking: Marking, ctx: Mapping[str, float]
     ) -> tuple[Marking, Transition | None]:
         """Fire the first enabled transition, return (new_marking, fired_transition)."""
+        ctx = self._validated_context(ctx)
         for t in self._transitions:
             if t.guard is not None and not t.guard.evaluate(ctx):
                 continue

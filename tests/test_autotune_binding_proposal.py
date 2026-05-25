@@ -14,6 +14,7 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
+import yaml
 
 from scpn_phase_orchestrator.binding import load_binding_spec
 from scpn_phase_orchestrator.exceptions import BindingError
@@ -176,6 +177,31 @@ def test_time_series_csv_yaml_binds_extractor_parameter_proposals(
     assert family.config["proposal_status"] == "review_only"
     assert extractor_proposals[0]["family"] == "auto_p_0"
     assert extractor_proposals[0]["parameters"]["source_column"] == "grid"
+
+
+def test_time_series_csv_yaml_quotes_injection_prone_column_names(
+    tmp_path: Path,
+) -> None:
+    csv_text = (
+        'time,"grid: evil","load # comment","break\n'
+        'line"\n0.00,0.0,1.0,0.0\n0.01,0.2,0.9,1.0\n'
+    )
+
+    proposal = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=100.0,
+        project_name="yaml_injection_review",
+    )
+
+    parsed = yaml.safe_load(proposal.binding.yaml_text)
+    spec = _load_proposal_yaml(tmp_path, proposal.binding.yaml_text)
+    config_values = [
+        parsed["oscillator_families"][layer.family]["config"]["source_column"]
+        for layer in sorted(spec.layers, key=lambda item: item.index)
+    ]
+
+    assert config_values == ["grid: evil", "load # comment", "break\nline"]
+    assert proposal.binding.validation_errors == ()
 
 
 def test_time_series_csv_yaml_binds_initial_k_template(

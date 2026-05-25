@@ -88,7 +88,40 @@ Generate a coherence report:
 spo report audit.jsonl
 ```
 
-## 5. Loading a Binding Spec Programmatically
+Run the real-data review demo:
+
+```bash
+spo demo --dataset heartbeat.csv --target coherence --steps 100
+```
+
+This command downloads the PhysioNet heart-rate-belt CSV for subject 3 from
+Guy et al. (2024), "Respiratory and heart rate monitoring dataset from
+aeration study", DOI `10.13026/e4dt-f689`; converts RR interval and heart-rate
+columns into numeric time-series channels; runs the review-only auto-binding
+proposal path; and prints the generated binding YAML plus dashboard commands.
+It does not write actuator commands or start network services.
+
+## 5. Running a Binding Spec from Python
+
+Application code can use the high-level facade directly:
+
+```python
+from scpn import Orchestrator
+
+orch = Orchestrator.from_yaml("domainpacks/minimal_domain/binding_spec.yaml")
+state = orch.run(steps=100, seed=42)
+
+print(f"Domain: {state.spec_name}")
+print(f"Oscillators: {state.phases.size}")
+print(f"R={state.order_parameter:.3f}")
+```
+
+The facade runs local research-tier Kuramoto binding specs and returns an
+immutable state record with final phases, coupling matrices, natural
+frequencies, and the Kuramoto order parameter. Use the lower-level
+`StuartLandauEngine` directly for amplitude-mode studies.
+
+## 6. Loading a Binding Spec Programmatically
 
 ```python
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
@@ -106,7 +139,7 @@ print(f"Safety tier: {spec.safety_tier}")
 
 `BindingSpec` is a dataclass with fields for layers, oscillator families, coupling, drivers, objectives, boundaries, actuators, imprint model, geometry prior, protocol net, and amplitude mode.
 
-## 6. Stuart-Landau Mode
+## 7. Stuart-Landau Mode
 
 Phase + amplitude dynamics with subcritical bifurcation detection:
 

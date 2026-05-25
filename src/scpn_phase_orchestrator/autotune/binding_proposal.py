@@ -545,88 +545,86 @@ def _binding_yaml(
     family_specs: Sequence[tuple[str, str, str] | tuple[str, str, str, Mapping]],
     initial_coupling_proposal: Mapping[str, JsonValue] | None = None,
 ) -> str:
-    layer_lines = []
-    family_lines = []
-    good_layers = []
-    cross_channel_lines = _cross_channel_coupling_lines(initial_coupling_proposal)
+    if not project_name:
+        raise ValueError("project_name must be non-empty")
+    layers: list[dict[str, JsonValue]] = []
+    oscillator_families: dict[str, JsonValue] = {}
+    good_layers: list[int] = []
     for index, raw_family_spec in enumerate(family_specs):
         family_name, channel, extractor_type, config = _normalise_family_spec(
             raw_family_spec
         )
         oscillator_id = f"osc_{index}"
-        good_layers.append(str(index))
-        layer_lines.extend(
-            [
-                f"  - name: replay_{index}",
-                f"    index: {index}",
-                f"    oscillator_ids: [{oscillator_id}]",
-                f"    family: {family_name}",
-            ]
+        good_layers.append(index)
+        layers.append(
+            {
+                "name": f"replay_{index}",
+                "index": index,
+                "oscillator_ids": [oscillator_id],
+                "family": family_name,
+            }
         )
-        family_lines.extend(
-            [
-                f"  {family_name}:",
-                f"    channel: {channel}",
-                f"    extractor_type: {extractor_type}",
-                *_yaml_mapping_lines("    config", config),
-            ]
-        )
+        oscillator_families[family_name] = {
+            "channel": channel,
+            "extractor_type": extractor_type,
+            "config": dict(config),
+        }
 
-    return "\n".join(
-        [
-            "# Review-only binding proposal. Inspect before copying into a domainpack.",
-            f"name: {_yaml_string(project_name)}",
-            'version: "0.1.0"',
-            "safety_tier: research",
-            f"sample_period_s: {sample_period_s:.12g}",
-            f"control_period_s: {max(sample_period_s, sample_period_s * 10.0):.12g}",
-            "",
-            "layers:",
-            *layer_lines,
-            "",
-            "oscillator_families:",
-            *family_lines,
-            "",
-            "coupling:",
-            "  base_strength: 0.45",
-            "  decay_alpha: 0.3",
-            *_coupling_template_lines(initial_coupling_proposal),
-            "",
-            "cross_channel_couplings:",
-            *cross_channel_lines,
-            "",
-            "drivers:",
-            "  physical:",
-            "    zeta: 0.0",
-            "    psi: 0.0",
-            "  informational:",
-            "    zeta: 0.02",
-            "  symbolic:",
-            "    zeta: 0.02",
-            "",
-            "objectives:",
-            f"  good_layers: [{', '.join(good_layers)}]",
-            "  bad_layers: []",
-            "  good_weight: 1.0",
-            "  bad_weight: 1.0",
-            "",
-            "boundaries: []",
-            "",
-            "actuators:",
-            "  - name: coupling_global",
-            "    knob: K",
-            "    scope: global",
-            "    limits: [0.0, 3.0]",
-            "",
-            "amplitude:",
-            "  mu: 1.0",
-            "  epsilon: 0.3",
-            "  amp_coupling_strength: 0.2",
-            "  amp_coupling_decay: 0.3",
-            "",
-            "policy: policy.yaml",
-            "",
-        ]
+    document: dict[str, JsonValue] = {
+        "name": project_name,
+        "version": "0.1.0",
+        "safety_tier": "research",
+        "sample_period_s": float(f"{sample_period_s:.12g}"),
+        "control_period_s": float(
+            f"{max(sample_period_s, sample_period_s * 10.0):.12g}"
+        ),
+        "layers": layers,
+        "oscillator_families": oscillator_families,
+        "coupling": {
+            "base_strength": 0.45,
+            "decay_alpha": 0.3,
+            "templates": _coupling_templates(initial_coupling_proposal),
+        },
+        "cross_channel_couplings": _cross_channel_couplings(
+            initial_coupling_proposal
+        ),
+        "drivers": {
+            "physical": {"zeta": 0.0, "psi": 0.0},
+            "informational": {"zeta": 0.02},
+            "symbolic": {"zeta": 0.02},
+        },
+        "objectives": {
+            "good_layers": good_layers,
+            "bad_layers": [],
+            "good_weight": 1.0,
+            "bad_weight": 1.0,
+        },
+        "boundaries": [],
+        "actuators": [
+            {
+                "name": "coupling_global",
+                "knob": "K",
+                "scope": "global",
+                "limits": [0.0, 3.0],
+            }
+        ],
+        "amplitude": {
+            "mu": 1.0,
+            "epsilon": 0.3,
+            "amp_coupling_strength": 0.2,
+            "amp_coupling_decay": 0.3,
+        },
+        "policy": "policy.yaml",
+    }
+    yaml_text = yaml.safe_dump(
+        document,
+        sort_keys=False,
+        default_flow_style=False,
+        allow_unicode=False,
+    )
+    return (
+        "# Review-only binding proposal. Inspect before copying into a domainpack.\n"
+        f"{yaml_text}"
     )
 
 
@@ -640,12 +638,12 @@ def _normalise_family_spec(
     return family_name, channel, extractor_type, config
 
 
-def _coupling_template_lines(
+def _coupling_templates(
     initial_coupling_proposal: Mapping[str, JsonValue] | None,
-) -> list[str]:
+) -> dict[str, JsonValue]:
     if not initial_coupling_proposal:
-        return ["  templates: {}"]
-    payload = {
+        return {}
+    return {
         "auto_initial_k": {
             "orientation": initial_coupling_proposal["orientation"],
             "columns": initial_coupling_proposal["columns"],
@@ -655,14 +653,13 @@ def _coupling_template_lines(
             "review_required": True,
         }
     }
-    return _yaml_mapping_lines("  templates", payload)
 
 
-def _cross_channel_coupling_lines(
+def _cross_channel_couplings(
     initial_coupling_proposal: Mapping[str, JsonValue] | None,
-) -> list[str]:
+) -> list[dict[str, JsonValue]]:
     if not initial_coupling_proposal:
-        return ["  []"]
+        return []
     channel_strengths: dict[tuple[str, str], float] = {}
     for edge in _sequence(initial_coupling_proposal.get("edges"), "initial K edges"):
         if not isinstance(edge, Mapping):
@@ -686,39 +683,19 @@ def _cross_channel_coupling_lines(
         key = (source, target)
         channel_strengths[key] = max(value, channel_strengths.get(key, 0.0))
     if not channel_strengths:
-        return ["  []"]
-    lines: list[str] = []
+        return []
+    couplings: list[dict[str, JsonValue]] = []
     for (source, target), strength in sorted(channel_strengths.items()):
-        lines.extend(
-            [
-                f"  - source: {source}",
-                f"    target: {target}",
-                f"    strength: {strength:.12g}",
-                "    mode: directed",
-                "    template: auto_initial_k",
-            ]
+        couplings.append(
+            {
+                "source": source,
+                "target": target,
+                "strength": float(f"{strength:.12g}"),
+                "mode": "directed",
+                "template": "auto_initial_k",
+            }
         )
-    return lines
-
-
-def _yaml_mapping_lines(key: str, value: Mapping) -> list[str]:
-    if not value:
-        return [f"{key}: {{}}"]
-    dumped = yaml.safe_dump(
-        {key.strip(): value},
-        sort_keys=False,
-        default_flow_style=False,
-    ).splitlines()
-    first = dumped[0]
-    indent = key[: len(key) - len(key.lstrip())]
-    label = key.strip()
-    lines = [f"{indent}{first}"]
-    lines.extend(f"{indent}{line}" for line in dumped[1:])
-    if lines[0] != f"{key}:":
-        lines[0] = f"{key}:"
-    if lines[0].strip() != f"{label}:":
-        lines[0] = f"{key}:"
-    return lines
+    return couplings
 
 
 def _validation_errors(yaml_text: str) -> tuple[str, ...]:
@@ -758,8 +735,3 @@ def _project_state(
 def _bounded_confidence(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
-
-def _yaml_string(value: str) -> str:
-    if not value:
-        raise ValueError("project_name must be non-empty")
-    return json.dumps(value)

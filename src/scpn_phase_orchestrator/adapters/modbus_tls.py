@@ -10,6 +10,8 @@
 
 Wraps pymodbus with an ``ssl.SSLContext`` for certificate-authenticated
 connections to SCADA endpoints per IEC 62443 zone/conduit requirements.
+Server certificate verification is always enabled: pass ``ca_cert_path`` for a
+deployment CA bundle or rely on the operating-system trust store.
 """
 
 from __future__ import annotations
@@ -62,9 +64,9 @@ class SecureModbusAdapter:
     tls_key_path : str | Path
         Path to client private key (PEM).
     ca_cert_path : str | Path | None
-        Path to CA bundle (PEM) for server verification. When provided,
-        server certificate is verified against this CA. When ``None``,
-        verification is disabled (NOT recommended for production).
+        Optional CA bundle (PEM) for server verification. When omitted, the
+        operating-system trust store is used. Server verification is never
+        disabled by this adapter.
     """
 
     def __init__(
@@ -90,16 +92,17 @@ class SecureModbusAdapter:
             raise ConnectionError(f"TLS certificate not found: {self._cert.name}")
         if not self._key.exists():
             raise ConnectionError(f"TLS key not found: {self._key.name}")
+        if self._ca is not None and not self._ca.exists():
+            raise ConnectionError(f"TLS CA bundle not found: {self._ca.name}")
         try:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.load_cert_chain(certfile=str(self._cert), keyfile=str(self._key))
             if self._ca is not None:
                 ctx.load_verify_locations(cafile=str(self._ca))
-                ctx.check_hostname = True
-                ctx.verify_mode = ssl.CERT_REQUIRED
             else:
-                ctx.check_hostname = False
-                ctx.verify_mode = ssl.CERT_NONE
+                ctx.load_default_certs(ssl.Purpose.SERVER_AUTH)
+            ctx.check_hostname = True
+            ctx.verify_mode = ssl.CERT_REQUIRED
             return ctx
         except ssl.SSLError:
             raise ConnectionError("TLS context creation failed") from None
@@ -151,3 +154,17 @@ class SecureModbusAdapter:
             return bool(self._client.connected)  # type: ignore[attr-defined]
         except (AttributeError, OSError, RuntimeError):
             return False
+
+    def close(self) -> None:
+        """Close the Modbus/TLS client when the pymodbus client exposes close()."""
+        close = getattr(self._client, "close", None)
+        if callable(close):
+            close()
+
+    def __enter__(self) -> SecureModbusAdapter:
+        """Return self for context-manager use."""
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        """Close the client on context-manager exit."""
+        self.close()

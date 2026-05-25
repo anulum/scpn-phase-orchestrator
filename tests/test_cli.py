@@ -286,6 +286,46 @@ def test_auto_bind_infers_sample_rate_from_time_column(runner, tmp_path):
     assert "discovery_evidence" in provenance
 
 
+def test_demo_real_data_heartbeat_downloads_and_auto_binds_review_only(
+    runner,
+    monkeypatch,
+):
+    class _Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self, _size):
+            return (
+                "Time,msgid,rr_ms,hr_bpm\n"
+                "01:22:59.835205Z,237,800,75\n"
+                "01:23:00.635205Z,238,810,74\n"
+                "01:23:01.445205Z,239,790,76\n"
+                "01:23:02.235205Z,240,805,75\n"
+            ).encode("utf-8")
+
+    def fake_urlopen(url, timeout):
+        assert "physionet.org" in url
+        assert timeout == 20
+        return _Response()
+
+    monkeypatch.setattr(cli_module, "urlopen", fake_urlopen)
+
+    result = runner.invoke(
+        main,
+        ["demo", "--dataset", "heartbeat.csv", "--target", "coherence", "--steps", "4"],
+    )
+
+    assert result.exit_code == 0
+    assert "SPO Real-Data Demo" in result.output
+    assert "PhysioNet" in result.output
+    assert "Proposal mode: review_only" in result.output
+    assert "Replay status: proposal_only" in result.output
+    assert "name: \"heartbeat_coherence_demo\"" in result.output
+
+
 def test_auto_bind_rejects_bad_source_with_scrubbed_error(runner, tmp_path):
     csv_path = tmp_path / "bad.csv"
     csv_path.write_text("time,grid\n0.00,not-a-number\n", encoding="utf-8")
@@ -6797,6 +6837,13 @@ def test_demo_reports_available_domainpacks_for_missing_domain(runner):
     assert "Domainpack 'missing_demo' not found." in result.output
     assert "Available:" in result.output
     assert "minimal_domain" in result.output
+
+
+def test_demo_rejects_domain_path_traversal(runner):
+    result = runner.invoke(main, ["demo", "--domain", "../minimal_domain"])
+
+    assert result.exit_code != 0
+    assert "domain must match" in result.output
 
 
 def test_demo_runs_packaged_domainpack_and_prints_progress(runner):

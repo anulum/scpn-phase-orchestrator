@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.artifacts.qpu_data import (
     emit_qpu_data_artifact,
     validate_qpu_data_artifact,
 )
+from scpn_phase_orchestrator.api import Orchestrator, OrchestratorState
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.exceptions import SPOError
@@ -58,6 +59,8 @@ __all__ = [
     "CouplingBuilder",
     "PhaseExtractor",
     "PhaseState",
+    "Orchestrator",
+    "OrchestratorState",
     "QPUDataArtifact",
     "RegimeManager",
     "SPOError",

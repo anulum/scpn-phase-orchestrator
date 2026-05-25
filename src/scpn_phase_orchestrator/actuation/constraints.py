@@ -19,8 +19,10 @@ from __future__ import annotations
 from dataclasses import replace
 from math import isfinite
 from numbers import Real
+from typing import Iterable
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.binding.types import ActuatorMapping
 
 __all__ = ["ActionProjector"]
 
@@ -80,6 +82,44 @@ class ActionProjector:
                 )
         self._rate_limits = rate_limits
         self._value_bounds = value_bounds
+
+    @classmethod
+    def from_actuator_mappings(
+        cls,
+        actuators: Iterable[ActuatorMapping],
+    ) -> ActionProjector:
+        """Build projector bounds and slew limits from binding-spec actuators.
+
+        `ActionProjector` is knob-indexed. A binding that maps the same knob to
+        multiple actuator records must therefore provide identical limits and
+        identical `rate_limit_per_step` values for those records; otherwise the
+        binding is ambiguous and projection fails closed.
+        """
+        rate_limits: dict[str, float] = {}
+        value_bounds: dict[str, tuple[float, float]] = {}
+        for actuator in actuators:
+            if not isinstance(actuator, ActuatorMapping):
+                raise TypeError(
+                    "actuators must contain ActuatorMapping instances, "
+                    f"got {actuator!r}"
+                )
+            bounds = (float(actuator.limits[0]), float(actuator.limits[1]))
+            existing_bounds = value_bounds.get(actuator.knob)
+            if existing_bounds is not None and existing_bounds != bounds:
+                raise ValueError(
+                    f"conflicting value bounds for actuator knob {actuator.knob!r}"
+                )
+            value_bounds[actuator.knob] = bounds
+            if actuator.rate_limit_per_step is None:
+                continue
+            rate_limit = float(actuator.rate_limit_per_step)
+            existing_rate = rate_limits.get(actuator.knob)
+            if existing_rate is not None and existing_rate != rate_limit:
+                raise ValueError(
+                    f"conflicting rate limits for actuator knob {actuator.knob!r}"
+                )
+            rate_limits[actuator.knob] = rate_limit
+        return cls(rate_limits=rate_limits, value_bounds=value_bounds)
 
     def project(self, action: ControlAction, previous_value: float) -> ControlAction:
         """Clamp action value to bounds and rate limit relative to *previous_value*."""

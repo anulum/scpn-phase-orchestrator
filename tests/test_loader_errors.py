@@ -133,5 +133,37 @@ def test_value_alignment_template_is_preserved_for_supervisor_guard(tmp_path):
     assert spec.value_alignment["constraints"][0]["name"] == "limit-K"
 
 
+def test_actuator_rate_limit_per_step_is_preserved(tmp_path):
+    import yaml
+
+    data = {
+        "name": "rate-limited-actuator",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.1,
+        "layers": [{"name": "L0", "index": 0}],
+        "oscillator_families": {"p": {"channel": "P", "extractor_type": "hilbert"}},
+        "coupling": {"base_strength": 0.5, "decay_alpha": 0.3},
+        "drivers": {},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "actuators": [
+            {
+                "name": "global_coupling",
+                "knob": "K",
+                "scope": "global",
+                "limits": [0.0, 2.0],
+                "rate_limit_per_step": 0.125,
+            }
+        ],
+    }
+    p = tmp_path / "rate_limited_actuator.yaml"
+    p.write_text(yaml.dump(data), encoding="utf-8")
+
+    spec = load_binding_spec(p)
+
+    assert spec.actuators[0].rate_limit_per_step == pytest.approx(0.125)
+
+
 # Pipeline wiring: loader errors are the first pipeline gate — if loading
 # fails, the entire simulation cannot start. Error tests prove robustness.

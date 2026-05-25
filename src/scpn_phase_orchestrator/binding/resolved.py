@@ -196,6 +196,7 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
                 "knob": actuator.knob,
                 "scope": actuator.scope,
                 "limits": list(actuator.limits),
+                "rate_limit_per_step": actuator.rate_limit_per_step,
             }
             for actuator in sorted(spec.actuators, key=lambda item: item.name)
         ],
