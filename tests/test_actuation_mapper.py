@@ -155,39 +155,40 @@ class TestActuationMapperEdgeCases:
             ActuationMapper([object()])
 
     @pytest.mark.parametrize(
-        "mapping, message",
+        "mapping_kwargs, message",
         [
             (
-                ActuatorMapping(
-                    name="bad",
-                    knob="omega",
-                    scope="global",
-                    limits=(0.0, 1.0),
-                ),
+                {
+                    "name": "bad",
+                    "knob": "omega",
+                    "scope": "global",
+                    "limits": (0.0, 1.0),
+                },
                 "knob",
             ),
             (
-                ActuatorMapping(
-                    name="bad",
-                    knob="K",
-                    scope="",
-                    limits=(0.0, 1.0),
-                ),
+                {
+                    "name": "bad",
+                    "knob": "K",
+                    "scope": "",
+                    "limits": (0.0, 1.0),
+                },
                 "scope",
             ),
             (
-                ActuatorMapping(
-                    name="bad",
-                    knob="K",
-                    scope="global",
-                    limits=(1.0, 0.0),
-                ),
+                {
+                    "name": "bad",
+                    "knob": "K",
+                    "scope": "global",
+                    "limits": (1.0, 0.0),
+                },
                 "limits",
             ),
         ],
     )
-    def test_rejects_invalid_actuator_mapping_fields(self, mapping, message):
+    def test_rejects_invalid_actuator_mapping_fields(self, mapping_kwargs, message):
         with pytest.raises(ValueError, match=message):
+            mapping = ActuatorMapping(**mapping_kwargs)
             ActuationMapper([mapping])
 
     def test_empty_mapper_produces_empty(self):
