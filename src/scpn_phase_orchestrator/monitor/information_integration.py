@@ -148,6 +148,68 @@ class IntegratedInformationBenchmarkReport:
     n_samples: int
     n_bins: int
 
+    def __post_init__(self) -> None:
+        n_samples = _validate_sample_count(self.n_samples)
+        n_bins = _validate_bins(self.n_bins)
+        cases = _validate_benchmark_cases(self.cases, n_bins=n_bins)
+        by_name = {case.name: case.result for case in cases}
+        locked_phi_margin = _validate_finite_scalar(
+            self.locked_phi_margin,
+            name="locked_phi_margin",
+        )
+        modular_total_margin = _validate_finite_scalar(
+            self.modular_total_margin,
+            name="modular_total_margin",
+        )
+        noisy_lock_phi_margin = _validate_finite_scalar(
+            self.noisy_lock_phi_margin,
+            name="noisy_lock_phi_margin",
+        )
+        phase_lag_total_margin = _validate_finite_scalar(
+            self.phase_lag_total_margin,
+            name="phase_lag_total_margin",
+        )
+
+        _require_close_margin(
+            locked_phi_margin,
+            by_name["locked"].phi - by_name["independent"].phi,
+            name="locked_phi_margin",
+        )
+        _require_close_margin(
+            modular_total_margin,
+            by_name["modular"].total_integration
+            - by_name["independent"].total_integration,
+            name="modular_total_margin",
+        )
+        _require_close_margin(
+            noisy_lock_phi_margin,
+            by_name["noisy_locked"].phi - by_name["independent"].phi,
+            name="noisy_lock_phi_margin",
+        )
+        _require_close_margin(
+            phase_lag_total_margin,
+            by_name["phase_lag_chain"].total_integration
+            - by_name["independent"].total_integration,
+            name="phase_lag_total_margin",
+        )
+
+        expected_ordering_passed = _expected_benchmark_ordering_passed(by_name)
+        if not isinstance(self.expected_ordering_passed, bool):
+            raise ValueError("expected_ordering_passed must be a boolean value")
+        if self.expected_ordering_passed is not expected_ordering_passed:
+            raise ValueError(
+                "expected_ordering_passed must match the benchmark case ordering"
+            )
+
+        object.__setattr__(self, "cases", cases)
+        object.__setattr__(self, "expected_ordering_passed", expected_ordering_passed)
+        object.__setattr__(self, "locked_phi_margin", locked_phi_margin)
+        object.__setattr__(self, "modular_total_margin", modular_total_margin)
+        object.__setattr__(self, "noisy_lock_phi_margin", noisy_lock_phi_margin)
+        object.__setattr__(self, "phase_lag_total_margin", phase_lag_total_margin)
+        object.__setattr__(self, "n_samples", n_samples)
+        object.__setattr__(self, "n_bins", n_bins)
+
     def to_audit_record(self) -> dict[str, Any]:
         """Return a JSON-serialisable benchmark report."""
         return {
@@ -217,16 +279,13 @@ def benchmark_integrated_information_approximations(
     chains, noisy globally locked streams, and globally locked streams with high
     cross-partition Phi.
     """
-    if n_samples < 32:
-        raise ValueError("n_samples must be at least 32")
+    samples = _validate_sample_count(n_samples)
     bins = _validate_bins(n_bins)
     cases = (
         IntegratedInformationBenchmarkCase(
             name="independent",
             description="seeded independent circular phase streams",
-            result=integrated_information(
-                _independent_benchmark_series(n_samples), bins
-            ),
+            result=integrated_information(_independent_benchmark_series(samples), bins),
         ),
         IntegratedInformationBenchmarkCase(
             name="modular",
@@ -234,26 +293,26 @@ def benchmark_integrated_information_approximations(
                 "two internally locked modules with weak cross-module "
                 "minimum-partition Phi"
             ),
-            result=integrated_information(_modular_benchmark_series(n_samples), bins),
+            result=integrated_information(_modular_benchmark_series(samples), bins),
         ),
         IntegratedInformationBenchmarkCase(
             name="phase_lag_chain",
             description="deterministic phase-lagged chain with coherent offsets",
             result=integrated_information(
-                _phase_lag_chain_benchmark_series(n_samples), bins
+                _phase_lag_chain_benchmark_series(samples), bins
             ),
         ),
         IntegratedInformationBenchmarkCase(
             name="noisy_locked",
             description="globally locked streams with deterministic phase noise",
             result=integrated_information(
-                _noisy_locked_benchmark_series(n_samples), bins
+                _noisy_locked_benchmark_series(samples), bins
             ),
         ),
         IntegratedInformationBenchmarkCase(
             name="locked",
             description="globally phase-locked streams with high cross-partition Phi",
-            result=integrated_information(_locked_benchmark_series(n_samples), bins),
+            result=integrated_information(_locked_benchmark_series(samples), bins),
         ),
     )
     by_name = {case.name: case.result for case in cases}
@@ -266,14 +325,7 @@ def benchmark_integrated_information_approximations(
         by_name["phase_lag_chain"].total_integration
         - by_name["independent"].total_integration
     )
-    expected_ordering_passed = (
-        locked_phi_margin > 0.0
-        and modular_total_margin > 0.0
-        and noisy_lock_phi_margin > 0.0
-        and phase_lag_total_margin > 0.0
-        and by_name["locked"].phi > by_name["modular"].phi
-        and by_name["locked"].phi > by_name["noisy_locked"].phi
-    )
+    expected_ordering_passed = _expected_benchmark_ordering_passed(by_name)
     return IntegratedInformationBenchmarkReport(
         cases=cases,
         expected_ordering_passed=expected_ordering_passed,
@@ -281,7 +333,7 @@ def benchmark_integrated_information_approximations(
         modular_total_margin=float(modular_total_margin),
         noisy_lock_phi_margin=float(noisy_lock_phi_margin),
         phase_lag_total_margin=float(phase_lag_total_margin),
-        n_samples=n_samples,
+        n_samples=samples,
         n_bins=bins,
     )
 
@@ -319,6 +371,17 @@ def _validate_bins(n_bins: int) -> int:
     return bins
 
 
+def _validate_sample_count(n_samples: int) -> int:
+    if isinstance(n_samples, bool) or not isinstance(n_samples, Integral):
+        msg = "n_samples must be an integer"
+        raise ValueError(msg)
+    samples = int(n_samples)
+    if samples < 32:
+        msg = "n_samples must be at least 32"
+        raise ValueError(msg)
+    return samples
+
+
 def _contains_boolean_alias(value: object) -> bool:
     try:
         raw = np.asarray(value, dtype=object)
@@ -335,6 +398,17 @@ def _validate_non_negative_scalar(value: object, *, name: str) -> float:
     scalar = float(value)
     if not np.isfinite(scalar) or scalar < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
+    return scalar
+
+
+def _validate_finite_scalar(value: object, *, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not be a boolean value")
+    if not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real")
+    scalar = float(value)
+    if not np.isfinite(scalar):
+        raise ValueError(f"{name} must be finite")
     return scalar
 
 
@@ -405,6 +479,59 @@ def _validate_partition_side(value: object, *, name: str) -> tuple[int, ...]:
     if len(set(indices)) != len(indices):
         raise ValueError(f"{name} groups must not contain duplicates")
     return tuple(indices)
+
+
+def _validate_benchmark_cases(
+    value: object,
+    *,
+    n_bins: int,
+) -> tuple[IntegratedInformationBenchmarkCase, ...]:
+    if not isinstance(value, tuple):
+        raise ValueError("cases must contain benchmark cases")
+    expected_names = (
+        "independent",
+        "modular",
+        "phase_lag_chain",
+        "noisy_locked",
+        "locked",
+    )
+    if len(value) != len(expected_names):
+        raise ValueError("cases must contain the five canonical benchmark cases")
+    validated: list[IntegratedInformationBenchmarkCase] = []
+    for case in value:
+        if not isinstance(case, IntegratedInformationBenchmarkCase):
+            raise ValueError("cases must contain benchmark cases")
+        if not case.name.strip():
+            raise ValueError("benchmark case names must be non-empty")
+        if not case.description.strip():
+            raise ValueError("benchmark case descriptions must be non-empty")
+        if case.result.n_bins != n_bins:
+            raise ValueError("benchmark case n_bins must match report n_bins")
+        validated.append(case)
+    names = tuple(case.name for case in validated)
+    if names != expected_names:
+        raise ValueError("cases must use the canonical benchmark ordering")
+    return tuple(validated)
+
+
+def _require_close_margin(value: float, expected: float, *, name: str) -> None:
+    if not np.isclose(value, expected, rtol=1e-12, atol=1e-12):
+        raise ValueError(f"{name} must match the benchmark case results")
+
+
+def _expected_benchmark_ordering_passed(
+    by_name: dict[str, IntegratedInformationResult],
+) -> bool:
+    return (
+        by_name["locked"].phi > by_name["independent"].phi
+        and by_name["modular"].total_integration
+        > by_name["independent"].total_integration
+        and by_name["noisy_locked"].phi > by_name["independent"].phi
+        and by_name["phase_lag_chain"].total_integration
+        > by_name["independent"].total_integration
+        and by_name["locked"].phi > by_name["modular"].phi
+        and by_name["locked"].phi > by_name["noisy_locked"].phi
+    )
 
 
 def _pairwise_mi_matrix(phases: FloatArray, n_bins: int) -> FloatArray:

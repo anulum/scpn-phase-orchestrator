@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, get_type_hints
 
 import numpy as np
@@ -352,9 +353,31 @@ class TestIntegratedInformationApproximationBenchmarks:
         assert len(record["cases"]) == 5
         assert record["cases"][0]["result"]["monitor"] == "integrated_information"
 
-    def test_benchmark_rejects_too_short_series(self) -> None:
+    @pytest.mark.parametrize("n_samples", [True, 31.0, 31])
+    def test_benchmark_rejects_invalid_sample_count(self, n_samples: Any) -> None:
         with pytest.raises(ValueError, match="n_samples"):
-            benchmark_integrated_information_approximations(n_samples=31)
+            benchmark_integrated_information_approximations(n_samples=n_samples)
+
+    def test_benchmark_report_rejects_inconsistent_case_evidence(self) -> None:
+        report = benchmark_integrated_information_approximations(
+            n_samples=128,
+            n_bins=8,
+        )
+
+        invalid_report_factories = [
+            lambda: replace(report, cases=tuple(reversed(report.cases))),
+            lambda: replace(report, cases=report.cases[:-1]),
+            lambda: replace(report, expected_ordering_passed=False),
+            lambda: replace(report, locked_phi_margin=report.locked_phi_margin + 0.5),
+            lambda: replace(report, modular_total_margin=np.nan),
+            lambda: replace(report, noisy_lock_phi_margin=True),
+            lambda: replace(report, n_samples=True),
+            lambda: replace(report, n_bins=report.n_bins + 1),
+        ]
+
+        for invalid_report_factory in invalid_report_factories:
+            with pytest.raises(ValueError):
+                invalid_report_factory()
 
 
 class TestIntegratedInformationResidualPaths:
