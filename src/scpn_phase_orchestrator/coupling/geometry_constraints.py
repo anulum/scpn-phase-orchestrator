@@ -88,8 +88,16 @@ def validate_knm(knm: FloatArray, *, atol: float = 1e-12) -> None:
 
 def project_knm(knm: FloatArray, constraints: list[GeometryConstraint]) -> FloatArray:
     """Apply all geometry constraints sequentially, then zero the diagonal."""
-    result: FloatArray = knm.copy()
+    if _contains_boolean_alias(knm):
+        raise ValueError("Knm must not contain boolean values")
+    result = np.asarray(knm, dtype=np.float64).copy()
+    if result.ndim != 2 or result.shape[0] != result.shape[1]:
+        raise ValueError(f"Knm must be square, got shape {result.shape}")
+    if not np.all(np.isfinite(result)):
+        raise ValueError("Knm must contain only finite values")
     for c in constraints:
         result = c.project(result)
+        if not np.all(np.isfinite(result)):
+            raise ValueError("geometry constraint returned non-finite Knm values")
     np.fill_diagonal(result, 0.0)
     return result

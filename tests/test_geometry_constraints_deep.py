@@ -276,6 +276,31 @@ class TestProjectKnm:
         assert np.all(result >= 0.0)
         assert_allclose(np.diag(result), 0.0)
 
+    @pytest.mark.parametrize(
+        ("knm", "match"),
+        [
+            ([[False, True], [True, False]], "boolean"),
+            ([[0.0, np.nan], [0.0, 0.0]], "finite"),
+            ([[0.0, 1.0, 2.0], [1.0, 0.0, 2.0]], "square"),
+        ],
+    )
+    def test_rejects_invalid_projection_input(self, knm, match):
+        """Projection rejects values that cannot define physical K_nm geometry."""
+        with pytest.raises(ValueError, match=match):
+            project_knm(knm, [SymmetryConstraint(), NonNegativeConstraint()])
+
+    def test_rejects_non_finite_constraint_output(self):
+        """Projection fails closed if a custom constraint produces non-finite K_nm."""
+
+        class NonFiniteConstraint(GeometryConstraint):
+            def project(self, knm):
+                result = knm.copy()
+                result[0, 1] = np.inf
+                return result
+
+        with pytest.raises(ValueError, match="non-finite"):
+            project_knm(np.zeros((2, 2)), [NonFiniteConstraint()])
+
 
 # ── Custom constraint (abstract base test) ─────────────────────────────
 
