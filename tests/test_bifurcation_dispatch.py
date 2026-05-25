@@ -25,6 +25,7 @@ import sys
 from types import ModuleType
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.upde import basin_stability as bs
 from scpn_phase_orchestrator.upde import bifurcation as bif
@@ -203,6 +204,49 @@ class TestCompositeRustFastPathContracts:
         )
         assert diagram.K_critical is None
         np.testing.assert_allclose(diagram.R_values, [0.01, 0.04])
+
+    @pytest.mark.parametrize(
+        ("K_values", "R_values", "K_critical", "match"),
+        [
+            ([0.0], [0.1], 0.5, "unexpected shape"),
+            ([0.0, 1.0], [0.1, 1.2], 0.5, "R outside"),
+            ([1.0, 0.0], [0.1, 0.2], 0.5, "non-monotone"),
+            ([0.0, 3.0], [0.1, 0.2], 0.5, "outside K_range"),
+            ([0.0, 1.0], [0.1, 0.2], float("inf"), "K_critical"),
+        ],
+    )
+    def test_trace_rejects_invalid_composite_rust_physics(
+        self,
+        monkeypatch,
+        K_values,
+        R_values,
+        K_critical,
+        match,
+    ):
+        fake_kernel = ModuleType("spo_kernel")
+
+        def _trace(*_args):
+            return (
+                np.array(K_values, dtype=np.float64),
+                np.array(R_values, dtype=np.float64),
+                K_critical,
+            )
+
+        def _find(*_args):
+            raise AssertionError("trace test must not call the Kc kernel")
+
+        fake_kernel.trace_sync_transition_rust = _trace
+        fake_kernel.find_critical_coupling_bif_rust = _find
+        module = self._load_with_fake_spo_kernel(monkeypatch, fake_kernel)
+
+        with pytest.raises(ValueError, match=match):
+            module.trace_sync_transition(
+                np.array([-1.0, 1.0]),
+                K_range=(0.0, 1.0),
+                n_points=2,
+                n_transient=3,
+                n_measure=2,
+            )
 
     def test_find_kc_delegates_to_composite_rust_search(self, monkeypatch):
         captured: dict[str, object] = {}

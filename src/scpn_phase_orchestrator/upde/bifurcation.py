@@ -220,6 +220,50 @@ def _validate_k_range(value: object) -> tuple[float, float]:
     return start, stop
 
 
+def _validate_rust_trace_result(
+    K_values: object,
+    R_values: object,
+    *,
+    n_points: int,
+    K_range: tuple[float, float],
+) -> tuple[FloatArray, FloatArray]:
+    try:
+        k_arr = np.asarray(K_values, dtype=np.float64)
+        r_arr = np.asarray(R_values, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Rust bifurcation trace must return numeric arrays") from exc
+    if k_arr.shape != (n_points,) or r_arr.shape != (n_points,):
+        raise ValueError(
+            "Rust bifurcation trace returned arrays with unexpected shape "
+            f"{k_arr.shape} and {r_arr.shape}; expected ({n_points},)"
+        )
+    if not np.all(np.isfinite(k_arr)) or not np.all(np.isfinite(r_arr)):
+        raise ValueError("Rust bifurcation trace returned non-finite values")
+    if np.any(r_arr < 0.0) or np.any(r_arr > 1.0):
+        raise ValueError("Rust bifurcation trace returned R outside [0, 1]")
+    if np.any(np.diff(k_arr) < -1e-12):
+        raise ValueError("Rust bifurcation trace returned non-monotone K values")
+    start, stop = K_range
+    if np.any(k_arr < start - 1e-12) or np.any(k_arr > stop + 1e-12):
+        raise ValueError("Rust bifurcation trace returned K outside K_range")
+    return (
+        np.ascontiguousarray(k_arr, dtype=np.float64),
+        np.ascontiguousarray(r_arr, dtype=np.float64),
+    )
+
+
+def _validate_optional_critical_coupling(value: object) -> float | None:
+    try:
+        critical = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Rust bifurcation trace returned invalid K_critical") from exc
+    if np.isnan(critical):
+        return None
+    if not np.isfinite(critical) or critical < 0.0:
+        raise ValueError("Rust bifurcation trace returned invalid K_critical")
+    return critical
+
+
 def _steady_state_R_dispatch(
     phases_init: FloatArray,
     omegas: FloatArray,
@@ -318,8 +362,13 @@ def trace_sync_transition(
             n_transient,
             n_measure,
         )
-        kv = np.asarray(kv)
-        rv = np.asarray(rv)
+        kv, rv = _validate_rust_trace_result(
+            kv,
+            rv,
+            n_points=n_points,
+            K_range=K_range,
+        )
+        critical = _validate_optional_critical_coupling(kc)
         for i in range(len(kv)):
             diagram.points.append(
                 BifurcationPoint(
@@ -328,8 +377,8 @@ def trace_sync_transition(
                     stable=True,
                 ),
             )
-        if not np.isnan(kc):
-            diagram.K_critical = float(kc)
+        if critical is not None:
+            diagram.K_critical = critical
         return diagram
 
     # Composite Rust unavailable — loop in Python, each trial
