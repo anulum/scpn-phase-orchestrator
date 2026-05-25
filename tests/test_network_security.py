@@ -97,9 +97,9 @@ def test_rate_limiter_uses_token_bucket_burst_capacity() -> None:
     limiter = TokenBucketRateLimiter(limit_per_minute=60, burst_capacity=2)
 
     assert limiter.allow("client-a", now=10.0) is True
+    assert limiter.allow("client-a", now=10.0) is True
+    assert limiter.allow("client-a", now=10.5) is False
     assert limiter.allow("client-a", now=11.0) is True
-    assert limiter.allow("client-a", now=11.5) is False
-    assert limiter.allow("client-a", now=12.0) is True
 
 
 def test_compat_rate_limiter_does_not_allow_full_minute_burst() -> None:
