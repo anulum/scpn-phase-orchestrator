@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import jax
 import jax.numpy as jnp
+from jax.scipy.sparse.linalg import cg
 
 TWO_PI = 2.0 * jnp.pi
 
@@ -601,24 +602,53 @@ def saf_order_parameter(
     K: jax.Array,
     omegas: jax.Array,
     eps: float = 1e-8,
+    solver: str = "auto",
+    exact_size_limit: int = 256,
+    cg_tol: float = 1e-5,
+    cg_maxiter: int | None = None,
 ) -> jax.Array:
     """Spectral Alignment Function: closed-form order parameter estimate.
 
     r ≈ 1 - (1/2N) Σ_{j=2}^N λ_j⁻² ⟨v^j, ω⟩²
 
     where λ_j are Laplacian eigenvalues and v^j are eigenvectors.
-    Valid in the strongly-coupled regime. Differentiable through
-    eigendecomposition for gradient-based topology optimization.
+    Valid in the strongly-coupled regime. The exact path differentiates through
+    Laplacian eigendecomposition. The conjugate-gradient path uses the
+    equivalent identity Σ λ_j⁻² ⟨v^j, ω⟩² = ||L⁺ω||², avoids full
+    eigendecomposition, and maps large dense problems to GPU-friendly
+    matrix-vector operations.
 
     Args:
         K: (N, N) symmetric coupling matrix (non-negative)
         omegas: (N,) natural frequencies
         eps: regularization for small eigenvalues
+        solver: "auto", "eigh", or "cg". "auto" uses exact eigendecomposition
+            up to exact_size_limit and conjugate gradient above it.
+        exact_size_limit: Largest N where "auto" keeps the exact eigensolver.
+        cg_tol: Relative tolerance for the conjugate-gradient solver.
+        cg_maxiter: Optional maximum conjugate-gradient iterations.
 
     Returns:
         Scalar estimated order parameter in [0, 1]
     """
     N = K.shape[0]
+    if solver == "auto":
+        solver = "eigh" if N <= exact_size_limit else "cg"
+    if solver == "cg":
+        return _saf_order_parameter_cg(K, omegas, eps, cg_tol, cg_maxiter)
+    if solver != "eigh":
+        raise ValueError("solver must be 'auto', 'eigh', or 'cg'")
+    return _saf_order_parameter_eigh(K, omegas, eps)
+
+
+def _saf_order_parameter_eigh(
+    K: jax.Array,
+    omegas: jax.Array,
+    eps: float,
+) -> jax.Array:
+    """Exact SAF estimate via dense symmetric Laplacian eigendecomposition."""
+    N = K.shape[0]
+    centred_omegas = omegas - jnp.mean(omegas)
     L = coupling_laplacian(K)
     eigenvalues, eigenvectors = jnp.linalg.eigh(L)
 
@@ -627,11 +657,32 @@ def saf_order_parameter(
     V = eigenvectors[:, 1:]  # (N, N-1)
 
     # ⟨v^j, ω⟩² for each non-zero eigenvector
-    projections = (V.T @ omegas) ** 2  # (N-1,)
+    projections = (V.T @ centred_omegas) ** 2  # (N-1,)
 
     # r ≈ 1 - (1/2N) Σ λ_j⁻² ⟨v^j, ω⟩²
     inv_lam_sq = 1.0 / (lam**2 + eps)
     r = 1.0 - jnp.sum(inv_lam_sq * projections) / (2.0 * N)
+    return jnp.clip(r, 0.0, 1.0)
+
+
+def _saf_order_parameter_cg(
+    K: jax.Array,
+    omegas: jax.Array,
+    eps: float,
+    tol: float,
+    maxiter: int | None,
+) -> jax.Array:
+    """GPU-oriented SAF estimate via Laplacian pseudoinverse solve."""
+    N = K.shape[0]
+    centred_omegas = omegas - jnp.mean(omegas)
+    degree = jnp.sum(K, axis=1)
+
+    def matvec(x: jax.Array) -> jax.Array:
+        return degree * x - K @ x + eps * x
+
+    solution, _ = cg(matvec, centred_omegas, tol=tol, maxiter=maxiter)
+    solution = solution - jnp.mean(solution)
+    r = 1.0 - jnp.vdot(solution, solution).real / (2.0 * N)
     return jnp.clip(r, 0.0, 1.0)
 
 
@@ -640,6 +691,10 @@ def saf_loss(
     omegas: jax.Array,
     budget: float = 0.0,
     budget_weight: float = 0.1,
+    solver: str = "auto",
+    exact_size_limit: int = 256,
+    cg_tol: float = 1e-5,
+    cg_maxiter: int | None = None,
 ) -> jax.Array:
     """Loss function for coupling topology optimization via SAF.
 
@@ -651,11 +706,22 @@ def saf_loss(
         omegas: (N,) natural frequencies
         budget: target total coupling strength (0 = no constraint)
         budget_weight: penalty weight for budget violation
+        solver: SAF solver passed to saf_order_parameter.
+        exact_size_limit: Largest N where "auto" keeps the exact eigensolver.
+        cg_tol: Relative tolerance for the conjugate-gradient solver.
+        cg_maxiter: Optional maximum conjugate-gradient iterations.
 
     Returns:
         Scalar loss (lower = better synchronization)
     """
-    r = saf_order_parameter(K, omegas)
+    r = saf_order_parameter(
+        K,
+        omegas,
+        solver=solver,
+        exact_size_limit=exact_size_limit,
+        cg_tol=cg_tol,
+        cg_maxiter=cg_maxiter,
+    )
     loss = -r
     if budget > 0.0:
         total_coupling = jnp.sum(jnp.abs(K))

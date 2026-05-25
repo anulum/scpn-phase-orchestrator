@@ -73,6 +73,22 @@ mirrored into validator-accepted `cross_channel_couplings`. This is an initial
 operator proposal only: downstream code must still validate the domainpack and
 explicitly accept the proposed matrix before using it for runtime actuation.
 
+For oscillator families with phase-like channels, the generated
+`auto_initial_k` matrix can be reviewed with the JAX Spectral Alignment
+Function before simulation or actuation:
+
+```python
+from scpn_phase_orchestrator.nn import saf_loss, saf_order_parameter
+
+r_est = saf_order_parameter(auto_initial_k, omegas, solver="auto")
+audit_loss = saf_loss(auto_initial_k, omegas, budget=10.0, solver="cg")
+```
+
+Use this as a review signal, not as automatic approval. SAF answers whether the
+proposed topology is spectrally aligned with the frequency field; it does not
+prove that the raw source data are valid, that the inferred channels are
+causal, or that a domainpack is safe for runtime actuation.
+
 The reference benchmark suite includes a deterministic
 `auto_binding_synthetic_quality` fixture set. It measures extractor coverage,
 binding-validator acceptance, expected initial-K support recall, generated edge

@@ -191,13 +191,22 @@ Amplitudes are clamped to >= 0 after each step.
 | `order_parameter(phases)` | $R = \|\langle e^{i\theta} \rangle\|$ | Scalar R in [0, 1]. R=1: perfect sync. R~0: incoherent. |
 | `plv(trajectory)` | $\text{PLV}_{ij} = \|\langle e^{i(\theta_i - \theta_j)} \rangle_t\|$ | `(N, N)` matrix in [0, 1]. |
 | `coupling_laplacian(K)` | $L = D - K$ | `(N, N)` Laplacian. |
-| `saf_order_parameter(K, omegas)` | $r \approx 1 - \frac{1}{2N}\sum_{j=2}^N \lambda_j^{-2} \langle v^j, \omega \rangle^2$ | Scalar estimated R. |
-| `saf_loss(K, omegas, budget, budget_weight)` | $-r + w \cdot \max(\|K\|_1 - B, 0)$ | Scalar loss for topology optimisation. |
+| `saf_order_parameter(K, omegas, solver="auto")` | $r \approx 1 - \frac{1}{2N}\sum_{j=2}^N \lambda_j^{-2} \langle v^j, \omega \rangle^2$ | Scalar estimated R. |
+| `saf_loss(K, omegas, budget, budget_weight, solver="auto")` | $-r + w \cdot \max(\|K\|_1 - B, 0)$ | Scalar loss for topology optimisation. |
 
 The SAF (Spectral Alignment Function) provides a closed-form estimate of the
 order parameter from Laplacian eigenstructure (Skardal & Taylor 2016; Song et
-al. 2025). It avoids ODE integration entirely, making it ~10x faster for
-gradient-based topology search.
+al. 2025). It avoids ODE integration entirely and is intended for topology
+screening, wiring-budget optimisation, learned coupling regularisation,
+auto-binding proposal review, and identifying frequency modes that are poorly
+aligned with a candidate graph.
+
+`solver="eigh"` uses exact dense Laplacian eigendecomposition. `solver="cg"`
+uses the equivalent $||L^+\omega||^2$ formulation with conjugate-gradient
+matrix-vector products, which is the GPU-oriented path for large dense systems.
+`solver="auto"` keeps exact eigendecomposition for small and medium systems and
+switches to CG above `exact_size_limit`. Both paths currently accept dense
+`(N, N)` coupling matrices, so device memory remains the hard scaling limit.
 
 ---
 

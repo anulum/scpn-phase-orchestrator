@@ -350,6 +350,31 @@ class TestSAF:
         r = float(saf_order_parameter(K, omegas))
         assert 0.0 <= r <= 1.0
 
+    def test_saf_cg_solver_matches_eigendecomposition_contract(self):
+        K = jnp.array(
+            [
+                [0.0, 1.4, 0.6, 0.3],
+                [1.4, 0.0, 0.8, 0.5],
+                [0.6, 0.8, 0.0, 1.1],
+                [0.3, 0.5, 1.1, 0.0],
+            ]
+        )
+        omegas = jnp.array([1.0, 1.2, 0.85, 1.05])
+
+        exact = saf_order_parameter(K, omegas, solver="eigh")
+        iterative = saf_order_parameter(K, omegas, solver="cg", cg_tol=1e-6)
+
+        np.testing.assert_allclose(iterative, exact, atol=2e-3)
+
+    def test_saf_auto_uses_cg_path_above_size_limit(self):
+        K = jnp.ones((4, 4)) * 2.0 - jnp.eye(4) * 2.0
+        omegas = jnp.array([1.0, 1.2, 0.9, 1.05])
+
+        forced_auto = saf_order_parameter(K, omegas, exact_size_limit=2, cg_tol=1e-6)
+        forced_cg = saf_order_parameter(K, omegas, solver="cg", cg_tol=1e-6)
+
+        np.testing.assert_allclose(forced_auto, forced_cg, atol=1e-12)
+
     def test_saf_loss_negative_r(self):
         K = jnp.ones((4, 4)) * 5.0 - jnp.eye(4) * 5.0
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
@@ -387,6 +412,21 @@ class TestDifferentiability:
         )
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
         grad_fn = jax.grad(lambda k: saf_loss(k, omegas))
+        g = grad_fn(K)
+        assert g.shape == (4, 4)
+        assert jnp.all(jnp.isfinite(g))
+
+    def test_saf_cg_loss_has_grad(self):
+        K = jnp.array(
+            [
+                [0.0, 1.0, 0.5, 0.2],
+                [1.0, 0.0, 0.8, 0.3],
+                [0.5, 0.8, 0.0, 1.2],
+                [0.2, 0.3, 1.2, 0.0],
+            ]
+        )
+        omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
+        grad_fn = jax.grad(lambda k: saf_loss(k, omegas, solver="cg"))
         g = grad_fn(K)
         assert g.shape == (4, 4)
         assert jnp.all(jnp.isfinite(g))

@@ -135,8 +135,42 @@ links.
 | `order_parameter(phases)` | scalar | Kuramoto R = \|Σ exp(iθ)\|/N |
 | `plv(trajectory)` | (N,N) array | Pairwise phase-locking value |
 | `coupling_laplacian(K)` | (N,N) array | Graph Laplacian L = D - K |
-| `saf_order_parameter(K, omegas)` | scalar | Self-consistent analytical R |
-| `saf_loss(K, omegas, budget)` | scalar | Differentiable SAF loss |
+| `saf_order_parameter(K, omegas, solver="auto")` | scalar | Self-consistent analytical R |
+| `saf_loss(K, omegas, budget, solver="auto")` | scalar | Differentiable SAF loss |
+
+### Spectral Alignment Function use cases
+
+SAF estimates the synchrony of a Kuramoto network directly from the coupling
+Laplacian and natural frequencies, without rolling out the ODE. Use it when the
+question is "which topology should synchronise this frequency field?" rather
+than "what is the phase trajectory at each time step?"
+
+Concrete uses:
+
+- Coupling-topology optimisation under a wiring or energy budget.
+- Fast screening of candidate graphs before expensive time-domain simulation.
+- Differentiable regularisation for learned `K` matrices in neural pipelines.
+- Review of `auto_initial_k` matrices produced by auto-binding before runtime
+  actuation.
+- Sensitivity analysis for which frequency modes are poorly aligned with the
+  graph Laplacian.
+
+Solver modes:
+
+- `solver="eigh"` computes the exact dense Laplacian eigendecomposition and is
+  appropriate for small and medium dense systems where eigenvectors are needed
+  for auditability.
+- `solver="cg"` uses the equivalent Laplacian pseudoinverse formulation and
+  conjugate-gradient matrix-vector products. This avoids full eigendecomposition
+  and is the preferred GPU path for large dense systems.
+- `solver="auto"` uses `eigh` up to `exact_size_limit` and switches to `cg`
+  above that size.
+
+Scaling limits: both paths still consume a dense `(N, N)` coupling matrix. The
+CG path removes the cubic eigensolver bottleneck, but it does not make dense
+memory disappear. For very sparse networks, keep a sparse or masked coupling
+representation upstream and materialise dense `K` only when the SAF audit size
+fits device memory.
 
 ::: scpn_phase_orchestrator.nn.functional
 

@@ -189,16 +189,26 @@ eigenstructure, enabling 10x faster gradient-based topology optimization.
 ```python
 from scpn_phase_orchestrator.nn import saf_order_parameter, saf_loss
 
-# Estimate order parameter from coupling + frequencies (no ODE needed)
-r = saf_order_parameter(K, omegas)
+# Estimate order parameter from coupling + frequencies (no ODE needed).
+# solver="auto" uses exact eigendecomposition for small N and a GPU-oriented
+# conjugate-gradient Laplacian solve for larger dense K.
+r = saf_order_parameter(K, omegas, solver="auto")
 
 # Optimize coupling topology via gradient descent
-grad_K = jax.grad(lambda K: -saf_order_parameter(K, omegas))(K)
+grad_K = jax.grad(lambda K: -saf_order_parameter(K, omegas, solver="cg"))(K)
 K_optimized = K - lr * grad_K
 
 # With budget constraint (L1 penalty on total coupling)
-loss = saf_loss(K, omegas, budget=10.0, budget_weight=0.1)
+loss = saf_loss(K, omegas, budget=10.0, budget_weight=0.1, solver="cg")
 ```
+
+Use SAF when the task is coupling-topology design rather than trajectory
+prediction: rank candidate graphs, optimise `K` under a wiring budget,
+regularise learned coupling matrices, or audit `auto_initial_k` proposals from
+the auto-binding pipeline before any runtime actuation. Exact `eigh` mode is
+best when eigenvectors need to be inspected. CG mode is the large dense GPU
+path; it avoids full eigendecomposition but still requires dense `(N, N)`
+coupling storage.
 
 Skardal & Taylor, SIAM J. Appl. Dyn. Syst. 2016; Song et al. 2025.
 
