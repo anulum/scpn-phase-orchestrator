@@ -253,10 +253,9 @@ def _validate_rust_trace_result(
 
 
 def _validate_optional_critical_coupling(value: object) -> float | None:
-    try:
-        critical = float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Rust bifurcation trace returned invalid K_critical") from exc
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("Rust bifurcation trace returned invalid K_critical")
+    critical = float(value)
     if np.isnan(critical):
         return None
     if not np.isfinite(critical) or critical < 0.0:
@@ -265,10 +264,9 @@ def _validate_optional_critical_coupling(value: object) -> float | None:
 
 
 def _validate_find_critical_coupling_result(value: object) -> float:
-    try:
-        critical = float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Rust critical-coupling search returned invalid K_c") from exc
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("Rust critical-coupling search returned invalid K_c")
+    critical = float(value)
     if np.isnan(critical):
         return float("nan")
     if not np.isfinite(critical) or critical < 0.0:
