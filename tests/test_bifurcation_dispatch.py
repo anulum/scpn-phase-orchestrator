@@ -290,3 +290,55 @@ class TestCompositeRustFastPathContracts:
         assert kc == 2.75
         assert captured["shape"] == (3, 9, 9, 3, 3)
         assert captured["integration"] == (0.03, 9, 6, 0.2)
+
+    @pytest.mark.parametrize("K_critical", [float("inf"), -0.1, object()])
+    def test_find_kc_rejects_invalid_composite_rust_result(
+        self,
+        monkeypatch,
+        K_critical,
+    ):
+        fake_kernel = ModuleType("spo_kernel")
+
+        def _trace(*_args):
+            raise AssertionError("find test must not call the trace kernel")
+
+        def _find(*_args):
+            return K_critical
+
+        fake_kernel.trace_sync_transition_rust = _trace
+        fake_kernel.find_critical_coupling_bif_rust = _find
+        module = self._load_with_fake_spo_kernel(monkeypatch, fake_kernel)
+
+        with pytest.raises(ValueError, match="invalid K_c"):
+            module.find_critical_coupling(
+                np.array([-0.4, 0.0, 0.4]),
+                dt=0.03,
+                n_transient=9,
+                n_measure=6,
+                tol=0.2,
+                seed=5,
+            )
+
+    def test_find_kc_preserves_composite_rust_nan_no_transition(self, monkeypatch):
+        fake_kernel = ModuleType("spo_kernel")
+
+        def _trace(*_args):
+            raise AssertionError("find test must not call the trace kernel")
+
+        def _find(*_args):
+            return float("nan")
+
+        fake_kernel.trace_sync_transition_rust = _trace
+        fake_kernel.find_critical_coupling_bif_rust = _find
+        module = self._load_with_fake_spo_kernel(monkeypatch, fake_kernel)
+
+        kc = module.find_critical_coupling(
+            np.array([-0.4, 0.0, 0.4]),
+            dt=0.03,
+            n_transient=9,
+            n_measure=6,
+            tol=0.2,
+            seed=5,
+        )
+
+        assert np.isnan(kc)

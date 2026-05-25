@@ -264,6 +264,18 @@ def _validate_optional_critical_coupling(value: object) -> float | None:
     return critical
 
 
+def _validate_find_critical_coupling_result(value: object) -> float:
+    try:
+        critical = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Rust critical-coupling search returned invalid K_c") from exc
+    if np.isnan(critical):
+        return float("nan")
+    if not np.isfinite(critical) or critical < 0.0:
+        raise ValueError("Rust critical-coupling search returned invalid K_c")
+    return critical
+
+
 def _steady_state_R_dispatch(
     phases_init: FloatArray,
     omegas: FloatArray,
@@ -459,7 +471,7 @@ def find_critical_coupling(
         k = np.ascontiguousarray(knm_template.ravel(), dtype=np.float64)
         a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
         p = np.ascontiguousarray(phases_init, dtype=np.float64)
-        return float(
+        return _validate_find_critical_coupling_result(
             _rust_find_kc(
                 o,
                 k,
