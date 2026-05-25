@@ -27,6 +27,15 @@ FloatArray: TypeAlias = NDArray[np.float64]
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "lyapunov_mojo"
 
 
+def _validate_zero_diagonal(knm: FloatArray, *, n: int) -> None:
+    matrix = np.ascontiguousarray(knm, dtype=np.float64).reshape((n, n))
+    if np.any(np.abs(np.diag(matrix)) > 1e-12):
+        raise ValueError(
+            "knm diagonal must be zero; Kuramoto self-coupling is not a "
+            "physical pair interaction"
+        )
+
+
 def _ensure_exe() -> Path:
     if not _EXE_PATH.exists():
         raise ImportError(
@@ -66,6 +75,7 @@ def lyapunov_spectrum_mojo(
     """Estimate the Lyapunov spectrum through the Mojo backend."""
 
     n = int(phases_init.size)
+    _validate_zero_diagonal(knm, n=n)
     tokens: list[str] = [
         "SPEC",
         str(n),

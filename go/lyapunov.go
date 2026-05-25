@@ -6,7 +6,7 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Lyapunov spectrum (Go port)
 
-// Package main builds ``liblyapunov.so`` — a C-shared library exporting
+// Package main builds `liblyapunov.so` — a C-shared library exporting
 // the Benettin 1980 / Shimada-Nagashima 1979 Lyapunov spectrum kernel
 // on the Kuramoto tangent space with RK4 integration and periodic
 // row-oriented Modified Gram-Schmidt. Matches the NumPy, Rust, Julia,
@@ -26,6 +26,15 @@ import (
 )
 
 const twoPi = 2.0 * math.Pi
+
+func hasSelfCoupling(knm []float64, n int) bool {
+	for i := 0; i < n; i++ {
+		if math.Abs(knm[i*n+i]) > 1e-12 {
+			return true
+		}
+	}
+	return false
+}
 
 // kuramotoRHS evaluates dθ/dt = ω + coupling + driving at the given
 // phases and writes the result into out (length n).
@@ -233,11 +242,11 @@ func lyapunovSpectrum(
 	return exponents
 }
 
-//export LyapunovSpectrum
-//
 // LyapunovSpectrum writes n exponents (sorted descending) into outPtr.
 // knmFlat and alphaFlat are row-major n×n matrices; outPtr expects n
 // cells. Returns 0 on success.
+//
+//export LyapunovSpectrum
 func LyapunovSpectrum(
 	phasesInitPtr *C.double,
 	omegasPtr *C.double,
@@ -257,6 +266,9 @@ func LyapunovSpectrum(
 	knm := unsafe.Slice((*float64)(unsafe.Pointer(knmFlatPtr)), nn*nn)
 	alpha := unsafe.Slice((*float64)(unsafe.Pointer(alphaFlatPtr)), nn*nn)
 	out := unsafe.Slice((*float64)(unsafe.Pointer(outPtr)), nn)
+	if hasSelfCoupling(knm, nn) {
+		return 2
+	}
 
 	result := lyapunovSpectrum(
 		phases, omegas, knm, alpha, nn,

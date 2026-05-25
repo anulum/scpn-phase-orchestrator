@@ -23,6 +23,16 @@ export lyapunov_spectrum
 
 const TWO_PI = 2.0 * pi
 
+function assert_zero_coupling_diagonal(knm::AbstractMatrix{Float64})
+    n = size(knm, 1)
+    @inbounds for i in 1:n
+        abs(knm[i, i]) <= 1e-12 || error(
+            "knm diagonal must be zero; Kuramoto self-coupling is not a physical pair interaction",
+        )
+    end
+    return nothing
+end
+
 
 function kuramoto_rhs(
     phases::AbstractVector{Float64},
@@ -106,6 +116,7 @@ function lyapunov_spectrum(
     # indexing where M[i, j] is the (i, j) entry in the original layout.
     knm = permutedims(reshape(collect(knm_flat), n, n))
     alpha = permutedims(reshape(collect(alpha_flat), n, n))
+    assert_zero_coupling_diagonal(knm)
 
     phases = collect(phases_init)
     Q = Matrix{Float64}(I, n, n)

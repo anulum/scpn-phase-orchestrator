@@ -225,3 +225,47 @@ class TestBackendTypingContracts:
                 context=f"{label}:{name}",
             )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
+
+
+class TestDirectBackendBoundaryContracts:
+    def test_go_bridge_rejects_self_coupling_before_library_load(self) -> None:
+        with pytest.raises(ValueError, match="knm diagonal"):
+            lyapunov_spectrum_go(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+                np.array([[0.2, 0.1], [0.1, 0.0]], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                0.01,
+                10,
+                2,
+                0.0,
+                0.0,
+            )
+
+    def test_julia_bridge_rejects_self_coupling_before_runtime_load(self) -> None:
+        with pytest.raises(ValueError, match="knm diagonal"):
+            lyapunov_spectrum_julia(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+                np.array([[0.2, 0.1], [0.1, 0.0]], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                0.01,
+                10,
+                2,
+                0.0,
+                0.0,
+            )
+
+    def test_mojo_bridge_rejects_self_coupling_before_executable_load(self) -> None:
+        with pytest.raises(ValueError, match="knm diagonal"):
+            lyapunov_spectrum_mojo(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+                np.array([[0.2, 0.1], [0.1, 0.0]], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                0.01,
+                10,
+                2,
+                0.0,
+                0.0,
+            )

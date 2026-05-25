@@ -69,6 +69,14 @@ pub fn lyapunov_spectrum(
     if qr_interval == 0 {
         return Err("qr_interval must be > 0".to_string());
     }
+    for i in 0..n {
+        if knm[i * n + i].abs() > 1e-12 {
+            return Err(
+                "knm diagonal must be zero; Kuramoto self-coupling is not a physical pair interaction"
+                    .to_string(),
+            );
+        }
+    }
 
     let nn = n * n;
     let mut phases = phases_init.to_vec();
@@ -482,6 +490,22 @@ mod tests {
     fn test_zero_qr_interval_error() {
         let result = lyapunov_spectrum(&[0.0], &[1.0], &[0.0], &[0.0], 0.01, 10, 0, 0.0, 0.0);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_rejects_self_coupling_diagonal() {
+        let result = lyapunov_spectrum(
+            &[0.0, 0.1],
+            &[1.0, 1.0],
+            &[0.2, 0.1, 0.1, 0.0],
+            &[0.0; 4],
+            0.01,
+            10,
+            2,
+            0.0,
+            0.0,
+        );
+        assert!(result.unwrap_err().contains("knm diagonal"));
     }
 
     #[test]

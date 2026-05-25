@@ -28,6 +28,15 @@ _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "lyapunov.jl"
 _JULIA_MODULE: Any | None = None
 
 
+def _validate_zero_diagonal(knm: FloatArray, *, n: int) -> None:
+    matrix = np.ascontiguousarray(knm, dtype=np.float64).reshape((n, n))
+    if np.any(np.abs(np.diag(matrix)) > 1e-12):
+        raise ValueError(
+            "knm diagonal must be zero; Kuramoto self-coupling is not a "
+            "physical pair interaction"
+        )
+
+
 def _ensure() -> Any:
     global _JULIA_MODULE
     if _JULIA_MODULE is not None:
@@ -54,8 +63,9 @@ def lyapunov_spectrum_julia(
 ) -> FloatArray:
     """Estimate the Lyapunov spectrum through the Julia backend."""
 
-    jl = _ensure()
     n = int(phases_init.size)
+    _validate_zero_diagonal(knm, n=n)
+    jl = _ensure()
     return np.asarray(
         jl.lyapunov_spectrum(
             np.ascontiguousarray(phases_init.ravel(), dtype=np.float64),

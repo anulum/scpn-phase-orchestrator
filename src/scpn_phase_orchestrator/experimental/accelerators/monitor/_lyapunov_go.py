@@ -29,6 +29,15 @@ _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "liblyapunov.so"
 _LIB: ctypes.CDLL | None = None
 
 
+def _validate_zero_diagonal(knm: FloatArray, *, n: int) -> None:
+    matrix = np.ascontiguousarray(knm, dtype=np.float64).reshape((n, n))
+    if np.any(np.abs(np.diag(matrix)) > 1e-12):
+        raise ValueError(
+            "knm diagonal must be zero; Kuramoto self-coupling is not a "
+            "physical pair interaction"
+        )
+
+
 def _load_lib() -> ctypes.CDLL:
     global _LIB
     if _LIB is not None:
@@ -71,8 +80,9 @@ def lyapunov_spectrum_go(
 ) -> FloatArray:
     """Estimate the Lyapunov spectrum through the Go backend."""
 
-    lib = _load_lib()
     n = int(phases_init.size)
+    _validate_zero_diagonal(knm, n=n)
+    lib = _load_lib()
     p = np.ascontiguousarray(phases_init.ravel(), dtype=np.float64)
     o = np.ascontiguousarray(omegas.ravel(), dtype=np.float64)
     k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)

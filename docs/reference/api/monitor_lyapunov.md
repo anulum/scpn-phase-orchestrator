@@ -51,7 +51,7 @@ The driver contributes only to the diagonal, because
 `∂/∂θ_i [ζ sin(Ψ − θ_i)] = −ζ cos(Ψ − θ_i)` and the off-diagonal
 cross-derivatives vanish.
 
-The public API rejects non-zero `K_ii` before backend dispatch. A
+The public API and direct backend bridge wrappers reject non-zero `K_ii` before backend dispatch or optional runtime loading. A
 diagonal coupling entry is a self-interaction, not a physical
 oscillator pair. Leaving it in the variational path would add a
 spurious `sin(-α_ii)` self-torque and would make the observer's

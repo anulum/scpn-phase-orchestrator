@@ -136,6 +136,13 @@ fn fmod_positive(x: Float64, m: Float64) -> Float64:
     return r
 
 
+fn has_self_coupling(knm: List[Float64], n: Int) -> Bool:
+    for i in range(n):
+        if abs(knm[i * n + i]) > 1e-12:
+            return True
+    return False
+
+
 fn lyapunov_spectrum(
     phases_init: List[Float64],
     omegas: List[Float64],
@@ -291,6 +298,8 @@ fn main() raises:
     var alpha = List[Float64](capacity=n * n)
     for _ in range(n * n):
         alpha.append(atof(tokens[idx])); idx += 1
+    if has_self_coupling(knm, n):
+        raise Error("knm diagonal must be zero; Kuramoto self-coupling is not a physical pair interaction")
 
     var out = lyapunov_spectrum(
         phases_init, omegas, knm, alpha,
