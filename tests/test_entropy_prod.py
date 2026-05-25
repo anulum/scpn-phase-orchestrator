@@ -143,6 +143,23 @@ class TestEntropyProductionRate:
                 dt=0.01,
             )
 
+    @pytest.mark.parametrize(
+        ("alpha", "dt"),
+        [
+            (True, 0.01),
+            (np.bool_(True), 0.01),
+            (1.0, False),
+            (1.0, np.bool_(False)),
+        ],
+    )
+    def test_rejects_boolean_alias_scalars(self, alpha: object, dt: object) -> None:
+        phases = np.array([0.0, 1.0], dtype=np.float64)
+        omegas = np.array([1.0, 2.0], dtype=np.float64)
+        knm = _all_to_all(2)
+
+        with pytest.raises(ValueError, match="boolean"):
+            entropy_production_rate(phases, omegas, knm, alpha=alpha, dt=dt)
+
 
 class TestEntropyProdPipelineWiring:
     """Pipeline: engine phases → entropy production rate → thermodynamics."""
@@ -230,9 +247,9 @@ class TestEntropyProdRustDispatch:
         assert np.isfinite(rate)
         assert rate >= 0.0
 
-    @pytest.mark.parametrize("backend_rate", [-0.1, np.nan, np.inf])
-    def test_entropy_production_falls_back_when_backend_returns_invalid_rate(
-        self, monkeypatch: pytest.MonkeyPatch, backend_rate: float
+    @pytest.mark.parametrize("backend_rate", [-0.1, np.nan, np.inf, np.bool_(True)])
+    def test_entropy_production_rejects_invalid_backend_rate(
+        self, monkeypatch: pytest.MonkeyPatch, backend_rate: object
     ) -> None:
         def _invalid_backend(
             _phases: np.ndarray,
@@ -244,16 +261,14 @@ class TestEntropyProdRustDispatch:
             return backend_rate
 
         monkeypatch.setattr(entropy_prod_module, "_dispatch", lambda: _invalid_backend)
-        rate = entropy_production_rate(
-            np.array([0.0, 1.0], dtype=np.float64),
-            np.array([1.0, 2.0], dtype=np.float64),
-            np.array([[0.0, 0.5], [0.5, 0.0]], dtype=np.float64),
-            alpha=1.0,
-            dt=0.01,
-        )
-
-        assert np.isfinite(rate)
-        assert rate >= 0.0
+        with pytest.raises(ValueError, match="backend entropy rate"):
+            entropy_production_rate(
+                np.array([0.0, 1.0], dtype=np.float64),
+                np.array([1.0, 2.0], dtype=np.float64),
+                np.array([[0.0, 0.5], [0.5, 0.0]], dtype=np.float64),
+                alpha=1.0,
+                dt=0.01,
+            )
 
     def test_dispatch_falls_back_to_python_when_loader_fails(
         self, monkeypatch: pytest.MonkeyPatch

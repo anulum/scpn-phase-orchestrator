@@ -150,7 +150,9 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not be a boolean value")
+    if not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     result = float(value)
     if not np.isfinite(result):
@@ -239,12 +241,14 @@ def entropy_production_rate(
     backend_fn = _dispatch()
     if backend_fn is not None:
         try:
-            return _validate_entropy_rate(
-                backend_fn(phases, omegas, knm, alpha, dt),
-                name="backend entropy rate",
-            )
+            backend_rate = backend_fn(phases, omegas, knm, alpha, dt)
         except Exception:
             backend_fn = None
+        else:
+            return _validate_entropy_rate(
+                backend_rate,
+                name="backend entropy rate",
+            )
 
     diff = phases[np.newaxis, :] - phases[:, np.newaxis]
     coupling = np.sum(knm * np.sin(diff), axis=1)
