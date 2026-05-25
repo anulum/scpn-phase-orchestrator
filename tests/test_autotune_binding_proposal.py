@@ -662,7 +662,7 @@ def test_resolve_sample_rate_hz_validates_explicit_rate_inputs():
         )
 
 
-def test_cross_channel_coupling_lines_filters_invalid_entries():
+def test_cross_channel_couplings_filters_invalid_entries():
     coupling = {
         "edges": (
             {"source_channel": "P", "target_channel": "I", "strength": 0.2},
@@ -673,12 +673,14 @@ def test_cross_channel_coupling_lines_filters_invalid_entries():
         )
     }
 
-    lines = binding_proposal._cross_channel_coupling_lines(coupling)
+    couplings = binding_proposal._cross_channel_couplings(coupling)
 
-    assert lines == [
-        "  - source: P",
-        "    target: I",
-        "    strength: 0.2",
-        "    mode: directed",
-        "    template: auto_initial_k",
+    assert couplings == [
+        {
+            "source": "P",
+            "target": "I",
+            "strength": 0.2,
+            "mode": "directed",
+            "template": "auto_initial_k",
+        }
     ]
