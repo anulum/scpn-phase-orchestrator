@@ -368,6 +368,25 @@ class TestHigherOrderTopologySupervisor:
         assert result.global_coherence < 0.95
         assert result.added_simplices == ()
 
+    def test_pairwise_support_floor_requires_bidirectional_support(self) -> None:
+        phases = np.array([0.0, 0.02, 0.04, np.pi, np.pi + 0.02, np.pi + 0.04])
+        knm = _zero_knm(6)
+        knm[0, 1] = knm[0, 2] = knm[1, 2] = 1.0
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=0.5,
+                coherence_floor=0.95,
+                simplex_threshold=0.99,
+                simplex_pairwise_support_floor=0.5,
+                max_new_simplices=4,
+            )
+        )
+
+        result = supervisor.mutate(phases, knm)
+
+        assert result.global_coherence < 0.95
+        assert result.added_simplices == ()
+
     def test_result_feeds_hypergraph_engine(self) -> None:
         phases = np.array([0.0, 0.02, 0.04, np.pi, np.pi + 0.01, np.pi + 0.03])
         omegas = np.zeros(6, dtype=np.float64)

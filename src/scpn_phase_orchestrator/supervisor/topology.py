@@ -292,7 +292,10 @@ def _has_pairwise_support(
 ) -> bool:
     if floor <= 0.0:
         return True
-    return all(knm[i, j] >= floor for i, j in combinations(nodes, 2))
+    return all(
+        min(float(knm[i, j]), float(knm[j, i])) >= floor
+        for i, j in combinations(nodes, 2)
+    )
 
 
 def _require_unit_interval(value: float, name: str) -> None:
