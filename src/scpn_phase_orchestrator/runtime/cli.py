@@ -26,7 +26,7 @@ import json
 import re
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal, TypeAlias, cast
+from typing import Any, Literal, TypeAlias, cast
 from urllib.parse import urlparse
 
 import click
@@ -6715,22 +6715,24 @@ def _run_real_data_demo(*, dataset: str, target: str, steps: int, port: int) -> 
         sample_rate_hz=None,
         project_name="heartbeat_coherence_demo",
     )
-    record = proposal.to_audit_record()
-    provenance = record["binding"]["provenance"]
+    record = cast(dict[str, Any], proposal.to_audit_record())
+    binding_record = cast(dict[str, Any], record["binding"])
+    source_record = cast(dict[str, Any], record["source"])
+    metadata_record = cast(dict[str, Any], record["metadata"])
+    runtime_record = cast(dict[str, Any], record["runtime"])
+    provenance = cast(dict[str, Any], binding_record["provenance"])
     click.echo("SPO Real-Data Demo — heartbeat coherence")
     click.echo(f"  Dataset: {dataset}")
     click.echo(f"  Source: {source}")
     click.echo(f"  Citation: {_PHYSIONET_HEARTBEAT_CITATION}")
     click.echo(f"  Target: {target}")
-    click.echo(f"  Rows used: {record['source']['sample_count']}")
+    click.echo(f"  Rows used: {source_record['sample_count']}")
     click.echo(f"  Sample rate: {provenance['sample_rate_hz']:.6g} Hz")
-    click.echo(
-        f"  Inferred channels: {', '.join(record['binding']['inferred_channels'])}"
-    )
-    click.echo(f"  Proposal mode: {record['metadata']['proposal_mode']}")
-    click.echo(f"  Replay status: {record['runtime']['replay_status']}")
-    click.echo(f"  Initial R: {record['runtime']['R']:.6f}")
-    click.echo(f"  Initial K: {record['runtime']['K']:.6f}")
+    click.echo(f"  Inferred channels: {', '.join(binding_record['inferred_channels'])}")
+    click.echo(f"  Proposal mode: {metadata_record['proposal_mode']}")
+    click.echo(f"  Replay status: {runtime_record['replay_status']}")
+    click.echo(f"  Initial R: {runtime_record['R']:.6f}")
+    click.echo(f"  Initial K: {runtime_record['K']:.6f}")
     click.echo("-" * 40)
     click.echo("Review-only binding YAML:")
     click.echo(proposal.binding.yaml_text, nl=False)
@@ -6822,6 +6824,8 @@ def _normalise_heartbeat_csv(raw: str, *, max_rows: int) -> str:
 
 
 def _finite_csv_float(value: object, field: str) -> float:
+    if not isinstance(value, str):
+        raise click.ClickException(f"heartbeat dataset has non-numeric {field}")
     try:
         number = float(value)
     except (TypeError, ValueError) as exc:

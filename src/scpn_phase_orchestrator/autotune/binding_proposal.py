@@ -25,7 +25,7 @@ import tempfile
 from collections.abc import Mapping, Sequence
 from math import isfinite
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import yaml
@@ -547,9 +547,9 @@ def _binding_yaml(
 ) -> str:
     if not project_name:
         raise ValueError("project_name must be non-empty")
-    layers: list[dict[str, JsonValue]] = []
+    layers: list[JsonValue] = []
     oscillator_families: dict[str, JsonValue] = {}
-    good_layers: list[int] = []
+    good_layers: list[JsonValue] = []
     for index, raw_family_spec in enumerate(family_specs):
         family_name, channel, extractor_type, config = _normalise_family_spec(
             raw_family_spec
@@ -585,7 +585,10 @@ def _binding_yaml(
             "decay_alpha": 0.3,
             "templates": _coupling_templates(initial_coupling_proposal),
         },
-        "cross_channel_couplings": _cross_channel_couplings(initial_coupling_proposal),
+        "cross_channel_couplings": cast(
+            list[JsonValue],
+            _cross_channel_couplings(initial_coupling_proposal),
+        ),
         "drivers": {
             "physical": {"zeta": 0.0, "psi": 0.0},
             "informational": {"zeta": 0.02},
