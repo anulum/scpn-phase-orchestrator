@@ -106,11 +106,13 @@ class TestOrderParameterMutationKillers:
 class TestPLVMutationKillers:
     """Kill mutants in compute_plv lines 38-61."""
 
-    def test_empty_a_returns_zero(self) -> None:
-        assert compute_plv(np.array([]), np.array([1.0])) == 0.0
+    def test_empty_a_requires_equal_length(self) -> None:
+        with pytest.raises(ValueError, match="equal-length"):
+            compute_plv(np.array([]), np.array([1.0]))
 
-    def test_empty_b_returns_zero(self) -> None:
-        assert compute_plv(np.array([1.0]), np.array([])) == 0.0
+    def test_empty_b_requires_equal_length(self) -> None:
+        with pytest.raises(ValueError, match="equal-length"):
+            compute_plv(np.array([1.0]), np.array([]))
 
     def test_both_empty_returns_zero(self) -> None:
         assert compute_plv(np.array([]), np.array([])) == 0.0
