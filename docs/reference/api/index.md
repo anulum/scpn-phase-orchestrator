@@ -44,6 +44,7 @@ the compatibility impact.
 
 | Module | Description |
 |--------|-------------|
+| [Python Facade](api.md) | High-level local simulation API for notebooks and applications |
 | [Core & Exceptions](core.md) | Exception hierarchy, Rust/Python compat constants |
 | [Binding](binding.md) | Configuration loading and validation for binding specs |
 | [UPDE Engine](upde.md) | Kuramoto ODE, Stuart-Landau amplitude ODE, metrics, PAC |

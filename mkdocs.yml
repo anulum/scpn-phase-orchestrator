@@ -123,6 +123,7 @@ nav:
       - "06 — Deterministic Replay for Debugging": tutorials/06_deterministic_replay_for_debugging.md
   - API Reference:
       - Overview: reference/api/index.md
+      - Python Facade: reference/api/api.md
       - Core & Exceptions: reference/api/core.md
       - Binding: reference/api/binding.md
       - UPDE Engine: reference/api/upde.md
