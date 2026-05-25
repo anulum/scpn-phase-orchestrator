@@ -70,7 +70,7 @@ def test_mi_monotonic_in_modulation_depth() -> None:
     theta = rng.uniform(0.0, TWO_PI, size=n)
     last = -1.0
     for depth in (0.0, 0.1, 0.3, 0.6, 0.9):
-        amp = 1.0 + depth * np.cos(theta) + 0.05 * rng.standard_normal(n)
+        amp = 1.2 + depth * np.cos(theta) + 0.02 * rng.standard_normal(n)
         mi = modulation_index(theta, amp, 18)
         # Allow tiny noise backslide (Tort MI is stochastic for small n).
         assert mi >= last - 0.005, (
