@@ -91,6 +91,15 @@ def test_r_bad_rejects_layer_index_outside_state():
         monitor.compute_r_bad(state)
 
 
+@pytest.mark.parametrize("r_value", [-0.01, 1.01, np.nan, np.inf, True])
+def test_r_good_rejects_invalid_layer_order_parameter(r_value):
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[])
+    state = _make_state([r_value])
+
+    with pytest.raises(ValueError, match="layer 0 R"):
+        monitor.compute_r_good(state)
+
+
 def test_detect_phase_lock_via_cla_matrix():
     """CLA matrix is the primary PLV source (matches Rust implementation)."""
     cla = np.array([[1.0, 0.95], [0.95, 1.0]])

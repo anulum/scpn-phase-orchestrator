@@ -70,6 +70,15 @@ def _validate_cross_layer_alignment(value: object, *, n_layers: int) -> FloatArr
     return np.ascontiguousarray(cla, dtype=np.float64)
 
 
+def _validate_order_parameter(value: object, *, layer_index: int) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"layer {layer_index} R must be finite real in [0, 1]")
+    r_value = float(value)
+    if not np.isfinite(r_value) or r_value < 0.0 or r_value > 1.0:
+        raise ValueError(f"layer {layer_index} R must be finite real in [0, 1]")
+    return r_value
+
+
 class CoherenceMonitor:
     """Track coherence partitioned into good vs bad layer subsets."""
 
@@ -122,7 +131,10 @@ class CoherenceMonitor:
                 f"{name} references layer indices outside state with "
                 f"{n_layers} layers: {invalid!r}"
             )
-        vals = [upde_state.layers[i].R for i in indices]
+        vals = [
+            _validate_order_parameter(upde_state.layers[i].R, layer_index=i)
+            for i in indices
+        ]
         if not vals:
             return 0.0
         return float(np.mean(vals))
