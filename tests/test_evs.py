@@ -234,6 +234,25 @@ def test_rust_frequency_specificity_receives_flat_phase_trials(monkeypatch):
     }
 
 
+@pytest.mark.parametrize("backend_value", [math.nan, -0.1, True])
+def test_rust_frequency_specificity_rejects_invalid_backend_output(
+    monkeypatch,
+    backend_value: object,
+):
+    phases = _entrained_phases(n_trials=3, n_time=5)
+
+    monkeypatch.setattr(evs_mod, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        evs_mod,
+        "_rust_freq_spec",
+        lambda *_args: backend_value,
+        raising=False,
+    )
+
+    with pytest.raises((TypeError, ValueError), match="specificity_ratio"):
+        EVSMonitor._frequency_specificity(phases, 12.0, 18.0)
+
+
 def test_evs_result_is_frozen():
     r = EVSResult(0.8, 0.6, 2.0, True)
     mutable = cast(Any, r)

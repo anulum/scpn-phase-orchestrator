@@ -165,7 +165,9 @@ class EVSMonitor:
         if _HAS_RUST:
             p = np.ascontiguousarray(phases, dtype=np.float64)
             n_trials, n_tp = p.shape
-            return float(_rust_freq_spec(p.ravel(), n_trials, n_tp, target, control))
+            return _validate_specificity_ratio(
+                _rust_freq_spec(p.ravel(), n_trials, n_tp, target, control)
+            )
 
         itpc_target = compute_itpc(phases)
         target_mean = float(np.mean(itpc_target)) if itpc_target.size > 0 else 0.0
