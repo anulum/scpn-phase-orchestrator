@@ -166,6 +166,13 @@ Connect to `/ws/stream`. Messages are JSON:
 The server pushes a `tick` message after each scrape cycle and an `anomaly`
 message for each detected anomaly.
 
+Client-to-server WebSocket content is deliberately narrow. The server accepts
+only keepalive messages: an empty text frame, `ping`, `pong`, or JSON objects
+whose `type` is `ping` or `pong`. Any other inbound text payload is rejected
+with close code `1003`. QueueWaves is a telemetry stream, not a command
+channel; control, configuration, or actuation requests must use reviewed SPO
+operator workflows instead of the WebSocket.
+
 ## Anomaly Types
 
 | Type | Trigger | Severity |

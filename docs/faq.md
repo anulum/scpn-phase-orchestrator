@@ -85,6 +85,20 @@ spans and metric records even when the OTel extra is not installed, then emits
 them when `scpn-phase-orchestrator[otel]` is available. Historical adapter
 imports remain compatibility aliases.
 
+### How are runtime requests rate-limited?
+
+Runtime network security uses token-bucket limiting. Each key accrues tokens at
+the configured per-minute rate up to a bounded burst capacity; a caller can
+only send a burst while tokens remain. This prevents a client from consuming an
+entire fixed-window allowance at the start of a minute.
+
+### How are Petri-net guard contexts validated?
+
+Petri-net guards evaluate only declared metric names. Unknown context keys,
+non-numeric values, and non-finite values are rejected before transition
+evaluation. This keeps guard decisions tied to the binding or adapter contract
+instead of accepting arbitrary runtime dictionary content.
+
 ### What is PAC?
 
 Phase-Amplitude Coupling, quantified by the Modulation Index (Tort et al.,

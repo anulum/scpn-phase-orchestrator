@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a lightweight Python API layer with `Orchestrator.from_yaml(...)` and
+  `Orchestrator.run(...)`, plus the `scpn` import alias for onboarding scripts
+  that should not depend on CLI invocation.
+- Added a real-data review demo for PhysioNet heart-rate-belt data through
+  `spo demo --dataset heartbeat.csv --target coherence --steps N`, including
+  dataset citation output, review-only auto-binding, and dashboard guidance.
+
+### Changed
+
+- Changed runtime request limiting from fixed minute windows to token-bucket
+  semantics so callers cannot consume a full per-minute allowance in a single
+  burst without bucket capacity.
+- Made action-projector slew limits binding-configurable through
+  `actuators[].rate_limit_per_step` while preserving conservative defaults for
+  omitted binding metadata.
+- Documented Modbus/TLS as requiring server certificate verification for both
+  deployment CA bundles and the operating-system trust store path.
+
+### Fixed
+
+- Hardened auto-binding YAML generation by emitting structured YAML instead of
+  interpolating raw source column names into text.
+- Hardened symbolic binding compilation with intent sanitisation, schema
+  validation, and explicit review-gate metadata before any generated binding is
+  treated as operational evidence.
+- Hardened demo domainpack loading against path traversal outside
+  `domainpacks/`.
+- Seeded audit hash chains with the header record content so replay integrity
+  includes the stream header.
+- Hardened QueueWaves WebSocket ingress to accept only keepalive messages from
+  clients and reject arbitrary inbound payloads.
+- Hardened Petri-net guard evaluation by rejecting unknown guard context keys
+  and non-finite guard values before transition evaluation.
+- Hardened bifurcation continuation and critical-coupling fast paths by
+  rejecting non-zero self-coupling diagonals, invalid composite Rust
+  `R(K)` arrays, and invalid Rust `K_c` results.
+
 ## [0.6.2] - 2026-05-24
 
 ### Changed

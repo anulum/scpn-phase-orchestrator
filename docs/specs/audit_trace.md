@@ -23,6 +23,12 @@ payload digest, previous event hash, and event hash. The JSON payload is still
 stored inside the envelope so existing deterministic replay semantics remain
 unchanged while the stream becomes tail-safe and schema-versioned.
 
+Unsigned JSONL audit logs use the same integrity principle: the header record
+is part of the hash chain seed. The first step or event record therefore links
+to the canonical header content instead of starting from a detached zero hash.
+Prepending, replacing, or deleting a header changes the downstream
+`_previous_hash` relationship and fails replay integrity checks.
+
 ## Step Record
 
 ```json

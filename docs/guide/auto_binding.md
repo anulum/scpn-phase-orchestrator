@@ -66,6 +66,11 @@ basic distribution statistics, and the review-only status. The same records are
 available under `binding.provenance["extractor_parameter_proposals"]` for JSON
 audit export.
 
+Generated binding YAML is emitted through the structured YAML serialiser rather
+than string interpolation. Raw source column names are preserved as scalar
+values and safely quoted when they contain `:`, `{`, `[`, `#`, newlines, or
+other YAML-significant characters.
+
 The generated binding includes a coupling template named `auto_initial_k`.
 Its matrix is oriented as `target_by_source`, has a zero diagonal, is scaled
 from the combined lagged-graph, phase-SINDy, and correlation evidence, and is
@@ -98,3 +103,9 @@ claim.
 
 The output is suitable for human review in SPO Studio or for tests that need a
 deterministic proposal package.
+
+Symbolic binding proposals carry the same review-only boundary. Free-text
+intent is sanitised before compilation, generated output is checked against the
+expected binding schema, and the result includes review metadata. Treat the
+proposal as an auditable draft until an operator approves and validates the
+domainpack through the normal binding loader.

@@ -210,7 +210,9 @@ for small $N$. For robust $K_c$: average over multiple seeds.
 
 **Inputs:**
 - `omegas` (N,) — natural frequency distribution
-- `knm_template` (N, N) — coupling topology (scaled by K during sweep)
+- `knm_template` (N, N) — coupling topology (scaled by K during sweep);
+  custom templates must be finite and have zero diagonal because `K_ii` is not
+  a physical pair interaction in the Kuramoto graph
 - `alpha` (N, N) — phase-lag matrix (optional, default zeros)
 - `K_range` — sweep bounds `(K_min, K_max)`
 
@@ -238,6 +240,13 @@ Both functions delegate to Rust when available:
 
 The Rust sweep uses `par_iter` over $K$ values (Rayon), providing
 near-linear speedup with core count for $n_{\text{points}} \geq 8$.
+
+Composite Rust output is still validated at the Python boundary before it is
+exposed as a public `BifurcationDiagram`. The trace fast path must return
+exactly `n_points` finite `K` and `R` samples, `K` must remain monotone inside
+`K_range`, every `R` must stay in `[0, 1]`, and `K_critical` must be either
+finite non-negative or `NaN` for "no transition". Invalid Rust output raises
+`ValueError` instead of entering reports, calibration, or supervisor logic.
 
 ### 4.3 Reproducibility
 
@@ -431,7 +440,7 @@ $N < 32$, finite-size noise is inherent and cannot be eliminated.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `omegas` | `NDArray` (N,) | — | Natural frequencies |
-| `knm_template` | `NDArray` (N,N) or None | all-to-all/N | Coupling topology |
+| `knm_template` | `NDArray` (N,N) or None | all-to-all/N | Coupling topology; finite with zero diagonal |
 | `dt` | `float` | `0.01` | Integration timestep |
 | `n_transient` | `int` | `3000` | Transient steps |
 | `n_measure` | `int` | `1000` | Measurement steps |
