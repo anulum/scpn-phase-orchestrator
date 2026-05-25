@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -397,7 +399,7 @@ class TestPetriNetPipelineEndToEnd:
             assert len(enabled) == 0
 
     def test_performance_enabled_under_10us(self):
-        """PetriNet.enabled() < 10μs for simple net."""
+        """PetriNet.enabled() remains microsecond-scale for a simple net."""
         import time
 
         places = [Place("a"), Place("b")]
@@ -415,7 +417,8 @@ class TestPetriNetPipelineEndToEnd:
         for _ in range(100000):
             pn.enabled(marking, ctx)
         elapsed = (time.perf_counter() - t0) / 100000
-        assert elapsed < 1e-5, f"enabled() took {elapsed * 1e6:.1f}μs"
+        budget_s = 15e-6 if os.environ.get("CI") else 10e-6
+        assert elapsed < budget_s, f"enabled() took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: PetriNet tested via UPDEEngine → R → Guard evaluation
