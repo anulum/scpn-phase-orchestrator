@@ -126,7 +126,12 @@ class PetriNetAdapter:
         """Advance the Petri net one step and return the active regime."""
         ctx = _validate_context(ctx)
         self._step += 1
-        new_marking, fired = self._net.step(self._marking, ctx)
+        guard_ctx = {
+            metric: value
+            for metric, value in ctx.items()
+            if metric in self._net.guard_metrics
+        }
+        new_marking, fired = self._net.step(self._marking, guard_ctx)
         if fired is not None:
             self._marking = new_marking
             if self._event_bus is not None:
