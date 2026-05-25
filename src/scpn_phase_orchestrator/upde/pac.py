@@ -113,7 +113,7 @@ def _validate_n_bins(n_bins: object) -> int:
         raise ValueError("n_bins must be an integer >= 2")
     bins = int(n_bins)
     if bins < 2:
-        return bins
+        raise ValueError("n_bins must be an integer >= 2")
     return bins
 
 
@@ -183,8 +183,12 @@ def _modulation_index_python(
     n_bins: int,
 ) -> float:
     n = min(theta_low.size, amp_high.size)
+    if n == 0:
+        return 0.0
     theta = theta_low[:n] % (2.0 * np.pi)
     amp = amp_high[:n]
+    if np.any(amp < 0.0):
+        raise ValueError("amp_high must contain non-negative amplitudes")
     bin_edges = np.linspace(0.0, 2.0 * np.pi, n_bins + 1)
     bin_indices = np.digitize(theta, bin_edges) - 1
     bin_indices = np.clip(bin_indices, 0, n_bins - 1)
@@ -274,8 +278,8 @@ def modulation_index(
     n_bins = _validate_n_bins(n_bins)
     theta_low = _validate_signal("theta_low", theta_low)
     amp_high = _validate_signal("amp_high", amp_high)
-    if n_bins < 2:
-        return 0.0
+    if np.any(amp_high < 0.0):
+        raise ValueError("amp_high must contain non-negative amplitudes")
     if theta_low.size == 0 or amp_high.size == 0:
         return 0.0
 
@@ -316,9 +320,9 @@ def pac_matrix(
     n_bins = _validate_n_bins(n_bins)
     phases_history = _validate_history("phases_history", phases_history)
     amplitudes_history = _validate_history("amplitudes_history", amplitudes_history)
+    if np.any(amplitudes_history < 0.0):
+        raise ValueError("amplitudes_history must contain non-negative amplitudes")
     t, n = phases_history.shape
-    if n_bins < 2:
-        return np.zeros((n, n), dtype=np.float64)
     if t == 0 or n == 0:
         return np.zeros((n, n), dtype=np.float64)
     if amplitudes_history.shape != (t, n):
