@@ -488,7 +488,12 @@ Near-term candidate tracks:
     pairwise support from transfer-entropy histories before proposing
     traffic/attack/defence simplices and records Lyapunov before/after energy
     evidence for the proposed mutation.
-  - Remaining scope: broader multi-domain Lyapunov policy validation.
+  - Broader multi-domain Lyapunov policy validation is in place:
+    `tests/test_topology_lyapunov_workflow.py` gates plasma-control,
+    traffic-flow, and network-security topology demos on finite before/after
+    Lyapunov energy evidence, non-increasing proposed pairwise topology
+    updates, auditable simplex additions, and review-only/non-actuating
+    payloads.
 - Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories.
   - Foundation is in place: causal counterfactual rollout support exists.
   - Live causal-model learning foundation is in place:

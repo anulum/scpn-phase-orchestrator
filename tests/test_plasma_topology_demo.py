@@ -28,6 +28,9 @@ def test_plasma_topology_demo_adds_auditable_guarded_simplices() -> None:
     assert audit["global_coherence"] < payload["policy"]["coherence_floor"]
     assert audit["added_simplices"]
     assert all(edge["strength"] <= 0.25 for edge in audit["added_simplices"])
+    lyapunov = payload["lyapunov_validation"]
+    assert lyapunov["non_increasing"] is True
+    assert lyapunov["delta_V"] < 0.0
 
 
 def test_simplex_pairwise_support_floor_blocks_unsupported_triads() -> None:

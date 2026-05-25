@@ -17,6 +17,7 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard
 from scpn_phase_orchestrator.supervisor import (
     HigherOrderTopologySupervisor,
     TopologyMutationPolicy,
@@ -44,6 +45,25 @@ def plasma_demo_phases() -> FloatArray:
     )
 
 
+def topology_lyapunov_validation(
+    phases: FloatArray,
+    before_knm: FloatArray,
+    after_knm: FloatArray,
+) -> dict[str, object]:
+    """Return Lyapunov evidence for a proposed plasma topology mutation."""
+    before = LyapunovGuard().evaluate(phases, before_knm)
+    after = LyapunovGuard().evaluate(phases, after_knm)
+    return {
+        "before_V": before.V,
+        "after_V": after.V,
+        "delta_V": after.V - before.V,
+        "non_increasing": after.V <= before.V,
+        "before_in_basin": before.in_basin,
+        "after_in_basin": after.in_basin,
+        "after_max_phase_diff": after.max_phase_diff,
+    }
+
+
 def run_demo() -> dict[str, object]:
     """Run one guarded higher-order topology mutation for plasma control."""
     spec = load_binding_spec(SPEC_PATH)
@@ -64,9 +84,9 @@ def run_demo() -> dict[str, object]:
         max_simplex_strength=0.25,
         simplex_pairwise_support_floor=0.12,
     )
-    result = HigherOrderTopologySupervisor(policy).mutate(
-        plasma_demo_phases(), coupling.knm
-    )
+    phases = plasma_demo_phases()
+    result = HigherOrderTopologySupervisor(policy).mutate(phases, coupling.knm)
+    lyapunov = topology_lyapunov_validation(phases, coupling.knm, result.knm)
     return {
         "domainpack": spec.name,
         "policy": {
@@ -74,6 +94,7 @@ def run_demo() -> dict[str, object]:
             "coherence_floor": policy.coherence_floor,
             "simplex_pairwise_support_floor": policy.simplex_pairwise_support_floor,
         },
+        "lyapunov_validation": lyapunov,
         "audit": result.to_audit_record(),
     }
 
