@@ -99,11 +99,11 @@ def plv_go(phases_a: FloatArray, phases_b: FloatArray) -> float:
     The calculation is delegated to the Go backend.
     """
 
-    lib = _load_lib()
     if phases_a.size != phases_b.size:
         raise ValueError(
             f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
         )
+    lib = _load_lib()
     a64 = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
     b64 = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

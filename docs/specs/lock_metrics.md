@@ -18,7 +18,9 @@ PLV = |mean(exp(i * (phi_a - phi_b)))|
 
 Pairwise coherence between two phase time series over a window. `PLV = 1` means constant phase difference. `PLV ≈ 0` means no stable relationship.
 
-Computed by `compute_plv(phases_a, phases_b)` in `upde.order_params`.
+Computed by `compute_plv(phases_a, phases_b)` in `upde.order_params`. The
+two phase series must be equal length; two empty series return `0.0`, while an
+empty/non-empty pair is rejected as an invalid PLV window.
 
 ## Cross-Layer Alignment Matrix
 

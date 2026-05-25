@@ -81,12 +81,12 @@ def plv_mojo(phases_a: FloatArray, phases_b: FloatArray) -> float:
     The calculation is delegated to the Mojo backend.
     """
 
-    if phases_a.size == 0 or phases_b.size == 0:
-        return 0.0
     if phases_a.size != phases_b.size:
         raise ValueError(
             f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
         )
+    if phases_a.size == 0:
+        return 0.0
     a = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
     b = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)
     tokens = ["PLV", str(a.size)]

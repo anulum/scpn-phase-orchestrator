@@ -64,6 +64,10 @@ def plv_julia(phases_a: FloatArray, phases_b: FloatArray) -> float:
     The calculation is delegated to the Julia backend.
     """
 
+    if phases_a.size != phases_b.size:
+        raise ValueError(
+            f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
+        )
     jl = _ensure_julia_loaded()
     return float(
         jl.plv(

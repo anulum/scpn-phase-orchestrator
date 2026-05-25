@@ -286,12 +286,12 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
     """
     phases_a = _validate_phases("phases_a", phases_a)
     phases_b = _validate_phases("phases_b", phases_b)
-    if phases_a.size == 0 or phases_b.size == 0:
-        return 0.0
     if phases_a.size != phases_b.size:
         raise ValueError(
             f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
         )
+    if phases_a.size == 0:
+        return 0.0
     backend_fn = _dispatch("plv")
     if backend_fn is not None:
         fn = cast(

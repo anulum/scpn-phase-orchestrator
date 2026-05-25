@@ -195,6 +195,10 @@ class TestPLV:
         with pytest.raises(ValueError, match="equal-length"):
             compute_plv(np.zeros(5), np.zeros(6))
 
+    def test_empty_non_empty_length_mismatch_rejected(self) -> None:
+        with pytest.raises(ValueError, match="equal-length"):
+            compute_plv(np.array([], dtype=np.float64), np.zeros(1, dtype=np.float64))
+
     @pytest.mark.parametrize(
         ("a", "b", "match"),
         [
@@ -732,11 +736,18 @@ class TestOrderParameterEdgeCases:
         assert abs(r - 1.0) < 1e-10, "Single oscillator must have R=1"
         assert abs(psi - 1.23) < 1e-10, "Single oscillator Ψ must equal its phase"
 
-    def test_plv_empty_either_side_returns_zero(self):
+    def test_plv_two_empty_series_returns_zero(self):
         from scpn_phase_orchestrator.upde.order_params import compute_plv
 
-        assert compute_plv(np.array([]), np.array([1.0])) == 0.0
-        assert compute_plv(np.array([1.0]), np.array([])) == 0.0
+        assert compute_plv(np.array([]), np.array([])) == 0.0
+
+    def test_plv_one_sided_empty_series_is_invalid(self):
+        from scpn_phase_orchestrator.upde.order_params import compute_plv
+
+        with pytest.raises(ValueError, match="equal-length"):
+            compute_plv(np.array([]), np.array([1.0]))
+        with pytest.raises(ValueError, match="equal-length"):
+            compute_plv(np.array([1.0]), np.array([]))
 
     def test_plv_identical_phases_returns_one(self):
         from scpn_phase_orchestrator.upde.order_params import compute_plv

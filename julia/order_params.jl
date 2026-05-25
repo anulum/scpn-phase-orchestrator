@@ -57,9 +57,9 @@ function plv(
     phases_b::AbstractVector{Float64},
 )
     n = length(phases_a)
-    n == 0 && return 0.0
     length(phases_b) == n ||
         error("PLV requires equal-length arrays")
+    n == 0 && return 0.0
     sx = 0.0
     sy = 0.0
     @inbounds for i in 1:n

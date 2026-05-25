@@ -24,6 +24,15 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_go import (
+    plv_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_julia import (
+    plv_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_mojo import (
+    plv_mojo,
+)
 from scpn_phase_orchestrator.upde import order_params as op_mod
 from scpn_phase_orchestrator.upde.order_params import (
     AVAILABLE_BACKENDS,
@@ -59,6 +68,13 @@ def _reference(
     finally:
         _reset(prev)
     return r_psi, plv_val, lc
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize("fn", [plv_go, plv_julia, plv_mojo])
+    def test_plv_rejects_empty_non_empty_mismatch_before_runtime_load(self, fn) -> None:
+        with pytest.raises(ValueError, match="equal-length"):
+            fn(np.array([], dtype=np.float64), np.zeros(1, dtype=np.float64))
 
 
 # ---------------------------------------------------------------------
