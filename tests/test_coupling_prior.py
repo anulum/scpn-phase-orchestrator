@@ -44,6 +44,12 @@ class TestUniversalPrior:
         second = prior.sample(seed=1234)
         assert first == second
 
+    @pytest.mark.parametrize("seed", [True, False, 1.5, "7", -1, 2**64])
+    def test_sample_rejects_invalid_seed(self, seed: object):
+        prior = UniversalPrior()
+        with pytest.raises((TypeError, ValueError), match="seed"):
+            prior.sample(seed=seed)
+
     def test_estimate_Kc(self):
         prior = UniversalPrior()
         omegas = np.array([1.0, 1.5, 2.0, 2.5])
@@ -51,6 +57,28 @@ class TestUniversalPrior:
         assert isinstance(result, CouplingPrior)
         assert result.K_c_estimate > 0
         assert result.K_base == 0.47
+
+    def test_estimate_Kc_preserves_zero_diagonal_distance_prior(self, monkeypatch):
+        prior = UniversalPrior()
+        captured = {}
+
+        def fake_critical_coupling(omegas, knm):
+            captured["omegas"] = np.asarray(omegas)
+            captured["knm"] = np.asarray(knm)
+            return 1.25
+
+        import scpn_phase_orchestrator.coupling.spectral as spectral
+
+        monkeypatch.setattr(spectral, "critical_coupling", fake_critical_coupling)
+
+        result = prior.estimate_Kc(np.array([0.0, 0.5, 1.0]), 3)
+
+        assert result.K_c_estimate == 1.25
+        np.testing.assert_allclose(np.diag(captured["knm"]), 0.0, atol=1e-15)
+        np.testing.assert_allclose(captured["knm"], captured["knm"].T, atol=1e-12)
+        assert np.all(captured["knm"] >= 0.0)
+        assert captured["knm"][0, 1] > captured["knm"][0, 2]
+        np.testing.assert_allclose(captured["omegas"], [0.0, 0.5, 1.0])
 
     def test_estimate_Kc_identical_omegas(self):
         prior = UniversalPrior()
@@ -71,7 +99,22 @@ class TestUniversalPrior:
     def test_estimate_Kc_rejects_invalid_layer_count(self):
         prior = UniversalPrior()
         with pytest.raises((TypeError, ValueError), match="n_layers"):
-            prior.estimate_Kc(np.array([0.1, 0.2]), True)  # type: ignore[arg-type]
+            prior.estimate_Kc(np.array([0.1, 0.2]), True)
+
+    @pytest.mark.parametrize(
+        "omegas",
+        [
+            np.array([0.1, np.nan]),
+            np.array([0.1, np.inf]),
+            np.array([True, False]),
+            np.array([[0.1, 0.2]]),
+            np.array([1.0 + 0.1j, 2.0 + 0.2j]),
+        ],
+    )
+    def test_estimate_Kc_rejects_invalid_frequency_vector(self, omegas: object):
+        prior = UniversalPrior()
+        with pytest.raises(ValueError, match="omegas"):
+            prior.estimate_Kc(omegas, 2)
 
     def test_log_probability_peak_at_mean(self):
         prior = UniversalPrior()

@@ -42,6 +42,12 @@ _K_BASE_MEAN = 0.47
 _K_BASE_STD = 0.09
 _DECAY_ALPHA_MEAN = 0.25
 _DECAY_ALPHA_STD = 0.07
+_MAX_SEED = 2**64 - 1
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
@@ -59,6 +65,38 @@ def _validate_positive_real(value: object, *, name: str) -> float:
     if resolved <= 0.0:
         raise ValueError(f"{name} prior hyperparameter must be positive")
     return resolved
+
+
+def _validate_seed(value: object | None) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise TypeError("seed must be an integer in the u64 range")
+    seed = int(value)
+    if seed < 0 or seed > _MAX_SEED:
+        raise ValueError("seed must be an integer in the u64 range")
+    return seed
+
+
+def _validate_frequency_vector(value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("omegas must not contain boolean values")
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError("omegas must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("omegas must be a finite 1-D frequency vector")
+    try:
+        omegas = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("omegas must be a finite 1-D frequency vector") from exc
+    if omegas.ndim != 1:
+        raise ValueError("omegas must be a finite 1-D frequency vector")
+    if omegas.size == 0:
+        raise ValueError("omegas must contain at least one frequency")
+    if not np.all(np.isfinite(omegas)):
+        raise ValueError("omegas must contain only finite values")
+    return np.ascontiguousarray(omegas, dtype=np.float64)
 
 
 @dataclass
@@ -108,6 +146,7 @@ class UniversalPrior:
         (NOT reproducible across sessions).
         """
         if rng is None:
+            seed = _validate_seed(seed)
             rng = np.random.default_rng(seed)
         K = max(0.01, rng.normal(self._K_base_mean, self._K_base_std))
         alpha = max(0.01, rng.normal(self._decay_alpha_mean, self._decay_alpha_std))
@@ -129,21 +168,20 @@ class UniversalPrior:
         """
         if isinstance(n_layers, bool) or not isinstance(n_layers, Integral):
             raise TypeError(f"n_layers must be an integer, got {n_layers!r}")
+        n_layers = int(n_layers)
         if n_layers <= 0:
             raise ValueError("n_layers must be a positive integer")
         from scpn_phase_orchestrator.coupling.spectral import critical_coupling
 
         prior = self.default()
-        raw_omegas = np.asarray(omegas)
-        if raw_omegas.ndim != 1:
-            raise ValueError("omegas must be a 1-D frequency vector")
-        if raw_omegas.size != n_layers:
+        omega_values = _validate_frequency_vector(omegas)
+        if omega_values.size != n_layers:
             raise ValueError("n_layers must match the length of omegas")
         idx = np.arange(n_layers)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
         knm: FloatArray = prior.K_base * np.exp(-prior.decay_alpha * dist)
         np.fill_diagonal(knm, 0.0)
-        K_c = critical_coupling(omegas, knm)
+        K_c = critical_coupling(omega_values, knm)
         return CouplingPrior(
             K_base=prior.K_base,
             decay_alpha=prior.decay_alpha,

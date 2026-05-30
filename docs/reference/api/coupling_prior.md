@@ -54,6 +54,11 @@ connectivity (Fiedler value).
 This estimate gives the minimum coupling strength needed for
 frequency synchronisation given the natural frequency spread
 $\max |\omega_i - \omega_j|$ and the network topology.
+The public boundary validates `omegas` as a finite one-dimensional
+real-valued frequency vector before constructing the distance-decay
+matrix or dispatching to the spectral critical-coupling calculation.
+Boolean aliases, complex values, non-finite values, empty vectors, and
+length mismatches are rejected.
 
 ### Distance-Decay Matrix
 
@@ -264,6 +269,15 @@ for i in range(5):
     config = prior.sample(rng)
     print(f"Sample {i}: K={config.K_base:.3f}, α={config.decay_alpha:.3f}")
 ```
+
+For reproducible sampling without passing an explicit generator, use an
+integer seed in the unsigned 64-bit range:
+
+```python
+config = prior.sample(seed=1234)
+```
+
+Boolean, negative, fractional, string, and out-of-range seeds are rejected.
 
 ### Estimate Critical Coupling
 

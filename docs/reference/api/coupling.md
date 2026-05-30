@@ -373,9 +373,10 @@ experimental programme.
 ### UniversalPrior
 
 - `default() → CouplingPrior` — MAP estimate (K_base=0.47, α=0.25)
-- `sample(rng=None) → CouplingPrior` — random draw from prior
+- `sample(rng=None, seed=None) → CouplingPrior` — random draw from prior;
+  `seed` must be an integer in the unsigned 64-bit range when provided
 - `estimate_Kc(omegas, n_layers) → CouplingPrior` — combines prior
-  with Dörfler-Bullo K_c for given omegas
+  with Dörfler-Bullo K_c for a finite one-dimensional frequency vector
 - `log_probability(K_base, decay_alpha) → float` — unnormalised
   log-probability under Gaussian prior
 **Detailed documentation:** [Universal Prior — detailed reference](coupling_prior.md)
