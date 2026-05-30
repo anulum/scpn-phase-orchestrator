@@ -193,6 +193,22 @@ def test_sindy_rejects_non_finite_phases(phases: np.ndarray):
         sindy.fit(phases, 0.05)
 
 
+@pytest.mark.parametrize(
+    "phases",
+    [
+        np.array([[True, False], [False, True]], dtype=bool),
+        np.array([[0.0, 1.0], [True, False]], dtype=object),
+        np.array([[0.0 + 0.1j, 1.0], [0.2, 1.5]], dtype=complex),
+    ],
+)
+def test_sindy_rejects_boolean_and_complex_phases(phases: np.ndarray):
+    """Logical masks and phasor values must not enter real phase regression."""
+    sindy = PhaseSINDy()
+
+    with pytest.raises(ValueError, match="boolean|finite 2D"):
+        sindy.fit(phases, 0.05)
+
+
 def test_sindy_threshold_sparsifies_weak_terms():
     """High threshold wipes small coupling coefficients below it."""
     dt = 0.05
@@ -402,6 +418,40 @@ def test_sindy_rust_backend_rejects_malformed_output_shape(
 
     with pytest.raises(ValueError, match="expected|Rust SINDy"):
         sindy.fit(phases, dt=0.05)
+
+
+def test_sindy_rust_backend_rejects_non_finite_coefficients(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Backend coefficients must stay finite before equation formatting."""
+    phases = np.array(
+        [
+            [0.0, 0.1],
+            [0.3, 0.4],
+        ],
+        dtype=np.float64,
+    )
+
+    def fake_rust_sindy_fit(
+        _p_flat: np.ndarray,
+        _n_oscillators: int,
+        _n_steps: int,
+        _dt: float,
+        _threshold: float,
+        _max_iter: int,
+    ) -> np.ndarray:
+        return np.array([1.0, np.nan, 0.1, 2.0], dtype=np.float64)
+
+    monkeypatch.setattr(sindy_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sindy_module,
+        "_rust_sindy_fit",
+        fake_rust_sindy_fit,
+        raising=False,
+    )
+
+    with pytest.raises(ValueError, match="non-finite coefficients"):
+        PhaseSINDy().fit(phases, dt=0.05)
 
 
 def test_sindy_get_equations_requires_fit_first():

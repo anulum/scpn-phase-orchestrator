@@ -40,6 +40,11 @@ __all__ = ["PhaseSINDy"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
 class PhaseSINDy:
     """Symbolic Discovery of Phase Dynamics using SINDy.
 
@@ -72,8 +77,16 @@ class PhaseSINDy:
         if not isfinite(parsed_dt) or parsed_dt <= 0.0:
             raise ValueError("dt must be a finite and positive scalar")
 
+        if _contains_boolean_alias(phases):
+            raise ValueError("phases must not contain boolean values")
+        raw_phases = np.asarray(phases)
+        if raw_phases.dtype == np.bool_:
+            raise ValueError("phases must not contain boolean values")
+        if np.iscomplexobj(raw_phases):
+            raise ValueError("phases must be a finite 2D numeric array")
+
         try:
-            phases_array = np.asarray(phases, dtype=np.float64)
+            phases_array = np.asarray(raw_phases, dtype=np.float64)
         except (TypeError, ValueError) as exc:
             raise ValueError("phases must be a finite 2D numeric array") from exc
 
@@ -105,13 +118,20 @@ class PhaseSINDy:
                 self.threshold,
                 self.max_iter,
             )
-            result_flat = np.asarray(result_flat, dtype=np.float64).ravel()
+            try:
+                result_flat = np.asarray(result_flat, dtype=np.float64).ravel()
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "Rust SINDy returned non-numeric coefficients"
+                ) from exc
             expected = N * N
             if result_flat.size != expected:
                 raise ValueError(
                     "Rust SINDy returned wrong number of coefficients: "
                     f"{result_flat.size} != {expected}"
                 )
+            if not np.all(np.isfinite(result_flat)):
+                raise ValueError("Rust SINDy returned non-finite coefficients")
             result = result_flat.reshape(N, N)
             # Remap: Rust stores [ω at diagonal, K_ij off-diagonal]
             # Python expects [ω, K_j1, K_j2, ...] (constant first, then j≠i)

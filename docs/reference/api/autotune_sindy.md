@@ -195,7 +195,7 @@ or adding a small $L_2$ regularisation can help.
 
 | Parameter | Type | Shape | Range | Meaning |
 |-----------|------|-------|-------|---------|
-| `phases` | `NDArray[float64]` | `(T, N)` | $[0, 2\pi)$ | Phase trajectory |
+| `phases` | `NDArray[float64]` | `(T, N)` | finite real, no boolean aliases | Phase trajectory |
 | `dt` | `float` | scalar | $> 0$ | Time step |
 
 ### Output Contract
@@ -204,6 +204,12 @@ or adding a small $L_2$ regularisation can help.
 |-------|------|-------|---------|
 | `coefficients` | `list[NDArray]` | $N \times [1+N-1]$ | Per-node coefficient vectors |
 | `feature_names` | `list[list[str]]` | $N \times [1+N-1]$ | Human-readable feature labels |
+
+Logical masks and complex phasors are rejected before coercion into the real
+phase-regression library. When the optional Rust backend is active, its
+coefficient payload must be numeric, finite, and exactly `N*N` entries before
+the diagonal frequency and off-diagonal coupling layout is remapped into the
+Python coefficient vectors.
 
 ---
 
