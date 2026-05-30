@@ -204,8 +204,8 @@ algebra.
 
 | Parameter | Type | Shape | Range | Meaning |
 |-----------|------|-------|-------|---------|
-| `phases` | `NDArray[float64]` | `(N, T)` | $[0, 2\pi)$ | Phase trajectories |
-| `omegas` | `NDArray[float64]` | `(N,)` | any | Known natural frequencies |
+| `phases` | `NDArray[float64]` | `(N, T)` | finite real, no boolean aliases | Phase trajectories |
+| `omegas` | `NDArray[float64]` | `(N,)` | finite real, no boolean aliases | Known natural frequencies |
 | `dt` | `float` | scalar | $> 0$ | Time step |
 
 ### Output Contract
@@ -213,6 +213,12 @@ algebra.
 | Field | Type | Shape | Constraints |
 |-------|------|-------|-------------|
 | (return) | `NDArray[float64]` | `(N, N)` | Diagonal = 0 |
+
+Boolean aliases and complex-valued samples are rejected before coercion, so
+logical masks or phasor-valued observations cannot silently enter the real
+phase-regression boundary. If the least-squares solve fails for a node, the
+corresponding coefficients remain zero; the harmonic estimator follows the
+same fail-closed convention as the first-harmonic estimator.
 
 ---
 

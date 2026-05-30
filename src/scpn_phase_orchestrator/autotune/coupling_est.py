@@ -25,9 +25,14 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-__all__ = ["estimate_coupling"]
+__all__ = ["estimate_coupling", "estimate_coupling_harmonics"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
 
 
 def _validate_inputs(
@@ -41,13 +46,27 @@ def _validate_inputs(
     if not np.isfinite(dt_value) or dt_value <= 0.0:
         raise ValueError("dt must be a finite positive real")
 
-    phases_array = np.atleast_2d(np.asarray(phases, dtype=np.float64))
+    if _contains_boolean_alias(phases):
+        raise ValueError("phases must not contain boolean values")
+    raw_phases = np.asarray(phases)
+    if raw_phases.dtype == np.bool_:
+        raise ValueError("phases must not contain boolean values")
+    if np.iscomplexobj(raw_phases):
+        raise ValueError("phases must be a finite 2-D trajectory matrix")
+    phases_array = np.asarray(raw_phases, dtype=np.float64)
     if phases_array.ndim != 2:
         raise ValueError("phases must be a finite 2-D trajectory matrix")
     if not np.all(np.isfinite(phases_array)):
         raise ValueError("phases must contain only finite values")
 
-    omegas_array = np.asarray(omegas, dtype=np.float64)
+    if _contains_boolean_alias(omegas):
+        raise ValueError("omegas must not contain boolean values")
+    raw_omegas = np.asarray(omegas)
+    if raw_omegas.dtype == np.bool_:
+        raise ValueError("omegas must not contain boolean values")
+    if np.iscomplexobj(raw_omegas):
+        raise ValueError("omegas must be a finite 1-D frequency vector")
+    omegas_array = np.asarray(raw_omegas, dtype=np.float64)
     if omegas_array.ndim != 1:
         raise ValueError("omegas must be a finite 1-D frequency vector")
     if not np.all(np.isfinite(omegas_array)):
@@ -160,8 +179,10 @@ def estimate_coupling_harmonics(
             blocks.append(np.cos(k * diff))
         regressors = np.vstack(blocks)  # (2*n_harmonics*n, T_eff)
 
-        with contextlib.suppress(np.linalg.LinAlgError):
+        try:
             coeffs = np.linalg.lstsq(regressors.T, target, rcond=None)[0]
+        except np.linalg.LinAlgError:
+            continue
 
         # Unpack coefficients
         idx = 0

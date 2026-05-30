@@ -72,6 +72,27 @@ class TestEstimateCoupling:
         with pytest.raises(ValueError, match="omegas"):
             estimate_coupling(phases, np.ones(2), dt=0.01)
 
+    @pytest.mark.parametrize(
+        ("phases", "omegas", "message"),
+        [
+            (np.array([[True, False, True, False]] * 2), np.ones(2), "boolean"),
+            (np.ones((2, 4), dtype=np.float64), np.array([True, False]), "boolean"),
+            (
+                np.array([[0.0 + 0.1j, 0.2, 0.3, 0.4]] * 2),
+                np.ones(2),
+                "finite 2-D",
+            ),
+            (
+                np.ones((2, 4), dtype=np.float64),
+                np.array([1.0 + 0.1j, 2.0]),
+                "finite 1-D",
+            ),
+        ],
+    )
+    def test_rejects_boolean_and_complex_inputs(self, phases, omegas, message):
+        with pytest.raises(ValueError, match=message):
+            estimate_coupling(phases, omegas, dt=0.01)
+
     def test_finite_values(self):
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (5, 200))
@@ -162,6 +183,31 @@ class TestHarmonicCoupling:
         phases = np.ones((3, 4), dtype=np.float64)
         with pytest.raises(ValueError, match="omegas"):
             estimate_coupling_harmonics(phases, np.ones(2), dt=0.01)
+
+    def test_harmonic_estimator_lstsq_failure_fails_closed_to_zero_coefficients(
+        self, monkeypatch
+    ):
+        phases = np.array(
+            [
+                [0.0, 0.2, 0.5, 0.9],
+                [0.1, 0.3, 0.6, 1.0],
+                [0.4, 0.5, 0.7, 1.1],
+            ],
+            dtype=np.float64,
+        )
+
+        def raise_linalg_error(*_args, **_kwargs):
+            raise np.linalg.LinAlgError("singular harmonic regression design")
+
+        monkeypatch.setattr(np.linalg, "lstsq", raise_linalg_error)
+
+        result = estimate_coupling_harmonics(phases, np.ones(3), dt=0.01)
+
+        assert set(result) == {"sin_1", "cos_1", "sin_2", "cos_2"}
+        for coefficients in result.values():
+            np.testing.assert_array_equal(
+                coefficients, np.zeros((3, 3), dtype=np.float64)
+            )
 
 
 class TestCouplingEstPipelineWiring:
