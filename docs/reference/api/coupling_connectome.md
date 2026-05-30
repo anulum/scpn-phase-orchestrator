@@ -191,20 +191,25 @@ data (80 regions, Desikan-Killiany atlas) when neurolib is installed.
 
 | Parameter | Type | Range | Default | Meaning |
 |-----------|------|-------|---------|---------|
-| `n_regions` | `int` | $\geq 2$ | — | Number of cortical regions |
-| `seed` | `int` | any | 42 | Random seed for noise |
+| `n_regions` | `int` | $\geq 2$; booleans rejected | — | Number of cortical regions |
+| `seed` | `int` | unsigned 64-bit range; booleans rejected | 42 | Random seed for noise |
 
 **load_neurolib_hcp:**
 
 | Parameter | Type | Range | Default | Meaning |
 |-----------|------|-------|---------|---------|
-| `n_regions` | `int` | $[2, 80]$ | 80 | Regions to return |
+| `n_regions` | `int` | $[2, 80]$; booleans rejected | 80 | Regions to return |
 
 ### Output Contract
 
 | Field | Type | Shape | Constraints |
 |-------|------|-------|-------------|
 | (return) | `NDArray[float64]` | `(N, N)` | Symmetric, $\geq 0$, diagonal = 0 |
+
+Both Python and optional Rust-backed paths are validated at the public Python
+boundary before returning. Invalid optional-backend or neurolib matrices fail
+closed if they are non-finite, asymmetric, negative, incorrectly shaped, or
+contain self-coupling on the diagonal.
 
 ---
 
@@ -351,6 +356,8 @@ generation. Due to different PRNG algorithms (NumPy uses PCG64,
 Rust uses LCG), the Python and Rust paths produce **different**
 matrices for the same seed. The structural properties (symmetric,
 hemispheric, DMN hubs) are identical; only the noise differs.
+The public Python wrapper validates those structural properties after optional
+Rust execution instead of trusting the foreign-function boundary blindly.
 
 ### Auto-Select Logic
 

@@ -46,7 +46,9 @@ def test_connectome_python_fallback_preserves_brain_network_structure(
 def test_neurolib_hcp_loader_validates_and_slices_dataset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    matrix = np.arange(80 * 80, dtype=np.float64).reshape(80, 80)
+    raw = np.arange(80 * 80, dtype=np.float64).reshape(80, 80)
+    matrix = raw + raw.T
+    np.fill_diagonal(matrix, 0.0)
 
     class Dataset:
         def __init__(self, name: str) -> None:
@@ -68,8 +70,33 @@ def test_neurolib_hcp_loader_validates_and_slices_dataset(
     assert np.all(loaded >= 0.0)
     with pytest.raises(ValueError, match=">= 2"):
         connectome.load_neurolib_hcp(1)
+    with pytest.raises(TypeError, match="n_regions must be an integer"):
+        connectome.load_neurolib_hcp(True)
     with pytest.raises(ValueError, match="<= 80"):
         connectome.load_neurolib_hcp(81)
+
+
+def test_neurolib_hcp_loader_rejects_invalid_dataset_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    matrix = np.ones((80, 80), dtype=np.float64)
+    matrix[0, 1] = np.nan
+
+    class Dataset:
+        def __init__(self, name: str) -> None:
+            assert name == "hcp"
+            self.Cmat = matrix
+
+    neurolib = types.ModuleType("neurolib")
+    utils = types.ModuleType("neurolib.utils")
+    load_data = types.ModuleType("neurolib.utils.loadData")
+    load_data.Dataset = Dataset
+    monkeypatch.setitem(sys.modules, "neurolib", neurolib)
+    monkeypatch.setitem(sys.modules, "neurolib.utils", utils)
+    monkeypatch.setitem(sys.modules, "neurolib.utils.loadData", load_data)
+
+    with pytest.raises(ValueError, match="finite"):
+        connectome.load_neurolib_hcp(5)
 
 
 def test_neurolib_hcp_loader_reports_missing_optional_dependency(

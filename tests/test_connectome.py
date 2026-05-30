@@ -80,6 +80,20 @@ def test_n_zero_raises():
         load_hcp_connectome(0)
 
 
+def test_n_regions_rejects_bool_and_non_integer():
+    with pytest.raises(TypeError, match="n_regions must be an integer"):
+        load_hcp_connectome(True)
+    with pytest.raises(TypeError, match="n_regions must be an integer"):
+        load_hcp_connectome(2.5)
+
+
+def test_seed_rejects_bool_and_out_of_u64_range():
+    with pytest.raises(TypeError, match="seed must be an integer"):
+        load_hcp_connectome(2, seed=False)
+    with pytest.raises(ValueError, match="seed must be an integer in the u64 range"):
+        load_hcp_connectome(2, seed=-1)
+
+
 def test_minimum_n():
     knm = load_hcp_connectome(2)
     assert knm.shape == (2, 2)
@@ -118,13 +132,15 @@ def test_dmn_hubs_present():
     assert dmn_coupling > non_dmn_coupling
 
 
-def test_optional_rust_loader_returns_matrix_contract(monkeypatch):
-    """Optional Rust loader must receive parameters and return matrix shape."""
+def test_optional_rust_loader_returns_validated_matrix_contract(monkeypatch):
+    """Optional Rust loader must preserve structural connectome invariants."""
     calls = []
 
     def fake_rust_load_hcp(n_regions, seed):
         calls.append((n_regions, seed))
-        return np.arange(n_regions * n_regions, dtype=np.float64)
+        matrix = np.ones((n_regions, n_regions), dtype=np.float64)
+        np.fill_diagonal(matrix, 0.0)
+        return matrix.ravel()
 
     monkeypatch.setattr(connectome_module, "_HAS_RUST", True)
     monkeypatch.setattr(
@@ -134,17 +150,26 @@ def test_optional_rust_loader_returns_matrix_contract(monkeypatch):
     knm = load_hcp_connectome(3, seed=17)
 
     assert calls == [(3, 17)]
-    np.testing.assert_array_equal(
-        knm,
-        np.array(
-            [
-                [0.0, 1.0, 2.0],
-                [3.0, 4.0, 5.0],
-                [6.0, 7.0, 8.0],
-            ],
-            dtype=np.float64,
-        ),
+    np.testing.assert_allclose(knm, knm.T, atol=1e-12)
+    np.testing.assert_allclose(np.diag(knm), 0.0, atol=1e-15)
+    assert np.all(knm >= 0.0)
+
+
+def test_optional_rust_loader_rejects_contract_violation(monkeypatch):
+    """The Python public boundary does not trust optional FFI output blindly."""
+
+    def fake_rust_load_hcp(n_regions, seed):
+        matrix = np.ones((n_regions, n_regions), dtype=np.float64)
+        matrix[0, 0] = 0.25
+        return matrix.ravel()
+
+    monkeypatch.setattr(connectome_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        connectome_module, "_rust_load_hcp", fake_rust_load_hcp, raising=False
     )
+
+    with pytest.raises(ValueError, match="diagonal must be zero"):
+        load_hcp_connectome(3, seed=17)
 
 
 def test_neurolib_import_error():

@@ -26,6 +26,7 @@ for examples, validation, and explicit downstream review.
 
 from __future__ import annotations
 
+from numbers import Integral
 from typing import TypeAlias
 
 import numpy as np
@@ -45,6 +46,52 @@ __all__ = ["load_hcp_connectome", "load_neurolib_hcp"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _NEUROLIB_HCP_SIZE = 80  # Cakan & Obermayer 2021, Neuroimage 227:117474
+_MAX_SEED = 2**64 - 1
+
+
+def _validate_n_regions(value: object, *, max_regions: int | None = None) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise TypeError("n_regions must be an integer")
+    n_regions = int(value)
+    if n_regions < 2:
+        msg = f"n_regions must be >= 2, got {n_regions}"
+        raise ValueError(msg)
+    if max_regions is not None and n_regions > max_regions:
+        msg = f"n_regions must be <= {max_regions}, got {n_regions}"
+        raise ValueError(msg)
+    return n_regions
+
+
+def _validate_seed(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise TypeError("seed must be an integer in the u64 range")
+    seed = int(value)
+    if seed < 0 or seed > _MAX_SEED:
+        raise ValueError("seed must be an integer in the u64 range")
+    return seed
+
+
+def _validate_connectome_matrix(
+    value: object, *, n_regions: int, source: str
+) -> FloatArray:
+    try:
+        matrix = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{source} connectome output must be a float matrix") from exc
+    if matrix.shape != (n_regions, n_regions):
+        raise ValueError(
+            f"{source} connectome output must have shape "
+            f"({n_regions}, {n_regions}), got {matrix.shape}"
+        )
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError(f"{source} connectome output must contain only finite values")
+    if np.any(matrix < 0.0):
+        raise ValueError(f"{source} connectome output must be non-negative")
+    if not np.allclose(matrix, matrix.T, atol=1e-12, rtol=0.0):
+        raise ValueError(f"{source} connectome output must be symmetric")
+    if not np.allclose(np.diag(matrix), 0.0, atol=1e-15, rtol=0.0):
+        raise ValueError(f"{source} connectome output diagonal must be zero")
+    return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
 def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
@@ -72,19 +119,18 @@ def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
             "neurolib is required for real HCP data: pip install neurolib"
         ) from None
 
-    if n_regions < 2:
-        msg = f"n_regions must be >= 2, got {n_regions}"
-        raise ValueError(msg)
-    if n_regions > _NEUROLIB_HCP_SIZE:
-        msg = f"n_regions must be <= {_NEUROLIB_HCP_SIZE}, got {n_regions}"
-        raise ValueError(msg)
+    n_regions = _validate_n_regions(n_regions, max_regions=_NEUROLIB_HCP_SIZE)
 
     ds = Dataset("hcp")
     sc: FloatArray = np.asarray(ds.Cmat, dtype=np.float64)
     sc = sc[:n_regions, :n_regions]
     np.fill_diagonal(sc, 0.0)
     result: FloatArray = np.clip(sc, 0.0, None)
-    return result
+    return _validate_connectome_matrix(
+        result,
+        n_regions=n_regions,
+        source="neurolib HCP",
+    )
 
 
 # Hagmann et al. 2008, PLoS Biol. 6:e159 — structural connectivity statistics
@@ -102,13 +148,16 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     Returns:
         Symmetric coupling matrix, shape (n_regions, n_regions), zero diagonal.
     """
-    if n_regions < 2:
-        msg = f"n_regions must be >= 2, got {n_regions}"
-        raise ValueError(msg)
+    n_regions = _validate_n_regions(n_regions)
+    seed = _validate_seed(seed)
 
     if _HAS_RUST:
-        flat: FloatArray = np.asarray(_rust_load_hcp(n_regions, seed))
-        return flat.reshape(n_regions, n_regions)
+        flat: FloatArray = np.asarray(_rust_load_hcp(n_regions, seed), dtype=np.float64)
+        return _validate_connectome_matrix(
+            flat.reshape(n_regions, n_regions),
+            n_regions=n_regions,
+            source="Rust HCP",
+        )
 
     rng = np.random.default_rng(seed=seed)
     knm: FloatArray = np.zeros((n_regions, n_regions), dtype=np.float64)
@@ -159,4 +208,8 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     knm = np.asarray((knm + knm.T) / 2.0, dtype=np.float64)
     np.fill_diagonal(knm, 0.0)
     result: FloatArray = np.clip(knm, 0, None)
-    return result
+    return _validate_connectome_matrix(
+        result,
+        n_regions=n_regions,
+        source="synthetic HCP",
+    )
