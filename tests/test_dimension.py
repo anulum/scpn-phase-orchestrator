@@ -90,6 +90,7 @@ class TestCorrelationIntegral:
             np.array([[0.0], [np.inf]], dtype=np.float64),
             np.zeros((2, 3, 4), dtype=np.float64),
             np.array([0.0, True], dtype=object),
+            np.array([0.0 + 1.0j, 1.0 + 0.0j], dtype=np.complex128),
             [["not-a-point"]],
         ],
     )
@@ -105,6 +106,7 @@ class TestCorrelationIntegral:
             np.array([-0.1], dtype=np.float64),
             np.zeros((1, 1), dtype=np.float64),
             np.array([0.1, True], dtype=object),
+            np.array([0.1 + 1.0j], dtype=np.complex128),
             ["not-epsilon"],
         ],
     )
@@ -226,6 +228,7 @@ class TestKaplanYorkeDimension:
             np.array([0.1, np.inf], dtype=np.float64),
             np.zeros((2, 2), dtype=np.float64),
             np.array([0.1, True], dtype=object),
+            np.array([0.1 + 1.0j, -0.2 + 0.0j], dtype=np.complex128),
             ["not-an-exponent"],
         ],
     )
@@ -266,6 +269,7 @@ class TestCorrelationDimensionResult:
         [
             [0.1, True],
             [np.nan, 1.0],
+            [0.1 + 1.0j, 1.0 + 0.0j],
             [[0.1, 1.0]],
         ],
     )
@@ -298,6 +302,7 @@ class TestCorrelationDimensionResult:
         [
             [0.25],
             [0.25, True],
+            [0.25 + 1.0j, 0.75 + 0.0j],
             [0.25, np.nan],
             [0.25, 1.1],
             [0.75, 0.25],
@@ -395,6 +400,7 @@ class TestBackendDispatch:
             np.array([0.5, 0.4], dtype=np.float64),
             np.array([True, False], dtype=np.bool_),
             np.array([0.5, np.bool_(True)], dtype=object),
+            np.array([0.5 + 1.0j, 0.75 + 0.0j], dtype=np.complex128),
         ],
     )
     def test_invalid_correlation_integral_backend_payload_falls_back(

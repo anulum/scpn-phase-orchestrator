@@ -162,6 +162,8 @@ def _validate_trajectory(trajectory: object) -> FloatArray:
     raw = np.asarray(trajectory)
     if _contains_boolean_alias(trajectory):
         raise ValueError("trajectory must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("trajectory must contain real-valued phase-space samples")
     try:
         traj = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -179,6 +181,8 @@ def _validate_epsilons(epsilons: object) -> FloatArray:
     raw = np.asarray(epsilons)
     if _contains_boolean_alias(epsilons):
         raise ValueError("epsilons must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("epsilons must contain real-valued distance thresholds")
     try:
         eps = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -212,6 +216,8 @@ def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
     raw = np.asarray(lyapunov_exponents)
     if _contains_boolean_alias(lyapunov_exponents):
         raise ValueError("lyapunov_exponents must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("lyapunov_exponents must contain real-valued exponents")
     try:
         le = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -237,8 +243,11 @@ def _validate_non_negative_float(value: object, *, name: str) -> float:
 def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("correlation integral output must not contain boolean values")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("correlation integral output must contain real values")
     try:
-        ci = np.asarray(value, dtype=np.float64)
+        ci = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("correlation integral output must be numeric") from exc
     if ci.shape != (expected_size,):

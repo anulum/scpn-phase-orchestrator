@@ -103,6 +103,9 @@ def correlation_integral(
 ```
 
 Returns a ``(K,)`` array of fractions in ``[0, 1]``.
+Trajectory coordinates, epsilon thresholds, and accelerated-backend
+``C(ε)`` payloads must be finite real values; complex-valued inputs
+are rejected instead of being projected onto their real part.
 
 ### 2.2 `correlation_dimension`
 
@@ -125,6 +128,9 @@ def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float: ...
 ```
 
 Input order is irrelevant — the kernel sorts internally.
+The Lyapunov spectrum must be finite and real-valued. Complex
+exponents are not coerced because Kaplan-Yorke dimension is defined
+on an ordered real Lyapunov spectrum.
 
 ---
 
@@ -282,26 +288,23 @@ finally:
 
 ## 7. Tests
 
-Three files (28 tests):
+Three module-owned files cover algorithmic invariants, backend
+contracts, and slow stability checks:
 
 ### 7.1 `tests/test_dimension_algorithm.py`
 
-14 tests:
-
 * `TestCorrelationIntegral` — monotone-in-ε, unit-interval bound,
   ``C(∞) = 1``, ``C(0) = 0``, ``T ≤ 1`` returns zero, Gaussian-cloud
-  slope sanity.
+  slope sanity, and rejection of non-real trajectory/epsilon values.
 * `TestKaplanYorke` — all-negative ``0``, all-positive ``N``,
-  sort-invariance, empty input ``0``, Lorenz-like spectrum lands in
-  ``(2, 3)``.
+  sort-invariance, empty input ``0``, real-spectrum enforcement, and
+  Lorenz-like spectrum lands in ``(2, 3)``.
 * `TestHypothesis` — random-spectrum KY bounded in ``[0, N]``
   across seeds.
 * `TestDispatcherSurface` — backend chain non-empty, Python always
   present.
 
 ### 7.2 `tests/test_dimension_backends.py`
-
-11 tests:
 
 * `TestRustParity` — Hypothesis sweep of full-pairs CI at
   ``1e-12`` + KY at ``1e-12``.
@@ -312,8 +315,6 @@ Three files (28 tests):
   entry under the tolerance matrix.
 
 ### 7.3 `tests/test_dimension_stability.py`
-
-Three ``@pytest.mark.slow`` tests:
 
 * 3-D Gaussian cloud ``D₂`` converges towards 3.
 * Subsampled ``C(ε)`` on a 300×4 trajectory stays finite and
