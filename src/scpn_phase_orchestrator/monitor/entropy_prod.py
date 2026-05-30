@@ -164,6 +164,8 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain real-valued samples")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -184,6 +186,8 @@ def _validate_matrix(
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain real-valued couplings")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:

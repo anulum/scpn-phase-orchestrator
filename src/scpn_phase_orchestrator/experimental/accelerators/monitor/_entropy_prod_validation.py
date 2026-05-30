@@ -42,10 +42,13 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain real-valued samples")
     try:
-        array = np.asarray(value).astype(np.float64, copy=True)
+        array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a one-dimensional float array") from exc
     if array.ndim != 1:
@@ -61,10 +64,13 @@ def _validate_matrix(
     name: str,
     expected_shape: tuple[int, int],
 ) -> FloatArray:
+    raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain real-valued couplings")
     try:
-        array = np.asarray(value).astype(np.float64, copy=True)
+        array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a two-dimensional float array") from exc
     if array.shape != expected_shape:

@@ -122,6 +122,9 @@ class TestEntropyProductionRate:
             ("phases", np.array([0.0, True], dtype=object), "phases"),
             ("omegas", np.array([1.0, False], dtype=object), "omegas"),
             ("knm", np.array([[0.0, True], [1.0, 0.0]], dtype=object), "knm"),
+            ("phases", np.array([0.0 + 1.0j, 1.0 + 0.0j]), "phases"),
+            ("omegas", np.array([1.0 + 1.0j, 2.0 + 0.0j]), "omegas"),
+            ("knm", np.array([[0.0 + 0.0j, 1.0 + 1.0j], [1.0, 0.0]]), "knm"),
         ],
     )
     def test_rejects_mixed_boolean_alias_arrays(
@@ -158,6 +161,23 @@ class TestEntropyProductionRate:
         knm = _all_to_all(2)
 
         with pytest.raises(ValueError, match="boolean"):
+            entropy_production_rate(phases, omegas, knm, alpha=alpha, dt=dt)
+
+    @pytest.mark.parametrize(
+        ("alpha", "dt", "match"),
+        [
+            (1.0 + 0.0j, 0.01, "alpha"),
+            (1.0, 0.01 + 0.0j, "dt"),
+        ],
+    )
+    def test_rejects_complex_scalars(
+        self, alpha: object, dt: object, match: str
+    ) -> None:
+        phases = np.array([0.0, 1.0], dtype=np.float64)
+        omegas = np.array([1.0, 2.0], dtype=np.float64)
+        knm = _all_to_all(2)
+
+        with pytest.raises(ValueError, match=match):
             entropy_production_rate(phases, omegas, knm, alpha=alpha, dt=dt)
 
 

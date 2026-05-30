@@ -82,6 +82,26 @@ def test__entropy_prod_validation_rejects_boolean_alias_inputs() -> None:
         )
 
 
+def test__entropy_prod_validation_rejects_complex_inputs() -> None:
+    with pytest.raises(ValueError, match="phases must contain real-valued samples"):
+        _entropy_prod_validation.validate_entropy_prod_backend_inputs(
+            np.array([0.0 + 1.0j, 1.0 + 0.0j]),
+            np.zeros(2),
+            np.zeros((2, 2)),
+            1.0,
+            0.01,
+        )
+
+    with pytest.raises(ValueError, match="knm must contain real-valued couplings"):
+        _entropy_prod_validation.validate_entropy_prod_backend_inputs(
+            np.zeros(2),
+            np.zeros(2),
+            np.array([[0.0 + 0.0j, 1.0 + 1.0j], [1.0, 0.0]]),
+            1.0,
+            0.01,
+        )
+
+
 def test_backend_array_contracts_are_parameterised() -> None:
     functions = (
         entropy_production_rate_go,
@@ -259,6 +279,28 @@ class TestEntropyProductionAdapterContracts:
             backend(
                 np.zeros(2),
                 np.zeros(1),
+                np.zeros((2, 2)),
+                1.0,
+                0.01,
+            )
+
+    def test_rejects_complex_arrays_before_runtime(
+        self,
+        name: str,
+        backend,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        if name == "go":
+            monkeypatch.setattr(_entropy_prod_go, "_load_lib", lambda: None)
+        elif name == "julia":
+            monkeypatch.setattr(_entropy_prod_julia, "_ensure", lambda: None)
+        else:
+            monkeypatch.setattr(_entropy_prod_mojo, "_run", lambda _payload: 0.0)
+
+        with pytest.raises(ValueError, match="omegas must contain real-valued samples"):
+            backend(
+                np.zeros(2),
+                np.array([0.0 + 1.0j, 1.0 + 0.0j]),
                 np.zeros((2, 2)),
                 1.0,
                 0.01,

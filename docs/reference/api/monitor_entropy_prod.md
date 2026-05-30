@@ -66,7 +66,7 @@ thermodynamic work done against the gradient flow.
 | Fully uncoupled, equal ``ω``                          | ``N · ω² · dt``            |
 | Doubled ``α`` with ``ω = 0``                          | ``4 × Σ`` (α enters squared)|
 | ``dt → 0``                                            | ``Σ → 0`` linearly          |
-| ``n = 0`` or ``dt ≤ 0``                               | ``0`` (short-circuit)      |
+| ``n = 0`` or ``dt = 0``                               | ``0`` (short-circuit)      |
 
 The kernel never returns negative values — each ``d² · dt`` term is
 non-negative.
@@ -105,8 +105,12 @@ def entropy_production_rate(
 ) -> float: ...
 ```
 
-Returns a single non-negative ``float``. ``n = 0`` or ``dt ≤ 0``
-short-circuits to ``0.0``.
+Returns a single non-negative ``float``. ``n = 0`` or ``dt = 0``
+short-circuits to ``0.0``; negative ``dt`` is rejected.
+The public monitor and direct polyglot adapter wrappers require
+finite real-valued phases, frequencies, couplings, ``alpha``, and
+``dt``. Complex arrays are rejected rather than projected onto their
+real components, because ``Σ`` is defined on real phase velocities.
 
 ---
 
@@ -302,7 +306,8 @@ Three files (21 tests total):
   nested-loop definition to 1e-12.
 * `TestScaling` — Σ is linear in ``dt``; α = 0 branch depends only
   on ``ω``.
-* `TestEdgeCases` — ``n = 0`` and ``dt ≤ 0`` short-circuit to 0.
+* `TestEdgeCases` — ``n = 0`` and ``dt = 0`` short-circuit to 0,
+  while negative ``dt`` fails closed.
 * `TestHypothesis` — random-input finite / non-negative invariant
   holds across seeds + sizes.
 * `TestDispatcherSurface` — Python always available; active is
@@ -340,13 +345,12 @@ pytest tests/test_entropy_prod_stability.py -m slow
 
 ## 8. Failure modes and caveats
 
-### 8.1 No input validation on NaN / Inf
+### 8.1 Public validation
 
-The kernel trusts its caller. A NaN in `phases`, `omegas`, or `knm`
-propagates to the output (the NumPy path silently returns `nan`; the
-native backends return whatever ``sin(NaN)`` produces, typically
-`nan`). Validate at the caller if you cannot trust the data
-pipeline.
+The public monitor validates shape, finiteness, real-valuedness, and
+boolean aliases before backend dispatch. The Go / Julia / Mojo direct
+adapter wrappers share the same validation helper, so direct adapter
+tests fail closed before entering polyglot runtimes.
 
 ### 8.2 Not thread-safe on the Python fallback
 
