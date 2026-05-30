@@ -74,6 +74,12 @@ def test_inference_result_audit_record_is_json_safe() -> None:
 def test_inference_rejects_invalid_inputs_and_unsupported_methods() -> None:
     with pytest.raises(ValueError, match="finite 2-D"):
         infer_coupling_from_timeseries(np.array([0.1, np.nan]))
+    with pytest.raises(ValueError, match="boolean"):
+        infer_coupling_from_timeseries(np.array([[True, False, True, False]] * 2))
+    with pytest.raises(ValueError, match="finite 2-D"):
+        infer_coupling_from_timeseries(
+            np.array([[0.1 + 0.1j, 0.2, 0.3, 0.4]] * 2)
+        )
     with pytest.raises(ValueError, match="at least 4 timesteps"):
         infer_coupling_from_timeseries(np.ones((2, 3)))
     with pytest.raises(NotImplementedError, match="notears"):
@@ -108,6 +114,30 @@ def test_cli_auto_coupling_estimation_outputs_json(tmp_path) -> None:
     assert payload["shape"] == [3, 240]
     assert payload["diagnostics"]["edge_count"] >= 1
     assert payload["knm"][0][1] > payload["knm"][1][0]
+
+
+def test_transfer_entropy_backend_negative_scores_fail_closed(monkeypatch) -> None:
+    import scpn_phase_orchestrator.coupling.infer as infer_module
+
+    def negative_scores(series, *, n_bins):
+        return np.array([[0.0, -0.25], [0.1, 0.0]], dtype=np.float64)
+
+    monkeypatch.setattr(infer_module, "transfer_entropy_matrix", negative_scores)
+
+    with pytest.raises(RuntimeError, match="negative scores"):
+        infer_coupling_from_timeseries(np.ones((2, 8)))
+
+
+def test_transfer_entropy_backend_self_scores_fail_closed(monkeypatch) -> None:
+    import scpn_phase_orchestrator.coupling.infer as infer_module
+
+    def self_scores(series, *, n_bins):
+        return np.array([[0.2, 0.1], [0.0, 0.0]], dtype=np.float64)
+
+    monkeypatch.setattr(infer_module, "transfer_entropy_matrix", self_scores)
+
+    with pytest.raises(RuntimeError, match="self scores"):
+        infer_coupling_from_timeseries(np.ones((2, 8)))
 
 
 @pytest.mark.parametrize(

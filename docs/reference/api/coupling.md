@@ -27,6 +27,9 @@ coupling matrix and phase-lag matrix are required for any simulation.
 For data-first onboarding, `auto_coupling_estimation()` infers an initial
 directed coupling graph from phase time series before review, projection, or
 engine execution.
+The inference boundary requires finite real phase samples and enforces the
+transfer-entropy invariant that directed scores are non-negative with no
+self-edge diagonal.
 
 ---
 

@@ -22,6 +22,10 @@ returns the transposed matrix for direct engine input.
 The current production backend is transfer entropy over binned phase states.
 `granger` and `notears` are reserved method names and raise
 `NotImplementedError` until those estimators have benchmarked implementations.
+The boundary rejects boolean aliases, complex values, non-finite samples, and
+non-2-D phase series before inference. Backend transfer-entropy matrices must
+be finite, non-negative, correctly shaped, and zero on the diagonal; invalid
+backend scores fail closed instead of being silently normalised.
 
 ## CLI
 

@@ -61,6 +61,11 @@ def _validate_optional_finite_real(value: object | None, *, name: str) -> float 
     return resolved
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
 @dataclass(frozen=True, slots=True)
 class CouplingInferenceConfig:
     """Configuration for data-driven coupling inference.
@@ -149,8 +154,18 @@ class CouplingInferenceResult:
 
 
 def _validate_phase_series(value: object, *, min_timesteps: int) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("phase_series must not contain boolean values")
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError("phase_series must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(
+            "phase_series must be a finite 2-D array with shape "
+            "(oscillators, timesteps)"
+        )
     try:
-        series = np.asarray(value, dtype=np.float64)
+        series = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(
             "phase_series must be a finite 2-D array with shape "
@@ -261,6 +276,10 @@ def infer_coupling_from_timeseries(
         )
     if not np.all(np.isfinite(scores)):
         raise RuntimeError("transfer-entropy backend returned non-finite scores")
+    if np.any(scores < -1e-12):
+        raise RuntimeError("transfer-entropy backend returned negative scores")
+    if not np.allclose(np.diag(scores), 0.0, atol=1e-12, rtol=0.0):
+        raise RuntimeError("transfer-entropy backend returned non-zero self scores")
     scores = np.maximum(scores, 0.0)
     np.fill_diagonal(scores, 0.0)
 
