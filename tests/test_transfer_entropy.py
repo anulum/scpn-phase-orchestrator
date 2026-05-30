@@ -124,6 +124,15 @@ class TestTransferEntropy:
                 n_bins=n_bins,
             )
 
+    def test_phase_te_accepts_numpy_integral_bin_count(self) -> None:
+        source = np.linspace(0.0, 4.0 * np.pi, 64)
+        target = np.roll(source, 1)
+
+        value = phase_transfer_entropy(source, target, n_bins=np.int64(8))
+
+        assert np.isfinite(value)
+        assert 0.0 <= value <= np.log(8)
+
     @pytest.mark.parametrize(
         ("source", "target", "match"),
         [
@@ -140,6 +149,16 @@ class TestTransferEntropy:
             (
                 np.array([0.0, 1.0, 2.0]),
                 np.array([0.0, False, 2.0], dtype=object),
+                "target",
+            ),
+            (
+                np.array([0.0 + 1.0j, 1.0 + 0.0j, 2.0 + 0.0j]),
+                np.array([0.0, 1.0, 2.0]),
+                "source",
+            ),
+            (
+                np.array([0.0, 1.0, 2.0]),
+                np.array([0.0 + 1.0j, 1.0 + 0.0j, 2.0 + 0.0j]),
                 "target",
             ),
         ],
@@ -175,6 +194,13 @@ class TestTransferEntropy:
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
+    def test_matrix_rejects_complex_phase_series(self):
+        series = np.array(
+            [[0.0 + 1.0j, 1.0 + 0.0j, 2.0 + 0.0j], [0.1, 1.1, 2.1]]
+        )
+        with pytest.raises(ValueError, match="phase_series"):
+            transfer_entropy_matrix(series)
+
     @pytest.mark.parametrize("shape", [(0, 8), (3, 0)])
     def test_matrix_rejects_empty_axes(self, shape):
         with pytest.raises(ValueError, match="phase_series"):
@@ -191,6 +217,36 @@ class TestTransferEntropy:
         rng = np.random.default_rng(42)
         data = rng.uniform(0, 2 * np.pi, (3, 100))
         te = transfer_entropy_matrix(data)
+        np.testing.assert_array_equal(np.diag(te), 0.0)
+
+    def test_matrix_canonicalises_backend_self_information_roundoff(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        series = np.vstack(
+            [
+                np.linspace(0.0, 1.0, 32),
+                np.linspace(0.2, 1.2, 32),
+            ]
+        )
+
+        def backend_with_roundoff(
+            _flat: np.ndarray, n_osc: int, n_time: int, bins: int
+        ) -> np.ndarray:
+            assert n_osc == 2
+            assert n_time == 32
+            assert bins == 8
+            return np.array([[1e-13, 0.25], [0.125, 1e-13]], dtype=np.float64)
+
+        monkeypatch.setattr(
+            te_mod,
+            "_dispatch",
+            lambda fn_name: backend_with_roundoff if fn_name == "te_matrix" else None,
+        )
+
+        te = transfer_entropy_matrix(series, n_bins=8)
+
+        assert te[0, 1] == pytest.approx(0.25)
+        assert te[1, 0] == pytest.approx(0.125)
         np.testing.assert_array_equal(np.diag(te), 0.0)
 
     def test_non_negative(self):

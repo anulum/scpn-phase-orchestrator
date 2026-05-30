@@ -97,10 +97,17 @@ M = transfer_entropy_matrix(series, n_bins=16)            # (N, N)
 Key parameters:
 
 * ``source`` / ``target`` — 1-D phase arrays, equal length. Radians,
-  any real value; wrapping is applied internally.
-* ``phase_series`` — ``(n_oscillators, n_timesteps)`` array.
+  any finite real value; wrapping is applied internally. Complex
+  samples and boolean aliases are rejected at the public boundary
+  because oscillator phase is a real-valued angle.
+* ``phase_series`` — ``(n_oscillators, n_timesteps)`` array with
+  finite real-valued entries. The matrix API enforces a zero diagonal
+  even when an accelerated backend returns tiny floating-point
+  self-information roundoff.
 * ``n_bins`` — number of phase bins. Default 16; typical range
-  8–32. Larger ``n_bins`` increases variance at fixed sample size.
+  8–32. Python and NumPy integer aliases are accepted; booleans and
+  non-integral values are rejected. Larger ``n_bins`` increases
+  variance at fixed sample size.
 
 Inputs with length < 3 return ``0.0`` because the 1-step Markov
 estimator needs at least one ``(Y_t, Y_{t+1}, X_t)`` triple.
@@ -224,7 +231,11 @@ Tested in ``test_te_matrix_asymmetric_for_directed_coupling``.
 ### 5.5 Matrix diagonal
 
 ``TE(i → i) = 0`` by construction in the matrix kernel.
-Tested in ``test_te_matrix_diagonal_zero``.
+The Python boundary also canonicalises accelerated-backend roundoff
+on the diagonal to exact zero before consumers threshold or sum the
+directed information matrix. Tested in
+``test_te_matrix_diagonal_zero`` and
+``test_matrix_canonicalises_backend_self_information_roundoff``.
 
 ### 5.6 Short-series return
 

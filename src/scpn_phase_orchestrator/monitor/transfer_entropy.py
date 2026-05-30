@@ -28,7 +28,7 @@ coupling from source to target.
 from __future__ import annotations
 
 from collections.abc import Callable
-from numbers import Real
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -159,6 +159,8 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be a finite real-valued 1-D phase vector")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -174,6 +176,8 @@ def _validate_phase_series(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be a finite real-valued 2-D phase series")
     try:
         series = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -193,7 +197,7 @@ def _validate_phase_series(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_n_bins(value: object) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if value < 2:
         raise ValueError("n_bins must be greater than or equal to 2")
@@ -246,7 +250,9 @@ def _validate_te_matrix(
         raise ValueError("transfer entropy matrix entries must not exceed log(n_bins)")
     if not np.allclose(np.diag(matrix), 0.0, rtol=0.0, atol=1e-12):
         raise ValueError("transfer entropy matrix diagonal must be zero")
-    return np.ascontiguousarray(np.maximum(matrix, 0.0), dtype=np.float64)
+    matrix = np.maximum(matrix, 0.0)
+    np.fill_diagonal(matrix, 0.0)
+    return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
 def _conditional_entropy(
