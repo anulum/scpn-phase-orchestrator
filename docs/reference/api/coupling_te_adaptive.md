@@ -169,8 +169,8 @@ UPDEEngine.step() ──→ phases(t) ──→ trajectory buffer
 
 | Parameter | Type | Shape | Range | Source |
 |-----------|------|-------|-------|--------|
-| `knm` | `NDArray[float64]` | `(N, N)` | $\geq 0$ | Current coupling matrix |
-| `phase_history` | `NDArray[float64]` | `(N, T)` | $[0, 2\pi)$ | Recent phase trajectories |
+| `knm` | `NDArray[float64]` | `(N, N)` | finite real, $\geq 0$, diagonal = 0 | Current coupling matrix |
+| `phase_history` | `NDArray[float64]` | `(N, T)` | finite real, no boolean aliases | Recent phase trajectories |
 | `lr` | `float` | scalar | $\geq 0$ | Learning rate (default 0.01) |
 | `decay` | `float` | scalar | $[0, 1]$ | Decay rate (default 0.0) |
 | `n_bins` | `int` | scalar | $\geq 2$ | Histogram bins (default 8) |
@@ -180,6 +180,13 @@ UPDEEngine.step() ──→ phases(t) ──→ trajectory buffer
 | Field | Type | Shape | Constraints |
 |-------|------|-------|-------------|
 | (return) | `NDArray[float64]` | `(N, N)` | $\geq 0$, diagonal = 0 |
+
+The public boundary rejects boolean aliases, complex values, non-finite
+samples, negative coupling, non-zero self-coupling, mismatched oscillator
+counts, invalid scalar update parameters, and invalid bin counts before the
+update. Transfer-entropy scores and optional Rust update results are also
+validated as finite `N x N` matrices with non-negative off-diagonal values and
+zero self-coupling before returning a matrix to engine callers.
 
 ### Typical Update Frequency
 

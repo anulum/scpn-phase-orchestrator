@@ -57,6 +57,112 @@ class TestTEAdaptive:
         result = te_adapt_coupling(knm, history, lr=0.0, decay=0.5)
         assert float(result.sum()) < float(knm.sum())
 
+    @pytest.mark.parametrize(
+        ("knm", "history", "kwargs", "message"),
+        [
+            (
+                np.array([[0.0, -0.1], [0.2, 0.0]], dtype=np.float64),
+                np.ones((2, 5), dtype=np.float64),
+                {},
+                "non-negative",
+            ),
+            (
+                np.array([[0.3, 0.1], [0.2, 0.0]], dtype=np.float64),
+                np.ones((2, 5), dtype=np.float64),
+                {},
+                "diagonal",
+            ),
+            (
+                np.eye(2, 3, dtype=np.float64),
+                np.ones((2, 5), dtype=np.float64),
+                {},
+                "square",
+            ),
+            (
+                np.zeros((2, 2), dtype=np.float64),
+                np.array([[True, False, True], [False, True, False]]),
+                {},
+                "boolean",
+            ),
+            (
+                np.zeros((2, 2), dtype=np.float64),
+                np.ones((3, 5), dtype=np.float64),
+                {},
+                "oscillator count",
+            ),
+            (
+                np.zeros((2, 2), dtype=np.float64),
+                np.ones((2, 5), dtype=np.float64),
+                {"lr": -0.1},
+                "lr",
+            ),
+            (
+                np.zeros((2, 2), dtype=np.float64),
+                np.ones((2, 5), dtype=np.float64),
+                {"decay": 1.1},
+                "decay",
+            ),
+            (
+                np.zeros((2, 2), dtype=np.float64),
+                np.ones((2, 5), dtype=np.float64),
+                {"n_bins": True},
+                "n_bins",
+            ),
+        ],
+    )
+    def test_rejects_invalid_public_boundary_inputs(
+        self,
+        knm: np.ndarray,
+        history: np.ndarray,
+        kwargs: dict[str, object],
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            te_adapt_coupling(knm, history, **kwargs)
+
+    def test_transfer_entropy_backend_negative_scores_fail_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fake_transfer_entropy_matrix(_history, *, n_bins):
+            return np.array([[0.0, -0.2], [0.1, 0.0]], dtype=np.float64)
+
+        monkeypatch.setattr(
+            te_mod,
+            "transfer_entropy_matrix",
+            fake_transfer_entropy_matrix,
+        )
+
+        with pytest.raises(RuntimeError, match="negative scores"):
+            te_adapt_coupling(
+                np.zeros((2, 2), dtype=np.float64),
+                np.ones((2, 5), dtype=np.float64),
+            )
+
+    def test_rust_backend_negative_coupling_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fake_transfer_entropy_matrix(_history, *, n_bins):
+            return np.array([[0.0, 0.2], [0.1, 0.0]], dtype=np.float64)
+
+        def fake_rust(_k_flat, _te_flat, _n, _lr, _decay):
+            return np.array([0.0, -0.1, 0.2, 0.0], dtype=np.float64)
+
+        monkeypatch.setattr(te_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(te_mod, "_rust_te_adapt", fake_rust, raising=False)
+        monkeypatch.setattr(
+            te_mod,
+            "transfer_entropy_matrix",
+            fake_transfer_entropy_matrix,
+        )
+
+        with pytest.raises(RuntimeError, match="negative coupling"):
+            te_adapt_coupling(
+                np.zeros((2, 2), dtype=np.float64),
+                np.ones((2, 5), dtype=np.float64),
+            )
+
     def test_rust_dispatch_uses_flattened_transfer_entropy_matrix(
         self,
         monkeypatch: pytest.MonkeyPatch,

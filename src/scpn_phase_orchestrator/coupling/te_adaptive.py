@@ -18,6 +18,7 @@ does not mutate live solver state or apply actuation.
 
 from __future__ import annotations
 
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -38,6 +39,99 @@ except ImportError:
 
 __all__ = ["te_adapt_coupling"]
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, bool) for item in raw.ravel())
+
+
+def _as_finite_real_array(value: object, *, name: str) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be finite and real-valued")
+    try:
+        array = np.asarray(raw, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be finite and real-valued") from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return array
+
+
+def _validate_knm(value: object) -> FloatArray:
+    knm = _as_finite_real_array(value, name="knm")
+    if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
+        raise ValueError("knm must be a finite square coupling matrix")
+    if np.any(knm < 0.0):
+        raise ValueError("knm must be non-negative")
+    if not np.allclose(np.diag(knm), 0.0, atol=1e-12, rtol=0.0):
+        raise ValueError("knm diagonal must be zero")
+    return knm
+
+
+def _validate_phase_history(value: object, *, n: int) -> FloatArray:
+    history = _as_finite_real_array(value, name="phase_history")
+    if history.ndim != 2:
+        raise ValueError("phase_history must be a finite 2-D phase matrix")
+    if history.shape[0] != n:
+        raise ValueError("phase_history oscillator count must match knm")
+    return history
+
+
+def _validate_non_negative_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real")
+    parsed = float(value)
+    if not np.isfinite(parsed) or parsed < 0.0:
+        raise ValueError(f"{name} must be a finite non-negative real")
+    return parsed
+
+
+def _validate_decay(value: object) -> float:
+    parsed = _validate_non_negative_real(value, name="decay")
+    if parsed > 1.0:
+        raise ValueError("decay must be in [0, 1]")
+    return parsed
+
+
+def _validate_n_bins(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("n_bins must be an integer >= 2")
+    parsed = int(value)
+    if parsed < 2:
+        raise ValueError("n_bins must be an integer >= 2")
+    return parsed
+
+
+def _validate_transfer_entropy_scores(value: object, *, n: int) -> FloatArray:
+    scores = _as_finite_real_array(value, name="transfer_entropy")
+    if scores.shape != (n, n):
+        raise RuntimeError("transfer-entropy backend returned wrong shape")
+    if np.any(scores < -1e-12):
+        raise RuntimeError("transfer-entropy backend returned negative scores")
+    if not np.allclose(np.diag(scores), 0.0, atol=1e-12, rtol=0.0):
+        raise RuntimeError("transfer-entropy backend returned non-zero self scores")
+    scores = np.maximum(scores, 0.0)
+    np.fill_diagonal(scores, 0.0)
+    return scores
+
+
+def _validate_adapted_coupling(value: object, *, n: int) -> FloatArray:
+    result = _as_finite_real_array(value, name="adapted coupling")
+    if result.shape != (n, n):
+        raise RuntimeError("TE adaptive backend returned wrong shape")
+    if np.any(result < -1e-12):
+        raise RuntimeError("TE adaptive backend returned negative coupling")
+    if not np.allclose(np.diag(result), 0.0, atol=1e-12, rtol=0.0):
+        raise RuntimeError("TE adaptive backend returned non-zero self coupling")
+    result = np.maximum(result, 0.0)
+    np.fill_diagonal(result, 0.0)
+    return result
 
 
 def te_adapt_coupling(
@@ -64,16 +158,24 @@ def te_adapt_coupling(
         decay: coupling decay rate per update (0 = no decay).
         n_bins: histogram bins for TE estimation.
     """
-    te = transfer_entropy_matrix(phase_history, n_bins=n_bins)
+    knm = _validate_knm(knm)
+    n = knm.shape[0]
+    phase_history = _validate_phase_history(phase_history, n=n)
+    lr = _validate_non_negative_real(lr, name="lr")
+    decay = _validate_decay(decay)
+    n_bins = _validate_n_bins(n_bins)
+    te = _validate_transfer_entropy_scores(
+        transfer_entropy_matrix(phase_history, n_bins=n_bins),
+        n=n,
+    )
     if _HAS_RUST:
-        n = knm.shape[0]
         k_flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         t_flat = np.ascontiguousarray(te.ravel(), dtype=np.float64)
-        result_flat: FloatArray = np.asarray(
+        result_flat = np.asarray(
             _rust_te_adapt(k_flat, t_flat, n, lr, decay),
             dtype=np.float64,
         )
-        return result_flat.reshape(n, n)
+        return _validate_adapted_coupling(result_flat.reshape(n, n), n=n)
     knm_new = (1.0 - decay) * knm + lr * te
     np.fill_diagonal(knm_new, 0.0)
     result: FloatArray = np.maximum(knm_new, 0.0)
