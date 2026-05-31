@@ -1,4 +1,6 @@
-# Entrainment Verification Score (EVS)
+
+
+Validation rejects object-dtype complex phase aliases before float coercion so the EVS battery remains defined on real trial-phase recordings before ITPC, persistence, and frequency-specificity evaluation.| `phases_trials` | `NDArray[float64]` | `(N_trials, T)` | 00, 2\pi)0 Finite real phase per trial per timepoint; boolean and complex aliases rejected |# Entrainment Verification Score (EVS)
 
 ## 1. Mathematical Formalism
 

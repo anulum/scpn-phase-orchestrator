@@ -108,6 +108,16 @@ def test_evaluate_rejects_invalid_phase_trials(phases, match):
         EVSMonitor().evaluate(phases, [0], 10.0, 20.0)
 
 
+def test_evaluate_rejects_object_complex_phase_trials_as_non_real() -> None:
+    phases = np.asarray(
+        [[0.0, complex(0.1, 0.0)], [0.2, 0.3]],
+        dtype=object,
+    )
+
+    with pytest.raises(ValueError, match="phases_trials must contain real-valued"):
+        EVSMonitor().evaluate(phases, [0], 10.0, 20.0)
+
+
 @pytest.mark.parametrize(
     "pause_indices",
     [[0.5], [True], [0, True], np.array([[0, 1]]), ["not-an-index"], [math.inf]],
@@ -126,6 +136,49 @@ def test_evaluate_rejects_invalid_frequencies(target_freq, control_freq):
     phases = _entrained_phases(n_trials=4, n_time=8)
     with pytest.raises((TypeError, ValueError), match="freq"):
         EVSMonitor().evaluate(phases, [0], target_freq, control_freq)
+
+
+@pytest.mark.parametrize(
+    ("target_freq", "control_freq", "match"),
+    [
+        (np.asarray(complex(10.0, 0.0), dtype=object), 20.0, "target_freq.*real"),
+        (10.0, np.asarray(complex(20.0, 0.0), dtype=object), "control_freq.*real"),
+    ],
+)
+def test_evaluate_rejects_object_complex_frequency_controls(
+    target_freq: object,
+    control_freq: object,
+    match: str,
+) -> None:
+    phases = _entrained_phases(n_trials=4, n_time=8)
+
+    with pytest.raises((TypeError, ValueError), match=match):
+        EVSMonitor().evaluate(phases, [0], target_freq, control_freq)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        (
+            {"itpc_threshold": np.asarray(complex(0.6, 0.0), dtype=object)},
+            "itpc_threshold.*real",
+        ),
+        (
+            {"persistence_threshold": np.asarray(complex(0.4, 0.0), dtype=object)},
+            "persistence_threshold.*real",
+        ),
+        (
+            {"specificity_threshold": np.asarray(complex(1.5, 0.0), dtype=object)},
+            "specificity_threshold.*real",
+        ),
+    ],
+)
+def test_constructor_rejects_object_complex_threshold_controls(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    with pytest.raises((TypeError, ValueError), match=match):
+        EVSMonitor(**kwargs)
 
 
 def test_persistence_criterion_required():
@@ -234,7 +287,10 @@ def test_rust_frequency_specificity_receives_flat_phase_trials(monkeypatch):
     }
 
 
-@pytest.mark.parametrize("backend_value", [math.nan, -0.1, True])
+@pytest.mark.parametrize(
+    "backend_value",
+    [math.nan, -0.1, True, np.asarray(complex(1.2, 0.0), dtype=object)],
+)
 def test_rust_frequency_specificity_rejects_invalid_backend_output(
     monkeypatch,
     backend_value: object,
@@ -251,6 +307,11 @@ def test_rust_frequency_specificity_rejects_invalid_backend_output(
 
     with pytest.raises((TypeError, ValueError), match="specificity_ratio"):
         EVSMonitor._frequency_specificity(phases, 12.0, 18.0)
+
+
+def test_evs_result_rejects_object_complex_specificity_ratio() -> None:
+    with pytest.raises((TypeError, ValueError), match="specificity_ratio.*real"):
+        EVSResult(0.8, 0.6, np.asarray(complex(1.2, 0.0), dtype=object), True)
 
 
 def test_evs_result_is_frozen():

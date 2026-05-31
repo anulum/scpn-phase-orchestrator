@@ -220,6 +220,8 @@ def _validate_phase_trials(value: object) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("phases_trials must not contain boolean values")
+    if _contains_complex_alias(raw):
+        raise ValueError("phases_trials must contain real-valued phase samples")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -262,4 +264,13 @@ def _contains_boolean_alias(value: object) -> bool:
         return True
     if raw.dtype == object:
         return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+    return False
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype == object:
+        return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
     return False
