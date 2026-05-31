@@ -242,8 +242,9 @@ and **synergy** (information available only from the joint observation).
 **Theory:** Williams & Beer 2010 (arXiv:1004.2515). Circular mutual
 information is estimated via binned phase histograms (default 32 bins).
 Inputs, group indices, and optional Rust scalar outputs are validated as
-finite real-valued quantities; boolean aliases and complex payloads are
-rejected before histogram estimation or backend acceptance.
+finite real-valued quantities; boolean aliases, complex dtypes, and object
+arrays carrying Python or NumPy complex scalar aliases are rejected before
+histogram estimation or backend acceptance.
 
 **Usage:**
 
@@ -275,8 +276,9 @@ audit records. It is not an exact IIT quantity and is not a
 consciousness claim.
 Phase-series inputs, bin/sample counts, audit scalars, partitions, and
 pairwise mutual-information matrices are validated as finite real-valued
-contracts. Boolean aliases and complex matrices are rejected before circular
-histogram estimation or audit-record acceptance.
+contracts. Boolean aliases, complex dtypes, and object arrays carrying Python
+or NumPy complex scalar aliases are rejected before circular histogram
+estimation or audit-record acceptance.
 
 **Usage:**
 

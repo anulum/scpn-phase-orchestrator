@@ -343,7 +343,7 @@ def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
         msg = "phase_series must not contain boolean values"
         raise ValueError(msg)
     raw = np.asarray(phase_series)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(phase_series):
         msg = "phase_series must contain real-valued phase samples"
         raise ValueError(msg)
     try:
@@ -397,9 +397,27 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
+
+
 def _validate_non_negative_scalar(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
+    if _has_complex_payload(value):
+        raise ValueError(f"{name} must be real-valued")
     if not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real")
     scalar = float(value)
@@ -411,6 +429,8 @@ def _validate_non_negative_scalar(value: object, *, name: str) -> float:
 def _validate_finite_scalar(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
+    if _has_complex_payload(value):
+        raise ValueError(f"{name} must be real-valued")
     if not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real")
     scalar = float(value)
@@ -430,7 +450,7 @@ def _validate_pairwise_mi(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("pairwise_mi must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("pairwise_mi must contain real-valued entries")
     try:
         matrix = raw.astype(np.float64, copy=True)

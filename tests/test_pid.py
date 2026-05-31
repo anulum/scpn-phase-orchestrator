@@ -75,11 +75,18 @@ class TestRedundancy:
             np.array([0.0, True], dtype=object),
             np.array([0.0, np.bool_(True)], dtype=object),
             np.array([0.0, 1.0 + 0.0j]),
+            np.array([0.0, complex(1.0, 0.0)], dtype=object),
             [0.0, True],
         ],
     )
     def test_rejects_invalid_phase_vector(self, phases):
         with pytest.raises(ValueError, match="phases"):
+            redundancy(phases, [0], [1])
+
+    def test_object_complex_phase_vector_is_rejected_as_real_valued_boundary(self):
+        phases = np.array([0.0, complex(1.0, 0.0)], dtype=object)
+
+        with pytest.raises(ValueError, match="real-valued"):
             redundancy(phases, [0], [1])
 
     @pytest.mark.parametrize(
@@ -91,6 +98,7 @@ class TestRedundancy:
             np.array([0, True], dtype=object),
             np.array([0, np.bool_(True)], dtype=object),
             np.array([0, 1 + 0j]),
+            np.array([0, complex(1.0, 0.0)], dtype=object),
             [-1],
             [3],
             np.array([[0]]),
@@ -99,6 +107,13 @@ class TestRedundancy:
     def test_rejects_invalid_group_indices(self, group):
         phases = np.array([0.0, 1.0, 2.0])
         with pytest.raises((TypeError, ValueError, IndexError), match="group_a"):
+            redundancy(phases, group, [1])
+
+    def test_object_complex_group_index_is_rejected_as_real_integer_boundary(self):
+        phases = np.array([0.0, 1.0, 2.0])
+        group = np.array([0, complex(1.0, 0.0)], dtype=object)
+
+        with pytest.raises(TypeError, match="real integer"):
             redundancy(phases, group, [1])
 
     @pytest.mark.parametrize("n_bins", [0, 1, False, np.bool_(True), 4.5])
@@ -142,11 +157,18 @@ class TestSynergy:
             np.array([0.0, True], dtype=object),
             np.array([0.0, np.bool_(True)], dtype=object),
             np.array([0.0, 1.0 + 0.0j]),
+            np.array([0.0, complex(1.0, 0.0)], dtype=object),
             [0.0, True],
         ],
     )
     def test_rejects_invalid_phase_vector(self, phases: np.ndarray) -> None:
         with pytest.raises(ValueError, match="phases"):
+            synergy(phases, [0], [1])
+
+    def test_object_complex_phase_vector_is_rejected_as_real_valued_boundary(self):
+        phases = np.array([0.0, complex(1.0, 0.0)], dtype=object)
+
+        with pytest.raises(ValueError, match="real-valued"):
             synergy(phases, [0], [1])
 
     @pytest.mark.parametrize(
@@ -158,6 +180,7 @@ class TestSynergy:
             np.array([0, True], dtype=object),
             np.array([0, np.bool_(True)], dtype=object),
             np.array([0, 1 + 0j]),
+            np.array([0, complex(1.0, 0.0)], dtype=object),
             [-1],
             [3],
             np.array([[0]]),
@@ -166,6 +189,13 @@ class TestSynergy:
     def test_rejects_invalid_group_indices(self, group):
         phases = np.array([0.0, 1.0, 2.0])
         with pytest.raises((TypeError, ValueError, IndexError), match="group_b"):
+            synergy(phases, [0], group)
+
+    def test_object_complex_group_index_is_rejected_as_real_integer_boundary(self):
+        phases = np.array([0.0, 1.0, 2.0])
+        group = np.array([0, complex(1.0, 0.0)], dtype=object)
+
+        with pytest.raises(TypeError, match="real integer"):
             synergy(phases, [0], group)
 
     @pytest.mark.parametrize("n_bins", [0, 1, True, np.bool_(True), 7.5])
@@ -238,7 +268,16 @@ class TestPIDPipelineWiring:
 class TestPIDRustDispatch:
     @pytest.mark.parametrize(
         "backend_value",
-        [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
+        [
+            -0.1,
+            np.nan,
+            np.inf,
+            [0.5],
+            True,
+            np.bool_(True),
+            0.5 + 0.0j,
+            np.asarray(complex(0.5, 0.0), dtype=object),
+        ],
     )
     def test_redundancy_invalid_rust_payload_falls_back(
         self,
@@ -316,7 +355,16 @@ class TestPIDRustDispatch:
 
     @pytest.mark.parametrize(
         "backend_value",
-        [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
+        [
+            -0.1,
+            np.nan,
+            np.inf,
+            [0.5],
+            True,
+            np.bool_(True),
+            0.5 + 0.0j,
+            np.asarray(complex(0.5, 0.0), dtype=object),
+        ],
     )
     def test_synergy_invalid_rust_payload_falls_back(
         self,

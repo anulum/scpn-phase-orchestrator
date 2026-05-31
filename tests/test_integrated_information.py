@@ -84,6 +84,46 @@ class TestIntegratedInformationContracts:
         with pytest.raises(ValueError, match="real-valued"):
             integrated_information(phases)
 
+    def test_object_complex_phase_series_is_rejected_as_real_valued_boundary(
+        self,
+    ) -> None:
+        phases = np.array(
+            [[0.0, complex(1.0, 0.0)], [1.0, 2.0]],
+            dtype=object,
+        )
+
+        with pytest.raises(ValueError, match="real-valued"):
+            integrated_information(phases)
+
+    def test_object_complex_result_scalars_are_rejected_as_real_valued_boundary(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="real-valued"):
+            IntegratedInformationResult(
+                phi=np.asarray(complex(0.0, 0.0), dtype=object),
+                normalised_phi=0.0,
+                total_integration=0.0,
+                minimum_partition=((0,), (1,)),
+                pairwise_mi=np.zeros((2, 2), dtype=np.float64),
+                n_bins=4,
+            )
+
+    def test_object_complex_pairwise_matrix_is_rejected_as_real_valued_boundary(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="real-valued"):
+            IntegratedInformationResult(
+                phi=0.0,
+                normalised_phi=0.0,
+                total_integration=0.0,
+                minimum_partition=((0,), (1,)),
+                pairwise_mi=np.array(
+                    [[0.0, complex(0.1, 0.0)], [complex(0.1, 0.0), 0.0]],
+                    dtype=object,
+                ),
+                n_bins=4,
+            )
+
     @pytest.mark.parametrize("n_bins", [False, np.bool_(True), 1, 1.5])
     def test_invalid_bin_count_is_rejected(self, n_bins: Any) -> None:
         phases = np.zeros((2, 8), dtype=np.float64)
@@ -200,6 +240,25 @@ class TestIntegratedInformationContracts:
                     [[0.0, 0.1 + 0.0j], [0.1 + 0.0j, 0.0]],
                     dtype=np.complex128,
                 ),
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": np.array(
+                    [[0.0, complex(0.1, 0.0)], [complex(0.1, 0.0), 0.0]],
+                    dtype=object,
+                ),
+                "n_bins": 4,
+            },
+            {
+                "phi": np.asarray(complex(0.0, 0.0), dtype=object),
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": [[0.0, 0.0], [0.0, 0.0]],
                 "n_bins": 4,
             },
             {
