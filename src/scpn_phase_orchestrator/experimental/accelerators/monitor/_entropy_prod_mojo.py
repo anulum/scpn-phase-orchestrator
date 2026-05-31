@@ -51,7 +51,7 @@ def _run(payload: str) -> float:
         raise ValueError(
             f"Mojo entropy_prod returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     if len(lines) != 1:
         raise ValueError(
             f"Mojo entropy_prod must emit exactly one scalar line, got {len(lines)}"

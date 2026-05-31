@@ -172,7 +172,8 @@ allocations per call.
 
 Stdin executable with one verb (`EP`). The body is a direct
 transliteration of the Rust / Go kernels. A single `print` line
-outputs the scalar result. The Python bridge rejects empty stdout,
+outputs the scalar result. The Python bridge validates raw stdout
+cardinality and rejects empty stdout, blank-line insertion,
 multi-line stdout, non-scalar text, non-finite values, and negative
 rates before returning to callers, so subprocess transport errors cannot
 silently pass as physical entropy-production values.

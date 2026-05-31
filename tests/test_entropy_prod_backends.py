@@ -149,6 +149,8 @@ def test_mojo_backend_rejects_nonfinite_entropy_output(
     ("stdout", "match"),
     [
         ("", "exactly one scalar line"),
+        ("\n0.1\n", "exactly one scalar line"),
+        ("0.1\n\n", "exactly one scalar line"),
         ("0.1\n0.2\n", "exactly one scalar line"),
         ("not-a-number\n", "non-scalar"),
         ("-0.01\n", "non-negative"),
