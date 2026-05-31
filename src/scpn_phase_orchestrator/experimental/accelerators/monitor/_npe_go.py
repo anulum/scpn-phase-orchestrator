@@ -18,6 +18,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._npe_validation import (
+    expected_npe_backend_output,
+    expected_phase_distance_backend_output,
     validate_npe_backend_inputs,
     validate_npe_backend_output,
     validate_phase_distance_backend_input,
@@ -73,7 +75,11 @@ def phase_distance_matrix_go(phases: FloatArray) -> FloatArray:
     )
     if rc != 0:
         raise ValueError(f"Go PhaseDistanceMatrix rc={rc}")
-    return validate_phase_distance_backend_output(out, n_phases=n)
+    return validate_phase_distance_backend_output(
+        out,
+        n_phases=n,
+        expected=expected_phase_distance_backend_output(p),
+    )
 
 
 def compute_npe_go(phases: FloatArray, max_radius: float) -> float:
@@ -90,4 +96,7 @@ def compute_npe_go(phases: FloatArray, max_radius: float) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go ComputeNPE rc={rc}")
-    return validate_npe_backend_output(out.value)
+    return validate_npe_backend_output(
+        out.value,
+        expected=expected_npe_backend_output(p, radius),
+    )

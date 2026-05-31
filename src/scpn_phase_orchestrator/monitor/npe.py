@@ -169,7 +169,13 @@ def _validate_phases(phases: object) -> FloatArray:
     return np.ascontiguousarray(array, dtype=np.float64)
 
 
-def _validate_distance_matrix(value: object, *, n_phases: int) -> FloatArray:
+def _validate_distance_matrix(
+    value: object,
+    *,
+    n_phases: int,
+    expected: FloatArray | None = None,
+    atol: float = 1.0e-10,
+) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("phase distance matrix must not contain boolean values")
@@ -195,6 +201,16 @@ def _validate_distance_matrix(value: object, *, n_phases: int) -> FloatArray:
         raise ValueError("phase distance matrix diagonal must be zero")
     matrix = np.clip(matrix, 0.0, np.pi)
     np.fill_diagonal(matrix, 0.0)
+    if expected is not None:
+        if expected.shape != (n_phases, n_phases):
+            raise ValueError(
+                "phase distance matrix expected output shape must match "
+                f"({n_phases}, {n_phases})"
+            )
+        if not np.allclose(matrix, expected, rtol=0.0, atol=atol):
+            raise ValueError(
+                "phase distance matrix must match exact circular phase distances"
+            )
     return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
@@ -215,7 +231,12 @@ def _validate_max_radius(max_radius: float | None) -> float:
     return radius
 
 
-def _validate_npe_value(value: object) -> float:
+def _validate_npe_value(
+    value: object,
+    *,
+    expected: float | None = None,
+    atol: float = 1.0e-9,
+) -> float:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"NPE must be a finite real scalar in [0, 1], got {value!r}")
     score = float(value)
@@ -224,58 +245,24 @@ def _validate_npe_value(value: object) -> float:
     tolerance = 1e-12
     if score < -tolerance or score > 1.0 + tolerance:
         raise ValueError(f"NPE must lie in [0, 1], got {value!r}")
-    return min(1.0, max(0.0, score))
+    score = min(1.0, max(0.0, score))
+    if expected is not None and abs(score - expected) > atol:
+        raise ValueError("NPE must match exact persistent-entropy reference")
+    return score
 
 
-def phase_distance_matrix(phases: FloatArray) -> FloatArray:
-    """Pairwise circular distance matrix ``d[i, j] ∈ [0, π]``."""
-    phases = _validate_phases(phases)
-    n = phases.size
-    backend_fn = _dispatch("phase_distance_matrix")
-    if backend_fn is not None:
-        fn = cast("Callable[[FloatArray], FloatArray]", backend_fn)
-        try:
-            flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
-            return _validate_distance_matrix(flat, n_phases=n)
-        except Exception:
-            backend_fn = None
-
+def _phase_distance_reference(phases: FloatArray) -> FloatArray:
     diff = phases[:, np.newaxis] - phases[np.newaxis, :]
-    return _validate_distance_matrix(
-        np.abs(np.arctan2(np.sin(diff), np.cos(diff))),
-        n_phases=n,
-    )
+    matrix = np.abs(np.arctan2(np.sin(diff), np.cos(diff)))
+    np.fill_diagonal(matrix, 0.0)
+    return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
-def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
-    """Normalised Persistent Entropy from H₀ persistence diagram.
-
-    ``NPE = H(p) / log(|p|)`` where ``p_i = lifetime_i / Σ lifetimes``
-    are the normalised birth-to-death lifetimes of the ``N − 1``
-    components in the H₀ barcode. Returns values in ``[0, 1]``:
-    ``~0`` means one dominant cluster (synchronised); ``~1`` means
-    uniform lifetime distribution (incoherent).
-    """
-    phases = _validate_phases(phases)
-    n = phases.size
-    radius = _validate_max_radius(max_radius)
+def _npe_from_distance_matrix(dist: FloatArray, radius: float) -> float:
+    n = int(dist.shape[0])
     if n < 2:
         return 0.0
 
-    backend_fn = _dispatch("compute_npe")
-    if backend_fn is not None:
-        fn = cast("Callable[[FloatArray, float], float]", backend_fn)
-        try:
-            return _validate_npe_value(
-                fn(
-                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                    radius,
-                ),
-            )
-        except Exception:
-            backend_fn = None
-
-    dist = phase_distance_matrix(phases)
     triu_idx = np.triu_indices(n, k=1)
     edges = dist[triu_idx]
     sorted_idx = np.argsort(edges)
@@ -311,10 +298,64 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
     total = sum(lifetimes)
     if total < 1e-15:
         return 0.0
-    probs = np.array(lifetimes) / total
+    probs = np.array(lifetimes, dtype=np.float64) / total
     probs = probs[probs > 0]
     entropy = -float(np.sum(probs * np.log(probs)))
     max_entropy = np.log(len(probs)) if len(probs) > 1 else 1.0
     if max_entropy < 1e-15:
         return 0.0
     return _validate_npe_value(entropy / max_entropy)
+
+
+def _compute_npe_reference(phases: FloatArray, radius: float) -> float:
+    return _npe_from_distance_matrix(_phase_distance_reference(phases), radius)
+
+
+def phase_distance_matrix(phases: FloatArray) -> FloatArray:
+    """Pairwise circular distance matrix ``d[i, j] ∈ [0, π]``."""
+    phases = _validate_phases(phases)
+    n = phases.size
+    expected = _phase_distance_reference(phases)
+    backend_fn = _dispatch("phase_distance_matrix")
+    if backend_fn is not None:
+        fn = cast("Callable[[FloatArray], FloatArray]", backend_fn)
+        try:
+            flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
+            return _validate_distance_matrix(flat, n_phases=n, expected=expected)
+        except Exception:
+            backend_fn = None
+
+    return expected
+
+
+def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
+    """Normalised Persistent Entropy from H₀ persistence diagram.
+
+    ``NPE = H(p) / log(|p|)`` where ``p_i = lifetime_i / Σ lifetimes``
+    are the normalised birth-to-death lifetimes of the ``N − 1``
+    components in the H₀ barcode. Returns values in ``[0, 1]``:
+    ``~0`` means one dominant cluster (synchronised); ``~1`` means
+    uniform lifetime distribution (incoherent).
+    """
+    phases = _validate_phases(phases)
+    n = phases.size
+    radius = _validate_max_radius(max_radius)
+    if n < 2:
+        return 0.0
+    expected = _compute_npe_reference(phases, radius)
+
+    backend_fn = _dispatch("compute_npe")
+    if backend_fn is not None:
+        fn = cast("Callable[[FloatArray, float], float]", backend_fn)
+        try:
+            return _validate_npe_value(
+                fn(
+                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                    radius,
+                ),
+                expected=expected,
+            )
+        except Exception:
+            backend_fn = None
+
+    return expected

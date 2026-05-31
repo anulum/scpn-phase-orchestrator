@@ -18,6 +18,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._npe_validation import (
+    expected_npe_backend_output,
+    expected_phase_distance_backend_output,
     validate_npe_backend_inputs,
     validate_npe_backend_output,
     validate_phase_distance_backend_input,
@@ -80,7 +82,11 @@ def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
     tokens = ["PDM", str(n)]
     tokens.extend(repr(float(x)) for x in p.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=n * n, label="PDM")
-    return validate_phase_distance_backend_output(result, n_phases=n)
+    return validate_phase_distance_backend_output(
+        result,
+        n_phases=n,
+        expected=expected_phase_distance_backend_output(p),
+    )
 
 
 def compute_npe_mojo(phases: FloatArray, max_radius: float) -> float:
@@ -93,4 +99,8 @@ def compute_npe_mojo(phases: FloatArray, max_radius: float) -> float:
     tokens = ["NPE", str(n), repr(radius)]
     tokens.extend(repr(float(x)) for x in p.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=1, label="NPE")
-    return validate_npe_backend_output(result[0])
+    return validate_npe_backend_output(
+        result[0],
+        expected=expected_npe_backend_output(p, radius),
+        atol=1.0e-9,
+    )

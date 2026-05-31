@@ -17,6 +17,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._npe_validation import (
+    expected_npe_backend_output,
+    expected_phase_distance_backend_output,
     validate_npe_backend_inputs,
     validate_npe_backend_output,
     validate_phase_distance_backend_input,
@@ -52,6 +54,7 @@ def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
     return validate_phase_distance_backend_output(
         jl.phase_distance_matrix(p),
         n_phases=p.size,
+        expected=expected_phase_distance_backend_output(p),
     )
 
 
@@ -64,5 +67,6 @@ def compute_npe_julia(phases: FloatArray, max_radius: float) -> float:
         jl.compute_npe(
             p,
             radius,
-        )
+        ),
+        expected=expected_npe_backend_output(p, radius),
     )

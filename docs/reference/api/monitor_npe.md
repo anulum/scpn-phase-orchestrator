@@ -163,10 +163,13 @@ round-trip to ``~1e-11``; tests use ``atol = 1e-9`` to absorb that.
 
 All backend outputs are revalidated by the Python public boundary:
 distance matrices must be finite, real-valued, symmetric, zero
-diagonal, and bounded in ``[0, π]``; backend scalar NPE values must
-be finite real numbers in ``[0, 1]``. Invalid backend payloads fall
-back to the NumPy reference implementation instead of entering the
-physics monitor.
+diagonal, bounded in ``[0, π]``, and equal to the exact wrapped
+``atan2(sin(Δθ), cos(Δθ))`` reference for every phase pair. Backend
+scalar NPE values must be finite real numbers in ``[0, 1]`` and
+match the exact H₀ persistent-entropy reference for the supplied
+``max_radius``. Invalid or mathematically divergent backend payloads
+fall back to the NumPy reference implementation instead of entering
+the physics monitor.
 
 Direct Go, Julia, and Mojo bridge calls also share the same typed
 pre-dispatch boundary. Phase vectors are accepted only as finite
@@ -177,41 +180,68 @@ non-negative real cutoff not exceeding ``π`` before shared-library,
 Julia, or subprocess execution. Direct backend outputs are also
 validated before return: distance outputs must contain exactly
 ``N × N`` finite real values, reshape to a symmetric matrix with
-zero diagonal, and remain bounded in ``[0, π]``; scalar NPE outputs
-must be finite real values in ``[0, 1]``. This keeps optional
-polyglot bridges fail-closed if a shared library, Julia side-file,
-or subprocess emits malformed numerical payloads.
+zero diagonal, remain bounded in ``[0, π]``, and preserve exact
+wrapped circular distances; scalar NPE outputs must be finite real
+values in ``[0, 1]`` and preserve the exact persistent-entropy
+scalar up to the backend tolerance. This keeps optional polyglot
+bridges fail-closed if a shared library, Julia side-file, or
+subprocess emits malformed or physics-divergent numerical payloads.
 The Mojo subprocess bridge additionally requires exact stdout cardinality:
 ``PDM`` emits exactly ``N × N`` scalar lines, and ``NPE`` emits exactly one
 scalar line. Missing, extra, blank, and non-scalar stdout lines fail closed
-before the distance-matrix or scalar NPE validators accept the result.
+before the distance-matrix or scalar NPE validators accept and compare the
+result to the reference contract.
 
 ---
 
-## 4. Physical invariants
+## 4. Benchmarks
 
-### 4.1 Bounds
+Measured on the local Ubuntu 24.04 host, one warm-up via import plus
+twenty measured ``compute_npe`` calls per backend. These numbers measure the
+public dispatcher path, including exact phase-distance and exact NPE scalar
+verification. Reproduce with
+`python benchmarks/npe_benchmark.py --sizes 16 64 256 --calls 20`.
+
+Current available backends for this run: ``rust``, ``mojo``, ``go``,
+``python``. Julia was not available in the local benchmark environment.
+
+| N   | rust (ms) | mojo (ms) | go (ms) | python (ms) |
+| --- | --------: | --------: | ------: | ----------: |
+| 16  |    0.2696 |   45.2720 |  0.4459 |      0.2363 |
+| 64  |    1.8924 |   47.3462 |  4.2675 |      1.4894 |
+| 256 |   28.5384 |  412.2933 | 76.9749 |     31.8514 |
+
+The native backends still exercise their compiled kernels, but every public
+result now pays for a deterministic reference check. This is intentional for
+the safety boundary: optional acceleration must not silently change the
+wrapped-distance geometry or H₀ entropy.
+
+---
+
+## 5. Physical invariants
+
+### 5.1 Bounds
 
 ``NPE ∈ [0, 1]``. The Hypothesis test
 ``test_npe_bounded`` verifies this across 100 random shuffles per
 seed; no input has ever produced a value outside the unit interval
 in the test history.
 
-### 4.2 Synchronised limit
+### 5.2 Synchronised limit
 
 If all phases are equal, every circular distance is zero, no merges
 happen outside the ``max_radius`` filter, and the barcode collapses
 to a single lifetime. The test ``test_npe_synchronised_low`` asserts
 ``NPE ≈ 0`` at ``atol = 1e-12``.
 
-### 4.3 Incoherent limit
+### 5.3 Incoherent limit
 
 For a uniform 64-point sample of ``S^1``, every pair-wise distance
 equals the inter-point gap and every lifetime is identical. The
 entropy ``H(p) = \log(N - 1)`` saturates the normalisation, so
 ``NPE ≈ 1``. ``test_npe_uniform_high`` asserts ``NPE > 0.95``.
 
-### 4.4 Clustering drops NPE
+### 5.4 Clustering drops NPE
 
 Two tight clusters (``std = 0.05``) at well-separated centres produce
 a lifetime distribution dominated by the inter-cluster jump; the
@@ -219,7 +249,7 @@ remaining intra-cluster lifetimes are near zero. Entropy drops below
 the uniform baseline. ``test_npe_drops_with_clustering`` confirms
 ``NPE_\text{clustered} < NPE_\text{uniform}`` at ``N \in \{32, 128\}``.
 
-### 4.5 Distance matrix properties
+### 5.5 Distance matrix properties
 
 * ``D`` is symmetric (``test_pdm_symmetric``).
 * ``D_{ii} = 0`` (``test_pdm_zero_diagonal``).
@@ -228,9 +258,9 @@ the uniform baseline. ``test_npe_drops_with_clustering`` confirms
 
 ---
 
-## 5. Usage patterns
+## 6. Usage patterns
 
-### 5.1 Regime monitoring
+### 6.1 Regime monitoring
 
 ```python
 from scpn_phase_orchestrator.monitor.npe import compute_npe
@@ -243,12 +273,11 @@ for _ in range(n_steps):
 # np.argmin(npe_trace) → moment of tightest synchronisation.
 ```
 
-A single scalar per step at sub-millisecond cost on Rust; the trace
-can be plotted alongside ``R(t)`` to reveal regimes the bulk order
-parameter misses (e.g. a transient chimera where ``R`` is
+A single scalar per step can be plotted alongside ``R(t)`` to reveal
+regimes the bulk order parameter misses (e.g. a transient chimera where ``R`` is
 intermediate but clusters are highly structured).
 
-### 5.2 Filter at a specific radius
+### 6.2 Filter at a specific radius
 
 ```python
 npe_local = compute_npe(phases, max_radius=π/4)

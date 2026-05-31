@@ -51,6 +51,8 @@ NpeBackend = Callable[[np.ndarray, object], float]
 
 
 def test__npe_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(npe_validation.expected_npe_backend_output)
+    assert callable(npe_validation.expected_phase_distance_backend_output)
     assert callable(npe_validation.validate_phase_distance_backend_input)
     assert callable(npe_validation.validate_npe_backend_inputs)
 
@@ -184,6 +186,27 @@ class TestDirectBackendBoundaryContracts:
                 n_phases=2,
             )
 
+    def test_phase_distance_backend_output_rejects_exact_distance_divergence(
+        self,
+    ) -> None:
+        phases = np.array([0.0, np.pi / 2.0, np.pi], dtype=np.float64)
+        expected = npe_validation.expected_phase_distance_backend_output(phases)
+        bounded_symmetric_wrong = np.array(
+            [
+                [0.0, 0.25, 0.5],
+                [0.25, 0.0, 0.25],
+                [0.5, 0.25, 0.0],
+            ],
+            dtype=np.float64,
+        )
+
+        with pytest.raises(ValueError, match="exact circular phase distances"):
+            npe_validation.validate_phase_distance_backend_output(
+                bounded_symmetric_wrong,
+                n_phases=3,
+                expected=expected,
+            )
+
     @pytest.mark.parametrize("score", [0.0, 0.5, 1.0, 1.0 + 5.0e-13])
     def test_npe_backend_output_accepts_unit_interval_scalars(
         self,
@@ -198,6 +221,17 @@ class TestDirectBackendBoundaryContracts:
     def test_npe_backend_output_rejects_invalid_scalars(self, score: object) -> None:
         with pytest.raises(ValueError, match="NPE backend output"):
             npe_validation.validate_npe_backend_output(score)
+
+    def test_npe_backend_output_rejects_exact_entropy_divergence(self) -> None:
+        phases = np.array([0.0, 0.1, 2.8, 3.0], dtype=np.float64)
+        expected = npe_validation.expected_npe_backend_output(phases, np.pi)
+        wrong_score = 0.0 if expected > 0.1 else 0.75
+
+        with pytest.raises(ValueError, match="exact NPE"):
+            npe_validation.validate_npe_backend_output(
+                wrong_score,
+                expected=expected,
+            )
 
     @pytest.mark.parametrize(
         "fn",
@@ -275,6 +309,71 @@ class TestDirectBackendBoundaryContracts:
         phases = np.array([0.0, 1.0, 2.0])
         with pytest.raises(ValueError, match="max_radius"):
             fn(phases, max_radius)
+
+    def test_julia_backend_rejects_exact_phase_distance_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        class _FakeJulia:
+            @staticmethod
+            def phase_distance_matrix(phases: np.ndarray) -> np.ndarray:
+                n = phases.size
+                wrong = np.full((n, n), 0.25, dtype=np.float64)
+                np.fill_diagonal(wrong, 0.0)
+                return wrong
+
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.experimental.accelerators.monitor."
+            "_npe_julia._ensure",
+            lambda: _FakeJulia(),
+        )
+
+        with pytest.raises(ValueError, match="exact circular phase distances"):
+            phase_distance_matrix_julia(np.array([0.0, np.pi / 2.0, np.pi]))
+
+    def test_mojo_backend_rejects_exact_npe_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.experimental.accelerators.monitor._npe_mojo._run",
+            lambda payload, *, expected_count, label: [0.0],
+        )
+
+        with pytest.raises(ValueError, match="exact NPE"):
+            compute_npe_mojo(np.array([0.0, 0.1, 2.8, 3.0]), np.pi)
+
+    def test_public_phase_distance_falls_back_from_wrong_backend(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        phases = np.array([0.0, np.pi / 2.0, np.pi], dtype=np.float64)
+        ref_pdm, _ = _reference(phases)
+
+        def _wrong_backend(phases_in: np.ndarray) -> np.ndarray:
+            n = phases_in.size
+            wrong = np.full((n, n), 0.25, dtype=np.float64)
+            np.fill_diagonal(wrong, 0.0)
+            return wrong
+
+        monkeypatch.setattr(npe_mod, "_dispatch", lambda _name: _wrong_backend)
+
+        np.testing.assert_allclose(phase_distance_matrix(phases), ref_pdm, atol=0.0)
+
+    def test_public_compute_npe_falls_back_from_wrong_backend(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        phases = np.array([0.0, 0.1, 2.8, 3.0], dtype=np.float64)
+        _, ref_npe = _reference(phases)
+
+        def _wrong_backend(phases_in: np.ndarray, radius: float) -> float:
+            del phases_in, radius
+            return 0.0 if ref_npe > 0.1 else 0.75
+
+        monkeypatch.setattr(npe_mod, "_dispatch", lambda _name: _wrong_backend)
+
+        assert abs(compute_npe(phases) - ref_npe) <= 1.0e-12
 
 
 class TestRustParity:
