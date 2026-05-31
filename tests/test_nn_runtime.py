@@ -93,3 +93,67 @@ def test_require_accelerator_allows_cpu_only_when_requested() -> None:
     device = require_accelerator(allow_cpu=True)
     assert isinstance(device, str)
     assert device
+
+
+def test_runtime_reports_unavailable_jax_contract(monkeypatch) -> None:
+    import scpn_phase_orchestrator.nn.runtime as runtime
+
+    monkeypatch.setattr(runtime, "HAS_JAX", False)
+
+    info = runtime.jax_runtime_info()
+    assert info.has_jax is False
+    assert info.backend is None
+    assert info.devices == ()
+    assert info.default_device is None
+    assert info.device_count == 0
+    assert info.accelerator_count == 0
+    assert info.has_accelerator is False
+
+    with pytest.raises(
+        RuntimeError, match=r"pip install scpn-phase-orchestrator\[nn\]"
+    ):
+        runtime.require_jax()
+    with pytest.raises(
+        RuntimeError, match=r"pip install scpn-phase-orchestrator\[nn\]"
+    ):
+        runtime.default_device()
+    with pytest.raises(RuntimeError, match="JAX is required"):
+        runtime.require_accelerator()
+
+
+def test_runtime_normalises_device_labels_and_accelerators(monkeypatch) -> None:
+    import scpn_phase_orchestrator.nn.runtime as runtime
+
+    class PlatformDevice:
+        platform = "GPU"
+        id = 2
+
+    class KindOnlyDevice:
+        device_kind = "TPU"
+
+    class StringDevice:
+        def __str__(self) -> str:
+            return "CustomASIC"
+
+    class FakeJax:
+        @staticmethod
+        def devices():
+            return (PlatformDevice(), KindOnlyDevice(), StringDevice())
+
+        @staticmethod
+        def default_backend():
+            return "gpu"
+
+    monkeypatch.setattr(runtime, "HAS_JAX", True)
+    monkeypatch.setattr(runtime, "require_jax", lambda: FakeJax)
+
+    info = runtime.jax_runtime_info()
+
+    assert info.backend == "gpu"
+    assert info.devices == ("gpu:2", "tpu", "customasic")
+    assert info.default_device == "gpu:2"
+    assert info.device_count == 3
+    assert info.accelerator_count == 3
+    assert info.has_accelerator is True
+    assert runtime.default_device() == "gpu:2"
+    assert runtime.require_accelerator() == "gpu:2"

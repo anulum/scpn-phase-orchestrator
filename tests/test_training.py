@@ -17,6 +17,7 @@ optax = pytest.importorskip("optax", reason="optax required")
 
 from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
 from scpn_phase_orchestrator.nn.training import (
+    coupling_sparsity_loss,
     generate_chimera_data,
     generate_kuramoto_data,
     sync_loss,
@@ -72,6 +73,17 @@ class TestTrajectoryLoss:
         assert float(loss) < 1e-4
 
 
+class TestCouplingSparsityLoss:
+    def test_scales_with_mean_absolute_coupling(self):
+        dense = jnp.array([[0.0, 2.0], [2.0, 0.0]])
+        sparse = jnp.array([[0.0, 0.5], [0.5, 0.0]])
+        assert coupling_sparsity_loss(dense) > coupling_sparsity_loss(sparse)
+
+    def test_zero_target_density_matches_mean_l1_penalty(self):
+        K = jnp.array([[0.0, -2.0], [1.0, 0.0]])
+        assert jnp.isclose(coupling_sparsity_loss(K, target_density=0.0), 0.75)
+
+
 class TestTrainStep:
     def test_returns_updated_model(self, layer, phases):
         optimizer = optax.adam(1e-3)
@@ -103,6 +115,26 @@ class TestTrain:
         )
         assert len(losses) == 10
         assert losses[-1] <= losses[0] + 0.01  # Allow small fluctuation
+
+    def test_callback_observes_each_epoch_loss(self, layer, phases):
+        seen: list[tuple[int, float]] = []
+
+        def loss_fn(m):
+            return sync_loss(m, phases, target_R=1.0)
+
+        def callback(epoch, model, loss):
+            assert isinstance(model, KuramotoLayer)
+            seen.append((epoch, float(loss)))
+
+        _, losses = train(
+            layer,
+            loss_fn,
+            optax.adam(1e-3),
+            n_epochs=3,
+            callback=callback,
+        )
+        assert [epoch for epoch, _ in seen] == [0, 1, 2]
+        assert [loss for _, loss in seen] == losses
 
 
 class TestGenerateKuramotoData:
