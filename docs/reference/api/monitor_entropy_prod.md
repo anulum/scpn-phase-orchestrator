@@ -111,6 +111,9 @@ The public monitor and direct polyglot adapter wrappers require
 finite real-valued phases, frequencies, couplings, ``alpha``, and
 ``dt``. Complex arrays are rejected rather than projected onto their
 real components, because ``Σ`` is defined on real phase velocities.
+Object-dtype complex aliases are rejected at the same real-valued
+boundary before float coercion, including scalar backend outputs from
+direct Go/Julia/Mojo adapters.
 
 ---
 

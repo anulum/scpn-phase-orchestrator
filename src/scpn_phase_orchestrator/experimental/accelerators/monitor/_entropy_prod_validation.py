@@ -33,7 +33,25 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(array) or _contains_complex_alias(value))
+
+
 def _validate_finite_float(value: object, *, name: str) -> float:
+    if _has_complex_payload(value):
+        raise ValueError(f"{name} must be a finite real-valued scalar")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     result = float(value)
@@ -46,7 +64,7 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued samples")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -68,7 +86,7 @@ def _validate_matrix(
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued couplings")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -116,7 +134,7 @@ def validate_entropy_prod_backend_output(value: object) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError("entropy_production_rate must not be a boolean value")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("entropy_production_rate must be real-valued")
     try:
         result = float(raw)

@@ -105,10 +105,81 @@ def test__entropy_prod_validation_rejects_complex_inputs() -> None:
 
 
 @pytest.mark.parametrize(
+    ("field", "bad_value", "match"),
+    [
+        (
+            "phases",
+            np.asarray([complex(0.0, 0.0), 1.0], dtype=object),
+            "phases must contain real-valued samples",
+        ),
+        (
+            "omegas",
+            np.asarray([0.0, complex(1.0, 0.0)], dtype=object),
+            "omegas must contain real-valued samples",
+        ),
+        (
+            "knm",
+            np.asarray(
+                [[0.0, complex(0.5, 0.0)], [0.5, 0.0]],
+                dtype=object,
+            ),
+            "knm must contain real-valued couplings",
+        ),
+    ],
+)
+def test__entropy_prod_validation_rejects_object_complex_alias_inputs(
+    field: str,
+    bad_value: np.ndarray,
+    match: str,
+) -> None:
+    values = {
+        "phases": np.zeros(2, dtype=np.float64),
+        "omegas": np.ones(2, dtype=np.float64),
+        "knm": np.zeros((2, 2), dtype=np.float64),
+    }
+    values[field] = bad_value
+
+    with pytest.raises(ValueError, match=match):
+        _entropy_prod_validation.validate_entropy_prod_backend_inputs(
+            values["phases"],
+            values["omegas"],
+            values["knm"],
+            1.0,
+            0.01,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "bad_value", "match"),
+    [
+        ("alpha", np.asarray(complex(1.0, 0.0), dtype=object), "alpha.*real"),
+        ("dt", np.asarray(complex(0.01, 0.0), dtype=object), "dt.*real"),
+    ],
+)
+def test__entropy_prod_validation_rejects_object_complex_scalar_controls(
+    field: str,
+    bad_value: np.ndarray,
+    match: str,
+) -> None:
+    values = {"alpha": 1.0, "dt": 0.01}
+    values[field] = bad_value
+
+    with pytest.raises(ValueError, match=match):
+        _entropy_prod_validation.validate_entropy_prod_backend_inputs(
+            np.zeros(2, dtype=np.float64),
+            np.ones(2, dtype=np.float64),
+            np.zeros((2, 2), dtype=np.float64),
+            values["alpha"],
+            values["dt"],
+        )
+
+
+@pytest.mark.parametrize(
     ("value", "match"),
     [
         (np.bool_(True), "boolean"),
         (1.0 + 0.1j, "real-valued"),
+        (np.asarray(complex(0.1, 0.0), dtype=object), "real-valued"),
         (np.inf, "finite"),
         (-0.01, "non-negative"),
     ],

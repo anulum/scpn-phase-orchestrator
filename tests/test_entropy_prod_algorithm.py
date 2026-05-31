@@ -253,10 +253,12 @@ class TestInputValidation:
         ("field", "bad_value"),
         [
             ("alpha", False),
+            ("alpha", np.asarray(complex(1.0, 0.0), dtype=object)),
             ("alpha", np.nan),
             ("alpha", np.inf),
             ("alpha", "1.0"),
             ("dt", False),
+            ("dt", np.asarray(complex(0.01, 0.0), dtype=object)),
             ("dt", np.nan),
             ("dt", np.inf),
             ("dt", "0.01"),
@@ -277,6 +279,55 @@ class TestInputValidation:
                 np.zeros((3, 3), dtype=np.float64),
                 alpha=kwargs["alpha"],
                 dt=kwargs["dt"],
+            )
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            (
+                "phases",
+                np.asarray([complex(0.0, 0.0), 0.1, 0.2], dtype=object),
+                "phases must contain real-valued samples",
+            ),
+            (
+                "omegas",
+                np.asarray([0.0, complex(0.1, 0.0), -0.1], dtype=object),
+                "omegas must contain real-valued samples",
+            ),
+            (
+                "knm",
+                np.asarray(
+                    [
+                        [0.0, complex(0.2, 0.0), 0.1],
+                        [0.2, 0.0, 0.3],
+                        [0.1, 0.3, 0.0],
+                    ],
+                    dtype=object,
+                ),
+                "knm must contain real-valued couplings",
+            ),
+        ],
+    )
+    def test_rejects_object_complex_alias_arrays_before_float_coercion(
+        self,
+        field: str,
+        bad_value: np.ndarray,
+        match: str,
+    ) -> None:
+        values = {
+            "phases": np.zeros(3, dtype=np.float64),
+            "omegas": np.ones(3, dtype=np.float64),
+            "knm": np.zeros((3, 3), dtype=np.float64),
+        }
+        values[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            entropy_production_rate(
+                values["phases"],
+                values["omegas"],
+                values["knm"],
+                alpha=1.0,
+                dt=0.01,
             )
 
     def test_accepts_array_like_float_buffers(self) -> None:
