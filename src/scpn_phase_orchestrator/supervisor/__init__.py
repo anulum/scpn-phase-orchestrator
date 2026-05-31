@@ -189,7 +189,11 @@ from scpn_phase_orchestrator.supervisor.sheaf import (
 )
 from scpn_phase_orchestrator.supervisor.strange_loop import (
     StrangeLoopAssessment,
+    StrangeLoopDriftScenario,
+    StrangeLoopDriftScenarioResult,
     StrangeLoopSupervisor,
+    build_strange_loop_drift_scenarios,
+    evaluate_strange_loop_drift_scenarios,
 )
 from scpn_phase_orchestrator.supervisor.topology import (
     HigherOrderTopologySupervisor,
@@ -285,6 +289,8 @@ __all__ = [
     "SheafControlProposal",
     "SheafObstructionSummary",
     "StrangeLoopAssessment",
+    "StrangeLoopDriftScenario",
+    "StrangeLoopDriftScenarioResult",
     "StrangeLoopSupervisor",
     "SupervisorPolicy",
     "Transition",
@@ -312,6 +318,7 @@ __all__ = [
     "build_intergenerational_policy_inheritance",
     "build_morphogenetic_field_snapshot",
     "build_multiverse_domain_scenarios",
+    "build_strange_loop_drift_scenarios",
     "build_sheaf_obstruction_summary",
     "build_temporal_causal_hypergraph_experiment",
     "render_morphogenetic_field_svg",
@@ -322,6 +329,7 @@ __all__ = [
     "export_policy_rules_tla",
     "export_stl_specs_prism",
     "evaluate_policy_stl_specs",
+    "evaluate_strange_loop_drift_scenarios",
     "evaluate_multiverse_branch_risk",
     "handle_hierarchy_frame",
     "handle_hierarchy_rest_payload",

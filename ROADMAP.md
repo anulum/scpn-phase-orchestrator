@@ -907,7 +907,9 @@ Speculative research watchlist:
     surfacing.
 - Constitutional value-alignment guard: Pareto objective constraints in binding specs, counterfactual violation logs, and forced safe fallback path.
 - Strange-loop meta-orchestrator: self-referential supervisor channel that monitors and damps policy drift, over-control, or control-loop oscillation.
-  - Foundation is in place: strange-loop supervisor monitor exists; remaining scope is long-run drift scenarios and studio surfacing.
+  - Foundation is in place: strange-loop supervisor monitor, deterministic
+    long-run drift scenarios, and reference-suite drift/oscillation/over-control
+    gates exist; remaining scope is richer Studio surfacing.
 - Morphogenetic field topology: reaction-diffusion-style field over coupling topology with grow/shrink primitives and field snapshot audit records.
   - Foundation is in place: morphogenetic topology field support exists.
   - Field snapshot visualisation foundation is in place:

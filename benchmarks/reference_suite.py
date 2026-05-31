@@ -124,6 +124,9 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyRule,
     PolicySTLSpec,
 )
+from scpn_phase_orchestrator.supervisor.strange_loop import (
+    evaluate_strange_loop_drift_scenarios,
+)
 from scpn_phase_orchestrator.upde.bayesian import (
     BayesianUPDEConfig,
     audit_bayesian_backend_status,
@@ -390,6 +393,15 @@ class SelfModelDigitalTwinThresholds(NamedTuple):
     max_max_observed_error: float
     require_non_actuating: bool
     require_operator_review: bool
+    require_execution_disabled: bool
+    require_deterministic_hash: bool
+
+
+class StrangeLoopDriftScenarioThresholds(NamedTuple):
+    min_scenario_count: int
+    min_long_run_step_count: int
+    min_passed_scenario_count: int
+    require_non_actuating: bool
     require_execution_disabled: bool
     require_deterministic_hash: bool
 
@@ -1388,6 +1400,75 @@ def benchmark_self_model_digital_twin() -> dict[str, float | int | str]:
             sort_keys=True,
         ),
         "scenario_results_json": json.dumps(scenario_records, sort_keys=True),
+    }
+
+
+def benchmark_strange_loop_drift_scenario_gate() -> dict[str, float | int | str]:
+    """Benchmark long-run strange-loop drift scenarios and review gates."""
+    thresholds = StrangeLoopDriftScenarioThresholds(
+        min_scenario_count=4,
+        min_long_run_step_count=128,
+        min_passed_scenario_count=4,
+        require_non_actuating=True,
+        require_execution_disabled=True,
+        require_deterministic_hash=True,
+    )
+
+    t0 = time.perf_counter()
+    results = evaluate_strange_loop_drift_scenarios()
+    repeated_results = evaluate_strange_loop_drift_scenarios()
+    elapsed = time.perf_counter() - t0
+
+    records = [result.to_audit_record() for result in results]
+    repeated_records = [result.to_audit_record() for result in repeated_results]
+    scenario_count = len(records)
+    long_run_step_count = sum(int(record["step_count"]) for record in records)
+    passed_scenario_count = sum(
+        int(record["passed_expected_trigger"] is True) for record in records
+    )
+    non_actuating = int(
+        all(record["non_actuating"] is True for record in records)
+    )
+    execution_disabled = int(
+        all(record["execution_disabled"] is True for record in records)
+    )
+    deterministic_hash = int(
+        [record["result_hash"] for record in records]
+        == [record["result_hash"] for record in repeated_records]
+    )
+    acceptance_passed = int(
+        scenario_count >= thresholds.min_scenario_count
+        and long_run_step_count >= thresholds.min_long_run_step_count
+        and passed_scenario_count >= thresholds.min_passed_scenario_count
+        and non_actuating == int(thresholds.require_non_actuating)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "strange_loop_drift_scenario_gate",
+        "scenario_count": scenario_count,
+        "long_run_step_count": long_run_step_count,
+        "passed_scenario_count": passed_scenario_count,
+        "non_actuating": non_actuating,
+        "execution_disabled": execution_disabled,
+        "deterministic_hash": deterministic_hash,
+        "drift_scenario_sha256": _stable_record_hash(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": long_run_step_count / elapsed if elapsed > 0.0 else 0.0,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_long_run_step_count": thresholds.min_long_run_step_count,
+                "min_passed_scenario_count": thresholds.min_passed_scenario_count,
+                "min_scenario_count": thresholds.min_scenario_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "scenario_results_json": json.dumps(records, sort_keys=True),
     }
 
 
@@ -6890,6 +6971,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
                 benchmark_hybrid_entanglement_order_parameter_gate()
             ),
             "self_model_digital_twin": benchmark_self_model_digital_twin(),
+            "strange_loop_drift_scenarios": (
+                benchmark_strange_loop_drift_scenario_gate()
+            ),
             "information_geometry_control": (
                 benchmark_information_geometry_control_gate()
             ),

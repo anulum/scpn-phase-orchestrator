@@ -319,6 +319,13 @@ self-awareness. It provides an auditable meta-control signal that can detect
 policy drift, control-loop oscillation, and excessive actuation before those
 dynamics are fed back into the plant.
 
+Long-run drift scenario helpers exercise that monitor across deterministic
+40-step review traces for stable power-grid trims, cardiac policy drift,
+traffic-control oscillation, and plasma over-control. The fixture corpus stays
+non-actuating and execution-disabled, publishes stable scenario/result hashes,
+and is gated in the reference suite so drift, oscillation, and over-control
+threshold behavior remains reproducible across releases.
+
 ::: scpn_phase_orchestrator.supervisor.strange_loop
 
 ---

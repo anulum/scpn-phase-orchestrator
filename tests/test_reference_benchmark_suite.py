@@ -44,6 +44,7 @@ from benchmarks.reference_suite import (
     benchmark_semantic_retrieval_ranking_quality,
     benchmark_sheaf_obstruction_domain_gate,
     benchmark_stl_closed_loop_plan_quality,
+    benchmark_strange_loop_drift_scenario_gate,
     benchmark_stuart_landau_reference,
     benchmark_temporal_causal_hypergraph_experiment_gate,
     benchmark_topos_semantic_binding_gate,
@@ -1411,6 +1412,44 @@ def test_multiverse_counterfactual_gate_reports_records() -> None:
     }
 
 
+def test_strange_loop_drift_scenario_gate_benchmark_shape() -> None:
+    out = benchmark_strange_loop_drift_scenario_gate()
+
+    assert out["suite"] == "strange_loop_drift_scenario_gate"
+    assert out["scenario_count"] >= 4
+    assert out["long_run_step_count"] >= 128
+    assert out["passed_scenario_count"] == out["scenario_count"]
+    assert out["non_actuating"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["drift_scenario_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_strange_loop_drift_scenario_gate_reports_modes() -> None:
+    out = benchmark_strange_loop_drift_scenario_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = json.loads(str(out["scenario_results_json"]))
+
+    assert thresholds == {
+        "min_long_run_step_count": 128,
+        "min_passed_scenario_count": 4,
+        "min_scenario_count": 4,
+        "require_deterministic_hash": True,
+        "require_execution_disabled": True,
+        "require_non_actuating": True,
+    }
+    assert {record["expected_trigger"] for record in records} >= {
+        "stable",
+        "policy_drift",
+        "control_loop_oscillation",
+        "over_control",
+    }
+    assert all(record["passed_expected_trigger"] is True for record in records)
+    assert all(record["non_actuating"] is True for record in records)
+
+
 def test_hybrid_entanglement_order_parameter_gate_benchmark_shape() -> None:
     out = benchmark_hybrid_entanglement_order_parameter_gate()
 
@@ -1692,6 +1731,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "self_model_digital_twin",
         "semantic_retrieval",
         "sheaf_obstruction_domains",
+        "strange_loop_drift_scenarios",
         "stl_closed_loop",
         "temporal_causal_hypergraph",
         "topos_semantic_binding",

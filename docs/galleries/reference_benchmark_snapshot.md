@@ -49,6 +49,7 @@ the current deterministic reference-suite evidence for release review.
 - `semantic_retrieval` (`semantic_retrieval_ranking_quality`): acceptance `1`
 - `sheaf_obstruction_domains` (`sheaf_obstruction_domain_gate`): acceptance `1`
 - `stl_closed_loop` (`stl_closed_loop_plan_quality`): acceptance `1`
+- `strange_loop_drift_scenarios` (`strange_loop_drift_scenario_gate`): acceptance `1`
 - `stuart_landau` (`stuart_landau_reference_pikovsky_2001`): acceptance `n/a`
 - `temporal_causal_hypergraph` (`temporal_causal_hypergraph_experiment_gate`): acceptance `1`
 - `topos_semantic_binding` (`topos_semantic_binding_gate`): acceptance `1`
@@ -74,10 +75,10 @@ the current deterministic reference-suite evidence for release review.
   "min_domain_extractor_coverage": 1.0,
   "min_sample_count": 128,
   "proposed_edge_count": 33,
-  "steps_per_second": 43.103793374958734,
+  "steps_per_second": 45.91912593801738,
   "suite": "auto_binding_synthetic_quality",
   "validation_error_count": 0,
-  "wall_time_s": 0.09279925702139735
+  "wall_time_s": 0.08710967202205211
 }
 ```
 
@@ -96,9 +97,9 @@ the current deterministic reference-suite evidence for release review.
   "rejected_child_count": 2,
   "review_only": 1,
   "safe_lineage_sha256": "830da8db3a0227d276bb5d8fa97bfe046b10db00c9976338033d64676d1b0ca8",
-  "steps_per_second": 4906.694182444275,
+  "steps_per_second": 13134.802003967077,
   "suite": "autopoietic_lineage_sandbox_gate",
-  "wall_time_s": 0.0010190160246565938
+  "wall_time_s": 0.0003806680906563997
 }
 ```
 
@@ -113,10 +114,10 @@ the current deterministic reference-suite evidence for release review.
   "backend_results_json": "[{\"available\": true, \"backend\": \"numpy\", \"fail_closed\": false, \"kind\": \"bayesian_backend_status\", \"reason\": \"executed\", \"sample_count\": 16}, {\"available\": false, \"backend\": \"numpyro\", \"fail_closed\": true, \"kind\": \"bayesian_backend_status\", \"reason\": \"numpyro Bayesian UPDE backend is not implemented; use backend='numpy' for reproducible Monte Carlo propagation\", \"sample_count\": 0}, {\"available\": false, \"backend\": \"blackjax\", \"fail_closed\": true, \"kind\": \"bayesian_backend_status\", \"reason\": \"blackjax Bayesian UPDE backend is not implemented; use backend='numpy' for reproducible Monte Carlo propagation\", \"sample_count\": 0}]",
   "fail_closed_backend_count": 2,
   "numpy_sample_count": 16,
-  "steps_per_second": 1749.5445023149562,
+  "steps_per_second": 2204.302106480321,
   "suite": "bayesian_backend_fail_closed",
   "unexpected_reserved_success_count": 0,
-  "wall_time_s": 0.0017147320322692394
+  "wall_time_s": 0.0013609749730676413
 }
 ```
 
@@ -134,9 +135,9 @@ the current deterministic reference-suite evidence for release review.
   "residual_rmse": 3.904347277377099e-07,
   "rollout_sample_count": 128,
   "sample_count": 96,
-  "steps_per_second": 6479.221894964794,
+  "steps_per_second": 6527.336559195951,
   "suite": "bayesian_posterior_fit_quality",
-  "wall_time_s": 0.014816593960858881,
+  "wall_time_s": 0.014707377064041793,
   "zero_diagonal_coupling": 1
 }
 ```
@@ -153,9 +154,9 @@ the current deterministic reference-suite evidence for release review.
   "domain_count": 3,
   "domain_results_json": "[{\"accepted\": true, \"artifact_count\": 3, \"deterministic_hash\": 1, \"domain\": \"plasma_control\", \"identifier_map_count\": 12, \"required_labels_present\": true, \"rule_count\": 2, \"stl_spec_count\": 2}, {\"accepted\": true, \"artifact_count\": 3, \"deterministic_hash\": 1, \"domain\": \"power_grid\", \"identifier_map_count\": 12, \"required_labels_present\": true, \"rule_count\": 2, \"stl_spec_count\": 2}, {\"accepted\": true, \"artifact_count\": 3, \"deterministic_hash\": 1, \"domain\": \"medical_cardiac\", \"identifier_map_count\": 12, \"required_labels_present\": true, \"rule_count\": 2, \"stl_spec_count\": 2}]",
   "failed_domain_count": 0,
-  "steps_per_second": 9492.98075578504,
+  "steps_per_second": 20827.88757866083,
   "suite": "domain_formal_safety_exports",
-  "wall_time_s": 0.0009480689186602831
+  "wall_time_s": 0.00043211295269429684
 }
 ```
 
@@ -177,9 +178,9 @@ the current deterministic reference-suite evidence for release review.
   "mutation_kinds_json": "[\"action\", \"add_arc\", \"community_bridge\", \"condition\", \"edge_add\", \"edge_remove\", \"edge_reweight\", \"guard_weight\", \"token_bound\"]",
   "non_actuating": 1,
   "operator_review_required": 1,
-  "steps_per_second": 431.3693416569502,
+  "steps_per_second": 859.7263974469835,
   "suite": "evolutionary_mutation_grammar_gate",
-  "wall_time_s": 0.04636398109141737
+  "wall_time_s": 0.02326321497093886
 }
 ```
 
@@ -205,10 +206,10 @@ the current deterministic reference-suite evidence for release review.
   "rejected_count": 6,
   "scenario_count": 4,
   "scenario_records_json": "[{\"accepted_count\": 8, \"best_candidate_id\": \"g001-c001\", \"candidate_count\": 8, \"candidate_hash_match\": 1, \"claim_boundary\": \"offline_evolutionary_supervisor_review_not_live_actuation\", \"counterfactual_filter_rejected_count\": 0, \"execution_disabled\": true, \"generation_count\": 2, \"hot_patch_permitted\": false, \"live_merge_permitted\": false, \"minimum_replay_reward\": 0.7, \"minimum_safety_margin\": 0.04, \"non_actuating\": true, \"operator_review_required\": true, \"population_size\": 4, \"rejected_count\": 0, \"report_hash\": \"ee898fb51c4c90a4c790ff37bcb8d731dc6269cb0d8d6845352bd358b8b91953\", \"report_hash_match\": 1, \"scenario_id\": \"power_grid_offline_evolutionary_search_v1\", \"stl_filter_rejected_count\": 0, \"stl_spec\": \"always (R >= 0.82)\"}, {\"accepted_count\": 3, \"best_candidate_id\": \"g001-c001\", \"candidate_count\": 5, \"candidate_hash_match\": 1, \"claim_boundary\": \"offline_evolutionary_supervisor_review_not_live_actuation\", \"counterfactual_filter_rejected_count\": 2, \"execution_disabled\": true, \"generation_count\": 1, \"hot_patch_permitted\": false, \"live_merge_permitted\": false, \"minimum_replay_reward\": 0.65, \"minimum_safety_margin\": 0.02, \"non_actuating\": true, \"operator_review_required\": true, \"population_size\": 5, \"rejected_count\": 2, \"report_hash\": \"1f94816584f399048f1f0a18e6a01890cfdbda1fd6852cac1352edb83699adc8\", \"report_hash_match\": 1, \"scenario_id\": \"cardiac_rhythm_offline_evolutionary_search_v1\", \"stl_filter_rejected_count\": 0, \"stl_spec\": \"always (R >= 0.60)\"}, {\"accepted_count\": 0, \"best_candidate_id\": \"\", \"candidate_count\": 4, \"candidate_hash_match\": 1, \"claim_boundary\": \"offline_evolutionary_supervisor_review_not_live_actuation\", \"counterfactual_filter_rejected_count\": 4, \"execution_disabled\": true, \"generation_count\": 1, \"hot_patch_permitted\": false, \"live_merge_permitted\": false, \"minimum_replay_reward\": 0.7, \"minimum_safety_margin\": 0.05, \"non_actuating\": true, \"operator_review_required\": true, \"population_size\": 4, \"rejected_count\": 4, \"report_hash\": \"77f54b75e92d66d425f36d15d3b9be6938f15e552e85d1bd98148ee4cda7d71d\", \"report_hash_match\": 1, \"scenario_id\": \"cyber_industrial_offline_evolutionary_search_v1\", \"stl_filter_rejected_count\": 4, \"stl_spec\": \"always (R >= 0.88)\"}, {\"accepted_count\": 4, \"best_candidate_id\": \"g001-c001\", \"candidate_count\": 4, \"candidate_hash_match\": 1, \"claim_boundary\": \"offline_evolutionary_supervisor_review_not_live_actuation\", \"counterfactual_filter_rejected_count\": 0, \"execution_disabled\": true, \"generation_count\": 1, \"hot_patch_permitted\": false, \"live_merge_permitted\": false, \"minimum_replay_reward\": 0.7, \"minimum_safety_margin\": 0.04, \"non_actuating\": true, \"operator_review_required\": true, \"population_size\": 4, \"rejected_count\": 0, \"report_hash\": \"7d0c412582ccdece8a551e20c2caffb14a065a02352c08710288ea45d77ad596\", \"report_hash_match\": 1, \"scenario_id\": \"traffic_flow_offline_evolutionary_search_v1\", \"stl_filter_rejected_count\": 0, \"stl_spec\": \"always (R >= 0.70)\"}]",
-  "steps_per_second": 2349.183264608228,
+  "steps_per_second": 4046.195265186503,
   "stl_filter_rejected_count": 4,
   "suite": "evolutionary_supervisor_search",
-  "wall_time_s": 0.008939277031458914
+  "wall_time_s": 0.005190060939639807
 }
 ```
 
@@ -229,11 +230,11 @@ the current deterministic reference-suite evidence for release review.
   "secure_execution_disabled": 1,
   "secure_preflight_count": 1,
   "service_execution_disabled": 1,
-  "steps_per_second": 912.3338483320697,
+  "steps_per_second": 1504.682610039877,
   "suite": "federated_deployment_preflight_gate",
   "transport_execution_disabled": 1,
   "transport_preflight_count": 1,
-  "wall_time_s": 0.0032882699742913246
+  "wall_time_s": 0.0019937759498134255
 }
 ```
 
@@ -263,10 +264,10 @@ the current deterministic reference-suite evidence for release review.
   "raw_time_series_received": 0,
   "rejected_node_count": 0,
   "report_hash": "72128d611e9dd6a183f4f9b9f9cde81a81479f2418d6970e70440bd2f9c20091",
-  "steps_per_second": 3252.981073236939,
+  "steps_per_second": 2545.597991007066,
   "suite": "federated_meta_orchestrator",
   "total_sample_count": 300,
-  "wall_time_s": 0.0009222310036420822
+  "wall_time_s": 0.0011785050155594945
 }
 ```
 
@@ -290,12 +291,12 @@ the current deterministic reference-suite evidence for release review.
   "secure_execution_disabled": 1,
   "secure_rejected_node_count": 0,
   "service_execution_disabled": 1,
-  "steps_per_second": 1076.2845462404932,
+  "steps_per_second": 1555.9213235176915,
   "suite": "federated_production_boundary_gate",
   "transport_envelope_count": 3,
   "transport_execution_disabled": 1,
   "transport_node_sequence_count": 3,
-  "wall_time_s": 0.0027873669750988483
+  "wall_time_s": 0.0019281180575489998
 }
 ```
 
@@ -324,10 +325,10 @@ the current deterministic reference-suite evidence for release review.
   "petri_tla_bytes": 1281,
   "policy_prism_bytes": 1116,
   "policy_tla_bytes": 1370,
-  "steps_per_second": 4798.938902394426,
+  "steps_per_second": 8149.334312905324,
   "stl_prism_bytes": 808,
   "suite": "formal_export_artifact_quality",
-  "wall_time_s": 0.0010418969905003905
+  "wall_time_s": 0.0006135470466688275
 }
 ```
 
@@ -345,11 +346,11 @@ the current deterministic reference-suite evidence for release review.
   "neuromorphic_sample_count": 2,
   "non_actuating": 1,
   "quantum_term_count": 3,
-  "steps_per_second": 3620.984414473088,
+  "steps_per_second": 7902.132940830144,
   "suite": "hybrid_cocompiler_review_gate",
   "target_backend_count": 4,
   "target_backends_json": "[\"qiskit_openqasm3\", \"pennylane_qasm\", \"lava\", \"pynn\"]",
-  "wall_time_s": 0.0002761679934337735
+  "wall_time_s": 0.00012654811143875122
 }
 ```
 
@@ -372,9 +373,9 @@ the current deterministic reference-suite evidence for release review.
   "non_actuating": 1,
   "product_case_count": 4,
   "scenario_count": 8,
-  "steps_per_second": 1310.9918313636542,
+  "steps_per_second": 1056.0648982024522,
   "suite": "hybrid_entanglement_order_parameter_gate",
-  "wall_time_s": 0.006102250074036419
+  "wall_time_s": 0.007575292023830116
 }
 ```
 
@@ -394,9 +395,9 @@ the current deterministic reference-suite evidence for release review.
   "packages_json": "[{\"actuation_permitted\": false, \"blocked_reasons\": [\"hybrid_operator_approval_missing\"], \"component_manifest_hashes\": {\"neuromorphic_schedule_sha256\": \"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\", \"quantum_manifest_sha256\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\", \"quantum_qasm_sha256\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}, \"component_statuses\": {\"hybrid\": \"co_simulation_parity_passed\", \"neuromorphic\": \"ready_not_executed\", \"quantum\": \"ready_not_executed\"}, \"execution_permitted\": false, \"hardware_write_permitted\": false, \"hybrid_manifest_sha256\": \"e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7\", \"hybrid_readiness_sha256\": \"67f184c426a68a3c63a8e7175f0dbdf09e941b6070c93283ea486a3d5fef735d\", \"operator_commands\": [\"review hybrid_neuromorphic_quantum_cocompiler.json\", \"review scpn_hybrid_target_readiness_v1.json\", \"verify package_sha256 before external operator handoff\", \"execute only outside SPO from an approved operator workflow\"], \"package_sha256\": \"ad392e2aae056e4a5e673d00dcf93f166f32f39db53c5c6cbf8e8ab2678f9afd\", \"qpu_execution_permitted\": false, \"schema\": \"scpn_hybrid_operator_handoff_package_v1\", \"status\": \"blocked\", \"target_backends\": [\"qiskit_openqasm3\", \"pennylane_qasm\", \"lava\", \"pynn\"]}, {\"actuation_permitted\": false, \"blocked_reasons\": [], \"component_manifest_hashes\": {\"neuromorphic_schedule_sha256\": \"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\", \"quantum_manifest_sha256\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\", \"quantum_qasm_sha256\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}, \"component_statuses\": {\"hybrid\": \"co_simulation_parity_passed\", \"neuromorphic\": \"ready_not_executed\", \"quantum\": \"ready_not_executed\"}, \"execution_permitted\": false, \"hardware_write_permitted\": false, \"hybrid_manifest_sha256\": \"e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7\", \"hybrid_readiness_sha256\": \"5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64\", \"operator_commands\": [\"review hybrid_neuromorphic_quantum_cocompiler.json\", \"review scpn_hybrid_target_readiness_v1.json\", \"verify package_sha256 before external operator handoff\", \"execute only outside SPO from an approved operator workflow\"], \"package_sha256\": \"c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5\", \"qpu_execution_permitted\": false, \"schema\": \"scpn_hybrid_operator_handoff_package_v1\", \"status\": \"ready_not_executed\", \"target_backends\": [\"qiskit_openqasm3\", \"pennylane_qasm\", \"lava\", \"pynn\"]}]",
   "ready_package_count": 1,
   "ready_package_sha256": "c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5",
-  "steps_per_second": 7547.281435347465,
+  "steps_per_second": 14393.044691665626,
   "suite": "hybrid_operator_handoff_package_gate",
-  "wall_time_s": 0.0002649960806593299
+  "wall_time_s": 0.00013895600568503141
 }
 ```
 
@@ -417,9 +418,9 @@ the current deterministic reference-suite evidence for release review.
   "ready_count": 1,
   "ready_readiness_sha256": "5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64",
   "record_count": 2,
-  "steps_per_second": 7989.551737159419,
+  "steps_per_second": 13778.573260381729,
   "suite": "hybrid_target_readiness_gate",
-  "wall_time_s": 0.0002503269352018833
+  "wall_time_s": 0.00014515290968120098
 }
 ```
 
@@ -447,9 +448,9 @@ the current deterministic reference-suite evidence for release review.
   "non_actuating": 1,
   "proposal_action_evidence_count": 4,
   "scenario_count": 4,
-  "steps_per_second": 1.5241980276503588,
+  "steps_per_second": 2.498781995258353,
   "suite": "information_geometry_control_gate",
-  "wall_time_s": 2.624330912018195
+  "wall_time_s": 1.6007799030048773
 }
 ```
 
@@ -468,9 +469,9 @@ the current deterministic reference-suite evidence for release review.
   "ordering_evidence_count": 6,
   "record_count": 12,
   "replay_records_json": "[{\"case_name\": \"cardiac_respiratory_lock\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"physiology\", \"expected_relationship\": \"cardiac_respiratory_lock > cardiac_respiratory_recovery in engineering proxy integration.\", \"minimum_partition\": [[0, 1], [2, 3]], \"n_bins\": 8, \"n_oscillators\": 4, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.21205869656204718, \"phi\": 0.44096366290559985, \"total_integration\": 0.47158338643364467}, {\"case_name\": \"cardiac_respiratory_recovery\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"physiology\", \"expected_relationship\": \"cardiac_respiratory_recovery < cardiac_respiratory_lock in engineering proxy integration.\", \"minimum_partition\": [[0, 2], [1, 3]], \"n_bins\": 8, \"n_oscillators\": 4, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.048910957729649485, \"phi\": 0.1017074773463796, \"total_integration\": 0.10884102086330437}, {\"case_name\": \"eeg_sleep_spindle\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"physiology\", \"expected_relationship\": \"eeg_sleep_spindle > eeg_sleep_baseline in engineering proxy integration.\", \"minimum_partition\": [[0], [1, 2, 3]], \"n_bins\": 8, \"n_oscillators\": 4, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.43912138463466466, \"phi\": 0.9131272490492912, \"total_integration\": 1.0079023062880308}, {\"case_name\": \"eeg_sleep_baseline\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"physiology\", \"expected_relationship\": \"eeg_sleep_baseline < eeg_sleep_spindle in engineering proxy integration.\", \"minimum_partition\": [[0, 3], [1, 2]], \"n_bins\": 8, \"n_oscillators\": 4, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.05592197906196478, \"phi\": 0.11628648635439953, \"total_integration\": 0.2156371949797753}, {\"case_name\": \"power_grid_islanding\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"infrastructure\", \"expected_relationship\": \"power_grid_islanding < power_grid_resynchronisation in engineering-information proxy integration\", \"minimum_partition\": [[0], [1, 2, 3, 4, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.0, \"phi\": 0.0, \"total_integration\": 0.32029448973968233}, {\"case_name\": \"power_grid_resynchronisation\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"infrastructure\", \"expected_relationship\": \"power_grid_resynchronisation > power_grid_islanding in engineering-information proxy integration\", \"minimum_partition\": [[0, 1], [2, 3, 4, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.1712200819054804, \"phi\": 0.35604215108407994, \"total_integration\": 0.47754008544108995}, {\"case_name\": \"traffic_spillback_fragmentation\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"infrastructure\", \"expected_relationship\": \"traffic_spillback_fragmentation < traffic_platoon_recovery in engineering-information proxy integration\", \"minimum_partition\": [[0], [1, 2, 3, 4, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.0, \"phi\": 0.0, \"total_integration\": 0.32032177007594664}, {\"case_name\": \"traffic_platoon_recovery\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"infrastructure\", \"expected_relationship\": \"traffic_platoon_recovery > traffic_spillback_fragmentation in engineering-information proxy integration\", \"minimum_partition\": [[0, 1], [2, 3, 4, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.12903508602483743, \"phi\": 0.26832091821427817, \"total_integration\": 0.48635445391861476}, {\"case_name\": \"cyber_disruption\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"cyber_industrial\", \"expected_relationship\": \"cyber_disruption < cyber_recontainment in engineering proxy integration\", \"minimum_partition\": [[0, 4, 5], [1, 2, 3]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.04625170926710428, \"phi\": 0.09617772562371486, \"total_integration\": 0.10259992143087594}, {\"case_name\": \"cyber_recontainment\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"cyber_industrial\", \"expected_relationship\": \"cyber_recontainment > cyber_disruption in engineering proxy integration\", \"minimum_partition\": [[0, 5], [1, 2, 3, 4]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.1844030700600674, \"phi\": 0.3834554042962013, \"total_integration\": 0.4014770029901035}, {\"case_name\": \"spc_fragmentation\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"cyber_industrial\", \"expected_relationship\": \"spc_fragmentation < spc_recovery in engineering proxy integration\", \"minimum_partition\": [[0, 2, 4], [1, 3, 5]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.044657360796357355, \"phi\": 0.09286237118172999, \"total_integration\": 0.09992210941069486}, {\"case_name\": \"spc_recovery\", \"claim_boundary\": \"engineering_proxy_not_theoretical_iit\", \"domain\": \"cyber_industrial\", \"expected_relationship\": \"spc_recovery > spc_fragmentation in engineering proxy integration\", \"minimum_partition\": [[0, 4, 5], [1, 2, 3]], \"n_bins\": 8, \"n_oscillators\": 6, \"n_samples\": 256, \"non_actuating\": true, \"normalised_phi\": 0.19783580418940888, \"phi\": 0.41138798966309453, \"total_integration\": 0.43156895842705706}]",
-  "steps_per_second": 129.57928480602868,
+  "steps_per_second": 152.15670337291556,
   "suite": "integrated_information_replay_corpus_gate",
-  "wall_time_s": 0.09260739490855485
+  "wall_time_s": 0.07886606198735535
 }
 ```
 
@@ -488,9 +489,9 @@ the current deterministic reference-suite evidence for release review.
   "policy_gene_count": 3,
   "review_only": 1,
   "signed_metadata_count": 2,
-  "steps_per_second": 3290.9407610827775,
+  "steps_per_second": 4576.879014690082,
   "suite": "intergenerational_policy_inheritance_gate",
-  "wall_time_s": 0.0006077289581298828
+  "wall_time_s": 0.0004369789967313409
 }
 ```
 
@@ -501,9 +502,9 @@ the current deterministic reference-suite evidence for release review.
   "final_order_parameter": 1.0,
   "n_oscillators": 64,
   "n_steps": 1000,
-  "steps_per_second": 8114.621229613496,
+  "steps_per_second": 10055.114094316967,
   "suite": "kuramoto_reference_strogatz_2000",
-  "wall_time_s": 0.12323434103745967
+  "wall_time_s": 0.09945187997072935
 }
 ```
 
@@ -528,9 +529,9 @@ the current deterministic reference-suite evidence for release review.
   "package_name": "scpn-meta",
   "package_sha256": "533acf3b37aa233b7a53da1903c99865a7e34055d3d5bcacef3501c3b9fd273f",
   "record_count": 4,
-  "steps_per_second": 7273.891266776016,
+  "steps_per_second": 6052.39845165927,
   "suite": "meta_transfer_package_manifest_quality",
-  "wall_time_s": 0.0005499119870364666
+  "wall_time_s": 0.0006608950207009912
 }
 ```
 
@@ -550,11 +551,11 @@ the current deterministic reference-suite evidence for release review.
   "proposal_knob_count": 4,
   "proposal_sha256": "bfef70f740fbdedc765080f9c9bb0156ec046fd0351dab4f4117c7c259a781fb",
   "record_count": 6,
-  "steps_per_second": 1749.2237396380444,
+  "steps_per_second": 666.8980023108437,
   "suite": "meta_transfer_audit_corpus_quality",
   "top_neighbour_domain": "power_grid",
   "training_summary_json": "{\"domain_count\": 4, \"domains\": [\"cardiac_rhythm\", \"manufacturing_spc\", \"power_grid\", \"traffic_flow\"], \"feature_keys\": [\"coherence\", \"event_rate\", \"load_variance\", \"phase_spread\", \"safety_margin\"], \"knob_keys\": [\"K\", \"Psi\", \"alpha\", \"zeta\"], \"record_count\": 6, \"reward_max\": 0.94, \"reward_mean\": 0.8866666666666667, \"reward_min\": 0.82}",
-  "wall_time_s": 0.003430092940106988
+  "wall_time_s": 0.008996878052130342
 }
 ```
 
@@ -570,11 +571,11 @@ the current deterministic reference-suite evidence for release review.
   "non_actuating": 1,
   "record_count": 3,
   "snapshot_rows": 1,
-  "steps_per_second": 38.115538314638755,
+  "steps_per_second": 42.638865971725735,
   "suite": "morphogenetic_domain_demo_gate",
   "total_grown_edges": 12,
   "total_shrunk_edges": 18,
-  "wall_time_s": 0.07870805799029768
+  "wall_time_s": 0.07035834400448948
 }
 ```
 
@@ -600,9 +601,9 @@ the current deterministic reference-suite evidence for release review.
   "risk_report_json": "{\"approved_count\": 3, \"branch_count\": 4, \"branch_decisions\": [{\"action_count\": 0, \"approved\": true, \"branch_hash\": \"d9aa6a3513c21ea4f20596923dc1d75efb01d590d03ea44689cc5b62a819ee18\", \"branch_id\": \"review_baseline\", \"final_R\": 0.8436346224324295, \"max_R\": 0.8436346224324295, \"mean_R\": 0.8162505885045557, \"min_R\": 0.7872473240249155, \"rejection_reasons\": [], \"topology_edge_count\": 20, \"topology_scale\": 2.8000000000000007}, {\"action_count\": 1, \"approved\": true, \"branch_hash\": \"03df5545bcdaef15940385dd27fa61dadf4a7bd7a0177c3d69afd56f6166d4f1\", \"branch_id\": \"review_safe_coupling\", \"final_R\": 0.8130256299775311, \"max_R\": 0.8130256299775311, \"mean_R\": 0.8002495863599326, \"min_R\": 0.7872473240249155, \"rejection_reasons\": [], \"topology_edge_count\": 10, \"topology_scale\": 10.0}, {\"action_count\": 2, \"approved\": true, \"branch_hash\": \"2ef8b780e0532c671d800c50e5183ad5f76c7a6d62a24c460f652ddc0a1a9545\", \"branch_id\": \"review_phase_lag\", \"final_R\": 0.8077674169095258, \"max_R\": 0.8077674169095258, \"mean_R\": 0.7975783754428809, \"min_R\": 0.7872473240249155, \"rejection_reasons\": [], \"topology_edge_count\": 10, \"topology_scale\": 10.0}, {\"action_count\": 7, \"approved\": false, \"branch_hash\": \"cbcadd83906d0bac0022631812e5431e09d107129a5f56e9db874103e1ea542c\", \"branch_id\": \"review_action_heavy\", \"final_R\": 0.8890965556438161, \"max_R\": 0.8890965556438161, \"mean_R\": 0.8415732135009447, \"min_R\": 0.7872473240249155, \"rejection_reasons\": [\"action_count_exceeds_limit\", \"topology_scale_exceeds_limit\"], \"topology_edge_count\": 20, \"topology_scale\": 20.0}], \"claim_boundary\": \"counterfactual_branch_risk_gate_not_live_actuation\", \"execution_disabled\": true, \"non_actuating\": true, \"rejected_count\": 1, \"rejection_reasons\": [\"action_count_exceeds_limit\", \"topology_scale_exceeds_limit\"], \"report_hash\": \"68f819ccf31e498860daa384573a642b327ad55ec33d7a6de9a648b7a3137b0d\", \"safest_branch_hash\": \"d9aa6a3513c21ea4f20596923dc1d75efb01d590d03ea44689cc5b62a819ee18\", \"safest_branch_id\": \"review_baseline\", \"schema_name\": \"multiverse_branch_risk_gate\", \"schema_version\": \"0.1.0\"}",
   "risk_report_sha256": "68f819ccf31e498860daa384573a642b327ad55ec33d7a6de9a648b7a3137b0d",
   "safest_branch_id": "review_baseline",
-  "steps_per_second": 1.093866351240088,
+  "steps_per_second": 1.0980404966956527,
   "suite": "multiverse_counterfactual_gate",
-  "wall_time_s": 3.6567538579693064
+  "wall_time_s": 3.6428528929827735
 }
 ```
 
@@ -622,10 +623,10 @@ the current deterministic reference-suite evidence for release review.
   "ready_count": 1,
   "ready_readiness_sha256": "fbff4ea82152b5fb51733f179661b8ec117b1afc076c80972e610af7717368d0",
   "record_count": 2,
-  "steps_per_second": 3272.7655982853476,
+  "steps_per_second": 7815.123691423087,
   "suite": "neuromorphic_target_readiness_gate",
   "target_backends_json": "[\"lava\", \"pynn\"]",
-  "wall_time_s": 0.0006111039547249675
+  "wall_time_s": 0.0002559140557423234
 }
 ```
 
@@ -635,9 +636,9 @@ the current deterministic reference-suite evidence for release review.
 {
   "n_steps": 5000,
   "reachable_markings": 4,
-  "steps_per_second": 138872.52903432012,
+  "steps_per_second": 191189.41097997886,
   "suite": "petri_net_reachability",
-  "wall_time_s": 0.036004240973852575
+  "wall_time_s": 0.02615207596682012
 }
 ```
 
@@ -662,9 +663,9 @@ the current deterministic reference-suite evidence for release review.
   "plugin_count": 2,
   "registry_sha256": "2d4c674709f348f669104d163445b83d74982e924fc8da0cb37efc27474985e2",
   "required_kind_count": 4,
-  "steps_per_second": 8763.728083626394,
+  "steps_per_second": 8100.662667543066,
   "suite": "plugin_ecosystem_catalog_quality",
-  "wall_time_s": 0.0003423200687393546
+  "wall_time_s": 0.00037034007254987955
 }
 ```
 
@@ -684,10 +685,10 @@ the current deterministic reference-suite evidence for release review.
   "ready_count": 1,
   "ready_readiness_sha256": "aa0f85ce5bbfd35acf04d96e29d3bb64edf7ce5b091193263b13712d98f6134c",
   "record_count": 2,
-  "steps_per_second": 4997.213169705837,
+  "steps_per_second": 10651.15718078214,
   "suite": "quantum_target_readiness_gate",
   "target_backends_json": "[\"qiskit_openqasm3\", \"pennylane_qasm\"]",
-  "wall_time_s": 0.00040022307075560093
+  "wall_time_s": 0.00018777302466332912
 }
 ```
 
@@ -708,10 +709,10 @@ the current deterministic reference-suite evidence for release review.
   "non_actuating_proposals": 1,
   "scenario_count": 3,
   "scenario_results_json": "[{\"accepted\": true, \"accepted_learner_count\": 3, \"baseline_coherence\": 0.793, \"failed_learner_count\": 0, \"learner_count\": 3, \"min_coherence_improvement\": 0.05827974999403174, \"non_actuating_proposals\": true, \"scenario\": \"two_channel_low_coupling\", \"unsafe_acceptance_count\": 0}, {\"accepted\": true, \"accepted_learner_count\": 3, \"baseline_coherence\": 0.7758666666666668, \"failed_learner_count\": 0, \"learner_count\": 3, \"min_coherence_improvement\": 0.05663105080295605, \"non_actuating_proposals\": true, \"scenario\": \"three_channel_cross_gain\", \"unsafe_acceptance_count\": 0}, {\"accepted\": true, \"accepted_learner_count\": 3, \"baseline_coherence\": 0.8022666666666668, \"failed_learner_count\": 0, \"learner_count\": 3, \"min_coherence_improvement\": 0.035689587760827646, \"non_actuating_proposals\": true, \"scenario\": \"stability_recovery\", \"unsafe_acceptance_count\": 0}]",
-  "steps_per_second": 422.1428556498188,
+  "steps_per_second": 389.4158501073939,
   "suite": "replay_policy_candidate_quality",
   "unsafe_acceptance_count": 0,
-  "wall_time_s": 0.021319797029718757
+  "wall_time_s": 0.023111540009267628
 }
 ```
 
@@ -732,9 +733,9 @@ the current deterministic reference-suite evidence for release review.
   "scenario_hash_match_count": 4,
   "scenario_results_json": "[{\"breached\": false, \"breached_count\": 0, \"claim_boundary\": \"self_model_error_monitor_not_live_reconfiguration\", \"domain\": \"power_grid\", \"execution_disabled\": 1, \"max_observed_error\": 0.050000000000000044, \"non_actuating\": 1, \"operator_review_required\": 1, \"overall_mae\": 0.03166666666666673, \"overall_rmse\": 0.034880749227427295, \"record_hash\": \"2c725b27887a28d23f67373bcc1e6fda853780937881ad469db4c062abc97752\", \"record_hash_match\": 1, \"scenario_hash\": \"07f5db1a36602d9eb3070446b6e0d3d10f1ec953758ac5da3a49a98d10373dd6\", \"scenario_hash_match\": 1, \"scenario_id\": \"power_grid_self_model_reconfiguration_v1\", \"within_threshold_match\": 1}, {\"breached\": false, \"breached_count\": 0, \"claim_boundary\": \"self_model_error_monitor_not_live_reconfiguration\", \"domain\": \"cardiac_rhythm\", \"execution_disabled\": 1, \"max_observed_error\": 0.050000000000000266, \"non_actuating\": 1, \"operator_review_required\": 1, \"overall_mae\": 0.032000000000000195, \"overall_rmse\": 0.0334664010613632, \"record_hash\": \"48737ea005a8a47cf62f2b0b14b1249bc99fa76db249624c8251f219f57f2522\", \"record_hash_match\": 1, \"scenario_hash\": \"0ae4f4a4e88a5228de470731d8115933b291d7222c9dbaa6a9d90fcdcbff6968\", \"scenario_hash_match\": 1, \"scenario_id\": \"cardiac_rhythm_self_model_reconfiguration_v1\", \"within_threshold_match\": 1}, {\"breached\": true, \"breached_count\": 1, \"claim_boundary\": \"self_model_error_monitor_not_live_reconfiguration\", \"domain\": \"traffic_flow\", \"execution_disabled\": 1, \"max_observed_error\": 2.42, \"non_actuating\": 1, \"operator_review_required\": 1, \"overall_mae\": 1.6200000000000003, \"overall_rmse\": 1.701140793702861, \"record_hash\": \"d3c6e790b14e037de14661465c0dae2c4bb655cff0d3a878e8b156d5003c493c\", \"record_hash_match\": 1, \"scenario_hash\": \"02da8ac76b809a92e143d8b66bb5c016b439ebe9abcaddad64fbe769801f95c8\", \"scenario_hash_match\": 1, \"scenario_id\": \"traffic_flow_self_model_reconfiguration_v1\", \"within_threshold_match\": 1}, {\"breached\": false, \"breached_count\": 0, \"claim_boundary\": \"self_model_error_monitor_not_live_reconfiguration\", \"domain\": \"cyber_industrial\", \"execution_disabled\": 1, \"max_observed_error\": 0.05999999999999983, \"non_actuating\": 1, \"operator_review_required\": 1, \"overall_mae\": 0.042499999999999975, \"overall_rmse\": 0.04387482193696057, \"record_hash\": \"3536a94661db82fa54dcc4d9d8f8b60b1aeddbaa88bd2f1da9ba2db9f2477c58\", \"record_hash_match\": 1, \"scenario_hash\": \"950967e7c39a374b6f7456b10a21393f14f19ec67d3edafcc95db089a5724f42\", \"scenario_hash_match\": 1, \"scenario_id\": \"cyber_industrial_self_model_reconfiguration_v1\", \"within_threshold_match\": 1}]",
   "self_model_sha256": "f00a9d1c6fbf0154fa31caa5536af0daaa22264524efd03f5f517233d05c7a9d",
-  "steps_per_second": 601.5934041889464,
+  "steps_per_second": 631.0398441885379,
   "suite": "self_model_digital_twin",
-  "wall_time_s": 0.006649009068496525
+  "wall_time_s": 0.006338743958622217
 }
 ```
 
@@ -752,11 +753,11 @@ the current deterministic reference-suite evidence for release review.
   "ranking_projection_json": "[{\"domainpack\": \"power_grid\", \"rank\": 1, \"ranking_features\": {\"matched_term_count\": 6.0, \"name_match_count\": 2.0, \"phrase_match\": 1.0, \"prompt_term_count\": 7.0, \"source_priority\": 1.0, \"term_density\": 0.75}, \"score\": 1.0, \"source\": \"domainpack\"}, {\"domainpack\": \"power_grid\", \"rank\": 2, \"ranking_features\": {\"matched_term_count\": 5.0, \"name_match_count\": 2.0, \"phrase_match\": 0.0, \"prompt_term_count\": 7.0, \"source_priority\": 0.75, \"term_density\": 0.714286}, \"score\": 1.0, \"source\": \"docs\"}, {\"domainpack\": \"grid_notes\", \"rank\": 3, \"ranking_features\": {\"matched_term_count\": 3.0, \"name_match_count\": 1.0, \"phrase_match\": 0.0, \"prompt_term_count\": 7.0, \"source_priority\": 1.0, \"term_density\": 0.6}, \"score\": 0.571, \"source\": \"domainpack\"}]",
   "ranking_sha256": "88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d",
   "retrieval_score": 1.0,
-  "steps_per_second": 87.29898937387729,
+  "steps_per_second": 81.73908972531406,
   "suite": "semantic_retrieval_ranking_quality",
   "top_domainpack": "power_grid",
   "top_source": "domainpack",
-  "wall_time_s": 0.034364658989943564
+  "wall_time_s": 0.03670214593876153
 }
 ```
 
@@ -778,11 +779,11 @@ the current deterministic reference-suite evidence for release review.
   "record_count": 6,
   "records_json": "[{\"actuating\": false, \"channel_count\": 5, \"domainpack\": \"cardiac_rhythm\", \"incident_edge_count\": 10, \"incident_kernel_dimension\": 0, \"incident_key\": \"incident\", \"incident_obstruction_score\": 0.9147620338754774, \"incident_severity\": \"critical\", \"node_count\": 4, \"nominal_edge_count\": 10, \"nominal_kernel_dimension\": 0, \"nominal_obstruction_score\": 0.08268151296390262, \"obstruction_delta\": 0.8320805209115748, \"scenario\": \"arrhythmic_desynchronization_sheaf_obstruction\", \"summary_present\": true, \"top_residual_edge_count\": 3}, {\"actuating\": false, \"channel_count\": 6, \"domainpack\": \"edge_consensus_nchannel\", \"incident_edge_count\": 6, \"incident_kernel_dimension\": 4, \"incident_key\": \"stressed\", \"incident_obstruction_score\": 0.6680638692021394, \"incident_severity\": \"critical\", \"node_count\": 3, \"nominal_edge_count\": 6, \"nominal_kernel_dimension\": 4, \"nominal_obstruction_score\": 0.07859177225808482, \"obstruction_delta\": 0.5894720969440547, \"scenario\": \"heterogeneous_edge_gateway_obstruction\", \"summary_present\": true, \"top_residual_edge_count\": 3}, {\"actuating\": false, \"channel_count\": 9, \"domainpack\": \"manufacturing_spc\", \"incident_edge_count\": 6, \"incident_kernel_dimension\": 0, \"incident_key\": \"incident\", \"incident_obstruction_score\": 0.5745389905538758, \"incident_severity\": \"critical\", \"node_count\": 3, \"nominal_edge_count\": 6, \"nominal_kernel_dimension\": 0, \"nominal_obstruction_score\": 0.16225806091942963, \"obstruction_delta\": 0.4122809296344462, \"scenario\": \"manufacturing_process_drift_obstruction\", \"summary_present\": true, \"top_residual_edge_count\": 3}, {\"actuating\": false, \"channel_count\": 5, \"domainpack\": \"power_grid\", \"incident_edge_count\": 8, \"incident_kernel_dimension\": 1, \"incident_key\": \"line_fault\", \"incident_obstruction_score\": 0.7009304138072481, \"incident_severity\": \"critical\", \"node_count\": 4, \"nominal_edge_count\": 8, \"nominal_kernel_dimension\": 1, \"nominal_obstruction_score\": 0.05368817374431729, \"obstruction_delta\": 0.6472422400629307, \"scenario\": \"line_fault_grid_sheaf_obstruction\", \"summary_present\": true, \"top_residual_edge_count\": 3}, {\"actuating\": false, \"channel_count\": 4, \"domainpack\": \"network_security\", \"incident_edge_count\": 6, \"incident_kernel_dimension\": 1, \"incident_key\": \"lateral_movement\", \"incident_obstruction_score\": 0.8549869394713971, \"incident_severity\": \"critical\", \"node_count\": 3, \"nominal_edge_count\": 6, \"nominal_kernel_dimension\": 1, \"nominal_obstruction_score\": 0.02754481197370328, \"obstruction_delta\": 0.8274421274976939, \"scenario\": \"lateral_movement_sheaf_obstruction\", \"summary_present\": true, \"top_residual_edge_count\": 3}, {\"actuating\": false, \"channel_count\": 5, \"domainpack\": \"traffic_flow\", \"incident_edge_count\": 12, \"incident_kernel_dimension\": 0, \"incident_key\": \"incident\", \"incident_obstruction_score\": 0.5879710374102906, \"incident_severity\": \"critical\", \"node_count\": 6, \"nominal_edge_count\": 12, \"nominal_kernel_dimension\": 0, \"nominal_obstruction_score\": 0.30677939413635114, \"obstruction_delta\": 0.2811916432739394, \"scenario\": \"congested_spillback_traffic_sheaf_obstruction\", \"summary_present\": true, \"top_residual_edge_count\": 3}]",
   "sheaf_obstruction_sha256": "327072e5c8a07305cc841eec13556f808964a6371965c3d8ab760e379b72ba08",
-  "steps_per_second": 26.90991507928952,
+  "steps_per_second": 41.21916253885947,
   "suite": "sheaf_obstruction_domain_gate",
   "summary_count": 6,
   "top_residual_edge_count": 18,
-  "wall_time_s": 0.22296614397782832
+  "wall_time_s": 0.14556336496025324
 }
 ```
 
@@ -803,9 +804,29 @@ the current deterministic reference-suite evidence for release review.
   "runtime_execution_disabled": 1,
   "runtime_gate_checked_count": 3,
   "runtime_mapped_command_count": 1,
-  "steps_per_second": 3026.3504444200694,
+  "steps_per_second": 6757.837532166844,
   "suite": "stl_closed_loop_plan_quality",
-  "wall_time_s": 0.0009912929963320494
+  "wall_time_s": 0.0004439289914444089
+}
+```
+
+### `strange_loop_drift_scenarios`
+
+```json
+{
+  "acceptance_passed": 1,
+  "acceptance_thresholds_json": "{\"min_long_run_step_count\": 128, \"min_passed_scenario_count\": 4, \"min_scenario_count\": 4, \"require_deterministic_hash\": true, \"require_execution_disabled\": true, \"require_non_actuating\": true}",
+  "deterministic_hash": 1,
+  "drift_scenario_sha256": "bd9977cd244ff28e6fa8e4af7fe8f428aac46e6a313ca996b3bb7220268736bf",
+  "execution_disabled": 1,
+  "long_run_step_count": 160,
+  "non_actuating": 1,
+  "passed_scenario_count": 4,
+  "scenario_count": 4,
+  "scenario_results_json": "[{\"claim_boundary\": \"strange_loop_drift_review_not_live_actuation\", \"domain\": \"power_grid\", \"execution_disabled\": true, \"expected_trigger\": \"stable\", \"final_recommended_knobs\": [], \"max_drift_score\": 0.0, \"max_oscillation_score\": 0.0, \"max_overcontrol_score\": 0.02, \"min_control_coherence\": 1.0, \"non_actuating\": true, \"passed_expected_trigger\": true, \"result_hash\": \"955bb35e6b0178260d7b553d05bb732d2d2d15c149ba12c0f9cf0a25791ce276\", \"scenario_hash\": \"016e94151a3e19bfc5e42ed6e467018361592d74ee43708b503c27145e557756\", \"scenario_id\": \"strange_loop_stable_frequency_trim_v1\", \"step_count\": 40, \"triggered_recommendation_count\": 0}, {\"claim_boundary\": \"strange_loop_drift_review_not_live_actuation\", \"domain\": \"cardiac_rhythm\", \"execution_disabled\": true, \"expected_trigger\": \"policy_drift\", \"final_recommended_knobs\": [\"zeta\", \"K\"], \"max_drift_score\": 0.12000000000000005, \"max_oscillation_score\": 0.0, \"max_overcontrol_score\": 4.71, \"min_control_coherence\": 1.0, \"non_actuating\": true, \"passed_expected_trigger\": true, \"result_hash\": \"3f966367bef39e52505b35652a819d584e6013d6312b5b434c2a2bfc4caf8114\", \"scenario_hash\": \"7ed3c280918e9e9c01791475d365d36f8fa1358425f520c353c8f1c30ffde388\", \"scenario_id\": \"strange_loop_monotone_policy_drift_v1\", \"step_count\": 40, \"triggered_recommendation_count\": 39}, {\"claim_boundary\": \"strange_loop_drift_review_not_live_actuation\", \"domain\": \"traffic_flow\", \"execution_disabled\": true, \"expected_trigger\": \"control_loop_oscillation\", \"final_recommended_knobs\": [\"zeta\", \"K\"], \"max_drift_score\": 0.44000000000000017, \"max_oscillation_score\": 1.0, \"max_overcontrol_score\": 0.22, \"min_control_coherence\": 0.0, \"non_actuating\": true, \"passed_expected_trigger\": true, \"result_hash\": \"ea42130eacc665e90695f09bccfb1d865b5cef550c482c6a8d97a2bd7824702b\", \"scenario_hash\": \"c6cad22ebdf831682723f5e564d22677c578d75cf9ac953005b5ab214e5c8ad6\", \"scenario_id\": \"strange_loop_alternating_control_v1\", \"step_count\": 40, \"triggered_recommendation_count\": 39}, {\"claim_boundary\": \"strange_loop_drift_review_not_live_actuation\", \"domain\": \"plasma_control\", \"execution_disabled\": true, \"expected_trigger\": \"over_control\", \"final_recommended_knobs\": [\"zeta\", \"K\"], \"max_drift_score\": 0.0, \"max_oscillation_score\": 0.0, \"max_overcontrol_score\": 0.5261178575186363, \"min_control_coherence\": 1.0, \"non_actuating\": true, \"passed_expected_trigger\": true, \"result_hash\": \"b9a2b3022ea768d281d110a2e5f661b3f83520c5eddcd6e17c4d91039c802313\", \"scenario_hash\": \"5966e723ba0ba60edfe572207275c940defb6942b46060b4f57df606ab90322d\", \"scenario_id\": \"strange_loop_sustained_overcontrol_v1\", \"step_count\": 40, \"triggered_recommendation_count\": 40}]",
+  "steps_per_second": 3353.8498756657573,
+  "suite": "strange_loop_drift_scenario_gate",
+  "wall_time_s": 0.0477063690777868
 }
 ```
 
@@ -816,9 +837,9 @@ the current deterministic reference-suite evidence for release review.
   "final_mean_amplitude": 3.619392214170773,
   "n_oscillators": 64,
   "n_steps": 1000,
-  "steps_per_second": 5362.085637229648,
+  "steps_per_second": 6874.747301692759,
   "suite": "stuart_landau_reference_pikovsky_2001",
-  "wall_time_s": 0.18649459700100124
+  "wall_time_s": 0.1454598919954151
 }
 ```
 
@@ -835,9 +856,9 @@ the current deterministic reference-suite evidence for release review.
   "min_baseline_edge_count": 1,
   "passing_experiment_sha256": "2c501b58b2c121100e1c66d5872f0beee45903a5bd23702dedb8fae328b1b974",
   "research_only": 1,
-  "steps_per_second": 3273.9006925743824,
+  "steps_per_second": 4104.551017472906,
   "suite": "temporal_causal_hypergraph_experiment_gate",
-  "wall_time_s": 0.0006108920788392425
+  "wall_time_s": 0.00048726401291787624
 }
 ```
 
@@ -855,11 +876,11 @@ the current deterministic reference-suite evidence for release review.
   "proof_boundary": 1,
   "record_count": 6,
   "semantic_report_count": 2,
-  "steps_per_second": 46.10244757995734,
+  "steps_per_second": 41.20070785561413,
   "suite": "topos_semantic_binding_gate",
   "topos_records_json": "[{\"kind\": \"symbolic_binding_functor\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 2, \"obligation_names\": [\"artifacts_input_type\", \"audit_record_boundary_stability\", \"audit_record_non_actuation_boundary\", \"audit_record_preserves_schema_status\", \"binding_layer_and_family_presence\", \"layer_indexes_are_non_negative_integers\", \"layer_indexes_map_to_stable_object_names\", \"retrieval_evidence_to_evidence_morphisms\", \"schema_validation_has_no_errors\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"24e1984276cfc7b1a62305501c58f0b4c8087e0ae14581f7cb8170226acf627a\"}, {\"kind\": \"symbolic_binding_functor\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 2, \"obligation_names\": [\"artifacts_input_type\", \"audit_record_boundary_stability\", \"audit_record_non_actuation_boundary\", \"audit_record_preserves_schema_status\", \"binding_layer_and_family_presence\", \"layer_indexes_are_non_negative_integers\", \"layer_indexes_map_to_stable_object_names\", \"retrieval_evidence_to_evidence_morphisms\", \"schema_validation_has_no_errors\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"24e1984276cfc7b1a62305501c58f0b4c8087e0ae14581f7cb8170226acf627a\"}, {\"kind\": \"policy_composition_category\", \"morphism_count\": 3, \"non_actuating\": true, \"object_count\": 2, \"obligation_names\": [\"rule.topos_guard_low_coherence.actions\", \"rule.topos_guard_low_coherence.condition\", \"rule.topos_guard_low_coherence.regimes\", \"rule.topos_guard_stability.actions\", \"rule.topos_guard_stability.condition\", \"rule.topos_guard_stability.regimes\", \"rule_names_unique\", \"rules_collection_valid\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"aeb642480a930cfd53ce9b65d0e2fc4686b72789924221b1de50023a2917eb6f\"}, {\"domain\": \"power_grid\", \"kind\": \"domain_example\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 25, \"obligation_names\": [\"power_grid_coherence_guard\", \"grid_frequency_protective_limit\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"3f8580488c3f7085ce7aa7b603fa844fecd961733470c0ba9912c12028ab180d\"}, {\"domain\": \"cardiac_rhythm\", \"kind\": \"domain_example\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 23, \"obligation_names\": [\"cardiac_rhythm_variability_guard\", \"cardiac_synchrony_cat_proof\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"3741e9afe6e8c6ea5b7ec1bc2719b28aee475faaf4de0fa16f8112dde7711a59\"}, {\"domain\": \"cyber_industrial\", \"kind\": \"domain_example\", \"morphism_count\": 2, \"non_actuating\": true, \"object_count\": 27, \"obligation_names\": [\"cyber_industrial_boundary_containment\", \"industrial_attack_mitigation_guard\"], \"passed\": true, \"proof_boundary\": \"categorical_validation_prototype_not_formal_topos_proof\", \"report_hash\": \"a322bd56cb445e0ec56d982025bff40840055360d0af05fc72372cbb6a380494\"}]",
   "topos_sha256": "89226d02d10ec1b52e54b0f407ca8f0b92b79685aff0366addda8f26a17f06a0",
-  "wall_time_s": 0.13014493405353278
+  "wall_time_s": 0.1456285659223795
 }
 ```
 
@@ -878,9 +899,9 @@ the current deterministic reference-suite evidence for release review.
   "record_count": 1,
   "replay_case_count": 3,
   "review_only": 1,
-  "steps_per_second": 6474.447664357253,
+  "steps_per_second": 16508.638930831672,
   "suite": "value_alignment_replay_calibration_gate",
   "threshold_fallback_case_count": 1,
-  "wall_time_s": 0.0004633599892258644
+  "wall_time_s": 0.00018172303680330515
 }
 ```

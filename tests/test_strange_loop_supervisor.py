@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import get_type_hints
 
 import numpy as np
@@ -19,8 +20,12 @@ from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor import (
     RegimeManager,
     StrangeLoopAssessment,
+    StrangeLoopDriftScenario,
+    StrangeLoopDriftScenarioResult,
     StrangeLoopSupervisor,
     SupervisorPolicy,
+    build_strange_loop_drift_scenarios,
+    evaluate_strange_loop_drift_scenarios,
 )
 from scpn_phase_orchestrator.supervisor import strange_loop as strange_loop_module
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -158,6 +163,60 @@ class TestStrangeLoopAssessment:
 
         assert supervisor.last_assessment is None
         assert supervisor.observe([]).drift_score == pytest.approx(0.0)
+
+
+class TestStrangeLoopLongRunDriftScenarios:
+    def test_builds_long_run_scenario_corpus(self) -> None:
+        scenarios = build_strange_loop_drift_scenarios()
+
+        assert len(scenarios) >= 4
+        assert all(
+            isinstance(scenario, StrangeLoopDriftScenario) for scenario in scenarios
+        )
+        assert {scenario.expected_trigger for scenario in scenarios} >= {
+            "stable",
+            "policy_drift",
+            "control_loop_oscillation",
+            "over_control",
+        }
+        assert all(len(scenario.action_schedule) >= 32 for scenario in scenarios)
+        assert all(scenario.non_actuating is True for scenario in scenarios)
+        assert all(scenario.execution_disabled is True for scenario in scenarios)
+        assert len({scenario.scenario_hash() for scenario in scenarios}) == len(
+            scenarios
+        )
+
+    def test_evaluates_expected_long_run_drift_modes(self) -> None:
+        results = evaluate_strange_loop_drift_scenarios()
+
+        assert len(results) >= 4
+        assert all(
+            isinstance(result, StrangeLoopDriftScenarioResult) for result in results
+        )
+        result_map = {result.expected_trigger: result for result in results}
+        assert result_map["stable"].triggered_recommendation_count == 0
+        assert result_map["stable"].max_drift_score < 0.08
+        assert result_map["policy_drift"].max_drift_score > 0.08
+        assert result_map["control_loop_oscillation"].max_oscillation_score > 0.35
+        assert result_map["over_control"].max_overcontrol_score > 0.35
+        assert all(result.passed_expected_trigger is True for result in results)
+
+    def test_long_run_records_are_json_safe_and_non_actuating(self) -> None:
+        scenario_records = [
+            scenario.to_audit_record()
+            for scenario in build_strange_loop_drift_scenarios()
+        ]
+        result_records = [
+            result.to_audit_record()
+            for result in evaluate_strange_loop_drift_scenarios()
+        ]
+
+        for record in (*scenario_records, *result_records):
+            assert record["non_actuating"] is True
+            assert record["execution_disabled"] is True
+            assert isinstance(record["scenario_hash"], str)
+            assert len(record["scenario_hash"]) == 64
+            json.dumps(record, allow_nan=False, sort_keys=True)
 
 
 class TestStrangeLoopPipelineWiring:
