@@ -301,6 +301,11 @@ or subprocess runtimes. The contract rejects boolean aliases, complex or
 non-finite flattened coupling payloads, non-vector inputs, malformed `n*n`
 buffer lengths, and invalid oscillator counts. Empty spectral problems return
 empty eigenvalue and Fiedler vectors without optional runtime loading.
+Public spectral helpers enforce the same real-valued boundary on coupling
+matrices, frequency vectors, `gamma_max`, optional primitive eigensystem
+outputs, and Rust fast-path scalar/vector returns. Boolean aliases are not
+coerced into weights or frequencies, and complex-valued aliases are rejected
+before NumPy can discard imaginary components.
 
 ::: scpn_phase_orchestrator.coupling.spectral
 

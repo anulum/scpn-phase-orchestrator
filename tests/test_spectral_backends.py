@@ -126,6 +126,12 @@ class TestDirectBackendBoundaryContracts:
                 ValueError,
                 "real-valued",
             ),
+            (
+                np.array([0.0, 1.0 + 1.0j, 0.0, 0.0], dtype=object),
+                2,
+                ValueError,
+                "real-valued",
+            ),
             (np.zeros((2, 2)), 2, ValueError, "one-dimensional"),
             (np.zeros(3), 2, ValueError, "n\\*n"),
             (np.zeros(4), True, ValueError, "n"),

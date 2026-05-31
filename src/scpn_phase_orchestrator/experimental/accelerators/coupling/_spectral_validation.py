@@ -22,11 +22,29 @@ __all__ = ["validate_spectral_backend_inputs"]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    if isinstance(value, np.ndarray):
+        if value.dtype == np.bool_:
+            return True
+        if value.dtype != object:
+            return False
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        return True
+    if isinstance(value, np.ndarray) and raw.dtype != object:
+        return False
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
 def _validate_n(value: object) -> int:
@@ -42,7 +60,7 @@ def _validate_knm_flat(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("knm_flat must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("knm_flat must be real-valued")
     try:
         knm_flat = raw.astype(np.float64, copy=True)

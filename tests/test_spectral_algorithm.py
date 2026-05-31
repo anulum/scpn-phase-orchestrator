@@ -111,6 +111,15 @@ class TestGraphLaplacian:
         with pytest.raises(ValueError, match="knm must not contain boolean"):
             graph_laplacian([[0.0, True], [1.0, 0.0]])
 
+    def test_rejects_numpy_boolean_coupling_alias(self):
+        knm = np.array(
+            [[0.0, np.bool_(True)], [1.0, 0.0]],
+            dtype=object,
+        )
+
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            graph_laplacian(knm)
+
 
 class TestFiedlerValue:
     @_python
@@ -222,6 +231,14 @@ class TestCriticalCoupling:
 
         with pytest.raises(ValueError, match="omegas must not contain boolean"):
             critical_coupling([True, 1.0], W)
+
+    @_python
+    def test_rejects_complex_frequency_alias(self):
+        W = np.ones((2, 2), dtype=np.float64)
+        np.fill_diagonal(W, 0.0)
+
+        with pytest.raises(ValueError, match="omegas must be a finite real-valued"):
+            critical_coupling(np.array([0.0, 1.0 + 2.0j]), W)
 
 
 class TestFiedlerPartition:
@@ -494,6 +511,53 @@ class TestValidationBoundaries:
         knm = np.array([[0.0, 1.0 + 1.0j], [1.0 + 1.0j, 0.0]])
         with pytest.raises(ValueError, match="knm must be a finite square matrix"):
             graph_laplacian(knm)
+
+    def test_optional_backend_boolean_output_falls_back_to_python(self, monkeypatch):
+        knm = np.array(
+            [
+                [0.0, 1.0, 0.0],
+                [1.0, 0.0, 1.0],
+                [0.0, 1.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
+
+        def invalid_primitive(flat, n):
+            assert n == 3
+            assert flat.shape == (9,)
+            return (
+                np.array([False, True, True], dtype=np.bool_),
+                np.array([True, False, True], dtype=np.bool_),
+            )
+
+        monkeypatch.setattr(s_mod, "_primitive", lambda: invalid_primitive)
+
+        eigvals, fiedler = spectral_eig(knm)
+
+        np.testing.assert_allclose(
+            eigvals,
+            np.linalg.eigvalsh(graph_laplacian(knm)),
+            atol=1e-12,
+        )
+        assert fiedler.shape == (3,)
+
+    def test_rust_fast_path_rejects_boolean_return_aliases(self, monkeypatch):
+        knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+
+        def rust_bundle():
+            return {
+                "fv": lambda flat, n: np.bool_(True),
+                "fvec": lambda flat, n: np.array([np.bool_(True), 0.0], dtype=object),
+            }
+
+        monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(s_mod, "_RUST_CACHE", None)
+        monkeypatch.setattr(s_mod, "_load_rust_bundle", rust_bundle)
+
+        with pytest.raises(ValueError, match="Fiedler value"):
+            fiedler_value(knm)
+        with pytest.raises(ValueError, match="Fiedler vector"):
+            fiedler_vector(knm)
 
     @pytest.mark.parametrize(
         ("knm", "omegas", "match"),

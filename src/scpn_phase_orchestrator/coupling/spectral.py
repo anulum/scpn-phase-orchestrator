@@ -75,8 +75,29 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
-    raw = np.asarray(value, dtype=object)
-    return any(isinstance(item, bool) for item in raw.ravel())
+    if isinstance(value, np.ndarray):
+        if value.dtype == np.bool_:
+            return True
+        if value.dtype != object:
+            return False
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        return True
+    if isinstance(value, np.ndarray) and raw.dtype != object:
+        return False
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.ravel())
 
 
 def _validate_coupling_matrix(knm: object) -> FloatArray:
@@ -85,8 +106,8 @@ def _validate_coupling_matrix(knm: object) -> FloatArray:
     raw = np.asarray(knm)
     if raw.dtype == np.bool_:
         raise ValueError("knm must not contain boolean values")
-    if np.iscomplexobj(raw):
-        raise ValueError("knm must be a finite square matrix")
+    if np.iscomplexobj(raw) or _contains_complex_alias(knm):
+        raise ValueError("knm must be a finite square matrix of real-valued weights")
     try:
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -111,6 +132,8 @@ def _validate_omega_vector(omegas: object) -> FloatArray:
     raw = np.asarray(omegas)
     if raw.dtype == np.bool_:
         raise ValueError("omegas must not contain boolean values")
+    if np.iscomplexobj(raw) or _contains_complex_alias(omegas):
+        raise ValueError("omegas must be a finite real-valued frequency vector")
     try:
         values = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -125,7 +148,7 @@ def _validate_omega_vector(omegas: object) -> FloatArray:
 
 
 def _validate_gamma_max(value: object) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError("gamma_max must be a finite real value")
     gamma = float(value)
     if not np.isfinite(gamma):
@@ -138,7 +161,7 @@ def _validate_gamma_max(value: object) -> float:
 def _validate_non_negative_scalar(
     value: object, *, name: str, allow_infinite: bool = False
 ) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative scalar")
     resolved = float(value)
     if allow_infinite and np.isposinf(resolved):
@@ -149,6 +172,8 @@ def _validate_non_negative_scalar(
 
 
 def _validate_rust_fiedler_vector(value: object, *, n: int) -> FloatArray:
+    if _contains_boolean_alias(value) or _contains_complex_alias(value):
+        raise ValueError("Fiedler vector must be real-valued and non-boolean")
     try:
         vector = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -199,6 +224,13 @@ def _validate_spectral_output(
         raise ValueError("spectral primitive output must be (eigvals, fiedler)")
     eigvals_raw = value[0]
     fiedler_raw = value[1]
+    if (
+        _contains_boolean_alias(eigvals_raw)
+        or _contains_boolean_alias(fiedler_raw)
+        or _contains_complex_alias(eigvals_raw)
+        or _contains_complex_alias(fiedler_raw)
+    ):
+        raise ValueError("spectral primitive output must be real-valued numeric arrays")
     try:
         eigvals = np.asarray(eigvals_raw, dtype=np.float64)
         fiedler = np.asarray(fiedler_raw, dtype=np.float64)
