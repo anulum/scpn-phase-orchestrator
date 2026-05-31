@@ -321,6 +321,8 @@ def render_morphogenetic_field_svg(
 def _validate_phases(phases: FloatArray) -> FloatArray:
     if _contains_boolean_alias(phases):
         raise ValueError("phases must not contain boolean values")
+    if _contains_complex_alias(phases):
+        raise ValueError("phases must not contain complex values")
     arr = np.asarray(phases, dtype=np.float64)
     if arr.ndim != 1:
         raise ValueError("phases must be a one-dimensional array")
@@ -334,6 +336,8 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
 def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
     if _contains_boolean_alias(knm):
         raise ValueError("knm must not contain boolean values")
+    if _contains_complex_alias(knm):
+        raise ValueError("knm must not contain complex values")
     arr = np.asarray(knm, dtype=np.float64)
     if arr.shape != (n, n):
         raise ValueError(f"knm must have shape ({n}, {n})")
@@ -341,12 +345,15 @@ def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
         raise ValueError("knm must be finite")
     if np.any(arr < 0.0):
         raise ValueError("knm must be non-negative")
+    _require_zero_diagonal(arr, "knm")
     return arr
 
 
 def _validate_field(field: FloatArray, n: int) -> FloatArray:
     if _contains_boolean_alias(field):
         raise ValueError("field must not contain boolean values")
+    if _contains_complex_alias(field):
+        raise ValueError("field must not contain complex values")
     arr = np.asarray(field, dtype=np.float64)
     if arr.shape != (n, n):
         raise ValueError(f"field must have shape ({n}, {n})")
@@ -354,12 +361,15 @@ def _validate_field(field: FloatArray, n: int) -> FloatArray:
         raise ValueError("field must be finite")
     if np.any((arr < 0.0) | (arr > 1.0)):
         raise ValueError("field values must be in [0, 1]")
+    _require_zero_diagonal(arr, "field")
     return arr
 
 
 def _validate_square_field(field: FloatArray) -> FloatArray:
     if _contains_boolean_alias(field):
         raise ValueError("field must not contain boolean values")
+    if _contains_complex_alias(field):
+        raise ValueError("field must not contain complex values")
     arr = np.asarray(field, dtype=np.float64)
     if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
         raise ValueError("field must be a square matrix")
@@ -367,6 +377,7 @@ def _validate_square_field(field: FloatArray) -> FloatArray:
         raise ValueError("field must be finite")
     if np.any((arr < 0.0) | (arr > 1.0)):
         raise ValueError("field values must be in [0, 1]")
+    _require_zero_diagonal(arr, "field")
     return arr
 
 
@@ -476,3 +487,16 @@ def _contains_boolean_alias(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        arr = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in arr.flat)
+
+
+def _require_zero_diagonal(array: FloatArray, name: str) -> None:
+    if not np.allclose(np.diag(array), 0.0, rtol=0.0, atol=0.0):
+        raise ValueError(f"{name} diagonal must be zero")

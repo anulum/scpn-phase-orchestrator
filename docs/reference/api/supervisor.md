@@ -365,7 +365,10 @@ This slice provides a reviewable grow/shrink primitive for topology shaping. It
 does not bypass the existing policy, causal, STL, or action-projection gates.
 The field snapshot helper is dependency-free and emits JSON-safe statistics,
 ASCII heatmap rows, and strongest-edge records for reports or later UI
-rendering.
+rendering. Coupling and carried topology-field matrices are strict off-diagonal
+graph objects: boolean and complex aliases are rejected before float coercion,
+and non-zero self-edge diagonals are rejected before any field evolution,
+snapshot, or SVG rendering.
 
 `render_morphogenetic_field_svg()` is the first richer UI rendering surface for
 the same field state. It produces a deterministic, dependency-free SVG heatmap

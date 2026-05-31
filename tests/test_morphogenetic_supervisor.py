@@ -150,7 +150,7 @@ class TestMorphogeneticTopologySupervisor:
 
     def test_zero_coupling_policy_keeps_single_oscillator_field_bounded(self) -> None:
         phases = np.array([0.75])
-        knm = np.array([[2.0]], dtype=np.float64)
+        knm = np.array([[0.0]], dtype=np.float64)
         supervisor = MorphogeneticTopologySupervisor(
             MorphogeneticFieldPolicy(
                 growth_rate=1.0,
@@ -166,24 +166,24 @@ class TestMorphogeneticTopologySupervisor:
 
         np.testing.assert_allclose(result.knm, [[0.0]])
         np.testing.assert_allclose(result.field_state.field, [[0.0]])
-        assert result.delta_norm == pytest.approx(2.0)
+        assert result.delta_norm == pytest.approx(0.0)
         assert result.grown_edges == ()
         assert result.shrunk_edges == ()
         assert result.global_coherence == pytest.approx(1.0)
 
-    def test_diagonal_field_deltas_do_not_become_control_actions(self) -> None:
+    def test_zero_diagonal_field_deltas_do_not_become_control_actions(self) -> None:
         phases = np.array([0.0, np.pi])
         knm = np.array(
             [
-                [0.25, 0.5],
-                [0.5, 0.25],
+                [0.0, 0.5],
+                [0.5, 0.0],
             ],
             dtype=np.float64,
         )
         field = np.array(
             [
-                [0.9, 0.8],
-                [0.8, 0.9],
+                [0.0, 0.8],
+                [0.8, 0.0],
             ],
             dtype=np.float64,
         )
@@ -247,9 +247,9 @@ class TestMorphogeneticTopologySupervisor:
     ) -> None:
         field = np.array(
             [
-                [1.0, 0.2, 0.0],
-                [0.0, 0.9, 0.8],
-                [0.4, 0.0, 0.7],
+                [0.0, 0.2, 0.0],
+                [0.0, 0.0, 0.8],
+                [0.4, 0.0, 0.0],
             ],
             dtype=np.float64,
         )
@@ -369,6 +369,12 @@ class TestMorphogeneticTopologySupervisor:
                 "phases must not contain boolean values",
             ),
             (
+                np.array([0.0, 1.0 + 0.0j], dtype=object),
+                np.zeros((2, 2), dtype=np.float64),
+                None,
+                "phases must not contain complex values",
+            ),
+            (
                 np.zeros(2, dtype=np.float64),
                 np.array([[0.0, np.inf], [0.0, 0.0]], dtype=np.float64),
                 None,
@@ -382,9 +388,21 @@ class TestMorphogeneticTopologySupervisor:
             ),
             (
                 np.zeros(2, dtype=np.float64),
+                np.array([[0.0, 0.1 + 0.0j], [0.0, 0.0]], dtype=object),
+                None,
+                "knm must not contain complex values",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
                 np.array([[0.0, -0.1], [0.0, 0.0]], dtype=np.float64),
                 None,
                 "knm must be non-negative",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.array([[0.1, 0.0], [0.0, 0.0]], dtype=np.float64),
+                None,
+                "knm diagonal must be zero",
             ),
             (
                 np.zeros(2, dtype=np.float64),
@@ -406,9 +424,25 @@ class TestMorphogeneticTopologySupervisor:
                 np.zeros(2, dtype=np.float64),
                 np.zeros((2, 2), dtype=np.float64),
                 MorphogeneticFieldState(
+                    np.array([[0.0, 0.1 + 0.0j], [0.0, 0.0]], dtype=object)
+                ),
+                "field must not contain complex values",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                MorphogeneticFieldState(
                     np.array([[0.0, 1.1], [0.0, 0.0]], dtype=np.float64)
                 ),
                 r"field values must be in \[0, 1\]",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                MorphogeneticFieldState(
+                    np.array([[0.1, 0.0], [0.0, 0.0]], dtype=np.float64)
+                ),
+                "field diagonal must be zero",
             ),
         ],
     )
@@ -450,8 +484,16 @@ class TestMorphogeneticTopologySupervisor:
                 "field must not contain boolean values",
             ),
             (
+                np.array([[0.0, 0.1 + 0.0j], [0.0, 0.0]], dtype=object),
+                "field must not contain complex values",
+            ),
+            (
                 np.array([[0.0, -0.1], [0.0, 0.0]], dtype=np.float64),
                 r"field values must be in \[0, 1\]",
+            ),
+            (
+                np.array([[0.1, 0.0], [0.0, 0.0]], dtype=np.float64),
+                "field diagonal must be zero",
             ),
         ],
     )
