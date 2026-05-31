@@ -183,6 +183,10 @@ class TestDirectBackendBoundaryContracts:
             ("\n0\n", "crossing count must be an integer"),
             ("0\n\n", "returned 2 lines, expected 1"),
             ("1\n0.0\n1.0\n0.5\n\n", "returned 5 lines, expected 4"),
+            (
+                "3\n0.0\n0.0\n0.0\n0.0\n0.0\n0.0\n0.5\n1.5\n2.5\n",
+                "must not exceed the 2 available intervals",
+            ),
         ],
     )
     def test_mojo_runner_preserves_raw_stdout_cardinality(

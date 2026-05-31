@@ -47,6 +47,7 @@ with length `t`, and the crossing count must be a non-boolean integer bounded
 by the `t - 1` sampled intervals. Active crossing times must remain inside the
 sampled interval range and strictly increase. Mojo subprocess parsing preserves
 raw stdout line cardinality, including blank records, and requires an explicit
-crossing-count header. Malformed Mojo text output is converted into
-deterministic `ValueError` failures instead of leaking index or conversion
-errors from the subprocess parser.
+crossing-count header that does not exceed the `t - 1` sampled intervals.
+Malformed Mojo text output is converted into deterministic `ValueError`
+failures instead of leaking index or conversion errors from the subprocess
+parser.

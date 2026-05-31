@@ -68,6 +68,12 @@ def _parse(lines: list[str], dim: int, t: int) -> tuple[FloatArray, FloatArray, 
         raise ValueError("Mojo Poincare crossing count must be an integer") from exc
     if n_cr < 0:
         raise ValueError("Mojo Poincare crossing count must be non-negative")
+    max_crossings = max(t - 1, 0)
+    if n_cr > max_crossings:
+        raise ValueError(
+            f"Mojo Poincare crossing count must not exceed the "
+            f"{max_crossings} available intervals"
+        )
     expected_lines = 1 + n_cr * dim + n_cr
     if len(lines) != expected_lines:
         raise ValueError(
