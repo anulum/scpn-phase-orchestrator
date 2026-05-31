@@ -64,6 +64,10 @@ def test_reduce_coupling_half():
         (np.array([[0.0, np.nan], [1.0, 0.0]]), "knm"),
         (np.array([[0.0, True], [1.0, 0.0]], dtype=object), "knm"),
         (np.array([[0.0, 1.0 + 0.0j], [1.0, 0.0]]), "real-valued"),
+        (
+            np.array([[0.0, complex(1.0, 0.0)], [1.0, 0.0]], dtype=object),
+            "real-valued",
+        ),
     ],
 )
 def test_reduce_coupling_rejects_invalid_coupling_matrix(knm, match):
@@ -86,6 +90,7 @@ def test_reduce_coupling_rejects_invalid_reduction_factor(reduction_factor):
         np.array([[False, True], [True, False]], dtype=np.bool_),
         np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object),
         np.array([[0.0, 1.0 + 0.0j], [1.0, 0.0]]),
+        np.array([[0.0, complex(1.0, 0.0)], [1.0, 0.0]], dtype=object),
     ],
 )
 def test_reduce_coupling_rejects_invalid_rust_reduce_output(
@@ -144,6 +149,7 @@ def test_entropy_empty_phases():
         np.array([0.0, np.inf]),
         np.array([0.0, True], dtype=object),
         np.array([0.0, 1.0 + 0.0j]),
+        np.array([0.0, complex(1.0, 0.0)], dtype=object),
     ],
 )
 def test_entropy_rejects_non_vector_or_non_finite_phases(phases):

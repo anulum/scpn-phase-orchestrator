@@ -32,11 +32,27 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
+
+
 def _validate_phase_vector(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("phases must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("phases must be real-valued")
     try:
         phases = raw.astype(np.float64, copy=True)
@@ -76,7 +92,7 @@ def validate_psychedelic_entropy_backend_output(
     if _contains_boolean_alias(value):
         raise ValueError("entropy backend output must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("entropy backend output must be real-valued")
     try:
         entropy = raw.astype(np.float64, copy=True)

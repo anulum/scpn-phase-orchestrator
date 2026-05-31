@@ -156,11 +156,27 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
+
+
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued phases")
     try:
         phases = raw.astype(np.float64, copy=True)
@@ -179,7 +195,7 @@ def _validate_coupling_matrix(
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued couplings")
     try:
         matrix = raw.astype(np.float64, copy=True)
@@ -248,7 +264,7 @@ def _validate_reduced_coupling(
     if _contains_boolean_alias(value):
         raise ValueError("reduced coupling matrix must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("reduced coupling matrix must contain real values")
     try:
         reduced = raw.astype(np.float64, copy=True)
@@ -270,7 +286,7 @@ def _validate_entropy_value(value: object, *, n_bins: int) -> float:
     if _contains_boolean_alias(value):
         raise ValueError("entropy output must not be a boolean value")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("entropy output must contain real values")
     try:
         scalar = raw.astype(np.float64, copy=True)

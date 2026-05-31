@@ -477,7 +477,8 @@ embedded = delay_embed(signal, delay=tau, dimension=m)
 The psychedelic monitor is a research diagnostic for phase-dispersion
 simulation inspired by entropic-brain hypotheses. Public Python calls and
 Go/Julia/Mojo entropy adapters reject boolean aliases, complex phases,
-non-finite phases, invalid bin counts, complex entropy payloads, and invalid
+object arrays carrying Python or NumPy complex scalar aliases, non-finite
+phases, invalid bin counts, complex entropy payloads, and invalid
 coupling-reduction backend matrices before results are accepted. This preserves
 the circular Shannon entropy and Kuramoto coupling semantics over real-valued
 phase observations; it is not a clinical, dosage, or actuation interface.

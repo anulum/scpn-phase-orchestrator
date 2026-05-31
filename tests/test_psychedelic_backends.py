@@ -128,6 +128,12 @@ class TestDirectBackendBoundaryContracts:
         [
             (np.array([0.0, True], dtype=object), 4, ValueError, "boolean"),
             (np.array([0.0, 1.0 + 0.0j]), 4, ValueError, "real-valued"),
+            (
+                np.array([0.0, complex(1.0, 0.0)], dtype=object),
+                4,
+                ValueError,
+                "real-valued",
+            ),
             (np.array([0.0, np.inf]), 4, ValueError, "finite"),
             (np.array([[0.0, 1.0]]), 4, ValueError, "one-dimensional"),
             (np.linspace(0.0, 1.0, 4), np.bool_(True), TypeError, "n_bins"),
@@ -165,6 +171,7 @@ class TestDirectBackendBoundaryContracts:
             ("go", np.inf, "finite"),
             ("julia", 2.0, r"\[0, log\(n_bins\)\]"),
             ("mojo", -0.1, r"\[0, log\(n_bins\)\]"),
+            ("julia", complex(1.0, 0.0), "real-valued"),
         ],
     )
     def test_invalid_entropy_backend_outputs_are_rejected(
