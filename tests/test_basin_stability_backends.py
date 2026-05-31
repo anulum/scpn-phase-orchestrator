@@ -18,12 +18,22 @@ and cross-checks against the Python reference with a tight tolerance.
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _basin_stability_go as basin_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _basin_stability_julia as basin_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _basin_stability_mojo as basin_mojo,
+)
 from scpn_phase_orchestrator.upde import basin_stability as b_mod
 from scpn_phase_orchestrator.upde.basin_stability import (
     basin_stability,
@@ -31,6 +41,25 @@ from scpn_phase_orchestrator.upde.basin_stability import (
 )
 
 TOL = 1e-12
+DirectBackend = Callable[
+    [
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        int,
+        float,
+        float,
+        int,
+        int,
+    ],
+    float,
+]
+DIRECT_BACKENDS = (
+    basin_go.steady_state_r_go,
+    basin_julia.steady_state_r_julia,
+    basin_mojo.steady_state_r_mojo,
+)
 
 
 @contextlib.contextmanager
@@ -47,6 +76,15 @@ def _all_to_all(n: int, strength: float = 1.0) -> np.ndarray:
     k = np.ones((n, n)) * strength / n
     np.fill_diagonal(k, 0.0)
     return k
+
+
+def _direct_payload(n: int = 5):
+    rng = np.random.default_rng(17)
+    phases = rng.uniform(0.0, 2.0 * np.pi, size=n)
+    omegas = rng.normal(0.0, 0.2, size=n)
+    knm = _all_to_all(n, strength=2.5).ravel()
+    alpha = np.zeros(n * n, dtype=np.float64)
+    return phases, omegas, knm, alpha, n, 1.0, 0.01, 20, 10
 
 
 def _reference_R(n: int, strength: float, seed: int) -> float:
@@ -81,6 +119,60 @@ def _backend_R(backend: str, n: int, strength: float, seed: int) -> float:
             n_transient=200,
             n_measure=100,
         )
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    @pytest.mark.parametrize(
+        ("index", "replacement"),
+        [
+            (0, lambda payload: payload[0].reshape(1, -1)),
+            (0, lambda payload: payload[0].astype(bool)),
+            (0, lambda payload: payload[0].astype(np.complex128) + 1j),
+            (0, lambda payload: np.array([np.nan, *payload[0][1:]])),
+            (1, lambda payload: payload[1][:-1]),
+            (1, lambda payload: payload[1].astype(bool)),
+            (1, lambda payload: np.array([np.inf, *payload[1][1:]])),
+            (2, lambda payload: payload[2][:-1]),
+            (2, lambda payload: payload[2].astype(bool)),
+            (2, lambda payload: payload[2].astype(np.complex128) + 1j),
+            (3, lambda payload: payload[3][:-1]),
+            (3, lambda payload: payload[3].astype(bool)),
+            (3, lambda payload: np.full_like(payload[3], np.nan)),
+            (4, lambda payload: True),
+            (4, lambda payload: 0),
+            (4, lambda payload: payload[4] + 1),
+            (5, lambda payload: True),
+            (5, lambda payload: float("nan")),
+            (6, lambda payload: 0.0),
+            (6, lambda payload: float("inf")),
+            (7, lambda payload: True),
+            (7, lambda payload: -1),
+            (8, lambda payload: True),
+            (8, lambda payload: -1),
+        ],
+    )
+    def test_invalid_inputs_fail_before_optional_runtime_loading(
+        self,
+        backend: DirectBackend,
+        index: int,
+        replacement: Callable[[tuple], object],
+    ) -> None:
+        """Direct Go/Julia/Mojo wrappers share the steady-state R contract."""
+
+        payload = list(_direct_payload())
+        payload[index] = replacement(tuple(payload))
+        with pytest.raises((TypeError, ValueError)):
+            backend(*payload)
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    def test_zero_measure_returns_zero_without_optional_runtime(
+        self,
+        backend: DirectBackend,
+    ) -> None:
+        payload = list(_direct_payload())
+        payload[8] = 0
+        assert backend(*payload) == 0.0
 
 
 class TestSteadyStateRParity:

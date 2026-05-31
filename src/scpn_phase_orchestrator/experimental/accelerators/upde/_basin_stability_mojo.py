@@ -16,6 +16,11 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
+from ._basin_stability_validation import (
+    validate_basin_stability_inputs,
+    validate_basin_stability_output,
+)
+
 __all__ = ["_ensure_exe", "steady_state_r_mojo"]
 
 FloatArray = NDArray[np.float64]
@@ -49,19 +54,42 @@ def steady_state_r_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
+    (
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        k_scale_f,
+        dt_f,
+        n_transient_i,
+        n_measure_i,
+    ) = validate_basin_stability_inputs(
+        phases_init,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        k_scale,
+        dt,
+        n_transient,
+        n_measure,
+    )
+    if n_measure_i == 0:
+        return 0.0
     exe = _ensure_exe()
     tokens: list[str] = [
         "STEADY",
-        str(int(n)),
-        repr(float(k_scale)),
-        repr(float(dt)),
-        str(int(n_transient)),
-        str(int(n_measure)),
+        str(n_i),
+        repr(k_scale_f),
+        repr(dt_f),
+        str(n_transient_i),
+        str(n_measure_i),
     ]
-    tokens.extend(repr(float(x)) for x in np.asarray(phases_init).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(omegas).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(alpha_flat).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in p.tolist())
+    tokens.extend(repr(float(x)) for x in o.tolist())
+    tokens.extend(repr(float(x)) for x in k.tolist())
+    tokens.extend(repr(float(x)) for x in a.tolist())
     proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
@@ -76,4 +104,4 @@ def steady_state_r_mojo(
     line = proc.stdout.strip()
     if not line:
         raise ValueError("Mojo STEADY returned empty output")
-    return float(line)
+    return validate_basin_stability_output(float(line))

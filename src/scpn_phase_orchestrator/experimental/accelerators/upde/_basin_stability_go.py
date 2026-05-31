@@ -16,6 +16,11 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
+from ._basin_stability_validation import (
+    validate_basin_stability_inputs,
+    validate_basin_stability_output,
+)
+
 __all__ = ["steady_state_r_go"]
 
 FloatArray = NDArray[np.float64]
@@ -67,20 +72,39 @@ def steady_state_r_go(
     The calculation is delegated to the Go backend.
     """
 
+    (
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        k_scale_f,
+        dt_f,
+        n_transient_i,
+        n_measure_i,
+    ) = validate_basin_stability_inputs(
+        phases_init,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        k_scale,
+        dt,
+        n_transient,
+        n_measure,
+    )
+    if n_measure_i == 0:
+        return 0.0
     lib = _load_lib()
-    p = np.ascontiguousarray(phases_init, dtype=np.float64)
-    o = np.ascontiguousarray(omegas, dtype=np.float64)
-    k = np.ascontiguousarray(knm_flat, dtype=np.float64)
-    a = np.ascontiguousarray(alpha_flat, dtype=np.float64)
     r = lib.SteadyStateR(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         o.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         k.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(n)),
-        ctypes.c_double(float(k_scale)),
-        ctypes.c_double(float(dt)),
-        ctypes.c_int(int(n_transient)),
-        ctypes.c_int(int(n_measure)),
+        ctypes.c_int(n_i),
+        ctypes.c_double(k_scale_f),
+        ctypes.c_double(dt_f),
+        ctypes.c_int(n_transient_i),
+        ctypes.c_int(n_measure_i),
     )
-    return float(r)
+    return validate_basin_stability_output(r)

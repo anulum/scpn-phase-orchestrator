@@ -16,6 +16,11 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from ._basin_stability_validation import (
+    validate_basin_stability_inputs,
+    validate_basin_stability_output,
+)
+
 __all__ = ["steady_state_r_julia"]
 
 FloatArray = NDArray[np.float64]
@@ -53,16 +58,39 @@ def steady_state_r_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    (
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        k_scale_f,
+        dt_f,
+        n_transient_i,
+        n_measure_i,
+    ) = validate_basin_stability_inputs(
+        phases_init,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        k_scale,
+        dt,
+        n_transient,
+        n_measure,
+    )
+    if n_measure_i == 0:
+        return 0.0
     jl = _ensure()
     r = jl.steady_state_r(
-        np.ascontiguousarray(phases_init, dtype=np.float64),
-        np.ascontiguousarray(omegas, dtype=np.float64),
-        np.ascontiguousarray(knm_flat, dtype=np.float64),
-        np.ascontiguousarray(alpha_flat, dtype=np.float64),
-        int(n),
-        float(k_scale),
-        float(dt),
-        int(n_transient),
-        int(n_measure),
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        k_scale_f,
+        dt_f,
+        n_transient_i,
+        n_measure_i,
     )
-    return float(r)
+    return validate_basin_stability_output(r)

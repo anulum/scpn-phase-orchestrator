@@ -262,6 +262,15 @@ Rust backend (`basin_stability_rust`) parallelises Monte Carlo trials
 with Rayon. Each trial is independent — embarrassingly parallel. Speedup
 scales linearly with core count up to `n_samples`.
 
+Direct Go, Julia, and Mojo one-trial accelerator entrypoints share the same
+pre-runtime boundary contract: `phases_init` and `omegas` must be finite real
+one-dimensional `float64` vectors of length `N`; `knm_flat` and `alpha_flat`
+must be finite real flattened `N*N` buffers; `N` must be a positive integer;
+`k_scale` must be finite; `dt` must be positive; and transient/measurement
+step counts must be non-negative integers. A zero-measure direct call returns
+`0.0` without requiring the optional backend binary or runtime. Non-zero
+backend results are checked as order parameters and must lie in `[0, 1]`.
+
 ### 4.3 Reproducibility
 
 All functions accept `seed` parameter. Initial conditions are generated
@@ -560,14 +569,14 @@ not by the $M$-element result array.
 
 ## Test Coverage
 
-- `tests/test_basin_stability.py` — 7 tests: S_B bounds [0,1], strong
+- `tests/test_basin_stability.py` — 7 tests: S_B bounds [0,1], high
   coupling S_B→1, weak coupling S_B→0, multi_basin keys, R_final shape,
   seed reproducibility, custom threshold
 - `tests/test_prop_basin_stability.py` — 17 property tests (Hypothesis):
   S_B always in [0,1], n_converged ≤ n_samples, R_final shape matches
   n_samples, deterministic with same seed
-
-Total: **24 tests**.
+- `tests/test_basin_stability_backends.py` — backend parity plus direct
+  accelerator boundary contracts for Go, Julia, and Mojo
 
 ---
 

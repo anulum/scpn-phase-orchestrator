@@ -7,11 +7,11 @@
 |---|---:|
 | Package version | 0.6.2 |
 | Public API exports | 24 |
-| Python package modules | 433 |
+| Python package modules | 434 |
 | Core Engine modules | 224 |
 | Runtime/Serving modules | 46 |
 | Integration modules | 24 |
-| Research/Experimental modules | 136 |
+| Research/Experimental modules | 137 |
 | Domainpack files | 36 |
 | Rust kernel files | 91 |
 | Optional extras | 15 |
