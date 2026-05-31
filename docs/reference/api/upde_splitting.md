@@ -402,6 +402,11 @@ The Rust implementation uses `rem_euclid(TAU)` for wrapping (always
 non-negative, unlike `%` which can return negative values in some
 languages).
 
+Direct Mojo splitting adapters enforce exact raw stdout cardinality and finite
+phase-domain values: `SPLIT` must emit exactly one finite scalar in `[0, 2*pi)`
+per oscillator. Blank, truncated, overlong, non-numeric, non-finite, or
+out-of-domain output is rejected before public arrays are returned.
+
 ### Internal Functions (Rust)
 
 - `rk4_coupling(p, knm, alpha, n, zeta, psi, dt)` — one RK4 step

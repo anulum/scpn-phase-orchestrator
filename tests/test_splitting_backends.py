@@ -172,6 +172,49 @@ class TestBackendTypingContracts:
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
 
 
+class TestDirectMojoBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo SPLIT returned 0 lines, expected 2"),
+            ("0.1\n0.2\n0.3\n", "Mojo SPLIT returned 3 lines, expected 2"),
+            ("0.1\n\n0.2\n", "Mojo SPLIT returned 3 lines, expected 2"),
+            ("0.1\nnot-a-number\n", "finite phases"),
+            ("0.1\nnan\n", "finite phases"),
+            ("0.1\n7.0\n", "finite phases"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_splitting_mojo, "_ensure_exe", lambda: "splitting")
+        monkeypatch.setattr(
+            _splitting_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: types.SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _splitting_mojo.splitting_run_mojo(
+                np.zeros(2, dtype=np.float64),
+                np.ones(2, dtype=np.float64),
+                np.zeros(4, dtype=np.float64),
+                np.zeros(4, dtype=np.float64),
+                2,
+                0.0,
+                0.0,
+                0.01,
+                1,
+            )
+
+
 class TestBackendLoaderDispatch:
     def test_rust_loader_preserves_contiguous_float64_contract(self, monkeypatch):
         calls: list[tuple[np.dtype, bool, int, float]] = []
