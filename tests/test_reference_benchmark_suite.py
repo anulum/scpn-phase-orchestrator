@@ -1364,7 +1364,7 @@ def test_multiverse_counterfactual_gate_benchmark_shape() -> None:
 
     assert out["suite"] == "multiverse_counterfactual_gate"
     assert out["branch_count"] >= 4
-    assert out["domain_scenario_count"] >= 3
+    assert out["domain_scenario_count"] >= 6
     assert out["approved_branch_count"] >= 2
     assert out["rejected_branch_count"] >= 1
     assert out["non_actuating"] == 1
@@ -1386,7 +1386,7 @@ def test_multiverse_counterfactual_gate_reports_records() -> None:
     assert thresholds == {
         "min_approved_branch_count": 2,
         "min_branch_count": 4,
-        "min_domain_scenario_count": 3,
+        "min_domain_scenario_count": 6,
         "min_rejected_branch_count": 1,
         "require_deterministic_hash": True,
         "require_execution_disabled": True,
@@ -1404,7 +1404,10 @@ def test_multiverse_counterfactual_gate_reports_records() -> None:
     assert {scenario["domain"] for scenario in scenarios} >= {
         "cardiac_rhythm",
         "cyber_industrial",
+        "manufacturing_spc",
+        "plasma_control",
         "power_grid",
+        "traffic_flow",
     }
 
 

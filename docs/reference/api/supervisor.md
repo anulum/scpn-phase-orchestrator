@@ -1068,7 +1068,10 @@ acceleration for larger branch corpora where JAX can place the vectorized
 rollout on an available accelerator. Reference benchmarks gate JAX output
 against NumPy branch hashes, topology metrics, order-parameter trajectories, and
 final phase angles while preserving the non-actuating, execution-disabled review
-boundary.
+boundary. Domain scenario fixtures now cover power-grid, cardiac-rhythm,
+cyber-industrial, traffic-flow, manufacturing process-control, and plasma-control
+use cases with simulator-compatible `K`, `alpha`, `zeta`, and `Psi` candidate
+controls.
 
 ::: scpn_phase_orchestrator.supervisor.multiverse
 

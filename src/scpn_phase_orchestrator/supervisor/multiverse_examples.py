@@ -21,6 +21,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 CounterfactualBoundary: Final[str] = "counterfactual_branch_rollout_not_live_actuation"
+SupportedCounterfactualKnobs: Final[frozenset[str]] = frozenset(
+    {"K", "alpha", "zeta", "Psi"}
+)
 
 
 def _ensure_float64_vector(
@@ -175,6 +178,11 @@ def _validate_branch_candidate(candidate: BranchCandidate) -> None:
             raise ValueError(
                 f"candidate '{candidate.candidate_id}' has invalid knob name"
             )
+        if knob_name not in SupportedCounterfactualKnobs:
+            raise ValueError(
+                f"candidate '{candidate.candidate_id}' knob "
+                f"'{knob_name}' is not supported by counterfactual rollouts"
+            )
         if not isinstance(knob_value, (int, float, np.floating)):
             raise ValueError(
                 f"candidate '{candidate.candidate_id}' knob '{knob_name}' value invalid"
@@ -292,7 +300,7 @@ def _build_static_scenarios() -> tuple[DomainScenario, ...]:
                 ),
                 BranchCandidate(
                     candidate_id="power_grid_regional_islanding",
-                    knob_variations=(("alpha", 0.04), ("beta", 0.02)),
+                    knob_variations=(("alpha", 0.04), ("Psi", 0.02)),
                     topology_variations=("sector_islands", "hierarchical_loop"),
                     objective_labels=("islanding_resilience", "power_flow_safety"),
                 ),
@@ -326,7 +334,7 @@ def _build_static_scenarios() -> tuple[DomainScenario, ...]:
                 ),
                 BranchCandidate(
                     candidate_id="cardiac_autonomic_probe",
-                    knob_variations=(("phi", -0.03), ("eta", 0.02)),
+                    knob_variations=(("alpha", -0.03), ("zeta", 0.02)),
                     topology_variations=(
                         "pacemaker_safe_override",
                         "layered_autonomic",
@@ -357,7 +365,7 @@ def _build_static_scenarios() -> tuple[DomainScenario, ...]:
             branch_candidates=(
                 BranchCandidate(
                     candidate_id="cyber_isolation_containment",
-                    knob_variations=(("gamma", 0.06), ("delta", 0.03)),
+                    knob_variations=(("zeta", 0.06), ("Psi", 0.03)),
                     topology_variations=(
                         "zonal_segmentation",
                         "trust_graph_hardening",
@@ -369,7 +377,7 @@ def _build_static_scenarios() -> tuple[DomainScenario, ...]:
                 ),
                 BranchCandidate(
                     candidate_id="cyber_traffic_cushion",
-                    knob_variations=(("K", 0.05), ("rho", -0.01)),
+                    knob_variations=(("K", 0.05), ("alpha", -0.01)),
                     topology_variations=(
                         "flow_reroute_bypass",
                         "priority_queueing",
@@ -381,6 +389,120 @@ def _build_static_scenarios() -> tuple[DomainScenario, ...]:
                 "attack_surface_reduction",
                 "service_containment",
                 "latency_regulation",
+            ),
+        ),
+        DomainScenario(
+            domain="traffic_flow",
+            scenario_id="traffic_flow_counterfactual_rollout_v1",
+            initial_phases=_ensure_float64_vector(
+                [0.05, 0.31, 0.62, 0.96, 1.37, 1.83, 2.41],
+                label="traffic_flow.initial_phases",
+            ),
+            initial_omegas=_ensure_float64_vector(
+                [0.82, 0.88, 0.79, 0.91, 0.86, 0.93, 0.84],
+                label="traffic_flow.initial_omegas",
+            ),
+            branch_candidates=(
+                BranchCandidate(
+                    candidate_id="traffic_ramp_meter_damping",
+                    knob_variations=(("K", 0.07), ("alpha", -0.015)),
+                    topology_variations=("corridor_metering", "arterial_feedback"),
+                    objective_labels=(
+                        "congestion_wave_damping",
+                        "green_wave_stability",
+                    ),
+                ),
+                BranchCandidate(
+                    candidate_id="traffic_spillback_diversion",
+                    knob_variations=(("zeta", 0.025), ("Psi", 0.18)),
+                    topology_variations=("queue_spillback_bypass", "adaptive_detour"),
+                    objective_labels=(
+                        "spillback_prevention",
+                        "network_throughput_guardrail",
+                    ),
+                ),
+            ),
+            objective_labels=(
+                "congestion_wave_damping",
+                "spillback_prevention",
+                "green_wave_stability",
+            ),
+        ),
+        DomainScenario(
+            domain="manufacturing_spc",
+            scenario_id="manufacturing_spc_counterfactual_rollout_v1",
+            initial_phases=_ensure_float64_vector(
+                [0.08, 0.27, 0.52, 0.88, 1.22, 1.61],
+                label="manufacturing_spc.initial_phases",
+            ),
+            initial_omegas=_ensure_float64_vector(
+                [1.00, 1.04, 0.97, 1.02, 0.95, 1.06],
+                label="manufacturing_spc.initial_omegas",
+            ),
+            branch_candidates=(
+                BranchCandidate(
+                    candidate_id="manufacturing_drift_recoupling",
+                    knob_variations=(("K", 0.06), ("zeta", 0.018)),
+                    topology_variations=("line_rebalance", "sensor_loop_reweight"),
+                    objective_labels=(
+                        "process_drift_recovery",
+                        "line_balance_stability",
+                    ),
+                ),
+                BranchCandidate(
+                    candidate_id="manufacturing_scrap_phase_guard",
+                    knob_variations=(("alpha", 0.025), ("Psi", -0.12)),
+                    topology_variations=("quality_gate_feedback", "rework_buffer"),
+                    objective_labels=(
+                        "scrap_rate_reduction",
+                        "quality_variance_guardrail",
+                    ),
+                ),
+            ),
+            objective_labels=(
+                "process_drift_recovery",
+                "scrap_rate_reduction",
+                "line_balance_stability",
+            ),
+        ),
+        DomainScenario(
+            domain="plasma_control",
+            scenario_id="plasma_control_counterfactual_rollout_v1",
+            initial_phases=_ensure_float64_vector(
+                [0.02, 0.44, 0.91, 1.33, 1.79, 2.26, 2.78, 3.10],
+                label="plasma_control.initial_phases",
+            ),
+            initial_omegas=_ensure_float64_vector(
+                [2.08, 2.01, 2.13, 2.05, 1.96, 2.10, 2.03, 2.16],
+                label="plasma_control.initial_omegas",
+            ),
+            branch_candidates=(
+                BranchCandidate(
+                    candidate_id="plasma_mode_locking_phase_scan",
+                    knob_variations=(("alpha", -0.02), ("K", 0.09)),
+                    topology_variations=("edge_harmonic_feedback", "coil_phase_scan"),
+                    objective_labels=(
+                        "mode_locking_stability",
+                        "confinement_margin",
+                    ),
+                ),
+                BranchCandidate(
+                    candidate_id="plasma_elm_mitigation_drive",
+                    knob_variations=(("zeta", 0.035), ("Psi", 0.24)),
+                    topology_variations=(
+                        "resonant_magnetic_perturbation",
+                        "q_profile_guard",
+                    ),
+                    objective_labels=(
+                        "edge_localised_mode_mitigation",
+                        "divertor_heat_flux_guardrail",
+                    ),
+                ),
+            ),
+            objective_labels=(
+                "mode_locking_stability",
+                "edge_localised_mode_mitigation",
+                "confinement_margin",
             ),
         ),
     )
@@ -412,6 +534,7 @@ __all__ = [
     "BranchCandidate",
     "CounterfactualBoundary",
     "DomainScenario",
+    "SupportedCounterfactualKnobs",
     "build_multiverse_domain_scenarios",
     "_validate_branch_candidate",
     "_validate_scenario",

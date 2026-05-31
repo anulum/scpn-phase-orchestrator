@@ -4219,7 +4219,7 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
     """Benchmark non-actuating multiverse branch simulation and risk review."""
     thresholds = MultiverseCounterfactualThresholds(
         min_branch_count=4,
-        min_domain_scenario_count=3,
+        min_domain_scenario_count=6,
         min_approved_branch_count=2,
         min_rejected_branch_count=1,
         require_non_actuating=True,

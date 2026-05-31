@@ -21,6 +21,8 @@ from scpn_phase_orchestrator.supervisor.multiverse_examples import (
     build_multiverse_domain_scenarios,
 )
 
+SUPPORTED_COUNTERFACTUAL_KNOBS = {"K", "alpha", "zeta", "Psi"}
+
 
 def _collect_arrays(payload: object) -> bool:
     if isinstance(payload, dict):
@@ -34,14 +36,28 @@ def test_build_returns_expected_domains_and_candidate_counts() -> None:
     scenarios = build_multiverse_domain_scenarios()
 
     assert isinstance(scenarios, tuple)
-    assert len(scenarios) >= 3
+    assert len(scenarios) >= 6
 
     domain_map = {scenario["domain"]: scenario for scenario in scenarios}
     assert set(domain_map).issuperset(
-        {"power_grid", "cardiac_rhythm", "cyber_industrial"}
+        {
+            "power_grid",
+            "cardiac_rhythm",
+            "cyber_industrial",
+            "traffic_flow",
+            "manufacturing_spc",
+            "plasma_control",
+        }
     )
 
-    for domain in {"power_grid", "cardiac_rhythm", "cyber_industrial"}:
+    for domain in {
+        "power_grid",
+        "cardiac_rhythm",
+        "cyber_industrial",
+        "traffic_flow",
+        "manufacturing_spc",
+        "plasma_control",
+    }:
         payload = domain_map[domain]
         assert payload["claim_boundary"] == CounterfactualBoundary
         assert payload["non_actuating"] is True
@@ -111,6 +127,21 @@ def test_domain_specific_objective_labels_and_candidate_flags() -> None:
             "service_containment",
             "latency_regulation",
         },
+        "traffic_flow": {
+            "congestion_wave_damping",
+            "spillback_prevention",
+            "green_wave_stability",
+        },
+        "manufacturing_spc": {
+            "process_drift_recovery",
+            "scrap_rate_reduction",
+            "line_balance_stability",
+        },
+        "plasma_control": {
+            "mode_locking_stability",
+            "edge_localised_mode_mitigation",
+            "confinement_margin",
+        },
     }
 
     for scenario in scenarios:
@@ -128,7 +159,26 @@ def test_domain_specific_objective_labels_and_candidate_flags() -> None:
             for knob_name, knob_value in candidate["knob_variations"]:
                 assert isinstance(knob_name, str)
                 assert knob_name.strip()
+                assert knob_name in SUPPORTED_COUNTERFACTUAL_KNOBS
                 assert math.isfinite(float(knob_value))
+
+
+def test_scenario_corpus_has_physics_safe_phase_vectors() -> None:
+    scenarios = build_multiverse_domain_scenarios()
+    total_candidate_count = 0
+
+    for scenario in scenarios:
+        phases = scenario["initial_phases"]
+        omegas = scenario["initial_omegas"]
+        total_candidate_count += len(scenario["branch_candidates"])
+
+        assert len(phases) == len(omegas)
+        assert len(phases) >= 5
+        assert all(0.0 <= float(phase) < 2.0 * math.pi for phase in phases)
+        assert all(math.isfinite(float(omega)) for omega in omegas)
+        assert not np.isclose(np.std(np.asarray(omegas, dtype=np.float64)), 0.0)
+
+    assert total_candidate_count >= 12
 
 
 def test_rejects_malformed_scenarios() -> None:
