@@ -149,11 +149,19 @@ def _contains_boolean_alias(raw: np.ndarray) -> bool:
     return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
 
 
+def _contains_complex_alias(raw: np.ndarray) -> bool:
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, complex | np.complexfloating) for value in raw.flat)
+
+
 def _validate_phases_trials(phases_trials: object) -> FloatArray:
     raw = np.asarray(phases_trials)
     if _contains_boolean_alias(raw):
         raise ValueError("phases_trials must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("phases_trials must contain real-valued phase samples")
     try:
         phases = raw.astype(np.float64, copy=True)
@@ -201,7 +209,7 @@ def _validate_itpc_values(
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("ITPC output must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("ITPC output must contain real values")
     try:
         itpc = raw.astype(np.float64, copy=True)
@@ -235,7 +243,7 @@ def _validate_persistence_value(
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("ITPC persistence output must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("ITPC persistence output must contain real values")
     try:
         scalar = raw.astype(np.float64, copy=True)

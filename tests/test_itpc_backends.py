@@ -222,6 +222,7 @@ class TestDirectBackendBoundaryContracts:
             (np.array([True, False]), 1, 2, "phases_flat"),
             (np.array([0.0, np.nan]), 1, 2, "phases_flat"),
             (np.array([0.0, 1.0], dtype=np.complex128), 1, 2, "real-valued"),
+            (np.array([0.0, 1.0j], dtype=object), 1, 2, "real-valued"),
             (np.array([[0.0, 1.0]]), 1, 2, "one-dimensional"),
             (np.array([0.0, 1.0]), True, 2, "n_trials"),
             (np.array([0.0, 1.0]), -1, 2, "n_trials"),
@@ -250,6 +251,7 @@ class TestDirectBackendBoundaryContracts:
         [
             (np.array([True, False]), 1, 2, np.array([0]), "phases_flat"),
             (np.array([0.0, np.inf]), 1, 2, np.array([0]), "phases_flat"),
+            (np.array([0.0, 1.0j], dtype=object), 1, 2, np.array([0]), "real-valued"),
             (np.array([0.0, 1.0]), True, 2, np.array([0]), "n_trials"),
             (np.array([0.0, 1.0]), 1, True, np.array([0]), "n_tp"),
             (np.array([0.0, 1.0]), 2, 2, np.array([0]), "n_trials\\*n_tp"),
@@ -382,6 +384,20 @@ class TestDirectBackendBoundaryContracts:
             itpc_validation.validate_itpc_persistence_backend_output(
                 wrong,
                 expected=expected,
+            )
+
+    def test_backend_output_validators_reject_object_complex_aliases_as_non_real(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="real-valued"):
+            itpc_validation.validate_compute_itpc_backend_output(
+                np.array([0.5 + 0.25j], dtype=object),
+                1,
+            )
+
+        with pytest.raises(ValueError, match="real-valued"):
+            itpc_validation.validate_itpc_persistence_backend_output(
+                np.array(0.5 + 0.25j, dtype=object),
             )
 
     @pytest.mark.parametrize("backend_name", ["go", "julia", "mojo"])

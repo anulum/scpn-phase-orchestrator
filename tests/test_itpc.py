@@ -63,6 +63,7 @@ def test_1d_input_returns_scalar_one():
         (np.array([[0.0, True]], dtype=object), "phases_trials"),
         (np.array([[0.0, np.bool_(True)]], dtype=object), "phases_trials"),
         (np.array([[0.0 + 0.0j, 0.5 + 0.25j]]), "real-valued"),
+        (np.array([[0.0, 0.5 + 0.25j]], dtype=object), "real-valued"),
         ([["not-a-phase"]], "phases_trials"),
     ],
 )
@@ -127,6 +128,13 @@ def test_persistence_out_of_bounds_indices_ignored():
 )
 def test_persistence_rejects_invalid_phase_trials(phases: Any) -> None:
     with pytest.raises(ValueError, match="phases_trials"):
+        itpc_persistence(phases, [0])
+
+
+def test_persistence_rejects_object_complex_phase_aliases_as_non_real() -> None:
+    phases = np.array([[0.0, 0.5 + 0.25j]], dtype=object)
+
+    with pytest.raises(ValueError, match="real-valued"):
         itpc_persistence(phases, [0])
 
 

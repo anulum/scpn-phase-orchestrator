@@ -28,6 +28,18 @@ def _contains_boolean_alias(raw: object) -> bool:
     return any(isinstance(value, (bool, np.bool_)) for value in array.flat)
 
 
+def _contains_complex_alias(raw: object) -> bool:
+    try:
+        array = np.asarray(raw)
+    except (TypeError, ValueError):
+        return False
+    if np.iscomplexobj(array):
+        return True
+    if array.dtype != object:
+        return False
+    return any(isinstance(value, complex | np.complexfloating) for value in array.flat)
+
+
 def _validate_int(value: object, name: str, *, minimum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
@@ -45,7 +57,7 @@ def _validate_phase_buffer(
     raw = np.asarray(phases_flat)
     if _contains_boolean_alias(phases_flat):
         raise ValueError("phases_flat must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("phases_flat must be real-valued")
     try:
         phases = raw.astype(np.float64, copy=True)
@@ -129,7 +141,7 @@ def validate_compute_itpc_backend_output(
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError("ITPC backend output must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("ITPC backend output must be real-valued")
     try:
         itpc = raw.astype(np.float64, copy=True)
@@ -165,7 +177,7 @@ def validate_itpc_persistence_backend_output(
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError("ITPC persistence backend output must not contain booleans")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("ITPC persistence backend output must be real-valued")
     try:
         scalar = raw.astype(np.float64, copy=True)
