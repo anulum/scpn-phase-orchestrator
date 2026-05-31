@@ -43,7 +43,7 @@ except ImportError:
 
 
 def _validate_n_bins(value: object) -> int:
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if value < 2:
         raise ValueError("n_bins must be greater than or equal to 2")
@@ -62,6 +62,8 @@ def _validate_phases(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("phases must not contain boolean values")
     raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("phases must contain real-valued samples")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -79,6 +81,8 @@ def _validate_group_indices(value: object, *, name: str, n_phases: int) -> IntAr
         raise ValueError(f"{name} must be a 1-D integer index array")
     if _contains_boolean_alias(value):
         raise TypeError(f"{name} must contain integer indices, not booleans")
+    if np.iscomplexobj(raw):
+        raise TypeError(f"{name} must contain real integer indices")
     try:
         numeric = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -96,8 +100,11 @@ def _validate_group_indices(value: object, *, name: str, n_phases: int) -> IntAr
 def _validate_pid_scalar(value: object, *, name: str) -> float:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain a real scalar")
     try:
-        scalar = np.asarray(value, dtype=np.float64)
+        scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
     if scalar.shape != ():

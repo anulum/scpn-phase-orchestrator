@@ -74,6 +74,7 @@ class TestRedundancy:
             np.array([True, False]),
             np.array([0.0, True], dtype=object),
             np.array([0.0, np.bool_(True)], dtype=object),
+            np.array([0.0, 1.0 + 0.0j]),
             [0.0, True],
         ],
     )
@@ -89,6 +90,7 @@ class TestRedundancy:
             [np.bool_(True)],
             np.array([0, True], dtype=object),
             np.array([0, np.bool_(True)], dtype=object),
+            np.array([0, 1 + 0j]),
             [-1],
             [3],
             np.array([[0]]),
@@ -99,7 +101,7 @@ class TestRedundancy:
         with pytest.raises((TypeError, ValueError, IndexError), match="group_a"):
             redundancy(phases, group, [1])
 
-    @pytest.mark.parametrize("n_bins", [0, 1, False, 4.5])
+    @pytest.mark.parametrize("n_bins", [0, 1, False, np.bool_(True), 4.5])
     def test_rejects_invalid_bin_count(self, n_bins):
         phases = np.array([0.0, 1.0, 2.0])
         with pytest.raises((TypeError, ValueError), match="n_bins"):
@@ -139,6 +141,7 @@ class TestSynergy:
             np.array([True, False]),
             np.array([0.0, True], dtype=object),
             np.array([0.0, np.bool_(True)], dtype=object),
+            np.array([0.0, 1.0 + 0.0j]),
             [0.0, True],
         ],
     )
@@ -154,6 +157,7 @@ class TestSynergy:
             [np.bool_(True)],
             np.array([0, True], dtype=object),
             np.array([0, np.bool_(True)], dtype=object),
+            np.array([0, 1 + 0j]),
             [-1],
             [3],
             np.array([[0]]),
@@ -164,7 +168,7 @@ class TestSynergy:
         with pytest.raises((TypeError, ValueError, IndexError), match="group_b"):
             synergy(phases, [0], group)
 
-    @pytest.mark.parametrize("n_bins", [0, 1, True, 7.5])
+    @pytest.mark.parametrize("n_bins", [0, 1, True, np.bool_(True), 7.5])
     def test_rejects_invalid_bin_count(self, n_bins):
         phases = np.array([0.0, 1.0, 2.0])
         with pytest.raises((TypeError, ValueError), match="n_bins"):
@@ -233,7 +237,8 @@ class TestPIDPipelineWiring:
 
 class TestPIDRustDispatch:
     @pytest.mark.parametrize(
-        "backend_value", [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True)]
+        "backend_value",
+        [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
     )
     def test_redundancy_invalid_rust_payload_falls_back(
         self,
@@ -310,7 +315,8 @@ class TestPIDRustDispatch:
         assert len(calls) == 1
 
     @pytest.mark.parametrize(
-        "backend_value", [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True)]
+        "backend_value",
+        [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
     )
     def test_synergy_invalid_rust_payload_falls_back(
         self,

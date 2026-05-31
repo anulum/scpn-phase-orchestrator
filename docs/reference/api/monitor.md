@@ -207,21 +207,23 @@ result = monitor.evaluate(
 ## Partial Information Decomposition (PID)
 
 Decomposes mutual information between two oscillator groups and a
-target variable into **redundancy** (information both groups share)
+global phase reference into **redundancy** (information both groups share)
 and **synergy** (information available only from the joint observation).
 
 **Theory:** Williams & Beer 2010 (arXiv:1004.2515). Circular mutual
 information is estimated via binned phase histograms (default 32 bins).
+Inputs, group indices, and optional Rust scalar outputs are validated as
+finite real-valued quantities; boolean aliases and complex payloads are
+rejected before histogram estimation or backend acceptance.
 
 **Usage:**
 
 ```python
 from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
 
-# phases_a, phases_b: (T,) phase time series from two groups
-# phases_target: (T,) target phase series
-R = redundancy(phases_a, phases_b, phases_target)  # shared info
-S = synergy(phases_a, phases_b, phases_target)      # joint-only info
+# phases: one phase vector; groups are oscillator index sets into that vector
+R = redundancy(phases, group_a=[0, 1, 2], group_b=[3, 4, 5])
+S = synergy(phases, group_a=[0, 1, 2], group_b=[3, 4, 5])
 ```
 
 ::: scpn_phase_orchestrator.monitor.npe
