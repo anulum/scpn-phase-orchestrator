@@ -220,6 +220,11 @@ an exactly `N*N` flat pairwise coupling buffer; and a zero self-coupling
 diagonal. Backend outputs must return finite `(theta, omega_dot)` vectors of
 length `N`, with phases on the torus `[0, 2π)`.
 
+The direct Mojo bridge also preserves raw stdout cardinality: `INERT` must
+emit exactly `2N` scalar lines, ordered as `N` torus phases followed by `N`
+frequency deviations. Blank, truncated, overlong, non-numeric, non-finite, or
+out-of-domain phase lines are rejected before public arrays are returned.
+
 ---
 
 ## 4. Features

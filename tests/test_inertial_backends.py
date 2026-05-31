@@ -26,6 +26,9 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _inertial_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _inertial_validation as inertial_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_go import (
@@ -285,6 +288,41 @@ def _direct_payload(n: int = 4):
     inertia = np.full(n, 1.5, dtype=np.float64)
     damping = np.full(n, 0.25, dtype=np.float64)
     return theta, omega_dot, power, knm.ravel(), inertia, damping, n, 0.01
+
+
+class TestDirectMojoBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo INERT returned 0 lines, expected 8"),
+            ("0.1\n0.2\n0.3\n0.4\n0.5\n0.6\n0.7\n0.8\n0.9\n", "expected 8"),
+            ("0.1\n0.2\n\n0.4\n0.5\n0.6\n0.7\n0.8\n", "finite phases"),
+            ("0.1\nbad\n0.3\n0.4\n0.5\n0.6\n0.7\n0.8\n", "finite phases"),
+            ("0.1\nnan\n0.3\n0.4\n0.5\n0.6\n0.7\n0.8\n", "finite phases"),
+            ("0.1\n7.0\n0.3\n0.4\n0.5\n0.6\n0.7\n0.8\n", "finite phases"),
+            ("0.1\n0.2\n0.3\n0.4\nbad\n0.6\n0.7\n0.8\n", "finite phases"),
+            ("0.1\n0.2\n0.3\n0.4\ninf\n0.6\n0.7\n0.8\n", "finite phases"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_inertial_mojo, "_ensure_exe", lambda: "inertial")
+        monkeypatch.setattr(
+            _inertial_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: type(
+                "Proc",
+                (),
+                {"returncode": 0, "stdout": stdout, "stderr": ""},
+            )(),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _inertial_mojo.inertial_step_mojo(*_direct_payload())
 
 
 class TestDirectBackendBoundaryContracts:

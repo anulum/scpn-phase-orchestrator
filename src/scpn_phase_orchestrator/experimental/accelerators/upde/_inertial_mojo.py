@@ -25,6 +25,7 @@ from ._inertial_validation import (
 __all__ = ["_ensure_exe", "inertial_step_mojo"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+TWO_PI = 2.0 * np.pi
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "inertial_mojo"
 
@@ -79,12 +80,29 @@ def inertial_step_mojo(
     )
     if proc.returncode != 0:
         raise ValueError(f"Mojo inertial exit {proc.returncode}: {proc.stderr.strip()}")
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     if len(lines) != 2 * n_i:
         raise ValueError(f"Mojo INERT returned {len(lines)} lines, expected {2 * n_i}")
-    new_theta = np.array([float(x) for x in lines[:n_i]], dtype=np.float64)
-    new_omega_dot = np.array(
-        [float(x) for x in lines[n_i:]],
-        dtype=np.float64,
-    )
+    values: list[float] = []
+    for index, line in enumerate(lines):
+        try:
+            value = float(line)
+        except ValueError as exc:
+            raise ValueError(
+                "Mojo INERT output must contain finite phases in [0, 2*pi) "
+                "followed by finite frequency deviations"
+            ) from exc
+        if not np.isfinite(value):
+            raise ValueError(
+                "Mojo INERT output must contain finite phases in [0, 2*pi) "
+                "followed by finite frequency deviations"
+            )
+        if index < n_i and (value < 0.0 or value >= TWO_PI):
+            raise ValueError(
+                "Mojo INERT output must contain finite phases in [0, 2*pi) "
+                "followed by finite frequency deviations"
+            )
+        values.append(value)
+    new_theta = np.array(values[:n_i], dtype=np.float64)
+    new_omega_dot = np.array(values[n_i:], dtype=np.float64)
     return validate_inertial_output(new_theta, new_omega_dot, n=n_i)
