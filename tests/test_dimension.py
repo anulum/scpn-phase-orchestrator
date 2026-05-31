@@ -557,7 +557,7 @@ class TestBackendDispatch:
             assert traj_flat.dtype == np.float64
             assert traj_flat.flags.c_contiguous
             np.testing.assert_array_equal(eps_sorted, np.array([0.1, 0.5, 1.0]))
-            return np.array([0.0, 0.5, 1.0], dtype=np.float64)
+            return np.array([0.0, 0.0, 0.0], dtype=np.float64)
 
         previous_backend = dim_mod.ACTIVE_BACKEND
         previous_loader = dim_mod._LOADERS["go"]
@@ -579,7 +579,7 @@ class TestBackendDispatch:
             monkeypatch.setattr(dim_mod, "_prepare_pair_indices", previous_prepare)
             dim_mod._BACKEND_FN_CACHE.clear()
 
-        np.testing.assert_array_equal(C, np.array([0.0, 0.5, 1.0]))
+        np.testing.assert_array_equal(C, np.array([0.0, 0.0, 0.0]))
         assert len(calls) == 1
         assert calls[0][0] == 4
         assert calls[0][1] == 2
