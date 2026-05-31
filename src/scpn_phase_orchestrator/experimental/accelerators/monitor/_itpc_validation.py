@@ -53,13 +53,15 @@ def _validate_phase_buffer(
         raise ValueError(
             "phases_flat must be a finite one-dimensional float array"
         ) from exc
+    expected = n_trials * n_tp
+    if expected == 0 and phases.size == 0:
+        return np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     if phases.ndim != 1:
         raise ValueError(
             f"phases_flat must be one-dimensional, got shape {phases.shape}"
         )
     if not np.all(np.isfinite(phases)):
         raise ValueError("phases_flat must contain only finite values")
-    expected = n_trials * n_tp
     if phases.size != expected:
         raise ValueError(
             f"phases_flat length {phases.size} does not match n_trials*n_tp={expected}"

@@ -99,7 +99,7 @@ class TestMojoBridgeErrorPaths:
         # non-empty call that reaches the subprocess path.
         with pytest.raises(ValueError, match="exit 1.*boom"):
             _itpc_mojo.compute_itpc_mojo(
-                np.ones((2, 3)),
+                np.ones(6),
                 n_trials=2,
                 n_tp=3,
             )
