@@ -14,8 +14,8 @@ that take seconds rather than milliseconds. They are opt-in via
 
 Covered:
 
-* Basin-convergence on a contracting all-to-all network across a long
-  integration (10 000 steps).
+* Basin-convergence on a contracting autonomous all-to-all network across a long
+  integration (10 000 steps), preserving the neutral global-phase mode.
 * Kaplan-Yorke dimension estimate that we expect to stay stable across
   RK4 timestep choices.
 * The sum ``Σ_i λ_i`` tracks the average divergence ``⟨tr J⟩`` (this
@@ -50,7 +50,7 @@ def _with_python_backend(func):
 
 @_with_python_backend
 def test_long_run_all_attracting():
-    """Strong all-to-all + shared ω → all λ < 0 after long integration."""
+    """Strong all-to-all + shared ω contracts all transverse Lyapunov modes."""
     n = 6
     phases = np.full(n, 0.05)
     omegas = np.zeros(n)
@@ -66,8 +66,10 @@ def test_long_run_all_attracting():
         n_steps=10_000,
         qr_interval=20,
     )
-    # All exponents should be strongly negative under contracting coupling.
-    assert np.all(spec < -0.5)
+    # Autonomous Kuramoto flow is invariant under a uniform phase shift, so one
+    # Lyapunov exponent remains neutral while all transverse modes contract.
+    assert abs(spec[0]) < 1e-8
+    assert np.all(spec[1:] < -0.5)
 
 
 @_with_python_backend
