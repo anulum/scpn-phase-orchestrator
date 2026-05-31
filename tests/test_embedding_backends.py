@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import sys
 import types
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -55,6 +56,10 @@ from scpn_phase_orchestrator.monitor.embedding import (
     optimal_dimension,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+DelayBackend = Callable[[np.ndarray, object, object], np.ndarray]
+MiBackend = Callable[[np.ndarray, object, object], float]
+NnBackend = Callable[[np.ndarray, object, object], tuple[np.ndarray, np.ndarray]]
 
 
 def _force(backend: str) -> str:
@@ -121,6 +126,93 @@ def test_backend_array_contracts_are_parameterised() -> None:
             assert_precise_ndarray_hint(hints["return"])
             assert "float64" in str(hints["return"])
             assert "int64" in str(hints["return"])
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        "fn",
+        [delay_embed_go, delay_embed_julia, delay_embed_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("signal", "delay", "dimension", "message"),
+        [
+            (np.array([0.0, True], dtype=object), 1, 2, "signal"),
+            (np.array([0.0 + 1.0j, 1.0 + 0.0j]), 1, 2, "signal"),
+            (np.array([0.0, np.nan, 2.0]), 1, 2, "signal"),
+            (np.array([[0.0, 1.0]]), 1, 2, "signal"),
+            (np.arange(8, dtype=np.float64), np.bool_(True), 2, "delay"),
+            (np.arange(8, dtype=np.float64), 0, 2, "delay"),
+            (np.arange(8, dtype=np.float64), 1, np.bool_(True), "dimension"),
+            (np.arange(3, dtype=np.float64), 2, 3, "too short"),
+        ],
+    )
+    def test_delay_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn: DelayBackend,
+        signal: np.ndarray,
+        delay: object,
+        dimension: object,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            fn(signal, delay, dimension)
+
+    @pytest.mark.parametrize(
+        "fn",
+        [mutual_information_go, mutual_information_julia, mutual_information_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("signal", "lag", "n_bins", "message"),
+        [
+            (np.array([0.0, np.bool_(False)], dtype=object), 1, 8, "signal"),
+            (np.array([0.0, 1.0j]), 1, 8, "signal"),
+            (np.array([0.0, np.inf]), 1, 8, "signal"),
+            (np.arange(8, dtype=np.float64), np.bool_(True), 8, "lag"),
+            (np.arange(8, dtype=np.float64), -1, 8, "lag"),
+            (np.arange(8, dtype=np.float64), 1, np.bool_(True), "n_bins"),
+            (np.arange(8, dtype=np.float64), 1, 1, "n_bins"),
+        ],
+    )
+    def test_mi_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn: MiBackend,
+        signal: np.ndarray,
+        lag: object,
+        n_bins: object,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            fn(signal, lag, n_bins)
+
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            nearest_neighbor_distances_go,
+            nearest_neighbor_distances_julia,
+            nearest_neighbor_distances_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("embedded", "t", "m", "message"),
+        [
+            (np.array([0.0, True], dtype=object), 1, 2, "embedded"),
+            (np.array([0.0 + 1.0j, 1.0 + 0.0j]), 1, 2, "embedded"),
+            (np.array([0.0, np.nan]), 1, 2, "embedded"),
+            (np.arange(6, dtype=np.float64), np.bool_(True), 3, "t"),
+            (np.arange(6, dtype=np.float64), 3, 0, "m"),
+            (np.arange(5, dtype=np.float64), 3, 2, "embedded length"),
+        ],
+    )
+    def test_nn_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn: NnBackend,
+        embedded: np.ndarray,
+        t: object,
+        m: object,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            fn(embedded, t, m)
 
 
 class TestDelayEmbedParity:

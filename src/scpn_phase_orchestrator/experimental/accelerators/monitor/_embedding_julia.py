@@ -16,6 +16,12 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._embedding_validation import (
+    validate_delay_embed_backend_inputs,
+    validate_mutual_information_backend_inputs,
+    validate_nearest_neighbor_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -49,12 +55,17 @@ def delay_embed_julia(
 ) -> FloatArray:
     """Build a delay-coordinate embedding through the Julia backend."""
 
+    s, delay_int, dimension_int, _ = validate_delay_embed_backend_inputs(
+        signal,
+        delay,
+        dimension,
+    )
     jl = _ensure()
     return np.asarray(
         jl.delay_embed(
-            np.ascontiguousarray(signal.ravel(), dtype=np.float64),
-            int(delay),
-            int(dimension),
+            s,
+            delay_int,
+            dimension_int,
         ),
         dtype=np.float64,
     )
@@ -70,12 +81,19 @@ def mutual_information_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    s, lag_int, bins_int = validate_mutual_information_backend_inputs(
+        signal,
+        lag,
+        n_bins,
+    )
+    if s.size - lag_int <= 0:
+        return 0.0
     jl = _ensure()
     return float(
         jl.mutual_information(
-            np.ascontiguousarray(signal.ravel(), dtype=np.float64),
-            int(lag),
-            int(n_bins),
+            s,
+            lag_int,
+            bins_int,
         )
     )
 
@@ -90,11 +108,14 @@ def nearest_neighbor_distances_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    e, t_int, m_int = validate_nearest_neighbor_backend_inputs(embedded, t, m)
+    if t_int == 0:
+        return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.int64)
     jl = _ensure()
     dist, idx = jl.nearest_neighbor_distances(
-        np.ascontiguousarray(embedded.ravel(), dtype=np.float64),
-        int(t),
-        int(m),
+        e,
+        t_int,
+        m_int,
     )
     return (
         np.asarray(dist, dtype=np.float64),

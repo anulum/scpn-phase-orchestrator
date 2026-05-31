@@ -17,6 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._embedding_validation import (
+    validate_delay_embed_backend_inputs,
+    validate_mutual_information_backend_inputs,
+    validate_nearest_neighbor_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -76,15 +82,18 @@ def delay_embed_go(
 ) -> FloatArray:
     """Build a delay-coordinate embedding through the Go backend."""
 
+    s, delay_int, dimension_int, t_eff = validate_delay_embed_backend_inputs(
+        signal,
+        delay,
+        dimension,
+    )
     lib = _load_lib()
-    s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
-    t_eff = int(s.size) - (int(dimension) - 1) * int(delay)
-    out = np.zeros(t_eff * int(dimension), dtype=np.float64)
+    out = np.zeros(t_eff * dimension_int, dtype=np.float64)
     rc = lib.DelayEmbed(
         s.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(int(s.size)),
-        ctypes.c_int(int(delay)),
-        ctypes.c_int(int(dimension)),
+        ctypes.c_int(delay_int),
+        ctypes.c_int(dimension_int),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
@@ -99,14 +108,20 @@ def mutual_information_go(
 ) -> float:
     """Compute mutual information for embedded phase samples through the Go backend."""
 
+    s, lag_int, bins_int = validate_mutual_information_backend_inputs(
+        signal,
+        lag,
+        n_bins,
+    )
+    if s.size - lag_int <= 0:
+        return 0.0
     lib = _load_lib()
-    s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)
     rc = lib.MutualInformation(
         s.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(int(s.size)),
-        ctypes.c_int(int(lag)),
-        ctypes.c_int(int(n_bins)),
+        ctypes.c_int(lag_int),
+        ctypes.c_int(bins_int),
         ctypes.byref(out),
     )
     if rc != 0:
@@ -124,14 +139,16 @@ def nearest_neighbor_distances_go(
     The calculation is delegated to the Go backend.
     """
 
+    e, t_int, m_int = validate_nearest_neighbor_backend_inputs(embedded, t, m)
+    if t_int == 0:
+        return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.int64)
     lib = _load_lib()
-    e = np.ascontiguousarray(embedded.ravel(), dtype=np.float64)
-    dist = np.zeros(t, dtype=np.float64)
-    idx = np.zeros(t, dtype=np.int64)
+    dist = np.zeros(t_int, dtype=np.float64)
+    idx = np.zeros(t_int, dtype=np.int64)
     rc = lib.NearestNeighborDistances(
         e.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)),
-        ctypes.c_int(int(m)),
+        ctypes.c_int(t_int),
+        ctypes.c_int(m_int),
         dist.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         idx.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
     )

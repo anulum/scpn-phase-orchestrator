@@ -17,6 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._embedding_validation import (
+    validate_delay_embed_backend_inputs,
+    validate_mutual_information_backend_inputs,
+    validate_nearest_neighbor_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -62,13 +68,17 @@ def delay_embed_mojo(
 ) -> FloatArray:
     """Build a delay-coordinate embedding through the Mojo backend."""
 
-    s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
+    s, delay_int, dimension_int, _ = validate_delay_embed_backend_inputs(
+        signal,
+        delay,
+        dimension,
+    )
     t = int(s.size)
     tokens: list[str] = [
         "DE",
         str(t),
-        str(int(delay)),
-        str(int(dimension)),
+        str(delay_int),
+        str(dimension_int),
     ]
     tokens.extend(repr(float(x)) for x in s.tolist())
     result = _run(" ".join(tokens) + "\n")
@@ -85,13 +95,19 @@ def mutual_information_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
-    s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
+    s, lag_int, bins_int = validate_mutual_information_backend_inputs(
+        signal,
+        lag,
+        n_bins,
+    )
+    if s.size - lag_int <= 0:
+        return 0.0
     t = int(s.size)
     tokens: list[str] = [
         "MI",
         str(t),
-        str(int(lag)),
-        str(int(n_bins)),
+        str(lag_int),
+        str(bins_int),
     ]
     tokens.extend(repr(float(x)) for x in s.tolist())
     result = _run(" ".join(tokens) + "\n")
@@ -108,12 +124,16 @@ def nearest_neighbor_distances_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
-    e = np.ascontiguousarray(embedded.ravel(), dtype=np.float64)
-    tokens: list[str] = ["NN", str(int(t)), str(int(m))]
+    e, t_int, m_int = validate_nearest_neighbor_backend_inputs(embedded, t, m)
+    if t_int == 0:
+        return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.int64)
+    tokens: list[str] = ["NN", str(t_int), str(m_int)]
     tokens.extend(repr(float(x)) for x in e.tolist())
     result = _run(" ".join(tokens) + "\n")
-    if len(result) != 2 * t:
-        raise ValueError(f"Mojo NN returned {len(result)} lines, expected {2 * t}")
-    dist = np.array([float(x) for x in result[:t]], dtype=np.float64)
-    idx = np.array([int(x) for x in result[t:]], dtype=np.int64)
+    if len(result) != 2 * t_int:
+        raise ValueError(
+            f"Mojo NN returned {len(result)} lines, expected {2 * t_int}"
+        )
+    dist = np.array([float(x) for x in result[:t_int]], dtype=np.float64)
+    idx = np.array([int(x) for x in result[t_int:]], dtype=np.int64)
     return dist, idx

@@ -6,6 +6,10 @@ only the global order parameter R. SPO's monitors detect chimera states,
 cross-frequency coupling, causal information flow, topological invariants,
 and thermodynamic irreversibility — phenomena that R alone cannot capture.
 
+Detailed module references:
+
+- [Delay embedding and phase-space reconstruction](monitor_embedding.md)
+
 ## Boundary Observer
 
 Detects when oscillator dynamics violate configured safety/performance
