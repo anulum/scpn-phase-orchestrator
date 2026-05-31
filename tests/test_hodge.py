@@ -28,14 +28,53 @@ class TestHodgeDecomposition:
         knm = _symmetric_coupling(4)
         phases = np.array([0.0, 0.5, 1.0, 1.5])
         result = hodge_decomposition(knm, phases)
+        total = np.sum(
+            knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]),
+            axis=1,
+        )
+        np.testing.assert_allclose(result.gradient, total, atol=1e-12)
         np.testing.assert_allclose(result.curl, 0.0, atol=1e-12)
+        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-12)
 
     def test_antisymmetric_coupling_no_gradient(self):
         """Antisymmetric K → all coupling in curl component, zero gradient."""
         knm = np.array([[0.0, 1.0, -0.5], [-1.0, 0.0, 2.0], [0.5, -2.0, 0.0]])
         phases = np.array([0.0, 0.5, 1.0])
         result = hodge_decomposition(knm, phases)
+        total = np.sum(
+            knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]),
+            axis=1,
+        )
         np.testing.assert_allclose(result.gradient, 0.0, atol=1e-12)
+        np.testing.assert_allclose(result.curl, total, atol=1e-12)
+        np.testing.assert_allclose(np.sum(result.curl), 0.0, atol=1e-12)
+
+    def test_two_node_antisymmetric_curl_matches_closed_form(self):
+        """For K_01=a, K_10=-a, curl=[a cos Δθ, -a cos Δθ]."""
+        a = 1.7
+        phases = np.array([0.25, 1.1])
+        knm = np.array([[0.0, a], [-a, 0.0]])
+        result = hodge_decomposition(knm, phases)
+        expected = np.array([a, -a]) * math.cos(phases[1] - phases[0])
+
+        np.testing.assert_allclose(result.gradient, 0.0, atol=1e-12)
+        np.testing.assert_allclose(result.curl, expected, atol=1e-12)
+        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-12)
+
+    def test_global_phase_shift_invariance(self):
+        """Hodge components depend on phase differences, not absolute phase."""
+        rng = np.random.default_rng(7)
+        knm = rng.standard_normal((5, 5))
+        np.fill_diagonal(knm, 0.0)
+        phases = rng.uniform(-np.pi, np.pi, 5)
+        shifted = phases + 17.25
+
+        base = hodge_decomposition(knm, phases)
+        translated = hodge_decomposition(knm, shifted)
+
+        np.testing.assert_allclose(translated.gradient, base.gradient, atol=1e-12)
+        np.testing.assert_allclose(translated.curl, base.curl, atol=1e-12)
+        np.testing.assert_allclose(translated.harmonic, base.harmonic, atol=1e-12)
 
     def test_reconstruction(self):
         """gradient + curl + harmonic = total coupling force."""
@@ -71,6 +110,11 @@ class TestHodgeDecomposition:
         phases = np.zeros(3)
         result = hodge_decomposition(knm, phases)
         assert isinstance(result, HodgeResult)
+        np.testing.assert_allclose(
+            result.gradient + result.curl + result.harmonic,
+            np.array([2.0, 2.0, 2.0]),
+            atol=1e-12,
+        )
 
     def test_single_oscillator(self):
         """N=1 → no coupling, all components zero."""
