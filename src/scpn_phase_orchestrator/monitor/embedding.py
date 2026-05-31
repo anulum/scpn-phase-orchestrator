@@ -287,6 +287,8 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
 def _validate_delay_embedding_output(
     value: object,
     *,
+    signal: FloatArray,
+    delay: int,
     t_effective: int,
     dimension: int,
 ) -> FloatArray:
@@ -308,6 +310,14 @@ def _validate_delay_embedding_output(
         )
     if not np.all(np.isfinite(embedded)):
         raise ValueError("delay embedding output must contain only finite values")
+    indices = np.arange(dimension, dtype=np.int64) * int(delay)
+    rows = (
+        np.arange(t_effective, dtype=np.int64)[:, np.newaxis]
+        + indices[np.newaxis, :]
+    )
+    expected = signal[rows]
+    if not np.array_equal(embedded, expected):
+        raise ValueError("delay embedding output must match exact indexing")
     return np.ascontiguousarray(embedded, dtype=np.float64)
 
 
@@ -347,15 +357,20 @@ def _validate_nn_output(
         raise ValueError("nearest-neighbor indices must be integer values")
     try:
         dist = raw_dist.astype(np.float64, copy=True)
-        idx = raw_idx.astype(np.int64, copy=True)
+        idx_float = raw_idx.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("nearest-neighbor backend output must be numeric") from exc
-    if dist.shape != (n_points,) or idx.shape != (n_points,):
+    if dist.shape != (n_points,) or idx_float.shape != (n_points,):
         raise ValueError(
             "nearest-neighbor backend output shape must match number of points"
         )
     if not np.all(np.isfinite(dist)) or np.any(dist < 0.0):
         raise ValueError("nearest-neighbor distances must be finite and non-negative")
+    if not np.all(np.isfinite(idx_float)):
+        raise ValueError("nearest-neighbor indices must be finite")
+    if not np.all(np.equal(idx_float, np.floor(idx_float))):
+        raise ValueError("nearest-neighbor indices must be integral")
+    idx = idx_float.astype(np.int64, copy=False)
     if np.any(idx < 0) or np.any(idx >= n_points):
         raise ValueError("nearest-neighbor indices must be in range")
     if n_points > 1 and np.any(idx == np.arange(n_points, dtype=np.int64)):
@@ -389,6 +404,8 @@ def delay_embed(
         try:
             return _validate_delay_embedding_output(
                 fn(s, delay, dimension),
+                signal=s,
+                delay=delay,
                 t_effective=t_eff,
                 dimension=dimension,
             )
@@ -400,6 +417,8 @@ def delay_embed(
     trajectory: FloatArray = np.asarray(s[rows], dtype=np.float64)
     return _validate_delay_embedding_output(
         trajectory,
+        signal=s,
+        delay=delay,
         t_effective=t_eff,
         dimension=dimension,
     )

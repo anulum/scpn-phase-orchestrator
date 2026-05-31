@@ -486,6 +486,62 @@ class TestDispatcherFallthroughForRust:
         assert dist.size == emb.shape[0]
         assert idx.size == emb.shape[0]
 
+    def test_dispatch_rejects_shape_correct_wrong_delay_embedding(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        sig = np.arange(8, dtype=np.float64)
+
+        def bad_loader() -> dict[str, object]:
+            return {
+                "de": lambda _signal, _delay, _dim: np.array(
+                    [[0.0, 2.0], [1.0, 99.0], [2.0, 4.0]],
+                    dtype=np.float64,
+                ),
+                "mi": None,
+                "nn": None,
+            }
+
+        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setitem(em_mod._LOADERS, "go", bad_loader)
+        monkeypatch.setitem(em_mod._BACKEND_CACHE, "go", bad_loader())
+        prev = _force("go")
+        try:
+            got = delay_embed(sig, 2, 2)
+        finally:
+            _reset(prev)
+
+        np.testing.assert_array_equal(got, _reference_de(sig, 2, 2))
+
+    def test_dispatch_rejects_fractional_nearest_neighbor_indices(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        emb = np.array([[0.0], [2.0], [5.0]], dtype=np.float64)
+
+        def bad_loader() -> dict[str, object]:
+            return {
+                "de": None,
+                "mi": None,
+                "nn": lambda _embedded, _t, _m: (
+                    np.array([2.0, 2.0, 3.0], dtype=np.float64),
+                    np.array([1.5, 0.0, 1.0], dtype=np.float64),
+                ),
+            }
+
+        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setitem(em_mod._LOADERS, "go", bad_loader)
+        monkeypatch.setitem(em_mod._BACKEND_CACHE, "go", bad_loader())
+        prev = _force("go")
+        try:
+            dist, idx = nearest_neighbor_distances(emb)
+        finally:
+            _reset(prev)
+
+        ref_dist, ref_idx = _reference_nn(emb)
+        np.testing.assert_allclose(dist, ref_dist)
+        np.testing.assert_array_equal(idx, ref_idx)
+
     def test_dispatch_returns_python_fallback_when_chain_reaches_python(
         self,
         monkeypatch: pytest.MonkeyPatch,

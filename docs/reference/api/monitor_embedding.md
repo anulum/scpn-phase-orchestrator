@@ -44,19 +44,25 @@ requests, invalid lags, and invalid bin counts are rejected before
 shared-library, Julia, or subprocess execution.
 
 Direct backend return payloads are validated before they are handed back to the
-public monitor boundary. Delay-embedding outputs must have the exact
-`(T_effective, dimension)` shape and match the mathematical indexing
-`x[t + k*tau]`; mutual-information outputs must be finite non-negative real
-scalars; nearest-neighbor outputs must contain finite non-negative distances
-and integral in-range neighbor indices, with self-neighbors rejected for
-non-trivial embeddings. Malformed Mojo text output is normalised to
-deterministic `ValueError` failures rather than leaking parser exceptions.
+public monitor boundary. The public dispatcher repeats the same physics-facing
+checks after backend fallback resolution so a shape-correct optional backend
+cannot silently return the wrong phase-space reconstruction. Delay-embedding
+outputs must have the exact `(T_effective, dimension)` shape and match the
+mathematical indexing `x[t + k*tau]`; mutual-information outputs must be finite
+non-negative real scalars; nearest-neighbor outputs must contain finite
+non-negative distances and integral in-range neighbor indices, with
+self-neighbors rejected for non-trivial embeddings. Malformed Mojo text output
+is normalised to deterministic `ValueError` failures rather than leaking parser
+exceptions.
 
 ## Invariants
 
 `delay_embed` is exact indexing and should match across backends without
 tolerance. Mutual information is non-negative. Nearest-neighbor distances
 are finite non-negative values with integer neighbor indices in range and
-no self-neighbor for non-trivial inputs.
+no self-neighbor for non-trivial inputs. Optional backend outputs that violate
+those invariants are rejected and the dispatcher falls back to the next
+available backend rather than returning a corrupted embedding or a truncated
+neighbor index.
 
 ::: scpn_phase_orchestrator.monitor.embedding
