@@ -16,6 +16,13 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._pac_validation import (
+    validate_modulation_index_inputs,
+    validate_modulation_index_output,
+    validate_pac_matrix_inputs,
+    validate_pac_matrix_output,
+)
+
 __all__ = ["modulation_index_julia", "pac_matrix_julia"]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "pac.jl"
@@ -45,13 +52,16 @@ def modulation_index_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    theta, amp, bins = validate_modulation_index_inputs(theta_low, amp_high, n_bins)
+    if theta.size == 0:
+        return 0.0
     jl = _ensure_julia_loaded()
-    return float(
+    return validate_modulation_index_output(
         jl.modulation_index(
-            np.ascontiguousarray(theta_low.ravel(), dtype=np.float64),
-            np.ascontiguousarray(amp_high.ravel(), dtype=np.float64),
-            n_bins,
-        )
+            theta,
+            amp,
+            bins,
+        ),
     )
 
 
@@ -67,14 +77,22 @@ def pac_matrix_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    phases, amplitudes, t_i, n_i, bins = validate_pac_matrix_inputs(
+        phases_flat,
+        amplitudes_flat,
+        t,
+        n,
+        n_bins,
+    )
     jl = _ensure_julia_loaded()
-    return np.asarray(
+    result = np.asarray(
         jl.pac_matrix(
-            np.ascontiguousarray(phases_flat, dtype=np.float64),
-            np.ascontiguousarray(amplitudes_flat, dtype=np.float64),
-            t,
-            n,
-            n_bins,
+            phases,
+            amplitudes,
+            t_i,
+            n_i,
+            bins,
         ),
         dtype=np.float64,
     )
+    return validate_pac_matrix_output(result, n=n_i)

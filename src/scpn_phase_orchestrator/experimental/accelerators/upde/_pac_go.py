@@ -17,6 +17,13 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._pac_validation import (
+    validate_modulation_index_inputs,
+    validate_modulation_index_output,
+    validate_pac_matrix_inputs,
+    validate_pac_matrix_output,
+)
+
 __all__ = ["modulation_index_go", "pac_matrix_go"]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libpac.so"
@@ -64,21 +71,22 @@ def modulation_index_go(
     The calculation is delegated to the Go backend.
     """
 
+    t, a, bins = validate_modulation_index_inputs(theta_low, amp_high, n_bins)
+    n = t.size
+    if n == 0:
+        return 0.0
     lib = _load_lib()
-    t = np.ascontiguousarray(theta_low.ravel(), dtype=np.float64)
-    a = np.ascontiguousarray(amp_high.ravel(), dtype=np.float64)
-    n = min(t.size, a.size)
     out = ctypes.c_double(0.0)
     rc = lib.ModulationIndex(
-        t[:n].ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        a[:n].ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        t.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(n),
-        ctypes.c_int(n_bins),
+        ctypes.c_int(bins),
         ctypes.byref(out),
     )
     if rc != 0:
         raise ValueError(f"Go ModulationIndex rc={rc}")
-    return float(out.value)
+    return validate_modulation_index_output(out.value)
 
 
 def pac_matrix_go(
@@ -93,18 +101,23 @@ def pac_matrix_go(
     The calculation is delegated to the Go backend.
     """
 
+    p, a, t_i, n_i, bins = validate_pac_matrix_inputs(
+        phases_flat,
+        amplitudes_flat,
+        t,
+        n,
+        n_bins,
+    )
     lib = _load_lib()
-    p = np.ascontiguousarray(phases_flat, dtype=np.float64)
-    a = np.ascontiguousarray(amplitudes_flat, dtype=np.float64)
-    out = np.zeros(n * n, dtype=np.float64)
+    out = np.zeros(n_i * n_i, dtype=np.float64)
     rc = lib.PACMatrix(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(t),
-        ctypes.c_int(n),
-        ctypes.c_int(n_bins),
+        ctypes.c_int(t_i),
+        ctypes.c_int(n_i),
+        ctypes.c_int(bins),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go PACMatrix rc={rc}")
-    return out
+    return validate_pac_matrix_output(out, n=n_i)

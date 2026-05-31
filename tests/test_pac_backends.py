@@ -15,6 +15,7 @@ follow the AttnRes reference.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from types import SimpleNamespace
 
 import numpy as np
@@ -23,7 +24,16 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _pac_go as pac_go_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _pac_julia as pac_julia_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _pac_mojo as pac_mojo_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _pac_validation as pac_validation,
 )
 from scpn_phase_orchestrator.upde import pac as pac_mod
 from scpn_phase_orchestrator.upde.pac import (
@@ -33,6 +43,25 @@ from scpn_phase_orchestrator.upde.pac import (
 )
 
 TWO_PI = 2.0 * np.pi
+MIBackend = Callable[..., float]
+MatrixBackend = Callable[..., np.ndarray]
+DIRECT_MI_BACKENDS: tuple[MIBackend, ...] = (
+    pac_go_mod.modulation_index_go,
+    pac_julia_mod.modulation_index_julia,
+    pac_mojo_mod.modulation_index_mojo,
+)
+DIRECT_MATRIX_BACKENDS: tuple[MatrixBackend, ...] = (
+    pac_go_mod.pac_matrix_go,
+    pac_julia_mod.pac_matrix_julia,
+    pac_mojo_mod.pac_matrix_mojo,
+)
+
+
+def test_pac_validation_helper_is_linked_to_backend_tests() -> None:
+    assert callable(pac_validation.validate_modulation_index_inputs)
+    assert callable(pac_validation.validate_modulation_index_output)
+    assert callable(pac_validation.validate_pac_matrix_inputs)
+    assert callable(pac_validation.validate_pac_matrix_output)
 
 
 def _force(backend: str) -> str:
@@ -59,6 +88,165 @@ def _reference_matrix(phases: np.ndarray, amps: np.ndarray, n_bins: int) -> np.n
         return pac_matrix(phases, amps, n_bins)
     finally:
         _reset(prev)
+
+
+def _mi_payload(samples: int = 16) -> tuple[np.ndarray, np.ndarray, int]:
+    theta = np.linspace(0.0, TWO_PI, samples, endpoint=False, dtype=np.float64)
+    amp = 1.0 + 0.25 * np.cos(theta)
+    return theta, amp, 12
+
+
+def _matrix_payload(
+    t: int = 8,
+    n: int = 3,
+) -> tuple[np.ndarray, np.ndarray, int, int, int]:
+    theta = np.linspace(0.0, TWO_PI, t, endpoint=False, dtype=np.float64)
+    phases = np.column_stack([theta + 0.1 * idx for idx in range(n)])
+    amps = 1.0 + 0.2 * np.cos(phases)
+    return phases.ravel(), amps.ravel(), t, n, 12
+
+
+def _forbid_runtime_load(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fail_loader() -> object:
+        raise AssertionError("optional backend loaded before validation")
+
+    monkeypatch.setattr(pac_go_mod, "_load_lib", _fail_loader)
+    monkeypatch.setattr(pac_julia_mod, "_ensure_julia_loaded", _fail_loader)
+    monkeypatch.setattr(pac_mojo_mod, "_ensure_exe", _fail_loader)
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize("backend", DIRECT_MI_BACKENDS)
+    @pytest.mark.parametrize(
+        ("theta", "amp", "n_bins"),
+        [
+            (_mi_payload()[0].reshape(2, -1), _mi_payload()[1], 12),
+            (_mi_payload()[0].astype(bool), _mi_payload()[1], 12),
+            (_mi_payload()[0].astype(np.complex128) + 1j, _mi_payload()[1], 12),
+            (np.array([np.nan, *_mi_payload()[0][1:]]), _mi_payload()[1], 12),
+            (_mi_payload()[0], _mi_payload()[1].reshape(2, -1), 12),
+            (_mi_payload()[0], _mi_payload()[1].astype(bool), 12),
+            (_mi_payload()[0], _mi_payload()[1].astype(np.complex128) + 1j, 12),
+            (_mi_payload()[0], np.array([np.inf, *_mi_payload()[1][1:]]), 12),
+            (_mi_payload()[0], np.array([-0.1, *_mi_payload()[1][1:]]), 12),
+            (_mi_payload()[0], _mi_payload()[1], True),
+            (_mi_payload()[0], _mi_payload()[1], 1),
+        ],
+    )
+    def test_modulation_index_rejects_invalid_inputs_before_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend: MIBackend,
+        theta: object,
+        amp: object,
+        n_bins: object,
+    ) -> None:
+        _forbid_runtime_load(monkeypatch)
+
+        with pytest.raises((TypeError, ValueError)):
+            backend(theta, amp, n_bins)
+
+    @pytest.mark.parametrize("backend", DIRECT_MI_BACKENDS)
+    def test_modulation_index_empty_common_window_returns_zero_without_runtime(
+        self, monkeypatch: pytest.MonkeyPatch, backend: MIBackend
+    ) -> None:
+        _forbid_runtime_load(monkeypatch)
+
+        assert backend(np.array([], dtype=np.float64), np.ones(3), 12) == 0.0
+
+    @pytest.mark.parametrize("backend", DIRECT_MATRIX_BACKENDS)
+    @pytest.mark.parametrize(
+        ("phases", "amps", "t", "n", "n_bins"),
+        [
+            (_matrix_payload()[0].reshape(2, -1), _matrix_payload()[1], 8, 3, 12),
+            (_matrix_payload()[0].astype(bool), _matrix_payload()[1], 8, 3, 12),
+            (
+                _matrix_payload()[0].astype(np.complex128) + 1j,
+                _matrix_payload()[1],
+                8,
+                3,
+                12,
+            ),
+            (
+                np.array([np.nan, *_matrix_payload()[0][1:]]),
+                _matrix_payload()[1],
+                8,
+                3,
+                12,
+            ),
+            (_matrix_payload()[0][:-1], _matrix_payload()[1], 8, 3, 12),
+            (_matrix_payload()[0], _matrix_payload()[1].reshape(2, -1), 8, 3, 12),
+            (_matrix_payload()[0], _matrix_payload()[1].astype(bool), 8, 3, 12),
+            (
+                _matrix_payload()[0],
+                _matrix_payload()[1].astype(np.complex128) + 1j,
+                8,
+                3,
+                12,
+            ),
+            (
+                _matrix_payload()[0],
+                np.array([np.inf, *_matrix_payload()[1][1:]]),
+                8,
+                3,
+                12,
+            ),
+            (
+                _matrix_payload()[0],
+                np.array([-0.1, *_matrix_payload()[1][1:]]),
+                8,
+                3,
+                12,
+            ),
+            (_matrix_payload()[0], _matrix_payload()[1], True, 3, 12),
+            (_matrix_payload()[0], _matrix_payload()[1], 0, 3, 12),
+            (_matrix_payload()[0], _matrix_payload()[1], 8, True, 12),
+            (_matrix_payload()[0], _matrix_payload()[1], 8, 0, 12),
+            (_matrix_payload()[0], _matrix_payload()[1], 8, 3, True),
+            (_matrix_payload()[0], _matrix_payload()[1], 8, 3, 1),
+        ],
+    )
+    def test_pac_matrix_rejects_invalid_inputs_before_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend: MatrixBackend,
+        phases: object,
+        amps: object,
+        t: object,
+        n: object,
+        n_bins: object,
+    ) -> None:
+        _forbid_runtime_load(monkeypatch)
+
+        with pytest.raises((TypeError, ValueError)):
+            backend(phases, amps, t, n, n_bins)
+
+    @pytest.mark.parametrize(
+        "output",
+        [np.nan, -0.1, 1.2, True, np.array([0.1, 0.2]), 0.1 + 0.0j],
+    )
+    def test_modulation_index_output_rejects_non_physical_payloads(
+        self, output: object
+    ) -> None:
+        with pytest.raises((TypeError, ValueError)):
+            pac_validation.validate_modulation_index_output(output)
+
+    @pytest.mark.parametrize(
+        "output",
+        [
+            np.array([0.1, np.nan, 0.2, 0.3]),
+            np.array([0.1, -0.1, 0.2, 0.3]),
+            np.array([0.1, 1.2, 0.2, 0.3]),
+            np.array([0.1, 0.2, 0.3]),
+            np.array([True, False, True, False]),
+            np.array([0.1 + 0.0j, 0.2 + 0.0j, 0.3 + 0.0j, 0.4 + 0.0j]),
+        ],
+    )
+    def test_pac_matrix_output_rejects_non_physical_payloads(
+        self, output: np.ndarray
+    ) -> None:
+        with pytest.raises((TypeError, ValueError)):
+            pac_validation.validate_pac_matrix_output(output, n=2)
 
 
 # ---------------------------------------------------------------------
