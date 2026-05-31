@@ -69,9 +69,7 @@ def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
                 f"Mojo envelope {label} output must be finite real values"
             ) from exc
         if not np.isfinite(value):
-            raise ValueError(
-                f"Mojo envelope {label} output must be finite real values"
-            )
+            raise ValueError(f"Mojo envelope {label} output must be finite real values")
         values.append(value)
     return values
 

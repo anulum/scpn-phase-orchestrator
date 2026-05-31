@@ -68,8 +68,7 @@ def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
             values.append(float(line))
         except ValueError as exc:
             raise ValueError(
-                f"Mojo {label} emitted a non-scalar transfer-entropy value: "
-                f"{line!r}"
+                f"Mojo {label} emitted a non-scalar transfer-entropy value: {line!r}"
             ) from exc
     return values
 

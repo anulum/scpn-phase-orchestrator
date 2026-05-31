@@ -312,8 +312,7 @@ def _validate_delay_embedding_output(
         raise ValueError("delay embedding output must contain only finite values")
     indices = np.arange(dimension, dtype=np.int64) * int(delay)
     rows = (
-        np.arange(t_effective, dtype=np.int64)[:, np.newaxis]
-        + indices[np.newaxis, :]
+        np.arange(t_effective, dtype=np.int64)[:, np.newaxis] + indices[np.newaxis, :]
     )
     expected = signal[rows]
     if not np.array_equal(embedded, expected):

@@ -257,9 +257,7 @@ def _validate_te_matrix(
     if expected is not None:
         reference = np.asarray(expected, dtype=np.float64).reshape(n_osc, n_osc)
         if not np.allclose(matrix, reference, rtol=0.0, atol=atol):
-            raise ValueError(
-                "transfer entropy matrix diverged from exact reference"
-            )
+            raise ValueError("transfer entropy matrix diverged from exact reference")
     return np.ascontiguousarray(matrix, dtype=np.float64)
 
 

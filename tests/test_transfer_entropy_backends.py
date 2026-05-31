@@ -520,6 +520,7 @@ class TestDirectBackendBoundaryContracts:
             monkeypatch.setattr(te_go, "_load_lib", lambda: _FakeGo())
             target_fn = phase_te_go
         elif backend == "julia":
+
             class _FakeJulia:
                 @staticmethod
                 def phase_transfer_entropy(

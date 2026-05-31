@@ -274,9 +274,7 @@ def validate_te_matrix_backend_output(
         raise ValueError("transfer entropy matrix backend output must be finite")
     tolerance = 1.0e-12
     if np.any(matrix < -tolerance):
-        raise ValueError(
-            "transfer entropy matrix backend output must be non-negative"
-        )
+        raise ValueError("transfer entropy matrix backend output must be non-negative")
     max_entropy = float(np.log(n_bins))
     if np.any(matrix > max_entropy + tolerance):
         raise ValueError(

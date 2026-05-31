@@ -77,9 +77,7 @@ class TestDirectMojoBoundaryContracts:
             ("0.1\n0.2\n0.3\n-inf\n", "finite z_real"),
         ],
     )
-    def test_mojo_runner_rejects_malformed_raw_stdout(
-        self, monkeypatch, stdout, match
-    ):
+    def test_mojo_runner_rejects_malformed_raw_stdout(self, monkeypatch, stdout, match):
         monkeypatch.setattr(_reduction_mojo, "_ensure_exe", lambda: "reduction")
         monkeypatch.setattr(
             _reduction_mojo.subprocess,

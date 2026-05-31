@@ -225,6 +225,7 @@ class TestDirectBackendBoundaryContracts:
             monkeypatch.setattr(winding_go, "_load_lib", lambda: _FakeGo())
             target = winding_numbers_go
         elif backend == "julia":
+
             class _FakeJulia:
                 @staticmethod
                 def winding_numbers(

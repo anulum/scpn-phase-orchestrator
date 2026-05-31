@@ -201,7 +201,5 @@ def validate_recurrence_backend_output(
         except (TypeError, ValueError) as exc:
             raise ValueError(f"{name} expected output must be numeric") from exc
         if not np.array_equal(result.reshape(t_int, t_int), expected_numeric):
-            raise ValueError(
-                f"{name} output must match exact recurrence threshold"
-            )
+            raise ValueError(f"{name} output must match exact recurrence threshold")
     return result

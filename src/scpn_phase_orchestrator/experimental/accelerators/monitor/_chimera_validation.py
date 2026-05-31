@@ -88,9 +88,7 @@ def validate_chimera_backend_output(
     n_int = _validate_n(n)
     values = _validate_float_vector(local_order, "local_order")
     if values.size != n_int:
-        raise ValueError(
-            f"local_order length {values.size} does not match n={n_int}"
-        )
+        raise ValueError(f"local_order length {values.size} does not match n={n_int}")
     if np.any((values < -1e-12) | (values > 1.0 + 1e-12)):
         raise ValueError("local_order values must lie in the physical interval [0, 1]")
     return np.ascontiguousarray(np.clip(values, 0.0, 1.0), dtype=np.float64)

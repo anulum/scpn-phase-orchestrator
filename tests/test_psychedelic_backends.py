@@ -82,9 +82,7 @@ def test_backend_array_contracts_are_parameterised() -> None:
 
 def test__psychedelic_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(psychedelic_validation.validate_psychedelic_backend_inputs)
-    assert callable(
-        psychedelic_validation.validate_psychedelic_entropy_backend_output
-    )
+    assert callable(psychedelic_validation.validate_psychedelic_entropy_backend_output)
 
 
 class _FakeGoPsychedelic:
