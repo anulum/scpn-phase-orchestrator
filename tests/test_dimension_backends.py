@@ -22,6 +22,7 @@ triu-indices pair list. Tolerances:
 from __future__ import annotations
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -45,6 +46,9 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_go imp
 from scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_julia import (
     correlation_integral_julia,
     kaplan_yorke_dimension_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_mojo import (
+    _run as run_dimension_mojo,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_mojo import (
     correlation_integral_mojo,
@@ -134,6 +138,39 @@ def test_backend_array_contracts_are_parameterised() -> None:
 
 
 class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("", 1, "KY", "exactly 1 scalar"),
+            ("2.0\n3.0\n", 1, "KY", "exactly 1 scalar"),
+            ("0.0\n\n0.5\n1.0\n", 3, "CI", "exactly 3 scalar"),
+            ("not-a-number\n", 1, "KY", "non-scalar"),
+        ],
+    )
+    def test_mojo_dimension_stdout_contract_rejects_malformed_payloads(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(dimension_mojo, "_ensure_exe", lambda: "dimension_mojo")
+        monkeypatch.setattr(
+            dimension_mojo.subprocess,
+            "run",
+            lambda *args, **kwargs: SimpleNamespace(
+                returncode=0, stdout=stdout, stderr=""
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            run_dimension_mojo(
+                "KY 3 0.2 0.0 -0.5\n",
+                expected_count=expected_count,
+                label=label,
+            )
+
     @pytest.mark.parametrize(
         "fn",
         [
@@ -329,7 +366,11 @@ class TestDirectBackendBoundaryContracts:
     def test_mojo_backend_rejects_out_of_bounds_kaplan_yorke_output(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(dimension_mojo, "_run", lambda payload: [4.0])
+        monkeypatch.setattr(
+            dimension_mojo,
+            "_run",
+            lambda payload, *, expected_count, label: [4.0],
+        )
 
         with pytest.raises(ValueError, match="\\[0, spectrum length\\]"):
             kaplan_yorke_dimension_mojo(np.array([0.2, 0.0, -0.5]))

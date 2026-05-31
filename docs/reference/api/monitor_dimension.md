@@ -176,6 +176,11 @@ Direct backend outputs are checked before return: correlation-integral
 vectors must match the epsilon count, stay finite, lie in ``[0, 1]``,
 and remain non-decreasing as epsilon grows; Kaplan-Yorke outputs must
 be finite real scalars in ``[0, len(lyapunov_exponents)]``.
+The Mojo subprocess bridge additionally requires exact stdout
+cardinality before numeric parsing: ``CI`` emits one scalar line per
+epsilon threshold and ``KY`` emits one scalar line. Missing, extra,
+blank, or non-scalar lines fail closed before shared dimension
+validators run.
 
 ---
 

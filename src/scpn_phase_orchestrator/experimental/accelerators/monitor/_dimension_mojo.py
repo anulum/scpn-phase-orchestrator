@@ -45,7 +45,7 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def _run(payload: str) -> list[float]:
+def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -58,7 +58,21 @@ def _run(payload: str) -> list[float]:
         raise ValueError(
             f"Mojo dimension returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [float(line) for line in proc.stdout.strip().splitlines() if line]
+    lines = proc.stdout.splitlines()
+    if len(lines) != expected_count:
+        raise ValueError(
+            f"Mojo {label} must emit exactly {expected_count} scalar line(s), "
+            f"got {len(lines)}"
+        )
+    values: list[float] = []
+    for line in lines:
+        try:
+            values.append(float(line))
+        except ValueError as exc:
+            raise ValueError(
+                f"Mojo {label} emitted a non-scalar dimension value: {line!r}"
+            ) from exc
+    return values
 
 
 def correlation_integral_mojo(
@@ -92,9 +106,7 @@ def correlation_integral_mojo(
     tokens.extend(str(int(x)) for x in jj.tolist())
     tokens.extend(repr(float(x)) for x in eps.tolist())
     tokens.extend(repr(float(x)) for x in traj.tolist())
-    result = _run(" ".join(tokens) + "\n")
-    if len(result) != n_k:
-        raise ValueError(f"Mojo CI returned {len(result)} values, expected {n_k}")
+    result = _run(" ".join(tokens) + "\n", expected_count=n_k, label="CI")
     return validate_correlation_integral_backend_output(result, eps)
 
 
@@ -105,7 +117,5 @@ def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
     n = int(le.size)
     tokens: list[str] = ["KY", str(n)]
     tokens.extend(repr(float(x)) for x in le.tolist())
-    result = _run(" ".join(tokens) + "\n")
-    if len(result) != 1:
-        raise ValueError(f"Mojo KY returned {len(result)} values, expected 1")
+    result = _run(" ".join(tokens) + "\n", expected_count=1, label="KY")
     return validate_kaplan_yorke_backend_output(result[0], le)
