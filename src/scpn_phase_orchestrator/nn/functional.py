@@ -17,11 +17,93 @@ Requires: jax>=0.4
 
 from __future__ import annotations
 
+import math
+from numbers import Integral, Real
+
 import jax
 import jax.numpy as jnp
 from jax.scipy.sparse.linalg import cg
 
 TWO_PI = 2.0 * jnp.pi
+
+
+def _as_real_jax_array(name: str, value: jax.Array) -> jax.Array:
+    """Return a numeric real-valued JAX array or reject unsafe public inputs."""
+    try:
+        array = jnp.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be array-like") from exc
+
+    if jnp.issubdtype(array.dtype, jnp.bool_):
+        raise ValueError(f"{name} must not contain boolean values")
+    if jnp.issubdtype(array.dtype, jnp.complexfloating):
+        raise ValueError(f"{name} must contain real-valued samples")
+    if not (
+        jnp.issubdtype(array.dtype, jnp.floating)
+        or jnp.issubdtype(array.dtype, jnp.integer)
+    ):
+        raise ValueError(f"{name} must contain numeric samples")
+    return array.astype(jnp.result_type(array, 1.0))
+
+
+def _validate_square_coupling(name: str, value: jax.Array) -> jax.Array:
+    """Validate real square coupling matrices before Laplacian construction."""
+    matrix = _as_real_jax_array(name, value)
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"{name} must be a square coupling matrix")
+    return matrix
+
+
+def _validate_frequency_vector(value: jax.Array, *, n: int) -> jax.Array:
+    """Validate real oscillator-frequency vectors against coupling dimension."""
+    vector = _as_real_jax_array("omegas", value)
+    if vector.ndim != 1:
+        raise ValueError("omegas must be a one-dimensional frequency vector")
+    if vector.shape[0] != n:
+        raise ValueError("omegas length must match K dimensions")
+    return vector
+
+
+def _require_positive_real(value: object, name: str) -> float:
+    """Require a finite positive scalar control parameter."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real")
+    result = float(value)
+    if not math.isfinite(result) or result <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real")
+    return result
+
+
+def _require_non_negative_real(value: object, name: str) -> float:
+    """Require a finite non-negative scalar control parameter."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real")
+    result = float(value)
+    if not math.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be a finite non-negative real")
+    return result
+
+
+def _require_positive_int(value: object, name: str) -> int:
+    """Require a positive integer control parameter."""
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a positive integer")
+    result = int(value)
+    if result < 1:
+        raise ValueError(f"{name} must be a positive integer")
+    return result
+
+
+def _require_positive_int_or_none(value: object, name: str) -> int | None:
+    """Require a positive integer control parameter or None."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a positive integer or None")
+    result = int(value)
+    if result < 1:
+        raise ValueError(f"{name} must be a positive integer or None")
+    return result
 
 
 def kuramoto_step(
@@ -594,6 +676,7 @@ def coupling_laplacian(K: jax.Array) -> jax.Array:
     Returns:
         (N, N) Laplacian matrix
     """
+    K = _validate_square_coupling("K", K)
     D = jnp.diag(jnp.sum(K, axis=1))
     return D - K
 
@@ -631,7 +714,14 @@ def saf_order_parameter(
     Returns:
         Scalar estimated order parameter in [0, 1]
     """
+    K = _validate_square_coupling("K", K)
     N = K.shape[0]
+    omegas = _validate_frequency_vector(omegas, n=N)
+    eps = _require_positive_real(eps, "eps")
+    exact_size_limit = _require_positive_int(exact_size_limit, "exact_size_limit")
+    cg_tol = _require_positive_real(cg_tol, "cg_tol")
+    cg_maxiter = _require_positive_int_or_none(cg_maxiter, "cg_maxiter")
+
     if solver == "auto":
         solver = "eigh" if exact_size_limit >= N else "cg"
     if solver == "cg":
@@ -714,6 +804,9 @@ def saf_loss(
     Returns:
         Scalar loss (lower = better synchronization)
     """
+    budget = _require_non_negative_real(budget, "budget")
+    budget_weight = _require_non_negative_real(budget_weight, "budget_weight")
+
     r = saf_order_parameter(
         K,
         omegas,

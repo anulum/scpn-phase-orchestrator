@@ -421,6 +421,19 @@ class TestSAF:
         row_sums = jnp.sum(L, axis=1)
         np.testing.assert_allclose(row_sums, jnp.zeros(2), atol=1e-12)
 
+    @pytest.mark.parametrize(
+        ("K", "match"),
+        [
+            (jnp.array([[False, True], [True, False]]), "boolean"),
+            (jnp.array([[0.0, 1.0j], [1.0, 0.0]]), "real-valued"),
+            (jnp.array([0.0, 1.0]), "square"),
+            (jnp.ones((2, 3)), "square"),
+        ],
+    )
+    def test_laplacian_rejects_non_real_or_malformed_coupling(self, K, match):
+        with pytest.raises(ValueError, match=match):
+            coupling_laplacian(K)
+
     def test_saf_order_parameter_in_range(self):
         K = jnp.ones((4, 4)) * 5.0 - jnp.eye(4) * 5.0
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
@@ -467,6 +480,62 @@ class TestSAF:
         with pytest.raises(ValueError, match="solver"):
             saf_order_parameter(K, omegas, solver="not-a-solver")
 
+    @pytest.mark.parametrize(
+        ("K", "omegas", "match"),
+        [
+            (
+                jnp.array([[False, True], [True, False]]),
+                jnp.array([1.0, 1.1]),
+                "K must not contain boolean",
+            ),
+            (
+                jnp.array([[0.0, 1.0j], [1.0, 0.0]]),
+                jnp.array([1.0, 1.1]),
+                "K must contain real-valued",
+            ),
+            (
+                jnp.ones((2, 3)),
+                jnp.array([1.0, 1.1]),
+                "K must be a square",
+            ),
+            (
+                jnp.ones((2, 2)) - jnp.eye(2),
+                jnp.array([[1.0, 1.1]]),
+                "omegas must be a one-dimensional",
+            ),
+            (
+                jnp.ones((2, 2)) - jnp.eye(2),
+                jnp.array([1.0 + 0.0j, 1.1 + 0.0j]),
+                "omegas must contain real-valued",
+            ),
+            (
+                jnp.ones((2, 2)) - jnp.eye(2),
+                jnp.array([1.0, 1.1, 1.2]),
+                "omegas length must match",
+            ),
+        ],
+    )
+    def test_saf_rejects_non_real_or_malformed_public_inputs(self, K, omegas, match):
+        with pytest.raises(ValueError, match=match):
+            saf_order_parameter(K, omegas)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"eps": 0.0}, "eps"),
+            ({"exact_size_limit": True}, "exact_size_limit"),
+            ({"exact_size_limit": 0}, "exact_size_limit"),
+            ({"cg_tol": -1.0}, "cg_tol"),
+            ({"cg_maxiter": 0}, "cg_maxiter"),
+        ],
+    )
+    def test_saf_rejects_invalid_solver_controls(self, kwargs, match):
+        K = jnp.ones((2, 2)) - jnp.eye(2)
+        omegas = jnp.array([1.0, 1.1])
+
+        with pytest.raises(ValueError, match=match):
+            saf_order_parameter(K, omegas, **kwargs)
+
     def test_saf_loss_negative_r(self):
         K = jnp.ones((4, 4)) * 5.0 - jnp.eye(4) * 5.0
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
@@ -480,14 +549,30 @@ class TestSAF:
         loss_budget = float(saf_loss(K, omegas, budget=1.0, budget_weight=1.0))
         assert loss_budget > loss_no_budget
 
-    def test_saf_loss_budget_not_penalised_below_zero_budget(self):
+    def test_saf_loss_zero_budget_disables_budget_penalty(self):
         K = jnp.ones((3, 3)) * 0.2 - jnp.eye(3) * 0.2
         omegas = jnp.array([1.0, 1.05, 0.95])
 
         no_budget = float(saf_loss(K, omegas, budget=0.0))
-        negative_budget = float(saf_loss(K, omegas, budget=-1.0))
 
-        assert negative_budget == pytest.approx(no_budget, abs=1e-12)
+        assert no_budget == pytest.approx(float(saf_loss(K, omegas)), abs=1e-12)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"budget": True}, "budget"),
+            ({"budget": math.nan}, "budget"),
+            ({"budget": -1.0}, "budget"),
+            ({"budget_weight": False}, "budget_weight"),
+            ({"budget_weight": -0.1}, "budget_weight"),
+        ],
+    )
+    def test_saf_loss_rejects_invalid_budget_controls(self, kwargs, match):
+        K = jnp.ones((2, 2)) - jnp.eye(2)
+        omegas = jnp.array([1.0, 1.1])
+
+        with pytest.raises(ValueError, match=match):
+            saf_loss(K, omegas, **kwargs)
 
 
 # ── Differentiability (JAX grad) ──

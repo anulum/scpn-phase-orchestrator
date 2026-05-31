@@ -172,6 +172,12 @@ memory disappear. For very sparse networks, keep a sparse or masked coupling
 representation upstream and materialise dense `K` only when the SAF audit size
 fits device memory.
 
+Boundary contract: `K` must be a square real-valued JAX-compatible coupling
+matrix and `omegas` must be a real-valued one-dimensional vector with matching
+length. Boolean and complex payloads are rejected before Laplacian construction.
+SAF solver controls are finite positive scalars or integers, while `saf_loss`
+budget controls are finite non-negative scalars.
+
 ::: scpn_phase_orchestrator.nn.functional
 
 ---

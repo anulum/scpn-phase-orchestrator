@@ -210,6 +210,11 @@ best when eigenvectors need to be inspected. CG mode is the large dense GPU
 path; it avoids full eigendecomposition but still requires dense `(N, N)`
 coupling storage.
 
+Inputs are fail-closed at the public boundary: `K` must be square and
+real-valued, `omegas` must be real-valued with matching length, and
+boolean/complex payloads or invalid solver/budget controls raise `ValueError`
+before optimisation.
+
 Skardal & Taylor, SIAM J. Appl. Dyn. Syst. 2016; Song et al. 2025.
 
 ## Reservoir Computing
