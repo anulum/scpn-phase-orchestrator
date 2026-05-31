@@ -43,7 +43,7 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def _run(payload: str) -> list[str]:
+def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -54,7 +54,26 @@ def _run(payload: str) -> list[str]:
     )
     if proc.returncode != 0:
         raise ValueError(f"Mojo envelope exit {proc.returncode}: {proc.stderr.strip()}")
-    return [line for line in proc.stdout.strip().splitlines() if line]
+    lines = proc.stdout.splitlines()
+    if len(lines) != expected_count:
+        raise ValueError(
+            f"Mojo envelope {label} returned {len(lines)} lines, "
+            f"expected {expected_count}"
+        )
+    values: list[float] = []
+    for line in lines:
+        try:
+            value = float(line)
+        except ValueError as exc:
+            raise ValueError(
+                f"Mojo envelope {label} output must be finite real values"
+            ) from exc
+        if not np.isfinite(value):
+            raise ValueError(
+                f"Mojo envelope {label} output must be finite real values"
+            )
+        values.append(value)
+    return values
 
 
 def extract_envelope_mojo(amps: FloatArray, window: int) -> FloatArray:
@@ -75,9 +94,9 @@ def extract_envelope_mojo(amps: FloatArray, window: int) -> FloatArray:
         str(window_i),
     ]
     tokens.extend(repr(float(x)) for x in a.tolist())
-    lines = _run(" ".join(tokens) + "\n")
+    values = _run(" ".join(tokens) + "\n", expected_count=int(a.size), label="RMS")
     return validate_extract_envelope_output(
-        np.array([float(x) for x in lines], dtype=np.float64),
+        np.array(values, dtype=np.float64),
         n=int(a.size),
     )
 
@@ -97,7 +116,5 @@ def envelope_modulation_depth_mojo(env: FloatArray) -> float:
         return 0.0
     tokens: list[str] = ["MOD", str(int(e.size))]
     tokens.extend(repr(float(x)) for x in e.tolist())
-    lines = _run(" ".join(tokens) + "\n")
-    if not lines:
-        raise ValueError("Mojo MOD returned empty output")
-    return validate_envelope_modulation_output(float(lines[0]))
+    values = _run(" ".join(tokens) + "\n", expected_count=1, label="MOD")
+    return validate_envelope_modulation_output(values[0])

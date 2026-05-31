@@ -353,7 +353,11 @@ runtimes. For `window >= len(amplitudes)`, direct extraction returns the global
 RMS replicated over the output vector, matching the public NumPy path and
 avoiding backend-specific edge-case drift. Backend extraction outputs must be
 finite non-negative vectors with the same length as the input; backend
-modulation-depth outputs must be finite scalars in `[0, 1]`.
+modulation-depth outputs must be finite scalars in `[0, 1]`. The direct Mojo
+subprocess bridge additionally requires exact raw stdout cardinality: one
+finite scalar line per extracted envelope sample for `RMS` and exactly one
+finite scalar line for `MOD`; blank, truncated, overlong, non-numeric, and
+non-finite output is rejected before public validators run.
 
 ---
 
@@ -404,7 +408,8 @@ due to SIMD optimisation in NumPy's C backend.
     performance benchmark
 - **Backend tests:** `tests/test_envelope_backends.py` covers Rust, Go, Julia,
   Mojo parity plus direct accelerator boundary contracts for invalid inputs,
-  empty inputs, global-RMS edge cases, and non-positive modulation inputs.
+  empty inputs, global-RMS edge cases, non-positive modulation inputs, and
+  malformed Mojo stdout rejection.
 - **Source lines:** 168 (Rust) + 75 (Python) = 243 total
 
 ---

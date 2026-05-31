@@ -26,6 +26,9 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _envelope_mojo as envelope_mojo_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _envelope_validation as envelope_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_go import (
@@ -168,6 +171,58 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         assert backend(np.array([], dtype=np.float64)) == 0.0
         assert backend(np.array([-3.0, -1.0], dtype=np.float64)) == 0.0
+
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("", 3, "RMS", "Mojo envelope RMS returned 0 lines, expected 3"),
+            (
+                "0.5\n0.6\n",
+                3,
+                "RMS",
+                "Mojo envelope RMS returned 2 lines, expected 3",
+            ),
+            (
+                "0.5\n\n0.6\n",
+                2,
+                "RMS",
+                "Mojo envelope RMS returned 3 lines, expected 2",
+            ),
+            (
+                "0.5\n0.6\n0.7\n",
+                1,
+                "MOD",
+                "Mojo envelope MOD returned 3 lines, expected 1",
+            ),
+            ("not-a-number\n", 1, "MOD", "finite real values"),
+            ("inf\n", 1, "MOD", "finite real values"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(envelope_mojo_mod, "_ensure_exe", lambda: "envelope")
+        monkeypatch.setattr(
+            envelope_mojo_mod.subprocess,
+            "run",
+            lambda *_args, **_kwargs: types.SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            envelope_mojo_mod._run(
+                "MOD 1 0.5\n",
+                expected_count=expected_count,
+                label=label,
+            )
 
 
 class TestRustParity:
