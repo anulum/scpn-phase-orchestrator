@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._itpc_validation import (
+    validate_compute_itpc_backend_inputs,
+    validate_itpc_persistence_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -41,12 +46,19 @@ def _ensure() -> Any:
 def compute_itpc_julia(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
     """Compute inter-trial phase coherence through the Julia backend."""
 
+    phases, n_trials, n_tp = validate_compute_itpc_backend_inputs(
+        phases_flat,
+        n_trials,
+        n_tp,
+    )
+    if n_trials == 0 or n_tp == 0:
+        return np.zeros(n_tp, dtype=np.float64)
     jl = _ensure()
     return np.asarray(
         jl.compute_itpc(
-            np.ascontiguousarray(phases_flat, dtype=np.float64),
-            int(n_trials),
-            int(n_tp),
+            phases,
+            n_trials,
+            n_tp,
         ),
         dtype=np.float64,
     )
@@ -60,12 +72,20 @@ def itpc_persistence_julia(
 ) -> float:
     """Compute inter-trial phase-coherence persistence through the Julia backend."""
 
+    phases, n_trials, n_tp, indices = validate_itpc_persistence_backend_inputs(
+        phases_flat,
+        n_trials,
+        n_tp,
+        pause_indices,
+    )
+    if indices.size == 0 or n_trials == 0 or n_tp == 0:
+        return 0.0
     jl = _ensure()
     return float(
         jl.itpc_persistence(
-            np.ascontiguousarray(phases_flat, dtype=np.float64),
-            int(n_trials),
-            int(n_tp),
-            np.ascontiguousarray(pause_indices, dtype=np.int64),
+            phases,
+            n_trials,
+            n_tp,
+            indices,
         )
     )

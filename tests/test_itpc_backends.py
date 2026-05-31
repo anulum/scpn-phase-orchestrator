@@ -19,6 +19,7 @@ measured parity sits at ~5e-17 on this host (bit-equivalent).
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from types import ModuleType
 from typing import get_type_hints
 
@@ -48,6 +49,8 @@ from scpn_phase_orchestrator.monitor.itpc import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+ItpcBackend = Callable[[np.ndarray, object, object], np.ndarray]
+PersistenceBackend = Callable[[np.ndarray, object, object, object], float]
 
 
 def _force(backend: str) -> str:
@@ -100,6 +103,68 @@ def test_backend_array_contracts_are_parameterised() -> None:
         if fn.__name__.startswith("compute_itpc"):
             assert_precise_ndarray_hint(hints["return"])
             assert "float64" in str(hints["return"])
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct optional ITPC backends validate before runtime loading."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [compute_itpc_go, compute_itpc_julia, compute_itpc_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("phases_flat", "n_trials", "n_tp", "match"),
+        [
+            (np.array([True, False]), 1, 2, "phases_flat"),
+            (np.array([0.0, np.nan]), 1, 2, "phases_flat"),
+            (np.array([0.0, 1.0], dtype=np.complex128), 1, 2, "real-valued"),
+            (np.array([[0.0, 1.0]]), 1, 2, "one-dimensional"),
+            (np.array([0.0, 1.0]), True, 2, "n_trials"),
+            (np.array([0.0, 1.0]), -1, 2, "n_trials"),
+            (np.array([0.0, 1.0]), 1, True, "n_tp"),
+            (np.array([0.0, 1.0]), 1, -1, "n_tp"),
+            (np.array([0.0, 1.0]), 2, 2, "n_trials\\*n_tp"),
+        ],
+    )
+    def test_compute_validation_precedes_runtime_load(
+        self,
+        backend: ItpcBackend,
+        phases_flat: np.ndarray,
+        n_trials: object,
+        n_tp: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            backend(phases_flat, n_trials, n_tp)
+
+    @pytest.mark.parametrize(
+        "backend",
+        [itpc_persistence_go, itpc_persistence_julia, itpc_persistence_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("phases_flat", "n_trials", "n_tp", "pause_indices", "match"),
+        [
+            (np.array([True, False]), 1, 2, np.array([0]), "phases_flat"),
+            (np.array([0.0, np.inf]), 1, 2, np.array([0]), "phases_flat"),
+            (np.array([0.0, 1.0]), True, 2, np.array([0]), "n_trials"),
+            (np.array([0.0, 1.0]), 1, True, np.array([0]), "n_tp"),
+            (np.array([0.0, 1.0]), 2, 2, np.array([0]), "n_trials\\*n_tp"),
+            (np.array([0.0, 1.0]), 1, 2, np.array([[0]]), "pause_indices"),
+            (np.array([0.0, 1.0]), 1, 2, np.array([True]), "pause_indices"),
+            (np.array([0.0, 1.0]), 1, 2, np.array([0.5]), "pause_indices"),
+        ],
+    )
+    def test_persistence_validation_precedes_runtime_load(
+        self,
+        backend: PersistenceBackend,
+        phases_flat: np.ndarray,
+        n_trials: object,
+        n_tp: object,
+        pause_indices: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            backend(phases_flat, n_trials, n_tp, pause_indices)
 
 
 def test_rust_loader_returns_kernel_functions(monkeypatch: pytest.MonkeyPatch) -> None:

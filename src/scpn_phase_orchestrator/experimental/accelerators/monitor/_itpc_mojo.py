@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._itpc_validation import (
+    validate_compute_itpc_backend_inputs,
+    validate_itpc_persistence_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -53,10 +58,15 @@ def _run(payload: str) -> list[float]:
 def compute_itpc_mojo(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
     """Compute inter-trial phase coherence through the Mojo backend."""
 
+    phases, n_trials, n_tp = validate_compute_itpc_backend_inputs(
+        phases_flat,
+        n_trials,
+        n_tp,
+    )
     if n_trials == 0 or n_tp == 0:
         return np.zeros(n_tp, dtype=np.float64)
     tokens: list[str] = ["ITPC", str(n_trials), str(n_tp)]
-    tokens.extend(repr(float(x)) for x in phases_flat.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in phases.tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n_tp:
         raise ValueError(f"Mojo ITPC returned {len(result)} values, expected {n_tp}")
@@ -71,7 +81,12 @@ def itpc_persistence_mojo(
 ) -> float:
     """Compute inter-trial phase-coherence persistence through the Mojo backend."""
 
-    idx = np.ascontiguousarray(pause_indices.ravel(), dtype=np.int64)
+    phases, n_trials, n_tp, idx = validate_itpc_persistence_backend_inputs(
+        phases_flat,
+        n_trials,
+        n_tp,
+        pause_indices,
+    )
     if idx.size == 0:
         return 0.0
     tokens: list[str] = [
@@ -81,6 +96,6 @@ def itpc_persistence_mojo(
         str(int(idx.size)),
     ]
     tokens.extend(str(int(x)) for x in idx.tolist())
-    tokens.extend(repr(float(x)) for x in phases_flat.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in phases.tolist())
     result = _run(" ".join(tokens) + "\n")
     return float(result[0])

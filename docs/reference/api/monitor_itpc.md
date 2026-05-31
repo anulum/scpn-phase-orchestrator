@@ -149,6 +149,22 @@ tighter than the guaranteed ``1e-9`` — measured at ``5e-17`` on this
 host. The tolerance is set loosely for robustness across Mojo
 versions.
 
+### 3.3 Direct accelerator boundary contract
+
+The direct Go, Julia, and Mojo wrappers validate before loading their optional
+runtimes:
+
+* `phases_flat` must be a one-dimensional finite real `float64` buffer with no
+  boolean aliases or complex values.
+* `n_trials` and `n_tp` must be non-boolean non-negative integers.
+* the flat buffer length must exactly match `n_trials * n_tp`.
+* `pause_indices` must be a one-dimensional integer buffer with no boolean
+  aliases.
+
+Empty trial or timepoint payloads preserve the Python fallback contract by
+returning an empty ITPC vector or `0.0` persistence before shared-library
+loading, Julia initialisation, or subprocess execution.
+
 ---
 
 ## 4. Per-backend build notes

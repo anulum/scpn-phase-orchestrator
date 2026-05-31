@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._itpc_validation import (
+    validate_compute_itpc_backend_inputs,
+    validate_itpc_persistence_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -59,8 +64,14 @@ def _load_lib() -> ctypes.CDLL:
 def compute_itpc_go(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
     """Compute inter-trial phase coherence through the Go backend."""
 
+    p, n_trials, n_tp = validate_compute_itpc_backend_inputs(
+        phases_flat,
+        n_trials,
+        n_tp,
+    )
+    if n_trials == 0 or n_tp == 0:
+        return np.zeros(n_tp, dtype=np.float64)
     lib = _load_lib()
-    p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     out = np.zeros(n_tp, dtype=np.float64)
     rc = lib.ComputeITPC(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -81,9 +92,15 @@ def itpc_persistence_go(
 ) -> float:
     """Compute inter-trial phase-coherence persistence through the Go backend."""
 
+    p, n_trials, n_tp, idx = validate_itpc_persistence_backend_inputs(
+        phases_flat,
+        n_trials,
+        n_tp,
+        pause_indices,
+    )
+    if idx.size == 0 or n_trials == 0 or n_tp == 0:
+        return 0.0
     lib = _load_lib()
-    p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
-    idx = np.ascontiguousarray(pause_indices.ravel(), dtype=np.int64)
     out = ctypes.c_double(0.0)
     rc = lib.ITPCPersistence(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
