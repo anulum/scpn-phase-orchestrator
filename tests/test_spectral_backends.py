@@ -41,6 +41,9 @@ from scpn_phase_orchestrator.coupling.spectral import (
     spectral_gap,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spectral_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _spectral_validation as spectral_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go import (
@@ -84,6 +87,10 @@ def _problem(seed: int, n: int = 6):
     W = (W + W.T) / 2
     np.fill_diagonal(W, 0.0)
     return W
+
+
+def _mojo_proc(stdout: str) -> object:
+    return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
 
 
 def _asymmetric_problem() -> np.ndarray:
@@ -152,6 +159,50 @@ class TestDirectBackendBoundaryContracts:
         assert eigvals.dtype == np.float64
         assert fiedler.dtype == np.float64
         assert eigvals.shape == fiedler.shape == (0,)
+
+
+class TestDirectMojoBoundaryContracts:
+    """Direct Mojo spectral adapter rejects malformed backend stdout."""
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo EIG returned 0 lines, expected 6"),
+            ("0\n1\n2\n0.1\n0.2\n0.3\n0.4\n", "expected 6"),
+            ("0\n1\n\n0.1\n0.2\n0.3\n", "finite eigenvalues"),
+            ("0\nbad\n2\n0.1\n0.2\n0.3\n", "finite eigenvalues"),
+            ("0\nnan\n2\n0.1\n0.2\n0.3\n", "finite eigenvalues"),
+            ("0\n1\n2\n0.1\ninf\n0.3\n", "finite eigenvalues"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_spectral_mojo, "_ensure_exe", lambda: "spectral")
+        monkeypatch.setattr(
+            _spectral_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: _mojo_proc(stdout),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _spectral_mojo.spectral_eig_mojo(_problem(23, n=3).ravel(), 3)
+
+    def test_mojo_runner_preserves_lapack_error_payload(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(_spectral_mojo, "_ensure_exe", lambda: "spectral")
+        monkeypatch.setattr(
+            _spectral_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: _mojo_proc("ERR: failed\n"),
+        )
+
+        with pytest.raises(ValueError, match="Mojo spectral LAPACK error"):
+            _spectral_mojo.spectral_eig_mojo(_problem(23, n=3).ravel(), 3)
 
 
 def _run_backend(backend: str, seed: int, n: int = 6):

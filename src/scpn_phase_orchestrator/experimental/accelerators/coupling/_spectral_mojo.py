@@ -56,11 +56,24 @@ def spectral_eig_mojo(
     )
     if proc.returncode != 0:
         raise ValueError(f"Mojo spectral exit {proc.returncode}: {proc.stderr.strip()}")
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     if lines and lines[0].startswith("ERR:"):
         raise ValueError(f"Mojo spectral LAPACK error: {lines[0]}")
     if len(lines) != 2 * n:
         raise ValueError(f"Mojo EIG returned {len(lines)} lines, expected {2 * n}")
-    eigvals = np.array([float(x) for x in lines[:n]], dtype=np.float64)
-    fiedler = np.array([float(x) for x in lines[n:]], dtype=np.float64)
+    try:
+        values = [float(line) for line in lines]
+    except ValueError as exc:
+        raise ValueError(
+            "Mojo EIG output must contain finite eigenvalues followed by "
+            "a finite Fiedler vector"
+        ) from exc
+    parsed = np.asarray(values, dtype=np.float64)
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError(
+            "Mojo EIG output must contain finite eigenvalues followed by "
+            "a finite Fiedler vector"
+        )
+    eigvals = parsed[:n].copy()
+    fiedler = parsed[n:].copy()
     return eigvals, fiedler
