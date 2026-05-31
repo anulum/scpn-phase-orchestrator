@@ -39,7 +39,7 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def _run(payload: str) -> list[float]:
+def _run(payload: str, *, expected_count: int) -> list[float]:
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -52,7 +52,20 @@ def _run(payload: str) -> list[float]:
         raise ValueError(
             f"Mojo upde_engine returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [float(line) for line in proc.stdout.strip().splitlines() if line]
+    lines = proc.stdout.splitlines()
+    if len(lines) != expected_count:
+        raise ValueError(
+            f"Mojo upde_engine returned {len(lines)} lines, expected {expected_count}"
+        )
+    values: list[float] = []
+    for line in lines:
+        try:
+            values.append(float(line))
+        except ValueError as exc:
+            raise ValueError(
+                "Mojo upde_engine output must be finite real values"
+            ) from exc
+    return values
 
 
 def upde_run_mojo(
@@ -120,5 +133,5 @@ def upde_run_mojo(
     tokens.extend(repr(float(x)) for x in o.tolist())
     tokens.extend(repr(float(x)) for x in k.tolist())
     tokens.extend(repr(float(x)) for x in a.tolist())
-    result = _run(" ".join(tokens) + "\n")
+    result = _run(" ".join(tokens) + "\n", expected_count=n)
     return validate_upde_backend_output(np.array(result, dtype=np.float64), n=n)

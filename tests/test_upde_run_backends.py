@@ -19,11 +19,15 @@ integrators. Tolerances:
 from __future__ import annotations
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _engine_mojo as engine_mojo_mod,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _engine_validation as engine_validation,
 )
@@ -187,6 +191,35 @@ class TestDirectBackendBoundaryContracts:
         result = backend(*payload)
         np.testing.assert_allclose(result, payload[0], atol=0.0)
         assert result is not payload[0]
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("0.0\n", "returned 1 lines, expected 2"),
+            ("0.0\n1.0\n2.0\n", "returned 3 lines, expected 2"),
+            ("0.0\n\n1.0\n", "returned 3 lines, expected 2"),
+            ("0.0\nnot-a-phase\n", "finite real values"),
+        ],
+    )
+    def test_mojo_runner_rejects_raw_stdout_cardinality_mismatches(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(engine_mojo_mod, "_ensure_exe", lambda: "upde_engine_mojo")
+        monkeypatch.setattr(
+            engine_mojo_mod.subprocess,
+            "run",
+            lambda *_args, **_kwargs: SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            engine_mojo_mod._run("RUN\n", expected_count=2)
 
 
 class TestRustParity:

@@ -87,7 +87,9 @@ exactly zero to exclude self-coupling; `dt`, `atol`, and `rtol` must be
 positive finite scalars; `n_steps` must be a non-negative integer; and
 `n_substeps` must be a positive integer. A zero-step direct call returns a
 copy of the initial phase vector without requiring the optional backend
-binary or runtime.
+binary or runtime. Mojo subprocess output must contain exactly one raw stdout
+line per oscillator phase; blank, truncated, or overlong output is rejected
+before final phase validation.
 
 ::: scpn_phase_orchestrator.upde.engine
     options:
