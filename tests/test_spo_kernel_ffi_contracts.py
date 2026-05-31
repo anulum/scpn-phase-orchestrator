@@ -22,6 +22,39 @@ import pytest
 spo = pytest.importorskip("spo_kernel")
 
 
+# ─── SSGF Costs ──────────────────────────────────────────────────
+
+
+class TestSSGFCostsRust:
+    def test_rejects_mismatched_cost_buffers(self):
+        with pytest.raises(ValueError, match="w_flat length"):
+            spo.compute_ssgf_costs_rust(np.zeros(3), np.zeros(2), 2)
+        with pytest.raises(ValueError, match="phases length"):
+            spo.compute_ssgf_costs_rust(np.zeros(4), np.zeros(1), 2)
+
+    @pytest.mark.parametrize(
+        ("w_flat", "phases", "weights", "match"),
+        [
+            (np.array([0.0, np.nan, 0.0, 0.0]), np.zeros(2), (), "finite"),
+            (np.zeros(4), np.array([0.0, np.inf]), (), "finite"),
+            (np.zeros(4), np.zeros(2), (float("nan"), 0.5, 0.1, 0.1), "weights"),
+            (np.zeros(4), np.zeros(2), (1.0, -0.5, 0.1, 0.1), "weights"),
+        ],
+    )
+    def test_rejects_non_physical_cost_inputs(self, w_flat, phases, weights, match):
+        kwargs = {}
+        if weights:
+            kwargs = {
+                "w1": weights[0],
+                "w2": weights[1],
+                "w3": weights[2],
+                "w4": weights[3],
+            }
+
+        with pytest.raises(ValueError, match=match):
+            spo.compute_ssgf_costs_rust(w_flat, phases, 2, **kwargs)
+
+
 # ─── PyUPDEStepper ───────────────────────────────────────────────
 
 

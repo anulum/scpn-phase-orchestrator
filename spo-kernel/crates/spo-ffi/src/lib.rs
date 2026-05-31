@@ -2424,6 +2424,45 @@ fn rqa_rust(
 
 // ─── SSGF Costs ───────────────────────────────────────────────────
 
+fn validate_ssgf_cost_inputs(
+    w: &[f64],
+    p: &[f64],
+    n: usize,
+    weights: (f64, f64, f64, f64),
+) -> PyResult<()> {
+    let expected = n
+        .checked_mul(n)
+        .ok_or_else(|| PyValueError::new_err("n*n overflow in SSGF cost input"))?;
+    if w.len() != expected {
+        return Err(PyValueError::new_err(format!(
+            "w_flat length {} does not match n*n={}",
+            w.len(),
+            expected
+        )));
+    }
+    if p.len() != n {
+        return Err(PyValueError::new_err(format!(
+            "phases length {} does not match n={}",
+            p.len(),
+            n
+        )));
+    }
+    if !w.iter().all(|value| value.is_finite()) || !p.iter().all(|value| value.is_finite()) {
+        return Err(PyValueError::new_err(
+            "SSGF cost inputs must contain only finite values",
+        ));
+    }
+    if [weights.0, weights.1, weights.2, weights.3]
+        .iter()
+        .any(|value| !value.is_finite() || *value < 0.0)
+    {
+        return Err(PyValueError::new_err(
+            "SSGF weights must be finite non-negative values",
+        ));
+    }
+    Ok(())
+}
+
 #[pyfunction]
 #[pyo3(signature = (w_flat, phases, n, w1 = 1.0, w2 = 0.5, w3 = 0.1, w4 = 0.1))]
 fn compute_ssgf_costs_rust(
@@ -2441,6 +2480,7 @@ fn compute_ssgf_costs_rust(
     let p = phases
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    validate_ssgf_cost_inputs(w, p, n, (w1, w2, w3, w4))?;
     let r = ssgf_costs::compute_ssgf_costs(w, p, n, (w1, w2, w3, w4));
     Ok((
         r.c1_sync,

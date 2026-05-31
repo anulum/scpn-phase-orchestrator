@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.ssgf import costs as costs_module
 from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
 from tests.typing_contracts import assert_precise_ndarray_hint
 
@@ -98,6 +99,35 @@ class TestSSGFCosts:
             compute_ssgf_costs(W, phases)
 
     @pytest.mark.parametrize(
+        ("W", "phases", "match"),
+        [
+            (
+                np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object),
+                np.zeros(2),
+                "W must not contain boolean",
+            ),
+            (
+                np.zeros((2, 2)),
+                np.array([0.0, np.bool_(True)], dtype=object),
+                "phases must not contain boolean",
+            ),
+            (
+                np.array([[0.0, 1.0 + 0.25j], [1.0, 0.0]], dtype=object),
+                np.zeros(2),
+                "W must be real-valued",
+            ),
+            (
+                np.zeros((2, 2)),
+                np.array([0.0, 0.25 + 0.5j], dtype=object),
+                "phases must be real-valued",
+            ),
+        ],
+    )
+    def test_rejects_alias_payloads_before_float_casting(self, W, phases, match):
+        with pytest.raises(ValueError, match=match):
+            compute_ssgf_costs(W, phases)
+
+    @pytest.mark.parametrize(
         "weights",
         [
             (),
@@ -112,6 +142,33 @@ class TestSSGFCosts:
     def test_rejects_invalid_weights(self, weights):
         with pytest.raises(ValueError, match="weights"):
             compute_ssgf_costs(np.eye(2), np.zeros(2), weights=weights)
+
+    def test_rejects_numpy_boolean_weight_alias(self):
+        with pytest.raises(ValueError, match="weights"):
+            compute_ssgf_costs(
+                np.eye(2),
+                np.zeros(2),
+                weights=(1.0, np.bool_(True), 0.1, 0.1),
+            )
+
+    @pytest.mark.parametrize(
+        ("rust_result", "match"),
+        [
+            ((0.0, -1.0, np.nan, 0.0, 0.0), "finite"),
+            ((np.bool_(False), -1.0, 0.0, 0.0, 0.0), "non-boolean"),
+            ((1.25, -1.0, 0.0, 0.0, 0.0), "synchronisation deficit"),
+            ((0.0, 0.5, 0.0, 0.0, 0.0), "spectral cost"),
+            ((0.0, -1.0, -0.1, 0.0, 0.0), "sparsity"),
+            ((0.0, -1.0, 0.0, -0.1, 0.0), "symmetry"),
+            ((0.0, -1.0, 0.0, 0.0, 0.5), "weighted total"),
+        ],
+    )
+    def test_rejects_invalid_rust_cost_terms(self, monkeypatch, rust_result, match):
+        monkeypatch.setattr(costs_module, "_HAS_RUST", True)
+        monkeypatch.setattr(costs_module, "_rust_costs", lambda *_: rust_result)
+
+        with pytest.raises(ValueError, match=match):
+            compute_ssgf_costs(np.eye(2), np.zeros(2))
 
     def test_returns_dataclass(self):
         costs = compute_ssgf_costs(np.eye(3), np.zeros(3))

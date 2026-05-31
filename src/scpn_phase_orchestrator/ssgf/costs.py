@@ -42,12 +42,41 @@ __all__ = ["SSGFCosts", "compute_ssgf_costs"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    if isinstance(value, np.ndarray):
+        if value.dtype == np.bool_:
+            return True
+        if value.dtype != object:
+            return False
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
+
+
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if np.iscomplexobj(raw):
+        return True
+    if isinstance(value, np.ndarray) and raw.dtype != object:
+        return False
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.ravel())
+
+
 def _validate_weights(weights: tuple[float, ...]) -> tuple[float, float, float, float]:
     if not isinstance(weights, tuple) or len(weights) != 4:
         raise ValueError("weights must be a tuple of four finite non-negative reals")
     parsed: list[float] = []
     for weight in weights:
-        if isinstance(weight, bool) or not isinstance(weight, Real):
+        if isinstance(weight, (bool, np.bool_)) or not isinstance(weight, Real):
             raise ValueError("weights must contain finite non-negative real values")
         value = float(weight)
         if not np.isfinite(value) or value < 0.0:
@@ -56,10 +85,12 @@ def _validate_weights(weights: tuple[float, ...]) -> tuple[float, float, float, 
     return parsed[0], parsed[1], parsed[2], parsed[3]
 
 
-def _validate_phases(phases: FloatArray) -> FloatArray:
-    raw = np.asarray(phases)
-    if raw.dtype == np.bool_:
+def _validate_phases(phases: object) -> FloatArray:
+    if _contains_boolean_alias(phases):
         raise ValueError("phases must not contain boolean values")
+    raw = np.asarray(phases)
+    if np.iscomplexobj(raw) or _contains_complex_alias(phases):
+        raise ValueError("phases must be real-valued")
     try:
         values = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -73,10 +104,12 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
     return values
 
 
-def _validate_weight_matrix(W: FloatArray) -> FloatArray:
-    raw = np.asarray(W)
-    if raw.dtype == np.bool_:
+def _validate_weight_matrix(W: object) -> FloatArray:
+    if _contains_boolean_alias(W):
         raise ValueError("W must not contain boolean values")
+    raw = np.asarray(W)
+    if np.iscomplexobj(raw) or _contains_complex_alias(W):
+        raise ValueError("W must be real-valued")
     try:
         values = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -86,6 +119,52 @@ def _validate_weight_matrix(W: FloatArray) -> FloatArray:
     if not np.all(np.isfinite(values)):
         raise ValueError("W must contain only finite values")
     return values
+
+
+def _validate_cost_scalar(value: object, *, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-boolean real")
+    scalar = float(value)
+    if not np.isfinite(scalar):
+        raise ValueError(f"{name} must be finite")
+    return scalar
+
+
+def _validate_rust_costs(
+    value: object,
+    *,
+    weights: tuple[float, float, float, float],
+) -> SSGFCosts:
+    if not isinstance(value, tuple) or len(value) != 5:
+        raise ValueError("Rust SSGF costs output must contain five cost terms")
+    c1 = _validate_cost_scalar(value[0], name="synchronisation deficit")
+    c2 = _validate_cost_scalar(value[1], name="spectral cost")
+    c3 = _validate_cost_scalar(value[2], name="sparsity cost")
+    c4 = _validate_cost_scalar(value[3], name="symmetry cost")
+    u_total = _validate_cost_scalar(value[4], name="weighted total")
+
+    tolerance = 1e-10
+    if c1 < -tolerance or c1 > 1.0 + tolerance:
+        raise ValueError("synchronisation deficit must stay in [0, 1]")
+    if c2 > tolerance:
+        raise ValueError("spectral cost must be non-positive")
+    if c3 < -tolerance:
+        raise ValueError("sparsity cost must be non-negative")
+    if c4 < -tolerance:
+        raise ValueError("symmetry cost must be non-negative")
+
+    w1, w2, w3, w4 = weights
+    expected_total = w1 * c1 + w2 * c2 + w3 * c3 + w4 * c4
+    if not np.isclose(u_total, expected_total, rtol=1e-10, atol=1e-10):
+        raise ValueError("weighted total must equal the weighted SSGF cost terms")
+
+    return SSGFCosts(
+        c1_sync=float(np.clip(c1, 0.0, 1.0)),
+        c2_spectral_gap=0.0 if abs(c2) <= tolerance else c2,
+        c3_sparsity=max(c3, 0.0),
+        c4_symmetry=max(c4, 0.0),
+        u_total=u_total,
+    )
 
 
 @dataclass
@@ -123,13 +202,9 @@ def compute_ssgf_costs(
     if _HAS_RUST:
         w_flat: FloatArray = np.ascontiguousarray(W_array.ravel())
         p: FloatArray = np.ascontiguousarray(phases, dtype=np.float64)
-        c1, c2, c3, c4, ut = _rust_costs(w_flat, p, n, w1, w2, w3, w4)
-        return SSGFCosts(
-            c1_sync=c1,
-            c2_spectral_gap=c2,
-            c3_sparsity=c3,
-            c4_symmetry=c4,
-            u_total=ut,
+        return _validate_rust_costs(
+            _rust_costs(w_flat, p, n, w1, w2, w3, w4),
+            weights=(w1, w2, w3, w4),
         )
 
     R, _ = compute_order_parameter(phases)

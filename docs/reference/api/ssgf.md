@@ -52,6 +52,14 @@ minimization:
 3. **C3 (Sparsity):** $ regularizer on $
 4. **C4 (Symmetry):** Deviation from  = W^T$
 
+Boundary contract: `compute_ssgf_costs` rejects boolean aliases,
+complex-valued aliases, non-finite payloads, non-vector phases, non-square
+coupling matrices, invalid weights, and inconsistent optional Rust return
+tuples before accepting a cost snapshot. The direct PyO3 Rust binding applies
+the same finite-shape and non-negative-weight checks before entering the Rust
+cost kernel, so malformed buffers fail with `ValueError` instead of a kernel
+panic.
+
 ::: scpn_phase_orchestrator.ssgf.costs
 
 ## Closure Diagnostics
