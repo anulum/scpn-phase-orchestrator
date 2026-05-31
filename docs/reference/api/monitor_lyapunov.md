@@ -256,6 +256,9 @@ them. Accepted spectra must contain exactly `N` finite real exponents and must
 already be sorted in descending Lyapunov order. Malformed length, complex,
 non-finite, boolean-alias, or unsorted backend payloads are rejected at the
 adapter boundary rather than being passed to downstream stability logic.
+The Mojo subprocess bridge additionally requires the `SPEC` executable to emit
+exactly `N` scalar stdout lines before numeric parsing; missing, extra, blank,
+or non-scalar lines fail closed before spectrum validation.
 
 ---
 
@@ -304,7 +307,8 @@ tagged `SPEC` followed by the integer / float scalar parameters and
 the four flat arrays. It prints `N` lines of `f64` to stdout.
 `_lyapunov_mojo.py` serialises arguments with `repr(float(x))`, so
 the only precision loss is the ASCII round-trip (captured by the
-`1e-6` tolerance in the parity tests).
+`1e-6` tolerance in the parity tests). The Python bridge rejects stdout
+unless it contains exactly one scalar line per Lyapunov exponent.
 
 The direct Mojo, Julia, and Go bridge functions validate all array and scalar
 inputs before loading optional runtimes: phase/frequency vectors and
@@ -531,6 +535,8 @@ against the forced Python reference. Classes:
   entry and asserts the tolerance-matched diff vs Python.
 * `TestDispatcherResolution` — `ACTIVE_BACKEND` is the first
   available; `"python"` is always in the chain.
+* `TestDirectBackendBoundaryContracts` — direct adapter inputs, backend output
+  spectra, and Mojo stdout cardinality fail closed at the bridge boundary.
 
 ### 7.3 `tests/test_lyapunov_stability.py` — long-run invariants
 

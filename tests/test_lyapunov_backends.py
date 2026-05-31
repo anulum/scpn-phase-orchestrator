@@ -16,6 +16,7 @@ reason so CI on minimal environments stays green.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -287,6 +288,40 @@ class TestBackendTypingContracts:
 
 
 class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "match"),
+        [
+            ("", 2, "exactly 2 scalar"),
+            ("0.1\n-0.2\n-0.3\n", 2, "exactly 2 scalar"),
+            ("0.1\n\n-0.2\n", 2, "exactly 2 scalar"),
+            ("0.1\nnot-a-scalar\n", 2, "non-scalar"),
+        ],
+    )
+    def test_mojo_lyapunov_stdout_contract_rejects_malformed_payloads(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(lyapunov_mojo_mod, "_ensure_exe", lambda: "lyapunov_mojo")
+        monkeypatch.setattr(
+            lyapunov_mojo_mod.subprocess,
+            "run",
+            lambda *args, **kwargs: SimpleNamespace(
+                returncode=0, stdout=stdout, stderr=""
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            lyapunov_mojo_mod._run(
+                "SPEC 2 0.01 10 2 0.0 0.0 "
+                "0.0 0.1 1.0 1.0 0.0 0.1 "
+                "0.1 0.0 0.0 0.0 0.0 0.0\n",
+                expected_count=expected_count,
+                label="SPEC",
+            )
+
     def test_go_bridge_rejects_self_coupling_before_library_load(self) -> None:
         with pytest.raises(ValueError, match="knm diagonal"):
             lyapunov_spectrum_go(
@@ -420,7 +455,11 @@ class TestDirectBackendBoundaryContracts:
             )
             backend = lyapunov_spectrum_julia
         else:
-            monkeypatch.setattr(lyapunov_mojo_mod, "_run", lambda _payload: payload)
+            monkeypatch.setattr(
+                lyapunov_mojo_mod,
+                "_run",
+                lambda _payload, *, expected_count, label: payload,
+            )
             backend = lyapunov_spectrum_mojo
 
         with pytest.raises(ValueError, match=match):
