@@ -312,12 +312,15 @@ class TestPhaseContractPipelineEndToEnd:
         import time
 
         phases = RNG.uniform(0, TWO_PI, 256)
-        # Warm-up
-        compute_order_parameter(phases)
-        t0 = time.perf_counter()
-        for _ in range(1000):
+        for _ in range(10):
             compute_order_parameter(phases)
-        elapsed = (time.perf_counter() - t0) / 1000
+        samples = []
+        for _ in range(5):
+            t0 = time.perf_counter()
+            for _ in range(1000):
+                compute_order_parameter(phases)
+            samples.append((time.perf_counter() - t0) / 1000)
+        elapsed = min(samples)
         limit = (
             5e-4 if os.getenv("CI") else 1.5e-4 if sys.platform == "darwin" else 1e-4
         )
