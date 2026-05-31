@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added JAX-backed information-geometry and multiverse rollout paths, expanded
+  multiverse scenario coverage, added strange-loop drift scenario gates, and
+  added review-only sheaf obstruction control proposals with deterministic
+  evidence surfaces.
 - Added a lightweight Python API layer with `Orchestrator.from_yaml(...)` and
   `Orchestrator.run(...)`, plus the `scpn` import alias for onboarding scripts
   that should not depend on CLI invocation.
@@ -29,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hardened UPDE, Hodge decomposition, E/I balance, chimera, Lyapunov,
+  plasticity, coupling-lag, K_nm geometry, spectral-coupling, SSGF, NPE,
+  ITPC, embedding, order-parameter, swarmalator, splitting, simplicial,
+  reduction, PAC, and market numerical boundaries around real-valued inputs,
+  zero self-coupling, exact backend-output preservation, typed direct
+  Go/Julia/Mojo validation, and object-dtype complex alias rejection.
 - Hardened auto-binding YAML generation by emitting structured YAML instead of
   interpolating raw source column names into text.
 - Hardened symbolic binding compilation with intent sanitisation, schema
