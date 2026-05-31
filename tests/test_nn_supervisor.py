@@ -1752,3 +1752,181 @@ def test_supervisor_replay_comparison_rejects_non_audit_replay_inputs() -> None:
 
     with pytest.raises(TypeError, match="to_audit_record"):
         compare_supervisor_replay_proposal(supervisor_proposal, object())
+
+
+def _valid_supervisor_record() -> dict[str, object]:
+    return {
+        "phases": [0.0, 0.1, 2.7, 3.1],
+        "omegas": [0.04, 0.03, -0.03, -0.04],
+        "base_K": [
+            [0.0, 0.03, 0.03, 0.03],
+            [0.03, 0.0, 0.03, 0.03],
+            [0.03, 0.03, 0.0, 0.03],
+            [0.03, 0.03, 0.03, 0.0],
+        ],
+        "good_mask": [1.0, 1.0, 0.0, 0.0],
+        "bad_mask": [0.0, 0.0, 1.0, 1.0],
+        "dt": 0.02,
+        "inner_steps": 4,
+        "horizon": 3,
+        "metadata": {"source": "validation-fixture"},
+    }
+
+
+def test_supervisor_corpus_replay_rejects_empty_and_churn_mismatch() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(91))
+    empty = SupervisorScenarioCorpus(scenarios=(), metadata=())
+    corpus = SupervisorScenarioCorpus(scenarios=(_scenario(),), metadata=({},))
+
+    with pytest.raises(ValueError, match="at least one scenario"):
+        build_supervisor_corpus_replay_proposals(policy, empty)
+    with pytest.raises(ValueError, match="regime_churn_scores"):
+        build_supervisor_corpus_replay_proposals(
+            policy,
+            corpus,
+            regime_churn_scores=(0.1, 0.2),
+        )
+
+
+def test_supervisor_replay_comparison_rejects_empty_label() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(92))
+    proposal = build_supervisor_replay_proposal(policy, _scenario())
+
+    with pytest.raises(ValueError, match="comparison_label"):
+        compare_supervisor_replay_proposal(
+            proposal,
+            _replay_search_result(),
+            comparison_label="",
+        )
+
+
+def test_supervisor_experiment_manifest_rejects_empty_command_lock_and_device() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(93))
+    report = build_supervisor_baseline_report(
+        (compare_supervisor_static_baseline(policy, _scenario()),)
+    )
+    base = {
+        "baseline_report": report,
+        "command": "cmd",
+        "git_sha": "abc1234",
+        "dependency_lock": {"lock": "sha"},
+        "device_info": {"backend": "cpu"},
+        "seed_list": (1,),
+    }
+
+    with pytest.raises(ValueError, match="command"):
+        build_supervisor_experiment_manifest(**dict(base, command=""))
+    with pytest.raises(ValueError, match="dependency_lock"):
+        build_supervisor_experiment_manifest(**dict(base, dependency_lock={}))
+    with pytest.raises(ValueError, match="device_info"):
+        build_supervisor_experiment_manifest(**dict(base, device_info={}))
+
+
+@pytest.mark.parametrize(
+    ("mutator", "match"),
+    [
+        (lambda record: dict(record, phases=[[0.0, 0.1]]), "phases"),
+        (lambda record: dict(record, good_mask=[1.0, -1.0, 0.0, 0.0]), "good_mask"),
+        (lambda record: dict(record, bad_mask=[0.0, 0.0, 0.0, 0.0]), "bad_mask"),
+        (lambda record: dict(record, base_K=[0.0, 0.03, 0.03, 0.03]), "base_K"),
+        (lambda record: dict(record, omegas=[0.04, np.inf, -0.03, -0.04]), "omegas"),
+        (lambda record: {k: v for k, v in record.items() if k != "dt"}, "dt"),
+        (lambda record: dict(record, dt=0.0), "dt"),
+        (lambda record: dict(record, inner_steps=True), "inner_steps"),
+        (lambda record: dict(record, horizon=0), "horizon"),
+    ],
+)
+def test_supervisor_scenario_corpus_rejects_boundary_record_errors(
+    mutator,
+    match,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        build_supervisor_scenario_corpus([mutator(_valid_supervisor_record())])
+
+
+def test_supervisor_scenario_corpus_rejects_non_mapping_record() -> None:
+    with pytest.raises(ValueError, match="record 0 must be a mapping"):
+        build_supervisor_scenario_corpus([object()])
+
+
+def test_collect_supervisor_rollouts_rejects_invalid_jitter_values() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(94))
+
+    with pytest.raises(ValueError, match="trajectory_jitter"):
+        collect_supervisor_rollouts(
+            policy,
+            _scenario(),
+            key=jax.random.PRNGKey(95),
+            n_episodes=1,
+            trajectory_jitter=True,
+        )
+    with pytest.raises(ValueError, match="trajectory_jitter"):
+        collect_supervisor_rollouts(
+            policy,
+            _scenario(),
+            key=jax.random.PRNGKey(96),
+            n_episodes=1,
+            trajectory_jitter=-0.1,
+        )
+
+
+def test_ppo_checkpoint_rejects_overwrite_and_missing_payload(tmp_path) -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(97))
+    optimizer = optax.adam(1e-3)
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+    checkpoint_dir = tmp_path / "ppo"
+
+    save_supervisor_ppo_checkpoint(
+        checkpoint_dir,
+        policy=policy,
+        opt_state=opt_state,
+        key=jax.random.PRNGKey(98),
+        n_updates=0,
+        loss_history=jnp.asarray([0.1]),
+    )
+    with pytest.raises(FileExistsError, match="already contains"):
+        save_supervisor_ppo_checkpoint(
+            checkpoint_dir,
+            policy=policy,
+            opt_state=opt_state,
+            key=jax.random.PRNGKey(98),
+            n_updates=0,
+            loss_history=jnp.asarray([0.1]),
+        )
+
+    (checkpoint_dir / "state.eqx").unlink()
+    with pytest.raises(FileNotFoundError, match="missing checkpoint payload"):
+        load_supervisor_ppo_checkpoint(
+            checkpoint_dir,
+            template_policy=policy,
+            template_opt_state=opt_state,
+        )
+
+
+def test_ppo_train_with_checkpoint_resume_requires_checkpoint_dir() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(99))
+    optimizer = optax.adam(1e-3)
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+    rollout = collect_supervisor_rollouts(
+        policy,
+        _scenario(),
+        key=jax.random.PRNGKey(100),
+        n_episodes=1,
+    )
+
+    with pytest.raises(ValueError, match="checkpoint_dir"):
+        ppo_supervisor_train_with_checkpoint(
+            policy,
+            rollout.batch,
+            key=jax.random.PRNGKey(101),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=1,
+            resume=True,
+        )
