@@ -62,8 +62,7 @@ def _validate_phase_buffer(
     expected = n_trials * n_tp
     if phases.size != expected:
         raise ValueError(
-            f"phases_flat length {phases.size} does not match "
-            f"n_trials*n_tp={expected}"
+            f"phases_flat length {phases.size} does not match n_trials*n_tp={expected}"
         )
     return np.ascontiguousarray(phases, dtype=np.float64)
 

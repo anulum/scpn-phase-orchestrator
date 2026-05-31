@@ -131,9 +131,7 @@ def nearest_neighbor_distances_mojo(
     tokens.extend(repr(float(x)) for x in e.tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != 2 * t_int:
-        raise ValueError(
-            f"Mojo NN returned {len(result)} lines, expected {2 * t_int}"
-        )
+        raise ValueError(f"Mojo NN returned {len(result)} lines, expected {2 * t_int}")
     dist = np.array([float(x) for x in result[:t_int]], dtype=np.float64)
     idx = np.array([int(x) for x in result[t_int:]], dtype=np.int64)
     return dist, idx

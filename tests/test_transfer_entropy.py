@@ -195,9 +195,7 @@ class TestTransferEntropy:
             transfer_entropy_matrix(series)
 
     def test_matrix_rejects_complex_phase_series(self):
-        series = np.array(
-            [[0.0 + 1.0j, 1.0 + 0.0j, 2.0 + 0.0j], [0.1, 1.1, 2.1]]
-        )
+        series = np.array([[0.0 + 1.0j, 1.0 + 0.0j, 2.0 + 0.0j], [0.1, 1.1, 2.1]])
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 

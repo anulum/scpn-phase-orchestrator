@@ -102,7 +102,9 @@ def _python_reference(knm: np.ndarray, theta: np.ndarray, **kw: object) -> np.nd
     return _force_backend("python", knm, theta, **kw)
 
 
-def _direct_payload(n: int = 3) -> tuple[
+def _direct_payload(
+    n: int = 3,
+) -> tuple[
     np.ndarray,
     np.ndarray,
     np.ndarray,

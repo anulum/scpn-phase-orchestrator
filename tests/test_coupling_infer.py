@@ -77,9 +77,7 @@ def test_inference_rejects_invalid_inputs_and_unsupported_methods() -> None:
     with pytest.raises(ValueError, match="boolean"):
         infer_coupling_from_timeseries(np.array([[True, False, True, False]] * 2))
     with pytest.raises(ValueError, match="finite 2-D"):
-        infer_coupling_from_timeseries(
-            np.array([[0.1 + 0.1j, 0.2, 0.3, 0.4]] * 2)
-        )
+        infer_coupling_from_timeseries(np.array([[0.1 + 0.1j, 0.2, 0.3, 0.4]] * 2))
     with pytest.raises(ValueError, match="at least 4 timesteps"):
         infer_coupling_from_timeseries(np.ones((2, 3)))
     with pytest.raises(NotImplementedError, match="notears"):
