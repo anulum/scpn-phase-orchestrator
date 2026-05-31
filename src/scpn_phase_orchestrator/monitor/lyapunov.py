@@ -389,10 +389,28 @@ def _rk4_step(
 
 
 def _column_qr_log_diag(Q: FloatArray) -> tuple[FloatArray, FloatArray]:
-    """Column-oriented QR — returns the reorthonormalised Q and ``log|R_ii|``
-    floored at ``log(1e-300)`` to avoid ``−inf``."""
-    Q_new, R = np.linalg.qr(Q)
-    diag = np.maximum(np.abs(np.diag(R)), 1e-300)
+    """Two-pass modified Gram-Schmidt QR matching the Rust kernel exactly.
+
+    Finite-horizon Lyapunov spectra are sensitive to the tangent basis produced
+    by each QR step. NumPy's Householder QR is mathematically valid, but it does
+    not produce the same intermediate basis as the production Rust kernel. The
+    Python reference therefore uses the same column-oriented two-pass modified
+    Gram-Schmidt routine as Rust and accumulates the pre-normalisation column
+    norms as the diagonal of ``R``.
+    """
+    Q_new = np.array(Q, dtype=np.float64, copy=True, order="C")
+    n = Q_new.shape[1]
+    diag = np.zeros(n, dtype=np.float64)
+    for column in range(n):
+        for _ in range(2):
+            for previous in range(column):
+                projection = float(np.dot(Q_new[:, previous], Q_new[:, column]))
+                Q_new[:, column] -= projection * Q_new[:, previous]
+        norm = float(np.linalg.norm(Q_new[:, column]))
+        diag[column] = norm
+        if norm > 1e-300:
+            Q_new[:, column] /= norm
+    diag = np.maximum(diag, 1e-300)
     return Q_new, np.log(diag)
 
 

@@ -55,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened bifurcation continuation and critical-coupling fast paths by
   rejecting non-zero self-coupling diagonals, invalid composite Rust
   `R(K)` arrays, and invalid Rust `K_c` results.
+- Aligned the Python Lyapunov reference QR routine with the Rust/Go/Mojo
+  two-pass modified Gram-Schmidt tangent-basis contract so finite-horizon
+  spectra remain reproducible across built backend artifacts.
 
 ## [0.6.2] - 2026-05-24
 
