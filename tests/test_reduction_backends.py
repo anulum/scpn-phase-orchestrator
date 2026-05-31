@@ -25,6 +25,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import _reduction_mojo
 from scpn_phase_orchestrator.upde import reduction as r_mod
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 
@@ -57,6 +58,37 @@ def _run(
     red = OttAntonsenReduction(omega_0=omega_0, delta=delta, K=K, dt=dt)
     with _force_backend(backend):
         return red.run(complex(z_re, z_im), n_steps=n_steps)
+
+
+def _mojo_proc(stdout: str) -> object:
+    return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
+
+
+class TestDirectMojoBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo OARUN returned 0 lines, expected 4"),
+            ("0.1\n0.2\n0.3\n0.4\n0.5\n", "expected 4"),
+            ("0.1\n\n0.3\n0.4\n", "finite z_real"),
+            ("0.1\nbad\n0.3\n0.4\n", "finite z_real"),
+            ("0.1\nnan\n0.3\n0.4\n", "finite z_real"),
+            ("0.1\n0.2\ninf\n0.4\n", "finite z_real"),
+            ("0.1\n0.2\n0.3\n-inf\n", "finite z_real"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self, monkeypatch, stdout, match
+    ):
+        monkeypatch.setattr(_reduction_mojo, "_ensure_exe", lambda: "reduction")
+        monkeypatch.setattr(
+            _reduction_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: _mojo_proc(stdout),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _reduction_mojo.oa_run_mojo(0.2, 0.1, 0.5, 0.1, 1.0, 0.01, 8)
 
 
 class TestBackendParity:

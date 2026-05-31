@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import math
 import subprocess
 from pathlib import Path
 
@@ -61,12 +62,18 @@ def oa_run_mojo(
     )
     if proc.returncode != 0:
         raise ValueError(f"Mojo OARUN exit {proc.returncode}: {proc.stderr.strip()}")
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     if len(lines) != 4:
         raise ValueError(f"Mojo OARUN returned {len(lines)} lines, expected 4")
-    return (
-        float(lines[0]),
-        float(lines[1]),
-        float(lines[2]),
-        float(lines[3]),
-    )
+    try:
+        z_real, z_imag, radius, psi = (float(line) for line in lines)
+    except ValueError as exc:
+        raise ValueError(
+            "Mojo OARUN output must contain finite z_real, z_imag, R, and psi values"
+        ) from exc
+    values = (z_real, z_imag, radius, psi)
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError(
+            "Mojo OARUN output must contain finite z_real, z_imag, R, and psi values"
+        )
+    return values

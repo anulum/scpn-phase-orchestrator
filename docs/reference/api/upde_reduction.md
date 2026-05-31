@@ -173,6 +173,8 @@ Oscillators.extract() ──→ ω₁, ω₂, ..., ωₙ
 - **Exact reduction** for Lorentzian $g(\omega)$ — not an approximation
 - **RK4 integration** — 4th-order accurate on the complex ODE
 - **Rust FFI acceleration** — 38-96x speedup over Python loop
+- **Mojo subprocess boundary** — accepts exactly four finite scalar records
+  from the compiled OA runner before constructing an `OAState`
 - **Analytical steady-state** — `steady_state_R()` returns exact $R_{ss}$
 - **Automatic Lorentzian fitting** — `predict_from_oscillators()` fits
   $(\omega_0, \Delta)$ from measured frequencies
