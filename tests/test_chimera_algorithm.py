@@ -88,6 +88,55 @@ class TestLocalOrderParameter:
         assert np.all(r <= 1.0 + 1e-12)
 
     @_python
+    def test_global_phase_shift_invariance(self):
+        """R_i depends on phase differences, not the absolute phase gauge."""
+        rng = np.random.default_rng(12)
+        n = 10
+        phases = rng.uniform(-math.pi, math.pi, n)
+        knm = rng.uniform(0.0, 1.0, (n, n))
+        np.fill_diagonal(knm, 0.0)
+
+        base = local_order_parameter(phases, knm)
+        shifted = local_order_parameter(phases + 23.0, knm)
+
+        np.testing.assert_allclose(shifted, base, atol=1e-12)
+
+    @_python
+    def test_permutation_equivariance(self):
+        """Relabelling oscillators relabels local order parameters exactly."""
+        rng = np.random.default_rng(13)
+        n = 9
+        phases = rng.uniform(0.0, TWO_PI, n)
+        knm = rng.uniform(0.0, 1.0, (n, n))
+        np.fill_diagonal(knm, 0.0)
+        permutation = np.array([2, 5, 1, 8, 0, 6, 3, 7, 4])
+
+        base = local_order_parameter(phases, knm)
+        relabelled = local_order_parameter(
+            phases[permutation],
+            knm[np.ix_(permutation, permutation)],
+        )
+
+        np.testing.assert_allclose(relabelled, base[permutation], atol=1e-12)
+
+    @_python
+    def test_negative_couplings_are_not_local_neighbours(self):
+        """The public contract defines neighbours by K_ij > 0 only."""
+        phases = np.array([0.0, 0.3, 1.1])
+        knm = np.array(
+            [
+                [0.0, -2.0, -1.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 1.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        r = local_order_parameter(phases, knm)
+        assert r[0] == 0.0
+        assert r[1] == pytest.approx(1.0)
+        assert r[2] == pytest.approx(1.0)
+
+    @_python
     def test_isolated_oscillator_returns_zero(self):
         # Oscillator 0 has no outgoing edges.
         n = 4
@@ -113,6 +162,7 @@ class TestLocalOrderParameter:
             (np.zeros(3), np.zeros((2, 2)), "knm shape"),
             (np.zeros(2), np.array([[0.0, np.inf], [0.0, 0.0]]), "knm"),
             (np.zeros(2), np.array([[True, False], [False, True]]), "knm"),
+            (np.zeros(2), np.array([[1.0, 0.0], [0.0, 0.0]]), "diagonal"),
             (
                 np.zeros(2),
                 np.array([[0.0 + 0.0j, 1.0 + 0.25j], [1.0, 0.0 + 0.0j]]),
@@ -168,12 +218,63 @@ class TestDetectChimera:
         )
 
     @_python
+    def test_detection_invariant_under_global_phase_shift(self):
+        rng = np.random.default_rng(19)
+        n = 18
+        phases = rng.uniform(-math.pi, math.pi, n)
+        knm = rng.uniform(0.0, 1.0, (n, n))
+        np.fill_diagonal(knm, 0.0)
+
+        base = detect_chimera(phases, knm)
+        shifted = detect_chimera(phases - 41.0, knm)
+
+        assert shifted == base
+
+    @_python
+    def test_detection_permutation_equivariance(self):
+        rng = np.random.default_rng(23)
+        n = 12
+        phases = np.concatenate([np.zeros(n // 2), rng.uniform(0.0, TWO_PI, n // 2)])
+        knm = _all_to_all(n)
+        permutation = np.array([7, 0, 11, 2, 5, 9, 1, 10, 3, 8, 4, 6])
+        inverse = {int(old): int(new) for new, old in enumerate(permutation)}
+
+        base = detect_chimera(phases, knm)
+        relabelled = detect_chimera(
+            phases[permutation],
+            knm[np.ix_(permutation, permutation)],
+        )
+
+        expected_coherent = sorted(inverse[idx] for idx in base.coherent_indices)
+        expected_incoherent = sorted(inverse[idx] for idx in base.incoherent_indices)
+        assert sorted(relabelled.coherent_indices) == expected_coherent
+        assert sorted(relabelled.incoherent_indices) == expected_incoherent
+        assert relabelled.chimera_index == pytest.approx(base.chimera_index)
+
+    @_python
     def test_empty_input_returns_empty_state(self):
         state = detect_chimera(np.array([]), np.zeros((0, 0)))
         assert isinstance(state, ChimeraState)
         assert state.coherent_indices == []
         assert state.incoherent_indices == []
         assert state.chimera_index == 0.0
+
+
+class TestChimeraStateBoundaries:
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"coherent_indices": [0, 0]}, "duplicate"),
+            ({"coherent_indices": [0], "incoherent_indices": [0]}, "disjoint"),
+            ({"coherent_indices": [True]}, "integer"),
+            ({"coherent_indices": [-1]}, "non-negative"),
+            ({"chimera_index": True}, "finite real"),
+            ({"chimera_index": 1.5}, "lie in \\[0, 1\\]"),
+        ],
+    )
+    def test_constructor_rejects_invalid_public_state(self, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            ChimeraState(**kwargs)
 
 
 class TestHypothesis:
