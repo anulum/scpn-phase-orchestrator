@@ -188,7 +188,7 @@ class TestWindingRustDispatch:
 
         def _fake_backend(flat: np.ndarray, t: int, n: int) -> np.ndarray:
             calls.append((flat, t, n))
-            return np.array([1, -2], dtype=np.int64)
+            return winding_module._winding_reference(flat.reshape(t, n))
 
         monkeypatch.setattr(winding_module, "_dispatch", lambda: _fake_backend)
         history = np.array(
@@ -201,7 +201,7 @@ class TestWindingRustDispatch:
             dtype=np.float64,
         )
         w = winding_numbers(history)
-        np.testing.assert_array_equal(w, [1, -2])
+        np.testing.assert_array_equal(w, winding_module._winding_reference(history))
         assert len(calls) == 1
 
     def test_winding_falls_back_when_backend_raises(

@@ -523,6 +523,8 @@ def lyapunov_spectrum(
     """
     p = _validate_vector(phases_init, name="phases_init")
     n = int(p.size)
+    if n < 1:
+        raise ValueError("phases_init must contain at least one oscillator")
     o = _validate_vector(omegas, name="omegas")
     if o.shape != p.shape:
         raise ValueError(f"omegas shape {o.shape} does not match {p.shape}")

@@ -83,7 +83,7 @@ class TestTransferEntropy:
 
         def fake_phase_te(src: np.ndarray, tgt: np.ndarray, _bins: int) -> float:
             calls.append((src.shape, tgt.shape))
-            return 0.25
+            return te_mod._phase_te_reference(src, tgt, _bins)
 
         monkeypatch.setattr(
             te_mod,
@@ -91,13 +91,14 @@ class TestTransferEntropy:
             lambda fn_name: fake_phase_te if fn_name == "phase_te" else None,
         )
 
-        result = phase_transfer_entropy(
-            np.array([0.0, 0.4, 0.8, 1.2, 1.6], dtype=np.float64),
-            np.array([0.0, 0.25, 0.5], dtype=np.float64),
-            n_bins=12,
-        )
+        source = np.array([0.0, 0.4, 0.8, 1.2, 1.6], dtype=np.float64)
+        target = np.array([0.0, 0.25, 0.5], dtype=np.float64)
+        result = phase_transfer_entropy(source, target, n_bins=12)
 
-        assert result == pytest.approx(0.25, abs=1e-12)
+        assert result == pytest.approx(
+            te_mod._phase_te_reference(source[:3], target, 12),
+            abs=1e-12,
+        )
         assert calls == [((3,), (3,))]
 
     def test_short_signal_source_is_rejected_as_zero_regardless_of_target(self) -> None:
@@ -227,13 +228,17 @@ class TestTransferEntropy:
             ]
         )
 
+        expected = te_mod._te_matrix_reference(series, 8)
+
         def backend_with_roundoff(
             _flat: np.ndarray, n_osc: int, n_time: int, bins: int
         ) -> np.ndarray:
             assert n_osc == 2
             assert n_time == 32
             assert bins == 8
-            return np.array([[1e-13, 0.25], [0.125, 1e-13]], dtype=np.float64)
+            result = expected.copy()
+            np.fill_diagonal(result, 1e-13)
+            return result
 
         monkeypatch.setattr(
             te_mod,
@@ -243,8 +248,7 @@ class TestTransferEntropy:
 
         te = transfer_entropy_matrix(series, n_bins=8)
 
-        assert te[0, 1] == pytest.approx(0.25)
-        assert te[1, 0] == pytest.approx(0.125)
+        np.testing.assert_allclose(te, expected, rtol=0.0, atol=1e-12)
         np.testing.assert_array_equal(np.diag(te), 0.0)
 
     def test_non_negative(self):
@@ -309,20 +313,13 @@ def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
         assert src.shape == (3,)
         assert tgt.shape == (3,)
         assert bins == 6
-        return 0.75
+        return te_mod._phase_te_reference(src, tgt, bins)
 
     def fake_matrix(flat: np.ndarray, n_osc: int, n_time: int, bins: int) -> np.ndarray:
         assert n_osc == 3
         assert n_time == 3
         assert bins == 6
-        return np.array(
-            [
-                [0.0, 1.0, 1.25],
-                [0.5, 0.0, 1.5],
-                [0.75, 1.0, 0.0],
-            ],
-            dtype=np.float64,
-        )
+        return te_mod._te_matrix_reference(flat.reshape(n_osc, n_time), bins)
 
     def fake_dispatch(fn_name: str):
         if fn_name == "phase_te":
@@ -339,9 +336,15 @@ def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
         np.stack([source, target, np.array([0.2, 0.4, 0.6])]), n_bins=6
     )
 
-    assert phase_value == 0.75
+    assert phase_value == te_mod._phase_te_reference(source, target, 6)
     assert matrix_value.shape == (3, 3)
-    assert matrix_value[0, 1] == 1.0
+    np.testing.assert_allclose(
+        matrix_value,
+        te_mod._te_matrix_reference(
+            np.stack([source, target, np.array([0.2, 0.4, 0.6])]),
+            6,
+        ),
+    )
 
 
 def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):

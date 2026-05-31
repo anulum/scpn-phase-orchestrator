@@ -18,9 +18,10 @@ same physical dimensions and cost semantics.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from numbers import Real
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -30,11 +31,16 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 try:
     from spo_kernel import (
-        compute_ssgf_costs_rust as _rust_costs,
+        compute_ssgf_costs_rust as _loaded_rust_costs,
     )
 
+    _rust_costs: Callable[..., object] | None = cast(
+        "Callable[..., object]",
+        _loaded_rust_costs,
+    )
     _HAS_RUST = True
 except ImportError:
+    _rust_costs = None
     _HAS_RUST = False
 
 __all__ = ["SSGFCosts", "compute_ssgf_costs"]
@@ -200,6 +206,8 @@ def compute_ssgf_costs(
     n = W_array.shape[0]
 
     if _HAS_RUST:
+        if _rust_costs is None:
+            raise RuntimeError("Rust SSGF backend unavailable")
         w_flat: FloatArray = np.ascontiguousarray(W_array.ravel())
         p: FloatArray = np.ascontiguousarray(phases, dtype=np.float64)
         return _validate_rust_costs(
