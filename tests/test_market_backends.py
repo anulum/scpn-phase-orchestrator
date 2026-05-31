@@ -20,6 +20,7 @@ rounding, so parity is tight (~1e-15) but not always 0.0.
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable
 from types import SimpleNamespace
 
 import numpy as np
@@ -28,7 +29,16 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _market_go as market_go_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _market_julia as market_julia_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _market_mojo as market_mojo_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _market_validation as market_validation,
 )
 from scpn_phase_orchestrator.upde import market as m_mod
 from scpn_phase_orchestrator.upde.market import (
@@ -37,6 +47,25 @@ from scpn_phase_orchestrator.upde.market import (
 )
 
 TOL = 1e-12
+OrderBackend = Callable[..., np.ndarray]
+PLVBackend = Callable[..., np.ndarray]
+DIRECT_ORDER_BACKENDS: tuple[OrderBackend, ...] = (
+    market_go_mod.market_order_parameter_go,
+    market_julia_mod.market_order_parameter_julia,
+    market_mojo_mod.market_order_parameter_mojo,
+)
+DIRECT_PLV_BACKENDS: tuple[PLVBackend, ...] = (
+    market_go_mod.market_plv_go,
+    market_julia_mod.market_plv_julia,
+    market_mojo_mod.market_plv_mojo,
+)
+
+
+def test_market_validation_helper_is_linked_to_backend_tests() -> None:
+    assert callable(market_validation.validate_market_order_inputs)
+    assert callable(market_validation.validate_market_order_output)
+    assert callable(market_validation.validate_market_plv_inputs)
+    assert callable(market_validation.validate_market_plv_output)
 
 
 @contextlib.contextmanager
@@ -52,6 +81,19 @@ def _force_backend(name: str):
 def _problem(seed: int, T: int = 40, N: int = 5):
     rng = np.random.default_rng(seed)
     return rng.uniform(0, 2 * np.pi, (T, N))
+
+
+def _direct_payload(t: int = 6, n: int = 3) -> np.ndarray:
+    return _problem(11, T=t, N=n).ravel()
+
+
+def _forbid_runtime_load(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fail_loader() -> object:
+        raise AssertionError("optional backend loaded before validation")
+
+    monkeypatch.setattr(market_go_mod, "_load_lib", _fail_loader)
+    monkeypatch.setattr(market_julia_mod, "_ensure", _fail_loader)
+    monkeypatch.setattr(market_mojo_mod, "_ensure_exe", _fail_loader)
 
 
 def _op_backend(backend: str, seed: int, T: int = 40, N: int = 5):
@@ -116,6 +158,100 @@ class TestDirectMojoBoundaryContracts:
                 expected_lines=expected_lines,
                 label=label,
             )
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize("backend", DIRECT_ORDER_BACKENDS)
+    @pytest.mark.parametrize(
+        ("phases", "t", "n"),
+        [
+            (_direct_payload().reshape(2, -1), 6, 3),
+            (_direct_payload().astype(bool), 6, 3),
+            (_direct_payload().astype(np.complex128) + 1j, 6, 3),
+            (np.array([np.nan, *_direct_payload()[1:]]), 6, 3),
+            (_direct_payload()[:-1], 6, 3),
+            (_direct_payload(), True, 3),
+            (_direct_payload(), 0, 3),
+            (_direct_payload(), 6, True),
+            (_direct_payload(), 6, 0),
+        ],
+    )
+    def test_order_backends_reject_invalid_inputs_before_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend: OrderBackend,
+        phases: object,
+        t: object,
+        n: object,
+    ) -> None:
+        _forbid_runtime_load(monkeypatch)
+
+        with pytest.raises((TypeError, ValueError)):
+            backend(phases, t, n)
+
+    @pytest.mark.parametrize("backend", DIRECT_PLV_BACKENDS)
+    @pytest.mark.parametrize(
+        ("phases", "t", "n", "window"),
+        [
+            (_direct_payload().reshape(2, -1), 6, 3, 2),
+            (_direct_payload().astype(bool), 6, 3, 2),
+            (_direct_payload().astype(np.complex128) + 1j, 6, 3, 2),
+            (np.array([np.inf, *_direct_payload()[1:]]), 6, 3, 2),
+            (_direct_payload()[:-1], 6, 3, 2),
+            (_direct_payload(), True, 3, 2),
+            (_direct_payload(), 6, True, 2),
+            (_direct_payload(), 6, 3, True),
+            (_direct_payload(), 6, 3, 0),
+            (_direct_payload(), 6, 3, 7),
+        ],
+    )
+    def test_plv_backends_reject_invalid_inputs_before_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend: PLVBackend,
+        phases: object,
+        t: object,
+        n: object,
+        window: object,
+    ) -> None:
+        _forbid_runtime_load(monkeypatch)
+
+        with pytest.raises((TypeError, ValueError)):
+            backend(phases, t, n, window)
+
+    @pytest.mark.parametrize(
+        "output",
+        [
+            np.array([0.1, np.nan]),
+            np.array([0.1, 1.2]),
+            np.array([0.1], dtype=np.float64),
+            np.array([True, False]),
+            np.array([0.1 + 0.0j, 0.2 + 0.0j]),
+        ],
+    )
+    def test_order_output_contract_rejects_non_physical_backend_payloads(
+        self, output: np.ndarray
+    ) -> None:
+        with pytest.raises((TypeError, ValueError)):
+            market_validation.validate_market_order_output(output, t=2)
+
+    @pytest.mark.parametrize(
+        "output",
+        [
+            np.array([0.1, np.nan, 0.2, 1.0]),
+            np.array([0.1, 1.2, 0.2, 1.0]),
+            np.array([0.1, 0.2, 1.0]),
+            np.array([True, False, True, False]),
+            np.array([0.1 + 0.0j, 0.2 + 0.0j, 0.2 + 0.0j, 1.0 + 0.0j]),
+            np.array([0.2, 0.2, 0.2, 0.2]),
+            np.array([1.0, 0.1, 0.2, 1.0]),
+        ],
+    )
+    def test_plv_output_contract_rejects_non_physical_backend_payloads(
+        self, output: np.ndarray
+    ) -> None:
+        with pytest.raises((TypeError, ValueError)):
+            market_validation.validate_market_plv_output(output, t=2, n=2, window=2)
 
 
 class TestOrderParameterParity:

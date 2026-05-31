@@ -16,6 +16,13 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._market_validation import (
+    validate_market_order_inputs,
+    validate_market_order_output,
+    validate_market_plv_inputs,
+    validate_market_plv_output,
+)
+
 __all__ = ["market_order_parameter_julia", "market_plv_julia"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -47,13 +54,14 @@ def market_order_parameter_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    p, t_i, n_i = validate_market_order_inputs(phases_flat, t, n)
     jl = _ensure()
     result = jl.market_order_parameter(
-        np.ascontiguousarray(phases_flat, dtype=np.float64),
-        int(t),
-        int(n),
+        p,
+        t_i,
+        n_i,
     )
-    return np.asarray(result, dtype=np.float64)
+    return validate_market_order_output(result, t=t_i)
 
 
 def market_plv_julia(
@@ -67,11 +75,17 @@ def market_plv_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    p, t_i, n_i, window_i = validate_market_plv_inputs(
+        phases_flat,
+        t,
+        n,
+        window,
+    )
     jl = _ensure()
     result = jl.market_plv(
-        np.ascontiguousarray(phases_flat, dtype=np.float64),
-        int(t),
-        int(n),
-        int(window),
+        p,
+        t_i,
+        n_i,
+        window_i,
     )
-    return np.asarray(result, dtype=np.float64)
+    return validate_market_plv_output(result, t=t_i, n=n_i, window=window_i)

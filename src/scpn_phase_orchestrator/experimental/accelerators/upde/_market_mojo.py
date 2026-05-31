@@ -17,6 +17,13 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._market_validation import (
+    validate_market_order_inputs,
+    validate_market_order_output,
+    validate_market_plv_inputs,
+    validate_market_plv_output,
+)
+
 __all__ = [
     "_ensure_exe",
     "market_order_parameter_mojo",
@@ -84,10 +91,11 @@ def market_order_parameter_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
-    tokens = ["ORDER", str(int(t)), str(int(n))]
-    tokens.extend(repr(float(x)) for x in np.asarray(phases_flat).ravel().tolist())
-    values = _run_mojo(tokens, expected_lines=int(t), label="ORDER")
-    return np.array(values, dtype=np.float64)
+    p, t_i, n_i = validate_market_order_inputs(phases_flat, t, n)
+    tokens = ["ORDER", str(t_i), str(n_i)]
+    tokens.extend(repr(float(x)) for x in p.tolist())
+    values = _run_mojo(tokens, expected_lines=t_i, label="ORDER")
+    return validate_market_order_output(values, t=t_i)
 
 
 def market_plv_mojo(
@@ -101,12 +109,18 @@ def market_plv_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
-    n_windows = int(t) - int(window) + 1
-    tokens = ["PLV", str(int(t)), str(int(n)), str(int(window))]
-    tokens.extend(repr(float(x)) for x in np.asarray(phases_flat).ravel().tolist())
+    p, t_i, n_i, window_i = validate_market_plv_inputs(
+        phases_flat,
+        t,
+        n,
+        window,
+    )
+    n_windows = t_i - window_i + 1
+    tokens = ["PLV", str(t_i), str(n_i), str(window_i)]
+    tokens.extend(repr(float(x)) for x in p.tolist())
     values = _run_mojo(
         tokens,
-        expected_lines=n_windows * int(n) * int(n),
+        expected_lines=n_windows * n_i * n_i,
         label="PLV",
     )
-    return np.array(values, dtype=np.float64)
+    return validate_market_plv_output(values, t=t_i, n=n_i, window=window_i)

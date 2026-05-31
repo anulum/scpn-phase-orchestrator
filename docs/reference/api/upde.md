@@ -158,6 +158,14 @@ transform, computes Kuramoto order parameter R(t) across assets, classifies
 synchronization regimes (desync/transition/synchronised), and detects
 crash early warning signals (R crossing threshold from below).
 
+Direct Go, Julia, and Mojo market accelerator entrypoints share a validated
+`float64` boundary before optional runtime loading: flattened phase payloads
+must be finite real vectors with exactly `T*N` values; `T`, `N`, and PLV window
+controls must be positive non-boolean integers; the PLV window must not exceed
+`T`; backend `R(t)` outputs must have length `T` and lie in `[0, 1]`; rolling
+PLV outputs must have the expected `(T-window+1)*N*N` cardinality, lie in
+`[0, 1]`, preserve unit diagonals, and remain symmetric.
+
 R(t) → 1 preceding market crashes documented for Black Monday 1987 and
 the 2008 financial crisis (arXiv:1109.1167).
 

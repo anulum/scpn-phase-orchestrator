@@ -17,6 +17,13 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._market_validation import (
+    validate_market_order_inputs,
+    validate_market_order_output,
+    validate_market_plv_inputs,
+    validate_market_plv_output,
+)
+
 __all__ = ["market_order_parameter_go", "market_plv_go"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -65,18 +72,18 @@ def market_order_parameter_go(
     The calculation is delegated to the Go backend.
     """
 
+    p, t_i, n_i = validate_market_order_inputs(phases_flat, t, n)
     lib = _load_lib()
-    p = np.ascontiguousarray(phases_flat, dtype=np.float64)
-    out = np.zeros(int(t), dtype=np.float64)
+    out = np.zeros(t_i, dtype=np.float64)
     rc = lib.MarketOrderParameter(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)),
-        ctypes.c_int(int(n)),
+        ctypes.c_int(t_i),
+        ctypes.c_int(n_i),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go MarketOrderParameter rc={rc}")
-    return out
+    return validate_market_order_output(out, t=t_i)
 
 
 def market_plv_go(
@@ -90,17 +97,22 @@ def market_plv_go(
     The calculation is delegated to the Go backend.
     """
 
+    p, t_i, n_i, window_i = validate_market_plv_inputs(
+        phases_flat,
+        t,
+        n,
+        window,
+    )
     lib = _load_lib()
-    n_windows = int(t) - int(window) + 1
-    p = np.ascontiguousarray(phases_flat, dtype=np.float64)
-    out = np.zeros(n_windows * int(n) * int(n), dtype=np.float64)
+    n_windows = t_i - window_i + 1
+    out = np.zeros(n_windows * n_i * n_i, dtype=np.float64)
     rc = lib.MarketPLV(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)),
-        ctypes.c_int(int(n)),
-        ctypes.c_int(int(window)),
+        ctypes.c_int(t_i),
+        ctypes.c_int(n_i),
+        ctypes.c_int(window_i),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go MarketPLV rc={rc}")
-    return out
+    return validate_market_plv_output(out, t=t_i, n=n_i, window=window_i)
