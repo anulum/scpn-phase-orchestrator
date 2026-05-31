@@ -18,6 +18,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._dimension_validation import (
+    expected_correlation_integral_backend_output,
+    expected_kaplan_yorke_backend_output,
     validate_correlation_integral_backend_inputs,
     validate_correlation_integral_backend_output,
     validate_kaplan_yorke_backend_input,
@@ -99,7 +101,15 @@ def correlation_integral_go(
     )
     if rc != 0:
         raise ValueError(f"Go CorrelationIntegral rc={rc}")
-    return validate_correlation_integral_backend_output(out, eps)
+    expected = expected_correlation_integral_backend_output(
+        traj,
+        t_int,
+        d_int,
+        ii,
+        jj,
+        eps,
+    )
+    return validate_correlation_integral_backend_output(out, eps, expected=expected)
 
 
 def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
@@ -115,4 +125,5 @@ def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go KaplanYorkeDimension rc={rc}")
-    return validate_kaplan_yorke_backend_output(out.value, le)
+    expected = expected_kaplan_yorke_backend_output(le)
+    return validate_kaplan_yorke_backend_output(out.value, le, expected=expected)

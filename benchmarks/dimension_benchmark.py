@@ -55,6 +55,7 @@ def bench_at(t: int, d: int, n_k: int, calls: int) -> dict:
         "n_k": n_k,
         "calls": calls,
         "available": AVAILABLE_BACKENDS,
+        "boundary_contract": "exact_numpy_dimension_reference_validated",
     }
     for backend in AVAILABLE_BACKENDS:
         tt = _bench(backend, traj, eps, calls)
@@ -71,7 +72,8 @@ def main() -> int:
     parser.add_argument("--calls", type=int, default=5)
     args = parser.parse_args()
 
-    print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}\n")
+    print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}")
+    print("Boundary contract: exact NumPy dimension reference validated\n")
     header = f"{'T':>5} {'d':>3} {'K':>3} {'calls':>6}"
     for b in AVAILABLE_BACKENDS:
         header += f" {b + '_ms':>12}"

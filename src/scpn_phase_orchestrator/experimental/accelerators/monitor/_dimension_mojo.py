@@ -18,6 +18,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._dimension_validation import (
+    expected_correlation_integral_backend_output,
+    expected_kaplan_yorke_backend_output,
     validate_correlation_integral_backend_inputs,
     validate_correlation_integral_backend_output,
     validate_kaplan_yorke_backend_input,
@@ -107,7 +109,20 @@ def correlation_integral_mojo(
     tokens.extend(repr(float(x)) for x in eps.tolist())
     tokens.extend(repr(float(x)) for x in traj.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=n_k, label="CI")
-    return validate_correlation_integral_backend_output(result, eps)
+    expected = expected_correlation_integral_backend_output(
+        traj,
+        t_int,
+        d_int,
+        ii,
+        jj,
+        eps,
+    )
+    return validate_correlation_integral_backend_output(
+        result,
+        eps,
+        expected=expected,
+        atol=1e-9,
+    )
 
 
 def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
@@ -118,4 +133,10 @@ def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
     tokens: list[str] = ["KY", str(n)]
     tokens.extend(repr(float(x)) for x in le.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=1, label="KY")
-    return validate_kaplan_yorke_backend_output(result[0], le)
+    expected = expected_kaplan_yorke_backend_output(le)
+    return validate_kaplan_yorke_backend_output(
+        result[0],
+        le,
+        expected=expected,
+        atol=1e-9,
+    )

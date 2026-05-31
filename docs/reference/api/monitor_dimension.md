@@ -176,6 +176,16 @@ Direct backend outputs are checked before return: correlation-integral
 vectors must match the epsilon count, stay finite, lie in ``[0, 1]``,
 and remain non-decreasing as epsilon grows; Kaplan-Yorke outputs must
 be finite real scalars in ``[0, len(lyapunov_exponents)]``.
+Those plausibility checks are not the boundary contract by themselves:
+direct Go, Julia, and Mojo calls also recompute the exact NumPy
+Grassberger-Procaccia result for the supplied pair indices and the exact
+Kaplan-Yorke result for the supplied spectrum before returning. A backend
+that emits a plausible but numerically different ``C(ε)`` vector or
+``D_KY`` scalar fails closed. The public Python dispatcher applies the
+same exact-reference check to accelerated non-Rust calls and falls back
+to the NumPy reference on divergence; the Rust path is exact-checked on
+full-pairs calls, while the documented Rust-owned subsampling path keeps
+the existing API-stability contract and receives shape/range validation.
 The Mojo subprocess bridge additionally requires exact stdout
 cardinality before numeric parsing: ``CI`` emits one scalar line per
 epsilon threshold and ``KY`` emits one scalar line. Missing, extra,
@@ -247,6 +257,10 @@ Observations:
 * **Mojo** is subprocess-bound at every size.
 
 Raw JSON: `python benchmarks/dimension_benchmark.py --output /tmp/dim_bench.json`.
+Each emitted benchmark row includes
+``"boundary_contract": "exact_numpy_dimension_reference_validated"`` so
+stored benchmark artefacts identify the validation boundary in force when
+timings were measured.
 
 ---
 

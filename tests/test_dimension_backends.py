@@ -70,6 +70,8 @@ KyBackend = Callable[[np.ndarray], float]
 
 
 def test__dimension_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(dimension_validation.expected_correlation_integral_backend_output)
+    assert callable(dimension_validation.expected_kaplan_yorke_backend_output)
     assert callable(dimension_validation.validate_correlation_integral_backend_inputs)
     assert callable(dimension_validation.validate_correlation_integral_backend_output)
     assert callable(dimension_validation.validate_kaplan_yorke_backend_input)
@@ -324,6 +326,16 @@ class TestDirectBackendBoundaryContracts:
                 np.array([0.1, 0.2]),
             )
 
+    def test_correlation_integral_output_validation_rejects_exact_divergence(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="exact reference"):
+            dimension_validation.validate_correlation_integral_backend_output(
+                np.array([0.0, 0.5]),
+                np.array([0.1, 0.2]),
+                expected=np.array([0.0, 1.0]),
+            )
+
     @pytest.mark.parametrize(
         ("value", "match"),
         [
@@ -341,6 +353,14 @@ class TestDirectBackendBoundaryContracts:
             dimension_validation.validate_kaplan_yorke_backend_output(
                 value,
                 np.array([0.2, 0.0, -0.5]),
+            )
+
+    def test_kaplan_yorke_output_validation_rejects_exact_divergence(self) -> None:
+        with pytest.raises(ValueError, match="exact reference"):
+            dimension_validation.validate_kaplan_yorke_backend_output(
+                1.0,
+                np.array([0.5, 0.1, -0.2, -0.5]),
+                expected=3.2,
             )
 
     def test_julia_backend_rejects_nonmonotone_correlation_output(
@@ -363,6 +383,47 @@ class TestDirectBackendBoundaryContracts:
                 np.array([0.1, 0.2]),
             )
 
+    def test_julia_backend_rejects_exact_correlation_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        class _FakeJulia:
+            @staticmethod
+            def correlation_integral(*args: object) -> np.ndarray:
+                return np.array([0.0])
+
+        monkeypatch.setattr(dimension_julia, "_ensure", lambda: _FakeJulia())
+
+        with pytest.raises(ValueError, match="exact reference"):
+            correlation_integral_julia(
+                np.array([0.0, 0.05]),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+            )
+
+    def test_mojo_backend_rejects_exact_correlation_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            dimension_mojo,
+            "_run",
+            lambda payload, *, expected_count, label: [0.0],
+        )
+
+        with pytest.raises(ValueError, match="exact reference"):
+            correlation_integral_mojo(
+                np.array([0.0, 0.05]),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+            )
+
     def test_mojo_backend_rejects_out_of_bounds_kaplan_yorke_output(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -374,6 +435,59 @@ class TestDirectBackendBoundaryContracts:
 
         with pytest.raises(ValueError, match="\\[0, spectrum length\\]"):
             kaplan_yorke_dimension_mojo(np.array([0.2, 0.0, -0.5]))
+
+    def test_mojo_backend_rejects_exact_kaplan_yorke_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            dimension_mojo,
+            "_run",
+            lambda payload, *, expected_count, label: [1.0],
+        )
+
+        with pytest.raises(ValueError, match="exact reference"):
+            kaplan_yorke_dimension_mojo(np.array([0.5, 0.1, -0.2, -0.5]))
+
+    def test_public_correlation_integral_falls_back_on_exact_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def _bad_backend(
+            traj_flat: np.ndarray,
+            t: int,
+            d: int,
+            idx_i: np.ndarray,
+            idx_j: np.ndarray,
+            epsilons: np.ndarray,
+        ) -> np.ndarray:
+            return np.zeros(epsilons.size, dtype=np.float64)
+
+        monkeypatch.setattr(dim_mod, "_dispatch", lambda name: _bad_backend)
+        prev = _force("go")
+        try:
+            got = correlation_integral(
+                np.array([[0.0], [0.05]]),
+                np.array([0.1]),
+                max_pairs=10,
+            )
+        finally:
+            _reset(prev)
+
+        np.testing.assert_allclose(got, np.array([1.0]), atol=1e-12)
+
+    def test_public_kaplan_yorke_falls_back_on_exact_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(dim_mod, "_dispatch", lambda name: lambda le: 1.0)
+        prev = _force("go")
+        try:
+            got = kaplan_yorke_dimension(np.array([0.4, -0.2, -0.8]))
+        finally:
+            _reset(prev)
+
+        assert abs(got - 2.25) < 1e-12
 
 
 class TestRustParity:

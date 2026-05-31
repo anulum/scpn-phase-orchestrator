@@ -17,6 +17,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._dimension_validation import (
+    expected_correlation_integral_backend_output,
+    expected_kaplan_yorke_backend_output,
     validate_correlation_integral_backend_inputs,
     validate_correlation_integral_backend_output,
     validate_kaplan_yorke_backend_input,
@@ -64,6 +66,14 @@ def correlation_integral_julia(
         epsilons,
     )
     jl = _ensure()
+    expected = expected_correlation_integral_backend_output(
+        traj,
+        t_int,
+        d_int,
+        ii,
+        jj,
+        eps,
+    )
     return validate_correlation_integral_backend_output(
         jl.correlation_integral(
             traj,
@@ -74,6 +84,7 @@ def correlation_integral_julia(
             eps,
         ),
         eps,
+        expected=expected,
     )
 
 
@@ -82,9 +93,11 @@ def kaplan_yorke_dimension_julia(lyapunov_exponents: FloatArray) -> float:
 
     le = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     jl = _ensure()
+    expected = expected_kaplan_yorke_backend_output(le)
     return validate_kaplan_yorke_backend_output(
         jl.kaplan_yorke_dimension(
             le,
         ),
         le,
+        expected=expected,
     )

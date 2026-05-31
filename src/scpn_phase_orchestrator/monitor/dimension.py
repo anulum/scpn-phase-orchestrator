@@ -264,13 +264,38 @@ def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
     return np.ascontiguousarray(np.clip(ci, 0.0, 1.0), dtype=np.float64)
 
 
-def _validate_ky_dimension(value: object, *, n_exponents: int) -> float:
+def _validate_ci_exact_reference(
+    value: object,
+    *,
+    expected: FloatArray,
+    atol: float,
+) -> FloatArray:
+    result = _validate_ci_values(value, expected_size=int(expected.size))
+    if not np.allclose(result, expected, rtol=0.0, atol=atol):
+        raise ValueError(
+            "correlation integral backend output diverged from exact reference"
+        )
+    return result
+
+
+def _validate_ky_dimension(
+    value: object,
+    *,
+    n_exponents: int,
+    expected: float | None = None,
+    atol: float = 1e-12,
+) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError("kaplan_yorke_dimension must not be a boolean value")
     dimension = _validate_non_negative_float(value, name="kaplan_yorke_dimension")
     if dimension > n_exponents + 1e-12:
         raise ValueError("kaplan_yorke_dimension must not exceed spectrum length")
-    return min(dimension, float(n_exponents))
+    clipped = min(dimension, float(n_exponents))
+    if expected is not None and abs(clipped - expected) > atol:
+        raise ValueError(
+            "kaplan_yorke_dimension backend output diverged from exact reference"
+        )
+    return clipped
 
 
 @dataclass
@@ -349,6 +374,47 @@ def _prepare_pair_indices(
     return idx_i[mask], idx_j[mask]
 
 
+def _correlation_integral_exact_reference(
+    trajectory: FloatArray,
+    idx_i: IntArray,
+    idx_j: IntArray,
+    epsilons: FloatArray,
+) -> FloatArray:
+    if idx_i.size == 0:
+        return np.zeros(epsilons.size, dtype=np.float64)
+    diffs = trajectory[idx_i] - trajectory[idx_j]
+    dists = np.sqrt(np.sum(diffs**2, axis=1))
+    return _validate_ci_values(
+        np.array([np.sum(dists < eps) / dists.size for eps in epsilons]),
+        expected_size=int(epsilons.size),
+    )
+
+
+def _kaplan_yorke_exact_reference(lyapunov_exponents: FloatArray) -> float:
+    if lyapunov_exponents.size == 0:
+        return 0.0
+    le_sorted = np.sort(lyapunov_exponents)[::-1]
+    cumsum = np.cumsum(le_sorted)
+    if cumsum[0] < 0:
+        return 0.0
+
+    j = 0
+    for i in range(len(cumsum)):
+        if cumsum[i] >= 0:
+            j = i
+        else:
+            break
+
+    if j + 1 >= len(le_sorted):
+        return float(len(le_sorted))
+
+    denom = abs(le_sorted[j + 1])
+    if denom == 0:
+        return float(j + 1)
+
+    return float(j + 1) + float(cumsum[j]) / float(denom)
+
+
 def correlation_integral(
     trajectory: object,
     epsilons: object,
@@ -381,6 +447,12 @@ def correlation_integral(
     eps_sorted = _validate_epsilons(epsilons)
     max_pairs = _validate_int_at_least(max_pairs, name="max_pairs", minimum=1)
     seed = _validate_int_at_least(seed, name="seed", minimum=0)
+    pair_result = _prepare_pair_indices(t, max_pairs, seed)
+    if pair_result is None:
+        return np.zeros(eps_sorted.size, dtype=np.float64)
+    idx_i, idx_j = pair_result
+    expected = _correlation_integral_exact_reference(traj, idx_i, idx_j, eps_sorted)
+    full_pairs = idx_i.size == t * (t - 1) // 2
 
     backend_fn = _dispatch("ci")
     if backend_fn is not None and ACTIVE_BACKEND == "rust":
@@ -389,24 +461,26 @@ def correlation_integral(
             backend_fn,
         )
         try:
+            rust_output = fn_rust(
+                np.ascontiguousarray(traj.ravel(), dtype=np.float64),
+                t,
+                d,
+                eps_sorted,
+                max_pairs,
+                seed,
+            )
+            if full_pairs:
+                return _validate_ci_exact_reference(
+                    rust_output,
+                    expected=expected,
+                    atol=1e-12,
+                )
             return _validate_ci_values(
-                fn_rust(
-                    np.ascontiguousarray(traj.ravel(), dtype=np.float64),
-                    t,
-                    d,
-                    eps_sorted,
-                    max_pairs,
-                    seed,
-                ),
+                rust_output,
                 expected_size=int(eps_sorted.size),
             )
         except Exception:
             backend_fn = None
-
-    pair_result = _prepare_pair_indices(t, max_pairs, seed)
-    if pair_result is None:
-        return np.zeros(eps_sorted.size, dtype=np.float64)
-    idx_i, idx_j = pair_result
 
     if backend_fn is not None:
         fn = cast(
@@ -415,7 +489,7 @@ def correlation_integral(
             backend_fn,
         )
         try:
-            return _validate_ci_values(
+            return _validate_ci_exact_reference(
                 fn(
                     np.ascontiguousarray(traj.ravel(), dtype=np.float64),
                     t,
@@ -424,20 +498,13 @@ def correlation_integral(
                     idx_j,
                     eps_sorted,
                 ),
-                expected_size=int(eps_sorted.size),
+                expected=expected,
+                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
             )
         except Exception:
             backend_fn = None
 
-    diffs = traj[idx_i] - traj[idx_j]
-    dists = np.sqrt(np.sum(diffs**2, axis=1))
-    n_pairs_actual = len(dists)
-    if n_pairs_actual == 0:
-        return np.zeros(eps_sorted.size, dtype=np.float64)
-    return _validate_ci_values(
-        np.array([np.sum(dists < eps) / n_pairs_actual for eps in eps_sorted]),
-        expected_size=int(eps_sorted.size),
-    )
+    return expected
 
 
 def correlation_dimension(
@@ -558,6 +625,7 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
     le = _validate_spectrum(lyapunov_exponents)
     if le.size == 0:
         return 0.0
+    expected = _kaplan_yorke_exact_reference(le)
     backend_fn = _dispatch("ky")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray], float]", backend_fn)
@@ -566,28 +634,10 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
             return _validate_ky_dimension(
                 fn(np.ascontiguousarray(le_sorted, dtype=np.float64)),
                 n_exponents=int(le_sorted.size),
+                expected=expected,
+                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
             )
         except Exception:
             backend_fn = None
 
-    le_sorted = np.sort(le)[::-1]
-    cumsum = np.cumsum(le_sorted)
-
-    if cumsum[0] < 0:
-        return 0.0
-
-    j = 0
-    for i in range(len(cumsum)):
-        if cumsum[i] >= 0:
-            j = i
-        else:
-            break
-
-    if j + 1 >= len(le_sorted):
-        return float(len(le_sorted))
-
-    denom = abs(le_sorted[j + 1])
-    if denom == 0:
-        return float(j + 1)
-
-    return float(j + 1) + float(cumsum[j]) / float(denom)
+    return expected

@@ -22,6 +22,8 @@ IntArray: TypeAlias = NDArray[np.int64]
 __all__ = [
     "FloatArray",
     "IntArray",
+    "expected_correlation_integral_backend_output",
+    "expected_kaplan_yorke_backend_output",
     "validate_correlation_integral_backend_inputs",
     "validate_correlation_integral_backend_output",
     "validate_kaplan_yorke_backend_output",
@@ -133,9 +135,56 @@ def validate_kaplan_yorke_backend_input(
     return _validate_float_vector(lyapunov_exponents, name="lyapunov_exponents")
 
 
+def expected_correlation_integral_backend_output(
+    traj_flat: FloatArray,
+    t: int,
+    d: int,
+    idx_i: IntArray,
+    idx_j: IntArray,
+    epsilons: FloatArray,
+) -> FloatArray:
+    """Return the exact Grassberger-Procaccia result for direct backend inputs."""
+
+    if idx_i.size == 0:
+        return np.zeros(epsilons.size, dtype=np.float64)
+    traj = np.ascontiguousarray(traj_flat.reshape(t, d), dtype=np.float64)
+    diffs = traj[idx_i] - traj[idx_j]
+    dists = np.sqrt(np.sum(diffs**2, axis=1))
+    return np.ascontiguousarray(
+        np.array([np.sum(dists < eps) / dists.size for eps in epsilons]),
+        dtype=np.float64,
+    )
+
+
+def expected_kaplan_yorke_backend_output(lyapunov_exponents: FloatArray) -> float:
+    """Return the exact Kaplan-Yorke dimension for a Lyapunov spectrum."""
+
+    spectrum = np.sort(lyapunov_exponents)[::-1]
+    if spectrum.size == 0:
+        return 0.0
+    cumsum = np.cumsum(spectrum)
+    if cumsum[0] < 0:
+        return 0.0
+    j = 0
+    for i, value in enumerate(cumsum):
+        if value >= 0:
+            j = i
+        else:
+            break
+    if j + 1 >= spectrum.size:
+        return float(spectrum.size)
+    denom = abs(float(spectrum[j + 1]))
+    if denom == 0.0:
+        return float(j + 1)
+    return float(j + 1) + float(cumsum[j]) / denom
+
+
 def validate_correlation_integral_backend_output(
     values: object,
     epsilons: object,
+    *,
+    expected: object | None = None,
+    atol: float = 1e-12,
 ) -> FloatArray:
     """Validate a direct-backend Grassberger-Procaccia C(epsilon) vector."""
 
@@ -150,12 +199,24 @@ def validate_correlation_integral_backend_output(
         raise ValueError("correlation_integral values must lie in [0, 1]")
     if np.any(np.diff(result) < -1e-12):
         raise ValueError("correlation_integral must be non-decreasing in epsilon")
-    return np.ascontiguousarray(np.clip(result, 0.0, 1.0), dtype=np.float64)
+    clipped = np.ascontiguousarray(np.clip(result, 0.0, 1.0), dtype=np.float64)
+    if expected is not None:
+        expected_values = _validate_float_vector(expected, name="expected")
+        if expected_values.shape != clipped.shape:
+            raise ValueError("expected correlation_integral shape must match output")
+        if not np.allclose(clipped, expected_values, rtol=0.0, atol=atol):
+            raise ValueError(
+                "correlation_integral backend output must match exact reference"
+            )
+    return clipped
 
 
 def validate_kaplan_yorke_backend_output(
     value: object,
     lyapunov_exponents: object,
+    *,
+    expected: object | None = None,
+    atol: float = 1e-12,
 ) -> float:
     """Validate a direct-backend Kaplan-Yorke dimension estimate."""
 
@@ -173,4 +234,21 @@ def validate_kaplan_yorke_backend_output(
         raise ValueError("kaplan_yorke_dimension must be finite")
     if dimension < -1e-12 or dimension > spectrum.size + 1e-12:
         raise ValueError("kaplan_yorke_dimension must lie in [0, spectrum length]")
-    return min(max(dimension, 0.0), float(spectrum.size))
+    clipped = min(max(dimension, 0.0), float(spectrum.size))
+    if expected is not None:
+        expected_raw = np.asarray(expected)
+        if np.iscomplexobj(expected_raw):
+            raise ValueError("expected kaplan_yorke_dimension must be real-valued")
+        try:
+            expected_value = float(expected_raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "expected kaplan_yorke_dimension must be a finite real scalar"
+            ) from exc
+        if not np.isfinite(expected_value):
+            raise ValueError("expected kaplan_yorke_dimension must be finite")
+        if abs(clipped - expected_value) > atol:
+            raise ValueError(
+                "kaplan_yorke_dimension backend output must match exact reference"
+            )
+    return clipped
