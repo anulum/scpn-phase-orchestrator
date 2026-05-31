@@ -19,7 +19,9 @@ from numpy.typing import NDArray
 
 from ._npe_validation import (
     validate_npe_backend_inputs,
+    validate_npe_backend_output,
     validate_phase_distance_backend_input,
+    validate_phase_distance_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -64,9 +66,7 @@ def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
     tokens = ["PDM", str(n)]
     tokens.extend(repr(float(x)) for x in p.tolist())
     result = _run(" ".join(tokens) + "\n")
-    if len(result) != n * n:
-        raise ValueError(f"Mojo PDM returned {len(result)} values, expected {n * n}")
-    return np.array(result, dtype=np.float64)
+    return validate_phase_distance_backend_output(result, n_phases=n)
 
 
 def compute_npe_mojo(phases: FloatArray, max_radius: float) -> float:
@@ -79,4 +79,6 @@ def compute_npe_mojo(phases: FloatArray, max_radius: float) -> float:
     tokens = ["NPE", str(n), repr(radius)]
     tokens.extend(repr(float(x)) for x in p.tolist())
     result = _run(" ".join(tokens) + "\n")
-    return float(result[0])
+    if len(result) != 1:
+        raise ValueError(f"Mojo NPE returned {len(result)} values, expected 1")
+    return validate_npe_backend_output(result[0])

@@ -92,6 +92,70 @@ def test_backend_array_contracts_are_parameterised() -> None:
 
 
 class TestDirectBackendBoundaryContracts:
+    def test_phase_distance_backend_output_accepts_flat_or_matrix_contract(
+        self,
+    ) -> None:
+        distances = np.array(
+            [
+                0.0,
+                0.25,
+                0.5,
+                0.25,
+                0.0,
+                0.75,
+                0.5,
+                0.75,
+                0.0,
+            ]
+        )
+
+        matrix = npe_validation.validate_phase_distance_backend_output(
+            distances,
+            n_phases=3,
+        )
+
+        assert matrix.shape == (3, 3)
+        np.testing.assert_allclose(matrix, matrix.T, atol=0.0)
+        np.testing.assert_allclose(np.diag(matrix), 0.0, atol=0.0)
+
+    @pytest.mark.parametrize(
+        ("distances", "message"),
+        [
+            (np.array([0.0, 1.0, 1.0]), "size"),
+            (np.array([[0.0, np.nan], [np.nan, 0.0]]), "finite"),
+            (np.array([[0.0, np.pi + 1.0], [np.pi + 1.0, 0.0]]), r"\[0, pi\]"),
+            (np.array([[0.0, 0.25], [0.5, 0.0]]), "symmetric"),
+            (np.array([[0.1, 0.25], [0.25, 0.0]]), "diagonal"),
+            (np.array([[False, 0.25], [0.25, False]], dtype=object), "booleans"),
+            (np.array([[0.0, 0.25j], [0.25j, 0.0]]), "real values"),
+        ],
+    )
+    def test_phase_distance_backend_output_rejects_invalid_physics(
+        self,
+        distances: np.ndarray,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            npe_validation.validate_phase_distance_backend_output(
+                distances,
+                n_phases=2,
+            )
+
+    @pytest.mark.parametrize("score", [0.0, 0.5, 1.0, 1.0 + 5.0e-13])
+    def test_npe_backend_output_accepts_unit_interval_scalars(
+        self,
+        score: float,
+    ) -> None:
+        assert 0.0 <= npe_validation.validate_npe_backend_output(score) <= 1.0
+
+    @pytest.mark.parametrize(
+        "score",
+        [np.bool_(False), np.nan, -1.0e-3, 1.0 + 1.0e-3, 0.5 + 0.0j],
+    )
+    def test_npe_backend_output_rejects_invalid_scalars(self, score: object) -> None:
+        with pytest.raises(ValueError, match="NPE backend output"):
+            npe_validation.validate_npe_backend_output(score)
+
     @pytest.mark.parametrize(
         "fn",
         [

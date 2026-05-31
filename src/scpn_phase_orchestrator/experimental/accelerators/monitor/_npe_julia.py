@@ -18,7 +18,9 @@ from numpy.typing import NDArray
 
 from ._npe_validation import (
     validate_npe_backend_inputs,
+    validate_npe_backend_output,
     validate_phase_distance_backend_input,
+    validate_phase_distance_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -47,9 +49,9 @@ def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
 
     p = validate_phase_distance_backend_input(phases)
     jl = _ensure()
-    return np.asarray(
+    return validate_phase_distance_backend_output(
         jl.phase_distance_matrix(p),
-        dtype=np.float64,
+        n_phases=p.size,
     )
 
 
@@ -58,7 +60,7 @@ def compute_npe_julia(phases: FloatArray, max_radius: float) -> float:
 
     p, radius = validate_npe_backend_inputs(phases, max_radius)
     jl = _ensure()
-    return float(
+    return validate_npe_backend_output(
         jl.compute_npe(
             p,
             radius,

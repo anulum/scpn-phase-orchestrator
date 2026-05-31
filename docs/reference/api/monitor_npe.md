@@ -174,7 +174,13 @@ real one-dimensional ``float64`` arrays with boolean aliases and
 complex samples rejected before optional runtime loading. Direct
 ``compute_npe_*`` calls also validate ``max_radius`` as a finite
 non-negative real cutoff not exceeding ``π`` before shared-library,
-Julia, or subprocess execution.
+Julia, or subprocess execution. Direct backend outputs are also
+validated before return: distance outputs must contain exactly
+``N × N`` finite real values, reshape to a symmetric matrix with
+zero diagonal, and remain bounded in ``[0, π]``; scalar NPE outputs
+must be finite real values in ``[0, 1]``. This keeps optional
+polyglot bridges fail-closed if a shared library, Julia side-file,
+or subprocess emits malformed numerical payloads.
 
 ---
 
