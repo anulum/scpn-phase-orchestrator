@@ -38,7 +38,7 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def _run(payload: str) -> list[float]:
+def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -51,7 +51,21 @@ def _run(payload: str) -> list[float]:
         raise ValueError(
             f"Mojo chimera returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [float(line) for line in proc.stdout.strip().splitlines() if line]
+    lines = proc.stdout.splitlines()
+    if len(lines) != expected_count:
+        raise ValueError(
+            f"Mojo {label} returned {len(lines)} scalar values, "
+            f"expected {expected_count}"
+        )
+    values: list[float] = []
+    for line in lines:
+        try:
+            values.append(float(line))
+        except ValueError as exc:
+            raise ValueError(
+                f"Mojo {label} emitted a non-scalar chimera value: {line!r}"
+            ) from exc
+    return values
 
 
 def local_order_parameter_mojo(
@@ -67,7 +81,5 @@ def local_order_parameter_mojo(
     tokens: list[str] = ["CHI", str(n)]
     tokens.extend(repr(float(x)) for x in phases_vec.tolist())
     tokens.extend(repr(float(x)) for x in knm_vec.tolist())
-    result = _run(" ".join(tokens) + "\n")
-    if len(result) != n:
-        raise ValueError(f"Mojo CHI returned {len(result)} values, expected {n}")
+    result = _run(" ".join(tokens) + "\n", expected_count=n, label="CHI")
     return validate_chimera_backend_output(result, n)

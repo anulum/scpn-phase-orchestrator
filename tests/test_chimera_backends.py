@@ -17,6 +17,7 @@ All backends agree with the Python reference within:
 from __future__ import annotations
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -173,11 +174,45 @@ class TestDirectBackendBoundaryContracts:
     def test_mojo_backend_rejects_nonfinite_output_before_return(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(chimera_mojo, "_run", lambda payload: [0.25, np.inf])
+        def _fake_run(payload: str, *, expected_count: int, label: str) -> list[float]:
+            assert expected_count == 2
+            assert label == "CHI"
+            return [0.25, np.inf]
+
+        monkeypatch.setattr(chimera_mojo, "_run", _fake_run)
         phases, knm = _problem(12, n=2)
 
         with pytest.raises(ValueError, match="finite"):
             local_order_parameter_mojo(phases, knm.ravel(), 2)
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "expected 2"),
+            ("0.25\n", "expected 2"),
+            ("0.25\n\n0.75\n", "expected 2"),
+            ("0.25\nnot-a-scalar\n", "non-scalar chimera value"),
+        ],
+    )
+    def test_mojo_subprocess_stdout_contract_rejects_malformed_local_order(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(chimera_mojo, "_ensure_exe", lambda: "chimera_mojo")
+        monkeypatch.setattr(
+            chimera_mojo.subprocess,
+            "run",
+            lambda *args, **kwargs: SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            chimera_mojo._run("CHI 2 0 1 0 1 1 0\n", expected_count=2, label="CHI")
 
 
 class TestRustParity:

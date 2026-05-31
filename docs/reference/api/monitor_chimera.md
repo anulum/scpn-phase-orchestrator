@@ -159,6 +159,12 @@ Empty direct calls preserve the Python public contract by returning an empty
 local-order vector before shared-library loading, Julia initialisation, or
 subprocess execution.
 
+For the Mojo subprocess adapter, stdout is part of the backend boundary:
+`CHI` must emit exactly one scalar line per oscillator. Missing rows, extra
+rows, blank-line insertion, and non-scalar tokens are rejected before the
+result reaches the shared physical-interval validation. This prevents text
+transport corruption from being normalised into a plausible local-order vector.
+
 Measured parity on a 20-oscillator sparse-``K`` problem: all four
 non-Python backends within ``1.1e-16`` of the Python reference —
 bit-equivalent under the test env.
