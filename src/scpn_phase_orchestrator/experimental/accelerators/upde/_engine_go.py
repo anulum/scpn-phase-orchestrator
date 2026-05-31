@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation import (
+    validate_upde_backend_inputs,
+    validate_upde_backend_output,
+)
+
 __all__ = ["upde_run_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -76,31 +81,52 @@ def upde_run_go(
     The calculation is delegated to the Go backend.
     """
 
+    (
+        p,
+        o,
+        k,
+        a,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+        method_s,
+        n_substeps_i,
+        atol_f,
+        rtol_f,
+    ) = validate_upde_backend_inputs(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+        method,
+        n_substeps,
+        atol,
+        rtol,
+    )
+    n = int(p.size)
+    if n_steps_i == 0:
+        return p.copy()
     lib = _load_lib()
-    if method not in _METHOD_IDS:
-        raise ValueError(
-            f"unknown method {method!r}; expected one of {list(_METHOD_IDS)}"
-        )
-    n = int(phases.size)
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64).copy()
-    o = np.ascontiguousarray(omegas.ravel(), dtype=np.float64)
-    k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
-    a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
     rc = lib.UPDERun(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         o.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         k.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(n),
-        ctypes.c_double(float(zeta)),
-        ctypes.c_double(float(psi)),
-        ctypes.c_double(float(dt)),
-        ctypes.c_int(int(n_steps)),
-        ctypes.c_int(int(_METHOD_IDS[method])),
-        ctypes.c_int(int(n_substeps)),
-        ctypes.c_double(float(atol)),
-        ctypes.c_double(float(rtol)),
+        ctypes.c_double(zeta_f),
+        ctypes.c_double(psi_f),
+        ctypes.c_double(dt_f),
+        ctypes.c_int(n_steps_i),
+        ctypes.c_int(_METHOD_IDS[method_s]),
+        ctypes.c_int(n_substeps_i),
+        ctypes.c_double(atol_f),
+        ctypes.c_double(rtol_f),
     )
     if rc != 0:
         raise ValueError(f"Go UPDERun rc={rc}")
-    return p
+    return validate_upde_backend_output(p, n=n)

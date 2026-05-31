@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation import (
+    validate_upde_backend_inputs,
+    validate_upde_backend_output,
+)
+
 __all__ = ["upde_run_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -55,23 +60,55 @@ def upde_run_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    (
+        p,
+        o,
+        k,
+        a,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+        method_s,
+        n_substeps_i,
+        atol_f,
+        rtol_f,
+    ) = validate_upde_backend_inputs(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+        method,
+        n_substeps,
+        atol,
+        rtol,
+    )
+    n = int(p.size)
+    if n_steps_i == 0:
+        return p.copy()
     jl = _ensure()
-    n = int(phases.size)
-    return np.asarray(
-        jl.upde_run(
-            np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-            np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-            np.ascontiguousarray(knm.ravel(), dtype=np.float64),
-            np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
-            n,
-            float(zeta),
-            float(psi),
-            float(dt),
-            int(n_steps),
-            str(method),
-            int(n_substeps),
-            float(atol),
-            float(rtol),
+    return validate_upde_backend_output(
+        np.asarray(
+            jl.upde_run(
+                p,
+                o,
+                k,
+                a,
+                n,
+                zeta_f,
+                psi_f,
+                dt_f,
+                n_steps_i,
+                method_s,
+                n_substeps_i,
+                atol_f,
+                rtol_f,
+            ),
+            dtype=np.float64,
         ),
-        dtype=np.float64,
+        n=n,
     )

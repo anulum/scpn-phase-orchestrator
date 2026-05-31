@@ -78,6 +78,17 @@ First-order Kuramoto ODE: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) +
 Supports Euler, RK4, and RK45 (adaptive) integration. Optional Rust FFI
 acceleration via `spo_kernel.PyUPDEStepper`.
 
+Direct Go, Julia, and Mojo accelerator entrypoints share the same boundary
+contract before optional runtime loading: phase and frequency vectors must be
+finite real one-dimensional `float64` arrays with matching length; coupling
+and phase-lag matrices must be finite real square matrices (or flattened
+square matrices) matching oscillator count; the coupling diagonal must be
+exactly zero to exclude self-coupling; `dt`, `atol`, and `rtol` must be
+positive finite scalars; `n_steps` must be a non-negative integer; and
+`n_substeps` must be a positive integer. A zero-step direct call returns a
+copy of the initial phase vector without requiring the optional backend
+binary or runtime.
+
 ::: scpn_phase_orchestrator.upde.engine
     options:
       members: false

@@ -18,6 +18,7 @@ integrators. Tolerances:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -40,6 +41,23 @@ from scpn_phase_orchestrator.upde.engine import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+DirectBackend = Callable[
+    [
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        float,
+        float,
+        float,
+        int,
+        str,
+        int,
+        float,
+        float,
+    ],
+    np.ndarray,
+]
 
 
 def _force(backend: str) -> str:
@@ -79,6 +97,88 @@ def _problem(seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0):
         "rtol": 1e-3,
     }
     return phases, omegas, knm, alpha, kwargs
+
+
+def _direct_payload(seed: int = 13):
+    phases, omegas, knm, alpha, kwargs = _problem(seed)
+    return (
+        phases,
+        omegas,
+        knm,
+        alpha,
+        kwargs["zeta"],
+        kwargs["psi"],
+        kwargs["dt"],
+        kwargs["n_steps"],
+        kwargs["method"],
+        kwargs["n_substeps"],
+        kwargs["atol"],
+        kwargs["rtol"],
+    )
+
+
+DIRECT_BACKENDS = (upde_run_go, upde_run_julia, upde_run_mojo)
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    @pytest.mark.parametrize(
+        ("index", "replacement"),
+        [
+            (0, lambda payload: payload[0].reshape(1, -1)),
+            (0, lambda payload: payload[0].astype(bool)),
+            (0, lambda payload: payload[0].astype(np.complex128) + 1j),
+            (0, lambda payload: np.array([np.nan, *payload[0][1:]])),
+            (1, lambda payload: payload[1][:-1]),
+            (1, lambda payload: payload[1].astype(bool)),
+            (1, lambda payload: np.array([np.inf, *payload[1][1:]])),
+            (2, lambda payload: payload[2][:-1, :]),
+            (2, lambda payload: payload[2].astype(bool)),
+            (2, lambda payload: payload[2].astype(np.complex128) + 1j),
+            (2, lambda payload: payload[2] + np.eye(payload[2].shape[0])),
+            (3, lambda payload: payload[3][:-1, :]),
+            (3, lambda payload: payload[3].astype(np.complex128) + 1j),
+            (3, lambda payload: np.full_like(payload[3], np.nan)),
+            (4, lambda payload: True),
+            (4, lambda payload: float("inf")),
+            (5, lambda payload: float("nan")),
+            (6, lambda payload: 0.0),
+            (6, lambda payload: float("nan")),
+            (7, lambda payload: True),
+            (7, lambda payload: -1),
+            (8, lambda payload: 1),
+            (8, lambda payload: "bogus"),
+            (9, lambda payload: 0),
+            (9, lambda payload: True),
+            (10, lambda payload: 0.0),
+            (10, lambda payload: float("nan")),
+            (11, lambda payload: 0.0),
+            (11, lambda payload: float("nan")),
+        ],
+    )
+    def test_invalid_inputs_fail_before_optional_runtime_loading(
+        self,
+        backend: DirectBackend,
+        index: int,
+        replacement: Callable[[tuple], object],
+    ) -> None:
+        """Direct Go/Julia/Mojo wrappers enforce the same scientific boundary."""
+
+        payload = list(_direct_payload())
+        payload[index] = replacement(tuple(payload))
+        with pytest.raises((TypeError, ValueError)):
+            backend(*payload)
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    def test_zero_steps_returns_initial_phase_without_optional_runtime(
+        self,
+        backend: DirectBackend,
+    ) -> None:
+        payload = list(_direct_payload())
+        payload[7] = 0
+        result = backend(*payload)
+        np.testing.assert_allclose(result, payload[0], atol=0.0)
+        assert result is not payload[0]
 
 
 class TestRustParity:

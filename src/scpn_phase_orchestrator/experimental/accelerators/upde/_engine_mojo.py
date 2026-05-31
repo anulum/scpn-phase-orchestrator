@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation import (
+    validate_upde_backend_inputs,
+    validate_upde_backend_output,
+)
+
 __all__ = ["_ensure_exe", "upde_run_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -69,28 +74,51 @@ def upde_run_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
-    if method not in _METHOD_IDS:
-        raise ValueError(
-            f"unknown method {method!r}; expected one of {list(_METHOD_IDS)}"
-        )
-    n = int(phases.size)
+    (
+        p,
+        o,
+        k,
+        a,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+        method_s,
+        n_substeps_i,
+        atol_f,
+        rtol_f,
+    ) = validate_upde_backend_inputs(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+        method,
+        n_substeps,
+        atol,
+        rtol,
+    )
+    n = int(p.size)
+    if n_steps_i == 0:
+        return p.copy()
     tokens: list[str] = [
         "RUN",
         str(n),
-        repr(float(zeta)),
-        repr(float(psi)),
-        repr(float(dt)),
-        str(int(n_steps)),
-        str(int(_METHOD_IDS[method])),
-        str(int(n_substeps)),
-        repr(float(atol)),
-        repr(float(rtol)),
+        repr(zeta_f),
+        repr(psi_f),
+        repr(dt_f),
+        str(n_steps_i),
+        str(_METHOD_IDS[method_s]),
+        str(n_substeps_i),
+        repr(atol_f),
+        repr(rtol_f),
     ]
-    tokens.extend(repr(float(x)) for x in phases.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in omegas.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in knm.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in alpha.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in p.tolist())
+    tokens.extend(repr(float(x)) for x in o.tolist())
+    tokens.extend(repr(float(x)) for x in k.tolist())
+    tokens.extend(repr(float(x)) for x in a.tolist())
     result = _run(" ".join(tokens) + "\n")
-    if len(result) != n:
-        raise ValueError(f"Mojo RUN returned {len(result)} values, expected {n}")
-    return np.array(result, dtype=np.float64)
+    return validate_upde_backend_output(np.array(result, dtype=np.float64), n=n)
