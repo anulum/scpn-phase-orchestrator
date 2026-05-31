@@ -24,6 +24,7 @@ from __future__ import annotations
 import sys
 import types
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -318,6 +319,48 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match=message):
             fn(embedded, t, m)
+
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("0.0\n\n1.0\n", 2, "DE", "Mojo DE returned 3 lines"),
+            ("\n0.0\n", 1, "MI", "Mojo MI returned 2 lines"),
+            ("0.0\n1.0\n2.0\n", 2, "NN", "Mojo NN returned 3 lines"),
+        ],
+    )
+    def test_mojo_runner_rejects_raw_stdout_cardinality_mismatches(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.experimental.accelerators.monitor."
+            "_embedding_mojo._ensure_exe",
+            lambda: "embedding_mojo",
+        )
+        from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+            _embedding_mojo,
+        )
+
+        monkeypatch.setattr(
+            _embedding_mojo.subprocess,
+            "run",
+            lambda *args, **kwargs: SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _embedding_mojo._run(
+                "DE 2 1 1 0 1\n",
+                expected_count=expected_count,
+                label=label,
+            )
 
 
 class TestDelayEmbedParity:

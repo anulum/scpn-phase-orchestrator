@@ -419,6 +419,10 @@ Boolean aliases and complex samples are rejected before the
 Rust/Mojo/Julia/Go backend chain because Takens delay coordinates,
 Fraser-Swinney mutual information, and false-nearest-neighbour
 distances are defined over real scalar observations.
+The Mojo subprocess adapter also validates raw stdout cardinality for
+delay-coordinate rows, mutual-information scalars, and nearest-neighbour
+distance/index pairs before numeric parsing, so blank-line insertion or
+missing rows cannot be normalised into a plausible embedding payload.
 
 **Usage:**
 
