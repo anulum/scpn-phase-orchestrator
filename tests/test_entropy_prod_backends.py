@@ -17,6 +17,7 @@ Tolerances:
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -142,6 +143,35 @@ def test_mojo_backend_rejects_nonfinite_entropy_output(
 
     with pytest.raises(ValueError, match="finite"):
         entropy_production_rate_mojo(phases, omegas, knm, 0.5, 0.01)
+
+
+@pytest.mark.parametrize(
+    ("stdout", "match"),
+    [
+        ("", "exactly one scalar line"),
+        ("0.1\n0.2\n", "exactly one scalar line"),
+        ("not-a-number\n", "non-scalar"),
+        ("-0.01\n", "non-negative"),
+    ],
+)
+def test_mojo_runner_rejects_malformed_entropy_stdout(
+    stdout: str,
+    match: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(_entropy_prod_mojo, "_ensure_exe", lambda: "entropy_prod_mojo")
+    monkeypatch.setattr(
+        _entropy_prod_mojo.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=0,
+            stdout=stdout,
+            stderr="",
+        ),
+    )
+
+    with pytest.raises(ValueError, match=match):
+        _entropy_prod_mojo._run("EP 2 0.5 0.01 0 1 0 0 0 0 0 0\n")
 
 
 def test_backend_array_contracts_are_parameterised() -> None:

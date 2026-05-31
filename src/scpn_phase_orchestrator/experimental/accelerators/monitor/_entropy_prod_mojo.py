@@ -51,8 +51,19 @@ def _run(payload: str) -> float:
         raise ValueError(
             f"Mojo entropy_prod returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    line = proc.stdout.strip().splitlines()[0]
-    return float(line)
+    lines = proc.stdout.strip().splitlines()
+    if len(lines) != 1:
+        raise ValueError(
+            f"Mojo entropy_prod must emit exactly one scalar line, got {len(lines)}"
+        )
+    try:
+        value = float(lines[0])
+    except ValueError as exc:
+        raise ValueError(
+            f"Mojo entropy_prod emitted a non-scalar entropy-production value: "
+            f"{lines[0]!r}"
+        ) from exc
+    return validate_entropy_prod_backend_output(value)
 
 
 def entropy_production_rate_mojo(

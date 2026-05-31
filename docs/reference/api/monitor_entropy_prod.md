@@ -172,7 +172,10 @@ allocations per call.
 
 Stdin executable with one verb (`EP`). The body is a direct
 transliteration of the Rust / Go kernels. A single `print` line
-outputs the scalar result.
+outputs the scalar result. The Python bridge rejects empty stdout,
+multi-line stdout, non-scalar text, non-finite values, and negative
+rates before returning to callers, so subprocess transport errors cannot
+silently pass as physical entropy-production values.
 
 ### 4.5 Python (`monitor/entropy_prod.py`)
 
