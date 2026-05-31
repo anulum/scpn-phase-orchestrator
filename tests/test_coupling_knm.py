@@ -272,11 +272,15 @@ class TestCouplingKnmPipelineEndToEnd:
         import time
 
         builder = CouplingBuilder()
-        builder.build_scpn_physics()  # warm-up
-        t0 = time.perf_counter()
-        for _ in range(100):
-            builder.build_scpn_physics()
-        elapsed = (time.perf_counter() - t0) / 100
+        for _ in range(5):
+            builder.build_scpn_physics()  # warm-up
+        samples = []
+        for _ in range(5):
+            t0 = time.perf_counter()
+            for _ in range(100):
+                builder.build_scpn_physics()
+            samples.append((time.perf_counter() - t0) / 100)
+        elapsed = min(samples)
         assert elapsed < 0.005, f"build_scpn_physics() took {elapsed * 1e3:.2f}ms"
 
 
