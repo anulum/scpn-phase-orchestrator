@@ -17,16 +17,16 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 |---|---:|
 | Package version | 0.6.2 |
 | Public API exports | 24 |
-| Python package modules | 419 |
+| Python package modules | 429 |
 | Core Engine modules | 224 |
 | Runtime/Serving modules | 46 |
 | Integration modules | 24 |
-| Research/Experimental modules | 122 |
+| Research/Experimental modules | 132 |
 | Domainpack files | 36 |
 | Rust kernel files | 91 |
 | Optional extras | 15 |
 | Python test files | 511 |
-| Public documentation pages | 171 |
+| Public documentation pages | 173 |
 | GitHub Actions workflows | 10 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — psychedelic backend boundary validation
+
+"""Shared validation for direct psychedelic accelerator calls."""
+
+from __future__ import annotations
+
+from numbers import Integral
+from typing import TypeAlias
+
+import numpy as np
+from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+
+__all__ = ["validate_psychedelic_backend_inputs"]
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def _validate_phase_vector(value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError("phases must not contain boolean values")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("phases must be real-valued")
+    try:
+        phases = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases must be a finite one-dimensional float array") from exc
+    if phases.ndim != 1:
+        raise ValueError(f"phases must be one-dimensional, got shape {phases.shape}")
+    if not np.all(np.isfinite(phases)):
+        raise ValueError("phases must contain only finite values")
+    return np.ascontiguousarray(phases, dtype=np.float64)
+
+
+def _validate_n_bins(value: object) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        raise TypeError("n_bins must be an integer greater than or equal to 2")
+    n_bins = int(value)
+    if n_bins < 2:
+        raise ValueError("n_bins must be greater than or equal to 2")
+    return n_bins
+
+
+def validate_psychedelic_backend_inputs(
+    phases: object,
+    n_bins: object,
+) -> tuple[FloatArray, int]:
+    """Validate entropy inputs before optional runtime loading."""
+
+    return _validate_phase_vector(phases), _validate_n_bins(n_bins)

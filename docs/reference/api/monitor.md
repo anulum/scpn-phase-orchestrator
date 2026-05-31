@@ -453,6 +453,12 @@ coupling-reduction backend matrices before results are accepted. This preserves
 the circular Shannon entropy and Kuramoto coupling semantics over real-valued
 phase observations; it is not a clinical, dosage, or actuation interface.
 
+Direct accelerator boundary contract: Go, Julia, and Mojo entropy adapters use
+one shared `float64` validation path before loading shared-library, Julia, or
+subprocess runtimes. Empty phase samples return zero entropy without requiring
+optional runtimes, matching the public Python fallback and preserving the
+Shannon special case for an empty empirical distribution.
+
 ::: scpn_phase_orchestrator.monitor.psychedelic
 
 ## Fractal Dimension

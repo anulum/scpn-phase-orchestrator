@@ -16,40 +16,14 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from ._psychedelic_validation import validate_psychedelic_backend_inputs
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["entropy_from_phases_julia"]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "psychedelic.jl"
 _JULIA_MODULE: Any | None = None
-
-
-def _contains_boolean_alias(value: object) -> bool:
-    try:
-        raw = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
-        return False
-    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
-
-
-def _validated_backend_inputs(phases: object, n_bins: object) -> tuple[FloatArray, int]:
-    if _contains_boolean_alias(phases):
-        raise ValueError("phases must not contain boolean values")
-    raw = np.asarray(phases)
-    if np.iscomplexobj(raw):
-        raise ValueError("phases must contain real-valued samples")
-    try:
-        phase_values = raw.astype(np.float64, copy=True).ravel()
-    except (TypeError, ValueError) as exc:
-        raise ValueError("phases must be a finite real-valued vector") from exc
-    if not np.all(np.isfinite(phase_values)):
-        raise ValueError("phases must contain only finite values")
-    if isinstance(n_bins, (bool, np.bool_)) or not isinstance(n_bins, int):
-        raise TypeError("n_bins must be an integer greater than or equal to 2")
-    bin_count = int(n_bins)
-    if bin_count < 2:
-        raise ValueError("n_bins must be greater than or equal to 2")
-    return np.ascontiguousarray(phase_values, dtype=np.float64), bin_count
 
 
 def _ensure() -> Any:
@@ -68,7 +42,9 @@ def _ensure() -> Any:
 def entropy_from_phases_julia(phases: FloatArray, n_bins: int) -> float:
     """Compute phase-distribution entropy through the Julia backend."""
 
-    phase_values, bin_count = _validated_backend_inputs(phases, n_bins)
+    phase_values, bin_count = validate_psychedelic_backend_inputs(phases, n_bins)
+    if phase_values.size == 0:
+        return 0.0
     jl = _ensure()
     return cast(
         "float",

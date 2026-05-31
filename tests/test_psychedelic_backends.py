@@ -14,6 +14,7 @@ the subprocess text round-trip on the bin-edge float comparisons.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -38,6 +39,7 @@ entropy_from_phases_julia = _psychedelic_julia.entropy_from_phases_julia
 entropy_from_phases_mojo = _psychedelic_mojo.entropy_from_phases_mojo
 
 TWO_PI = 2.0 * np.pi
+EntropyBackend = Callable[[np.ndarray, object], float]
 
 
 def _force(backend: str) -> str:
@@ -74,32 +76,52 @@ def test_backend_array_contracts_are_parameterised() -> None:
         assert "float64" in str(hints["phases"])
 
 
-@pytest.mark.parametrize(
-    "fn",
-    [
-        entropy_from_phases_go,
-        entropy_from_phases_julia,
-        entropy_from_phases_mojo,
-    ],
-)
-@pytest.mark.parametrize(
-    ("phases", "n_bins", "error"),
-    [
-        (np.array([0.0, True], dtype=object), 4, ValueError),
-        (np.array([0.0, 1.0 + 0.0j]), 4, ValueError),
-        (np.array([0.0, np.inf]), 4, ValueError),
-        (np.linspace(0.0, 1.0, 4), np.bool_(True), TypeError),
-        (np.linspace(0.0, 1.0, 4), 1, ValueError),
-    ],
-)
-def test_direct_backend_adapters_reject_invalid_inputs_before_runtime_loading(
-    fn,
-    phases: np.ndarray,
-    n_bins: object,
-    error: type[Exception],
-) -> None:
-    with pytest.raises(error):
-        fn(phases, n_bins)  # type: ignore[arg-type]
+class TestDirectBackendBoundaryContracts:
+    """Direct optional psychedelic backends validate before runtime loading."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            entropy_from_phases_go,
+            entropy_from_phases_julia,
+            entropy_from_phases_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("phases", "n_bins", "error", "match"),
+        [
+            (np.array([0.0, True], dtype=object), 4, ValueError, "boolean"),
+            (np.array([0.0, 1.0 + 0.0j]), 4, ValueError, "real-valued"),
+            (np.array([0.0, np.inf]), 4, ValueError, "finite"),
+            (np.array([[0.0, 1.0]]), 4, ValueError, "one-dimensional"),
+            (np.linspace(0.0, 1.0, 4), np.bool_(True), TypeError, "n_bins"),
+            (np.linspace(0.0, 1.0, 4), 1, ValueError, "n_bins"),
+        ],
+    )
+    def test_validation_precedes_runtime_load(
+        self,
+        backend: EntropyBackend,
+        phases: np.ndarray,
+        n_bins: object,
+        error: type[Exception],
+        match: str,
+    ) -> None:
+        with pytest.raises(error, match=match):
+            backend(phases, n_bins)
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            entropy_from_phases_go,
+            entropy_from_phases_julia,
+            entropy_from_phases_mojo,
+        ],
+    )
+    def test_empty_phase_entropy_returns_zero_before_runtime_load(
+        self,
+        backend: EntropyBackend,
+    ) -> None:
+        assert backend(np.array([], dtype=np.float64), 36) == 0.0
 
 
 class TestRustParity:
