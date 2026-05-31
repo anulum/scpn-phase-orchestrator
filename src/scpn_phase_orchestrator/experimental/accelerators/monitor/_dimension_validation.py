@@ -39,6 +39,22 @@ def _contains_boolean_alias(raw: np.ndarray) -> bool:
     return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
+
+
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
@@ -52,7 +68,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -70,7 +86,7 @@ def _validate_index_vector(value: object, *, name: str, upper_bound: int) -> Int
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError(f"{name} must contain integer indices")
     try:
         numeric = raw.astype(np.float64, copy=True)
@@ -224,7 +240,7 @@ def validate_kaplan_yorke_backend_output(
     if isinstance(value, (bool, np.bool_)):
         raise ValueError("kaplan_yorke_dimension must not be a boolean value")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("kaplan_yorke_dimension must be real-valued")
     try:
         dimension = float(raw)
@@ -237,7 +253,7 @@ def validate_kaplan_yorke_backend_output(
     clipped = min(max(dimension, 0.0), float(spectrum.size))
     if expected is not None:
         expected_raw = np.asarray(expected)
-        if np.iscomplexobj(expected_raw):
+        if _has_complex_payload(expected):
             raise ValueError("expected kaplan_yorke_dimension must be real-valued")
         try:
             expected_value = float(expected_raw)

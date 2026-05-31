@@ -91,6 +91,7 @@ class TestCorrelationIntegral:
             np.zeros((2, 3, 4), dtype=np.float64),
             np.array([0.0, True], dtype=object),
             np.array([0.0 + 1.0j, 1.0 + 0.0j], dtype=np.complex128),
+            np.array([0.0 + 1.0j, 1.0], dtype=object),
             [["not-a-point"]],
         ],
     )
@@ -107,6 +108,7 @@ class TestCorrelationIntegral:
             np.zeros((1, 1), dtype=np.float64),
             np.array([0.1, True], dtype=object),
             np.array([0.1 + 1.0j], dtype=np.complex128),
+            np.array([0.1 + 1.0j], dtype=object),
             ["not-epsilon"],
         ],
     )
@@ -229,6 +231,7 @@ class TestKaplanYorkeDimension:
             np.zeros((2, 2), dtype=np.float64),
             np.array([0.1, True], dtype=object),
             np.array([0.1 + 1.0j, -0.2 + 0.0j], dtype=np.complex128),
+            np.array([0.1 + 1.0j, -0.2], dtype=object),
             ["not-an-exponent"],
         ],
     )
@@ -270,6 +273,7 @@ class TestCorrelationDimensionResult:
             [0.1, True],
             [np.nan, 1.0],
             [0.1 + 1.0j, 1.0 + 0.0j],
+            np.array([0.1 + 1.0j, 1.0], dtype=object),
             [[0.1, 1.0]],
         ],
     )
@@ -303,6 +307,7 @@ class TestCorrelationDimensionResult:
             [0.25],
             [0.25, True],
             [0.25 + 1.0j, 0.75 + 0.0j],
+            np.array([0.25 + 1.0j, 0.75], dtype=object),
             [0.25, np.nan],
             [0.25, 1.1],
             [0.75, 0.25],
@@ -318,7 +323,15 @@ class TestCorrelationDimensionResult:
                 scaling_range=(0.1, 1.0),
             )
 
-    @pytest.mark.parametrize("slope", [[1.0, 2.0, 3.0], [np.nan], [[1.0]]])
+    @pytest.mark.parametrize(
+        "slope",
+        [
+            [1.0, 2.0, 3.0],
+            [np.nan],
+            [[1.0]],
+            np.array([1.0 + 0.1j], dtype=object),
+        ],
+    )
     def test_rejects_invalid_slope(self, slope: Any) -> None:
         with pytest.raises(ValueError, match="slope"):
             CorrelationDimensionResult(

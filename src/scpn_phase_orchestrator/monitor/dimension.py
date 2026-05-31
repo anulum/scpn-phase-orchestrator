@@ -158,11 +158,27 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
+
+
 def _validate_trajectory(trajectory: object) -> FloatArray:
     raw = np.asarray(trajectory)
     if _contains_boolean_alias(trajectory):
         raise ValueError("trajectory must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(trajectory):
         raise ValueError("trajectory must contain real-valued phase-space samples")
     try:
         traj = raw.astype(np.float64, copy=True)
@@ -181,7 +197,7 @@ def _validate_epsilons(epsilons: object) -> FloatArray:
     raw = np.asarray(epsilons)
     if _contains_boolean_alias(epsilons):
         raise ValueError("epsilons must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(epsilons):
         raise ValueError("epsilons must contain real-valued distance thresholds")
     try:
         eps = raw.astype(np.float64, copy=True)
@@ -216,7 +232,7 @@ def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
     raw = np.asarray(lyapunov_exponents)
     if _contains_boolean_alias(lyapunov_exponents):
         raise ValueError("lyapunov_exponents must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(lyapunov_exponents):
         raise ValueError("lyapunov_exponents must contain real-valued exponents")
     try:
         le = raw.astype(np.float64, copy=True)
@@ -244,7 +260,7 @@ def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("correlation integral output must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("correlation integral output must contain real values")
     try:
         ci = raw.astype(np.float64, copy=True)
@@ -287,6 +303,8 @@ def _validate_ky_dimension(
 ) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError("kaplan_yorke_dimension must not be a boolean value")
+    if _has_complex_payload(value):
+        raise ValueError("kaplan_yorke_dimension must be real-valued")
     dimension = _validate_non_negative_float(value, name="kaplan_yorke_dimension")
     if dimension > n_exponents + 1e-12:
         raise ValueError("kaplan_yorke_dimension must not exceed spectrum length")
@@ -323,6 +341,10 @@ class CorrelationDimensionResult:
             c_eps = _validate_ci_values(self.C_eps, expected_size=int(epsilons.size))
         except ValueError as exc:
             raise ValueError(f"C_eps {exc}") from exc
+        if _contains_boolean_alias(self.slope):
+            raise ValueError("slope must not contain boolean values")
+        if _has_complex_payload(self.slope):
+            raise ValueError("slope must contain real values")
         try:
             slope = np.asarray(self.slope, dtype=np.float64)
         except (TypeError, ValueError) as exc:
