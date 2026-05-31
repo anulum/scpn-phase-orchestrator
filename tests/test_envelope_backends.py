@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import sys
 import types
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -43,6 +44,19 @@ from scpn_phase_orchestrator.upde.envelope import (
     extract_envelope,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+ExtractBackend = Callable[[np.ndarray, int], np.ndarray]
+ModBackend = Callable[[np.ndarray], float]
+DIRECT_EXTRACT_BACKENDS = (
+    extract_envelope_go,
+    extract_envelope_julia,
+    extract_envelope_mojo,
+)
+DIRECT_MOD_BACKENDS = (
+    envelope_modulation_depth_go,
+    envelope_modulation_depth_julia,
+    envelope_modulation_depth_mojo,
+)
 
 
 def _force(backend: str) -> str:
@@ -73,6 +87,77 @@ def _ref_mod(env):
 
 def _amps(seed: int, n: int = 500) -> np.ndarray:
     return np.abs(np.random.default_rng(seed).normal(1.0, 0.3, n))
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize("backend", DIRECT_EXTRACT_BACKENDS)
+    @pytest.mark.parametrize(
+        ("amps", "window"),
+        [
+            (np.ones((1, 4)), 2),
+            (np.array([True, False]), 2),
+            (np.array([1.0 + 1j, 2.0 + 0j]), 2),
+            (np.array([1.0, np.nan, 2.0]), 2),
+            (np.array([1.0, np.inf, 2.0]), 2),
+            (np.ones(4), True),
+            (np.ones(4), 0),
+        ],
+    )
+    def test_extract_invalid_inputs_fail_before_optional_runtime_loading(
+        self,
+        backend: ExtractBackend,
+        amps: np.ndarray,
+        window: object,
+    ) -> None:
+        with pytest.raises((TypeError, ValueError)):
+            backend(amps, window)
+
+    @pytest.mark.parametrize("backend", DIRECT_MOD_BACKENDS)
+    @pytest.mark.parametrize(
+        "env",
+        [
+            np.ones((1, 4)),
+            np.array([True, False]),
+            np.array([1.0 + 1j, 2.0 + 0j]),
+            np.array([1.0, np.nan, 2.0]),
+            np.array([1.0, np.inf, 2.0]),
+        ],
+    )
+    def test_mod_invalid_inputs_fail_before_optional_runtime_loading(
+        self,
+        backend: ModBackend,
+        env: np.ndarray,
+    ) -> None:
+        with pytest.raises((TypeError, ValueError)):
+            backend(env)
+
+    @pytest.mark.parametrize("backend", DIRECT_EXTRACT_BACKENDS)
+    def test_extract_empty_returns_empty_without_optional_runtime(
+        self,
+        backend: ExtractBackend,
+    ) -> None:
+        result = backend(np.array([], dtype=np.float64), 3)
+        assert result.dtype == np.float64
+        assert result.shape == (0,)
+
+    @pytest.mark.parametrize("backend", DIRECT_EXTRACT_BACKENDS)
+    @pytest.mark.parametrize("window", [4, 8])
+    def test_extract_global_rms_without_optional_runtime(
+        self,
+        backend: ExtractBackend,
+        window: int,
+    ) -> None:
+        amps = np.array([-1.0, 2.0, -3.0, 4.0], dtype=np.float64)
+        expected = np.full(4, np.sqrt(np.mean(amps * amps)), dtype=np.float64)
+        np.testing.assert_allclose(backend(amps, window), expected, atol=0.0)
+
+    @pytest.mark.parametrize("backend", DIRECT_MOD_BACKENDS)
+    def test_mod_empty_and_non_positive_return_zero_without_optional_runtime(
+        self,
+        backend: ModBackend,
+    ) -> None:
+        assert backend(np.array([], dtype=np.float64)) == 0.0
+        assert backend(np.array([-3.0, -1.0], dtype=np.float64)) == 0.0
 
 
 class TestRustParity:

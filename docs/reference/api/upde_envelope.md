@@ -344,6 +344,17 @@ pub fn envelope_modulation_depth(envelope: &[f64]) -> f64
   only 1-D; 2-D falls back to NumPy cumsum per column)
 - `envelope_modulation_depth`: Rust for all inputs (flattened)
 
+Direct Go, Julia, and Mojo accelerator entrypoints share the same boundary
+contract before optional runtime loading: extraction inputs must be finite real
+one-dimensional `float64` vectors and `window` must be a positive integer;
+modulation-depth inputs must be finite real one-dimensional vectors. Empty
+inputs return the documented empty vector or `0.0` without loading optional
+runtimes. For `window >= len(amplitudes)`, direct extraction returns the global
+RMS replicated over the output vector, matching the public NumPy path and
+avoiding backend-specific edge-case drift. Backend extraction outputs must be
+finite non-negative vectors with the same length as the input; backend
+modulation-depth outputs must be finite scalars in `[0, 1]`.
+
 ---
 
 ## 7. Performance Benchmarks
@@ -391,6 +402,9 @@ due to SIMD optimisation in NumPy's C backend.
     constant returns zero, full modulation, partial modulation,
     empty/zero returns, range check, frozen dataclass, pipeline end-to-end,
     performance benchmark
+- **Backend tests:** `tests/test_envelope_backends.py` covers Rust, Go, Julia,
+  Mojo parity plus direct accelerator boundary contracts for invalid inputs,
+  empty inputs, global-RMS edge cases, and non-positive modulation inputs.
 - **Source lines:** 168 (Rust) + 75 (Python) = 243 total
 
 ---

@@ -16,6 +16,13 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._envelope_validation import (
+    validate_envelope_modulation_input,
+    validate_envelope_modulation_output,
+    validate_extract_envelope_input,
+    validate_extract_envelope_output,
+)
+
 __all__ = ["envelope_modulation_depth_julia", "extract_envelope_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -42,13 +49,22 @@ def extract_envelope_julia(amps: FloatArray, window: int) -> FloatArray:
     The calculation is delegated to the Julia backend.
     """
 
+    a, window_i = validate_extract_envelope_input(amps, window)
+    if a.size == 0:
+        return np.zeros(0, dtype=np.float64)
+    if window_i >= a.size:
+        rms = float(np.sqrt(np.mean(a * a)))
+        return np.full(a.size, rms, dtype=np.float64)
     jl = _ensure()
-    return np.asarray(
-        jl.extract_envelope(
-            np.ascontiguousarray(amps.ravel(), dtype=np.float64),
-            int(window),
+    return validate_extract_envelope_output(
+        np.asarray(
+            jl.extract_envelope(
+                a,
+                window_i,
+            ),
+            dtype=np.float64,
         ),
-        dtype=np.float64,
+        n=int(a.size),
     )
 
 
@@ -58,9 +74,16 @@ def envelope_modulation_depth_julia(env: FloatArray) -> float:
     The calculation is delegated to the Julia backend.
     """
 
+    e = validate_envelope_modulation_input(env)
+    if e.size == 0:
+        return 0.0
+    vmax = float(np.max(e))
+    vmin = float(np.min(e))
+    if vmax + vmin <= 0.0:
+        return 0.0
     jl = _ensure()
-    return float(
+    return validate_envelope_modulation_output(
         jl.envelope_modulation_depth(
-            np.ascontiguousarray(env.ravel(), dtype=np.float64),
+            e,
         )
     )

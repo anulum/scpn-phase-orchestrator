@@ -17,6 +17,13 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._envelope_validation import (
+    validate_envelope_modulation_input,
+    validate_envelope_modulation_output,
+    validate_extract_envelope_input,
+    validate_extract_envelope_output,
+)
+
 __all__ = [
     "_ensure_exe",
     "envelope_modulation_depth_mojo",
@@ -56,17 +63,23 @@ def extract_envelope_mojo(amps: FloatArray, window: int) -> FloatArray:
     The calculation is delegated to the Mojo backend.
     """
 
-    a = np.ascontiguousarray(amps.ravel(), dtype=np.float64)
+    a, window_i = validate_extract_envelope_input(amps, window)
     if a.size == 0:
         return np.zeros(0, dtype=np.float64)
+    if window_i >= a.size:
+        rms = float(np.sqrt(np.mean(a * a)))
+        return np.full(a.size, rms, dtype=np.float64)
     tokens: list[str] = [
         "RMS",
         str(int(a.size)),
-        str(int(window)),
+        str(window_i),
     ]
     tokens.extend(repr(float(x)) for x in a.tolist())
     lines = _run(" ".join(tokens) + "\n")
-    return np.array([float(x) for x in lines], dtype=np.float64)
+    return validate_extract_envelope_output(
+        np.array([float(x) for x in lines], dtype=np.float64),
+        n=int(a.size),
+    )
 
 
 def envelope_modulation_depth_mojo(env: FloatArray) -> float:
@@ -75,10 +88,16 @@ def envelope_modulation_depth_mojo(env: FloatArray) -> float:
     The calculation is delegated to the Mojo backend.
     """
 
-    e = np.ascontiguousarray(env.ravel(), dtype=np.float64)
+    e = validate_envelope_modulation_input(env)
     if e.size == 0:
+        return 0.0
+    vmax = float(np.max(e))
+    vmin = float(np.min(e))
+    if vmax + vmin <= 0.0:
         return 0.0
     tokens: list[str] = ["MOD", str(int(e.size))]
     tokens.extend(repr(float(x)) for x in e.tolist())
     lines = _run(" ".join(tokens) + "\n")
-    return float(lines[0])
+    if not lines:
+        raise ValueError("Mojo MOD returned empty output")
+    return validate_envelope_modulation_output(float(lines[0]))

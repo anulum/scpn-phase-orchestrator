@@ -17,6 +17,13 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._envelope_validation import (
+    validate_envelope_modulation_input,
+    validate_envelope_modulation_output,
+    validate_extract_envelope_input,
+    validate_extract_envelope_output,
+)
+
 __all__ = ["envelope_modulation_depth_go", "extract_envelope_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -58,20 +65,23 @@ def extract_envelope_go(amps: FloatArray, window: int) -> FloatArray:
     The calculation is delegated to the Go backend.
     """
 
-    lib = _load_lib()
-    a = np.ascontiguousarray(amps.ravel(), dtype=np.float64)
+    a, window_i = validate_extract_envelope_input(amps, window)
     if a.size == 0:
         return np.zeros(0, dtype=np.float64)
+    if window_i >= a.size:
+        rms = float(np.sqrt(np.mean(a * a)))
+        return np.full(a.size, rms, dtype=np.float64)
+    lib = _load_lib()
     out = np.zeros(a.size, dtype=np.float64)
     rc = lib.ExtractEnvelope(
         a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(int(a.size)),
-        ctypes.c_int(int(window)),
+        ctypes.c_int(window_i),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go ExtractEnvelope rc={rc}")
-    return out
+    return validate_extract_envelope_output(out, n=int(a.size))
 
 
 def envelope_modulation_depth_go(env: FloatArray) -> float:
@@ -80,9 +90,15 @@ def envelope_modulation_depth_go(env: FloatArray) -> float:
     The calculation is delegated to the Go backend.
     """
 
-    lib = _load_lib()
-    e = np.ascontiguousarray(env.ravel(), dtype=np.float64)
+    e = validate_envelope_modulation_input(env)
+    if e.size == 0:
+        return 0.0
+    vmax = float(np.max(e))
+    vmin = float(np.min(e))
+    if vmax + vmin <= 0.0:
+        return 0.0
     out = ctypes.c_double(0.0)
+    lib = _load_lib()
     rc = lib.EnvelopeModulationDepth(
         e.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(int(e.size)),
@@ -90,4 +106,4 @@ def envelope_modulation_depth_go(env: FloatArray) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go EnvelopeModulationDepth rc={rc}")
-    return float(out.value)
+    return validate_envelope_modulation_output(out.value)
