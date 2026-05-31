@@ -58,7 +58,13 @@ def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
         raise ValueError(
             f"Mojo psychedelic exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    lines = [line for line in proc.stdout.strip().splitlines() if line]
+    lines = proc.stdout.splitlines()
     if len(lines) != 1:
         raise ValueError(f"Mojo entropy returned {len(lines)} values")
-    return validate_psychedelic_entropy_backend_output(float(lines[0]), bin_count)
+    try:
+        value = float(lines[0])
+    except ValueError as exc:
+        raise ValueError(
+            f"Mojo entropy emitted a non-scalar psychedelic value: {lines[0]!r}"
+        ) from exc
+    return validate_psychedelic_entropy_backend_output(value, bin_count)

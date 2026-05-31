@@ -15,6 +15,7 @@ the subprocess text round-trip on the bin-edge float comparisons.
 from __future__ import annotations
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -207,23 +208,29 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(ValueError, match=match):
             backend(phases, 4)
 
-    def test_mojo_rejects_malformed_entropy_line_count(
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("\n0.1\n", "Mojo entropy returned 2"),
+            ("0.1\n\n", "Mojo entropy returned 2"),
+            ("0.1\n0.2\n", "Mojo entropy returned 2"),
+            ("not-a-scalar\n", "non-scalar psychedelic value"),
+        ],
+    )
+    def test_mojo_rejects_malformed_entropy_stdout(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
     ) -> None:
         monkeypatch.setattr(_psychedelic_mojo, "_ensure_exe", lambda: "fake")
 
         def fake_run(*_args: object, **_kwargs: object) -> object:
-            class Result:
-                returncode = 0
-                stderr = ""
-                stdout = "0.1\n0.2\n"
-
-            return Result()
+            return SimpleNamespace(returncode=0, stderr="", stdout=stdout)
 
         monkeypatch.setattr(_psychedelic_mojo.subprocess, "run", fake_run)
 
-        with pytest.raises(ValueError, match="Mojo entropy returned 2"):
+        with pytest.raises(ValueError, match=match):
             entropy_from_phases_mojo(np.linspace(0.0, 1.0, 8), 4)
 
 
