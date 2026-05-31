@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._poincare_validation import (
+    validate_phase_poincare_backend_inputs,
+    validate_poincare_section_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_poincare_go", "poincare_section_go"]
@@ -71,9 +76,15 @@ def poincare_section_go(
 ) -> tuple[FloatArray, FloatArray, int]:
     """Extract Poincare section crossings through the Go backend."""
 
+    traj, t, d, nrm, offset, direction_id = validate_poincare_section_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        normal,
+        offset,
+        direction_id,
+    )
     lib = _load_lib()
-    traj = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
-    nrm = np.ascontiguousarray(normal.ravel(), dtype=np.float64)
     crossings = np.zeros(t * d, dtype=np.float64)
     times = np.zeros(t, dtype=np.float64)
     n_cr = lib.PoincareSection(
@@ -98,8 +109,16 @@ def phase_poincare_go(
 ) -> tuple[FloatArray, FloatArray, int]:
     """Compute phase-space Poincare diagnostics through the Go backend."""
 
+    phases, t, n, oscillator_idx, section_phase = (
+        validate_phase_poincare_backend_inputs(
+            phases_flat,
+            t,
+            n,
+            oscillator_idx,
+            section_phase,
+        )
+    )
     lib = _load_lib()
-    phases = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     crossings = np.zeros(t * n, dtype=np.float64)
     times = np.zeros(t, dtype=np.float64)
     n_cr = lib.PhasePoincare(

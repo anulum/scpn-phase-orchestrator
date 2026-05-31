@@ -500,6 +500,8 @@ points (Poincare map), and computes return time statistics. Return time
 regularity distinguishes periodic orbits (constant return time) from
 chaotic ones (fluctuating return times).
 
+**Detailed documentation:** [Poincare section monitor](monitor_poincare.md)
+
 **Two interfaces:**
 
 - `poincare_section()`: general hyperplane crossing for any state-space trajectory

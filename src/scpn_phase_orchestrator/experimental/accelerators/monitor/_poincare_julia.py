@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._poincare_validation import (
+    validate_phase_poincare_backend_inputs,
+    validate_poincare_section_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_poincare_julia", "poincare_section_julia"]
@@ -47,14 +52,22 @@ def poincare_section_julia(
 ) -> tuple[FloatArray, FloatArray, int]:
     """Extract Poincare section crossings through the Julia backend."""
 
+    traj, t, d, nrm, offset, direction_id = validate_poincare_section_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        normal,
+        offset,
+        direction_id,
+    )
     jl = _ensure()
     cr, times, n_cr = jl.poincare_section(
-        np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64),
-        int(t),
-        int(d),
-        np.ascontiguousarray(normal.ravel(), dtype=np.float64),
-        float(offset),
-        int(direction_id),
+        traj,
+        t,
+        d,
+        nrm,
+        offset,
+        direction_id,
     )
     return (
         np.asarray(cr, dtype=np.float64),
@@ -72,13 +85,22 @@ def phase_poincare_julia(
 ) -> tuple[FloatArray, FloatArray, int]:
     """Compute phase-space Poincare diagnostics through the Julia backend."""
 
+    phases, t, n, oscillator_idx, section_phase = (
+        validate_phase_poincare_backend_inputs(
+            phases_flat,
+            t,
+            n,
+            oscillator_idx,
+            section_phase,
+        )
+    )
     jl = _ensure()
     cr, times, n_cr = jl.phase_poincare(
-        np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
-        int(t),
-        int(n),
-        int(oscillator_idx),
-        float(section_phase),
+        phases,
+        t,
+        n,
+        oscillator_idx,
+        section_phase,
     )
     return (
         np.asarray(cr, dtype=np.float64),

@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._poincare_validation import (
+    validate_phase_poincare_backend_inputs,
+    validate_poincare_section_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -82,15 +87,23 @@ def poincare_section_mojo(
 ) -> tuple[FloatArray, FloatArray, int]:
     """Extract Poincare section crossings through the Mojo backend."""
 
+    traj, t, d, nrm, offset, direction_id = validate_poincare_section_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        normal,
+        offset,
+        direction_id,
+    )
     tokens: list[str] = [
         "SEC",
-        str(int(t)),
-        str(int(d)),
-        str(int(direction_id)),
-        repr(float(offset)),
+        str(t),
+        str(d),
+        str(direction_id),
+        repr(offset),
     ]
-    tokens.extend(repr(float(x)) for x in normal.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in traj_flat.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in nrm.tolist())
+    tokens.extend(repr(float(x)) for x in traj.tolist())
     return _parse(_run(" ".join(tokens) + "\n"), d, t)
 
 
@@ -103,12 +116,21 @@ def phase_poincare_mojo(
 ) -> tuple[FloatArray, FloatArray, int]:
     """Compute phase-space Poincare diagnostics through the Mojo backend."""
 
+    phases, t, n, oscillator_idx, section_phase = (
+        validate_phase_poincare_backend_inputs(
+            phases_flat,
+            t,
+            n,
+            oscillator_idx,
+            section_phase,
+        )
+    )
     tokens: list[str] = [
         "PHASE",
-        str(int(t)),
-        str(int(n)),
-        str(int(oscillator_idx)),
-        repr(float(section_phase)),
+        str(t),
+        str(n),
+        str(oscillator_idx),
+        repr(section_phase),
     ]
-    tokens.extend(repr(float(x)) for x in phases_flat.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in phases.tolist())
     return _parse(_run(" ".join(tokens) + "\n"), n, t)

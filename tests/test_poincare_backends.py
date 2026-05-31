@@ -13,6 +13,7 @@ count, crossing coordinates (to 1e-9), and times."""
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -37,6 +38,15 @@ from scpn_phase_orchestrator.monitor.poincare import (
     poincare_section,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+SectionBackend = Callable[
+    [np.ndarray, object, object, np.ndarray, object, object],
+    tuple[np.ndarray, np.ndarray, int],
+]
+PhaseBackend = Callable[
+    [np.ndarray, object, object, object, object],
+    tuple[np.ndarray, np.ndarray, int],
+]
 
 
 def _force(backend: str) -> str:
@@ -95,6 +105,70 @@ def test_backend_array_contracts_are_parameterised() -> None:
             if key in {"traj_flat", "normal", "phases_flat", "return"}:
                 assert_precise_ndarray_hint(hints[key])
                 assert "float64" in str(hints[key])
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct optional Poincare backends validate before runtime loading."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [poincare_section_go, poincare_section_julia, poincare_section_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("traj_flat", "t", "d", "normal", "offset", "direction_id", "match"),
+        [
+            (np.array([True, False]), 2, 1, np.array([1.0]), 0.0, 0, "traj_flat"),
+            (np.array([0.0, np.nan]), 2, 1, np.array([1.0]), 0.0, 0, "traj_flat"),
+            (np.array([0.0, 1.0]), True, 1, np.array([1.0]), 0.0, 0, "t"),
+            (np.array([0.0, 1.0]), 2, 2, np.array([1.0, 0.0]), 0.0, 0, "t\\*d"),
+            (np.array([0.0, 1.0]), 2, 1, np.array([True]), 0.0, 0, "normal"),
+            (np.array([0.0, 1.0]), 2, 1, np.array([1.0, 0.0]), 0.0, 0, "normal"),
+            (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), math.inf, 0, "offset"),
+            (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), 0.0, 3, "direction"),
+        ],
+    )
+    def test_section_validation_precedes_runtime_load(
+        self,
+        backend: SectionBackend,
+        traj_flat: np.ndarray,
+        t: object,
+        d: object,
+        normal: np.ndarray,
+        offset: object,
+        direction_id: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            backend(traj_flat, t, d, normal, offset, direction_id)
+
+    @pytest.mark.parametrize(
+        "backend",
+        [phase_poincare_go, phase_poincare_julia, phase_poincare_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("phases_flat", "t", "n", "oscillator_idx", "section_phase", "match"),
+        [
+            (np.array([True, False]), 2, 1, 0, 0.0, "phases_flat"),
+            (np.array([0.0, np.inf]), 2, 1, 0, 0.0, "phases_flat"),
+            (np.array([0.0, 1.0]), 0, 1, 0, 0.0, "t"),
+            (np.array([0.0, 1.0]), 2, 2, 0, 0.0, "t\\*n"),
+            (np.array([0.0, 1.0]), 2, 1, True, 0.0, "oscillator_idx"),
+            (np.array([0.0, 1.0]), 2, 1, 1, 0.0, "oscillator_idx"),
+            (np.array([0.0, 1.0]), 2, 1, 0, np.nan, "section_phase"),
+        ],
+    )
+    def test_phase_validation_precedes_runtime_load(
+        self,
+        backend: PhaseBackend,
+        phases_flat: np.ndarray,
+        t: object,
+        n: object,
+        oscillator_idx: object,
+        section_phase: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            backend(phases_flat, t, n, oscillator_idx, section_phase)
 
 
 class TestPoincareSectionParity:
