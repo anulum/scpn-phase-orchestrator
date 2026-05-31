@@ -16,6 +16,8 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from ._winding_validation import validate_winding_backend_inputs
+
 __all__ = ["winding_numbers_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -44,14 +46,15 @@ def winding_numbers_julia(
 ) -> IntArray:
     """Compute oscillator winding numbers through the Julia backend."""
 
+    phases, t, n = validate_winding_backend_inputs(phases_flat, t, n)
     jl = _ensure()
     return cast(
         "IntArray",
         np.asarray(
             jl.winding_numbers(
-                np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
-                int(t),
-                int(n),
+                phases,
+                t,
+                n,
             )
         ),
     )

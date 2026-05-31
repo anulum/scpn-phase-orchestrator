@@ -98,6 +98,20 @@ any float noise at the ``1e-12`` level vanishes before the
 comparison. Measured cross-backend disagreement on random
 problems: exactly ``0`` across every seed and size.
 
+### 3.3 Direct accelerator boundary contract
+
+The direct Go, Julia, and Mojo wrappers validate before loading their optional
+runtimes:
+
+* `phases_flat` must be a one-dimensional finite real `float64` buffer with no
+  boolean aliases or complex values.
+* `t` must be a non-boolean integer at least 2.
+* `n` must be a non-boolean positive integer.
+* the flat buffer length must exactly match `t * n`.
+
+Invalid topological phase histories therefore fail deterministically in Python
+before shared-library loading, Julia initialisation, or subprocess execution.
+
 ---
 
 ## 4. Per-backend build notes

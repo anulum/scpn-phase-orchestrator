@@ -21,6 +21,15 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor._winding_go import (
+    winding_numbers_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._winding_julia import (
+    winding_numbers_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._winding_mojo import (
+    winding_numbers_mojo,
+)
 from scpn_phase_orchestrator.monitor import winding as w_mod
 from scpn_phase_orchestrator.monitor.winding import (
     AVAILABLE_BACKENDS,
@@ -57,6 +66,39 @@ def _problem(seed: int, t: int = 300, n: int = 6) -> np.ndarray:
     for i in range(1, t):
         hist[i] = (hist[i - 1] + omegas * dt) % TWO_PI
     return hist
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct optional winding backends validate before runtime loading."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [winding_numbers_go, winding_numbers_julia, winding_numbers_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("phases_flat", "t", "n", "match"),
+        [
+            (np.array([True, False]), 2, 1, "phases_flat"),
+            (np.array([0.0, np.nan]), 2, 1, "phases_flat"),
+            (np.array([0.0, 1.0], dtype=np.complex128), 2, 1, "real-valued"),
+            (np.array([[0.0], [1.0]]), 2, 1, "one-dimensional"),
+            (np.array([0.0, 1.0]), True, 1, "t"),
+            (np.array([0.0, 1.0]), 1, 1, "t"),
+            (np.array([0.0, 1.0]), 2, 0, "n"),
+            (np.array([0.0, 1.0]), 2, True, "n"),
+            (np.array([0.0, 1.0]), 3, 1, "t\\*n"),
+        ],
+    )
+    def test_validation_precedes_runtime_load(
+        self,
+        backend,
+        phases_flat: np.ndarray,
+        t: object,
+        n: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            backend(phases_flat, t, n)
 
 
 class TestRustParity:

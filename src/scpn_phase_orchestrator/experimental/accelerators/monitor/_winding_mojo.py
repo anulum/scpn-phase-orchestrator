@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._winding_validation import validate_winding_backend_inputs
+
 __all__ = ["_ensure_exe", "winding_numbers_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -56,10 +58,9 @@ def winding_numbers_mojo(
 ) -> IntArray:
     """Compute oscillator winding numbers through the Mojo backend."""
 
-    if n == 0 or t < 2:
-        return np.zeros(n, dtype=np.int64)
-    tokens: list[str] = ["WIND", str(int(t)), str(int(n))]
-    tokens.extend(repr(float(x)) for x in phases_flat.ravel().tolist())
+    phases, t, n = validate_winding_backend_inputs(phases_flat, t, n)
+    tokens: list[str] = ["WIND", str(t), str(n)]
+    tokens.extend(repr(float(x)) for x in phases.tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n:
         raise ValueError(f"Mojo WIND returned {len(result)} values, expected {n}")

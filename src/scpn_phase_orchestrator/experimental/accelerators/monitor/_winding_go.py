@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._winding_validation import validate_winding_backend_inputs
+
 __all__ = ["winding_numbers_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -53,8 +55,8 @@ def winding_numbers_go(
 ) -> IntArray:
     """Compute oscillator winding numbers through the Go backend."""
 
+    p, t, n = validate_winding_backend_inputs(phases_flat, t, n)
     lib = _load_lib()
-    p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     out = np.zeros(n, dtype=np.int64)
     rc = lib.WindingNumbers(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
