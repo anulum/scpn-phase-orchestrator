@@ -265,7 +265,7 @@ warn_return_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --benchmark-disable"
 xfail_strict = true
 filterwarnings = ["error::DeprecationWarning"]
 asyncio_mode = "auto"

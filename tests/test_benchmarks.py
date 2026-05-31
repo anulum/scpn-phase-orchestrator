@@ -8,11 +8,11 @@
 
 """Performance benchmarks for hot-path functions.
 
-Run: py -3.12 -m pytest tests/test_benchmarks.py --benchmark-only
-Compare: py -3.12 -m pytest tests/test_benchmarks.py --benchmark-compare
+Run: py -3.12 -m pytest tests/test_benchmarks.py --benchmark-enable --benchmark-only
+Compare: py -3.12 -m pytest tests/test_benchmarks.py --benchmark-enable --benchmark-compare
 
 These benchmarks track performance regressions across commits.
-They are NOT run during normal CI (--benchmark-disable is the default).
+They are NOT run during normal CI (`--benchmark-disable` is the default).
 """
 
 from __future__ import annotations
