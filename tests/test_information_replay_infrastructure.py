@@ -126,7 +126,17 @@ def test_build_replays_accepts_numpy_integer_parameters() -> None:
         ("normalised_phi", True, "normalised_phi"),
         ("normalised_phi", np.bool_(True), "normalised_phi"),
         ("normalised_phi", 0.5 + 0.0j, "normalised_phi"),
+        (
+            "normalised_phi",
+            np.asarray(complex(0.5, 0.0), dtype=object),
+            "real-valued",
+        ),
         ("total_integration", -0.1, "total_integration"),
+        (
+            "total_integration",
+            np.asarray(complex(0.5, 0.0), dtype=object),
+            "real-valued",
+        ),
         ("n_oscillators", True, "n_oscillators"),
         ("n_samples", np.bool_(True), "n_samples"),
         ("n_bins", np.bool_(True), "n_bins"),
@@ -155,6 +165,7 @@ def test_validate_records_rejects_invalid_metric_fields(
         [[0, 0], [1, 2, 3, 4, 5]],
         [[0], [1, 2, True]],
         [[0], [1, 2, np.bool_(True)]],
+        [[0], [1, 2, complex(3.0, 0.0)]],
         [[0], []],
     ],
 )
@@ -172,6 +183,20 @@ def test_validate_records_rejects_invalid_minimum_partition(
     bad["minimum_partition"] = partition
 
     with pytest.raises(ValueError, match="minimum_partition"):
+        _validate_replay_records((bad, *records[1:]))
+
+
+def test_validate_records_rejects_object_complex_partition_as_real_integer() -> None:
+    records = tuple(
+        dict(record)
+        for record in build_infrastructure_integrated_information_replays(
+            n_samples=192,
+        )
+    )
+    bad = dict(records[0])
+    bad["minimum_partition"] = [[0], [1, 2, complex(3.0, 0.0), 4, 5]]
+
+    with pytest.raises(ValueError, match="real integer"):
         _validate_replay_records((bad, *records[1:]))
 
 

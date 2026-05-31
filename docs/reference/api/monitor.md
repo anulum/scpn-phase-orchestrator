@@ -597,17 +597,19 @@ Domain-specific information replay fixtures for cyber-industrial,
 infrastructure, and physiology validation paths.
 Physiology replay records enforce non-actuating audit boundaries, integer
 sample/bin/oscillator counts, finite non-negative metrics, unit-interval
-normalised Phi, and boolean-alias-free minimum partitions before replay corpus
-relationships are accepted.
+normalised Phi, and minimum partitions free of boolean aliases and
+object-complex integer aliases before replay corpus relationships are accepted.
 Infrastructure replay records apply the same engineering-proxy boundary to
 power-grid and traffic-corridor replay corpora: sample/bin/oscillator counts are
 integer-only, metrics are finite real non-negative values, normalised Phi is
-bounded to the unit interval, and minimum partitions reject boolean aliases
-before the re-synchronisation/recovery ordering contracts are accepted.
+bounded to the unit interval, and minimum partitions reject boolean aliases plus
+object-complex integer aliases before the re-synchronisation/recovery ordering
+contracts are accepted.
 Cyber-industrial replay records apply the same boundary to lateral-movement and
 manufacturing SPC corpora so containment/recovery ordering claims are accepted
 only after integer-only record counts, finite real metrics, bounded normalised
-Phi, and boolean-alias-free minimum partitions pass validation.
+Phi, and minimum partitions free of boolean aliases and object-complex integer
+aliases pass validation.
 
 ::: scpn_phase_orchestrator.monitor.information_replay_cyber_industrial
 

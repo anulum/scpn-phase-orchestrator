@@ -186,6 +186,8 @@ def _validate_record_metrics(record: dict[str, Any]) -> None:
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        if _has_complex_payload(value):
+            raise ValueError(f"{name} must be real-valued")
         raise ValueError(f"{name} must be a finite non-negative real")
     scalar = float(value)
     if not np.isfinite(scalar) or scalar < 0.0:
@@ -193,8 +195,26 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
     return scalar
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
+
+
 def _validate_integer_field(value: object, *, name: str, minimum: int) -> int:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        if _has_complex_payload(value):
+            raise ValueError(f"{name} must be a real integer >= {minimum}")
         raise ValueError(f"{name} must be an integer >= {minimum}")
     scalar = int(value)
     if scalar < minimum:
@@ -228,6 +248,10 @@ def _validate_partition_side(value: object) -> tuple[int, ...]:
     indices: list[int] = []
     for item in value:
         if isinstance(item, (bool, np.bool_)) or not isinstance(item, Integral):
+            if _has_complex_payload(item):
+                raise ValueError(
+                    "minimum_partition groups must contain real integer indices"
+                )
             raise ValueError("minimum_partition groups must contain integer indices")
         index = int(item)
         if index < 0:
