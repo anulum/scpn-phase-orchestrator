@@ -66,6 +66,26 @@ def test_zero_mean_signals_lag_finite():
     assert abs(lag) < 1.0 / 256.0
 
 
+@pytest.mark.parametrize(
+    ("signal_a", "signal_b", "sample_rate", "message"),
+    [
+        ([0.0, 1.0, 0.0], [0.0, 1.0], 100.0, "same finite one-dimensional"),
+        ([], [], 100.0, "non-empty"),
+        ([1.0, 1.0, 1.0], [0.0, 1.0, 0.0], 100.0, "variance"),
+        ([0.0, 1.0, True], [0.0, 1.0, 0.0], 100.0, "boolean"),
+        ([0.0, 1.0, np.nan], [0.0, 1.0, 0.0], 100.0, "finite"),
+        ([0.0, 1.0, 0.0], [0.0, 1.0, 0.0], 0.0, "sample_rate"),
+        ([0.0, 1.0, 0.0], [0.0, 1.0, 0.0], True, "sample_rate"),
+    ],
+)
+def test_estimate_lag_rejects_non_physical_signal_boundaries(
+    signal_a, signal_b, sample_rate, message
+):
+    model = LagModel()
+    with pytest.raises(ValueError, match=message):
+        model.estimate_lag(signal_a, signal_b, sample_rate=sample_rate)
+
+
 def test_alpha_matrix_diagonal_zero():
     model = LagModel()
     lags = {(0, 1): 0.3}
@@ -138,6 +158,12 @@ def test_estimate_from_distances_rejects_invalid_distances():
 
     with pytest.raises(ValueError, match="distances"):
         LagModel.estimate_from_distances([[0.0, True], [1.0, 0.0]], speed=1.0)
+
+    with pytest.raises(ValueError, match="symmetric"):
+        LagModel.estimate_from_distances([[0.0, 1.0], [1.2, 0.0]], speed=1.0)
+
+    with pytest.raises(ValueError, match="zero diagonal"):
+        LagModel.estimate_from_distances([[0.1, 1.0], [1.0, 0.0]], speed=1.0)
 
 
 class TestLagPipelineWiring:

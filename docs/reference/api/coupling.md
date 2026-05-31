@@ -158,14 +158,22 @@ known physical distances.
 α_ij = 2π × distances[i,j] / speed
 ```
 
-Returns an antisymmetric matrix: α_ij = -α_ji. This encodes the fact
-that if signal from i reaches j with positive lag, then j reaches i with
-negative lag.
+Inputs must be a finite real square physical-distance matrix with
+non-negative entries, a zero diagonal, and symmetric pair distances, plus a
+finite positive propagation speed. Returns an antisymmetric matrix:
+α_ij = -α_ji. This encodes the fact that if signal from i reaches j with
+positive lag, then j reaches i with negative lag. Directed or asymmetric
+empirical delays belong in `build_alpha_matrix`, not in the physical-distance
+constructor.
 
 ### From cross-correlation
 
 `LagModel().estimate_lag(signal_a, signal_b, sample_rate)` finds the
-cross-correlation peak lag in seconds between two signals.
+cross-correlation peak lag in seconds between two signals. Signals must be
+finite real one-dimensional arrays with equal non-zero length and non-zero
+variance. The sample-rate must be a finite positive real value. Constant,
+boolean, complex, non-finite, or length-mismatched signals are rejected because
+they do not define a reliable phase-lag estimate.
 
 ### Matrix construction
 

@@ -14,6 +14,8 @@ use std::f64::consts::TAU;
 
 use spo_types::{SpoError, SpoResult};
 
+const DISTANCE_ATOL: f64 = 1.0e-12;
+
 /// Phase-lag α matrix estimated from propagation distances and speed.
 #[derive(Debug, Clone)]
 pub struct LagModel {
@@ -29,10 +31,13 @@ impl LagModel {
     /// # Errors
     /// Returns `InvalidDimension` if `distances.len() != n * n`.
     pub fn estimate_from_distances(distances: &[f64], n: usize, speed: f64) -> SpoResult<Self> {
-        if distances.len() != n * n {
+        let expected_len = n.checked_mul(n).ok_or_else(|| {
+            SpoError::InvalidDimension("n*n overflows usize for lag matrix".into())
+        })?;
+        if distances.len() != expected_len {
             return Err(SpoError::InvalidDimension(format!(
                 "expected {}={n}*{n}, got {}",
-                n * n,
+                expected_len,
                 distances.len()
             )));
         }
@@ -46,6 +51,27 @@ impl LagModel {
                 return Err(SpoError::IntegrationDiverged(
                     "distances contain NaN/Inf".into(),
                 ));
+            }
+            if d < 0.0 {
+                return Err(SpoError::IntegrationDiverged(
+                    "distances must be non-negative".into(),
+                ));
+            }
+        }
+        for i in 0..n {
+            if distances[i * n + i].abs() > DISTANCE_ATOL {
+                return Err(SpoError::IntegrationDiverged(
+                    "distances must have a zero diagonal".into(),
+                ));
+            }
+            for j in (i + 1)..n {
+                let forward = distances[i * n + j];
+                let reverse = distances[j * n + i];
+                if (forward - reverse).abs() > DISTANCE_ATOL {
+                    return Err(SpoError::IntegrationDiverged(
+                        "distances must be symmetric physical pair distances".into(),
+                    ));
+                }
             }
         }
         let mut alpha = vec![0.0; n * n];
@@ -137,6 +163,27 @@ mod tests {
     fn inf_distance_rejected() {
         let n = 2;
         let distances = vec![0.0, f64::INFINITY, f64::INFINITY, 0.0];
+        assert!(LagModel::estimate_from_distances(&distances, n, 1.0).is_err());
+    }
+
+    #[test]
+    fn negative_distance_rejected() {
+        let n = 2;
+        let distances = vec![0.0, -1.0, -1.0, 0.0];
+        assert!(LagModel::estimate_from_distances(&distances, n, 1.0).is_err());
+    }
+
+    #[test]
+    fn asymmetric_distance_rejected() {
+        let n = 2;
+        let distances = vec![0.0, 1.0, 1.2, 0.0];
+        assert!(LagModel::estimate_from_distances(&distances, n, 1.0).is_err());
+    }
+
+    #[test]
+    fn non_zero_distance_diagonal_rejected() {
+        let n = 2;
+        let distances = vec![0.1, 1.0, 1.0, 0.0];
         assert!(LagModel::estimate_from_distances(&distances, n, 1.0).is_err());
     }
 
