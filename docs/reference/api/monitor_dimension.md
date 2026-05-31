@@ -162,6 +162,17 @@ Measured parity on a 30×3 trajectory with 8 epsilons: all four
 non-Python backends bit-equivalent at ``0.0e+00``. Kaplan-Yorke is
 deterministic on every backend (``0.0e+00`` diff).
 
+Direct Go, Julia, and Mojo bridge calls share the public typed
+pre-dispatch contract before optional runtime loading. Correlation-
+integral inputs must provide a finite real one-dimensional
+``float64`` trajectory payload whose length matches ``T*d``, finite
+non-negative epsilon thresholds, integer ``T``/``d`` controls, and
+same-length integer pair-index arrays that stay inside ``[0, T)``
+without self-pairs. Direct Kaplan-Yorke calls accept only finite
+real one-dimensional Lyapunov spectra. Boolean aliases and complex
+payloads are rejected before shared-library, Julia, or subprocess
+execution.
+
 ---
 
 ## 4. Per-backend build notes

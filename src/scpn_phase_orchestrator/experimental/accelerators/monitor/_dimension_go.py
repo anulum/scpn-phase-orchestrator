@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._dimension_validation import (
+    validate_correlation_integral_backend_inputs,
+    validate_kaplan_yorke_backend_input,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -69,16 +74,20 @@ def correlation_integral_go(
 ) -> FloatArray:
     """Compute the phase-space correlation integral through the Go backend."""
 
+    traj, t_int, d_int, ii, jj, eps = validate_correlation_integral_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        idx_i,
+        idx_j,
+        epsilons,
+    )
     lib = _load_lib()
-    traj = np.ascontiguousarray(traj_flat, dtype=np.float64)
-    ii = np.ascontiguousarray(idx_i.ravel(), dtype=np.int64)
-    jj = np.ascontiguousarray(idx_j.ravel(), dtype=np.int64)
-    eps = np.ascontiguousarray(epsilons.ravel(), dtype=np.float64)
     out = np.zeros(eps.size, dtype=np.float64)
     rc = lib.CorrelationIntegral(
         traj.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)),
-        ctypes.c_int(int(d)),
+        ctypes.c_int(t_int),
+        ctypes.c_int(d_int),
         ii.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
         jj.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
         ctypes.c_int(int(ii.size)),
@@ -94,8 +103,8 @@ def correlation_integral_go(
 def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
     """Estimate the Kaplan-Yorke dimension through the Go backend."""
 
+    le = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     lib = _load_lib()
-    le = np.ascontiguousarray(lyapunov_exponents.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)
     rc = lib.KaplanYorkeDimension(
         le.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),

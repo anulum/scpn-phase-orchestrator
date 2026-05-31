@@ -21,6 +21,7 @@ triu-indices pair list. Tolerances:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -47,6 +48,12 @@ from scpn_phase_orchestrator.monitor.dimension import (
     kaplan_yorke_dimension,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+CiBackend = Callable[
+    [np.ndarray, object, object, np.ndarray, np.ndarray, np.ndarray],
+    np.ndarray,
+]
+KyBackend = Callable[[np.ndarray], float]
 
 
 def _force(backend: str) -> str:
@@ -108,6 +115,141 @@ def test_backend_array_contracts_are_parameterised() -> None:
         hints = get_type_hints(fn)
         assert_precise_ndarray_hint(hints["lyapunov_exponents"])
         assert "float64" in str(hints["lyapunov_exponents"])
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            correlation_integral_go,
+            correlation_integral_julia,
+            correlation_integral_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("traj_flat", "t", "d", "idx_i", "idx_j", "epsilons", "message"),
+        [
+            (
+                np.array([0.0, True], dtype=object),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+                "traj_flat",
+            ),
+            (
+                np.array([0.0 + 1.0j, 1.0 + 0.0j]),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+                "traj_flat",
+            ),
+            (
+                np.array([0.0, np.nan]),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+                "traj_flat",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                np.bool_(True),
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+                "t",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                0,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+                "d",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([0, 1]),
+                np.array([1]),
+                np.array([0.1]),
+                "same length",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([0]),
+                np.array([0]),
+                np.array([0.1]),
+                "self-pairs",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([0]),
+                np.array([2]),
+                np.array([0.1]),
+                "idx_j",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([-0.1]),
+                "epsilons",
+            ),
+        ],
+    )
+    def test_correlation_integral_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn: CiBackend,
+        traj_flat: np.ndarray,
+        t: object,
+        d: object,
+        idx_i: np.ndarray,
+        idx_j: np.ndarray,
+        epsilons: np.ndarray,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            fn(traj_flat, t, d, idx_i, idx_j, epsilons)
+
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            kaplan_yorke_dimension_go,
+            kaplan_yorke_dimension_julia,
+            kaplan_yorke_dimension_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "lyapunov_exponents",
+        [
+            np.array([0.1, np.bool_(False)], dtype=object),
+            np.array([0.1 + 0.0j, -0.2 + 1.0j]),
+            np.array([0.1, np.inf]),
+            np.array([[0.1, -0.2]]),
+        ],
+    )
+    def test_kaplan_yorke_backend_rejects_invalid_spectrum_before_runtime_load(
+        self,
+        fn: KyBackend,
+        lyapunov_exponents: np.ndarray,
+    ) -> None:
+        with pytest.raises(ValueError, match="lyapunov_exponents"):
+            fn(lyapunov_exponents)
 
 
 class TestRustParity:

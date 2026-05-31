@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._dimension_validation import (
+    validate_correlation_integral_backend_inputs,
+    validate_kaplan_yorke_backend_input,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -64,19 +69,27 @@ def correlation_integral_mojo(
 ) -> FloatArray:
     """Compute the phase-space correlation integral through the Mojo backend."""
 
+    traj, t_int, d_int, ii, jj, eps = validate_correlation_integral_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        idx_i,
+        idx_j,
+        epsilons,
+    )
     n_p = int(idx_i.size)
-    n_k = int(epsilons.size)
+    n_k = int(eps.size)
     tokens: list[str] = [
         "CI",
-        str(int(t)),
-        str(int(d)),
+        str(t_int),
+        str(d_int),
         str(n_p),
         str(n_k),
     ]
-    tokens.extend(str(int(x)) for x in idx_i.ravel().tolist())
-    tokens.extend(str(int(x)) for x in idx_j.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in epsilons.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in traj_flat.ravel().tolist())
+    tokens.extend(str(int(x)) for x in ii.tolist())
+    tokens.extend(str(int(x)) for x in jj.tolist())
+    tokens.extend(repr(float(x)) for x in eps.tolist())
+    tokens.extend(repr(float(x)) for x in traj.tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n_k:
         raise ValueError(f"Mojo CI returned {len(result)} values, expected {n_k}")
@@ -86,7 +99,7 @@ def correlation_integral_mojo(
 def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
     """Estimate the Kaplan-Yorke dimension through the Mojo backend."""
 
-    le = np.asarray(lyapunov_exponents, dtype=np.float64).ravel()
+    le = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     n = int(le.size)
     tokens: list[str] = ["KY", str(n)]
     tokens.extend(repr(float(x)) for x in le.tolist())

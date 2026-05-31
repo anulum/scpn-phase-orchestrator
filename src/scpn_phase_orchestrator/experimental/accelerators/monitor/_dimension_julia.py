@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._dimension_validation import (
+    validate_correlation_integral_backend_inputs,
+    validate_kaplan_yorke_backend_input,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -48,15 +53,23 @@ def correlation_integral_julia(
 ) -> FloatArray:
     """Compute the phase-space correlation integral through the Julia backend."""
 
+    traj, t_int, d_int, ii, jj, eps = validate_correlation_integral_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        idx_i,
+        idx_j,
+        epsilons,
+    )
     jl = _ensure()
     return np.asarray(
         jl.correlation_integral(
-            np.ascontiguousarray(traj_flat, dtype=np.float64),
-            int(t),
-            int(d),
-            np.ascontiguousarray(idx_i, dtype=np.int64),
-            np.ascontiguousarray(idx_j, dtype=np.int64),
-            np.ascontiguousarray(epsilons, dtype=np.float64),
+            traj,
+            t_int,
+            d_int,
+            ii,
+            jj,
+            eps,
         ),
         dtype=np.float64,
     )
@@ -65,9 +78,10 @@ def correlation_integral_julia(
 def kaplan_yorke_dimension_julia(lyapunov_exponents: FloatArray) -> float:
     """Estimate the Kaplan-Yorke dimension through the Julia backend."""
 
+    le = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     jl = _ensure()
     return float(
         jl.kaplan_yorke_dimension(
-            np.ascontiguousarray(lyapunov_exponents, dtype=np.float64),
+            le,
         )
     )
