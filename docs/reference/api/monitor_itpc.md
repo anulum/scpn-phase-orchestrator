@@ -352,11 +352,14 @@ With ``n_trials = 1`` ITPC is trivially 1 at every time point (one
 phasor has unit magnitude by construction). With ``n_trials = 0``
 every backend returns the empty array.
 
-### 8.2 Non-float input
+### 8.2 Non-real input
 
-`compute_itpc` casts via `np.asarray(..., dtype=np.float64)`. Integer
-or complex inputs are coerced silently; inputs with NaN / Inf
-propagate to the output (no validation at the top of the function).
+`compute_itpc` accepts finite real-valued phase arrays. Integer inputs
+are converted to ``float64`` because they still denote real phase
+angles. Boolean aliases, complex phase samples, NaN, and Inf are
+rejected before backend dispatch. Backend ITPC vectors and persistence
+scalars are also revalidated as finite real values in ``[0, 1]`` before
+their results are accepted.
 
 ### 8.3 Pause-index overflow
 

@@ -153,6 +153,8 @@ def _validate_phases_trials(phases_trials: object) -> FloatArray:
     raw = np.asarray(phases_trials)
     if _contains_boolean_alias(raw):
         raise ValueError("phases_trials must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("phases_trials must contain real-valued phase samples")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -179,10 +181,13 @@ def _validate_pause_indices(pause_indices: object) -> IntArray:
 
 
 def _validate_itpc_values(value: object, *, n_timepoints: int) -> FloatArray:
-    if _contains_boolean_alias(np.asarray(value)):
+    raw = np.asarray(value)
+    if _contains_boolean_alias(raw):
         raise ValueError("ITPC output must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("ITPC output must contain real values")
     try:
-        itpc = np.asarray(value, dtype=np.float64)
+        itpc = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("ITPC output must be numeric") from exc
     if itpc.shape != (n_timepoints,):
@@ -198,10 +203,13 @@ def _validate_itpc_values(value: object, *, n_timepoints: int) -> FloatArray:
 
 
 def _validate_persistence_value(value: object) -> float:
-    if _contains_boolean_alias(np.asarray(value)):
+    raw = np.asarray(value)
+    if _contains_boolean_alias(raw):
         raise ValueError("ITPC persistence output must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("ITPC persistence output must contain real values")
     try:
-        scalar = np.asarray(value, dtype=np.float64)
+        scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("ITPC persistence output must be numeric") from exc
     if scalar.shape != ():
