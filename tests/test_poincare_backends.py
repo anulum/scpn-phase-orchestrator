@@ -14,11 +14,15 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _poincare_mojo as poincare_mojo_mod,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _poincare_validation as poincare_validation,
 )
@@ -171,6 +175,35 @@ class TestDirectBackendBoundaryContracts:
                 t=3,
                 dim=2,
             )
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "missing crossing count header"),
+            ("\n0\n", "crossing count must be an integer"),
+            ("0\n\n", "returned 2 lines, expected 1"),
+            ("1\n0.0\n1.0\n0.5\n\n", "returned 5 lines, expected 4"),
+        ],
+    )
+    def test_mojo_runner_preserves_raw_stdout_cardinality(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(poincare_mojo_mod, "_ensure_exe", lambda: "poincare_mojo")
+        monkeypatch.setattr(
+            poincare_mojo_mod.subprocess,
+            "run",
+            lambda *_args, **_kwargs: SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            poincare_mojo_mod._parse(poincare_mojo_mod._run("PHASE\n"), dim=2, t=3)
 
     @pytest.mark.parametrize(
         "backend",

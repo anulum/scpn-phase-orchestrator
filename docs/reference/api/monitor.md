@@ -514,6 +514,10 @@ points (Poincare map), and computes return time statistics. Return time
 regularity distinguishes periodic orbits (constant return time) from
 chaotic ones (fluctuating return times).
 
+Direct accelerator contracts require finite real crossing coordinates,
+strictly increasing sampled crossing times, and Mojo text output with an
+explicit crossing-count header plus exact raw-line cardinality.
+
 **Detailed documentation:** [Poincare section monitor](monitor_poincare.md)
 
 **Two interfaces:**

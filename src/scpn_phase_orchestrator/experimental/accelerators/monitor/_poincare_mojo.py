@@ -56,22 +56,18 @@ def _run(payload: str) -> list[str]:
         raise ValueError(
             f"Mojo poincare returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [line for line in proc.stdout.strip().splitlines() if line]
+    return proc.stdout.splitlines()
 
 
 def _parse(lines: list[str], dim: int, t: int) -> tuple[FloatArray, FloatArray, int]:
     if not lines:
-        return validate_poincare_backend_outputs(
-            np.zeros(t * dim, dtype=np.float64),
-            np.zeros(t, dtype=np.float64),
-            0,
-            t=t,
-            dim=dim,
-        )
+        raise ValueError("Mojo Poincare output missing crossing count header")
     try:
         n_cr = int(lines[0])
     except ValueError as exc:
         raise ValueError("Mojo Poincare crossing count must be an integer") from exc
+    if n_cr < 0:
+        raise ValueError("Mojo Poincare crossing count must be non-negative")
     expected_lines = 1 + n_cr * dim + n_cr
     if len(lines) != expected_lines:
         raise ValueError(
