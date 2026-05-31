@@ -243,6 +243,14 @@ total coupling flow = gradient + curl + harmonic
 
 `hodge_decomposition(knm, phases)` computes all three components.
 
+Direct accelerator boundary contract: Go, Julia, and Mojo Hodge adapters use a
+single typed `float64` validation path before loading shared-library, Julia, or
+subprocess runtimes. The contract rejects boolean aliases, complex or non-finite
+payloads, malformed flattened `n*n` coupling buffers, phase vectors whose length
+does not match `n`, and invalid oscillator counts. Empty Hodge systems return
+empty `gradient`, `curl`, and `harmonic` components without requiring optional
+runtimes, matching the public Python special case.
+
 ::: scpn_phase_orchestrator.coupling.hodge
 
 ---

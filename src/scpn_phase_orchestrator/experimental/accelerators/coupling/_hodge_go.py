@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._hodge_validation import validate_hodge_backend_inputs
+
 __all__ = ["hodge_decomposition_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -54,9 +56,11 @@ def hodge_decomposition_go(
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """Compute Hodge gradient, curl, and harmonic terms with the Go backend."""
 
+    k, p, n = validate_hodge_backend_inputs(knm_flat, phases, n)
+    if n == 0:
+        empty = np.zeros(0, dtype=np.float64)
+        return empty, empty.copy(), empty.copy()
     lib = _load_lib()
-    k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     gradient = np.zeros(n, dtype=np.float64)
     curl = np.zeros(n, dtype=np.float64)
     harmonic = np.zeros(n, dtype=np.float64)

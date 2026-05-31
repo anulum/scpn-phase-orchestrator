@@ -16,6 +16,8 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._hodge_validation import validate_hodge_backend_inputs
+
 __all__ = ["hodge_decomposition_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -43,11 +45,15 @@ def hodge_decomposition_julia(
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """Compute Hodge gradient, curl, and harmonic terms with Julia."""
 
+    k, p, n = validate_hodge_backend_inputs(knm_flat, phases, n)
+    if n == 0:
+        empty = np.zeros(0, dtype=np.float64)
+        return empty, empty.copy(), empty.copy()
     jl = _ensure()
     g, c, h = jl.hodge_decomposition(
-        np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64),
-        np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-        int(n),
+        k,
+        p,
+        n,
     )
     return (
         np.asarray(g, dtype=np.float64),

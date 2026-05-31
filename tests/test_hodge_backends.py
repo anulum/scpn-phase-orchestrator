@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import sys
 import types
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -41,6 +42,10 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo impo
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+HodgeDirectBackend = Callable[
+    [np.ndarray, np.ndarray, object],
+    tuple[np.ndarray, np.ndarray, np.ndarray],
+]
 
 
 def _force(backend: str) -> str:
@@ -67,6 +72,81 @@ def _problem(seed: int, n: int = 16):
     np.fill_diagonal(k, 0.0)
     phases = rng.uniform(0, TWO_PI, n)
     return k, phases
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct optional Hodge backends validate before runtime loading."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            hodge_decomposition_go,
+            hodge_decomposition_julia,
+            hodge_decomposition_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("knm_flat", "phases", "n", "error", "match"),
+        [
+            (
+                np.array([True, False, False, True]),
+                np.zeros(2),
+                2,
+                ValueError,
+                "knm_flat",
+            ),
+            (np.array([0.0, np.nan, 0.0, 0.0]), np.zeros(2), 2, ValueError, "finite"),
+            (
+                np.array([0.0, 1.0 + 0.0j, 0.0, 0.0]),
+                np.zeros(2),
+                2,
+                ValueError,
+                "real-valued",
+            ),
+            (np.zeros((2, 2)), np.zeros(2), 2, ValueError, "knm_flat"),
+            (np.zeros(3), np.zeros(2), 2, ValueError, "n\\*n"),
+            (np.zeros(4), np.array([True, False]), 2, ValueError, "phases"),
+            (np.zeros(4), np.array([0.0, np.inf]), 2, ValueError, "finite"),
+            (np.zeros(4), np.array([0.0, 1.0 + 0.0j]), 2, ValueError, "real-valued"),
+            (np.zeros(4), np.array([[0.0, 1.0]]), 2, ValueError, "one-dimensional"),
+            (np.zeros(4), np.zeros(1), 2, ValueError, "phases length"),
+            (np.zeros(4), np.zeros(2), True, ValueError, "n"),
+            (np.zeros(4), np.zeros(2), -1, ValueError, "n"),
+        ],
+    )
+    def test_validation_precedes_runtime_load(
+        self,
+        backend: HodgeDirectBackend,
+        knm_flat: np.ndarray,
+        phases: np.ndarray,
+        n: object,
+        error: type[Exception],
+        match: str,
+    ) -> None:
+        with pytest.raises(error, match=match):
+            backend(knm_flat, phases, n)
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            hodge_decomposition_go,
+            hodge_decomposition_julia,
+            hodge_decomposition_mojo,
+        ],
+    )
+    def test_empty_hodge_returns_empty_components_before_runtime_load(
+        self,
+        backend: HodgeDirectBackend,
+    ) -> None:
+        gradient, curl, harmonic = backend(
+            np.array([], dtype=np.float64),
+            np.array([], dtype=np.float64),
+            0,
+        )
+        assert gradient.dtype == np.float64
+        assert curl.dtype == np.float64
+        assert harmonic.dtype == np.float64
+        assert gradient.shape == curl.shape == harmonic.shape == (0,)
 
 
 class TestRustParity:

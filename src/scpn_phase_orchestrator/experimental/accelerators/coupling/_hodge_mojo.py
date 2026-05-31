@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._hodge_validation import validate_hodge_backend_inputs
+
 __all__ = ["_ensure_exe", "hodge_decomposition_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -39,9 +41,11 @@ def hodge_decomposition_mojo(
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """Compute Hodge gradient, curl, and harmonic terms via the Mojo executable."""
 
+    k, p, n = validate_hodge_backend_inputs(knm_flat, phases, n)
+    if n == 0:
+        empty = np.zeros(0, dtype=np.float64)
+        return empty, empty.copy(), empty.copy()
     exe = _ensure_exe()
-    k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     tokens: list[str] = ["HODGE", str(int(n))]
     tokens.extend(repr(float(x)) for x in k.tolist())
     tokens.extend(repr(float(x)) for x in p.tolist())
