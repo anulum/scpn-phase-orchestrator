@@ -160,6 +160,8 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain real-valued phases")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -177,6 +179,8 @@ def _validate_coupling_matrix(
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain real-valued couplings")
     try:
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -204,7 +208,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_n_bins(value: object) -> int:
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if value < 2:
         raise ValueError("n_bins must be greater than or equal to 2")
@@ -212,7 +216,7 @@ def _validate_n_bins(value: object) -> int:
 
 
 def _validate_step_count(value: object, *, name: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be a non-negative integer")
     if value < 0:
         raise ValueError(f"{name} must be a non-negative integer")
@@ -243,8 +247,11 @@ def _validate_reduced_coupling(
 ) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("reduced coupling matrix must not contain boolean values")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("reduced coupling matrix must contain real values")
     try:
-        reduced = np.asarray(value, dtype=np.float64)
+        reduced = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("reduced coupling matrix must be numeric") from exc
     if reduced.ndim == 1 and reduced.size == expected_shape[0] * expected_shape[1]:
@@ -262,8 +269,11 @@ def _validate_reduced_coupling(
 def _validate_entropy_value(value: object, *, n_bins: int) -> float:
     if _contains_boolean_alias(value):
         raise ValueError("entropy output must not be a boolean value")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("entropy output must contain real values")
     try:
-        scalar = np.asarray(value, dtype=np.float64)
+        scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("entropy output must be numeric") from exc
     if scalar.shape != ():

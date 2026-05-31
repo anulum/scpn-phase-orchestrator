@@ -74,6 +74,34 @@ def test_backend_array_contracts_are_parameterised() -> None:
         assert "float64" in str(hints["phases"])
 
 
+@pytest.mark.parametrize(
+    "fn",
+    [
+        entropy_from_phases_go,
+        entropy_from_phases_julia,
+        entropy_from_phases_mojo,
+    ],
+)
+@pytest.mark.parametrize(
+    ("phases", "n_bins", "error"),
+    [
+        (np.array([0.0, True], dtype=object), 4, ValueError),
+        (np.array([0.0, 1.0 + 0.0j]), 4, ValueError),
+        (np.array([0.0, np.inf]), 4, ValueError),
+        (np.linspace(0.0, 1.0, 4), np.bool_(True), TypeError),
+        (np.linspace(0.0, 1.0, 4), 1, ValueError),
+    ],
+)
+def test_direct_backend_adapters_reject_invalid_inputs_before_runtime_loading(
+    fn,
+    phases: np.ndarray,
+    n_bins: object,
+    error: type[Exception],
+) -> None:
+    with pytest.raises(error):
+        fn(phases, n_bins)  # type: ignore[arg-type]
+
+
 class TestRustParity:
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:

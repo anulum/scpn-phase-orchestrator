@@ -63,6 +63,7 @@ def test_reduce_coupling_half():
         (np.ones(4), "knm must be a finite 2-D matrix"),
         (np.array([[0.0, np.nan], [1.0, 0.0]]), "knm"),
         (np.array([[0.0, True], [1.0, 0.0]], dtype=object), "knm"),
+        (np.array([[0.0, 1.0 + 0.0j], [1.0, 0.0]]), "real-valued"),
     ],
 )
 def test_reduce_coupling_rejects_invalid_coupling_matrix(knm, match):
@@ -84,6 +85,7 @@ def test_reduce_coupling_rejects_invalid_reduction_factor(reduction_factor):
         np.array([[0.0, np.nan], [1.0, 0.0]], dtype=np.float64),
         np.array([[False, True], [True, False]], dtype=np.bool_),
         np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object),
+        np.array([[0.0, 1.0 + 0.0j], [1.0, 0.0]]),
     ],
 )
 def test_reduce_coupling_rejects_invalid_rust_reduce_output(
@@ -141,6 +143,7 @@ def test_entropy_empty_phases():
         np.array([[0.0, 1.0]]),
         np.array([0.0, np.inf]),
         np.array([0.0, True], dtype=object),
+        np.array([0.0, 1.0 + 0.0j]),
     ],
 )
 def test_entropy_rejects_non_vector_or_non_finite_phases(phases):
@@ -148,7 +151,7 @@ def test_entropy_rejects_non_vector_or_non_finite_phases(phases):
         entropy_from_phases(phases)
 
 
-@pytest.mark.parametrize("n_bins", [0, 1, False, 18.5])
+@pytest.mark.parametrize("n_bins", [0, 1, False, np.bool_(True), 18.5])
 def test_entropy_rejects_invalid_bin_counts(n_bins):
     with pytest.raises((TypeError, ValueError), match="n_bins"):
         entropy_from_phases(np.linspace(0.0, 1.0, 8), n_bins=n_bins)
@@ -162,7 +165,7 @@ def test_entropy_accepts_numpy_integer_bin_count() -> None:
 
 @pytest.mark.parametrize(
     "backend_value",
-    [-0.1, np.nan, np.inf, [0.5], np.log(4) + 1.0, True, np.bool_(True)],
+    [-0.1, np.nan, np.inf, [0.5], np.log(4) + 1.0, True, np.bool_(True), 0.5 + 0.0j],
 )
 def test_entropy_invalid_backend_payload_falls_back(
     monkeypatch: pytest.MonkeyPatch,
