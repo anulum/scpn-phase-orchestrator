@@ -58,6 +58,7 @@ class TestPhaseDistanceMatrix:
             (np.array([0.0, np.inf], dtype=np.float64), "phases"),
             (np.array([True, False]), "phases"),
             (np.array([0.0, np.bool_(True)], dtype=object), "phases"),
+            (np.array([0.0 + 0.0j, 1.0 + 0.5j]), "real-valued"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
@@ -129,6 +130,7 @@ class TestNPE:
             (np.array([0.0, np.inf], dtype=np.float64), "phases"),
             (np.array([True, False]), "phases"),
             (np.array([0.0, np.bool_(True)], dtype=object), "phases"),
+            (np.array([0.0 + 0.0j, 1.0 + 0.5j]), "real-valued"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
@@ -141,7 +143,7 @@ class TestNPE:
 
     @pytest.mark.parametrize(
         "max_radius",
-        [False, np.nan, np.inf, "1.0", -0.1, np.pi + 1e-6],
+        [False, np.bool_(False), np.nan, np.inf, "1.0", 0.5 + 0.0j, -0.1, np.pi + 1e-6],
     )
     def test_rejects_invalid_max_radius(self, max_radius: Any) -> None:
         with pytest.raises(ValueError, match="max_radius"):

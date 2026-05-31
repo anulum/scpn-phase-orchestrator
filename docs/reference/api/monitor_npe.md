@@ -114,10 +114,14 @@ value_small = compute_npe(phases, max_radius=0.5)
 
 Key parameters:
 
-* ``phases``: ``(N,)`` array. Wrapping is applied internally — values
-  outside ``[0, 2π)`` are fine.
-* ``max_radius``: filtration cutoff in radians. ``None`` (default)
-  means ``π``; negative is treated as ``π`` in the compiled backends.
+* ``phases``: finite real-valued ``(N,)`` array. Wrapping is applied
+  internally — values outside ``[0, 2π)`` are fine. Boolean aliases
+  and complex samples are rejected because the circular-distance
+  geometry is defined on real phase angles.
+* ``max_radius``: finite real scalar filtration cutoff in radians.
+  ``None`` (default) means ``π``. Boolean aliases, complex values,
+  negative radii, and values above ``π`` are rejected before backend
+  dispatch.
 * Input of size ``< 2`` returns ``0.0`` (undefined barcode).
 
 Return type: ``float`` (``NPE``) or ``np.ndarray`` of shape ``(N, N)``
@@ -156,6 +160,13 @@ Return type: ``float`` (``NPE``) or ``np.ndarray`` of shape ``(N, N)``
 The Mojo tolerance is wider because the text-protocol round-trip
 and ``log()`` summation over lifetimes amplify a 17-digit
 round-trip to ``~1e-11``; tests use ``atol = 1e-9`` to absorb that.
+
+All backend outputs are revalidated by the Python public boundary:
+distance matrices must be finite, real-valued, symmetric, zero
+diagonal, and bounded in ``[0, π]``; backend scalar NPE values must
+be finite real numbers in ``[0, 1]``. Invalid backend payloads fall
+back to the NumPy reference implementation instead of entering the
+physics monitor.
 
 ---
 

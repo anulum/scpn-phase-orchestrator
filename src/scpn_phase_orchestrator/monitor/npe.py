@@ -156,6 +156,8 @@ def _validate_phases(phases: object) -> FloatArray:
     raw = np.asarray(phases)
     if _contains_boolean_alias(raw):
         raise ValueError("phases must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("phases must contain real-valued phase samples")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -168,10 +170,13 @@ def _validate_phases(phases: object) -> FloatArray:
 
 
 def _validate_distance_matrix(value: object, *, n_phases: int) -> FloatArray:
-    if _contains_boolean_alias(np.asarray(value)):
+    raw = np.asarray(value)
+    if _contains_boolean_alias(raw):
         raise ValueError("phase distance matrix must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("phase distance matrix must contain real values")
     try:
-        matrix = np.asarray(value, dtype=np.float64)
+        matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phase distance matrix must be numeric") from exc
     if matrix.shape != (n_phases, n_phases):
@@ -196,7 +201,7 @@ def _validate_distance_matrix(value: object, *, n_phases: int) -> FloatArray:
 def _validate_max_radius(max_radius: float | None) -> float:
     if max_radius is None:
         return float(np.pi)
-    if isinstance(max_radius, bool) or not isinstance(max_radius, Real):
+    if isinstance(max_radius, (bool, np.bool_)) or not isinstance(max_radius, Real):
         raise ValueError(
             f"max_radius must be a finite non-negative real, got {max_radius!r}"
         )
@@ -211,7 +216,7 @@ def _validate_max_radius(max_radius: float | None) -> float:
 
 
 def _validate_npe_value(value: object) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"NPE must be a finite real scalar in [0, 1], got {value!r}")
     score = float(value)
     if not np.isfinite(score):
