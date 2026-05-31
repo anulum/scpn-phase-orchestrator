@@ -263,11 +263,11 @@ def validate_te_matrix_backend_output(
         raise ValueError(
             "transfer entropy matrix backend output must be numeric"
         ) from exc
-    expected = n_osc * n_osc
-    if matrix.size != expected:
+    expected_size = n_osc * n_osc
+    if matrix.size != expected_size:
         raise ValueError(
             "transfer entropy matrix backend output size "
-            f"{matrix.size} does not match {expected}"
+            f"{matrix.size} does not match {expected_size}"
         )
     matrix = matrix.reshape(n_osc, n_osc)
     if not np.all(np.isfinite(matrix)):
