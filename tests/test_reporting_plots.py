@@ -11,6 +11,9 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
+from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -18,6 +21,77 @@ import scpn_phase_orchestrator.reporting.plots as plots_module
 from scpn_phase_orchestrator.reporting.plots import CoherencePlot
 
 _HAS_MPL = importlib.util.find_spec("matplotlib") is not None
+
+
+class _FakeAxis:
+    def __init__(self) -> None:
+        self.vertical_markers: list[int] = []
+
+    def plot(self, *args, **kwargs):
+        return [object()]
+
+    def set_xlabel(self, *args, **kwargs) -> None:
+        return None
+
+    def set_ylabel(self, *args, **kwargs) -> None:
+        return None
+
+    def set_ylim(self, *args, **kwargs) -> None:
+        return None
+
+    def set_xlim(self, *args, **kwargs) -> None:
+        return None
+
+    def set_yticks(self, *args, **kwargs) -> None:
+        return None
+
+    def legend(self, *args, **kwargs) -> None:
+        return None
+
+    def add_patch(self, *args, **kwargs) -> None:
+        return None
+
+    def axvline(self, step_x, *args, **kwargs) -> None:
+        self.vertical_markers.append(step_x)
+
+    def tick_params(self, *args, **kwargs) -> None:
+        return None
+
+    def twinx(self):
+        return _FakeAxis()
+
+    def get_legend_handles_labels(self):
+        return [], []
+
+    def imshow(self, *args, **kwargs):
+        return object()
+
+
+class _FakeFigure:
+    def tight_layout(self) -> None:
+        return None
+
+    def savefig(self, output_path, *args, **kwargs) -> None:
+        with Path(output_path).open("wb") as handle:
+            handle.write(b"fake-rendered-plot")
+
+    def colorbar(self, *args, **kwargs) -> None:
+        return None
+
+
+class _FakePyplot:
+    def __init__(self) -> None:
+        self.closed: list[_FakeFigure] = []
+
+    def subplots(self, *args, **kwargs):
+        return _FakeFigure(), _FakeAxis()
+
+    def close(self, fig) -> None:
+        self.closed.append(fig)
+
+
+def _fake_rectangle(*args, **kwargs):
+    return {"args": args, "kwargs": kwargs}
 
 
 def _make_log(n_steps: int = 20, n_layers: int = 3) -> list[dict]:
@@ -47,6 +121,75 @@ def _make_log(n_steps: int = 20, n_layers: int = 3) -> list[dict]:
             ]
         records.append(record)
     return records
+
+
+class TestMatplotlibLoaderContracts:
+    def test_cached_matplotlib_handles_are_reused(self, monkeypatch) -> None:
+        fake_pyplot = _FakePyplot()
+        monkeypatch.setattr(plots_module, "_plt", fake_pyplot)
+        monkeypatch.setattr(plots_module, "_Rectangle", _fake_rectangle)
+
+        assert plots_module._require_matplotlib() == (fake_pyplot, _fake_rectangle)
+
+    def test_missing_matplotlib_raises_actionable_extra_message(self, monkeypatch):
+        monkeypatch.setattr(plots_module, "_plt", None)
+        monkeypatch.setattr(plots_module, "_HAS_MPL", False)
+
+        with pytest.raises(ImportError, match=r"scpn-phase-orchestrator\[plot\]"):
+            plots_module._require_matplotlib()
+
+    def test_uncached_loader_selects_headless_backend(self, monkeypatch) -> None:
+        backend_updates: list[str] = []
+
+        fake_matplotlib = ModuleType("matplotlib")
+        fake_matplotlib.__path__ = []
+        fake_matplotlib.get_backend = lambda: "TkAgg"
+        fake_matplotlib.use = backend_updates.append
+
+        fake_pyplot = ModuleType("matplotlib.pyplot")
+        fake_pyplot.subplots = _FakePyplot().subplots
+        fake_pyplot.close = _FakePyplot().close
+
+        fake_patches = ModuleType("matplotlib.patches")
+        fake_patches.Rectangle = _fake_rectangle
+
+        monkeypatch.setattr(plots_module, "_plt", None)
+        monkeypatch.setattr(plots_module, "_Rectangle", None)
+        monkeypatch.setattr(plots_module, "_HAS_MPL", True)
+        monkeypatch.setitem(sys.modules, "matplotlib", fake_matplotlib)
+        monkeypatch.setitem(sys.modules, "matplotlib.pyplot", fake_pyplot)
+        monkeypatch.setitem(sys.modules, "matplotlib.patches", fake_patches)
+
+        assert plots_module._require_matplotlib() == (fake_pyplot, _fake_rectangle)
+        assert backend_updates == ["Agg"]
+
+
+class TestCoherencePlotHeadlessRendering:
+    def test_all_plot_methods_write_outputs_with_headless_renderer(
+        self, monkeypatch, tmp_path
+    ) -> None:
+        fake_pyplot = _FakePyplot()
+        monkeypatch.setattr(
+            plots_module,
+            "_require_matplotlib",
+            lambda: (fake_pyplot, _fake_rectangle),
+        )
+
+        log_data = _make_log()
+        log_data.append({"event": "pac_snapshot", "pac_matrix": [0.0, 0.1, 0.2, 0.3]})
+        plot = CoherencePlot(log_data)
+
+        outputs = [
+            plot.plot_r_timeline(tmp_path / "r.png"),
+            plot.plot_regime_timeline(tmp_path / "regime.png"),
+            plot.plot_action_audit(tmp_path / "actions.png"),
+            plot.plot_amplitude_timeline(tmp_path / "amplitude.png"),
+            plot.plot_pac_heatmap(tmp_path / "pac.png"),
+        ]
+
+        assert all(path.exists() for path in outputs)
+        assert all(path.read_bytes() == b"fake-rendered-plot" for path in outputs)
+        assert len(fake_pyplot.closed) == len(outputs)
 
 
 @pytest.mark.skipif(not _HAS_MPL, reason="matplotlib not installed")
