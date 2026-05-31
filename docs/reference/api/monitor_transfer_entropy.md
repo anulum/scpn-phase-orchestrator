@@ -118,6 +118,13 @@ matrix-series payloads must be finite real `float64` arrays with boolean aliases
 rejected, oscillator/time/bin counts must be integer-valued, and `n_bins` must
 be at least two.
 
+Direct backend return payloads are also validated before return. Pairwise TE
+must be a finite non-negative real scalar not exceeding `log(n_bins)`. Matrix TE
+payloads must contain exactly `N*N` finite real values, be non-negative, stay
+within the same entropy bound, and carry an exact zero diagonal. This keeps Go,
+Julia, and Mojo bridge failures deterministic if an optional runtime emits a
+malformed scalar, a diagonal self-information leak, or an out-of-domain matrix.
+
 ---
 
 ## 3. Multi-backend fallback chain

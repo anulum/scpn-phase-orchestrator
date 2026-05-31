@@ -11,14 +11,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 from ._te_validation import (
     validate_phase_te_backend_inputs,
+    validate_te_backend_output,
     validate_te_matrix_backend_inputs,
+    validate_te_matrix_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -51,13 +53,13 @@ def phase_te_julia(source: FloatArray, target: FloatArray, n_bins: int) -> float
         n_bins,
     )
     jl = _ensure()
-    return cast(
-        "float",
+    return validate_te_backend_output(
         jl.phase_transfer_entropy(
             np.ascontiguousarray(source.ravel(), dtype=np.float64),
             np.ascontiguousarray(target.ravel(), dtype=np.float64),
             n_bins,
         ),
+        n_bins=n_bins,
     )
 
 
@@ -76,14 +78,13 @@ def te_matrix_julia(
         n_bins,
     )
     jl = _ensure()
-    return cast(
-        "FloatArray",
-        np.asarray(
-            jl.transfer_entropy_matrix(
-                np.ascontiguousarray(phase_series, dtype=np.float64),
-                n_osc,
-                n_time,
-                n_bins,
-            )
+    return validate_te_matrix_backend_output(
+        jl.transfer_entropy_matrix(
+            np.ascontiguousarray(phase_series, dtype=np.float64),
+            n_osc,
+            n_time,
+            n_bins,
         ),
+        n_osc=n_osc,
+        n_bins=n_bins,
     )

@@ -348,6 +348,77 @@ class TestCrossBackendConsistency:
 
 
 class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize("value", [0.0, 0.25, np.log(4) + 5.0e-13])
+    def test_pairwise_te_backend_output_accepts_entropy_bounds(
+        self,
+        value: float,
+    ) -> None:
+        assert te_validation.validate_te_backend_output(value, n_bins=4) >= 0.0
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            np.bool_(False),
+            -1.0e-3,
+            np.inf,
+            np.log(4) + 1.0e-3,
+            0.1 + 0.0j,
+            np.array([0.1]),
+        ],
+    )
+    def test_pairwise_te_backend_output_rejects_invalid_scalars(
+        self,
+        value: object,
+    ) -> None:
+        with pytest.raises(ValueError, match="transfer entropy backend output"):
+            te_validation.validate_te_backend_output(value, n_bins=4)
+
+    def test_te_matrix_backend_output_accepts_directed_matrix(self) -> None:
+        matrix = te_validation.validate_te_matrix_backend_output(
+            np.array(
+                [
+                    0.0,
+                    0.25,
+                    0.5,
+                    0.125,
+                    0.0,
+                    0.375,
+                    0.2,
+                    0.3,
+                    0.0,
+                ],
+            ),
+            n_osc=3,
+            n_bins=4,
+        )
+
+        assert matrix.shape == (3, 3)
+        np.testing.assert_allclose(np.diag(matrix), 0.0, atol=0.0)
+
+    @pytest.mark.parametrize(
+        ("matrix", "match"),
+        [
+            (np.array([0.0, 0.1, 0.2]), "size"),
+            (np.array([[0.0, np.nan], [0.1, 0.0]]), "finite"),
+            (np.array([[0.0, -0.1], [0.1, 0.0]]), "non-negative"),
+            (np.array([[0.0, np.log(4) + 1.0], [0.1, 0.0]]), "log"),
+            (np.array([[0.1, 0.0], [0.0, 0.0]]), "diagonal"),
+            (np.array([[False, 0.1], [0.2, False]], dtype=object), "boolean"),
+            (np.array([[0.0, 0.1j], [0.2j, 0.0]]), "real"),
+        ],
+    )
+    def test_te_matrix_backend_output_rejects_invalid_payloads(
+        self,
+        matrix: np.ndarray,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            te_validation.validate_te_matrix_backend_output(
+                matrix,
+                n_osc=2,
+                n_bins=4,
+            )
+
     @pytest.mark.parametrize(
         ("fn", "label"),
         [

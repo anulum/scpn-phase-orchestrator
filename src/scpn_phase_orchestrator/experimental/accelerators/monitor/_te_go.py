@@ -20,7 +20,9 @@ from numpy.typing import NDArray
 
 from ._te_validation import (
     validate_phase_te_backend_inputs,
+    validate_te_backend_output,
     validate_te_matrix_backend_inputs,
+    validate_te_matrix_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -84,7 +86,7 @@ def phase_te_go(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go PhaseTransferEntropy rc={rc}")
-    return float(out.value)
+    return validate_te_backend_output(out.value, n_bins=n_bins)
 
 
 def te_matrix_go(
@@ -113,4 +115,4 @@ def te_matrix_go(
     )
     if rc != 0:
         raise ValueError(f"Go TransferEntropyMatrix rc={rc}")
-    return out
+    return validate_te_matrix_backend_output(out, n_osc=n_osc, n_bins=n_bins)

@@ -19,7 +19,9 @@ from numpy.typing import NDArray
 
 from ._te_validation import (
     validate_phase_te_backend_inputs,
+    validate_te_backend_output,
     validate_te_matrix_backend_inputs,
+    validate_te_matrix_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -72,7 +74,9 @@ def phase_te_mojo(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     tokens.extend(repr(float(x)) for x in s[:n].tolist())
     tokens.extend(repr(float(x)) for x in t[:n].tolist())
     result = _run(" ".join(tokens) + "\n")
-    return float(result[0])
+    if len(result) != 1:
+        raise ValueError(f"Mojo PTE returned {len(result)} values, expected 1")
+    return validate_te_backend_output(result[0], n_bins=n_bins)
 
 
 def te_matrix_mojo(
@@ -97,4 +101,4 @@ def te_matrix_mojo(
         raise ValueError(
             f"Mojo MAT returned {len(result)} values, expected {n_osc * n_osc}"
         )
-    return np.array(result, dtype=np.float64)
+    return validate_te_matrix_backend_output(result, n_osc=n_osc, n_bins=n_bins)

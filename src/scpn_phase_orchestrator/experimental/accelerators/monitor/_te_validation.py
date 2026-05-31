@@ -18,6 +18,14 @@ from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
+__all__ = [
+    "FloatArray",
+    "validate_phase_te_backend_inputs",
+    "validate_te_backend_output",
+    "validate_te_matrix_backend_inputs",
+    "validate_te_matrix_backend_output",
+]
+
 
 def _contains_boolean_alias(value: object) -> bool:
     try:
@@ -112,3 +120,72 @@ def validate_te_matrix_backend_inputs(
         timestep_count,
         _validate_int_at_least(n_bins, name="n_bins", minimum=2),
     )
+
+
+def validate_te_backend_output(value: object, *, n_bins: int) -> float:
+    """Validate a direct pairwise transfer-entropy backend scalar."""
+
+    raw = np.asarray(value)
+    if _contains_boolean_alias(raw):
+        raise ValueError("transfer entropy backend output must not be boolean")
+    if np.iscomplexobj(raw):
+        raise ValueError("transfer entropy backend output must be real")
+    try:
+        scalar = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("transfer entropy backend output must be numeric") from exc
+    if scalar.shape != ():
+        raise ValueError("transfer entropy backend output must be scalar")
+    result = float(scalar)
+    max_entropy = float(np.log(n_bins))
+    tolerance = 1.0e-12
+    if not np.isfinite(result) or result < -tolerance:
+        raise ValueError("transfer entropy backend output must be non-negative")
+    if result > max_entropy + tolerance:
+        raise ValueError("transfer entropy backend output must not exceed log(n_bins)")
+    return max(result, 0.0)
+
+
+def validate_te_matrix_backend_output(
+    value: object,
+    *,
+    n_osc: int,
+    n_bins: int,
+) -> FloatArray:
+    """Validate a direct transfer-entropy matrix backend payload."""
+
+    raw = np.asarray(value)
+    if _contains_boolean_alias(raw):
+        raise ValueError("transfer entropy matrix backend output has boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("transfer entropy matrix backend output must be real")
+    try:
+        matrix = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "transfer entropy matrix backend output must be numeric"
+        ) from exc
+    expected = n_osc * n_osc
+    if matrix.size != expected:
+        raise ValueError(
+            "transfer entropy matrix backend output size "
+            f"{matrix.size} does not match {expected}"
+        )
+    matrix = matrix.reshape(n_osc, n_osc)
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("transfer entropy matrix backend output must be finite")
+    tolerance = 1.0e-12
+    if np.any(matrix < -tolerance):
+        raise ValueError(
+            "transfer entropy matrix backend output must be non-negative"
+        )
+    max_entropy = float(np.log(n_bins))
+    if np.any(matrix > max_entropy + tolerance):
+        raise ValueError(
+            "transfer entropy matrix backend output must not exceed log(n_bins)"
+        )
+    if not np.allclose(np.diag(matrix), 0.0, rtol=0.0, atol=tolerance):
+        raise ValueError("transfer entropy matrix backend output diagonal must be zero")
+    matrix = np.maximum(matrix, 0.0)
+    np.fill_diagonal(matrix, 0.0)
+    return np.ascontiguousarray(matrix, dtype=np.float64)
