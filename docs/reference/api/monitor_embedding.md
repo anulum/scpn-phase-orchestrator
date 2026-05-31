@@ -43,6 +43,15 @@ payloads, malformed flattened embedding lengths, invalid delay/dimension
 requests, invalid lags, and invalid bin counts are rejected before
 shared-library, Julia, or subprocess execution.
 
+Direct backend return payloads are validated before they are handed back to the
+public monitor boundary. Delay-embedding outputs must have the exact
+`(T_effective, dimension)` shape and match the mathematical indexing
+`x[t + k*tau]`; mutual-information outputs must be finite non-negative real
+scalars; nearest-neighbor outputs must contain finite non-negative distances
+and integral in-range neighbor indices, with self-neighbors rejected for
+non-trivial embeddings. Malformed Mojo text output is normalised to
+deterministic `ValueError` failures rather than leaking parser exceptions.
+
 ## Invariants
 
 `delay_embed` is exact indexing and should match across backends without

@@ -18,8 +18,11 @@ from numpy.typing import NDArray
 
 from ._embedding_validation import (
     validate_delay_embed_backend_inputs,
+    validate_delay_embed_backend_output,
     validate_mutual_information_backend_inputs,
+    validate_mutual_information_backend_output,
     validate_nearest_neighbor_backend_inputs,
+    validate_nearest_neighbor_backend_outputs,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -55,19 +58,22 @@ def delay_embed_julia(
 ) -> FloatArray:
     """Build a delay-coordinate embedding through the Julia backend."""
 
-    s, delay_int, dimension_int, _ = validate_delay_embed_backend_inputs(
+    s, delay_int, dimension_int, t_eff = validate_delay_embed_backend_inputs(
         signal,
         delay,
         dimension,
     )
     jl = _ensure()
-    return np.asarray(
+    return validate_delay_embed_backend_output(
         jl.delay_embed(
             s,
             delay_int,
             dimension_int,
         ),
-        dtype=np.float64,
+        signal=s,
+        delay=delay_int,
+        dimension=dimension_int,
+        t_effective=t_eff,
     )
 
 
@@ -89,7 +95,7 @@ def mutual_information_julia(
     if s.size - lag_int <= 0:
         return 0.0
     jl = _ensure()
-    return float(
+    return validate_mutual_information_backend_output(
         jl.mutual_information(
             s,
             lag_int,
@@ -117,7 +123,4 @@ def nearest_neighbor_distances_julia(
         t_int,
         m_int,
     )
-    return (
-        np.asarray(dist, dtype=np.float64),
-        np.asarray(idx, dtype=np.int64),
-    )
+    return validate_nearest_neighbor_backend_outputs(dist, idx, t=t_int)

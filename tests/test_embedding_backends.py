@@ -138,6 +138,102 @@ def test_backend_array_contracts_are_parameterised() -> None:
 
 
 class TestDirectBackendBoundaryContracts:
+    def test_delay_backend_output_contract_requires_exact_indexing(self) -> None:
+        signal = np.arange(8, dtype=np.float64)
+        valid = np.array([[0.0, 2.0], [1.0, 3.0], [2.0, 4.0]])
+
+        embedded = embedding_validation.validate_delay_embed_backend_output(
+            valid,
+            signal=signal,
+            delay=2,
+            dimension=2,
+            t_effective=3,
+        )
+
+        np.testing.assert_array_equal(embedded, valid)
+
+    @pytest.mark.parametrize(
+        ("embedded", "match"),
+        [
+            (np.array([0.0, 2.0, 1.0]), "shape"),
+            (np.array([[0.0, np.inf], [1.0, 3.0], [2.0, 4.0]]), "finite"),
+            (np.array([[0.0, True], [1.0, 3.0], [2.0, 4.0]], dtype=object), "boolean"),
+            (np.array([[0.0, 2.0j], [1.0, 3.0], [2.0, 4.0]]), "real"),
+            (np.array([[0.0, 2.0], [1.0, 99.0], [2.0, 4.0]]), "exact indexing"),
+        ],
+    )
+    def test_delay_backend_output_contract_rejects_invalid_payloads(
+        self,
+        embedded: np.ndarray,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            embedding_validation.validate_delay_embed_backend_output(
+                embedded,
+                signal=np.arange(8, dtype=np.float64),
+                delay=2,
+                dimension=2,
+                t_effective=3,
+            )
+
+    @pytest.mark.parametrize("value", [0.0, 1.5, np.array(2.0)])
+    def test_mi_backend_output_contract_accepts_non_negative_scalars(
+        self,
+        value: object,
+    ) -> None:
+        result = embedding_validation.validate_mutual_information_backend_output(value)
+        assert result >= 0.0
+
+    @pytest.mark.parametrize(
+        "value",
+        [np.bool_(True), -1.0, np.inf, 1.0 + 0.0j, np.array([1.0])],
+    )
+    def test_mi_backend_output_contract_rejects_invalid_payloads(
+        self,
+        value: object,
+    ) -> None:
+        with pytest.raises(ValueError, match="mutual information backend output"):
+            embedding_validation.validate_mutual_information_backend_output(value)
+
+    def test_nn_backend_output_contract_accepts_metric_payload(self) -> None:
+        distances, indices = (
+            embedding_validation.validate_nearest_neighbor_backend_outputs(
+                np.array([1.0, 2.0, 1.0]),
+                np.array([2.0, 0.0, 0.0]),
+                t=3,
+            )
+        )
+
+        np.testing.assert_allclose(distances, [1.0, 2.0, 1.0])
+        np.testing.assert_array_equal(indices, [2, 0, 0])
+
+    @pytest.mark.parametrize(
+        ("distances", "indices", "match"),
+        [
+            (np.array([1.0, np.nan]), np.array([1.0, 0.0]), "finite"),
+            (np.array([1.0, -0.1]), np.array([1.0, 0.0]), "non-negative"),
+            (np.array([1.0, 2.0]), np.array([1.0, np.inf]), "finite"),
+            (np.array([1.0, 2.0]), np.array([1.0, 0.5]), "integral"),
+            (np.array([1.0, 2.0]), np.array([2.0, 0.0]), "in range"),
+            (np.array([1.0, 2.0]), np.array([0.0, 1.0]), "self"),
+            (np.array([1.0]), np.array([0.0, 1.0]), "shape"),
+            (np.array([True, 1.0], dtype=object), np.array([1.0, 0.0]), "booleans"),
+            (np.array([1.0, 2.0]), np.array([True, 0.0], dtype=object), "booleans"),
+        ],
+    )
+    def test_nn_backend_output_contract_rejects_invalid_payloads(
+        self,
+        distances: np.ndarray,
+        indices: np.ndarray,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            embedding_validation.validate_nearest_neighbor_backend_outputs(
+                distances,
+                indices,
+                t=2,
+            )
+
     @pytest.mark.parametrize(
         "fn",
         [delay_embed_go, delay_embed_julia, delay_embed_mojo],

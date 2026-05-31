@@ -19,8 +19,11 @@ from numpy.typing import NDArray
 
 from ._embedding_validation import (
     validate_delay_embed_backend_inputs,
+    validate_delay_embed_backend_output,
     validate_mutual_information_backend_inputs,
+    validate_mutual_information_backend_output,
     validate_nearest_neighbor_backend_inputs,
+    validate_nearest_neighbor_backend_outputs,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -68,7 +71,7 @@ def delay_embed_mojo(
 ) -> FloatArray:
     """Build a delay-coordinate embedding through the Mojo backend."""
 
-    s, delay_int, dimension_int, _ = validate_delay_embed_backend_inputs(
+    s, delay_int, dimension_int, t_eff = validate_delay_embed_backend_inputs(
         signal,
         delay,
         dimension,
@@ -82,7 +85,17 @@ def delay_embed_mojo(
     ]
     tokens.extend(repr(float(x)) for x in s.tolist())
     result = _run(" ".join(tokens) + "\n")
-    return np.array([float(line) for line in result], dtype=np.float64)
+    try:
+        values = np.array([float(line) for line in result], dtype=np.float64)
+    except ValueError as exc:
+        raise ValueError("Mojo delay embedding output must be real-valued") from exc
+    return validate_delay_embed_backend_output(
+        values,
+        signal=s,
+        delay=delay_int,
+        dimension=dimension_int,
+        t_effective=t_eff,
+    )
 
 
 def mutual_information_mojo(
@@ -111,7 +124,13 @@ def mutual_information_mojo(
     ]
     tokens.extend(repr(float(x)) for x in s.tolist())
     result = _run(" ".join(tokens) + "\n")
-    return float(result[0])
+    if len(result) != 1:
+        raise ValueError(f"Mojo MI returned {len(result)} lines, expected 1")
+    try:
+        value = float(result[0])
+    except ValueError as exc:
+        raise ValueError("Mojo MI output must be real-valued") from exc
+    return validate_mutual_information_backend_output(value)
 
 
 def nearest_neighbor_distances_mojo(
@@ -132,6 +151,12 @@ def nearest_neighbor_distances_mojo(
     result = _run(" ".join(tokens) + "\n")
     if len(result) != 2 * t_int:
         raise ValueError(f"Mojo NN returned {len(result)} lines, expected {2 * t_int}")
-    dist = np.array([float(x) for x in result[:t_int]], dtype=np.float64)
-    idx = np.array([int(x) for x in result[t_int:]], dtype=np.int64)
-    return dist, idx
+    try:
+        dist = np.array([float(x) for x in result[:t_int]], dtype=np.float64)
+    except ValueError as exc:
+        raise ValueError("Mojo NN distances must be real-valued") from exc
+    try:
+        idx = np.array([float(x) for x in result[t_int:]], dtype=np.float64)
+    except ValueError as exc:
+        raise ValueError("Mojo NN indices must be numeric") from exc
+    return validate_nearest_neighbor_backend_outputs(dist, idx, t=t_int)

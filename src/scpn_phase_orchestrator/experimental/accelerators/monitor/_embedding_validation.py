@@ -21,8 +21,11 @@ FloatArray: TypeAlias = NDArray[np.float64]
 __all__ = [
     "FloatArray",
     "validate_delay_embed_backend_inputs",
+    "validate_delay_embed_backend_output",
+    "validate_mutual_information_backend_output",
     "validate_mutual_information_backend_inputs",
     "validate_nearest_neighbor_backend_inputs",
+    "validate_nearest_neighbor_backend_outputs",
 ]
 
 
@@ -108,3 +111,105 @@ def validate_nearest_neighbor_backend_inputs(
     if e.size != expected:
         raise ValueError(f"embedded length {e.size} does not match t*m = {expected}")
     return e, t_int, m_int
+
+
+def validate_delay_embed_backend_output(
+    embedded: object,
+    *,
+    signal: FloatArray,
+    delay: int,
+    dimension: int,
+    t_effective: int,
+) -> FloatArray:
+    """Validate a direct backend delay embedding against exact indexing."""
+
+    raw = np.asarray(embedded)
+    if _contains_boolean_alias(raw):
+        raise ValueError("delay embedding backend output must not contain booleans")
+    if np.iscomplexobj(raw):
+        raise ValueError("delay embedding backend output must contain real values")
+    try:
+        array = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("delay embedding backend output must be numeric") from exc
+    if array.shape == (t_effective * dimension,):
+        array = array.reshape(t_effective, dimension)
+    if array.shape != (t_effective, dimension):
+        raise ValueError(
+            f"delay embedding backend output shape {array.shape} does not match "
+            f"({t_effective}, {dimension})"
+        )
+    if not np.all(np.isfinite(array)):
+        raise ValueError("delay embedding backend output must be finite")
+    indices = np.arange(dimension) * delay
+    rows = np.arange(t_effective)[:, np.newaxis] + indices[np.newaxis, :]
+    expected = signal[rows]
+    if not np.array_equal(array, expected):
+        raise ValueError("delay embedding backend output must match exact indexing")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def validate_mutual_information_backend_output(value: object) -> float:
+    """Validate a direct backend mutual-information scalar."""
+
+    raw = np.asarray(value)
+    if _contains_boolean_alias(raw):
+        raise ValueError("mutual information backend output must not be boolean")
+    if np.iscomplexobj(raw):
+        raise ValueError("mutual information backend output must be real")
+    try:
+        scalar = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("mutual information backend output must be numeric") from exc
+    if scalar.shape != ():
+        raise ValueError("mutual information backend output must be scalar")
+    result = float(scalar)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError("mutual information backend output must be non-negative")
+    return result
+
+
+def validate_nearest_neighbor_backend_outputs(
+    distances: object,
+    indices: object,
+    *,
+    t: int,
+) -> tuple[FloatArray, NDArray[np.int64]]:
+    """Validate direct backend nearest-neighbour payloads."""
+
+    t_int = _validate_int_at_least(t, name="t", minimum=0)
+    raw_dist = np.asarray(distances)
+    raw_idx = np.asarray(indices)
+    if _contains_boolean_alias(raw_dist):
+        raise ValueError("nearest-neighbor distances must not contain booleans")
+    if _contains_boolean_alias(raw_idx):
+        raise ValueError("nearest-neighbor indices must not contain booleans")
+    if np.iscomplexobj(raw_dist):
+        raise ValueError("nearest-neighbor distances must contain real values")
+    if np.iscomplexobj(raw_idx):
+        raise ValueError("nearest-neighbor indices must contain integer values")
+    try:
+        dist = raw_dist.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("nearest-neighbor distances must be numeric") from exc
+    try:
+        idx_float = raw_idx.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("nearest-neighbor indices must be numeric") from exc
+    if dist.shape != (t_int,) or idx_float.shape != (t_int,):
+        raise ValueError("nearest-neighbor backend output shape must match t")
+    if not np.all(np.isfinite(dist)) or np.any(dist < 0.0):
+        raise ValueError("nearest-neighbor distances must be finite and non-negative")
+    if not np.all(np.isfinite(idx_float)):
+        raise ValueError("nearest-neighbor indices must be finite")
+    if not np.all(np.equal(idx_float, np.floor(idx_float))):
+        raise ValueError("nearest-neighbor indices must be integral")
+    idx = idx_float.astype(np.int64, copy=False)
+    if np.any(idx < 0) or np.any(idx >= t_int):
+        raise ValueError("nearest-neighbor indices must be in range")
+    if t_int > 1 and np.any(idx == np.arange(t_int, dtype=np.int64)):
+        raise ValueError("nearest-neighbor indices must not point to self")
+    return (
+        np.ascontiguousarray(dist, dtype=np.float64),
+        np.ascontiguousarray(idx, dtype=np.int64),
+    )

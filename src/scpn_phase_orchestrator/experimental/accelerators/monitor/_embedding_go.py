@@ -19,8 +19,11 @@ from numpy.typing import NDArray
 
 from ._embedding_validation import (
     validate_delay_embed_backend_inputs,
+    validate_delay_embed_backend_output,
     validate_mutual_information_backend_inputs,
+    validate_mutual_information_backend_output,
     validate_nearest_neighbor_backend_inputs,
+    validate_nearest_neighbor_backend_outputs,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -98,7 +101,13 @@ def delay_embed_go(
     )
     if rc != 0:
         raise ValueError(f"Go DelayEmbed rc={rc}")
-    return out
+    return validate_delay_embed_backend_output(
+        out,
+        signal=s,
+        delay=delay_int,
+        dimension=dimension_int,
+        t_effective=t_eff,
+    )
 
 
 def mutual_information_go(
@@ -126,7 +135,7 @@ def mutual_information_go(
     )
     if rc != 0:
         raise ValueError(f"Go MutualInformation rc={rc}")
-    return float(out.value)
+    return validate_mutual_information_backend_output(out.value)
 
 
 def nearest_neighbor_distances_go(
@@ -154,4 +163,4 @@ def nearest_neighbor_distances_go(
     )
     if rc != 0:
         raise ValueError(f"Go NearestNeighborDistances rc={rc}")
-    return dist, idx
+    return validate_nearest_neighbor_backend_outputs(dist, idx, t=t_int)
