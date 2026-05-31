@@ -57,7 +57,6 @@ def test__poincare_validation_helper_is_directly_linked_to_backend_tests() -> No
     assert callable(poincare_validation.validate_phase_poincare_backend_inputs)
 
 
-
 def _force(backend: str) -> str:
     prev = p_mod.ACTIVE_BACKEND
     p_mod.ACTIVE_BACKEND = backend

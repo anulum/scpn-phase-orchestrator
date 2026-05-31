@@ -55,7 +55,6 @@ def test__hodge_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(hodge_validation.validate_hodge_backend_inputs)
 
 
-
 def _force(backend: str) -> str:
     prev = h_mod.ACTIVE_BACKEND
     h_mod.ACTIVE_BACKEND = backend

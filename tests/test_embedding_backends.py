@@ -71,7 +71,6 @@ def test__embedding_validation_helper_is_directly_linked_to_backend_tests() -> N
     assert callable(embedding_validation.validate_nearest_neighbor_backend_inputs)
 
 
-
 def _force(backend: str) -> str:
     prev = em_mod.ACTIVE_BACKEND
     em_mod.ACTIVE_BACKEND = backend

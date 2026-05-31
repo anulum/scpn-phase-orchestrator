@@ -52,7 +52,6 @@ def test__chimera_validation_helper_is_directly_linked_to_backend_tests() -> Non
     assert callable(chimera_validation.validate_chimera_backend_inputs)
 
 
-
 def _force(backend: str) -> str:
     prev = ch_mod.ACTIVE_BACKEND
     ch_mod.ACTIVE_BACKEND = backend

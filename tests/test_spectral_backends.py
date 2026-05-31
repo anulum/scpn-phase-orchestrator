@@ -64,7 +64,6 @@ def test__spectral_validation_helper_is_directly_linked_to_backend_tests() -> No
     assert callable(spectral_validation.validate_spectral_backend_inputs)
 
 
-
 @contextlib.contextmanager
 def _force(name: str):
     prev = s_mod.ACTIVE_BACKEND

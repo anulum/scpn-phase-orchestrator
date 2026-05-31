@@ -51,7 +51,6 @@ def test__npe_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(npe_validation.validate_npe_backend_inputs)
 
 
-
 def _force(backend: str) -> str:
     prev = npe_mod.ACTIVE_BACKEND
     npe_mod.ACTIVE_BACKEND = backend

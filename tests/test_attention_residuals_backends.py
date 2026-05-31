@@ -67,6 +67,7 @@ def test__attnres_validation_helper_is_directly_linked_to_backend_tests() -> Non
     assert callable(attnres_validation.validate_attnres_backend_inputs)
     assert callable(attnres_validation.validate_attnres_backend_output)
 
+
 TWO_PI = 2.0 * np.pi
 AttnResDirectBackend = Callable[
     [

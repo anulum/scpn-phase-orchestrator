@@ -64,7 +64,6 @@ def test__dimension_validation_helper_is_directly_linked_to_backend_tests() -> N
     assert callable(dimension_validation.validate_kaplan_yorke_backend_input)
 
 
-
 def _force(backend: str) -> str:
     prev = dim_mod.ACTIVE_BACKEND
     dim_mod.ACTIVE_BACKEND = backend

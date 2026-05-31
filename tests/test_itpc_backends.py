@@ -61,7 +61,6 @@ def test__itpc_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(itpc_validation.validate_itpc_persistence_backend_inputs)
 
 
-
 def _force(backend: str) -> str:
     prev = it_mod.ACTIVE_BACKEND
     it_mod.ACTIVE_BACKEND = backend

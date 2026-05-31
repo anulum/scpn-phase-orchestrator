@@ -47,7 +47,6 @@ def test__lyapunov_validation_helper_is_directly_linked_to_backend_tests() -> No
     assert callable(lyapunov_validation.validate_lyapunov_backend_inputs)
 
 
-
 def _force(backend: str) -> str:
     prev = ly_mod.ACTIVE_BACKEND
     ly_mod.ACTIVE_BACKEND = backend
