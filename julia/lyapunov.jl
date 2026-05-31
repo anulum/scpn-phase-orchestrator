@@ -10,7 +10,7 @@
 lyapunov.jl
 
 Benettin 1980 / Shimada & Nagashima 1979 Lyapunov spectrum on the
-Kuramoto tangent space via RK4 integration + periodic row-oriented
+Kuramoto tangent space via RK4 integration + periodic column-oriented
 Modified Gram-Schmidt. Matches the Rust / NumPy / Go / Mojo reference
 implementations bit-for-bit up to float rounding.
 """
@@ -31,6 +31,17 @@ function assert_zero_coupling_diagonal(knm::AbstractMatrix{Float64})
         )
     end
     return nothing
+end
+
+
+function initial_tangent_basis(n::Int, zeta::Float64)
+    Q = Matrix{Float64}(I, n, n)
+    if zeta == 0.0
+        Q[:, 1] .= 1.0 / sqrt(Float64(n))
+        F = qr(Q)
+        Q = Matrix(F.Q)
+    end
+    return Q
 end
 
 
@@ -119,7 +130,7 @@ function lyapunov_spectrum(
     assert_zero_coupling_diagonal(knm)
 
     phases = collect(phases_init)
-    Q = Matrix{Float64}(I, n, n)
+    Q = initial_tangent_basis(n, zeta)
     exponents = zeros(Float64, n)
     total_time = 0.0
     dt6 = dt / 6.0
@@ -151,10 +162,10 @@ function lyapunov_spectrum(
         Q = Q .+ dt6 .* (k1q .+ 2.0 .* k2q .+ 2.0 .* k3q .+ k4q)
         total_time += dt
 
-        # Periodic QR reorthogonalisation on rows (Rust convention).
+        # Periodic QR reorthogonalisation on tangent-vector columns.
         if step % qr_interval == 0
-            F = qr(Q')
-            Q = Matrix(F.Q)'
+            F = qr(Q)
+            Q = Matrix(F.Q)
             R = F.R
             @inbounds for i in 1:n
                 d = abs(R[i, i])

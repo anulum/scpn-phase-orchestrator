@@ -8,7 +8,7 @@
 
 """Benettin 1980 / Shimada-Nagashima 1979 Lyapunov spectrum as a Mojo
 executable. RK4 integration on the (phases, Q) tangent-space pair plus
-periodic row-oriented Modified Gram-Schmidt to accumulate log-stretch
+periodic column-oriented Modified Gram-Schmidt to accumulate log-stretch
 factors. Matches the Rust / NumPy / Julia / Go reference implementations
 bit-for-bit up to float rounding.
 
@@ -93,10 +93,10 @@ fn mat_mul(
             out[i * n + k] = s
 
 
-fn row_mgs(
+fn column_mgs(
     mut Q: List[Float64], n: Int, mut diagR: List[Float64]
 ) -> None:
-    """Row-oriented Modified Gram-Schmidt with two-pass reorthogonalisation.
+    """Column-oriented Modified Gram-Schmidt with two-pass reorthogonalisation.
     Matches the Rust kernel's ``modified_gram_schmidt`` convention.
     """
     for j in range(n):
@@ -104,19 +104,34 @@ fn row_mgs(
             for k in range(j):
                 var dot: Float64 = 0.0
                 for i in range(n):
-                    dot += Q[k * n + i] * Q[j * n + i]
+                    dot += Q[i * n + k] * Q[i * n + j]
                 for i in range(n):
-                    Q[j * n + i] = Q[j * n + i] - dot * Q[k * n + i]
+                    Q[i * n + j] = Q[i * n + j] - dot * Q[i * n + k]
         var norm_sq: Float64 = 0.0
         for i in range(n):
-            var v = Q[j * n + i]
+            var v = Q[i * n + j]
             norm_sq += v * v
         var norm = sqrt(norm_sq)
         diagR[j] = norm
         if norm > 1e-300:
             var inv = 1.0 / norm
             for i in range(n):
-                Q[j * n + i] = Q[j * n + i] * inv
+                Q[i * n + j] = Q[i * n + j] * inv
+
+
+fn initialise_tangent_basis(
+    mut Q: List[Float64], n: Int, zeta: Float64, mut diagR: List[Float64]
+) -> None:
+    for idx in range(n * n):
+        Q[idx] = 0.0
+    for i in range(n):
+        Q[i * n + i] = 1.0
+
+    if zeta == 0.0:
+        var neutral = 1.0 / sqrt(Float64(n))
+        for i in range(n):
+            Q[i * n] = neutral
+        column_mgs(Q, n, diagR)
 
 
 fn sort_descending(mut xs: List[Float64], n: Int) -> None:
@@ -166,8 +181,6 @@ fn lyapunov_spectrum(
     var Q = List[Float64](capacity=nn)
     for _ in range(nn):
         Q.append(0.0)
-    for i in range(n):
-        Q[i * n + i] = 1.0
 
     var k1p = List[Float64](capacity=n)
     var k2p = List[Float64](capacity=n)
@@ -202,6 +215,7 @@ fn lyapunov_spectrum(
     var exponents = List[Float64](capacity=n)
     for _ in range(n):
         exponents.append(0.0)
+    initialise_tangent_basis(Q, n, zeta, diagR)
 
     var total_time: Float64 = 0.0
 
@@ -252,7 +266,7 @@ fn lyapunov_spectrum(
 
         # Periodic QR.
         if (step + 1) % qr_interval == 0:
-            row_mgs(Q, n, diagR)
+            column_mgs(Q, n, diagR)
             for i in range(n):
                 var d = abs(diagR[i])
                 if d < 1e-300:

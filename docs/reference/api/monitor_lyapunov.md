@@ -299,7 +299,8 @@ in its standard library. The port therefore re-implements
 * `mat_mul` — naive triple loop, row-major (since `N ≤ 64` in
   practice the cost is acceptable and stays out of Mojo's alias
   analyser).
-* `row_mgs` — two-pass MGS matching the Rust convention.
+* `column_mgs` — two-pass MGS on tangent-vector columns matching the
+  Rust convention.
 * `sort_descending` — in-place insertion sort.
 
 The executable reads a single whitespace-separated line from stdin
@@ -325,14 +326,13 @@ mojo build mojo/lyapunov.mojo -o mojo/lyapunov_mojo -Xlinker -lm
 
 ### 4.3 Julia (`julia/lyapunov.jl`)
 
-Julia's `LinearAlgebra.qr` is first-class, so `row_mgs` is replaced
-by `F = qr(Q'); Q = Matrix(F.Q)'; R = F.R` — the transpose dance
-converts Julia's column-based QR into row-MGS. The rest of the code
-mirrors Python: `kuramoto_rhs`, `kuramoto_jacobian` (with the driver
-diagonal) and a standard RK4 step. The Julia package is loaded once
-per Python process by `juliacall` and cached in `_JULIA_MODULE`, so
-amortised call overhead is a single dispatch plus a Float64 array
-round-trip.
+Julia's `LinearAlgebra.qr` is first-class, so the port applies
+`F = qr(Q); Q = Matrix(F.Q); R = F.R` directly to the tangent-vector
+columns. The rest of the code mirrors Python: `kuramoto_rhs`,
+`kuramoto_jacobian` (with the driver diagonal) and a standard RK4 step.
+The Julia package is loaded once per Python process by `juliacall` and
+cached in `_JULIA_MODULE`, so amortised call overhead is a single
+dispatch plus a Float64 array round-trip.
 
 ### 4.4 Go (`go/lyapunov.go`)
 
@@ -661,10 +661,17 @@ on Python.
 
 ## 11. Changelog
 
+* **2026-05-31** — Corrected the QR convention across Python, Rust,
+  Go, Julia, and Mojo to orthonormalise tangent-vector columns for
+  `dQ/dt = J(θ)Q`. Autonomous systems now seed the first tangent
+  column with the normalized global phase-shift direction so finite
+  Lyapunov horizons preserve the exact neutral mode while transverse
+  modes contract.
+
 * **2026-04-18** — Migrated to the AttnRes-level standard. The Python
-  reference now uses RK4 + driver-diagonal Jacobian + row-oriented
-  MGS. The Julia, Go, and Mojo ports were rewritten to match Rust
-  bit-for-bit; the Mojo port re-implements `mat_mul` + `row_mgs` in
-  pure Mojo. Three new test files (`test_lyapunov_algorithm.py`,
+  reference now uses RK4 + driver-diagonal Jacobian + periodic
+  Gram-Schmidt QR. The Julia, Go, and Mojo ports were rewritten to
+  match Rust bit-for-bit; the Mojo port re-implements the matrix and
+  QR kernels in pure Mojo. Three new test files (`test_lyapunov_algorithm.py`,
   `test_lyapunov_backends.py`, `test_lyapunov_stability.py`) plus the
   multi-backend benchmark.

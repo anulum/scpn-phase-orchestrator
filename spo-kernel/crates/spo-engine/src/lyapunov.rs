@@ -13,8 +13,9 @@ use std::f64::consts::PI;
 /// and optional external driver.
 ///
 /// Evolves N perturbation vectors alongside the Kuramoto ODE using RK4
-/// integration. Every `qr_interval` steps, QR-reorthogonalises via
-/// modified Gram-Schmidt and accumulates growth rates from diag(R).
+/// integration. Every `qr_interval` steps, QR-reorthogonalises the
+/// tangent columns via modified Gram-Schmidt and accumulates growth
+/// rates from diag(R).
 ///
 /// References:
 /// - Benettin et al. 1980, Meccanica 15:9-20.
@@ -80,10 +81,7 @@ pub fn lyapunov_spectrum(
 
     let nn = n * n;
     let mut phases = phases_init.to_vec();
-    let mut q = vec![0.0; nn];
-    for i in 0..n {
-        q[i * n + i] = 1.0;
-    }
+    let mut q = initial_tangent_basis(n, zeta);
     let mut exponents = vec![0.0; n];
     let mut n_qr = 0;
     let mut total_time = 0.0;
@@ -349,7 +347,7 @@ fn compute_jq(
     });
 }
 
-/// Modified Gram-Schmidt QR on row-major N×N matrix Q, in-place.
+/// Modified Gram-Schmidt QR on columns of row-major N×N matrix Q, in-place.
 ///
 /// Returns the diagonal of R (column norms before normalisation = stretching factors).
 /// Uses two-pass reorthogonalisation (Daniel et al. 1976) for numerical stability
@@ -359,30 +357,47 @@ fn modified_gram_schmidt(q: &mut [f64], n: usize) -> Vec<f64> {
     for j in 0..n {
         for _pass in 0..2 {
             for k in 0..j {
-                let (q_before, q_after) = q.split_at_mut(j * n);
-                let q_k = &q_before[k * n..(k + 1) * n];
-                let q_j = &mut q_after[..n];
-
-                let dot: f64 = q_k.iter().zip(q_j.iter()).map(|(&qk, &qj)| qk * qj).sum();
-                for (i, val) in q_j.iter_mut().enumerate() {
-                    *val -= dot * q_k[i];
+                let mut dot = 0.0;
+                for i in 0..n {
+                    dot += q[i * n + k] * q[i * n + j];
+                }
+                for i in 0..n {
+                    q[i * n + j] -= dot * q[i * n + k];
                 }
             }
         }
-        let start = j * n;
-        let q_j = &q[start..start + n];
-        let norm_sq: f64 = q_j.iter().map(|&x| x * x).sum();
+        let mut norm_sq = 0.0;
+        for i in 0..n {
+            let value = q[i * n + j];
+            norm_sq += value * value;
+        }
         let norm = norm_sq.sqrt();
         r_diag[j] = norm;
         if norm > 1e-300 {
             let inv = 1.0 / norm;
-            let q_j_mut = &mut q[start..start + n];
-            for val in q_j_mut.iter_mut() {
-                *val *= inv;
+            for i in 0..n {
+                q[i * n + j] *= inv;
             }
         }
     }
     r_diag
+}
+
+fn initial_tangent_basis(n: usize, zeta: f64) -> Vec<f64> {
+    let mut q = vec![0.0; n * n];
+    for i in 0..n {
+        q[i * n + i] = 1.0;
+    }
+
+    if zeta == 0.0 {
+        let neutral = 1.0 / (n as f64).sqrt();
+        for i in 0..n {
+            q[i * n] = neutral;
+        }
+        let _ = modified_gram_schmidt(&mut q, n);
+    }
+
+    q
 }
 
 #[cfg(test)]
@@ -453,6 +468,35 @@ mod tests {
             "λ_2 should be negative for strong coupling: {}",
             result[1]
         );
+    }
+
+    #[test]
+    fn test_synchronised_autonomous_system_retains_neutral_phase_mode() {
+        // Autonomous Kuramoto flow is invariant under global phase shifts, so
+        // the leading Lyapunov exponent at synchrony must remain neutral.
+        let n = 4;
+        let phases = vec![0.0; n];
+        let omegas = vec![0.0; n];
+        let mut knm = vec![2.0; n * n];
+        for i in 0..n {
+            knm[i * n + i] = 0.0;
+        }
+        let alpha = vec![0.0; n * n];
+        let result =
+            lyapunov_spectrum(&phases, &omegas, &knm, &alpha, 0.005, 1000, 10, 0.0, 0.0).unwrap();
+        assert!(
+            result[0].abs() < 0.05,
+            "λ_1 should be neutral for global phase shift symmetry: {}",
+            result[0]
+        );
+        for (idx, exponent) in result.iter().enumerate().skip(1) {
+            assert!(
+                *exponent < -0.1,
+                "λ_{} should contract transverse perturbations: {}",
+                idx + 1,
+                exponent
+            );
+        }
     }
 
     #[test]

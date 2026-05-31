@@ -9,7 +9,7 @@
 // Package main builds `liblyapunov.so` — a C-shared library exporting
 // the Benettin 1980 / Shimada-Nagashima 1979 Lyapunov spectrum kernel
 // on the Kuramoto tangent space with RK4 integration and periodic
-// row-oriented Modified Gram-Schmidt. Matches the NumPy, Rust, Julia,
+// column-oriented Modified Gram-Schmidt. Matches the NumPy, Rust, Julia,
 // and Mojo reference implementations bit-for-bit up to float rounding.
 //
 // Build with::
@@ -101,26 +101,27 @@ func matMul(A, B, out []float64, n int) {
 	}
 }
 
-// rowMGS performs Modified Gram-Schmidt on rows of Q (row-major n×n) in
-// place. After the call, each row of Q is orthonormal and diagR[k] is
+// columnMGS performs Modified Gram-Schmidt on tangent-vector columns of
+// Q (row-major n×n) in place. After the call, each column of Q is
+// orthonormal and diagR[k] is
 // |R_kk|. Two-pass reorthogonalisation (Daniel et al. 1976) for
 // numerical stability, matching the Rust kernel.
-func rowMGS(Q []float64, n int, diagR []float64) {
+func columnMGS(Q []float64, n int, diagR []float64) {
 	for j := 0; j < n; j++ {
 		for pass := 0; pass < 2; pass++ {
 			for k := 0; k < j; k++ {
 				dot := 0.0
 				for i := 0; i < n; i++ {
-					dot += Q[k*n+i] * Q[j*n+i]
+					dot += Q[i*n+k] * Q[i*n+j]
 				}
 				for i := 0; i < n; i++ {
-					Q[j*n+i] -= dot * Q[k*n+i]
+					Q[i*n+j] -= dot * Q[i*n+k]
 				}
 			}
 		}
 		normSq := 0.0
 		for i := 0; i < n; i++ {
-			v := Q[j*n+i]
+			v := Q[i*n+j]
 			normSq += v * v
 		}
 		norm := math.Sqrt(normSq)
@@ -128,10 +129,28 @@ func rowMGS(Q []float64, n int, diagR []float64) {
 		if norm > 1e-300 {
 			inv := 1.0 / norm
 			for i := 0; i < n; i++ {
-				Q[j*n+i] *= inv
+				Q[i*n+j] *= inv
 			}
 		}
 	}
+}
+
+func initialTangentBasis(n int, zeta float64) []float64 {
+	Q := make([]float64, n*n)
+	for i := 0; i < n; i++ {
+		Q[i*n+i] = 1.0
+	}
+
+	if zeta == 0.0 {
+		neutral := 1.0 / math.Sqrt(float64(n))
+		for i := 0; i < n; i++ {
+			Q[i*n] = neutral
+		}
+		diagR := make([]float64, n)
+		columnMGS(Q, n, diagR)
+	}
+
+	return Q
 }
 
 func lyapunovSpectrum(
@@ -145,10 +164,7 @@ func lyapunovSpectrum(
 	copy(phases, phasesInit)
 
 	nn := n * n
-	Q := make([]float64, nn)
-	for i := 0; i < n; i++ {
-		Q[i*n+i] = 1.0
-	}
+	Q := initialTangentBasis(n, zeta)
 
 	// RK4 stage buffers.
 	k1p := make([]float64, n)
@@ -222,7 +238,7 @@ func lyapunovSpectrum(
 
 		// --- Periodic QR reorthogonalisation -------------------------
 		if (step+1)%qrInterval == 0 {
-			rowMGS(Q, n, diagR)
+			columnMGS(Q, n, diagR)
 			for i := 0; i < n; i++ {
 				d := math.Abs(diagR[i])
 				if d < 1e-300 {

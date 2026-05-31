@@ -388,12 +388,29 @@ def _rk4_step(
     return new_phases, new_Q
 
 
-def _row_qr_log_diag(Q: FloatArray) -> tuple[FloatArray, FloatArray]:
-    """Row-oriented QR — returns the reorthonormalised Q and ``log|R_ii|``
+def _column_qr_log_diag(Q: FloatArray) -> tuple[FloatArray, FloatArray]:
+    """Column-oriented QR — returns the reorthonormalised Q and ``log|R_ii|``
     floored at ``log(1e-300)`` to avoid ``−inf``."""
-    Q_t, R = np.linalg.qr(Q.T)
+    Q_new, R = np.linalg.qr(Q)
     diag = np.maximum(np.abs(np.diag(R)), 1e-300)
-    return Q_t.T, np.log(diag)
+    return Q_new, np.log(diag)
+
+
+def _initial_tangent_basis(n: int, zeta: float) -> FloatArray:
+    """Return an orthonormal tangent basis for Lyapunov integration.
+
+    Autonomous Kuramoto systems are invariant under uniform phase shifts, so
+    the vector ``(1, ..., 1) / sqrt(n)`` is an exact neutral tangent direction.
+    Seeding it as the first QR column prevents finite-horizon spectra from
+    burying the neutral mode behind arbitrary identity-basis transients. Driven
+    systems keep the identity basis because the external driver breaks that
+    symmetry.
+    """
+    Q = np.eye(n, dtype=np.float64)
+    if zeta == 0.0:
+        Q[:, 0] = 1.0 / np.sqrt(float(n))
+        Q, _ = np.linalg.qr(Q)
+    return Q
 
 
 def _lyapunov_spectrum_python(
@@ -407,16 +424,17 @@ def _lyapunov_spectrum_python(
     zeta: float,
     psi: float,
 ) -> FloatArray:
-    """Benettin 1980 Lyapunov spectrum via RK4 + row-oriented MGS.
+    """Benettin 1980 Lyapunov spectrum via RK4 + column-oriented QR.
 
     Matches the Rust kernel line-for-line: RK4 on the joint
     ``(phases, Q)`` state, phases wrapped to ``[0, 2π)`` after each
     step, and the driver ``−ζ cos(Ψ − θ_i)`` enters the Jacobian
-    diagonal. Periodic QR (Rust convention: orthonormalise rows of Q).
+    diagonal. Perturbation vectors are columns because the variational
+    equation is ``dQ/dt = J(θ) Q``.
     """
     n = len(phases_init)
     phases = phases_init.copy()
-    Q = np.eye(n, dtype=np.float64)
+    Q = _initial_tangent_basis(n, zeta)
     exponents = np.zeros(n, dtype=np.float64)
     n_qr = 0
     total_time = 0.0
@@ -424,7 +442,7 @@ def _lyapunov_spectrum_python(
         phases, Q = _rk4_step(phases, Q, omegas, knm, alpha, dt, zeta, psi)
         total_time += dt
         if (step + 1) % qr_interval == 0:
-            Q, log_diag = _row_qr_log_diag(Q)
+            Q, log_diag = _column_qr_log_diag(Q)
             exponents += log_diag
             n_qr += 1
     if n_qr > 0:

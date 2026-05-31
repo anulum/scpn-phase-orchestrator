@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
+from scpn_phase_orchestrator.monitor import lyapunov as lyapunov_module
 from scpn_phase_orchestrator.monitor.lyapunov import lyapunov_spectrum
 
 
@@ -47,6 +49,23 @@ class TestLyapunovSpectrum:
         alpha = np.zeros((N, N))
         spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=500)
         assert spec[0] <= 0.1  # max exponent near zero or negative
+
+    def test_synchronized_autonomous_system_retains_global_phase_neutral_mode(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Autonomous Kuramoto dynamics are invariant under global phase shifts."""
+        monkeypatch.setattr(lyapunov_module, "ACTIVE_BACKEND", "python")
+        n = 4
+        phases = np.zeros(n)
+        omegas = np.zeros(n)
+        knm = np.ones((n, n)) * 2.0
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+
+        spec = lyapunov_spectrum(phases, omegas, knm, alpha, dt=0.005, n_steps=1000)
+
+        assert abs(spec[0]) < 0.05
+        assert np.all(spec[1:] < -0.1)
 
     def test_uncoupled_zero(self):
         """Zero coupling → all exponents should be ~0 (neutral stability)."""
