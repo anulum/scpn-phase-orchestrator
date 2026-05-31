@@ -48,6 +48,9 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
     AVAILABLE_BACKENDS,
     attnres_modulate,
 )
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _attnres_validation as attnres_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_go import (
     attnres_modulate_go,
 )
@@ -58,6 +61,11 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_mojo im
     attnres_modulate_mojo,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+
+def test__attnres_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(attnres_validation.validate_attnres_backend_inputs)
+    assert callable(attnres_validation.validate_attnres_backend_output)
 
 TWO_PI = 2.0 * np.pi
 AttnResDirectBackend = Callable[

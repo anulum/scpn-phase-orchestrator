@@ -25,6 +25,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _hypergraph_validation as hypergraph_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_go import (
     hypergraph_run_go,
 )
@@ -40,6 +43,11 @@ from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
 DIRECT_BACKENDS = (hypergraph_run_go, hypergraph_run_julia, hypergraph_run_mojo)
+
+
+def test__hypergraph_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(hypergraph_validation.validate_hypergraph_inputs)
+    assert callable(hypergraph_validation.validate_hypergraph_output)
 
 
 @contextlib.contextmanager

@@ -27,6 +27,9 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _psychedelic_julia,
     _psychedelic_mojo,
 )
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _psychedelic_validation as psychedelic_validation,
+)
 from scpn_phase_orchestrator.monitor import psychedelic as py_mod
 from scpn_phase_orchestrator.monitor.psychedelic import (
     AVAILABLE_BACKENDS,
@@ -74,6 +77,10 @@ def test_backend_array_contracts_are_parameterised() -> None:
         hints = get_type_hints(fn)
         assert_precise_ndarray_hint(hints["phases"])
         assert "float64" in str(hints["phases"])
+
+
+def test__psychedelic_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(psychedelic_validation.validate_psychedelic_backend_inputs)
 
 
 class TestDirectBackendBoundaryContracts:

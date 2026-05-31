@@ -31,6 +31,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _embedding_validation as embedding_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._embedding_go import (
     delay_embed_go,
     mutual_information_go,
@@ -60,6 +63,13 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 DelayBackend = Callable[[np.ndarray, object, object], np.ndarray]
 MiBackend = Callable[[np.ndarray, object, object], float]
 NnBackend = Callable[[np.ndarray, object, object], tuple[np.ndarray, np.ndarray]]
+
+
+def test__embedding_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(embedding_validation.validate_delay_embed_backend_inputs)
+    assert callable(embedding_validation.validate_mutual_information_backend_inputs)
+    assert callable(embedding_validation.validate_nearest_neighbor_backend_inputs)
+
 
 
 def _force(backend: str) -> str:

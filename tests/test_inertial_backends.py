@@ -25,6 +25,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _inertial_validation as inertial_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_go import (
     inertial_step_go,
 )
@@ -39,6 +42,11 @@ from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
 
 TOL = 1e-12
 DIRECT_BACKENDS = (inertial_step_go, inertial_step_julia, inertial_step_mojo)
+
+
+def test__inertial_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(inertial_validation.validate_inertial_inputs)
+    assert callable(inertial_validation.validate_inertial_output)
 
 
 @contextlib.contextmanager

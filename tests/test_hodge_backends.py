@@ -30,6 +30,9 @@ from scpn_phase_orchestrator.coupling.hodge import (
     AVAILABLE_BACKENDS,
     hodge_decomposition,
 )
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _hodge_validation as hodge_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go import (
     hodge_decomposition_go,
 )
@@ -46,6 +49,11 @@ HodgeDirectBackend = Callable[
     [np.ndarray, np.ndarray, object],
     tuple[np.ndarray, np.ndarray, np.ndarray],
 ]
+
+
+def test__hodge_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(hodge_validation.validate_hodge_backend_inputs)
+
 
 
 def _force(backend: str) -> str:

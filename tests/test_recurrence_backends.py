@@ -28,6 +28,9 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _recurrence_julia,
     _recurrence_mojo,
 )
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _recurrence_validation as recurrence_validation,
+)
 from scpn_phase_orchestrator.monitor import recurrence as r_mod
 from scpn_phase_orchestrator.monitor.recurrence import (
     AVAILABLE_BACKENDS,
@@ -48,6 +51,11 @@ cross_recurrence_matrix_mojo = _recurrence_mojo.cross_recurrence_matrix_mojo
 recurrence_matrix_go = _recurrence_go.recurrence_matrix_go
 recurrence_matrix_julia = _recurrence_julia.recurrence_matrix_julia
 recurrence_matrix_mojo = _recurrence_mojo.recurrence_matrix_mojo
+
+
+def test__recurrence_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(recurrence_validation.validate_recurrence_backend_inputs)
+    assert callable(recurrence_validation.validate_cross_recurrence_backend_inputs)
 
 
 def _force(backend: str) -> str:

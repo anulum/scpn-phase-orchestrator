@@ -24,6 +24,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _chimera_validation as chimera_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_go import (
     local_order_parameter_go,
 )
@@ -43,6 +46,11 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 LocalOrderBackend = Callable[[np.ndarray, np.ndarray, object], np.ndarray]
+
+
+def test__chimera_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(chimera_validation.validate_chimera_backend_inputs)
+
 
 
 def _force(backend: str) -> str:

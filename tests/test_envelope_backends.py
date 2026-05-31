@@ -25,6 +25,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _envelope_validation as envelope_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_go import (
     envelope_modulation_depth_go,
     extract_envelope_go,
@@ -57,6 +60,13 @@ DIRECT_MOD_BACKENDS = (
     envelope_modulation_depth_julia,
     envelope_modulation_depth_mojo,
 )
+
+
+def test__envelope_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(envelope_validation.validate_extract_envelope_input)
+    assert callable(envelope_validation.validate_extract_envelope_output)
+    assert callable(envelope_validation.validate_envelope_modulation_input)
+    assert callable(envelope_validation.validate_envelope_modulation_output)
 
 
 def _force(backend: str) -> str:

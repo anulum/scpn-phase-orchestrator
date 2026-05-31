@@ -40,6 +40,9 @@ from scpn_phase_orchestrator.coupling.spectral import (
     spectral_eig,
     spectral_gap,
 )
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spectral_validation as spectral_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go import (
     spectral_eig_go,
 )
@@ -55,6 +58,11 @@ TOL_LAPACK = 1e-12
 TOL_GONUM = 1e-11  # gonum EigenSym vs LAPACK
 TOL_MOJO = 1e-10  # subprocess text round-trip on top of LAPACK
 SpectralDirectBackend = Callable[[np.ndarray, object], tuple[np.ndarray, np.ndarray]]
+
+
+def test__spectral_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(spectral_validation.validate_spectral_backend_inputs)
+
 
 
 @contextlib.contextmanager

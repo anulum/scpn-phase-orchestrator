@@ -19,6 +19,9 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _poincare_validation as poincare_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._poincare_go import (
     phase_poincare_go,
     poincare_section_go,
@@ -47,6 +50,12 @@ PhaseBackend = Callable[
     [np.ndarray, object, object, object, object],
     tuple[np.ndarray, np.ndarray, int],
 ]
+
+
+def test__poincare_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(poincare_validation.validate_poincare_section_backend_inputs)
+    assert callable(poincare_validation.validate_phase_poincare_backend_inputs)
+
 
 
 def _force(backend: str) -> str:

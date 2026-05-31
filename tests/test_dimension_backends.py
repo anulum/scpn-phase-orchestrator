@@ -29,6 +29,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _dimension_validation as dimension_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_go import (
     correlation_integral_go,
     kaplan_yorke_dimension_go,
@@ -54,6 +57,12 @@ CiBackend = Callable[
     np.ndarray,
 ]
 KyBackend = Callable[[np.ndarray], float]
+
+
+def test__dimension_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(dimension_validation.validate_correlation_integral_backend_inputs)
+    assert callable(dimension_validation.validate_kaplan_yorke_backend_input)
+
 
 
 def _force(backend: str) -> str:

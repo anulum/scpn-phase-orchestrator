@@ -28,6 +28,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _itpc_validation as itpc_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_go import (
     compute_itpc_go,
     itpc_persistence_go,
@@ -51,6 +54,12 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 TWO_PI = 2.0 * np.pi
 ItpcBackend = Callable[[np.ndarray, object, object], np.ndarray]
 PersistenceBackend = Callable[[np.ndarray, object, object, object], float]
+
+
+def test__itpc_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(itpc_validation.validate_compute_itpc_backend_inputs)
+    assert callable(itpc_validation.validate_itpc_persistence_backend_inputs)
+
 
 
 def _force(backend: str) -> str:

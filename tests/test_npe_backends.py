@@ -18,6 +18,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _npe_validation as npe_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._npe_go import (
     compute_npe_go,
     phase_distance_matrix_go,
@@ -41,6 +44,12 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 TWO_PI = 2.0 * np.pi
 PdmBackend = Callable[[np.ndarray], np.ndarray]
 NpeBackend = Callable[[np.ndarray, object], float]
+
+
+def test__npe_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(npe_validation.validate_phase_distance_backend_input)
+    assert callable(npe_validation.validate_npe_backend_inputs)
+
 
 
 def _force(backend: str) -> str:

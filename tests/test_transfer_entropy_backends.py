@@ -20,6 +20,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _te_validation as te_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._te_go import (
     phase_te_go,
     te_matrix_go,
@@ -41,6 +44,11 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+
+
+def test__te_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(te_validation.validate_phase_te_backend_inputs)
+    assert callable(te_validation.validate_te_matrix_backend_inputs)
 
 
 def _force(backend: str) -> str:

@@ -21,6 +21,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _winding_validation as winding_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._winding_go import (
     winding_numbers_go,
 )
@@ -37,6 +40,10 @@ from scpn_phase_orchestrator.monitor.winding import (
 )
 
 TWO_PI = 2.0 * np.pi
+
+
+def test__winding_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(winding_validation.validate_winding_backend_inputs)
 
 
 def _force(backend: str) -> str:

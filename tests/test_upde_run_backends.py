@@ -24,6 +24,9 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _engine_validation as engine_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_go import (
     upde_run_go,
 )
@@ -58,6 +61,11 @@ DirectBackend = Callable[
     ],
     np.ndarray,
 ]
+
+
+def test__engine_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(engine_validation.validate_upde_backend_inputs)
+    assert callable(engine_validation.validate_upde_backend_output)
 
 
 def _force(backend: str) -> str:

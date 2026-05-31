@@ -21,6 +21,9 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _lyapunov_validation as lyapunov_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_go import (
     lyapunov_spectrum_go,
 )
@@ -38,6 +41,11 @@ from scpn_phase_orchestrator.monitor.lyapunov import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+
+
+def test__lyapunov_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(lyapunov_validation.validate_lyapunov_backend_inputs)
+
 
 
 def _force(backend: str) -> str:

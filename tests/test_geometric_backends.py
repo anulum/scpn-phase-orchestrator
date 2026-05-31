@@ -30,6 +30,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _geometric_validation as geometric_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_go import (
     torus_run_go,
 )
@@ -60,6 +63,11 @@ DirectBackend = Callable[
     np.ndarray,
 ]
 DIRECT_BACKENDS = (torus_run_go, torus_run_julia, torus_run_mojo)
+
+
+def test__geometric_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(geometric_validation.validate_torus_inputs)
+    assert callable(geometric_validation.validate_torus_output)
 
 
 @contextlib.contextmanager

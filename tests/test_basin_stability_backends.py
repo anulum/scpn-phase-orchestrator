@@ -34,6 +34,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _basin_stability_mojo as basin_mojo,
 )
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _basin_stability_validation as basin_validation,
+)
 from scpn_phase_orchestrator.upde import basin_stability as b_mod
 from scpn_phase_orchestrator.upde.basin_stability import (
     basin_stability,
@@ -60,6 +63,11 @@ DIRECT_BACKENDS = (
     basin_julia.steady_state_r_julia,
     basin_mojo.steady_state_r_mojo,
 )
+
+
+def test__basin_stability_validation_linkage() -> None:
+    assert callable(basin_validation.validate_basin_stability_inputs)
+    assert callable(basin_validation.validate_basin_stability_output)
 
 
 @contextlib.contextmanager
