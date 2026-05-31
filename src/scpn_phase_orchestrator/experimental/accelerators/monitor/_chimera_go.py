@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._chimera_validation import validate_chimera_backend_inputs
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["local_order_parameter_go"]
@@ -53,9 +55,10 @@ def local_order_parameter_go(
 ) -> FloatArray:
     """Compute local phase order parameters through the Go backend."""
 
+    p, k, n = validate_chimera_backend_inputs(phases, knm_flat, n)
+    if n == 0:
+        return np.zeros(0, dtype=np.float64)
     lib = _load_lib()
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-    k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)
     out = np.zeros(n, dtype=np.float64)
     rc = lib.LocalOrderParameter(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),

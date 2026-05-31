@@ -139,6 +139,23 @@ extracts the `local_order` vector from its 4-tuple return value.
 | Mojo    | `1e-9`    | Subprocess text round-trip.               |
 | Python  | exact     | Reference.                                |
 
+### 3.3 Direct accelerator boundary contract
+
+The direct Go, Julia, and Mojo wrappers validate before loading their optional
+runtimes:
+
+* `phases` must be a one-dimensional finite real `float64` vector with no
+  boolean aliases or complex values.
+* `knm_flat` must be a one-dimensional finite real `float64` vector with no
+  boolean aliases or complex values.
+* `n` must be a non-boolean non-negative integer.
+* `phases.size` must equal `n` and `knm_flat.size` must equal `n * n`.
+* the flattened coupling matrix must have a zero self-coupling diagonal.
+
+Empty direct calls preserve the Python public contract by returning an empty
+local-order vector before shared-library loading, Julia initialisation, or
+subprocess execution.
+
 Measured parity on a 20-oscillator sparse-``K`` problem: all four
 non-Python backends within ``1.1e-16`` of the Python reference —
 bit-equivalent under the test env.

@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._chimera_validation import validate_chimera_backend_inputs
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["_ensure_exe", "local_order_parameter_mojo"]
@@ -56,11 +58,12 @@ def local_order_parameter_mojo(
 ) -> FloatArray:
     """Compute local phase order parameters through the Mojo backend."""
 
+    phases_vec, knm_vec, n = validate_chimera_backend_inputs(phases, knm_flat, n)
     if n == 0:
         return np.zeros(0, dtype=np.float64)
-    tokens: list[str] = ["CHI", str(int(n))]
-    tokens.extend(repr(float(x)) for x in phases.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in knm_flat.ravel().tolist())
+    tokens: list[str] = ["CHI", str(n)]
+    tokens.extend(repr(float(x)) for x in phases_vec.tolist())
+    tokens.extend(repr(float(x)) for x in knm_vec.tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n:
         raise ValueError(f"Mojo CHI returned {len(result)} values, expected {n}")

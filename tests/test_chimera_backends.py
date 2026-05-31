@@ -16,6 +16,7 @@ All backends agree with the Python reference within:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -41,6 +42,7 @@ from scpn_phase_orchestrator.monitor.chimera import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+LocalOrderBackend = Callable[[np.ndarray, np.ndarray, object], np.ndarray]
 
 
 def _force(backend: str) -> str:
@@ -81,6 +83,46 @@ def test_backend_array_contracts_are_parameterised() -> None:
         for key in ("phases", "knm_flat", "return"):
             assert_precise_ndarray_hint(hints[key])
             assert "float64" in str(hints[key])
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct optional chimera backends validate before runtime loading."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            local_order_parameter_go,
+            local_order_parameter_julia,
+            local_order_parameter_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("phases", "knm_flat", "n", "match"),
+        [
+            (np.array([True, False]), np.zeros(4), 2, "phases"),
+            (np.array([0.0, np.nan]), np.zeros(4), 2, "phases"),
+            (np.array([0.0, 1.0], dtype=np.complex128), np.zeros(4), 2, "real-valued"),
+            (np.array([[0.0, 1.0]]), np.zeros(4), 2, "one-dimensional"),
+            (np.array([0.0, 1.0]), np.zeros(4), True, "n"),
+            (np.array([0.0, 1.0]), np.zeros(4), -1, "n"),
+            (np.array([0.0]), np.zeros(4), 2, "phases length"),
+            (np.array([0.0, 1.0]), np.array([True, False, False, True]), 2, "knm_flat"),
+            (np.array([0.0, 1.0]), np.array([0.0, np.inf, 0.0, 0.0]), 2, "knm_flat"),
+            (np.array([0.0, 1.0]), np.zeros((2, 2)), 2, "knm_flat"),
+            (np.array([0.0, 1.0]), np.zeros(3), 2, "n\\*n"),
+            (np.array([0.0, 1.0]), np.eye(2).ravel(), 2, "diagonal"),
+        ],
+    )
+    def test_validation_precedes_runtime_load(
+        self,
+        backend: LocalOrderBackend,
+        phases: np.ndarray,
+        knm_flat: np.ndarray,
+        n: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            backend(phases, knm_flat, n)
 
 
 class TestRustParity:
