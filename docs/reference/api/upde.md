@@ -193,6 +193,16 @@ splintered phase wave, active phase wave — depending on J and K signs.
 
 O'Keeffe, Hong, Strogatz, Nature Communications 2017.
 
+Direct Go, Julia, and Mojo swarmalator accelerator entrypoints share a
+validated position-phase boundary before optional runtime loading: positions
+must be finite real `float64` values with shape `(N, D)` or exactly `N*D`
+flattened values; phase and frequency vectors must be finite real
+one-dimensional `float64` arrays of length `N`; `N`, `D`, and `dt` must be
+positive; and attraction, repulsion, phase-attraction modulation, and
+phase-coupling coefficients must be finite real controls. Backend outputs must
+return finite positions and torus phases in `[0, 2*pi)`, and Mojo stdout must
+contain exactly `N*D + N` scalar lines.
+
 ::: scpn_phase_orchestrator.upde.swarmalator
 
 ## Stochastic Engine

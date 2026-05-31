@@ -17,6 +17,7 @@ pre-migration Python used ``dist³`` which drifted by O(1e-4)).
 
 from __future__ import annotations
 
+import ctypes
 import sys
 import types
 from typing import get_type_hints
@@ -43,6 +44,99 @@ swarmalator_step_julia = _swarmalator_julia.swarmalator_step_julia
 swarmalator_step_mojo = _swarmalator_mojo.swarmalator_step_mojo
 
 TWO_PI = 2.0 * np.pi
+
+
+def _valid_direct_args():
+    return (
+        np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+        np.array([0.2, 0.4], dtype=np.float64),
+        np.array([0.1, -0.2], dtype=np.float64),
+        2,
+        2,
+        1.0,
+        1.0,
+        0.8,
+        1.2,
+        0.01,
+    )
+
+
+def _with_direct_arg(index: int, value):
+    args = list(_valid_direct_args())
+    args[index] = value
+    return tuple(args)
+
+
+class _FakeGoSwarmalatorLib:
+    def __init__(
+        self,
+        positions: tuple[float, ...],
+        phases: tuple[float, ...],
+        rc: int = 0,
+    ) -> None:
+        self.positions = positions
+        self.phases = phases
+        self.rc = rc
+
+    def SwarmalatorStep(self, *_args):
+        pos_ref = ctypes.cast(_args[-2], ctypes.POINTER(ctypes.c_double))
+        phase_ref = ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))
+        for index, value in enumerate(self.positions):
+            pos_ref[index] = value
+        for index, value in enumerate(self.phases):
+            phase_ref[index] = value
+        return self.rc
+
+
+class _FakeJuliaSwarmalatorModule:
+    def __init__(
+        self,
+        positions: tuple[float, ...],
+        phases: tuple[float, ...],
+    ) -> None:
+        self.positions = positions
+        self.phases = phases
+
+    def swarmalator_step(self, *_args):
+        return (
+            np.array(self.positions, dtype=np.float64),
+            np.array(self.phases, dtype=np.float64),
+        )
+
+
+def _call_direct_backend(
+    module,
+    monkeypatch: pytest.MonkeyPatch,
+    positions: tuple[float, ...],
+    phases: tuple[float, ...],
+):
+    if module is _swarmalator_go:
+        monkeypatch.setattr(
+            _swarmalator_go,
+            "_load_lib",
+            lambda: _FakeGoSwarmalatorLib(positions, phases),
+        )
+        return _swarmalator_go.swarmalator_step_go(*_valid_direct_args())
+    if module is _swarmalator_julia:
+        monkeypatch.setattr(
+            _swarmalator_julia,
+            "_ensure",
+            lambda: _FakeJuliaSwarmalatorModule(positions, phases),
+        )
+        return _swarmalator_julia.swarmalator_step_julia(*_valid_direct_args())
+
+    monkeypatch.setattr(_swarmalator_mojo, "_ensure_exe", lambda: "swarmalator")
+    stdout = "".join(f"{value}\n" for value in (*positions, *phases))
+    monkeypatch.setattr(
+        _swarmalator_mojo.subprocess,
+        "run",
+        lambda *_args, **_kwargs: types.SimpleNamespace(
+            returncode=0,
+            stdout=stdout,
+            stderr="",
+        ),
+    )
+    return _swarmalator_mojo.swarmalator_step_mojo(*_valid_direct_args())
 
 
 def _force(backend: str) -> str:
@@ -219,6 +313,121 @@ class TestBackendTypingContracts:
                 context=f"{label}:{name}",
             )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
+
+
+class TestDirectSwarmalatorBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("module", "fn_name", "loader_name"),
+        [
+            (_swarmalator_go, "swarmalator_step_go", "_load_lib"),
+            (_swarmalator_julia, "swarmalator_step_julia", "_ensure"),
+            (_swarmalator_mojo, "swarmalator_step_mojo", "_ensure_exe"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("args", "match"),
+        [
+            (_with_direct_arg(0, np.array([[True, False], [False, True]])), "pos"),
+            (_with_direct_arg(0, np.zeros(3, dtype=np.float64)), "pos"),
+            (_with_direct_arg(1, np.array([0.1 + 0.0j, 0.2])), "phases"),
+            (_with_direct_arg(2, np.array([True, False])), "omegas"),
+            (_with_direct_arg(3, True), "n"),
+            (_with_direct_arg(3, 0), "n"),
+            (_with_direct_arg(4, True), "dim"),
+            (_with_direct_arg(4, 0), "dim"),
+            (_with_direct_arg(5, True), "a"),
+            (_with_direct_arg(6, np.inf), "b"),
+            (_with_direct_arg(7, object()), "j"),
+            (_with_direct_arg(8, np.nan), "k"),
+            (_with_direct_arg(9, 0.0), "dt"),
+            (_with_direct_arg(9, -0.01), "dt"),
+        ],
+    )
+    def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+        fn_name: str,
+        loader_name: str,
+        args,
+        match: str,
+    ) -> None:
+        def forbidden_loader():
+            raise AssertionError("runtime loader must not be called")
+
+        monkeypatch.setattr(module, loader_name, forbidden_loader)
+
+        with pytest.raises(ValueError, match=match):
+            getattr(module, fn_name)(*args)
+
+    @pytest.mark.parametrize(
+        "module",
+        [_swarmalator_go, _swarmalator_julia, _swarmalator_mojo],
+    )
+    def test_direct_backend_accepts_valid_position_phase_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+    ) -> None:
+        got_pos, got_phases = _call_direct_backend(
+            module,
+            monkeypatch,
+            (0.1, 0.2, 0.3, 0.4),
+            (0.5, 0.6),
+        )
+
+        np.testing.assert_allclose(
+            got_pos,
+            np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64),
+        )
+        np.testing.assert_allclose(
+            got_phases,
+            np.array([0.5, 0.6], dtype=np.float64),
+        )
+        assert got_pos.dtype == np.float64
+        assert got_phases.dtype == np.float64
+
+    @pytest.mark.parametrize(
+        "module",
+        [_swarmalator_go, _swarmalator_julia, _swarmalator_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("positions", "phases", "match"),
+        [
+            ((0.1, np.nan, 0.3, 0.4), (0.5, 0.6), "positions"),
+            ((0.1, 0.2, 0.3, 0.4), (-0.1, 0.6), "phases"),
+            ((0.1, 0.2, 0.3, 0.4), (0.5, TWO_PI), "phases"),
+        ],
+    )
+    def test_direct_backend_rejects_non_physical_outputs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+        positions: tuple[float, ...],
+        phases: tuple[float, ...],
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            _call_direct_backend(module, monkeypatch, positions, phases)
+
+    @pytest.mark.parametrize("module", [_swarmalator_julia, _swarmalator_mojo])
+    @pytest.mark.parametrize(
+        ("positions", "phases", "match"),
+        [
+            ((0.1, 0.2, 0.3), (0.5, 0.6), "positions|expected 6"),
+            ((0.1, 0.2, 0.3, 0.4), (0.5,), "phases|expected 6"),
+        ],
+    )
+    def test_direct_backend_rejects_wrong_output_cardinality(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+        positions: tuple[float, ...],
+        phases: tuple[float, ...],
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            _call_direct_backend(module, monkeypatch, positions, phases)
 
 
 class TestBackendLoaderContracts:

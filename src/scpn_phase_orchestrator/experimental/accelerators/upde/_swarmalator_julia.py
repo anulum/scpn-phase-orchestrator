@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._swarmalator_validation import (
+    validate_swarmalator_inputs,
+    validate_swarmalator_output,
+)
+
 __all__ = ["swarmalator_step_julia"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -54,22 +59,35 @@ def swarmalator_step_julia(
     The calculation is delegated to the Julia backend.
     """
 
-    jl = _ensure()
-    new_pos_flat, new_phases = jl.swarmalator_step(
-        np.ascontiguousarray(pos.ravel(), dtype=np.float64),
-        np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-        np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-        int(n),
-        int(dim),
-        float(a),
-        float(b),
-        float(j),
-        float(k),
-        float(dt),
-    )
-    new_pos_array: FloatArray = np.asarray(new_pos_flat, dtype=np.float64).reshape(
+    p, ph, om, n_i, dim_i, a_f, b_f, j_f, k_f, dt_f = validate_swarmalator_inputs(
+        pos,
+        phases,
+        omegas,
         n,
         dim,
+        a,
+        b,
+        j,
+        k,
+        dt,
     )
-    new_phases_array: FloatArray = np.asarray(new_phases, dtype=np.float64)
+    jl = _ensure()
+    new_pos_flat, new_phases = jl.swarmalator_step(
+        np.ascontiguousarray(p.ravel(), dtype=np.float64),
+        ph,
+        om,
+        n_i,
+        dim_i,
+        a_f,
+        b_f,
+        j_f,
+        k_f,
+        dt_f,
+    )
+    new_pos_array, new_phases_array = validate_swarmalator_output(
+        new_pos_flat,
+        new_phases,
+        n=n_i,
+        dim=dim_i,
+    )
     return new_pos_array, new_phases_array

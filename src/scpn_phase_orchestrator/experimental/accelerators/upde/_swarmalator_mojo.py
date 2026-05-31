@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._swarmalator_validation import (
+    validate_swarmalator_inputs,
+    validate_swarmalator_output,
+)
+
 __all__ = ["_ensure_exe", "swarmalator_step_mojo"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -51,20 +56,32 @@ def swarmalator_step_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
+    p, ph, om, n_i, dim_i, a_f, b_f, j_f, k_f, dt_f = validate_swarmalator_inputs(
+        pos,
+        phases,
+        omegas,
+        n,
+        dim,
+        a,
+        b,
+        j,
+        k,
+        dt,
+    )
     exe = _ensure_exe()
     tokens: list[str] = [
         "STEP",
-        str(int(n)),
-        str(int(dim)),
-        repr(float(a)),
-        repr(float(b)),
-        repr(float(j)),
-        repr(float(k)),
-        repr(float(dt)),
+        str(n_i),
+        str(dim_i),
+        repr(a_f),
+        repr(b_f),
+        repr(j_f),
+        repr(k_f),
+        repr(dt_f),
     ]
-    tokens.extend(repr(float(x)) for x in pos.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in phases.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in omegas.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in p.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in ph.tolist())
+    tokens.extend(repr(float(x)) for x in om.tolist())
     proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
@@ -77,11 +94,11 @@ def swarmalator_step_mojo(
             f"Mojo swarmalator exit {proc.returncode}: {proc.stderr.strip()}"
         )
     lines = proc.stdout.splitlines()
-    expected = n * dim + n
+    expected = n_i * dim_i + n_i
     if len(lines) != expected:
         raise ValueError(f"Mojo STEP returned {len(lines)} lines, expected {expected}")
     values: list[float] = []
-    phase_offset = n * dim
+    phase_offset = n_i * dim_i
     for index, line in enumerate(lines):
         try:
             value = float(line)
@@ -103,4 +120,4 @@ def swarmalator_step_mojo(
         values.append(value)
     new_pos: FloatArray = np.array(values[:phase_offset], dtype=np.float64)
     new_phases: FloatArray = np.array(values[phase_offset:], dtype=np.float64)
-    return new_pos.reshape(n, dim), new_phases
+    return validate_swarmalator_output(new_pos, new_phases, n=n_i, dim=dim_i)

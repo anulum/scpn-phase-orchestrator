@@ -194,8 +194,13 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    raw = np.asarray(value)
+    if np.issubdtype(raw.dtype, np.bool_):
+        raise ValueError(f"{name} must be real-valued, not boolean")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be real-valued, not complex")
     try:
-        arr = np.asarray(value, dtype=np.float64)
+        arr = np.asarray(raw, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite float array") from exc
     if arr.shape != shape:
@@ -203,6 +208,28 @@ def _validate_state_array(
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _validate_backend_output(
+    pos: object,
+    phases: object,
+    *,
+    n: int,
+    dim: int,
+) -> tuple[FloatArray, FloatArray]:
+    out_pos = _validate_state_array(
+        pos,
+        name="backend output positions",
+        shape=(n, dim),
+    )
+    out_phases = _validate_state_array(
+        phases,
+        name="backend output phases",
+        shape=(n,),
+    )
+    if np.any(out_phases < 0.0) or np.any(out_phases >= TWO_PI):
+        raise ValueError("backend output phases must be in [0, 2*pi)")
+    return out_pos, out_phases
 
 
 def _python_step(
@@ -324,17 +351,21 @@ class SwarmalatorEngine:
 
         backend_fn = _dispatch()
         if backend_fn is not None:
-            return backend_fn(
-                pos64,
-                phases64,
-                omegas64,
-                self._n,
-                self._dim,
-                a,
-                b,
-                j,
-                k,
-                self._dt,
+            return _validate_backend_output(
+                *backend_fn(
+                    pos64,
+                    phases64,
+                    omegas64,
+                    self._n,
+                    self._dim,
+                    a,
+                    b,
+                    j,
+                    k,
+                    self._dt,
+                ),
+                n=self._n,
+                dim=self._dim,
             )
         return _python_step(
             pos64,

@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._swarmalator_validation import (
+    validate_swarmalator_inputs,
+    validate_swarmalator_output,
+)
+
 __all__ = ["swarmalator_step_go"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -72,26 +77,36 @@ def swarmalator_step_go(
     The calculation is delegated to the Go backend.
     """
 
+    p, ph, om, n_i, dim_i, a_f, b_f, j_f, k_f, dt_f = validate_swarmalator_inputs(
+        pos,
+        phases,
+        omegas,
+        n,
+        dim,
+        a,
+        b,
+        j,
+        k,
+        dt,
+    )
     lib = _load_lib()
-    p = np.ascontiguousarray(pos.ravel(), dtype=np.float64)
-    ph = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-    om = np.ascontiguousarray(omegas.ravel(), dtype=np.float64)
-    new_pos: FloatArray = np.zeros(n * dim, dtype=np.float64)
-    new_phases: FloatArray = np.zeros(n, dtype=np.float64)
+    pos_flat = np.ascontiguousarray(p.ravel(), dtype=np.float64)
+    new_pos: FloatArray = np.zeros(n_i * dim_i, dtype=np.float64)
+    new_phases: FloatArray = np.zeros(n_i, dtype=np.float64)
     rc = lib.SwarmalatorStep(
-        p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        pos_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ph.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         om.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(n)),
-        ctypes.c_int(int(dim)),
-        ctypes.c_double(float(a)),
-        ctypes.c_double(float(b)),
-        ctypes.c_double(float(j)),
-        ctypes.c_double(float(k)),
-        ctypes.c_double(float(dt)),
+        ctypes.c_int(n_i),
+        ctypes.c_int(dim_i),
+        ctypes.c_double(a_f),
+        ctypes.c_double(b_f),
+        ctypes.c_double(j_f),
+        ctypes.c_double(k_f),
+        ctypes.c_double(dt_f),
         new_pos.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         new_phases.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go SwarmalatorStep rc={rc}")
-    return new_pos.reshape(n, dim), new_phases
+    return validate_swarmalator_output(new_pos, new_phases, n=n_i, dim=dim_i)

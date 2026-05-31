@@ -106,6 +106,36 @@ class TestStep:
             eng.step(pos, phases, bad_omegas, 1.0, 1.0, 0.8, 1.0)
 
     @_python
+    @pytest.mark.parametrize(
+        ("pos", "phases", "omegas", "match"),
+        [
+            (
+                np.zeros((2, 2), dtype=bool),
+                np.zeros(2, dtype=np.float64),
+                np.zeros(2, dtype=np.float64),
+                "pos",
+            ),
+            (
+                np.zeros((2, 2), dtype=np.float64),
+                np.zeros(2, dtype=bool),
+                np.zeros(2, dtype=np.float64),
+                "phases",
+            ),
+            (
+                np.zeros((2, 2), dtype=np.float64),
+                np.zeros(2, dtype=np.float64),
+                np.zeros(2, dtype=bool),
+                "omegas",
+            ),
+        ],
+    )
+    def test_boolean_state_aliases_are_rejected(self, pos, phases, omegas, match):
+        eng = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match=match):
+            eng.step(pos, phases, omegas)
+
+    @_python
     def test_single_agent_kinematic_boundary(self):
         eng = SwarmalatorEngine(1, dim=2, dt=0.01)
         pos = np.array([[0.2, -0.1]], dtype=float)
@@ -149,6 +179,24 @@ class TestStep:
         np.testing.assert_allclose(new_pos, pos, atol=1e-12)
         expected = (phases + 0.01 * omegas) % TWO_PI
         np.testing.assert_allclose(new_ph, expected, atol=1e-12)
+
+    def test_selected_backend_output_must_preserve_finite_torus_state(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        pos = np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64)
+        phases = np.array([0.2, 0.4], dtype=np.float64)
+        omegas = np.array([0.1, -0.2], dtype=np.float64)
+
+        def invalid_backend(*_args, **_kwargs):
+            return pos.copy(), np.array([0.1, TWO_PI], dtype=np.float64)
+
+        monkeypatch.setattr(sw_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(sw_mod, "_load_backend", lambda _name: invalid_backend)
+        eng = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="backend output phases"):
+            eng.step(pos, phases, omegas)
 
 
 class TestRun:
