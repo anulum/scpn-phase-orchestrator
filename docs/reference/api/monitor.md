@@ -547,6 +547,11 @@ Physiology replay records enforce non-actuating audit boundaries, integer
 sample/bin/oscillator counts, finite non-negative metrics, unit-interval
 normalised Phi, and boolean-alias-free minimum partitions before replay corpus
 relationships are accepted.
+Infrastructure replay records apply the same engineering-proxy boundary to
+power-grid and traffic-corridor replay corpora: sample/bin/oscillator counts are
+integer-only, metrics are finite real non-negative values, normalised Phi is
+bounded to the unit interval, and minimum partitions reject boolean aliases
+before the re-synchronisation/recovery ordering contracts are accepted.
 
 ::: scpn_phase_orchestrator.monitor.information_replay_cyber_industrial
 

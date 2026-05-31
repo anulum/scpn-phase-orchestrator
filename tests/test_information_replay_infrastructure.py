@@ -97,8 +97,12 @@ def test_build_replays_reject_invalid_parameters() -> None:
         build_infrastructure_integrated_information_replays(n_bins=1)
     with pytest.raises(ValueError, match="n_bins"):
         build_infrastructure_integrated_information_replays(n_bins=True)
+    with pytest.raises(ValueError, match="n_bins"):
+        build_infrastructure_integrated_information_replays(n_bins=np.bool_(True))
     with pytest.raises(ValueError, match="n_samples"):
         build_infrastructure_integrated_information_replays(n_samples=31.0)
+    with pytest.raises(ValueError, match="n_samples"):
+        build_infrastructure_integrated_information_replays(n_samples=np.bool_(True))
 
 
 def test_build_replays_accepts_numpy_integer_parameters() -> None:
@@ -120,7 +124,12 @@ def test_build_replays_accepts_numpy_integer_parameters() -> None:
         ("phi", np.nan, "phi"),
         ("normalised_phi", 1.1, "normalised_phi"),
         ("normalised_phi", True, "normalised_phi"),
+        ("normalised_phi", np.bool_(True), "normalised_phi"),
+        ("normalised_phi", 0.5 + 0.0j, "normalised_phi"),
         ("total_integration", -0.1, "total_integration"),
+        ("n_oscillators", True, "n_oscillators"),
+        ("n_samples", np.bool_(True), "n_samples"),
+        ("n_bins", np.bool_(True), "n_bins"),
     ],
 )
 def test_validate_records_rejects_invalid_metric_fields(
@@ -145,6 +154,7 @@ def test_validate_records_rejects_invalid_metric_fields(
         [[0], [1, 2]],
         [[0, 0], [1, 2, 3, 4, 5]],
         [[0], [1, 2, True]],
+        [[0], [1, 2, np.bool_(True)]],
         [[0], []],
     ],
 )

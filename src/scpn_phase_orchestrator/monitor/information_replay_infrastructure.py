@@ -66,12 +66,16 @@ def build_infrastructure_integrated_information_replays(
 
 def _validate_replay_parameters(*, n_samples: int, n_bins: int) -> None:
     if (
-        isinstance(n_samples, bool)
+        isinstance(n_samples, (bool, np.bool_))
         or not isinstance(n_samples, Integral)
         or n_samples < 32
     ):
         raise ValueError("n_samples must be an integer >= 32")
-    if isinstance(n_bins, bool) or not isinstance(n_bins, Integral) or n_bins < 2:
+    if (
+        isinstance(n_bins, (bool, np.bool_))
+        or not isinstance(n_bins, Integral)
+        or n_bins < 2
+    ):
         raise ValueError("n_bins must be an integer >= 2")
 
 
@@ -104,8 +108,21 @@ def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
             raise ValueError("invalid claim boundary value")
         if record["non_actuating"] is not True:
             raise ValueError("replay records must be non-actuating")
-        if not isinstance(record["n_oscillators"], int) or record["n_oscillators"] < 2:
-            raise ValueError("n_oscillators must be at least two")
+        record["n_oscillators"] = _validate_integer_field(
+            record["n_oscillators"],
+            name="n_oscillators",
+            minimum=2,
+        )
+        record["n_samples"] = _validate_integer_field(
+            record["n_samples"],
+            name="n_samples",
+            minimum=32,
+        )
+        record["n_bins"] = _validate_integer_field(
+            record["n_bins"],
+            name="n_bins",
+            minimum=2,
+        )
         if (
             not isinstance(record["minimum_partition"], list)
             or len(record["minimum_partition"]) != 2
@@ -163,11 +180,20 @@ def _validate_record_metrics(record: dict[str, Any]) -> None:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real")
     scalar = float(value)
     if not np.isfinite(scalar) or scalar < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
+    return scalar
+
+
+def _validate_integer_field(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be an integer >= {minimum}")
+    scalar = int(value)
+    if scalar < minimum:
+        raise ValueError(f"{name} must be an integer >= {minimum}")
     return scalar
 
 
@@ -196,7 +222,7 @@ def _validate_partition_side(value: object) -> tuple[int, ...]:
         raise ValueError("minimum_partition entries must be lists")
     indices: list[int] = []
     for item in value:
-        if isinstance(item, bool) or not isinstance(item, Integral):
+        if isinstance(item, (bool, np.bool_)) or not isinstance(item, Integral):
             raise ValueError("minimum_partition groups must contain integer indices")
         index = int(item)
         if index < 0:
