@@ -343,7 +343,14 @@ def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
         msg = "phase_series must not contain boolean values"
         raise ValueError(msg)
     raw = np.asarray(phase_series)
-    phases = raw.astype(np.float64, copy=True)
+    if np.iscomplexobj(raw):
+        msg = "phase_series must contain real-valued phase samples"
+        raise ValueError(msg)
+    try:
+        phases = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        msg = "phase_series must be a finite real-valued matrix"
+        raise ValueError(msg) from exc
     if phases.ndim != 2:
         msg = "phase_series must have shape (n_oscillators, n_samples)"
         raise ValueError(msg)
@@ -361,7 +368,7 @@ def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
 
 
 def _validate_bins(n_bins: int) -> int:
-    if isinstance(n_bins, bool) or not isinstance(n_bins, Integral):
+    if isinstance(n_bins, (bool, np.bool_)) or not isinstance(n_bins, Integral):
         msg = "n_bins must be an integer"
         raise ValueError(msg)
     bins = int(n_bins)
@@ -372,7 +379,7 @@ def _validate_bins(n_bins: int) -> int:
 
 
 def _validate_sample_count(n_samples: int) -> int:
-    if isinstance(n_samples, bool) or not isinstance(n_samples, Integral):
+    if isinstance(n_samples, (bool, np.bool_)) or not isinstance(n_samples, Integral):
         msg = "n_samples must be an integer"
         raise ValueError(msg)
     samples = int(n_samples)
@@ -422,8 +429,11 @@ def _validate_unit_interval_scalar(value: object, *, name: str) -> float:
 def _validate_pairwise_mi(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("pairwise_mi must not contain boolean values")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("pairwise_mi must contain real-valued entries")
     try:
-        matrix = np.asarray(value, dtype=np.float64)
+        matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("pairwise_mi must be a numeric matrix") from exc
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:

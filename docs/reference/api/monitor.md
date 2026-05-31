@@ -244,6 +244,10 @@ the minimum cross-partition information as `phi`.
 This is an engineering proxy for comparing regime traces and writing
 audit records. It is not an exact IIT quantity and is not a
 consciousness claim.
+Phase-series inputs, bin/sample counts, audit scalars, partitions, and
+pairwise mutual-information matrices are validated as finite real-valued
+contracts. Boolean aliases and complex matrices are rejected before circular
+histogram estimation or audit-record acceptance.
 
 **Usage:**
 

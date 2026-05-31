@@ -75,7 +75,16 @@ class TestIntegratedInformationContracts:
         with pytest.raises(ValueError, match="phase_series"):
             integrated_information(phases)
 
-    @pytest.mark.parametrize("n_bins", [False, 1, 1.5])
+    def test_complex_phase_series_is_rejected(self) -> None:
+        phases = np.array(
+            [[0.0, 1.0 + 0.0j], [1.0, 2.0]],
+            dtype=np.complex128,
+        )
+
+        with pytest.raises(ValueError, match="real-valued"):
+            integrated_information(phases)
+
+    @pytest.mark.parametrize("n_bins", [False, np.bool_(True), 1, 1.5])
     def test_invalid_bin_count_is_rejected(self, n_bins: Any) -> None:
         phases = np.zeros((2, 8), dtype=np.float64)
 
@@ -179,6 +188,17 @@ class TestIntegratedInformationContracts:
                 "minimum_partition": ((0,), (1,)),
                 "pairwise_mi": np.array(
                     [[0.0, np.bool_(True)], [np.bool_(True), 0.0]], dtype=object
+                ),
+                "n_bins": 4,
+            },
+            {
+                "phi": 0.0,
+                "normalised_phi": 0.0,
+                "total_integration": 0.0,
+                "minimum_partition": ((0,), (1,)),
+                "pairwise_mi": np.array(
+                    [[0.0, 0.1 + 0.0j], [0.1 + 0.0j, 0.0]],
+                    dtype=np.complex128,
                 ),
                 "n_bins": 4,
             },
@@ -353,7 +373,7 @@ class TestIntegratedInformationApproximationBenchmarks:
         assert len(record["cases"]) == 5
         assert record["cases"][0]["result"]["monitor"] == "integrated_information"
 
-    @pytest.mark.parametrize("n_samples", [True, 31.0, 31])
+    @pytest.mark.parametrize("n_samples", [True, np.bool_(True), 31.0, 31])
     def test_benchmark_rejects_invalid_sample_count(self, n_samples: Any) -> None:
         with pytest.raises(ValueError, match="n_samples"):
             benchmark_integrated_information_approximations(n_samples=n_samples)
