@@ -17,6 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._winding_validation import (
+    expected_winding_backend_output,
     validate_winding_backend_inputs,
     validate_winding_backend_output,
 )
@@ -51,6 +52,7 @@ def winding_numbers_julia(
 
     phases, t, n = validate_winding_backend_inputs(phases_flat, t, n)
     jl = _ensure()
+    expected = expected_winding_backend_output(phases, t, n)
     return validate_winding_backend_output(
         np.asarray(
             jl.winding_numbers(
@@ -61,4 +63,5 @@ def winding_numbers_julia(
         ),
         t=t,
         n=n,
+        expected=expected,
     )

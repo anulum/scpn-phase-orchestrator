@@ -49,7 +49,13 @@ def bench_at(t: int, n: int, calls: int) -> dict:
     hist[0] = rng.uniform(0, TWO_PI, n)
     for i in range(1, t):
         hist[i] = (hist[i - 1] + omegas * dt) % TWO_PI
-    row: dict = {"T": t, "N": n, "calls": calls, "available": AVAILABLE_BACKENDS}
+    row: dict = {
+        "T": t,
+        "N": n,
+        "calls": calls,
+        "available": AVAILABLE_BACKENDS,
+        "boundary_contract": "exact_numpy_wrapped_increment_validated",
+    }
     for backend in AVAILABLE_BACKENDS:
         tm = _bench(backend, hist, calls)
         row[f"{backend}_ms_per_call"] = (tm / calls) * 1000.0
@@ -64,7 +70,8 @@ def main() -> int:
     parser.add_argument("--calls", type=int, default=5)
     args = parser.parse_args()
 
-    print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}\n")
+    print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}")
+    print("Boundary contract: exact NumPy wrapped-increment reference validated\n")
     header = f"{'T':>6} {'N':>4} {'calls':>6}"
     for b in AVAILABLE_BACKENDS:
         header += f" {b + '_ms':>12}"

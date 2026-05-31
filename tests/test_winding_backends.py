@@ -52,6 +52,7 @@ TWO_PI = 2.0 * np.pi
 
 def test__winding_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(winding_validation.validate_winding_backend_inputs)
+    assert callable(winding_validation.expected_winding_backend_output)
     assert callable(winding_validation.validate_winding_backend_output)
 
 
@@ -164,6 +165,88 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(ValueError, match=match):
             winding_validation.validate_winding_backend_output(value, t=4, n=1)
 
+    def test_output_validation_rejects_in_range_wrong_winding_number(self) -> None:
+        traj = np.array(
+            [
+                [0.0],
+                [0.375 * TWO_PI],
+                [0.750 * TWO_PI],
+                [1.125 * TWO_PI],
+            ],
+            dtype=np.float64,
+        )
+        expected = winding_validation.expected_winding_backend_output(
+            traj.ravel(),
+            4,
+            1,
+        )
+
+        with pytest.raises(ValueError, match="exact winding reference"):
+            winding_validation.validate_winding_backend_output(
+                np.array([0], dtype=np.int64),
+                t=4,
+                n=1,
+                expected=expected,
+            )
+
+    @pytest.mark.parametrize("backend", ["go", "julia", "mojo"])
+    def test_direct_backends_reject_in_range_wrong_winding_number(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend: str,
+    ) -> None:
+        traj = np.array(
+            [
+                [0.0],
+                [0.375 * TWO_PI],
+                [0.750 * TWO_PI],
+                [1.125 * TWO_PI],
+            ],
+            dtype=np.float64,
+        )
+        wrong = np.array([0], dtype=np.int64)
+
+        if backend == "go":
+            from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+                _winding_go as winding_go,
+            )
+
+            class _FakeGo:
+                @staticmethod
+                def WindingNumbers(
+                    _phases_ptr: object,
+                    _t: object,
+                    _n: object,
+                    out_ptr: object,
+                ) -> int:
+                    out_ptr[0] = int(wrong[0])
+                    return 0
+
+            monkeypatch.setattr(winding_go, "_load_lib", lambda: _FakeGo())
+            target = winding_numbers_go
+        elif backend == "julia":
+            class _FakeJulia:
+                @staticmethod
+                def winding_numbers(
+                    _phases: np.ndarray,
+                    _t: int,
+                    _n: int,
+                ) -> np.ndarray:
+                    return wrong
+
+            monkeypatch.setattr(winding_julia, "_ensure", lambda: _FakeJulia())
+            target = winding_numbers_julia
+        else:
+            monkeypatch.setattr(
+                winding_mojo,
+                "_run",
+                lambda payload, *, expected_count, label: wrong.tolist(),
+            )
+            target = winding_numbers_mojo
+
+        with pytest.raises(ValueError, match="exact winding reference"):
+            target(traj.ravel(), 4, 1)
+
     def test_julia_backend_rejects_fractional_winding_output(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -190,6 +273,30 @@ class TestDirectBackendBoundaryContracts:
 
         with pytest.raises(ValueError, match="wrapped-increment"):
             winding_numbers_mojo(traj.ravel(), 4, 1)
+
+
+def test_public_winding_falls_back_when_backend_breaks_exact_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    traj = np.array(
+        [
+            [0.0],
+            [0.375 * TWO_PI],
+            [0.750 * TWO_PI],
+            [1.125 * TWO_PI],
+        ],
+        dtype=np.float64,
+    )
+
+    def fake_backend(_phases_flat: np.ndarray, _t: int, _n: int) -> np.ndarray:
+        return np.array([0], dtype=np.int64)
+
+    monkeypatch.setattr(w_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setattr(w_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+    monkeypatch.setitem(w_mod._BACKEND_CACHE, "go", fake_backend)
+    monkeypatch.setitem(w_mod._LOADERS, "go", lambda: fake_backend)
+
+    np.testing.assert_array_equal(winding_numbers(traj), _reference(traj))
 
 
 class TestRustParity:

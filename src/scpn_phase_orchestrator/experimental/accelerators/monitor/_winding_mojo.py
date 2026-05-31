@@ -18,6 +18,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._winding_validation import (
+    expected_winding_backend_output,
     validate_winding_backend_inputs,
     validate_winding_backend_output,
 )
@@ -79,4 +80,5 @@ def winding_numbers_mojo(
     tokens: list[str] = ["WIND", str(t), str(n)]
     tokens.extend(repr(float(x)) for x in phases.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=n, label="WIND")
-    return validate_winding_backend_output(result, t=t, n=n)
+    expected = expected_winding_backend_output(phases, t, n)
+    return validate_winding_backend_output(result, t=t, n=n, expected=expected)

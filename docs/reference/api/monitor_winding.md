@@ -17,8 +17,8 @@ rotation rather than storage discontinuities.
 
 This is the twelfth module migrated to the AttnRes-level standard:
 five-language backend chain, bit-exact integer parity across all
-four non-Python backends, multi-backend benchmark, and
-``pytest.mark.slow`` stability tests.
+four non-Python backends, exact public-boundary reference validation,
+multi-backend benchmark, and ``pytest.mark.slow`` stability tests.
 
 ---
 
@@ -48,6 +48,9 @@ the true cumulative angular displacement.
 * Time reversal: reversing the trajectory negates every ``w_i``.
 * Sign: positive ω → positive ``w_i`` (for long enough ``T``).
 * Empty / single-step: ``T < 2`` → zero vector.
+* Exact wrapped-increment preservation: public and direct accelerator
+  boundaries reject in-range integer vectors unless they match the NumPy
+  ``diff`` → wrap → sum → ``floor`` reference exactly.
 
 ---
 
@@ -111,12 +114,17 @@ runtimes:
 * returned winding vectors must be finite integer-valued `int64` arrays of
   length `n`, contain no boolean aliases, and stay within the wrapped-increment
   bound implied by `t`.
+* returned winding vectors must also equal the exact NumPy wrapped-increment
+  reference for the supplied phase history; direct wrappers fail closed on
+  plausible but wrong integer outputs.
 * the Mojo subprocess bridge must emit exactly `n` integer stdout lines for the
   `WIND` verb; missing, extra, blank, or non-integer lines fail closed before
   winding-vector validation.
 
 Invalid topological phase histories therefore fail deterministically in Python
 before shared-library loading, Julia initialisation, or subprocess execution.
+At the public API, a backend that emits a bounded but wrong winding vector is
+discarded and the Python reference is returned instead.
 
 ---
 
@@ -156,13 +164,18 @@ np.floor(cumulative / TWO_PI).astype(np.int64)
 ```
 
 Single vectorised pass; short-circuits at ``T < 2``.
+The same expression is the exact public-boundary contract for Rust, Mojo,
+Julia, and Go backend outputs.
 
 ---
 
 ## 5. Benchmarks
 
 Measured on the local Ubuntu 24.04 host, 16-thread x86_64, one
-warm-up + five measured calls, ``N = 16``. Reproduce with
+warm-up + five measured calls, ``N = 16``. Current benchmark output prints and
+records the boundary contract (`exact_numpy_wrapped_increment_validated`)
+because non-Python backend timings include exact NumPy reference validation at
+the public API. Reproduce with
 `python benchmarks/winding_benchmark.py --T-list 500 2000 10000 --N 16 --calls 5`.
 
 | T     | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |

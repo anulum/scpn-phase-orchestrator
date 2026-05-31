@@ -18,6 +18,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._winding_validation import (
+    expected_winding_backend_output,
     validate_winding_backend_inputs,
     validate_winding_backend_output,
 )
@@ -69,4 +70,5 @@ def winding_numbers_go(
     )
     if rc != 0:
         raise ValueError(f"Go WindingNumbers rc={rc}")
-    return validate_winding_backend_output(out, t=t, n=n)
+    expected = expected_winding_backend_output(p, t, n)
+    return validate_winding_backend_output(out, t=t, n=n, expected=expected)

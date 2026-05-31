@@ -153,7 +153,20 @@ def _validate_phase_history(phases_history: object) -> FloatArray:
     return np.ascontiguousarray(array, dtype=np.float64)
 
 
-def _validate_backend_winding(value: object, *, n: int, t: int) -> IntArray:
+def _winding_reference(phases_history: FloatArray) -> IntArray:
+    dtheta = np.diff(phases_history, axis=0)
+    dtheta_wrapped = (dtheta + np.pi) % TWO_PI - np.pi
+    cumulative = np.sum(dtheta_wrapped, axis=0)
+    return cast("IntArray", np.floor(cumulative / TWO_PI).astype(np.int64))
+
+
+def _validate_backend_winding(
+    value: object,
+    *,
+    n: int,
+    t: int,
+    expected: IntArray | None = None,
+) -> IntArray:
     if _contains_boolean_alias(value):
         raise ValueError("backend winding output must not contain boolean values")
     try:
@@ -173,7 +186,16 @@ def _validate_backend_winding(value: object, *, n: int, t: int) -> IntArray:
     max_abs_winding = int(np.ceil(max(t - 1, 0) / 2.0))
     if np.any(np.abs(numeric) > max_abs_winding):
         raise ValueError("backend winding output exceeds wrapped-increment bound")
-    return np.ascontiguousarray(numeric.astype(np.int64), dtype=np.int64)
+    winding = np.ascontiguousarray(numeric.astype(np.int64), dtype=np.int64)
+    if expected is not None:
+        reference = np.asarray(expected, dtype=np.int64)
+        if reference.shape != winding.shape:
+            raise ValueError("exact winding reference shape must match backend output")
+        if not np.array_equal(winding, reference):
+            raise ValueError(
+                "backend winding output diverged from exact winding reference"
+            )
+    return winding
 
 
 def winding_numbers(phases_history: FloatArray) -> IntArray:
@@ -195,19 +217,21 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
 
     t, n = int(phases_history.shape[0]), int(phases_history.shape[1])
     flat: FloatArray = np.ascontiguousarray(phases_history.ravel(), dtype=np.float64)
+    expected = _winding_reference(phases_history)
 
     backend_fn = _dispatch()
     if backend_fn is not None:
         try:
-            return _validate_backend_winding(backend_fn(flat, t, n), n=n, t=t)
+            return _validate_backend_winding(
+                backend_fn(flat, t, n),
+                n=n,
+                t=t,
+                expected=expected,
+            )
         except Exception:
             n = int(n)
 
-    # Unwrap via cumulative phase increments to handle wrap-around correctly.
-    dtheta = np.diff(phases_history, axis=0)
-    dtheta_wrapped = (dtheta + np.pi) % TWO_PI - np.pi
-    cumulative = np.sum(dtheta_wrapped, axis=0)
-    return cast("IntArray", np.floor(cumulative / TWO_PI).astype(np.int64))
+    return _validate_backend_winding(expected, n=n, t=t, expected=expected)
 
 
 def winding_vector(phases_history: FloatArray) -> IntArray:
