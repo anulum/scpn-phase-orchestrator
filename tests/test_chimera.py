@@ -134,12 +134,22 @@ def test_chimera_state_rejects_invalid_public_record(payload: dict[str, Any]) ->
     [
         (np.array([0.0, True], dtype=object), np.zeros((2, 2)), "phases"),
         (np.array([0.0 + 0.0j, 0.5 + 0.25j]), np.zeros((2, 2)), "real-valued"),
+        (
+            np.array([0.0 + 0.25j, 0.5], dtype=object),
+            np.zeros((2, 2)),
+            "real-valued",
+        ),
         (np.zeros((1, 2)), np.zeros((2, 2)), "phases"),
         (np.array([0.0, np.nan]), np.zeros((2, 2)), "phases"),
         (np.zeros(2), np.array([[0.0, True], [0.0, 0.0]], dtype=object), "knm"),
         (
             np.zeros(2),
             np.array([[0.0 + 0.0j, 1.0 + 0.25j], [1.0, 0.0 + 0.0j]]),
+            "real-valued",
+        ),
+        (
+            np.zeros(2),
+            np.array([[0.0, 1.0 + 0.25j], [1.0, 0.0]], dtype=object),
             "real-valued",
         ),
         (np.zeros(2), np.zeros((2, 3)), "knm"),
@@ -199,6 +209,7 @@ def test_local_order_parameter_falls_back_when_backend_raises(
         np.array([0.5, 1.1], dtype=np.float64),
         np.array([-0.1, 0.5], dtype=np.float64),
         np.array([0.5 + 0.0j, 0.5 + 0.25j]),
+        np.array([0.5 + 0.25j, 0.5], dtype=object),
         np.array([True, False], dtype=np.bool_),
         np.array([0.5, np.bool_(True)], dtype=object),
     ],

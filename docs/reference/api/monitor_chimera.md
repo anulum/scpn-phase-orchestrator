@@ -86,10 +86,12 @@ Returns a ``(N,)`` array of ``R_i`` values. The compute surface for
 the 5-backend chain.
 
 Inputs must be finite real-valued arrays. Boolean aliases and complex
-phase/coupling payloads are rejected before backend dispatch because
-the neighbourhood phasor statistic is defined over real phase angles
-and real coupling weights. Backend local-order vectors are revalidated
-as finite real values in ``[0, 1]`` before their results are accepted.
+phase/coupling payloads, including object arrays that hide Python or
+NumPy complex scalar aliases, are rejected before backend dispatch
+because the neighbourhood phasor statistic is defined over real phase
+angles and real coupling weights. Backend local-order vectors are
+revalidated as finite real values in ``[0, 1]`` before their results
+are accepted.
 
 ### 2.2 `detect_chimera`
 
@@ -145,15 +147,15 @@ The direct Go, Julia, and Mojo wrappers validate before loading their optional
 runtimes:
 
 * `phases` must be a one-dimensional finite real `float64` vector with no
-  boolean aliases or complex values.
+  boolean aliases, complex dtypes, or object-carried complex scalar aliases.
 * `knm_flat` must be a one-dimensional finite real `float64` vector with no
-  boolean aliases or complex values.
+  boolean aliases, complex dtypes, or object-carried complex scalar aliases.
 * `n` must be a non-boolean non-negative integer.
 * `phases.size` must equal `n` and `knm_flat.size` must equal `n * n`.
 * the flattened coupling matrix must have a zero self-coupling diagonal.
 * returned `local_order` must be a finite real vector of length `n` with no
-  boolean aliases, no complex values, and values inside the physical
-  interval `[0, 1]`.
+  boolean aliases, no complex dtype/object-complex payloads, and values inside
+  the physical interval `[0, 1]`.
 
 Empty direct calls preserve the Python public contract by returning an empty
 local-order vector before shared-library loading, Julia initialisation, or

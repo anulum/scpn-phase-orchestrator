@@ -204,6 +204,22 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
+
+
 def _validate_chimera_inputs(
     phases: object,
     knm: object,
@@ -211,7 +227,7 @@ def _validate_chimera_inputs(
     raw_phases = np.asarray(phases)
     if _contains_boolean_alias(raw_phases):
         raise ValueError("phases must not contain boolean values")
-    if np.iscomplexobj(raw_phases):
+    if _has_complex_payload(phases):
         raise ValueError("phases must contain real-valued phase samples")
     try:
         phases_array = raw_phases.astype(np.float64, copy=True)
@@ -226,7 +242,7 @@ def _validate_chimera_inputs(
     raw_knm = np.asarray(knm)
     if _contains_boolean_alias(raw_knm):
         raise ValueError("knm must not contain boolean values")
-    if np.iscomplexobj(raw_knm):
+    if _has_complex_payload(knm):
         raise ValueError("knm must contain real-valued couplings")
     try:
         knm_array = raw_knm.astype(np.float64, copy=True)
@@ -248,7 +264,7 @@ def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("local order parameter output must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(value):
         raise ValueError("local order parameter output must contain real values")
     try:
         local = raw.astype(np.float64, copy=True)
