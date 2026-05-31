@@ -310,7 +310,12 @@ Coupling adaptation rule inspired by biological synaptic plasticity:
 
 - `three_factor_update(knm, eligibility, modulator, phase_gate, lr=0.01)
   → NDArray`: applies the three-factor rule. Only modifies K when all
-  three factors are active.
+  three factors are active. The boundary enforces the same physical K_nm
+  contract consumed by the UPDE engines: `knm` must be finite, real,
+  non-negative, square, and zero-diagonal; `eligibility` must be finite, real,
+  square, zero-diagonal, and bounded in `[-1, 1]`. Negative modulation can
+  depress coupling but is clamped at zero, and the result always keeps a
+  zero self-coupling diagonal.
 
 ### Three factors
 

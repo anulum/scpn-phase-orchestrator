@@ -11,7 +11,9 @@
 The module computes pairwise phase eligibility traces and applies a
 modulator-gated Hebbian update to `K_nm`. Public functions reject boolean,
 non-numeric, non-finite, non-vector, non-square, and shape-mismatched inputs so
-plasticity cannot corrupt coupling state silently.
+plasticity cannot corrupt coupling state silently. The update preserves the
+Kuramoto coupling contract by requiring non-negative zero-diagonal `K_nm`,
+bounded zero-diagonal eligibility traces, and finite real scalar controls.
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 def _contains_boolean_alias(value: object) -> bool:
     raw = np.asarray(value, dtype=object)
-    return any(isinstance(item, bool) for item in raw.ravel())
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
@@ -38,6 +40,8 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be real-valued")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -55,6 +59,8 @@ def _validate_square_matrix(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be real-valued")
     try:
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -64,6 +70,26 @@ def _validate_square_matrix(value: object, *, name: str) -> FloatArray:
     if not np.all(np.isfinite(matrix)):
         raise ValueError(f"{name} must contain only finite values")
     return matrix
+
+
+def _validate_coupling_matrix(value: object) -> FloatArray:
+    knm = _validate_square_matrix(value, name="knm")
+    if np.any(knm < -1e-12):
+        raise ValueError("knm must be non-negative")
+    if not np.allclose(np.diag(knm), 0.0, atol=1e-12):
+        raise ValueError("knm diagonal must be zero")
+    result: FloatArray = np.maximum(knm, 0.0)
+    return result
+
+
+def _validate_eligibility_matrix(value: object) -> FloatArray:
+    eligibility = _validate_square_matrix(value, name="eligibility")
+    if not np.allclose(np.diag(eligibility), 0.0, atol=1e-12):
+        raise ValueError("eligibility diagonal must be zero")
+    if np.any(eligibility < -1.0 - 1e-12) or np.any(eligibility > 1.0 + 1e-12):
+        raise ValueError("eligibility values must lie in [-1, 1]")
+    result: FloatArray = np.clip(eligibility, -1.0, 1.0)
+    return result
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
@@ -122,8 +148,8 @@ def three_factor_update(
     Returns:
         Updated coupling matrix (new array, does not mutate input).
     """
-    knm = _validate_square_matrix(knm, name="knm")
-    eligibility = _validate_square_matrix(eligibility, name="eligibility")
+    knm = _validate_coupling_matrix(knm)
+    eligibility = _validate_eligibility_matrix(eligibility)
     if eligibility.shape != knm.shape:
         raise ValueError(
             "eligibility shape "
@@ -136,4 +162,7 @@ def three_factor_update(
     if not phase_gate:
         return knm.copy()
     delta = lr * eligibility * modulator
-    return knm + delta
+    updated = np.maximum(knm + delta, 0.0)
+    np.fill_diagonal(updated, 0.0)
+    result: FloatArray = updated
+    return result

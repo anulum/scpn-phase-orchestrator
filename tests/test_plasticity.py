@@ -20,6 +20,12 @@ from scpn_phase_orchestrator.coupling.plasticity import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 
+def _physical_matrix(n: int, value: float = 1.0) -> np.ndarray:
+    matrix = np.full((n, n), value, dtype=np.float64)
+    np.fill_diagonal(matrix, 0.0)
+    return matrix
+
+
 def test_public_array_contracts_are_parameterised() -> None:
     """Public plasticity array contracts stay element-typed."""
     for hint in [
@@ -60,8 +66,8 @@ def test_eligibility_diagonal_zero():
 
 
 def test_three_factor_gate_off_no_update():
-    knm = np.ones((3, 3))
-    elig = np.ones((3, 3))
+    knm = _physical_matrix(3)
+    elig = _physical_matrix(3)
     result = three_factor_update(knm, elig, modulator=1.0, phase_gate=False, lr=0.1)
     np.testing.assert_array_equal(result, knm)
 
@@ -76,23 +82,25 @@ def test_three_factor_positive_modulator_increases_coupling():
 
 
 def test_three_factor_negative_modulator_decreases_coupling():
-    knm = np.ones((3, 3))
-    elig = np.ones((3, 3))
+    knm = _physical_matrix(3)
+    elig = _physical_matrix(3)
     result = three_factor_update(knm, elig, modulator=-1.0, phase_gate=True, lr=0.1)
-    assert np.all(result < knm)
+    off_diag = ~np.eye(3, dtype=bool)
+    assert np.all(result[off_diag] < knm[off_diag])
+    np.testing.assert_array_equal(np.diag(result), 0.0)
 
 
 def test_three_factor_does_not_mutate_input():
-    knm = np.ones((3, 3))
+    knm = _physical_matrix(3)
     original = knm.copy()
-    elig = np.ones((3, 3))
+    elig = _physical_matrix(3)
     three_factor_update(knm, elig, modulator=1.0, phase_gate=True, lr=0.1)
     np.testing.assert_array_equal(knm, original)
 
 
 def test_three_factor_zero_modulator_no_change():
-    knm = np.ones((5, 5)) * 0.5
-    elig = np.ones((5, 5))
+    knm = _physical_matrix(5, value=0.5)
+    elig = _physical_matrix(5)
     result = three_factor_update(knm, elig, modulator=0.0, phase_gate=True, lr=0.1)
     np.testing.assert_allclose(result, knm, atol=1e-15)
 
@@ -123,6 +131,11 @@ def test_eligibility_rejects_mixed_boolean_phase_alias():
         compute_eligibility([True, 0.5])
 
 
+def test_eligibility_rejects_complex_phase_alias_without_casting():
+    with pytest.raises(ValueError, match="phases must be real-valued"):
+        compute_eligibility(np.array([0.0 + 0.5j, 1.0 + 0.0j]))
+
+
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     [
@@ -135,13 +148,13 @@ def test_eligibility_rejects_mixed_boolean_phase_alias():
         ),
         (
             {
-                "knm": np.ones((2, 2)),
+                "knm": _physical_matrix(2),
                 "eligibility": np.array([[True, False], [False, True]]),
             },
             "eligibility",
         ),
         (
-            {"knm": np.ones((2, 2)), "eligibility": np.ones((2, 3))},
+            {"knm": _physical_matrix(2), "eligibility": np.ones((2, 3))},
             "eligibility",
         ),
         (
@@ -182,6 +195,70 @@ def test_three_factor_rejects_mixed_boolean_matrix_aliases():
 
 
 @pytest.mark.parametrize(
+    ("knm", "eligibility", "match"),
+    [
+        (
+            np.array([[0.0, -0.1], [0.2, 0.0]]),
+            _physical_matrix(2),
+            "knm must be non-negative",
+        ),
+        (
+            np.eye(2),
+            _physical_matrix(2),
+            "knm diagonal",
+        ),
+        (
+            _physical_matrix(2),
+            np.eye(2),
+            "eligibility diagonal",
+        ),
+        (
+            _physical_matrix(2),
+            np.array([[0.0, 1.25], [0.5, 0.0]]),
+            "eligibility values",
+        ),
+        (
+            np.array([[0.0 + 0.0j, 0.1 + 0.2j], [0.1 + 0.0j, 0.0 + 0.0j]]),
+            _physical_matrix(2),
+            "knm must be real-valued",
+        ),
+        (
+            _physical_matrix(2),
+            np.array([[0.0 + 0.0j, 0.1 + 0.2j], [0.1 + 0.0j, 0.0 + 0.0j]]),
+            "eligibility must be real-valued",
+        ),
+    ],
+)
+def test_three_factor_rejects_non_physical_coupling_contracts(
+    knm,
+    eligibility,
+    match,
+):
+    with pytest.raises(ValueError, match=match):
+        three_factor_update(
+            knm,
+            eligibility,
+            modulator=1.0,
+            phase_gate=True,
+        )
+
+
+def test_three_factor_negative_modulator_clamps_to_zero_without_self_coupling():
+    knm = np.array([[0.0, 0.02], [0.03, 0.0]])
+    eligibility = _physical_matrix(2)
+
+    result = three_factor_update(
+        knm,
+        eligibility,
+        modulator=-1.0,
+        phase_gate=True,
+        lr=1.0,
+    )
+
+    np.testing.assert_array_equal(result, np.zeros((2, 2)))
+
+
+@pytest.mark.parametrize(
     ("modulator", "phase_gate", "lr", "error"),
     [
         (True, True, 0.01, TypeError),
@@ -194,8 +271,8 @@ def test_three_factor_rejects_mixed_boolean_matrix_aliases():
 def test_three_factor_rejects_invalid_scalars(modulator, phase_gate, lr, error):
     with pytest.raises(error):
         three_factor_update(
-            np.ones((2, 2)),
-            np.ones((2, 2)),
+            _physical_matrix(2),
+            _physical_matrix(2),
             modulator=modulator,
             phase_gate=phase_gate,
             lr=lr,

@@ -33,7 +33,8 @@ impl PlasticityModel {
     /// Update a dense row-major coupling matrix in place.
     ///
     /// The eligibility trace is `cos(theta_j - theta_i)`, implemented from
-    /// precomputed sine and cosine buffers. Self-couplings are preserved.
+    /// precomputed sine and cosine buffers. Self-couplings are zeroed to
+    /// preserve the Kuramoto no-self-edge coupling invariant.
     pub fn update(
         &self,
         sin_theta: &[f64],
@@ -60,6 +61,7 @@ impl PlasticityModel {
             let si = sin_theta[i];
             for j in 0..n {
                 if i == j {
+                    knm[i * n + j] = 0.0;
                     continue;
                 }
                 let idx = i * n + j;
@@ -73,7 +75,7 @@ impl PlasticityModel {
     /// Update sparse CSR coupling values in place.
     ///
     /// The sparse structure is interpreted as `row_ptr` plus `col_indices`;
-    /// entries where source and target are the same neuron are preserved.
+    /// entries where source and target are the same neuron are zeroed.
     pub fn update_sparse(
         &self,
         sin_theta: &[f64],
@@ -110,6 +112,7 @@ impl PlasticityModel {
             for idx in start..end {
                 let j = col_indices[idx];
                 if i == j {
+                    knm_values[idx] = 0.0;
                     continue;
                 }
                 let elig = cos_theta[j] * ci + sin_theta[j] * si;
@@ -132,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_update_preserves_self_edges_and_clamps_non_negative() {
+    fn dense_update_zeros_self_edges_and_clamps_non_negative() {
         let model = PlasticityModel::new(1.0, 0.0).expect("model init failed");
         let phases = [0.0_f64, std::f64::consts::PI];
         let sin_theta: Vec<f64> = phases.iter().map(|p| p.sin()).collect();
@@ -141,10 +144,34 @@ mod tests {
 
         model.update(&sin_theta, &cos_theta, &mut knm, 1.0, 1.0);
 
-        assert_eq!(knm[0], 7.0);
-        assert_eq!(knm[3], 9.0);
+        assert_eq!(knm[0], 0.0);
+        assert_eq!(knm[3], 0.0);
         assert_eq!(knm[1], 0.0);
         assert_eq!(knm[2], 0.0);
+    }
+
+    #[test]
+    fn sparse_update_zeros_self_edges() {
+        let model = PlasticityModel::new(1.0, 0.0).expect("model init failed");
+        let phases = [0.0_f64, 0.0];
+        let sin_theta: Vec<f64> = phases.iter().map(|p| p.sin()).collect();
+        let cos_theta: Vec<f64> = phases.iter().map(|p| p.cos()).collect();
+        let row_ptr = vec![0, 2, 2];
+        let col_indices = vec![0, 1];
+        let mut values = vec![5.0, 0.25];
+
+        model.update_sparse(
+            &sin_theta,
+            &cos_theta,
+            &row_ptr,
+            &col_indices,
+            &mut values,
+            1.0,
+            0.1,
+        );
+
+        assert_eq!(values[0], 0.0);
+        assert!((values[1] - 0.35).abs() < 1e-12);
     }
 
     #[test]
