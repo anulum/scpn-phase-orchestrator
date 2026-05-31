@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._inertial_validation import (
+    validate_inertial_inputs,
+    validate_inertial_output,
+)
+
 __all__ = ["inertial_step_julia"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -52,18 +57,25 @@ def inertial_step_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    th, od, pw, km, ine, dmp, n_i, dt_f = validate_inertial_inputs(
+        theta,
+        omega_dot,
+        power,
+        knm_flat,
+        inertia,
+        damping,
+        n,
+        dt,
+    )
     jl = _ensure()
     new_theta, new_omega_dot = jl.inertial_step(
-        np.ascontiguousarray(theta, dtype=np.float64),
-        np.ascontiguousarray(omega_dot, dtype=np.float64),
-        np.ascontiguousarray(power, dtype=np.float64),
-        np.ascontiguousarray(knm_flat, dtype=np.float64),
-        np.ascontiguousarray(inertia, dtype=np.float64),
-        np.ascontiguousarray(damping, dtype=np.float64),
-        int(n),
-        float(dt),
+        th,
+        od,
+        pw,
+        km,
+        ine,
+        dmp,
+        n_i,
+        dt_f,
     )
-    return (
-        np.asarray(new_theta, dtype=np.float64),
-        np.asarray(new_omega_dot, dtype=np.float64),
-    )
+    return validate_inertial_output(new_theta, new_omega_dot, n=n_i)

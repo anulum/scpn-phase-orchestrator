@@ -212,6 +212,14 @@ verify $V(t) \to V_{\min}$ numerically.
 - `(theta, omega_dot)` — updated state after RK4 step
 - `run()` also returns trajectory arrays
 
+Direct Go, Julia, and Mojo accelerator wrappers validate the swing-equation
+state before loading optional runtimes. The direct boundary requires finite
+real one-dimensional `float64` buffers for `theta`, `omega_dot`, `power`,
+`inertia`, and `damping`; positive inertia, damping, and timestep values;
+an exactly `N*N` flat pairwise coupling buffer; and a zero self-coupling
+diagonal. Backend outputs must return finite `(theta, omega_dot)` vectors of
+length `N`, with phases on the torus `[0, 2π)`.
+
 ---
 
 ## 4. Features

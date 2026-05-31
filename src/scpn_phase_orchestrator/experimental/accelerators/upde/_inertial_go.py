@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._inertial_validation import (
+    validate_inertial_inputs,
+    validate_inertial_output,
+)
+
 __all__ = ["inertial_step_go"]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libinertial.so"
@@ -67,15 +72,19 @@ def inertial_step_go(
     The calculation is delegated to the Go backend.
     """
 
+    th, od, pw, km, ine, dmp, n_i, dt_f = validate_inertial_inputs(
+        theta,
+        omega_dot,
+        power,
+        knm_flat,
+        inertia,
+        damping,
+        n,
+        dt,
+    )
     lib = _load_lib()
-    th = np.ascontiguousarray(theta, dtype=np.float64)
-    od = np.ascontiguousarray(omega_dot, dtype=np.float64)
-    pw = np.ascontiguousarray(power, dtype=np.float64)
-    km = np.ascontiguousarray(knm_flat, dtype=np.float64)
-    ine = np.ascontiguousarray(inertia, dtype=np.float64)
-    dmp = np.ascontiguousarray(damping, dtype=np.float64)
-    new_theta = np.zeros(n, dtype=np.float64)
-    new_omega_dot = np.zeros(n, dtype=np.float64)
+    new_theta = np.zeros(n_i, dtype=np.float64)
+    new_omega_dot = np.zeros(n_i, dtype=np.float64)
     rc = lib.InertialStep(
         th.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         od.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -83,11 +92,11 @@ def inertial_step_go(
         km.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ine.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         dmp.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(n)),
-        ctypes.c_double(float(dt)),
+        ctypes.c_int(n_i),
+        ctypes.c_double(dt_f),
         new_theta.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         new_omega_dot.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go InertialStep rc={rc}")
-    return new_theta, new_omega_dot
+    return validate_inertial_output(new_theta, new_omega_dot, n=n_i)

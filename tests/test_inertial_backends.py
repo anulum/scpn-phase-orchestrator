@@ -25,10 +25,20 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_go import (
+    inertial_step_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_julia import (
+    inertial_step_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_mojo import (
+    inertial_step_mojo,
+)
 from scpn_phase_orchestrator.upde import inertial as i_mod
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
 
 TOL = 1e-12
+DIRECT_BACKENDS = (inertial_step_go, inertial_step_julia, inertial_step_mojo)
 
 
 @contextlib.contextmanager
@@ -256,6 +266,51 @@ class TestBackendLoaderContracts:
             got_theta, got_omega = loader()(*args)
             np.testing.assert_allclose(got_theta, theta + offset + 0.01)
             np.testing.assert_allclose(got_omega, omega - offset + 0.01)
+
+
+def _direct_payload(n: int = 4):
+    theta = np.linspace(0.1, 1.0, n, dtype=np.float64)
+    omega_dot = np.linspace(-0.2, 0.2, n, dtype=np.float64)
+    power = np.linspace(-0.4, 0.4, n, dtype=np.float64)
+    knm = np.full((n, n), 0.03, dtype=np.float64)
+    np.fill_diagonal(knm, 0.0)
+    inertia = np.full(n, 1.5, dtype=np.float64)
+    damping = np.full(n, 0.25, dtype=np.float64)
+    return theta, omega_dot, power, knm.ravel(), inertia, damping, n, 0.01
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct Go/Julia/Mojo bridges reject invalid inertial states early."""
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    @pytest.mark.parametrize(
+        "index,replacement",
+        [
+            (0, np.array([0.0, np.nan], dtype=np.float64)),
+            (1, np.array([0.0, 1.0 + 0.1j], dtype=np.complex128)),
+            (2, np.array([True, False], dtype=np.bool_)),
+            (3, np.ones(3, dtype=np.float64)),
+            (4, np.array([1.0, 0.0, 1.0, 1.0], dtype=np.float64)),
+            (5, np.array([1.0, 1.0, -0.1, 1.0], dtype=np.float64)),
+            (6, True),
+            (7, 0.0),
+        ],
+    )
+    def test_validation_precedes_runtime_load(self, backend, index, replacement):
+        args = list(_direct_payload())
+        args[index] = replacement
+        with pytest.raises(ValueError):
+            backend(*args)
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    def test_rejects_self_coupling_diagonal(self, backend):
+        args = list(_direct_payload())
+        knm = np.full((4, 4), 0.03, dtype=np.float64)
+        np.fill_diagonal(knm, 0.2)
+        args[3] = knm.ravel()
+
+        with pytest.raises(ValueError, match="diagonal"):
+            backend(*args)
 
 
 class TestDispatchFallbackChain:

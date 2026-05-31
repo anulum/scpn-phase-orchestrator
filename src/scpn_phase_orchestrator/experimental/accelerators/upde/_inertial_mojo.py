@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._inertial_validation import (
+    validate_inertial_inputs,
+    validate_inertial_output,
+)
+
 __all__ = ["_ensure_exe", "inertial_step_mojo"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -48,13 +53,23 @@ def inertial_step_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
+    th, od, pw, km, ine, dmp, n_i, dt_f = validate_inertial_inputs(
+        theta,
+        omega_dot,
+        power,
+        knm_flat,
+        inertia,
+        damping,
+        n,
+        dt,
+    )
     exe = _ensure_exe()
-    tokens: list[str] = ["INERT", str(int(n)), repr(float(dt))]
-    for arr in (theta, omega_dot, power):
-        tokens.extend(repr(float(x)) for x in np.asarray(arr).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
-    for arr in (inertia, damping):
-        tokens.extend(repr(float(x)) for x in np.asarray(arr).ravel().tolist())
+    tokens: list[str] = ["INERT", str(n_i), repr(dt_f)]
+    for arr in (th, od, pw):
+        tokens.extend(repr(float(x)) for x in arr.tolist())
+    tokens.extend(repr(float(x)) for x in km.tolist())
+    for arr in (ine, dmp):
+        tokens.extend(repr(float(x)) for x in arr.tolist())
     proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
@@ -65,11 +80,11 @@ def inertial_step_mojo(
     if proc.returncode != 0:
         raise ValueError(f"Mojo inertial exit {proc.returncode}: {proc.stderr.strip()}")
     lines = proc.stdout.strip().splitlines()
-    if len(lines) != 2 * n:
-        raise ValueError(f"Mojo INERT returned {len(lines)} lines, expected {2 * n}")
-    new_theta = np.array([float(x) for x in lines[:n]], dtype=np.float64)
+    if len(lines) != 2 * n_i:
+        raise ValueError(f"Mojo INERT returned {len(lines)} lines, expected {2 * n_i}")
+    new_theta = np.array([float(x) for x in lines[:n_i]], dtype=np.float64)
     new_omega_dot = np.array(
-        [float(x) for x in lines[n:]],
+        [float(x) for x in lines[n_i:]],
         dtype=np.float64,
     )
-    return new_theta, new_omega_dot
+    return validate_inertial_output(new_theta, new_omega_dot, n=n_i)
