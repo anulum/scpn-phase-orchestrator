@@ -37,7 +37,12 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def _run_mojo(tokens: list[str], expected_lines: int) -> list[str]:
+def _run_mojo(
+    tokens: list[str],
+    *,
+    expected_lines: int,
+    label: str,
+) -> list[float]:
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -48,10 +53,25 @@ def _run_mojo(tokens: list[str], expected_lines: int) -> list[str]:
     )
     if proc.returncode != 0:
         raise ValueError(f"Mojo market exit {proc.returncode}: {proc.stderr.strip()}")
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     if len(lines) != expected_lines:
-        raise ValueError(f"Mojo returned {len(lines)} lines, expected {expected_lines}")
-    return lines
+        message = (
+            f"Mojo market {label} returned {len(lines)} lines, "
+            f"expected {expected_lines}"
+        )
+        raise ValueError(message)
+    values: list[float] = []
+    for line in lines:
+        try:
+            value = float(line)
+        except ValueError as exc:
+            raise ValueError(
+                f"Mojo market {label} output must be finite real values"
+            ) from exc
+        if not np.isfinite(value):
+            raise ValueError(f"Mojo market {label} output must be finite real values")
+        values.append(value)
+    return values
 
 
 def market_order_parameter_mojo(
@@ -66,8 +86,8 @@ def market_order_parameter_mojo(
 
     tokens = ["ORDER", str(int(t)), str(int(n))]
     tokens.extend(repr(float(x)) for x in np.asarray(phases_flat).ravel().tolist())
-    lines = _run_mojo(tokens, expected_lines=int(t))
-    return np.array([float(x) for x in lines], dtype=np.float64)
+    values = _run_mojo(tokens, expected_lines=int(t), label="ORDER")
+    return np.array(values, dtype=np.float64)
 
 
 def market_plv_mojo(
@@ -84,5 +104,9 @@ def market_plv_mojo(
     n_windows = int(t) - int(window) + 1
     tokens = ["PLV", str(int(t)), str(int(n)), str(int(window))]
     tokens.extend(repr(float(x)) for x in np.asarray(phases_flat).ravel().tolist())
-    lines = _run_mojo(tokens, expected_lines=n_windows * int(n) * int(n))
-    return np.array([float(x) for x in lines], dtype=np.float64)
+    values = _run_mojo(
+        tokens,
+        expected_lines=n_windows * int(n) * int(n),
+        label="PLV",
+    )
+    return np.array(values, dtype=np.float64)

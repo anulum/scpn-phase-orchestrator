@@ -255,6 +255,11 @@ user should choose filtering appropriate to their frequency of interest.
 
 ### 4.2 Rust Acceleration
 
+Direct Mojo market adapters enforce exact raw stdout cardinality: `ORDER` must
+emit one finite scalar per timestep, and `PLV` must emit one finite scalar per
+rolling-window matrix entry. Blank, truncated, overlong, non-numeric, or
+non-finite output is rejected before public arrays are returned.
+
 `market_order_parameter`, `market_plv`, and `detect_regimes` all have Rust
 backends via spo-kernel. Speedup is significant for `market_plv` which
 is $O(T \cdot W \cdot N^2)$.

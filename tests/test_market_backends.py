@@ -20,12 +20,16 @@ rounding, so parity is tight (~1e-15) but not always 0.0.
 from __future__ import annotations
 
 import contextlib
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _market_mojo as market_mojo_mod,
+)
 from scpn_phase_orchestrator.upde import market as m_mod
 from scpn_phase_orchestrator.upde.market import (
     market_order_parameter,
@@ -64,6 +68,54 @@ def _plv_backend(backend: str, seed: int, T: int = 40, N: int = 5, W: int = 10):
     phases = _problem(seed, T, N)
     with _force_backend(backend):
         return market_plv(phases, window=W)
+
+
+class TestDirectMojoBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "expected_lines", "label", "match"),
+        [
+            ("", 2, "ORDER", "Mojo market ORDER returned 0 lines, expected 2"),
+            (
+                "0.1\n0.2\n0.3\n",
+                2,
+                "ORDER",
+                "Mojo market ORDER returned 3 lines, expected 2",
+            ),
+            (
+                "0.1\n\n0.2\n",
+                2,
+                "ORDER",
+                "Mojo market ORDER returned 3 lines, expected 2",
+            ),
+            ("0.1\nnot-a-number\n", 2, "PLV", "finite real values"),
+            ("0.1\nnan\n", 2, "PLV", "finite real values"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_lines: int,
+        label: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(market_mojo_mod, "_ensure_exe", lambda: "market")
+        monkeypatch.setattr(
+            market_mojo_mod.subprocess,
+            "run",
+            lambda *_args, **_kwargs: SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            market_mojo_mod._run_mojo(
+                ["ORDER", "1", "1", "0.0"],
+                expected_lines=expected_lines,
+                label=label,
+            )
 
 
 class TestOrderParameterParity:
