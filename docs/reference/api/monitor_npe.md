@@ -116,8 +116,9 @@ Key parameters:
 
 * ``phases``: finite real-valued ``(N,)`` array. Wrapping is applied
   internally — values outside ``[0, 2π)`` are fine. Boolean aliases
-  and complex samples are rejected because the circular-distance
-  geometry is defined on real phase angles.
+  and complex samples, including object-dtype complex aliases, are
+  rejected because the circular-distance geometry is defined on real
+  phase angles.
 * ``max_radius``: finite real scalar filtration cutoff in radians.
   ``None`` (default) means ``π``. Boolean aliases, complex values,
   negative radii, and values above ``π`` are rejected before backend
@@ -169,23 +170,26 @@ scalar NPE values must be finite real numbers in ``[0, 1]`` and
 match the exact H₀ persistent-entropy reference for the supplied
 ``max_radius``. Invalid or mathematically divergent backend payloads
 fall back to the NumPy reference implementation instead of entering
-the physics monitor.
+the physics monitor. Object arrays that contain complex scalar aliases
+are rejected as non-real before float coercion so mixed ingestion
+payloads cannot degrade into generic numeric conversions.
 
 Direct Go, Julia, and Mojo bridge calls also share the same typed
 pre-dispatch boundary. Phase vectors are accepted only as finite
 real one-dimensional ``float64`` arrays with boolean aliases and
-complex samples rejected before optional runtime loading. Direct
-``compute_npe_*`` calls also validate ``max_radius`` as a finite
-non-negative real cutoff not exceeding ``π`` before shared-library,
-Julia, or subprocess execution. Direct backend outputs are also
-validated before return: distance outputs must contain exactly
-``N × N`` finite real values, reshape to a symmetric matrix with
-zero diagonal, remain bounded in ``[0, π]``, and preserve exact
-wrapped circular distances; scalar NPE outputs must be finite real
-values in ``[0, 1]`` and preserve the exact persistent-entropy
-scalar up to the backend tolerance. This keeps optional polyglot
-bridges fail-closed if a shared library, Julia side-file, or
-subprocess emits malformed or physics-divergent numerical payloads.
+complex samples, including object-dtype complex aliases, rejected
+before optional runtime loading. Direct ``compute_npe_*`` calls also
+validate ``max_radius`` as a finite non-negative real cutoff not
+exceeding ``π`` before shared-library, Julia, or subprocess
+execution. Direct backend outputs are also validated before return:
+distance outputs must contain exactly ``N × N`` finite real values,
+reshape to a symmetric matrix with zero diagonal, remain bounded in
+``[0, π]``, and preserve exact wrapped circular distances; scalar NPE
+outputs must be finite real values in ``[0, 1]`` and preserve the
+exact persistent-entropy scalar up to the backend tolerance. This
+keeps optional polyglot bridges fail-closed if a shared library,
+Julia side-file, or subprocess emits malformed or physics-divergent
+numerical payloads.
 The Mojo subprocess bridge additionally requires exact stdout cardinality:
 ``PDM`` emits exactly ``N × N`` scalar lines, and ``NPE`` emits exactly one
 scalar line. Missing, extra, blank, and non-scalar stdout lines fail closed
@@ -388,7 +392,7 @@ size should cache NPE and re-evaluate every ``k``-th step with
 ### 8.2 Criterion benchmark (bare Rust kernel)
 
 Not exported yet as a criterion bench target — tracked as a
-follow-up item in the module TODO. The Rust kernel source lives at
+follow-up item in the public roadmap. The Rust kernel source lives at
 ``spo-kernel/crates/spo-engine/src/npe.rs`` and is reachable from
 ``cargo test -p spo-engine --lib npe``.
 
@@ -442,7 +446,7 @@ a genuine partial-sync fixed point with ``NPE ≈ 0.8``.
 
 ``supervisor.regimes.RegimeManager`` does not yet read NPE
 directly. A straightforward extension — promoted to a follow-up
-item in ``project_spo_todo.md`` — is to add an NPE threshold as
+item in ``docs/roadmap.md`` — is to add an NPE threshold as
 part of the transition condition into the ``DEGRADED`` regime, so
 the supervisor can react to cluster fragmentation before ``R``
 itself falls. The monitor is **wired but non-voting** until that

@@ -37,13 +37,21 @@ def _contains_boolean_alias(raw: np.ndarray) -> bool:
     return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
 
 
+def _contains_complex_alias(raw: np.ndarray) -> bool:
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, complex | np.complexfloating) for value in raw.flat)
+
+
 def validate_phase_distance_backend_input(phases: object) -> FloatArray:
     """Return a finite real one-dimensional phase vector for direct backends."""
 
     raw = np.asarray(phases)
     if _contains_boolean_alias(raw):
         raise ValueError("phases must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("phases must contain real-valued phase samples")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -132,7 +140,7 @@ def validate_phase_distance_backend_output(
     raw = np.asarray(distances)
     if _contains_boolean_alias(raw):
         raise ValueError("phase distance backend output must not contain booleans")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("phase distance backend output must contain real values")
     try:
         array = raw.astype(np.float64, copy=True)

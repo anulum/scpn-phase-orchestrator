@@ -59,6 +59,7 @@ class TestPhaseDistanceMatrix:
             (np.array([True, False]), "phases"),
             (np.array([0.0, np.bool_(True)], dtype=object), "phases"),
             (np.array([0.0 + 0.0j, 1.0 + 0.5j]), "real-valued"),
+            (np.array([0.0, 1.0 + 0.5j], dtype=object), "real-valued"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
@@ -131,6 +132,7 @@ class TestNPE:
             (np.array([True, False]), "phases"),
             (np.array([0.0, np.bool_(True)], dtype=object), "phases"),
             (np.array([0.0 + 0.0j, 1.0 + 0.5j]), "real-valued"),
+            (np.array([0.0, 1.0 + 0.5j], dtype=object), "real-valued"),
         ],
     )
     def test_rejects_invalid_phase_buffers(

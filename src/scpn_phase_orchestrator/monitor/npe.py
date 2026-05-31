@@ -152,11 +152,19 @@ def _contains_boolean_alias(raw: np.ndarray) -> bool:
     return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
 
 
+def _contains_complex_alias(raw: np.ndarray) -> bool:
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, complex | np.complexfloating) for value in raw.flat)
+
+
 def _validate_phases(phases: object) -> FloatArray:
     raw = np.asarray(phases)
     if _contains_boolean_alias(raw):
         raise ValueError("phases must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("phases must contain real-valued phase samples")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -179,7 +187,7 @@ def _validate_distance_matrix(
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("phase distance matrix must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("phase distance matrix must contain real values")
     try:
         matrix = raw.astype(np.float64, copy=True)

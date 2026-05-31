@@ -173,6 +173,7 @@ class TestDirectBackendBoundaryContracts:
             (np.array([[0.1, 0.25], [0.25, 0.0]]), "diagonal"),
             (np.array([[False, 0.25], [0.25, False]], dtype=object), "booleans"),
             (np.array([[0.0, 0.25j], [0.25j, 0.0]]), "real values"),
+            (np.array([[0.0, 0.25j], [0.25j, 0.0]], dtype=object), "real values"),
         ],
     )
     def test_phase_distance_backend_output_rejects_invalid_physics(
@@ -246,6 +247,7 @@ class TestDirectBackendBoundaryContracts:
         [
             np.array([0.0, True], dtype=object),
             np.array([0.0 + 1.0j, 1.0 + 0.0j]),
+            np.array([0.0, 1.0j], dtype=object),
             np.array([0.0, np.inf]),
             np.array([[0.0, 1.0]]),
         ],
@@ -271,6 +273,7 @@ class TestDirectBackendBoundaryContracts:
         [
             np.array([0.0, np.bool_(False)], dtype=object),
             np.array([0.0, 1.0j]),
+            np.array([0.0, 1.0j], dtype=object),
             np.array([0.0, np.nan]),
             np.array([[0.0, 1.0]]),
         ],
