@@ -63,6 +63,11 @@ def _problem(seed: int, n: int = 16, dim: int = 2):
     return pos, phases, omegas
 
 
+def _direct_payload(n: int = 3, dim: int = 2):
+    pos, phases, omegas = _problem(19, n=n, dim=dim)
+    return pos, phases, omegas, n, dim, 1.0, 1.0, 0.8, 1.2, 0.01
+
+
 def _reference_step(pos, phases, omegas, n: int, dim: int):
     prev = _force("python")
     try:
@@ -248,6 +253,38 @@ class TestBackendLoaderContracts:
         assert got_pos.dtype == np.float64
         assert got_phases.dtype == np.float64
         assert calls == {"init": (2, 2, 0.01), "contiguous": (True, True, True)}
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo STEP returned 0 lines, expected 9"),
+            ("0\n1\n2\n3\n4\n5\n0.1\n0.2\n0.3\n0.4\n", "expected 9"),
+            ("0\n1\n2\n3\n4\n\n0.1\n0.2\n0.3\n", "finite positions"),
+            ("0\n1\n2\nnan\n4\n5\n0.1\n0.2\n0.3\n", "finite positions"),
+            ("0\n1\n2\n3\n4\n5\nbad\n0.2\n0.3\n", "finite positions"),
+            ("0\n1\n2\n3\n4\n5\n7.0\n0.2\n0.3\n", "finite positions"),
+            ("0\n1\n2\n3\n4\n5\n0.1\ninf\n0.3\n", "finite positions"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_swarmalator_mojo, "_ensure_exe", lambda: "swarmalator")
+        monkeypatch.setattr(
+            _swarmalator_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: type(
+                "Proc",
+                (),
+                {"returncode": 0, "stdout": stdout, "stderr": ""},
+            )(),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _swarmalator_mojo.swarmalator_step_mojo(*_direct_payload())
 
     def test_optional_backend_loaders_return_callable_numeric_kernels(
         self, monkeypatch

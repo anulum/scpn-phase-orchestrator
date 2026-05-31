@@ -20,6 +20,7 @@ from numpy.typing import NDArray
 __all__ = ["_ensure_exe", "swarmalator_step_mojo"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+TWO_PI = 2.0 * np.pi
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "swarmalator_mojo"
 
@@ -75,16 +76,31 @@ def swarmalator_step_mojo(
         raise ValueError(
             f"Mojo swarmalator exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     expected = n * dim + n
     if len(lines) != expected:
         raise ValueError(f"Mojo STEP returned {len(lines)} lines, expected {expected}")
-    new_pos: FloatArray = np.array(
-        [float(x) for x in lines[: n * dim]],
-        dtype=np.float64,
-    )
-    new_phases: FloatArray = np.array(
-        [float(x) for x in lines[n * dim :]],
-        dtype=np.float64,
-    )
+    values: list[float] = []
+    phase_offset = n * dim
+    for index, line in enumerate(lines):
+        try:
+            value = float(line)
+        except ValueError as exc:
+            raise ValueError(
+                "Mojo STEP output must contain finite positions followed by "
+                "finite phases in [0, 2*pi)"
+            ) from exc
+        if not np.isfinite(value):
+            raise ValueError(
+                "Mojo STEP output must contain finite positions followed by "
+                "finite phases in [0, 2*pi)"
+            )
+        if index >= phase_offset and (value < 0.0 or value >= TWO_PI):
+            raise ValueError(
+                "Mojo STEP output must contain finite positions followed by "
+                "finite phases in [0, 2*pi)"
+            )
+        values.append(value)
+    new_pos: FloatArray = np.array(values[:phase_offset], dtype=np.float64)
+    new_phases: FloatArray = np.array(values[phase_offset:], dtype=np.float64)
     return new_pos.reshape(n, dim), new_phases

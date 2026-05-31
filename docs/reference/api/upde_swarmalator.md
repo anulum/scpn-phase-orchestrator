@@ -234,6 +234,12 @@ continuation (not yet implemented in SPO) would be needed.
 **Outputs:**
 - `(new_pos, new_phases)` — updated state
 
+Direct Mojo swarmalator adapters preserve raw stdout cardinality at the
+position-phase boundary: `STEP` must emit exactly `N*d + N` scalar lines,
+ordered as flattened positions followed by torus phases. Blank, truncated,
+overlong, non-numeric, non-finite, or out-of-domain phase lines are rejected
+before public arrays are returned.
+
 ---
 
 ## 4. Features
