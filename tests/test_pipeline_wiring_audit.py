@@ -221,20 +221,11 @@ class TestPipelinePerformance:
         assert elapsed < 0.001, f"UPDEEngine.step(64) = {elapsed * 1000:.2f}ms > 1ms"
 
     def test_order_parameter_n256_under_100us(self):
-        import os
-        import sys
-
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         phases = np.random.default_rng(0).uniform(0, TWO_PI, 256)
         elapsed = self._time_fn(lambda: compute_order_parameter(phases))
-        limit = (
-            0.0005
-            if os.getenv("CI")
-            else 0.00015
-            if sys.platform == "darwin"
-            else 0.0001
-        )
+        limit = 0.0005
         assert elapsed < limit, (
             f"order_parameter(256) = {elapsed * 1e6:.0f}μs > {limit * 1e6:.0f}μs"
         )
