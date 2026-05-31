@@ -83,6 +83,19 @@ class TestSheafCoherenceContracts:
         with pytest.raises(ValueError, match="node_states must not contain boolean"):
             sheaf_coherence(states, maps)
 
+    @pytest.mark.parametrize(
+        "states",
+        [
+            np.array([[0.0], [1.0 + 0.0j]], dtype=np.complex128),
+            np.array([[0.0], [1.0 + 0.25j]], dtype=object),
+        ],
+    )
+    def test_complex_node_states_are_rejected(self, states: np.ndarray) -> None:
+        maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="node_states must not contain complex"):
+            sheaf_coherence(states, maps)
+
     def test_non_finite_restrictions_are_rejected_by_coherence_and_laplacian(
         self,
     ) -> None:
@@ -106,6 +119,25 @@ class TestSheafCoherenceContracts:
             sheaf_coherence(states, maps)
         with pytest.raises(
             ValueError, match="restriction_maps must not contain boolean"
+        ):
+            sheaf_laplacian(maps)
+
+    @pytest.mark.parametrize(
+        "maps",
+        [
+            np.array([[[[0.0]], [[1.0 + 0.0j]]], [[[0.0]], [[0.0]]]]),
+            np.array([[[[0.0]], [[1.0 + 0.25j]]], [[[0.0]], [[0.0]]]], dtype=object),
+        ],
+    )
+    def test_complex_restriction_maps_are_rejected(self, maps: np.ndarray) -> None:
+        states = np.zeros((2, 1), dtype=np.float64)
+
+        with pytest.raises(
+            ValueError, match="restriction_maps must not contain complex"
+        ):
+            sheaf_coherence(states, maps)
+        with pytest.raises(
+            ValueError, match="restriction_maps must not contain complex"
         ):
             sheaf_laplacian(maps)
 

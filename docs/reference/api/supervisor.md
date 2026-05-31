@@ -410,6 +410,12 @@ live actuation.
 restriction maps. It builds the block sheaf Laplacian, computes edge residuals,
 and reports obstruction metrics for audit logs.
 
+Inputs are fail-closed real-valued tensors: `node_states` must have shape
+`(n_nodes, n_channels)` and `restriction_maps` must have shape
+`(n_nodes, n_nodes, n_channels, n_channels)`. Boolean aliases, complex values,
+non-finite values, and malformed object payloads are rejected before Laplacian
+assembly so the obstruction score cannot depend on implicit dtype coercion.
+
 This supervisor-facing sheaf-cohomology slice exposes obstruction score,
 consistency energy, approximate kernel dimension, obstruction dimension, and a
 review-only obstruction-aware control primitive. It does not claim a complete

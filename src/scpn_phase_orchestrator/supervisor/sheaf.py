@@ -345,7 +345,12 @@ def sheaf_laplacian(
     """Build the block sheaf Laplacian from directed restriction maps."""
     if _contains_boolean_alias(restriction_maps):
         raise ValueError("restriction_maps must not contain boolean values")
-    maps = np.asarray(restriction_maps, dtype=np.float64)
+    if _contains_complex_alias(restriction_maps):
+        raise ValueError("restriction_maps must not contain complex values")
+    try:
+        maps = np.asarray(restriction_maps, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("restriction_maps must be real-valued") from exc
     if (
         maps.ndim != 4
         or maps.shape[0] != maps.shape[1]
@@ -402,7 +407,12 @@ def _restriction_residuals(
 def _validate_node_states(node_states: FloatArray) -> FloatArray:
     if _contains_boolean_alias(node_states):
         raise ValueError("node_states must not contain boolean values")
-    states = np.asarray(node_states, dtype=np.float64)
+    if _contains_complex_alias(node_states):
+        raise ValueError("node_states must not contain complex values")
+    try:
+        states = np.asarray(node_states, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("node_states must be real-valued") from exc
     if states.ndim != 2:
         raise ValueError("node_states must have shape (N, D)")
     if states.shape[0] < 1 or states.shape[1] < 1:
@@ -418,7 +428,12 @@ def _validate_restriction_maps(
 ) -> FloatArray:
     if _contains_boolean_alias(restriction_maps):
         raise ValueError("restriction_maps must not contain boolean values")
-    maps = np.asarray(restriction_maps, dtype=np.float64)
+    if _contains_complex_alias(restriction_maps):
+        raise ValueError("restriction_maps must not contain complex values")
+    try:
+        maps = np.asarray(restriction_maps, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("restriction_maps must be real-valued") from exc
     n_nodes, n_channels = state_shape
     expected = (n_nodes, n_nodes, n_channels, n_channels)
     if maps.shape != expected:
@@ -483,6 +498,14 @@ def _contains_boolean_alias(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
 
 def _kernel_dimension(laplacian: FloatArray, tolerance: float) -> int:
