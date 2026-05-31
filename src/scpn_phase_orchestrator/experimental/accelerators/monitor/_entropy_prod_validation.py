@@ -21,6 +21,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 __all__ = [
     "FloatArray",
     "validate_entropy_prod_backend_inputs",
+    "validate_entropy_prod_backend_output",
 ]
 
 
@@ -107,3 +108,24 @@ def validate_entropy_prod_backend_inputs(
     if dt_value < 0.0:
         raise ValueError(f"dt must be non-negative, got {dt!r}")
     return phases_array, omegas_array, knm_array, alpha_value, dt_value
+
+
+def validate_entropy_prod_backend_output(value: object) -> float:
+    """Validate a direct-backend entropy-production-rate scalar."""
+
+    if isinstance(value, (bool, np.bool_)):
+        raise ValueError("entropy_production_rate must not be a boolean value")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("entropy_production_rate must be real-valued")
+    try:
+        result = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "entropy_production_rate must be a finite real scalar"
+        ) from exc
+    if not np.isfinite(result):
+        raise ValueError("entropy_production_rate must be finite")
+    if result < -1e-12:
+        raise ValueError("entropy_production_rate must be non-negative")
+    return max(result, 0.0)

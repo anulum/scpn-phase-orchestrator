@@ -17,7 +17,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._entropy_prod_validation import validate_entropy_prod_backend_inputs
+from ._entropy_prod_validation import (
+    validate_entropy_prod_backend_inputs,
+    validate_entropy_prod_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -85,4 +88,4 @@ def entropy_production_rate_go(
     )
     if rc != 0:
         raise ValueError(f"Go EntropyProductionRate rc={rc}")
-    return float(out.value)
+    return validate_entropy_prod_backend_output(out.value)

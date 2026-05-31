@@ -16,7 +16,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._entropy_prod_validation import validate_entropy_prod_backend_inputs
+from ._entropy_prod_validation import (
+    validate_entropy_prod_backend_inputs,
+    validate_entropy_prod_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -56,7 +59,7 @@ def entropy_production_rate_julia(
         dt,
     )
     jl = _ensure()
-    return float(
+    return validate_entropy_prod_backend_output(
         jl.entropy_production_rate(
             np.ascontiguousarray(phases.ravel(), dtype=np.float64),
             np.ascontiguousarray(omegas.ravel(), dtype=np.float64),

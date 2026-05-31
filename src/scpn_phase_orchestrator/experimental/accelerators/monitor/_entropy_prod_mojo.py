@@ -17,7 +17,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._entropy_prod_validation import validate_entropy_prod_backend_inputs
+from ._entropy_prod_validation import (
+    validate_entropy_prod_backend_inputs,
+    validate_entropy_prod_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -80,4 +83,4 @@ def entropy_production_rate_mojo(
     tokens.extend(repr(float(x)) for x in phases.ravel().tolist())
     tokens.extend(repr(float(x)) for x in omegas.ravel().tolist())
     tokens.extend(repr(float(x)) for x in knm.ravel().tolist())
-    return _run(" ".join(tokens) + "\n")
+    return validate_entropy_prod_backend_output(_run(" ".join(tokens) + "\n"))

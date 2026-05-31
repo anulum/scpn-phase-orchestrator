@@ -351,6 +351,9 @@ The public monitor validates shape, finiteness, real-valuedness, and
 boolean aliases before backend dispatch. The Go / Julia / Mojo direct
 adapter wrappers share the same validation helper, so direct adapter
 tests fail closed before entering polyglot runtimes.
+Direct backend outputs are validated before return as finite real
+non-negative entropy-production scalars. Boolean aliases, complex values,
+non-finite results, and negative rates fail closed at the Python boundary.
 
 ### 8.2 Not thread-safe on the Python fallback
 

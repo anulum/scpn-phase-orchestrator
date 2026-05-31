@@ -72,6 +72,7 @@ def _problem(seed: int, n: int = 6):
 
 
 def test__entropy_prod_validation_rejects_boolean_alias_inputs() -> None:
+    assert callable(_entropy_prod_validation.validate_entropy_prod_backend_output)
     with pytest.raises(ValueError, match="knm must not contain boolean values"):
         _entropy_prod_validation.validate_entropy_prod_backend_inputs(
             np.zeros(2),
@@ -100,6 +101,47 @@ def test__entropy_prod_validation_rejects_complex_inputs() -> None:
             1.0,
             0.01,
         )
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        (np.bool_(True), "boolean"),
+        (1.0 + 0.1j, "real-valued"),
+        (np.inf, "finite"),
+        (-0.01, "non-negative"),
+    ],
+)
+def test__entropy_prod_validation_rejects_nonphysical_backend_output(
+    value: object, match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        _entropy_prod_validation.validate_entropy_prod_backend_output(value)
+
+
+def test_julia_backend_rejects_negative_entropy_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeJulia:
+        @staticmethod
+        def entropy_production_rate(*args: object) -> float:
+            return -0.01
+
+    phases, omegas, knm = _problem(41, n=3)
+    monkeypatch.setattr(_entropy_prod_julia, "_ensure", lambda: _FakeJulia())
+
+    with pytest.raises(ValueError, match="non-negative"):
+        entropy_production_rate_julia(phases, omegas, knm, 0.5, 0.01)
+
+
+def test_mojo_backend_rejects_nonfinite_entropy_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    phases, omegas, knm = _problem(42, n=3)
+    monkeypatch.setattr(_entropy_prod_mojo, "_run", lambda payload: np.inf)
+
+    with pytest.raises(ValueError, match="finite"):
+        entropy_production_rate_mojo(phases, omegas, knm, 0.5, 0.01)
 
 
 def test_backend_array_contracts_are_parameterised() -> None:
