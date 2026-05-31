@@ -186,8 +186,7 @@ def build_strange_loop_drift_scenarios() -> tuple[StrangeLoopDriftScenario, ...]
             ),
             expected_trigger="policy_drift",
             action_schedule=tuple(
-                (_review_action("K", 0.03 + 0.12 * step, step),)
-                for step in range(40)
+                (_review_action("K", 0.03 + 0.12 * step, step),) for step in range(40)
             ),
         ),
         StrangeLoopDriftScenario(
@@ -230,9 +229,7 @@ def evaluate_strange_loop_drift_scenarios(
 ) -> tuple[StrangeLoopDriftScenarioResult, ...]:
     """Evaluate long-run drift scenarios through ``StrangeLoopSupervisor``."""
     scenario_tuple = (
-        build_strange_loop_drift_scenarios()
-        if scenarios is None
-        else tuple(scenarios)
+        build_strange_loop_drift_scenarios() if scenarios is None else tuple(scenarios)
     )
     results: list[StrangeLoopDriftScenarioResult] = []
     for scenario in scenario_tuple:
@@ -253,9 +250,7 @@ def evaluate_strange_loop_drift_scenarios(
         max_overcontrol = max(
             assessment.overcontrol_score for assessment in assessments
         )
-        min_coherence = min(
-            assessment.control_coherence for assessment in assessments
-        )
+        min_coherence = min(assessment.control_coherence for assessment in assessments)
         triggered_count = sum(
             1 for assessment in assessments if assessment.recommended_actions
         )

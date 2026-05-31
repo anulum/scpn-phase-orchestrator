@@ -247,9 +247,7 @@ def test_explicit_jax_backend_matches_numpy_information_geometry_contract() -> N
     assert jax_proposal.natural_gradient_norm == pytest.approx(
         numpy_proposal.natural_gradient_norm
     )
-    assert jax_proposal.curvature_proxy == pytest.approx(
-        numpy_proposal.curvature_proxy
-    )
+    assert jax_proposal.curvature_proxy == pytest.approx(numpy_proposal.curvature_proxy)
     np.testing.assert_allclose(
         jax_proposal.state.metric_tensor,
         numpy_proposal.state.metric_tensor,

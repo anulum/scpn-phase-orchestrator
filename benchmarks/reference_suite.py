@@ -1426,9 +1426,7 @@ def benchmark_strange_loop_drift_scenario_gate() -> dict[str, float | int | str]
     passed_scenario_count = sum(
         int(record["passed_expected_trigger"] is True) for record in records
     )
-    non_actuating = int(
-        all(record["non_actuating"] is True for record in records)
-    )
+    non_actuating = int(all(record["non_actuating"] is True for record in records))
     execution_disabled = int(
         all(record["execution_disabled"] is True for record in records)
     )
@@ -1950,8 +1948,7 @@ def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
         len(plans) >= thresholds.min_plan_count
         and projected_action_count >= thresholds.min_projected_action_count
         and runtime_gate_checked_count >= thresholds.min_runtime_gate_checked_count
-        and runtime_mapped_command_count
-        >= thresholds.min_runtime_mapped_command_count
+        and runtime_mapped_command_count >= thresholds.min_runtime_mapped_command_count
         and blocked_reason_count >= thresholds.min_blocked_reason_count
         and non_actuating == int(thresholds.require_non_actuating)
         and runtime_execution_disabled
@@ -4469,9 +4466,7 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
                 "min_rejected_branch_count": thresholds.min_rejected_branch_count,
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_execution_disabled": thresholds.require_execution_disabled,
-                "require_jax_backend_parity": (
-                    thresholds.require_jax_backend_parity
-                ),
+                "require_jax_backend_parity": (thresholds.require_jax_backend_parity),
                 "require_non_actuating": thresholds.require_non_actuating,
             },
             sort_keys=True,
@@ -5222,9 +5217,7 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
         "execution_disabled": execution_disabled,
         "operator_review_required": operator_review_required,
         "deterministic_hash": deterministic_hash,
-        "sheaf_obstruction_sha256": _stable_record_hash(
-            [*records, control_record]
-        ),
+        "sheaf_obstruction_sha256": _stable_record_hash([*records, control_record]),
         "acceptance_passed": acceptance_passed,
         "acceptance_thresholds_json": json.dumps(
             {

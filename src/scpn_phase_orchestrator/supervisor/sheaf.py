@@ -122,9 +122,7 @@ class SheafControlProposal:
             "cohomology_dimensions": {
                 "baseline_kernel_dimension": self.baseline_kernel_dimension,
                 "projected_kernel_dimension": self.projected_kernel_dimension,
-                "baseline_obstruction_dimension": (
-                    self.baseline_obstruction_dimension
-                ),
+                "baseline_obstruction_dimension": (self.baseline_obstruction_dimension),
                 "projected_obstruction_dimension": (
                     self.projected_obstruction_dimension
                 ),

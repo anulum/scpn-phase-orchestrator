@@ -357,8 +357,7 @@ class TestSheafCoherenceBehaviour:
         assert proposal.projected_kernel_dimension >= baseline.kernel_dimension
         assert proposal.baseline_obstruction_dimension == baseline.obstruction_dimension
         assert (
-            proposal.projected_obstruction_dimension
-            <= baseline.obstruction_dimension
+            proposal.projected_obstruction_dimension <= baseline.obstruction_dimension
         )
 
         audit = proposal.to_audit_record()

@@ -218,8 +218,10 @@ class TestDirectBackendBoundaryContracts:
             order_params_julia_mod.__name__: order_params_julia_mod,
             order_params_mojo_mod.__name__: order_params_mojo_mod,
         }[module]
-        loader_attr = "_run" if mod is order_params_mojo_mod else (
-            "_load_lib" if mod is order_params_go_mod else "_ensure_julia_loaded"
+        loader_attr = (
+            "_run"
+            if mod is order_params_mojo_mod
+            else ("_load_lib" if mod is order_params_go_mod else "_ensure_julia_loaded")
         )
         monkeypatch.setattr(
             mod,
@@ -271,8 +273,10 @@ class TestDirectBackendBoundaryContracts:
             order_params_julia_mod.__name__: order_params_julia_mod,
             order_params_mojo_mod.__name__: order_params_mojo_mod,
         }[module]
-        loader_attr = "_run" if mod is order_params_mojo_mod else (
-            "_load_lib" if mod is order_params_go_mod else "_ensure_julia_loaded"
+        loader_attr = (
+            "_run"
+            if mod is order_params_mojo_mod
+            else ("_load_lib" if mod is order_params_go_mod else "_ensure_julia_loaded")
         )
         monkeypatch.setattr(
             mod,
@@ -305,8 +309,14 @@ class TestDirectBackendBoundaryContracts:
                 order_params_julia_mod.__name__: order_params_julia_mod,
                 order_params_mojo_mod.__name__: order_params_mojo_mod,
             }[module]
-            loader_attr = "_run" if mod is order_params_mojo_mod else (
-                "_load_lib" if mod is order_params_go_mod else "_ensure_julia_loaded"
+            loader_attr = (
+                "_run"
+                if mod is order_params_mojo_mod
+                else (
+                    "_load_lib"
+                    if mod is order_params_go_mod
+                    else "_ensure_julia_loaded"
+                )
             )
             monkeypatch.setattr(
                 mod,

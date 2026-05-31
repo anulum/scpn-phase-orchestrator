@@ -76,8 +76,7 @@ class _FakeGoReductionLib:
 
     def OARun(self, *_args: object) -> int:
         output_refs = (
-            ctypes.cast(arg, ctypes.POINTER(ctypes.c_double))
-            for arg in _args[-4:]
+            ctypes.cast(arg, ctypes.POINTER(ctypes.c_double)) for arg in _args[-4:]
         )
         for output_ref, value in zip(output_refs, self.output, strict=True):
             output_ref.contents.value = value

@@ -98,10 +98,7 @@ def validate_oa_output(
     magnitude = math.hypot(z_re_f, z_im_f)
     if magnitude > 1.0 + _UNIT_DISK_TOLERANCE:
         raise ValueError("backend z output must lie in the OA unit disk")
-    if (
-        radius_f < -_UNIT_DISK_TOLERANCE
-        or radius_f > 1.0 + _UNIT_DISK_TOLERANCE
-    ):
+    if radius_f < -_UNIT_DISK_TOLERANCE or radius_f > 1.0 + _UNIT_DISK_TOLERANCE:
         raise ValueError("backend R output must lie in [0, 1]")
     if not math.isclose(
         radius_f,
