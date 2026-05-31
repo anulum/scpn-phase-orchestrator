@@ -14,11 +14,16 @@ from hashlib import sha256
 from math import log
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.studio.ui_helpers as ui
 from scpn_phase_orchestrator.studio.workflow import BindingProposal
-from scpn_phase_orchestrator.supervisor import evaluate_strange_loop_drift_scenarios
+from scpn_phase_orchestrator.supervisor import (
+    MorphogeneticFieldState,
+    evaluate_strange_loop_drift_scenarios,
+    render_morphogenetic_field_svg,
+)
 
 MINIMAL_SPEC = Path("domainpacks/minimal_domain/binding_spec.yaml")
 DIGITAL_TWIN_SPEC = Path("domainpacks/digital_twin_nchannel/binding_spec.yaml")
@@ -254,6 +259,69 @@ def test_strange_loop_studio_panel_rejects_malformed_scenario_evidence() -> None
         ui.build_strange_loop_studio_panel([{**record, "scenario_hash": "bad"}])
     with pytest.raises(ValueError, match="finite non-negative real"):
         ui.build_strange_loop_studio_panel([{**record, "max_drift_score": True}])
+
+
+def test_morphogenetic_field_panel_preserves_svg_snapshot_evidence() -> None:
+    field = np.array(
+        [
+            [0.0, 0.9, 0.2],
+            [0.4, 0.0, 0.7],
+            [0.1, 0.3, 0.0],
+        ],
+        dtype=np.float64,
+    )
+    artefact = render_morphogenetic_field_svg(
+        MorphogeneticFieldState(field),
+        top_k=3,
+        cell_size=16,
+        title="Studio field review",
+    ).to_audit_record()
+
+    panel = ui.build_morphogenetic_field_studio_panel(artefact)
+
+    assert panel["panel_kind"] == "studio_morphogenetic_field_panel"
+    assert panel["renderer"] == "morphogenetic_field_svg"
+    assert panel["actuation_permitted"] is False
+    assert panel["top_edge_count"] == 3
+    assert panel["shape"] == [3, 3]
+    assert panel["snapshot"]["maximum"] == pytest.approx(0.9)
+    assert panel["strongest_edge"] == {
+        "source": 0,
+        "target": 1,
+        "weight": pytest.approx(0.9),
+    }
+    assert panel["field_energy"]["l2_norm"] == pytest.approx(
+        float(np.linalg.norm(field))
+    )
+    assert panel["svg"].startswith("<svg ")
+
+
+def test_morphogenetic_field_panel_rejects_malformed_svg_evidence() -> None:
+    field = np.array([[0.0, 0.8], [0.2, 0.0]], dtype=np.float64)
+    artefact = render_morphogenetic_field_svg(
+        MorphogeneticFieldState(field),
+        top_k=2,
+    ).to_audit_record()
+    snapshot = dict(artefact["snapshot"])
+
+    with pytest.raises(ValueError, match="format"):
+        ui.build_morphogenetic_field_studio_panel({**artefact, "format": "png"})
+    with pytest.raises(ValueError, match="svg"):
+        ui.build_morphogenetic_field_studio_panel({**artefact, "svg": "<script />"})
+    with pytest.raises(ValueError, match="shape"):
+        ui.build_morphogenetic_field_studio_panel(
+            {**artefact, "snapshot": {**snapshot, "shape": [2, True]}}
+        )
+    with pytest.raises(ValueError, match="top_edges"):
+        ui.build_morphogenetic_field_studio_panel(
+            {
+                **artefact,
+                "snapshot": {
+                    **snapshot,
+                    "top_edges": [{"source": 0, "target": 0, "weight": 0.5}],
+                },
+            }
+        )
 
 
 def test_canvas_review_artifacts_capture_layout_and_topology_changes() -> None:

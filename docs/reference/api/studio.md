@@ -32,6 +32,15 @@ finite non-negative metrics, unit-interval coherence, and SHA-256 scenario/
 result hashes before Studio may display the evidence. The payload remains
 review-only and sets `actuation_permitted: false`.
 
+`build_morphogenetic_field_studio_panel(svg_artifact)` renders a passive
+`render_morphogenetic_field_svg()` artefact into a Studio payload with SVG
+metadata, fixed-width ASCII heatmap rows, field-energy statistics, strongest
+off-diagonal topology edges, and explicit `actuation_permitted: false`. The
+helper requires a complete SVG document, square snapshot shape, bounded
+unit-interval field statistics, shape-compatible heatmap rows, sorted
+off-diagonal top-edge records, and finite non-negative L2 energy before Studio
+may expose the field rendering to an operator.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.ui_helpers

@@ -380,6 +380,11 @@ the same field state. It produces a deterministic, dependency-free SVG heatmap
 plus top-edge labels and snapshot metadata. The renderer is passive: it turns an
 already computed field into a review artefact and does not mutate policy,
 coupling, or actuation state.
+Studio packages those SVG artefacts through
+`build_morphogenetic_field_studio_panel()`, which validates complete SVG
+documents, fixed-width heatmap rows, field-energy statistics, and sorted
+off-diagonal topology edges before exposing the panel as passive operator
+evidence.
 
 `domainpacks/swarm_robotics/morphogenetic_field_demo.py` provides a deterministic
 domainpack proof: it evaluates a split-flock phase state and emits the
