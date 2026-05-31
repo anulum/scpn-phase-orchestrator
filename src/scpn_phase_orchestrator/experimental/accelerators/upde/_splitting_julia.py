@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._splitting_validation import (
+    validate_splitting_inputs,
+    validate_splitting_output,
+)
+
 __all__ = ["splitting_run_julia"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -53,17 +58,28 @@ def splitting_run_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    p, o, k, a, n_i, zeta_f, psi_f, dt_f, n_steps_i = validate_splitting_inputs(
+        phases,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+    )
     jl = _ensure()
     result = jl.splitting_run(
-        np.ascontiguousarray(phases, dtype=np.float64),
-        np.ascontiguousarray(omegas, dtype=np.float64),
-        np.ascontiguousarray(knm_flat, dtype=np.float64),
-        np.ascontiguousarray(alpha_flat, dtype=np.float64),
-        int(n),
-        float(zeta),
-        float(psi),
-        float(dt),
-        int(n_steps),
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
     )
     result_array: FloatArray = np.asarray(result, dtype=np.float64)
-    return result_array
+    return validate_splitting_output(result_array, n=n_i)

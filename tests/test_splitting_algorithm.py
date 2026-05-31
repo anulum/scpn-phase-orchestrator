@@ -140,6 +140,24 @@ class TestRun:
             p = eng.step(p, omegas, knm, 0.0, 0.0, alpha)
         np.testing.assert_allclose(chunk, p, atol=1e-12)
 
+    @_python
+    def test_run_rejects_pairwise_self_coupling(self):
+        theta = np.array([0.1, 0.3, 0.7], dtype=np.float64)
+        omegas = np.array([0.2, -0.1, 0.05], dtype=np.float64)
+        knm = np.array(
+            [
+                [0.0, 0.2, 0.1],
+                [0.3, 0.05, 0.4],
+                [0.1, 0.2, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        alpha = np.zeros((3, 3), dtype=np.float64)
+        eng = SplittingEngine(3, 0.01)
+
+        with pytest.raises(ValueError, match="knm diagonal"):
+            eng.run(theta, omegas, knm, 0.0, 0.0, alpha, n_steps=1)
+
 
 class TestOrderParameter:
     @_python

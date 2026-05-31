@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import contextlib
+import ctypes
 import math
 import sys
 import types
@@ -36,6 +37,75 @@ splitting_run_mojo = _splitting_mojo.splitting_run_mojo
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
+
+
+def _valid_direct_args():
+    return (
+        np.array([0.1, 0.3], dtype=np.float64),
+        np.array([0.2, -0.1], dtype=np.float64),
+        np.array([0.0, 0.4, 0.2, 0.0], dtype=np.float64),
+        np.zeros(4, dtype=np.float64),
+        2,
+        0.0,
+        0.0,
+        0.01,
+        1,
+    )
+
+
+def _with_direct_arg(index: int, value):
+    args = list(_valid_direct_args())
+    args[index] = value
+    return tuple(args)
+
+
+class _FakeGoSplittingLib:
+    def __init__(self, output: tuple[float, ...], rc: int = 0):
+        self.output = output
+        self.rc = rc
+
+    def SplittingRun(self, *_args):
+        output_ref = ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))
+        for index, value in enumerate(self.output):
+            output_ref[index] = value
+        return self.rc
+
+
+class _FakeJuliaSplittingModule:
+    def __init__(self, output: tuple[float, ...]):
+        self.output = output
+
+    def splitting_run(self, *_args):
+        return np.array(self.output, dtype=np.float64)
+
+
+def _call_direct_backend(module, monkeypatch, output: tuple[float, ...]):
+    if module is _splitting_go:
+        monkeypatch.setattr(
+            _splitting_go,
+            "_load_lib",
+            lambda: _FakeGoSplittingLib(output),
+        )
+        return _splitting_go.splitting_run_go(*_valid_direct_args())
+    if module is _splitting_julia:
+        monkeypatch.setattr(
+            _splitting_julia,
+            "_ensure",
+            lambda: _FakeJuliaSplittingModule(output),
+        )
+        return _splitting_julia.splitting_run_julia(*_valid_direct_args())
+
+    monkeypatch.setattr(_splitting_mojo, "_ensure_exe", lambda: "splitting")
+    monkeypatch.setattr(
+        _splitting_mojo.subprocess,
+        "run",
+        lambda *_args, **_kwargs: types.SimpleNamespace(
+            returncode=0,
+            stdout="".join(f"{value}\n" for value in output),
+            stderr="",
+        ),
+    )
+    return _splitting_mojo.splitting_run_mojo(*_valid_direct_args())
 
 
 @contextlib.contextmanager
@@ -170,6 +240,91 @@ class TestBackendTypingContracts:
                 context=f"{label}:{name}",
             )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
+
+
+class TestDirectSplittingBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("module", "fn_name", "loader_name"),
+        [
+            (_splitting_go, "splitting_run_go", "_load_lib"),
+            (_splitting_julia, "splitting_run_julia", "_ensure"),
+            (_splitting_mojo, "splitting_run_mojo", "_ensure_exe"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("args", "match"),
+        [
+            (_with_direct_arg(0, np.array([True, False])), "phases"),
+            (_with_direct_arg(0, np.array([0.1])), "phases"),
+            (_with_direct_arg(1, np.array([0.1 + 0.0j, 0.2])), "omegas"),
+            (_with_direct_arg(2, np.zeros(3, dtype=np.float64)), "knm_flat"),
+            (
+                _with_direct_arg(
+                    2,
+                    np.array([1.0, 0.4, 0.2, 0.0], dtype=np.float64),
+                ),
+                "diagonal",
+            ),
+            (_with_direct_arg(3, np.zeros(3, dtype=np.float64)), "alpha_flat"),
+            (_with_direct_arg(4, True), "n"),
+            (_with_direct_arg(7, 0.0), "dt"),
+            (_with_direct_arg(7, -0.01), "dt"),
+            (_with_direct_arg(8, 0), "n_steps"),
+        ],
+    )
+    def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+        fn_name: str,
+        loader_name: str,
+        args,
+        match: str,
+    ) -> None:
+        def forbidden_loader():
+            raise AssertionError("runtime loader must not be called")
+
+        monkeypatch.setattr(module, loader_name, forbidden_loader)
+
+        with pytest.raises(ValueError, match=match):
+            getattr(module, fn_name)(*args)
+
+    @pytest.mark.parametrize(
+        "module",
+        [_splitting_go, _splitting_julia, _splitting_mojo],
+    )
+    def test_direct_backend_accepts_valid_torus_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+    ) -> None:
+        got = _call_direct_backend(module, monkeypatch, (0.2, 0.4))
+
+        np.testing.assert_allclose(got, np.array([0.2, 0.4], dtype=np.float64))
+        assert got.dtype == np.float64
+
+    @pytest.mark.parametrize(
+        "module",
+        [_splitting_go, _splitting_julia, _splitting_mojo],
+    )
+    @pytest.mark.parametrize("output", [(-0.1, 0.2), (0.1, TWO_PI)])
+    def test_direct_backend_rejects_out_of_torus_outputs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+        output: tuple[float, ...],
+    ) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            _call_direct_backend(module, monkeypatch, output)
+
+    @pytest.mark.parametrize("module", [_splitting_julia, _splitting_mojo])
+    def test_direct_backend_rejects_wrong_output_length(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+    ) -> None:
+        with pytest.raises(ValueError, match="length 2|expected 2"):
+            _call_direct_backend(module, monkeypatch, (0.2,))
 
 
 class TestDirectMojoBoundaryContracts:

@@ -19,6 +19,11 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+from ._splitting_validation import (
+    validate_splitting_inputs,
+    validate_splitting_output,
+)
+
 __all__ = ["_ensure_exe", "splitting_run_mojo"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -51,19 +56,30 @@ def splitting_run_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
+    p, o, k, a, n_i, zeta_f, psi_f, dt_f, n_steps_i = validate_splitting_inputs(
+        phases,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+    )
     exe = _ensure_exe()
     tokens: list[str] = [
         "SPLIT",
-        str(int(n)),
-        repr(float(zeta)),
-        repr(float(psi)),
-        repr(float(dt)),
-        str(int(n_steps)),
+        str(n_i),
+        repr(zeta_f),
+        repr(psi_f),
+        repr(dt_f),
+        str(n_steps_i),
     ]
-    tokens.extend(repr(float(x)) for x in np.asarray(phases).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(omegas).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(alpha_flat).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in p.tolist())
+    tokens.extend(repr(float(x)) for x in o.tolist())
+    tokens.extend(repr(float(x)) for x in k.tolist())
+    tokens.extend(repr(float(x)) for x in a.tolist())
     proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
@@ -76,8 +92,8 @@ def splitting_run_mojo(
             f"Mojo splitting exit {proc.returncode}: {proc.stderr.strip()}"
         )
     lines = proc.stdout.splitlines()
-    if len(lines) != n:
-        raise ValueError(f"Mojo SPLIT returned {len(lines)} lines, expected {n}")
+    if len(lines) != n_i:
+        raise ValueError(f"Mojo SPLIT returned {len(lines)} lines, expected {n_i}")
     values: list[float] = []
     for line in lines:
         try:
@@ -90,4 +106,4 @@ def splitting_run_mojo(
             raise ValueError("Mojo SPLIT output must be finite phases in [0, 2*pi)")
         values.append(value)
     result: FloatArray = np.array(values, dtype=np.float64)
-    return result
+    return validate_splitting_output(result, n=n_i)

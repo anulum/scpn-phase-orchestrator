@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._splitting_validation import (
+    validate_splitting_inputs,
+    validate_splitting_output,
+)
+
 __all__ = ["splitting_run_go"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -69,24 +74,31 @@ def splitting_run_go(
     The calculation is delegated to the Go backend.
     """
 
+    p, o, k, a, n_i, zeta_f, psi_f, dt_f, n_steps_i = validate_splitting_inputs(
+        phases,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+    )
     lib = _load_lib()
-    p = np.ascontiguousarray(phases, dtype=np.float64)
-    o = np.ascontiguousarray(omegas, dtype=np.float64)
-    k = np.ascontiguousarray(knm_flat, dtype=np.float64)
-    a = np.ascontiguousarray(alpha_flat, dtype=np.float64)
-    out: FloatArray = np.zeros(int(n), dtype=np.float64)
+    out: FloatArray = np.zeros(n_i, dtype=np.float64)
     rc = lib.SplittingRun(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         o.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         k.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(n)),
-        ctypes.c_double(float(zeta)),
-        ctypes.c_double(float(psi)),
-        ctypes.c_double(float(dt)),
-        ctypes.c_int(int(n_steps)),
+        ctypes.c_int(n_i),
+        ctypes.c_double(zeta_f),
+        ctypes.c_double(psi_f),
+        ctypes.c_double(dt_f),
+        ctypes.c_int(n_steps_i),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go SplittingRun rc={rc}")
-    return out
+    return validate_splitting_output(out, n=n_i)

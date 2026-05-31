@@ -404,6 +404,8 @@ class SplittingEngine:
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
         knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
+        if np.any(np.diag(knm64) != 0.0):
+            raise ValueError("knm diagonal must be exactly zero")
         alpha64 = _validate_state_array(
             alpha,
             name="alpha",
