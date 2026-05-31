@@ -15,6 +15,7 @@ Outputs are booleans — tolerance is exact array equality. Both
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -34,6 +35,12 @@ from scpn_phase_orchestrator.monitor.recurrence import (
     recurrence_matrix,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+RmBackend = Callable[[np.ndarray, object, object, object, object], np.ndarray]
+CrossBackend = Callable[
+    [np.ndarray, np.ndarray, object, object, object, object],
+    np.ndarray,
+]
 
 cross_recurrence_matrix_go = _recurrence_go.cross_recurrence_matrix_go
 cross_recurrence_matrix_julia = _recurrence_julia.cross_recurrence_matrix_julia
@@ -105,6 +112,107 @@ def test_backend_array_contracts_are_parameterised() -> None:
         )
         assert "float64" in str(float_hint)
         assert "uint8" in str(hints["return"])
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            recurrence_matrix_go,
+            recurrence_matrix_julia,
+            recurrence_matrix_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("traj_flat", "t", "d", "epsilon", "angular", "message"),
+        [
+            (np.array([0.0, True], dtype=object), 2, 1, 0.5, False, "traj_flat"),
+            (np.array([0.0 + 1.0j, 1.0 + 0.0j]), 2, 1, 0.5, False, "traj_flat"),
+            (np.array([0.0, np.inf]), 2, 1, 0.5, False, "traj_flat"),
+            (np.array([[0.0, 1.0]]), 2, 1, 0.5, False, "traj_flat"),
+            (np.array([0.0, 1.0]), 3, 1, 0.5, False, "traj_flat"),
+            (np.array([0.0, 1.0]), np.bool_(True), 1, 0.5, False, "t"),
+            (np.array([0.0, 1.0]), 2, 0, 0.5, False, "d"),
+            (np.array([0.0, 1.0]), 2, 1, np.nan, False, "epsilon"),
+            (np.array([0.0, 1.0]), 2, 1, -0.1, False, "epsilon"),
+            (np.array([0.0, 1.0]), 2, 1, 0.5, 1, "angular"),
+        ],
+    )
+    def test_recurrence_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn: RmBackend,
+        traj_flat: np.ndarray,
+        t: object,
+        d: object,
+        epsilon: object,
+        angular: object,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            fn(traj_flat, t, d, epsilon, angular)
+
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            cross_recurrence_matrix_go,
+            cross_recurrence_matrix_julia,
+            cross_recurrence_matrix_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("traj_a", "traj_b", "t", "d", "epsilon", "angular", "message"),
+        [
+            (
+                np.array([0.0, 1.0]),
+                np.array([0.0, np.bool_(True)], dtype=object),
+                2,
+                1,
+                0.5,
+                False,
+                "traj_b_flat",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                np.array([0.0, 1.0j]),
+                2,
+                1,
+                0.5,
+                False,
+                "traj_b_flat",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                np.array([0.0]),
+                2,
+                1,
+                0.5,
+                False,
+                "traj_b_flat",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.bool_(False),
+                False,
+                "epsilon",
+            ),
+        ],
+    )
+    def test_cross_recurrence_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn: CrossBackend,
+        traj_a: np.ndarray,
+        traj_b: np.ndarray,
+        t: object,
+        d: object,
+        epsilon: object,
+        angular: object,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            fn(traj_a, traj_b, t, d, epsilon, angular)
 
 
 class TestRustParity:

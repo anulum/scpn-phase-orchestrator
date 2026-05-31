@@ -150,6 +150,17 @@ The output is boolean — cross-backend tolerance is **exact array
 equality** (``np.array_equal``). Both euclidean and angular metrics
 verified across seeds and sizes.
 
+Direct Go, Julia, and Mojo bridge calls share the public typed
+pre-dispatch boundary before optional runtime loading. Flat
+trajectory payloads must be finite real one-dimensional ``float64``
+arrays whose length matches ``T*d``; ``T`` and ``d`` must be integer
+controls with ``T >= 0`` and ``d >= 1``; ``epsilon`` must be a finite
+non-negative real; and the direct ``angular`` argument must be an
+explicit boolean flag. Boolean aliases inside trajectory payloads,
+complex samples, non-finite samples, malformed lengths, and invalid
+controls are rejected before shared-library, Julia, or subprocess
+execution.
+
 ---
 
 ## 4. Per-backend build notes

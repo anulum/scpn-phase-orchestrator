@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._recurrence_validation import (
+    validate_cross_recurrence_backend_inputs,
+    validate_recurrence_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 ByteArray: TypeAlias = NDArray[np.uint8]
 
@@ -47,14 +52,21 @@ def recurrence_matrix_julia(
 ) -> ByteArray:
     """Compute the recurrence matrix through the Julia backend."""
 
+    p, t_int, d_int, radius, angular_flag = validate_recurrence_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        epsilon,
+        angular,
+    )
     jl = _ensure()
     return np.asarray(
         jl.recurrence_matrix(
-            np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64),
-            int(t),
-            int(d),
-            float(epsilon),
-            bool(angular),
+            p,
+            t_int,
+            d_int,
+            radius,
+            angular_flag,
         ),
         dtype=np.uint8,
     )
@@ -70,15 +82,30 @@ def cross_recurrence_matrix_julia(
 ) -> ByteArray:
     """Compute the cross-recurrence matrix through the Julia backend."""
 
+    (
+        a,
+        b,
+        t_int,
+        d_int,
+        radius,
+        angular_flag,
+    ) = validate_cross_recurrence_backend_inputs(
+        traj_a_flat,
+        traj_b_flat,
+        t,
+        d,
+        epsilon,
+        angular,
+    )
     jl = _ensure()
     return np.asarray(
         jl.cross_recurrence_matrix(
-            np.ascontiguousarray(traj_a_flat.ravel(), dtype=np.float64),
-            np.ascontiguousarray(traj_b_flat.ravel(), dtype=np.float64),
-            int(t),
-            int(d),
-            float(epsilon),
-            bool(angular),
+            a,
+            b,
+            t_int,
+            d_int,
+            radius,
+            angular_flag,
         ),
         dtype=np.uint8,
     )

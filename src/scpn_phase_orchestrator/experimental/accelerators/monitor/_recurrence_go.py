@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._recurrence_validation import (
+    validate_cross_recurrence_backend_inputs,
+    validate_recurrence_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 ByteArray: TypeAlias = NDArray[np.uint8]
 
@@ -69,15 +74,21 @@ def recurrence_matrix_go(
 ) -> ByteArray:
     """Compute the recurrence matrix through the Go backend."""
 
+    p, t_int, d_int, radius, angular_flag = validate_recurrence_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        epsilon,
+        angular,
+    )
     lib = _load_lib()
-    p = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
-    out = np.zeros(t * t, dtype=np.uint8)
+    out = np.zeros(t_int * t_int, dtype=np.uint8)
     rc = lib.RecurrenceMatrix(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)),
-        ctypes.c_int(int(d)),
-        ctypes.c_double(float(epsilon)),
-        ctypes.c_int(int(angular)),
+        ctypes.c_int(t_int),
+        ctypes.c_int(d_int),
+        ctypes.c_double(radius),
+        ctypes.c_int(int(angular_flag)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)),
     )
     if rc != 0:
@@ -95,17 +106,30 @@ def cross_recurrence_matrix_go(
 ) -> ByteArray:
     """Compute the cross-recurrence matrix through the Go backend."""
 
+    (
+        a,
+        b,
+        t_int,
+        d_int,
+        radius,
+        angular_flag,
+    ) = validate_cross_recurrence_backend_inputs(
+        traj_a_flat,
+        traj_b_flat,
+        t,
+        d,
+        epsilon,
+        angular,
+    )
     lib = _load_lib()
-    a = np.ascontiguousarray(traj_a_flat.ravel(), dtype=np.float64)
-    b = np.ascontiguousarray(traj_b_flat.ravel(), dtype=np.float64)
-    out = np.zeros(t * t, dtype=np.uint8)
+    out = np.zeros(t_int * t_int, dtype=np.uint8)
     rc = lib.CrossRecurrenceMatrix(
         a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         b.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)),
-        ctypes.c_int(int(d)),
-        ctypes.c_double(float(epsilon)),
-        ctypes.c_int(int(angular)),
+        ctypes.c_int(t_int),
+        ctypes.c_int(d_int),
+        ctypes.c_double(radius),
+        ctypes.c_int(int(angular_flag)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)),
     )
     if rc != 0:

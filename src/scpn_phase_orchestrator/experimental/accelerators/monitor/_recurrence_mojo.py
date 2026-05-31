@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._recurrence_validation import (
+    validate_cross_recurrence_backend_inputs,
+    validate_recurrence_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 ByteArray: TypeAlias = NDArray[np.uint8]
 
@@ -63,17 +68,26 @@ def recurrence_matrix_mojo(
 ) -> ByteArray:
     """Compute the recurrence matrix through the Mojo backend."""
 
+    p, t_int, d_int, radius, angular_flag = validate_recurrence_backend_inputs(
+        traj_flat,
+        t,
+        d,
+        epsilon,
+        angular,
+    )
     tokens: list[str] = [
         "REC",
-        str(int(t)),
-        str(int(d)),
-        str(int(angular)),
-        repr(float(epsilon)),
+        str(t_int),
+        str(d_int),
+        str(int(angular_flag)),
+        repr(radius),
     ]
-    tokens.extend(repr(float(x)) for x in traj_flat.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in p.tolist())
     result = _run(" ".join(tokens) + "\n")
-    if len(result) != t * t:
-        raise ValueError(f"Mojo REC returned {len(result)} values, expected {t * t}")
+    if len(result) != t_int * t_int:
+        raise ValueError(
+            f"Mojo REC returned {len(result)} values, expected {t_int * t_int}"
+        )
     return np.array(result, dtype=np.uint8)
 
 
@@ -87,16 +101,33 @@ def cross_recurrence_matrix_mojo(
 ) -> ByteArray:
     """Compute the cross-recurrence matrix through the Mojo backend."""
 
+    (
+        a,
+        b,
+        t_int,
+        d_int,
+        radius,
+        angular_flag,
+    ) = validate_cross_recurrence_backend_inputs(
+        traj_a_flat,
+        traj_b_flat,
+        t,
+        d,
+        epsilon,
+        angular,
+    )
     tokens: list[str] = [
         "CROSS",
-        str(int(t)),
-        str(int(d)),
-        str(int(angular)),
-        repr(float(epsilon)),
+        str(t_int),
+        str(d_int),
+        str(int(angular_flag)),
+        repr(radius),
     ]
-    tokens.extend(repr(float(x)) for x in traj_a_flat.ravel().tolist())
-    tokens.extend(repr(float(x)) for x in traj_b_flat.ravel().tolist())
+    tokens.extend(repr(float(x)) for x in a.tolist())
+    tokens.extend(repr(float(x)) for x in b.tolist())
     result = _run(" ".join(tokens) + "\n")
-    if len(result) != t * t:
-        raise ValueError(f"Mojo CROSS returned {len(result)} values, expected {t * t}")
+    if len(result) != t_int * t_int:
+        raise ValueError(
+            f"Mojo CROSS returned {len(result)} values, expected {t_int * t_int}"
+        )
     return np.array(result, dtype=np.uint8)
