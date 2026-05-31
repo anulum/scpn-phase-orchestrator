@@ -33,6 +33,8 @@ from __future__ import annotations
 
 import sys
 import types
+from collections.abc import Callable
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -46,8 +48,34 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
     AVAILABLE_BACKENDS,
     attnres_modulate,
 )
+from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_go import (
+    attnres_modulate_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_julia import (
+    attnres_modulate_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_mojo import (
+    attnres_modulate_mojo,
+)
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+AttnResDirectBackend = Callable[
+    [
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        object,
+        object,
+        object,
+        object,
+        object,
+    ],
+    np.ndarray,
+]
 
 
 def _symmetric_knm(n: int, strength: float = 0.3, seed: int = 0) -> np.ndarray:
@@ -72,6 +100,135 @@ def _force_backend(
 
 def _python_reference(knm: np.ndarray, theta: np.ndarray, **kw: object) -> np.ndarray:
     return _force_backend("python", knm, theta, **kw)
+
+
+def _direct_payload(n: int = 3) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    int,
+    int,
+    int,
+    float,
+    float,
+]:
+    knm = _symmetric_knm(n, seed=11).ravel()
+    theta = np.linspace(0.0, TWO_PI, n, endpoint=False)
+    w = np.zeros((1, 8, 8), dtype=np.float64).ravel()
+    return knm, theta, w, w.copy(), w.copy(), w.copy(), n, 1, -1, 1.0, 0.25
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct optional AttnRes backends validate before runtime loading."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            attnres_modulate_go,
+            attnres_modulate_julia,
+            attnres_modulate_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("field", "replacement", "error", "match"),
+        [
+            ("knm", np.array([True] * 9), ValueError, "knm_flat"),
+            ("knm", np.array([0.0, np.nan] + [0.0] * 7), ValueError, "finite"),
+            ("knm", np.zeros((3, 3)), ValueError, "one-dimensional"),
+            ("knm", np.zeros(8), ValueError, "n\\*n"),
+            ("theta", np.array([0.0, np.inf, 1.0]), ValueError, "finite"),
+            ("theta", np.array([0.0, 1.0 + 0.0j, 2.0]), ValueError, "real-valued"),
+            ("theta", np.zeros(2), ValueError, "theta length"),
+            ("w_q", np.array([True] * 64), ValueError, "w_q"),
+            ("w_k", np.array([0.0, np.inf] + [0.0] * 62), ValueError, "finite"),
+            ("w_v", np.zeros(63), ValueError, "w_q, w_k, and w_v"),
+            ("w_o", np.zeros(63), ValueError, "w_o"),
+            ("n", True, ValueError, "n"),
+            ("n", -1, ValueError, "n"),
+            ("n_heads", True, ValueError, "n_heads"),
+            ("n_heads", 0, ValueError, "n_heads"),
+            ("block_size", 0, ValueError, "block_size"),
+            ("block_size", True, ValueError, "block_size"),
+            ("temperature", 0.0, ValueError, "temperature"),
+            ("temperature", np.inf, ValueError, "temperature"),
+            ("lambda_", -0.1, ValueError, "lambda_"),
+            ("lambda_", np.nan, ValueError, "lambda_"),
+        ],
+    )
+    def test_validation_precedes_runtime_load(
+        self,
+        backend: AttnResDirectBackend,
+        field: str,
+        replacement: object,
+        error: type[Exception],
+        match: str,
+    ) -> None:
+        payload = list(_direct_payload())
+        index = {
+            "knm": 0,
+            "theta": 1,
+            "w_q": 2,
+            "w_k": 3,
+            "w_v": 4,
+            "w_o": 5,
+            "n": 6,
+            "n_heads": 7,
+            "block_size": 8,
+            "temperature": 9,
+            "lambda_": 10,
+        }[field]
+        payload[index] = replacement
+        with pytest.raises(error, match=match):
+            backend(*payload)
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            attnres_modulate_go,
+            attnres_modulate_julia,
+            attnres_modulate_mojo,
+        ],
+    )
+    def test_empty_attnres_returns_empty_vector_before_runtime_load(
+        self,
+        backend: AttnResDirectBackend,
+    ) -> None:
+        w = np.zeros(64, dtype=np.float64)
+        out = backend(
+            np.array([], dtype=np.float64),
+            np.array([], dtype=np.float64),
+            w,
+            w.copy(),
+            w.copy(),
+            w.copy(),
+            0,
+            1,
+            -1,
+            1.0,
+            0.25,
+        )
+        assert out.dtype == np.float64
+        assert out.shape == (0,)
+
+
+class TestBackendTypingContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (attnres_modulate_go, "go"),
+            (attnres_modulate_julia, "julia"),
+            (attnres_modulate_mojo, "mojo"),
+        ],
+    )
+    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        for name in ("knm_flat", "theta", "w_q", "w_k", "w_v", "w_o", "return"):
+            text = str(hints[name])
+            assert_precise_ndarray_hint(hints[name], context=f"{label}:{name}")
+            assert "numpy.float64" in text, f"{label}:{name} missing float64"
 
 
 # ---------------------------------------------------------------------

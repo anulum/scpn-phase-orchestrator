@@ -23,6 +23,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._attnres_validation import (
+    validate_attnres_backend_inputs,
+    validate_attnres_backend_output,
+)
+
 __all__ = ["attnres_modulate_julia"]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "attnres.jl"
@@ -58,6 +63,33 @@ def attnres_modulate_julia(
 ) -> FloatArray:
     """Julia-backed multi-head AttnRes modulation. Signature matches
     the Rust / Go / Mojo FFIs."""
+    (
+        knm_flat,
+        theta,
+        w_q,
+        w_k,
+        w_v,
+        w_o,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
+    ) = validate_attnres_backend_inputs(
+        knm_flat,
+        theta,
+        w_q,
+        w_k,
+        w_v,
+        w_o,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
+    )
+    if n == 0:
+        return np.zeros(0, dtype=np.float64)
     jl_mod = _ensure_julia_loaded()
     result = jl_mod.attnres_modulate(
         knm_flat,
@@ -72,4 +104,4 @@ def attnres_modulate_julia(
         temperature,
         lambda_,
     )
-    return np.asarray(result, dtype=np.float64)
+    return validate_attnres_backend_output(result, n=n)

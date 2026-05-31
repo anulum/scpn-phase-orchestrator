@@ -22,6 +22,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._attnres_validation import (
+    validate_attnres_backend_inputs,
+    validate_attnres_backend_output,
+)
+
 __all__ = ["attnres_modulate_go"]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libattnres.so"
@@ -73,13 +78,34 @@ def attnres_modulate_go(
     lambda_: float,
 ) -> FloatArray:
     """Go-backed multi-head AttnRes. Signature matches the Rust FFI."""
+    (
+        knm64,
+        theta64,
+        wq64,
+        wk64,
+        wv64,
+        wo64,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
+    ) = validate_attnres_backend_inputs(
+        knm_flat,
+        theta,
+        w_q,
+        w_k,
+        w_v,
+        w_o,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
+    )
+    if n == 0:
+        return np.zeros(0, dtype=np.float64)
     lib = _load_lib()
-    knm64 = np.ascontiguousarray(knm_flat, dtype=np.float64)
-    theta64 = np.ascontiguousarray(theta, dtype=np.float64)
-    wq64 = np.ascontiguousarray(w_q, dtype=np.float64)
-    wk64 = np.ascontiguousarray(w_k, dtype=np.float64)
-    wv64 = np.ascontiguousarray(w_v, dtype=np.float64)
-    wo64 = np.ascontiguousarray(w_o, dtype=np.float64)
     out = np.zeros(n * n, dtype=np.float64)
     rc = lib.AttnResModulate(
         knm64.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -97,4 +123,4 @@ def attnres_modulate_go(
     )
     if rc != 0:
         raise ValueError(f"Go AttnResModulate returned error code {rc}")
-    return out
+    return validate_attnres_backend_output(out, n=n)

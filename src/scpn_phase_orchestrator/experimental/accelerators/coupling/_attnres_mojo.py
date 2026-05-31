@@ -25,6 +25,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._attnres_validation import (
+    validate_attnres_backend_inputs,
+    validate_attnres_backend_output,
+)
+
 __all__ = ["attnres_modulate_mojo"]
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "attnres_mojo"
@@ -58,6 +63,33 @@ def attnres_modulate_mojo(
     Pays a subprocess spawn + text-serialisation cost; used as the
     fallback between Julia and Go rather than the fast path.
     """
+    (
+        knm_flat,
+        theta,
+        w_q,
+        w_k,
+        w_v,
+        w_o,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
+    ) = validate_attnres_backend_inputs(
+        knm_flat,
+        theta,
+        w_q,
+        w_k,
+        w_v,
+        w_o,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
+    )
+    if n == 0:
+        return np.zeros(0, dtype=np.float64)
     exe = _ensure_exe()
 
     tokens: list[str] = [
@@ -67,12 +99,12 @@ def attnres_modulate_mojo(
         repr(float(temperature)),
         repr(float(lambda_)),
     ]
-    tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(theta).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(w_q).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(w_k).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(w_v).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(w_o).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in knm_flat.tolist())
+    tokens.extend(repr(float(x)) for x in theta.tolist())
+    tokens.extend(repr(float(x)) for x in w_q.tolist())
+    tokens.extend(repr(float(x)) for x in w_k.tolist())
+    tokens.extend(repr(float(x)) for x in w_v.tolist())
+    tokens.extend(repr(float(x)) for x in w_o.tolist())
     payload = " ".join(tokens) + "\n"
 
     proc = subprocess.run(  # nosec B603
@@ -92,4 +124,4 @@ def attnres_modulate_mojo(
     )
     if result.size != n * n:
         raise ValueError(f"Mojo returned {result.size} values, expected {n * n}")
-    return result
+    return validate_attnres_backend_output(result, n=n)

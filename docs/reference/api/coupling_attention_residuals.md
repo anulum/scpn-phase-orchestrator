@@ -482,6 +482,15 @@ value that meets the objective.
 | `benchmarks/attnres_modulation_benchmark.py` | Multi-backend wall-clock harness. |
 | Internal Phase-3 research brief | Validation criteria source. |
 
+Direct accelerator boundary contract: Go, Julia, and Mojo AttnRes adapters use
+one shared typed `float64` validation path before loading shared-library, Julia,
+or subprocess runtimes. The contract rejects boolean aliases, complex or
+non-finite flattened coupling, phase, and projection buffers, malformed `n*n`
+coupling lengths, phase-length mismatch, incompatible flattened projection
+lengths, invalid head counts, invalid `block_size`, non-positive temperature,
+and negative modulation strength. Empty systems return an empty flattened
+coupling vector without optional runtime loading.
+
 ---
 
 ## 11. Design notes
