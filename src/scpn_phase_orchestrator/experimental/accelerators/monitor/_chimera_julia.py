@@ -16,7 +16,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._chimera_validation import validate_chimera_backend_inputs
+from ._chimera_validation import (
+    validate_chimera_backend_inputs,
+    validate_chimera_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -50,10 +53,11 @@ def local_order_parameter_julia(
     if n == 0:
         return np.zeros(0, dtype=np.float64)
     jl = _ensure()
-    return np.asarray(
+    return validate_chimera_backend_output(
         jl.local_order_parameter(
             phases_vec,
             knm_vec,
             n,
-        )
+        ),
+        n,
     )

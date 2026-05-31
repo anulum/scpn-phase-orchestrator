@@ -25,6 +25,12 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _chimera_julia as chimera_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _chimera_mojo as chimera_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _chimera_validation as chimera_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_go import (
@@ -50,6 +56,7 @@ LocalOrderBackend = Callable[[np.ndarray, np.ndarray, object], np.ndarray]
 
 def test__chimera_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(chimera_validation.validate_chimera_backend_inputs)
+    assert callable(chimera_validation.validate_chimera_backend_output)
 
 
 def _force(backend: str) -> str:
@@ -130,6 +137,47 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match=match):
             backend(phases, knm_flat, n)
+
+    @pytest.mark.parametrize(
+        ("local_order", "match"),
+        [
+            (np.array([0.1, np.nan]), "finite"),
+            (np.array([0.1, np.bool_(True)], dtype=object), "boolean"),
+            (np.array([0.1, 0.2 + 0.1j], dtype=np.complex128), "real-valued"),
+            (np.array([0.1, 1.2]), "\\[0, 1\\]"),
+            (np.array([0.1]), "length"),
+        ],
+    )
+    def test_output_validation_rejects_nonphysical_local_order(
+        self, local_order: np.ndarray, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            chimera_validation.validate_chimera_backend_output(local_order, 2)
+
+    def test_julia_backend_rejects_nonphysical_output_before_return(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class _FakeJulia:
+            @staticmethod
+            def local_order_parameter(
+                phases: np.ndarray, knm: np.ndarray, n: int
+            ) -> np.ndarray:
+                return np.array([0.25, 1.25])
+
+        monkeypatch.setattr(chimera_julia, "_ensure", lambda: _FakeJulia())
+        phases, knm = _problem(11, n=2)
+
+        with pytest.raises(ValueError, match="\\[0, 1\\]"):
+            local_order_parameter_julia(phases, knm.ravel(), 2)
+
+    def test_mojo_backend_rejects_nonfinite_output_before_return(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(chimera_mojo, "_run", lambda payload: [0.25, np.inf])
+        phases, knm = _problem(12, n=2)
+
+        with pytest.raises(ValueError, match="finite"):
+            local_order_parameter_mojo(phases, knm.ravel(), 2)
 
 
 class TestRustParity:

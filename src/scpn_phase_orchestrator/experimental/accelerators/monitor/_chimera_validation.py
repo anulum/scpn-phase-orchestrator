@@ -77,3 +77,20 @@ def validate_chimera_backend_inputs(
         if not np.allclose(diagonal, 0.0, rtol=0.0, atol=1e-15):
             raise ValueError("knm_flat self-coupling diagonal must be zero")
     return phases_vec, knm_vec, n_int
+
+
+def validate_chimera_backend_output(
+    local_order: object,
+    n: object,
+) -> FloatArray:
+    """Validate direct backend local-order output before returning it."""
+
+    n_int = _validate_n(n)
+    values = _validate_float_vector(local_order, "local_order")
+    if values.size != n_int:
+        raise ValueError(
+            f"local_order length {values.size} does not match n={n_int}"
+        )
+    if np.any((values < -1e-12) | (values > 1.0 + 1e-12)):
+        raise ValueError("local_order values must lie in the physical interval [0, 1]")
+    return np.ascontiguousarray(np.clip(values, 0.0, 1.0), dtype=np.float64)

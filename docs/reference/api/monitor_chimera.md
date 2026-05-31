@@ -151,6 +151,9 @@ runtimes:
 * `n` must be a non-boolean non-negative integer.
 * `phases.size` must equal `n` and `knm_flat.size` must equal `n * n`.
 * the flattened coupling matrix must have a zero self-coupling diagonal.
+* returned `local_order` must be a finite real vector of length `n` with no
+  boolean aliases, no complex values, and values inside the physical
+  interval `[0, 1]`.
 
 Empty direct calls preserve the Python public contract by returning an empty
 local-order vector before shared-library loading, Julia initialisation, or
@@ -303,13 +306,15 @@ Three files (24 tests):
 
 ### 7.2 `tests/test_chimera_backends.py`
 
-8 tests:
+Module-specific backend tests cover:
 
 * `TestRustParity` — Hypothesis sweep over random ``(N, seed)``
   at `1e-12`.
 * `TestJuliaParity` — two seeds at `1e-12`.
 * `TestGoParity` — Hypothesis sweep at `1e-12`.
 * `TestMojoParity` — two seeds at `1e-9`.
+* `TestDirectBackendBoundaryContracts` — invalid inputs fail before optional
+  runtime loading, and nonphysical local-order outputs fail before return.
 * `TestCrossBackendConsistency` — iterates every
   `AVAILABLE_BACKENDS` under the tolerance matrix + confirms
   `detect_chimera` routes through `local_order_parameter`.

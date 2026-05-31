@@ -17,7 +17,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._chimera_validation import validate_chimera_backend_inputs
+from ._chimera_validation import (
+    validate_chimera_backend_inputs,
+    validate_chimera_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -67,4 +70,4 @@ def local_order_parameter_mojo(
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n:
         raise ValueError(f"Mojo CHI returned {len(result)} values, expected {n}")
-    return np.array(result, dtype=np.float64)
+    return validate_chimera_backend_output(result, n)

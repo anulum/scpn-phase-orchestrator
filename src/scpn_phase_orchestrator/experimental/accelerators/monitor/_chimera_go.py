@@ -17,7 +17,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._chimera_validation import validate_chimera_backend_inputs
+from ._chimera_validation import (
+    validate_chimera_backend_inputs,
+    validate_chimera_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -68,4 +71,4 @@ def local_order_parameter_go(
     )
     if rc != 0:
         raise ValueError(f"Go LocalOrderParameter rc={rc}")
-    return out
+    return validate_chimera_backend_output(out, n)
