@@ -397,6 +397,16 @@ Rust path is used for `run()` when `_HAS_RUST is True`. The `step()`
 method uses the Python path (NumPy complex arithmetic) which is
 competitive for single steps due to vectorisation.
 
+Direct Go, Julia, and Mojo accelerator entrypoints share the same boundary
+contract before optional runtime loading: phase and frequency inputs must be
+finite real one-dimensional `float64` vectors of length `N`; `knm_flat` and
+`alpha_flat` must be finite real flattened `N*N` buffers; `N` must be a
+positive integer; `zeta`, `psi`, and `dt` must be finite real scalars with
+`dt > 0`; and `n_steps` must be a non-negative integer. A zero-step direct
+call returns the initial phases normalised into `[0, 2π)` without requiring
+the optional backend binary or runtime. Backend outputs are validated as
+finite phase vectors in `[0, 2π)`.
+
 ---
 
 ## 7. Performance Benchmarks
@@ -465,6 +475,10 @@ allocations.
 - **Python tests:** 6 (`tests/test_torus_engine.py`)
   - Output on torus, pure rotation exact, wrapping smooth,
     synchronisation, run shape, preserves sync
+- **Backend tests:** `tests/test_geometric_backends.py` covers Rust, Go,
+  Julia, and Mojo parity plus direct accelerator boundary contracts for
+  malformed vectors, flattened matrix buffers, scalar controls, step counts,
+  and zero-step torus normalisation.
 - **Source lines:** 205 (Rust) + 102 (Python) = 307 total
 
 ---

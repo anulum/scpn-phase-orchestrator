@@ -17,6 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._geometric_validation import (
+    TWO_PI,
+    validate_torus_inputs,
+    validate_torus_output,
+)
+
 __all__ = ["_ensure_exe", "torus_run_mojo"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -49,19 +55,42 @@ def torus_run_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
+    (
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+    ) = validate_torus_inputs(
+        phases,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+    )
+    if n_steps_i == 0:
+        return p % TWO_PI
     exe = _ensure_exe()
     tokens: list[str] = [
         "TORUS",
-        str(int(n)),
-        repr(float(zeta)),
-        repr(float(psi)),
-        repr(float(dt)),
-        str(int(n_steps)),
+        str(n_i),
+        repr(zeta_f),
+        repr(psi_f),
+        repr(dt_f),
+        str(n_steps_i),
     ]
-    tokens.extend(repr(float(x)) for x in np.asarray(phases).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(omegas).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(alpha_flat).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in p.tolist())
+    tokens.extend(repr(float(x)) for x in o.tolist())
+    tokens.extend(repr(float(x)) for x in k.tolist())
+    tokens.extend(repr(float(x)) for x in a.tolist())
     proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
@@ -74,6 +103,6 @@ def torus_run_mojo(
             f"Mojo geometric exit {proc.returncode}: {proc.stderr.strip()}"
         )
     lines = proc.stdout.strip().splitlines()
-    if len(lines) != n:
-        raise ValueError(f"Mojo TORUS returned {len(lines)} lines, expected {n}")
-    return np.array([float(x) for x in lines], dtype=np.float64)
+    if len(lines) != n_i:
+        raise ValueError(f"Mojo TORUS returned {len(lines)} lines, expected {n_i}")
+    return validate_torus_output(np.array([float(x) for x in lines]), n=n_i)

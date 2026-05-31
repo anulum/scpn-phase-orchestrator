@@ -16,6 +16,12 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._geometric_validation import (
+    TWO_PI,
+    validate_torus_inputs,
+    validate_torus_output,
+)
+
 __all__ = ["torus_run_julia"]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "geometric.jl"
@@ -52,16 +58,39 @@ def torus_run_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    (
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+    ) = validate_torus_inputs(
+        phases,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+    )
+    if n_steps_i == 0:
+        return p % TWO_PI
     jl = _ensure()
     result = jl.torus_run(
-        np.ascontiguousarray(phases, dtype=np.float64),
-        np.ascontiguousarray(omegas, dtype=np.float64),
-        np.ascontiguousarray(knm_flat, dtype=np.float64),
-        np.ascontiguousarray(alpha_flat, dtype=np.float64),
-        int(n),
-        float(zeta),
-        float(psi),
-        float(dt),
-        int(n_steps),
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
     )
-    return np.asarray(result, dtype=np.float64)
+    return validate_torus_output(np.asarray(result, dtype=np.float64), n=n_i)

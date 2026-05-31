@@ -17,6 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._geometric_validation import (
+    TWO_PI,
+    validate_torus_inputs,
+    validate_torus_output,
+)
+
 __all__ = ["torus_run_go"]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libgeometric.so"
@@ -68,24 +74,43 @@ def torus_run_go(
     The calculation is delegated to the Go backend.
     """
 
+    (
+        p,
+        o,
+        k,
+        a,
+        n_i,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+    ) = validate_torus_inputs(
+        phases,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+    )
+    if n_steps_i == 0:
+        return p % TWO_PI
     lib = _load_lib()
-    p = np.ascontiguousarray(phases, dtype=np.float64)
-    o = np.ascontiguousarray(omegas, dtype=np.float64)
-    k = np.ascontiguousarray(knm_flat, dtype=np.float64)
-    a = np.ascontiguousarray(alpha_flat, dtype=np.float64)
-    out = np.zeros(int(n), dtype=np.float64)
+    out = np.zeros(n_i, dtype=np.float64)
     rc = lib.TorusRun(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         o.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         k.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(n)),
-        ctypes.c_double(float(zeta)),
-        ctypes.c_double(float(psi)),
-        ctypes.c_double(float(dt)),
-        ctypes.c_int(int(n_steps)),
+        ctypes.c_int(n_i),
+        ctypes.c_double(zeta_f),
+        ctypes.c_double(psi_f),
+        ctypes.c_double(dt_f),
+        ctypes.c_int(n_steps_i),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go TorusRun rc={rc}")
-    return out
+    return validate_torus_output(out, n=n_i)

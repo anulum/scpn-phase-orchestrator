@@ -23,18 +23,43 @@ import contextlib
 import math
 import sys
 import types
+from collections.abc import Callable
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_go import (
+    torus_run_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_julia import (
+    torus_run_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_mojo import (
+    torus_run_mojo,
+)
 from scpn_phase_orchestrator.upde import geometric as g_mod
 from scpn_phase_orchestrator.upde.geometric import TorusEngine
 
 TWO_PI = 2.0 * math.pi
 TOL_EXPANSION = 1e-12
 TOL_ATAN2 = 1e-10
+DirectBackend = Callable[
+    [
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        int,
+        float,
+        float,
+        float,
+        int,
+    ],
+    np.ndarray,
+]
+DIRECT_BACKENDS = (torus_run_go, torus_run_julia, torus_run_mojo)
 
 
 @contextlib.contextmanager
@@ -61,6 +86,11 @@ def _problem(seed: int, n: int = 6, alpha_nonzero: bool = False):
     return theta, omegas, knm, alpha
 
 
+def _direct_payload(n: int = 5):
+    phases, omegas, knm, alpha = _problem(11, n=n, alpha_nonzero=True)
+    return phases, omegas, knm.ravel(), alpha.ravel(), n, 0.2, 0.7, 0.01, 4
+
+
 def _run_backend(
     backend: str,
     seed: int,
@@ -76,6 +106,60 @@ def _run_backend(
     eng = TorusEngine(n, 0.01)
     with _force_backend(backend):
         return eng.run(theta, omegas, knm, zeta, psi, alpha, n_steps=n_steps)
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    @pytest.mark.parametrize(
+        ("index", "replacement"),
+        [
+            (0, lambda payload: payload[0].reshape(1, -1)),
+            (0, lambda payload: payload[0].astype(bool)),
+            (0, lambda payload: payload[0].astype(np.complex128) + 1j),
+            (0, lambda payload: np.array([np.nan, *payload[0][1:]])),
+            (1, lambda payload: payload[1][:-1]),
+            (1, lambda payload: payload[1].astype(bool)),
+            (1, lambda payload: np.array([np.inf, *payload[1][1:]])),
+            (2, lambda payload: payload[2][:-1]),
+            (2, lambda payload: payload[2].astype(bool)),
+            (2, lambda payload: payload[2].astype(np.complex128) + 1j),
+            (3, lambda payload: payload[3][:-1]),
+            (3, lambda payload: payload[3].astype(bool)),
+            (3, lambda payload: np.full_like(payload[3], np.nan)),
+            (4, lambda payload: True),
+            (4, lambda payload: 0),
+            (4, lambda payload: payload[4] + 1),
+            (5, lambda payload: True),
+            (5, lambda payload: float("nan")),
+            (6, lambda payload: float("inf")),
+            (7, lambda payload: 0.0),
+            (7, lambda payload: True),
+            (8, lambda payload: -1),
+            (8, lambda payload: True),
+        ],
+    )
+    def test_invalid_inputs_fail_before_optional_runtime_loading(
+        self,
+        backend: DirectBackend,
+        index: int,
+        replacement: Callable[[tuple], object],
+    ) -> None:
+        """Direct Go/Julia/Mojo wrappers share the torus-run contract."""
+
+        payload = list(_direct_payload())
+        payload[index] = replacement(tuple(payload))
+        with pytest.raises((TypeError, ValueError)):
+            backend(*payload)
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    def test_zero_steps_normalises_phases_without_optional_runtime(
+        self,
+        backend: DirectBackend,
+    ) -> None:
+        payload = list(_direct_payload())
+        payload[0] = np.array([-0.25, 0.0, TWO_PI + 0.5, 8.0, -TWO_PI])
+        payload[8] = 0
+        np.testing.assert_allclose(backend(*payload), payload[0] % TWO_PI, atol=0.0)
 
 
 class TestAlphaZero:
