@@ -160,6 +160,10 @@ explicit boolean flag. Boolean aliases inside trajectory payloads,
 complex samples, non-finite samples, malformed lengths, and invalid
 controls are rejected before shared-library, Julia, or subprocess
 execution.
+Direct backend outputs are also validated before return as numeric
+``0``/``1`` recurrence relations of size ``T*T``. Plain recurrence outputs
+must keep the true diagonal and symmetry invariants; cross-recurrence outputs
+may be non-symmetric but must still be binary and finite.
 
 ---
 
@@ -319,6 +323,8 @@ Three files (29 tests):
 * `TestGoParity` — Hypothesis sweep + cross.
 * `TestMojoParity` — two seeds at T=15 (subprocess cost bounds
   sample size).
+* `TestDirectBackendBoundaryContracts` — invalid direct inputs fail before
+  optional runtime loading, and invalid recurrence outputs fail before return.
 * `TestCrossBackendConsistency` — every `AVAILABLE_BACKENDS`
   entry for both RM and cross-RM.
 

@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 from ._recurrence_validation import (
     validate_cross_recurrence_backend_inputs,
     validate_recurrence_backend_inputs,
+    validate_recurrence_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -60,7 +61,7 @@ def recurrence_matrix_julia(
         angular,
     )
     jl = _ensure()
-    return np.asarray(
+    return validate_recurrence_backend_output(
         jl.recurrence_matrix(
             p,
             t_int,
@@ -68,7 +69,8 @@ def recurrence_matrix_julia(
             radius,
             angular_flag,
         ),
-        dtype=np.uint8,
+        t=t_int,
+        name="recurrence_matrix",
     )
 
 
@@ -98,7 +100,7 @@ def cross_recurrence_matrix_julia(
         angular,
     )
     jl = _ensure()
-    return np.asarray(
+    return validate_recurrence_backend_output(
         jl.cross_recurrence_matrix(
             a,
             b,
@@ -107,5 +109,6 @@ def cross_recurrence_matrix_julia(
             radius,
             angular_flag,
         ),
-        dtype=np.uint8,
+        t=t_int,
+        name="cross_recurrence_matrix",
     )

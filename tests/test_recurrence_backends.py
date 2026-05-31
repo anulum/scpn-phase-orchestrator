@@ -56,6 +56,7 @@ recurrence_matrix_mojo = _recurrence_mojo.recurrence_matrix_mojo
 def test__recurrence_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(recurrence_validation.validate_recurrence_backend_inputs)
     assert callable(recurrence_validation.validate_cross_recurrence_backend_inputs)
+    assert callable(recurrence_validation.validate_recurrence_backend_output)
 
 
 def _force(backend: str) -> str:
@@ -221,6 +222,55 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match=message):
             fn(traj_a, traj_b, t, d, epsilon, angular)
+
+    @pytest.mark.parametrize(
+        ("value", "name", "match"),
+        [
+            (np.array([0, 1, 1]), "recurrence_matrix", "size"),
+            (np.array([0, 1, 2, 1]), "recurrence_matrix", "0/1"),
+            (np.array([1, np.inf, 0, 1]), "recurrence_matrix", "finite"),
+            (np.array([0, 1, 1, 1]), "recurrence_matrix", "true diagonal"),
+            (np.array([1, 1, 0, 1]), "recurrence_matrix", "symmetric"),
+            (np.array([0, 1, 2, 1]), "cross_recurrence_matrix", "0/1"),
+        ],
+    )
+    def test_output_validation_rejects_nonphysical_recurrence_values(
+        self, value: np.ndarray, name: str, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            recurrence_validation.validate_recurrence_backend_output(
+                value,
+                t=2,
+                name=name,
+            )
+
+    def test_julia_backend_rejects_asymmetric_recurrence_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class _FakeJulia:
+            @staticmethod
+            def recurrence_matrix(*args: object) -> np.ndarray:
+                return np.array([1, 1, 0, 1], dtype=np.uint8)
+
+        monkeypatch.setattr(_recurrence_julia, "_ensure", lambda: _FakeJulia())
+
+        with pytest.raises(ValueError, match="symmetric"):
+            recurrence_matrix_julia(np.array([0.0, 1.0]), 2, 1, 0.5, False)
+
+    def test_mojo_backend_rejects_nonbinary_cross_recurrence_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(_recurrence_mojo, "_run", lambda payload: [0, 1, 2, 1])
+
+        with pytest.raises(ValueError, match="0/1"):
+            cross_recurrence_matrix_mojo(
+                np.array([0.0, 1.0]),
+                np.array([1.0, 2.0]),
+                2,
+                1,
+                0.5,
+                False,
+            )
 
 
 class TestRustParity:

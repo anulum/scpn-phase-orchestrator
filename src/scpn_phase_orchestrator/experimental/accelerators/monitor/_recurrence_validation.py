@@ -21,6 +21,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 __all__ = [
     "FloatArray",
     "validate_cross_recurrence_backend_inputs",
+    "validate_recurrence_backend_output",
     "validate_recurrence_backend_inputs",
 ]
 
@@ -134,3 +135,34 @@ def validate_cross_recurrence_backend_inputs(
         _validate_epsilon(epsilon),
         _validate_angular(angular),
     )
+
+
+def validate_recurrence_backend_output(
+    value: object,
+    *,
+    t: object,
+    name: str,
+) -> NDArray[np.uint8]:
+    """Validate direct-backend recurrence output before returning it."""
+
+    t_int = _validate_int_at_least(t, name="t", minimum=0)
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} output must be array-like") from exc
+    if array.size != t_int * t_int:
+        raise ValueError(f"{name} output size must be {t_int * t_int}")
+    try:
+        numeric = array.reshape(t_int, t_int).astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} output must be numeric") from exc
+    if not np.all(np.isfinite(numeric)):
+        raise ValueError(f"{name} output must contain only finite values")
+    if not np.all((numeric == 0.0) | (numeric == 1.0)):
+        raise ValueError(f"{name} output must contain only 0/1 values")
+    if name == "recurrence_matrix":
+        if not np.all(numeric.diagonal() == 1.0):
+            raise ValueError("recurrence_matrix output must have true diagonal")
+        if not np.array_equal(numeric, numeric.T):
+            raise ValueError("recurrence_matrix output must be symmetric")
+    return np.ascontiguousarray(numeric.ravel().astype(np.uint8), dtype=np.uint8)

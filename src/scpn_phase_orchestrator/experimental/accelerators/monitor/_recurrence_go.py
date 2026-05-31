@@ -20,6 +20,7 @@ from numpy.typing import NDArray
 from ._recurrence_validation import (
     validate_cross_recurrence_backend_inputs,
     validate_recurrence_backend_inputs,
+    validate_recurrence_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -93,7 +94,11 @@ def recurrence_matrix_go(
     )
     if rc != 0:
         raise ValueError(f"Go RecurrenceMatrix rc={rc}")
-    return out
+    return validate_recurrence_backend_output(
+        out,
+        t=t_int,
+        name="recurrence_matrix",
+    )
 
 
 def cross_recurrence_matrix_go(
@@ -134,4 +139,8 @@ def cross_recurrence_matrix_go(
     )
     if rc != 0:
         raise ValueError(f"Go CrossRecurrenceMatrix rc={rc}")
-    return out
+    return validate_recurrence_backend_output(
+        out,
+        t=t_int,
+        name="cross_recurrence_matrix",
+    )

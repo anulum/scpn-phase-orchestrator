@@ -20,6 +20,7 @@ from numpy.typing import NDArray
 from ._recurrence_validation import (
     validate_cross_recurrence_backend_inputs,
     validate_recurrence_backend_inputs,
+    validate_recurrence_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -88,7 +89,11 @@ def recurrence_matrix_mojo(
         raise ValueError(
             f"Mojo REC returned {len(result)} values, expected {t_int * t_int}"
         )
-    return np.array(result, dtype=np.uint8)
+    return validate_recurrence_backend_output(
+        result,
+        t=t_int,
+        name="recurrence_matrix",
+    )
 
 
 def cross_recurrence_matrix_mojo(
@@ -130,4 +135,8 @@ def cross_recurrence_matrix_mojo(
         raise ValueError(
             f"Mojo CROSS returned {len(result)} values, expected {t_int * t_int}"
         )
-    return np.array(result, dtype=np.uint8)
+    return validate_recurrence_backend_output(
+        result,
+        t=t_int,
+        name="cross_recurrence_matrix",
+    )
