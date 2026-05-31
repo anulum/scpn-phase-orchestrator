@@ -96,12 +96,22 @@ Every push is gated by a local CI mirror. Set it up once:
 
 ```bash
 git config core.hooksPath .githooks
+git config commit.template .gitmessage
 ```
 
-This installs a `pre-push` hook that runs `tools/preflight.py` — the same
-10 gates CI enforces (ruff, format, version-sync, mypy, module-linkage,
-pytest, bandit, cargo fmt, cargo clippy, cargo test). Push is blocked if
-any gate fails.
+This installs a `commit-msg` hook that requires the project authorship trailer
+and a `pre-push` hook that runs `tools/preflight.py` — the same 10 gates CI
+enforces (ruff, format, version-sync, mypy, module-linkage, pytest, bandit,
+cargo fmt, cargo clippy, cargo test). Push is blocked if any gate fails.
+
+Every new commit message must include exactly one project authorship trailer:
+
+```text
+Authored by Anulum Fortis & Arcane Sapience (protoscience@anulum.li)
+```
+
+Historical `Co-Authored-By: Arcane Sapience <protoscience@anulum.li>` trailers
+are left unchanged, but the old trailer is no longer accepted for new commits.
 
 To run manually at any time:
 
