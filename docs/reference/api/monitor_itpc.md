@@ -160,6 +160,10 @@ runtimes:
 * the flat buffer length must exactly match `n_trials * n_tp`.
 * `pause_indices` must be a one-dimensional integer buffer with no boolean
   aliases.
+* returned ITPC vectors must have exactly ``n_tp`` finite real values in
+  ``[0, 1]``.
+* returned persistence scores must be finite real scalars in ``[0, 1]``; Mojo
+  persistence must emit exactly one scalar.
 
 Empty trial or timepoint payloads preserve the Python fallback contract by
 returning an empty ITPC vector or `0.0` persistence before shared-library

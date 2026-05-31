@@ -19,7 +19,9 @@ from numpy.typing import NDArray
 
 from ._itpc_validation import (
     validate_compute_itpc_backend_inputs,
+    validate_compute_itpc_backend_output,
     validate_itpc_persistence_backend_inputs,
+    validate_itpc_persistence_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -81,7 +83,7 @@ def compute_itpc_go(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatA
     )
     if rc != 0:
         raise ValueError(f"Go ComputeITPC rc={rc}")
-    return out
+    return validate_compute_itpc_backend_output(out, n_tp)
 
 
 def itpc_persistence_go(
@@ -112,4 +114,4 @@ def itpc_persistence_go(
     )
     if rc != 0:
         raise ValueError(f"Go ITPCPersistence rc={rc}")
-    return float(out.value)
+    return validate_itpc_persistence_backend_output(out.value)

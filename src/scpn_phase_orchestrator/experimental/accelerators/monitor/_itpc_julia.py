@@ -18,7 +18,9 @@ from numpy.typing import NDArray
 
 from ._itpc_validation import (
     validate_compute_itpc_backend_inputs,
+    validate_compute_itpc_backend_output,
     validate_itpc_persistence_backend_inputs,
+    validate_itpc_persistence_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -54,13 +56,13 @@ def compute_itpc_julia(phases_flat: FloatArray, n_trials: int, n_tp: int) -> Flo
     if n_trials == 0 or n_tp == 0:
         return np.zeros(n_tp, dtype=np.float64)
     jl = _ensure()
-    return np.asarray(
+    return validate_compute_itpc_backend_output(
         jl.compute_itpc(
             phases,
             n_trials,
             n_tp,
         ),
-        dtype=np.float64,
+        n_tp,
     )
 
 
@@ -81,7 +83,7 @@ def itpc_persistence_julia(
     if indices.size == 0 or n_trials == 0 or n_tp == 0:
         return 0.0
     jl = _ensure()
-    return float(
+    return validate_itpc_persistence_backend_output(
         jl.itpc_persistence(
             phases,
             n_trials,

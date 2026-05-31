@@ -29,6 +29,15 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _itpc_go as itpc_go_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _itpc_julia as itpc_julia_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _itpc_mojo as itpc_mojo_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _itpc_validation as itpc_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_go import (
@@ -113,6 +122,58 @@ def test_backend_array_contracts_are_parameterised() -> None:
             assert "float64" in str(hints["return"])
 
 
+class _FakeJuliaITPC:
+    def __init__(self, *, vector: object, persistence: object = 0.5) -> None:
+        self.vector = vector
+        self.persistence = persistence
+
+    def compute_itpc(
+        self,
+        _phases_flat: np.ndarray,
+        _n_trials: int,
+        _n_tp: int,
+    ) -> object:
+        return self.vector
+
+    def itpc_persistence(
+        self,
+        _phases_flat: np.ndarray,
+        _n_trials: int,
+        _n_tp: int,
+        _pause_indices: np.ndarray,
+    ) -> object:
+        return self.persistence
+
+
+class _FakeGoITPC:
+    def __init__(self, *, vector: np.ndarray, persistence: float = 0.5) -> None:
+        self.vector = vector
+        self.persistence = persistence
+
+    def ComputeITPC(
+        self,
+        _phases_ptr: object,
+        _n_trials: object,
+        n_tp: object,
+        out_ptr: object,
+    ) -> int:
+        out = np.ctypeslib.as_array(out_ptr, shape=(int(n_tp.value),))
+        out[:] = self.vector
+        return 0
+
+    def ITPCPersistence(
+        self,
+        _phases_ptr: object,
+        _n_trials: object,
+        _n_tp: object,
+        _indices_ptr: object,
+        _n_indices: object,
+        out_ptr: object,
+    ) -> int:
+        out_ptr._obj.value = self.persistence
+        return 0
+
+
 class TestDirectBackendBoundaryContracts:
     """Direct optional ITPC backends validate before runtime loading."""
 
@@ -173,6 +234,90 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match=match):
             backend(phases_flat, n_trials, n_tp, pause_indices)
+
+    @pytest.mark.parametrize(
+        ("backend_name", "match"),
+        [
+            ("go", "ITPC backend output"),
+            ("julia", "ITPC backend output"),
+            ("mojo", "ITPC backend output"),
+        ],
+    )
+    def test_compute_rejects_invalid_backend_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_name: str,
+        match: str,
+    ) -> None:
+        phases = np.array([0.0, 0.2, 0.4, 0.6], dtype=np.float64)
+        if backend_name == "go":
+            fake = _FakeGoITPC(vector=np.array([0.25, 1.25], dtype=np.float64))
+            monkeypatch.setattr(itpc_go_mod, "_load_lib", lambda: fake)
+            backend = compute_itpc_go
+        elif backend_name == "julia":
+            monkeypatch.setattr(
+                itpc_julia_mod,
+                "_ensure",
+                lambda: _FakeJuliaITPC(vector=np.array([0.25, np.nan])),
+            )
+            backend = compute_itpc_julia
+        else:
+            monkeypatch.setattr(itpc_mojo_mod, "_run", lambda _payload: [0.25])
+            backend = compute_itpc_mojo
+
+        with pytest.raises(ValueError, match=match):
+            backend(phases, 2, 2)
+
+    @pytest.mark.parametrize(
+        ("backend_name", "invalid_value"),
+        [
+            ("go", np.inf),
+            ("julia", 1.25),
+            ("mojo", -0.1),
+        ],
+    )
+    def test_persistence_rejects_invalid_backend_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_name: str,
+        invalid_value: float,
+    ) -> None:
+        phases = np.array([0.0, 0.2, 0.4, 0.6], dtype=np.float64)
+        indices = np.array([0, 1], dtype=np.int64)
+        if backend_name == "go":
+            fake = _FakeGoITPC(
+                vector=np.array([0.25, 0.5], dtype=np.float64),
+                persistence=float(invalid_value),
+            )
+            monkeypatch.setattr(itpc_go_mod, "_load_lib", lambda: fake)
+            backend = itpc_persistence_go
+        elif backend_name == "julia":
+            monkeypatch.setattr(
+                itpc_julia_mod,
+                "_ensure",
+                lambda: _FakeJuliaITPC(
+                    vector=np.array([0.25, 0.5]),
+                    persistence=invalid_value,
+                ),
+            )
+            backend = itpc_persistence_julia
+        else:
+            monkeypatch.setattr(itpc_mojo_mod, "_run", lambda _payload: [invalid_value])
+            backend = itpc_persistence_mojo
+
+        with pytest.raises(ValueError, match="ITPC persistence backend output"):
+            backend(phases, 2, 2, indices)
+
+    def test_mojo_persistence_rejects_malformed_output_length(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        phases = np.array([0.0, 0.2, 0.4, 0.6], dtype=np.float64)
+        indices = np.array([0, 1], dtype=np.int64)
+        monkeypatch.setattr(itpc_mojo_mod, "_run", lambda _payload: [0.25, 0.5])
+
+        with pytest.raises(ValueError, match="Mojo ITPC persistence returned 2"):
+            itpc_persistence_mojo(phases, 2, 2, indices)
 
 
 def test_rust_loader_returns_kernel_functions(monkeypatch: pytest.MonkeyPatch) -> None:

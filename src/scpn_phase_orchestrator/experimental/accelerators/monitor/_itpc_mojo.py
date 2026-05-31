@@ -19,7 +19,9 @@ from numpy.typing import NDArray
 
 from ._itpc_validation import (
     validate_compute_itpc_backend_inputs,
+    validate_compute_itpc_backend_output,
     validate_itpc_persistence_backend_inputs,
+    validate_itpc_persistence_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -68,9 +70,7 @@ def compute_itpc_mojo(phases_flat: FloatArray, n_trials: int, n_tp: int) -> Floa
     tokens: list[str] = ["ITPC", str(n_trials), str(n_tp)]
     tokens.extend(repr(float(x)) for x in phases.tolist())
     result = _run(" ".join(tokens) + "\n")
-    if len(result) != n_tp:
-        raise ValueError(f"Mojo ITPC returned {len(result)} values, expected {n_tp}")
-    return np.array(result, dtype=np.float64)
+    return validate_compute_itpc_backend_output(result, n_tp)
 
 
 def itpc_persistence_mojo(
@@ -98,4 +98,6 @@ def itpc_persistence_mojo(
     tokens.extend(str(int(x)) for x in idx.tolist())
     tokens.extend(repr(float(x)) for x in phases.tolist())
     result = _run(" ".join(tokens) + "\n")
-    return float(result[0])
+    if len(result) != 1:
+        raise ValueError(f"Mojo ITPC persistence returned {len(result)} values")
+    return validate_itpc_persistence_backend_output(result[0])

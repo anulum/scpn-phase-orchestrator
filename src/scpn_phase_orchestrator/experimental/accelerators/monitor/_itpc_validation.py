@@ -82,6 +82,53 @@ def validate_compute_itpc_backend_inputs(
     return phases, trials, timepoints
 
 
+def validate_compute_itpc_backend_output(value: object, n_tp: int) -> FloatArray:
+    """Validate direct ITPC vectors returned by optional backends."""
+
+    raw = np.asarray(value)
+    if _contains_boolean_alias(value):
+        raise ValueError("ITPC backend output must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("ITPC backend output must be real-valued")
+    try:
+        itpc = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("ITPC backend output must be numeric") from exc
+    if itpc.shape != (n_tp,):
+        raise ValueError(
+            f"ITPC backend output shape {itpc.shape} does not match ({n_tp},)"
+        )
+    if not np.all(np.isfinite(itpc)):
+        raise ValueError("ITPC backend output must contain only finite values")
+    tolerance = 1e-12
+    if np.any(itpc < -tolerance) or np.any(itpc > 1.0 + tolerance):
+        raise ValueError("ITPC backend output must lie in [0, 1]")
+    return np.ascontiguousarray(np.clip(itpc, 0.0, 1.0), dtype=np.float64)
+
+
+def validate_itpc_persistence_backend_output(value: object) -> float:
+    """Validate direct ITPC persistence scalars returned by optional backends."""
+
+    raw = np.asarray(value)
+    if _contains_boolean_alias(value):
+        raise ValueError("ITPC persistence backend output must not contain booleans")
+    if np.iscomplexobj(raw):
+        raise ValueError("ITPC persistence backend output must be real-valued")
+    try:
+        scalar = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("ITPC persistence backend output must be numeric") from exc
+    if scalar.shape != ():
+        raise ValueError("ITPC persistence backend output must be scalar")
+    score = float(scalar)
+    if not np.isfinite(score):
+        raise ValueError("ITPC persistence backend output must be finite")
+    tolerance = 1e-12
+    if score < -tolerance or score > 1.0 + tolerance:
+        raise ValueError("ITPC persistence backend output must lie in [0, 1]")
+    return min(1.0, max(0.0, score))
+
+
 def validate_itpc_persistence_backend_inputs(
     phases_flat: object,
     n_trials: object,
