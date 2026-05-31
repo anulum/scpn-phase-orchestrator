@@ -61,7 +61,7 @@ DIRECT_PLV_BACKENDS: tuple[PLVBackend, ...] = (
 )
 
 
-def test_market_validation_helper_is_linked_to_backend_tests() -> None:
+def test__market_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(market_validation.validate_market_order_inputs)
     assert callable(market_validation.validate_market_order_output)
     assert callable(market_validation.validate_market_plv_inputs)

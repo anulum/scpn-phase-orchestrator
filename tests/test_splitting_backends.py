@@ -27,6 +27,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _splitting_julia,
     _splitting_mojo,
 )
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _splitting_validation as splitting_validation,
+)
 from scpn_phase_orchestrator.upde import splitting as sp_mod
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
 from tests.typing_contracts import assert_precise_ndarray_hint
@@ -37,6 +40,20 @@ splitting_run_mojo = _splitting_mojo.splitting_run_mojo
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
+
+
+def test__splitting_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    args = _valid_direct_args()
+
+    validated = splitting_validation.validate_splitting_inputs(*args)
+    output = splitting_validation.validate_splitting_output(
+        np.array([0.2, 0.4], dtype=np.float64),
+        n=2,
+    )
+
+    assert validated[4] == 2
+    assert validated[8] == 1
+    np.testing.assert_array_equal(output, np.array([0.2, 0.4], dtype=np.float64))
 
 
 def _valid_direct_args():

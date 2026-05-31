@@ -26,11 +26,28 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _simplicial_julia,
     _simplicial_mojo,
 )
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _simplicial_validation as simplicial_validation,
+)
 from scpn_phase_orchestrator.upde import simplicial as s_mod
 from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
+
+
+def test__simplicial_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    args = _valid_direct_args()
+
+    validated = simplicial_validation.validate_simplicial_inputs(*args)
+    output = simplicial_validation.validate_simplicial_output(
+        np.array([0.2, 0.4], dtype=np.float64),
+        n=2,
+    )
+
+    assert validated[4] == 2
+    assert validated[9] == 1
+    np.testing.assert_array_equal(output, np.array([0.2, 0.4], dtype=np.float64))
 
 
 @contextlib.contextmanager

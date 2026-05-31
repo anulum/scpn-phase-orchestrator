@@ -36,6 +36,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _order_params_mojo as order_params_mojo_mod,
 )
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _order_params_validation as order_params_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_go import (
     layer_coherence_go,
     order_parameter_go,
@@ -60,6 +63,32 @@ from scpn_phase_orchestrator.upde.order_params import (
 )
 
 TWO_PI = 2.0 * np.pi
+
+
+def test__order_params_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    phases = np.array([0.0, np.pi], dtype=np.float64)
+    indices = np.array([0, 1], dtype=np.int64)
+
+    validated_phases = order_params_validation.validate_order_parameter_inputs(phases)
+    r, psi = order_params_validation.validate_order_parameter_output(0.25, 1.0)
+    phases_a, phases_b = order_params_validation.validate_plv_inputs(phases, phases)
+    unit_value = order_params_validation.validate_unit_interval_output(
+        0.5,
+        name="plv",
+    )
+    layer_phases, layer_indices = (
+        order_params_validation.validate_layer_coherence_inputs(
+            phases,
+            indices,
+        )
+    )
+
+    np.testing.assert_array_equal(validated_phases, phases)
+    assert (r, psi) == (0.25, 1.0)
+    np.testing.assert_array_equal(phases_a, phases_b)
+    assert unit_value == 0.5
+    np.testing.assert_array_equal(layer_phases, phases)
+    np.testing.assert_array_equal(layer_indices, indices)
 
 
 class _FakeGoOrderParamsLib:

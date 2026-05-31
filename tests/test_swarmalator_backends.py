@@ -32,6 +32,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _swarmalator_julia,
     _swarmalator_mojo,
 )
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _swarmalator_validation as swarmalator_validation,
+)
 from scpn_phase_orchestrator.upde import swarmalator as sw_mod
 from scpn_phase_orchestrator.upde.swarmalator import (
     AVAILABLE_BACKENDS,
@@ -44,6 +47,23 @@ swarmalator_step_julia = _swarmalator_julia.swarmalator_step_julia
 swarmalator_step_mojo = _swarmalator_mojo.swarmalator_step_mojo
 
 TWO_PI = 2.0 * np.pi
+
+
+def test__swarmalator_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    args = _valid_direct_args()
+
+    validated = swarmalator_validation.validate_swarmalator_inputs(*args)
+    positions, phases = swarmalator_validation.validate_swarmalator_output(
+        args[0],
+        args[1],
+        n=2,
+        dim=2,
+    )
+
+    assert validated[3] == 2
+    assert validated[4] == 2
+    np.testing.assert_array_equal(positions, args[0])
+    np.testing.assert_array_equal(phases, args[1])
 
 
 def _valid_direct_args():

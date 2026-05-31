@@ -31,10 +31,36 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _reduction_julia,
     _reduction_mojo,
 )
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _reduction_validation as reduction_validation,
+)
 from scpn_phase_orchestrator.upde import reduction as r_mod
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 
 TOL = 1e-12
+
+
+def test__reduction_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    validated = reduction_validation.validate_oa_inputs(
+        0.2,
+        0.1,
+        0.5,
+        0.1,
+        1.0,
+        0.01,
+        8,
+    )
+    output = reduction_validation.validate_oa_output(
+        0.3,
+        0.2,
+        float(np.hypot(0.3, 0.2)),
+        float(np.arctan2(0.2, 0.3)),
+    )
+
+    assert validated[6] == 8
+    assert validated[5] == 0.01
+    assert output[2] == float(np.hypot(0.3, 0.2))
+    assert output[3] == float(np.arctan2(0.2, 0.3))
 
 
 @contextlib.contextmanager

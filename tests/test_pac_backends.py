@@ -57,7 +57,7 @@ DIRECT_MATRIX_BACKENDS: tuple[MatrixBackend, ...] = (
 )
 
 
-def test_pac_validation_helper_is_linked_to_backend_tests() -> None:
+def test__pac_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(pac_validation.validate_modulation_index_inputs)
     assert callable(pac_validation.validate_modulation_index_output)
     assert callable(pac_validation.validate_pac_matrix_inputs)
