@@ -179,6 +179,15 @@ class TestMaskedKuramoto:
 
 
 class TestWinfree:
+    def test_zero_coupling_matches_uncoupled_rotation(self):
+        phases = jnp.array([0.1, 0.5, 1.0, 1.5])
+        omegas = jnp.array([0.2, 0.4, 0.6, 0.8])
+        dt = 0.25
+
+        result = winfree_step(phases, omegas, K=0.0, dt=dt)
+
+        np.testing.assert_allclose(result, (phases + dt * omegas) % TWO_PI, atol=1e-7)
+
     def test_winfree_step_advances(self):
         phases = jnp.array([0.1, 0.5, 1.0, 1.5])
         omegas = jnp.ones(4)
@@ -198,6 +207,16 @@ class TestWinfree:
         final, traj = winfree_forward(phases, omegas, K=1.0, dt=0.01, n_steps=20)
         assert final.shape == (4,)
         assert traj.shape == (20, 4)
+
+    def test_winfree_forward_euler_records_last_state(self):
+        phases = jnp.array([0.0, 0.2, 0.4, 0.6])
+        omegas = jnp.ones(4)
+
+        final, traj = winfree_forward(
+            phases, omegas, K=0.5, dt=0.01, n_steps=5, method="euler"
+        )
+
+        np.testing.assert_allclose(final, traj[-1], atol=1e-12)
 
 
 # ── Simplicial ──
@@ -234,6 +253,27 @@ class TestSimplicial:
         )
         assert final.shape == (4,)
         assert traj.shape == (10, 4)
+
+    def test_forward_simplicial_euler_sigma_zero_matches_kuramoto(
+        self, omegas4, uniform_coupling4
+    ):
+        phases = jnp.array([0.1, 0.3, 0.8, 1.5])
+
+        simp_final, simp_traj = simplicial_forward(
+            phases,
+            omegas4,
+            uniform_coupling4,
+            0.01,
+            7,
+            sigma2=0.0,
+            method="euler",
+        )
+        kura_final, kura_traj = kuramoto_forward(
+            phases, omegas4, uniform_coupling4, 0.01, 7, method="euler"
+        )
+
+        np.testing.assert_allclose(simp_final, kura_final, atol=1e-10)
+        np.testing.assert_allclose(simp_traj, kura_traj, atol=1e-10)
 
 
 # ── Stuart-Landau ──
@@ -280,6 +320,35 @@ class TestStuartLandau:
         assert fr.shape == (n,)
         assert tp.shape == (20, n)
         assert tr.shape == (20, n)
+
+    def test_forward_euler_records_final_phase_and_amplitude(self):
+        n = 3
+        phases = jnp.array([0.0, 0.2, 0.4])
+        amps = jnp.ones(n) * 0.2
+        omegas = jnp.ones(n) * 0.5
+        mu = jnp.ones(n) * 0.3
+        K = jnp.zeros((n, n))
+        K_r = jnp.zeros((n, n))
+
+        fp, fr, tp, tr = stuart_landau_forward(
+            phases, amps, omegas, mu, K, K_r, dt=0.01, n_steps=6, method="euler"
+        )
+
+        np.testing.assert_allclose(fp, tp[-1], atol=1e-12)
+        np.testing.assert_allclose(fr, tr[-1], atol=1e-12)
+
+    def test_negative_amplitudes_are_clipped_to_physical_radius(self):
+        n = 2
+        phases = jnp.zeros(n)
+        amps = jnp.array([-0.5, 0.1])
+        omegas = jnp.zeros(n)
+        mu = jnp.ones(n)
+        K = jnp.zeros((n, n))
+        K_r = jnp.ones((n, n)) - jnp.eye(n)
+
+        _, new_r = stuart_landau_step(phases, amps, omegas, mu, K, K_r, dt=0.1)
+
+        assert jnp.all(new_r >= 0.0)
 
     def test_amplitude_grows_when_mu_positive(self):
         n = 2
@@ -328,6 +397,14 @@ class TestPLV:
         plv_mat = plv(traj)
         np.testing.assert_allclose(plv_mat, plv_mat.T, atol=1e-12)
 
+    def test_constant_phase_offset_is_locked(self):
+        base = jnp.linspace(0.0, 1.0, 25)
+        traj = jnp.stack([base, base + 0.75], axis=1)
+
+        plv_mat = plv(traj)
+
+        np.testing.assert_allclose(plv_mat, jnp.ones((2, 2)), atol=1e-6)
+
 
 # ── SAF & Laplacian ──
 
@@ -349,6 +426,14 @@ class TestSAF:
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
         r = float(saf_order_parameter(K, omegas))
         assert 0.0 <= r <= 1.0
+
+    def test_saf_identical_frequencies_are_perfectly_aligned(self):
+        K = jnp.ones((4, 4)) - jnp.eye(4)
+        omegas = jnp.ones(4) * 2.0
+
+        r = float(saf_order_parameter(K, omegas, solver="eigh"))
+
+        assert r == pytest.approx(1.0, abs=1e-7)
 
     def test_saf_cg_solver_matches_eigendecomposition_contract(self):
         K = jnp.array(
@@ -375,6 +460,13 @@ class TestSAF:
 
         np.testing.assert_allclose(forced_auto, forced_cg, atol=1e-12)
 
+    def test_saf_rejects_unknown_solver(self):
+        K = jnp.ones((3, 3)) - jnp.eye(3)
+        omegas = jnp.array([1.0, 1.1, 0.9])
+
+        with pytest.raises(ValueError, match="solver"):
+            saf_order_parameter(K, omegas, solver="not-a-solver")
+
     def test_saf_loss_negative_r(self):
         K = jnp.ones((4, 4)) * 5.0 - jnp.eye(4) * 5.0
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
@@ -387,6 +479,15 @@ class TestSAF:
         loss_no_budget = float(saf_loss(K, omegas, budget=0.0))
         loss_budget = float(saf_loss(K, omegas, budget=1.0, budget_weight=1.0))
         assert loss_budget > loss_no_budget
+
+    def test_saf_loss_budget_not_penalised_below_zero_budget(self):
+        K = jnp.ones((3, 3)) * 0.2 - jnp.eye(3) * 0.2
+        omegas = jnp.array([1.0, 1.05, 0.95])
+
+        no_budget = float(saf_loss(K, omegas, budget=0.0))
+        negative_budget = float(saf_loss(K, omegas, budget=-1.0))
+
+        assert negative_budget == pytest.approx(no_budget, abs=1e-12)
 
 
 # ── Differentiability (JAX grad) ──

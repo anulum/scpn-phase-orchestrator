@@ -342,6 +342,16 @@ class TestKuramotoLayer:
         assert out.shape == (N,)
         assert jnp.isfinite(out).all()
 
+    def test_masked_forward_trajectory_records_final_state(self, key):
+        mask = np.eye(N, dtype=np.float32)
+        layer = KuramotoLayer(N, n_steps=10, dt=DT, mask=mask, key=key)
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        final, trajectory = layer.forward_with_trajectory(phases)
+        assert final.shape == (N,)
+        assert trajectory.shape == (10, N)
+        assert jnp.allclose(final, trajectory[-1])
+        assert jnp.isfinite(trajectory).all()
+
 
 # --- Simplicial (3-body) Kuramoto ---
 

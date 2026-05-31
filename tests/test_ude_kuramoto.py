@@ -127,6 +127,15 @@ class TestUDEKuramotoLayer:
         out = layer(phases)
         assert out.shape == (N,)
 
+    def test_forward_with_trajectory_records_final_state(self, key):
+        layer = UDEKuramotoLayer(N, n_steps=N_STEPS, dt=DT, key=key)
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        final, trajectory = layer.forward_with_trajectory(phases)
+        assert final.shape == (N,)
+        assert trajectory.shape == (N_STEPS, N)
+        assert jnp.allclose(final, trajectory[-1])
+        assert jnp.isfinite(trajectory).all()
+
     def test_sync_score(self, key):
         layer = UDEKuramotoLayer(N, n_steps=N_STEPS, dt=DT, key=key)
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)

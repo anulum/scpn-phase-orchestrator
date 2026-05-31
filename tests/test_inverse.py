@@ -111,6 +111,37 @@ class TestInferCoupling:
         assert jnp.isfinite(omegas).all()
         assert jnp.max(jnp.abs(K)) < 100.0  # not diverged
 
+    def test_multiple_shooting_l1_returns_finite_parameters(self, synthetic_data):
+        _, _, observed = synthetic_data
+        K, omegas, losses = infer_coupling(
+            observed,
+            DT,
+            n_epochs=3,
+            lr=0.005,
+            l1_weight=0.01,
+            window_size=5,
+        )
+        assert K.shape == (N, N)
+        assert omegas.shape == (N,)
+        assert len(losses) == 3
+        assert jnp.isfinite(K).all()
+        assert jnp.isfinite(omegas).all()
+
+    def test_zero_grad_clip_returns_finite_parameters(self, synthetic_data):
+        _, _, observed = synthetic_data
+        K, omegas, losses = infer_coupling(
+            observed,
+            DT,
+            n_epochs=3,
+            lr=0.005,
+            grad_clip=0.0,
+        )
+        assert K.shape == (N, N)
+        assert omegas.shape == (N,)
+        assert len(losses) == 3
+        assert jnp.isfinite(K).all()
+        assert jnp.isfinite(omegas).all()
+
 
 class TestCouplingCorrelation:
     def test_perfect_correlation(self):
