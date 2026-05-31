@@ -508,13 +508,25 @@ def assess_fep_hierarchy(
     )
 
 
+def _coerce_real_array(name: str, value: object) -> FloatArray:
+    raw = np.asarray(value, dtype=object)
+    if any(isinstance(item, bool | np.bool_) for item in raw.ravel()):
+        raise ValueError(f"{name} must not contain boolean values")
+    if any(isinstance(item, complex | np.complexfloating) for item in raw.ravel()):
+        raise ValueError(f"{name} must contain real-valued samples")
+    try:
+        return np.ascontiguousarray(raw.astype(np.float64), dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+
+
 def _validate_phase_inputs(
-    phases: FloatArray,
-    omegas: FloatArray,
+    phases: object,
+    omegas: object,
     n_oscillators: int,
 ) -> tuple[FloatArray, FloatArray]:
-    phase_arr = np.asarray(phases, dtype=np.float64)
-    omega_arr = np.asarray(omegas, dtype=np.float64)
+    phase_arr = _coerce_real_array("phases", phases)
+    omega_arr = _coerce_real_array("omegas", omegas)
     if phase_arr.shape != (n_oscillators,):
         raise ValueError(f"phases must have shape ({n_oscillators},)")
     if omega_arr.shape != (n_oscillators,):
@@ -527,15 +539,15 @@ def _validate_phase_inputs(
 
 
 def _validate_predictive_inputs(
-    phases: FloatArray,
-    omegas: FloatArray,
-    knm: FloatArray,
-    alpha: FloatArray,
+    phases: object,
+    omegas: object,
+    knm: object,
+    alpha: object,
     n_oscillators: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
     phase_arr, omega_arr = _validate_phase_inputs(phases, omegas, n_oscillators)
-    knm_arr = np.asarray(knm, dtype=np.float64)
-    alpha_arr = np.asarray(alpha, dtype=np.float64)
+    knm_arr = _coerce_real_array("knm", knm)
+    alpha_arr = _coerce_real_array("alpha", alpha)
     expected_shape = (n_oscillators, n_oscillators)
     if knm_arr.shape != expected_shape:
         raise ValueError(f"knm must have shape {expected_shape}")
@@ -613,13 +625,13 @@ def _validate_hierarchy_inputs(
 
 def _validate_child_observation(
     name: str,
-    phases: FloatArray,
-    omegas: FloatArray,
+    phases: object,
+    omegas: object,
 ) -> tuple[FloatArray, FloatArray]:
     if not isinstance(name, str) or not name:
         raise ValueError("child names must be non-empty strings")
-    phase_arr = np.asarray(phases, dtype=np.float64)
-    omega_arr = np.asarray(omegas, dtype=np.float64)
+    phase_arr = _coerce_real_array(f"child {name!r} phases", phases)
+    omega_arr = _coerce_real_array(f"child {name!r} omegas", omegas)
     if phase_arr.ndim != 1 or phase_arr.size < 1:
         raise ValueError(f"child {name!r} phases must be a non-empty vector")
     if omega_arr.shape != phase_arr.shape:

@@ -908,6 +908,11 @@ PredictiveSupervisor(
 - `decide(phases, omegas, knm, alpha, upde_state, boundary_state)
   → list[ControlAction]` — predicts then acts if degradation imminent
 
+`phases`, `omegas`, `knm`, and `alpha` are finite real-valued arrays. Boolean
+aliases and complex/object-complex payloads are rejected before OA prediction so
+the forward model cannot silently reinterpret non-physical inputs as real
+oscillator states, frequencies, coupling, or phase-lag matrices.
+
 ### Safety fallback
 
 When |R_predicted - R_measured| > `divergence_threshold`, the MPC
@@ -965,6 +970,8 @@ observed coherence into a parent phase vector, then runs a parent
 `FEPPredictiveSupervisor` over the reduced child state. The returned
 `FEPHierarchyAssessment` records child assessments, child actions, parent
 assessment, parent actions, child `R` values, and parent phase encoding.
+Child phase and frequency observations use the same finite real-valued boundary
+contract as the single-supervisor path.
 
 ```python
 hierarchy = assess_fep_hierarchy(

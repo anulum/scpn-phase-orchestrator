@@ -96,6 +96,60 @@ class TestPrediction:
                 values["alpha"],
             )
 
+    @pytest.mark.parametrize(
+        ("field", "value", "match"),
+        [
+            ("phases", [0.0, True, 0.2, 0.3], "phases must not contain boolean"),
+            (
+                "omegas",
+                np.asarray([1.0, complex(1.1, 0.0), 0.9, 1.2], dtype=object),
+                "omegas must contain real-valued",
+            ),
+            (
+                "knm",
+                np.asarray(
+                    [
+                        [0.0, complex(0.1, 0.0), 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.0],
+                    ],
+                    dtype=object,
+                ),
+                "knm must contain real-valued",
+            ),
+            (
+                "alpha",
+                [
+                    [0.0, False, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0],
+                ],
+                "alpha must not contain boolean",
+            ),
+        ],
+    )
+    def test_predict_rejects_boolean_and_complex_array_aliases(
+        self, field, value, match
+    ):
+        values = {
+            "phases": np.zeros(4),
+            "omegas": np.ones(4),
+            "knm": np.zeros((4, 4)),
+            "alpha": np.zeros((4, 4)),
+        }
+        values[field] = value
+        supervisor = PredictiveSupervisor(4, dt=0.01)
+
+        with pytest.raises(ValueError, match=match):
+            supervisor.predict(
+                values["phases"],
+                values["omegas"],
+                values["knm"],
+                values["alpha"],
+            )
+
     def test_returns_prediction(self):
         ps = PredictiveSupervisor(8, dt=0.01, horizon=10)
         phases = np.zeros(8)
@@ -511,6 +565,18 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
         with pytest.raises(ValueError, match="omegas must be finite"):
             supervisor.assess(np.zeros(4), np.array([1.0, 1.1, np.inf, 1.3]))
 
+    def test_fep_assess_rejects_boolean_and_complex_array_aliases(self):
+        supervisor = FEPPredictiveSupervisor(4, dt=0.01)
+
+        with pytest.raises(ValueError, match="phases must not contain boolean"):
+            supervisor.assess([0.0, True, 0.2, 0.3], np.ones(4))
+
+        with pytest.raises(ValueError, match="omegas must contain real-valued"):
+            supervisor.assess(
+                np.zeros(4),
+                np.asarray([1.0, complex(1.1, 0.0), 0.9, 1.2], dtype=object),
+            )
+
 
 class TestFEPHierarchyInPredictiveCoverage:
     def test_fep_hierarchy_serialises_child_parent_actions_and_phase_encoding(self):
@@ -698,6 +764,25 @@ class TestFEPHierarchyInPredictiveCoverage:
     def test_fep_hierarchy_rejects_invalid_child_observations(self, children, match):
         with pytest.raises(ValueError, match=match):
             assess_fep_hierarchy(children, dt=0.01)
+
+    def test_fep_hierarchy_rejects_boolean_and_complex_child_aliases(self):
+        with pytest.raises(
+            ValueError, match="child 'bad_child' phases must not contain boolean"
+        ):
+            assess_fep_hierarchy({"bad_child": ([0.0, True], [1.0, 1.0])}, dt=0.01)
+
+        with pytest.raises(
+            ValueError, match="child 'bad_child' omegas must contain real-valued"
+        ):
+            assess_fep_hierarchy(
+                {
+                    "bad_child": (
+                        np.zeros(2),
+                        np.asarray([1.0, complex(1.1, 0.0)], dtype=object),
+                    )
+                },
+                dt=0.01,
+            )
 
     def test_fep_hierarchy_rejects_non_mapping_children(self):
         with pytest.raises(ValueError, match="children must be a mapping"):
