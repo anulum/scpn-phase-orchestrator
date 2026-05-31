@@ -21,6 +21,14 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._order_params_validation import (
+    validate_layer_coherence_inputs,
+    validate_order_parameter_inputs,
+    validate_order_parameter_output,
+    validate_plv_inputs,
+    validate_unit_interval_output,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -83,13 +91,13 @@ def order_parameter_mojo(phases: FloatArray) -> tuple[float, float]:
     The calculation is delegated to the Mojo backend.
     """
 
-    if phases.size == 0:
+    p = validate_order_parameter_inputs(phases)
+    if p.size == 0:
         return (0.0, 0.0)
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     tokens = ["R", str(p.size)]
     tokens.extend(repr(float(x)) for x in p.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=2, label="R")
-    return float(result[0]), float(result[1])
+    return validate_order_parameter_output(result[0], result[1])
 
 
 def plv_mojo(phases_a: FloatArray, phases_b: FloatArray) -> float:
@@ -98,19 +106,14 @@ def plv_mojo(phases_a: FloatArray, phases_b: FloatArray) -> float:
     The calculation is delegated to the Mojo backend.
     """
 
-    if phases_a.size != phases_b.size:
-        raise ValueError(
-            f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
-        )
-    if phases_a.size == 0:
+    a, b = validate_plv_inputs(phases_a, phases_b)
+    if a.size == 0:
         return 0.0
-    a = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
-    b = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)
     tokens = ["PLV", str(a.size)]
     tokens.extend(repr(float(x)) for x in a.tolist())
     tokens.extend(repr(float(x)) for x in b.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=1, label="PLV")
-    return float(result[0])
+    return validate_unit_interval_output(result[0], name="PLV")
 
 
 def layer_coherence_mojo(phases: FloatArray, indices: IntArray) -> float:
@@ -119,13 +122,12 @@ def layer_coherence_mojo(phases: FloatArray, indices: IntArray) -> float:
     The calculation is delegated to the Mojo backend.
     """
 
-    if indices.size == 0:
+    p, idx = validate_layer_coherence_inputs(phases, indices)
+    if idx.size == 0:
         return 0.0
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-    idx = np.ascontiguousarray(indices.ravel(), dtype=np.int64)
     tokens = ["LC", str(p.size)]
     tokens.extend(repr(float(x)) for x in p.tolist())
     tokens.append(str(idx.size))
     tokens.extend(str(int(i)) for i in idx.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=1, label="LC")
-    return float(result[0])
+    return validate_unit_interval_output(result[0], name="layer coherence")

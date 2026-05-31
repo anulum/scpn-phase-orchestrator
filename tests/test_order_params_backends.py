@@ -19,6 +19,7 @@ Tolerance budgets match the AttnRes reference:
 
 from __future__ import annotations
 
+import ctypes
 from types import SimpleNamespace
 
 import numpy as np
@@ -27,15 +28,27 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _order_params_go as order_params_go_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _order_params_julia as order_params_julia_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _order_params_mojo as order_params_mojo_mod,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_go import (
+    layer_coherence_go,
+    order_parameter_go,
     plv_go,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_julia import (
+    layer_coherence_julia,
+    order_parameter_julia,
     plv_julia,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_mojo import (
+    layer_coherence_mojo,
+    order_parameter_mojo,
     plv_mojo,
 )
 from scpn_phase_orchestrator.upde import order_params as op_mod
@@ -47,6 +60,56 @@ from scpn_phase_orchestrator.upde.order_params import (
 )
 
 TWO_PI = 2.0 * np.pi
+
+
+class _FakeGoOrderParamsLib:
+    def __init__(
+        self,
+        *,
+        order: tuple[float, float] = (0.5, 1.0),
+        plv: float = 0.25,
+        layer: float = 0.75,
+        rc: int = 0,
+    ) -> None:
+        self.order = order
+        self.plv = plv
+        self.layer = layer
+        self.rc = rc
+
+    def OrderParameter(self, *_args: object) -> int:
+        ctypes.cast(_args[-2], ctypes.POINTER(ctypes.c_double))[0] = self.order[0]
+        ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))[0] = self.order[1]
+        return self.rc
+
+    def PLV(self, *_args: object) -> int:
+        ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))[0] = self.plv
+        return self.rc
+
+    def LayerCoherence(self, *_args: object) -> int:
+        ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))[0] = self.layer
+        return self.rc
+
+
+class _FakeJuliaOrderParams:
+    def __init__(
+        self,
+        *,
+        order: tuple[float, float] = (0.5, 1.0),
+        plv: float = 0.25,
+        layer: float = 0.75,
+    ) -> None:
+        self.order = order
+        self._plv = plv
+        self.layer = layer
+
+    def order_parameter(self, _phases: np.ndarray) -> tuple[float, float]:
+        return self.order
+
+    def plv(self, _phases_a: np.ndarray, _phases_b: np.ndarray) -> float:
+        return self._plv
+
+    def layer_coherence(self, _phases: np.ndarray, _indices: np.ndarray) -> float:
+        return self.layer
 
 
 def _force(backend: str) -> str:
@@ -76,10 +139,319 @@ def _reference(
 
 
 class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("fn", "loader_attr"),
+        [
+            (order_parameter_go, "_load_lib"),
+            (order_parameter_julia, "_ensure_julia_loaded"),
+            (order_parameter_mojo, "_run"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            np.array([True, False]),
+            np.array([0.0 + 0.0j, 1.0 + 0.0j]),
+            np.array([0.0, np.nan]),
+            np.array([[0.0, 1.0]]),
+        ],
+    )
+    def test_order_parameter_rejects_invalid_inputs_before_runtime_load(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fn,
+        loader_attr: str,
+        phases: np.ndarray,
+    ) -> None:
+        module = fn.__globals__["__name__"]
+        mod = {
+            order_params_go_mod.__name__: order_params_go_mod,
+            order_params_julia_mod.__name__: order_params_julia_mod,
+            order_params_mojo_mod.__name__: order_params_mojo_mod,
+        }[module]
+        monkeypatch.setattr(
+            mod,
+            loader_attr,
+            lambda *_args, **_kwargs: pytest.fail("runtime must not load"),
+        )
+
+        with pytest.raises(ValueError, match="phases"):
+            fn(phases)
+
+    @pytest.mark.parametrize("fn", [plv_go, plv_julia, plv_mojo])
+    @pytest.mark.parametrize(
+        ("phases_a", "phases_b", "match"),
+        [
+            (
+                np.array([True, False]),
+                np.zeros(2, dtype=np.float64),
+                "phases_a",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.array([0.0 + 0.0j, 1.0 + 0.0j]),
+                "phases_b",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.array([0.0, np.nan]),
+                "phases_b",
+            ),
+            (
+                np.zeros((1, 2), dtype=np.float64),
+                np.zeros(2, dtype=np.float64),
+                "phases_a",
+            ),
+        ],
+    )
+    def test_plv_rejects_invalid_inputs_before_runtime_load(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fn,
+        phases_a: np.ndarray,
+        phases_b: np.ndarray,
+        match: str,
+    ) -> None:
+        module = fn.__globals__["__name__"]
+        mod = {
+            order_params_go_mod.__name__: order_params_go_mod,
+            order_params_julia_mod.__name__: order_params_julia_mod,
+            order_params_mojo_mod.__name__: order_params_mojo_mod,
+        }[module]
+        loader_attr = "_run" if mod is order_params_mojo_mod else (
+            "_load_lib" if mod is order_params_go_mod else "_ensure_julia_loaded"
+        )
+        monkeypatch.setattr(
+            mod,
+            loader_attr,
+            lambda *_args, **_kwargs: pytest.fail("runtime must not load"),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            fn(phases_a, phases_b)
+
     @pytest.mark.parametrize("fn", [plv_go, plv_julia, plv_mojo])
     def test_plv_rejects_empty_non_empty_mismatch_before_runtime_load(self, fn) -> None:
         with pytest.raises(ValueError, match="equal-length"):
             fn(np.array([], dtype=np.float64), np.zeros(1, dtype=np.float64))
+
+    @pytest.mark.parametrize(
+        "fn",
+        [layer_coherence_go, layer_coherence_julia, layer_coherence_mojo],
+    )
+    @pytest.mark.parametrize(
+        ("phases", "indices", "match"),
+        [
+            (np.array([True, False]), np.array([0], dtype=np.int64), "phases"),
+            (
+                np.array([0.0 + 0.0j, 1.0 + 0.0j]),
+                np.array([0], dtype=np.int64),
+                "phases",
+            ),
+            (np.array([0.0, np.nan]), np.array([0], dtype=np.int64), "phases"),
+            (np.zeros(2, dtype=np.float64), np.array([True]), "indices"),
+            (np.zeros(2, dtype=np.float64), np.array([0.5]), "indices"),
+            (np.zeros(2, dtype=np.float64), np.array([-1]), "indices"),
+            (np.zeros(2, dtype=np.float64), np.array([2]), "indices"),
+            (np.zeros(2, dtype=np.float64), np.array([0, 0]), "indices"),
+            (np.zeros((1, 2), dtype=np.float64), np.array([0]), "phases"),
+        ],
+    )
+    def test_layer_coherence_rejects_invalid_inputs_before_runtime_load(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fn,
+        phases: np.ndarray,
+        indices: np.ndarray,
+        match: str,
+    ) -> None:
+        module = fn.__globals__["__name__"]
+        mod = {
+            order_params_go_mod.__name__: order_params_go_mod,
+            order_params_julia_mod.__name__: order_params_julia_mod,
+            order_params_mojo_mod.__name__: order_params_mojo_mod,
+        }[module]
+        loader_attr = "_run" if mod is order_params_mojo_mod else (
+            "_load_lib" if mod is order_params_go_mod else "_ensure_julia_loaded"
+        )
+        monkeypatch.setattr(
+            mod,
+            loader_attr,
+            lambda *_args, **_kwargs: pytest.fail("runtime must not load"),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            fn(phases, indices)
+
+    @pytest.mark.parametrize(
+        ("order_fn", "plv_fn", "layer_fn"),
+        [
+            (order_parameter_go, plv_go, layer_coherence_go),
+            (order_parameter_julia, plv_julia, layer_coherence_julia),
+            (order_parameter_mojo, plv_mojo, layer_coherence_mojo),
+        ],
+    )
+    def test_empty_measure_cases_skip_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        order_fn,
+        plv_fn,
+        layer_fn,
+    ) -> None:
+        for fn in (order_fn, plv_fn, layer_fn):
+            module = fn.__globals__["__name__"]
+            mod = {
+                order_params_go_mod.__name__: order_params_go_mod,
+                order_params_julia_mod.__name__: order_params_julia_mod,
+                order_params_mojo_mod.__name__: order_params_mojo_mod,
+            }[module]
+            loader_attr = "_run" if mod is order_params_mojo_mod else (
+                "_load_lib" if mod is order_params_go_mod else "_ensure_julia_loaded"
+            )
+            monkeypatch.setattr(
+                mod,
+                loader_attr,
+                lambda *_args, **_kwargs: pytest.fail("runtime must not load"),
+            )
+
+        phases = np.array([], dtype=np.float64)
+        assert order_fn(phases) == (0.0, 0.0)
+        assert plv_fn(phases, phases) == 0.0
+        assert layer_fn(phases, np.array([], dtype=np.int64)) == 0.0
+
+    @pytest.mark.parametrize(
+        ("module", "order_fn", "plv_fn", "layer_fn", "patcher"),
+        [
+            (
+                order_params_go_mod,
+                order_parameter_go,
+                plv_go,
+                layer_coherence_go,
+                lambda monkeypatch, **kw: monkeypatch.setattr(
+                    order_params_go_mod,
+                    "_load_lib",
+                    lambda: _FakeGoOrderParamsLib(**kw),
+                ),
+            ),
+            (
+                order_params_julia_mod,
+                order_parameter_julia,
+                plv_julia,
+                layer_coherence_julia,
+                lambda monkeypatch, **kw: monkeypatch.setattr(
+                    order_params_julia_mod,
+                    "_ensure_julia_loaded",
+                    lambda: _FakeJuliaOrderParams(**kw),
+                ),
+            ),
+            (
+                order_params_mojo_mod,
+                order_parameter_mojo,
+                plv_mojo,
+                layer_coherence_mojo,
+                None,
+            ),
+        ],
+    )
+    def test_direct_backend_outputs_are_physical_and_canonical(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+        order_fn,
+        plv_fn,
+        layer_fn,
+        patcher,
+    ) -> None:
+        phases = np.array([0.0, 1.0], dtype=np.float64)
+        indices = np.array([0], dtype=np.int64)
+
+        if module is order_params_mojo_mod:
+            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [0.5, -0.25])
+        else:
+            patcher(monkeypatch, order=(0.5, -0.25), plv=0.25, layer=0.75)
+        assert order_fn(phases) == pytest.approx((0.5, (-0.25) % TWO_PI))
+
+        if module is order_params_mojo_mod:
+            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [0.25])
+        assert plv_fn(phases, phases) == pytest.approx(0.25)
+
+        if module is order_params_mojo_mod:
+            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [0.75])
+        assert layer_fn(phases, indices) == pytest.approx(0.75)
+
+    @pytest.mark.parametrize(
+        ("module", "order_fn", "plv_fn", "layer_fn", "patcher"),
+        [
+            (
+                order_params_go_mod,
+                order_parameter_go,
+                plv_go,
+                layer_coherence_go,
+                lambda monkeypatch, **kw: monkeypatch.setattr(
+                    order_params_go_mod,
+                    "_load_lib",
+                    lambda: _FakeGoOrderParamsLib(**kw),
+                ),
+            ),
+            (
+                order_params_julia_mod,
+                order_parameter_julia,
+                plv_julia,
+                layer_coherence_julia,
+                lambda monkeypatch, **kw: monkeypatch.setattr(
+                    order_params_julia_mod,
+                    "_ensure_julia_loaded",
+                    lambda: _FakeJuliaOrderParams(**kw),
+                ),
+            ),
+            (
+                order_params_mojo_mod,
+                order_parameter_mojo,
+                plv_mojo,
+                layer_coherence_mojo,
+                None,
+            ),
+        ],
+    )
+    def test_direct_backend_outputs_reject_non_physical_scalars(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module,
+        order_fn,
+        plv_fn,
+        layer_fn,
+        patcher,
+    ) -> None:
+        phases = np.array([0.0, 1.0], dtype=np.float64)
+        indices = np.array([0], dtype=np.int64)
+
+        if module is order_params_mojo_mod:
+            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [1.25, 0.0])
+        else:
+            patcher(monkeypatch, order=(1.25, 0.0), plv=0.25, layer=0.75)
+        with pytest.raises(ValueError, match="R"):
+            order_fn(phases)
+
+        if module is order_params_mojo_mod:
+            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [0.5, np.nan])
+        else:
+            patcher(monkeypatch, order=(0.5, np.nan), plv=0.25, layer=0.75)
+        with pytest.raises(ValueError, match="mean phase"):
+            order_fn(phases)
+
+        if module is order_params_mojo_mod:
+            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [-0.1])
+        else:
+            patcher(monkeypatch, order=(0.5, 0.0), plv=-0.1, layer=0.75)
+        with pytest.raises(ValueError, match="PLV"):
+            plv_fn(phases, phases)
+
+        if module is order_params_mojo_mod:
+            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [1.1])
+        else:
+            patcher(monkeypatch, order=(0.5, 0.0), plv=0.25, layer=1.1)
+        with pytest.raises(ValueError, match="layer coherence"):
+            layer_fn(phases, indices)
 
     @pytest.mark.parametrize(
         ("stdout", "expected_count", "label", "match"),

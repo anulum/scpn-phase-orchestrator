@@ -21,6 +21,14 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._order_params_validation import (
+    validate_layer_coherence_inputs,
+    validate_order_parameter_inputs,
+    validate_order_parameter_output,
+    validate_plv_inputs,
+    validate_unit_interval_output,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -78,8 +86,10 @@ def order_parameter_go(phases: FloatArray) -> tuple[float, float]:
     The calculation is delegated to the Go backend.
     """
 
+    phases64 = validate_order_parameter_inputs(phases)
+    if phases64.size == 0:
+        return (0.0, 0.0)
     lib = _load_lib()
-    phases64 = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     out_r = ctypes.c_double(0.0)
     out_psi = ctypes.c_double(0.0)
     rc = lib.OrderParameter(
@@ -90,7 +100,7 @@ def order_parameter_go(phases: FloatArray) -> tuple[float, float]:
     )
     if rc != 0:
         raise ValueError(f"Go OrderParameter rc={rc}")
-    return float(out_r.value), float(out_psi.value)
+    return validate_order_parameter_output(out_r.value, out_psi.value)
 
 
 def plv_go(phases_a: FloatArray, phases_b: FloatArray) -> float:
@@ -99,13 +109,10 @@ def plv_go(phases_a: FloatArray, phases_b: FloatArray) -> float:
     The calculation is delegated to the Go backend.
     """
 
-    if phases_a.size != phases_b.size:
-        raise ValueError(
-            f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
-        )
+    a64, b64 = validate_plv_inputs(phases_a, phases_b)
+    if a64.size == 0:
+        return 0.0
     lib = _load_lib()
-    a64 = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
-    b64 = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)
     rc = lib.PLV(
         a64.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -115,7 +122,7 @@ def plv_go(phases_a: FloatArray, phases_b: FloatArray) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go PLV rc={rc}")
-    return float(out.value)
+    return validate_unit_interval_output(out.value, name="PLV")
 
 
 def layer_coherence_go(phases: FloatArray, indices: IntArray) -> float:
@@ -124,9 +131,10 @@ def layer_coherence_go(phases: FloatArray, indices: IntArray) -> float:
     The calculation is delegated to the Go backend.
     """
 
+    p64, i64 = validate_layer_coherence_inputs(phases, indices)
+    if i64.size == 0:
+        return 0.0
     lib = _load_lib()
-    p64 = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-    i64 = np.ascontiguousarray(indices.ravel(), dtype=np.int64)
     out = ctypes.c_double(0.0)
     rc = lib.LayerCoherence(
         p64.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -137,4 +145,4 @@ def layer_coherence_go(phases: FloatArray, indices: IntArray) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go LayerCoherence rc={rc}")
-    return float(out.value)
+    return validate_unit_interval_output(out.value, name="layer coherence")

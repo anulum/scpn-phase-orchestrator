@@ -283,6 +283,16 @@ Kuramoto order parameter R (global coherence), PLV (pairwise phase-locking
 value), and layer coherence (R for oscillator subsets). Optional Rust
 acceleration.
 
+Direct Go, Julia, and Mojo order-parameter entrypoints share the same typed
+boundary before optional runtime loading: phase payloads must be one-dimensional
+finite real vectors, PLV inputs must be equal-length phase vectors, and
+layer-coherence indices must be unique in-range oscillator indices. Empty
+zero-measure calls return the neutral value without loading an optional runtime:
+`(0.0, 0.0)` for global order, `0.0` for PLV, and `0.0` for layer coherence.
+Backend outputs are accepted only when physical: `R`, PLV, and layer coherence
+must be finite values in `[0, 1]`, and mean phase must be finite before being
+canonicalised to the public `[0, 2*pi)` convention.
+
 ::: scpn_phase_orchestrator.upde.order_params
 
 ::: scpn_phase_orchestrator.upde.metrics
