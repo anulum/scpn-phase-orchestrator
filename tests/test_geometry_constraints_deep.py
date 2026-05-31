@@ -78,6 +78,18 @@ class TestValidateKnmShape:
         with pytest.raises(ValueError, match="finite"):
             validate_knm(m)
 
+    def test_complex_coupling_rejected(self):
+        m = np.array([[0.0, 1.0j], [-1.0j, 0.0]], dtype=np.complex128)
+        with pytest.raises(ValueError, match="real"):
+            validate_knm(m)
+
+    def test_numpy_boolean_alias_rejected(self):
+        m = np.array(
+            [[np.bool_(False), np.bool_(True)], [np.bool_(True), np.bool_(False)]]
+        )
+        with pytest.raises(ValueError, match="boolean"):
+            validate_knm(m)
+
 
 # ── validate_knm: symmetry check ───────────────────────────────────────
 
@@ -195,6 +207,19 @@ class TestSymmetryConstraint:
         result = SymmetryConstraint().project(m)
         assert_allclose(result, result.T, atol=1e-14)
 
+    @pytest.mark.parametrize(
+        ("knm", "match"),
+        [
+            ([[0.0, 1.0], [1.0, np.nan]], "finite"),
+            ([[0.0, 1.0j], [-1.0j, 0.0]], "real"),
+            ([[False, True], [True, False]], "boolean"),
+            ([[0.0, 1.0, 2.0], [1.0, 0.0, 2.0]], "square"),
+        ],
+    )
+    def test_direct_projection_rejects_invalid_knm(self, knm, match):
+        with pytest.raises(ValueError, match=match):
+            SymmetryConstraint().project(knm)
+
 
 # ── NonNegativeConstraint ──────────────────────────────────────────────
 
@@ -228,6 +253,25 @@ class TestNonNegativeConstraint:
         m = np.zeros((4, 4))
         result = NonNegativeConstraint().project(m)
         assert_allclose(result, m)
+
+    @pytest.mark.parametrize(
+        ("knm", "match"),
+        [
+            ([[0.0, np.inf], [1.0, 0.0]], "finite"),
+            ([[0.0, 1.0j], [-1.0j, 0.0]], "real"),
+            (
+                [
+                    [np.bool_(False), np.bool_(True)],
+                    [np.bool_(True), np.bool_(False)],
+                ],
+                "boolean",
+            ),
+            ([[0.0, 1.0, 2.0], [1.0, 0.0, 2.0]], "square"),
+        ],
+    )
+    def test_direct_projection_rejects_invalid_knm(self, knm, match):
+        with pytest.raises(ValueError, match=match):
+            NonNegativeConstraint().project(knm)
 
 
 # ── project_knm ─────────────────────────────────────────────────────────
@@ -300,6 +344,38 @@ class TestProjectKnm:
 
         with pytest.raises(ValueError, match="non-finite"):
             project_knm(np.zeros((2, 2)), [NonFiniteConstraint()])
+
+    def test_rejects_complex_constraint_output(self):
+        """Projection fails closed if a custom constraint produces complex K_nm."""
+
+        class ComplexConstraint(GeometryConstraint):
+            def project(self, knm):
+                result = knm.astype(np.complex128)
+                result[0, 1] = 1.0j
+                return result
+
+        with pytest.raises(ValueError, match="real"):
+            project_knm(np.zeros((2, 2)), [ComplexConstraint()])
+
+    def test_rejects_shape_changing_constraint_output(self):
+        """Projection fails closed if a custom constraint changes oscillator count."""
+
+        class ShapeChangingConstraint(GeometryConstraint):
+            def project(self, knm):
+                return np.zeros((knm.shape[0] + 1, knm.shape[1] + 1))
+
+        with pytest.raises(ValueError, match="shape"):
+            project_knm(np.zeros((2, 2)), [ShapeChangingConstraint()])
+
+    def test_rejects_non_constraint_object(self):
+        """Projection accepts only explicit geometry constraint instances."""
+
+        class DuckConstraint:
+            def project(self, knm):
+                return knm
+
+        with pytest.raises(ValueError, match="GeometryConstraint"):
+            project_knm(np.zeros((2, 2)), [DuckConstraint()])
 
 
 # ── Custom constraint (abstract base test) ─────────────────────────────

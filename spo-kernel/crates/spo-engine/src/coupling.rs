@@ -53,12 +53,20 @@ impl CouplingBuilder {
 /// # Errors
 /// Returns `InvalidDimension` if `knm.len() != n * n`.
 pub fn project_knm(knm: &mut [f64], n: usize) -> SpoResult<()> {
-    if knm.len() != n * n {
+    let expected_len = n
+        .checked_mul(n)
+        .ok_or_else(|| SpoError::InvalidDimension("n*n overflows usize for Knm".into()))?;
+    if knm.len() != expected_len {
         return Err(SpoError::InvalidDimension(format!(
             "expected {}={n}*{n}, got {}",
-            n * n,
+            expected_len,
             knm.len()
         )));
+    }
+    if knm.iter().any(|value| !value.is_finite()) {
+        return Err(SpoError::IntegrationDiverged(
+            "Knm must contain only finite values".into(),
+        ));
     }
     for i in 0..n {
         for j in (i + 1)..n {
@@ -157,6 +165,18 @@ mod tests {
     fn project_dimension_mismatch() {
         let mut knm = vec![1.0; 5];
         assert!(project_knm(&mut knm, 3).is_err());
+    }
+
+    #[test]
+    fn project_nan_rejected() {
+        let mut knm = vec![0.0, f64::NAN, 1.0, 0.0];
+        assert!(project_knm(&mut knm, 2).is_err());
+    }
+
+    #[test]
+    fn project_inf_rejected() {
+        let mut knm = vec![0.0, f64::INFINITY, 1.0, 0.0];
+        assert!(project_knm(&mut knm, 2).is_err());
     }
 
     #[test]

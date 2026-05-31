@@ -35,7 +35,30 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 def _contains_boolean_alias(value: object) -> bool:
     raw = np.asarray(value, dtype=object)
-    return any(isinstance(item, bool) for item in raw.ravel())
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.ravel())
+
+
+def _validate_knm_matrix(value: object, *, name: str = "Knm") -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError(f"{name} must be real-valued")
+    try:
+        matrix = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real square matrix") from exc
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"{name} must be square, got shape {matrix.shape}")
+    if not np.all(np.isfinite(matrix)):
+        if name == "geometry constraint output":
+            raise ValueError("geometry constraint returned non-finite Knm values")
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
 class GeometryConstraint(ABC):
@@ -52,6 +75,7 @@ class SymmetryConstraint(GeometryConstraint):
 
     def project(self, knm: FloatArray) -> FloatArray:
         """Return the symmetric part of *knm*."""
+        knm = _validate_knm_matrix(knm)
         result: FloatArray = 0.5 * (knm + knm.T)
         return result
 
@@ -61,6 +85,7 @@ class NonNegativeConstraint(GeometryConstraint):
 
     def project(self, knm: FloatArray) -> FloatArray:
         """Return *knm* with all negative entries replaced by 0."""
+        knm = _validate_knm_matrix(knm)
         result: FloatArray = np.maximum(knm, 0.0)
         return result
 
@@ -70,13 +95,7 @@ def validate_knm(knm: FloatArray, *, atol: float = 1e-12) -> None:
 
     Raises ValueError with a specific message on the first violation found.
     """
-    if _contains_boolean_alias(knm):
-        raise ValueError("Knm must not contain boolean values")
-    knm = np.asarray(knm, dtype=np.float64)
-    if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
-        raise ValueError(f"Knm must be square, got shape {knm.shape}")
-    if not np.all(np.isfinite(knm)):
-        raise ValueError("Knm must contain only finite values")
+    knm = _validate_knm_matrix(knm)
     if not np.allclose(knm, knm.T, atol=atol):
         raise ValueError("Knm is not symmetric")
     if np.any(knm < -atol):
@@ -88,16 +107,15 @@ def validate_knm(knm: FloatArray, *, atol: float = 1e-12) -> None:
 
 def project_knm(knm: FloatArray, constraints: list[GeometryConstraint]) -> FloatArray:
     """Apply all geometry constraints sequentially, then zero the diagonal."""
-    if _contains_boolean_alias(knm):
-        raise ValueError("Knm must not contain boolean values")
-    result = np.asarray(knm, dtype=np.float64).copy()
-    if result.ndim != 2 or result.shape[0] != result.shape[1]:
-        raise ValueError(f"Knm must be square, got shape {result.shape}")
-    if not np.all(np.isfinite(result)):
-        raise ValueError("Knm must contain only finite values")
+    result = _validate_knm_matrix(knm).copy()
     for c in constraints:
-        result = c.project(result)
-        if not np.all(np.isfinite(result)):
-            raise ValueError("geometry constraint returned non-finite Knm values")
+        if not isinstance(c, GeometryConstraint):
+            raise ValueError("geometry constraint must be a GeometryConstraint")
+        projected = _validate_knm_matrix(
+            c.project(result), name="geometry constraint output"
+        )
+        if projected.shape != result.shape:
+            raise ValueError("geometry constraint output shape must match Knm shape")
+        result = projected
     np.fill_diagonal(result, 0.0)
     return result

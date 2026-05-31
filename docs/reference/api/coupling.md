@@ -135,11 +135,15 @@ Enforces structural invariants on K_nm.
 
 ### Validation
 
-`validate_knm(knm, atol=1e-12)` checks all four invariants (square,
-symmetric, non-negative, zero diagonal). Raises `ValueError` on violation.
+`validate_knm(knm, atol=1e-12)` accepts only finite real square matrices and
+checks all four invariants: symmetric, non-negative, zero diagonal, and
+boolean/complex aliases rejected before numeric projection. Raises
+`ValueError` on violation.
 
 `project_knm(knm, constraints)` applies constraints sequentially, then
-zeros the diagonal.
+zeros the diagonal. Built-in and custom constraints are fail-closed: each
+constraint must be a `GeometryConstraint`, preserve the matrix shape, and
+return finite real square K_nm values before the next projection step.
 
 ::: scpn_phase_orchestrator.coupling.geometry_constraints
 
