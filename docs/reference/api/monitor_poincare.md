@@ -16,19 +16,21 @@ return-time spread measurable without assuming a particular phase model.
 
 `poincare_section(trajectory, normal, offset=0.0, direction="positive")`
 accepts finite real 1-D or 2-D trajectories and a finite real section normal.
-The normal length must match the state dimension. `direction` is limited to
-`positive`, `negative`, or `both`.
+Boolean aliases, complex dtypes, and object arrays containing complex scalars
+are rejected before any float coercion. The normal length must match the state
+dimension. `direction` is limited to `positive`, `negative`, or `both`.
 
 `phase_poincare(phases, oscillator_idx=0, section_phase=0.0)` accepts finite
-real phase histories with shape `(T, N)`, rejects boolean aliases, checks the
-oscillator index, and computes crossings modulo `2*pi`.
+real phase histories with shape `(T, N)`, rejects boolean and complex aliases,
+checks the oscillator index, and computes crossings modulo `2*pi`.
 
 ## Direct accelerator boundary contract
 
 The direct Go, Julia, and Mojo wrappers validate before loading their optional
 runtimes:
 
-- flattened trajectory and phase buffers must be real finite `float64` vectors;
+- flattened trajectory and phase buffers must be real finite `float64` vectors
+  without boolean aliases, complex dtypes, or object-complex scalar aliases;
 - `t`, `d`, and `n` must be non-boolean positive integers;
 - flattened buffer lengths must exactly match `t*d` or `t*n`;
 - normals must be finite real vectors with length `d`;

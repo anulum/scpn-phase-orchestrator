@@ -69,6 +69,8 @@ class TestPoincareSection:
             (np.array([[0.0], [np.nan]], dtype=np.float64), "trajectory"),
             (np.array([[0.0], [np.inf]], dtype=np.float64), "trajectory"),
             (np.array([[0.0], [True]], dtype=object), "trajectory"),
+            (np.array([[0.0], [1.0j]], dtype=object), "trajectory"),
+            (np.array([[0.0], [1.0j]]), "trajectory"),
             ([["not-a-state"]], "trajectory"),
         ],
     )
@@ -86,6 +88,8 @@ class TestPoincareSection:
             (np.array([1.0, 0.0]), "normal shape"),
             (np.array([np.nan]), "normal"),
             (np.array([True], dtype=object), "normal"),
+            (np.array([1.0j], dtype=object), "normal"),
+            (np.array([1.0j]), "normal"),
             ([["not-a-normal"]], "normal"),
         ],
     )
@@ -256,6 +260,8 @@ class TestPhasePoincare:
             np.array([[0.0], [np.nan]], dtype=np.float64),
             np.array([[0.0], [np.inf]], dtype=np.float64),
             np.array([[0.0], [True]], dtype=object),
+            np.array([[0.0], [1.0j]], dtype=object),
+            np.array([[0.0], [1.0j]]),
             [["not-a-phase"]],
         ],
     )
@@ -366,6 +372,7 @@ class TestPoincareResultValidation:
             ({"crossings": [0.0, 1.0]}, "crossings must be two-dimensional"),
             ({"crossings": [[0.0], [np.nan]]}, "crossings"),
             ({"crossings": [[0.0], [True]]}, "crossings"),
+            ({"crossings": [[0.0], [1.0j]]}, "crossings"),
             ({"crossing_times": [0.0]}, "crossing_times shape"),
             ({"crossing_times": [2.0, 1.0]}, "crossing_times must be"),
             (
@@ -377,7 +384,9 @@ class TestPoincareResultValidation:
                 "crossing_times must be",
             ),
             ({"crossing_times": [0.0, np.inf]}, "crossing_times"),
+            ({"crossing_times": [0.0, 1.0j]}, "crossing_times"),
             ({"return_times": [1.0, 2.0]}, "return_times shape"),
+            ({"return_times": [1.0j]}, "return_times"),
             ({"return_times": [-1.0]}, "return_times must be non-negative"),
             ({"return_times": [3.0]}, "return_times must match"),
             ({"mean_return_time": -1.0}, "mean_return_time must be non-negative"),

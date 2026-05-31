@@ -34,6 +34,14 @@ def _contains_boolean_alias(raw: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(raw: object) -> bool:
+    try:
+        array = np.asarray(raw, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
 def _validate_int(value: object, name: str, *, minimum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
@@ -56,7 +64,7 @@ def _validate_float_vector(value: object, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
     try:
         array = raw.astype(np.float64, copy=True)

@@ -195,10 +195,28 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(array) or _contains_complex_alias(value))
+
+
 def _validate_state_history(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if _has_complex_payload(value):
+        raise ValueError(f"{name} must contain real-valued samples")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -216,6 +234,8 @@ def _validate_normal(normal: object, *, expected_dim: int) -> FloatArray:
     raw = np.asarray(normal)
     if _contains_boolean_alias(normal):
         raise ValueError("normal must not contain boolean values")
+    if _has_complex_payload(normal):
+        raise ValueError("normal must contain real-valued samples")
     try:
         normal_vec = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -300,6 +320,8 @@ class PoincareResult:
 def _validate_crossings(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("crossings must not contain boolean values")
+    if _has_complex_payload(value):
+        raise ValueError("crossings must contain real-valued samples")
     try:
         crossings = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -314,6 +336,8 @@ def _validate_crossings(value: object) -> FloatArray:
 def _validate_crossing_times(value: object, *, expected_count: int) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("crossing_times must not contain boolean values")
+    if _has_complex_payload(value):
+        raise ValueError("crossing_times must contain real-valued samples")
     try:
         crossing_times = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -341,6 +365,8 @@ def _validate_return_times(
 ) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("return_times must not contain boolean values")
+    if _has_complex_payload(value):
+        raise ValueError("return_times must contain real-valued samples")
     try:
         return_times_array = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
