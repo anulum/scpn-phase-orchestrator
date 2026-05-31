@@ -21,20 +21,13 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._lyapunov_validation import validate_lyapunov_backend_inputs
+
 __all__ = ["lyapunov_spectrum_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "lyapunov.jl"
 _JULIA_MODULE: Any | None = None
-
-
-def _validate_zero_diagonal(knm: FloatArray, *, n: int) -> None:
-    matrix = np.ascontiguousarray(knm, dtype=np.float64).reshape((n, n))
-    if np.any(np.abs(np.diag(matrix)) > 1e-12):
-        raise ValueError(
-            "knm diagonal must be zero; Kuramoto self-coupling is not a "
-            "physical pair interaction"
-        )
 
 
 def _ensure() -> Any:
@@ -63,8 +56,28 @@ def lyapunov_spectrum_julia(
 ) -> FloatArray:
     """Estimate the Lyapunov spectrum through the Julia backend."""
 
+    (
+        phases_init,
+        omegas,
+        knm,
+        alpha,
+        dt,
+        n_steps,
+        qr_interval,
+        zeta,
+        psi,
+    ) = validate_lyapunov_backend_inputs(
+        phases_init,
+        omegas,
+        knm,
+        alpha,
+        dt,
+        n_steps,
+        qr_interval,
+        zeta,
+        psi,
+    )
     n = int(phases_init.size)
-    _validate_zero_diagonal(knm, n=n)
     jl = _ensure()
     return np.asarray(
         jl.lyapunov_spectrum(

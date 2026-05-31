@@ -22,20 +22,13 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._lyapunov_validation import validate_lyapunov_backend_inputs
+
 __all__ = ["lyapunov_spectrum_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "liblyapunov.so"
 _LIB: ctypes.CDLL | None = None
-
-
-def _validate_zero_diagonal(knm: FloatArray, *, n: int) -> None:
-    matrix = np.ascontiguousarray(knm, dtype=np.float64).reshape((n, n))
-    if np.any(np.abs(np.diag(matrix)) > 1e-12):
-        raise ValueError(
-            "knm diagonal must be zero; Kuramoto self-coupling is not a "
-            "physical pair interaction"
-        )
 
 
 def _load_lib() -> ctypes.CDLL:
@@ -80,8 +73,28 @@ def lyapunov_spectrum_go(
 ) -> FloatArray:
     """Estimate the Lyapunov spectrum through the Go backend."""
 
+    (
+        phases_init,
+        omegas,
+        knm,
+        alpha,
+        dt,
+        n_steps,
+        qr_interval,
+        zeta,
+        psi,
+    ) = validate_lyapunov_backend_inputs(
+        phases_init,
+        omegas,
+        knm,
+        alpha,
+        dt,
+        n_steps,
+        qr_interval,
+        zeta,
+        psi,
+    )
     n = int(phases_init.size)
-    _validate_zero_diagonal(knm, n=n)
     lib = _load_lib()
     p = np.ascontiguousarray(phases_init.ravel(), dtype=np.float64)
     o = np.ascontiguousarray(omegas.ravel(), dtype=np.float64)

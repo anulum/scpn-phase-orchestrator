@@ -21,19 +21,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._lyapunov_validation import validate_lyapunov_backend_inputs
+
 __all__ = ["_ensure_exe", "lyapunov_spectrum_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "lyapunov_mojo"
-
-
-def _validate_zero_diagonal(knm: FloatArray, *, n: int) -> None:
-    matrix = np.ascontiguousarray(knm, dtype=np.float64).reshape((n, n))
-    if np.any(np.abs(np.diag(matrix)) > 1e-12):
-        raise ValueError(
-            "knm diagonal must be zero; Kuramoto self-coupling is not a "
-            "physical pair interaction"
-        )
 
 
 def _ensure_exe() -> Path:
@@ -74,8 +67,28 @@ def lyapunov_spectrum_mojo(
 ) -> FloatArray:
     """Estimate the Lyapunov spectrum through the Mojo backend."""
 
+    (
+        phases_init,
+        omegas,
+        knm,
+        alpha,
+        dt,
+        n_steps,
+        qr_interval,
+        zeta,
+        psi,
+    ) = validate_lyapunov_backend_inputs(
+        phases_init,
+        omegas,
+        knm,
+        alpha,
+        dt,
+        n_steps,
+        qr_interval,
+        zeta,
+        psi,
+    )
     n = int(phases_init.size)
-    _validate_zero_diagonal(knm, n=n)
     tokens: list[str] = [
         "SPEC",
         str(n),

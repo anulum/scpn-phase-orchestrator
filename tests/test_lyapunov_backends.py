@@ -269,3 +269,53 @@ class TestDirectBackendBoundaryContracts:
                 0.0,
                 0.0,
             )
+
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (lyapunov_spectrum_go, "go"),
+            (lyapunov_spectrum_julia, "julia"),
+            (lyapunov_spectrum_mojo, "mojo"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("field", "value", "match"),
+        [
+            (
+                "phases_init",
+                np.array([0.0, np.bool_(True)], dtype=object),
+                "phases_init",
+            ),
+            ("omegas", np.array([1.0, np.nan], dtype=np.float64), "omegas"),
+            ("knm", np.array([[0.0, 0.1], [0.1, np.inf]], dtype=np.float64), "knm"),
+            ("alpha", np.array([[0.0, 0.0], [0.0, 0.0j]], dtype=complex), "alpha"),
+            ("dt", np.bool_(True), "dt"),
+            ("n_steps", np.bool_(True), "n_steps"),
+            ("qr_interval", np.bool_(True), "qr_interval"),
+            ("zeta", -0.1, "zeta"),
+            ("psi", np.nan, "psi"),
+        ],
+    )
+    def test_direct_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn,
+        label: str,
+        field: str,
+        value: object,
+        match: str,
+    ) -> None:
+        kwargs: dict[str, object] = {
+            "phases_init": np.array([0.0, 0.1], dtype=np.float64),
+            "omegas": np.array([1.0, 1.0], dtype=np.float64),
+            "knm": np.array([[0.0, 0.1], [0.1, 0.0]], dtype=np.float64),
+            "alpha": np.zeros((2, 2), dtype=np.float64),
+            "dt": 0.01,
+            "n_steps": 10,
+            "qr_interval": 2,
+            "zeta": 0.0,
+            "psi": 0.0,
+        }
+        kwargs[field] = value
+
+        with pytest.raises(ValueError, match=match):
+            fn(**kwargs)

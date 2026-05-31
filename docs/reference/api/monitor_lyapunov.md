@@ -300,6 +300,13 @@ the four flat arrays. It prints `N` lines of `f64` to stdout.
 the only precision loss is the ASCII round-trip (captured by the
 `1e-6` tolerance in the parity tests).
 
+The direct Mojo, Julia, and Go bridge functions validate all array and scalar
+inputs before loading optional runtimes: phase/frequency vectors and
+coupling/lag matrices must be finite real `float64` arrays with boolean aliases
+rejected, `dt` must be positive, `n_steps` and `qr_interval` must be integer
+counts, `zeta` must be non-negative, `psi` must be finite, and the coupling
+diagonal must remain zero.
+
 **Build:**
 
 ```bash
