@@ -16,6 +16,7 @@ Outputs are booleans — tolerance is exact array equality. Both
 from __future__ import annotations
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -124,6 +125,39 @@ def test_backend_array_contracts_are_parameterised() -> None:
 
 
 class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("", 4, "REC", "exactly 4 integer"),
+            ("1\n0\n0\n1\n1\n", 4, "REC", "exactly 4 integer"),
+            ("1\n\n0\n0\n1\n", 4, "CROSS", "exactly 4 integer"),
+            ("1\nnot-an-int\n0\n1\n", 4, "REC", "non-integer"),
+        ],
+    )
+    def test_mojo_recurrence_stdout_contract_rejects_malformed_payloads(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_recurrence_mojo, "_ensure_exe", lambda: "recurrence_mojo")
+        monkeypatch.setattr(
+            _recurrence_mojo.subprocess,
+            "run",
+            lambda *args, **kwargs: SimpleNamespace(
+                returncode=0, stdout=stdout, stderr=""
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _recurrence_mojo._run(
+                "REC 2 1 0 0.5 0.0 1.0\n",
+                expected_count=expected_count,
+                label=label,
+            )
+
     @pytest.mark.parametrize(
         "fn",
         [
@@ -260,7 +294,11 @@ class TestDirectBackendBoundaryContracts:
     def test_mojo_backend_rejects_nonbinary_cross_recurrence_output(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(_recurrence_mojo, "_run", lambda payload: [0, 1, 2, 1])
+        monkeypatch.setattr(
+            _recurrence_mojo,
+            "_run",
+            lambda payload, *, expected_count, label: [0, 1, 2, 1],
+        )
 
         with pytest.raises(ValueError, match="0/1"):
             cross_recurrence_matrix_mojo(

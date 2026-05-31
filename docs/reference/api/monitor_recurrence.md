@@ -164,6 +164,11 @@ Direct backend outputs are also validated before return as numeric
 ``0``/``1`` recurrence relations of size ``T*T``. Plain recurrence outputs
 must keep the true diagonal and symmetry invariants; cross-recurrence outputs
 may be non-symmetric but must still be binary and finite.
+The Mojo subprocess bridge also enforces exact stdout cardinality before
+integer parsing: ``REC`` and ``CROSS`` must each emit exactly ``T*T``
+integer lines. Missing, extra, blank, or non-integer lines fail closed before
+the shared recurrence validators check binary, diagonal, and symmetry
+invariants.
 
 ---
 
@@ -192,7 +197,8 @@ output via caller-owned `*uchar` pointer.
 
 Stdin executable with two verbs (`REC` / `CROSS`). Returns ``T × T``
 integer entries (0 / 1) as ASCII lines. The subprocess round-trip
-is the bottleneck — retained for parity coverage.
+is the bottleneck — retained for parity coverage. The Python bridge rejects
+stdout unless the executable emits exactly one integer line per matrix entry.
 
 ### 4.5 Python
 
@@ -315,7 +321,7 @@ Three files (29 tests):
 
 ### 7.2 `tests/test_recurrence_backends.py`
 
-12 tests:
+Boundary and parity suites:
 
 * `TestRustParity` — Hypothesis sweep over ``(T, seed)``, array-
   exact equality; angular and cross variants.
