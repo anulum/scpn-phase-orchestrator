@@ -325,6 +325,11 @@ traffic-control oscillation, and plasma over-control. The fixture corpus stays
 non-actuating and execution-disabled, publishes stable scenario/result hashes,
 and is gated in the reference suite so drift, oscillation, and over-control
 threshold behavior remains reproducible across releases.
+Studio renders the resulting audit records through
+`build_strange_loop_studio_panel()`, which preserves the
+`strange_loop_drift_review_not_live_actuation` boundary, validates SHA-256
+evidence hashes and finite metric ranges, and keeps all recommendations behind
+the normal review and safety gate.
 
 ::: scpn_phase_orchestrator.supervisor.strange_loop
 

@@ -18,6 +18,7 @@ import pytest
 
 import scpn_phase_orchestrator.studio.ui_helpers as ui
 from scpn_phase_orchestrator.studio.workflow import BindingProposal
+from scpn_phase_orchestrator.supervisor import evaluate_strange_loop_drift_scenarios
 
 MINIMAL_SPEC = Path("domainpacks/minimal_domain/binding_spec.yaml")
 DIGITAL_TWIN_SPEC = Path("domainpacks/digital_twin_nchannel/binding_spec.yaml")
@@ -211,6 +212,48 @@ def test_integrated_information_panel_rejects_malformed_monitor_records() -> Non
         ui.build_integrated_information_panel(
             [{**valid_record, "pairwise_mi": [[0.5, 0.11], [0.12, 0.5]]}]
         )
+
+
+def test_strange_loop_studio_panel_preserves_non_actuating_scenario_evidence() -> None:
+    records = [
+        result.to_audit_record() for result in evaluate_strange_loop_drift_scenarios()
+    ]
+
+    panel = ui.build_strange_loop_studio_panel(records)
+
+    assert panel["panel_kind"] == "studio_strange_loop_panel"
+    assert panel["claim_boundary"] == "strange_loop_drift_review_not_live_actuation"
+    assert panel["non_actuating"] is True
+    assert panel["execution_disabled"] is True
+    assert panel["actuation_permitted"] is False
+    assert panel["scenario_count"] == len(records)
+    assert panel["passed_count"] == len(records)
+    assert panel["failed_scenario_ids"] == []
+    assert set(panel["triggered_modes"]) == {
+        "stable",
+        "policy_drift",
+        "control_loop_oscillation",
+        "over_control",
+    }
+    assert panel["maxima"]["drift_score"] == pytest.approx(
+        max(record["max_drift_score"] for record in records)
+    )
+    assert panel["maxima"]["overcontrol_score"] == pytest.approx(
+        max(record["max_overcontrol_score"] for record in records)
+    )
+
+
+def test_strange_loop_studio_panel_rejects_malformed_scenario_evidence() -> None:
+    record = evaluate_strange_loop_drift_scenarios()[0].to_audit_record()
+
+    with pytest.raises(ValueError, match="execution_disabled"):
+        ui.build_strange_loop_studio_panel([{**record, "execution_disabled": False}])
+    with pytest.raises(ValueError, match="expected_trigger"):
+        ui.build_strange_loop_studio_panel([{**record, "expected_trigger": "unknown"}])
+    with pytest.raises(ValueError, match="scenario_hash"):
+        ui.build_strange_loop_studio_panel([{**record, "scenario_hash": "bad"}])
+    with pytest.raises(ValueError, match="finite non-negative real"):
+        ui.build_strange_loop_studio_panel([{**record, "max_drift_score": True}])
 
 
 def test_canvas_review_artifacts_capture_layout_and_topology_changes() -> None:

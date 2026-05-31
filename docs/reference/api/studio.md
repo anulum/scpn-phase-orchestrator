@@ -22,6 +22,16 @@ non-negative information metrics, Phi/log-bin normalisation consistency,
 integer-only minimum partitions, and symmetric bounded pairwise-MI matrices
 when matrix evidence is supplied.
 
+`build_strange_loop_studio_panel(records)` renders offline
+`StrangeLoopSupervisor` drift-scenario result records into a Studio payload with
+scenario pass counts, triggered-mode summaries, maximum drift/oscillation/
+over-control scores, minimum control coherence, and failed-scenario IDs. It
+requires the `strange_loop_drift_review_not_live_actuation` claim boundary,
+`non_actuating: true`, `execution_disabled: true`, supported expected triggers,
+finite non-negative metrics, unit-interval coherence, and SHA-256 scenario/
+result hashes before Studio may display the evidence. The payload remains
+review-only and sets `actuation_permitted: false`.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.ui_helpers
