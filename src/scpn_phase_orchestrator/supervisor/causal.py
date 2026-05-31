@@ -266,8 +266,16 @@ class CausalInterventionEngine:
         actions: tuple[ControlAction, ...],
     ) -> InterventionParameters:
         """Apply supported supervisor actions to UPDE parameters."""
-        next_knm = np.array(knm, dtype=np.float64, copy=True)
-        next_alpha = np.array(alpha, dtype=np.float64, copy=True)
+        next_knm = np.array(_coerce_float_array("knm", knm), copy=True)
+        next_alpha = np.array(_coerce_float_array("alpha", alpha), copy=True)
+        if next_knm.shape != (self._n, self._n):
+            raise ValueError(
+                f"knm.shape={next_knm.shape}, expected {(self._n, self._n)}"
+            )
+        if next_alpha.shape != (self._n, self._n):
+            raise ValueError(
+                f"alpha.shape={next_alpha.shape}, expected {(self._n, self._n)}"
+            )
         next_zeta = float(zeta)
         next_psi = float(psi)
 
@@ -364,16 +372,16 @@ def learn_causal_graph(
     estimate is intentionally lightweight and audit-first; it is not a formal
     do-calculus proof.
     """
-    _validate_causal_trace(trace, lag, min_abs_weight)
-    nodes = tuple(trace)
+    trace_arrays = _validate_causal_trace(trace, lag, min_abs_weight)
+    nodes = tuple(trace_arrays)
     edges: list[CausalInfluenceEdge] = []
     for source in nodes:
-        source_values = np.asarray(trace[source], dtype=np.float64)
+        source_values = trace_arrays[source]
         source_window = source_values[:-lag]
         for target in nodes:
             if source == target:
                 continue
-            target_values = np.asarray(trace[target], dtype=np.float64)
+            target_values = trace_arrays[target]
             target_delta = target_values[lag:] - target_values[:-lag]
             weight, confidence = _lagged_linear_effect(source_window, target_delta)
             if abs(weight) >= min_abs_weight:
@@ -517,7 +525,7 @@ def _validate_causal_trace(
     trace: dict[str, list[float]],
     lag: int,
     min_abs_weight: float,
-) -> None:
+) -> dict[str, FloatArray]:
     if isinstance(lag, bool) or int(lag) != lag or lag < 1:
         raise ValueError("lag must be a positive integer")
     if not np.isfinite(min_abs_weight) or min_abs_weight < 0.0:
@@ -530,10 +538,15 @@ def _validate_causal_trace(
     length = lengths.pop()
     if length <= lag:
         raise ValueError("trace length must be greater than lag")
+    arrays: dict[str, FloatArray] = {}
     for name, values in trace.items():
-        data = np.asarray(values, dtype=np.float64)
+        data = _coerce_float_array(f"trace signal {name!r}", values)
+        if data.ndim != 1:
+            raise ValueError(f"trace signal {name!r} must be one-dimensional")
         if not np.all(np.isfinite(data)):
             raise ValueError(f"trace signal {name!r} contains NaN/Inf")
+        arrays[name] = data
+    return arrays
 
 
 def _validated_temporal_hyperedges(
@@ -623,8 +636,13 @@ def _require_finite_real(value: object, *, name: str) -> float:
 
 
 def _coerce_float_array(name: str, value: object) -> FloatArray:
+    raw = np.asarray(value, dtype=object)
+    if any(isinstance(item, bool | np.bool_) for item in raw.ravel()):
+        raise ValueError(f"{name} must not contain boolean values")
+    if any(isinstance(item, complex | np.complexfloating) for item in raw.ravel()):
+        raise ValueError(f"{name} must contain real-valued samples")
     try:
-        return np.asarray(value, dtype=np.float64)
+        return np.ascontiguousarray(raw.astype(np.float64), dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
 

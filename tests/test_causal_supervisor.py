@@ -337,6 +337,87 @@ def test_input_shape_validation() -> None:
         engine.evaluate_actions(phases, omegas, knm, alpha, np.inf, 0.0, [])
 
 
+@pytest.mark.parametrize(
+    ("field", "payload", "match"),
+    [
+        ("phases", [0.0, 1.0, True, 2.0], "phases must not contain boolean"),
+        (
+            "omegas",
+            np.asarray([1.0, complex(1.1, 0.0), 0.9, 1.2], dtype=object),
+            "omegas must contain real-valued",
+        ),
+        (
+            "knm",
+            np.asarray(
+                [
+                    [0.0, complex(0.1, 0.0), 0.1, 0.1],
+                    [0.1, 0.0, 0.1, 0.1],
+                    [0.1, 0.1, 0.0, 0.1],
+                    [0.1, 0.1, 0.1, 0.0],
+                ],
+                dtype=object,
+            ),
+            "knm must contain real-valued",
+        ),
+        (
+            "alpha",
+            [
+                [0.0, False, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+            ],
+            "alpha must not contain boolean",
+        ),
+    ],
+)
+def test_evaluate_actions_rejects_boolean_and_complex_array_aliases(
+    field: str,
+    payload: object,
+    match: str,
+) -> None:
+    phases, omegas, knm, alpha = _system(4)
+    values: dict[str, object] = {
+        "phases": phases,
+        "omegas": omegas,
+        "knm": knm,
+        "alpha": alpha,
+    }
+    values[field] = payload
+    engine = CausalInterventionEngine(4, dt=0.01, horizon=2)
+
+    with pytest.raises(ValueError, match=match):
+        engine.evaluate_actions(
+            values["phases"],
+            values["omegas"],
+            values["knm"],
+            values["alpha"],
+            0.0,
+            0.0,
+            [],
+        )
+
+
+def test_apply_actions_rejects_non_real_matrix_parameters() -> None:
+    _, _, knm, alpha = _system(3)
+    engine = CausalInterventionEngine(3, dt=0.01)
+    complex_knm = np.asarray(
+        [
+            [0.0, complex(0.1, 0.0), 0.1],
+            [0.1, 0.0, 0.1],
+            [0.1, 0.1, 0.0],
+        ],
+        dtype=object,
+    )
+    boolean_alpha = [[0.0, True, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+
+    with pytest.raises(ValueError, match="knm must contain real-valued"):
+        engine.apply_actions(complex_knm, alpha, 0.0, 0.0, ())
+
+    with pytest.raises(ValueError, match="alpha must not contain boolean"):
+        engine.apply_actions(knm, boolean_alpha, 0.0, 0.0, ())
+
+
 def test_evaluate_actions_accepts_array_like_inputs_after_validation() -> None:
     phases, omegas, knm, alpha = _system(4)
     engine = CausalInterventionEngine(4, dt=0.01, horizon=2)
@@ -525,6 +606,17 @@ def test_learn_causal_graph_rejects_invalid_trace_inputs() -> None:
 
     with pytest.raises(ValueError, match="trace signal 'a' contains NaN/Inf"):
         learn_causal_graph({"a": [0.1, np.inf], "b": [0.2, 0.3]})
+
+    with pytest.raises(ValueError, match="trace signal 'a' must not contain boolean"):
+        learn_causal_graph({"a": [0.1, True, 0.3], "b": [0.2, 0.3, 0.4]})
+
+    with pytest.raises(ValueError, match="trace signal 'a' must contain real-valued"):
+        learn_causal_graph(
+            {
+                "a": np.asarray([0.1, complex(0.2, 0.0), 0.3], dtype=object),
+                "b": [0.2, 0.3, 0.4],
+            }
+        )
 
 
 def test_learn_causal_graph_rejects_empty_trace_evidence() -> None:

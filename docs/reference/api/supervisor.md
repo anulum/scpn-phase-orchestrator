@@ -607,6 +607,11 @@ paired UPDE trajectories from the same state:
 The result is a `CounterfactualRollout` with `R` and `Psi` trajectories,
 final and mean `R` deltas, signed final phase delta, and a serialisable audit
 payload.
+Counterfactual phases, frequency vectors, coupling matrices, phase-lag
+matrices, and lagged causal traces are validated as finite real-valued numeric
+arrays before simulation or causal scoring. Boolean aliases and
+complex/object-complex payloads are rejected before float coercion so rollouts
+and lagged-linear influence estimates stay on the real Kuramoto state space.
 
 ```python
 from scpn_phase_orchestrator.supervisor import CausalInterventionEngine
