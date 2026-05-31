@@ -404,6 +404,12 @@ recurrence analysis on scalar measurements.
    (Kennel, Brown & Abarbanel 1992)
 3. **Embedding** constructs vectors v(t) = [x(t), x(t-τ), ..., x(t-(m-1)τ)]
 
+Inputs and backend outputs are validated as finite real-valued arrays.
+Boolean aliases and complex samples are rejected before the
+Rust/Mojo/Julia/Go backend chain because Takens delay coordinates,
+Fraser-Swinney mutual information, and false-nearest-neighbour
+distances are defined over real scalar observations.
+
 **Usage:**
 
 ```python

@@ -65,6 +65,15 @@ class TestDelayEmbed:
         with pytest.raises(ValueError, match="signal"):
             delay_embed(np.array([True, False, True]), delay=1, dimension=2)
 
+    @_python
+    def test_rejects_complex_signal(self):
+        with pytest.raises(ValueError, match="real-valued"):
+            delay_embed(
+                np.array([0.0 + 0.0j, 1.0 + 0.25j, 2.0 + 0.0j]),
+                delay=1,
+                dimension=2,
+            )
+
 
 class TestMutualInformation:
     @_python

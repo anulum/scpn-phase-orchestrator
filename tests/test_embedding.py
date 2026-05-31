@@ -59,6 +59,7 @@ class TestDelayEmbed:
             np.array([0.0, np.inf], dtype=np.float64),
             np.array([0.0, True], dtype=object),
             np.array([0.0, np.bool_(True)], dtype=object),
+            np.array([0.0 + 0.0j, 1.0 + 0.25j]),
             ["not-a-signal"],
         ],
     )
@@ -129,6 +130,7 @@ class TestMutualInformationContracts:
             np.array([0.0, np.inf], dtype=np.float64),
             np.array([0.0, True], dtype=object),
             np.array([0.0, np.bool_(True)], dtype=object),
+            np.array([0.0 + 0.0j, 1.0 + 0.25j]),
             ["not-a-signal"],
         ],
     )
@@ -160,6 +162,7 @@ class TestNearestNeighborContracts:
             np.array([[0.0], [np.inf]], dtype=np.float64),
             np.array([[0.0], [True]], dtype=object),
             np.array([[0.0], [np.bool_(True)]], dtype=object),
+            np.array([[0.0 + 0.0j], [1.0 + 0.25j]]),
             [["not-a-point"]],
         ],
     )
@@ -237,6 +240,12 @@ class TestEmbeddingResultBoundary:
             },
             {
                 "trajectory": [[0.0, np.bool_(True)]],
+                "delay": 1,
+                "dimension": 2,
+                "T_effective": 1,
+            },
+            {
+                "trajectory": [[0.0 + 0.0j, 1.0 + 0.25j]],
                 "delay": 1,
                 "dimension": 2,
                 "T_effective": 1,
@@ -404,6 +413,9 @@ class TestEmbeddingBackendFallbacks:
             np.array([0.0, 1.0], dtype=np.float64),
             np.array([[0.0, np.nan], [1.0, 2.0], [2.0, 3.0]], dtype=np.float64),
             np.array([[0.0, np.bool_(True)], [1.0, 2.0], [2.0, 3.0]], dtype=object),
+            np.array(
+                [[0.0 + 0.0j, 1.0], [1.0, 2.0 + 0.25j], [2.0, 3.0]],
+            ),
             np.zeros((2, 3), dtype=np.float64),
         ],
     )
@@ -456,7 +468,8 @@ class TestEmbeddingBackendFallbacks:
         assert mi >= 0.0
 
     @pytest.mark.parametrize(
-        "backend_value", [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True)]
+        "backend_value",
+        [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
     )
     def test_invalid_mutual_information_backend_payload_falls_back_to_python(
         self,
@@ -512,8 +525,16 @@ class TestEmbeddingBackendFallbacks:
                 np.array([1, 0, 1], dtype=np.int64),
             ),
             (
+                np.array([1.0 + 0.0j, 1.0 + 0.25j, 2.0 + 0.0j]),
+                np.array([1, 0, 1], dtype=np.int64),
+            ),
+            (
                 np.array([1.0, 1.0, 1.0], dtype=np.float64),
                 np.array([np.bool_(True), 0, 1], dtype=object),
+            ),
+            (
+                np.array([1.0, 1.0, 2.0], dtype=np.float64),
+                np.array([1 + 0j, 0 + 0j, 1 + 0j]),
             ),
         ],
     )

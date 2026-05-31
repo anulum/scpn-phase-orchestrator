@@ -234,6 +234,8 @@ def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
     if _contains_boolean_alias(signal):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(signal)
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain real-valued samples")
     try:
         array = raw.astype(np.float64, copy=True).ravel()
     except (TypeError, ValueError) as exc:
@@ -249,6 +251,8 @@ def _validate_embedded(embedded: object) -> FloatArray:
     if _contains_boolean_alias(embedded):
         raise ValueError("embedded must not contain boolean values")
     raw = np.asarray(embedded)
+    if np.iscomplexobj(raw):
+        raise ValueError("embedded must contain real-valued coordinates")
     try:
         array = np.atleast_2d(raw.astype(np.float64, copy=True))
     except (TypeError, ValueError) as exc:
@@ -263,7 +267,7 @@ def _validate_embedded(embedded: object) -> FloatArray:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     result = int(value)
     if result < minimum:
@@ -272,7 +276,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
     result = float(value)
     if not np.isfinite(result) or result < 0.0:
@@ -288,8 +292,11 @@ def _validate_delay_embedding_output(
 ) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("delay embedding output must not contain boolean values")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("delay embedding output must contain real values")
     try:
-        embedded = np.asarray(value, dtype=np.float64)
+        embedded = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("delay embedding output must be numeric") from exc
     if embedded.shape == (t_effective * dimension,):
@@ -307,8 +314,11 @@ def _validate_delay_embedding_output(
 def _validate_non_negative_scalar(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must contain real values")
     try:
-        scalar = np.asarray(value, dtype=np.float64)
+        scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
     if scalar.shape != ():
@@ -329,9 +339,15 @@ def _validate_nn_output(
         raise ValueError("nearest-neighbor distances must not contain boolean values")
     if _contains_boolean_alias(indices):
         raise ValueError("nearest-neighbor indices must not contain boolean values")
+    raw_dist = np.asarray(distances)
+    raw_idx = np.asarray(indices)
+    if np.iscomplexobj(raw_dist):
+        raise ValueError("nearest-neighbor distances must contain real values")
+    if np.iscomplexobj(raw_idx):
+        raise ValueError("nearest-neighbor indices must be integer values")
     try:
-        dist = np.asarray(distances, dtype=np.float64)
-        idx = np.asarray(indices, dtype=np.int64)
+        dist = raw_dist.astype(np.float64, copy=True)
+        idx = raw_idx.astype(np.int64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("nearest-neighbor backend output must be numeric") from exc
     if dist.shape != (n_points,) or idx.shape != (n_points,):
