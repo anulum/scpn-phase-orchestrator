@@ -107,6 +107,13 @@ def cross_recurrence_matrix(
 
 Both return ``(T, T)`` boolean arrays.
 
+Input trajectories are real-valued phase-space samples. The public
+Python boundary rejects boolean aliases, complex-valued buffers,
+non-finite values, non-array-like payloads, and dimensions outside
+the documented 1D/2D trajectory contract before backend dispatch.
+The same real ``float64`` contract is enforced by the direct Go,
+Julia, and Mojo bridges.
+
 ### 2.2 RQA wrappers
 
 ```python
@@ -307,15 +314,16 @@ finally:
 
 ## 7. Tests
 
-Three files (29 tests):
+Module-specific recurrence suites:
 
 ### 7.1 `tests/test_recurrence_algorithm.py`
 
-14 tests:
+Coverage:
 
 * `TestRecurrenceMatrix` — main diagonal always 1; symmetry;
   monotone in ε; large ε → fully recurrent; small ε → only
-  diagonal.
+  diagonal; invalid boolean, complex, non-finite, and non-array
+  trajectory payloads fail at the public boundary.
 * `TestAngularMetric` — wraps ``θ = 0`` / ``2π − ε`` correctly.
 * `TestCrossRecurrence` — self-cross equals plain R;
   mismatched-shape raises.
@@ -337,7 +345,8 @@ Boundary and parity suites:
 * `TestMojoParity` — two seeds at T=15 (subprocess cost bounds
   sample size).
 * `TestDirectBackendBoundaryContracts` — invalid direct inputs fail before
-  optional runtime loading, and invalid recurrence outputs fail before return.
+  optional runtime loading, complex buffers are not coerced to real
+  buffers, and invalid recurrence outputs fail before return.
 * `TestCrossBackendConsistency` — every `AVAILABLE_BACKENDS`
   entry for both RM and cross-RM.
 

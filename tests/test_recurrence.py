@@ -66,6 +66,7 @@ class TestRecurrenceMatrix:
             (np.array([0.0, np.nan], dtype=np.float64), "trajectory"),
             (np.array([[0.0], [np.inf]], dtype=np.float64), "trajectory"),
             (np.array([0.0, True], dtype=object), "trajectory"),
+            (np.array([0.0 + 1.0j, 1.0 + 0.0j]), "trajectory"),
             ([["not-a-state"]], "trajectory"),
         ],
     )
@@ -317,6 +318,8 @@ class TestCrossRecurrence:
             (np.zeros(2), np.array([0.0, np.inf]), "traj_b"),
             (np.array([0.0, True], dtype=object), np.zeros(2), "traj_a"),
             (np.zeros(2), np.array([0.0, False], dtype=object), "traj_b"),
+            (np.array([0.0 + 1.0j, 1.0]), np.zeros(2), "traj_a"),
+            (np.zeros(2), np.array([0.0, 1.0j]), "traj_b"),
             ([["not-a-state"]], np.zeros((1, 1)), "traj_a"),
         ],
     )
