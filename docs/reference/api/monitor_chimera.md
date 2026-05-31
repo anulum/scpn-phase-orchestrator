@@ -85,6 +85,12 @@ def local_order_parameter(
 Returns a ``(N,)`` array of ``R_i`` values. The compute surface for
 the 5-backend chain.
 
+Inputs must be finite real-valued arrays. Boolean aliases and complex
+phase/coupling payloads are rejected before backend dispatch because
+the neighbourhood phasor statistic is defined over real phase angles
+and real coupling weights. Backend local-order vectors are revalidated
+as finite real values in ``[0, 1]`` before their results are accepted.
+
 ### 2.2 `detect_chimera`
 
 ```python

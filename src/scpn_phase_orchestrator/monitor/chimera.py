@@ -166,7 +166,7 @@ class ChimeraState:
         overlap = set(coherent).intersection(incoherent)
         if overlap:
             raise ValueError("coherent_indices and incoherent_indices must be disjoint")
-        if isinstance(self.chimera_index, bool) or not isinstance(
+        if isinstance(self.chimera_index, (bool, np.bool_)) or not isinstance(
             self.chimera_index,
             Real,
         ):
@@ -211,6 +211,8 @@ def _validate_chimera_inputs(
     raw_phases = np.asarray(phases)
     if _contains_boolean_alias(raw_phases):
         raise ValueError("phases must not contain boolean values")
+    if np.iscomplexobj(raw_phases):
+        raise ValueError("phases must contain real-valued phase samples")
     try:
         phases_array = raw_phases.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -224,6 +226,8 @@ def _validate_chimera_inputs(
     raw_knm = np.asarray(knm)
     if _contains_boolean_alias(raw_knm):
         raise ValueError("knm must not contain boolean values")
+    if np.iscomplexobj(raw_knm):
+        raise ValueError("knm must contain real-valued couplings")
     try:
         knm_array = raw_knm.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -241,10 +245,13 @@ def _validate_chimera_inputs(
 
 
 def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
-    if _contains_boolean_alias(value):
+    raw = np.asarray(value)
+    if _contains_boolean_alias(raw):
         raise ValueError("local order parameter output must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("local order parameter output must contain real values")
     try:
-        local = np.asarray(value, dtype=np.float64)
+        local = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("local order parameter output must be numeric") from exc
     if local.shape != (n_oscillators,):
