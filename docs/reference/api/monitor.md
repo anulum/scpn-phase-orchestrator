@@ -308,8 +308,9 @@ synthetic calibration cases for independent, modular, phase-lagged chain, noisy
 locked, and globally locked phase regimes. It is a numerical approximation
 benchmark, not a hardware performance benchmark; the audit record documents
 ordering margins and preserves the same engineering-proxy claim boundary.
-Studio renders those audit records through
-`build_integrated_information_panel()`, which keeps the monitor passive,
+Studio renders those audit records through the public
+`scpn_phase_orchestrator.studio.build_integrated_information_panel()` facade,
+which keeps the monitor passive,
 requires the explicit engineering-proxy claim boundary, and exposes Phi,
 normalised Phi, total-integration ranges, and minimum partitions for operator
 review without enabling actuation or consciousness claims.

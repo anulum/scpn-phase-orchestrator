@@ -12,6 +12,11 @@ Studio helper functions are pure payload builders used by the Streamlit
 operator surface and by tests that validate browser-facing contracts without
 opening transports or writing hardware.
 
+The public `scpn_phase_orchestrator.studio` facade exports the passive physics
+review panels below alongside the lower-level helper module. Operator code can
+therefore depend on the Studio package surface without importing private helper
+paths or bypassing the review-only safety gates.
+
 `build_integrated_information_panel(records)` renders passive
 `integrated_information` monitor audit records into an operator payload with
 latest Phi proxy values, normalised-Phi and total-integration ranges,

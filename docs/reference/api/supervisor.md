@@ -325,8 +325,9 @@ traffic-control oscillation, and plasma over-control. The fixture corpus stays
 non-actuating and execution-disabled, publishes stable scenario/result hashes,
 and is gated in the reference suite so drift, oscillation, and over-control
 threshold behavior remains reproducible across releases.
-Studio renders the resulting audit records through
-`build_strange_loop_studio_panel()`, which preserves the
+Studio renders the resulting audit records through the public
+`scpn_phase_orchestrator.studio.build_strange_loop_studio_panel()` facade,
+which preserves the
 `strange_loop_drift_review_not_live_actuation` boundary, validates SHA-256
 evidence hashes and finite metric ranges, and keeps all recommendations behind
 the normal review and safety gate.
@@ -380,8 +381,9 @@ the same field state. It produces a deterministic, dependency-free SVG heatmap
 plus top-edge labels and snapshot metadata. The renderer is passive: it turns an
 already computed field into a review artefact and does not mutate policy,
 coupling, or actuation state.
-Studio packages those SVG artefacts through
-`build_morphogenetic_field_studio_panel()`, which validates complete SVG
+Studio packages those SVG artefacts through the public
+`scpn_phase_orchestrator.studio.build_morphogenetic_field_studio_panel()`
+facade, which validates complete SVG
 documents, fixed-width heatmap rows, field-energy statistics, and sorted
 off-diagonal topology edges before exposing the panel as passive operator
 evidence.
