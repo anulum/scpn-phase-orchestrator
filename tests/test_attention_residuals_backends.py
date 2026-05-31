@@ -49,6 +49,9 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
     attnres_modulate,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _attnres_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _attnres_validation as attnres_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_go import (
@@ -130,6 +133,10 @@ def _direct_payload(
     theta = np.linspace(0.0, TWO_PI, n, endpoint=False)
     w = np.zeros((1, 8, 8), dtype=np.float64).ravel()
     return knm, theta, w, w.copy(), w.copy(), w.copy(), n, 1, -1, 1.0, 0.25
+
+
+def _mojo_proc(stdout: str) -> object:
+    return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
 
 
 class TestDirectBackendBoundaryContracts:
@@ -223,6 +230,38 @@ class TestDirectBackendBoundaryContracts:
         )
         assert out.dtype == np.float64
         assert out.shape == (0,)
+
+
+class TestDirectMojoBoundaryContracts:
+    """Direct Mojo AttnRes adapter rejects malformed backend stdout."""
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo returned 0 values, expected 9"),
+            ("0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n", "expected 9"),
+            ("0\n1\n2\n\n4\n5\n6\n7\n8\n", "finite modulated"),
+            ("0\nbad\n2\n3\n4\n5\n6\n7\n8\n", "finite modulated"),
+            ("0\nnan\n2\n3\n4\n5\n6\n7\n8\n", "finite modulated"),
+            ("0\n1\n2\n3\ninf\n5\n6\n7\n8\n", "finite modulated"),
+            ("0\n1\n2\n3\n4\n5\n6\n7\n-inf\n", "finite modulated"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_attnres_mojo, "_ensure_exe", lambda: "attnres")
+        monkeypatch.setattr(
+            _attnres_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: _mojo_proc(stdout),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _attnres_mojo.attnres_modulate_mojo(*_direct_payload())
 
 
 class TestBackendTypingContracts:

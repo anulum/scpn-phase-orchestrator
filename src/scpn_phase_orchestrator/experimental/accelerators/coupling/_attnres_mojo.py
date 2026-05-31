@@ -118,10 +118,20 @@ def attnres_modulate_mojo(
         raise ValueError(
             f"Mojo attnres returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    result = np.array(
-        [float(line) for line in proc.stdout.strip().splitlines() if line],
-        dtype=np.float64,
-    )
+    lines = proc.stdout.splitlines()
+    if len(lines) != n * n:
+        raise ValueError(f"Mojo returned {len(lines)} values, expected {n * n}")
+    try:
+        values = [float(line) for line in lines]
+    except ValueError as exc:
+        raise ValueError(
+            "Mojo AttnRes output must contain finite modulated coupling values"
+        ) from exc
+    result = np.asarray(values, dtype=np.float64)
+    if not np.all(np.isfinite(result)):
+        raise ValueError(
+            "Mojo AttnRes output must contain finite modulated coupling values"
+        )
     if result.size != n * n:
         raise ValueError(f"Mojo returned {result.size} values, expected {n * n}")
     return validate_attnres_backend_output(result, n=n)

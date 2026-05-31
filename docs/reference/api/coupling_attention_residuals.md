@@ -174,7 +174,7 @@ call.
 | Position | Backend | Build / dependency | Notes |
 |---|---|---|---|
 | 1 | Rust | ``maturin develop`` from ``spo-kernel/crates/spo-ffi`` | Canonical fast path; PyO3 binding returns ``Bound<PyArray1<f64>>`` directly (no Vec → PyList round-trip). |
-| 2 | Mojo | ``mojo build mojo/attnres.mojo -o mojo/attnres_mojo -Xlinker -lm`` | Subprocess bridge with one-line text protocol; Mojo 0.26 ``UnsafePointer`` C-ABI not yet stable, so full ctypes binding is deferred to Mojo 0.27+. |
+| 2 | Mojo | ``mojo build mojo/attnres.mojo -o mojo/attnres_mojo -Xlinker -lm`` | Subprocess bridge with one-line text protocol; the Python boundary accepts exactly ``N*N`` finite output records before returning a matrix. Mojo 0.26 ``UnsafePointer`` C-ABI is not yet stable, so full ctypes binding is deferred to Mojo 0.27+. |
 | 3 | Julia | ``juliacall`` + ``julia/attnres.jl`` | Bridged lazily; first call pays Julia's one-time PythonCall bootstrap (~30 s) but subsequent calls JIT to native speed. |
 | 4 | Go | ``go build -buildmode=c-shared -o go/libattnres.so go/attnres.go`` | ctypes call into the shared library. No JIT warm-up. |
 | 5 | Python | always present | NumPy reference — the correctness floor, and the implementation all compiled backends mirror bit-for-bit. |
