@@ -41,7 +41,7 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def _run(payload: str) -> list[float]:
+def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -54,7 +54,21 @@ def _run(payload: str) -> list[float]:
         raise ValueError(
             f"Mojo itpc returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [float(line) for line in proc.stdout.strip().splitlines() if line]
+    lines = proc.stdout.splitlines()
+    if len(lines) != expected_count:
+        raise ValueError(
+            f"Mojo {label} must emit exactly {expected_count} scalar line(s), "
+            f"got {len(lines)}"
+        )
+    values: list[float] = []
+    for line in lines:
+        try:
+            values.append(float(line))
+        except ValueError as exc:
+            raise ValueError(
+                f"Mojo {label} emitted a non-scalar ITPC value: {line!r}"
+            ) from exc
+    return values
 
 
 def compute_itpc_mojo(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
@@ -69,7 +83,7 @@ def compute_itpc_mojo(phases_flat: FloatArray, n_trials: int, n_tp: int) -> Floa
         return np.zeros(n_tp, dtype=np.float64)
     tokens: list[str] = ["ITPC", str(n_trials), str(n_tp)]
     tokens.extend(repr(float(x)) for x in phases.tolist())
-    result = _run(" ".join(tokens) + "\n")
+    result = _run(" ".join(tokens) + "\n", expected_count=n_tp, label="ITPC")
     return validate_compute_itpc_backend_output(result, n_tp)
 
 
@@ -97,7 +111,5 @@ def itpc_persistence_mojo(
     ]
     tokens.extend(str(int(x)) for x in idx.tolist())
     tokens.extend(repr(float(x)) for x in phases.tolist())
-    result = _run(" ".join(tokens) + "\n")
-    if len(result) != 1:
-        raise ValueError(f"Mojo ITPC persistence returned {len(result)} values")
+    result = _run(" ".join(tokens) + "\n", expected_count=1, label="PERS")
     return validate_itpc_persistence_backend_output(result[0])

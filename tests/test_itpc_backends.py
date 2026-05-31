@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -178,6 +178,39 @@ class TestDirectBackendBoundaryContracts:
     """Direct optional ITPC backends validate before runtime loading."""
 
     @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("", 2, "ITPC", "exactly 2 scalar"),
+            ("0.25\n0.5\n0.75\n", 2, "ITPC", "exactly 2 scalar"),
+            ("0.25\n\n0.5\n", 2, "ITPC", "exactly 2 scalar"),
+            ("not-a-scalar\n", 1, "PERS", "non-scalar"),
+        ],
+    )
+    def test_mojo_itpc_stdout_contract_rejects_malformed_payloads(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(itpc_mojo_mod, "_ensure_exe", lambda: "itpc_mojo")
+        monkeypatch.setattr(
+            itpc_mojo_mod.subprocess,
+            "run",
+            lambda *args, **kwargs: SimpleNamespace(
+                returncode=0, stdout=stdout, stderr=""
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            itpc_mojo_mod._run(
+                "ITPC 2 2 0.0 0.2 0.4 0.6\n",
+                expected_count=expected_count,
+                label=label,
+            )
+
+    @pytest.mark.parametrize(
         "backend",
         [compute_itpc_go, compute_itpc_julia, compute_itpc_mojo],
     )
@@ -262,7 +295,11 @@ class TestDirectBackendBoundaryContracts:
             )
             backend = compute_itpc_julia
         else:
-            monkeypatch.setattr(itpc_mojo_mod, "_run", lambda _payload: [0.25])
+            monkeypatch.setattr(
+                itpc_mojo_mod,
+                "_run",
+                lambda _payload, *, expected_count, label: [0.25],
+            )
             backend = compute_itpc_mojo
 
         with pytest.raises(ValueError, match=match):
@@ -302,22 +339,15 @@ class TestDirectBackendBoundaryContracts:
             )
             backend = itpc_persistence_julia
         else:
-            monkeypatch.setattr(itpc_mojo_mod, "_run", lambda _payload: [invalid_value])
+            monkeypatch.setattr(
+                itpc_mojo_mod,
+                "_run",
+                lambda _payload, *, expected_count, label: [invalid_value],
+            )
             backend = itpc_persistence_mojo
 
         with pytest.raises(ValueError, match="ITPC persistence backend output"):
             backend(phases, 2, 2, indices)
-
-    def test_mojo_persistence_rejects_malformed_output_length(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        phases = np.array([0.0, 0.2, 0.4, 0.6], dtype=np.float64)
-        indices = np.array([0, 1], dtype=np.int64)
-        monkeypatch.setattr(itpc_mojo_mod, "_run", lambda _payload: [0.25, 0.5])
-
-        with pytest.raises(ValueError, match="Mojo ITPC persistence returned 2"):
-            itpc_persistence_mojo(phases, 2, 2, indices)
 
 
 def test_rust_loader_returns_kernel_functions(monkeypatch: pytest.MonkeyPatch) -> None:

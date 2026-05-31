@@ -164,6 +164,9 @@ runtimes:
   ``[0, 1]``.
 * returned persistence scores must be finite real scalars in ``[0, 1]``; Mojo
   persistence must emit exactly one scalar.
+* the Mojo subprocess bridge must emit exact stdout cardinality before numeric
+  parsing: `ITPC` emits one scalar line per time point and `PERS` emits one
+  scalar line. Missing, extra, blank, or non-scalar lines fail closed.
 
 Empty trial or timepoint payloads preserve the Python fallback contract by
 returning an empty ITPC vector or `0.0` persistence before shared-library
@@ -207,7 +210,8 @@ Single-file stdin executable with two verbs (`ITPC` / `PERS`). The
 compute kernel mirrors Julia line-for-line — a time-point outer
 loop, trial inner loop, `sqrt(sr² + si²) / N` per time point. The
 persistence branch reuses the `compute_itpc` pass to save a full
-second traversal.
+second traversal. The Python bridge requires exact stdout cardinality before
+parsing: `ITPC` emits `n_tp` scalar lines and `PERS` emits one scalar line.
 
 ### 4.5 Python (`src/.../monitor/itpc.py`)
 
@@ -344,6 +348,8 @@ Three files (31 tests):
 * `TestMojoParity` — two seeds at `1e-9` + persistence check.
 * `TestCrossBackendConsistency` — iterates every
   `AVAILABLE_BACKENDS` entry under the tolerance matrix.
+* `TestDirectBackendBoundaryContracts` — direct adapter inputs, backend
+  outputs, and Mojo stdout cardinality fail closed at the bridge boundary.
 
 ### 7.3 `tests/test_itpc_stability.py` — long-run invariants
 
