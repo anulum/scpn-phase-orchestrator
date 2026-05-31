@@ -223,6 +223,94 @@ class TestMultiverseCounterfactualRollouts:
 
         assert not np.isclose(baseline_final, boosted_final)
 
+    @pytest.mark.parametrize(
+        ("field", "message"),
+        [
+            ("baseline_k", "baseline_k diagonal"),
+            ("baseline_alpha", "baseline_alpha diagonal"),
+        ],
+    )
+    def test_rejects_self_coupling_baseline_matrices(
+        self, field: str, message: str
+    ) -> None:
+        phases, omegas, baseline_k, baseline_alpha = _base_inputs()
+        if field == "baseline_k":
+            baseline_k = baseline_k.copy()
+            baseline_k[1, 1] = 0.01
+        else:
+            baseline_alpha = baseline_alpha.copy()
+            baseline_alpha[2, 2] = 0.01
+
+        with pytest.raises(ValueError, match=message):
+            simulate_multiverse_counterfactual_branches(
+                phases=phases,
+                omegas=omegas,
+                baseline_k=baseline_k,
+                baseline_alpha=baseline_alpha,
+                branch_action_sets=((ControlAction("K", "global", 0.1, 1.0, "bad"),),),
+            )
+
+    def test_rejects_self_coupling_topology_masks(self) -> None:
+        phases, omegas, baseline_k, baseline_alpha = _base_inputs()
+        topology_mask = np.ones_like(baseline_k)
+        topology_mask[0, 0] = 1.0
+
+        with pytest.raises(ValueError, match="topology_mask diagonal"):
+            simulate_multiverse_counterfactual_branches(
+                phases=phases,
+                omegas=omegas,
+                baseline_k=baseline_k,
+                baseline_alpha=baseline_alpha,
+                branch_action_sets=(
+                    (ControlAction("K", "global", 0.1, 1.0, "bad mask"),),
+                ),
+                topology_masks=(topology_mask,),
+            )
+
+    def test_matrix_branch_actions_preserve_off_diagonal_kuramoto_graph(self) -> None:
+        phases, omegas, baseline_k, baseline_alpha = _base_inputs()
+        zero_k = np.zeros_like(baseline_k)
+        zero_alpha = np.zeros_like(baseline_alpha)
+        off_diagonal = np.ones_like(baseline_k)
+        np.fill_diagonal(off_diagonal, 0.0)
+
+        action_manifest = simulate_multiverse_counterfactual_branches(
+            phases=phases,
+            omegas=omegas,
+            baseline_k=zero_k,
+            baseline_alpha=zero_alpha,
+            branch_action_sets=(
+                (
+                    ControlAction("K", "global", 0.3, 1.0, "global coupling"),
+                    ControlAction("alpha", "global", 0.5, 1.0, "global lag"),
+                ),
+            ),
+            horizon=6,
+            dt=0.02,
+        )
+        explicit_manifest = simulate_multiverse_counterfactual_branches(
+            phases=phases,
+            omegas=omegas,
+            baseline_k=0.3 * off_diagonal,
+            baseline_alpha=0.5 * off_diagonal,
+            branch_action_sets=((),),
+            horizon=6,
+            dt=0.02,
+        )
+
+        action_record = action_manifest.branch_records[0]
+        explicit_record = explicit_manifest.branch_records[0]
+        assert action_record.final_R == pytest.approx(
+            explicit_record.final_R, abs=1e-12
+        )
+        assert action_record.final_psi == pytest.approx(
+            explicit_record.final_psi, abs=1e-12
+        )
+        assert action_record.topology_edge_count == explicit_record.topology_edge_count
+        assert action_record.topology_scale == pytest.approx(
+            explicit_record.topology_scale, abs=1e-12
+        )
+
     def test_jax_backend_matches_numpy_branch_invariants(self) -> None:
         pytest.importorskip("jax")
         pytest.importorskip("jax.numpy")

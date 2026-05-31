@@ -1087,7 +1087,10 @@ acceleration for larger branch corpora where JAX can place the vectorized
 rollout on an available accelerator. Reference benchmarks gate JAX output
 against NumPy branch hashes, topology metrics, order-parameter trajectories, and
 final phase angles while preserving the non-actuating, execution-disabled review
-boundary. Domain scenario fixtures now cover power-grid, cardiac-rhythm,
+boundary. Multiverse branch rollouts preserve the Kuramoto graph contract by
+requiring zero diagonal baseline coupling, phase-lag, and topology-mask matrices;
+matrix branch actions are projected back onto the off-diagonal graph before
+simulation. Domain scenario fixtures now cover power-grid, cardiac-rhythm,
 cyber-industrial, traffic-flow, manufacturing process-control, and plasma-control
 use cases with simulator-compatible `K`, `alpha`, `zeta`, and `Psi` candidate
 controls.

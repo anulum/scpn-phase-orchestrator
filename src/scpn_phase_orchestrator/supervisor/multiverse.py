@@ -208,6 +208,13 @@ def _require_shape(name: str, array: FloatArray, shape: tuple[int, ...]) -> None
         raise ValueError(f"{name} must contain only finite values")
 
 
+def _require_zero_diagonal(name: str, array: FloatArray) -> None:
+    if array.ndim != 2 or array.shape[0] != array.shape[1]:
+        raise ValueError(f"{name} must be a square matrix")
+    if not np.allclose(np.diag(array), 0.0, rtol=0.0, atol=0.0):
+        raise ValueError(f"{name} diagonal must be zero")
+
+
 def _stable_hash(payload: object) -> str:
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return sha256(blob.encode("utf-8")).hexdigest()
@@ -283,6 +290,9 @@ def _normalise_branch_specs(
                 raise ValueError(
                     f"branch[{spec.branch_id}].topology_mask must contain finite values"
                 )
+            _require_zero_diagonal(
+                f"branch[{spec.branch_id}].topology_mask", spec.topology_mask
+            )
         result.append(
             MultiverseBranchSpec(
                 branch_id=spec.branch_id,
@@ -365,6 +375,8 @@ def _apply_branch_actions(
         else:
             psi = (psi + value) % TWO_PI
 
+    np.fill_diagonal(knm, 0.0)
+    np.fill_diagonal(alpha, 0.0)
     if topology_mask is not None:
         knm *= topology_mask
         alpha *= topology_mask
@@ -597,6 +609,8 @@ def simulate_multiverse_counterfactual_branches(
     _require_shape("omegas", omegas_arr, (n_osc,))
     _require_shape("baseline_k", baseline_k_arr, (n_osc, n_osc))
     _require_shape("baseline_alpha", baseline_alpha_arr, (n_osc, n_osc))
+    _require_zero_diagonal("baseline_k", baseline_k_arr)
+    _require_zero_diagonal("baseline_alpha", baseline_alpha_arr)
 
     horizon_i = _require_positive_int(horizon, "horizon")
     dt_f = _require_positive_real(dt, "dt")
