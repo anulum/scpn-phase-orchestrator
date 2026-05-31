@@ -76,6 +76,27 @@ class TestSTLBuiltinFallback:
         with pytest.raises(ImportError, match="rtamt"):
             monitor.evaluate({"x": [1.0], "y": [0.0]})
 
+    @pytest.mark.parametrize(
+        ("trace", "match"),
+        [
+            ({"R": [0.4, True]}, "boolean"),
+            (
+                {"R": np.asarray([0.4, complex(0.5, 0.0)], dtype=object)},
+                "real-valued",
+            ),
+            ({"R": [0.4, np.inf]}, "finite"),
+        ],
+    )
+    def test_builtin_trace_rejects_non_real_or_nonfinite_payloads(
+        self,
+        trace: dict[str, object],
+        match: str,
+    ) -> None:
+        monitor = STLMonitor("always (R >= 0.3)")
+
+        with pytest.raises(ValueError, match=match):
+            monitor.evaluate(trace)
+
 
 @needs_rtamt
 class TestSTLMonitor:

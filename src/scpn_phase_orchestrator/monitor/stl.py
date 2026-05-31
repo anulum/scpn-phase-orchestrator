@@ -355,16 +355,8 @@ class STLMonitor:
         A positive value means the specification is satisfied; negative
         means violated.  The magnitude indicates how far from the boundary.
         """
-        if not trace:
-            raise ValueError("trace must contain at least one signal")
-
-        lengths = {len(v) for v in trace.values()}
-        if len(lengths) != 1:
-            raise ValueError("all signals in trace must have equal length")
-
-        length = lengths.pop()
-        if length == 0:
-            raise ValueError("trace signals must be non-empty")
+        _validate_trace(trace)
+        length = len(next(iter(trace.values())))
 
         if self._simple is not None:
             return _evaluate_simple(self._simple, trace)
@@ -383,8 +375,8 @@ class STLMonitor:
 
         # rtamt discrete-time offline: flat lists per signal + 'time' key
         datasets: dict[str, list[float]] = {}
-        for name, values in trace.items():
-            datasets[name] = [float(v) for v in values]
+        for name in trace:
+            datasets[name] = _trace_signal_array(name, trace).tolist()
         if "time" not in datasets:
             datasets["time"] = [float(t) for t in range(length)]
 
@@ -740,6 +732,46 @@ def _validate_trace(trace: dict[str, list[float]]) -> None:
     length = lengths.pop()
     if length == 0:
         raise ValueError("trace signals must be non-empty")
+    for signal in trace:
+        _trace_signal_array(signal, trace)
+
+
+def _trace_signal_array(signal: str, trace: dict[str, list[float]]) -> FloatArray:
+    if signal not in trace:
+        raise ValueError(f"trace missing signal {signal!r}")
+
+    raw = np.asarray(trace[signal], dtype=object)
+    if raw.ndim != 1:
+        raise ValueError(f"trace signal {signal!r} must be a 1-D numeric signal")
+    if _contains_boolean_alias(raw):
+        raise ValueError(f"trace signal {signal!r} must not contain boolean values")
+    if _contains_complex_alias(raw):
+        raise ValueError(f"trace signal {signal!r} must contain real-valued samples")
+
+    try:
+        values = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"trace signal {signal!r} must be numeric") from exc
+
+    if not np.all(np.isfinite(values)):
+        raise ValueError(f"trace signal {signal!r} must contain only finite values")
+    return np.ascontiguousarray(values, dtype=np.float64)
+
+
+def _contains_boolean_alias(raw: NDArray[np.generic]) -> bool:
+    if raw.dtype == np.bool_:
+        return True
+    if raw.dtype == object:
+        return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+    return False
+
+
+def _contains_complex_alias(raw: NDArray[np.generic]) -> bool:
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype == object:
+        return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+    return False
 
 
 def _validate_horizon_steps(horizon_steps: int) -> None:
@@ -772,9 +804,7 @@ def _predicate_robustness(
     threshold: float,
     trace: dict[str, list[float]],
 ) -> FloatArray:
-    if signal not in trace:
-        raise ValueError(f"trace missing signal {signal!r}")
-    values = np.asarray(trace[signal], dtype=np.float64)
+    values = _trace_signal_array(signal, trace)
     if op in {">=", ">"}:
         return values - threshold
     if op in {"<=", "<"}:

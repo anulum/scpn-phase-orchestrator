@@ -119,6 +119,25 @@ def test_automaton_synthesis_rejects_unsupported_or_incomplete_traces():
         )
 
 
+@pytest.mark.parametrize(
+    ("trace", "match"),
+    [
+        ({"R": [0.4, False]}, "boolean"),
+        (
+            {"R": [0.4, complex(0.5, 0.0)]},
+            "real-valued",
+        ),
+        ({"R": [0.4, float("nan")]}, "finite"),
+    ],
+)
+def test_automaton_and_controller_paths_reject_non_real_or_nonfinite_traces(
+    trace: dict[str, list[object]],
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        synthesise_stl_monitoring_automaton("always (R >= 0.3)", trace)
+
+
 def test_policy_stl_automata_preserve_policy_identity_and_audit_severity():
     specs = [
         PolicySTLSpec(

@@ -49,6 +49,13 @@ Positive robustness means the formula is satisfied; negative robustness
 means violated. `evaluate_result()` returns an audit-ready result with
 the formula, robustness, satisfaction boolean, and backend name.
 
+Trace signals are validated at the public boundary before builtin evaluation,
+`rtamt` handoff, automaton synthesis, controller synthesis, or closed-loop
+planning. Each signal must be a one-dimensional, finite, real-valued numeric
+sequence with no boolean aliases; complex/object-complex payloads and NaN/Inf
+samples are rejected because they do not define ordered STL predicate
+robustness.
+
 ```python
 from scpn_phase_orchestrator.monitor.stl import STLMonitor
 
