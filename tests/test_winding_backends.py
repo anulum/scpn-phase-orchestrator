@@ -16,6 +16,8 @@ disagreement is exactly ``0`` across seeds and sizes.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -86,6 +88,38 @@ class TestDirectBackendBoundaryContracts:
     """Direct optional winding backends validate before runtime loading."""
 
     @pytest.mark.parametrize(
+        ("stdout", "expected_count", "match"),
+        [
+            ("", 2, "exactly 2 integer"),
+            ("0\n1\n-1\n", 2, "exactly 2 integer"),
+            ("0\n\n1\n", 2, "exactly 2 integer"),
+            ("0\nnot-an-int\n", 2, "non-integer"),
+        ],
+    )
+    def test_mojo_winding_stdout_contract_rejects_malformed_payloads(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(winding_mojo, "_ensure_exe", lambda: "winding_mojo")
+        monkeypatch.setattr(
+            winding_mojo.subprocess,
+            "run",
+            lambda *args, **kwargs: SimpleNamespace(
+                returncode=0, stdout=stdout, stderr=""
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            winding_mojo._run(
+                "WIND 2 2 0.0 1.0 0.5 1.5\n",
+                expected_count=expected_count,
+                label="WIND",
+            )
+
+    @pytest.mark.parametrize(
         "backend",
         [winding_numbers_go, winding_numbers_julia, winding_numbers_mojo],
     )
@@ -147,7 +181,11 @@ class TestDirectBackendBoundaryContracts:
     def test_mojo_backend_rejects_unbounded_winding_output(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(winding_mojo, "_run", lambda payload: [3])
+        monkeypatch.setattr(
+            winding_mojo,
+            "_run",
+            lambda payload, *, expected_count, label: [3],
+        )
         traj = _problem(45, t=4, n=1)
 
         with pytest.raises(ValueError, match="wrapped-increment"):

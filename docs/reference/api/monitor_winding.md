@@ -111,6 +111,9 @@ runtimes:
 * returned winding vectors must be finite integer-valued `int64` arrays of
   length `n`, contain no boolean aliases, and stay within the wrapped-increment
   bound implied by `t`.
+* the Mojo subprocess bridge must emit exactly `n` integer stdout lines for the
+  `WIND` verb; missing, extra, blank, or non-integer lines fail closed before
+  winding-vector validation.
 
 Invalid topological phase histories therefore fail deterministically in Python
 before shared-library loading, Julia initialisation, or subprocess execution.
@@ -141,7 +144,8 @@ result lives in ``(−π, π]`` exactly as in Python.
 Stdin executable with one verb (`WIND`). Uses
 ``Float64(Int(x / 2π)) * 2π`` for integer truncation because Mojo
 0.26's `%` on `Float64` follows sign conventions that differ from
-`math.fmod` — the explicit form matches Python exactly.
+`math.fmod` — the explicit form matches Python exactly. The Python bridge
+requires exactly one integer stdout line per oscillator.
 
 ### 4.5 Python (`monitor/winding.py`)
 
@@ -256,7 +260,7 @@ Three files (20 tests):
 
 ### 7.2 `tests/test_winding_backends.py`
 
-7 tests:
+Boundary and parity suites:
 
 * `TestRustParity` — Hypothesis sweep over random ``(N, seed)``
   with array-exact equality.
