@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._compat import TWO_PI
+
 __all__ = ["_ensure_exe", "simplicial_run_mojo"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -75,8 +77,19 @@ def simplicial_run_mojo(
         raise ValueError(
             f"Mojo simplicial exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     if len(lines) != n:
         raise ValueError(f"Mojo SIMP returned {len(lines)} lines, expected {n}")
-    result: FloatArray = np.array([float(x) for x in lines], dtype=np.float64)
+    values: list[float] = []
+    for line in lines:
+        try:
+            value = float(line)
+        except ValueError as exc:
+            raise ValueError(
+                "Mojo SIMP output must be finite phases in [0, 2*pi)"
+            ) from exc
+        if not np.isfinite(value) or value < 0.0 or value >= TWO_PI:
+            raise ValueError("Mojo SIMP output must be finite phases in [0, 2*pi)")
+        values.append(value)
+    result: FloatArray = np.array(values, dtype=np.float64)
     return result

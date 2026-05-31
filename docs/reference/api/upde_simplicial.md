@@ -395,6 +395,11 @@ drift matters, use `SplittingEngine` (second-order) or `GeometricEngine`
 The 3-body factorisation introduces no additional numerical error — it is
 an exact algebraic identity, not an approximation.
 
+Direct Mojo simplicial adapters enforce exact raw stdout cardinality and finite
+phase-domain values: `SIMP` must emit exactly one finite scalar in `[0, 2*pi)`
+per oscillator. Blank, truncated, overlong, non-numeric, non-finite, or
+out-of-domain output is rejected before public arrays are returned.
+
 ### Test Coverage
 
 - **Rust tests:** 10 (simplicial module in spo-engine)

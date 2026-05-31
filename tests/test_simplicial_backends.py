@@ -20,6 +20,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import _simplicial_mojo
 from scpn_phase_orchestrator.upde import simplicial as s_mod
 from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 
@@ -156,6 +157,50 @@ class TestHypothesisParity:
         ref = _run_backend("python", seed, n=n, sigma2=sigma2)
         got = _run_backend("go", seed, n=n, sigma2=sigma2)
         assert np.max(np.abs(got - ref)) < TOL
+
+
+class TestDirectMojoBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo SIMP returned 0 lines, expected 2"),
+            ("0.1\n0.2\n0.3\n", "Mojo SIMP returned 3 lines, expected 2"),
+            ("0.1\n\n0.2\n", "Mojo SIMP returned 3 lines, expected 2"),
+            ("0.1\nnot-a-number\n", "finite phases"),
+            ("0.1\nnan\n", "finite phases"),
+            ("0.1\n7.0\n", "finite phases"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_simplicial_mojo, "_ensure_exe", lambda: "simplicial")
+        monkeypatch.setattr(
+            _simplicial_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: types.SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _simplicial_mojo.simplicial_run_mojo(
+                np.zeros(2, dtype=np.float64),
+                np.ones(2, dtype=np.float64),
+                np.zeros(4, dtype=np.float64),
+                np.zeros(4, dtype=np.float64),
+                2,
+                0.0,
+                0.0,
+                0.5,
+                0.01,
+                1,
+            )
 
 
 class TestOptionalLoaderSuccessPaths:
