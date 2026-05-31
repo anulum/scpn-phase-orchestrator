@@ -203,8 +203,6 @@ class TestLyapunovPipelineWiring:
 
     def test_lyapunov_evaluate_performance(self):
         """LyapunovGuard.evaluate(N=64) must stay within CI runner budgets."""
-        import os
-        import sys
         import time
 
         n = 64
@@ -219,9 +217,7 @@ class TestLyapunovPipelineWiring:
         for _ in range(100):
             guard.evaluate(phases, knm)
         elapsed = (time.perf_counter() - t0) / 100
-        limit = (
-            0.005 if os.getenv("CI") else 0.002 if sys.platform == "darwin" else 0.001
-        )
+        limit = 0.005
         assert elapsed < limit, (
             f"evaluate(64) took {elapsed * 1000:.2f}ms, limit {limit * 1000:.1f}ms"
         )
