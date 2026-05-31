@@ -157,12 +157,14 @@ nav:
       - Monitor: reference/api/monitor.md
       - "Monitor — Chimera": reference/api/monitor_chimera.md
       - "Monitor — Dimension": reference/api/monitor_dimension.md
+      - "Monitor — Embedding": reference/api/monitor_embedding.md
       - "Monitor — Entropy Production": reference/api/monitor_entropy_prod.md
       - "Monitor — Sleep Staging": reference/api/monitor_sleep_staging.md
       - "Monitor — EVS (Entrainment)": reference/api/monitor_evs.md
       - "Monitor — ITPC": reference/api/monitor_itpc.md
       - "Monitor — Lyapunov": reference/api/monitor_lyapunov.md
       - "Monitor — NPE": reference/api/monitor_npe.md
+      - "Monitor — Poincare": reference/api/monitor_poincare.md
       - "Monitor — Recurrence": reference/api/monitor_recurrence.md
       - "Monitor — Transfer Entropy": reference/api/monitor_transfer_entropy.md
       - "Monitor — Winding": reference/api/monitor_winding.md
