@@ -101,7 +101,13 @@ def steady_state_r_mojo(
         raise ValueError(
             f"Mojo basin_stability exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    line = proc.stdout.strip()
-    if not line:
-        raise ValueError("Mojo STEADY returned empty output")
-    return validate_basin_stability_output(float(line))
+    lines = proc.stdout.splitlines()
+    if len(lines) != 1:
+        raise ValueError(f"Mojo STEADY returned {len(lines)} lines, expected 1")
+    try:
+        steady_state_r = float(lines[0])
+    except ValueError as exc:
+        raise ValueError(
+            "Mojo STEADY output must contain one finite steady-state R scalar"
+        ) from exc
+    return validate_basin_stability_output(steady_state_r)

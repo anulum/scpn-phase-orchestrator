@@ -95,6 +95,10 @@ def _direct_payload(n: int = 5):
     return phases, omegas, knm, alpha, n, 1.0, 0.01, 20, 10
 
 
+def _mojo_proc(stdout: str) -> object:
+    return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
+
+
 def _reference_R(n: int, strength: float, seed: int) -> float:
     omegas = np.ones(n)
     knm = _all_to_all(n, strength=strength)
@@ -181,6 +185,31 @@ class TestDirectBackendBoundaryContracts:
         payload = list(_direct_payload())
         payload[8] = 0
         assert backend(*payload) == 0.0
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo STEADY returned 0 lines, expected 1"),
+            ("\n", "one finite steady-state R"),
+            ("0.5\n0.6\n", "expected 1"),
+            ("not-a-number\n", "one finite steady-state R"),
+            ("nan\n", "steady-state R must be finite"),
+            ("inf\n", "steady-state R must be finite"),
+            ("1.2\n", "steady-state R must lie in \\[0, 1\\]"),
+        ],
+    )
+    def test_mojo_steady_state_rejects_malformed_stdout(
+        self, monkeypatch: pytest.MonkeyPatch, stdout: str, match: str
+    ) -> None:
+        monkeypatch.setattr(basin_mojo, "_ensure_exe", lambda: "basin_stability")
+        monkeypatch.setattr(
+            basin_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: _mojo_proc(stdout),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            basin_mojo.steady_state_r_mojo(*_direct_payload())
 
 
 class TestSteadyStateRParity:

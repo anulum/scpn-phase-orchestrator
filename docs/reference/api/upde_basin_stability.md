@@ -270,6 +270,9 @@ must be finite real flattened `N*N` buffers; `N` must be a positive integer;
 step counts must be non-negative integers. A zero-measure direct call returns
 `0.0` without requiring the optional backend binary or runtime. Non-zero
 backend results are checked as order parameters and must lie in `[0, 1]`.
+The Mojo subprocess boundary accepts exactly one finite scalar stdout record
+for the steady-state order parameter, rejecting blank, multi-line, non-finite,
+and out-of-range records before they can enter the basin classification.
 
 ### 4.3 Reproducibility
 
