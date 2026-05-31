@@ -265,6 +265,19 @@ class TestDirectBackendBoundaryContracts:
 
     @pytest.mark.parametrize(
         "fn",
+        [delay_embed_go, delay_embed_julia, delay_embed_mojo],
+    )
+    def test_delay_backend_rejects_object_complex_signal_alias_before_runtime_load(
+        self,
+        fn: DelayBackend,
+    ) -> None:
+        signal = np.array([0.0 + 0.0j, 1.0 + 0.25j, 2.0 + 0.0j], dtype=object)
+
+        with pytest.raises(ValueError, match="real"):
+            fn(signal, 1, 2)
+
+    @pytest.mark.parametrize(
+        "fn",
         [mutual_information_go, mutual_information_julia, mutual_information_mojo],
     )
     @pytest.mark.parametrize(
@@ -289,6 +302,19 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match=message):
             fn(signal, lag, n_bins)
+
+    @pytest.mark.parametrize(
+        "fn",
+        [mutual_information_go, mutual_information_julia, mutual_information_mojo],
+    )
+    def test_mi_backend_rejects_object_complex_signal_alias_before_runtime_load(
+        self,
+        fn: MiBackend,
+    ) -> None:
+        signal = np.array([0.0 + 0.0j, 1.0 + 0.25j, 0.0 + 0.0j], dtype=object)
+
+        with pytest.raises(ValueError, match="real"):
+            fn(signal, 1, 8)
 
     @pytest.mark.parametrize(
         "fn",
@@ -319,6 +345,55 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match=message):
             fn(embedded, t, m)
+
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            nearest_neighbor_distances_go,
+            nearest_neighbor_distances_julia,
+            nearest_neighbor_distances_mojo,
+        ],
+    )
+    def test_nn_backend_rejects_object_complex_embedded_alias_before_runtime_load(
+        self,
+        fn: NnBackend,
+    ) -> None:
+        embedded = np.array([0.0 + 0.0j, 1.0 + 0.25j], dtype=object)
+
+        with pytest.raises(ValueError, match="real"):
+            fn(embedded, 1, 2)
+
+    def test_backend_output_validators_reject_object_complex_aliases_as_non_real(
+        self,
+    ) -> None:
+        signal = np.arange(8, dtype=np.float64)
+        with pytest.raises(ValueError, match="real"):
+            embedding_validation.validate_delay_embed_backend_output(
+                np.array(
+                    [[0.0 + 0.0j, 2.0], [1.0, 3.0 + 0.25j], [2.0, 4.0]],
+                    dtype=object,
+                ),
+                signal=signal,
+                delay=2,
+                dimension=2,
+                t_effective=3,
+            )
+        with pytest.raises(ValueError, match="real"):
+            embedding_validation.validate_mutual_information_backend_output(
+                np.array(1.0 + 0.0j, dtype=object)
+            )
+        with pytest.raises(ValueError, match="real"):
+            embedding_validation.validate_nearest_neighbor_backend_outputs(
+                np.array([1.0 + 0.0j, 2.0 + 0.25j], dtype=object),
+                np.array([1.0, 0.0]),
+                t=2,
+            )
+        with pytest.raises(ValueError, match="integer"):
+            embedding_validation.validate_nearest_neighbor_backend_outputs(
+                np.array([1.0, 2.0]),
+                np.array([1.0 + 0.0j, 0.0 + 0.25j], dtype=object),
+                t=2,
+            )
 
     @pytest.mark.parametrize(
         ("stdout", "expected_count", "label", "match"),

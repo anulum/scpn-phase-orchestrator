@@ -67,6 +67,12 @@ class TestDelayEmbed:
         with pytest.raises(ValueError, match="signal"):
             delay_embed(signal, delay=1, dimension=1)
 
+    def test_rejects_object_complex_signal_alias_as_non_real(self) -> None:
+        signal = np.array([0.0 + 0.0j, 1.0 + 0.25j, 2.0 + 0.0j], dtype=object)
+
+        with pytest.raises(ValueError, match="real-valued"):
+            delay_embed(signal, delay=1, dimension=1)
+
     @pytest.mark.parametrize("delay", [False, 0, -1, 1.5, "1"])
     def test_rejects_invalid_delay(self, delay: Any) -> None:
         with pytest.raises(ValueError, match="delay"):
@@ -139,6 +145,12 @@ class TestMutualInformationContracts:
         with pytest.raises(ValueError, match="signal"):
             mutual_information(signal, lag=1, n_bins=4)
 
+    def test_rejects_object_complex_signal_alias_as_non_real(self) -> None:
+        signal = np.array([0.0 + 0.0j, 1.0 + 0.25j, 0.0 + 0.0j], dtype=object)
+
+        with pytest.raises(ValueError, match="real-valued"):
+            mutual_information(signal, lag=1, n_bins=4)
+
     @pytest.mark.parametrize("lag", [False, -1, 1.5, "1"])
     def test_rejects_invalid_lag(self, lag: Any) -> None:
         with pytest.raises(ValueError, match="lag"):
@@ -169,6 +181,15 @@ class TestNearestNeighborContracts:
     )
     def test_rejects_invalid_embedded_points(self, embedded: Any) -> None:
         with pytest.raises(ValueError, match="embedded"):
+            nearest_neighbor_distances(embedded)
+
+    def test_rejects_object_complex_embedded_alias_as_non_real(self) -> None:
+        embedded = np.array(
+            [[0.0 + 0.0j], [1.0 + 0.25j], [3.0 + 0.0j]],
+            dtype=object,
+        )
+
+        with pytest.raises(ValueError, match="real-valued"):
             nearest_neighbor_distances(embedded)
 
     def test_accepts_array_like_embedded_points(self) -> None:
@@ -202,6 +223,39 @@ class TestValidationBoundarySemantics:
     def test_validate_non_negative_real_rejects_boolean(self) -> None:
         with pytest.raises(ValueError, match="finite non-negative real"):
             em_mod._validate_non_negative_real(np.bool_(True), name="atol")
+
+    def test_public_output_helpers_reject_object_complex_aliases_as_non_real(
+        self,
+    ) -> None:
+        signal = np.arange(8, dtype=np.float64)
+        with pytest.raises(ValueError, match="real"):
+            em_mod._validate_delay_embedding_output(
+                np.array(
+                    [[0.0 + 0.0j, 2.0], [1.0, 3.0 + 0.25j], [2.0, 4.0]],
+                    dtype=object,
+                ),
+                signal=signal,
+                delay=2,
+                t_effective=3,
+                dimension=2,
+            )
+        with pytest.raises(ValueError, match="real"):
+            em_mod._validate_non_negative_scalar(
+                np.array(1.0 + 0.0j, dtype=object),
+                name="mutual_information",
+            )
+        with pytest.raises(ValueError, match="real"):
+            em_mod._validate_nn_output(
+                np.array([1.0 + 0.0j, 2.0 + 0.25j], dtype=object),
+                np.array([1.0, 0.0]),
+                n_points=2,
+            )
+        with pytest.raises(ValueError, match="integer"):
+            em_mod._validate_nn_output(
+                np.array([1.0, 2.0]),
+                np.array([1.0 + 0.0j, 0.0 + 0.25j], dtype=object),
+                n_points=2,
+            )
 
 
 class TestEmbeddingResultBoundary:
@@ -262,6 +316,18 @@ class TestEmbeddingResultBoundary:
     def test_rejects_invalid_record(self, payload: dict[str, Any]) -> None:
         with pytest.raises(ValueError):
             EmbeddingResult(**payload)
+
+    def test_rejects_object_complex_trajectory_alias_as_non_real(self) -> None:
+        with pytest.raises(ValueError, match="real-valued"):
+            EmbeddingResult(
+                trajectory=np.array(
+                    [[0.0 + 0.0j, 1.0 + 0.25j]],
+                    dtype=object,
+                ),
+                delay=1,
+                dimension=2,
+                T_effective=1,
+            )
 
 
 class TestOptimalDelay:

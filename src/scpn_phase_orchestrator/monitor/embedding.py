@@ -230,11 +230,20 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
 def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
     if _contains_boolean_alias(signal):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(signal)
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError(f"{name} must contain real-valued samples")
     try:
         array = raw.astype(np.float64, copy=True).ravel()
@@ -251,7 +260,7 @@ def _validate_embedded(embedded: object) -> FloatArray:
     if _contains_boolean_alias(embedded):
         raise ValueError("embedded must not contain boolean values")
     raw = np.asarray(embedded)
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("embedded must contain real-valued coordinates")
     try:
         array = np.atleast_2d(raw.astype(np.float64, copy=True))
@@ -295,7 +304,7 @@ def _validate_delay_embedding_output(
     if _contains_boolean_alias(value):
         raise ValueError("delay embedding output must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("delay embedding output must contain real values")
     try:
         embedded = raw.astype(np.float64, copy=True)
@@ -324,7 +333,7 @@ def _validate_non_negative_scalar(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError(f"{name} must contain real values")
     try:
         scalar = raw.astype(np.float64, copy=True)
@@ -350,9 +359,9 @@ def _validate_nn_output(
         raise ValueError("nearest-neighbor indices must not contain boolean values")
     raw_dist = np.asarray(distances)
     raw_idx = np.asarray(indices)
-    if np.iscomplexobj(raw_dist):
+    if _contains_complex_alias(raw_dist):
         raise ValueError("nearest-neighbor distances must contain real values")
-    if np.iscomplexobj(raw_idx):
+    if _contains_complex_alias(raw_idx):
         raise ValueError("nearest-neighbor indices must be integer values")
     try:
         dist = raw_dist.astype(np.float64, copy=True)

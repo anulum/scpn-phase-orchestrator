@@ -37,6 +37,14 @@ def _contains_boolean_alias(raw: np.ndarray) -> bool:
     return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
 
 
+def _contains_complex_alias(raw: np.ndarray) -> bool:
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, (complex, np.complexfloating)) for value in raw.flat)
+
+
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
@@ -50,7 +58,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError(f"{name} must contain real values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -126,7 +134,7 @@ def validate_delay_embed_backend_output(
     raw = np.asarray(embedded)
     if _contains_boolean_alias(raw):
         raise ValueError("delay embedding backend output must not contain booleans")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("delay embedding backend output must contain real values")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -155,7 +163,7 @@ def validate_mutual_information_backend_output(value: object) -> float:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("mutual information backend output must not be boolean")
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(raw):
         raise ValueError("mutual information backend output must be real")
     try:
         scalar = raw.astype(np.float64, copy=True)
@@ -184,9 +192,9 @@ def validate_nearest_neighbor_backend_outputs(
         raise ValueError("nearest-neighbor distances must not contain booleans")
     if _contains_boolean_alias(raw_idx):
         raise ValueError("nearest-neighbor indices must not contain booleans")
-    if np.iscomplexobj(raw_dist):
+    if _contains_complex_alias(raw_dist):
         raise ValueError("nearest-neighbor distances must contain real values")
-    if np.iscomplexobj(raw_idx):
+    if _contains_complex_alias(raw_idx):
         raise ValueError("nearest-neighbor indices must contain integer values")
     try:
         dist = raw_dist.astype(np.float64, copy=True)
