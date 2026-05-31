@@ -46,6 +46,16 @@ unit-interval field statistics, shape-compatible heatmap rows, sorted
 off-diagonal top-edge records, and finite non-negative L2 energy before Studio
 may expose the field rendering to an operator.
 
+`build_multiverse_counterfactual_studio_panel(manifest, risk_report)` joins a
+passive multiverse rollout manifest with the matching branch-risk report and
+renders branch comparison rows, approval counts, rejected-branch IDs,
+coherence ranges, safest-branch metadata, and immutable manifest/report hashes.
+The helper requires non-actuating execution-disabled rollout and risk claim
+boundaries, supported NumPy or JAX vectorised backends, unit-interval `R`
+metrics with ordered intervals, matching branch hashes across rollout and risk
+records, finite topology pressure metrics, and explicit
+`actuation_permitted: false` output.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.ui_helpers

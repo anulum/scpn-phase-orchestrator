@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   evidence surfaces.
 - Added public Studio facade exports for the integrated-information,
   strange-loop, and morphogenetic-field passive review panels.
+- Added passive Studio surfacing for multiverse counterfactual rollout
+  manifests and branch-risk reports.
 - Added a lightweight Python API layer with `Orchestrator.from_yaml(...)` and
   `Orchestrator.run(...)`, plus the `scpn` import alias for onboarding scripts
   that should not depend on CLI invocation.

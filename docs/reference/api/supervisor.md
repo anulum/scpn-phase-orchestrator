@@ -1114,7 +1114,11 @@ matrix branch actions are projected back onto the off-diagonal graph before
 simulation. Domain scenario fixtures now cover power-grid, cardiac-rhythm,
 cyber-industrial, traffic-flow, manufacturing process-control, and plasma-control
 use cases with simulator-compatible `K`, `alpha`, `zeta`, and `Psi` candidate
-controls.
+controls. Studio packages rollout manifests and branch-risk reports through
+the public
+`scpn_phase_orchestrator.studio.build_multiverse_counterfactual_studio_panel()`
+facade, which preserves the non-actuating claim boundaries, joins branch hashes,
+renders approval/rejection evidence, and never emits executable actions.
 
 ::: scpn_phase_orchestrator.supervisor.multiverse
 

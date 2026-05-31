@@ -71,3 +71,5 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         "target": 1,
         "weight": pytest.approx(0.8),
     }
+    assert "build_multiverse_counterfactual_studio_panel" in studio.__all__
+    assert callable(studio.build_multiverse_counterfactual_studio_panel)

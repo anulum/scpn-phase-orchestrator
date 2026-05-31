@@ -18,11 +18,19 @@ import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.studio.ui_helpers as ui
+from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.studio.workflow import BindingProposal
 from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldState,
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
+)
+from scpn_phase_orchestrator.supervisor.multiverse import (
+    simulate_multiverse_counterfactual_branches,
+)
+from scpn_phase_orchestrator.supervisor.multiverse_risk import (
+    MultiverseRiskThresholds,
+    evaluate_multiverse_branch_risk,
 )
 
 MINIMAL_SPEC = Path("domainpacks/minimal_domain/binding_spec.yaml")
@@ -321,6 +329,139 @@ def test_morphogenetic_field_panel_rejects_malformed_svg_evidence() -> None:
                     "top_edges": [{"source": 0, "target": 0, "weight": 0.5}],
                 },
             }
+        )
+
+
+def test_multiverse_counterfactual_panel_preserves_manifest_and_risk_evidence() -> None:
+    phases = np.array([0.10, 1.20, 2.40], dtype=np.float64)
+    omegas = np.array([0.05, -0.02, 0.01], dtype=np.float64)
+    baseline_k = np.array(
+        [[0.0, 0.15, 0.15], [0.15, 0.0, 0.15], [0.15, 0.15, 0.0]],
+        dtype=np.float64,
+    )
+    baseline_alpha = np.zeros((3, 3), dtype=np.float64)
+    manifest = simulate_multiverse_counterfactual_branches(
+        phases=phases,
+        omegas=omegas,
+        baseline_k=baseline_k,
+        baseline_alpha=baseline_alpha,
+        branch_action_sets=(
+            (),
+            (ControlAction("K", "global", 0.25, 1.0, "coupling review"),),
+        ),
+        horizon=8,
+        dt=0.02,
+    ).to_audit_record()
+    risk = evaluate_multiverse_branch_risk(
+        manifest,
+        MultiverseRiskThresholds(
+            min_mean_R=0.0,
+            min_final_R=0.0,
+            max_action_count=4,
+        ),
+    ).to_audit_record()
+
+    panel = ui.build_multiverse_counterfactual_studio_panel(manifest, risk)
+
+    assert panel["panel_kind"] == "studio_multiverse_counterfactual_panel"
+    assert panel["claim_boundary"] == "counterfactual_branch_rollout_not_live_actuation"
+    assert panel["risk_claim_boundary"] == (
+        "counterfactual_branch_risk_gate_not_live_actuation"
+    )
+    assert panel["non_actuating"] is True
+    assert panel["execution_disabled"] is True
+    assert panel["actuation_permitted"] is False
+    assert panel["branch_count"] == 2
+    assert panel["approved_count"] == 2
+    assert panel["rejected_count"] == 0
+    assert panel["safest_branch_id"] in {"branch_000", "branch_001"}
+    assert panel["coherence_range"]["minimum"] <= panel["coherence_range"]["maximum"]
+    assert panel["branch_rows"][1]["action_count"] == 1
+    assert panel["branch_rows"][1]["risk_approved"] is True
+    assert "actions_to_apply" not in panel
+    assert "control_actions" not in panel
+
+
+def test_multiverse_counterfactual_panel_rejects_malformed_evidence() -> None:
+    manifest = {
+        "schema_name": "multiverse_counterfactual_rollout",
+        "schema_version": "0.1.0",
+        "branch_count": 1,
+        "horizon": 4,
+        "backend": "numpy_vectorized",
+        "non_actuating": True,
+        "execution_disabled": True,
+        "claim_boundary": "counterfactual_branch_rollout_not_live_actuation",
+        "manifest_hash": "a" * 64,
+        "branch_records": [
+            {
+                "branch_id": "safe",
+                "branch_hash": "b" * 64,
+                "action_count": 0,
+                "action_labels": [],
+                "topology_edge_count": 2,
+                "topology_scale": 0.3,
+                "final_R": 0.8,
+                "mean_R": 0.7,
+                "min_R": 0.6,
+                "max_R": 0.9,
+                "final_psi": 0.1,
+            }
+        ],
+    }
+    risk = {
+        "schema_name": "multiverse_branch_risk_gate",
+        "schema_version": "0.1.0",
+        "branch_count": 1,
+        "approved_count": 1,
+        "rejected_count": 0,
+        "safest_branch_id": "safe",
+        "safest_branch_hash": "b" * 64,
+        "rejection_reasons": [],
+        "claim_boundary": "counterfactual_branch_risk_gate_not_live_actuation",
+        "non_actuating": True,
+        "execution_disabled": True,
+        "report_hash": "c" * 64,
+        "branch_decisions": [
+            {
+                "branch_id": "safe",
+                "branch_hash": "b" * 64,
+                "final_R": 0.8,
+                "mean_R": 0.7,
+                "min_R": 0.6,
+                "max_R": 0.9,
+                "action_count": 0,
+                "topology_edge_count": 2,
+                "topology_scale": 0.3,
+                "approved": True,
+                "rejection_reasons": [],
+            }
+        ],
+    }
+
+    with pytest.raises(ValueError, match="claim boundary"):
+        ui.build_multiverse_counterfactual_studio_panel(
+            {**manifest, "claim_boundary": "live_control"}, risk
+        )
+    with pytest.raises(ValueError, match="branch_count"):
+        ui.build_multiverse_counterfactual_studio_panel(
+            {**manifest, "branch_count": 2}, risk
+        )
+    with pytest.raises(ValueError, match="R interval"):
+        bad_branch = dict(manifest["branch_records"][0])
+        bad_branch["min_R"] = 0.95
+        ui.build_multiverse_counterfactual_studio_panel(
+            {**manifest, "branch_records": [bad_branch]}, risk
+        )
+    with pytest.raises(ValueError, match="risk decision"):
+        ui.build_multiverse_counterfactual_studio_panel(
+            manifest,
+            {
+                **risk,
+                "branch_decisions": [
+                    {**risk["branch_decisions"][0], "branch_id": "other"}
+                ],
+            },
         )
 
 
