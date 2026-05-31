@@ -33,9 +33,16 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, bool | np.bool_) for item in raw.ravel())
 
 
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, complex | np.complexfloating) for item in raw.ravel())
+
+
 def _validate_distances(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("distances must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError("distances must contain real-valued samples")
     try:
         distances = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -76,6 +83,8 @@ def _validate_n_layers(value: object) -> int:
 def _validate_signal(value: object, *, name: str) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError(f"{name} must contain real-valued samples")
     try:
         signal = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

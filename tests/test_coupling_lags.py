@@ -159,11 +159,28 @@ def test_estimate_from_distances_rejects_invalid_distances():
     with pytest.raises(ValueError, match="distances"):
         LagModel.estimate_from_distances([[0.0, True], [1.0, 0.0]], speed=1.0)
 
+    with pytest.raises(ValueError, match="real-valued"):
+        LagModel.estimate_from_distances(
+            np.asarray([[0.0, complex(1.0, 0.0)], [1.0, 0.0]], dtype=object),
+            speed=1.0,
+        )
+
     with pytest.raises(ValueError, match="symmetric"):
         LagModel.estimate_from_distances([[0.0, 1.0], [1.2, 0.0]], speed=1.0)
 
     with pytest.raises(ValueError, match="zero diagonal"):
         LagModel.estimate_from_distances([[0.1, 1.0], [1.0, 0.0]], speed=1.0)
+
+
+def test_estimate_lag_rejects_object_complex_signal_aliases():
+    model = LagModel()
+
+    with pytest.raises(ValueError, match="real-valued"):
+        model.estimate_lag(
+            np.asarray([0.0, complex(1.0, 0.0), 0.0], dtype=object),
+            [0.0, 1.0, 0.0],
+            sample_rate=100.0,
+        )
 
 
 class TestLagPipelineWiring:

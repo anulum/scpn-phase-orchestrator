@@ -164,7 +164,9 @@ known physical distances.
 
 Inputs must be a finite real square physical-distance matrix with
 non-negative entries, a zero diagonal, and symmetric pair distances, plus a
-finite positive propagation speed. Returns an antisymmetric matrix:
+finite positive propagation speed. Boolean aliases and complex/object-complex
+distance payloads are rejected before numeric coercion because transport
+delays are ordered real quantities. Returns an antisymmetric matrix:
 α_ij = -α_ji. This encodes the fact that if signal from i reaches j with
 positive lag, then j reaches i with negative lag. Directed or asymmetric
 empirical delays belong in `build_alpha_matrix`, not in the physical-distance
@@ -176,8 +178,9 @@ constructor.
 cross-correlation peak lag in seconds between two signals. Signals must be
 finite real one-dimensional arrays with equal non-zero length and non-zero
 variance. The sample-rate must be a finite positive real value. Constant,
-boolean, complex, non-finite, or length-mismatched signals are rejected because
-they do not define a reliable phase-lag estimate.
+boolean, complex/object-complex, non-finite, or length-mismatched signals are
+rejected before cross-correlation because they do not define a reliable
+phase-lag estimate.
 
 ### Matrix construction
 
