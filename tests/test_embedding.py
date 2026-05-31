@@ -91,8 +91,9 @@ class TestDelayEmbed:
         def _dispatch(fn_name: str) -> object | None:
             calls["fn_name"] = fn_name
             if fn_name == "de":
-                return lambda signal, delay, dimension: (
-                    np.arange(6, dtype=np.float64) + 10
+                return lambda signal, delay, dimension: np.array(
+                    [0.0, 1.0, 1.0, 2.0, 2.0, 3.0],
+                    dtype=np.float64,
                 )
             return None
 
@@ -105,8 +106,8 @@ class TestDelayEmbed:
 
         assert calls["fn_name"] == "de"
         assert emb.shape == (3, 2)
-        np.testing.assert_array_equal(emb[0], [10.0, 11.0])
-        np.testing.assert_array_equal(emb[1], [12.0, 13.0])
+        np.testing.assert_array_equal(emb[0], [0.0, 1.0])
+        np.testing.assert_array_equal(emb[1], [1.0, 2.0])
 
     def test_python_fallback_returns_shifted_windows(
         self,
