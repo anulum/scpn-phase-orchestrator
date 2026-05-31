@@ -23,6 +23,8 @@ __all__ = [
     "FloatArray",
     "IntArray",
     "validate_correlation_integral_backend_inputs",
+    "validate_correlation_integral_backend_output",
+    "validate_kaplan_yorke_backend_output",
     "validate_kaplan_yorke_backend_input",
 ]
 
@@ -129,3 +131,46 @@ def validate_kaplan_yorke_backend_input(
     """Return a finite real one-dimensional Lyapunov spectrum."""
 
     return _validate_float_vector(lyapunov_exponents, name="lyapunov_exponents")
+
+
+def validate_correlation_integral_backend_output(
+    values: object,
+    epsilons: object,
+) -> FloatArray:
+    """Validate a direct-backend Grassberger-Procaccia C(epsilon) vector."""
+
+    result = _validate_float_vector(values, name="correlation_integral")
+    eps = _validate_epsilons(epsilons)
+    if result.size != eps.size:
+        raise ValueError(
+            "correlation_integral length "
+            f"{result.size} does not match epsilons length {eps.size}"
+        )
+    if np.any((result < -1e-12) | (result > 1.0 + 1e-12)):
+        raise ValueError("correlation_integral values must lie in [0, 1]")
+    if np.any(np.diff(result) < -1e-12):
+        raise ValueError("correlation_integral must be non-decreasing in epsilon")
+    return np.ascontiguousarray(np.clip(result, 0.0, 1.0), dtype=np.float64)
+
+
+def validate_kaplan_yorke_backend_output(
+    value: object,
+    lyapunov_exponents: object,
+) -> float:
+    """Validate a direct-backend Kaplan-Yorke dimension estimate."""
+
+    spectrum = validate_kaplan_yorke_backend_input(lyapunov_exponents)
+    if isinstance(value, (bool, np.bool_)):
+        raise ValueError("kaplan_yorke_dimension must not be a boolean value")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("kaplan_yorke_dimension must be real-valued")
+    try:
+        dimension = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("kaplan_yorke_dimension must be a finite real scalar") from exc
+    if not np.isfinite(dimension):
+        raise ValueError("kaplan_yorke_dimension must be finite")
+    if dimension < -1e-12 or dimension > spectrum.size + 1e-12:
+        raise ValueError("kaplan_yorke_dimension must lie in [0, spectrum length]")
+    return min(max(dimension, 0.0), float(spectrum.size))

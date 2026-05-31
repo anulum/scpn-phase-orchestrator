@@ -19,7 +19,9 @@ from numpy.typing import NDArray
 
 from ._dimension_validation import (
     validate_correlation_integral_backend_inputs,
+    validate_correlation_integral_backend_output,
     validate_kaplan_yorke_backend_input,
+    validate_kaplan_yorke_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -97,7 +99,7 @@ def correlation_integral_go(
     )
     if rc != 0:
         raise ValueError(f"Go CorrelationIntegral rc={rc}")
-    return out
+    return validate_correlation_integral_backend_output(out, eps)
 
 
 def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
@@ -113,4 +115,4 @@ def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go KaplanYorkeDimension rc={rc}")
-    return float(out.value)
+    return validate_kaplan_yorke_backend_output(out.value, le)

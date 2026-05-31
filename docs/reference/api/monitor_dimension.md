@@ -172,6 +172,10 @@ without self-pairs. Direct Kaplan-Yorke calls accept only finite
 real one-dimensional Lyapunov spectra. Boolean aliases and complex
 payloads are rejected before shared-library, Julia, or subprocess
 execution.
+Direct backend outputs are checked before return: correlation-integral
+vectors must match the epsilon count, stay finite, lie in ``[0, 1]``,
+and remain non-decreasing as epsilon grows; Kaplan-Yorke outputs must
+be finite real scalars in ``[0, len(lyapunov_exponents)]``.
 
 ---
 

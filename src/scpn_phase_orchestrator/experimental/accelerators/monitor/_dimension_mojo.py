@@ -19,7 +19,9 @@ from numpy.typing import NDArray
 
 from ._dimension_validation import (
     validate_correlation_integral_backend_inputs,
+    validate_correlation_integral_backend_output,
     validate_kaplan_yorke_backend_input,
+    validate_kaplan_yorke_backend_output,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -93,7 +95,7 @@ def correlation_integral_mojo(
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n_k:
         raise ValueError(f"Mojo CI returned {len(result)} values, expected {n_k}")
-    return np.array(result, dtype=np.float64)
+    return validate_correlation_integral_backend_output(result, eps)
 
 
 def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
@@ -104,4 +106,6 @@ def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
     tokens: list[str] = ["KY", str(n)]
     tokens.extend(repr(float(x)) for x in le.tolist())
     result = _run(" ".join(tokens) + "\n")
-    return float(result[0])
+    if len(result) != 1:
+        raise ValueError(f"Mojo KY returned {len(result)} values, expected 1")
+    return validate_kaplan_yorke_backend_output(result[0], le)

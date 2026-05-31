@@ -30,6 +30,12 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _dimension_julia as dimension_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _dimension_mojo as dimension_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _dimension_validation as dimension_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_go import (
@@ -61,7 +67,9 @@ KyBackend = Callable[[np.ndarray], float]
 
 def test__dimension_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(dimension_validation.validate_correlation_integral_backend_inputs)
+    assert callable(dimension_validation.validate_correlation_integral_backend_output)
     assert callable(dimension_validation.validate_kaplan_yorke_backend_input)
+    assert callable(dimension_validation.validate_kaplan_yorke_backend_output)
 
 
 def _force(backend: str) -> str:
@@ -258,6 +266,73 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match="lyapunov_exponents"):
             fn(lyapunov_exponents)
+
+    @pytest.mark.parametrize(
+        ("values", "match"),
+        [
+            (np.array([0.0, np.nan]), "finite"),
+            (np.array([0.0, np.bool_(True)], dtype=object), "boolean"),
+            (np.array([0.0, 0.5 + 0.1j], dtype=np.complex128), "real"),
+            (np.array([0.0, 1.2]), "\\[0, 1\\]"),
+            (np.array([0.5, 0.4]), "non-decreasing"),
+            (np.array([0.0]), "length"),
+        ],
+    )
+    def test_correlation_integral_output_validation_rejects_nonphysical_values(
+        self, values: np.ndarray, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            dimension_validation.validate_correlation_integral_backend_output(
+                values,
+                np.array([0.1, 0.2]),
+            )
+
+    @pytest.mark.parametrize(
+        ("value", "match"),
+        [
+            (np.bool_(True), "boolean"),
+            (1.0 + 0.1j, "real"),
+            (np.inf, "finite"),
+            (-0.5, "\\[0, spectrum length\\]"),
+            (4.5, "\\[0, spectrum length\\]"),
+        ],
+    )
+    def test_kaplan_yorke_output_validation_rejects_nonphysical_values(
+        self, value: object, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            dimension_validation.validate_kaplan_yorke_backend_output(
+                value,
+                np.array([0.2, 0.0, -0.5]),
+            )
+
+    def test_julia_backend_rejects_nonmonotone_correlation_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class _FakeJulia:
+            @staticmethod
+            def correlation_integral(*args: object) -> np.ndarray:
+                return np.array([0.4, 0.3])
+
+        monkeypatch.setattr(dimension_julia, "_ensure", lambda: _FakeJulia())
+
+        with pytest.raises(ValueError, match="non-decreasing"):
+            correlation_integral_julia(
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1, 0.2]),
+            )
+
+    def test_mojo_backend_rejects_out_of_bounds_kaplan_yorke_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(dimension_mojo, "_run", lambda payload: [4.0])
+
+        with pytest.raises(ValueError, match="\\[0, spectrum length\\]"):
+            kaplan_yorke_dimension_mojo(np.array([0.2, 0.0, -0.5]))
 
 
 class TestRustParity:
