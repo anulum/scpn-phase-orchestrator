@@ -15,7 +15,7 @@ import json
 from dataclasses import dataclass
 from math import acos
 from numbers import Real
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -32,10 +32,12 @@ __all__ = [
 ]
 
 _BACKEND: str = "numpy_jax_compatible_information_geometry"
+_JAX_BACKEND: str = "jax_native_information_geometry"
 _DEFAULT_KNOB: str = "K"
 _DEFAULT_SCOPE: str = "global"
 _BOUNDARY: str = "information_geometry_control_not_live_actuation"
 _EPS: float = 1e-12
+_BACKEND_ALIASES: frozenset[str] = frozenset(("numpy", "jax"))
 
 
 @dataclass(frozen=True)
@@ -110,10 +112,14 @@ def propose_information_geometry_control(
     max_step: float,
     knob: str = _DEFAULT_KNOB,
     scope: str = _DEFAULT_SCOPE,
+    backend: str = "numpy",
 ) -> InformationGeometryControlProposal:
     """Compute a finite, deterministic information-geometry control proposal.
 
     Parameters are validated eagerly and no mutation of caller arrays is performed.
+    The default NumPy backend preserves historical audit hashes; passing
+    ``backend="jax"`` uses a JAX-native vectorised metric path and converts the
+    resulting proposal back to JSON-safe NumPy scalars and arrays.
     """
     simplex = _normalise_simplex(current_distribution, "current_distribution")
     target = _normalise_simplex(target_distribution, "target_distribution")
@@ -123,10 +129,7 @@ def propose_information_geometry_control(
     max_step_value = _as_finite_real(max_step, "max_step", allow_non_positive=False)
     knob = _as_non_empty_str(knob, "knob")
     scope = _as_non_empty_str(scope, "scope")
-
-    fisher_rao_distance = _fisher_rao_distance(simplex, target)
-    wasserstein_distance = _wasserstein_distance(simplex, target)
-    metric_tensor = _fisher_information_metric(simplex)
+    backend_name = _normalise_backend_name(backend)
 
     if coupling_gradient is None:
         objective_gradient = target - simplex
@@ -137,11 +140,31 @@ def propose_information_geometry_control(
             "coupling_gradient",
         )
 
-    natural_gradient = _natural_gradient_direction(
-        objective_gradient, simplex, max_step_value
-    )
+    if backend_name == "jax":
+        (
+            fisher_rao_distance,
+            wasserstein_distance,
+            metric_tensor,
+            natural_gradient,
+            curvature_proxy,
+        ) = _compute_information_geometry_jax(
+            simplex,
+            target,
+            objective_gradient,
+            max_step_value,
+        )
+        audit_backend = _JAX_BACKEND
+    else:
+        fisher_rao_distance = _fisher_rao_distance(simplex, target)
+        wasserstein_distance = _wasserstein_distance(simplex, target)
+        metric_tensor = _fisher_information_metric(simplex)
+        natural_gradient = _natural_gradient_direction(
+            objective_gradient, simplex, max_step_value
+        )
+        curvature_proxy = _curvature_proxy(metric_tensor)
+        audit_backend = _BACKEND
+
     geodesic_length = float(fisher_rao_distance)
-    curvature_proxy = _curvature_proxy(metric_tensor)
 
     action_value = float(
         np.clip(np.sum(natural_gradient), -max_step_value, max_step_value)
@@ -171,7 +194,7 @@ def propose_information_geometry_control(
         wasserstein_distance=wasserstein_distance,
         natural_gradient_norm=float(np.linalg.norm(natural_gradient)),
         curvature_proxy=curvature_proxy,
-        backend=_BACKEND,
+        backend=audit_backend,
         claim_boundary=_BOUNDARY,
         non_actuating=True,
         execution_disabled=True,
@@ -186,13 +209,22 @@ def propose_information_geometry_control(
         wasserstein_distance=wasserstein_distance,
         natural_gradient_norm=float(np.linalg.norm(natural_gradient)),
         curvature_proxy=curvature_proxy,
-        backend=_BACKEND,
+        backend=audit_backend,
         claim_boundary=_BOUNDARY,
         non_actuating=True,
         execution_disabled=True,
         proposal_hash=proposal_hash,
         state=state,
     )
+
+
+def _normalise_backend_name(backend: object) -> str:
+    if not isinstance(backend, str):
+        raise ValueError("backend must be one of: jax, numpy")
+    normalised = backend.strip().lower()
+    if normalised not in _BACKEND_ALIASES:
+        raise ValueError("backend must be one of: jax, numpy")
+    return normalised
 
 
 def _normalise_simplex(
@@ -302,6 +334,55 @@ def _curvature_proxy(metric_tensor: FloatArray) -> float:
     variance = float(np.var(metric_diag))
     magnitude = float(np.mean(metric_diag))
     return float(np.clip(np.sqrt(variance) / (1.0 + magnitude), 0.0, 1.0))
+
+
+def _compute_information_geometry_jax(
+    simplex: FloatArray,
+    target: FloatArray,
+    gradient: FloatArray,
+    max_step: float,
+) -> tuple[float, float, FloatArray, FloatArray, float]:
+    jnp = _load_jax_numpy()
+    simplex_j = jnp.asarray(simplex, dtype=jnp.float64)
+    target_j = jnp.asarray(target, dtype=jnp.float64)
+    gradient_j = jnp.asarray(gradient, dtype=jnp.float64)
+
+    overlap = jnp.sum(jnp.sqrt(simplex_j) * jnp.sqrt(target_j))
+    overlap = jnp.clip(overlap, 0.0, 1.0)
+    fisher_rao_distance = 2.0 * jnp.arccos(overlap)
+    wasserstein_distance = jnp.sum(
+        jnp.abs(jnp.cumsum(simplex_j) - jnp.cumsum(target_j))
+    )
+
+    metric_diag = 1.0 / jnp.maximum(simplex_j, _EPS)
+    metric_tensor = jnp.diag(metric_diag)
+
+    direction = gradient_j * simplex_j
+    norm = jnp.linalg.norm(direction)
+    scale = jnp.where((norm <= max_step) | (norm == 0.0), 1.0, max_step / norm)
+    natural_gradient = direction * scale
+
+    variance = jnp.var(metric_diag)
+    magnitude = jnp.mean(metric_diag)
+    curvature_proxy = jnp.clip(jnp.sqrt(variance) / (1.0 + magnitude), 0.0, 1.0)
+
+    return (
+        float(fisher_rao_distance),
+        float(wasserstein_distance),
+        np.asarray(metric_tensor, dtype=np.float64),
+        np.asarray(natural_gradient, dtype=np.float64),
+        float(curvature_proxy),
+    )
+
+
+def _load_jax_numpy() -> Any:
+    try:
+        import jax
+        import jax.numpy as jnp
+    except Exception as exc:  # pragma: no cover - depends on optional runtime
+        raise RuntimeError("backend='jax' requested but JAX is not available") from exc
+    jax.config.update("jax_enable_x64", True)
+    return jnp
 
 
 def _compute_hash(record: dict[str, object]) -> str:

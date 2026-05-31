@@ -216,3 +216,55 @@ def test_metrics_are_finite_in_state_and_proposal() -> None:
     assert np.isfinite(state.curvature_proxy)
     assert np.isfinite(state.metric_tensor).all()
     assert np.isfinite(state.tangent_vector).all()
+
+
+def test_explicit_jax_backend_matches_numpy_information_geometry_contract() -> None:
+    numpy_proposal = propose_information_geometry_control(
+        [0.16, 0.27, 0.18, 0.39],
+        [0.21, 0.23, 0.27, 0.29],
+        coupling_gradient=[0.05, -0.02, 0.04, -0.01],
+        max_step=0.2,
+        backend="numpy",
+    )
+    jax_proposal = propose_information_geometry_control(
+        [0.16, 0.27, 0.18, 0.39],
+        [0.21, 0.23, 0.27, 0.29],
+        coupling_gradient=[0.05, -0.02, 0.04, -0.01],
+        max_step=0.2,
+        backend="jax",
+    )
+
+    assert jax_proposal.backend == "jax_native_information_geometry"
+    assert jax_proposal.claim_boundary == numpy_proposal.claim_boundary
+    assert jax_proposal.non_actuating is True
+    assert jax_proposal.execution_disabled is True
+    assert jax_proposal.fisher_rao_distance == pytest.approx(
+        numpy_proposal.fisher_rao_distance
+    )
+    assert jax_proposal.wasserstein_distance == pytest.approx(
+        numpy_proposal.wasserstein_distance
+    )
+    assert jax_proposal.natural_gradient_norm == pytest.approx(
+        numpy_proposal.natural_gradient_norm
+    )
+    assert jax_proposal.curvature_proxy == pytest.approx(
+        numpy_proposal.curvature_proxy
+    )
+    np.testing.assert_allclose(
+        jax_proposal.state.metric_tensor,
+        numpy_proposal.state.metric_tensor,
+    )
+    np.testing.assert_allclose(
+        jax_proposal.state.tangent_vector,
+        numpy_proposal.state.tangent_vector,
+    )
+
+
+def test_unknown_information_geometry_backend_fails_closed() -> None:
+    with pytest.raises(ValueError, match="backend"):
+        propose_information_geometry_control(
+            [0.5, 0.5],
+            [0.25, 0.75],
+            max_step=0.1,
+            backend="gpu_magic",
+        )

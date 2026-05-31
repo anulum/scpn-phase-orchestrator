@@ -691,7 +691,10 @@ Speculative research watchlist:
     and Wasserstein review primitive emits metric tensors, natural-gradient
     proposals, curvature/geodesic metrics, deterministic domain scenarios, and
     reference-suite gates without live actuation.
-  - Remaining scope: optional JAX-native acceleration.
+  - Optional JAX-native acceleration is in place behind an explicit backend
+    selector with NumPy parity evidence in the reference-suite gate; runtime
+    outputs remain review-only and non-actuating.
+  - Remaining scope: richer Studio surfacing.
 - Sheaf-cohomology control over N-channel states, with sheaf Laplacian and obstruction metrics.
   - Foundation is in place: sheaf coherence supervisor support exists.
   - Heterogeneous edge-consensus demo is in place:

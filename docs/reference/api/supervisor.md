@@ -1027,6 +1027,10 @@ deployment preflight evidence without exporting raw local data.
 
 Information-geometric control proposals, static scenario examples, and
 autopoietic lineage inheritance helpers for review-only policy evolution.
+The information-geometry primitive keeps NumPy as the default audit-stable
+backend and exposes explicit `backend="jax"` acceleration with reference-gated
+parity for Fisher-Rao distance, Wasserstein distance, curvature proxy, and
+natural-gradient proposals. Both paths remain non-actuating review surfaces.
 
 ::: scpn_phase_orchestrator.supervisor.information_geometry
 

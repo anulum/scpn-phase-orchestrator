@@ -1477,6 +1477,8 @@ def test_information_geometry_control_gate_benchmark_shape() -> None:
     assert out["execution_disabled"] == 1
     assert out["claim_boundary"] == 1
     assert out["deterministic_hash"] == 1
+    assert out["jax_backend_parity"] == 1
+    assert out["jax_backend_value"] == "jax_native_information_geometry"
     assert out["acceptance_passed"] == 1
     assert len(str(out["information_geometry_sha256"])) == 64
     assert float(out["min_fisher_rao_distance"]) >= 0.0
@@ -1496,6 +1498,7 @@ def test_information_geometry_control_gate_reports_thresholds_and_records() -> N
         "require_claim_boundary": True,
         "require_deterministic_hash": True,
         "require_execution_disabled": True,
+        "require_jax_backend_parity": True,
         "require_non_actuating": True,
     }
     assert len(records) == int(out["scenario_count"])
@@ -1516,6 +1519,8 @@ def test_information_geometry_control_gate_reports_thresholds_and_records() -> N
     assert all(record["non_actuating"] is True for record in records)
     assert all(record["execution_disabled"] is True for record in records)
     assert all(record["repeat_match"] == 1 for record in records)
+    assert all(record["jax_backend"] == out["jax_backend_value"] for record in records)
+    assert all(record["jax_parity_match"] == 1 for record in records)
     assert all(record["proposal_action_count"] >= 1 for record in records)
 
 

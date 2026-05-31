@@ -399,6 +399,7 @@ class InformationGeometryControlThresholds(NamedTuple):
     require_execution_disabled: bool
     require_claim_boundary: bool
     require_deterministic_hash: bool
+    require_jax_backend_parity: bool
 
 
 class MultiverseCounterfactualThresholds(NamedTuple):
@@ -4534,6 +4535,7 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
         require_execution_disabled=True,
         require_claim_boundary=True,
         require_deterministic_hash=True,
+        require_jax_backend_parity=True,
     )
 
     from scpn_phase_orchestrator.supervisor.information_geometry import (
@@ -4671,6 +4673,8 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
         current_distribution: np.ndarray,
         target_distribution: np.ndarray,
         fixture: Mapping[str, object],
+        *,
+        backend: str,
     ) -> object:
         max_step_raw = fixture.get("max_step", 0.05)
         if not isinstance(max_step_raw, (int, float)) or max_step_raw <= 0.0:
@@ -4687,6 +4691,7 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
             target_distribution=target_distribution,
             max_step=max_step,
             knob=str(knob_name),
+            backend=backend,
         )
 
     scenario_fixtures = tuple(build_information_geometry_control_scenarios())
@@ -4696,6 +4701,7 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
     records: list[dict[str, object]] = []
     finite_metric_total = 0
     proposal_action_evidence_count = 0
+    jax_backend_parity_total = 0
 
     for idx, scenario in enumerate(scenario_fixtures):
         fixture: Mapping[str, object] = (
@@ -4742,10 +4748,27 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
             fallback_dimension=source_dimension,
             rotation=idx + 1,
         )
-        proposal = _call_proposal(source_distribution, target_distribution, fixture)
-        repeated = _call_proposal(source_distribution, target_distribution, fixture)
+        proposal = _call_proposal(
+            source_distribution,
+            target_distribution,
+            fixture,
+            backend="numpy",
+        )
+        repeated = _call_proposal(
+            source_distribution,
+            target_distribution,
+            fixture,
+            backend="numpy",
+        )
+        jax_proposal = _call_proposal(
+            source_distribution,
+            target_distribution,
+            fixture,
+            backend="jax",
+        )
         proposal_record = _to_record(proposal)
         repeated_record = _to_record(repeated)
+        jax_record = _to_record(jax_proposal)
 
         proposal_hash = str(
             proposal_record.get(
@@ -4787,6 +4810,47 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
             ),
             state_keys=("curvature_proxy",),
         )
+        jax_fisher_rao = _metric(
+            jax_record,
+            (
+                "fisher_rao_distance",
+                "fisher_rao",
+                "fisher_rao_metric",
+            ),
+        )
+        jax_wasserstein = _metric(
+            jax_record,
+            ("wasserstein_distance", "wasserstein", "earth_movers_distance"),
+        )
+        jax_geodesic = _metric(
+            jax_record,
+            ("geodesic_distance", "geodesic", "geodesic_metric"),
+            state_keys=("geodesic_length",),
+        )
+        jax_curvature = _metric(
+            jax_record,
+            (
+                "curvature",
+                "curvature_proxy",
+                "riemannian_curvature",
+                "information_curvature",
+            ),
+            state_keys=("curvature_proxy",),
+        )
+        jax_backend = str(jax_record.get("backend", ""))
+        jax_claim_boundary = str(jax_record.get("claim_boundary", ""))
+        proposal_claim_boundary = str(proposal_record.get("claim_boundary", ""))
+        jax_parity_match = int(
+            jax_backend == "jax_native_information_geometry"
+            and jax_claim_boundary == proposal_claim_boundary
+            and bool(jax_record.get("non_actuating")) is True
+            and bool(jax_record.get("execution_disabled")) is True
+            and np.isclose(jax_fisher_rao, fisher_rao)
+            and np.isclose(jax_wasserstein, wasserstein)
+            and np.isclose(jax_geodesic, geodesic)
+            and np.isclose(jax_curvature, curvature)
+        )
+        jax_backend_parity_total += jax_parity_match
         scenario_evidence = _evidence_count(proposal_record)
         proposal_action_evidence_count += int(scenario_evidence > 0)
         finite_metric_total += (
@@ -4835,6 +4899,8 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
                 "non_actuating": non_actuating,
                 "execution_disabled": execution_disabled,
                 "claim_boundary": claim_boundary,
+                "jax_backend": jax_backend,
+                "jax_parity_match": jax_parity_match,
             }
         )
 
@@ -4860,6 +4926,8 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
         and execution_disabled == int(thresholds.require_execution_disabled)
         and claim_boundary == int(thresholds.require_claim_boundary)
         and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and jax_backend_parity_total
+        == len(records) * int(thresholds.require_jax_backend_parity)
     )
 
     fisher_rao_values = [record["fisher_rao_distance"] for record in records]
@@ -4878,6 +4946,8 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
         "proposal_action_evidence_count": proposal_action_evidence_count,
         "finite_metric_count": finite_metric_total,
         "deterministic_hash": deterministic_hash,
+        "jax_backend_parity": int(jax_backend_parity_total == len(records)),
+        "jax_backend_value": "jax_native_information_geometry",
         "min_fisher_rao_distance": min(fisher_rao_values),
         "max_fisher_rao_distance": max(fisher_rao_values),
         "min_wasserstein_distance": min(wasserstein_values),
@@ -4894,6 +4964,7 @@ def benchmark_information_geometry_control_gate() -> dict[str, float | int | str
                 "require_claim_boundary": thresholds.require_claim_boundary,
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_jax_backend_parity": thresholds.require_jax_backend_parity,
                 "require_non_actuating": thresholds.require_non_actuating,
             },
             sort_keys=True,
