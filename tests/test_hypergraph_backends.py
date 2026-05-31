@@ -25,6 +25,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import _hypergraph_mojo
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _hypergraph_validation as hypergraph_validation,
 )
@@ -305,6 +306,39 @@ def _direct_payload(n: int = 6):
         0.01,
         4,
     )
+
+
+class TestDirectMojoBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo HGRUN returned 0 lines, expected 6"),
+            ("0.1\n0.2\n0.3\n0.4\n0.5\n0.6\n0.7\n", "expected 6"),
+            ("0.1\n0.2\n\n0.4\n0.5\n0.6\n0.7\n", "expected 6"),
+            ("0.1\n0.2\n0.3\nbad\n0.5\n0.6\n", "finite phases"),
+            ("0.1\n0.2\n0.3\nnan\n0.5\n0.6\n", "finite phases"),
+            ("0.1\n0.2\n0.3\n7.0\n0.5\n0.6\n", "finite phases"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_hypergraph_mojo, "_ensure_exe", lambda: "hypergraph")
+        monkeypatch.setattr(
+            _hypergraph_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: type(
+                "Proc",
+                (),
+                {"returncode": 0, "stdout": stdout, "stderr": ""},
+            )(),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _hypergraph_mojo.hypergraph_run_mojo(*_direct_payload())
 
 
 class TestDirectBackendBoundaryContracts:

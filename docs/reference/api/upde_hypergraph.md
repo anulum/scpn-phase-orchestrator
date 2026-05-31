@@ -501,6 +501,11 @@ Both Python and Rust paths are deterministic given the same inputs.
 The Rust path uses the same mathematical operations in the same order,
 ensuring bitwise-identical results across runs.
 
+Direct Mojo hypergraph adapters enforce exact raw stdout cardinality and finite
+phase-domain values: `HGRUN` must emit exactly one finite scalar in `[0, 2*pi)`
+per oscillator. Blank, truncated, overlong, non-numeric, non-finite, or
+out-of-domain output is rejected before public arrays are returned.
+
 ---
 
 ## Edge Cases and Limitations
