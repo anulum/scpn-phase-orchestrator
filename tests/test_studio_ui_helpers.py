@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from hashlib import sha256
+from math import log
 from pathlib import Path
 
 import pytest
@@ -134,6 +135,82 @@ def test_chart_table_and_canvas_builders_describe_real_binding_spec() -> None:
     assert graph["layer_count"] == 2
     assert graph["channel_count"] == 3
     assert graph["edge_count"] == 0
+
+
+def test_integrated_information_panel_preserves_operator_claim_boundary() -> None:
+    n_bins = 8
+    records = [
+        {
+            "monitor": "integrated_information",
+            "phi": 0.12,
+            "normalised_phi": 0.12 / log(n_bins),
+            "total_integration": 0.24,
+            "minimum_partition": [[0, 1], [2, 3]],
+            "pairwise_mi": [
+                [0.5, 0.2, 0.12, 0.12],
+                [0.2, 0.5, 0.12, 0.12],
+                [0.12, 0.12, 0.5, 0.2],
+                [0.12, 0.12, 0.2, 0.5],
+            ],
+            "n_bins": n_bins,
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        },
+        {
+            "monitor": "integrated_information",
+            "phi": 0.16,
+            "normalised_phi": 0.16 / log(n_bins),
+            "total_integration": 0.31,
+            "minimum_partition": [[0, 2], [1, 3]],
+            "pairwise_mi": [
+                [0.6, 0.16, 0.18, 0.16],
+                [0.16, 0.6, 0.16, 0.18],
+                [0.18, 0.16, 0.6, 0.16],
+                [0.16, 0.18, 0.16, 0.6],
+            ],
+            "n_bins": n_bins,
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        },
+    ]
+
+    panel = ui.build_integrated_information_panel(records)
+
+    assert panel["panel_kind"] == "studio_integrated_information_panel"
+    assert panel["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
+    assert panel["consciousness_claim_permitted"] is False
+    assert panel["actuation_permitted"] is False
+    assert panel["record_count"] == 2
+    assert panel["latest"]["minimum_partition"] == [[0, 2], [1, 3]]
+    assert panel["strongest_partition"]["phi"] == 0.16
+    assert panel["phi_range"] == {"min": 0.12, "max": 0.16}
+
+
+def test_integrated_information_panel_rejects_malformed_monitor_records() -> None:
+    n_bins = 8
+    valid_record = {
+        "monitor": "integrated_information",
+        "phi": 0.12,
+        "normalised_phi": 0.12 / log(n_bins),
+        "total_integration": 0.24,
+        "minimum_partition": [[0], [1]],
+        "pairwise_mi": [[0.5, 0.12], [0.12, 0.5]],
+        "n_bins": n_bins,
+        "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    }
+
+    with pytest.raises(ValueError, match="claim boundary"):
+        ui.build_integrated_information_panel(
+            [{**valid_record, "claim_boundary": "consciousness_claim"}]
+        )
+    with pytest.raises(ValueError, match="normalised_phi"):
+        ui.build_integrated_information_panel([{**valid_record, "normalised_phi": 0.9}])
+    with pytest.raises(ValueError, match="indices must be integers"):
+        ui.build_integrated_information_panel(
+            [{**valid_record, "minimum_partition": [[False], [1]]}]
+        )
+    with pytest.raises(ValueError, match="symmetric"):
+        ui.build_integrated_information_panel(
+            [{**valid_record, "pairwise_mi": [[0.5, 0.11], [0.12, 0.5]]}]
+        )
 
 
 def test_canvas_review_artifacts_capture_layout_and_topology_changes() -> None:
