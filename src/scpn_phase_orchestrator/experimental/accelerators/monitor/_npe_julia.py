@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._npe_validation import (
+    validate_npe_backend_inputs,
+    validate_phase_distance_backend_input,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_distance_matrix_julia", "compute_npe_julia"]
@@ -40,11 +45,10 @@ def _ensure() -> Any:
 def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
     """Compute pairwise wrapped phase distances through the Julia backend."""
 
+    p = validate_phase_distance_backend_input(phases)
     jl = _ensure()
     return np.asarray(
-        jl.phase_distance_matrix(
-            np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-        ),
+        jl.phase_distance_matrix(p),
         dtype=np.float64,
     )
 
@@ -52,10 +56,11 @@ def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
 def compute_npe_julia(phases: FloatArray, max_radius: float) -> float:
     """Compute normalised phase entropy through the Julia backend."""
 
+    p, radius = validate_npe_backend_inputs(phases, max_radius)
     jl = _ensure()
     return float(
         jl.compute_npe(
-            np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-            float(max_radius),
+            p,
+            radius,
         )
     )

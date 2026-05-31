@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._npe_validation import (
+    validate_npe_backend_inputs,
+    validate_phase_distance_backend_input,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_distance_matrix_mojo", "compute_npe_mojo"]
@@ -52,7 +57,7 @@ def _run(payload: str) -> list[float]:
 def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
     """Compute pairwise wrapped phase distances through the Mojo backend."""
 
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
+    p = validate_phase_distance_backend_input(phases)
     n = int(p.size)
     if n == 0:
         return np.zeros(0, dtype=np.float64)
@@ -67,11 +72,11 @@ def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
 def compute_npe_mojo(phases: FloatArray, max_radius: float) -> float:
     """Compute normalised phase entropy through the Mojo backend."""
 
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
+    p, radius = validate_npe_backend_inputs(phases, max_radius)
     n = int(p.size)
     if n < 2:
         return 0.0
-    tokens = ["NPE", str(n), repr(float(max_radius))]
+    tokens = ["NPE", str(n), repr(radius)]
     tokens.extend(repr(float(x)) for x in p.tolist())
     result = _run(" ".join(tokens) + "\n")
     return float(result[0])

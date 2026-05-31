@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -38,6 +39,8 @@ from scpn_phase_orchestrator.monitor.npe import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+PdmBackend = Callable[[np.ndarray], np.ndarray]
+NpeBackend = Callable[[np.ndarray, object], float]
 
 
 def _force(backend: str) -> str:
@@ -78,6 +81,85 @@ def test_backend_array_contracts_are_parameterised() -> None:
         if fn.__name__.startswith("phase_distance_matrix"):
             assert_precise_ndarray_hint(hints["return"])
             assert "float64" in str(hints["return"])
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            phase_distance_matrix_go,
+            phase_distance_matrix_julia,
+            phase_distance_matrix_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            np.array([0.0, True], dtype=object),
+            np.array([0.0 + 1.0j, 1.0 + 0.0j]),
+            np.array([0.0, np.inf]),
+            np.array([[0.0, 1.0]]),
+        ],
+    )
+    def test_phase_distance_backend_rejects_invalid_phases_before_runtime_load(
+        self,
+        fn: PdmBackend,
+        phases: np.ndarray,
+    ) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            fn(phases)
+
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            compute_npe_go,
+            compute_npe_julia,
+            compute_npe_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            np.array([0.0, np.bool_(False)], dtype=object),
+            np.array([0.0, 1.0j]),
+            np.array([0.0, np.nan]),
+            np.array([[0.0, 1.0]]),
+        ],
+    )
+    def test_npe_backend_rejects_invalid_phases_before_runtime_load(
+        self,
+        fn: NpeBackend,
+        phases: np.ndarray,
+    ) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            fn(phases, np.pi)
+
+    @pytest.mark.parametrize(
+        "fn",
+        [
+            compute_npe_go,
+            compute_npe_julia,
+            compute_npe_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "max_radius",
+        [
+            np.bool_(True),
+            np.nan,
+            -1.0,
+            np.pi + 1.0e-6,
+            1.0 + 0.0j,
+        ],
+    )
+    def test_npe_backend_rejects_invalid_radius_before_runtime_load(
+        self,
+        fn: NpeBackend,
+        max_radius: object,
+    ) -> None:
+        phases = np.array([0.0, 1.0, 2.0])
+        with pytest.raises(ValueError, match="max_radius"):
+            fn(phases, max_radius)
 
 
 class TestRustParity:

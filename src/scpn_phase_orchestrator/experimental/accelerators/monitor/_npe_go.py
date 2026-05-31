@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._npe_validation import (
+    validate_npe_backend_inputs,
+    validate_phase_distance_backend_input,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_distance_matrix_go", "compute_npe_go"]
@@ -55,8 +60,8 @@ def _load_lib() -> ctypes.CDLL:
 def phase_distance_matrix_go(phases: FloatArray) -> FloatArray:
     """Compute pairwise wrapped phase distances through the Go backend."""
 
+    p = validate_phase_distance_backend_input(phases)
     lib = _load_lib()
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     n = p.size
     out = np.zeros(n * n, dtype=np.float64)
     rc = lib.PhaseDistanceMatrix(
@@ -72,13 +77,13 @@ def phase_distance_matrix_go(phases: FloatArray) -> FloatArray:
 def compute_npe_go(phases: FloatArray, max_radius: float) -> float:
     """Compute normalised phase entropy through the Go backend."""
 
+    p, radius = validate_npe_backend_inputs(phases, max_radius)
     lib = _load_lib()
-    p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)
     rc = lib.ComputeNPE(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(p.size),
-        ctypes.c_double(max_radius),
+        ctypes.c_double(radius),
         ctypes.byref(out),
     )
     if rc != 0:

@@ -168,6 +168,14 @@ be finite real numbers in ``[0, 1]``. Invalid backend payloads fall
 back to the NumPy reference implementation instead of entering the
 physics monitor.
 
+Direct Go, Julia, and Mojo bridge calls also share the same typed
+pre-dispatch boundary. Phase vectors are accepted only as finite
+real one-dimensional ``float64`` arrays with boolean aliases and
+complex samples rejected before optional runtime loading. Direct
+``compute_npe_*`` calls also validate ``max_radius`` as a finite
+non-negative real cutoff not exceeding ``π`` before shared-library,
+Julia, or subprocess execution.
+
 ---
 
 ## 4. Physical invariants
