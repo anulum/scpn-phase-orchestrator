@@ -18,6 +18,13 @@ from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
+__all__ = [
+    "FloatArray",
+    "validate_phase_poincare_backend_inputs",
+    "validate_poincare_backend_outputs",
+    "validate_poincare_section_backend_inputs",
+]
+
 
 def _contains_boolean_alias(raw: object) -> bool:
     try:
@@ -114,3 +121,44 @@ def validate_phase_poincare_backend_inputs(
         raise ValueError(f"oscillator_idx must be in [0, {n_int}), got {idx}")
     section = _validate_finite_real(section_phase, "section_phase")
     return phases, t_int, n_int, idx, section
+
+
+def validate_poincare_backend_outputs(
+    crossings_flat: object,
+    times: object,
+    n_cr: object,
+    *,
+    t: int,
+    dim: int,
+) -> tuple[FloatArray, FloatArray, int]:
+    """Validate direct Poincare backend crossing payloads before return."""
+
+    t_int = _validate_int(t, "t", minimum=1)
+    dim_int = _validate_int(dim, "dim", minimum=1)
+    count = _validate_int(n_cr, "n_cr", minimum=0)
+    max_crossings = max(t_int - 1, 0)
+    if count > max_crossings:
+        raise ValueError(
+            f"n_cr must not exceed the {max_crossings} available intervals"
+        )
+
+    crossings = _validate_float_vector(crossings_flat, "crossings_flat")
+    expected_crossings = t_int * dim_int
+    if crossings.size != expected_crossings:
+        raise ValueError(
+            "crossings_flat length "
+            f"{crossings.size} does not match t*dim={expected_crossings}"
+        )
+    crossing_times = _validate_float_vector(times, "times")
+    if crossing_times.size != t_int:
+        raise ValueError(f"times length {crossing_times.size} does not match t={t_int}")
+    active_times = crossing_times[:count]
+    if active_times.size:
+        tolerance = 1.0e-12
+        if np.any(active_times < -tolerance) or np.any(
+            active_times > max_crossings + tolerance
+        ):
+            raise ValueError("active crossing times must lie within sampled intervals")
+        if active_times.size > 1 and np.any(np.diff(active_times) <= tolerance):
+            raise ValueError("active crossing times must be strictly increasing")
+    return crossings, crossing_times, count

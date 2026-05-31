@@ -18,6 +18,7 @@ from numpy.typing import NDArray
 
 from ._poincare_validation import (
     validate_phase_poincare_backend_inputs,
+    validate_poincare_backend_outputs,
     validate_poincare_section_backend_inputs,
 )
 
@@ -69,10 +70,12 @@ def poincare_section_julia(
         offset,
         direction_id,
     )
-    return (
-        np.asarray(cr, dtype=np.float64),
-        np.asarray(times, dtype=np.float64),
-        int(n_cr),
+    return validate_poincare_backend_outputs(
+        cr,
+        times,
+        n_cr,
+        t=t,
+        dim=d,
     )
 
 
@@ -102,8 +105,10 @@ def phase_poincare_julia(
         oscillator_idx,
         section_phase,
     )
-    return (
-        np.asarray(cr, dtype=np.float64),
-        np.asarray(times, dtype=np.float64),
-        int(n_cr),
+    return validate_poincare_backend_outputs(
+        cr,
+        times,
+        n_cr,
+        t=t,
+        dim=n,
     )

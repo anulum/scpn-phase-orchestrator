@@ -118,6 +118,60 @@ def test_backend_array_contracts_are_parameterised() -> None:
 class TestDirectBackendBoundaryContracts:
     """Direct optional Poincare backends validate before runtime loading."""
 
+    def test_backend_output_contract_accepts_valid_payload(self) -> None:
+        crossings = np.array([0.0, 1.0, 0.0, 0.0, 2.0, 0.0])
+        times = np.array([0.5, 1.5, 0.0])
+
+        valid_crossings, valid_times, valid_count = (
+            poincare_validation.validate_poincare_backend_outputs(
+                crossings,
+                times,
+                2,
+                t=3,
+                dim=2,
+            )
+        )
+
+        assert valid_count == 2
+        np.testing.assert_allclose(valid_crossings[:4], [0.0, 1.0, 0.0, 0.0])
+        np.testing.assert_allclose(valid_times[:2], [0.5, 1.5])
+
+    @pytest.mark.parametrize(
+        ("crossings", "times", "n_cr", "match"),
+        [
+            (np.array([0.0, 1.0, 2.0]), np.zeros(3), 1, "t\\*dim"),
+            (np.array([0.0, np.inf, 0.0, 0.0, 0.0, 0.0]), np.zeros(3), 1, "finite"),
+            (
+                np.array([0.0, True, 0.0, 0.0, 0.0, 0.0], dtype=object),
+                np.zeros(3),
+                1,
+                "crossings_flat",
+            ),
+            (np.zeros(6), np.array([0.0, np.nan, 0.0]), 1, "finite"),
+            (np.zeros(6), np.array([0.0, True, 0.0], dtype=object), 1, "times"),
+            (np.zeros(6), np.zeros(2), 1, "times length"),
+            (np.zeros(6), np.zeros(3), True, "n_cr"),
+            (np.zeros(6), np.zeros(3), 3, "available intervals"),
+            (np.zeros(6), np.array([-1.0e-3, 0.0, 0.0]), 1, "sampled intervals"),
+            (np.zeros(6), np.array([1.5, 0.5, 0.0]), 2, "strictly increasing"),
+        ],
+    )
+    def test_backend_output_contract_rejects_invalid_payloads(
+        self,
+        crossings: np.ndarray,
+        times: np.ndarray,
+        n_cr: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            poincare_validation.validate_poincare_backend_outputs(
+                crossings,
+                times,
+                n_cr,
+                t=3,
+                dim=2,
+            )
+
     @pytest.mark.parametrize(
         "backend",
         [poincare_section_go, poincare_section_julia, poincare_section_mojo],

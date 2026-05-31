@@ -39,3 +39,12 @@ runtimes:
 This keeps the Python, Go, Julia, and Mojo surfaces aligned: invalid physics
 states fail deterministically in Python before optional runtime loading or FFI
 marshalling.
+
+Direct backend return payloads are validated before they are returned to the
+public assembly boundary. Crossing buffers must be finite real `float64`
+vectors with length `t*dim`, time buffers must be finite real `float64` vectors
+with length `t`, and the crossing count must be a non-boolean integer bounded
+by the `t - 1` sampled intervals. Active crossing times must remain inside the
+sampled interval range and strictly increase. Malformed Mojo text output is
+converted into deterministic `ValueError` failures instead of leaking index or
+conversion errors from the subprocess parser.

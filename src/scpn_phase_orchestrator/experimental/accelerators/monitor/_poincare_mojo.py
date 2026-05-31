@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 
 from ._poincare_validation import (
     validate_phase_poincare_backend_inputs,
+    validate_poincare_backend_outputs,
     validate_poincare_section_backend_inputs,
 )
 
@@ -60,21 +61,43 @@ def _run(payload: str) -> list[str]:
 
 def _parse(lines: list[str], dim: int, t: int) -> tuple[FloatArray, FloatArray, int]:
     if not lines:
-        return (
+        return validate_poincare_backend_outputs(
             np.zeros(t * dim, dtype=np.float64),
             np.zeros(t, dtype=np.float64),
             0,
+            t=t,
+            dim=dim,
         )
-    n_cr = int(lines[0])
+    try:
+        n_cr = int(lines[0])
+    except ValueError as exc:
+        raise ValueError("Mojo Poincare crossing count must be an integer") from exc
+    expected_lines = 1 + n_cr * dim + n_cr
+    if len(lines) != expected_lines:
+        raise ValueError(
+            f"Mojo Poincare returned {len(lines)} lines, expected {expected_lines}"
+        )
     crossings_flat = np.zeros(t * dim, dtype=np.float64)
     times = np.zeros(t, dtype=np.float64)
     pos = 1
-    for k in range(n_cr * dim):
-        crossings_flat[k] = float(lines[pos + k])
+    try:
+        for k in range(n_cr * dim):
+            crossings_flat[k] = float(lines[pos + k])
+    except ValueError as exc:
+        raise ValueError("Mojo Poincare crossings must be finite real values") from exc
     pos += n_cr * dim
-    for k in range(n_cr):
-        times[k] = float(lines[pos + k])
-    return crossings_flat, times, n_cr
+    try:
+        for k in range(n_cr):
+            times[k] = float(lines[pos + k])
+    except ValueError as exc:
+        raise ValueError("Mojo Poincare times must be finite real values") from exc
+    return validate_poincare_backend_outputs(
+        crossings_flat,
+        times,
+        n_cr,
+        t=t,
+        dim=dim,
+    )
 
 
 def poincare_section_mojo(

@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 
 from ._poincare_validation import (
     validate_phase_poincare_backend_inputs,
+    validate_poincare_backend_outputs,
     validate_poincare_section_backend_inputs,
 )
 
@@ -97,7 +98,7 @@ def poincare_section_go(
         crossings.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         times.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
-    return crossings, times, int(n_cr)
+    return validate_poincare_backend_outputs(crossings, times, n_cr, t=t, dim=d)
 
 
 def phase_poincare_go(
@@ -130,4 +131,4 @@ def phase_poincare_go(
         crossings.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         times.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
-    return crossings, times, int(n_cr)
+    return validate_poincare_backend_outputs(crossings, times, n_cr, t=t, dim=n)
