@@ -19,6 +19,11 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+from ._simplicial_validation import (
+    validate_simplicial_inputs,
+    validate_simplicial_output,
+)
+
 __all__ = ["_ensure_exe", "simplicial_run_mojo"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -52,6 +57,22 @@ def simplicial_run_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
+    phases, omegas, knm_flat, alpha_flat, n, zeta, psi, sigma2, dt, n_steps = (
+        validate_simplicial_inputs(
+            phases,
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            zeta,
+            psi,
+            sigma2,
+            dt,
+            n_steps,
+        )
+    )
+    if n_steps == 0:
+        return phases.copy()
     exe = _ensure_exe()
     tokens: list[str] = [
         "SIMP",
@@ -62,10 +83,10 @@ def simplicial_run_mojo(
         repr(float(dt)),
         str(int(n_steps)),
     ]
-    tokens.extend(repr(float(x)) for x in np.asarray(phases).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(omegas).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(alpha_flat).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in phases.tolist())
+    tokens.extend(repr(float(x)) for x in omegas.tolist())
+    tokens.extend(repr(float(x)) for x in knm_flat.tolist())
+    tokens.extend(repr(float(x)) for x in alpha_flat.tolist())
     proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
@@ -92,4 +113,4 @@ def simplicial_run_mojo(
             raise ValueError("Mojo SIMP output must be finite phases in [0, 2*pi)")
         values.append(value)
     result: FloatArray = np.array(values, dtype=np.float64)
-    return result
+    return validate_simplicial_output(result, n=n)

@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._simplicial_validation import (
+    validate_simplicial_inputs,
+    validate_simplicial_output,
+)
+
 __all__ = ["simplicial_run_go"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -71,17 +76,29 @@ def simplicial_run_go(
     The calculation is delegated to the Go backend.
     """
 
+    phases, omegas, knm_flat, alpha_flat, n, zeta, psi, sigma2, dt, n_steps = (
+        validate_simplicial_inputs(
+            phases,
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            zeta,
+            psi,
+            sigma2,
+            dt,
+            n_steps,
+        )
+    )
+    if n_steps == 0:
+        return phases.copy()
     lib = _load_lib()
-    p = np.ascontiguousarray(phases, dtype=np.float64)
-    o = np.ascontiguousarray(omegas, dtype=np.float64)
-    k = np.ascontiguousarray(knm_flat, dtype=np.float64)
-    a = np.ascontiguousarray(alpha_flat, dtype=np.float64)
     out: FloatArray = np.zeros(int(n), dtype=np.float64)
     rc = lib.SimplicialRun(
-        p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        o.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        k.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        phases.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        omegas.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        knm_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        alpha_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(int(n)),
         ctypes.c_double(float(zeta)),
         ctypes.c_double(float(psi)),
@@ -92,4 +109,4 @@ def simplicial_run_go(
     )
     if rc != 0:
         raise ValueError(f"Go SimplicialRun rc={rc}")
-    return out
+    return validate_simplicial_output(out, n=n)

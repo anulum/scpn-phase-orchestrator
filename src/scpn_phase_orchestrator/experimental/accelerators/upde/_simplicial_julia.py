@@ -16,6 +16,11 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._simplicial_validation import (
+    validate_simplicial_inputs,
+    validate_simplicial_output,
+)
+
 __all__ = ["simplicial_run_julia"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -54,12 +59,28 @@ def simplicial_run_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    phases, omegas, knm_flat, alpha_flat, n, zeta, psi, sigma2, dt, n_steps = (
+        validate_simplicial_inputs(
+            phases,
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            zeta,
+            psi,
+            sigma2,
+            dt,
+            n_steps,
+        )
+    )
+    if n_steps == 0:
+        return phases.copy()
     jl = _ensure()
     result = jl.simplicial_run(
-        np.ascontiguousarray(phases, dtype=np.float64),
-        np.ascontiguousarray(omegas, dtype=np.float64),
-        np.ascontiguousarray(knm_flat, dtype=np.float64),
-        np.ascontiguousarray(alpha_flat, dtype=np.float64),
+        phases,
+        omegas,
+        knm_flat,
+        alpha_flat,
         int(n),
         float(zeta),
         float(psi),
@@ -68,4 +89,4 @@ def simplicial_run_julia(
         int(n_steps),
     )
     result_array: FloatArray = np.asarray(result, dtype=np.float64)
-    return result_array
+    return validate_simplicial_output(result_array, n=n)

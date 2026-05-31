@@ -116,6 +116,18 @@ class TestStep:
         expected = (theta + dt * (omegas + coupling)) % TWO_PI
         np.testing.assert_allclose(got, expected, atol=1e-12)
 
+    @_python
+    def test_rejects_non_zero_pairwise_self_coupling(self):
+        """The pairwise graph represents interactions between distinct
+        oscillators; self-coupling is not a physical simplicial edge."""
+
+        theta, omegas, knm, alpha = _problem(1, n=4)
+        knm[0, 0] = 0.25
+        eng = SimplicialEngine(4, 0.01, sigma2=0.5)
+
+        with pytest.raises(ValueError, match="knm diagonal"):
+            eng.run(theta, omegas, knm, 0.0, 0.0, alpha, n_steps=1)
+
 
 class TestThreeBodyIdentity:
     @_python

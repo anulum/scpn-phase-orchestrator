@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import contextlib
+import ctypes
 import math
 import sys
 import types
@@ -20,7 +21,11 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.experimental.accelerators.upde import _simplicial_mojo
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _simplicial_go,
+    _simplicial_julia,
+    _simplicial_mojo,
+)
 from scpn_phase_orchestrator.upde import simplicial as s_mod
 from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 
@@ -68,6 +73,287 @@ def _run_backend(
     eng = SimplicialEngine(n, 0.01, sigma2=sigma2)
     with _force_backend(backend):
         return eng.run(theta, omegas, knm, zeta, psi, alpha, n_steps=n_steps)
+
+
+def _valid_direct_args() -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    int,
+    float,
+    float,
+    float,
+    float,
+    int,
+]:
+    return (
+        np.array([0.1, 0.3], dtype=np.float64),
+        np.array([0.2, -0.1], dtype=np.float64),
+        np.array([0.0, 0.4, 0.2, 0.0], dtype=np.float64),
+        np.zeros(4, dtype=np.float64),
+        2,
+        0.0,
+        0.0,
+        0.5,
+        0.01,
+        1,
+    )
+
+
+class _FakeGoSimplicialLib:
+    def __init__(self, output: tuple[float, ...], rc: int = 0) -> None:
+        self.output = output
+        self.rc = rc
+
+    def SimplicialRun(self, *_args: object) -> int:
+        output_ref = ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))
+        for index, value in enumerate(self.output):
+            output_ref[index] = value
+        return self.rc
+
+
+class _FakeJuliaSimplicialModule:
+    def __init__(self, output: tuple[float, ...]) -> None:
+        self.output = output
+
+    def simplicial_run(self, *_args: object) -> np.ndarray:
+        return np.asarray(self.output, dtype=np.float64)
+
+
+def _mojo_proc_from_output(output: tuple[float, ...]) -> types.SimpleNamespace:
+    return types.SimpleNamespace(
+        returncode=0,
+        stdout="\n".join(str(value) for value in output) + "\n",
+        stderr="",
+    )
+
+
+def _install_direct_output(
+    monkeypatch: pytest.MonkeyPatch,
+    module: object,
+    output: tuple[float, ...],
+) -> None:
+    if module is _simplicial_go:
+        monkeypatch.setattr(
+            _simplicial_go,
+            "_load_lib",
+            lambda: _FakeGoSimplicialLib(output),
+        )
+        return
+    if module is _simplicial_julia:
+        monkeypatch.setattr(
+            _simplicial_julia,
+            "_ensure",
+            lambda: _FakeJuliaSimplicialModule(output),
+        )
+        return
+    monkeypatch.setattr(_simplicial_mojo, "_ensure_exe", lambda: "simplicial")
+    monkeypatch.setattr(
+        _simplicial_mojo.subprocess,
+        "run",
+        lambda *_args, **_kwargs: _mojo_proc_from_output(output),
+    )
+
+
+class TestDirectSimplicialBoundaryContracts:
+    @pytest.mark.parametrize(
+        "module",
+        [_simplicial_go, _simplicial_julia, _simplicial_mojo],
+        ids=["go", "julia", "mojo"],
+    )
+    @pytest.mark.parametrize(
+        ("mutator", "match"),
+        [
+            (
+                lambda args: (
+                    np.array([False, True]),
+                    *args[1:],
+                ),
+                "phases",
+            ),
+            (
+                lambda args: (
+                    np.array([0.1], dtype=np.float64),
+                    *args[1:],
+                ),
+                "phases",
+            ),
+            (
+                lambda args: (
+                    args[0],
+                    np.array([1.0 + 0.0j, 1.0 + 0.1j]),
+                    *args[2:],
+                ),
+                "omegas",
+            ),
+            (
+                lambda args: (
+                    *args[:2],
+                    np.array([0.0, 0.2, 0.0], dtype=np.float64),
+                    *args[3:],
+                ),
+                "knm_flat",
+            ),
+            (
+                lambda args: (
+                    *args[:2],
+                    np.array([1.0, 0.2, 0.4, 0.0], dtype=np.float64),
+                    *args[3:],
+                ),
+                "diagonal",
+            ),
+            (
+                lambda args: (*args[:4], True, *args[5:]),
+                "n",
+            ),
+            (
+                lambda args: (*args[:7], -0.1, *args[8:]),
+                "sigma2",
+            ),
+            (
+                lambda args: (*args[:8], 0.0, args[9]),
+                "dt",
+            ),
+            (
+                lambda args: (*args[:9], -1),
+                "n_steps",
+            ),
+        ],
+    )
+    def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module: object,
+        mutator: object,
+        match: str,
+    ) -> None:
+        args = mutator(_valid_direct_args())
+        if module is _simplicial_go:
+            monkeypatch.setattr(
+                _simplicial_go,
+                "_load_lib",
+                lambda: pytest.fail("Go runtime must not be loaded"),
+            )
+            runner = _simplicial_go.simplicial_run_go
+        elif module is _simplicial_julia:
+            monkeypatch.setattr(
+                _simplicial_julia,
+                "_ensure",
+                lambda: pytest.fail("Julia runtime must not be loaded"),
+            )
+            runner = _simplicial_julia.simplicial_run_julia
+        else:
+            monkeypatch.setattr(
+                _simplicial_mojo,
+                "_ensure_exe",
+                lambda: pytest.fail("Mojo runtime must not be loaded"),
+            )
+            runner = _simplicial_mojo.simplicial_run_mojo
+
+        with pytest.raises(ValueError, match=match):
+            runner(*args)
+
+    @pytest.mark.parametrize(
+        "module",
+        [_simplicial_go, _simplicial_julia, _simplicial_mojo],
+        ids=["go", "julia", "mojo"],
+    )
+    def test_direct_backend_zero_steps_returns_phase_copy_without_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module: object,
+    ) -> None:
+        args = (*_valid_direct_args()[:9], 0)
+        if module is _simplicial_go:
+            monkeypatch.setattr(
+                _simplicial_go,
+                "_load_lib",
+                lambda: pytest.fail("Go runtime must not be loaded"),
+            )
+            got = _simplicial_go.simplicial_run_go(*args)
+        elif module is _simplicial_julia:
+            monkeypatch.setattr(
+                _simplicial_julia,
+                "_ensure",
+                lambda: pytest.fail("Julia runtime must not be loaded"),
+            )
+            got = _simplicial_julia.simplicial_run_julia(*args)
+        else:
+            monkeypatch.setattr(
+                _simplicial_mojo,
+                "_ensure_exe",
+                lambda: pytest.fail("Mojo runtime must not be loaded"),
+            )
+            got = _simplicial_mojo.simplicial_run_mojo(*args)
+
+        np.testing.assert_allclose(got, args[0], atol=0.0, rtol=0.0)
+        assert got is not args[0]
+
+    @pytest.mark.parametrize(
+        "module",
+        [_simplicial_go, _simplicial_julia, _simplicial_mojo],
+        ids=["go", "julia", "mojo"],
+    )
+    def test_direct_backend_accepts_valid_torus_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module: object,
+    ) -> None:
+        _install_direct_output(monkeypatch, module, (0.2, 0.4))
+
+        if module is _simplicial_go:
+            got = _simplicial_go.simplicial_run_go(*_valid_direct_args())
+        elif module is _simplicial_julia:
+            got = _simplicial_julia.simplicial_run_julia(*_valid_direct_args())
+        else:
+            got = _simplicial_mojo.simplicial_run_mojo(*_valid_direct_args())
+
+        np.testing.assert_allclose(got, [0.2, 0.4], atol=1e-12)
+
+    @pytest.mark.parametrize(
+        "module",
+        [_simplicial_go, _simplicial_julia, _simplicial_mojo],
+        ids=["go", "julia", "mojo"],
+    )
+    @pytest.mark.parametrize("output", [(-0.1, 0.2), (0.1, TWO_PI)])
+    def test_direct_backend_rejects_out_of_torus_outputs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module: object,
+        output: tuple[float, float],
+    ) -> None:
+        _install_direct_output(monkeypatch, module, output)
+
+        if module is _simplicial_go:
+            runner = _simplicial_go.simplicial_run_go
+        elif module is _simplicial_julia:
+            runner = _simplicial_julia.simplicial_run_julia
+        else:
+            runner = _simplicial_mojo.simplicial_run_mojo
+
+        with pytest.raises(ValueError, match="phases"):
+            runner(*_valid_direct_args())
+
+    @pytest.mark.parametrize(
+        "module",
+        [_simplicial_julia, _simplicial_mojo],
+        ids=["julia", "mojo"],
+    )
+    def test_direct_backend_rejects_wrong_output_length(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module: object,
+    ) -> None:
+        _install_direct_output(monkeypatch, module, (0.2,))
+
+        runner = (
+            _simplicial_julia.simplicial_run_julia
+            if module is _simplicial_julia
+            else _simplicial_mojo.simplicial_run_mojo
+        )
+        with pytest.raises(ValueError, match="length 2|expected 2"):
+            runner(*_valid_direct_args())
 
 
 class TestParityAlphaZero:

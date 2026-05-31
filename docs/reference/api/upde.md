@@ -132,6 +132,17 @@ under triangular constraints, reaction loops, power-network group modes, and
 simplicial-complex or hypergraph-derived topology where synchronization
 thresholds depend on 3-body motifs.
 
+Direct Go, Julia, and Mojo simplicial accelerator entrypoints share the same
+validated torus boundary before optional runtime loading: phase and frequency
+vectors must be finite real one-dimensional `float64` arrays matching the
+oscillator count; flattened pairwise coupling and phase-lag buffers must have
+exactly `N*N` values; pairwise self-coupling `K_ii` must be zero because the
+pairwise graph represents interactions between distinct oscillators; `zeta`,
+`psi`, `sigma2`, `dt`, and `n_steps` must be finite non-boolean controls with
+non-negative triadic strength, positive timestep, and non-negative step count.
+Zero-step direct calls return a copy of the input phases without loading the
+optional runtime. Backend outputs must be finite torus phases in `[0, 2*pi)`.
+
 Gambuzza et al. 2023, Nature Physics; Tang et al. 2025.
 **Detailed documentation:** [Simplicial (3-body) — detailed reference](upde_simplicial.md)
 
