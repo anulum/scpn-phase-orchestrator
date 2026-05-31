@@ -458,6 +458,9 @@ one shared `float64` validation path before loading shared-library, Julia, or
 subprocess runtimes. Empty phase samples return zero entropy without requiring
 optional runtimes, matching the public Python fallback and preserving the
 Shannon special case for an empty empirical distribution.
+Direct backend entropy outputs are also revalidated as finite real scalars in
+the physical interval `[0, log(n_bins)]`; malformed Mojo line counts are
+rejected before the value reaches downstream monitor logic.
 
 ::: scpn_phase_orchestrator.monitor.psychedelic
 

@@ -18,7 +18,10 @@ from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
-__all__ = ["validate_psychedelic_backend_inputs"]
+__all__ = [
+    "validate_psychedelic_backend_inputs",
+    "validate_psychedelic_entropy_backend_output",
+]
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -62,3 +65,30 @@ def validate_psychedelic_backend_inputs(
     """Validate entropy inputs before optional runtime loading."""
 
     return _validate_phase_vector(phases), _validate_n_bins(n_bins)
+
+
+def validate_psychedelic_entropy_backend_output(
+    value: object,
+    n_bins: int,
+) -> float:
+    """Validate direct backend circular-entropy outputs."""
+
+    if _contains_boolean_alias(value):
+        raise ValueError("entropy backend output must not contain boolean values")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("entropy backend output must be real-valued")
+    try:
+        entropy = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("entropy backend output must be numeric") from exc
+    if entropy.shape != ():
+        raise ValueError("entropy backend output must be scalar")
+    scalar = float(entropy)
+    if not np.isfinite(scalar):
+        raise ValueError("entropy backend output must be finite")
+    tolerance = 1e-12
+    upper = float(np.log(float(n_bins)))
+    if scalar < -tolerance or scalar > upper + tolerance:
+        raise ValueError("entropy backend output must lie in [0, log(n_bins)]")
+    return min(upper, max(0.0, scalar))

@@ -17,7 +17,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._psychedelic_validation import validate_psychedelic_backend_inputs
+from ._psychedelic_validation import (
+    validate_psychedelic_backend_inputs,
+    validate_psychedelic_entropy_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -65,4 +68,4 @@ def entropy_from_phases_go(phases: FloatArray, n_bins: int) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go EntropyFromPhases rc={rc}")
-    return float(out.value)
+    return validate_psychedelic_entropy_backend_output(out.value, bin_count)

@@ -17,7 +17,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._psychedelic_validation import validate_psychedelic_backend_inputs
+from ._psychedelic_validation import (
+    validate_psychedelic_backend_inputs,
+    validate_psychedelic_entropy_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -55,4 +58,7 @@ def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
         raise ValueError(
             f"Mojo psychedelic exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return float(proc.stdout.strip().splitlines()[0])
+    lines = [line for line in proc.stdout.strip().splitlines() if line]
+    if len(lines) != 1:
+        raise ValueError(f"Mojo entropy returned {len(lines)} values")
+    return validate_psychedelic_entropy_backend_output(float(lines[0]), bin_count)

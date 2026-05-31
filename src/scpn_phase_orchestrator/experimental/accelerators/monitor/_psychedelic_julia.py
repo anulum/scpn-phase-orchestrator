@@ -11,12 +11,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
-from ._psychedelic_validation import validate_psychedelic_backend_inputs
+from ._psychedelic_validation import (
+    validate_psychedelic_backend_inputs,
+    validate_psychedelic_entropy_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -46,10 +49,10 @@ def entropy_from_phases_julia(phases: FloatArray, n_bins: int) -> float:
     if phase_values.size == 0:
         return 0.0
     jl = _ensure()
-    return cast(
-        "float",
+    return validate_psychedelic_entropy_backend_output(
         jl.entropy_from_phases(
             phase_values,
             bin_count,
         ),
+        bin_count,
     )

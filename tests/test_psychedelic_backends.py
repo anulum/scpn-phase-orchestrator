@@ -81,6 +81,36 @@ def test_backend_array_contracts_are_parameterised() -> None:
 
 def test__psychedelic_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(psychedelic_validation.validate_psychedelic_backend_inputs)
+    assert callable(
+        psychedelic_validation.validate_psychedelic_entropy_backend_output
+    )
+
+
+class _FakeGoPsychedelic:
+    def __init__(self, entropy: float) -> None:
+        self.entropy = entropy
+
+    def EntropyFromPhases(
+        self,
+        _phases_ptr: object,
+        _n: object,
+        _n_bins: object,
+        out_ptr: object,
+    ) -> int:
+        out_ptr._obj.value = self.entropy
+        return 0
+
+
+class _FakeJuliaPsychedelic:
+    def __init__(self, entropy: object) -> None:
+        self.entropy = entropy
+
+    def entropy_from_phases(
+        self,
+        _phase_values: np.ndarray,
+        _bin_count: int,
+    ) -> object:
+        return self.entropy
 
 
 class TestDirectBackendBoundaryContracts:
@@ -129,6 +159,72 @@ class TestDirectBackendBoundaryContracts:
         backend: EntropyBackend,
     ) -> None:
         assert backend(np.array([], dtype=np.float64), 36) == 0.0
+
+    @pytest.mark.parametrize(
+        ("backend_name", "payload", "match"),
+        [
+            ("go", np.inf, "finite"),
+            ("julia", 2.0, r"\[0, log\(n_bins\)\]"),
+            ("mojo", -0.1, r"\[0, log\(n_bins\)\]"),
+        ],
+    )
+    def test_invalid_entropy_backend_outputs_are_rejected(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_name: str,
+        payload: float,
+        match: str,
+    ) -> None:
+        phases = np.linspace(0.0, 1.0, 8, dtype=np.float64)
+        if backend_name == "go":
+            monkeypatch.setattr(
+                _psychedelic_go,
+                "_load_lib",
+                lambda: _FakeGoPsychedelic(float(payload)),
+            )
+            backend = entropy_from_phases_go
+        elif backend_name == "julia":
+            monkeypatch.setattr(
+                _psychedelic_julia,
+                "_ensure",
+                lambda: _FakeJuliaPsychedelic(payload),
+            )
+            backend = entropy_from_phases_julia
+        else:
+            monkeypatch.setattr(_psychedelic_mojo, "_ensure_exe", lambda: "fake")
+
+            def fake_run(*_args: object, **_kwargs: object) -> object:
+                class Result:
+                    returncode = 0
+                    stderr = ""
+                    stdout = f"{payload}\n"
+
+                return Result()
+
+            monkeypatch.setattr(_psychedelic_mojo.subprocess, "run", fake_run)
+            backend = entropy_from_phases_mojo
+
+        with pytest.raises(ValueError, match=match):
+            backend(phases, 4)
+
+    def test_mojo_rejects_malformed_entropy_line_count(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(_psychedelic_mojo, "_ensure_exe", lambda: "fake")
+
+        def fake_run(*_args: object, **_kwargs: object) -> object:
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = "0.1\n0.2\n"
+
+            return Result()
+
+        monkeypatch.setattr(_psychedelic_mojo.subprocess, "run", fake_run)
+
+        with pytest.raises(ValueError, match="Mojo entropy returned 2"):
+            entropy_from_phases_mojo(np.linspace(0.0, 1.0, 8), 4)
 
 
 class TestRustParity:
