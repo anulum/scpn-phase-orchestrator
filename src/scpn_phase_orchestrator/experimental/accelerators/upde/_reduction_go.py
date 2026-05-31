@@ -13,6 +13,8 @@ from __future__ import annotations
 import ctypes
 from pathlib import Path
 
+from ._reduction_validation import validate_oa_inputs, validate_oa_output
+
 __all__ = ["oa_run_go"]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libreduction.so"
@@ -62,6 +64,15 @@ def oa_run_go(
     The calculation is delegated to the Go backend.
     """
 
+    z_re, z_im, omega_0, delta, k_coupling, dt, n_steps = validate_oa_inputs(
+        z_re,
+        z_im,
+        omega_0,
+        delta,
+        k_coupling,
+        dt,
+        n_steps,
+    )
     lib = _load_lib()
     re = ctypes.c_double(0.0)
     im = ctypes.c_double(0.0)
@@ -82,4 +93,4 @@ def oa_run_go(
     )
     if rc != 0:
         raise ValueError(f"Go OARun rc={rc}")
-    return (re.value, im.value, r.value, psi.value)
+    return validate_oa_output(re.value, im.value, r.value, psi.value)

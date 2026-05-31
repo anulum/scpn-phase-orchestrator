@@ -14,6 +14,8 @@ import math
 import subprocess
 from pathlib import Path
 
+from ._reduction_validation import validate_oa_inputs, validate_oa_output
+
 __all__ = ["_ensure_exe", "oa_run_mojo"]
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "reduction_mojo"
@@ -42,6 +44,15 @@ def oa_run_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
+    z_re, z_im, omega_0, delta, k_coupling, dt, n_steps = validate_oa_inputs(
+        z_re,
+        z_im,
+        omega_0,
+        delta,
+        k_coupling,
+        dt,
+        n_steps,
+    )
     exe = _ensure_exe()
     tokens = [
         "OARUN",
@@ -76,4 +87,4 @@ def oa_run_mojo(
         raise ValueError(
             "Mojo OARUN output must contain finite z_real, z_imag, R, and psi values"
         )
-    return values
+    return validate_oa_output(*values)

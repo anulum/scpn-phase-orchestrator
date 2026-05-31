@@ -31,7 +31,7 @@ TODO queue.
 | R1 coverage debt closure | The local coverage guard passes, and recent work has added focused behaviour tests for the residual source areas listed in the internal coverage inventory. | Reduce remaining source debt against a fresh CI coverage artefact; keep tests module-specific and regression-driven. |
 | R7 Rust benchmark coverage | Reference-suite metadata and public snapshot pages exist, but not every Rust module has a dedicated measured benchmark file. | Add benchmark files only where the benchmark is reproducible, measured, and useful; do not invent numbers. |
 | S7 CI optimisation | CI already validates roadmap status, reference suite, security scans, and scoped feature tests. | Evaluate unified Python jobs, FFI coverage merge, and Hypothesis profile reductions without weakening gates. |
-| V2 typed NumPy signatures | Several public helper, PAC/market-backend, and accelerator surfaces now use element-typed array signatures. | Continue scoped module-by-module signature sweeps as files are touched. |
+| V2 typed NumPy signatures | Several public helper, PAC/market/reduction-backend, and accelerator surfaces now use element-typed or scalar-typed boundary contracts. | Continue scoped module-by-module signature sweeps as files are touched. |
 | JSON deserialisation hardening | Main decoded heartbeat and Prometheus response boundaries are fail-closed. | Harden adjacent externally supplied JSON boundaries when those modules are touched. |
 | One-click SPO Studio | The operator prototype covers loading, binding review, live metrics, deployment manifests, recovery reports, and export flows. | Turn the prototype into a standalone product and attach real FPGA or neuromorphic evidence. |
 | Auto-binding and data-driven discovery | Review-only proposal builders, SINDy/coupling evidence, `auto_initial_k`, and benchmark-gated fixture thresholds are implemented. | Validate against private or partner live datasets under review-only acceptance thresholds. |
@@ -183,7 +183,7 @@ These items are acknowledged but not the current documentation slice:
 
 | Item | Status |
 |------|--------|
-| Typed NumPy signature sweep | tracked as maintenance; STL fallback robustness, strange-loop supervisor helper arrays, PAC direct backend contracts, and financial-market direct backend contracts are parameterised; continue scoped module-by-module sweeps |
+| Typed NumPy signature sweep | tracked as maintenance; STL fallback robustness, strange-loop supervisor helper arrays, PAC direct backend contracts, financial-market direct backend contracts, and Ott-Antonsen direct reduction backend contracts are parameterised; continue scoped module-by-module sweeps |
 | Visual and batch-heavy features | deferred unless a user-facing workflow needs them immediately |
 | Broad benchmark-file expansion | useful, but benchmark numbers must be measured and reproducible before publication |
 | Thin-test strengthening | long-running maintenance backlog; do opportunistically when touching a module, but do not let broad test-hardening displace active feature/module roadmap work |

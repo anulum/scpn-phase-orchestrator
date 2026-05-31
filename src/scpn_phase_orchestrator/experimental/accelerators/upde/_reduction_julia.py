@@ -13,6 +13,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ._reduction_validation import validate_oa_inputs, validate_oa_output
+
 __all__ = ["oa_run_julia"]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "reduction.jl"
@@ -46,6 +48,15 @@ def oa_run_julia(
     The calculation is delegated to the Julia backend.
     """
 
+    z_re, z_im, omega_0, delta, k_coupling, dt, n_steps = validate_oa_inputs(
+        z_re,
+        z_im,
+        omega_0,
+        delta,
+        k_coupling,
+        dt,
+        n_steps,
+    )
     jl = _ensure()
     result = jl.oa_run(
         float(z_re),
@@ -56,4 +67,9 @@ def oa_run_julia(
         float(dt),
         int(n_steps),
     )
-    return (float(result[0]), float(result[1]), float(result[2]), float(result[3]))
+    return validate_oa_output(
+        float(result[0]),
+        float(result[1]),
+        float(result[2]),
+        float(result[3]),
+    )

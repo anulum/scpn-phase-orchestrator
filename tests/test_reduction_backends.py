@@ -16,6 +16,7 @@ epsilon on Mojo.
 from __future__ import annotations
 
 import contextlib
+import ctypes
 import importlib
 import sys
 import types
@@ -25,7 +26,11 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.experimental.accelerators.upde import _reduction_mojo
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _reduction_go,
+    _reduction_julia,
+    _reduction_mojo,
+)
 from scpn_phase_orchestrator.upde import reduction as r_mod
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 
@@ -62,6 +67,161 @@ def _run(
 
 def _mojo_proc(stdout: str) -> object:
     return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
+
+
+class _FakeGoReductionLib:
+    def __init__(self, output: tuple[float, float, float, float], rc: int = 0) -> None:
+        self.output = output
+        self.rc = rc
+
+    def OARun(self, *_args: object) -> int:
+        output_refs = (
+            ctypes.cast(arg, ctypes.POINTER(ctypes.c_double))
+            for arg in _args[-4:]
+        )
+        for output_ref, value in zip(output_refs, self.output, strict=True):
+            output_ref.contents.value = value
+        return self.rc
+
+
+class _FakeJuliaReductionModule:
+    def __init__(self, output: tuple[float, float, float, float]) -> None:
+        self.output = output
+
+    def oa_run(self, *_args: object) -> tuple[float, float, float, float]:
+        return self.output
+
+
+def _install_reduction_output(
+    monkeypatch: pytest.MonkeyPatch,
+    module: object,
+    output: tuple[float, float, float, float],
+) -> None:
+    if module is _reduction_go:
+        monkeypatch.setattr(
+            _reduction_go,
+            "_load_lib",
+            lambda: _FakeGoReductionLib(output),
+        )
+        return
+    if module is _reduction_julia:
+        monkeypatch.setattr(
+            _reduction_julia,
+            "_ensure",
+            lambda: _FakeJuliaReductionModule(output),
+        )
+        return
+    monkeypatch.setattr(_reduction_mojo, "_ensure_exe", lambda: "reduction")
+    monkeypatch.setattr(
+        _reduction_mojo.subprocess,
+        "run",
+        lambda *_args, **_kwargs: _mojo_proc(
+            "\n".join(str(value) for value in output) + "\n"
+        ),
+    )
+
+
+class TestDirectReductionBoundaryContracts:
+    @pytest.mark.parametrize(
+        "module",
+        [_reduction_go, _reduction_julia, _reduction_mojo],
+        ids=["go", "julia", "mojo"],
+    )
+    @pytest.mark.parametrize(
+        ("args", "match"),
+        [
+            ((True, 0.0, 0.5, 0.1, 1.0, 0.01, 8), "z_re must be"),
+            ((0.8, 0.8, 0.5, 0.1, 1.0, 0.01, 8), "OA unit disk"),
+            ((0.2, 0.1, float("nan"), 0.1, 1.0, 0.01, 8), "omega_0"),
+            ((0.2, 0.1, 0.5, -0.1, 1.0, 0.01, 8), "delta"),
+            ((0.2, 0.1, 0.5, 0.1, 1.0, 0.0, 8), "dt"),
+            ((0.2, 0.1, 0.5, 0.1, 1.0, 0.01, 0), "n_steps"),
+        ],
+    )
+    def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module: object,
+        args: tuple[object, ...],
+        match: str,
+    ) -> None:
+        if module is _reduction_go:
+            monkeypatch.setattr(
+                _reduction_go,
+                "_load_lib",
+                lambda: pytest.fail("Go runtime must not be loaded"),
+            )
+            runner = _reduction_go.oa_run_go
+        elif module is _reduction_julia:
+            monkeypatch.setattr(
+                _reduction_julia,
+                "_ensure",
+                lambda: pytest.fail("Julia runtime must not be loaded"),
+            )
+            runner = _reduction_julia.oa_run_julia
+        else:
+            monkeypatch.setattr(
+                _reduction_mojo,
+                "_ensure_exe",
+                lambda: pytest.fail("Mojo runtime must not be loaded"),
+            )
+            runner = _reduction_mojo.oa_run_mojo
+
+        with pytest.raises((TypeError, ValueError), match=match):
+            runner(*args)
+
+    @pytest.mark.parametrize(
+        "module",
+        [_reduction_go, _reduction_julia, _reduction_mojo],
+        ids=["go", "julia", "mojo"],
+    )
+    def test_direct_backend_accepts_valid_unit_disk_result(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module: object,
+    ) -> None:
+        _install_reduction_output(monkeypatch, module, (0.2, 0.0, 0.2, 0.0))
+
+        if module is _reduction_go:
+            got = _reduction_go.oa_run_go(0.2, 0.0, 0.5, 0.1, 1.0, 0.01, 8)
+        elif module is _reduction_julia:
+            got = _reduction_julia.oa_run_julia(0.2, 0.0, 0.5, 0.1, 1.0, 0.01, 8)
+        else:
+            got = _reduction_mojo.oa_run_mojo(0.2, 0.0, 0.5, 0.1, 1.0, 0.01, 8)
+
+        assert got == (0.2, 0.0, 0.2, 0.0)
+
+    @pytest.mark.parametrize(
+        "module",
+        [_reduction_go, _reduction_julia, _reduction_mojo],
+        ids=["go", "julia", "mojo"],
+    )
+    @pytest.mark.parametrize(
+        ("output", "match"),
+        [
+            ((0.8, 0.8, 1.1313708498984762, 0.7853981633974483), "unit disk"),
+            ((0.2, 0.0, 0.5, 0.0), "R must match"),
+            ((0.0, 0.2, 0.2, 0.0), "psi must match"),
+        ],
+    )
+    def test_direct_backend_rejects_non_physical_outputs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        module: object,
+        output: tuple[float, float, float, float],
+        match: str,
+    ) -> None:
+        _install_reduction_output(monkeypatch, module, output)
+
+        if module is _reduction_go:
+            runner = _reduction_go.oa_run_go
+        elif module is _reduction_julia:
+            runner = _reduction_julia.oa_run_julia
+        else:
+            runner = _reduction_mojo.oa_run_mojo
+
+        with pytest.raises(ValueError, match=match):
+            runner(0.2, 0.0, 0.5, 0.1, 1.0, 0.01, 8)
 
 
 class TestDirectMojoBoundaryContracts:

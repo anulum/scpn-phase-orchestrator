@@ -222,6 +222,16 @@ ODE: dz/dt = -(Δ + iω₀)z + (K/2)(z - |z|²z).
 Critical coupling K_c = 2Δ. Steady-state: R_ss = √(1 - 2Δ/K).
 Used by the PredictiveSupervisor as a fast forward model for MPC
 (O(1) computation vs O(N) for full simulation).
+
+Direct Go, Julia, and Mojo Ott-Antonsen accelerator entrypoints share the
+same scalar boundary before optional runtime loading: the complex order
+parameter must lie inside the OA unit disk, Lorentzian width must be
+non-negative, timestep and step count must be positive, and all scalar
+controls must be finite non-boolean real values. Backend outputs are accepted
+only when the returned complex state remains in the OA unit disk, `R` matches
+`|z|`, and `psi` matches `atan2(Im(z), Re(z))`, preserving the physical
+mean-field state contract across the polyglot chain.
+
 **Detailed documentation:** [Ott-Antonsen Reduction — detailed reference](upde_reduction.md)
 
 ::: scpn_phase_orchestrator.upde.reduction
