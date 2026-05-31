@@ -58,13 +58,23 @@ def hodge_decomposition_mojo(
     )
     if proc.returncode != 0:
         raise ValueError(f"Mojo hodge exit {proc.returncode}: {proc.stderr.strip()}")
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     if len(lines) != 3 * n:
         raise ValueError(f"Mojo HODGE returned {len(lines)} lines, expected {3 * n}")
-    gradient = np.array([float(x) for x in lines[:n]], dtype=np.float64)
-    curl = np.array([float(x) for x in lines[n : 2 * n]], dtype=np.float64)
-    harmonic = np.array(
-        [float(x) for x in lines[2 * n : 3 * n]],
-        dtype=np.float64,
-    )
+    try:
+        values = [float(line) for line in lines]
+    except ValueError as exc:
+        raise ValueError(
+            "Mojo HODGE output must contain finite gradient, curl, and "
+            "harmonic components"
+        ) from exc
+    parsed = np.asarray(values, dtype=np.float64)
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError(
+            "Mojo HODGE output must contain finite gradient, curl, and "
+            "harmonic components"
+        )
+    gradient = parsed[:n].copy()
+    curl = parsed[n : 2 * n].copy()
+    harmonic = parsed[2 * n : 3 * n].copy()
     return gradient, curl, harmonic

@@ -31,6 +31,9 @@ from scpn_phase_orchestrator.coupling.hodge import (
     hodge_decomposition,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _hodge_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _hodge_validation as hodge_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go import (
@@ -79,6 +82,10 @@ def _problem(seed: int, n: int = 16):
     np.fill_diagonal(k, 0.0)
     phases = rng.uniform(0, TWO_PI, n)
     return k, phases
+
+
+def _mojo_proc(stdout: str) -> object:
+    return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
 
 
 class TestDirectBackendBoundaryContracts:
@@ -154,6 +161,39 @@ class TestDirectBackendBoundaryContracts:
         assert curl.dtype == np.float64
         assert harmonic.dtype == np.float64
         assert gradient.shape == curl.shape == harmonic.shape == (0,)
+
+
+class TestDirectMojoBoundaryContracts:
+    """Direct Mojo Hodge adapter rejects malformed backend stdout."""
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo HODGE returned 0 lines, expected 9"),
+            ("0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n", "expected 9"),
+            ("0\n1\n2\n\n4\n5\n6\n7\n8\n", "finite gradient"),
+            ("0\nbad\n2\n3\n4\n5\n6\n7\n8\n", "finite gradient"),
+            ("0\nnan\n2\n3\n4\n5\n6\n7\n8\n", "finite gradient"),
+            ("0\n1\n2\n3\ninf\n5\n6\n7\n8\n", "finite gradient"),
+            ("0\n1\n2\n3\n4\n5\n6\n7\n-inf\n", "finite gradient"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        knm, phases = _problem(23, n=3)
+        monkeypatch.setattr(_hodge_mojo, "_ensure_exe", lambda: "hodge")
+        monkeypatch.setattr(
+            _hodge_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: _mojo_proc(stdout),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _hodge_mojo.hodge_decomposition_mojo(knm.ravel(), phases, 3)
 
 
 class TestRustParity:
