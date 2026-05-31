@@ -218,18 +218,21 @@ class TestNPERustDispatch:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[tuple[np.ndarray, float]] = []
+        phases = np.array([0.0, 1.0, 2.0], dtype=np.float64)
+        radius = 1.5
+        expected = npe_module._compute_npe_reference(phases, radius)
 
         def _fake_npe(phases: np.ndarray, radius: float) -> float:
             calls.append((phases, radius))
-            return 0.55
+            return expected
 
         monkeypatch.setattr(
             npe_module,
             "_dispatch",
             lambda fn_name: _fake_npe if fn_name == "compute_npe" else None,
         )
-        npe = compute_npe(np.array([0.0, 1.0, 2.0], dtype=np.float64), max_radius=1.5)
-        assert npe == pytest.approx(0.55, abs=1e-12)
+        npe = compute_npe(phases, max_radius=radius)
+        assert npe == pytest.approx(expected, abs=1e-12)
         assert len(calls) == 1
 
     def test_compute_npe_falls_back_when_backend_raises(
