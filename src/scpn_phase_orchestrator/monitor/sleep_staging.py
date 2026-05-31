@@ -198,8 +198,9 @@ def _contains_complex_alias(value: object) -> bool:
 def _validate_stage_code(value: object) -> str:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError("Rust sleep stage code must be an integer stage code")
-    code = int(value)
-    if float(value) != float(code) or code not in _STAGE_NAMES:
+    numeric = float(value)
+    code = int(numeric)
+    if numeric != float(code) or code not in _STAGE_NAMES:
         raise ValueError(
             f"Rust sleep stage code must be in {_STAGE_NAMES}, got {value!r}"
         )

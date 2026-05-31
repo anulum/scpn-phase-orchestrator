@@ -239,14 +239,14 @@ class TestRandomProperty:
 
 class TestInputValidation:
     def test_empty_phases(self):
-        spec = lyapunov_spectrum(
-            np.array([]),
-            np.array([]),
-            np.zeros((0, 0)),
-            np.zeros((0, 0)),
-            n_steps=10,
-        )
-        assert spec.shape == (0,)
+        with pytest.raises(ValueError, match="at least one oscillator"):
+            lyapunov_spectrum(
+                np.array([]),
+                np.array([]),
+                np.zeros((0, 0)),
+                np.zeros((0, 0)),
+                n_steps=10,
+            )
 
     @pytest.mark.parametrize(
         ("field", "bad_value", "match"),
