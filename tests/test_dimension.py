@@ -526,7 +526,7 @@ class TestBackendDispatch:
             assert traj_flat.flags.c_contiguous
             assert traj_flat.dtype == np.float64
             np.testing.assert_array_equal(eps_sorted, np.array([0.1, 1.0, 2.0]))
-            return np.array([0.25, 0.5, 1.0], dtype=np.float64)
+            return np.array([0.0, 0.0, 2.0 / 3.0], dtype=np.float64)
 
         previous_backend = dim_mod.ACTIVE_BACKEND
         previous_loader = dim_mod._LOADERS["rust"]
@@ -541,7 +541,7 @@ class TestBackendDispatch:
             monkeypatch.setitem(dim_mod._LOADERS, "rust", previous_loader)
             dim_mod._BACKEND_FN_CACHE.clear()
 
-        np.testing.assert_array_equal(C, np.array([0.25, 0.5, 1.0]))
+        np.testing.assert_array_equal(C, np.array([0.0, 0.0, 2.0 / 3.0]))
         assert calls == [(3, 2, 17, 9)]
 
     def test_non_rust_dispatch_uses_prepared_indices(
