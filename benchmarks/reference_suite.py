@@ -413,6 +413,7 @@ class MultiverseCounterfactualThresholds(NamedTuple):
     require_non_actuating: bool
     require_execution_disabled: bool
     require_deterministic_hash: bool
+    require_jax_backend_parity: bool
 
 
 class PluginEcosystemThresholds(NamedTuple):
@@ -4224,6 +4225,7 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
         require_non_actuating=True,
         require_execution_disabled=True,
         require_deterministic_hash=True,
+        require_jax_backend_parity=True,
     )
 
     phases = np.array([0.0, 0.35, 0.85, 1.3, 1.9], dtype=np.float64)
@@ -4287,6 +4289,16 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
         horizon=16,
         dt=0.02,
     )
+    jax_manifest = simulate_multiverse_counterfactual_branches(
+        phases=phases,
+        omegas=omegas,
+        baseline_k=baseline_k,
+        baseline_alpha=baseline_alpha,
+        branch_specs=branch_specs,
+        horizon=16,
+        dt=0.02,
+        backend="jax",
+    )
     risk_report = evaluate_multiverse_branch_risk(
         manifest.to_audit_record(),
         MultiverseRiskThresholds(
@@ -4304,6 +4316,31 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
     risk_record = risk_report.to_audit_record()
     branch_records = manifest_record["branch_records"]
     deterministic_hash = int(manifest.manifest_hash == repeated.manifest_hash)
+    jax_backend_parity = int(
+        manifest.branch_count == jax_manifest.branch_count
+        and all(
+            numpy_record.branch_id == jax_record.branch_id
+            and numpy_record.branch_hash == jax_record.branch_hash
+            and numpy_record.action_count == jax_record.action_count
+            and numpy_record.action_labels == jax_record.action_labels
+            and numpy_record.topology_edge_count == jax_record.topology_edge_count
+            and np.isclose(
+                numpy_record.topology_scale,
+                jax_record.topology_scale,
+                atol=1e-12,
+            )
+            and np.isclose(numpy_record.final_R, jax_record.final_R, atol=1e-10)
+            and np.isclose(numpy_record.mean_R, jax_record.mean_R, atol=1e-10)
+            and np.isclose(numpy_record.min_R, jax_record.min_R, atol=1e-10)
+            and np.isclose(numpy_record.max_R, jax_record.max_R, atol=1e-10)
+            and np.isclose(numpy_record.final_psi, jax_record.final_psi, atol=1e-10)
+            for numpy_record, jax_record in zip(
+                manifest.branch_records,
+                jax_manifest.branch_records,
+                strict=True,
+            )
+        )
+    )
     non_actuating = int(
         manifest.non_actuating is True
         and risk_report.non_actuating is True
@@ -4322,6 +4359,7 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
         and non_actuating == int(thresholds.require_non_actuating)
         and execution_disabled == int(thresholds.require_execution_disabled)
         and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and jax_backend_parity == int(thresholds.require_jax_backend_parity)
     )
 
     return {
@@ -4335,6 +4373,9 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
         "non_actuating": non_actuating,
         "execution_disabled": execution_disabled,
         "deterministic_hash": deterministic_hash,
+        "jax_backend_parity": jax_backend_parity,
+        "numpy_backend": manifest.backend,
+        "jax_backend": jax_manifest.backend,
         "manifest_sha256": manifest.manifest_hash,
         "risk_report_sha256": risk_report.report_hash,
         "safest_branch_id": risk_report.safest_branch_id or "",
@@ -4347,6 +4388,9 @@ def benchmark_multiverse_counterfactual_gate() -> dict[str, float | int | str]:
                 "min_rejected_branch_count": thresholds.min_rejected_branch_count,
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_jax_backend_parity": (
+                    thresholds.require_jax_backend_parity
+                ),
                 "require_non_actuating": thresholds.require_non_actuating,
             },
             sort_keys=True,

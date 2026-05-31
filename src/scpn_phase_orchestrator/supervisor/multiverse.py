@@ -8,9 +8,10 @@
 
 """Deterministic counterfactual branch rollouts over branch topologies.
 
-The implementation runs vectorised NumPy trajectories for multiple branch
-interventions in one pass and keeps a strict non-actuation boundary. It is an
-upstream-safe simulation surface for research, policy gating, and audit review.
+The implementation runs vectorised NumPy or optional JAX trajectories for
+multiple branch interventions in one pass and keeps a strict non-actuation
+boundary. It is an upstream-safe simulation surface for research, policy
+gating, and audit review.
 """
 
 from __future__ import annotations
@@ -37,7 +38,9 @@ __all__ = [
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
-_BACKEND_NAME = "numpy_vectorized_jax_compatible"
+_NUMPY_BACKEND_NAME = "numpy_vectorized"
+_JAX_BACKEND_NAME = "jax_vectorized"
+_SUPPORTED_BACKENDS = frozenset({"jax", "numpy"})
 _SUPPORTED_KNOBS = {"K", "alpha", "zeta", "Psi", "psi"}
 
 
@@ -176,6 +179,26 @@ def _require_non_negative_int(value: object, field: str) -> int:
     if int(value) < 0 or int(value) != value:
         raise ValueError(f"{field} must be a non-negative integer")
     return int(value)
+
+
+def _normalise_backend(backend: str) -> str:
+    if not isinstance(backend, str):
+        raise ValueError("backend must be one of: jax, numpy")
+    backend_name = backend.strip().lower()
+    if backend_name not in _SUPPORTED_BACKENDS:
+        raise ValueError("backend must be one of: jax, numpy")
+    return backend_name
+
+
+def _load_jax_numpy() -> Any:
+    try:
+        import jax
+
+        jax.config.update("jax_enable_x64", True)
+        import jax.numpy as jnp
+    except ImportError as exc:  # pragma: no cover - optional dependency boundary
+        raise RuntimeError("backend='jax' requested but JAX is not available") from exc
+    return jnp
 
 
 def _require_shape(name: str, array: FloatArray, shape: tuple[int, ...]) -> None:
@@ -434,6 +457,116 @@ def _order_parameters(theta: FloatArray) -> tuple[FloatArray, FloatArray]:
     return R, psi
 
 
+def _rollout_numpy(
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: FloatArray,
+    psi: FloatArray,
+    *,
+    horizon: int,
+    dt: float,
+    method: str,
+) -> tuple[FloatArray, FloatArray]:
+    branch_count, n_osc, _ = knm.shape
+    theta = np.broadcast_to(phases[None, :], (branch_count, n_osc)).copy()
+    R_traj = np.empty((horizon + 1, branch_count), dtype=np.float64)
+    psi_traj = np.empty((horizon + 1, branch_count), dtype=np.float64)
+    R_traj[0], psi_traj[0] = _order_parameters(theta)
+
+    for step in range(horizon):
+        if method == "euler":
+            theta = _euler_step(
+                theta=theta,
+                omegas=omegas,
+                knm=knm,
+                alpha=alpha,
+                zeta=zeta,
+                psi=psi,
+                dt=dt,
+            )
+        else:
+            theta = _rk4_step(
+                theta=theta,
+                omegas=omegas,
+                knm=knm,
+                alpha=alpha,
+                zeta=zeta,
+                psi=psi,
+                dt=dt,
+            )
+        R_traj[step + 1], psi_traj[step + 1] = _order_parameters(theta)
+    return R_traj, psi_traj
+
+
+def _rollout_jax(
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: FloatArray,
+    psi: FloatArray,
+    *,
+    horizon: int,
+    dt: float,
+    method: str,
+) -> tuple[FloatArray, FloatArray]:
+    jnp = _load_jax_numpy()
+    branch_count, n_osc, _ = knm.shape
+    theta = jnp.broadcast_to(
+        jnp.asarray(phases, dtype=jnp.float64)[None, :],
+        (branch_count, n_osc),
+    )
+    omegas_j = jnp.asarray(omegas, dtype=jnp.float64)
+    knm_j = jnp.asarray(knm, dtype=jnp.float64)
+    alpha_j = jnp.asarray(alpha, dtype=jnp.float64)
+    zeta_j = jnp.asarray(zeta, dtype=jnp.float64)
+    psi_j = jnp.asarray(psi, dtype=jnp.float64)
+    dt_j = jnp.asarray(dt, dtype=jnp.float64)
+    two_pi = jnp.asarray(TWO_PI, dtype=jnp.float64)
+
+    def derivative(theta_j: Any) -> Any:
+        phase_diff = theta_j[:, None, :] - theta_j[:, :, None]
+        coupling = jnp.sum(knm_j * jnp.sin(phase_diff - alpha_j), axis=2)
+        coupling = coupling + omegas_j[None, :]
+        return coupling + zeta_j[:, None] * jnp.sin(psi_j[:, None] - theta_j)
+
+    def euler_step(theta_j: Any) -> Any:
+        return jnp.mod(theta_j + dt_j * derivative(theta_j), two_pi)
+
+    def rk4_step(theta_j: Any) -> Any:
+        k1 = derivative(theta_j)
+        k2 = derivative(jnp.mod(theta_j + 0.5 * dt_j * k1, two_pi))
+        k3 = derivative(jnp.mod(theta_j + 0.5 * dt_j * k2, two_pi))
+        k4 = derivative(jnp.mod(theta_j + dt_j * k3, two_pi))
+        return jnp.mod(
+            theta_j + (dt_j / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4),
+            two_pi,
+        )
+
+    def order_parameters(theta_j: Any) -> tuple[Any, Any]:
+        z = jnp.exp(1j * theta_j)
+        mean = jnp.mean(z, axis=1)
+        return jnp.abs(mean), jnp.mod(jnp.angle(mean), two_pi)
+
+    R_values: list[Any] = []
+    psi_values: list[Any] = []
+    R0, psi0 = order_parameters(theta)
+    R_values.append(R0)
+    psi_values.append(psi0)
+    for _ in range(horizon):
+        theta = euler_step(theta) if method == "euler" else rk4_step(theta)
+        R_step, psi_step = order_parameters(theta)
+        R_values.append(R_step)
+        psi_values.append(psi_step)
+
+    return (
+        np.asarray(jnp.stack(R_values), dtype=np.float64),
+        np.asarray(jnp.stack(psi_values), dtype=np.float64),
+    )
+
+
 def simulate_multiverse_counterfactual_branches(
     phases: NDArray[np.float64],
     omegas: NDArray[np.float64],
@@ -448,6 +581,7 @@ def simulate_multiverse_counterfactual_branches(
     horizon: int = 20,
     dt: float = 0.01,
     method: str = "rk4",
+    backend: str = "numpy",
 ) -> MultiverseCounterfactualManifest:
     """Run deterministic branch counterfactual rollouts without actuation."""
     phases_arr = _coerce_float_array("phases", phases)
@@ -468,6 +602,7 @@ def simulate_multiverse_counterfactual_branches(
     dt_f = _require_positive_real(dt, "dt")
     baseline_zeta_f = _require_finite_real(baseline_zeta, "baseline_zeta")
     baseline_psi_f = _require_finite_real(baseline_psi, "baseline_psi")
+    backend_name = _normalise_backend(backend)
     if method not in {"euler", "rk4"}:
         raise ValueError("method must be 'euler' or 'rk4'")
 
@@ -523,33 +658,32 @@ def simulate_multiverse_counterfactual_branches(
             )
         )
 
-    theta = np.broadcast_to(phases_arr[None, :], (branch_count, n_osc)).copy()
-    R_traj = np.empty((horizon_i + 1, branch_count), dtype=np.float64)
-    psi_traj = np.empty((horizon_i + 1, branch_count), dtype=np.float64)
-    R_traj[0], psi_traj[0] = _order_parameters(theta)
-
-    for step in range(horizon_i):
-        if method == "euler":
-            theta = _euler_step(
-                theta=theta,
-                omegas=omegas_arr,
-                knm=knm_cube,
-                alpha=alpha_cube,
-                zeta=zeta_vec,
-                psi=psi_vec,
-                dt=dt_f,
-            )
-        else:
-            theta = _rk4_step(
-                theta=theta,
-                omegas=omegas_arr,
-                knm=knm_cube,
-                alpha=alpha_cube,
-                zeta=zeta_vec,
-                psi=psi_vec,
-                dt=dt_f,
-            )
-        R_traj[step + 1], psi_traj[step + 1] = _order_parameters(theta)
+    if backend_name == "jax":
+        R_traj, psi_traj = _rollout_jax(
+            phases=phases_arr,
+            omegas=omegas_arr,
+            knm=knm_cube,
+            alpha=alpha_cube,
+            zeta=zeta_vec,
+            psi=psi_vec,
+            horizon=horizon_i,
+            dt=dt_f,
+            method=method,
+        )
+        audit_backend = _JAX_BACKEND_NAME
+    else:
+        R_traj, psi_traj = _rollout_numpy(
+            phases=phases_arr,
+            omegas=omegas_arr,
+            knm=knm_cube,
+            alpha=alpha_cube,
+            zeta=zeta_vec,
+            psi=psi_vec,
+            horizon=horizon_i,
+            dt=dt_f,
+            method=method,
+        )
+        audit_backend = _NUMPY_BACKEND_NAME
 
     if not np.all(np.isfinite(R_traj)) or not np.all(np.isfinite(psi_traj)):
         raise ValueError("rollout produced non-finite values")
@@ -576,7 +710,7 @@ def simulate_multiverse_counterfactual_branches(
         "schema_version": "0.1.0",
         "branch_count": branch_count,
         "horizon": horizon_i,
-        "backend": _BACKEND_NAME,
+        "backend": audit_backend,
         "non_actuating": True,
         "execution_disabled": True,
         "claim_boundary": "counterfactual_branch_rollout_not_live_actuation",
@@ -591,7 +725,7 @@ def simulate_multiverse_counterfactual_branches(
         branch_records=records,
         branch_count=branch_count,
         horizon=horizon_i,
-        backend=_BACKEND_NAME,
+        backend=audit_backend,
         non_actuating=True,
         execution_disabled=True,
         claim_boundary="counterfactual_branch_rollout_not_live_actuation",

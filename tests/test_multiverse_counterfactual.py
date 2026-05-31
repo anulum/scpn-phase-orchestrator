@@ -78,7 +78,7 @@ class TestMultiverseCounterfactualRollouts:
         )
         record = manifest.to_audit_record()
 
-        assert record["backend"] == "numpy_vectorized_jax_compatible"
+        assert record["backend"] == "numpy_vectorized"
         assert record["branch_count"] == 1
         assert record["non_actuating"] is True
         assert record["execution_disabled"] is True
@@ -172,6 +172,15 @@ class TestMultiverseCounterfactualRollouts:
                 },
                 "dt",
             ),
+            (
+                {
+                    "branch_action_sets": (
+                        (ControlAction("K", "global", 0.1, 1.0, "bad"),),
+                    ),
+                    "backend": "invalid",
+                },
+                "backend",
+            ),
         ],
     )
     def test_fail_closed_on_invalid_inputs(self, bad_input, message: str) -> None:
@@ -213,3 +222,69 @@ class TestMultiverseCounterfactualRollouts:
         boosted_final = manifest.branch_records[1].final_R
 
         assert not np.isclose(baseline_final, boosted_final)
+
+    def test_jax_backend_matches_numpy_branch_invariants(self) -> None:
+        pytest.importorskip("jax")
+        pytest.importorskip("jax.numpy")
+        phases, omegas, baseline_k, baseline_alpha = _base_inputs()
+        branches = (
+            MultiverseBranchSpec("baseline", ()),
+            MultiverseBranchSpec(
+                "stronger_coupling",
+                (
+                    ControlAction("K", "global", 0.14, 1.0, "increase coupling"),
+                    ControlAction("alpha", "global", 0.04, 1.0, "phase lag"),
+                    ControlAction("zeta", "global", 0.015, 1.0, "forcing"),
+                    ControlAction("Psi", "global", 0.2, 1.0, "forcing phase"),
+                ),
+            ),
+        )
+
+        numpy_manifest = simulate_multiverse_counterfactual_branches(
+            phases=phases,
+            omegas=omegas,
+            baseline_k=baseline_k,
+            baseline_alpha=baseline_alpha,
+            branch_specs=branches,
+            horizon=12,
+            dt=0.015,
+            backend="numpy",
+        )
+        jax_manifest = simulate_multiverse_counterfactual_branches(
+            phases=phases,
+            omegas=omegas,
+            baseline_k=baseline_k,
+            baseline_alpha=baseline_alpha,
+            branch_specs=branches,
+            horizon=12,
+            dt=0.015,
+            backend="jax",
+        )
+
+        assert numpy_manifest.backend == "numpy_vectorized"
+        assert jax_manifest.backend == "jax_vectorized"
+        assert jax_manifest.non_actuating is True
+        assert jax_manifest.execution_disabled is True
+        assert jax_manifest.branch_count == numpy_manifest.branch_count
+        for numpy_record, jax_record in zip(
+            numpy_manifest.branch_records,
+            jax_manifest.branch_records,
+            strict=True,
+        ):
+            assert jax_record.branch_id == numpy_record.branch_id
+            assert jax_record.branch_hash == numpy_record.branch_hash
+            assert jax_record.action_count == numpy_record.action_count
+            assert jax_record.action_labels == numpy_record.action_labels
+            assert jax_record.topology_edge_count == numpy_record.topology_edge_count
+            assert jax_record.topology_scale == pytest.approx(
+                numpy_record.topology_scale,
+                abs=1e-12,
+            )
+            assert jax_record.final_R == pytest.approx(numpy_record.final_R, abs=1e-10)
+            assert jax_record.mean_R == pytest.approx(numpy_record.mean_R, abs=1e-10)
+            assert jax_record.min_R == pytest.approx(numpy_record.min_R, abs=1e-10)
+            assert jax_record.max_R == pytest.approx(numpy_record.max_R, abs=1e-10)
+            assert jax_record.final_psi == pytest.approx(
+                numpy_record.final_psi,
+                abs=1e-10,
+            )

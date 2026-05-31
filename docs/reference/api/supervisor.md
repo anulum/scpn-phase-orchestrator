@@ -1062,7 +1062,13 @@ natural-gradient proposals. Both paths remain non-actuating review surfaces.
 ## Multiverse and Topos Review
 
 Counterfactual branch simulation, example manifests, branch-risk gates, and
-categorical policy composition checks.
+categorical policy composition checks. The multiverse simulator keeps NumPy as
+the default deterministic audit backend and exposes explicit `backend="jax"`
+acceleration for larger branch corpora where JAX can place the vectorized
+rollout on an available accelerator. Reference benchmarks gate JAX output
+against NumPy branch hashes, topology metrics, order-parameter trajectories, and
+final phase angles while preserving the non-actuating, execution-disabled review
+boundary.
 
 ::: scpn_phase_orchestrator.supervisor.multiverse
 

@@ -976,9 +976,10 @@ Speculative research watchlist:
     records. Remaining scope: richer Studio UI surfacing and optional external
     categorical proof-tool export.
 - Multiverse counterfactual simulator: deterministic vectorised branch rollouts,
-  domain scenario fixtures, and fail-closed non-actuating branch-risk gates are
-  implemented with reference-suite evidence. Remaining scope: optional JAX
-  acceleration, larger scenario corpora, and richer Studio surfacing.
+  optional JAX acceleration with NumPy parity evidence, domain scenario fixtures,
+  and fail-closed non-actuating branch-risk gates are implemented with
+  reference-suite evidence. Remaining scope: larger scenario corpora and richer
+  Studio surfacing.
 - Entanglement-aware hybrid order parameters: dependency-free quantum
   co-simulation monitor now reports bipartition Von Neumann entanglement
   entropy, normalised entropy, participation ratio, classical `R`/`Psi`,
