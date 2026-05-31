@@ -323,6 +323,88 @@ class TestSheafCoherenceBehaviour:
         assert exact_critical.severity == "critical"
         assert below_threshold.severity == "nominal"
 
+    def test_laplacian_control_proposal_reduces_obstruction_energy(self) -> None:
+        states = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [0.0, -1.0],
+            ],
+            dtype=np.float64,
+        )
+        maps = _identity_maps(n_nodes=3, n_channels=2)
+        baseline = sheaf_coherence(states, maps)
+
+        proposal = sheaf_module.propose_sheaf_obstruction_control(
+            states,
+            maps,
+            step_size=0.25,
+            max_update_norm=0.4,
+        )
+
+        assert isinstance(proposal, sheaf_module.SheafControlProposal)
+        assert proposal.non_actuating is True
+        assert proposal.execution_disabled is True
+        assert proposal.operator_review_required is True
+        assert proposal.accepted_for_review is True
+        assert proposal.baseline_obstruction_score == pytest.approx(
+            baseline.obstruction_score
+        )
+        assert proposal.projected_obstruction_score < baseline.obstruction_score
+        assert proposal.projected_consistency_energy < baseline.consistency_energy
+        assert np.linalg.norm(proposal.recommended_update) <= 0.4 + 1e-12
+        assert proposal.baseline_kernel_dimension == baseline.kernel_dimension
+        assert proposal.projected_kernel_dimension >= baseline.kernel_dimension
+        assert proposal.baseline_obstruction_dimension == baseline.obstruction_dimension
+        assert (
+            proposal.projected_obstruction_dimension
+            <= baseline.obstruction_dimension
+        )
+
+        audit = proposal.to_audit_record()
+        assert audit["method"] == "sheaf_laplacian_gradient_descent_review"
+        assert audit["execution_disabled"] is True
+        assert audit["cohomology_dimensions"] == {
+            "baseline_kernel_dimension": proposal.baseline_kernel_dimension,
+            "projected_kernel_dimension": proposal.projected_kernel_dimension,
+            "baseline_obstruction_dimension": proposal.baseline_obstruction_dimension,
+            "projected_obstruction_dimension": proposal.projected_obstruction_dimension,
+        }
+
+    def test_laplacian_control_proposal_is_passive_for_global_section(self) -> None:
+        states = np.tile(np.array([0.25, -0.5], dtype=np.float64), (3, 1))
+        maps = _identity_maps(n_nodes=3, n_channels=2)
+
+        proposal = sheaf_module.propose_sheaf_obstruction_control(states, maps)
+
+        assert proposal.accepted_for_review is False
+        assert proposal.blocked_reasons == ("no_obstruction_detected",)
+        assert proposal.update_norm == pytest.approx(0.0)
+        assert np.allclose(proposal.recommended_update, 0.0)
+        assert np.allclose(proposal.projected_node_states, states)
+        assert proposal.baseline_obstruction_score == pytest.approx(0.0)
+        assert proposal.projected_obstruction_score == pytest.approx(0.0)
+
+    @pytest.mark.parametrize(
+        ("step_size", "max_update_norm"),
+        [(0.0, 1.0), (-1.0, 1.0), (True, 1.0), (0.1, -1.0), (0.1, True)],
+    )
+    def test_laplacian_control_proposal_rejects_invalid_step_controls(
+        self,
+        step_size: object,
+        max_update_norm: object,
+    ) -> None:
+        states = np.zeros((2, 1), dtype=np.float64)
+        maps = _identity_maps(n_nodes=2, n_channels=1)
+
+        with pytest.raises(ValueError, match="step_size|max_update_norm"):
+            sheaf_module.propose_sheaf_obstruction_control(
+                states,
+                maps,
+                step_size=step_size,  # type: ignore[arg-type]
+                max_update_norm=max_update_norm,  # type: ignore[arg-type]
+            )
+
     def test_kernel_dimension_is_tolerant_to_small_numerical_noise(self) -> None:
         laplacian = np.array(
             [

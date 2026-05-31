@@ -400,10 +400,10 @@ live actuation.
 restriction maps. It builds the block sheaf Laplacian, computes edge residuals,
 and reports obstruction metrics for audit logs.
 
-This is the first supervisor-facing sheaf-cohomology slice: it exposes
-obstruction score, consistency energy, approximate kernel dimension, and
-obstruction dimension. It does not claim a complete formal proof system or
-autonomous sheaf-control loop.
+This supervisor-facing sheaf-cohomology slice exposes obstruction score,
+consistency energy, approximate kernel dimension, obstruction dimension, and a
+review-only obstruction-aware control primitive. It does not claim a complete
+formal proof system or autonomous sheaf-control loop.
 
 ```python
 from scpn_phase_orchestrator.supervisor import (
@@ -417,6 +417,27 @@ summary = build_sheaf_obstruction_summary(result)
 
 if result.obstruction_score > 0.1:
     audit_payload = summary.to_audit_record()
+```
+
+`propose_sheaf_obstruction_control()` projects an obstructed section one
+bounded step down the sheaf-Laplacian consistency-energy gradient. The use case
+is operator review: identify a mathematically justified state correction that
+reduces obstruction while recording before/after cohomology dimensions. The
+proposal is always non-actuating, execution-disabled, and review-required.
+
+```python
+from scpn_phase_orchestrator.supervisor import (
+    propose_sheaf_obstruction_control,
+)
+
+proposal = propose_sheaf_obstruction_control(
+    node_states,
+    restriction_maps,
+    step_size=0.25,
+    max_update_norm=0.4,
+)
+assert proposal.projected_consistency_energy <= proposal.baseline_consistency_energy
+assert proposal.execution_disabled
 ```
 
 `domainpacks/edge_consensus_nchannel/sheaf_obstruction_demo.py` provides a

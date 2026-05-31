@@ -503,8 +503,11 @@ class SheafObstructionBenchmarkThresholds(NamedTuple):
     min_top_residual_edge_count: int
     min_critical_count: int
     min_obstruction_delta: float
+    min_control_energy_reduction: float
     max_nominal_obstruction_score: float
     require_non_actuating: bool
+    require_execution_disabled: bool
+    require_operator_review: bool
     require_deterministic_hash: bool
 
 
@@ -5015,8 +5018,11 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
         min_top_residual_edge_count=18,
         min_critical_count=5,
         min_obstruction_delta=0.1,
+        min_control_energy_reduction=0.1,
         max_nominal_obstruction_score=0.35,
         require_non_actuating=True,
+        require_execution_disabled=True,
+        require_operator_review=True,
         require_deterministic_hash=True,
     )
     module_paths = (
@@ -5037,6 +5043,8 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
 
     records = [_sheaf_obstruction_demo_record(demo) for demo in demos]
     repeated_records = [_sheaf_obstruction_demo_record(demo) for demo in repeated]
+    control_record = _sheaf_obstruction_control_record()
+    repeated_control_record = _sheaf_obstruction_control_record()
     summary_count = sum(int(record["summary_present"]) for record in records)
     top_residual_edge_count = sum(
         int(record["top_residual_edge_count"]) for record in records
@@ -5050,16 +5058,27 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
     max_nominal_obstruction_score = max(
         float(record["nominal_obstruction_score"]) for record in records
     )
-    non_actuating = int(all(record["actuating"] is False for record in records))
-    deterministic_hash = int(records == repeated_records)
+    control_energy_reduction = float(control_record["control_energy_reduction"])
+    non_actuating = int(
+        all(record["actuating"] is False for record in records)
+        and control_record["non_actuating"] is True
+    )
+    execution_disabled = int(control_record["execution_disabled"] is True)
+    operator_review_required = int(control_record["operator_review_required"] is True)
+    deterministic_hash = int(
+        records == repeated_records and control_record == repeated_control_record
+    )
     acceptance_passed = int(
         len(records) >= thresholds.min_demo_count
         and summary_count >= thresholds.min_summary_count
         and top_residual_edge_count >= thresholds.min_top_residual_edge_count
         and critical_count >= thresholds.min_critical_count
         and min_obstruction_delta >= thresholds.min_obstruction_delta
+        and control_energy_reduction >= thresholds.min_control_energy_reduction
         and max_nominal_obstruction_score <= thresholds.max_nominal_obstruction_score
         and non_actuating == int(thresholds.require_non_actuating)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and operator_review_required == int(thresholds.require_operator_review)
         and deterministic_hash == int(thresholds.require_deterministic_hash)
     )
 
@@ -5072,10 +5091,15 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
         "top_residual_edge_count": top_residual_edge_count,
         "critical_count": critical_count,
         "min_obstruction_delta": min_obstruction_delta,
+        "control_energy_reduction": control_energy_reduction,
         "max_nominal_obstruction_score": max_nominal_obstruction_score,
         "non_actuating": non_actuating,
+        "execution_disabled": execution_disabled,
+        "operator_review_required": operator_review_required,
         "deterministic_hash": deterministic_hash,
-        "sheaf_obstruction_sha256": _stable_record_hash(records),
+        "sheaf_obstruction_sha256": _stable_record_hash(
+            [*records, control_record]
+        ),
         "acceptance_passed": acceptance_passed,
         "acceptance_thresholds_json": json.dumps(
             {
@@ -5084,14 +5108,20 @@ def benchmark_sheaf_obstruction_domain_gate() -> dict[str, float | int | str]:
                 ),
                 "min_critical_count": thresholds.min_critical_count,
                 "min_demo_count": thresholds.min_demo_count,
+                "min_control_energy_reduction": (
+                    thresholds.min_control_energy_reduction
+                ),
                 "min_obstruction_delta": thresholds.min_obstruction_delta,
                 "min_summary_count": thresholds.min_summary_count,
                 "min_top_residual_edge_count": (thresholds.min_top_residual_edge_count),
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
                 "require_non_actuating": thresholds.require_non_actuating,
+                "require_operator_review": thresholds.require_operator_review,
             },
             sort_keys=True,
         ),
+        "control_record_json": json.dumps(control_record, sort_keys=True),
         "records_json": json.dumps(records, sort_keys=True),
     }
 
@@ -6681,6 +6711,44 @@ def _sheaf_obstruction_demo_record(payload: Mapping[str, object]) -> dict[str, o
         "incident_kernel_dimension": int(incident["kernel_dimension"]),
         "summary_present": True,
         "actuating": bool(payload["actuating"]),
+    }
+
+
+def _sheaf_obstruction_control_record() -> dict[str, object]:
+    from domainpacks.power_grid.sheaf_obstruction_demo import (
+        line_fault_power_grid_sheaf_state,
+        power_grid_restriction_maps,
+    )
+    from scpn_phase_orchestrator.supervisor import (
+        propose_sheaf_obstruction_control,
+    )
+
+    proposal = propose_sheaf_obstruction_control(
+        line_fault_power_grid_sheaf_state(),
+        power_grid_restriction_maps(),
+        step_size=0.25,
+        max_update_norm=0.4,
+    )
+    energy_reduction = (
+        proposal.baseline_consistency_energy - proposal.projected_consistency_energy
+    )
+    return {
+        "scenario": "power_grid_line_fault_sheaf_control_review",
+        "accepted_for_review": proposal.accepted_for_review,
+        "baseline_obstruction_score": proposal.baseline_obstruction_score,
+        "projected_obstruction_score": proposal.projected_obstruction_score,
+        "baseline_consistency_energy": proposal.baseline_consistency_energy,
+        "projected_consistency_energy": proposal.projected_consistency_energy,
+        "control_energy_reduction": energy_reduction,
+        "baseline_kernel_dimension": proposal.baseline_kernel_dimension,
+        "projected_kernel_dimension": proposal.projected_kernel_dimension,
+        "baseline_obstruction_dimension": proposal.baseline_obstruction_dimension,
+        "projected_obstruction_dimension": proposal.projected_obstruction_dimension,
+        "update_norm": proposal.update_norm,
+        "non_actuating": proposal.non_actuating,
+        "execution_disabled": proposal.execution_disabled,
+        "operator_review_required": proposal.operator_review_required,
+        "blocked_reason_count": len(proposal.blocked_reasons),
     }
 
 

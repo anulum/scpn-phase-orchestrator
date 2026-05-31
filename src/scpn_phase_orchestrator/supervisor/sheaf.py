@@ -20,8 +20,10 @@ from numpy.typing import NDArray
 __all__ = [
     "SheafCoherenceResult",
     "SheafObstructionSummary",
+    "SheafControlProposal",
     "SheafCoherenceSupervisor",
     "build_sheaf_obstruction_summary",
+    "propose_sheaf_obstruction_control",
     "sheaf_coherence",
     "sheaf_laplacian",
 ]
@@ -86,6 +88,60 @@ class SheafObstructionSummary:
         }
 
 
+@dataclass(frozen=True)
+class SheafControlProposal:
+    """Review-only obstruction-aware sheaf-Laplacian control proposal."""
+
+    baseline_obstruction_score: float
+    projected_obstruction_score: float
+    baseline_consistency_energy: float
+    projected_consistency_energy: float
+    baseline_kernel_dimension: int
+    projected_kernel_dimension: int
+    baseline_obstruction_dimension: int
+    projected_obstruction_dimension: int
+    recommended_update: FloatArray
+    projected_node_states: FloatArray
+    update_norm: float
+    step_size: float
+    max_update_norm: float
+    accepted_for_review: bool
+    non_actuating: bool
+    execution_disabled: bool
+    operator_review_required: bool
+    blocked_reasons: tuple[str, ...]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a compact serialisable payload for operator review."""
+        return {
+            "method": "sheaf_laplacian_gradient_descent_review",
+            "baseline_obstruction_score": self.baseline_obstruction_score,
+            "projected_obstruction_score": self.projected_obstruction_score,
+            "baseline_consistency_energy": self.baseline_consistency_energy,
+            "projected_consistency_energy": self.projected_consistency_energy,
+            "cohomology_dimensions": {
+                "baseline_kernel_dimension": self.baseline_kernel_dimension,
+                "projected_kernel_dimension": self.projected_kernel_dimension,
+                "baseline_obstruction_dimension": (
+                    self.baseline_obstruction_dimension
+                ),
+                "projected_obstruction_dimension": (
+                    self.projected_obstruction_dimension
+                ),
+            },
+            "recommended_update_shape": list(self.recommended_update.shape),
+            "projected_node_state_shape": list(self.projected_node_states.shape),
+            "update_norm": self.update_norm,
+            "step_size": self.step_size,
+            "max_update_norm": self.max_update_norm,
+            "accepted_for_review": self.accepted_for_review,
+            "non_actuating": self.non_actuating,
+            "execution_disabled": self.execution_disabled,
+            "operator_review_required": self.operator_review_required,
+            "blocked_reasons": list(self.blocked_reasons),
+        }
+
+
 class SheafCoherenceSupervisor:
     """Assess whether N-channel states agree across restriction maps."""
 
@@ -127,6 +183,108 @@ def build_sheaf_obstruction_summary(
         obstruction_score=result.obstruction_score,
         warning_threshold=warn,
         critical_threshold=critical,
+    )
+
+
+def propose_sheaf_obstruction_control(
+    node_states: FloatArray,
+    restriction_maps: FloatArray,
+    *,
+    step_size: float = 0.25,
+    max_update_norm: float = 0.25,
+    tolerance: float = 1e-8,
+    max_backtracking_steps: int = 12,
+) -> SheafControlProposal:
+    """Propose a review-only correction along the sheaf-Laplacian gradient.
+
+    The proposal minimises the cellular-sheaf consistency energy
+    ``x.T @ L @ x`` by a bounded explicit gradient step. A small deterministic
+    backtracking line search is used so accepted proposals never increase the
+    measured obstruction energy. The result is an audit artefact only:
+    execution is disabled and any live actuation requires a separate operator
+    approval path.
+    """
+    states = _validate_node_states(node_states)
+    if len(states.shape) != 2:
+        raise ValueError("node_states must be a 2-D matrix")
+    maps = _validate_restriction_maps(
+        restriction_maps,
+        (states.shape[0], states.shape[1]),
+    )
+    step = _validate_positive_step(step_size, "step_size")
+    max_norm = _validate_update_norm(max_update_norm)
+    tol = _validate_tolerance(tolerance)
+    max_steps = _validate_backtracking_steps(max_backtracking_steps)
+
+    baseline = sheaf_coherence(states, maps, tolerance=tol)
+    zero_update = np.zeros_like(states, dtype=np.float64)
+    if baseline.obstruction_score <= tol or baseline.consistency_energy <= tol:
+        return _sheaf_control_proposal(
+            baseline=baseline,
+            projected=baseline,
+            update=zero_update,
+            projected_node_states=states,
+            step_size=step,
+            max_update_norm=max_norm,
+            accepted=False,
+            blocked_reasons=("no_obstruction_detected",),
+        )
+
+    flat_state = states.reshape(-1)
+    gradient = (2.0 * baseline.laplacian @ flat_state).reshape(states.shape)
+    gradient_norm = float(np.linalg.norm(gradient))
+    if gradient_norm <= tol:
+        return _sheaf_control_proposal(
+            baseline=baseline,
+            projected=baseline,
+            update=zero_update,
+            projected_node_states=states,
+            step_size=step,
+            max_update_norm=max_norm,
+            accepted=False,
+            blocked_reasons=("zero_sheaf_laplacian_gradient",),
+        )
+
+    candidate_projected = baseline
+    candidate_update = zero_update
+    scale = step
+    for _ in range(max_steps):
+        update = -scale * gradient
+        update_norm = float(np.linalg.norm(update))
+        if max_norm == 0.0:
+            update = zero_update
+        elif update_norm > max_norm:
+            update = update * (max_norm / update_norm)
+        projected_states = states + update
+        projected = sheaf_coherence(projected_states, maps, tolerance=tol)
+        if (
+            projected.consistency_energy <= baseline.consistency_energy
+            and projected.obstruction_score <= baseline.obstruction_score
+            and float(np.linalg.norm(update)) > tol
+        ):
+            return _sheaf_control_proposal(
+                baseline=baseline,
+                projected=projected,
+                update=update,
+                projected_node_states=projected_states,
+                step_size=scale,
+                max_update_norm=max_norm,
+                accepted=True,
+                blocked_reasons=(),
+            )
+        candidate_projected = projected
+        candidate_update = update
+        scale *= 0.5
+
+    return _sheaf_control_proposal(
+        baseline=baseline,
+        projected=candidate_projected,
+        update=candidate_update,
+        projected_node_states=states + candidate_update,
+        step_size=scale,
+        max_update_norm=max_norm,
+        accepted=False,
+        blocked_reasons=("no_monotone_sheaf_projection",),
     )
 
 
@@ -281,6 +439,36 @@ def _validate_tolerance(tolerance: float) -> float:
     return value
 
 
+def _validate_positive_step(value: float, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real number")
+    result = float(value)
+    if not np.isfinite(result) or result <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
+    return result
+
+
+def _validate_update_norm(max_update_norm: float) -> float:
+    if isinstance(max_update_norm, (bool, np.bool_)) or not isinstance(
+        max_update_norm, Real
+    ):
+        raise ValueError("max_update_norm must be a finite non-negative real number")
+    result = float(max_update_norm)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError("max_update_norm must be finite and non-negative")
+    return result
+
+
+def _validate_backtracking_steps(max_backtracking_steps: int) -> int:
+    if (
+        isinstance(max_backtracking_steps, (bool, np.bool_))
+        or not isinstance(max_backtracking_steps, Integral)
+        or max_backtracking_steps < 1
+    ):
+        raise ValueError("max_backtracking_steps must be a positive integer")
+    return int(max_backtracking_steps)
+
+
 def _validate_top_k(top_k: int) -> int:
     if (
         isinstance(top_k, (bool, np.bool_))
@@ -345,3 +533,36 @@ def _top_residual_edges(
         )
     edges.sort(key=lambda item: (-item[2], item[0], item[1]))
     return tuple(edges[:top_k])
+
+
+def _sheaf_control_proposal(
+    *,
+    baseline: SheafCoherenceResult,
+    projected: SheafCoherenceResult,
+    update: FloatArray,
+    projected_node_states: FloatArray,
+    step_size: float,
+    max_update_norm: float,
+    accepted: bool,
+    blocked_reasons: tuple[str, ...],
+) -> SheafControlProposal:
+    return SheafControlProposal(
+        baseline_obstruction_score=baseline.obstruction_score,
+        projected_obstruction_score=projected.obstruction_score,
+        baseline_consistency_energy=baseline.consistency_energy,
+        projected_consistency_energy=projected.consistency_energy,
+        baseline_kernel_dimension=baseline.kernel_dimension,
+        projected_kernel_dimension=projected.kernel_dimension,
+        baseline_obstruction_dimension=baseline.obstruction_dimension,
+        projected_obstruction_dimension=projected.obstruction_dimension,
+        recommended_update=np.asarray(update, dtype=np.float64),
+        projected_node_states=np.asarray(projected_node_states, dtype=np.float64),
+        update_norm=float(np.linalg.norm(update)),
+        step_size=step_size,
+        max_update_norm=max_update_norm,
+        accepted_for_review=accepted,
+        non_actuating=True,
+        execution_disabled=True,
+        operator_review_required=True,
+        blocked_reasons=blocked_reasons,
+    )

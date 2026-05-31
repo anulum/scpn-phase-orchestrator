@@ -703,6 +703,11 @@ Speculative research watchlist:
   - Remaining scope: richer Studio surfacing.
 - Sheaf-cohomology control over N-channel states, with sheaf Laplacian and obstruction metrics.
   - Foundation is in place: sheaf coherence supervisor support exists.
+  - Obstruction-aware review control is in place:
+    `propose_sheaf_obstruction_control()` computes a bounded
+    sheaf-Laplacian gradient proposal that reduces consistency energy, exposes
+    before/after kernel and obstruction dimensions, and keeps execution
+    disabled for operator review.
   - Heterogeneous edge-consensus demo is in place:
     `domainpacks/edge_consensus_nchannel/sheaf_obstruction_demo.py` compares
     nominal and gateway-stressed six-channel sections across directed
@@ -734,8 +739,9 @@ Speculative research watchlist:
   - Reference-suite gates are in place:
     `benchmark_sheaf_obstruction_domain_gate()` requires deterministic
     obstruction-demo hashes, per-demo top-residual summaries, non-actuation,
-    critical incident coverage, and positive obstruction deltas across six
-    heterogeneous domainpacks.
+    critical incident coverage, positive obstruction deltas across six
+    heterogeneous domainpacks, and power-grid sheaf-control energy reduction
+    with disabled execution.
   - Remaining scope: live-domain validation on maintained operator datasets.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
   - Foundation is in place: deterministic review-only aggregation validates
@@ -893,6 +899,12 @@ Speculative research watchlist:
     metadata, inherited gene coverage, replay-fitness thresholds, deterministic
     hashes, and reviewed-hot-patch-only merge semantics.
 - Sheaf-theoretic coherence manifold: obstruction-aware control primitive over a sheaf Laplacian with audit-visible cohomology dimensions.
+  - Foundation is in place: the supervisor exports
+    `propose_sheaf_obstruction_control()` as a non-actuating review primitive
+    with monotone consistency-energy reduction and audit-visible before/after
+    cohomology dimensions.
+  - Remaining scope: maintained live-domain validation and richer operator
+    surfacing.
 - Constitutional value-alignment guard: Pareto objective constraints in binding specs, counterfactual violation logs, and forced safe fallback path.
 - Strange-loop meta-orchestrator: self-referential supervisor channel that monitors and damps policy drift, over-control, or control-loop oscillation.
   - Foundation is in place: strange-loop supervisor monitor exists; remaining scope is long-run drift scenarios and studio surfacing.

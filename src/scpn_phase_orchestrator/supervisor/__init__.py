@@ -180,8 +180,10 @@ from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.supervisor.sheaf import (
     SheafCoherenceResult,
     SheafCoherenceSupervisor,
+    SheafControlProposal,
     SheafObstructionSummary,
     build_sheaf_obstruction_summary,
+    propose_sheaf_obstruction_control,
     sheaf_coherence,
     sheaf_laplacian,
 )
@@ -280,6 +282,7 @@ __all__ = [
     "RegimeManager",
     "SheafCoherenceResult",
     "SheafCoherenceSupervisor",
+    "SheafControlProposal",
     "SheafObstructionSummary",
     "StrangeLoopAssessment",
     "StrangeLoopSupervisor",
@@ -328,6 +331,7 @@ __all__ = [
     "load_hierarchy_sync_envelope",
     "learn_causal_graph",
     "propose_information_geometry_control",
+    "propose_sheaf_obstruction_control",
     "sheaf_coherence",
     "sheaf_laplacian",
     "replay_hierarchy_jsonl",

@@ -1545,8 +1545,11 @@ def test_sheaf_obstruction_domain_gate_shape() -> None:
     assert out["top_residual_edge_count"] >= 18
     assert out["critical_count"] >= 5
     assert float(out["min_obstruction_delta"]) >= 0.1
+    assert float(out["control_energy_reduction"]) >= 0.1
     assert float(out["max_nominal_obstruction_score"]) <= 0.35
     assert out["non_actuating"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["operator_review_required"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
     assert len(str(out["sheaf_obstruction_sha256"])) == 64
@@ -1556,18 +1559,29 @@ def test_sheaf_obstruction_domain_gate_shape() -> None:
 def test_sheaf_obstruction_domain_gate_reports_records() -> None:
     out = benchmark_sheaf_obstruction_domain_gate()
     thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    control_record = json.loads(str(out["control_record_json"]))
     records = json.loads(str(out["records_json"]))
 
     assert thresholds == {
         "max_nominal_obstruction_score": 0.35,
         "min_critical_count": 5,
+        "min_control_energy_reduction": 0.1,
         "min_demo_count": 6,
         "min_obstruction_delta": 0.1,
         "min_summary_count": 6,
         "min_top_residual_edge_count": 18,
         "require_deterministic_hash": True,
+        "require_execution_disabled": True,
         "require_non_actuating": True,
+        "require_operator_review": True,
     }
+    assert control_record["accepted_for_review"] is True
+    assert control_record["execution_disabled"] is True
+    assert control_record["operator_review_required"] is True
+    assert (
+        control_record["projected_consistency_energy"]
+        < control_record["baseline_consistency_energy"]
+    )
     assert {record["domainpack"] for record in records} == {
         "cardiac_rhythm",
         "edge_consensus_nchannel",
