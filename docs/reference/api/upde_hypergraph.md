@@ -174,6 +174,14 @@ Hyperedges are serialised for Rust FFI as three flat arrays:
 - `edge_offsets: int64[]` — start index in `edge_nodes` for each edge
 - `edge_strengths: float64[]` — coupling strength per edge
 
+Direct Go, Julia, and Mojo accelerator wrappers validate this encoding before
+loading optional runtimes: offsets must start at zero and increase strictly,
+each encoded hyperedge must contain at least two distinct valid oscillator
+indices, strengths and state vectors must be finite real `float64` buffers,
+and optional pairwise `K_nm`/`alpha` flat buffers must be empty or exactly
+`N*N` with zero diagonals. Zero-step direct calls return the torus-normalised
+input phases without requiring the optional runtime.
+
 This avoids Python object overhead and enables zero-copy transfer.
 
 ### Input Contracts
@@ -197,6 +205,7 @@ This avoids Python object overhead and enables zero-copy transfer.
 - **Optional pairwise coupling** via standard $K_{nm}$ matrix
 - **External drive** ($\zeta$, $\Psi$) for entrainment
 - **Full Rust FFI acceleration** with flat-encoded edge transfer
+- **Direct Go/Julia/Mojo boundary validation** before optional runtime loading
 - **Order parameter computation** — built-in `order_parameter()` method
 - **step() and run()** — single-step or batch integration
 

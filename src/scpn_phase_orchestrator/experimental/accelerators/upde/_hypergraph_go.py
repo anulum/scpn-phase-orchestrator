@@ -17,6 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._hypergraph_validation import (
+    TWO_PI,
+    validate_hypergraph_inputs,
+    validate_hypergraph_output,
+)
+
 __all__ = ["hypergraph_run_go"]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libhypergraph.so"
@@ -79,15 +85,37 @@ def hypergraph_run_go(
     The calculation is delegated to the Go backend.
     """
 
+    (
+        p,
+        o,
+        n_i,
+        en,
+        eo,
+        es,
+        knm,
+        alpha,
+        zeta_f,
+        psi_f,
+        dt_f,
+        steps_i,
+    ) = validate_hypergraph_inputs(
+        phases,
+        omegas,
+        n,
+        edge_nodes,
+        edge_offsets,
+        edge_strengths,
+        knm_flat,
+        alpha_flat,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+    )
+    if steps_i == 0:
+        return np.mod(p, TWO_PI)
     lib = _load_lib()
-    p = np.ascontiguousarray(phases, dtype=np.float64)
-    o = np.ascontiguousarray(omegas, dtype=np.float64)
-    en = np.ascontiguousarray(edge_nodes, dtype=np.int64)
-    eo = np.ascontiguousarray(edge_offsets, dtype=np.int64)
-    es = np.ascontiguousarray(edge_strengths, dtype=np.float64)
-    knm = np.ascontiguousarray(knm_flat, dtype=np.float64)
-    alpha = np.ascontiguousarray(alpha_flat, dtype=np.float64)
-    out = np.zeros(int(n), dtype=np.float64)
+    out = np.zeros(n_i, dtype=np.float64)
     knm_ptr = (
         knm.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
         if knm.size
@@ -101,7 +129,7 @@ def hypergraph_run_go(
     rc = lib.HypergraphRun(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         o.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(n)),
+        ctypes.c_int(n_i),
         en.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
         eo.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
         es.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -111,12 +139,12 @@ def hypergraph_run_go(
         ctypes.c_int(int(knm.size)),
         alpha_ptr,
         ctypes.c_int(int(alpha.size)),
-        ctypes.c_double(float(zeta)),
-        ctypes.c_double(float(psi)),
-        ctypes.c_double(float(dt)),
-        ctypes.c_int(int(n_steps)),
+        ctypes.c_double(zeta_f),
+        ctypes.c_double(psi_f),
+        ctypes.c_double(dt_f),
+        ctypes.c_int(steps_i),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go HypergraphRun rc={rc}")
-    return out
+    return validate_hypergraph_output(out, n=n_i)

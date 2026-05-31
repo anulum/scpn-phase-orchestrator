@@ -25,11 +25,21 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_go import (
+    hypergraph_run_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_julia import (
+    hypergraph_run_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_mojo import (
+    hypergraph_run_mojo,
+)
 from scpn_phase_orchestrator.upde import hypergraph as h_mod
 from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
+DIRECT_BACKENDS = (hypergraph_run_go, hypergraph_run_julia, hypergraph_run_mojo)
 
 
 @contextlib.contextmanager
@@ -262,3 +272,77 @@ class TestDispatchFallbackChain:
         assert b1 is fake_backend
         assert b2 is fake_backend
         assert call_count == 1
+
+
+def _direct_payload(n: int = 6):
+    phases = np.linspace(0.1, 1.1, n, dtype=np.float64)
+    omegas = np.linspace(0.2, 0.7, n, dtype=np.float64)
+    edge_nodes = np.array([0, 1, 2, 1, 3, 4, 5], dtype=np.int64)
+    edge_offsets = np.array([0, 3], dtype=np.int64)
+    edge_strengths = np.array([0.4, 0.25], dtype=np.float64)
+    knm = np.full((n, n), 0.02, dtype=np.float64)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n), dtype=np.float64)
+    return (
+        phases,
+        omegas,
+        n,
+        edge_nodes,
+        edge_offsets,
+        edge_strengths,
+        knm.ravel(),
+        alpha.ravel(),
+        0.1,
+        0.3,
+        0.01,
+        4,
+    )
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct Go/Julia/Mojo bridges reject invalid hypergraph payloads early."""
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    @pytest.mark.parametrize(
+        "index,replacement",
+        [
+            (0, np.array([0.0, np.nan], dtype=np.float64)),
+            (1, np.array([0.0, 1.0 + 0.1j], dtype=np.complex128)),
+            (2, True),
+            (3, np.array([0, 1, 6], dtype=np.int64)),
+            (4, np.array([1], dtype=np.int64)),
+            (5, np.array([0.2], dtype=np.float64)),
+            (6, np.ones(7, dtype=np.float64)),
+            (7, np.eye(6, dtype=np.float64).ravel()),
+            (8, float("nan")),
+            (9, float("inf")),
+            (10, 0.0),
+            (11, -1),
+        ],
+    )
+    def test_validation_precedes_runtime_load(self, backend, index, replacement):
+        args = list(_direct_payload())
+        args[index] = replacement
+        with pytest.raises(ValueError):
+            backend(*args)
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    def test_rejects_duplicate_nodes_in_one_hyperedge(self, backend):
+        args = list(_direct_payload())
+        args[3] = np.array([0, 1, 1], dtype=np.int64)
+        args[4] = np.array([0], dtype=np.int64)
+        args[5] = np.array([0.4], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="repeat nodes"):
+            backend(*args)
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    def test_zero_step_normalises_without_optional_runtime(self, backend):
+        args = list(_direct_payload())
+        raw_phases = np.array([-0.25, 0.0, TWO_PI + 0.2, 9.0, 1.5, 2.0])
+        args[0] = raw_phases
+        args[11] = 0
+
+        got = backend(*args)
+
+        np.testing.assert_allclose(got, np.mod(raw_phases, TWO_PI))

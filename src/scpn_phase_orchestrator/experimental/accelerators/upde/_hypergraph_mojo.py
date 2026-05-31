@@ -17,6 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._hypergraph_validation import (
+    TWO_PI,
+    validate_hypergraph_inputs,
+    validate_hypergraph_output,
+)
+
 __all__ = ["_ensure_exe", "hypergraph_run_mojo"]
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "hypergraph_mojo"
@@ -52,26 +58,50 @@ def hypergraph_run_mojo(
     The calculation is delegated to the Mojo backend.
     """
 
+    (
+        p,
+        o,
+        n_i,
+        en,
+        eo,
+        es,
+        kn,
+        al,
+        zeta_f,
+        psi_f,
+        dt_f,
+        steps_i,
+    ) = validate_hypergraph_inputs(
+        phases,
+        omegas,
+        n,
+        edge_nodes,
+        edge_offsets,
+        edge_strengths,
+        knm_flat,
+        alpha_flat,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+    )
+    if steps_i == 0:
+        return np.mod(p, TWO_PI)
     exe = _ensure_exe()
-    en = np.asarray(edge_nodes).ravel()
-    eo = np.asarray(edge_offsets).ravel()
-    es = np.asarray(edge_strengths).ravel()
-    kn = np.asarray(knm_flat).ravel()
-    al = np.asarray(alpha_flat).ravel()
     tokens: list[str] = [
         "HGRUN",
-        str(int(n)),
+        str(n_i),
         str(int(en.size)),
         str(int(eo.size)),
         str(int(kn.size)),
         str(int(al.size)),
-        repr(float(zeta)),
-        repr(float(psi)),
-        repr(float(dt)),
-        str(int(n_steps)),
+        repr(zeta_f),
+        repr(psi_f),
+        repr(dt_f),
+        str(steps_i),
     ]
-    tokens.extend(repr(float(x)) for x in np.asarray(phases).ravel().tolist())
-    tokens.extend(repr(float(x)) for x in np.asarray(omegas).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in p.tolist())
+    tokens.extend(repr(float(x)) for x in o.tolist())
     tokens.extend(str(int(x)) for x in en.tolist())
     tokens.extend(str(int(x)) for x in eo.tolist())
     tokens.extend(repr(float(x)) for x in es.tolist())
@@ -89,6 +119,6 @@ def hypergraph_run_mojo(
             f"Mojo hypergraph exit {proc.returncode}: {proc.stderr.strip()}"
         )
     lines = proc.stdout.strip().splitlines()
-    if len(lines) != n:
-        raise ValueError(f"Mojo HGRUN returned {len(lines)} lines, expected {n}")
-    return np.array([float(x) for x in lines], dtype=np.float64)
+    if len(lines) != n_i:
+        raise ValueError(f"Mojo HGRUN returned {len(lines)} lines, expected {n_i}")
+    return validate_hypergraph_output(np.array([float(x) for x in lines]), n=n_i)
