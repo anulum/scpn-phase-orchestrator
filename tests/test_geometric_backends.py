@@ -31,6 +31,9 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _geometric_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _geometric_validation as geometric_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_go import (
@@ -114,6 +117,39 @@ def _run_backend(
     eng = TorusEngine(n, 0.01)
     with _force_backend(backend):
         return eng.run(theta, omegas, knm, zeta, psi, alpha, n_steps=n_steps)
+
+
+class TestDirectMojoBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("", "Mojo TORUS returned 0 lines, expected 5"),
+            ("0.1\n0.2\n0.3\n0.4\n0.5\n0.6\n", "expected 5"),
+            ("0.1\n0.2\n\n0.4\n0.5\n0.6\n", "expected 5"),
+            ("0.1\n0.2\nbad\n0.4\n0.5\n", "finite phases"),
+            ("0.1\n0.2\nnan\n0.4\n0.5\n", "finite phases"),
+            ("0.1\n0.2\n7.0\n0.4\n0.5\n", "finite phases"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_geometric_mojo, "_ensure_exe", lambda: "geometric")
+        monkeypatch.setattr(
+            _geometric_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: type(
+                "Proc",
+                (),
+                {"returncode": 0, "stdout": stdout, "stderr": ""},
+            )(),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _geometric_mojo.torus_run_mojo(*_direct_payload())
 
 
 class TestDirectBackendBoundaryContracts:

@@ -184,6 +184,12 @@ CouplingBuilder.build() ──→ K_nm, α
 |--------|------|-------|-------|
 | `phases_new` | `NDArray[float64]` | `(N,)` | $[0, 2\pi)$ via `atan2` + `rem_euclid` |
 
+Direct Mojo torus adapters enforce exact raw stdout cardinality and finite
+phase-domain values: `TORUS` must emit exactly one finite scalar in
+`[0, 2*pi)` per oscillator. Blank, truncated, overlong, non-numeric,
+non-finite, or out-of-domain output is rejected before public arrays are
+returned.
+
 ---
 
 ## 4. Features

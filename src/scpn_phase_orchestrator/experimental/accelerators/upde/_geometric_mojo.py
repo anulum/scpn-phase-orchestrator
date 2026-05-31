@@ -102,7 +102,18 @@ def torus_run_mojo(
         raise ValueError(
             f"Mojo geometric exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    lines = proc.stdout.strip().splitlines()
+    lines = proc.stdout.splitlines()
     if len(lines) != n_i:
         raise ValueError(f"Mojo TORUS returned {len(lines)} lines, expected {n_i}")
-    return validate_torus_output(np.array([float(x) for x in lines]), n=n_i)
+    values: list[float] = []
+    for line in lines:
+        try:
+            value = float(line)
+        except ValueError as exc:
+            raise ValueError(
+                "Mojo TORUS output must be finite phases in [0, 2*pi)"
+            ) from exc
+        if not np.isfinite(value) or value < 0.0 or value >= TWO_PI:
+            raise ValueError("Mojo TORUS output must be finite phases in [0, 2*pi)")
+        values.append(value)
+    return validate_torus_output(np.array(values, dtype=np.float64), n=n_i)
