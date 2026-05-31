@@ -529,7 +529,7 @@ Near-term candidate tracks:
     `domainpacks/cardiac_rhythm/fep_hierarchy_demo.py` runs pacemaker/atrial
     and ventricular/recovery child axes into a parent cardiac supervisor.
   - Remaining scope: deeper predictive-coding world-model integration.
-- STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, audit satisfaction traces, and controller-synthesis linkage. The builtin monitoring automata foundation is implemented; controller synthesis remains open.
+- STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, audit satisfaction traces, controller-synthesis linkage, and non-actuating runtime actuation-gate evidence. The builtin monitoring automata, controller-synthesis, projection, closed-loop planning, and runtime-gate foundations are implemented; live-actuation parity remains operator-approval expansion work.
   - Foundation is in place: built-in STL robustness monitoring exists.
   - Policy DSL integration is in place: policy YAML can declare
     `stl_monitors`, load them with `load_policy_stl_specs()`, evaluate traces
@@ -556,12 +556,18 @@ Near-term candidate tracks:
     `synthesise_stl_closed_loop_plan()` binds STL automata, feedback signals,
     candidate synthesis, policy-gated projection, fail-closed blockers, and a
     future review horizon without mutating runtime state or enabling actuation.
+  - Runtime actuation-stack validation is in place:
+    `validate_stl_runtime_actuation_gate()` routes projected `ControlAction`
+    proposals through deterministic `ActuationMapper` validation, records
+    mapper-valid command evidence, and keeps execution disabled for operator
+    review.
   - Reference-suite evidence is in place:
     `benchmark_stl_closed_loop_plan_quality()` gates projected non-actuating
     plans, missing-template blockers, satisfied-monitor no-action behaviour,
-    deterministic plan hashes, and zero actuation leaks.
-  - Remaining scope: runtime integration that passes projected plans through
-    the full safety/actuation stack.
+    runtime actuation-gate coverage, disabled execution, deterministic plan
+    hashes, and zero actuation leaks.
+  - Remaining scope: maintain runtime-stack parity as live actuation backends
+    and operator approvals expand.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
   - LLM-guided scaffold foundation is in place: `spo scaffold --llm` accepts

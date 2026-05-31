@@ -227,8 +227,11 @@ class DomainFormalExportFixture(NamedTuple):
 class STLClosedLoopThresholds(NamedTuple):
     min_plan_count: int
     min_projected_action_count: int
+    min_runtime_gate_checked_count: int
+    min_runtime_mapped_command_count: int
     min_blocked_reason_count: int
     require_non_actuating: bool
+    require_runtime_execution_disabled: bool
     require_deterministic_hash: bool
 
 
@@ -1743,8 +1746,11 @@ def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
     thresholds = STLClosedLoopThresholds(
         min_plan_count=3,
         min_projected_action_count=1,
+        min_runtime_gate_checked_count=3,
+        min_runtime_mapped_command_count=1,
         min_blocked_reason_count=3,
         require_non_actuating=True,
+        require_runtime_execution_disabled=True,
         require_deterministic_hash=True,
     )
     projection_template = STLActionProjectionTemplate(
@@ -1836,19 +1842,35 @@ def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
         len(plan.projected_plan.rejected_candidates) for plan in plans
     )
     blocked_reason_count = sum(len(plan.blocked_reasons) for plan in plans)
+    runtime_gate_checked_count = sum(
+        int(plan.runtime_gate.non_actuating and plan.runtime_gate.execution_disabled)
+        for plan in plans
+    )
+    runtime_mapped_command_count = sum(
+        plan.runtime_gate.mapped_command_count for plan in plans
+    )
+    runtime_execution_disabled = int(
+        all(plan.runtime_gate.execution_disabled for plan in plans)
+    )
     non_actuating = int(
         all(
             not plan.actuating
             and not plan.synthesis.actuating
             and not plan.projected_plan.actuating
+            and plan.runtime_gate.non_actuating
             for plan in plans
         )
     )
     acceptance_passed = int(
         len(plans) >= thresholds.min_plan_count
         and projected_action_count >= thresholds.min_projected_action_count
+        and runtime_gate_checked_count >= thresholds.min_runtime_gate_checked_count
+        and runtime_mapped_command_count
+        >= thresholds.min_runtime_mapped_command_count
         and blocked_reason_count >= thresholds.min_blocked_reason_count
         and non_actuating == int(thresholds.require_non_actuating)
+        and runtime_execution_disabled
+        == int(thresholds.require_runtime_execution_disabled)
         and deterministic_hash == int(thresholds.require_deterministic_hash)
         and projected.next_review_start_index == 3
         and projected.next_review_end_index == 6
@@ -1863,6 +1885,9 @@ def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
         "projected_action_count": projected_action_count,
         "rejected_candidate_count": rejected_candidate_count,
         "blocked_reason_count": blocked_reason_count,
+        "runtime_gate_checked_count": runtime_gate_checked_count,
+        "runtime_mapped_command_count": runtime_mapped_command_count,
+        "runtime_execution_disabled": runtime_execution_disabled,
         "non_actuating": non_actuating,
         "deterministic_hash": deterministic_hash,
         "plan_sha256": sha256(plans_json.encode()).hexdigest(),
@@ -1872,8 +1897,17 @@ def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
                 "min_blocked_reason_count": thresholds.min_blocked_reason_count,
                 "min_plan_count": thresholds.min_plan_count,
                 "min_projected_action_count": (thresholds.min_projected_action_count),
+                "min_runtime_gate_checked_count": (
+                    thresholds.min_runtime_gate_checked_count
+                ),
+                "min_runtime_mapped_command_count": (
+                    thresholds.min_runtime_mapped_command_count
+                ),
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_non_actuating": thresholds.require_non_actuating,
+                "require_runtime_execution_disabled": (
+                    thresholds.require_runtime_execution_disabled
+                ),
             },
             sort_keys=True,
         ),

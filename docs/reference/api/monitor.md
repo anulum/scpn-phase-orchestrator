@@ -133,6 +133,31 @@ plan = project_stl_controller_candidates(
 assert plan.to_audit_record()["actuating"] is False
 ```
 
+`synthesise_stl_closed_loop_plan()` now also records a
+`runtime_actuation_gate` audit section. The gate routes projected
+`ControlAction` proposals through `ActuationMapper` using the same explicit
+projection templates, records deterministic actuator-command evidence, and
+keeps `non_actuating` plus `execution_disabled` true. This is the intended use
+case for STL closed-loop planning: prove that a violated safety formula can be
+translated into bounded, mapper-valid runtime actions for operator review
+without enabling live actuation.
+
+```python
+from scpn_phase_orchestrator.monitor.stl import (
+    synthesise_stl_closed_loop_plan,
+)
+
+closed_loop_plan = synthesise_stl_closed_loop_plan(
+    automaton,
+    {"R": [0.1, 0.2, 0.75]},
+    (projection_template,),
+    horizon_steps=4,
+    action_map={"R": "raise_coupling"},
+)
+gate = closed_loop_plan.to_audit_record()["runtime_actuation_gate"]
+assert gate["execution_disabled"] is True
+```
+
 ::: scpn_phase_orchestrator.monitor.stl
 
 ## Chimera State Detection

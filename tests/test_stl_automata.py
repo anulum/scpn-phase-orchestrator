@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+import scpn_phase_orchestrator.monitor.stl as stl_module
 from scpn_phase_orchestrator.monitor.stl import (
     STLActionProjectionTemplate,
     STLAutomatonState,
@@ -374,6 +375,25 @@ def test_stl_closed_loop_plan_binds_projection_and_review_horizon():
     assert len(plan.synthesis.candidates) == 1
     assert len(plan.projected_plan.approved_actions) == 1
     assert plan.projected_plan.approved_actions[0].value == pytest.approx(0.95)
+    assert plan.runtime_gate == stl_module.STLRuntimeActuationGate(
+        spec="eventually (R >= 0.8)",
+        non_actuating=True,
+        execution_disabled=True,
+        accepted=True,
+        action_count=1,
+        mapper_valid_action_count=1,
+        mapped_command_count=1,
+        commands=(
+            {
+                "actuator": "stl_runtime_K_global",
+                "value": pytest.approx(0.95),
+                "knob": "K",
+                "scope": "global",
+                "ttl_s": 0.5,
+            },
+        ),
+        blocked_reasons=(),
+    )
     assert plan.to_audit_record()["projected_action_plan"]["approved_actions"] == [
         {
             "knob": "K",
@@ -386,6 +406,25 @@ def test_stl_closed_loop_plan_binds_projection_and_review_horizon():
             ),
         }
     ]
+    assert plan.to_audit_record()["runtime_actuation_gate"] == {
+        "spec": "eventually (R >= 0.8)",
+        "non_actuating": True,
+        "execution_disabled": True,
+        "accepted": True,
+        "action_count": 1,
+        "mapper_valid_action_count": 1,
+        "mapped_command_count": 1,
+        "commands": [
+            {
+                "actuator": "stl_runtime_K_global",
+                "knob": "K",
+                "scope": "global",
+                "value": pytest.approx(0.95),
+                "ttl_s": 0.5,
+            }
+        ],
+        "blocked_reasons": [],
+    }
 
 
 def test_stl_closed_loop_plan_records_fail_closed_blockers():
@@ -400,6 +439,10 @@ def test_stl_closed_loop_plan_records_fail_closed_blockers():
     assert plan.actuating is False
     assert plan.projected_plan.approved_actions == ()
     assert plan.blocked_reasons == ("no_projected_actions", "unprojected_candidates")
+    assert plan.runtime_gate.accepted is False
+    assert plan.runtime_gate.action_count == 0
+    assert plan.runtime_gate.mapped_command_count == 0
+    assert plan.runtime_gate.blocked_reasons == ("no_runtime_actions",)
     assert plan.to_audit_record()["blocked_reasons"] == [
         "no_projected_actions",
         "unprojected_candidates",
@@ -420,6 +463,50 @@ def test_stl_closed_loop_plan_satisfied_monitor_never_projects_actions():
     assert plan.synthesis.candidates == ()
     assert plan.projected_plan.approved_actions == ()
     assert plan.blocked_reasons == ("stl_satisfied_no_control_needed",)
+    assert plan.runtime_gate.accepted is False
+    assert plan.runtime_gate.action_count == 0
+    assert plan.runtime_gate.blocked_reasons == ("no_runtime_actions",)
+
+
+def test_stl_runtime_actuation_gate_fails_closed_for_invalid_runtime_knob():
+    synthesis = STLControllerSynthesis(
+        spec="always (theta >= 0.0)",
+        satisfied=False,
+        actuating=False,
+        source_backend="builtin",
+        candidates=(
+            STLControllerCandidate(
+                signal="theta",
+                action="raise_invalid_runtime_knob",
+                direction="increase",
+                time_index=1,
+                robustness=-0.2,
+                rationale="theta below runtime threshold",
+            ),
+        ),
+    )
+    template = STLActionProjectionTemplate(
+        action="raise_invalid_runtime_knob",
+        knob="theta_gain",
+        scope="global",
+        base_value=0.4,
+        step=0.5,
+        ttl_s=0.25,
+        previous_value=0.4,
+        value_bounds=(0.0, 1.0),
+        rate_limit=0.25,
+    )
+    projection = project_stl_controller_candidates(synthesis, (template,))
+
+    gate = stl_module.validate_stl_runtime_actuation_gate(projection, (template,))
+
+    assert gate.accepted is False
+    assert gate.non_actuating is True
+    assert gate.execution_disabled is True
+    assert gate.action_count == 1
+    assert gate.mapper_valid_action_count == 0
+    assert gate.mapped_command_count == 0
+    assert gate.blocked_reasons == ("actuation_mapper_rejected_template",)
 
 
 @pytest.mark.parametrize("bad_horizon", [0, -1, True, 1.5])

@@ -764,6 +764,9 @@ def test_stl_closed_loop_plan_quality_benchmark_shape() -> None:
     assert out["projected_action_count"] == 1
     assert out["rejected_candidate_count"] == 1
     assert out["blocked_reason_count"] == 3
+    assert out["runtime_gate_checked_count"] == 3
+    assert out["runtime_mapped_command_count"] == 1
+    assert out["runtime_execution_disabled"] == 1
     assert out["non_actuating"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
@@ -780,10 +783,19 @@ def test_stl_closed_loop_plan_quality_reports_thresholds_and_plans() -> None:
         "min_blocked_reason_count": 3,
         "min_plan_count": 3,
         "min_projected_action_count": 1,
+        "min_runtime_gate_checked_count": 3,
+        "min_runtime_mapped_command_count": 1,
         "require_deterministic_hash": True,
         "require_non_actuating": True,
+        "require_runtime_execution_disabled": True,
     }
     assert [plan["actuating"] for plan in plans] == [False, False, False]
+    assert [plan["runtime_actuation_gate"]["execution_disabled"] for plan in plans] == [
+        True,
+        True,
+        True,
+    ]
+    assert plans[0]["runtime_actuation_gate"]["mapped_command_count"] == 1
     assert [plan["next_review_end_index"] for plan in plans] == [6, 3, 3]
     assert plans[0]["projected_action_plan"]["approved_actions"][0]["knob"] == "K"
     assert plans[1]["blocked_reasons"] == [
