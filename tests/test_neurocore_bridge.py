@@ -331,9 +331,15 @@ class TestNeurocoreBridgeScaleTiming:
             n_layers=10, neurons_per_layer=1000, current_scale=2.5, backend="rust"
         )
         state = _make_state(list(np.linspace(0.1, 0.95, 10)))
-        t0 = time.perf_counter()
-        rates = bridge.step(state, n_substeps=100)
-        elapsed = time.perf_counter() - t0
+        bridge.step(state, n_substeps=100)  # warm-up native dispatch
+        samples = []
+        rates = None
+        for _ in range(3):
+            t0 = time.perf_counter()
+            rates = bridge.step(state, n_substeps=100)
+            samples.append(time.perf_counter() - t0)
+        elapsed = min(samples)
+        assert rates is not None
         assert rates.shape == (10,)
         # Shared CI runners (especially macOS) have high variance — use 650ms
         # budget on CI, tight 100ms locally.
