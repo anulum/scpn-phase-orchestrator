@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._spectral_validation import validate_spectral_backend_inputs
+
 __all__ = ["spectral_eig_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -52,8 +54,11 @@ def spectral_eig_go(
 ) -> tuple[FloatArray, FloatArray]:
     """Compute coupling-spectrum eigenvalues and Fiedler vector with Go."""
 
+    k, n = validate_spectral_backend_inputs(knm_flat, n)
+    if n == 0:
+        empty = np.zeros(0, dtype=np.float64)
+        return empty, empty.copy()
     lib = _load_lib()
-    k = np.ascontiguousarray(knm_flat, dtype=np.float64)
     eigvals = np.zeros(int(n), dtype=np.float64)
     fiedler = np.zeros(int(n), dtype=np.float64)
     rc = lib.SpectralEig(

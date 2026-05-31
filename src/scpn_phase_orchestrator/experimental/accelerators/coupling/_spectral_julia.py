@@ -16,6 +16,8 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._spectral_validation import validate_spectral_backend_inputs
+
 __all__ = ["spectral_eig_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -42,10 +44,14 @@ def spectral_eig_julia(
 ) -> tuple[FloatArray, FloatArray]:
     """Compute coupling-spectrum eigenvalues and Fiedler vector with Julia."""
 
+    k, n = validate_spectral_backend_inputs(knm_flat, n)
+    if n == 0:
+        empty = np.zeros(0, dtype=np.float64)
+        return empty, empty.copy()
     jl = _ensure()
     eigvals, fiedler = jl.spectral_eig(
-        np.ascontiguousarray(knm_flat, dtype=np.float64),
-        int(n),
+        k,
+        n,
     )
     return (
         np.asarray(eigvals, dtype=np.float64),

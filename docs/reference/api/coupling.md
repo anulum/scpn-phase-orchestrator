@@ -283,6 +283,13 @@ K_c = max_{i,j} |ω_i - ω_j| / λ₂(L)
 where λ₂ is the Fiedler eigenvalue (algebraic connectivity). Networks
 with higher λ₂ synchronise more easily.
 
+Direct accelerator boundary contract: Go, Julia, and Mojo spectral adapters use
+one shared typed `float64` validation path before loading shared-library, Julia,
+or subprocess runtimes. The contract rejects boolean aliases, complex or
+non-finite flattened coupling payloads, non-vector inputs, malformed `n*n`
+buffer lengths, and invalid oscillator counts. Empty spectral problems return
+empty eigenvalue and Fiedler vectors without optional runtime loading.
+
 ::: scpn_phase_orchestrator.coupling.spectral
 
 ---

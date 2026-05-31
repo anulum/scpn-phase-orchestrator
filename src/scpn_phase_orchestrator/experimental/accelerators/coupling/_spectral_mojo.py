@@ -17,6 +17,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._spectral_validation import validate_spectral_backend_inputs
+
 __all__ = ["_ensure_exe", "spectral_eig_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -38,9 +40,13 @@ def spectral_eig_mojo(
 ) -> tuple[FloatArray, FloatArray]:
     """Compute coupling-spectrum eigenvalues and Fiedler vector via Mojo."""
 
+    k, n = validate_spectral_backend_inputs(knm_flat, n)
+    if n == 0:
+        empty = np.zeros(0, dtype=np.float64)
+        return empty, empty.copy()
     exe = _ensure_exe()
     tokens: list[str] = ["EIG", str(int(n))]
-    tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in k.tolist())
     proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",

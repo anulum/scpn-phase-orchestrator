@@ -24,6 +24,7 @@ than on raw values.
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -53,6 +54,7 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 TOL_LAPACK = 1e-12
 TOL_GONUM = 1e-11  # gonum EigenSym vs LAPACK
 TOL_MOJO = 1e-10  # subprocess text round-trip on top of LAPACK
+SpectralDirectBackend = Callable[[np.ndarray, object], tuple[np.ndarray, np.ndarray]]
 
 
 @contextlib.contextmanager
@@ -86,6 +88,63 @@ def _asymmetric_problem() -> np.ndarray:
         ],
         dtype=np.float64,
     )
+
+
+class TestDirectBackendBoundaryContracts:
+    """Direct optional spectral backends validate before runtime loading."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            spectral_eig_go,
+            spectral_eig_julia,
+            spectral_eig_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("knm_flat", "n", "error", "match"),
+        [
+            (np.array([True, False, False, True]), 2, ValueError, "boolean"),
+            (np.array([0.0, np.nan, 0.0, 0.0]), 2, ValueError, "finite"),
+            (
+                np.array([0.0, 1.0 + 0.0j, 0.0, 0.0]),
+                2,
+                ValueError,
+                "real-valued",
+            ),
+            (np.zeros((2, 2)), 2, ValueError, "one-dimensional"),
+            (np.zeros(3), 2, ValueError, "n\\*n"),
+            (np.zeros(4), True, ValueError, "n"),
+            (np.zeros(4), -1, ValueError, "n"),
+        ],
+    )
+    def test_validation_precedes_runtime_load(
+        self,
+        backend: SpectralDirectBackend,
+        knm_flat: np.ndarray,
+        n: object,
+        error: type[Exception],
+        match: str,
+    ) -> None:
+        with pytest.raises(error, match=match):
+            backend(knm_flat, n)
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            spectral_eig_go,
+            spectral_eig_julia,
+            spectral_eig_mojo,
+        ],
+    )
+    def test_empty_spectral_problem_returns_empty_vectors_before_runtime_load(
+        self,
+        backend: SpectralDirectBackend,
+    ) -> None:
+        eigvals, fiedler = backend(np.array([], dtype=np.float64), 0)
+        assert eigvals.dtype == np.float64
+        assert fiedler.dtype == np.float64
+        assert eigvals.shape == fiedler.shape == (0,)
 
 
 def _run_backend(backend: str, seed: int, n: int = 6):
