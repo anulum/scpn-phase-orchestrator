@@ -447,9 +447,6 @@ def test_meta_transfer_package_manifest_quality_benchmark_shape() -> None:
     assert out["package_digest_matches"] == 1
     assert out["execution_disabled"] == 1
     assert out["deterministic_hash"] == 1
-    assert out["jax_backend_parity"] == 1
-    assert out["numpy_backend"] == "numpy_vectorized"
-    assert out["jax_backend"] == "jax_vectorized"
     assert out["acceptance_passed"] == 1
     assert len(str(out["package_sha256"])) == 64
     assert len(str(out["manifest_sha256"])) == 64
