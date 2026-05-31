@@ -15,11 +15,16 @@ follow the AttnRes reference.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _pac_mojo as pac_mojo_mod,
+)
 from scpn_phase_orchestrator.upde import pac as pac_mod
 from scpn_phase_orchestrator.upde.pac import (
     AVAILABLE_BACKENDS,
@@ -209,6 +214,45 @@ class TestMojoParity:
         finally:
             _reset(prev)
         np.testing.assert_allclose(result, ref, atol=1e-10)
+
+
+class TestDirectMojoBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("", 1, "MI", "Mojo PAC MI returned 0 lines, expected 1"),
+            ("0.1\n0.2\n", 1, "MI", "Mojo PAC MI returned 2 lines, expected 1"),
+            (
+                "0.1\n\n0.2\n",
+                2,
+                "matrix",
+                "Mojo PAC matrix returned 3 lines, expected 2",
+            ),
+            ("0.1\nnot-a-number\n", 2, "matrix", "finite real values"),
+            ("0.1\nnan\n", 2, "matrix", "finite real values"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(pac_mojo_mod, "_ensure_exe", lambda: "pac_mojo")
+        monkeypatch.setattr(
+            pac_mojo_mod.subprocess,
+            "run",
+            lambda *_args, **_kwargs: SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            pac_mojo_mod._run("MI\n", expected_count=expected_count, label=label)
 
 
 # ---------------------------------------------------------------------

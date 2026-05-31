@@ -253,6 +253,9 @@ acceleration.
 Modulation index (MI) via Tort et al. 2010. Bins low-frequency phase,
 computes mean high-frequency amplitude per bin, KL divergence from uniform.
 Produces N×N PAC matrix: entry [i,j] = MI(phase_i, amplitude_j).
+Direct Mojo PAC output must contain exactly one scalar line for modulation
+index calls or exactly N×N scalar lines for matrix calls; blank, non-finite,
+truncated, or overlong text output is rejected before public assembly.
 Central to neuroscience cross-frequency coupling analysis.
 
 ::: scpn_phase_orchestrator.upde.pac

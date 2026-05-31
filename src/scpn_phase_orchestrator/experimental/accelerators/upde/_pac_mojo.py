@@ -32,7 +32,7 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def _run(payload: str) -> list[float]:
+def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -45,7 +45,23 @@ def _run(payload: str) -> list[float]:
         raise ValueError(
             f"Mojo pac returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [float(line) for line in proc.stdout.strip().splitlines() if line]
+    lines = proc.stdout.splitlines()
+    if len(lines) != expected_count:
+        raise ValueError(
+            f"Mojo PAC {label} returned {len(lines)} lines, expected {expected_count}"
+        )
+    values: list[float] = []
+    for line in lines:
+        try:
+            value = float(line)
+        except ValueError as exc:
+            raise ValueError(
+                f"Mojo PAC {label} output must be finite real values"
+            ) from exc
+        if not np.isfinite(value):
+            raise ValueError(f"Mojo PAC {label} output must be finite real values")
+        values.append(value)
+    return values
 
 
 def modulation_index_mojo(
@@ -64,7 +80,7 @@ def modulation_index_mojo(
     tokens = ["MI", str(n), str(n_bins)]
     tokens.extend(repr(float(x)) for x in t[:n].tolist())
     tokens.extend(repr(float(x)) for x in a[:n].tolist())
-    result = _run(" ".join(tokens) + "\n")
+    result = _run(" ".join(tokens) + "\n", expected_count=1, label="MI")
     return float(result[0])
 
 
@@ -85,9 +101,5 @@ def pac_matrix_mojo(
     tokens = ["MAT", str(t), str(n), str(n_bins)]
     tokens.extend(repr(float(x)) for x in p.tolist())
     tokens.extend(repr(float(x)) for x in a.tolist())
-    result = _run(" ".join(tokens) + "\n")
-    if len(result) != n * n:
-        raise ValueError(
-            f"Mojo PAC matrix returned {len(result)} values, expected {n * n}"
-        )
+    result = _run(" ".join(tokens) + "\n", expected_count=n * n, label="matrix")
     return np.array(result, dtype=np.float64)
