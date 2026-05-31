@@ -40,7 +40,7 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def _run(payload: str) -> list[float]:
+def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -54,7 +54,22 @@ def _run(payload: str) -> list[float]:
             f"Mojo transfer_entropy returned exit {proc.returncode}: "
             f"{proc.stderr.strip()}"
         )
-    return [float(line) for line in proc.stdout.strip().splitlines() if line]
+    lines = proc.stdout.splitlines()
+    if len(lines) != expected_count:
+        raise ValueError(
+            f"Mojo {label} must emit exactly {expected_count} scalar line(s), "
+            f"got {len(lines)}"
+        )
+    values: list[float] = []
+    for line in lines:
+        try:
+            values.append(float(line))
+        except ValueError as exc:
+            raise ValueError(
+                f"Mojo {label} emitted a non-scalar transfer-entropy value: "
+                f"{line!r}"
+            ) from exc
+    return values
 
 
 def phase_te_mojo(source: FloatArray, target: FloatArray, n_bins: int) -> float:
@@ -73,9 +88,7 @@ def phase_te_mojo(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     tokens = ["PTE", str(n), str(n_bins)]
     tokens.extend(repr(float(x)) for x in s[:n].tolist())
     tokens.extend(repr(float(x)) for x in t[:n].tolist())
-    result = _run(" ".join(tokens) + "\n")
-    if len(result) != 1:
-        raise ValueError(f"Mojo PTE returned {len(result)} values, expected 1")
+    result = _run(" ".join(tokens) + "\n", expected_count=1, label="PTE")
     return validate_te_backend_output(result[0], n_bins=n_bins)
 
 
@@ -96,9 +109,9 @@ def te_matrix_mojo(
     s = np.ascontiguousarray(phase_series, dtype=np.float64)
     tokens = ["MAT", str(n_osc), str(n_time), str(n_bins)]
     tokens.extend(repr(float(x)) for x in s.tolist())
-    result = _run(" ".join(tokens) + "\n")
-    if len(result) != n_osc * n_osc:
-        raise ValueError(
-            f"Mojo MAT returned {len(result)} values, expected {n_osc * n_osc}"
-        )
+    result = _run(
+        " ".join(tokens) + "\n",
+        expected_count=n_osc * n_osc,
+        label="MAT",
+    )
     return validate_te_matrix_backend_output(result, n_osc=n_osc, n_bins=n_bins)

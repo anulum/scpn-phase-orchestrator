@@ -32,6 +32,9 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor._te_julia import 
     te_matrix_julia,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._te_mojo import (
+    _run as run_te_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._te_mojo import (
     phase_te_mojo,
     te_matrix_mojo,
 )
@@ -348,6 +351,45 @@ class TestCrossBackendConsistency:
 
 
 class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("", 1, "PTE", "exactly 1 scalar"),
+            ("0.1\n0.2\n", 1, "PTE", "exactly 1 scalar"),
+            ("0.0\n\n0.1\n0.0\n0.0\n", 4, "MAT", "exactly 4 scalar"),
+            ("not-a-number\n", 1, "PTE", "non-scalar"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_transfer_entropy_stdout(
+        self,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.experimental.accelerators.monitor."
+            "_te_mojo._ensure_exe",
+            lambda: "transfer_entropy_mojo",
+        )
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.experimental.accelerators.monitor."
+            "_te_mojo.subprocess.run",
+            lambda *args, **kwargs: types.SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            run_te_mojo(
+                "PTE 3 4 0 1 2 1 2 3\n",
+                expected_count=expected_count,
+                label=label,
+            )
+
     @pytest.mark.parametrize("value", [0.0, 0.25, np.log(4) + 5.0e-13])
     def test_pairwise_te_backend_output_accepts_entropy_bounds(
         self,

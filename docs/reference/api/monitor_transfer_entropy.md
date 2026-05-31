@@ -124,6 +124,10 @@ payloads must contain exactly `N*N` finite real values, be non-negative, stay
 within the same entropy bound, and carry an exact zero diagonal. This keeps Go,
 Julia, and Mojo bridge failures deterministic if an optional runtime emits a
 malformed scalar, a diagonal self-information leak, or an out-of-domain matrix.
+The Mojo subprocess bridge additionally requires exact stdout cardinality:
+pairwise TE emits one scalar line, and matrix TE emits exactly `N*N` scalar
+lines. Blank, missing, extra, and non-scalar stdout lines fail closed before
+the entropy-domain validators accept the result.
 
 ---
 
@@ -374,9 +378,9 @@ regularisation so parity holds bit-for-bit.
 | `julia/transfer_entropy.jl` | Julia `TransferEntropy` module |
 | `go/transfer_entropy.go` | Go c-shared library |
 | `mojo/transfer_entropy.mojo` | Mojo text-stdin executable |
-| `src/scpn_phase_orchestrator/monitor/_te_julia.py` | `juliacall` bridge |
-| `src/scpn_phase_orchestrator/monitor/_te_go.py` | `ctypes` bridge |
-| `src/scpn_phase_orchestrator/monitor/_te_mojo.py` | subprocess bridge |
+| `src/scpn_phase_orchestrator/experimental/accelerators/monitor/_te_julia.py` | `juliacall` bridge |
+| `src/scpn_phase_orchestrator/experimental/accelerators/monitor/_te_go.py` | `ctypes` bridge |
+| `src/scpn_phase_orchestrator/experimental/accelerators/monitor/_te_mojo.py` | subprocess bridge |
 | `tests/test_transfer_entropy_backends.py` | 8 per-backend parity tests |
 | `tests/test_transfer_entropy_stability.py` | 6 stability tests (slow) |
 | `benchmarks/transfer_entropy_benchmark.py` | Multi-backend wall-clock harness |
