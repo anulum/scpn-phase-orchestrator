@@ -543,6 +543,10 @@ fixtures for review-only cosimulation evidence.
 
 Domain-specific information replay fixtures for cyber-industrial,
 infrastructure, and physiology validation paths.
+Physiology replay records enforce non-actuating audit boundaries, integer
+sample/bin/oscillator counts, finite non-negative metrics, unit-interval
+normalised Phi, and boolean-alias-free minimum partitions before replay corpus
+relationships are accepted.
 
 ::: scpn_phase_orchestrator.monitor.information_replay_cyber_industrial
 
