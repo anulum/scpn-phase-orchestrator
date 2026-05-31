@@ -112,6 +112,12 @@ Key parameters:
 Inputs with length < 3 return ``0.0`` because the 1-step Markov
 estimator needs at least one ``(Y_t, Y_{t+1}, X_t)`` triple.
 
+The direct Go, Julia, and Mojo bridge functions share the same typed
+validation boundary before optional runtime loading: phase vectors and flattened
+matrix-series payloads must be finite real `float64` arrays with boolean aliases
+rejected, oscillator/time/bin counts must be integer-valued, and `n_bins` must
+be at least two.
+
 ---
 
 ## 3. Multi-backend fallback chain

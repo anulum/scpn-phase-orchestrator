@@ -337,3 +337,84 @@ class TestCrossBackendConsistency:
             finally:
                 _reset(prev)
             assert abs(result - ref) <= tolerances[backend]
+
+
+class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (phase_te_go, "go"),
+            (phase_te_julia, "julia"),
+            (phase_te_mojo, "mojo"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("field", "value", "match"),
+        [
+            ("source", np.array([0.0, np.bool_(True)], dtype=object), "source"),
+            ("target", np.array([0.0, np.inf], dtype=np.float64), "target"),
+            ("source", np.array([0.0 + 0.0j, 1.0 + 0.0j]), "source"),
+            ("n_bins", np.bool_(True), "n_bins"),
+            ("n_bins", 1, "n_bins"),
+        ],
+    )
+    def test_phase_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn,
+        label: str,
+        field: str,
+        value: object,
+        match: str,
+    ) -> None:
+        kwargs: dict[str, object] = {
+            "source": np.array([0.0, 0.1, 0.2], dtype=np.float64),
+            "target": np.array([0.2, 0.3, 0.4], dtype=np.float64),
+            "n_bins": 4,
+        }
+        kwargs[field] = value
+
+        with pytest.raises(ValueError, match=match):
+            fn(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (te_matrix_go, "go"),
+            (te_matrix_julia, "julia"),
+            (te_matrix_mojo, "mojo"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("field", "value", "match"),
+        [
+            (
+                "phase_series",
+                np.array([0.0, np.bool_(True)], dtype=object),
+                "phase_series",
+            ),
+            ("phase_series", np.array([0.0 + 0.0j, 1.0 + 0.0j]), "phase_series"),
+            ("phase_series", np.array([0.0, np.nan], dtype=np.float64), "phase_series"),
+            ("n_osc", np.bool_(True), "n_osc"),
+            ("n_time", np.bool_(True), "n_time"),
+            ("n_bins", np.bool_(True), "n_bins"),
+            ("n_bins", 1, "n_bins"),
+        ],
+    )
+    def test_matrix_backend_rejects_invalid_inputs_before_runtime_load(
+        self,
+        fn,
+        label: str,
+        field: str,
+        value: object,
+        match: str,
+    ) -> None:
+        kwargs: dict[str, object] = {
+            "phase_series": np.array([0.0, 0.1, 0.2, 0.3], dtype=np.float64),
+            "n_osc": 2,
+            "n_time": 2,
+            "n_bins": 4,
+        }
+        kwargs[field] = value
+
+        with pytest.raises(ValueError, match=match):
+            fn(**kwargs)

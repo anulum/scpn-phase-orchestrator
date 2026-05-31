@@ -17,6 +17,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._te_validation import (
+    validate_phase_te_backend_inputs,
+    validate_te_matrix_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_te_mojo", "te_matrix_mojo"]
@@ -53,6 +58,11 @@ def _run(payload: str) -> list[float]:
 def phase_te_mojo(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     """Compute pairwise phase transfer entropy through the Mojo backend."""
 
+    source, target, n_bins = validate_phase_te_backend_inputs(
+        source,
+        target,
+        n_bins,
+    )
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)
     n = int(min(s.size, t.size))
@@ -73,6 +83,12 @@ def te_matrix_mojo(
 ) -> FloatArray:
     """Compute the phase transfer-entropy matrix through the Mojo backend."""
 
+    phase_series, n_osc, n_time, n_bins = validate_te_matrix_backend_inputs(
+        phase_series,
+        n_osc,
+        n_time,
+        n_bins,
+    )
     s = np.ascontiguousarray(phase_series, dtype=np.float64)
     tokens = ["MAT", str(n_osc), str(n_time), str(n_bins)]
     tokens.extend(repr(float(x)) for x in s.tolist())

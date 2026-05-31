@@ -18,6 +18,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from ._te_validation import (
+    validate_phase_te_backend_inputs,
+    validate_te_matrix_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_te_go", "te_matrix_go"]
@@ -60,6 +65,11 @@ def _load_lib() -> ctypes.CDLL:
 def phase_te_go(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     """Compute pairwise phase transfer entropy through the Go backend."""
 
+    source, target, n_bins = validate_phase_te_backend_inputs(
+        source,
+        target,
+        n_bins,
+    )
     lib = _load_lib()
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)
@@ -85,6 +95,12 @@ def te_matrix_go(
 ) -> FloatArray:
     """Compute the phase transfer-entropy matrix through the Go backend."""
 
+    phase_series, n_osc, n_time, n_bins = validate_te_matrix_backend_inputs(
+        phase_series,
+        n_osc,
+        n_time,
+        n_bins,
+    )
     lib = _load_lib()
     series = np.ascontiguousarray(phase_series, dtype=np.float64)
     out = np.zeros(n_osc * n_osc, dtype=np.float64)

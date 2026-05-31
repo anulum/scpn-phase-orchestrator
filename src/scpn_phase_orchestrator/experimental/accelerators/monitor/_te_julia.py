@@ -16,6 +16,11 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from ._te_validation import (
+    validate_phase_te_backend_inputs,
+    validate_te_matrix_backend_inputs,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_te_julia", "te_matrix_julia"]
@@ -40,6 +45,11 @@ def _ensure() -> Any:
 def phase_te_julia(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     """Compute pairwise phase transfer entropy through the Julia backend."""
 
+    source, target, n_bins = validate_phase_te_backend_inputs(
+        source,
+        target,
+        n_bins,
+    )
     jl = _ensure()
     return cast(
         "float",
@@ -59,6 +69,12 @@ def te_matrix_julia(
 ) -> FloatArray:
     """Compute the phase transfer-entropy matrix through the Julia backend."""
 
+    phase_series, n_osc, n_time, n_bins = validate_te_matrix_backend_inputs(
+        phase_series,
+        n_osc,
+        n_time,
+        n_bins,
+    )
     jl = _ensure()
     return cast(
         "FloatArray",
