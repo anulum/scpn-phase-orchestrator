@@ -51,7 +51,9 @@ TWO_PI = 2.0 * np.pi
 
 def test__te_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(te_validation.validate_phase_te_backend_inputs)
+    assert callable(te_validation.expected_phase_te_backend_output)
     assert callable(te_validation.validate_te_matrix_backend_inputs)
+    assert callable(te_validation.expected_te_matrix_backend_output)
 
 
 def _force(backend: str) -> str:
@@ -153,20 +155,13 @@ def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> No
         captured["phase_src_contiguous"] = src.flags.c_contiguous
         captured["phase_tgt_contiguous"] = tgt.flags.c_contiguous
         captured["phase_bins"] = n_bins
-        return 0.375
+        return _reference_te(src, tgt, n_bins)
 
     def te_matrix(flat: np.ndarray, n_osc: int, n_time: int, n_bins: int) -> np.ndarray:
         captured["matrix_flat_contiguous"] = flat.flags.c_contiguous
         captured["matrix_shape"] = (n_osc, n_time)
         captured["matrix_bins"] = n_bins
-        return np.array(
-            [
-                [0.0, 1.0, 1.25],
-                [0.5, 0.0, 1.5],
-                [0.75, 1.0, 0.0],
-            ],
-            dtype=np.float64,
-        ).ravel()
+        return _reference_matrix(flat.reshape(n_osc, n_time), n_bins).ravel()
 
     kernels = {"phase_te": phase_te, "te_matrix": te_matrix}
     monkeypatch.setattr(te_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
@@ -180,7 +175,11 @@ def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> No
     try:
         src = np.arange(12, dtype=np.float64)[::2]
         tgt = np.arange(12, dtype=np.float64)[1::2]
-        assert phase_transfer_entropy(src, tgt, n_bins=7) == 0.375
+        assert phase_transfer_entropy(src, tgt, n_bins=7) == _reference_te(
+            src,
+            tgt,
+            7,
+        )
 
         series = np.arange(30, dtype=np.float64).reshape(3, 10)[:, ::2]
         matrix = transfer_entropy_matrix(series, n_bins=5)
@@ -195,15 +194,7 @@ def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> No
         "matrix_shape": (3, 5),
         "matrix_bins": 5,
     }
-    expected = np.array(
-        [
-            [0.0, 1.0, 1.25],
-            [0.5, 0.0, 1.5],
-            [0.75, 1.0, 0.0],
-        ],
-        dtype=np.float64,
-    )
-    np.testing.assert_array_equal(matrix, expected)
+    np.testing.assert_array_equal(matrix, _reference_matrix(series, 5))
 
 
 class TestRustParity:
@@ -415,6 +406,21 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(ValueError, match="transfer entropy backend output"):
             te_validation.validate_te_backend_output(value, n_bins=4)
 
+    def test_pairwise_te_backend_output_rejects_exact_estimator_divergence(
+        self,
+    ) -> None:
+        source = np.array([0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1, 4.0])
+        target = np.array([0.1, 0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1])
+        expected = te_validation.expected_phase_te_backend_output(source, target, 2)
+        assert expected > 0.0
+
+        with pytest.raises(ValueError, match="exact transfer-entropy reference"):
+            te_validation.validate_te_backend_output(
+                0.0,
+                n_bins=2,
+                expected=expected,
+            )
+
     def test_te_matrix_backend_output_accepts_directed_matrix(self) -> None:
         matrix = te_validation.validate_te_matrix_backend_output(
             np.array(
@@ -460,6 +466,85 @@ class TestDirectBackendBoundaryContracts:
                 n_osc=2,
                 n_bins=4,
             )
+
+    def test_te_matrix_backend_output_rejects_exact_estimator_divergence(
+        self,
+    ) -> None:
+        source = np.array([0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1, 4.0])
+        target = np.array([0.1, 0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1])
+        series = np.vstack([source, target])
+        expected = te_validation.expected_te_matrix_backend_output(
+            series.ravel(),
+            2,
+            source.size,
+            2,
+        )
+        wrong = np.zeros_like(expected)
+        assert expected[0, 1] > 0.0
+
+        with pytest.raises(ValueError, match="exact transfer-entropy reference"):
+            te_validation.validate_te_matrix_backend_output(
+                wrong,
+                n_osc=2,
+                n_bins=2,
+                expected=expected,
+            )
+
+    @pytest.mark.parametrize("backend", ["go", "julia", "mojo"])
+    def test_direct_pairwise_backends_reject_exact_estimator_divergence(
+        self,
+        backend: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = np.array([0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1, 4.0])
+        target = np.array([0.1, 0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1])
+        wrong = 0.0
+
+        if backend == "go":
+            from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+                _te_go as te_go,
+            )
+
+            class _FakeGo:
+                @staticmethod
+                def PhaseTransferEntropy(
+                    _source_ptr: object,
+                    _target_ptr: object,
+                    _n: object,
+                    _n_bins: object,
+                    out_ptr: object,
+                ) -> int:
+                    out_ptr._obj.value = wrong
+                    return 0
+
+            monkeypatch.setattr(te_go, "_load_lib", lambda: _FakeGo())
+            target_fn = phase_te_go
+        elif backend == "julia":
+            class _FakeJulia:
+                @staticmethod
+                def phase_transfer_entropy(
+                    _source: np.ndarray,
+                    _target: np.ndarray,
+                    _n_bins: int,
+                ) -> float:
+                    return wrong
+
+            monkeypatch.setattr(
+                "scpn_phase_orchestrator.experimental.accelerators.monitor."
+                "_te_julia._ensure",
+                lambda: _FakeJulia(),
+            )
+            target_fn = phase_te_julia
+        else:
+            monkeypatch.setattr(
+                "scpn_phase_orchestrator.experimental.accelerators.monitor."
+                "_te_mojo._run",
+                lambda payload, *, expected_count, label: [wrong],
+            )
+            target_fn = phase_te_mojo
+
+        with pytest.raises(ValueError, match="exact transfer-entropy reference"):
+            target_fn(source, target, 2)
 
     @pytest.mark.parametrize(
         ("fn", "label"),
@@ -539,3 +624,53 @@ class TestDirectBackendBoundaryContracts:
 
         with pytest.raises(ValueError, match=match):
             fn(**kwargs)
+
+
+def test_public_transfer_entropy_falls_back_on_exact_contract_divergence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = np.array([0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1, 4.0])
+    target = np.array([0.1, 0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1])
+
+    def fake_phase_te(_src: np.ndarray, _tgt: np.ndarray, _n_bins: int) -> float:
+        return 0.0
+
+    kernels = {"phase_te": fake_phase_te, "te_matrix": lambda *_args: np.zeros(4)}
+    monkeypatch.setattr(te_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setattr(te_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+    monkeypatch.setitem(te_mod._BACKEND_CACHE, "go", kernels)
+    monkeypatch.setitem(te_mod._LOADERS, "go", lambda: kernels)
+
+    assert phase_transfer_entropy(source, target, 2) == _reference_te(
+        source,
+        target,
+        2,
+    )
+
+
+def test_public_transfer_entropy_matrix_falls_back_on_exact_contract_divergence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = np.array([0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1, 4.0])
+    target = np.array([0.1, 0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1])
+    series = np.vstack([source, target])
+
+    def fake_matrix(
+        _flat: np.ndarray,
+        _n_osc: int,
+        _n_time: int,
+        _n_bins: int,
+    ) -> np.ndarray:
+        return np.zeros(4, dtype=np.float64)
+
+    kernels = {"phase_te": lambda *_args: 0.0, "te_matrix": fake_matrix}
+    monkeypatch.setattr(te_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setattr(te_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+    monkeypatch.setitem(te_mod._BACKEND_CACHE, "go", kernels)
+    monkeypatch.setitem(te_mod._LOADERS, "go", lambda: kernels)
+
+    np.testing.assert_allclose(
+        transfer_entropy_matrix(series, 2),
+        _reference_matrix(series, 2),
+        atol=0.0,
+    )

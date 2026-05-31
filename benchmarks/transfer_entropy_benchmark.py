@@ -50,7 +50,12 @@ def bench_at(n: int, calls: int) -> dict:
     rng = np.random.default_rng(42)
     src = rng.uniform(0.0, TWO_PI, size=n)
     tgt = rng.uniform(0.0, TWO_PI, size=n)
-    row: dict = {"n": n, "calls": calls, "available": AVAILABLE_BACKENDS}
+    row: dict = {
+        "n": n,
+        "calls": calls,
+        "available": AVAILABLE_BACKENDS,
+        "boundary_contract": "exact_numpy_histogram_estimator_validated",
+    }
     for backend in AVAILABLE_BACKENDS:
         t = _bench(backend, src, tgt, calls)
         row[f"{backend}_ms_per_call"] = (t / calls) * 1000.0
@@ -64,7 +69,8 @@ def main() -> int:
     parser.add_argument("--calls", type=int, default=50)
     args = parser.parse_args()
 
-    print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}\n")
+    print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}")
+    print("Boundary contract: exact NumPy histogram estimator validated\n")
     header = f"{'N':>6}"
     for b in AVAILABLE_BACKENDS:
         header += f" {b + '_ms':>12}"

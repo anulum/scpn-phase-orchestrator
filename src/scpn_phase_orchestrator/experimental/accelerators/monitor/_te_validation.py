@@ -20,11 +20,15 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "FloatArray",
+    "expected_phase_te_backend_output",
+    "expected_te_matrix_backend_output",
     "validate_phase_te_backend_inputs",
     "validate_te_backend_output",
     "validate_te_matrix_backend_inputs",
     "validate_te_matrix_backend_output",
 ]
+
+TWO_PI = 2.0 * np.pi
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -122,7 +126,88 @@ def validate_te_matrix_backend_inputs(
     )
 
 
-def validate_te_backend_output(value: object, *, n_bins: int) -> float:
+def _conditional_entropy(
+    target: NDArray[np.int64],
+    condition: NDArray[np.int64],
+    n_cond_bins: int,
+) -> float:
+    n = len(target)
+    entropy = 0.0
+    for c in range(n_cond_bins):
+        mask = condition == c
+        count = int(np.sum(mask))
+        if count < 2:
+            continue
+        vals = target[mask]
+        _, counts = np.unique(vals, return_counts=True)
+        probs = counts / count
+        entropy -= (count / n) * float(np.sum(probs * np.log(probs + 1e-30)))
+    return entropy
+
+
+def expected_phase_te_backend_output(
+    source: FloatArray,
+    target: FloatArray,
+    n_bins: int,
+) -> float:
+    """Return the exact NumPy transfer-entropy reference for validated payloads."""
+
+    n_samples = min(int(source.size), int(target.size))
+    if n_samples < 3:
+        return 0.0
+    source_values = np.asarray(source[:n_samples], dtype=np.float64)
+    target_values = np.asarray(target[:n_samples], dtype=np.float64)
+    n = n_samples - 1
+    bins = np.linspace(0.0, TWO_PI, n_bins + 1)
+    src_binned = np.clip(
+        np.digitize(source_values[:n] % TWO_PI, bins) - 1,
+        0,
+        n_bins - 1,
+    ).astype(np.int64)
+    tgt_binned = np.clip(
+        np.digitize(target_values[:n] % TWO_PI, bins) - 1,
+        0,
+        n_bins - 1,
+    ).astype(np.int64)
+    tgt_next = np.clip(
+        np.digitize(target_values[1 : n + 1] % TWO_PI, bins) - 1,
+        0,
+        n_bins - 1,
+    ).astype(np.int64)
+    h_y_yt = _conditional_entropy(tgt_next, tgt_binned, n_bins)
+    joint_cond = (tgt_binned * n_bins + src_binned).astype(np.int64)
+    h_y_yt_x = _conditional_entropy(tgt_next, joint_cond, n_bins * n_bins)
+    return max(h_y_yt - h_y_yt_x, 0.0)
+
+
+def expected_te_matrix_backend_output(
+    phase_series: FloatArray,
+    n_osc: int,
+    n_time: int,
+    n_bins: int,
+) -> FloatArray:
+    """Return the exact NumPy transfer-entropy matrix reference."""
+
+    series = np.asarray(phase_series, dtype=np.float64).reshape(n_osc, n_time)
+    matrix = np.zeros((n_osc, n_osc), dtype=np.float64)
+    for i in range(n_osc):
+        for j in range(n_osc):
+            if i != j:
+                matrix[i, j] = expected_phase_te_backend_output(
+                    series[i],
+                    series[j],
+                    n_bins,
+                )
+    return np.ascontiguousarray(matrix, dtype=np.float64)
+
+
+def validate_te_backend_output(
+    value: object,
+    *,
+    n_bins: int,
+    expected: float | None = None,
+    atol: float = 1e-12,
+) -> float:
     """Validate a direct pairwise transfer-entropy backend scalar."""
 
     raw = np.asarray(value)
@@ -143,7 +228,18 @@ def validate_te_backend_output(value: object, *, n_bins: int) -> float:
         raise ValueError("transfer entropy backend output must be non-negative")
     if result > max_entropy + tolerance:
         raise ValueError("transfer entropy backend output must not exceed log(n_bins)")
-    return max(result, 0.0)
+    result = max(result, 0.0)
+    if expected is not None and not np.isclose(
+        result,
+        float(expected),
+        rtol=0.0,
+        atol=atol,
+    ):
+        raise ValueError(
+            "transfer entropy backend output diverged from exact "
+            "transfer-entropy reference"
+        )
+    return result
 
 
 def validate_te_matrix_backend_output(
@@ -151,6 +247,8 @@ def validate_te_matrix_backend_output(
     *,
     n_osc: int,
     n_bins: int,
+    expected: FloatArray | None = None,
+    atol: float = 1e-12,
 ) -> FloatArray:
     """Validate a direct transfer-entropy matrix backend payload."""
 
@@ -188,4 +286,11 @@ def validate_te_matrix_backend_output(
         raise ValueError("transfer entropy matrix backend output diagonal must be zero")
     matrix = np.maximum(matrix, 0.0)
     np.fill_diagonal(matrix, 0.0)
+    if expected is not None:
+        reference = np.asarray(expected, dtype=np.float64).reshape(n_osc, n_osc)
+        if not np.allclose(matrix, reference, rtol=0.0, atol=atol):
+            raise ValueError(
+                "transfer entropy matrix backend output diverged from exact "
+                "transfer-entropy reference"
+            )
     return np.ascontiguousarray(matrix, dtype=np.float64)

@@ -17,6 +17,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._te_validation import (
+    expected_phase_te_backend_output,
+    expected_te_matrix_backend_output,
     validate_phase_te_backend_inputs,
     validate_te_backend_output,
     validate_te_matrix_backend_inputs,
@@ -53,13 +55,17 @@ def phase_te_julia(source: FloatArray, target: FloatArray, n_bins: int) -> float
         n_bins,
     )
     jl = _ensure()
+    source_values = np.ascontiguousarray(source.ravel(), dtype=np.float64)
+    target_values = np.ascontiguousarray(target.ravel(), dtype=np.float64)
+    expected = expected_phase_te_backend_output(source_values, target_values, n_bins)
     return validate_te_backend_output(
         jl.phase_transfer_entropy(
-            np.ascontiguousarray(source.ravel(), dtype=np.float64),
-            np.ascontiguousarray(target.ravel(), dtype=np.float64),
+            source_values,
+            target_values,
             n_bins,
         ),
         n_bins=n_bins,
+        expected=expected,
     )
 
 
@@ -78,13 +84,16 @@ def te_matrix_julia(
         n_bins,
     )
     jl = _ensure()
+    series = np.ascontiguousarray(phase_series, dtype=np.float64)
+    expected = expected_te_matrix_backend_output(series, n_osc, n_time, n_bins)
     return validate_te_matrix_backend_output(
         jl.transfer_entropy_matrix(
-            np.ascontiguousarray(phase_series, dtype=np.float64),
+            series,
             n_osc,
             n_time,
             n_bins,
         ),
         n_osc=n_osc,
         n_bins=n_bins,
+        expected=expected,
     )

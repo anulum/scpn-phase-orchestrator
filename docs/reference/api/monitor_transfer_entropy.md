@@ -12,7 +12,8 @@ driver".
 This is the fifth reference implementation of the AttnRes-level
 standard: five-language backend chain, bit-exact parity across
 Rust / Julia / Go against the NumPy reference, multi-backend
-benchmark and `pytest.mark.slow` stability tests.
+benchmark, exact public-boundary reference validation, and
+`pytest.mark.slow` stability tests.
 
 ---
 
@@ -129,6 +130,13 @@ pairwise TE emits one scalar line, and matrix TE emits exactly `N*N` scalar
 lines. Blank, missing, extra, and non-scalar stdout lines fail closed before
 the entropy-domain validators accept the result.
 
+Public and direct accelerator boundaries also preserve the exact estimator, not
+only its numeric range. Pairwise backend scalars and matrix payloads must match
+the NumPy histogram estimator for the supplied phase data (`1e-12` for
+Rust/Julia/Go, `1e-9` for Mojo text transport). Direct Go, Julia, and Mojo
+wrappers fail closed on plausible but wrong in-range values; the public API
+discards such backend results and returns the Python reference instead.
+
 ---
 
 ## 3. Multi-backend fallback chain
@@ -186,6 +194,10 @@ Useful for A/B comparisons or deterministic cross-backend tests.
 Output from
 ``PYTHONPATH=src python benchmarks/transfer_entropy_benchmark.py
 --sizes 200 1000 5000 --calls 50``:
+
+Current benchmark output prints and records the boundary contract
+(`exact_numpy_histogram_estimator_validated`) because non-Python backend timings
+include exact NumPy reference validation at the public API.
 
 | N | Rust | Mojo | Julia | Go | Python |
 |---|---|---|---|---|---|

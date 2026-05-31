@@ -19,6 +19,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._te_validation import (
+    expected_phase_te_backend_output,
+    expected_te_matrix_backend_output,
     validate_phase_te_backend_inputs,
     validate_te_backend_output,
     validate_te_matrix_backend_inputs,
@@ -76,6 +78,8 @@ def phase_te_go(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)
     n = min(s.size, t.size)
+    if n < 3:
+        return 0.0
     out = ctypes.c_double(0.0)
     rc = lib.PhaseTransferEntropy(
         s[:n].ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -86,7 +90,8 @@ def phase_te_go(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     )
     if rc != 0:
         raise ValueError(f"Go PhaseTransferEntropy rc={rc}")
-    return validate_te_backend_output(out.value, n_bins=n_bins)
+    expected = expected_phase_te_backend_output(s[:n], t[:n], n_bins)
+    return validate_te_backend_output(out.value, n_bins=n_bins, expected=expected)
 
 
 def te_matrix_go(
@@ -115,4 +120,10 @@ def te_matrix_go(
     )
     if rc != 0:
         raise ValueError(f"Go TransferEntropyMatrix rc={rc}")
-    return validate_te_matrix_backend_output(out, n_osc=n_osc, n_bins=n_bins)
+    expected = expected_te_matrix_backend_output(series, n_osc, n_time, n_bins)
+    return validate_te_matrix_backend_output(
+        out,
+        n_osc=n_osc,
+        n_bins=n_bins,
+        expected=expected,
+    )

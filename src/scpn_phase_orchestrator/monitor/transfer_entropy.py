@@ -230,6 +230,8 @@ def _validate_te_matrix(
     *,
     n_osc: int,
     max_entropy: float,
+    expected: FloatArray | None = None,
+    atol: float = 1e-12,
 ) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("transfer entropy matrix must not contain boolean values")
@@ -252,6 +254,12 @@ def _validate_te_matrix(
         raise ValueError("transfer entropy matrix diagonal must be zero")
     matrix = np.maximum(matrix, 0.0)
     np.fill_diagonal(matrix, 0.0)
+    if expected is not None:
+        reference = np.asarray(expected, dtype=np.float64).reshape(n_osc, n_osc)
+        if not np.allclose(matrix, reference, rtol=0.0, atol=atol):
+            raise ValueError(
+                "transfer entropy matrix diverged from exact reference"
+            )
     return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
@@ -273,6 +281,52 @@ def _conditional_entropy(
     return h
 
 
+def _phase_te_reference(
+    source_values: FloatArray,
+    target_values: FloatArray,
+    bin_count: int,
+) -> float:
+    n_samples = min(len(source_values), len(target_values))
+    if n_samples < 3:
+        return 0.0
+    source_values = source_values[:n_samples]
+    target_values = target_values[:n_samples]
+    n = n_samples - 1
+    bins = np.linspace(0, 2 * np.pi, bin_count + 1)
+    src_binned: IntArray = np.clip(
+        np.digitize(source_values[:n] % (2 * np.pi), bins) - 1,
+        0,
+        bin_count - 1,
+    ).astype(np.int64)
+    tgt_binned: IntArray = np.clip(
+        np.digitize(target_values[:n] % (2 * np.pi), bins) - 1,
+        0,
+        bin_count - 1,
+    ).astype(np.int64)
+    tgt_next: IntArray = np.clip(
+        np.digitize(target_values[1 : n + 1] % (2 * np.pi), bins) - 1,
+        0,
+        bin_count - 1,
+    ).astype(np.int64)
+    h_y_yt = _conditional_entropy(tgt_next, tgt_binned, bin_count)
+    joint_cond: IntArray = (tgt_binned * bin_count + src_binned).astype(np.int64)
+    h_y_yt_x = _conditional_entropy(tgt_next, joint_cond, bin_count * bin_count)
+    return _validate_te_scalar(
+        h_y_yt - h_y_yt_x,
+        max_entropy=float(np.log(bin_count)),
+    )
+
+
+def _te_matrix_reference(series: FloatArray, bin_count: int) -> FloatArray:
+    n_osc, _n_time = series.shape
+    te: FloatArray = np.zeros((n_osc, n_osc), dtype=np.float64)
+    for i in range(n_osc):
+        for j in range(n_osc):
+            if i != j:
+                te[i, j] = _phase_te_reference(series[i], series[j], bin_count)
+    return te
+
+
 def phase_transfer_entropy(
     source: FloatArray, target: FloatArray, n_bins: int = 16
 ) -> float:
@@ -285,46 +339,35 @@ def phase_transfer_entropy(
         return 0.0
     source_values = source_values[:n_samples]
     target_values = target_values[:n_samples]
+    expected = _phase_te_reference(source_values, target_values, bin_count)
     backend_fn = _dispatch("phase_te")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, FloatArray, int], float]", backend_fn)
         try:
-            return _validate_te_scalar(
-                fn(
-                    np.ascontiguousarray(source_values, dtype=np.float64),
-                    np.ascontiguousarray(target_values, dtype=np.float64),
-                    bin_count,
-                ),
+            result = fn(
+                np.ascontiguousarray(source_values, dtype=np.float64),
+                np.ascontiguousarray(target_values, dtype=np.float64),
+                bin_count,
+            )
+            result = _validate_te_scalar(
+                result,
                 name="backend transfer entropy",
                 max_entropy=float(np.log(bin_count)),
             )
+            if not np.isclose(
+                result,
+                expected,
+                rtol=0.0,
+                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
+            ):
+                raise ValueError(
+                    "backend transfer entropy diverged from exact reference"
+                )
+            return result
         except Exception:
             bin_count = int(bin_count)
 
-    n = n_samples - 1
-    bins = np.linspace(0, 2 * np.pi, bin_count + 1)
-    src_binned: IntArray = np.clip(
-        np.digitize(source_values[:n] % (2 * np.pi), bins) - 1,
-        0,
-        bin_count - 1,
-    )
-    tgt_binned: IntArray = np.clip(
-        np.digitize(target_values[:n] % (2 * np.pi), bins) - 1,
-        0,
-        bin_count - 1,
-    )
-    tgt_next: IntArray = np.clip(
-        np.digitize(target_values[1 : n + 1] % (2 * np.pi), bins) - 1,
-        0,
-        bin_count - 1,
-    )
-    h_y_yt = _conditional_entropy(tgt_next, tgt_binned, bin_count)
-    joint_cond: IntArray = tgt_binned * bin_count + src_binned
-    h_y_yt_x = _conditional_entropy(tgt_next, joint_cond, bin_count * bin_count)
-    return _validate_te_scalar(
-        h_y_yt - h_y_yt_x,
-        max_entropy=float(np.log(bin_count)),
-    )
+    return expected
 
 
 def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> FloatArray:
@@ -333,6 +376,7 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
     bin_count = _validate_n_bins(n_bins)
     series = _validate_phase_series(phase_series, name="phase_series")
     n_osc, n_time = series.shape
+    expected = _te_matrix_reference(series, bin_count)
     backend_fn = _dispatch("te_matrix")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int, int], FloatArray]", backend_fn)
@@ -347,13 +391,10 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
                 flat,
                 n_osc=n_osc,
                 max_entropy=float(np.log(bin_count)),
+                expected=expected,
+                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
             )
         except Exception:
             n_time = int(n_time)
 
-    te: FloatArray = np.zeros((n_osc, n_osc), dtype=np.float64)
-    for i in range(n_osc):
-        for j in range(n_osc):
-            if i != j:
-                te[i, j] = phase_transfer_entropy(series[i], series[j], bin_count)
-    return te
+    return expected

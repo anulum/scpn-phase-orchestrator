@@ -18,6 +18,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._te_validation import (
+    expected_phase_te_backend_output,
+    expected_te_matrix_backend_output,
     validate_phase_te_backend_inputs,
     validate_te_backend_output,
     validate_te_matrix_backend_inputs,
@@ -89,7 +91,13 @@ def phase_te_mojo(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     tokens.extend(repr(float(x)) for x in s[:n].tolist())
     tokens.extend(repr(float(x)) for x in t[:n].tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=1, label="PTE")
-    return validate_te_backend_output(result[0], n_bins=n_bins)
+    expected = expected_phase_te_backend_output(s[:n], t[:n], n_bins)
+    return validate_te_backend_output(
+        result[0],
+        n_bins=n_bins,
+        expected=expected,
+        atol=1e-9,
+    )
 
 
 def te_matrix_mojo(
@@ -114,4 +122,11 @@ def te_matrix_mojo(
         expected_count=n_osc * n_osc,
         label="MAT",
     )
-    return validate_te_matrix_backend_output(result, n_osc=n_osc, n_bins=n_bins)
+    expected = expected_te_matrix_backend_output(s, n_osc, n_time, n_bins)
+    return validate_te_matrix_backend_output(
+        result,
+        n_osc=n_osc,
+        n_bins=n_bins,
+        expected=expected,
+        atol=1e-9,
+    )
