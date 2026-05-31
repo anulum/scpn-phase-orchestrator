@@ -181,6 +181,10 @@ zero diagonal, and remain bounded in ``[0, π]``; scalar NPE outputs
 must be finite real values in ``[0, 1]``. This keeps optional
 polyglot bridges fail-closed if a shared library, Julia side-file,
 or subprocess emits malformed numerical payloads.
+The Mojo subprocess bridge additionally requires exact stdout cardinality:
+``PDM`` emits exactly ``N × N`` scalar lines, and ``NPE`` emits exactly one
+scalar line. Missing, extra, blank, and non-scalar stdout lines fail closed
+before the distance-matrix or scalar NPE validators accept the result.
 
 ---
 

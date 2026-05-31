@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -28,6 +29,9 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor._npe_go import (
 from scpn_phase_orchestrator.experimental.accelerators.monitor._npe_julia import (
     compute_npe_julia,
     phase_distance_matrix_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._npe_mojo import (
+    _run as run_npe_mojo,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._npe_mojo import (
     compute_npe_mojo,
@@ -92,6 +96,45 @@ def test_backend_array_contracts_are_parameterised() -> None:
 
 
 class TestDirectBackendBoundaryContracts:
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("", 1, "NPE", "exactly 1 scalar"),
+            ("0.1\n0.2\n", 1, "NPE", "exactly 1 scalar"),
+            ("0.0\n\n0.5\n0.5\n0.0\n", 4, "PDM", "exactly 4 scalar"),
+            ("not-a-number\n", 1, "NPE", "non-scalar"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_npe_stdout(
+        self,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.experimental.accelerators.monitor."
+            "_npe_mojo._ensure_exe",
+            lambda: "npe_mojo",
+        )
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.experimental.accelerators.monitor."
+            "_npe_mojo.subprocess.run",
+            lambda *args, **kwargs: SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            run_npe_mojo(
+                "NPE 2 3.141592653589793 0 1\n",
+                expected_count=expected_count,
+                label=label,
+            )
+
     def test_phase_distance_backend_output_accepts_flat_or_matrix_contract(
         self,
     ) -> None:
