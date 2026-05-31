@@ -592,6 +592,11 @@ at import time and exposes the choice as ``ACTIVE_BACKEND`` /
 
 Tests in ``tests/test_order_params_backends.py`` enforce
 ``atol = 1e-12`` for Rust/Julia/Go and ``atol = 1e-13`` for Mojo.
+The direct Mojo subprocess bridge also enforces exact raw stdout cardinality:
+two finite scalar lines for ``compute_order_parameter`` and one finite scalar
+line for ``compute_plv`` or ``compute_layer_coherence``. Blank, truncated,
+overlong, non-finite, or non-numeric output is rejected before public values
+are returned.
 
 ### Measured benchmark
 

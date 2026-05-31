@@ -19,11 +19,16 @@ Tolerance budgets match the AttnRes reference:
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _order_params_mojo as order_params_mojo_mod,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_go import (
     plv_go,
 )
@@ -75,6 +80,52 @@ class TestDirectBackendBoundaryContracts:
     def test_plv_rejects_empty_non_empty_mismatch_before_runtime_load(self, fn) -> None:
         with pytest.raises(ValueError, match="equal-length"):
             fn(np.array([], dtype=np.float64), np.zeros(1, dtype=np.float64))
+
+    @pytest.mark.parametrize(
+        ("stdout", "expected_count", "label", "match"),
+        [
+            ("", 2, "R", "Mojo order_params R returned 0 lines, expected 2"),
+            (
+                "0.5\n1.0\n7.0\n",
+                2,
+                "R",
+                "Mojo order_params R returned 3 lines, expected 2",
+            ),
+            (
+                "0.5\n\n",
+                1,
+                "PLV",
+                "Mojo order_params PLV returned 2 lines, expected 1",
+            ),
+            ("not-a-number\n", 1, "LC", "finite real values"),
+            ("nan\n", 1, "LC", "finite real values"),
+        ],
+    )
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        expected_count: int,
+        label: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(order_params_mojo_mod, "_ensure_exe", lambda: "order")
+        monkeypatch.setattr(
+            order_params_mojo_mod.subprocess,
+            "run",
+            lambda *_args, **_kwargs: SimpleNamespace(
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            ),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            order_params_mojo_mod._run(
+                "R 1 0.0\n",
+                expected_count=expected_count,
+                label=label,
+            )
 
 
 # ---------------------------------------------------------------------
