@@ -21,7 +21,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._lyapunov_validation import validate_lyapunov_backend_inputs
+from ._lyapunov_validation import (
+    validate_lyapunov_backend_inputs,
+    validate_lyapunov_backend_output,
+)
 
 __all__ = ["_ensure_exe", "lyapunov_spectrum_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -103,6 +106,4 @@ def lyapunov_spectrum_mojo(
     tokens.extend(repr(float(x)) for x in knm.ravel().tolist())
     tokens.extend(repr(float(x)) for x in alpha.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
-    if len(result) != n:
-        raise ValueError(f"Mojo SPEC returned {len(result)} values, expected {n}")
-    return np.array(result, dtype=np.float64)
+    return validate_lyapunov_backend_output(result, n)

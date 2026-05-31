@@ -145,3 +145,26 @@ def validate_lyapunov_backend_inputs(
         _validate_non_negative_real(zeta, name="zeta"),
         _validate_finite_real(psi, name="psi"),
     )
+
+
+def validate_lyapunov_backend_output(value: object, n: int) -> FloatArray:
+    """Validate direct backend Lyapunov spectra before returning them."""
+
+    raw = np.asarray(value)
+    if _contains_boolean_alias(value):
+        raise ValueError("Lyapunov backend output must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("Lyapunov backend output must be real-valued")
+    try:
+        spectrum = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Lyapunov backend output must be numeric") from exc
+    if spectrum.shape != (n,):
+        raise ValueError(
+            f"Lyapunov backend output shape {spectrum.shape} does not match ({n},)"
+        )
+    if not np.all(np.isfinite(spectrum)):
+        raise ValueError("Lyapunov backend output must contain only finite values")
+    if spectrum.size > 1 and np.any(np.diff(spectrum) > 1e-12):
+        raise ValueError("Lyapunov backend output must be sorted descending")
+    return np.ascontiguousarray(spectrum, dtype=np.float64)

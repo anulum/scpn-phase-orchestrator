@@ -251,6 +251,12 @@ tolerances listed in the parity tests:
 | Mojo                       | `1e-6`           | Subprocess stdin ↔ stdout text; `atof` round-trips `f64`.         |
 | Python                     | exact            | Python is the reference.                                          |
 
+Direct Go, Julia, and Mojo wrappers revalidate backend spectra before returning
+them. Accepted spectra must contain exactly `N` finite real exponents and must
+already be sorted in descending Lyapunov order. Malformed length, complex,
+non-finite, boolean-alias, or unsorted backend payloads are rejected at the
+adapter boundary rather than being passed to downstream stability logic.
+
 ---
 
 ## 4. Per-backend build notes

@@ -22,7 +22,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._lyapunov_validation import validate_lyapunov_backend_inputs
+from ._lyapunov_validation import (
+    validate_lyapunov_backend_inputs,
+    validate_lyapunov_backend_output,
+)
 
 __all__ = ["lyapunov_spectrum_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -116,4 +119,4 @@ def lyapunov_spectrum_go(
     )
     if rc != 0:
         raise ValueError(f"Go LyapunovSpectrum rc={rc}")
-    return out
+    return validate_lyapunov_backend_output(out, n)

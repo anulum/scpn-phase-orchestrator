@@ -21,7 +21,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._lyapunov_validation import validate_lyapunov_backend_inputs
+from ._lyapunov_validation import (
+    validate_lyapunov_backend_inputs,
+    validate_lyapunov_backend_output,
+)
 
 __all__ = ["lyapunov_spectrum_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -79,7 +82,7 @@ def lyapunov_spectrum_julia(
     )
     n = int(phases_init.size)
     jl = _ensure()
-    return np.asarray(
+    return validate_lyapunov_backend_output(
         jl.lyapunov_spectrum(
             np.ascontiguousarray(phases_init.ravel(), dtype=np.float64),
             np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
@@ -92,5 +95,5 @@ def lyapunov_spectrum_julia(
             float(zeta),
             float(psi),
         ),
-        dtype=np.float64,
+        n,
     )

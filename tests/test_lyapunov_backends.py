@@ -22,6 +22,15 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _lyapunov_go as lyapunov_go_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _lyapunov_julia as lyapunov_julia_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _lyapunov_mojo as lyapunov_mojo_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _lyapunov_validation as lyapunov_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_go import (
@@ -82,6 +91,49 @@ def _problem(seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0):
         "psi": psi,
     }
     return phases, omegas, knm, alpha, kwargs
+
+
+class _FakeGoLyapunov:
+    def __init__(self, spectrum: np.ndarray) -> None:
+        self.spectrum = spectrum
+
+    def LyapunovSpectrum(
+        self,
+        _phases_ptr: object,
+        _omegas_ptr: object,
+        _knm_ptr: object,
+        _alpha_ptr: object,
+        n: object,
+        _dt: object,
+        _n_steps: object,
+        _qr_interval: object,
+        _zeta: object,
+        _psi: object,
+        out_ptr: object,
+    ) -> int:
+        out = np.ctypeslib.as_array(out_ptr, shape=(int(n.value),))
+        out[:] = self.spectrum
+        return 0
+
+
+class _FakeJuliaLyapunov:
+    def __init__(self, spectrum: object) -> None:
+        self.spectrum = spectrum
+
+    def lyapunov_spectrum(
+        self,
+        _phases: np.ndarray,
+        _omegas: np.ndarray,
+        _knm: np.ndarray,
+        _alpha: np.ndarray,
+        _n: int,
+        _dt: float,
+        _n_steps: int,
+        _qr_interval: int,
+        _zeta: float,
+        _psi: float,
+    ) -> object:
+        return self.spectrum
 
 
 class TestRustParity:
@@ -326,3 +378,50 @@ class TestDirectBackendBoundaryContracts:
 
         with pytest.raises(ValueError, match=match):
             fn(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("backend_name", "payload", "match"),
+        [
+            ("go", np.array([0.1, np.inf], dtype=np.float64), "finite"),
+            ("julia", np.array([0.1, 0.2], dtype=np.float64), "sorted descending"),
+            ("mojo", [0.1], "shape"),
+        ],
+    )
+    def test_direct_backend_rejects_invalid_spectrum_outputs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_name: str,
+        payload: object,
+        match: str,
+    ) -> None:
+        kwargs: dict[str, object] = {
+            "phases_init": np.array([0.0, 0.1], dtype=np.float64),
+            "omegas": np.array([1.0, 1.0], dtype=np.float64),
+            "knm": np.array([[0.0, 0.1], [0.1, 0.0]], dtype=np.float64),
+            "alpha": np.zeros((2, 2), dtype=np.float64),
+            "dt": 0.01,
+            "n_steps": 10,
+            "qr_interval": 2,
+            "zeta": 0.0,
+            "psi": 0.0,
+        }
+        if backend_name == "go":
+            monkeypatch.setattr(
+                lyapunov_go_mod,
+                "_load_lib",
+                lambda: _FakeGoLyapunov(np.asarray(payload, dtype=np.float64)),
+            )
+            backend = lyapunov_spectrum_go
+        elif backend_name == "julia":
+            monkeypatch.setattr(
+                lyapunov_julia_mod,
+                "_ensure",
+                lambda: _FakeJuliaLyapunov(payload),
+            )
+            backend = lyapunov_spectrum_julia
+        else:
+            monkeypatch.setattr(lyapunov_mojo_mod, "_run", lambda _payload: payload)
+            backend = lyapunov_spectrum_mojo
+
+        with pytest.raises(ValueError, match=match):
+            backend(**kwargs)
