@@ -72,6 +72,9 @@ def winding_numbers(phases_history: NDArray) -> NDArray: ...
 
 Takes a ``(T, N)`` phase history; returns ``(N,)`` int64 array.
 ``T < 2`` short-circuits to a zero vector.
+The public boundary rejects boolean aliases, complex dtypes, and object arrays
+containing complex scalar aliases before any float coercion, preserving the
+real-valued wrapped-increment topology contract.
 
 ### 2.2 `winding_vector`
 
@@ -107,13 +110,13 @@ The direct Go, Julia, and Mojo wrappers validate before loading their optional
 runtimes:
 
 * `phases_flat` must be a one-dimensional finite real `float64` buffer with no
-  boolean aliases or complex values.
+  boolean aliases, complex dtypes, or object-complex scalar aliases.
 * `t` must be a non-boolean integer at least 2.
 * `n` must be a non-boolean positive integer.
 * the flat buffer length must exactly match `t * n`.
-* returned winding vectors must be finite integer-valued `int64` arrays of
-  length `n`, contain no boolean aliases, and stay within the wrapped-increment
-  bound implied by `t`.
+* returned winding vectors must be finite real integer-valued `int64` arrays of
+  length `n`, contain no boolean or complex aliases, and stay within the
+  wrapped-increment bound implied by `t`.
 * returned winding vectors must also equal the exact NumPy wrapped-increment
   reference for the supplied phase history; direct wrappers fail closed on
   plausible but wrong integer outputs.

@@ -128,6 +128,7 @@ class TestDirectBackendBoundaryContracts:
         ("phases_flat", "t", "n", "match"),
         [
             (np.array([True, False]), 2, 1, "phases_flat"),
+            (np.array([0.0, 1.0j], dtype=object), 2, 1, "phases_flat"),
             (np.array([0.0, np.nan]), 2, 1, "phases_flat"),
             (np.array([0.0, 1.0], dtype=np.complex128), 2, 1, "real-valued"),
             (np.array([[0.0], [1.0]]), 2, 1, "one-dimensional"),
@@ -153,6 +154,8 @@ class TestDirectBackendBoundaryContracts:
         ("value", "match"),
         [
             (np.array([np.bool_(True)], dtype=object), "boolean"),
+            (np.array([0.0 + 1.0j], dtype=object), "real-valued"),
+            (np.array([0.0 + 1.0j], dtype=np.complex128), "real-valued"),
             (np.array([np.inf]), "finite"),
             (np.array([0.5]), "integer"),
             (np.array([3]), "wrapped-increment"),

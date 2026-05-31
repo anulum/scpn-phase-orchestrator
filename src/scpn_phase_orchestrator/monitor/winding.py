@@ -138,10 +138,28 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _has_complex_payload(value: object) -> bool:
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(value)
+    return bool(np.iscomplexobj(array) or _contains_complex_alias(value))
+
+
 def _validate_phase_history(phases_history: object) -> FloatArray:
     raw = np.asarray(phases_history)
     if _contains_boolean_alias(phases_history):
         raise ValueError("phases_history must not contain boolean values")
+    if _has_complex_payload(phases_history):
+        raise ValueError("phases_history must contain real-valued samples")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -169,6 +187,8 @@ def _validate_backend_winding(
 ) -> IntArray:
     if _contains_boolean_alias(value):
         raise ValueError("backend winding output must not contain boolean values")
+    if _has_complex_payload(value):
+        raise ValueError("backend winding output must be real-valued")
     try:
         array = np.asarray(value)
     except (TypeError, ValueError) as exc:

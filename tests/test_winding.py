@@ -124,6 +124,17 @@ class TestWindingNumbers:
         with pytest.raises(ValueError, match="phases_history"):
             winding_numbers(np.array([[0.0, True], [1.0, 2.0]], dtype=object))
 
+    @pytest.mark.parametrize(
+        "history",
+        [
+            np.array([[0.0], [1.0j]], dtype=object),
+            np.array([[0.0], [1.0j]], dtype=np.complex128),
+        ],
+    )
+    def test_rejects_complex_phase_history(self, history: np.ndarray) -> None:
+        with pytest.raises(ValueError, match="phases_history"):
+            winding_numbers(history)
+
     def test_rejects_rank_three_history(self) -> None:
         with pytest.raises(ValueError, match="phases_history must be 1D or 2D"):
             winding_numbers(np.zeros((2, 2, 2), dtype=np.float64))
@@ -177,12 +188,20 @@ class TestWindingRustDispatch:
 
         def _fake_backend(flat: np.ndarray, t: int, n: int) -> np.ndarray:
             calls.append((flat, t, n))
-            return np.array([1, -1], dtype=np.int64)
+            return np.array([1, -2], dtype=np.int64)
 
         monkeypatch.setattr(winding_module, "_dispatch", lambda: _fake_backend)
-        history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
+        history = np.array(
+            [
+                [0.0, 0.0],
+                [0.7 * np.pi, -0.7 * np.pi],
+                [1.4 * np.pi, -1.4 * np.pi],
+                [2.1 * np.pi, -2.1 * np.pi],
+            ],
+            dtype=np.float64,
+        )
         w = winding_numbers(history)
-        np.testing.assert_array_equal(w, [1, -1])
+        np.testing.assert_array_equal(w, [1, -2])
         assert len(calls) == 1
 
     def test_winding_falls_back_when_backend_raises(
@@ -206,6 +225,8 @@ class TestWindingRustDispatch:
             np.array([100, 0], dtype=np.int64),
             np.array([True, False], dtype=np.bool_),
             np.array([1, np.bool_(False)], dtype=object),
+            np.array([0.0 + 1.0j, -1.0], dtype=object),
+            np.array([0.0 + 1.0j, -1.0], dtype=np.complex128),
         ],
     )
     def test_winding_falls_back_when_backend_returns_invalid_payload(

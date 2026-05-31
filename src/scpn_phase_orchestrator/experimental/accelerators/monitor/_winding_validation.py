@@ -29,6 +29,22 @@ def _contains_boolean_alias(raw: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(raw: object) -> bool:
+    try:
+        array = np.asarray(raw, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _has_complex_payload(raw: object) -> bool:
+    try:
+        array = np.asarray(raw)
+    except (TypeError, ValueError):
+        return _contains_complex_alias(raw)
+    return bool(np.iscomplexobj(array) or _contains_complex_alias(raw))
+
+
 def _validate_int(value: object, name: str, *, minimum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
@@ -50,7 +66,7 @@ def validate_winding_backend_inputs(
     raw = np.asarray(phases_flat)
     if _contains_boolean_alias(phases_flat):
         raise ValueError("phases_flat must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _has_complex_payload(phases_flat):
         raise ValueError("phases_flat must be real-valued")
     try:
         phases = raw.astype(np.float64, copy=True)
@@ -99,6 +115,8 @@ def validate_winding_backend_output(
     n_int = _validate_int(n, "n", minimum=1)
     if _contains_boolean_alias(value):
         raise ValueError("winding output must not contain boolean values")
+    if _has_complex_payload(value):
+        raise ValueError("winding output must be real-valued")
     try:
         array = np.asarray(value)
     except (TypeError, ValueError) as exc:
