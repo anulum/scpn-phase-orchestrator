@@ -55,6 +55,7 @@ recurrence_matrix_mojo = _recurrence_mojo.recurrence_matrix_mojo
 
 
 def test__recurrence_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    assert callable(recurrence_validation.expected_recurrence_backend_output)
     assert callable(recurrence_validation.validate_recurrence_backend_inputs)
     assert callable(recurrence_validation.validate_cross_recurrence_backend_inputs)
     assert callable(recurrence_validation.validate_recurrence_backend_output)
@@ -278,6 +279,47 @@ class TestDirectBackendBoundaryContracts:
                 name=name,
             )
 
+    def test_output_validation_rejects_exact_threshold_divergence(self) -> None:
+        traj = np.array([0.0, 2.0, 5.0], dtype=np.float64)
+        expected = recurrence_validation.expected_recurrence_backend_output(
+            traj,
+            traj,
+            t=3,
+            d=1,
+            epsilon=0.5,
+            angular=False,
+        )
+        symmetric_wrong = np.ones((3, 3), dtype=np.uint8)
+
+        with pytest.raises(ValueError, match="exact recurrence threshold"):
+            recurrence_validation.validate_recurrence_backend_output(
+                symmetric_wrong,
+                t=3,
+                name="recurrence_matrix",
+                expected=expected,
+            )
+
+    def test_cross_output_validation_rejects_exact_threshold_divergence(self) -> None:
+        traj_a = np.array([0.0, 2.0], dtype=np.float64)
+        traj_b = np.array([0.0, 3.0], dtype=np.float64)
+        expected = recurrence_validation.expected_recurrence_backend_output(
+            traj_a,
+            traj_b,
+            t=2,
+            d=1,
+            epsilon=0.5,
+            angular=False,
+        )
+        binary_wrong = np.array([1, 1, 0, 1], dtype=np.uint8)
+
+        with pytest.raises(ValueError, match="exact recurrence threshold"):
+            recurrence_validation.validate_recurrence_backend_output(
+                binary_wrong,
+                t=2,
+                name="cross_recurrence_matrix",
+                expected=expected,
+            )
+
     def test_julia_backend_rejects_asymmetric_recurrence_output(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -290,6 +332,19 @@ class TestDirectBackendBoundaryContracts:
 
         with pytest.raises(ValueError, match="symmetric"):
             recurrence_matrix_julia(np.array([0.0, 1.0]), 2, 1, 0.5, False)
+
+    def test_julia_backend_rejects_exact_threshold_divergence(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class _FakeJulia:
+            @staticmethod
+            def recurrence_matrix(*args: object) -> np.ndarray:
+                return np.ones((3, 3), dtype=np.uint8)
+
+        monkeypatch.setattr(_recurrence_julia, "_ensure", lambda: _FakeJulia())
+
+        with pytest.raises(ValueError, match="exact recurrence threshold"):
+            recurrence_matrix_julia(np.array([0.0, 2.0, 5.0]), 3, 1, 0.5, False)
 
     def test_mojo_backend_rejects_nonbinary_cross_recurrence_output(
         self, monkeypatch: pytest.MonkeyPatch
@@ -309,6 +364,52 @@ class TestDirectBackendBoundaryContracts:
                 0.5,
                 False,
             )
+
+    def test_public_recurrence_falls_back_from_shape_correct_wrong_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        traj = np.array([0.0, 2.0, 5.0], dtype=np.float64)
+
+        def _wrong_backend(
+            traj_flat: np.ndarray,
+            t: int,
+            d: int,
+            epsilon: float,
+            angular: bool,
+        ) -> np.ndarray:
+            del traj_flat, d, epsilon, angular
+            return np.ones((t, t), dtype=np.uint8)
+
+        monkeypatch.setattr(r_mod, "_dispatch", lambda _name: _wrong_backend)
+
+        np.testing.assert_array_equal(
+            recurrence_matrix(traj, 0.5),
+            _reference_rm(traj, 0.5),
+        )
+
+    def test_public_cross_recurrence_falls_back_from_wrong_binary_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        traj_a = np.array([0.0, 2.0], dtype=np.float64)
+        traj_b = np.array([0.0, 3.0], dtype=np.float64)
+
+        def _wrong_backend(
+            traj_a_flat: np.ndarray,
+            traj_b_flat: np.ndarray,
+            t: int,
+            d: int,
+            epsilon: float,
+            angular: bool,
+        ) -> np.ndarray:
+            del traj_a_flat, traj_b_flat, t, d, epsilon, angular
+            return np.array([1, 1, 0, 1], dtype=np.uint8)
+
+        monkeypatch.setattr(r_mod, "_dispatch", lambda _name: _wrong_backend)
+
+        np.testing.assert_array_equal(
+            cross_recurrence_matrix(traj_a, traj_b, 0.5),
+            _reference_cross(traj_a, traj_b, 0.5),
+        )
 
 
 class TestRustParity:

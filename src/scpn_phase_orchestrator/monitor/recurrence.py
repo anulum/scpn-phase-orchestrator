@@ -268,7 +268,29 @@ def _validate_non_negative_int(value: object, *, name: str) -> int:
     return result
 
 
-def _backend_recurrence_matrix(value: object, *, t: int, name: str) -> BoolArray:
+def _expected_recurrence_matrix(
+    traj_a: FloatArray,
+    traj_b: FloatArray,
+    *,
+    epsilon: float,
+    angular: bool,
+) -> BoolArray:
+    diff = traj_a[:, np.newaxis, :] - traj_b[np.newaxis, :, :]
+    if angular:
+        dist = np.sqrt(np.sum(4.0 * np.sin(diff / 2.0) ** 2, axis=2))
+    else:
+        dist = np.sqrt(np.sum(diff**2, axis=2))
+    result: BoolArray = dist <= epsilon
+    return result
+
+
+def _backend_recurrence_matrix(
+    value: object,
+    *,
+    t: int,
+    name: str,
+    expected: BoolArray,
+) -> BoolArray:
     try:
         array = np.asarray(value)
     except (TypeError, ValueError) as exc:
@@ -291,6 +313,10 @@ def _backend_recurrence_matrix(value: object, *, t: int, name: str) -> BoolArray
             raise ValueError("recurrence_matrix backend output must have true diagonal")
         if not np.array_equal(matrix, matrix.T):
             raise ValueError("recurrence_matrix backend output must be symmetric")
+    if expected.shape != (t, t):
+        raise ValueError(f"{name} expected output shape must be {(t, t)}")
+    if not np.array_equal(matrix, expected):
+        raise ValueError(f"{name} backend output must match exact recurrence threshold")
     return matrix
 
 
@@ -371,6 +397,12 @@ def recurrence_matrix(
     if t == 0:
         return np.zeros((0, 0), dtype=bool)
     flat = traj.ravel()
+    expected = _expected_recurrence_matrix(
+        traj,
+        traj,
+        epsilon=epsilon,
+        angular=angular,
+    )
 
     backend_fn = _dispatch("rm")
     if backend_fn is not None:
@@ -380,19 +412,15 @@ def recurrence_matrix(
         )
         try:
             return _backend_recurrence_matrix(
-                fn(flat, t, d, epsilon, angular), t=t, name="recurrence_matrix"
+                fn(flat, t, d, epsilon, angular),
+                t=t,
+                name="recurrence_matrix",
+                expected=expected,
             )
         except Exception:
             angular = bool(angular)
 
-    if angular:
-        diff = traj[:, np.newaxis, :] - traj[np.newaxis, :, :]
-        dist = np.sqrt(np.sum(4 * np.sin(diff / 2) ** 2, axis=2))
-    else:
-        diff = traj[:, np.newaxis, :] - traj[np.newaxis, :, :]
-        dist = np.sqrt(np.sum(diff**2, axis=2))
-    result: BoolArray = dist <= epsilon
-    return result
+    return expected
 
 
 def cross_recurrence_matrix(
@@ -417,6 +445,12 @@ def cross_recurrence_matrix(
         return np.zeros((0, 0), dtype=bool)
     a_flat = a.ravel()
     b_flat = b.ravel()
+    expected = _expected_recurrence_matrix(
+        a,
+        b,
+        epsilon=epsilon,
+        angular=angular,
+    )
 
     backend_fn = _dispatch("cross_rm")
     if backend_fn is not None:
@@ -429,18 +463,12 @@ def cross_recurrence_matrix(
                 fn(a_flat, b_flat, t, d, epsilon, angular),
                 t=t,
                 name="cross_recurrence_matrix",
+                expected=expected,
             )
         except Exception:
             angular = bool(angular)
 
-    if angular:
-        diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]
-        dist = np.sqrt(np.sum(4 * np.sin(diff / 2) ** 2, axis=2))
-    else:
-        diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]
-        dist = np.sqrt(np.sum(diff**2, axis=2))
-    result: BoolArray = dist <= epsilon
-    return result
+    return expected
 
 
 def _diagonal_lines(R: BoolArray, l_min: int = 2) -> list[int]:

@@ -163,12 +163,17 @@ execution.
 Direct backend outputs are also validated before return as numeric
 ``0``/``1`` recurrence relations of size ``T*T``. Plain recurrence outputs
 must keep the true diagonal and symmetry invariants; cross-recurrence outputs
-may be non-symmetric but must still be binary and finite.
+may be non-symmetric but must still be binary and finite. Both plain and
+cross-recurrence outputs must also match the exact reference threshold relation
+``Θ(ε - distance)`` for every cell after the bridge returns. This closes the
+otherwise plausible failure mode where a backend emits a shape-correct binary
+matrix that preserves superficial invariants while changing the recurrence
+physics.
 The Mojo subprocess bridge also enforces exact stdout cardinality before
 integer parsing: ``REC`` and ``CROSS`` must each emit exactly ``T*T``
 integer lines. Missing, extra, blank, or non-integer lines fail closed before
-the shared recurrence validators check binary, diagonal, and symmetry
-invariants.
+the shared recurrence validators check binary, diagonal, symmetry, and exact
+threshold invariants.
 
 ---
 
@@ -217,24 +222,26 @@ The ``T × T × d`` scratch allocation dominates at large ``T``.
 ## 5. Benchmarks
 
 Measured on the local Ubuntu 24.04 host, ``d = 3``, ``ε = 0.8``,
-one warm-up + twenty measured calls. Reproduce with
+one warm-up + twenty measured calls. These numbers measure the public
+dispatcher path, including exact backend-output verification. Reproduce with
 `python benchmarks/recurrence_benchmark.py --T-list 30 100 300 --d 3 --epsilon 0.8 --calls 20`.
 
-| T   | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
-| --- | --------: | --------: | ---------: | ------: | ----------: |
-| 30  |    0.0407 |   68.5577 |     0.0801 |  0.6710 |      0.0320 |
-| 100 |    0.0609 |   71.9942 |     0.1520 |  1.3860 |      0.4017 |
-| 300 |    0.2005 |   91.3079 |     0.8742 |  1.8750 |      7.3125 |
+Current available backends for this run: ``rust``, ``mojo``, ``go``,
+``python``. Julia was not available in the local benchmark environment.
+
+| T   | rust (ms) | mojo (ms) | go (ms) | python (ms) |
+| --- | --------: | --------: | ------: | ----------: |
+| 30  |    0.1808 |   37.1652 |  0.9591 |      0.0531 |
+| 100 |    0.5143 |   47.7967 |  2.4362 |      0.4082 |
+| 300 |    6.9221 |   93.4381 | 17.7945 |      6.2673 |
 
 Observations:
 
-* **Python (NumPy) wins at small T** — the whole pair matrix fits
-  in cache and the vectorised form is near-ideal.
-* **Rust wins from T = 100 onwards** and dominates at T = 300
-  (~36× Python).
-* **Julia is a close second** at larger T after `juliacall`
-  warm-up.
-* **Go c-shared** is consistent but single-goroutine.
+* **Python (NumPy) remains the public-dispatch latency baseline** for the
+  measured sizes because it computes the exact threshold relation directly.
+* **Rust and Go include an additional exact-output verification pass** on top
+  of the native kernel result. The overhead is intentional: accelerated
+  backends must not change recurrence physics silently.
 * **Mojo** is subprocess-bound at every size.
 
 Raw JSON: `python benchmarks/recurrence_benchmark.py --output /tmp/rec_bench.json`.

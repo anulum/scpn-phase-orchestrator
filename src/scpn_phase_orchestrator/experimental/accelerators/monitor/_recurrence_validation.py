@@ -20,6 +20,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "FloatArray",
+    "expected_recurrence_backend_output",
     "validate_cross_recurrence_backend_inputs",
     "validate_recurrence_backend_output",
     "validate_recurrence_backend_inputs",
@@ -137,11 +138,33 @@ def validate_cross_recurrence_backend_inputs(
     )
 
 
+def expected_recurrence_backend_output(
+    traj_a_flat: FloatArray,
+    traj_b_flat: FloatArray,
+    *,
+    t: int,
+    d: int,
+    epsilon: float,
+    angular: bool,
+) -> NDArray[np.uint8]:
+    """Return the exact binary recurrence relation required from a backend."""
+
+    a = traj_a_flat.reshape(t, d)
+    b = traj_b_flat.reshape(t, d)
+    diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]
+    if angular:
+        dist = np.sqrt(np.sum(4.0 * np.sin(diff / 2.0) ** 2, axis=2))
+    else:
+        dist = np.sqrt(np.sum(diff**2, axis=2))
+    return np.ascontiguousarray((dist <= epsilon).astype(np.uint8).ravel())
+
+
 def validate_recurrence_backend_output(
     value: object,
     *,
     t: object,
     name: str,
+    expected: object | None = None,
 ) -> NDArray[np.uint8]:
     """Validate direct-backend recurrence output before returning it."""
 
@@ -165,4 +188,20 @@ def validate_recurrence_backend_output(
             raise ValueError("recurrence_matrix output must have true diagonal")
         if not np.array_equal(numeric, numeric.T):
             raise ValueError("recurrence_matrix output must be symmetric")
-    return np.ascontiguousarray(numeric.ravel().astype(np.uint8), dtype=np.uint8)
+    result = np.ascontiguousarray(numeric.ravel().astype(np.uint8), dtype=np.uint8)
+    if expected is not None:
+        try:
+            expected_array = np.asarray(expected).reshape(t_int, t_int)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"{name} expected output must have size {t_int * t_int}"
+            ) from exc
+        try:
+            expected_numeric = expected_array.astype(np.uint8, copy=False)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} expected output must be numeric") from exc
+        if not np.array_equal(result.reshape(t_int, t_int), expected_numeric):
+            raise ValueError(
+                f"{name} output must match exact recurrence threshold"
+            )
+    return result

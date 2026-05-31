@@ -17,6 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._recurrence_validation import (
+    expected_recurrence_backend_output,
     validate_cross_recurrence_backend_inputs,
     validate_recurrence_backend_inputs,
     validate_recurrence_backend_output,
@@ -71,6 +72,14 @@ def recurrence_matrix_julia(
         ),
         t=t_int,
         name="recurrence_matrix",
+        expected=expected_recurrence_backend_output(
+            p,
+            p,
+            t=t_int,
+            d=d_int,
+            epsilon=radius,
+            angular=angular_flag,
+        ),
     )
 
 
@@ -111,4 +120,12 @@ def cross_recurrence_matrix_julia(
         ),
         t=t_int,
         name="cross_recurrence_matrix",
+        expected=expected_recurrence_backend_output(
+            a,
+            b,
+            t=t_int,
+            d=d_int,
+            epsilon=radius,
+            angular=angular_flag,
+        ),
     )
