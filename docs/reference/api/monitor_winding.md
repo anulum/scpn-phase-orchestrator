@@ -108,6 +108,9 @@ runtimes:
 * `t` must be a non-boolean integer at least 2.
 * `n` must be a non-boolean positive integer.
 * the flat buffer length must exactly match `t * n`.
+* returned winding vectors must be finite integer-valued `int64` arrays of
+  length `n`, contain no boolean aliases, and stay within the wrapped-increment
+  bound implied by `t`.
 
 Invalid topological phase histories therefore fail deterministically in Python
 before shared-library loading, Julia initialisation, or subprocess execution.
@@ -260,6 +263,8 @@ Three files (20 tests):
 * `TestJuliaParity` — two seeds with array-exact equality.
 * `TestGoParity` — Hypothesis sweep, array-exact.
 * `TestMojoParity` — two seeds, array-exact.
+* `TestDirectBackendBoundaryContracts` — invalid direct inputs fail before
+  optional runtime loading, and invalid winding outputs fail before return.
 * `TestCrossBackendConsistency` — iterates every
   `AVAILABLE_BACKENDS` entry, requires exact array equality.
 

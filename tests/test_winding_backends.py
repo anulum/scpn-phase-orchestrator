@@ -22,6 +22,12 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _winding_julia as winding_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _winding_mojo as winding_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _winding_validation as winding_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._winding_go import (
@@ -44,6 +50,7 @@ TWO_PI = 2.0 * np.pi
 
 def test__winding_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(winding_validation.validate_winding_backend_inputs)
+    assert callable(winding_validation.validate_winding_backend_output)
 
 
 def _force(backend: str) -> str:
@@ -106,6 +113,45 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match=match):
             backend(phases_flat, t, n)
+
+    @pytest.mark.parametrize(
+        ("value", "match"),
+        [
+            (np.array([np.bool_(True)], dtype=object), "boolean"),
+            (np.array([np.inf]), "finite"),
+            (np.array([0.5]), "integer"),
+            (np.array([3]), "wrapped-increment"),
+            (np.array([0, 1]), "shape"),
+        ],
+    )
+    def test_output_validation_rejects_nonphysical_winding_values(
+        self, value: np.ndarray, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            winding_validation.validate_winding_backend_output(value, t=4, n=1)
+
+    def test_julia_backend_rejects_fractional_winding_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class _FakeJulia:
+            @staticmethod
+            def winding_numbers(phases: np.ndarray, t: int, n: int) -> np.ndarray:
+                return np.array([0.5])
+
+        monkeypatch.setattr(winding_julia, "_ensure", lambda: _FakeJulia())
+        traj = _problem(44, t=4, n=1)
+
+        with pytest.raises(ValueError, match="integer"):
+            winding_numbers_julia(traj.ravel(), 4, 1)
+
+    def test_mojo_backend_rejects_unbounded_winding_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(winding_mojo, "_run", lambda payload: [3])
+        traj = _problem(45, t=4, n=1)
+
+        with pytest.raises(ValueError, match="wrapped-increment"):
+            winding_numbers_mojo(traj.ravel(), 4, 1)
 
 
 class TestRustParity:

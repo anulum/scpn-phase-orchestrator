@@ -17,7 +17,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ._winding_validation import validate_winding_backend_inputs
+from ._winding_validation import (
+    validate_winding_backend_inputs,
+    validate_winding_backend_output,
+)
 
 __all__ = ["_ensure_exe", "winding_numbers_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -64,4 +67,4 @@ def winding_numbers_mojo(
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n:
         raise ValueError(f"Mojo WIND returned {len(result)} values, expected {n}")
-    return np.array(result, dtype=np.int64)
+    return validate_winding_backend_output(result, t=t, n=n)

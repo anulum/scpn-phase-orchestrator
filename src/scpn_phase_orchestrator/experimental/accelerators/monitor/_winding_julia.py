@@ -11,12 +11,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
-from ._winding_validation import validate_winding_backend_inputs
+from ._winding_validation import (
+    validate_winding_backend_inputs,
+    validate_winding_backend_output,
+)
 
 __all__ = ["winding_numbers_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -48,8 +51,7 @@ def winding_numbers_julia(
 
     phases, t, n = validate_winding_backend_inputs(phases_flat, t, n)
     jl = _ensure()
-    return cast(
-        "IntArray",
+    return validate_winding_backend_output(
         np.asarray(
             jl.winding_numbers(
                 phases,
@@ -57,4 +59,6 @@ def winding_numbers_julia(
                 n,
             )
         ),
+        t=t,
+        n=n,
     )

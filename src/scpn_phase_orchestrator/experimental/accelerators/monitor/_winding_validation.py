@@ -17,6 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 
 def _contains_boolean_alias(raw: object) -> bool:
@@ -68,3 +69,35 @@ def validate_winding_backend_inputs(
             f"phases_flat length {phases.size} does not match t*n={expected}"
         )
     return np.ascontiguousarray(phases, dtype=np.float64), t_int, n_int
+
+
+def validate_winding_backend_output(
+    value: object,
+    *,
+    t: object,
+    n: object,
+) -> IntArray:
+    """Validate direct-backend winding output before returning it."""
+
+    t_int = _validate_int(t, "t", minimum=2)
+    n_int = _validate_int(n, "n", minimum=1)
+    if _contains_boolean_alias(value):
+        raise ValueError("winding output must not contain boolean values")
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("winding output must be array-like") from exc
+    if array.shape != (n_int,):
+        raise ValueError(f"winding output shape {array.shape} must be ({n_int},)")
+    try:
+        numeric = array.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("winding output must be numeric") from exc
+    if not np.all(np.isfinite(numeric)):
+        raise ValueError("winding output must contain only finite values")
+    if not np.all(np.equal(numeric, np.floor(numeric))):
+        raise ValueError("winding output must contain integer values")
+    max_abs_winding = int(np.ceil(max(t_int - 1, 0) / 2.0))
+    if np.any(np.abs(numeric) > max_abs_winding):
+        raise ValueError("winding output exceeds wrapped-increment bound")
+    return np.ascontiguousarray(numeric.astype(np.int64), dtype=np.int64)
