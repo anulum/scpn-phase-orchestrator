@@ -74,7 +74,7 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
     desync = _validate_functional_desync(functional_desync)
     if _HAS_RUST:
         code = _rust_classify(r_value, desync)
-        return _STAGE_NAMES[code]
+        return _validate_stage_code(code)
     if _STAGE_THRESHOLDS["N3"] <= r_value:
         return "N3"
     if _STAGE_THRESHOLDS["N2"] <= r_value:
@@ -124,7 +124,7 @@ def ultradian_phase(
             [_STAGE_CODES[s] for s in stages],
             dtype=np.uint8,
         )
-        return float(_rust_ultradian(rust_ts, codes))
+        return _validate_ultradian_phase(_rust_ultradian(rust_ts, codes))
     n = int(ts.size)
 
     last_n3_idx = -1
@@ -159,6 +159,8 @@ def _validate_timestamps(value: object) -> FloatArray:
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError("timestamps must not contain boolean values")
+    if _contains_complex_alias(raw):
+        raise ValueError("timestamps must contain real-valued samples")
     try:
         timestamps = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -182,3 +184,32 @@ def _validate_stage_history(stage_history: list[str], *, expected_n: int) -> lis
     if invalid:
         raise ValueError(f"stage_history contains unknown sleep stage {invalid[0]!r}")
     return stage_history
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype == object:
+        return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+    return False
+
+
+def _validate_stage_code(value: object) -> str:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError("Rust sleep stage code must be an integer stage code")
+    code = int(value)
+    if float(value) != float(code) or code not in _STAGE_NAMES:
+        raise ValueError(
+            f"Rust sleep stage code must be in {_STAGE_NAMES}, got {value!r}"
+        )
+    return _STAGE_NAMES[code]
+
+
+def _validate_ultradian_phase(value: object) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError("Rust ultradian phase must be a finite real value in [0, 1)")
+    phase = float(value)
+    if not np.isfinite(phase) or phase < 0.0 or phase >= 1.0:
+        raise ValueError("Rust ultradian phase must be a finite real value in [0, 1)")
+    return phase

@@ -179,6 +179,10 @@ a computational analogue for brain-inspired control systems.
 | `timestamps` | `NDArray[float64]` | `(T,)` | Epoch times in seconds |
 | `stage_history` | `list[str]` | `(T,)` | Stage labels per epoch |
 
+Timestamp arrays are validated as finite, monotonic, real-valued
+one-dimensional buffers. Boolean and complex aliases are rejected before float
+coercion so ultradian phase is never computed from non-real time axes.
+
 ### Output Contracts
 
 | Function | Returns | Type | Range |
@@ -338,6 +342,9 @@ codes at the FFI boundary:
 _STAGE_NAMES = {0: "Wake", 1: "N1", 2: "N2", 3: "N3", 4: "REM"}
 _STAGE_CODES = {"Wake": 0, "N1": 1, "N2": 2, "N3": 3, "REM": 4}
 ```
+
+Rust outputs are validated before use: sleep-stage codes must map to
+`Wake`/`N1`/`N2`/`N3`/`REM`, and ultradian phase must be finite in `[0, 1)`.
 
 ---
 

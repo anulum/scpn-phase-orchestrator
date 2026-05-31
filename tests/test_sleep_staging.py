@@ -58,6 +58,11 @@ def test_classify_sleep_stage_rejects_invalid_order_parameter(value):
         classify_sleep_stage(value)
 
 
+def test_classify_sleep_stage_rejects_object_complex_order_parameter() -> None:
+    with pytest.raises((TypeError, ValueError), match="R.*real"):
+        classify_sleep_stage(np.asarray(complex(0.7, 0.0), dtype=object))
+
+
 @pytest.mark.parametrize("functional_desync", [0, 1, "yes"])
 def test_classify_sleep_stage_requires_boolean_desync_flag(functional_desync):
     with pytest.raises(TypeError, match="functional_desync"):
@@ -111,6 +116,13 @@ def test_ultradian_empty_input():
     assert ultradian_phase(np.array([]), []) == 0.0
 
 
+def test_ultradian_rejects_object_complex_timestamps_as_non_real() -> None:
+    timestamps = np.asarray([0.0, complex(30.0, 0.0)], dtype=object)
+
+    with pytest.raises(ValueError, match="timestamps must contain real-valued"):
+        ultradian_phase(timestamps, ["N3", "REM"])
+
+
 @pytest.mark.parametrize(
     ("timestamps", "stages", "match"),
     [
@@ -146,6 +158,19 @@ def test_optional_rust_classification_path_maps_stage_codes(monkeypatch):
     assert calls == [(0.21, True)]
 
 
+def test_optional_rust_classification_rejects_invalid_stage_code(monkeypatch):
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sleep_staging_module,
+        "_rust_classify",
+        lambda *_args: 9,
+        raising=False,
+    )
+
+    with pytest.raises(ValueError, match="Rust sleep stage code"):
+        classify_sleep_stage(0.21, functional_desync=True)
+
+
 def test_optional_rust_ultradian_path_translates_stage_codes(monkeypatch):
     calls = []
 
@@ -169,6 +194,24 @@ def test_optional_rust_ultradian_path_translates_stage_codes(monkeypatch):
     np.testing.assert_array_equal(calls[0][0], timestamps)
     assert calls[0][0].dtype == np.float64
     np.testing.assert_array_equal(calls[0][1], np.array([0, 3, 4], dtype=np.uint8))
+
+
+@pytest.mark.parametrize("backend_value", [np.nan, np.inf, -0.1, 1.0])
+def test_optional_rust_ultradian_rejects_nonphysical_phase(
+    monkeypatch,
+    backend_value: float,
+) -> None:
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sleep_staging_module,
+        "_rust_ultradian",
+        lambda *_args: backend_value,
+        raising=False,
+    )
+
+    timestamps = np.array([10.0, 70.0, 130.0], dtype=np.float64)
+    with pytest.raises(ValueError, match="Rust ultradian phase"):
+        ultradian_phase(timestamps, ["Wake", "N3", "REM"])
 
 
 class TestSleepStagingPipelineWiring:
