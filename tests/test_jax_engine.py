@@ -45,6 +45,23 @@ def test_jax_upde_phases_bounded(jax_upde):
 
 
 @pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"n": 0}, "n"),
+        ({"n": True}, "n"),
+        ({"n": 8, "dt": "0.01"}, "dt"),
+        ({"n": 8, "dt": np.inf}, "dt"),
+        ({"n": 8, "method": "verlet"}, "unsupported method"),
+    ],
+)
+def test_jax_upde_rejects_invalid_constructor_inputs(kwargs, match):
+    from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
+
+    with pytest.raises(ValueError, match=match):
+        JaxUPDEEngine(**kwargs)
+
+
+@pytest.mark.parametrize(
     ("field", "value", "match"),
     [
         ("phases", np.zeros(7), "phases"),
@@ -55,6 +72,7 @@ def test_jax_upde_phases_bounded(jax_upde):
         ("omegas", np.full(8, np.inf), "omegas"),
         ("knm", np.full((8, 8), np.nan), "knm"),
         ("alpha", np.full((8, 8), np.inf), "alpha"),
+        ("alpha", object(), "alpha"),
         ("zeta", np.nan, "zeta"),
         ("psi", "0.0", "psi"),
     ],
@@ -136,6 +154,22 @@ def test_jax_sl_phases_and_amplitudes(jax_sl):
     assert np.all(result[:n] >= 0.0)
     assert np.all(result[:n] < TWO_PI + 1e-6)
     assert np.all(result[n:] >= 0.0)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"n": 0}, "n"),
+        ({"n": False}, "n"),
+        ({"n": 4, "dt": 0.0}, "dt"),
+        ({"n": 4, "dt": np.nan}, "dt"),
+    ],
+)
+def test_jax_stuart_landau_rejects_invalid_constructor_inputs(kwargs, match):
+    from scpn_phase_orchestrator.upde.jax_engine import JaxStuartLandauEngine
+
+    with pytest.raises(ValueError, match=match):
+        JaxStuartLandauEngine(**kwargs)
 
 
 @pytest.mark.parametrize(

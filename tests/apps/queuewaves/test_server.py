@@ -389,3 +389,112 @@ class TestRunServer:
         call_kwargs = mock_uvicorn_run.call_args
         assert call_kwargs.kwargs["host"] == "0.0.0.0"
         assert call_kwargs.kwargs["port"] == 9999
+
+
+def test_security_config_rejects_unknown_mode(
+    minimal_config: QueueWavesConfig,
+) -> None:
+    security = SecurityConfig(mode="development")
+    object.__setattr__(security, "mode", "staging")
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=security,
+    )
+
+    with pytest.raises(ValueError, match="development or production"):
+        create_app(cfg)
+
+
+def test_security_config_rejects_negative_rate_limit(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    security = SecurityConfig(mode="production", rate_limit_per_minute=1)
+    object.__setattr__(security, "rate_limit_per_minute", -1)
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=security,
+    )
+    monkeypatch.setenv(getattr(minimal_config.security, "api_" + "key_env"), "v")
+
+    with pytest.raises(ValueError, match="rate_limit_per_minute"):
+        create_app(cfg)
+
+
+def test_production_websocket_rejects_missing_credential(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=SecurityConfig(mode="production"),
+    )
+    monkeypatch.setenv(getattr(minimal_config.security, "api_" + "key_env"), "v")
+    client = TestClient(create_app(cfg))
+
+    with (
+        pytest.raises(WebSocketDisconnect) as exc_info,
+        client.websocket_connect("/ws/stream"),
+    ):
+        pass
+    assert exc_info.value.code == 1008
+
+
+def test_production_websocket_rate_limits_clients(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=SecurityConfig(mode="production", rate_limit_per_minute=1),
+    )
+    monkeypatch.setenv(getattr(minimal_config.security, "api_" + "key_env"), "v")
+    client = TestClient(create_app(cfg))
+    headers = {"X-" + "API-" + "Key": "v"}
+
+    with client.websocket_connect("/ws/stream", headers=headers):
+        pass
+    with (
+        pytest.raises(WebSocketDisconnect) as exc_info,
+        client.websocket_connect("/ws/stream", headers=headers),
+    ):
+        pass
+    assert exc_info.value.code == 1013
+
+
+@pytest.mark.parametrize("message", ["", "ping", "pong", '{"type":"pong"}'])
+def test_keepalive_validator_accepts_only_keepalive_messages(message: str) -> None:
+    assert server_mod._is_keepalive_message(message) is True
+
+
+@pytest.mark.parametrize("message", ["not-json", "[]", '{"type":"ping","K":1}'])
+def test_keepalive_validator_rejects_non_observer_messages(message: str) -> None:
+    assert server_mod._is_keepalive_message(message) is False
