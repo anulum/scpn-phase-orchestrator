@@ -67,7 +67,9 @@ PersistenceBackend = Callable[[np.ndarray, object, object, object], float]
 
 def test__itpc_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(itpc_validation.validate_compute_itpc_backend_inputs)
+    assert callable(itpc_validation.expected_compute_itpc_backend_output)
     assert callable(itpc_validation.validate_itpc_persistence_backend_inputs)
+    assert callable(itpc_validation.expected_itpc_persistence_backend_output)
 
 
 def _force(backend: str) -> str:
@@ -349,6 +351,112 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(ValueError, match="ITPC persistence backend output"):
             backend(phases, 2, 2, indices)
 
+    def test_compute_rejects_in_range_backend_output_that_breaks_exact_itpc(
+        self,
+    ) -> None:
+        phases = np.array([0.0, 0.2, 1.5, 1.7], dtype=np.float64)
+        expected = itpc_validation.expected_compute_itpc_backend_output(phases, 2, 2)
+        wrong = np.zeros_like(expected)
+
+        with pytest.raises(ValueError, match="exact reference"):
+            itpc_validation.validate_compute_itpc_backend_output(
+                wrong,
+                2,
+                expected=expected,
+            )
+
+    def test_persistence_rejects_in_range_backend_output_that_breaks_exact_itpc(
+        self,
+    ) -> None:
+        phases = np.array([0.0, 0.2, 1.5, 1.7], dtype=np.float64)
+        indices = np.array([0, 1], dtype=np.int64)
+        expected = itpc_validation.expected_itpc_persistence_backend_output(
+            phases,
+            2,
+            2,
+            indices,
+        )
+        wrong = 0.0 if expected > 0.1 else 0.75
+
+        with pytest.raises(ValueError, match="exact reference"):
+            itpc_validation.validate_itpc_persistence_backend_output(
+                wrong,
+                expected=expected,
+            )
+
+    @pytest.mark.parametrize("backend_name", ["go", "julia", "mojo"])
+    def test_direct_compute_rejects_in_range_exact_itpc_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_name: str,
+    ) -> None:
+        phases = np.array([0.0, 0.2, 1.5, 1.7], dtype=np.float64)
+        wrong = np.zeros(2, dtype=np.float64)
+        if backend_name == "go":
+            monkeypatch.setattr(
+                itpc_go_mod,
+                "_load_lib",
+                lambda: _FakeGoITPC(vector=wrong),
+            )
+            backend = compute_itpc_go
+        elif backend_name == "julia":
+            monkeypatch.setattr(
+                itpc_julia_mod,
+                "_ensure",
+                lambda: _FakeJuliaITPC(vector=wrong),
+            )
+            backend = compute_itpc_julia
+        else:
+            monkeypatch.setattr(
+                itpc_mojo_mod,
+                "_run",
+                lambda _payload, *, expected_count, label: wrong.tolist(),
+            )
+            backend = compute_itpc_mojo
+
+        with pytest.raises(ValueError, match="exact reference"):
+            backend(phases, 2, 2)
+
+    @pytest.mark.parametrize("backend_name", ["go", "julia", "mojo"])
+    def test_direct_persistence_rejects_in_range_exact_itpc_divergence(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_name: str,
+    ) -> None:
+        phases = np.array([0.0, 0.2, 1.5, 1.7], dtype=np.float64)
+        indices = np.array([0, 1], dtype=np.int64)
+        wrong = 0.0
+        if backend_name == "go":
+            monkeypatch.setattr(
+                itpc_go_mod,
+                "_load_lib",
+                lambda: _FakeGoITPC(
+                    vector=np.ones(2, dtype=np.float64),
+                    persistence=wrong,
+                ),
+            )
+            backend = itpc_persistence_go
+        elif backend_name == "julia":
+            monkeypatch.setattr(
+                itpc_julia_mod,
+                "_ensure",
+                lambda: _FakeJuliaITPC(
+                    vector=np.ones(2, dtype=np.float64),
+                    persistence=wrong,
+                ),
+            )
+            backend = itpc_persistence_julia
+        else:
+            monkeypatch.setattr(
+                itpc_mojo_mod,
+                "_run",
+                lambda _payload, *, expected_count, label: [wrong],
+            )
+            backend = itpc_persistence_mojo
+
+        with pytest.raises(ValueError, match="exact reference"):
+            backend(phases, 2, 2, indices)
+
 
 def test_rust_loader_returns_kernel_functions(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_kernel = ModuleType("spo_kernel")
@@ -375,7 +483,7 @@ def test_rust_itpc_dispatch_uses_contiguous_flattened_input(
         n_tp: int,
     ) -> np.ndarray:
         calls.append((phases_flat, n_trials, n_tp))
-        return np.array([0.25, 0.5, 0.75], dtype=np.float64)
+        return _reference_itpc(phases_flat.reshape(n_trials, n_tp))
 
     monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
@@ -395,7 +503,7 @@ def test_rust_itpc_dispatch_uses_contiguous_flattened_input(
 
     result = compute_itpc(phases)
 
-    np.testing.assert_allclose(result, np.array([0.25, 0.5, 0.75]))
+    np.testing.assert_allclose(result, _reference_itpc(phases))
     assert len(calls) == 1
     phases_flat, n_trials, n_tp = calls[0]
     assert phases_flat.flags.c_contiguous
@@ -415,7 +523,7 @@ def test_rust_persistence_dispatch_uses_contiguous_arrays(
         pause_indices: np.ndarray,
     ) -> float:
         calls.append((phases_flat, n_trials, n_tp, pause_indices))
-        return 0.875
+        return _reference_pers(phases_flat.reshape(n_trials, n_tp), pause_indices)
 
     monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
@@ -438,7 +546,7 @@ def test_rust_persistence_dispatch_uses_contiguous_arrays(
 
     result = itpc_persistence(phases, [0, 2])
 
-    assert result == 0.875
+    assert result == _reference_pers(phases, np.array([0, 2], dtype=np.int64))
     assert len(calls) == 1
     phases_flat, n_trials, n_tp, pause_indices = calls[0]
     assert phases_flat.flags.c_contiguous
@@ -449,14 +557,14 @@ def test_rust_persistence_dispatch_uses_contiguous_arrays(
     assert (n_trials, n_tp) == (2, 3)
 
 
-def test_non_rust_dispatch_flattens_inputs_and_preserves_backend_result(
+def test_non_rust_dispatch_flattens_inputs_and_preserves_exact_backend_result(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[np.ndarray, int, int]] = []
 
     def fake_itpc(phases_flat: np.ndarray, n_trials: int, n_tp: int) -> np.ndarray:
         calls.append((phases_flat.copy(), n_trials, n_tp))
-        return np.array([0.125, 0.25, 0.5], dtype=np.float64)
+        return _reference_itpc(phases_flat.reshape(n_trials, n_tp))
 
     monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "go")
     monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["go", "python"])
@@ -474,7 +582,7 @@ def test_non_rust_dispatch_flattens_inputs_and_preserves_backend_result(
 
     result = compute_itpc(phases)
 
-    np.testing.assert_allclose(result, np.array([0.125, 0.25, 0.5]))
+    np.testing.assert_allclose(result, _reference_itpc(phases))
     assert len(calls) == 1
     phases_flat, n_trials, n_tp = calls[0]
     np.testing.assert_array_equal(phases_flat, phases.ravel())
@@ -493,7 +601,7 @@ def test_non_rust_persistence_dispatch_passes_pause_indices(
         pause_indices: np.ndarray,
     ) -> float:
         calls.append((phases_flat.copy(), n_trials, n_tp, pause_indices.copy()))
-        return 0.625
+        return _reference_pers(phases_flat.reshape(n_trials, n_tp), pause_indices)
 
     monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "mojo")
     monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["mojo", "python"])
@@ -511,12 +619,69 @@ def test_non_rust_persistence_dispatch_passes_pause_indices(
 
     result = itpc_persistence(phases, [0, 2])
 
-    assert result == 0.625
+    assert result == _reference_pers(phases, np.array([0, 2], dtype=np.int64))
     assert len(calls) == 1
     phases_flat, n_trials, n_tp, pause_indices = calls[0]
     np.testing.assert_array_equal(phases_flat, phases.ravel())
     assert (n_trials, n_tp) == (2, 3)
     np.testing.assert_array_equal(pause_indices, np.array([0, 2]))
+
+
+def test_public_itpc_falls_back_when_backend_breaks_exact_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    phases = np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
+
+    def fake_itpc(_phases_flat: np.ndarray, _n_trials: int, _n_tp: int) -> np.ndarray:
+        return np.zeros(3, dtype=np.float64)
+
+    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+    monkeypatch.setitem(
+        it_mod._BACKEND_FN_CACHE,
+        "go",
+        {"itpc": fake_itpc, "persistence": lambda *_args: 0.0},
+    )
+    monkeypatch.setitem(
+        it_mod._LOADERS,
+        "go",
+        lambda: {"itpc": fake_itpc, "persistence": lambda *_args: 0.0},
+    )
+
+    np.testing.assert_allclose(compute_itpc(phases), _reference_itpc(phases))
+
+
+def test_public_persistence_falls_back_when_backend_breaks_exact_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    phases = np.array([[0.0, 0.25, 0.5], [1.0, 1.25, 1.5]], dtype=np.float64)
+    pause_indices = np.array([0, 2], dtype=np.int64)
+
+    def fake_persistence(
+        _phases_flat: np.ndarray,
+        _n_trials: int,
+        _n_tp: int,
+        _pause_indices: np.ndarray,
+    ) -> float:
+        return 0.0
+
+    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "mojo")
+    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["mojo", "python"])
+    monkeypatch.setitem(
+        it_mod._BACKEND_FN_CACHE,
+        "mojo",
+        {"itpc": lambda *_args: np.array([]), "persistence": fake_persistence},
+    )
+    monkeypatch.setitem(
+        it_mod._LOADERS,
+        "mojo",
+        lambda: {"itpc": lambda *_args: np.array([]), "persistence": fake_persistence},
+    )
+
+    assert itpc_persistence(phases, pause_indices) == _reference_pers(
+        phases,
+        pause_indices,
+    )
 
 
 class TestRustParity:

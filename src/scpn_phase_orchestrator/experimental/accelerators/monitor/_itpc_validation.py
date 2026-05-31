@@ -82,7 +82,48 @@ def validate_compute_itpc_backend_inputs(
     return phases, trials, timepoints
 
 
-def validate_compute_itpc_backend_output(value: object, n_tp: int) -> FloatArray:
+def expected_compute_itpc_backend_output(
+    phases_flat: FloatArray,
+    n_trials: int,
+    n_tp: int,
+) -> FloatArray:
+    """Return the exact NumPy ITPC reference for validated backend payloads."""
+
+    if n_tp == 0:
+        return np.zeros(0, dtype=np.float64)
+    if n_trials == 0:
+        return np.zeros(n_tp, dtype=np.float64)
+    phases = np.asarray(phases_flat, dtype=np.float64).reshape(n_trials, n_tp)
+    return np.ascontiguousarray(
+        np.abs(np.mean(np.exp(1j * phases), axis=0)),
+        dtype=np.float64,
+    )
+
+
+def expected_itpc_persistence_backend_output(
+    phases_flat: FloatArray,
+    n_trials: int,
+    n_tp: int,
+    pause_indices: IntArray,
+) -> float:
+    """Return the exact NumPy persistence reference for validated payloads."""
+
+    if n_trials == 0 or n_tp == 0 or pause_indices.size == 0:
+        return 0.0
+    itpc = expected_compute_itpc_backend_output(phases_flat, n_trials, n_tp)
+    valid = pause_indices[(pause_indices >= 0) & (pause_indices < itpc.size)]
+    if valid.size == 0:
+        return 0.0
+    return float(np.mean(itpc[valid]))
+
+
+def validate_compute_itpc_backend_output(
+    value: object,
+    n_tp: int,
+    *,
+    expected: FloatArray | None = None,
+    atol: float = 1e-12,
+) -> FloatArray:
     """Validate direct ITPC vectors returned by optional backends."""
 
     raw = np.asarray(value)
@@ -103,10 +144,22 @@ def validate_compute_itpc_backend_output(value: object, n_tp: int) -> FloatArray
     tolerance = 1e-12
     if np.any(itpc < -tolerance) or np.any(itpc > 1.0 + tolerance):
         raise ValueError("ITPC backend output must lie in [0, 1]")
-    return np.ascontiguousarray(np.clip(itpc, 0.0, 1.0), dtype=np.float64)
+    clipped = np.ascontiguousarray(np.clip(itpc, 0.0, 1.0), dtype=np.float64)
+    if expected is not None:
+        reference = np.asarray(expected, dtype=np.float64)
+        if reference.shape != clipped.shape:
+            raise ValueError("ITPC exact reference shape must match backend output")
+        if not np.allclose(clipped, reference, rtol=0.0, atol=atol):
+            raise ValueError("ITPC backend output diverged from exact reference")
+    return clipped
 
 
-def validate_itpc_persistence_backend_output(value: object) -> float:
+def validate_itpc_persistence_backend_output(
+    value: object,
+    *,
+    expected: float | None = None,
+    atol: float = 1e-12,
+) -> float:
     """Validate direct ITPC persistence scalars returned by optional backends."""
 
     raw = np.asarray(value)
@@ -126,7 +179,17 @@ def validate_itpc_persistence_backend_output(value: object) -> float:
     tolerance = 1e-12
     if score < -tolerance or score > 1.0 + tolerance:
         raise ValueError("ITPC persistence backend output must lie in [0, 1]")
-    return min(1.0, max(0.0, score))
+    clipped = min(1.0, max(0.0, score))
+    if expected is not None and not np.isclose(
+        clipped,
+        float(expected),
+        rtol=0.0,
+        atol=atol,
+    ):
+        raise ValueError(
+            "ITPC persistence backend output diverged from exact reference"
+        )
+    return clipped
 
 
 def validate_itpc_persistence_backend_inputs(

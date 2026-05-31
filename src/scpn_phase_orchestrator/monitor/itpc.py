@@ -180,7 +180,24 @@ def _validate_pause_indices(pause_indices: object) -> IntArray:
     return np.ascontiguousarray(flat, dtype=np.int64)
 
 
-def _validate_itpc_values(value: object, *, n_timepoints: int) -> FloatArray:
+def _compute_itpc_reference(phases: FloatArray) -> FloatArray:
+    if phases.ndim == 1:
+        return np.array([1.0], dtype=np.float64)
+    if phases.shape[0] == 0:
+        return np.zeros(phases.shape[1], dtype=np.float64)
+    return np.ascontiguousarray(
+        np.abs(np.mean(np.exp(1j * phases), axis=0)),
+        dtype=np.float64,
+    )
+
+
+def _validate_itpc_values(
+    value: object,
+    *,
+    n_timepoints: int,
+    expected: FloatArray | None = None,
+    atol: float = 1e-12,
+) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("ITPC output must not contain boolean values")
@@ -199,10 +216,22 @@ def _validate_itpc_values(value: object, *, n_timepoints: int) -> FloatArray:
     tolerance = 1e-12
     if np.any(itpc < -tolerance) or np.any(itpc > 1.0 + tolerance):
         raise ValueError("ITPC output must lie in [0, 1]")
-    return np.ascontiguousarray(np.clip(itpc, 0.0, 1.0), dtype=np.float64)
+    clipped = np.ascontiguousarray(np.clip(itpc, 0.0, 1.0), dtype=np.float64)
+    if expected is not None:
+        reference = np.asarray(expected, dtype=np.float64)
+        if reference.shape != clipped.shape:
+            raise ValueError("ITPC exact reference shape must match backend output")
+        if not np.allclose(clipped, reference, rtol=0.0, atol=atol):
+            raise ValueError("ITPC backend output diverged from exact reference")
+    return clipped
 
 
-def _validate_persistence_value(value: object) -> float:
+def _validate_persistence_value(
+    value: object,
+    *,
+    expected: float | None = None,
+    atol: float = 1e-12,
+) -> float:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("ITPC persistence output must not contain boolean values")
@@ -220,7 +249,17 @@ def _validate_persistence_value(value: object) -> float:
     tolerance = 1e-12
     if score < -tolerance or score > 1.0 + tolerance:
         raise ValueError("ITPC persistence output must lie in [0, 1]")
-    return min(1.0, max(0.0, score))
+    clipped = min(1.0, max(0.0, score))
+    if expected is not None and not np.isclose(
+        clipped,
+        float(expected),
+        rtol=0.0,
+        atol=atol,
+    ):
+        raise ValueError(
+            "ITPC persistence backend output diverged from exact reference"
+        )
+    return clipped
 
 
 def compute_itpc(phases_trials: object) -> FloatArray:
@@ -237,10 +276,11 @@ def compute_itpc(phases_trials: object) -> FloatArray:
     """
     phases = _validate_phases_trials(phases_trials)
     if phases.ndim == 1:
-        return np.array([1.0])
+        return np.array([1.0], dtype=np.float64)
     if phases.shape[0] == 0:
-        return np.array([])
+        return np.array([], dtype=np.float64)
     n_trials, n_tp = phases.shape
+    expected = _compute_itpc_reference(phases)
 
     backend_fn = _dispatch("itpc")
     if backend_fn is not None:
@@ -252,18 +292,21 @@ def compute_itpc(phases_trials: object) -> FloatArray:
                 )
                 flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
                 return _validate_itpc_values(
-                    fn_rust(flat, n_trials, n_tp), n_timepoints=n_tp
+                    fn_rust(flat, n_trials, n_tp),
+                    n_timepoints=n_tp,
+                    expected=expected,
                 )
             fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
             return _validate_itpc_values(
                 fn(phases.ravel(), int(n_trials), int(n_tp)),
                 n_timepoints=n_tp,
+                expected=expected,
+                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
             )
         except Exception:
             backend_fn = None
 
-    result: FloatArray = np.abs(np.mean(np.exp(1j * phases), axis=0))
-    return _validate_itpc_values(result, n_timepoints=n_tp)
+    return _validate_itpc_values(expected, n_timepoints=n_tp, expected=expected)
 
 
 def itpc_persistence(
@@ -292,6 +335,9 @@ def itpc_persistence(
     if phases.ndim == 1:
         phases = phases.reshape(1, -1)
     n_trials, n_tp = phases.shape
+    itpc_full = _compute_itpc_reference(phases)
+    valid = pause_idx[(pause_idx >= 0) & (pause_idx < itpc_full.size)]
+    expected = 0.0 if valid.size == 0 else float(np.mean(itpc_full[valid]))
 
     backend_fn = _dispatch("persistence")
     if backend_fn is not None:
@@ -307,17 +353,16 @@ def itpc_persistence(
                         n_trials,
                         n_tp,
                         np.ascontiguousarray(pause_idx, dtype=np.int64),
-                    )
+                    ),
+                    expected=expected,
                 )
             fn = cast("Callable[[FloatArray, int, int, IntArray], float]", backend_fn)
             return _validate_persistence_value(
-                fn(phases.ravel(), int(n_trials), int(n_tp), pause_idx)
+                fn(phases.ravel(), int(n_trials), int(n_tp), pause_idx),
+                expected=expected,
+                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
             )
         except Exception:
             backend_fn = None
 
-    itpc_full = compute_itpc(phases)
-    valid = pause_idx[(pause_idx >= 0) & (pause_idx < itpc_full.size)]
-    if valid.size == 0:
-        return 0.0
-    return _validate_persistence_value(np.mean(itpc_full[valid]))
+    return _validate_persistence_value(expected, expected=expected)

@@ -18,6 +18,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._itpc_validation import (
+    expected_compute_itpc_backend_output,
+    expected_itpc_persistence_backend_output,
     validate_compute_itpc_backend_inputs,
     validate_compute_itpc_backend_output,
     validate_itpc_persistence_backend_inputs,
@@ -83,7 +85,8 @@ def compute_itpc_go(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatA
     )
     if rc != 0:
         raise ValueError(f"Go ComputeITPC rc={rc}")
-    return validate_compute_itpc_backend_output(out, n_tp)
+    expected = expected_compute_itpc_backend_output(p, n_trials, n_tp)
+    return validate_compute_itpc_backend_output(out, n_tp, expected=expected)
 
 
 def itpc_persistence_go(
@@ -114,4 +117,5 @@ def itpc_persistence_go(
     )
     if rc != 0:
         raise ValueError(f"Go ITPCPersistence rc={rc}")
-    return validate_itpc_persistence_backend_output(out.value)
+    expected = expected_itpc_persistence_backend_output(p, n_trials, n_tp, idx)
+    return validate_itpc_persistence_backend_output(out.value, expected=expected)

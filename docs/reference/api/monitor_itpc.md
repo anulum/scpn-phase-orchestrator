@@ -12,8 +12,9 @@ distinguish true neural entrainment from evoked responses.
 
 This is the eighth module migrated to the AttnRes-level standard:
 five-language backend chain (Rust → Mojo → Julia → Go → Python),
-bit-exact parity across all four non-Python backends, multi-backend
-benchmark, and ``pytest.mark.slow`` stability tests.
+bit-exact parity across all four non-Python backends, exact public-boundary
+reference validation, multi-backend benchmark, and ``pytest.mark.slow``
+stability tests.
 
 ---
 
@@ -60,6 +61,10 @@ after ``t_{stim}^{off}``; evoked responses collapse immediately.
   variance across trials lowers ``ITPC_t``.
 * **Bounded output.** Every value lies in ``[0, 1]`` exactly, with no
   floating-point drift even after millions of trials.
+* **Exact estimator preservation.** Public and direct accelerator boundaries
+  reject in-range outputs unless they match
+  ``abs(mean(exp(1j * phases), axis=0))`` to the backend tolerance; persistence
+  must likewise equal the mean of that same vector over valid pause indices.
 * **Single-trial edge case.** A 1-D input is treated as one trial;
   the mean has unit magnitude by construction.
 
@@ -107,8 +112,9 @@ def itpc_persistence(
 ) -> float: ...
 ```
 
-Returns the mean ITPC at the provided indices, clamping to valid
-``[0, n_timepoints)``. Empty ``pause_indices`` returns ``0.0``.
+Returns the mean ITPC at the provided indices after filtering to valid
+``[0, n_timepoints)`` entries. Empty ``pause_indices`` or all-invalid indices
+return ``0.0``.
 
 ---
 
@@ -161,9 +167,10 @@ runtimes:
 * `pause_indices` must be a one-dimensional integer buffer with no boolean
   aliases.
 * returned ITPC vectors must have exactly ``n_tp`` finite real values in
-  ``[0, 1]``.
-* returned persistence scores must be finite real scalars in ``[0, 1]``; Mojo
-  persistence must emit exactly one scalar.
+  ``[0, 1]`` and match the NumPy reference estimator to tolerance.
+* returned persistence scores must be finite real scalars in ``[0, 1]`` and
+  match the mean NumPy ITPC over valid pause indices; Mojo persistence must emit
+  exactly one scalar.
 * the Mojo subprocess bridge must emit exact stdout cardinality before numeric
   parsing: `ITPC` emits one scalar line per time point and `PERS` emits one
   scalar line. Missing, extra, blank, or non-scalar lines fail closed.
@@ -171,6 +178,11 @@ runtimes:
 Empty trial or timepoint payloads preserve the Python fallback contract by
 returning an empty ITPC vector or `0.0` persistence before shared-library
 loading, Julia initialisation, or subprocess execution.
+
+The public Python API also validates optional backend outputs against the exact
+reference before returning. A backend that emits a plausible but wrong in-range
+ITPC vector or persistence scalar is discarded and the Python reference result is
+returned instead; direct adapter calls fail closed with `ValueError`.
 
 ---
 
@@ -215,10 +227,11 @@ parsing: `ITPC` emits `n_tp` scalar lines and `PERS` emits one scalar line.
 
 ### 4.5 Python (`src/.../monitor/itpc.py`)
 
-The reference fallback is a one-liner
-`np.abs(np.mean(np.exp(1j * phases), axis=0))`. Under the hood NumPy
-vectorises the complex exponential + the trial-axis mean, so it is
-competitive at small to medium ``n_trials × n_tp`` (see §5).
+The reference fallback is
+`np.abs(np.mean(np.exp(1j * phases), axis=0))`. The same expression is used as
+the exact public-boundary contract for Rust, Mojo, Julia, and Go outputs. Under
+the hood NumPy vectorises the complex exponential plus the trial-axis mean, so
+it is competitive at small to medium ``n_trials × n_tp`` (see §5).
 
 ---
 
@@ -228,8 +241,10 @@ Measured on the local Ubuntu 24.04 host, 16-thread x86_64 CPU,
 NumPy 2.3.4 / MKL, Julia 1.11.2, Go 1.23.4, Mojo 0.26.2,
 `spo_kernel` built in release mode.
 
-Per-call wall-clock in **milliseconds**, one warm-up + five measured
-calls. Reproduce with
+Per-call wall-clock in **milliseconds**, one warm-up + five measured calls.
+Current benchmark output prints and records the boundary contract
+(`exact_numpy_reference_validated`) because non-Python backend timings include
+the exact NumPy reference check at the public API. Reproduce with
 `python benchmarks/itpc_benchmark.py --n-trials-list 20 100 500 --n-tp-list 100 500 --calls 5`.
 
 | trials | tp  | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |

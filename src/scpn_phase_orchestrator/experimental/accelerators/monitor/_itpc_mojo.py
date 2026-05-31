@@ -18,6 +18,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._itpc_validation import (
+    expected_compute_itpc_backend_output,
+    expected_itpc_persistence_backend_output,
     validate_compute_itpc_backend_inputs,
     validate_compute_itpc_backend_output,
     validate_itpc_persistence_backend_inputs,
@@ -84,7 +86,13 @@ def compute_itpc_mojo(phases_flat: FloatArray, n_trials: int, n_tp: int) -> Floa
     tokens: list[str] = ["ITPC", str(n_trials), str(n_tp)]
     tokens.extend(repr(float(x)) for x in phases.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=n_tp, label="ITPC")
-    return validate_compute_itpc_backend_output(result, n_tp)
+    expected = expected_compute_itpc_backend_output(phases, n_trials, n_tp)
+    return validate_compute_itpc_backend_output(
+        result,
+        n_tp,
+        expected=expected,
+        atol=1e-9,
+    )
 
 
 def itpc_persistence_mojo(
@@ -103,6 +111,8 @@ def itpc_persistence_mojo(
     )
     if idx.size == 0:
         return 0.0
+    if n_trials == 0 or n_tp == 0:
+        return 0.0
     tokens: list[str] = [
         "PERS",
         str(n_trials),
@@ -112,4 +122,9 @@ def itpc_persistence_mojo(
     tokens.extend(str(int(x)) for x in idx.tolist())
     tokens.extend(repr(float(x)) for x in phases.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=1, label="PERS")
-    return validate_itpc_persistence_backend_output(result[0])
+    expected = expected_itpc_persistence_backend_output(phases, n_trials, n_tp, idx)
+    return validate_itpc_persistence_backend_output(
+        result[0],
+        expected=expected,
+        atol=1e-9,
+    )

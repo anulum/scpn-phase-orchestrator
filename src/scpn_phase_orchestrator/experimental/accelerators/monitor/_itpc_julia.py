@@ -17,6 +17,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._itpc_validation import (
+    expected_compute_itpc_backend_output,
+    expected_itpc_persistence_backend_output,
     validate_compute_itpc_backend_inputs,
     validate_compute_itpc_backend_output,
     validate_itpc_persistence_backend_inputs,
@@ -56,6 +58,7 @@ def compute_itpc_julia(phases_flat: FloatArray, n_trials: int, n_tp: int) -> Flo
     if n_trials == 0 or n_tp == 0:
         return np.zeros(n_tp, dtype=np.float64)
     jl = _ensure()
+    expected = expected_compute_itpc_backend_output(phases, n_trials, n_tp)
     return validate_compute_itpc_backend_output(
         jl.compute_itpc(
             phases,
@@ -63,6 +66,7 @@ def compute_itpc_julia(phases_flat: FloatArray, n_trials: int, n_tp: int) -> Flo
             n_tp,
         ),
         n_tp,
+        expected=expected,
     )
 
 
@@ -83,11 +87,18 @@ def itpc_persistence_julia(
     if indices.size == 0 or n_trials == 0 or n_tp == 0:
         return 0.0
     jl = _ensure()
+    expected = expected_itpc_persistence_backend_output(
+        phases,
+        n_trials,
+        n_tp,
+        indices,
+    )
     return validate_itpc_persistence_backend_output(
         jl.itpc_persistence(
             phases,
             n_trials,
             n_tp,
             indices,
-        )
+        ),
+        expected=expected,
     )
