@@ -26,6 +26,7 @@ for examples, validation, and explicit downstream review.
 
 from __future__ import annotations
 
+from functools import lru_cache
 from numbers import Integral
 from typing import TypeAlias
 
@@ -164,8 +165,17 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     """
     n_regions = _validate_n_regions(n_regions)
     seed = _validate_seed(seed)
+    backend_id = id(_rust_load_hcp) if _HAS_RUST else 0
+    return _load_hcp_connectome_cached(n_regions, seed, _HAS_RUST, backend_id).copy()
 
-    if _HAS_RUST:
+
+@lru_cache(maxsize=128)
+def _load_hcp_connectome_cached(
+    n_regions: int, seed: int, has_rust: bool, backend_id: int
+) -> FloatArray:
+    del backend_id  # cache key preserves monkeypatched FFI-loader identity
+
+    if has_rust:
         raw_array = np.asarray(_rust_load_hcp(n_regions, seed))
         if np.issubdtype(raw_array.dtype, np.bool_):
             raise ValueError(
