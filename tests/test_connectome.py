@@ -51,8 +51,8 @@ def test_non_negative():
     assert np.all(knm >= 0.0)
 
 
-def test_intra_stronger_than_inter():
-    """Intra-hemispheric coupling should be stronger than inter on average."""
+def test_intra_larger_than_inter():
+    """Intra-hemispheric coupling should be larger than inter on average."""
     n = 40
     knm = load_hcp_connectome(n)
     half = n // 2
@@ -170,6 +170,41 @@ def test_optional_rust_loader_rejects_contract_violation(monkeypatch):
 
     with pytest.raises(ValueError, match="diagonal must be zero"):
         load_hcp_connectome(3, seed=17)
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        (
+            np.asarray([[0.0, np.bool_(True)], [np.bool_(True), 0.0]], dtype=object),
+            "must not contain boolean values",
+        ),
+        (
+            np.asarray(
+                [[0.0, complex(0.2, 0.0)], [complex(0.2, 0.0), 0.0]],
+                dtype=object,
+            ),
+            "must contain real-valued weights",
+        ),
+    ],
+)
+def test_optional_rust_loader_rejects_boolean_and_complex_aliases(
+    monkeypatch,
+    payload,
+    message,
+):
+    """Optional FFI output must not rely on float coercion for graph weights."""
+
+    def fake_rust_load_hcp(n_regions, seed):
+        return payload.ravel()
+
+    monkeypatch.setattr(connectome_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        connectome_module, "_rust_load_hcp", fake_rust_load_hcp, raising=False
+    )
+
+    with pytest.raises(ValueError, match=message):
+        load_hcp_connectome(2, seed=17)
 
 
 def test_neurolib_import_error():

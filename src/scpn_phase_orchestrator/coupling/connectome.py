@@ -8,7 +8,7 @@
 #
 # NOT real Human Connectome Project data. Generates a structured coupling
 # matrix that mimics known macroscale brain connectivity patterns:
-#   - Strong intra-hemispheric coupling
+#   - Higher intra-hemispheric coupling
 #   - Weaker inter-hemispheric coupling (corpus callosum pattern)
 #   - Default mode network (DMN) hub structure
 #
@@ -74,8 +74,22 @@ def _validate_seed(value: object) -> int:
 def _validate_connectome_matrix(
     value: object, *, n_regions: int, source: str
 ) -> FloatArray:
+    matrix = _coerce_connectome_matrix(value, n_regions=n_regions, source=source)
+    if not np.allclose(np.diag(matrix), 0.0, atol=1e-15, rtol=0.0):
+        raise ValueError(f"{source} connectome output diagonal must be zero")
+    return np.ascontiguousarray(matrix, dtype=np.float64)
+
+
+def _coerce_connectome_matrix(
+    value: object, *, n_regions: int, source: str
+) -> FloatArray:
+    raw = np.asarray(value, dtype=object)
+    if any(isinstance(item, bool | np.bool_) for item in raw.ravel()):
+        raise ValueError(f"{source} connectome output must not contain boolean values")
+    if any(isinstance(item, complex | np.complexfloating) for item in raw.ravel()):
+        raise ValueError(f"{source} connectome output must contain real-valued weights")
     try:
-        matrix = np.asarray(value, dtype=np.float64)
+        matrix = np.asarray(raw, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{source} connectome output must be a float matrix") from exc
     if matrix.shape != (n_regions, n_regions):
@@ -89,8 +103,6 @@ def _validate_connectome_matrix(
         raise ValueError(f"{source} connectome output must be non-negative")
     if not np.allclose(matrix, matrix.T, atol=1e-12, rtol=0.0):
         raise ValueError(f"{source} connectome output must be symmetric")
-    if not np.allclose(np.diag(matrix), 0.0, atol=1e-15, rtol=0.0):
-        raise ValueError(f"{source} connectome output diagonal must be zero")
     return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
@@ -122,12 +134,14 @@ def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
     n_regions = _validate_n_regions(n_regions, max_regions=_NEUROLIB_HCP_SIZE)
 
     ds = Dataset("hcp")
-    sc: FloatArray = np.asarray(ds.Cmat, dtype=np.float64)
-    sc = sc[:n_regions, :n_regions]
+    sc = _coerce_connectome_matrix(
+        ds.Cmat,
+        n_regions=_NEUROLIB_HCP_SIZE,
+        source="neurolib HCP",
+    )[:n_regions, :n_regions].copy()
     np.fill_diagonal(sc, 0.0)
-    result: FloatArray = np.clip(sc, 0.0, None)
     return _validate_connectome_matrix(
-        result,
+        sc,
         n_regions=n_regions,
         source="neurolib HCP",
     )
@@ -176,13 +190,13 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
         np.fill_diagonal(block, 0.0)
         knm[hemi_start:hemi_end, hemi_start:hemi_end] = block
 
-    # Inter-hemispheric: corpus callosum — homotopic connections strongest
+    # Inter-hemispheric: corpus callosum — homotopic connections largest
     for i in range(min(half, n_regions - half)):
         j = i + half
         weight = _INTER_HEMI_STRENGTH * np.exp(
             -0.1 * abs(i - i)
-        )  # homotopic = strongest
-        # Add distance decay for non-homotopic callosal fibers
+        )  # homotopic = largest
+        # Add distance decay for non-homotopic callosal fibres
         spread = min(3, half)
         for offset in range(-spread, spread + 1):
             ji = i + offset

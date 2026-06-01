@@ -13,6 +13,7 @@ from __future__ import annotations
 import builtins
 import sys
 import types
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -76,11 +77,25 @@ def test_neurolib_hcp_loader_validates_and_slices_dataset(
         connectome.load_neurolib_hcp(81)
 
 
+@pytest.mark.parametrize(
+    ("matrix_update", "message"),
+    [
+        (lambda matrix: matrix.__setitem__((0, 1), np.nan), "finite"),
+        (lambda matrix: matrix.__setitem__((0, 1), -0.25), "non-negative"),
+        (lambda matrix: matrix.__setitem__((0, 1), np.bool_(True)), "boolean"),
+        (lambda matrix: matrix.__setitem__((0, 1), complex(0.2, 0.0)), "real-valued"),
+    ],
+)
 def test_neurolib_hcp_loader_rejects_invalid_dataset_contract(
     monkeypatch: pytest.MonkeyPatch,
+    matrix_update: Callable[[np.ndarray], None],
+    message: str,
 ) -> None:
-    matrix = np.ones((80, 80), dtype=np.float64)
-    matrix[0, 1] = np.nan
+    matrix = np.ones((80, 80), dtype=object)
+    matrix = matrix + matrix.T
+    np.fill_diagonal(matrix, 0.0)
+    matrix_update(matrix)
+    matrix[1, 0] = matrix[0, 1]
 
     class Dataset:
         def __init__(self, name: str) -> None:
@@ -95,7 +110,7 @@ def test_neurolib_hcp_loader_rejects_invalid_dataset_contract(
     monkeypatch.setitem(sys.modules, "neurolib.utils", utils)
     monkeypatch.setitem(sys.modules, "neurolib.utils.loadData", load_data)
 
-    with pytest.raises(ValueError, match="finite"):
+    with pytest.raises(ValueError, match=message):
         connectome.load_neurolib_hcp(5)
 
 
