@@ -8,11 +8,11 @@
     "optional_extras": 15,
     "public_api_exports": 24,
     "public_documentation_pages": 173,
-    "python_package_modules": 446,
+    "python_package_modules": 447,
     "research_experimental_modules": 149,
-    "runtime_serving_modules": 46,
+    "runtime_serving_modules": 47,
     "rust_kernel_files": 91,
-    "test_files": 512
+    "test_files": 520
   },
   "documentation": {
     "public_pages": [
@@ -748,6 +748,7 @@
       "src/scpn_phase_orchestrator/scaffold/__init__.py",
       "src/scpn_phase_orchestrator/scaffold/llm.py",
       "src/scpn_phase_orchestrator/studio/__init__.py",
+      "src/scpn_phase_orchestrator/studio/product.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers.py",
       "src/scpn_phase_orchestrator/studio/workflow.py"
     ]
@@ -1098,6 +1099,7 @@
     "src/scpn_phase_orchestrator/ssgf/pgbo.py",
     "src/scpn_phase_orchestrator/ssgf/tcbo.py",
     "src/scpn_phase_orchestrator/studio/__init__.py",
+    "src/scpn_phase_orchestrator/studio/product.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers.py",
     "src/scpn_phase_orchestrator/studio/workflow.py",
     "src/scpn_phase_orchestrator/supervisor/__init__.py",
@@ -1586,6 +1588,13 @@
       "tests/test_reduction_config_validation.py",
       "tests/test_reduction_stability.py",
       "tests/test_ref_kernel.py",
+      "tests/test_reference_api_api.py",
+      "tests/test_reference_api_artifacts.py",
+      "tests/test_reference_api_coupling_infer.py",
+      "tests/test_reference_api_distributed.py",
+      "tests/test_reference_api_monitor_poincare.py",
+      "tests/test_reference_api_scaffold.py",
+      "tests/test_reference_api_visualization.py",
       "tests/test_reference_benchmark_snapshot_docs.py",
       "tests/test_reference_benchmark_suite.py",
       "tests/test_regime_events.py",
@@ -1664,6 +1673,7 @@
       "tests/test_stuart_landau_parity.py",
       "tests/test_stuart_landau_replay.py",
       "tests/test_stuart_landau_validation.py",
+      "tests/test_studio_product.py",
       "tests/test_studio_public_facade.py",
       "tests/test_studio_ui_helpers.py",
       "tests/test_studio_workflow.py",

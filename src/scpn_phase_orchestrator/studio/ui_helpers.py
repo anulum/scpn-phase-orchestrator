@@ -2664,7 +2664,7 @@ def _normalise_topos_named_records(
     for item in value:
         if not isinstance(item, Mapping):
             raise ValueError(f"{name} entries must be mappings")
-        record = {
+        record: dict[str, object] = {
             "name": _require_non_empty_text(item.get("name"), f"{name} name"),
         }
         if "kind" in item:

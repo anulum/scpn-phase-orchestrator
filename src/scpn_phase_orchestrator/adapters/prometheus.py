@@ -123,7 +123,7 @@ def _require_query_text(query: str) -> str:
     return query_text
 
 
-def _require_finite_float(value: float, field_name: str) -> float:
+def _require_finite_float(value: object, field_name: str) -> float:
     if isinstance(value, bool):
         raise ValueError(f"Prometheus {field_name} must be finite")
     try:
