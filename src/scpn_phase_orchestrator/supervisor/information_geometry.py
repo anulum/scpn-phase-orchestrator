@@ -264,6 +264,8 @@ def _as_float_array(
 ) -> FloatArray:
     if isinstance(values, (bool, np.bool_)) or _contains_boolean_alias(values):
         raise ValueError(f"{name} must contain numeric values")
+    if _contains_complex_alias(values):
+        raise ValueError(f"{name} must contain real-valued numeric values")
     array = np.asarray(values, dtype=np.float64)
     if not isinstance(array, np.ndarray):
         raise ValueError(f"{name} must be an array-like of floats")
@@ -272,6 +274,14 @@ def _as_float_array(
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain finite values")
     return np.array(array, dtype=np.float64, copy=True)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
 
 def _contains_boolean_alias(value: object) -> bool:

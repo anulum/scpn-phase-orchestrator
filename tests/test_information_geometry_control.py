@@ -218,6 +218,36 @@ def test_metrics_are_finite_in_state_and_proposal() -> None:
     assert np.isfinite(state.tangent_vector).all()
 
 
+@pytest.mark.parametrize(
+    ("current_distribution", "target_distribution", "coupling_gradient", "message"),
+    [
+        ([0.5 + 0.1j, 0.5], [0.5, 0.5], None, "current_distribution"),
+        (
+            [0.5, 0.5],
+            np.array([0.5, complex(0.5, 0.1)], dtype=object),
+            None,
+            "target_distribution",
+        ),
+        (
+            [0.5, 0.5],
+            [0.5, 0.5],
+            [np.complex128(0.1 + 0.2j), 0.0],
+            "coupling_gradient",
+        ),
+    ],
+)
+def test_complex_alias_inputs_fail_closed(
+    current_distribution, target_distribution, coupling_gradient, message
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        propose_information_geometry_control(
+            current_distribution,
+            target_distribution,
+            coupling_gradient=coupling_gradient,
+            max_step=0.2,
+        )
+
+
 def test_explicit_jax_backend_matches_numpy_information_geometry_contract() -> None:
     numpy_proposal = propose_information_geometry_control(
         [0.16, 0.27, 0.18, 0.39],

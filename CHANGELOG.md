@@ -82,6 +82,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened multiverse counterfactual rollouts by rejecting object-dtype boolean
   and complex aliases before phase, frequency, coupling, phase-lag, or topology
   mask payloads are accepted for non-actuating branch simulation.
+- Hardened information-geometry control proposals by rejecting complex
+  distribution and gradient aliases before simplex normalisation or
+  natural-gradient proposal generation.
 - Hardened the FusionCore bridge boundary by rejecting non-positive q-profile
   bounds, negative fusion observables, negative stability ratios, and empty
   phase-feedback vectors before phase encoding or order-parameter export.
