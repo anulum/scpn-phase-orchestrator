@@ -54,6 +54,8 @@ __all__ = ["create_app"]
 logger = logging.getLogger(__name__)
 
 _MAX_HISTORY = 500
+_MAX_WEBSOCKET_MESSAGE_BYTES = 1024
+_KEEPALIVE_TYPES = frozenset({"ping", "pong"})
 
 
 def create_app(cfg: QueueWavesConfig) -> object:
@@ -308,7 +310,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
         try:
             while True:
                 msg = await websocket.receive_text()
-                if len(msg) > 1024:
+                if _websocket_message_exceeds_limit(msg):
                     await websocket.close(code=1009, reason="Message too large")
                     break
                 if not _is_keepalive_message(msg):
@@ -322,18 +324,40 @@ def create_app(cfg: QueueWavesConfig) -> object:
     return app
 
 
+def _reject_json_constant(token: str) -> None:
+    raise ValueError(f"non-finite JSON constant is not allowed: {token}")
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    obj: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError(f"duplicate JSON object key is not allowed: {key}")
+        obj[key] = value
+    return obj
+
+
+def _websocket_message_exceeds_limit(msg: str) -> bool:
+    return len(msg.encode("utf-8")) > _MAX_WEBSOCKET_MESSAGE_BYTES
+
+
 def _is_keepalive_message(msg: str) -> bool:
     if msg in {"", "ping", "pong"}:
         return True
     try:
-        payload = json.loads(msg)
-    except json.JSONDecodeError:
+        payload = json.loads(
+            msg,
+            object_pairs_hook=_unique_json_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (json.JSONDecodeError, ValueError):
         return False
     if not isinstance(payload, dict):
         return False
-    if set(payload) - {"type"}:
+    if set(payload) != {"type"}:
         return False
-    return payload.get("type") in {"ping", "pong"}
+    msg_type = payload["type"]
+    return isinstance(msg_type, str) and msg_type in _KEEPALIVE_TYPES
 
 
 def run_server(config_path: str, host: str = "127.0.0.1", port: int = 8080) -> None:

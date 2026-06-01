@@ -168,10 +168,12 @@ message for each detected anomaly.
 
 Client-to-server WebSocket content is deliberately narrow. The server accepts
 only keepalive messages: an empty text frame, `ping`, `pong`, or JSON objects
-whose `type` is `ping` or `pong`. Any other inbound text payload is rejected
-with close code `1003`. QueueWaves is a telemetry stream, not a command
-channel; control, configuration, or actuation requests must use reviewed SPO
-operator workflows instead of the WebSocket.
+whose only key is the string `type` with value `ping` or `pong`. JSON constants
+such as `NaN`, duplicate object keys, extra fields, arrays, booleans, and
+command-like payloads are rejected with close code `1003`; text frames above
+1024 UTF-8 bytes are rejected with close code `1009`. QueueWaves is a telemetry
+stream, not a command channel; control, configuration, or actuation requests
+must use reviewed SPO operator workflows instead of the WebSocket.
 
 ## Anomaly Types
 
