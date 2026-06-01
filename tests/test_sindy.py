@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — PhaseSINDy tests
 
-"""Coverage for the Phase-SINDy symbolic coupling discoverer.
+"""Behavioural tests for the Phase-SINDy symbolic coupling discoverer.
 
 The pre-existing single happy-path case exercised recovery on a clean
 two-oscillator signal. This suite adds the edge and error paths flagged
@@ -142,21 +142,27 @@ def test_sindy_rejects_negative_threshold():
         PhaseSINDy(threshold=-0.1)
 
 
-@pytest.mark.parametrize("threshold", [float("nan"), float("inf"), True, "0.1"])
+@pytest.mark.parametrize(
+    "threshold",
+    [float("nan"), float("inf"), True, np.bool_(True), "0.1"],
+)
 def test_sindy_rejects_non_finite_or_non_numeric_threshold(threshold: object):
     """Threshold must be a finite numeric sparsity bound."""
     with pytest.raises(ValueError, match="threshold"):
         PhaseSINDy(threshold=cast(Any, threshold))
 
 
-@pytest.mark.parametrize("max_iter", [1.5, "2", True])
+@pytest.mark.parametrize("max_iter", [1.5, "2", True, np.bool_(True)])
 def test_sindy_rejects_non_integer_max_iter(max_iter: object):
     """STLSQ iterations must be a positive integer count."""
     with pytest.raises(ValueError, match="max_iter"):
         PhaseSINDy(max_iter=cast(Any, max_iter))
 
 
-@pytest.mark.parametrize("dt", [float("nan"), float("inf"), 0.0, -0.05, True, "0.05"])
+@pytest.mark.parametrize(
+    "dt",
+    [float("nan"), float("inf"), 0.0, -0.05, True, np.bool_(True), "0.05"],
+)
 def test_sindy_rejects_malformed_dt(dt: object):
     """PhaseSINDy requires a finite positive timestep."""
     sindy = PhaseSINDy()
@@ -198,6 +204,7 @@ def test_sindy_rejects_non_finite_phases(phases: np.ndarray):
     [
         np.array([[True, False], [False, True]], dtype=bool),
         np.array([[0.0, 1.0], [True, False]], dtype=object),
+        np.array([[0.0, 1.0], [np.bool_(True), np.bool_(False)]], dtype=object),
         np.array([[0.0 + 0.1j, 1.0], [0.2, 1.5]], dtype=complex),
     ],
 )
@@ -351,6 +358,8 @@ def test_sindy_rust_backend_remaps_matrix_coefficients(
         [
             [0.0, 0.1, 0.2],
             [0.3, 0.4, 0.5],
+            [0.6, 0.7, 0.8],
+            [0.9, 1.0, 1.1],
         ],
         dtype=np.float64,
     )
@@ -368,7 +377,7 @@ def test_sindy_rust_backend_remaps_matrix_coefficients(
     assert captured == {
         "flat": tuple(float(v) for v in phases.ravel()),
         "n_oscillators": 3,
-        "n_steps": 2,
+        "n_steps": 4,
         "dt": 0.05,
         "threshold": 0.125,
         "max_iter": 7,
@@ -393,6 +402,8 @@ def test_sindy_rust_backend_rejects_malformed_output_shape(
         [
             [0.0, 0.1, 0.2],
             [0.3, 0.4, 0.5],
+            [0.6, 0.7, 0.8],
+            [0.9, 1.0, 1.1],
         ],
         dtype=np.float64,
     )
@@ -428,6 +439,7 @@ def test_sindy_rust_backend_rejects_non_finite_coefficients(
         [
             [0.0, 0.1],
             [0.3, 0.4],
+            [0.6, 0.7],
         ],
         dtype=np.float64,
     )
@@ -454,48 +466,51 @@ def test_sindy_rust_backend_rejects_non_finite_coefficients(
         PhaseSINDy().fit(phases, dt=0.05)
 
 
+def test_sindy_python_lstsq_rejects_non_finite_coefficients(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Python regression must not accept non-finite fitted coefficients."""
+
+    def fake_lstsq(theta: np.ndarray, _target: np.ndarray) -> tuple[np.ndarray, ...]:
+        return (np.full(theta.shape[1], np.nan, dtype=np.float64),)
+
+    monkeypatch.setattr(sindy_module, "_HAS_RUST", False)
+    monkeypatch.setattr(sindy_module, "lstsq", fake_lstsq)
+
+    phases = np.array(
+        [
+            [0.0, 0.1],
+            [0.2, 0.3],
+            [0.4, 0.5],
+        ],
+        dtype=np.float64,
+    )
+
+    with pytest.raises(ValueError, match="least-squares.*non-finite"):
+        PhaseSINDy().fit(phases, dt=0.05)
+
+
 def test_sindy_get_equations_requires_fit_first():
     """Equation export must fail closed until coefficients are fitted."""
     with pytest.raises(RuntimeError, match="called before fit"):
         PhaseSINDy().get_equations()
 
 
-def test_sindy_empty_phases_does_not_crash():
-    """Empty trajectory: fit must not crash and must return finite output.
-
-    The specific coefficient dimensionality is an implementation detail —
-    the contract covered here is "no NaN, no exception, one entry per
-    oscillator".
-    """
+@pytest.mark.parametrize(
+    "phases",
+    [
+        np.zeros((0, 2), dtype=np.float64),
+        np.array([[0.0, 0.3]], dtype=np.float64),
+        np.zeros((2, 2), dtype=np.float64),
+        np.zeros((4, 0), dtype=np.float64),
+    ],
+)
+def test_sindy_rejects_underdetermined_phase_series(phases: np.ndarray) -> None:
+    """SINDy fitting requires derivative samples for at least one oscillator."""
     sindy = PhaseSINDy()
-    coeffs = sindy.fit(np.zeros((0, 2)), 0.01)
-    assert isinstance(coeffs, list)
-    assert len(coeffs) == 2
-    for c in coeffs:
-        assert np.all(np.isfinite(c))
 
-
-def test_sindy_single_timestep_returns_zero_coefficients():
-    """Single-step trajectories are structurally valid but lack regression data."""
-    sindy = PhaseSINDy()
-    coeffs = sindy.fit(np.array([[0.0, 0.3]]), 0.05)
-
-    assert len(coeffs) == 2
-    assert len(coeffs[0]) == 2
-    assert len(coeffs[1]) == 2
-    assert np.allclose(coeffs[0], 0.0)
-    assert np.allclose(coeffs[1], 0.0)
-
-
-def test_sindy_single_timestep_returns_zero_equations():
-    """Single-step trajectories render equations through the zero-structure contract."""
-    sindy = PhaseSINDy()
-    sindy.fit(np.array([[0.0, 0.3]]), 0.05)
-
-    assert sindy.get_equations() == [
-        "d(theta_0)/dt = 0",
-        "d(theta_1)/dt = 0",
-    ]
+    with pytest.raises(ValueError, match="at least"):
+        sindy.fit(phases, 0.01)
 
 
 # Pipeline wiring: PhaseSINDy feeds the auto-tune pipeline (see

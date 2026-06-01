@@ -3269,7 +3269,8 @@ fn sindy_fit_rust(
     let p = phases
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = sindy::sindy_fit(p, n_osc, n_time, dt, threshold, max_iter);
+    let result = sindy::sindy_fit(p, n_osc, n_time, dt, threshold, max_iter)
+        .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, result).into())
 }
 

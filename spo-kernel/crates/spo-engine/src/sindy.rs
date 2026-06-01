@@ -21,7 +21,6 @@ use std::f64::consts::{PI, TAU};
 /// Run Phase-SINDy: discover coupling coefficients for each oscillator.
 ///
 /// Returns (N × N) where `[i][i]` = ω_i and `[i][j]` = K_ij for j≠i.
-#[must_use]
 pub fn sindy_fit(
     phases: &[f64],
     n_osc: usize,
@@ -29,16 +28,13 @@ pub fn sindy_fit(
     dt: f64,
     threshold: f64,
     max_iter: usize,
-) -> Vec<f64> {
-    if n_time < 3 || n_osc == 0 {
-        return vec![0.0; n_osc * n_osc];
-    }
+) -> Result<Vec<f64>, String> {
+    validate_sindy_inputs(phases, n_osc, n_time, dt, threshold, max_iter)?;
 
     let t_eff = n_time - 1;
     let theta_dot = compute_theta_dot(phases, n_osc, n_time, dt);
     let mut result = vec![0.0; n_osc * n_osc];
 
-    // Parallelize over oscillators
     result
         .par_chunks_mut(n_osc)
         .enumerate()
@@ -48,7 +44,56 @@ pub fn sindy_fit(
             res_row[..n_osc].copy_from_slice(&xi[..n_osc]);
         });
 
-    result
+    if result.iter().any(|v| !v.is_finite()) {
+        return Err("Phase-SINDy produced non-finite coefficients".to_string());
+    }
+
+    Ok(result)
+}
+
+fn validate_sindy_inputs(
+    phases: &[f64],
+    n_osc: usize,
+    n_time: usize,
+    dt: f64,
+    threshold: f64,
+    max_iter: usize,
+) -> Result<(), String> {
+    if n_osc == 0 {
+        return Err("Phase-SINDy requires at least one oscillator".to_string());
+    }
+    if n_time < 2 {
+        return Err("Phase-SINDy requires at least two time samples".to_string());
+    }
+    if n_time - 1 < n_osc {
+        return Err(
+            "Phase-SINDy requires at least one derivative sample per feature".to_string(),
+        );
+    }
+    if !dt.is_finite() || dt <= 0.0 {
+        return Err("Phase-SINDy dt must be finite and positive".to_string());
+    }
+    if !threshold.is_finite() || threshold < 0.0 {
+        return Err("Phase-SINDy threshold must be finite and non-negative".to_string());
+    }
+    if max_iter == 0 {
+        return Err("Phase-SINDy max_iter must be at least one".to_string());
+    }
+    let expected = n_osc
+        .checked_mul(n_time)
+        .ok_or_else(|| "Phase-SINDy input dimensions overflow".to_string())?;
+    if phases.len() != expected {
+        return Err(format!(
+            "Phase-SINDy phase buffer length mismatch: {} != {}",
+            phases.len(),
+            expected
+        ));
+    }
+    if phases.iter().any(|v| !v.is_finite()) {
+        return Err("Phase-SINDy phases must be finite".to_string());
+    }
+
+    Ok(())
 }
 
 /// Compute θ̇ via finite differences with phase unwrapping.
@@ -267,7 +312,7 @@ mod tests {
         let omegas = vec![1.0, 1.5, 2.0];
         let coupling = vec![0.0, 1.0, 0.5, 1.0, 0.0, 0.8, 0.5, 0.8, 0.0];
         let phases = generate_kuramoto_trajectory(n, t, dt, &omegas, &coupling);
-        let result = sindy_fit(&phases, n, t, dt, 0.05, 10);
+        let result = sindy_fit(&phases, n, t, dt, 0.05, 10).expect("valid SINDy fit");
         for i in 0..n {
             assert!(
                 (result[i * n + i] - omegas[i]).abs() < 0.5,
@@ -286,7 +331,7 @@ mod tests {
         let omegas = vec![1.0, 2.0];
         let coupling = vec![0.0; n * n];
         let phases = generate_kuramoto_trajectory(n, t, dt, &omegas, &coupling);
-        let result = sindy_fit(&phases, n, t, dt, 0.1, 10);
+        let result = sindy_fit(&phases, n, t, dt, 0.1, 10).expect("valid SINDy fit");
         for i in 0..n {
             for j in 0..n {
                 if i != j {
@@ -301,17 +346,45 @@ mod tests {
     }
 
     #[test]
-    fn test_short_data_returns_zeros() {
-        let result = sindy_fit(&[0.0; 4], 2, 2, 0.01, 0.05, 10);
-        for v in &result {
-            assert_eq!(*v, 0.0);
-        }
+    fn test_short_data_rejects_underdetermined_fit() {
+        let err = sindy_fit(&[0.0; 4], 2, 2, 0.01, 0.05, 10)
+            .expect_err("underdetermined regression must fail closed");
+        assert!(err.contains("derivative sample per feature"));
     }
 
     #[test]
     fn test_output_size() {
-        let result = sindy_fit(&vec![0.5; 50 * 4], 4, 50, 0.01, 0.05, 10);
+        let result =
+            sindy_fit(&vec![0.5; 50 * 4], 4, 50, 0.01, 0.05, 10).expect("valid SINDy fit");
         assert_eq!(result.len(), 16);
+    }
+
+    #[test]
+    fn test_rejects_invalid_controls_and_payloads() {
+        assert!(sindy_fit(&[0.0; 6], 2, 3, 0.0, 0.05, 10)
+            .expect_err("zero dt must fail closed")
+            .contains("dt"));
+        assert!(sindy_fit(&[0.0; 6], 2, 3, 0.01, f64::NAN, 10)
+            .expect_err("non-finite threshold must fail closed")
+            .contains("threshold"));
+        assert!(sindy_fit(&[0.0; 6], 2, 3, 0.01, 0.05, 0)
+            .expect_err("zero iterations must fail closed")
+            .contains("max_iter"));
+        assert!(
+            sindy_fit(
+                &[0.0, f64::INFINITY, 0.0, 0.1, 0.2, 0.3],
+                2,
+                3,
+                0.01,
+                0.05,
+                10
+            )
+            .expect_err("non-finite phases must fail closed")
+            .contains("finite")
+        );
+        assert!(sindy_fit(&[0.0; 5], 2, 3, 0.01, 0.05, 10)
+            .expect_err("shape mismatch must fail closed")
+            .contains("length mismatch"));
     }
 
     #[test]

@@ -40,9 +40,30 @@ __all__ = ["PhaseSINDy"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _is_boolean_alias(value: object) -> bool:
+    return isinstance(value, (bool, np.bool_))
+
+
 def _contains_boolean_alias(value: object) -> bool:
     raw = np.asarray(value, dtype=object)
-    return any(isinstance(item, bool) for item in raw.ravel())
+    return any(_is_boolean_alias(item) for item in raw.ravel())
+
+
+def _coerce_lstsq_coefficients(values: object, expected_size: int) -> FloatArray:
+    try:
+        coefficients = np.asarray(values, dtype=np.float64).ravel()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "PhaseSINDy least-squares returned non-numeric coefficients"
+        ) from exc
+    if coefficients.size != expected_size:
+        raise ValueError(
+            "PhaseSINDy least-squares returned wrong coefficient count: "
+            f"{coefficients.size} != {expected_size}"
+        )
+    if not np.all(np.isfinite(coefficients)):
+        raise ValueError("PhaseSINDy least-squares returned non-finite coefficients")
+    return coefficients
 
 
 class PhaseSINDy:
@@ -54,12 +75,12 @@ class PhaseSINDy:
     """
 
     def __init__(self, threshold: float = 0.05, max_iter: int = 10):
-        if isinstance(threshold, bool) or not isinstance(threshold, Real):
+        if _is_boolean_alias(threshold) or not isinstance(threshold, Real):
             raise ValueError("threshold must be finite and non-negative")
         parsed_threshold = float(threshold)
         if not isfinite(parsed_threshold) or parsed_threshold < 0.0:
             raise ValueError("threshold must be non-negative and finite")
-        if isinstance(max_iter, bool) or not isinstance(max_iter, Integral):
+        if _is_boolean_alias(max_iter) or not isinstance(max_iter, Integral):
             raise ValueError("max_iter must be an integer >= 1")
         if max_iter < 1:
             raise ValueError(f"max_iter must be >= 1, got {max_iter}")
@@ -71,7 +92,7 @@ class PhaseSINDy:
 
     def fit(self, phases: FloatArray, dt: float) -> list[FloatArray]:
         """Discover equations node-by-node to handle independent coupling."""
-        if isinstance(dt, bool) or not isinstance(dt, Real):
+        if _is_boolean_alias(dt) or not isinstance(dt, Real):
             raise ValueError("dt must be a finite and positive scalar")
         parsed_dt = float(dt)
         if not isfinite(parsed_dt) or parsed_dt <= 0.0:
@@ -98,15 +119,18 @@ class PhaseSINDy:
 
         T, N = phases_array.shape
 
-        if T < 2:
+        if T < 2 or N < 1:
             self.coefficients = []
             self.feature_names = []
-            for i in range(N):
-                names = ["1"]
-                names.extend(f"sin(theta_{j} - theta_{i})" for j in range(N) if j != i)
-                self.coefficients.append(np.zeros(len(names), dtype=np.float64))
-                self.feature_names.append(names)
-            return self.coefficients
+            raise ValueError(
+                "phases must contain at least two time samples and one oscillator"
+            )
+        if T - 1 < N:
+            self.coefficients = []
+            self.feature_names = []
+            raise ValueError(
+                "phases must provide at least one derivative sample per feature"
+            )
 
         if _HAS_RUST:
             p_flat = np.ascontiguousarray(phases_array, dtype=np.float64).ravel()
@@ -144,7 +168,7 @@ class PhaseSINDy:
                     if j != i:
                         xi.append(result[i, j])
                         names.append(f"sin(theta_{j} - theta_{i})")
-                self.coefficients.append(np.array(xi))
+                self.coefficients.append(np.array(xi, dtype=np.float64))
                 self.feature_names.append(names)
             return self.coefficients
 
@@ -170,14 +194,20 @@ class PhaseSINDy:
             Theta = np.hstack(library)
 
             # 2. STLSQ for this node
-            xi = lstsq(Theta, theta_dot[:, i])[0]
+            xi = _coerce_lstsq_coefficients(
+                lstsq(Theta, theta_dot[:, i])[0],
+                Theta.shape[1],
+            )
 
             for _ in range(self.max_iter):
                 small_indices = np.abs(xi) < self.threshold
                 xi[small_indices] = 0
                 big_indices = ~small_indices
                 if np.any(big_indices):
-                    xi[big_indices] = lstsq(Theta[:, big_indices], theta_dot[:, i])[0]
+                    xi[big_indices] = _coerce_lstsq_coefficients(
+                        lstsq(Theta[:, big_indices], theta_dot[:, i])[0],
+                        int(np.count_nonzero(big_indices)),
+                    )
 
             self.coefficients.append(xi)
             self.feature_names.append(f_names)

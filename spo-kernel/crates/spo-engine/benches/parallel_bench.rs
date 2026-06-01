@@ -260,7 +260,8 @@ fn bench_sindy_fit(c: &mut Criterion) {
         let phases = make_ring_phases(n, t, 0.5);
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
-                let result = sindy_fit(&phases, n, t, 0.01, 0.05, 10);
+                let result = sindy_fit(&phases, n, t, 0.01, 0.05, 10)
+                    .expect("valid Phase-SINDy benchmark input");
                 criterion::black_box(result);
             });
         });
