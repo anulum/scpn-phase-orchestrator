@@ -56,6 +56,7 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     assert "hybrid_order_parameters" in panel_ids
     assert "topos_semantic_binding" in panel_ids
     assert "autopoietic_lineage_sandbox" in panel_ids
+    assert "intergenerational_policy_inheritance" in panel_ids
     assert "strange_loop_meta_orchestrator" in panel_ids
 
     evolutionary_panel = next(
@@ -102,6 +103,29 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     assert lineage_panel["hot_patch_permitted"] is False
     assert lineage_panel["execution_disabled"] is True
     assert lineage_panel["operator_review_required"] is True
+    inheritance_panel = next(
+        panel
+        for panel in panels
+        if panel["panel_id"] == "intergenerational_policy_inheritance"
+    )
+    assert inheritance_panel["builder"] == (
+        "build_intergenerational_inheritance_studio_panel"
+    )
+    assert inheritance_panel["claim_boundary"] == (
+        "intergenerational_inheritance_review_not_direct_hot_patch"
+    )
+    assert inheritance_panel["required_evidence"] == (
+        "signed inheritance-history package",
+        "inheritance SHA-256 hashes",
+        "HMAC signature metadata",
+        "multi-objective replay-fitness rows",
+    )
+    assert inheritance_panel["direct_hot_patch_permitted"] is False
+    assert inheritance_panel["actuation_permitted"] is False
+    assert inheritance_panel["live_merge_permitted"] is False
+    assert inheritance_panel["hot_patch_permitted"] is False
+    assert inheritance_panel["execution_disabled"] is True
+    assert inheritance_panel["operator_review_required"] is True
     for panel in panels:
         builder = panel["builder"]
         assert isinstance(builder, str)

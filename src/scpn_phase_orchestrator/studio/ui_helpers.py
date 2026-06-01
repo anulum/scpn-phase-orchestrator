@@ -65,6 +65,7 @@ __all__ = [
     "build_deployment_readiness",
     "build_error_report",
     "build_autopoietic_lineage_studio_panel",
+    "build_intergenerational_inheritance_studio_panel",
     "build_evolutionary_supervisor_policy_search_studio_panel",
     "build_hybrid_order_studio_panel",
     "build_information_geometry_studio_panel",
@@ -129,6 +130,12 @@ _EVOLUTIONARY_SEARCH_SCHEMA = "evolutionary_supervisor_policy_search"
 _EVOLUTIONARY_DSL_SCHEMA = "policy_dsl_evolution"
 _AUTOPOIETIC_LINEAGE_SCHEMA = "scpn_autopoietic_lineage_sandbox_v1"
 _AUTOPOIETIC_LINEAGE_BOUNDARY = "autopoietic_lineage_sandbox_review_not_live_merge"
+_INTERGENERATIONAL_HISTORY_SCHEMA = (
+    "scpn_intergenerational_policy_inheritance_history_v1"
+)
+_INTERGENERATIONAL_HISTORY_BOUNDARY = (
+    "intergenerational_inheritance_review_not_direct_hot_patch"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -609,6 +616,65 @@ def build_autopoietic_lineage_studio_panel(
             "render as offline lineage sandbox evidence only; compare replay "
             "domains, policy diffs, and blocked reasons before a separately "
             "reviewed inheritance workflow"
+        ),
+    }
+
+
+def build_intergenerational_inheritance_studio_panel(
+    histories: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    """Build a passive Studio panel for inheritance-history review."""
+
+    normalised_histories = _normalise_intergenerational_inheritance_histories(histories)
+    child_rows = tuple(
+        child
+        for history in normalised_histories
+        for child in cast(tuple[dict[str, object], ...], history["child_rows"])
+    )
+    replay_domains = tuple(
+        sorted(
+            {
+                str(domain)
+                for history in normalised_histories
+                for domain in cast(tuple[str, ...], history["replay_domains"])
+            }
+        )
+    )
+    fitness_scores = tuple(float(row["fitness_score"]) for row in child_rows)
+
+    return {
+        "panel_kind": "studio_intergenerational_inheritance_panel",
+        "supervisor": "intergenerational_policy_inheritance",
+        "history_count": len(normalised_histories),
+        "claim_boundary": _INTERGENERATIONAL_HISTORY_BOUNDARY,
+        "non_actuating": True,
+        "execution_disabled": True,
+        "operator_review_required": True,
+        "direct_hot_patch_permitted": False,
+        "hot_patch_permitted": False,
+        "live_merge_permitted": False,
+        "actuation_permitted": False,
+        "histories": normalised_histories,
+        "inheritance_child_rows": child_rows,
+        "history_record_total": len(child_rows),
+        "signed_metadata_total": sum(
+            int(history["signed_metadata_count"]) for history in normalised_histories
+        ),
+        "replay_domains": replay_domains,
+        "replay_domain_count": len(replay_domains),
+        "fitness_range": {
+            "minimum": min(fitness_scores),
+            "maximum": max(fitness_scores),
+        },
+        "operator_summary": (
+            "intergenerational inheritance review: "
+            f"{len(normalised_histories)} history package(s), "
+            f"{len(child_rows)} signed child record(s), "
+            f"{len(replay_domains)} replay domain(s)"
+        ),
+        "operator_action": (
+            "render as signed inheritance-history evidence only; require "
+            "separate operator approval before any reviewed hot-patch workflow"
         ),
     }
 
@@ -2946,6 +3012,182 @@ def _normalise_autopoietic_lineage_manifests(
             }
         )
     return tuple(normalised)
+
+
+def _normalise_intergenerational_inheritance_histories(
+    histories: Sequence[Mapping[str, object]],
+) -> tuple[dict[str, object], ...]:
+    rows = _autopoietic_lineage_mapping_sequence(histories, "inheritance histories")
+    normalised: list[dict[str, object]] = []
+    seen_histories: set[str] = set()
+    for index, history in enumerate(rows):
+        name = f"inheritance history {index}"
+        if history.get("schema") != _INTERGENERATIONAL_HISTORY_SCHEMA:
+            raise ValueError(f"{name} has unsupported schema")
+        history_sha256 = _autopoietic_lineage_sha(
+            history.get("history_sha256"), f"{name} history_sha256"
+        )
+        if history_sha256 in seen_histories:
+            raise ValueError(f"{name} duplicates history_sha256")
+        seen_histories.add(history_sha256)
+        _intergenerational_history_hash_check(history, name, history_sha256)
+        _autopoietic_lineage_bool(history, "hot_patch_review_required", True, name)
+        _autopoietic_lineage_bool(history, "direct_hot_patch_permitted", False, name)
+        _autopoietic_lineage_bool(history, "actuation_permitted", False, name)
+        _autopoietic_lineage_bool(history, "operator_review_required", True, name)
+        if history.get("merge_strategy") != "reviewed_hot_patch_only":
+            raise ValueError(f"{name} merge_strategy is unsupported")
+
+        child_rows = _normalise_intergenerational_child_rows(
+            history.get("child_rows"), name
+        )
+        history_record_count = _autopoietic_lineage_int(
+            history.get("history_record_count"), f"{name} history_record_count"
+        )
+        signed_metadata_count = _autopoietic_lineage_int(
+            history.get("signed_metadata_count"), f"{name} signed_metadata_count"
+        )
+        replay_domain_count = _autopoietic_lineage_int(
+            history.get("replay_domain_count"), f"{name} replay_domain_count"
+        )
+        replay_domains = _autopoietic_lineage_text_tuple(
+            history.get("replay_domains"), f"{name} replay_domains"
+        )
+        if history_record_count != len(child_rows):
+            raise ValueError(f"{name} history_record_count does not match rows")
+        if signed_metadata_count != len(child_rows):
+            raise ValueError(f"{name} signed_metadata_count does not match rows")
+        if replay_domain_count != len(set(replay_domains)):
+            raise ValueError(f"{name} replay_domain_count does not match rows")
+        fitness_values = tuple(float(row["fitness_score"]) for row in child_rows)
+        minimum_fitness = _autopoietic_lineage_float(
+            history.get("minimum_fitness_score"), f"{name} minimum_fitness_score"
+        )
+        maximum_fitness = _autopoietic_lineage_float(
+            history.get("maximum_fitness_score"), f"{name} maximum_fitness_score"
+        )
+        mean_fitness = _autopoietic_lineage_float(
+            history.get("mean_fitness_score"), f"{name} mean_fitness_score"
+        )
+        if not np.isclose(minimum_fitness, min(fitness_values)):
+            raise ValueError(f"{name} minimum_fitness_score does not match rows")
+        if not np.isclose(maximum_fitness, max(fitness_values)):
+            raise ValueError(f"{name} maximum_fitness_score does not match rows")
+        if not np.isclose(mean_fitness, float(np.mean(fitness_values))):
+            raise ValueError(f"{name} mean_fitness_score does not match rows")
+
+        normalised.append(
+            {
+                "schema": _INTERGENERATIONAL_HISTORY_SCHEMA,
+                "history_sha256": history_sha256,
+                "lineage_sha256": _autopoietic_lineage_sha(
+                    history.get("lineage_sha256"), f"{name} lineage_sha256"
+                ),
+                "parent_policy_sha256": _autopoietic_lineage_sha(
+                    history.get("parent_policy_sha256"),
+                    f"{name} parent_policy_sha256",
+                ),
+                "history_record_count": history_record_count,
+                "signed_metadata_count": signed_metadata_count,
+                "replay_domain_count": replay_domain_count,
+                "replay_domains": tuple(sorted(replay_domains)),
+                "child_rows": child_rows,
+                "minimum_fitness_score": minimum_fitness,
+                "maximum_fitness_score": maximum_fitness,
+                "mean_fitness_score": mean_fitness,
+                "hot_patch_review_required": True,
+                "direct_hot_patch_permitted": False,
+                "merge_strategy": "reviewed_hot_patch_only",
+                "actuation_permitted": False,
+                "operator_review_required": True,
+            }
+        )
+    return tuple(normalised)
+
+
+def _normalise_intergenerational_child_rows(
+    value: object,
+    history_name: str,
+) -> tuple[dict[str, object], ...]:
+    rows = _autopoietic_lineage_mapping_sequence(
+        value, f"{history_name} child_rows"
+    )
+    if not rows:
+        raise ValueError(f"{history_name} must contain child_rows")
+    normalised: list[dict[str, object]] = []
+    seen_inheritances: set[str] = set()
+    for index, row in enumerate(rows):
+        name = f"{history_name} child row {index}"
+        inheritance_sha256 = _autopoietic_lineage_sha(
+            row.get("inheritance_sha256"), f"{name} inheritance_sha256"
+        )
+        if inheritance_sha256 in seen_inheritances:
+            raise ValueError(f"{name} duplicates inheritance_sha256")
+        seen_inheritances.add(inheritance_sha256)
+        generation_index = _autopoietic_lineage_int(
+            row.get("generation_index"), f"{name} generation_index"
+        )
+        if generation_index != index:
+            raise ValueError(f"{name} generation_index must be contiguous")
+        _autopoietic_lineage_bool(row, "hot_patch_review_required", True, name)
+        _autopoietic_lineage_bool(row, "direct_hot_patch_permitted", False, name)
+        _autopoietic_lineage_bool(row, "actuation_permitted", False, name)
+        if row.get("merge_strategy") != "reviewed_hot_patch_only":
+            raise ValueError(f"{name} merge_strategy is unsupported")
+        normalised.append(
+            {
+                "generation_index": generation_index,
+                "inheritance_sha256": inheritance_sha256,
+                "lineage_sha256": _autopoietic_lineage_sha(
+                    row.get("lineage_sha256"), f"{name} lineage_sha256"
+                ),
+                "child_sha256": _autopoietic_lineage_sha(
+                    row.get("child_sha256"), f"{name} child_sha256"
+                ),
+                "signer_id": _autopoietic_lineage_text(
+                    row.get("signer_id"), f"{name} signer_id"
+                ),
+                "signature_sha256": _autopoietic_lineage_sha(
+                    row.get("signature_sha256"), f"{name} signature_sha256"
+                ),
+                "policy_gene_count": _autopoietic_lineage_int(
+                    row.get("policy_gene_count"), f"{name} policy_gene_count"
+                ),
+                "policy_diff_count": _autopoietic_lineage_int(
+                    row.get("policy_diff_count"), f"{name} policy_diff_count"
+                ),
+                "fitness_score": _autopoietic_lineage_float(
+                    row.get("fitness_score"), f"{name} fitness_score"
+                ),
+                "reward_component": _autopoietic_lineage_float(
+                    row.get("reward_component"), f"{name} reward_component"
+                ),
+                "safety_component": _autopoietic_lineage_float(
+                    row.get("safety_component"), f"{name} safety_component"
+                ),
+                "simplicity_component": _autopoietic_lineage_float(
+                    row.get("simplicity_component"), f"{name} simplicity_component"
+                ),
+                "merge_strategy": "reviewed_hot_patch_only",
+                "hot_patch_review_required": True,
+                "direct_hot_patch_permitted": False,
+                "actuation_permitted": False,
+            }
+        )
+    return tuple(normalised)
+
+
+def _intergenerational_history_hash_check(
+    history: Mapping[str, object],
+    name: str,
+    history_sha256: str,
+) -> None:
+    body = dict(history)
+    body.pop("history_sha256", None)
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    expected = sha256(canonical.encode("utf-8")).hexdigest()
+    if expected != history_sha256:
+        raise ValueError(f"{name} history_sha256 does not match content")
 
 
 def _normalise_autopoietic_lineage_children(

@@ -31,6 +31,8 @@ from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldState,
     build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
+    build_intergenerational_policy_inheritance,
+    build_intergenerational_policy_inheritance_history,
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
 )
@@ -593,6 +595,100 @@ def test_autopoietic_lineage_panel_rejects_malformed_evidence() -> None:
         ui.build_autopoietic_lineage_studio_panel(
             [{**manifest, "child_candidates": [bad_child]}]
         )
+
+
+def test_intergenerational_inheritance_panel_preserves_signed_history() -> None:
+    lineage = build_autopoietic_lineage_sandbox(
+        {"K": 0.42, "alpha": 0.18, "zeta": 0.09},
+        build_autopoietic_lineage_replay_corpus(),
+        child_budget=2,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+    inheritances = [
+        build_intergenerational_policy_inheritance(
+            lineage,
+            child,
+            signer_id="studio-review-key",
+            signing_key="studio-local-signing-key",
+            objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
+        )
+        for child in lineage["child_candidates"]
+        if child["status"] == "accepted_for_review"
+    ]
+    history = build_intergenerational_policy_inheritance_history(lineage, inheritances)
+
+    panel = ui.build_intergenerational_inheritance_studio_panel([history])
+
+    assert panel["panel_kind"] == "studio_intergenerational_inheritance_panel"
+    assert panel["claim_boundary"] == (
+        "intergenerational_inheritance_review_not_direct_hot_patch"
+    )
+    assert panel["non_actuating"] is True
+    assert panel["execution_disabled"] is True
+    assert panel["operator_review_required"] is True
+    assert panel["direct_hot_patch_permitted"] is False
+    assert panel["hot_patch_permitted"] is False
+    assert panel["actuation_permitted"] is False
+    assert panel["history_count"] == 1
+    assert panel["history_record_total"] == 2
+    assert panel["signed_metadata_total"] == 2
+    assert panel["replay_domain_count"] == 4
+    assert len(panel["inheritance_child_rows"]) == 2
+    assert "control_actions" not in panel
+    assert "actions_to_apply" not in panel
+
+
+def test_intergenerational_inheritance_panel_rejects_malformed_history() -> None:
+    lineage = build_autopoietic_lineage_sandbox(
+        {"K": 0.42, "alpha": 0.18},
+        build_autopoietic_lineage_replay_corpus(),
+        child_budget=2,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+    inheritances = [
+        build_intergenerational_policy_inheritance(
+            lineage,
+            child,
+            signer_id="studio-review-key",
+            signing_key="studio-local-signing-key",
+        )
+        for child in lineage["child_candidates"]
+        if child["status"] == "accepted_for_review"
+    ]
+    history = build_intergenerational_policy_inheritance_history(lineage, inheritances)
+
+    with pytest.raises(ValueError, match="history_sha256"):
+        ui.build_intergenerational_inheritance_studio_panel(
+            [{**history, "history_sha256": "bad"}]
+        )
+    bad_count_history = {**history, "history_record_count": 99}
+    bad_count_body = dict(bad_count_history)
+    bad_count_body.pop("history_sha256", None)
+    bad_count_history["history_sha256"] = sha256(
+        json.dumps(
+            bad_count_body,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    with pytest.raises(ValueError, match="history_record_count"):
+        ui.build_intergenerational_inheritance_studio_panel(
+            [bad_count_history]
+        )
+    bad_child = dict(history["child_rows"][0])
+    bad_child["direct_hot_patch_permitted"] = True
+    bad_history = {**history, "child_rows": (bad_child, history["child_rows"][1])}
+    bad_body = dict(bad_history)
+    bad_body.pop("history_sha256", None)
+    bad_history["history_sha256"] = sha256(
+        json.dumps(bad_body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    with pytest.raises(ValueError, match="direct_hot_patch_permitted"):
+        ui.build_intergenerational_inheritance_studio_panel([bad_history])
 
 
 def test_evolutionary_supervisor_policy_search_panel_rejects_malformed_evidence() -> (

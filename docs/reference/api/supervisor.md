@@ -1188,6 +1188,12 @@ actuation disabled. The curated replay corpus spans power-grid recovery,
 cardiac-rhythm pacing recovery, traffic-flow platooning, and cyber-industrial
 recontainment so operators can compare policy diffs across domains before any
 separate inheritance-review workflow.
+Intergenerational inheritance then signs accepted child-policy records,
+materialises inherited genomes, records multi-objective replay fitness, and can
+package deterministic history rows for operator review. The history package
+links lineage hashes, inheritance hashes, HMAC signature metadata, replay
+domains, and fitness ranges while keeping direct hot patching and actuation
+disabled.
 
 ::: scpn_phase_orchestrator.supervisor.information_geometry
 

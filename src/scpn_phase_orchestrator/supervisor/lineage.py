@@ -21,6 +21,7 @@ import numpy as np
 __all__ = [
     "build_autopoietic_lineage_replay_corpus",
     "build_autopoietic_lineage_sandbox",
+    "build_intergenerational_policy_inheritance_history",
     "build_intergenerational_policy_inheritance",
 ]
 
@@ -207,6 +208,66 @@ def build_intergenerational_policy_inheritance(
     }
     manifest["inheritance_sha256"] = _stable_hash(manifest)
     return manifest
+
+
+def build_intergenerational_policy_inheritance_history(
+    lineage_manifest: Mapping[str, object],
+    inheritance_manifests: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    """Build deterministic review history for signed inherited-policy records.
+
+    The history package joins one lineage sandbox manifest with signed
+    inheritance manifests derived from it. It is evidence for operator review:
+    the package is deterministic, validates disabled direct hot patching and
+    actuation, and does not execute or merge inherited policies.
+    """
+
+    lineage = _validated_lineage_manifest(lineage_manifest)
+    if (
+        not isinstance(inheritance_manifests, Sequence)
+        or isinstance(inheritance_manifests, str | bytes)
+        or not inheritance_manifests
+    ):
+        raise ValueError("inheritance_manifests must be a non-empty sequence")
+    records = tuple(
+        _validated_inheritance_manifest(manifest, lineage)
+        for manifest in inheritance_manifests
+    )
+    child_rows = tuple(
+        _inheritance_history_child_row(index, manifest)
+        for index, manifest in enumerate(records)
+    )
+    replay_domains = tuple(
+        str(domain)
+        for domain in lineage.get("replay_domains", ())
+        if isinstance(domain, str) and domain
+    )
+    fitness_scores = tuple(
+        float(row["fitness_score"])
+        for row in child_rows
+    )
+    history: dict[str, object] = {
+        "schema": "scpn_intergenerational_policy_inheritance_history_v1",
+        "lineage_sha256": str(lineage["lineage_sha256"]),
+        "parent_policy_sha256": str(lineage["parent_policy_sha256"]),
+        "history_record_count": len(records),
+        "signed_metadata_count": sum(
+            1 for manifest in records if manifest["signed_metadata"]
+        ),
+        "replay_domain_count": len(replay_domains),
+        "replay_domains": replay_domains,
+        "child_rows": child_rows,
+        "minimum_fitness_score": min(fitness_scores),
+        "maximum_fitness_score": max(fitness_scores),
+        "mean_fitness_score": float(np.mean(fitness_scores)),
+        "hot_patch_review_required": True,
+        "direct_hot_patch_permitted": False,
+        "merge_strategy": "reviewed_hot_patch_only",
+        "actuation_permitted": False,
+        "operator_review_required": True,
+    }
+    history["history_sha256"] = _stable_hash(history)
+    return history
 
 
 def _validated_policy(policy: Mapping[str, object]) -> dict[str, float]:
@@ -511,6 +572,106 @@ def _validated_objective_weights(
     if total <= 0.0:
         raise ValueError("objective_weights total must be positive")
     return {key: weights[key] / total for key in sorted(weights)}
+
+
+def _validated_inheritance_manifest(
+    manifest: Mapping[str, object],
+    lineage: Mapping[str, object],
+) -> dict[str, object]:
+    if not isinstance(manifest, Mapping):
+        raise ValueError("inheritance_manifest must be a mapping")
+    data = dict(manifest)
+    if data.get("schema") != "scpn_intergenerational_policy_inheritance_v1":
+        raise ValueError("inheritance_manifest schema is unsupported")
+    if data.get("lineage_sha256") != lineage.get("lineage_sha256"):
+        raise ValueError("inheritance_manifest lineage_sha256 does not match")
+    if data.get("parent_policy_sha256") != lineage.get("parent_policy_sha256"):
+        raise ValueError("inheritance_manifest parent_policy_sha256 does not match")
+    recorded_hash = _non_empty_string(
+        data.get("inheritance_sha256"), "inheritance_manifest.inheritance_sha256"
+    )
+    body = dict(data)
+    body.pop("inheritance_sha256", None)
+    if _stable_hash(body) != recorded_hash:
+        raise ValueError("inheritance_manifest hash does not match content")
+    if data.get("hot_patch_review_required") is not True:
+        raise ValueError("inheritance_manifest must require hot patch review")
+    if data.get("direct_hot_patch_permitted") is not False:
+        raise ValueError("inheritance_manifest must disable direct hot patching")
+    if data.get("actuation_permitted") is not False:
+        raise ValueError("inheritance_manifest must disable actuation")
+    if data.get("merge_strategy") != "reviewed_hot_patch_only":
+        raise ValueError("inheritance_manifest merge strategy is unsupported")
+    _non_empty_string(data.get("child_sha256"), "inheritance_manifest.child_sha256")
+    _validated_policy(
+        _require_mapping(
+            data.get("inherited_policy_genome"),
+            "inheritance_manifest.inherited_policy_genome",
+        )
+    )
+    fitness = _require_mapping(
+        data.get("multi_objective_replay_fitness"),
+        "inheritance_manifest.multi_objective_replay_fitness",
+    )
+    _finite_number(fitness.get("fitness_score"), "fitness_score")
+    signed = _require_mapping(
+        data.get("signed_metadata"),
+        "inheritance_manifest.signed_metadata",
+    )
+    if signed.get("signature_algorithm") != "hmac-sha256":
+        raise ValueError("inheritance_manifest signature algorithm is unsupported")
+    _non_empty_string(signed.get("signer_id"), "signed_metadata.signer_id")
+    signature = _non_empty_string(
+        signed.get("signature_sha256"),
+        "signed_metadata.signature_sha256",
+    )
+    if len(signature) != 64 or any(
+        char not in "0123456789abcdef" for char in signature
+    ):
+        raise ValueError("signed_metadata.signature_sha256 must be lowercase SHA-256")
+    if not _policy_diff_items(data):
+        raise ValueError("inheritance_manifest.policy_diff must be non-empty")
+    return data
+
+
+def _inheritance_history_child_row(
+    index: int,
+    manifest: Mapping[str, object],
+) -> dict[str, object]:
+    fitness = _require_mapping(
+        manifest["multi_objective_replay_fitness"],
+        "multi_objective_replay_fitness",
+    )
+    signed = _require_mapping(manifest["signed_metadata"], "signed_metadata")
+    return {
+        "generation_index": index,
+        "inheritance_sha256": str(manifest["inheritance_sha256"]),
+        "lineage_sha256": str(manifest["lineage_sha256"]),
+        "child_sha256": str(manifest["child_sha256"]),
+        "signer_id": str(signed["signer_id"]),
+        "signature_sha256": str(signed["signature_sha256"]),
+        "policy_gene_count": len(
+            _require_mapping(
+                manifest["inherited_policy_genome"],
+                "inherited_policy_genome",
+            )
+        ),
+        "policy_diff_count": len(_policy_diff_items(manifest)),
+        "fitness_score": _finite_number(fitness["fitness_score"], "fitness_score"),
+        "reward_component": _finite_number(
+            fitness["reward_component"], "reward_component"
+        ),
+        "safety_component": _finite_number(
+            fitness["safety_component"], "safety_component"
+        ),
+        "simplicity_component": _finite_number(
+            fitness["simplicity_component"], "simplicity_component"
+        ),
+        "merge_strategy": str(manifest["merge_strategy"]),
+        "hot_patch_review_required": True,
+        "direct_hot_patch_permitted": False,
+        "actuation_permitted": False,
+    }
 
 
 def _multi_objective_fitness(

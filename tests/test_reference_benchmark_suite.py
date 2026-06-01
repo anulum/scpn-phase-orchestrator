@@ -1187,11 +1187,14 @@ def test_intergenerational_policy_inheritance_gate_benchmark_shape() -> None:
     assert out["manifest_count"] == 2
     assert out["signed_metadata_count"] == 2
     assert out["policy_gene_count"] == 3
+    assert out["history_record_count"] == 2
+    assert out["replay_domain_count"] == 4
     assert float(out["min_fitness_score"]) >= 0.35
     assert out["review_only"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
     assert len(str(out["inheritance_sha256"])) == 64
+    assert len(str(out["history_sha256"])) == 64
     assert float(out["steps_per_second"]) > 0.0
 
 
@@ -1199,11 +1202,14 @@ def test_intergenerational_policy_inheritance_gate_reports_signed_records() -> N
     out = benchmark_intergenerational_policy_inheritance_gate()
     thresholds = json.loads(str(out["acceptance_thresholds_json"]))
     manifests = json.loads(str(out["inheritance_manifests_json"]))
+    history = json.loads(str(out["inheritance_history_json"]))
 
     assert thresholds == {
         "min_fitness_score": 0.35,
+        "min_history_record_count": 2,
         "min_manifest_count": 2,
         "min_policy_gene_count": 3,
+        "min_replay_domain_count": 4,
         "min_signed_metadata_count": 2,
         "require_deterministic_hash": True,
         "require_review_only": True,
@@ -1224,6 +1230,13 @@ def test_intergenerational_policy_inheritance_gate_reports_signed_records() -> N
         manifest["merge_strategy"] == "reviewed_hot_patch_only"
         for manifest in manifests
     )
+    assert history["schema"] == "scpn_intergenerational_policy_inheritance_history_v1"
+    assert history["history_record_count"] == 2
+    assert history["signed_metadata_count"] == 2
+    assert history["replay_domain_count"] == 4
+    assert history["direct_hot_patch_permitted"] is False
+    assert history["actuation_permitted"] is False
+    assert [row["generation_index"] for row in history["child_rows"]] == [0, 1]
 
 
 def test_temporal_causal_hypergraph_experiment_gate_benchmark_shape() -> None:

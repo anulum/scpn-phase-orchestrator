@@ -135,6 +135,21 @@ display the evidence. The payload sets `actuation_permitted: false`,
 `operator_review_required: true`; it is a review surface for comparing
 resource-bounded child-policy proposals, not a self-modifying runtime.
 
+`build_intergenerational_inheritance_studio_panel(histories)` renders passive
+intergenerational policy-inheritance history evidence into an operator payload.
+It preserves signed inheritance-history packages, inheritance SHA-256 hashes,
+child-policy hashes, HMAC signature metadata, replay-domain coverage, and
+multi-objective replay-fitness rows under the
+`intergenerational_inheritance_review_not_direct_hot_patch` claim boundary. The
+helper requires deterministic history hashes, matching history/signed-count
+rows, contiguous generation indices, finite fitness metrics, reviewed-hot-patch
+merge semantics, disabled direct hot patching, and disabled actuation before
+Studio may display the evidence. The payload sets
+`direct_hot_patch_permitted: false`, `hot_patch_permitted: false`,
+`live_merge_permitted: false`, `actuation_permitted: false`, and
+`operator_review_required: true`; it is a signed review surface, not an
+executable patch channel.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.product

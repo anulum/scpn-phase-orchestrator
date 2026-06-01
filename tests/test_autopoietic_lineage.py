@@ -14,6 +14,7 @@ from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
+    build_intergenerational_policy_inheritance_history,
 )
 
 
@@ -182,6 +183,43 @@ def test_intergenerational_policy_inheritance_is_signed_and_review_only() -> Non
     assert first["direct_hot_patch_permitted"] is False
     assert first["actuation_permitted"] is False
     assert first["merge_strategy"] == "reviewed_hot_patch_only"
+
+
+def test_intergenerational_policy_inheritance_history_preserves_review_records() -> None:
+    lineage = build_autopoietic_lineage_sandbox(
+        {"K": 0.42, "alpha": 0.18, "zeta": 0.09},
+        build_autopoietic_lineage_replay_corpus(),
+        child_budget=2,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+    inheritances = [
+        build_intergenerational_policy_inheritance(
+            lineage,
+            child,
+            signer_id="operator-review-key",
+            signing_key="local-test-key",
+            objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
+        )
+        for child in lineage["child_candidates"]
+        if child["status"] == "accepted_for_review"
+    ]
+
+    first = build_intergenerational_policy_inheritance_history(lineage, inheritances)
+    second = build_intergenerational_policy_inheritance_history(lineage, inheritances)
+
+    assert first == second
+    assert first["schema"] == "scpn_intergenerational_policy_inheritance_history_v1"
+    assert first["history_record_count"] == len(inheritances)
+    assert first["signed_metadata_count"] == len(inheritances)
+    assert first["replay_domain_count"] == 4
+    assert first["direct_hot_patch_permitted"] is False
+    assert first["actuation_permitted"] is False
+    assert first["operator_review_required"] is True
+    assert len(str(first["history_sha256"])) == 64
+    assert [row["generation_index"] for row in first["child_rows"]] == [0, 1]
+    assert all(row["fitness_score"] > 0.0 for row in first["child_rows"])
 
 
 def test_intergenerational_policy_inheritance_rejects_unreviewed_children() -> None:

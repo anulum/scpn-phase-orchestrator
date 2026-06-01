@@ -113,6 +113,7 @@ from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
 from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
+    build_intergenerational_policy_inheritance_history,
     build_intergenerational_policy_inheritance,
 )
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
@@ -316,6 +317,7 @@ __all__ = [
     "build_bft_meta_orchestrator_manifest",
     "build_autopoietic_lineage_replay_corpus",
     "build_autopoietic_lineage_sandbox",
+    "build_intergenerational_policy_inheritance_history",
     "build_evolutionary_supervisor_search_examples",
     "build_evolutionary_supervisor_search_examples_from_worker_a_api",
     "build_federated_meta_orchestrator_manifest",

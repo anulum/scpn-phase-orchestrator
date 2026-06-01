@@ -22,6 +22,8 @@ from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldState,
     build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
+    build_intergenerational_policy_inheritance,
+    build_intergenerational_policy_inheritance_history,
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
 )
@@ -110,6 +112,20 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         minimum_replay_reward=0.7,
         minimum_safety_margin=0.1,
     )
+    inheritance_manifests = [
+        build_intergenerational_policy_inheritance(
+            lineage_manifest,
+            child,
+            signer_id="studio-facade-review-key",
+            signing_key="studio-facade-local-signing-key",
+        )
+        for child in lineage_manifest["child_candidates"]
+        if child["status"] == "accepted_for_review"
+    ]
+    inheritance_history = build_intergenerational_policy_inheritance_history(
+        lineage_manifest,
+        inheritance_manifests,
+    )
     morphogenetic_artifact = render_morphogenetic_field_svg(
         MorphogeneticFieldState(
             np.array(
@@ -138,6 +154,9 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         )
     )
     lineage_panel = studio.build_autopoietic_lineage_studio_panel([lineage_manifest])
+    inheritance_panel = studio.build_intergenerational_inheritance_studio_panel(
+        [inheritance_history]
+    )
     morphogenetic_panel = studio.build_morphogenetic_field_studio_panel(
         morphogenetic_artifact
     )
@@ -170,6 +189,13 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     assert lineage_panel["actuation_permitted"] is False
     assert lineage_panel["replay_domain_count"] == 4
     assert "build_autopoietic_lineage_studio_panel" in studio.__all__
+    assert inheritance_panel["claim_boundary"] == (
+        "intergenerational_inheritance_review_not_direct_hot_patch"
+    )
+    assert inheritance_panel["direct_hot_patch_permitted"] is False
+    assert inheritance_panel["actuation_permitted"] is False
+    assert inheritance_panel["history_record_total"] == 2
+    assert "build_intergenerational_inheritance_studio_panel" in studio.__all__
     assert morphogenetic_panel["panel_kind"] == ("studio_morphogenetic_field_panel")
     assert morphogenetic_panel["actuation_permitted"] is False
     assert morphogenetic_panel["strongest_edge"] == {

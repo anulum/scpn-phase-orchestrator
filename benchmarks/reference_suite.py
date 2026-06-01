@@ -98,6 +98,7 @@ from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
+    build_intergenerational_policy_inheritance_history,
 )
 from scpn_phase_orchestrator.supervisor.multiverse import (
     MultiverseBranchSpec,
@@ -323,6 +324,8 @@ class IntergenerationalInheritanceThresholds(NamedTuple):
     min_manifest_count: int
     min_signed_metadata_count: int
     min_policy_gene_count: int
+    min_history_record_count: int
+    min_replay_domain_count: int
     min_fitness_score: float
     require_review_only: bool
     require_deterministic_hash: bool
@@ -2949,25 +2952,14 @@ def benchmark_intergenerational_policy_inheritance_gate() -> dict[
         min_manifest_count=2,
         min_signed_metadata_count=2,
         min_policy_gene_count=3,
+        min_history_record_count=2,
+        min_replay_domain_count=4,
         min_fitness_score=0.35,
         require_review_only=True,
         require_deterministic_hash=True,
     )
     parent_policy = {"K": 0.42, "alpha": 0.18, "zeta": 0.09}
-    replays = [
-        {
-            "replay_id": "nominal_grid_replay",
-            "reward": 0.82,
-            "safety_margin": 0.24,
-            "violations": [],
-        },
-        {
-            "replay_id": "disturbance_grid_replay",
-            "reward": 0.74,
-            "safety_margin": 0.18,
-            "violations": [],
-        },
-    ]
+    replays = build_autopoietic_lineage_replay_corpus()
 
     t0 = time.perf_counter()
     lineage = build_autopoietic_lineage_sandbox(
@@ -3000,9 +2992,19 @@ def benchmark_intergenerational_policy_inheritance_gate() -> dict[
         signing_key="reference-suite-local-signing-key",
         objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
     )
+    history = build_intergenerational_policy_inheritance_history(
+        lineage,
+        inheritance_manifests,
+    )
+    repeated_history = build_intergenerational_policy_inheritance_history(
+        lineage,
+        inheritance_manifests,
+    )
     elapsed = time.perf_counter() - t0
 
     manifest_count = len(inheritance_manifests)
+    history_record_count = int(history["history_record_count"])
+    replay_domain_count = int(history["replay_domain_count"])
     signed_metadata_count = sum(
         1 for manifest in inheritance_manifests if manifest["signed_metadata"]
     )
@@ -3021,14 +3023,21 @@ def benchmark_intergenerational_policy_inheritance_gate() -> dict[
             and manifest["merge_strategy"] == "reviewed_hot_patch_only"
             for manifest in inheritance_manifests
         )
+        and history["hot_patch_review_required"] is True
+        and history["direct_hot_patch_permitted"] is False
+        and history["actuation_permitted"] is False
+        and history["merge_strategy"] == "reviewed_hot_patch_only"
     )
     deterministic_hash = int(
         inheritance_manifests[0]["inheritance_sha256"] == repeated["inheritance_sha256"]
+        and history["history_sha256"] == repeated_history["history_sha256"]
     )
     acceptance_passed = int(
         manifest_count >= thresholds.min_manifest_count
         and signed_metadata_count >= thresholds.min_signed_metadata_count
         and policy_gene_count >= thresholds.min_policy_gene_count
+        and history_record_count >= thresholds.min_history_record_count
+        and replay_domain_count >= thresholds.min_replay_domain_count
         and min_fitness_score >= thresholds.min_fitness_score
         and review_only == int(thresholds.require_review_only)
         and deterministic_hash == int(thresholds.require_deterministic_hash)
@@ -3041,16 +3050,21 @@ def benchmark_intergenerational_policy_inheritance_gate() -> dict[
         "steps_per_second": manifest_count / elapsed,
         "signed_metadata_count": signed_metadata_count,
         "policy_gene_count": policy_gene_count,
+        "history_record_count": history_record_count,
+        "replay_domain_count": replay_domain_count,
         "min_fitness_score": min_fitness_score,
         "review_only": review_only,
         "deterministic_hash": deterministic_hash,
         "inheritance_sha256": str(inheritance_manifests[0]["inheritance_sha256"]),
+        "history_sha256": str(history["history_sha256"]),
         "acceptance_passed": acceptance_passed,
         "acceptance_thresholds_json": json.dumps(
             {
                 "min_fitness_score": thresholds.min_fitness_score,
+                "min_history_record_count": thresholds.min_history_record_count,
                 "min_manifest_count": thresholds.min_manifest_count,
                 "min_policy_gene_count": thresholds.min_policy_gene_count,
+                "min_replay_domain_count": thresholds.min_replay_domain_count,
                 "min_signed_metadata_count": thresholds.min_signed_metadata_count,
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_review_only": thresholds.require_review_only,
@@ -3061,6 +3075,7 @@ def benchmark_intergenerational_policy_inheritance_gate() -> dict[
             inheritance_manifests,
             sort_keys=True,
         ),
+        "inheritance_history_json": json.dumps(history, sort_keys=True),
     }
 
 
