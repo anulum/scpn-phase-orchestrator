@@ -19,6 +19,9 @@ from scpn_phase_orchestrator.supervisor import (
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
 )
+from scpn_phase_orchestrator.supervisor.information_geometry import (
+    propose_information_geometry_control,
+)
 
 
 def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
@@ -37,6 +40,11 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     strange_loop_records = [
         result.to_audit_record() for result in evaluate_strange_loop_drift_scenarios()
     ]
+    information_geometry_record = propose_information_geometry_control(
+        [0.2, 0.3, 0.5],
+        [0.3, 0.3, 0.4],
+        max_step=0.05,
+    ).to_audit_record()
     morphogenetic_artifact = render_morphogenetic_field_svg(
         MorphogeneticFieldState(
             np.array(
@@ -52,6 +60,9 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
 
     integrated_panel = studio.build_integrated_information_panel([integrated_record])
     strange_loop_panel = studio.build_strange_loop_studio_panel(strange_loop_records)
+    information_geometry_panel = studio.build_information_geometry_studio_panel(
+        [information_geometry_record]
+    )
     morphogenetic_panel = studio.build_morphogenetic_field_studio_panel(
         morphogenetic_artifact
     )
@@ -64,6 +75,10 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         "strange_loop_drift_review_not_live_actuation"
     )
     assert strange_loop_panel["actuation_permitted"] is False
+    assert information_geometry_panel["claim_boundary"] == (
+        "information_geometry_control_not_live_actuation"
+    )
+    assert information_geometry_panel["actuation_permitted"] is False
     assert morphogenetic_panel["panel_kind"] == ("studio_morphogenetic_field_panel")
     assert morphogenetic_panel["actuation_permitted"] is False
     assert morphogenetic_panel["strongest_edge"] == {
@@ -75,3 +90,5 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     assert callable(studio.build_multiverse_counterfactual_studio_panel)
     assert "build_hybrid_order_studio_panel" in studio.__all__
     assert callable(studio.build_hybrid_order_studio_panel)
+    assert "build_information_geometry_studio_panel" in studio.__all__
+    assert callable(studio.build_information_geometry_studio_panel)

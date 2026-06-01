@@ -25,6 +25,12 @@ from scpn_phase_orchestrator.supervisor import (
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
 )
+from scpn_phase_orchestrator.supervisor.information_geometry import (
+    propose_information_geometry_control,
+)
+from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
+    build_information_geometry_control_scenarios,
+)
 from scpn_phase_orchestrator.supervisor.multiverse import (
     simulate_multiverse_counterfactual_branches,
 )
@@ -224,6 +230,108 @@ def test_integrated_information_panel_rejects_malformed_monitor_records() -> Non
     with pytest.raises(ValueError, match="symmetric"):
         ui.build_integrated_information_panel(
             [{**valid_record, "pairwise_mi": [[0.5, 0.11], [0.12, 0.5]]}]
+        )
+
+
+def test_information_geometry_studio_panel_preserves_review_evidence() -> None:
+    proposals = [
+        propose_information_geometry_control(
+            [0.16, 0.27, 0.18, 0.39],
+            [0.21, 0.23, 0.27, 0.29],
+            coupling_gradient=[0.05, -0.02, 0.04, -0.01],
+            max_step=0.08,
+            knob="K",
+            scope="power_grid",
+        ).to_audit_record(),
+        propose_information_geometry_control(
+            [0.18, 0.21, 0.25, 0.19, 0.17],
+            [0.20, 0.18, 0.23, 0.21, 0.18],
+            coupling_gradient=[0.03, -0.01, 0.02, -0.01, 0.01],
+            max_step=0.05,
+            knob="zeta",
+            scope="cardiac_rhythm",
+            backend="jax",
+        ).to_audit_record(),
+    ]
+    scenarios = build_information_geometry_control_scenarios()
+
+    panel = ui.build_information_geometry_studio_panel(
+        proposals,
+        scenarios=scenarios,
+    )
+
+    assert panel["panel_kind"] == "studio_information_geometry_panel"
+    assert panel["claim_boundary"] == (
+        "information_geometry_control_not_live_actuation"
+    )
+    assert panel["non_actuating"] is True
+    assert panel["execution_disabled"] is True
+    assert panel["actuation_permitted"] is False
+    assert panel["proposal_count"] == 2
+    assert panel["scenario_count"] == len(scenarios)
+    assert panel["latest"]["scope"] == "cardiac_rhythm"
+    assert panel["metric_diagonal_range"]["minimum"] > 0.0
+    assert panel["fisher_rao_range"]["maximum"] >= panel["fisher_rao_range"]["minimum"]
+    assert (
+        panel["wasserstein_range"]["maximum"] >= (panel["wasserstein_range"]["minimum"])
+    )
+    assert panel["scenario_domains"] == tuple(
+        sorted({scenario["domain"] for scenario in scenarios})
+    )
+    assert panel["candidate_rows"][0]["domain"] == scenarios[0]["domain"]
+    assert panel["candidate_rows"][0]["objective_count"] == len(
+        scenarios[0]["objective_labels"]
+    )
+    assert "actions_to_apply" not in panel
+    assert "control_actions" not in panel
+
+
+def test_information_geometry_studio_panel_rejects_malformed_review_evidence() -> None:
+    proposal = propose_information_geometry_control(
+        [0.2, 0.3, 0.5],
+        [0.3, 0.3, 0.4],
+        coupling_gradient=[0.01, -0.02, 0.01],
+        max_step=0.06,
+    ).to_audit_record()
+    scenario = build_information_geometry_control_scenarios()[0]
+
+    with pytest.raises(ValueError, match="claim boundary"):
+        ui.build_information_geometry_studio_panel(
+            [
+                {
+                    **proposal,
+                    "claim_boundary": "live_information_geometry_control",
+                }
+            ]
+        )
+    with pytest.raises(ValueError, match="metric_tensor"):
+        ui.build_information_geometry_studio_panel(
+            [
+                {
+                    **proposal,
+                    "state": {
+                        **proposal["state"],
+                        "metric_tensor": [[1.0, 0.0], [0.0, 1.0]],
+                    },
+                }
+            ]
+        )
+    with pytest.raises(ValueError, match="simplex_coordinates"):
+        ui.build_information_geometry_studio_panel(
+            [
+                {
+                    **proposal,
+                    "state": {
+                        **proposal["state"],
+                        "simplex_coordinates": [0.2, True, 0.8],
+                    },
+                }
+            ]
+        )
+    with pytest.raises(ValueError, match="scenario_hash"):
+        ui.build_information_geometry_studio_panel(
+            [proposal],
+            scenarios=[{**scenario, "scenario_hash": "bad"}],
         )
 
 

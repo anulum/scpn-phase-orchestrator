@@ -69,6 +69,21 @@ two-group bipartitions, supported local NumPy simulator backends, and matching
 record SHA-256 hashes before Studio may display the evidence. The payload sets
 both `actuation_permitted: false` and `qpu_execution_permitted: false`.
 
+`build_information_geometry_studio_panel(records, scenarios=...)` renders
+passive information-geometry control proposal audit records and deterministic
+domain scenarios into a Studio payload. It exposes Fisher-Rao and Wasserstein
+distance ranges, metric-tensor and positive metric-diagonal ranges,
+natural-gradient norm ranges, curvature/geodesic metrics, backend summaries,
+latest review proposal cards, and scenario candidate rows. The helper requires the
+`information_geometry_control_not_live_actuation` claim boundary, true
+`non_actuating` and `execution_disabled` flags, supported NumPy/JAX information
+geometry backends, SHA-256 proposal/scenario hashes, unit-mass simplex
+coordinates, matching target/tangent dimensions, positive finite metric
+diagonals, symmetric metric tensors, matching geodesic/Fisher-Rao metrics, and
+strictly positive review TTL/max-step values before Studio may display the
+evidence. The payload sets `actuation_permitted: false` and never exposes
+executable control actions.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.ui_helpers
