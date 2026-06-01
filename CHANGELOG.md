@@ -94,6 +94,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the Prometheus adapter decoded sample-pair boundary by rejecting
   boolean, negative, and non-real sample timestamps before returning range or
   instant metric values.
+- Closed the named Gaian/Prometheus JSON deserialisation roadmap scope and
+  moved future adjacent JSON reviews into public boundary maintenance.
 - Aligned Gaian mesh peer and local phase validation with circular phase
   semantics by wrapping finite negative `psi` values modulo `2*pi`.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
