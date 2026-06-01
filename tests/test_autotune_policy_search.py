@@ -25,6 +25,7 @@ from scpn_phase_orchestrator.autotune import (
     search_adaptive_replay_policy,
     search_replay_policy,
 )
+from scpn_phase_orchestrator.autotune.reward import AutotunePolicyProposal
 
 
 class TestReplayPolicySearchContract:
@@ -106,6 +107,36 @@ class TestReplayPolicySearch:
                     channel_weight_step=0.0,
                     cross_channel_gain_step=0.0,
                 ),
+            )
+
+    def test_rejects_non_callable_or_malformed_evaluator_boundary(self) -> None:
+        with pytest.raises(TypeError, match="evaluator"):
+            search_replay_policy(
+                KnobPolicyCandidate(K=0.2),
+                cast("ReplayPolicyEvaluator", object()),
+            )
+
+        def malformed_evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
+            return cast("RewardObservation", {"coherence": 0.9})
+
+        with pytest.raises(TypeError, match="RewardObservation"):
+            search_replay_policy(KnobPolicyCandidate(K=0.2), malformed_evaluator)
+
+    def test_rejects_malformed_config_object_boundary(self) -> None:
+        def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
+            return RewardObservation(coherence=0.8)
+
+        with pytest.raises(TypeError, match="search_config"):
+            search_replay_policy(
+                KnobPolicyCandidate(K=0.2),
+                evaluator,
+                search_config=cast("OfflinePolicySearchConfig", object()),
+            )
+        with pytest.raises(TypeError, match="proposal_config"):
+            search_replay_policy(
+                KnobPolicyCandidate(K=0.2),
+                evaluator,
+                proposal_config=cast("PolicyProposalConfig", object()),
             )
 
     def test_audit_record_serialises_search_and_proposal(self) -> None:
@@ -203,6 +234,28 @@ class TestReplayPolicySearch:
         assert any(
             isinstance(record["channel_weights"], list) for record in candidate_records
         )
+
+    def test_result_constructor_rejects_non_physical_audit_payloads(self) -> None:
+        proposal = AutotunePolicyProposal(
+            accepted=False,
+            selected=None,
+            alternatives=(),
+            reasons=("review required",),
+            config=PolicyProposalConfig(),
+        )
+
+        with pytest.raises(ValueError, match="seed.K.*boolean"):
+            ReplayPolicySearchResult(
+                seed=KnobPolicyCandidate(K=cast("float", True)),
+                candidates=(KnobPolicyCandidate(),),
+                proposal=proposal,
+            )
+        with pytest.raises(ValueError, match="channel_weights"):
+            ReplayPolicySearchResult(
+                seed=KnobPolicyCandidate(channel_weights=(cast("float", -0.1),)),
+                candidates=(KnobPolicyCandidate(),),
+                proposal=proposal,
+            )
 
     def test_evaluator_alias_accepts_candidate_to_observation_callable(self) -> None:
         def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
@@ -344,9 +397,50 @@ class TestAdaptiveReplayPolicySearch:
     def test_adaptive_config_validates_bounds(self) -> None:
         with pytest.raises(ValueError, match="iterations"):
             AdaptiveReplayPolicySearchConfig(iterations=0)
+        with pytest.raises(TypeError, match="iterations"):
+            AdaptiveReplayPolicySearchConfig(iterations=cast("int", True))
+        with pytest.raises(TypeError, match="iterations"):
+            AdaptiveReplayPolicySearchConfig(iterations=cast("int", 1.5))
         with pytest.raises(ValueError, match="step_decay"):
             AdaptiveReplayPolicySearchConfig(step_decay=0.0)
+        with pytest.raises(ValueError, match="step_decay"):
+            AdaptiveReplayPolicySearchConfig(
+                step_decay=cast("float", np.bool_(True))
+            )
         with pytest.raises(ValueError, match="improvement_tolerance"):
             AdaptiveReplayPolicySearchConfig(improvement_tolerance=-0.1)
+        with pytest.raises(ValueError, match="improvement_tolerance"):
+            AdaptiveReplayPolicySearchConfig(
+                improvement_tolerance=cast("float", True)
+            )
         with pytest.raises(ValueError, match="min_step"):
             AdaptiveReplayPolicySearchConfig(min_step=-0.1)
+        with pytest.raises(ValueError, match="min_step"):
+            AdaptiveReplayPolicySearchConfig(
+                min_step=cast("float", np.bool_(False))
+            )
+        with pytest.raises(TypeError, match="base_search_config"):
+            AdaptiveReplayPolicySearchConfig(
+                base_search_config=cast("OfflinePolicySearchConfig", object())
+            )
+
+        config = AdaptiveReplayPolicySearchConfig(iterations=np.int64(2))
+
+        assert config.iterations == 2
+        assert isinstance(config.iterations, int)
+
+    def test_adaptive_search_rejects_malformed_public_boundaries(self) -> None:
+        def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
+            return RewardObservation(coherence=0.8)
+
+        with pytest.raises(TypeError, match="evaluator"):
+            search_adaptive_replay_policy(
+                KnobPolicyCandidate(K=0.2),
+                cast("ReplayPolicyEvaluator", object()),
+            )
+        with pytest.raises(TypeError, match="adaptive_config"):
+            search_adaptive_replay_policy(
+                KnobPolicyCandidate(K=0.2),
+                evaluator,
+                adaptive_config=cast("AdaptiveReplayPolicySearchConfig", object()),
+            )

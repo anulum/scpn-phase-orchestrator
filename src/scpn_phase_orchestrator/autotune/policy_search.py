@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -55,17 +56,37 @@ class AdaptiveReplayPolicySearchConfig:
     min_step: float = 0.0
 
     def __post_init__(self) -> None:
-        if self.iterations < 1:
-            raise ValueError("iterations must be positive")
-        if not np.isfinite(self.step_decay) or not 0.0 < self.step_decay <= 1.0:
-            raise ValueError("step_decay must be finite and within (0, 1]")
-        if (
-            not np.isfinite(self.improvement_tolerance)
-            or self.improvement_tolerance < 0.0
-        ):
-            raise ValueError("improvement_tolerance must be finite and non-negative")
-        if not np.isfinite(self.min_step) or self.min_step < 0.0:
-            raise ValueError("min_step must be finite and non-negative")
+        if not isinstance(self.base_search_config, OfflinePolicySearchConfig):
+            raise TypeError("base_search_config must be OfflinePolicySearchConfig")
+        object.__setattr__(
+            self,
+            "iterations",
+            _require_positive_integer(self.iterations, "iterations"),
+        )
+        object.__setattr__(
+            self,
+            "step_decay",
+            _require_bounded_real(
+                self.step_decay,
+                "step_decay",
+                lower=0.0,
+                upper=1.0,
+                lower_inclusive=False,
+            ),
+        )
+        object.__setattr__(
+            self,
+            "improvement_tolerance",
+            _require_non_negative_real(
+                self.improvement_tolerance,
+                "improvement_tolerance",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "min_step",
+            _require_non_negative_real(self.min_step, "min_step"),
+        )
 
 
 @dataclass(frozen=True)
@@ -75,6 +96,17 @@ class ReplayPolicySearchResult:
     seed: KnobPolicyCandidate
     candidates: tuple[KnobPolicyCandidate, ...]
     proposal: AutotunePolicyProposal
+
+    def __post_init__(self) -> None:
+        _validate_candidate(self.seed, "seed")
+        if not isinstance(self.candidates, tuple):
+            raise TypeError("candidates must be a tuple of KnobPolicyCandidate")
+        if not self.candidates:
+            raise ValueError("candidates must not be empty")
+        for index, candidate in enumerate(self.candidates):
+            _validate_candidate(candidate, f"candidates[{index}]")
+        if not isinstance(self.proposal, AutotunePolicyProposal):
+            raise TypeError("proposal must be AutotunePolicyProposal")
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a serialisable search record."""
@@ -95,6 +127,22 @@ class AdaptiveReplayPolicySearchResult:
     rounds: tuple[ReplayPolicySearchResult, ...]
     proposal: AutotunePolicyProposal
     config: AdaptiveReplayPolicySearchConfig
+
+    def __post_init__(self) -> None:
+        _validate_candidate(self.seed, "seed")
+        if not isinstance(self.rounds, tuple):
+            raise TypeError("rounds must be a tuple of ReplayPolicySearchResult")
+        if not self.rounds:
+            raise ValueError("rounds must not be empty")
+        for index, round_result in enumerate(self.rounds):
+            if not isinstance(round_result, ReplayPolicySearchResult):
+                raise TypeError(
+                    f"rounds[{index}] must be ReplayPolicySearchResult"
+                )
+        if not isinstance(self.proposal, AutotunePolicyProposal):
+            raise TypeError("proposal must be AutotunePolicyProposal")
+        if not isinstance(self.config, AdaptiveReplayPolicySearchConfig):
+            raise TypeError("config must be AdaptiveReplayPolicySearchConfig")
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a serialisable adaptive-search record."""
@@ -127,17 +175,46 @@ def search_replay_policy(
     applies control actions directly; it only turns candidate observations into
     the existing reviewable proposal record.
     """
-    candidates = generate_offline_policy_candidates(seed, search_config)
+    _validate_candidate(seed, "seed")
+    if not callable(evaluator):
+        raise TypeError("evaluator must be callable")
+    active_search_config = cast(
+        "OfflinePolicySearchConfig | None",
+        _optional_config(
+            search_config,
+            OfflinePolicySearchConfig,
+            "search_config",
+        ),
+    )
+    active_reward_config = cast(
+        "RewardConfig | None",
+        _optional_config(
+            reward_config,
+            RewardConfig,
+            "reward_config",
+        ),
+    )
+    active_proposal_config = cast(
+        "PolicyProposalConfig | None",
+        _optional_config(
+            proposal_config,
+            PolicyProposalConfig,
+            "proposal_config",
+        ),
+    )
+
+    candidates = generate_offline_policy_candidates(seed, active_search_config)
     if not candidates:
         raise ValueError("replay policy search generated no candidates")
 
     replay_observations = tuple(
-        (candidate, evaluator(candidate)) for candidate in candidates
+        (candidate, _evaluate_candidate(evaluator, candidate))
+        for candidate in candidates
     )
     proposal = propose_replay_policy(
         replay_observations,
-        reward_config=reward_config,
-        proposal_config=proposal_config,
+        reward_config=active_reward_config,
+        proposal_config=active_proposal_config,
     )
     return ReplayPolicySearchResult(
         seed=seed,
@@ -160,8 +237,41 @@ def search_adaptive_replay_policy(
     final proposal is still built from replay observations and existing review
     gates; no candidate is applied directly.
     """
-    active_config = adaptive_config or AdaptiveReplayPolicySearchConfig()
-    active_proposal_config = proposal_config or PolicyProposalConfig()
+    _validate_candidate(seed, "seed")
+    if not callable(evaluator):
+        raise TypeError("evaluator must be callable")
+    active_config = (
+        AdaptiveReplayPolicySearchConfig()
+        if adaptive_config is None
+        else cast(
+            "AdaptiveReplayPolicySearchConfig",
+            _require_config_type(
+                adaptive_config,
+                AdaptiveReplayPolicySearchConfig,
+                "adaptive_config",
+            ),
+        )
+    )
+    active_reward_config = cast(
+        "RewardConfig | None",
+        _optional_config(
+            reward_config,
+            RewardConfig,
+            "reward_config",
+        ),
+    )
+    active_proposal_config = (
+        PolicyProposalConfig()
+        if proposal_config is None
+        else cast(
+            "PolicyProposalConfig",
+            _require_config_type(
+                proposal_config,
+                PolicyProposalConfig,
+                "proposal_config",
+            ),
+        )
+    )
     current_seed = seed
     search_config = active_config.base_search_config
     rounds: list[ReplayPolicySearchResult] = []
@@ -173,12 +283,13 @@ def search_adaptive_replay_policy(
         if not candidates:
             raise ValueError("adaptive replay policy search generated no candidates")
         round_observations = tuple(
-            (candidate, evaluator(candidate)) for candidate in candidates
+            (candidate, _evaluate_candidate(evaluator, candidate))
+            for candidate in candidates
         )
         replay_observations.extend(round_observations)
         round_proposal = propose_replay_policy(
             round_observations,
-            reward_config=reward_config,
+            reward_config=active_reward_config,
             proposal_config=active_proposal_config,
         )
         rounds.append(
@@ -191,7 +302,7 @@ def search_adaptive_replay_policy(
 
         ranked = rank_replay_candidates(
             round_observations,
-            reward_config,
+            active_reward_config,
             require_safe=active_proposal_config.require_safe,
             top_k=1,
         )
@@ -203,7 +314,7 @@ def search_adaptive_replay_policy(
 
     final_proposal = propose_replay_policy(
         tuple(replay_observations),
-        reward_config=reward_config,
+        reward_config=active_reward_config,
         proposal_config=active_proposal_config,
     )
     return AdaptiveReplayPolicySearchResult(
@@ -215,6 +326,7 @@ def search_adaptive_replay_policy(
 
 
 def _candidate_to_record(candidate: KnobPolicyCandidate) -> dict[str, object]:
+    _validate_candidate(candidate, "candidate")
     return {
         "K": _serialise_knob(candidate.K),
         "alpha": _serialise_knob(candidate.alpha),
@@ -226,10 +338,129 @@ def _candidate_to_record(candidate: KnobPolicyCandidate) -> dict[str, object]:
 
 
 def _serialise_knob(value: float | FloatArray) -> object:
-    array = np.asarray(value, dtype=np.float64)
+    array = _real_array(value, "candidate knob")
     if array.ndim == 0:
         return float(array)
     return cast("list[object]", array.tolist())
+
+
+def _evaluate_candidate(
+    evaluator: ReplayPolicyEvaluator,
+    candidate: KnobPolicyCandidate,
+) -> RewardObservation:
+    observation = evaluator(candidate)
+    if not isinstance(observation, RewardObservation):
+        raise TypeError("evaluator must return RewardObservation")
+    return observation
+
+
+def _optional_config(
+    value: object | None,
+    expected_type: type[object],
+    label: str,
+) -> object | None:
+    if value is None:
+        return None
+    return _require_config_type(value, expected_type, label)
+
+
+def _require_config_type(
+    value: object,
+    expected_type: type[object],
+    label: str,
+) -> object:
+    if not isinstance(value, expected_type):
+        raise TypeError(f"{label} must be {expected_type.__name__}")
+    return value
+
+
+def _validate_candidate(candidate: object, label: str) -> None:
+    if not isinstance(candidate, KnobPolicyCandidate):
+        raise TypeError(f"{label} must be KnobPolicyCandidate")
+    for knob_name, value in [
+        ("K", candidate.K),
+        ("alpha", candidate.alpha),
+        ("zeta", candidate.zeta),
+        ("Psi", candidate.Psi),
+    ]:
+        _real_array(value, f"{label}.{knob_name}")
+    for index, weight in enumerate(candidate.channel_weights):
+        _require_non_negative_real(
+            weight,
+            f"{label}.channel_weights[{index}]",
+        )
+    for index, gain in enumerate(candidate.cross_channel_gains):
+        _require_non_negative_real(
+            gain,
+            f"{label}.cross_channel_gains[{index}]",
+        )
+
+
+def _require_positive_integer(value: object, label: str) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        raise TypeError(f"{label} must be a positive integer")
+    parsed = int(value)
+    if parsed < 1:
+        raise ValueError(f"{label} must be positive")
+    return parsed
+
+
+def _require_non_negative_real(value: object, label: str) -> float:
+    return _require_bounded_real(
+        value,
+        label,
+        lower=0.0,
+        upper=None,
+        lower_inclusive=True,
+    )
+
+
+def _require_bounded_real(
+    value: object,
+    label: str,
+    *,
+    lower: float,
+    upper: float | None,
+    lower_inclusive: bool,
+) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{label} must be finite")
+    parsed = float(value)
+    if not np.isfinite(parsed):
+        raise ValueError(f"{label} must be finite")
+    lower_ok = parsed >= lower if lower_inclusive else parsed > lower
+    upper_ok = True if upper is None else parsed <= upper
+    if not lower_ok or not upper_ok:
+        if upper is None:
+            interval = f"{'[' if lower_inclusive else '('}{lower}, inf)"
+        else:
+            interval = f"{'[' if lower_inclusive else '('}{lower}, {upper}]"
+        raise ValueError(f"{label} must be within {interval}")
+    return parsed
+
+
+def _real_array(value: object, label: str) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_ or _object_array_contains(raw, (bool, np.bool_)):
+        raise ValueError(f"{label} must not contain boolean values")
+    if np.iscomplexobj(raw) or _object_array_contains(
+        raw,
+        (complex, np.complexfloating),
+    ):
+        raise ValueError(f"{label} must be real-valued")
+    try:
+        array: FloatArray = raw.astype(np.float64, copy=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be real-valued") from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{label} must be finite")
+    return array
+
+
+def _object_array_contains(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+    if raw.dtype != object:
+        return False
+    return any(isinstance(item, aliases) for item in raw.ravel())
 
 
 def _decay_search_config(
