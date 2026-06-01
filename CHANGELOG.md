@@ -104,6 +104,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expanded the Python facade API reference with import, binding-validation,
   deterministic-run, state-record, and safety-boundary contracts plus a
   dedicated docs guard.
+- Expanded the distributed sync API reference with phase-gossip wire-message,
+  digest, sequence-watermark, bounded-correction, replay, and audit contracts
+  plus a dedicated docs guard.
 - Aligned Gaian mesh peer and local phase validation with circular phase
   semantics by wrapping finite negative `psi` values modulo `2*pi`.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
