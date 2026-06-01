@@ -72,19 +72,44 @@ class TestEstimateCoupling:
         with pytest.raises(ValueError, match="omegas"):
             estimate_coupling(phases, np.ones(2), dt=0.01)
 
+    def test_rejects_empty_oscillator_trajectory(self):
+        phases = np.empty((0, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="at least one oscillator"):
+            estimate_coupling(phases, np.empty(0), dt=0.01)
+
     @pytest.mark.parametrize(
         ("phases", "omegas", "message"),
         [
             (np.array([[True, False, True, False]] * 2), np.ones(2), "boolean"),
+            (
+                np.array([[np.bool_(True), 0.2, 0.3, 0.4]], dtype=object),
+                np.ones(1),
+                "boolean",
+            ),
             (np.ones((2, 4), dtype=np.float64), np.array([True, False]), "boolean"),
+            (
+                np.ones((1, 4), dtype=np.float64),
+                np.array([np.bool_(True)], dtype=object),
+                "boolean",
+            ),
             (
                 np.array([[0.0 + 0.1j, 0.2, 0.3, 0.4]] * 2),
                 np.ones(2),
                 "finite 2-D",
             ),
             (
+                np.array([[1.0 + 0.0j, 0.2, 0.3, 0.4]], dtype=object),
+                np.ones(1),
+                "finite 2-D",
+            ),
+            (
                 np.ones((2, 4), dtype=np.float64),
                 np.array([1.0 + 0.1j, 2.0]),
+                "finite 1-D",
+            ),
+            (
+                np.ones((1, 4), dtype=np.float64),
+                np.array([1.0 + 0.0j], dtype=object),
                 "finite 1-D",
             ),
         ],
@@ -121,6 +146,27 @@ class TestEstimateCoupling:
         np.testing.assert_array_equal(knm, np.zeros((3, 3), dtype=np.float64))
         np.testing.assert_array_equal(np.diag(knm), 0.0)
         assert np.all(np.isfinite(knm))
+
+    def test_non_finite_lstsq_coefficients_fail_closed_to_zero_coupling(
+        self, monkeypatch
+    ):
+        phases = np.array(
+            [
+                [0.0, 0.2, 0.5, 0.9],
+                [0.1, 0.3, 0.6, 1.0],
+                [0.4, 0.5, 0.7, 1.1],
+            ],
+            dtype=np.float64,
+        )
+
+        def non_finite_coefficients(*_args, **_kwargs):
+            return np.array([np.nan, np.inf, 1.0]), np.array([]), 0, np.array([])
+
+        monkeypatch.setattr(np.linalg, "lstsq", non_finite_coefficients)
+
+        knm = estimate_coupling(phases, np.ones(3), dt=0.01)
+
+        np.testing.assert_array_equal(knm, np.zeros((3, 3), dtype=np.float64))
 
 
 class TestHarmonicCoupling:
@@ -184,6 +230,11 @@ class TestHarmonicCoupling:
         with pytest.raises(ValueError, match="omegas"):
             estimate_coupling_harmonics(phases, np.ones(2), dt=0.01)
 
+    def test_harmonic_estimator_rejects_empty_oscillator_trajectory(self):
+        phases = np.empty((0, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="at least one oscillator"):
+            estimate_coupling_harmonics(phases, np.empty(0), dt=0.01)
+
     def test_harmonic_estimator_lstsq_failure_fails_closed_to_zero_coefficients(
         self, monkeypatch
     ):
@@ -204,6 +255,51 @@ class TestHarmonicCoupling:
         result = estimate_coupling_harmonics(phases, np.ones(3), dt=0.01)
 
         assert set(result) == {"sin_1", "cos_1", "sin_2", "cos_2"}
+        for coefficients in result.values():
+            np.testing.assert_array_equal(
+                coefficients, np.zeros((3, 3), dtype=np.float64)
+            )
+
+    def test_harmonic_estimator_rejects_numpy_boolean_harmonic_alias(self):
+        phases = np.ones((3, 4), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="n_harmonics"):
+            estimate_coupling_harmonics(
+                phases,
+                np.ones(3),
+                dt=0.01,
+                n_harmonics=np.bool_(True),
+            )
+
+    def test_harmonic_estimator_non_finite_coefficients_fail_closed_to_zero(
+        self, monkeypatch
+    ):
+        phases = np.array(
+            [
+                [0.0, 0.2, 0.5, 0.9],
+                [0.1, 0.3, 0.6, 1.0],
+                [0.4, 0.5, 0.7, 1.1],
+            ],
+            dtype=np.float64,
+        )
+
+        def non_finite_coefficients(*_args, **_kwargs):
+            return (
+                np.array([np.nan, np.inf, 1.0, 2.0, 3.0, 4.0]),
+                np.array([]),
+                0,
+                np.array([]),
+            )
+
+        monkeypatch.setattr(np.linalg, "lstsq", non_finite_coefficients)
+
+        result = estimate_coupling_harmonics(
+            phases,
+            np.ones(3),
+            dt=0.01,
+            n_harmonics=1,
+        )
+
         for coefficients in result.values():
             np.testing.assert_array_equal(
                 coefficients, np.zeros((3, 3), dtype=np.float64)

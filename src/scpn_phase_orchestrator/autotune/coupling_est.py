@@ -32,7 +32,12 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 def _contains_boolean_alias(value: object) -> bool:
     raw = np.asarray(value, dtype=object)
-    return any(isinstance(item, bool) for item in raw.ravel())
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.ravel())
 
 
 def _validate_inputs(
@@ -40,7 +45,7 @@ def _validate_inputs(
     omegas: object,
     dt: object,
 ) -> tuple[FloatArray, FloatArray, float]:
-    if isinstance(dt, bool) or not isinstance(dt, Real):
+    if isinstance(dt, (bool, np.bool_)) or not isinstance(dt, Real):
         raise ValueError("dt must be a finite positive real")
     dt_value = float(dt)
     if not np.isfinite(dt_value) or dt_value <= 0.0:
@@ -51,11 +56,16 @@ def _validate_inputs(
     raw_phases = np.asarray(phases)
     if raw_phases.dtype == np.bool_:
         raise ValueError("phases must not contain boolean values")
-    if np.iscomplexobj(raw_phases):
+    if np.iscomplexobj(raw_phases) or _contains_complex_alias(raw_phases):
         raise ValueError("phases must be a finite 2-D trajectory matrix")
-    phases_array = np.asarray(raw_phases, dtype=np.float64)
+    try:
+        phases_array = np.asarray(raw_phases, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases must be a finite 2-D trajectory matrix") from exc
     if phases_array.ndim != 2:
         raise ValueError("phases must be a finite 2-D trajectory matrix")
+    if phases_array.shape[0] < 1:
+        raise ValueError("phases must contain at least one oscillator")
     if not np.all(np.isfinite(phases_array)):
         raise ValueError("phases must contain only finite values")
 
@@ -64,9 +74,12 @@ def _validate_inputs(
     raw_omegas = np.asarray(omegas)
     if raw_omegas.dtype == np.bool_:
         raise ValueError("omegas must not contain boolean values")
-    if np.iscomplexobj(raw_omegas):
+    if np.iscomplexobj(raw_omegas) or _contains_complex_alias(raw_omegas):
         raise ValueError("omegas must be a finite 1-D frequency vector")
-    omegas_array = np.asarray(raw_omegas, dtype=np.float64)
+    try:
+        omegas_array = np.asarray(raw_omegas, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("omegas must be a finite 1-D frequency vector") from exc
     if omegas_array.ndim != 1:
         raise ValueError("omegas must be a finite 1-D frequency vector")
     if not np.all(np.isfinite(omegas_array)):
@@ -130,7 +143,9 @@ def estimate_coupling(
         # Least squares: target = K_i · regressors
         # K_i = target @ regressors^T @ (regressors @ regressors^T)^{-1}
         with contextlib.suppress(np.linalg.LinAlgError):
-            knm[i, :] = np.linalg.lstsq(regressors.T, target, rcond=None)[0]
+            coeffs = np.linalg.lstsq(regressors.T, target, rcond=None)[0]
+            if np.all(np.isfinite(coeffs)):
+                knm[i, :] = coeffs
 
     np.fill_diagonal(knm, 0.0)
     return knm
@@ -182,6 +197,8 @@ def estimate_coupling_harmonics(
         try:
             coeffs = np.linalg.lstsq(regressors.T, target, rcond=None)[0]
         except np.linalg.LinAlgError:
+            continue
+        if not np.all(np.isfinite(coeffs)):
             continue
 
         # Unpack coefficients
