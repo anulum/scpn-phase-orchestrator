@@ -80,6 +80,13 @@ def test_upde_to_current_rejects_invalid_scale_and_state_values():
         bridge.upde_state_to_input_current(bad_state)
 
 
+@pytest.mark.parametrize("r_value", [-0.01, 1.01])
+def test_upde_to_current_rejects_out_of_bounds_order_parameter(r_value: float):
+    bridge = SNNControllerBridge()
+    with pytest.raises(ValueError, match="layer 0 R"):
+        bridge.upde_state_to_input_current(_make_state([r_value]))
+
+
 def test_public_array_contracts_are_parameterised():
     for hint in [
         get_type_hints(SNNControllerBridge.upde_state_to_input_current)["return"],
@@ -121,6 +128,18 @@ def test_spike_rates_reject_malformed_inputs():
         bridge.spike_rates_to_actions(np.array([np.nan]), [0], threshold_hz=50.0)
     with pytest.raises(ValueError, match="rates"):
         bridge.spike_rates_to_actions(np.ones((1, 1)), [0], threshold_hz=50.0)
+    with pytest.raises(ValueError, match="rates"):
+        bridge.spike_rates_to_actions(np.array([-1.0]), [0], threshold_hz=50.0)
+    with pytest.raises(ValueError, match="rates"):
+        bridge.spike_rates_to_actions(
+            np.array([True, False]), [0, 1], threshold_hz=50.0
+        )
+    with pytest.raises(ValueError, match="rates"):
+        bridge.spike_rates_to_actions(
+            np.array([1.0, 2.0 + 0.0j], dtype=object),
+            [0, 1],
+            threshold_hz=50.0,
+        )
     with pytest.raises(ValueError, match="layer_assignments"):
         bridge.spike_rates_to_actions(np.array([60.0]), [True], threshold_hz=50.0)
     with pytest.raises(ValueError, match="layer_assignments"):
@@ -157,6 +176,10 @@ def test_lif_rate_rejects_non_finite_currents():
         bridge.lif_rate_estimate(np.array([1.0, np.inf]))
     with pytest.raises(ValueError, match="currents"):
         bridge.lif_rate_estimate(np.ones((1, 1)))
+    with pytest.raises(ValueError, match="currents"):
+        bridge.lif_rate_estimate(np.array([True, False]))
+    with pytest.raises(ValueError, match="currents"):
+        bridge.lif_rate_estimate(np.array([1.0, 2.0 + 0.0j], dtype=object))
 
 
 def test_custom_lif_params():
@@ -288,6 +311,27 @@ def test_neuromorphic_schedule_manifest_rejects_invalid_state():
         assert "cross_layer_alignment shape" in str(exc)
     else:
         raise AssertionError("invalid cross-layer shape must be rejected")
+
+
+def test_neuromorphic_schedule_manifest_rejects_non_real_alignment_aliases():
+    bridge = SNNControllerBridge()
+    state = UPDEState(
+        layers=[LayerState(R=0.4, psi=0.0), LayerState(R=0.6, psi=0.0)],
+        cross_layer_alignment=np.array([[0.0, True], [False, 0.0]], dtype=object),
+        stability_proxy=0.5,
+        regime_id="nominal",
+    )
+
+    with pytest.raises(ValueError, match="cross_layer_alignment"):
+        bridge.build_neuromorphic_schedule_manifest(state)
+
+
+def test_neuromorphic_schedule_manifest_rejects_unbounded_order_parameter():
+    bridge = SNNControllerBridge()
+    state = _make_state([0.4, 1.2])
+
+    with pytest.raises(ValueError, match="layer 1 R"):
+        bridge.build_neuromorphic_schedule_manifest(state)
 
 
 def test_neuromorphic_target_readiness_audit_blocks_missing_preconditions():

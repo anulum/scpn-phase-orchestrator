@@ -70,11 +70,42 @@ def _require_positive_real(value: object, *, field: str) -> float:
     return result
 
 
-def _require_finite_array(values: FloatArray, *, field: str) -> FloatArray:
+def _has_non_real_numeric_alias(value: object) -> bool:
+    if isinstance(value, bool | np.bool_):
+        return True
+    if isinstance(value, complex | np.complexfloating):
+        return True
+    if isinstance(value, np.ndarray):
+        if value.dtype.kind in {"b", "c"}:
+            return True
+        if value.dtype.kind == "O":
+            return any(_has_non_real_numeric_alias(item) for item in value.flat)
+        return False
+    if isinstance(value, list | tuple):
+        return any(_has_non_real_numeric_alias(item) for item in value)
+    return not isinstance(value, Real)
+
+
+def _require_finite_array(values: object, *, field: str) -> FloatArray:
+    if _has_non_real_numeric_alias(values):
+        raise ValueError(f"{field} must contain real-valued numeric data")
     array: FloatArray = np.asarray(values, dtype=np.float64)
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{field} must contain only finite values")
     return array
+
+
+def _require_order_parameter(value: object, *, field: str) -> float:
+    if (
+        not isinstance(value, Real)
+        or isinstance(value, bool)
+        or not isfinite(float(value))
+    ):
+        raise ValueError(f"{field} must be finite")
+    result = float(value)
+    if result < 0.0 or result > 1.0:
+        raise ValueError(f"{field} must be within [0, 1]")
+    return result
 
 
 def _validated_layer_assignments(layer_assignments: list[int]) -> list[int]:
@@ -123,10 +154,13 @@ class SNNControllerBridge:
     ) -> FloatArray:
         """Map R values from each layer to LIF input currents."""
         i_scale = _require_positive_real(i_scale, field="i_scale")
-        for idx, layer in enumerate(state.layers):
-            if not np.isfinite(layer.R):
-                raise ValueError(f"layer {idx} R must be finite")
-        r_values: FloatArray = np.array([ls.R for ls in state.layers], dtype=np.float64)
+        r_values: FloatArray = np.array(
+            [
+                _require_order_parameter(layer.R, field=f"layer {idx} R")
+                for idx, layer in enumerate(state.layers)
+            ],
+            dtype=np.float64,
+        )
         result: FloatArray = r_values * i_scale
         return result
 
@@ -145,6 +179,8 @@ class SNNControllerBridge:
         rates = _require_finite_array(rates, field="rates")
         if rates.ndim != 1:
             raise ValueError("rates must be 1-D")
+        if np.any(rates < 0.0):
+            raise ValueError("rates must be non-negative")
         layer_assignments = _validated_layer_assignments(layer_assignments)
         if len(layer_assignments) != rates.size:
             raise ValueError("layer_assignments length must match rates length")
@@ -419,7 +455,10 @@ class SNNControllerBridge:
         ):
             if not np.isfinite(value) or value <= 0.0:
                 raise ValueError(f"{name} must be finite and positive")
-        alignment = np.asarray(state.cross_layer_alignment, dtype=np.float64)
+        alignment = _require_finite_array(
+            state.cross_layer_alignment,
+            field="cross_layer_alignment",
+        )
         if alignment.shape != (n_layers, n_layers):
             raise ValueError(
                 "cross_layer_alignment shape must match layer count, "
@@ -428,8 +467,9 @@ class SNNControllerBridge:
         if not np.all(np.isfinite(alignment)):
             raise ValueError("cross_layer_alignment must contain finite values")
         for idx, layer in enumerate(state.layers):
-            if not np.isfinite(layer.R) or not np.isfinite(layer.psi):
-                raise ValueError(f"layer {idx} R and psi must be finite")
+            _require_order_parameter(layer.R, field=f"layer {idx} R")
+            if not np.isfinite(layer.psi):
+                raise ValueError(f"layer {idx} psi must be finite")
 
     def _population_record(
         self,

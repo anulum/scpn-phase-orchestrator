@@ -95,6 +95,11 @@ phase-state exports from entering downstream review paths.
 
 ### SNN Bridge
 
+`SNNControllerBridge` maps finite UPDE layer order-parameter magnitudes in
+`[0, 1]` to LIF input currents, validates non-negative real-valued spike rates
+before action projection, and rejects boolean or complex array aliases before
+schedule-manifest generation.
+
 ::: scpn_phase_orchestrator.adapters.snn_bridge
 
 ### Neurocore Bridge

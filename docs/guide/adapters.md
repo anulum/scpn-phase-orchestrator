@@ -114,7 +114,10 @@ available), Nengo-style pure-numpy schedules, and Lava schedule handoff.
 `lava-nc` is intentionally not installed by SPO extras because current
 upstream releases pin a vulnerable `asteval` range; live Lava runtimes must be
 managed by the external operator environment. Converts `UPDEState` R-values to
-LIF input currents and spike rates to `ControlAction` objects.
+LIF input currents and spike rates to `ControlAction` objects. Imported layer
+order parameters must be finite magnitudes in `[0, 1]`; current, rate, and
+cross-alignment arrays reject boolean and complex aliases before numeric
+coercion, and spike rates must remain non-negative.
 
 ```python
 from scpn_phase_orchestrator.adapters import SNNControllerBridge
