@@ -199,6 +199,9 @@ Multiple independent instances of SPO running across different machines can "cou
 - **Topological Consensus:** Enables thousands of independent agents (drones, servers) to synchronize without a central command node.
 - **Timeout-Aware:** Automatically drops stale peers from the mean-field calculation to prevent phantom drag.
 
+Peer and local `psi` values are finite real phases on the circle; negative
+finite phases are canonicalised modulo `2*pi` before mesh-drive computation.
+
 ::: scpn_phase_orchestrator.adapters.gaian_mesh_bridge
 
 ## LSL BCI Entrainment Bridge

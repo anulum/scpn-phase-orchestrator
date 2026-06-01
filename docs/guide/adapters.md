@@ -148,6 +148,12 @@ amplitudes, and custom frequencies must be finite positive real values; boolean
 and complex aliases are rejected before buffering or waveform generation so
 digital flags and phasors cannot enter oscillator sensor channels.
 
+### GaianMeshNode
+
+Distributed mesh coupling exchanges reduced peer order parameters. Peer and
+local phases use circular semantics: finite real negative `psi` values are
+wrapped modulo `2*pi`, while non-finite and boolean aliases remain invalid.
+
 ### LSLBCIBridge
 
 Live BCI ingress uses Lab Streaming Layer samples as a phase-extraction input.

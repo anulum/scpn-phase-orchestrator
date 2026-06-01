@@ -91,6 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sample timestamps before buffered Hilbert phase extraction.
 - Hardened the hardware I/O boundary by rejecting boolean and complex
   sample/frequency aliases before buffering or synthetic EEG generation.
+- Aligned Gaian mesh peer and local phase validation with circular phase
+  semantics by wrapping finite negative `psi` values modulo `2*pi`.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
   aliases, non-zero layer self-coupling, empty phase snapshots, negative plasma
   ratios, and non-positive safety-factor minima before coupling expansion or

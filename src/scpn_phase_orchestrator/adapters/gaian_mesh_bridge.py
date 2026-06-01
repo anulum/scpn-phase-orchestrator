@@ -50,7 +50,7 @@ class PeerState:
         if any(ord(char) < 32 for char in self.node_id):
             raise ValueError("node_id must not contain control characters")
         self.R = _require_unit_interval(self.R, field="R")
-        self.psi = _require_finite_real(self.psi, field="psi", positive=False)
+        self.psi = _require_phase(self.psi, field="psi")
         self.timestamp = _require_finite_real(
             self.timestamp,
             field="timestamp",
@@ -86,7 +86,13 @@ def _require_unit_interval(value: object, *, field: str) -> float:
 
 
 def _require_phase(value: object, *, field: str) -> float:
-    result = _require_finite_real(value, field=field, positive=False)
+    if (
+        not isinstance(value, Real)
+        or isinstance(value, bool)
+        or not isfinite(float(value))
+    ):
+        raise ValueError(f"{field} must be finite")
+    result = float(value)
     return result % (2.0 * np.pi)
 
 

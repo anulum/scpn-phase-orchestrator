@@ -56,6 +56,10 @@ class TestPeerState:
         assert ps.R == 0.8
         assert ps.psi == 1.5
 
+    def test_negative_peer_phase_is_wrapped(self) -> None:
+        ps = PeerState(node_id="a", R=0.8, psi=-0.25, timestamp=100.0)
+        assert ps.psi == pytest.approx((2 * np.pi) - 0.25)
+
 
 class TestNodeInit:
     def test_default_values(self, node: GaianMeshNode) -> None:
@@ -115,6 +119,10 @@ class TestUpdateLocalState:
         node.update_local_state(R=0.9, psi=1.23)
         assert node._local_R == 0.9
         assert node._local_psi == 1.23
+
+    def test_negative_local_phase_is_wrapped(self, node: GaianMeshNode) -> None:
+        node.update_local_state(R=0.9, psi=-0.5)
+        assert node._local_psi == pytest.approx((2 * np.pi) - 0.5)
 
     @pytest.mark.parametrize(
         ("r_value", "psi"),
