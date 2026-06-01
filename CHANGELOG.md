@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strange-loop, and morphogenetic-field passive review panels.
 - Added passive Studio surfacing for multiverse counterfactual rollout
   manifests and branch-risk reports.
+- Added explicit local NumPy statevector and density-matrix simulator backend
+  contracts plus passive Studio surfacing for hybrid classical-quantum
+  entanglement order-parameter evidence.
 - Added a lightweight Python API layer with `Orchestrator.from_yaml(...)` and
   `Orchestrator.run(...)`, plus the `scpn` import alias for onboarding scripts
   that should not depend on CLI invocation.

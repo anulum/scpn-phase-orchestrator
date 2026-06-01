@@ -231,3 +231,51 @@ def test_hybrid_order_accepts_numpy_integer_qubit_contracts() -> None:
 
     assert result.qubit_count == 2
     assert result.bipartition == ((0,), (1,))
+
+
+def test_hybrid_order_explicit_simulator_backend_contracts() -> None:
+    from scpn_phase_orchestrator.monitor.hybrid_order import (
+        compute_hybrid_entanglement_order_parameter,
+    )
+
+    phases = np.array([0.0, 1.0], dtype=np.float64)
+    statevector = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128)
+    density = np.outer(statevector, np.conj(statevector))
+
+    vector_result = compute_hybrid_entanglement_order_parameter(
+        phases=phases,
+        quantum_state=statevector,
+        bipartition=((0,), (1,)),
+        simulator_backend="numpy_statevector",
+    )
+    density_result = compute_hybrid_entanglement_order_parameter(
+        phases=phases,
+        quantum_state=density,
+        bipartition=((0,), (1,)),
+        simulator_backend="numpy_density_matrix",
+    )
+
+    assert vector_result.backend == "numpy_statevector"
+    assert density_result.backend == "numpy_density_matrix"
+
+    with pytest.raises(ValueError, match="statevector"):
+        compute_hybrid_entanglement_order_parameter(
+            phases=phases,
+            quantum_state=density,
+            bipartition=((0,), (1,)),
+            simulator_backend="numpy_statevector",
+        )
+    with pytest.raises(ValueError, match="density matrix"):
+        compute_hybrid_entanglement_order_parameter(
+            phases=phases,
+            quantum_state=statevector,
+            bipartition=((0,), (1,)),
+            simulator_backend="numpy_density_matrix",
+        )
+    with pytest.raises(ValueError, match="simulator_backend"):
+        compute_hybrid_entanglement_order_parameter(
+            phases=phases,
+            quantum_state=statevector,
+            bipartition=((0,), (1,)),
+            simulator_backend="qpu_live",
+        )

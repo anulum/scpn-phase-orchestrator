@@ -10,6 +10,36 @@ Detailed module references:
 
 - [Delay embedding and phase-space reconstruction](monitor_embedding.md)
 
+## Hybrid Classical-Quantum Order Parameter
+
+`compute_hybrid_entanglement_order_parameter()` evaluates local quantum
+co-simulation evidence only. It combines Kuramoto `R`/`Psi` with bipartition
+Von Neumann entropy, normalised entropy, participation ratio, deterministic
+record hashing, and the
+`quantum_cosimulation_monitor_not_qpu_execution` claim boundary.
+
+The monitor now accepts an explicit `simulator_backend` contract:
+
+- `numpy_statevector_density_matrix`: default compatibility path accepting
+  either statevectors or density matrices.
+- `numpy_statevector`: requires a one-dimensional statevector payload.
+- `numpy_density_matrix`: requires a square Hermitian positive-semidefinite
+  density matrix payload.
+
+All backends are local NumPy simulators. They do not execute QPU workloads,
+apply controls, or promote simulator evidence to hardware evidence.
+
+::: scpn_phase_orchestrator.monitor.hybrid_order
+
+## Hybrid Order Scenario Fixtures
+
+`build_hybrid_order_parameter_scenarios()` emits deterministic review fixtures
+for quantum-simulation, power-grid, and cardiac-rhythm examples. Scenario and
+candidate records are JSON-safe, non-actuating, execution-disabled, and carry
+the same no-QPU claim boundary for Studio and audit use.
+
+::: scpn_phase_orchestrator.monitor.hybrid_order_examples
+
 ## Boundary Observer
 
 Detects when oscillator dynamics violate configured safety/performance

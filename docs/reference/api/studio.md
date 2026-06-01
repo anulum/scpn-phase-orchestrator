@@ -56,6 +56,19 @@ metrics with ordered intervals, matching branch hashes across rollout and risk
 records, finite topology pressure metrics, and explicit
 `actuation_permitted: false` output.
 
+`build_hybrid_order_studio_panel(records, scenarios=...)` renders passive
+hybrid classical-quantum order-parameter audit records and deterministic
+scenario fixtures into a Studio payload. It exposes classical `R`/`Psi`,
+bipartition Von Neumann entropy, normalised entropy, participation-ratio
+ranges, strongest-entanglement review cards, simulator backend summaries, and
+scenario candidate rows. The helper requires the
+`quantum_cosimulation_monitor_not_qpu_execution` claim boundary, true
+`non_actuating` and `execution_disabled` flags, finite unit-interval
+coherence and normalised-entropy metrics, positive qubit counts, valid
+two-group bipartitions, supported local NumPy simulator backends, and matching
+record SHA-256 hashes before Studio may display the evidence. The payload sets
+both `actuation_permitted: false` and `qpu_execution_permitted: false`.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.ui_helpers

@@ -382,6 +382,90 @@ def test_multiverse_counterfactual_panel_preserves_manifest_and_risk_evidence() 
     assert "control_actions" not in panel
 
 
+def test_hybrid_order_studio_panel_preserves_entanglement_review_evidence() -> None:
+    from scpn_phase_orchestrator.monitor.hybrid_order import (
+        compute_hybrid_entanglement_order_parameter,
+    )
+    from scpn_phase_orchestrator.monitor.hybrid_order_examples import (
+        build_hybrid_order_parameter_scenarios,
+    )
+
+    phases = np.array([0.0, 0.4, 0.9, 1.7], dtype=np.float64)
+    product_state = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128)
+    bell_state = np.array(
+        [1 / np.sqrt(2), 0.0, 0.0, 1 / np.sqrt(2)],
+        dtype=np.complex128,
+    )
+    records = [
+        compute_hybrid_entanglement_order_parameter(
+            phases=phases,
+            quantum_state=product_state,
+            bipartition=((0,), (1,)),
+            simulator_backend="numpy_statevector",
+        ).to_audit_record(),
+        compute_hybrid_entanglement_order_parameter(
+            phases=phases,
+            quantum_state=np.outer(bell_state, np.conj(bell_state)),
+            bipartition=((0,), (1,)),
+            simulator_backend="numpy_density_matrix",
+        ).to_audit_record(),
+    ]
+
+    panel = ui.build_hybrid_order_studio_panel(
+        records,
+        scenarios=build_hybrid_order_parameter_scenarios(),
+    )
+
+    assert panel["panel_kind"] == "studio_hybrid_order_panel"
+    assert panel["claim_boundary"] == "quantum_cosimulation_monitor_not_qpu_execution"
+    assert panel["non_actuating"] is True
+    assert panel["execution_disabled"] is True
+    assert panel["actuation_permitted"] is False
+    assert panel["qpu_execution_permitted"] is False
+    assert panel["record_count"] == 2
+    assert panel["scenario_count"] >= 3
+    assert set(panel["simulator_backends"]) == {
+        "numpy_density_matrix",
+        "numpy_statevector",
+    }
+    assert panel["entropy_range"]["minimum"] < 0.05
+    assert panel["entropy_range"]["maximum"] > 0.9
+    assert panel["latest"]["backend"] == "numpy_density_matrix"
+    assert panel["strongest_entanglement"]["entanglement_entropy"] == pytest.approx(
+        panel["entropy_range"]["maximum"]
+    )
+    assert panel["candidate_rows"]
+    assert {row["state_type"] for row in panel["candidate_rows"]} >= {
+        "product",
+        "entangled",
+    }
+
+
+def test_hybrid_order_studio_panel_rejects_malformed_review_evidence() -> None:
+    from scpn_phase_orchestrator.monitor.hybrid_order import (
+        compute_hybrid_entanglement_order_parameter,
+    )
+
+    record = compute_hybrid_entanglement_order_parameter(
+        phases=np.array([0.0, 1.0], dtype=np.float64),
+        quantum_state=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128),
+        bipartition=((0,), (1,)),
+    ).to_audit_record()
+
+    with pytest.raises(ValueError, match="claim boundary"):
+        ui.build_hybrid_order_studio_panel(
+            [{**record, "claim_boundary": "qpu_execution_claim"}]
+        )
+    with pytest.raises(ValueError, match="normalised_entanglement_entropy"):
+        ui.build_hybrid_order_studio_panel(
+            [{**record, "normalised_entanglement_entropy": 1.4}]
+        )
+    with pytest.raises(ValueError, match="bipartition"):
+        ui.build_hybrid_order_studio_panel([{**record, "bipartition": [[False], [1]]}])
+    with pytest.raises(ValueError, match="record_hash"):
+        ui.build_hybrid_order_studio_panel([{**record, "record_hash": "bad"}])
+
+
 def test_multiverse_counterfactual_panel_rejects_malformed_evidence() -> None:
     manifest = {
         "schema_name": "multiverse_counterfactual_rollout",

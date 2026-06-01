@@ -73,3 +73,5 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     }
     assert "build_multiverse_counterfactual_studio_panel" in studio.__all__
     assert callable(studio.build_multiverse_counterfactual_studio_panel)
+    assert "build_hybrid_order_studio_panel" in studio.__all__
+    assert callable(studio.build_hybrid_order_studio_panel)

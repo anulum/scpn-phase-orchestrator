@@ -34,6 +34,13 @@ __all__ = [
 
 CLAIM_BOUNDARY = "quantum_cosimulation_monitor_not_qpu_execution"
 BACKEND = "numpy_statevector_density_matrix"
+SUPPORTED_SIMULATOR_BACKENDS = frozenset(
+    {
+        BACKEND,
+        "numpy_statevector",
+        "numpy_density_matrix",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -78,6 +85,7 @@ def compute_hybrid_entanglement_order_parameter(
     *,
     qubit_count: int | None = None,
     bipartition: tuple[tuple[int, ...], tuple[int, ...]] | None = None,
+    simulator_backend: str = BACKEND,
 ) -> HybridOrderParameterResult:
     """Compute classical R/Psi and the entanglement-aware hybrid order metric.
 
@@ -87,6 +95,10 @@ def compute_hybrid_entanglement_order_parameter(
             ``(2**n, 2**n)``.
         qubit_count: Optional explicit qubit-count override; must match the state.
         bipartition: Optional pair of qubit index groups for reduced entropy.
+        simulator_backend: Explicit local simulator contract. The default
+            accepts either statevector or density-matrix NumPy inputs;
+            ``"numpy_statevector"`` and ``"numpy_density_matrix"`` require the
+            corresponding payload shape and record that backend explicitly.
 
     Returns:
         HybridOrderParameterResult with a deterministic audit record hash.
@@ -94,7 +106,14 @@ def compute_hybrid_entanglement_order_parameter(
     phases_clean = _require_finite_float_array(phases, name="phases")
     r_value, psi_value = compute_order_parameter(phases_clean)
 
-    n_qubits, density_matrix = _validate_quantum_state(quantum_state)
+    backend = _validate_simulator_backend(simulator_backend)
+    n_qubits, density_matrix, state_kind = _validate_quantum_state(quantum_state)
+    if backend == "numpy_statevector" and state_kind != "statevector":
+        raise ValueError("simulator_backend numpy_statevector requires a statevector")
+    if backend == "numpy_density_matrix" and state_kind != "density_matrix":
+        raise ValueError(
+            "simulator_backend numpy_density_matrix requires a density matrix"
+        )
 
     if qubit_count is None:
         qubit_count = n_qubits
@@ -128,7 +147,7 @@ def compute_hybrid_entanglement_order_parameter(
         "participation_ratio": float(participation_ratio),
         "qubit_count": int(qubit_count),
         "bipartition": [list(partition[0]), list(partition[1])],
-        "backend": BACKEND,
+        "backend": backend,
         "claim_boundary": CLAIM_BOUNDARY,
         "non_actuating": True,
         "execution_disabled": True,
@@ -174,7 +193,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 def _validate_quantum_state(
     quantum_state: object,
-) -> tuple[int, NDArray[np.complex128]]:
+) -> tuple[int, NDArray[np.complex128], str]:
     raw_state = np.asarray(quantum_state)
     if _contains_boolean_alias(raw_state):
         raise ValueError("quantum_state must not contain boolean values")
@@ -185,7 +204,8 @@ def _validate_quantum_state(
         raw_state = raw_state.reshape(-1)
 
     if raw_state.ndim == 1:
-        return _normalise_statevector(raw_state)
+        n_qubits, density = _normalise_statevector(raw_state)
+        return n_qubits, density, "statevector"
 
     if raw_state.ndim != 2:
         raise ValueError("quantum_state must be a vector or density matrix")
@@ -213,7 +233,19 @@ def _validate_quantum_state(
         raise ValueError("density matrix must be positive semidefinite")
 
     n_qubits = _qubit_count_from_dimension(density.shape[0])
-    return n_qubits, density
+    return n_qubits, density, "density_matrix"
+
+
+def _validate_simulator_backend(simulator_backend: object) -> str:
+    if not isinstance(simulator_backend, str) or not simulator_backend.strip():
+        raise ValueError("simulator_backend must be a supported backend name")
+    backend = simulator_backend.strip()
+    if backend not in SUPPORTED_SIMULATOR_BACKENDS:
+        raise ValueError(
+            "simulator_backend must be one of: "
+            + ", ".join(sorted(SUPPORTED_SIMULATOR_BACKENDS))
+        )
+    return backend
 
 
 def _normalise_statevector(
