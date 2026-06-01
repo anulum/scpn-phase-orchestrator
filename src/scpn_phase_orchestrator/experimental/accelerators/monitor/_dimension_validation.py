@@ -17,6 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
+ArrayPayload: TypeAlias = NDArray[np.generic]
 IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
@@ -31,7 +32,7 @@ __all__ = [
 ]
 
 
-def _contains_boolean_alias(raw: np.ndarray) -> bool:
+def _contains_boolean_alias(raw: ArrayPayload) -> bool:
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:

@@ -75,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened bifurcation continuation and critical-coupling fast paths by
   rejecting non-zero self-coupling diagonals, invalid composite Rust
   `R(K)` arrays, and invalid Rust `K_c` results.
+- Hardened typed-array maintenance by replacing residual runtime-only
+  `np.ndarray` annotations in monitor and direct accelerator validation helpers
+  with parameterized NumPy payload aliases, and strengthened the source hygiene
+  test to block regressions.
 - Hardened the FusionCore bridge boundary by rejecting non-positive q-profile
   bounds, negative fusion observables, negative stability ratios, and empty
   phase-feedback vectors before phase encoding or order-parameter export.

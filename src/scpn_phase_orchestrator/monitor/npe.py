@@ -29,6 +29,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
+ArrayPayload: TypeAlias = NDArray[np.generic]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -144,7 +145,7 @@ def _dispatch(fn_name: str) -> object:
     return None
 
 
-def _contains_boolean_alias(raw: np.ndarray) -> bool:
+def _contains_boolean_alias(raw: ArrayPayload) -> bool:
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -152,7 +153,7 @@ def _contains_boolean_alias(raw: np.ndarray) -> bool:
     return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
 
 
-def _contains_complex_alias(raw: np.ndarray) -> bool:
+def _contains_complex_alias(raw: ArrayPayload) -> bool:
     if np.iscomplexobj(raw):
         return True
     if raw.dtype != object:

@@ -27,6 +27,28 @@ def _contains_bare_ndarray_annotation(expr: ast.AST, *, root: bool = True) -> bo
     return False
 
 
+def _contains_numpy_ndarray_annotation(expr: ast.AST) -> bool:
+    if (
+        isinstance(expr, ast.Attribute)
+        and expr.attr == "ndarray"
+        and isinstance(expr.value, ast.Name)
+        and expr.value.id == "np"
+    ):
+        return True
+
+    return any(
+        _contains_numpy_ndarray_annotation(child)
+        for child in ast.iter_child_nodes(expr)
+    )
+
+
+def _is_ndarray_annotation_violation(expr: ast.AST) -> bool:
+    return _contains_bare_ndarray_annotation(
+        expr,
+        root=True,
+    ) or _contains_numpy_ndarray_annotation(expr)
+
+
 def _scan_annotation_text(annotation_text: str) -> bool:
     stripped = annotation_text.strip()
     if not stripped:
@@ -45,7 +67,7 @@ def _scan_annotation_text(annotation_text: str) -> bool:
         if isinstance(parsed, ast.Constant) and isinstance(parsed.value, str):
             parsed = ast.parse(parsed.value, mode="eval").body
 
-    return _contains_bare_ndarray_annotation(parsed, root=True)
+    return _is_ndarray_annotation_violation(parsed)
 
 
 def _iter_offending_annotations(
@@ -55,9 +77,7 @@ def _iter_offending_annotations(
 
     for node in ast.walk(tree):
         annotation = getattr(node, "annotation", None)
-        if annotation is not None and _contains_bare_ndarray_annotation(
-            annotation, root=True
-        ):
+        if annotation is not None and _is_ndarray_annotation_violation(annotation):
             offenders.append(
                 (
                     getattr(annotation, "lineno", 1),
@@ -67,9 +87,7 @@ def _iter_offending_annotations(
             )
 
         returns = getattr(node, "returns", None)
-        if returns is not None and _contains_bare_ndarray_annotation(
-            returns, root=True
-        ):
+        if returns is not None and _is_ndarray_annotation_violation(returns):
             offenders.append(
                 (
                     getattr(returns, "lineno", 1),
@@ -114,7 +132,8 @@ def test_no_bare_ndarray_annotations_in_src() -> None:
     """
     Enforce the typed-NumPy maintenance sweep contract in src.
 
-    NDArray should be parameterized (`NDArray[np.float64]`) in annotations.
+    Array annotations should use parameterized `NDArray[...]` aliases, not bare
+    `NDArray` or runtime-only `np.ndarray` annotations.
     """
     offenders: list[str] = []
     for path in sorted(SRC_ROOT.rglob("*.py")):
