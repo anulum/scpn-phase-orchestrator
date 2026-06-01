@@ -53,7 +53,7 @@ A caller is responsible for:
 The module is responsible for:
 
 - serializing phase messages in canonical JSON,
-- rejecting non-finite phase payloads,
+- rejecting non-finite phase payloads and duplicate object keys,
 - preserving a protocol kind string,
 - checking protocol version compatibility,
 - checking payload digests,
@@ -94,7 +94,8 @@ The wire flow is:
 8. A caller transmits the wire bytes through its chosen transport.
 9. A receiving caller passes bytes to `PhaseGossipNode.ingest()`.
 10. The receiver decodes with `PhaseSyncMessage.from_wire()`.
-11. The receiver validates kind, version, finiteness, size, and digest.
+11. The receiver validates kind, version, finiteness, duplicate-key absence,
+    size, and digest.
 12. The receiver applies peer-specific sequence watermarks.
 13. The receiver records acceptance or rejection as `GossipIngestResult`.
 14. The receiver may later call `synchronise(local_phases)`.
