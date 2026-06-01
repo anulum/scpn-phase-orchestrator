@@ -25,6 +25,14 @@ def test_replay_load_rejects_non_finite_json_constants(tmp_path: Path) -> None:
         ReplayEngine(path).load()
 
 
+def test_replay_load_rejects_duplicate_json_object_keys(tmp_path: Path) -> None:
+    path = tmp_path / "audit.jsonl"
+    path.write_text('{"event":"operator_note","event":"tampered"}\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="canonical finite JSON"):
+        ReplayEngine(path).load()
+
+
 def test_replay_integrity_rejects_non_finite_hashed_entries() -> None:
     entry: dict[str, object] = {"event": "operator_note", "value": float("nan")}
     json_line = json.dumps(entry, separators=(",", ":"), sort_keys=True)

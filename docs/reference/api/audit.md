@@ -145,6 +145,8 @@ platform differences, or code regressions.
 - Any divergence is flagged with the step number and magnitude
 - Platform-specific float differences (x86 vs ARM extended precision)
   are handled via configurable tolerance
+- JSONL parsing rejects non-finite constants, duplicate object keys, and
+  non-object lines before replay or hash verification
 
 ```python
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine

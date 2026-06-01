@@ -51,15 +51,26 @@ def _reject_json_constant(value: str) -> None:
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    record: dict[str, object] = {}
+    for key, value in pairs:
+        if key in record:
+            raise ValueError(f"duplicate JSON object key is not allowed: {key!r}")
+        record[key] = value
+    return record
+
+
 def _parse_audit_json(line: str) -> dict:
     try:
-        decoded = json.loads(line, parse_constant=_reject_json_constant)
+        decoded = json.loads(
+            line,
+            object_pairs_hook=_unique_json_object,
+            parse_constant=_reject_json_constant,
+        )
     except json.JSONDecodeError:
         raise
     except ValueError as exc:
-        raise ValueError(
-            "audit replay JSON must contain only finite JSON numbers"
-        ) from exc
+        raise ValueError("audit replay JSON must be canonical finite JSON") from exc
     if not isinstance(decoded, dict):
         raise ValueError("audit replay JSON line must be an object")
     return decoded
