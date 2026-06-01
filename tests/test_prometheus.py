@@ -332,9 +332,7 @@ class TestPrometheusAdapter:
                 adapter.fetch_metric("up", 0, 10, 1)
 
     @pytest.mark.parametrize("timestamp", [True, -1, "not-a-timestamp"])
-    def test_fetch_metric_rejects_malformed_sample_timestamps(
-        self, timestamp: object
-    ):
+    def test_fetch_metric_rejects_malformed_sample_timestamps(self, timestamp: object):
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         body = {
@@ -356,9 +354,7 @@ class TestPrometheusAdapter:
                 adapter.fetch_metric("up", 0, 10, 1)
 
     @pytest.mark.parametrize("timestamp", [False, -1, "not-a-timestamp"])
-    def test_fetch_instant_rejects_malformed_sample_timestamps(
-        self, timestamp: object
-    ):
+    def test_fetch_instant_rejects_malformed_sample_timestamps(self, timestamp: object):
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         body = {
