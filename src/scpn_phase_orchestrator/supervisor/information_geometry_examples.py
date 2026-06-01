@@ -36,6 +36,8 @@ _SUPPORTED_DOMAINS: Final[tuple[str, ...]] = (
 def _ensure_float64_vector(values: Iterable[float], *, label: str) -> FloatArray:
     if isinstance(values, (bool, np.bool_)) or _contains_boolean_alias(values):
         raise ValueError(f"{label} must contain numeric values")
+    if _contains_complex_alias(values):
+        raise ValueError(f"{label} must contain real-valued numeric values")
     arr = np.asarray(tuple(values), dtype=np.float64)
     if arr.ndim != 1:
         raise ValueError(f"{label} must be a 1D array, got ndim={arr.ndim}")
@@ -89,6 +91,14 @@ def _contains_boolean_alias(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
 
 @dataclass(frozen=True)
@@ -356,9 +366,14 @@ def _validate_scenario_record(record: dict[str, object]) -> None:
         knob, value = item
         if not isinstance(knob, str):
             raise ValueError("record control_gradient knobs must be strings")
-        if isinstance(value, (bool, np.bool_)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(
+            value, (int, float, np.integer, np.floating)
+        ):
             raise ValueError("record control_gradient values must be numeric")
-        control_gradient.append((knob, float(value)))
+        numeric_value = float(value)
+        if not math.isfinite(numeric_value):
+            raise ValueError("record control_gradient values must be finite")
+        control_gradient.append((knob, numeric_value))
 
     scenario = InformationGeometryScenario(
         domain=record["domain"],

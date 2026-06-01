@@ -200,6 +200,21 @@ def test_rejects_boolean_alias_distribution_values() -> None:
         )
 
 
+def test_rejects_complex_alias_distribution_values() -> None:
+    with pytest.raises(ValueError, match="current_distribution"):
+        _validate_information_geometry_scenario(
+            _bad_scenario(
+                distributions=DistributionPair(
+                    current_distribution=np.array(
+                        [0.2 + 0.1j, 0.3, 0.5],
+                        dtype=object,
+                    ),
+                    target_distribution=np.array([0.4, 0.2, 0.4], dtype=np.float64),
+                )
+            )
+        )
+
+
 def test_rejects_boolean_alias_control_gradient_and_max_step() -> None:
     with pytest.raises(ValueError, match="control_gradient"):
         _validate_information_geometry_scenario(
@@ -239,3 +254,17 @@ def test_rejects_records_with_invalid_hash_and_malformed_shapes() -> None:
     bad_shape["current_distribution"] = [0.4, 0.4]
     with pytest.raises(ValueError, match="matching shape"):
         _validate_scenario_record(bad_shape)
+
+
+def test_record_rejects_complex_alias_distribution_and_gradient_values() -> None:
+    scenario = build_information_geometry_control_scenarios()[0]
+
+    bad_distribution = deepcopy(scenario)
+    bad_distribution["current_distribution"] = [0.4 + 0.1j, 0.3, 0.2, 0.1]
+    with pytest.raises(ValueError, match="current_distribution"):
+        _validate_scenario_record(bad_distribution)
+
+    bad_gradient = deepcopy(scenario)
+    bad_gradient["control_gradient"] = [["K", np.complex128(0.1 + 0.2j)]]
+    with pytest.raises(ValueError, match="control_gradient"):
+        _validate_scenario_record(bad_gradient)
