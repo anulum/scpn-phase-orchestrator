@@ -12,7 +12,7 @@
     "research_experimental_modules": 149,
     "runtime_serving_modules": 47,
     "rust_kernel_files": 91,
-    "test_files": 520
+    "test_files": 522
   },
   "documentation": {
     "public_pages": [
@@ -49,6 +49,7 @@
       "docs/getting-started/quickstart.md",
       "docs/getting-started/start_here.md",
       "docs/getting-started/troubleshooting.md",
+      "docs/getting-started/use_cases.md",
       "docs/guide/adapters.md",
       "docs/guide/advanced_dynamics.md",
       "docs/guide/analysis_toolkit.md",
@@ -182,6 +183,7 @@
       "docs/specs/regime_manager.md",
       "docs/specs/resolved_runtime_defaults.md",
       "docs/specs/upde_numerics.md",
+      "docs/tutorials/00_choose_a_use_case.md",
       "docs/tutorials/01_new_domain_checklist.md",
       "docs/tutorials/02_oscillator_hunt_sheet.md",
       "docs/tutorials/03_build_knm_templates.md",
@@ -1263,7 +1265,9 @@
       "tests/test_autopoietic_lineage.py",
       "tests/test_autotune_binding_proposal.py",
       "tests/test_autotune_discovery.py",
+      "tests/test_autotune_freq_id.py",
       "tests/test_autotune_learners.py",
+      "tests/test_autotune_phase_extract.py",
       "tests/test_autotune_pipeline.py",
       "tests/test_autotune_policy_search.py",
       "tests/test_autotune_reward.py",

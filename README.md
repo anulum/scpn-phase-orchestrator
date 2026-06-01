@@ -42,7 +42,7 @@ you need to understand what the software is for before choosing an API.
 | Domainpack files | 36 |
 | Rust kernel files | 91 |
 | Optional extras | 15 |
-| Python test files | 520 |
+| Python test files | 522 |
 | Public documentation pages | 175 |
 | GitHub Actions workflows | 10 |
 
