@@ -140,7 +140,9 @@ class MultiverseCounterfactualManifest:
 
 def _coerce_float_array(name: str, value: object) -> FloatArray:
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(raw):
+        raise ValueError(f"{name} must be a real ndarray")
+    if _contains_complex_alias(raw):
         raise ValueError(f"{name} must be a real ndarray")
     try:
         data = np.asarray(raw, dtype=np.float64)
@@ -156,6 +158,22 @@ def _require_finite_real(value: object, field: str) -> float:
     if not np.isfinite(finite):
         raise ValueError(f"{field} must be finite")
     return finite
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
 def _require_positive_real(value: object, field: str) -> float:

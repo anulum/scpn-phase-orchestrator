@@ -204,6 +204,111 @@ class TestMultiverseCounterfactualRollouts:
         with pytest.raises(ValueError, match=message):
             simulate_multiverse_counterfactual_branches(**options)
 
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("phases", np.array([0.1, True, 1.4], dtype=object)),
+            ("omegas", np.array([0.05, np.bool_(False), 0.01], dtype=object)),
+            (
+                "baseline_k",
+                np.array(
+                    [[0.0, True, 0.15], [0.15, 0.0, 0.15], [0.15, 0.15, 0.0]],
+                    dtype=object,
+                ),
+            ),
+            (
+                "baseline_alpha",
+                np.array(
+                    [[0.0, 0.0, 0.0], [False, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                    dtype=object,
+                ),
+            ),
+        ],
+    )
+    def test_rejects_boolean_aliases_before_float_coercion(
+        self, field: str, bad_value: object
+    ) -> None:
+        phases, omegas, baseline_k, baseline_alpha = _base_inputs()
+        options = {
+            "phases": phases,
+            "omegas": omegas,
+            "baseline_k": baseline_k,
+            "baseline_alpha": baseline_alpha,
+            "branch_action_sets": (
+                (ControlAction("K", "global", 0.1, 1.0, "review"),),
+            ),
+        }
+        options[field] = bad_value
+
+        with pytest.raises(ValueError, match=f"{field} must be a real ndarray"):
+            simulate_multiverse_counterfactual_branches(**options)
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("phases", np.array([0.1, 1.2 + 0.1j, 1.4], dtype=object)),
+            ("omegas", np.array([0.05, -0.02, complex(0.01, 0.2)], dtype=object)),
+            (
+                "baseline_k",
+                np.array(
+                    [
+                        [0.0, 0.15 + 0.01j, 0.15],
+                        [0.15, 0.0, 0.15],
+                        [0.15, 0.15, 0.0],
+                    ],
+                    dtype=object,
+                ),
+            ),
+            (
+                "baseline_alpha",
+                np.array(
+                    [
+                        [0.0, 0.0, 0.0],
+                        [complex(0.0, 0.1), 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                    dtype=object,
+                ),
+            ),
+        ],
+    )
+    def test_rejects_complex_aliases_before_float_coercion(
+        self, field: str, bad_value: object
+    ) -> None:
+        phases, omegas, baseline_k, baseline_alpha = _base_inputs()
+        options = {
+            "phases": phases,
+            "omegas": omegas,
+            "baseline_k": baseline_k,
+            "baseline_alpha": baseline_alpha,
+            "branch_action_sets": (
+                (ControlAction("K", "global", 0.1, 1.0, "review"),),
+            ),
+        }
+        options[field] = bad_value
+
+        with pytest.raises(ValueError, match=f"{field} must be a real ndarray"):
+            simulate_multiverse_counterfactual_branches(**options)
+
+    def test_rejects_boolean_alias_topology_mask_before_float_coercion(self) -> None:
+        phases, omegas, baseline_k, baseline_alpha = _base_inputs()
+        topology_mask = np.array(
+            [[0.0, True, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 0.0]],
+            dtype=object,
+        )
+
+        with pytest.raises(ValueError, match="topology_mask must be a real ndarray"):
+            simulate_multiverse_counterfactual_branches(
+                phases=phases,
+                omegas=omegas,
+                baseline_k=baseline_k,
+                baseline_alpha=baseline_alpha,
+                branch_action_sets=(
+                    (ControlAction("K", "global", 0.1, 1.0, "bad"),),
+                ),
+                topology_masks=(topology_mask,),
+            )
+
     def test_k_increase_branch_changes_final_order_parameter(self) -> None:
         phases, omegas, baseline_k, baseline_alpha = _base_inputs()
         manifest = simulate_multiverse_counterfactual_branches(

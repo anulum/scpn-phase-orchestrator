@@ -132,7 +132,7 @@ def test_no_bare_ndarray_annotations_in_src() -> None:
     """
     Enforce the typed-NumPy maintenance sweep contract in src.
 
-    Array annotations should use parameterized `NDArray[...]` aliases, not bare
+    Array annotations should use parameterised `NDArray[...]` aliases, not bare
     `NDArray` or runtime-only `np.ndarray` annotations.
     """
     offenders: list[str] = []
@@ -143,6 +143,6 @@ def test_no_bare_ndarray_annotations_in_src() -> None:
 
     if offenders:
         pytest.fail(
-            "Unparameterized NDArray annotations remain in src: "
+            "Unparameterised NDArray annotations remain in src: "
             + ", ".join(sorted(set(offenders)))
         )
