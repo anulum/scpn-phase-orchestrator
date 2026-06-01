@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 from math import isfinite
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, cast
 from urllib.error import URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
@@ -29,6 +29,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
+FloatLike: TypeAlias = str | bytes | bytearray | memoryview | int | float
 
 
 def _reject_json_constant(value: str) -> None:
@@ -126,8 +127,10 @@ def _require_query_text(query: str) -> str:
 def _require_finite_float(value: object, field_name: str) -> float:
     if isinstance(value, bool):
         raise ValueError(f"Prometheus {field_name} must be finite")
+    if not isinstance(value, (str, bytes, bytearray, memoryview, int, float)):
+        raise ValueError(f"Prometheus {field_name} must be finite")
     try:
-        parsed = float(value)
+        parsed = float(cast(FloatLike, value))
     except (TypeError, ValueError) as exc:
         raise ValueError(f"Prometheus {field_name} must be finite") from exc
     if not isfinite(parsed):
