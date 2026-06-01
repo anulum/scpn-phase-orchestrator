@@ -63,8 +63,8 @@ def identify_frequencies(
     sample_rate = _positive_real(fs, "fs")
     data = np.atleast_2d(_real_data(data))
     n_ch, n_t = data.shape
-    if n_t < 4:
-        raise ValueError(f"Need >= 4 time samples, got {n_t}")
+    if n_t < 3:
+        raise ValueError(f"Need >= 3 time samples, got {n_t}")
     if not np.all(np.isfinite(data)):
         raise ValueError("data must contain only finite values")
     if not np.any(np.abs(data - data.mean(axis=1, keepdims=True)) > 0.0):
@@ -166,7 +166,7 @@ def _real_scalar(value: object, name: str) -> float:
     return parsed
 
 
-def _contains_alias(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+def _contains_alias(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

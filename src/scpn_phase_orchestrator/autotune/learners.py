@@ -16,6 +16,7 @@ from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.autotune.policy_search import (
     ReplayPolicyEvaluator,
@@ -60,6 +61,10 @@ class LearnerPolicyProposal:
         object.__setattr__(self, "learner_kind", self.learner_kind.strip())
         if not isinstance(self.policy_search, ReplayPolicySearchResult):
             raise TypeError("policy_search must be a ReplayPolicySearchResult")
+        if self.actuation_permitted is True:
+            raise ValueError(
+                "learner proposals are replay-only; actuation_permitted must be False"
+            )
         if self.actuation_permitted is not False:
             raise ValueError("actuation_permitted must be exactly False")
         if not isinstance(self.learner_parameters, Mapping):
@@ -340,7 +345,7 @@ def _mean_seed_k(seed: KnobPolicyCandidate) -> float:
     return float(values.mean())
 
 
-def _object_array_contains(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+def _object_array_contains(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

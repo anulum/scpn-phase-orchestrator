@@ -139,7 +139,7 @@ def _positive_real(value: object, name: str) -> float:
     return parsed
 
 
-def _contains_alias(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+def _contains_alias(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

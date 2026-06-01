@@ -440,6 +440,11 @@ def _phase_sindy_library(
         return _skipped_phase_sindy("requires_at_least_two_phase_columns", threshold)
     if table.shape[0] < 3:
         return _skipped_phase_sindy("requires_at_least_three_samples", threshold)
+    if table.shape[0] - 1 < table.shape[1]:
+        return _skipped_phase_sindy(
+            "requires_at_least_one_derivative_sample_per_feature",
+            threshold,
+        )
     if not _is_phase_like_table(table, columns):
         return _skipped_phase_sindy("skipped_non_phase_like", threshold)
 

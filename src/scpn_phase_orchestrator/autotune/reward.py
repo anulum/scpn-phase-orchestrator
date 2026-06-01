@@ -230,7 +230,11 @@ class AutotunePolicyProposal:
             ],
             "reasons": list(self.reasons),
             "config": {
-                "min_reward": self.config.min_reward,
+                "min_reward": (
+                    None
+                    if self.config.min_reward == -np.inf
+                    else self.config.min_reward
+                ),
                 "min_coherence": self.config.min_coherence,
                 "max_alternatives": self.config.max_alternatives,
                 "require_safe": self.config.require_safe,
@@ -614,7 +618,7 @@ def _real_knob_array(value: object, label: str) -> FloatArray:
     return array
 
 
-def _contains_alias(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+def _contains_alias(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

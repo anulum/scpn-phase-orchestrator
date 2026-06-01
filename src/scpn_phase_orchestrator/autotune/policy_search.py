@@ -455,7 +455,7 @@ def _real_array(value: object, label: str) -> FloatArray:
     return array
 
 
-def _object_array_contains(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+def _object_array_contains(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

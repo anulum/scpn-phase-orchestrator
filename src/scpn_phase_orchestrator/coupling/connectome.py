@@ -166,7 +166,18 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     seed = _validate_seed(seed)
 
     if _HAS_RUST:
-        flat: FloatArray = np.asarray(_rust_load_hcp(n_regions, seed), dtype=np.float64)
+        raw_flat = np.asarray(_rust_load_hcp(n_regions, seed), dtype=object)
+        if any(isinstance(item, bool | np.bool_) for item in raw_flat.ravel()):
+            raise ValueError(
+                "Rust HCP connectome output must not contain boolean values"
+            )
+        if any(
+            isinstance(item, complex | np.complexfloating) for item in raw_flat.ravel()
+        ):
+            raise ValueError(
+                "Rust HCP connectome output must contain real-valued weights"
+            )
+        flat: FloatArray = np.asarray(raw_flat, dtype=np.float64)
         return _validate_connectome_matrix(
             flat.reshape(n_regions, n_regions),
             n_regions=n_regions,
