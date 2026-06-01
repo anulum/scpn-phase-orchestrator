@@ -110,6 +110,60 @@ def _validate_finite_real(name: str, value: object) -> float:
     return value_float
 
 
+def _validate_seed(name: str, value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        msg = f"{name} must be a non-negative integer, got {value!r}"
+        raise ValueError(msg)
+    value_int = int(value)
+    if value_int < 0:
+        msg = f"{name} must be a non-negative integer, got {value_int}"
+        raise ValueError(msg)
+    return value_int
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _as_real_array(name: str, value: object) -> FloatArray:
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError(f"{name} must be real-valued")
+    try:
+        parsed = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real array") from exc
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError(f"{name} must contain only finite values")
+    return parsed
+
+
+def _validate_coupling_contract(knm: FloatArray, *, name: str = "knm") -> None:
+    if not np.allclose(knm, knm.T, rtol=1e-12, atol=1e-12):
+        raise ValueError(f"{name} must be symmetric")
+    if not np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=1e-12):
+        raise ValueError(f"{name} diagonal must be zero")
+
+
+def _validate_backend_output(value: object, *, n: int) -> FloatArray:
+    parsed = _as_real_array("backend output", value)
+    if parsed.shape == (n * n,):
+        parsed = parsed.reshape(n, n)
+    elif parsed.shape != (n, n):
+        raise ValueError(
+            f"backend output shape {parsed.shape} does not match ({n}, {n})"
+        )
+    _validate_coupling_contract(parsed, name="backend output")
+    return np.asarray(parsed, dtype=np.float64)
+
+
 def default_projections(
     n_heads: int = 4,
     seed: int = 0,
@@ -134,6 +188,7 @@ def default_projections(
     ``w_o`` is ``(H · d_head, d_model)``.
     """
     n_heads = _validate_positive_int("n_heads", n_heads)
+    seed = _validate_seed("seed", seed)
     d_model = _validate_even_model_width(d_model)
     if d_model % n_heads != 0:
         msg = f"d_model={d_model} not divisible by n_heads={n_heads}"
@@ -421,11 +476,14 @@ def attnres_modulate(
     Raises
     ------
     ValueError
-        On shape mismatches, negative ``lambda_``, non-positive
-        ``temperature``, non-finite numeric inputs, or invalid model
-        topology.
+        On shape mismatches, boolean or complex numeric aliases,
+        non-symmetric or self-coupled ``knm`` topology, negative
+        ``lambda_``, non-positive ``temperature``, non-finite numeric
+        inputs, invalid model topology, or non-physical optional-backend
+        output.
     """
     n_heads = _validate_positive_int("n_heads", n_heads)
+    projection_seed = _validate_seed("projection_seed", projection_seed)
     temperature = _validate_finite_real("temperature", temperature)
     lambda_ = _validate_finite_real("lambda_", lambda_)
     if temperature <= 0.0:
@@ -435,17 +493,16 @@ def attnres_modulate(
     if block_size is not None:
         block_size = _validate_positive_int("block_size", block_size)
 
-    knm64 = np.asarray(knm, dtype=np.float64)
-    theta64 = np.asarray(theta, dtype=np.float64)
+    knm64 = _as_real_array("knm", knm)
+    theta64 = _as_real_array("theta", theta)
     if knm64.ndim != 2 or knm64.shape[0] != knm64.shape[1]:
         raise ValueError(f"knm must be square 2-D; got shape {knm64.shape}")
     n = knm64.shape[0]
     if theta64.shape != (n,):
         raise ValueError(f"theta shape {theta64.shape} does not match knm (N={n})")
-    if not np.all(np.isfinite(knm64)):
-        raise ValueError("knm must contain only finite values")
-    if not np.all(np.isfinite(theta64)):
-        raise ValueError("theta must contain only finite values")
+    _validate_coupling_contract(knm64)
+    if n == 0:
+        return knm64.copy()
 
     if any(p is None for p in (w_q, w_k, w_v, w_o)):
         d_q, d_k, d_v, d_o = default_projections(n_heads=n_heads, seed=projection_seed)
@@ -456,10 +513,10 @@ def attnres_modulate(
 
     if w_q is None or w_k is None or w_v is None or w_o is None:
         raise ValueError("attention projections must be provided or defaultable")
-    w_q = np.asarray(w_q, dtype=np.float64)
-    w_k = np.asarray(w_k, dtype=np.float64)
-    w_v = np.asarray(w_v, dtype=np.float64)
-    w_o = np.asarray(w_o, dtype=np.float64)
+    w_q = _as_real_array("w_q", w_q)
+    w_k = _as_real_array("w_k", w_k)
+    w_v = _as_real_array("w_v", w_v)
+    w_o = _as_real_array("w_o", w_o)
     if w_q.shape != w_k.shape or w_q.shape != w_v.shape:
         raise ValueError(
             f"w_q / w_k / w_v shape mismatch: {w_q.shape}, {w_k.shape}, {w_v.shape}"
@@ -474,14 +531,6 @@ def attnres_modulate(
         raise ValueError(f"d_model {d_model} != n_heads {n_heads} · d_head {d_head}")
     if w_o.shape != (n_heads * d_head, d_model):
         raise ValueError(f"w_o shape {w_o.shape} != ({n_heads * d_head}, {d_model})")
-    for name, projection in (
-        ("w_q", w_q),
-        ("w_k", w_k),
-        ("w_v", w_v),
-        ("w_o", w_o),
-    ):
-        if not np.all(np.isfinite(projection)):
-            raise ValueError(f"{name} must contain only finite values")
 
     if lambda_ == 0.0:
         return knm64.copy()
@@ -512,7 +561,7 @@ def attnres_modulate(
             temperature,
             lambda_,
         )
-        return np.asarray(out, dtype=np.float64).reshape(n, n)
+        return _validate_backend_output(out, n=n)
 
     out = _python_fallback(
         knm_flat,

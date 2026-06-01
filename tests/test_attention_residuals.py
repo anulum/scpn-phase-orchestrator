@@ -565,3 +565,75 @@ def test_python_reference_block_mask_preserves_out_of_band_edges() -> None:
     far = np.abs(np.arange(7)[:, None] - np.arange(7)[None, :]) > 1
     np.testing.assert_allclose(modulated[far], knm[far], atol=1e-12)
     assert np.any(np.abs(modulated[~far] - knm[~far]) > 1e-10)
+
+
+def test_public_entry_rejects_boolean_and_complex_payload_aliases() -> None:
+    knm = _symmetric_knm(3)
+    theta = np.zeros(3, dtype=np.float64)
+
+    with pytest.raises(ValueError, match="knm.*boolean"):
+        attnres_modulate(np.array([[False, True], [True, False]]), np.zeros(2))
+
+    with pytest.raises(ValueError, match="theta.*real-valued"):
+        attnres_modulate(knm, np.array([0.0, 1.0 + 0.0j, 2.0], dtype=object))
+
+    w_q, w_k, w_v, w_o = default_projections(n_heads=1)
+    w_q_obj = w_q.astype(object)
+    w_q_obj[0, 0, 0] = 1.0 + 0.0j
+    with pytest.raises(ValueError, match="w_q.*real-valued"):
+        attnres_modulate(
+            knm,
+            theta,
+            w_q=w_q_obj,
+            w_k=w_k,
+            w_v=w_v,
+            w_o=w_o,
+            n_heads=1,
+        )
+
+
+def test_public_entry_rejects_non_physical_coupling_topology() -> None:
+    theta = np.zeros(3, dtype=np.float64)
+
+    asymmetric = _symmetric_knm(3)
+    asymmetric[0, 1] += 0.25
+    with pytest.raises(ValueError, match="knm must be symmetric"):
+        attnres_modulate(asymmetric, theta)
+
+    self_coupled = _symmetric_knm(3)
+    self_coupled[1, 1] = 0.1
+    with pytest.raises(ValueError, match="knm diagonal"):
+        attnres_modulate(self_coupled, theta)
+
+
+def test_public_entry_preserves_empty_system_contract() -> None:
+    out = attnres_modulate(
+        np.zeros((0, 0), dtype=np.float64),
+        np.zeros(0, dtype=np.float64),
+    )
+
+    assert out.shape == (0, 0)
+    assert out.dtype == np.float64
+
+
+def test_projection_seed_rejects_boolean_alias() -> None:
+    with pytest.raises(ValueError, match="seed"):
+        default_projections(seed=True)
+
+    with pytest.raises(ValueError, match="projection_seed"):
+        attnres_modulate(_symmetric_knm(3), np.zeros(3), projection_seed=True)
+
+
+def test_backend_output_must_preserve_attnres_physics_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def non_physical_backend(*args: object) -> np.ndarray:
+        n = int(args[6])
+        out = np.zeros((n, n), dtype=np.float64)
+        out[0, 0] = 1.0
+        return out.ravel()
+
+    monkeypatch.setattr(attnres_mod, "_dispatch_backend", lambda: non_physical_backend)
+
+    with pytest.raises(ValueError, match="backend output.*diagonal"):
+        attnres_modulate(_symmetric_knm(3), np.zeros(3), n_heads=1, lambda_=0.25)
