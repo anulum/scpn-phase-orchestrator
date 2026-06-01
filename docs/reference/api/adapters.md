@@ -140,7 +140,10 @@ Exports SPO metrics and traces to any OTLP-compatible backend
 
 ### Prometheus
 
-Exposes SPO metrics as a Prometheus scrape target.
+Fetches Prometheus instant and range metrics as a validated telemetry input
+boundary. The adapter rejects malformed decoded JSON, malformed result/sample
+structures, non-finite JSON constants, boolean/negative/non-real sample
+timestamps, and non-finite sample values before returning arrays or scalars.
 
 **PrometheusAdapter API:**
 
@@ -150,7 +153,8 @@ PrometheusAdapter(endpoint: str, timeout: float = 5.0)
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `update` | `(upde_state)` | Push current metrics |
+| `fetch_metric` | `(query, start, end, step) -> NDArray[np.float64]` | Fetch a range-vector metric as finite values |
+| `fetch_instant` | `(query) -> float` | Fetch one instant-vector scalar |
 
 ::: scpn_phase_orchestrator.adapters.prometheus
 

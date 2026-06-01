@@ -331,6 +331,54 @@ class TestPrometheusAdapter:
             with pytest.raises(ValueError, match="finite JSON"):
                 adapter.fetch_metric("up", 0, 10, 1)
 
+    @pytest.mark.parametrize("timestamp", [True, -1, "not-a-timestamp"])
+    def test_fetch_metric_rejects_malformed_sample_timestamps(
+        self, timestamp: object
+    ):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        body = {
+            "status": "success",
+            "data": {"result": [{"values": [[timestamp, "0.5"]]}]},
+        }
+        encoded = json.dumps(body).encode()
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = encoded
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            with pytest.raises(ValueError, match="sample timestamp"):
+                adapter.fetch_metric("up", 0, 10, 1)
+
+    @pytest.mark.parametrize("timestamp", [False, -1, "not-a-timestamp"])
+    def test_fetch_instant_rejects_malformed_sample_timestamps(
+        self, timestamp: object
+    ):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        body = {
+            "status": "success",
+            "data": {"result": [{"value": [timestamp, "0.5"]}]},
+        }
+        encoded = json.dumps(body).encode()
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = encoded
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            with pytest.raises(ValueError, match="sample timestamp"):
+                adapter.fetch_instant("up")
+
     @pytest.mark.parametrize(
         "body",
         [

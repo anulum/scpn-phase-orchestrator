@@ -169,6 +169,13 @@ def _require_sample_pair(sample: object, *, field_name: str) -> Sequence[Any]:
     return sample
 
 
+def _require_sample_timestamp(value: object) -> float:
+    timestamp = _require_finite_float(value, "sample timestamp")
+    if timestamp < 0.0:
+        raise ValueError("Prometheus sample timestamp must be non-negative")
+    return timestamp
+
+
 def _range_values(series: object) -> list[float]:
     if not isinstance(series, Mapping):
         raise ValueError("Prometheus result series must be an object")
@@ -179,6 +186,7 @@ def _range_values(series: object) -> list[float]:
     values: list[float] = []
     for sample in samples:
         pair = _require_sample_pair(sample, field_name="range result values")
+        _require_sample_timestamp(pair[0])
         values.append(_require_finite_float(pair[1], "sample value"))
     return values
 
@@ -187,4 +195,5 @@ def _instant_value(series: object) -> float:
     if not isinstance(series, Mapping):
         raise ValueError("Prometheus result series must be an object")
     pair = _require_sample_pair(series.get("value"), field_name="instant result value")
+    _require_sample_timestamp(pair[0])
     return _require_finite_float(pair[1], "sample value")
