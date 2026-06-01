@@ -287,3 +287,88 @@ def test_validation_report_does_not_emit_control_actions(monkeypatch):
     )
     assert report.passed is True
     assert report.non_actuating is True
+
+
+def test_rule_names_are_trimmed_and_blank_names_rejected() -> None:
+    trimmed = topos_policy.validate_policy_composition_category(
+        [_atomic_rule(" alpha ", ["NOMINAL"])]
+    )
+    payload = trimmed.to_audit_record()
+
+    assert trimmed.passed is True
+    assert payload["objects"][0]["name"] == "alpha"
+    assert payload["morphisms"][0]["source"] == "alpha"
+    assert payload["morphisms"][0]["target"] == "alpha"
+
+    with pytest.raises(ValueError, match="rule names must be non-empty"):
+        topos_policy.validate_policy_composition_category(
+            [_atomic_rule("   ", ["NOMINAL"])]
+        )
+
+
+def test_action_identity_and_compound_logic_are_canonicalised() -> None:
+    report = topos_policy.validate_policy_composition_category(
+        [
+            _rule(
+                "policy",
+                ["NOMINAL"],
+                CompoundCondition(
+                    logic=" and ",
+                    conditions=[
+                        PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                    ],
+                ),
+                actions=[
+                    PolicyAction(
+                        knob=" K ",
+                        scope=" global ",
+                        value=0.25,
+                        ttl_s=1.0,
+                    )
+                ],
+            )
+        ]
+    )
+    payload = report.to_audit_record()
+
+    assert report.passed is True
+    assert payload["objects"][0]["action_labels"] == ["action[K|global|0.25|1]"]
+    assert "action[K|global|0.25|1]" in payload["morphisms"][0]["label"]
+
+
+@pytest.mark.parametrize(
+    ("action", "evidence"),
+    [
+        (
+            PolicyAction(knob="   ", scope="global", value=0.1, ttl_s=1.0),
+            "knob",
+        ),
+        (
+            PolicyAction(knob="K", scope="   ", value=0.1, ttl_s=1.0),
+            "scope",
+        ),
+    ],
+)
+def test_blank_action_identity_members_cannot_pass(
+    action: PolicyAction,
+    evidence: str,
+) -> None:
+    report = topos_policy.validate_policy_composition_category(
+        [
+            _rule(
+                "bad_action_identity",
+                ["NOMINAL"],
+                PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                actions=[action],
+            )
+        ]
+    )
+    action_obligation = next(
+        item
+        for item in report.to_audit_record()["obligation_records"]
+        if item["name"] == "rule.bad_action_identity.actions"
+    )
+
+    assert report.passed is False
+    assert action_obligation["status"] == "failed"
+    assert evidence in str(action_obligation["evidence"])

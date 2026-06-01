@@ -141,11 +141,13 @@ def _as_action_label(action: PolicyAction) -> str:
         raise ValueError("policy actions must be PolicyAction objects")
     value = _as_finite_real(action.value, "policy action value")
     ttl = _as_finite_real(action.ttl_s, "policy action ttl_s", allow_negative=False)
-    if not isinstance(action.knob, str) or not action.knob:
+    if not isinstance(action.knob, str) or not action.knob.strip():
         raise ValueError("policy action knob must be a non-empty string")
-    if not isinstance(action.scope, str) or not action.scope:
+    if not isinstance(action.scope, str) or not action.scope.strip():
         raise ValueError("policy action scope must be a non-empty string")
-    return f"action[{action.knob}|{action.scope}|{value:.17g}|{ttl:.17g}]"
+    knob = action.knob.strip()
+    scope = action.scope.strip()
+    return f"action[{knob}|{scope}|{value:.17g}|{ttl:.17g}]"
 
 
 def _as_finite_real(
@@ -168,7 +170,7 @@ def _as_finite_real(
 def _normalised_logic(raw_logic: str) -> str:
     if not isinstance(raw_logic, str):
         raise ValueError("compound condition logic must be a string")
-    logic = raw_logic.upper()
+    logic = raw_logic.strip().upper()
     if logic not in _ALLOWED_LOGICS:
         raise ValueError("compound condition logic must be AND or OR")
     return logic
@@ -237,6 +239,7 @@ def validate_policy_composition_category(
     if not all(isinstance(rule, PolicyRule) for rule in rule_list):
         raise ValueError("rules must contain only PolicyRule objects")
 
+    canonical_rule_names: dict[int, str] = {}
     obligations: list[PolicyCompositionObligation] = []
     _add_obligation(
         obligations,
@@ -247,13 +250,15 @@ def validate_policy_composition_category(
 
     name_failures: set[str] = set()
     raw_names = [rule.name for rule in rule_list]
-    normalized_names = [name.strip() for name in raw_names if isinstance(name, str)]
-
-    if len(normalized_names) != len(raw_names):
-        raise ValueError("rule names must be strings")
-
-    if not normalized_names:
-        raise ValueError("rule names must be non-empty")
+    normalized_names: list[str] = []
+    for rule, raw_name in zip(rule_list, raw_names, strict=True):
+        if not isinstance(raw_name, str):
+            raise ValueError("rule names must be strings")
+        normalized_name = raw_name.strip()
+        if not normalized_name:
+            raise ValueError("rule names must be non-empty")
+        canonical_rule_names[id(rule)] = normalized_name
+        normalized_names.append(normalized_name)
 
     duplicates = {
         name for name in set(normalized_names) if normalized_names.count(name) > 1
@@ -279,9 +284,10 @@ def validate_policy_composition_category(
     morphism_labels: set[str] = set()
     all_ok = True
 
-    for rule in sorted(rule_list, key=lambda item: item.name):
+    for rule in sorted(rule_list, key=lambda item: canonical_rule_names[id(item)]):
+        rule_name = canonical_rule_names[id(rule)]
         rule_ok = True
-        if rule.name in name_failures:
+        if rule_name in name_failures:
             rule_ok = False
 
         regimes_ok, regime_values, regime_evidence = _is_non_empty_str_list(
@@ -291,14 +297,14 @@ def validate_policy_composition_category(
             rule_ok = False
             _add_obligation(
                 obligations,
-                name=f"rule.{rule.name}.regimes",
+                name=f"rule.{rule_name}.regimes",
                 passed=False,
                 evidence=f"invalid regimes: {regime_evidence}",
             )
         else:
             _add_obligation(
                 obligations,
-                name=f"rule.{rule.name}.regimes",
+                name=f"rule.{rule_name}.regimes",
                 passed=True,
                 evidence="deterministic and non-empty regimes list",
             )
@@ -328,7 +334,7 @@ def validate_policy_composition_category(
                     _validate_policy_condition(cond)
                 _add_obligation(
                     obligations,
-                    name=f"rule.{rule.name}.condition",
+                    name=f"rule.{rule_name}.condition",
                     passed=True,
                     evidence=f"compound condition with {cond_logic}",
                 )
@@ -337,7 +343,7 @@ def validate_policy_composition_category(
                 _validate_policy_condition(rule.condition)
                 _add_obligation(
                     obligations,
-                    name=f"rule.{rule.name}.condition",
+                    name=f"rule.{rule_name}.condition",
                     passed=True,
                     evidence="atomic policy condition",
                 )
@@ -349,7 +355,7 @@ def validate_policy_composition_category(
             rule_ok = False
             _add_obligation(
                 obligations,
-                name=f"rule.{rule.name}.condition",
+                name=f"rule.{rule_name}.condition",
                 passed=False,
                 evidence=str(error),
             )
@@ -361,7 +367,7 @@ def validate_policy_composition_category(
             rule_ok = False
             _add_obligation(
                 obligations,
-                name=f"rule.{rule.name}.actions",
+                name=f"rule.{rule_name}.actions",
                 passed=False,
                 evidence="actions must be a list",
             )
@@ -373,7 +379,7 @@ def validate_policy_composition_category(
                     action_labels.append(_as_action_label(action))
                 _add_obligation(
                     obligations,
-                    name=f"rule.{rule.name}.actions",
+                    name=f"rule.{rule_name}.actions",
                     passed=True,
                     evidence=f"{len(action_labels)} deterministic action label(s)",
                 )
@@ -381,7 +387,7 @@ def validate_policy_composition_category(
                 rule_ok = False
                 _add_obligation(
                     obligations,
-                    name=f"rule.{rule.name}.actions",
+                    name=f"rule.{rule_name}.actions",
                     passed=False,
                     evidence=str(error),
                 )
@@ -389,7 +395,7 @@ def validate_policy_composition_category(
         if rule_ok and cond_logic is not None and action_labels and regimes_ok:
             norm_regimes = tuple(sorted(set(regime_values)))
             obj = PolicyCompositionObject(
-                name=rule.name,
+                name=rule_name,
                 regimes=norm_regimes,
                 action_labels=tuple(sorted(action_labels)),
             )
