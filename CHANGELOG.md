@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entanglement order-parameter evidence.
 - Added passive Studio surfacing for information-geometry control proposal
   audit records and deterministic domain scenario evidence.
+- Added passive Studio surfacing for Topos semantic-binding validation reports
+  and deterministic domain obligation examples.
 - Added a lightweight Python API layer with `Orchestrator.from_yaml(...)` and
   `Orchestrator.run(...)`, plus the `scpn` import alias for onboarding scripts
   that should not depend on CLI invocation.

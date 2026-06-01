@@ -84,6 +84,19 @@ strictly positive review TTL/max-step values before Studio may display the
 evidence. The payload sets `actuation_permitted: false` and never exposes
 executable control actions.
 
+`build_topos_semantic_binding_studio_panel(symbolic_reports, policy_reports,
+examples=...)` renders passive Topos-theoretic semantic-binding evidence into
+an operator payload. It joins symbolic-binding functor validation reports,
+policy-composition category reports, and deterministic domain obligation
+examples while preserving the prototype proof boundary. The helper requires
+the `categorical_validation_prototype_not_formal_topos_proof` proof boundary,
+true `non_actuating` flags, supported validation schemas, SHA-256 report and
+example hashes, matching object/morphism counts, deterministic morphisms,
+well-formed obligation records, and passed domain examples before Studio may
+display the evidence. The payload sets `actuation_permitted: false` and
+`formal_proof_claim_permitted: false`; it is a review surface, not a
+machine-checked proof or executable policy channel.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.ui_helpers

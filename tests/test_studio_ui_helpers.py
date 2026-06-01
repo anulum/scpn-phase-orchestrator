@@ -19,6 +19,13 @@ import pytest
 
 import scpn_phase_orchestrator.studio.ui_helpers as ui
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.binding.semantic import compile_symbolic_binding
+from scpn_phase_orchestrator.binding.topos_examples import (
+    build_topos_domain_obligation_examples,
+)
+from scpn_phase_orchestrator.binding.topos_semantic import (
+    validate_symbolic_binding_functor,
+)
 from scpn_phase_orchestrator.studio.workflow import BindingProposal
 from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldState,
@@ -37,6 +44,14 @@ from scpn_phase_orchestrator.supervisor.multiverse import (
 from scpn_phase_orchestrator.supervisor.multiverse_risk import (
     MultiverseRiskThresholds,
     evaluate_multiverse_branch_risk,
+)
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    PolicyAction,
+    PolicyCondition,
+    PolicyRule,
+)
+from scpn_phase_orchestrator.supervisor.topos_policy import (
+    validate_policy_composition_category,
 )
 
 MINIMAL_SPEC = Path("domainpacks/minimal_domain/binding_spec.yaml")
@@ -332,6 +347,112 @@ def test_information_geometry_studio_panel_rejects_malformed_review_evidence() -
         ui.build_information_geometry_studio_panel(
             [proposal],
             scenarios=[{**scenario, "scenario_hash": "bad"}],
+        )
+
+
+def test_topos_semantic_binding_panel_preserves_proof_boundary_evidence() -> None:
+    artifacts = compile_symbolic_binding(
+        "2-layer power-grid categorical binding with oscillator coherence guards",
+        name="studio_topos_power_grid",
+        oscillators_per_layer=2,
+        dry_run_steps=1,
+    )
+    symbolic_report = validate_symbolic_binding_functor(artifacts).to_audit_record()
+    policy_report = validate_policy_composition_category(
+        [
+            PolicyRule(
+                name="studio_topos_grid_guard",
+                regimes=["DEGRADED", "CRITICAL"],
+                condition=PolicyCondition(
+                    metric="R_good",
+                    layer=0,
+                    op="<",
+                    threshold=0.7,
+                ),
+                actions=[PolicyAction(knob="K", scope="global", value=0.08, ttl_s=4.0)],
+            )
+        ]
+    ).to_audit_record()
+    examples = build_topos_domain_obligation_examples()
+
+    panel = ui.build_topos_semantic_binding_studio_panel(
+        [symbolic_report],
+        [policy_report],
+        examples=examples,
+    )
+
+    assert panel["panel_kind"] == "studio_topos_semantic_binding_panel"
+    assert panel["proof_boundary"] == (
+        "categorical_validation_prototype_not_formal_topos_proof"
+    )
+    assert panel["non_actuating"] is True
+    assert panel["actuation_permitted"] is False
+    assert panel["formal_proof_claim_permitted"] is False
+    assert panel["symbolic_report_count"] == 1
+    assert panel["policy_report_count"] == 1
+    assert panel["example_count"] == len(examples)
+    assert panel["passed_symbolic_report_count"] == 1
+    assert panel["passed_policy_report_count"] == 1
+    assert panel["example_domains"] == tuple(
+        sorted({example["domain"] for example in examples})
+    )
+    assert panel["object_count_range"]["minimum"] > 0
+    assert panel["morphism_count_range"]["minimum"] > 0
+    assert panel["example_rows"][0]["domain"] == examples[0]["domain"]
+    assert panel["example_rows"][0]["obligation_count"] == len(
+        examples[0]["obligation_names"]
+    )
+    assert "actions_to_apply" not in panel
+    assert "control_actions" not in panel
+
+
+def test_topos_semantic_binding_panel_rejects_malformed_proof_evidence() -> None:
+    artifacts = compile_symbolic_binding(
+        "1-layer cardiac categorical binding with rhythm coherence guard",
+        name="studio_topos_cardiac",
+        oscillators_per_layer=2,
+        dry_run_steps=1,
+    )
+    symbolic_report = validate_symbolic_binding_functor(artifacts).to_audit_record()
+    policy_report = validate_policy_composition_category(
+        [
+            PolicyRule(
+                name="studio_topos_cardiac_guard",
+                regimes=["CRITICAL"],
+                condition=PolicyCondition(
+                    metric="R",
+                    layer=0,
+                    op="<",
+                    threshold=0.55,
+                ),
+                actions=[
+                    PolicyAction(knob="zeta", scope="global", value=-0.03, ttl_s=5.0)
+                ],
+            )
+        ]
+    ).to_audit_record()
+    example = build_topos_domain_obligation_examples()[0]
+
+    with pytest.raises(ValueError, match="proof boundary"):
+        ui.build_topos_semantic_binding_studio_panel(
+            [{**symbolic_report, "proof_boundary": "formal_topos_proof"}],
+            [policy_report],
+        )
+    with pytest.raises(ValueError, match="report_hash"):
+        ui.build_topos_semantic_binding_studio_panel(
+            [{**symbolic_report, "report_hash": "bad"}],
+            [policy_report],
+        )
+    with pytest.raises(ValueError, match="non_actuating"):
+        ui.build_topos_semantic_binding_studio_panel(
+            [symbolic_report],
+            [{**policy_report, "non_actuating": False}],
+        )
+    with pytest.raises(ValueError, match="example_hash"):
+        ui.build_topos_semantic_binding_studio_panel(
+            [symbolic_report],
+            [policy_report],
+            examples=[{**example, "example_hash": "bad"}],
         )
 
 
