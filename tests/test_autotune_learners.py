@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
+from typing import cast
 
 import numpy as np
 import pytest
@@ -91,6 +93,39 @@ def test_hybrid_physics_proposal_rejects_invalid_prior() -> None:
             critical_coupling_estimate=-1.0,
         )
 
+    with pytest.raises(ValueError, match="critical_coupling_estimate"):
+        generate_hybrid_physics_proposal(
+            seed,
+            _safe_observation,
+            critical_coupling_estimate=True,
+        )
+
+
+@pytest.mark.parametrize("seed_value", [True, -1, 1.25])
+def test_replay_learner_seed_value_rejects_non_integer_aliases(
+    seed_value: object,
+) -> None:
+    seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
+
+    with pytest.raises(ValueError, match="seed_value"):
+        generate_ppo_like_proposal(
+            seed,
+            _safe_observation,
+            seed_value=cast(int, seed_value),
+        )
+
+
+def test_replay_learner_accepts_numpy_integer_seed_canonically() -> None:
+    seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
+
+    proposal = generate_sac_like_proposal(
+        seed,
+        _safe_observation,
+        seed_value=np.int64(11),
+    )
+
+    assert proposal.to_audit_record()["learner_parameters"]["seed_value"] == 11
+
 
 def test_learner_policy_proposal_never_permits_actuation() -> None:
     seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
@@ -142,6 +177,49 @@ def test_audit_record_coerces_numpy_scalars_and_non_finite_values() -> None:
     assert record["learner_parameters"]["diagnostics"] == ["inf", "nan"]
     assert record["physics_prior"]["critical_coupling_estimate"] == 1.4
     json.dumps(record, allow_nan=False, sort_keys=True)
+
+
+def test_audit_record_rejects_invalid_mapping_keys_and_complex_values() -> None:
+    seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
+    proposal = generate_hybrid_physics_proposal(
+        seed,
+        _safe_observation,
+        critical_coupling_estimate=1.4,
+    )
+
+    invalid_key = LearnerPolicyProposal(
+        learner_kind=proposal.learner_kind,
+        policy_search=proposal.policy_search,
+        learner_parameters=cast(Mapping[str, object], {True: 1.0}),
+    )
+    with pytest.raises(ValueError, match="audit mapping keys"):
+        invalid_key.to_audit_record()
+
+    invalid_value = LearnerPolicyProposal(
+        learner_kind=proposal.learner_kind,
+        policy_search=proposal.policy_search,
+        learner_parameters={"complex_gain": 1.0 + 0.0j},
+    )
+    with pytest.raises(ValueError, match="complex"):
+        invalid_value.to_audit_record()
+
+
+def test_learner_policy_proposal_rejects_invalid_identity_and_payloads() -> None:
+    seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
+    proposal = generate_ppo_like_proposal(seed, _safe_observation, seed_value=7)
+
+    with pytest.raises(ValueError, match="learner_kind"):
+        LearnerPolicyProposal(
+            learner_kind=" ",
+            policy_search=proposal.policy_search,
+        )
+
+    with pytest.raises(TypeError, match="learner_parameters"):
+        LearnerPolicyProposal(
+            learner_kind=proposal.learner_kind,
+            policy_search=proposal.policy_search,
+            learner_parameters=cast(Mapping[str, object], ["not", "mapping"]),
+        )
 
 
 def test_audit_record_guard_rejects_non_mapping_payload() -> None:

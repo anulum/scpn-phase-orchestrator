@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -54,8 +55,16 @@ class LearnerPolicyProposal:
     physics_prior: AuditMapping = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if not isinstance(self.learner_kind, str) or not self.learner_kind.strip():
+            raise ValueError("learner_kind must be a non-empty string")
+        if not isinstance(self.policy_search, ReplayPolicySearchResult):
+            raise TypeError("policy_search must be a ReplayPolicySearchResult")
         if self.actuation_permitted:
             raise ValueError("learner policy proposals are replay-only")
+        if not isinstance(self.learner_parameters, Mapping):
+            raise TypeError("learner_parameters must be a mapping")
+        if not isinstance(self.physics_prior, Mapping):
+            raise TypeError("physics_prior must be a mapping")
 
     def to_audit_record(self) -> dict[str, object]:
         """Return an audit-serialisable learner proposal record."""
@@ -79,16 +88,24 @@ def _json_safe_record(value: object) -> dict[str, object]:
 
 def _json_safe_value(value: object) -> object:
     if isinstance(value, Mapping):
-        return {
-            str(key): _json_safe_value(nested_value)
-            for key, nested_value in value.items()
-        }
+        record: dict[str, object] = {}
+        for key, nested_value in value.items():
+            if not isinstance(key, str) or not key.strip():
+                raise ValueError("audit mapping keys must be non-empty strings")
+            record[key.strip()] = _json_safe_value(nested_value)
+        return record
     if isinstance(value, tuple | list):
         return [_json_safe_value(nested_value) for nested_value in value]
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, np.integer):
+        return int(value)
     if isinstance(value, np.floating):
         value = float(value)
     if isinstance(value, float) and not np.isfinite(value):
         return repr(value)
+    if isinstance(value, (complex, np.complexfloating)):
+        raise ValueError("audit records must not contain complex values")
     return value
 
 
@@ -101,6 +118,7 @@ def generate_ppo_like_proposal(
     proposal_config: PolicyProposalConfig | None = None,
 ) -> LearnerPolicyProposal:
     """Generate a deterministic PPO-shaped proposal from replay evaluations."""
+    seed_value = _validate_seed_value(seed_value)
     clip_range = _uniform(seed_value, low=0.08, high=0.18)
     search_config = OfflinePolicySearchConfig(
         K_step=clip_range,
@@ -136,6 +154,7 @@ def generate_sac_like_proposal(
     proposal_config: PolicyProposalConfig | None = None,
 ) -> LearnerPolicyProposal:
     """Generate a deterministic SAC-shaped proposal from replay evaluations."""
+    seed_value = _validate_seed_value(seed_value)
     entropy_temperature = _uniform(seed_value, low=0.03, high=0.12)
     search_config = OfflinePolicySearchConfig(
         K_step=0.04 + entropy_temperature,
@@ -172,8 +191,11 @@ def generate_hybrid_physics_proposal(
     proposal_config: PolicyProposalConfig | None = None,
 ) -> LearnerPolicyProposal:
     """Generate a replay proposal shaped by a critical-coupling prior."""
-    if not np.isfinite(critical_coupling_estimate) or critical_coupling_estimate <= 0.0:
-        raise ValueError("critical_coupling_estimate must be finite and positive")
+    seed_value = _validate_seed_value(seed_value)
+    critical_coupling_estimate = _positive_real(
+        critical_coupling_estimate,
+        "critical_coupling_estimate",
+    )
 
     current_k = float(np.asarray(seed.K, dtype=np.float64).mean())
     prior_gap = critical_coupling_estimate - current_k
@@ -271,3 +293,29 @@ def _uniform(seed_value: int | None, *, low: float, high: float) -> float:
     if seed_value is None:
         return float((low + high) * 0.5)
     return float(np.random.default_rng(seed_value).uniform(low, high))
+
+
+def _validate_seed_value(seed_value: int | None) -> int | None:
+    if seed_value is None:
+        return None
+    if isinstance(seed_value, (bool, np.bool_)) or not isinstance(
+        seed_value,
+        (Integral, np.integer),
+    ):
+        raise ValueError("seed_value must be a non-negative integer or None")
+    seed_int = int(seed_value)
+    if seed_int < 0:
+        raise ValueError("seed_value must be a non-negative integer or None")
+    return seed_int
+
+
+def _positive_real(value: object, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Real, np.floating),
+    ):
+        raise ValueError(f"{name} must be finite and positive")
+    parsed = float(value)
+    if not np.isfinite(parsed) or parsed <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
+    return parsed
