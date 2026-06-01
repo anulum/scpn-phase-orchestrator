@@ -93,6 +93,20 @@ strictly positive review TTL/max-step values before Studio may display the
 evidence. The payload sets `actuation_permitted: false` and never exposes
 executable control actions.
 
+`build_sheaf_cohomology_studio_panel(records, summaries, control_proposals)`
+renders passive sheaf-Laplacian obstruction evidence into an operator payload.
+It joins `sheaf_coherence()` audit records, obstruction-summary residual rows,
+and review-only `propose_sheaf_obstruction_control()` records under the
+`sheaf_cohomology_review_not_live_actuation` claim boundary. The helper
+requires finite non-negative obstruction/energy metrics, shape-compatible
+Laplacian and residual dimensions, valid cohomology-dimension evidence,
+explicit residual-edge triage rows, true `non_actuating`,
+`execution_disabled`, and `operator_review_required` flags, bounded update
+norms, and monotone accepted projections before Studio may display the
+evidence. The payload sets `actuation_permitted: false`,
+`hot_patch_permitted: false`, and `live_merge_permitted: false`; it is an
+operator review surface, not a live sheaf-control channel.
+
 `build_topos_semantic_binding_studio_panel(symbolic_reports, policy_reports,
 examples=...)` renders passive Topos-theoretic semantic-binding evidence into
 an operator payload. It joins symbolic-binding functor validation reports,

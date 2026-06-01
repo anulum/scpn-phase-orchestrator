@@ -132,6 +132,27 @@ STUDIO_REVIEW_PANEL_REGISTRY: tuple[PanelRecord, ...] = (
         "operator_review_required": True,
     },
     {
+        "panel_id": "sheaf_cohomology_control",
+        "title": "Sheaf-cohomology control",
+        "builder": "build_sheaf_cohomology_studio_panel",
+        "claim_boundary": "sheaf_cohomology_review_not_live_actuation",
+        "source_rows": (
+            "Sheaf-cohomology control",
+            "Sheaf-theoretic coherence manifold",
+        ),
+        "required_evidence": (
+            "sheaf-Laplacian obstruction audit record",
+            "residual-edge triage summary",
+            "cohomology-dimension evidence",
+            "review-only control proposal",
+        ),
+        "actuation_permitted": False,
+        "live_merge_permitted": False,
+        "hot_patch_permitted": False,
+        "execution_disabled": True,
+        "operator_review_required": True,
+    },
+    {
         "panel_id": "topos_semantic_binding",
         "title": "Topos semantic binding",
         "builder": "build_topos_semantic_binding_studio_panel",

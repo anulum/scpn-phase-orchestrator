@@ -55,6 +55,7 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     assert "multiverse_counterfactual_rollout" in panel_ids
     assert "hybrid_order_parameters" in panel_ids
     assert "topos_semantic_binding" in panel_ids
+    assert "sheaf_cohomology_control" in panel_ids
     assert "autopoietic_lineage_sandbox" in panel_ids
     assert "intergenerational_policy_inheritance" in panel_ids
     assert "strange_loop_meta_orchestrator" in panel_ids
@@ -103,6 +104,24 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     assert lineage_panel["hot_patch_permitted"] is False
     assert lineage_panel["execution_disabled"] is True
     assert lineage_panel["operator_review_required"] is True
+    sheaf_panel = next(
+        panel for panel in panels if panel["panel_id"] == "sheaf_cohomology_control"
+    )
+    assert sheaf_panel["builder"] == "build_sheaf_cohomology_studio_panel"
+    assert sheaf_panel["claim_boundary"] == (
+        "sheaf_cohomology_review_not_live_actuation"
+    )
+    assert sheaf_panel["required_evidence"] == (
+        "sheaf-Laplacian obstruction audit record",
+        "residual-edge triage summary",
+        "cohomology-dimension evidence",
+        "review-only control proposal",
+    )
+    assert sheaf_panel["actuation_permitted"] is False
+    assert sheaf_panel["live_merge_permitted"] is False
+    assert sheaf_panel["hot_patch_permitted"] is False
+    assert sheaf_panel["execution_disabled"] is True
+    assert sheaf_panel["operator_review_required"] is True
     inheritance_panel = next(
         panel
         for panel in panels

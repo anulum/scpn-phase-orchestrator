@@ -493,6 +493,12 @@ reviewable triage record. It classifies `nominal`, `warning`, and `critical`
 states from explicit thresholds and reports the strongest residual edges so
 operators can see which directed restrictions are failing.
 
+Studio exposes this evidence through
+`build_sheaf_cohomology_studio_panel(records, summaries, control_proposals)`.
+That panel keeps obstruction records, residual-edge summaries, and bounded
+review-only control proposals together while preserving disabled execution and
+actuation gates.
+
 ::: scpn_phase_orchestrator.supervisor.sheaf
 
 ---

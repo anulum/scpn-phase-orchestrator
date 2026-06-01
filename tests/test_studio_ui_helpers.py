@@ -33,8 +33,11 @@ from scpn_phase_orchestrator.supervisor import (
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
     build_intergenerational_policy_inheritance_history,
+    build_sheaf_obstruction_summary,
     evaluate_strange_loop_drift_scenarios,
+    propose_sheaf_obstruction_control,
     render_morphogenetic_field_svg,
+    sheaf_coherence,
 )
 from scpn_phase_orchestrator.supervisor.evolutionary_examples import (
     build_evolutionary_supervisor_search_examples_from_worker_a_api,
@@ -360,6 +363,114 @@ def test_information_geometry_studio_panel_rejects_malformed_review_evidence() -
         ui.build_information_geometry_studio_panel(
             [proposal],
             scenarios=[{**scenario, "scenario_hash": "bad"}],
+        )
+
+
+def test_sheaf_cohomology_studio_panel_preserves_review_evidence() -> None:
+    states = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.0, -1.0],
+        ],
+        dtype=np.float64,
+    )
+    maps = np.zeros((3, 3, 2, 2), dtype=np.float64)
+    for target in range(3):
+        for source in range(3):
+            if target != source:
+                maps[target, source] = np.eye(2, dtype=np.float64)
+    result = sheaf_coherence(states, maps)
+    summary = build_sheaf_obstruction_summary(
+        result,
+        warning_threshold=0.05,
+        critical_threshold=0.25,
+        top_k=4,
+    ).to_audit_record()
+    proposal = propose_sheaf_obstruction_control(
+        states,
+        maps,
+        step_size=0.25,
+        max_update_norm=0.4,
+    ).to_audit_record()
+
+    panel = ui.build_sheaf_cohomology_studio_panel(
+        [result.to_audit_record()],
+        summaries=[summary],
+        control_proposals=[proposal],
+    )
+
+    assert panel["panel_kind"] == "studio_sheaf_cohomology_panel"
+    assert panel["claim_boundary"] == "sheaf_cohomology_review_not_live_actuation"
+    assert panel["non_actuating"] is True
+    assert panel["execution_disabled"] is True
+    assert panel["operator_review_required"] is True
+    assert panel["actuation_permitted"] is False
+    assert panel["live_merge_permitted"] is False
+    assert panel["hot_patch_permitted"] is False
+    assert panel["record_count"] == 1
+    assert panel["summary_count"] == 1
+    assert panel["control_proposal_count"] == 1
+    assert panel["accepted_control_proposal_count"] == 1
+    assert panel["critical_summary_count"] == 1
+    assert len(panel["top_residual_rows"]) == 4
+    assert (
+        panel["obstruction_range"]["maximum"]
+        >= panel["obstruction_range"]["minimum"]
+    )
+    assert (
+        panel["control_proposals"][0]["projected_consistency_energy"]
+        < panel["control_proposals"][0]["baseline_consistency_energy"]
+    )
+    assert "actions_to_apply" not in panel
+    assert "control_actions" not in panel
+
+
+def test_sheaf_cohomology_studio_panel_rejects_malformed_evidence() -> None:
+    states = np.array([[0.0, 0.0], [1.0, -1.0]], dtype=np.float64)
+    maps = np.zeros((2, 2, 2, 2), dtype=np.float64)
+    maps[0, 1] = np.eye(2, dtype=np.float64)
+    maps[1, 0] = np.eye(2, dtype=np.float64)
+    result = sheaf_coherence(states, maps)
+    summary = build_sheaf_obstruction_summary(result).to_audit_record()
+    proposal = propose_sheaf_obstruction_control(states, maps).to_audit_record()
+
+    with pytest.raises(ValueError, match="method"):
+        ui.build_sheaf_cohomology_studio_panel(
+            [{**result.to_audit_record(), "method": "live_sheaf_control"}],
+            summaries=[summary],
+            control_proposals=[proposal],
+        )
+    with pytest.raises(ValueError, match="critical_threshold"):
+        ui.build_sheaf_cohomology_studio_panel(
+            [result.to_audit_record()],
+            summaries=[
+                {
+                    **summary,
+                    "warning_threshold": 0.5,
+                    "critical_threshold": 0.1,
+                }
+            ],
+            control_proposals=[proposal],
+        )
+    with pytest.raises(ValueError, match="non_actuating"):
+        ui.build_sheaf_cohomology_studio_panel(
+            [result.to_audit_record()],
+            summaries=[summary],
+            control_proposals=[{**proposal, "non_actuating": False}],
+        )
+    with pytest.raises(ValueError, match="projected energy"):
+        ui.build_sheaf_cohomology_studio_panel(
+            [result.to_audit_record()],
+            summaries=[summary],
+            control_proposals=[
+                {
+                    **proposal,
+                    "projected_consistency_energy": (
+                        proposal["baseline_consistency_energy"] + 1.0
+                    ),
+                }
+            ],
         )
 
 

@@ -24,8 +24,11 @@ from scpn_phase_orchestrator.supervisor import (
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
     build_intergenerational_policy_inheritance_history,
+    build_sheaf_obstruction_summary,
     evaluate_strange_loop_drift_scenarios,
+    propose_sheaf_obstruction_control,
     render_morphogenetic_field_svg,
+    sheaf_coherence,
 )
 from scpn_phase_orchestrator.supervisor.evolutionary_search import (
     run_offline_evolutionary_supervisor_search,
@@ -126,6 +129,32 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         lineage_manifest,
         inheritance_manifests,
     )
+    sheaf_states = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.0, -1.0],
+        ],
+        dtype=np.float64,
+    )
+    sheaf_maps = np.zeros((3, 3, 2, 2), dtype=np.float64)
+    for target in range(3):
+        for source in range(3):
+            if target != source:
+                sheaf_maps[target, source] = np.eye(2, dtype=np.float64)
+    sheaf_result = sheaf_coherence(sheaf_states, sheaf_maps)
+    sheaf_summary = build_sheaf_obstruction_summary(
+        sheaf_result,
+        warning_threshold=0.05,
+        critical_threshold=0.25,
+        top_k=3,
+    ).to_audit_record()
+    sheaf_proposal = propose_sheaf_obstruction_control(
+        sheaf_states,
+        sheaf_maps,
+        step_size=0.25,
+        max_update_norm=0.4,
+    ).to_audit_record()
     morphogenetic_artifact = render_morphogenetic_field_svg(
         MorphogeneticFieldState(
             np.array(
@@ -156,6 +185,11 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     lineage_panel = studio.build_autopoietic_lineage_studio_panel([lineage_manifest])
     inheritance_panel = studio.build_intergenerational_inheritance_studio_panel(
         [inheritance_history]
+    )
+    sheaf_panel = studio.build_sheaf_cohomology_studio_panel(
+        [sheaf_result.to_audit_record()],
+        summaries=[sheaf_summary],
+        control_proposals=[sheaf_proposal],
     )
     morphogenetic_panel = studio.build_morphogenetic_field_studio_panel(
         morphogenetic_artifact
@@ -196,6 +230,10 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     assert inheritance_panel["actuation_permitted"] is False
     assert inheritance_panel["history_record_total"] == 2
     assert "build_intergenerational_inheritance_studio_panel" in studio.__all__
+    assert sheaf_panel["claim_boundary"] == "sheaf_cohomology_review_not_live_actuation"
+    assert sheaf_panel["actuation_permitted"] is False
+    assert sheaf_panel["accepted_control_proposal_count"] == 1
+    assert "build_sheaf_cohomology_studio_panel" in studio.__all__
     assert morphogenetic_panel["panel_kind"] == ("studio_morphogenetic_field_panel")
     assert morphogenetic_panel["actuation_permitted"] is False
     assert morphogenetic_panel["strongest_edge"] == {
@@ -209,6 +247,7 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     assert callable(studio.build_hybrid_order_studio_panel)
     assert "build_information_geometry_studio_panel" in studio.__all__
     assert callable(studio.build_information_geometry_studio_panel)
+    assert callable(studio.build_sheaf_cohomology_studio_panel)
     assert "build_topos_semantic_binding_studio_panel" in studio.__all__
     assert callable(studio.build_topos_semantic_binding_studio_panel)
     assert "build_evolutionary_supervisor_policy_search_studio_panel" in studio.__all__
