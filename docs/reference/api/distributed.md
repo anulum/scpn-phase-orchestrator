@@ -16,6 +16,12 @@ The implementation lives in
 The public package re-exports the same symbols from
 `scpn_phase_orchestrator.runtime.distributed`.
 
+:::: scpn_phase_orchestrator.runtime.distributed.sync
+    options:
+      show_root_heading: true
+      show_source: false
+      members_order: source
+
 ## Primary use cases
 
 - Multi-process simulation workers that integrate different oscillator shards and
