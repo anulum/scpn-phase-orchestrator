@@ -49,6 +49,11 @@ Builds coupling matrices from parameters.
 | `apply_handshakes` | `(state, path) → CouplingState` | Overlay from JSON spec |
 | `switch_template` | `(state, name, templates) → CouplingState` | Runtime topology switch |
 
+`apply_handshakes()` parses the JSON specification fail-closed: non-finite
+constants, duplicate object keys, non-list `matrix` payloads, self-coupled
+entries, and out-of-range layer indices are rejected before any K_nm entries
+are modified.
+
 ### CouplingState (frozen dataclass)
 
 | Field | Type | Description |

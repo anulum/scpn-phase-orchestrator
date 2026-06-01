@@ -137,6 +137,21 @@ class TestCouplingBuilderAlgebraic:
         assert np.all(state.knm >= 0.0)
         assert np.all(np.isfinite(state.knm))
 
+    def test_apply_handshakes_rejects_duplicate_json_object_keys(self, tmp_path):
+        builder = CouplingBuilder()
+        state = builder.build(3, 0.5, 0.1)
+        handshakes = tmp_path / "handshakes.json"
+        handshakes.write_text(
+            (
+                '{"matrix":[{"from_layer":1,"from_layer":2,'
+                '"to_layer":3,"coupling_strength":0.2}]}'
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="canonical finite JSON"):
+            builder.apply_handshakes(state, handshakes)
+
     @pytest.mark.parametrize("bad_tau", [0.0, -1.0, np.nan, np.inf])
     def test_adjacent_coupling_rejects_nonfinite_timescale(self, monkeypatch, bad_tau):
         from scpn_phase_orchestrator.coupling import knm as knm_mod
