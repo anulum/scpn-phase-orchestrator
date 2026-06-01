@@ -691,6 +691,57 @@ graph = learn_causal_graph(
 audit_graph = graph.to_audit_record()
 ```
 
+`build_temporal_causal_hypergraph_experiment()` is the research-screening layer
+for temporal-causal hypergraph candidates. It compares each proposed
+time-symmetric hyperedge against a deterministic family of conventional
+baselines before any claim can be made:
+
+- lagged-linear graph edge score from `learn_causal_graph()`;
+- lagged Pearson correlation between source and future target;
+- lagged-delta Pearson correlation between source and target increment;
+- pairwise Granger-style residual improvement over target history;
+- target-persistence null correlation.
+
+Candidate hyperedges are accepted for review only when their score beats the
+strongest baseline by the configured margin. The manifest stays research-only:
+production claims, hot patches, and actuation are disabled, and non-winning
+candidates are retained as blocked evidence for audit comparison. Use this for
+offline discovery of higher-order temporal coupling hypotheses, not for
+real-time causal intervention.
+
+```python
+from scpn_phase_orchestrator.supervisor import (
+    build_temporal_causal_hypergraph_experiment,
+)
+
+manifest = build_temporal_causal_hypergraph_experiment(
+    {
+        "driver": driver_trace,
+        "response": response_trace,
+        "distractor": distractor_trace,
+    },
+    [
+        {
+            "sources": ["driver", "response"],
+            "target": "response",
+            "time_offsets": [-1, 0],
+            "score": candidate_score,
+        }
+    ],
+    lag=1,
+    min_abs_weight=1e-4,
+    required_baseline_margin=0.1,
+)
+assert manifest["production_claim_permitted"] is False
+assert manifest["baseline"]["strongest_baseline"] in {
+    "lagged_linear_graph",
+    "lagged_pearson",
+    "lagged_delta_pearson",
+    "granger_residual_improvement",
+    "target_persistence_null",
+}
+```
+
 Domainpack demos:
 
 - `domainpacks/cardiac_rhythm/causal_attribution_demo.py` evaluates a

@@ -693,6 +693,18 @@ def test_temporal_causal_hypergraph_experiment_beats_baseline_research_only() ->
     assert len(str(first["experiment_sha256"])) == 64
     assert first["accepted_hyperedges"][0]["target"] == "response"
     assert first["baseline"]["edge_count"] >= 1
+    assert first["baseline"]["score"] == pytest.approx(2.0)
+    assert first["baseline"]["strongest_baseline"] == "lagged_linear_graph"
+    assert {record["name"] for record in first["baseline"]["baseline_family"]} == {
+        "granger_residual_improvement",
+        "lagged_delta_pearson",
+        "lagged_linear_graph",
+        "lagged_pearson",
+        "target_persistence_null",
+    }
+    assert all(
+        record["edge_count"] >= 0 for record in first["baseline"]["baseline_family"]
+    )
 
 
 def test_temporal_causal_hypergraph_experiment_blocks_without_baseline_win() -> None:
@@ -728,6 +740,40 @@ def test_temporal_causal_hypergraph_experiment_blocks_without_baseline_win() -> 
             trace,
             [{"sources": ["driver"], "target": "response", "time_offsets": []}],
         )
+
+
+def test_temporal_causal_hypergraph_experiment_blocks_against_broader_baselines() -> (
+    None
+):
+    trace = {
+        "driver": [0.0, 1.0, 2.0, 3.0, 4.0],
+        "response": [10.0, 11.0, 12.0, 13.0, 14.0],
+    }
+
+    manifest = build_temporal_causal_hypergraph_experiment(
+        trace,
+        [
+            {
+                "sources": ["driver", "response"],
+                "target": "response",
+                "time_offsets": [-1, 0],
+                "score": 0.5,
+            }
+        ],
+        lag=1,
+        min_abs_weight=0.1,
+    )
+    family = {
+        record["name"]: record for record in manifest["baseline"]["baseline_family"]
+    }
+
+    assert family["lagged_linear_graph"]["score"] == pytest.approx(0.0)
+    assert family["lagged_pearson"]["score"] == pytest.approx(1.0)
+    assert family["target_persistence_null"]["score"] == pytest.approx(1.0)
+    assert manifest["baseline"]["score"] == pytest.approx(1.0)
+    assert manifest["baseline_beaten"] is False
+    assert manifest["accepted_hyperedge_count"] == 0
+    assert manifest["blocked_reasons"] == ["conventional_causal_baseline_not_beaten"]
 
 
 def test_temporal_causal_hypergraph_experiment_rejects_negative_baseline_margin() -> (

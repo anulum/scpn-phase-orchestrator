@@ -330,6 +330,7 @@ class TemporalCausalHypergraphThresholds(NamedTuple):
     min_manifest_count: int
     min_accepted_hyperedge_count: int
     min_baseline_edge_count: int
+    min_baseline_family_count: int
     require_research_only: bool
     require_deterministic_hash: bool
 
@@ -3073,6 +3074,7 @@ def benchmark_temporal_causal_hypergraph_experiment_gate() -> dict[
         min_manifest_count=2,
         min_accepted_hyperedge_count=1,
         min_baseline_edge_count=1,
+        min_baseline_family_count=5,
         require_research_only=True,
         require_deterministic_hash=True,
     )
@@ -3129,6 +3131,9 @@ def benchmark_temporal_causal_hypergraph_experiment_gate() -> dict[
     min_baseline_edge_count = min(
         int(manifest["baseline"]["edge_count"]) for manifest in manifests
     )
+    min_baseline_family_count = min(
+        len(manifest["baseline"]["baseline_family"]) for manifest in manifests
+    )
     research_only = int(
         all(
             manifest["research_only"] is True
@@ -3144,6 +3149,7 @@ def benchmark_temporal_causal_hypergraph_experiment_gate() -> dict[
         len(manifests) >= thresholds.min_manifest_count
         and accepted_hyperedge_count >= thresholds.min_accepted_hyperedge_count
         and min_baseline_edge_count >= thresholds.min_baseline_edge_count
+        and min_baseline_family_count >= thresholds.min_baseline_family_count
         and research_only == int(thresholds.require_research_only)
         and deterministic_hash == int(thresholds.require_deterministic_hash)
     )
@@ -3155,6 +3161,7 @@ def benchmark_temporal_causal_hypergraph_experiment_gate() -> dict[
         "steps_per_second": len(manifests) / elapsed,
         "accepted_hyperedge_count": accepted_hyperedge_count,
         "min_baseline_edge_count": min_baseline_edge_count,
+        "min_baseline_family_count": min_baseline_family_count,
         "research_only": research_only,
         "deterministic_hash": deterministic_hash,
         "passing_experiment_sha256": str(passing["experiment_sha256"]),
@@ -3165,6 +3172,7 @@ def benchmark_temporal_causal_hypergraph_experiment_gate() -> dict[
                     thresholds.min_accepted_hyperedge_count
                 ),
                 "min_baseline_edge_count": thresholds.min_baseline_edge_count,
+                "min_baseline_family_count": thresholds.min_baseline_family_count,
                 "min_manifest_count": thresholds.min_manifest_count,
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_research_only": thresholds.require_research_only,

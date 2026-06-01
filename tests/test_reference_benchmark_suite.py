@@ -1222,6 +1222,7 @@ def test_temporal_causal_hypergraph_experiment_gate_benchmark_shape() -> None:
     assert out["manifest_count"] == 2
     assert out["accepted_hyperedge_count"] == 1
     assert out["min_baseline_edge_count"] >= 1
+    assert out["min_baseline_family_count"] == 5
     assert out["research_only"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
@@ -1237,6 +1238,7 @@ def test_temporal_causal_hypergraph_experiment_gate_reports_baselines() -> None:
     assert thresholds == {
         "min_accepted_hyperedge_count": 1,
         "min_baseline_edge_count": 1,
+        "min_baseline_family_count": 5,
         "min_manifest_count": 2,
         "require_deterministic_hash": True,
         "require_research_only": True,
@@ -1247,6 +1249,17 @@ def test_temporal_causal_hypergraph_experiment_gate_reports_baselines() -> None:
     ]
     assert [manifest["baseline_beaten"] for manifest in manifests] == [True, False]
     assert all(manifest["research_only"] is True for manifest in manifests)
+    assert all(
+        {record["name"] for record in manifest["baseline"]["baseline_family"]}
+        == {
+            "granger_residual_improvement",
+            "lagged_delta_pearson",
+            "lagged_linear_graph",
+            "lagged_pearson",
+            "target_persistence_null",
+        }
+        for manifest in manifests
+    )
     assert all(
         manifest["production_claim_permitted"] is False for manifest in manifests
     )

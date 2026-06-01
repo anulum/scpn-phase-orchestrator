@@ -438,17 +438,32 @@ def build_temporal_causal_hypergraph_experiment(
 ) -> dict[str, object]:
     """Build a research-only temporal-causal hypergraph experiment manifest.
 
-    The manifest compares candidate time-symmetric hyperedges against the
-    conventional lagged causal graph baseline. It never permits production
-    claims, hot-patching, or actuation; baseline failure keeps all candidates
-    blocked as research evidence only.
+    The manifest compares candidate time-symmetric hyperedges against a
+    deterministic family of conventional causal baselines: lagged-linear graph
+    edges, lagged Pearson correlation, lagged-delta correlation,
+    Granger-style residual improvement, and target persistence. It never
+    permits production claims, hot-patching, or actuation; baseline failure
+    keeps all candidates blocked as research evidence only.
     """
 
     if not np.isfinite(required_baseline_margin) or required_baseline_margin < 0.0:
         raise ValueError("required_baseline_margin must be finite and non-negative")
     baseline = learn_causal_graph(trace, lag=lag, min_abs_weight=min_abs_weight)
     candidates = _validated_temporal_hyperedges(candidate_hyperedges)
-    baseline_score = _baseline_score(baseline)
+    baseline_family = _causal_baseline_family(
+        trace,
+        lag=lag,
+        min_abs_weight=min_abs_weight,
+        graph=baseline,
+    )
+    strongest_baseline = max(
+        baseline_family,
+        key=lambda record: (
+            float(record["score"]),
+            str(record["name"]),
+        ),
+    )
+    baseline_score = float(strongest_baseline["score"])
     accepted: list[dict[str, object]] = []
     evaluated: list[dict[str, object]] = []
     for candidate in candidates:
@@ -483,6 +498,8 @@ def build_temporal_causal_hypergraph_experiment(
             "edge_count": len(baseline.edges),
             "node_count": len(baseline.nodes),
             "score": baseline_score,
+            "strongest_baseline": strongest_baseline["name"],
+            "baseline_family": baseline_family,
             "lag": baseline.lag,
             "min_abs_weight": baseline.min_abs_weight,
             "edges": [edge.to_audit_record() for edge in baseline.edges],
@@ -598,6 +615,153 @@ def _baseline_score(graph: CausalGraphEstimate) -> float:
     return float(max(abs(edge.weight) * edge.confidence for edge in graph.edges))
 
 
+def _causal_baseline_family(
+    trace: dict[str, list[float]],
+    *,
+    lag: int,
+    min_abs_weight: float,
+    graph: CausalGraphEstimate,
+) -> list[dict[str, float | int | str]]:
+    arrays = _validate_causal_trace(trace, lag, min_abs_weight)
+    lagged_linear_score = _baseline_score(graph)
+    records = [
+        {
+            "name": "lagged_linear_graph",
+            "score": lagged_linear_score,
+            "edge_count": len(graph.edges),
+            "description": "max_abs_lagged_linear_edge_weight_times_confidence",
+        },
+        _pairwise_correlation_baseline(
+            arrays,
+            lag=lag,
+            min_abs_weight=min_abs_weight,
+            name="lagged_pearson",
+            description="max_abs_corr_source_t_target_t_plus_lag",
+            use_delta=False,
+        ),
+        _pairwise_correlation_baseline(
+            arrays,
+            lag=lag,
+            min_abs_weight=min_abs_weight,
+            name="lagged_delta_pearson",
+            description="max_abs_corr_source_t_target_delta_t_plus_lag",
+            use_delta=True,
+        ),
+        _granger_residual_improvement_baseline(
+            arrays,
+            lag=lag,
+            min_abs_weight=min_abs_weight,
+        ),
+        _target_persistence_baseline(
+            arrays,
+            lag=lag,
+            min_abs_weight=min_abs_weight,
+        ),
+    ]
+    return sorted(records, key=lambda record: str(record["name"]))
+
+
+def _pairwise_correlation_baseline(
+    arrays: dict[str, FloatArray],
+    *,
+    lag: int,
+    min_abs_weight: float,
+    name: str,
+    description: str,
+    use_delta: bool,
+) -> dict[str, float | int | str]:
+    max_score = 0.0
+    edge_count = 0
+    for source, source_values in arrays.items():
+        source_window = source_values[:-lag]
+        for target, target_values in arrays.items():
+            if source == target:
+                continue
+            target_window = (
+                target_values[lag:] - target_values[:-lag]
+                if use_delta
+                else target_values[lag:]
+            )
+            score = abs(_correlation(source_window, target_window))
+            max_score = max(max_score, score)
+            if score >= min_abs_weight:
+                edge_count += 1
+    return {
+        "name": name,
+        "score": float(max_score),
+        "edge_count": edge_count,
+        "description": description,
+    }
+
+
+def _granger_residual_improvement_baseline(
+    arrays: dict[str, FloatArray],
+    *,
+    lag: int,
+    min_abs_weight: float,
+) -> dict[str, float | int | str]:
+    max_score = 0.0
+    edge_count = 0
+    for source, source_values in arrays.items():
+        source_window = source_values[:-lag]
+        for target, target_values in arrays.items():
+            if source == target:
+                continue
+            autoregressive_window = target_values[:-lag]
+            target_future = target_values[lag:]
+            restricted_sse = _linear_residual_sse(
+                autoregressive_window.reshape(-1, 1),
+                target_future,
+            )
+            full_sse = _linear_residual_sse(
+                np.column_stack((autoregressive_window, source_window)),
+                target_future,
+            )
+            if restricted_sse <= 0.0:
+                score = 0.0
+            else:
+                score = max(0.0, (restricted_sse - full_sse) / restricted_sse)
+            max_score = max(max_score, score)
+            if score >= min_abs_weight:
+                edge_count += 1
+    return {
+        "name": "granger_residual_improvement",
+        "score": float(max_score),
+        "edge_count": edge_count,
+        "description": "max_fractional_sse_reduction_source_plus_target_history",
+    }
+
+
+def _target_persistence_baseline(
+    arrays: dict[str, FloatArray],
+    *,
+    lag: int,
+    min_abs_weight: float,
+) -> dict[str, float | int | str]:
+    max_score = 0.0
+    edge_count = 0
+    for values in arrays.values():
+        score = abs(_correlation(values[:-lag], values[lag:]))
+        max_score = max(max_score, score)
+        if score >= min_abs_weight:
+            edge_count += 1
+    return {
+        "name": "target_persistence_null",
+        "score": float(max_score),
+        "edge_count": edge_count,
+        "description": "max_abs_corr_target_t_target_t_plus_lag",
+    }
+
+
+def _linear_residual_sse(design: FloatArray, target: FloatArray) -> float:
+    if design.shape[0] != target.shape[0]:
+        raise ValueError("linear baseline design and target length mismatch")
+    augmented = np.column_stack((np.ones(design.shape[0], dtype=np.float64), design))
+    coefficients, *_ = np.linalg.lstsq(augmented, target, rcond=None)
+    residual = target - augmented @ coefficients
+    return float(np.dot(residual, residual))
+
+
 def _stable_json_hash(payload: object) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return sha256(canonical.encode("utf-8")).hexdigest()
@@ -661,3 +825,13 @@ def _lagged_linear_effect(
     weight = covariance / source_var
     confidence = min(1.0, abs(covariance) / float(np.sqrt(source_var * target_var)))
     return float(weight), float(confidence)
+
+
+def _correlation(a: FloatArray, b: FloatArray) -> float:
+    a_centered = a - float(np.mean(a))
+    b_centered = b - float(np.mean(b))
+    a_var = float(np.dot(a_centered, a_centered))
+    b_var = float(np.dot(b_centered, b_centered))
+    if a_var == 0.0 or b_var == 0.0:
+        return 0.0
+    return float(np.dot(a_centered, b_centered) / np.sqrt(a_var * b_var))
