@@ -142,10 +142,11 @@ simulator-parity handoff, not a live neuromorphic target run.
 
 ### Hardware I/O
 
-The simulated hardware board provides deterministic sinusoidal EEG-like
-channels for local pipeline tests. Custom frequencies must be finite positive
-real values; boolean aliases are rejected before waveform generation so digital
-control flags cannot be interpreted as `1 Hz` oscillator frequencies.
+The sample buffer and simulated hardware board provide deterministic
+real-valued sensor ingress for local pipeline tests. Samples must be finite real
+amplitudes, and custom frequencies must be finite positive real values; boolean
+and complex aliases are rejected before buffering or waveform generation so
+digital flags and phasors cannot enter oscillator sensor channels.
 
 ### LSLBCIBridge
 

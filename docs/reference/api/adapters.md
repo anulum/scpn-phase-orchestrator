@@ -181,9 +181,10 @@ Translates ControlAction to Modbus register writes over TLS.
 
 Generic hardware I/O abstraction for digital/analogue outputs.
 
-Simulated-board frequency configuration accepts only finite positive real
-frequencies; boolean aliases are rejected before synthetic EEG generation so
-digital flags cannot become oscillator frequencies.
+Hardware I/O sample buffers and simulated-board frequency configuration
+accept only finite real sensor amplitudes and finite positive real frequencies;
+boolean and complex aliases are rejected before buffering or synthetic EEG
+generation so flags and phasors cannot enter real sensor channels.
 
 ::: scpn_phase_orchestrator.adapters.hardware_io
 

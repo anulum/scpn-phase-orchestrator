@@ -63,6 +63,18 @@ def _channel_index(value: object, *, n_channels: int) -> int:
     return idx
 
 
+def _has_non_real_numeric_alias(values: object) -> bool:
+    array = np.asarray(values)
+    if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.complexfloating):
+        return True
+    if array.dtype == object:
+        return any(
+            isinstance(item, bool | np.bool_ | complex | np.complexfloating)
+            for item in array.flat
+        )
+    return False
+
+
 def _validated_frequencies(
     frequencies: FloatArray | None,
     *,
@@ -70,12 +82,8 @@ def _validated_frequencies(
 ) -> FloatArray:
     if frequencies is None:
         return np.linspace(1.0, 40.0, n_channels, dtype=np.float64)
-    raw = np.asarray(frequencies)
-    if raw.dtype == np.bool_ or (
-        raw.dtype == object
-        and any(isinstance(item, bool | np.bool_) for item in raw.flat)
-    ):
-        raise ValueError("frequencies must be real numeric values, not boolean")
+    if _has_non_real_numeric_alias(frequencies):
+        raise ValueError("frequencies must contain real numeric values")
     array = np.asarray(frequencies, dtype=np.float64)
     if array.shape != (n_channels,):
         raise ValueError(f"frequencies must have shape ({n_channels},)")
@@ -133,6 +141,8 @@ class SampleBuffer:
             raise ValueError(
                 f"samples first dimension must match n_channels={self.n_channels}"
             )
+        if _has_non_real_numeric_alias(samples):
+            raise ValueError("samples must contain real numeric values")
         if not np.issubdtype(samples.dtype, np.number):
             raise ValueError("samples must be numeric")
         if not np.all(np.isfinite(samples)):

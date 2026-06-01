@@ -110,6 +110,11 @@ class TestSampleBuffer:
         with pytest.raises(ValueError, match="finite"):
             buf.push(bad)
 
+    def test_push_rejects_complex_samples(self):
+        buf = SampleBuffer(capacity=8, n_channels=1)
+        with pytest.raises(ValueError, match="real"):
+            buf.push(np.array([[1.0 + 0.25j]]))
+
     @given(
         n_channels=st.integers(min_value=1, max_value=6),
         capacity=st.integers(min_value=1, max_value=20),
@@ -146,6 +151,7 @@ class TestSimulatedBoard:
             (1, 256, np.array([np.nan])),
             (1, 256, np.array([-1.0])),
             (1, 256, np.array([True])),
+            (1, 256, np.array([1.0 + 0.25j])),
         ],
     )
     def test_constructor_rejects_invalid_config(
