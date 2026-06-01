@@ -84,6 +84,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the SNN controller bridge by bounding UPDE order-parameter
   magnitudes, rejecting negative spike rates, and rejecting boolean or complex
   aliases before LIF current, rate, and neuromorphic schedule conversion.
+- Hardened the Neurocore bridge by rejecting negative deterministic seeds and
+  boolean-alias rate vectors before action projection or Rust backend output
+  acceptance.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
   aliases, non-zero layer self-coupling, empty phase snapshots, negative plasma
   ratios, and non-positive safety-factor minima before coupling expansion or

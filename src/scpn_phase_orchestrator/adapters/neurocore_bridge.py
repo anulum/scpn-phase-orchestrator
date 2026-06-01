@@ -95,7 +95,10 @@ def _require_seed(value: int | None) -> int | None:
         return None
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("seed must be an integer or None")
-    return int(value)
+    result = int(value)
+    if result < 0:
+        raise ValueError("seed must be non-negative")
+    return result
 
 
 def _require_unit_interval(value: object, *, field: str) -> float:
@@ -105,7 +108,22 @@ def _require_unit_interval(value: object, *, field: str) -> float:
     return result
 
 
+def _has_boolean_alias(value: object) -> bool:
+    if isinstance(value, bool | np.bool_):
+        return True
+    if isinstance(value, np.ndarray):
+        if value.dtype.kind == "b":
+            return True
+        if value.dtype.kind == "O":
+            return any(_has_boolean_alias(item) for item in value.flat)
+    if isinstance(value, list | tuple):
+        return any(_has_boolean_alias(item) for item in value)
+    return False
+
+
 def _require_rate_vector(value: object, *, n_layers: int) -> FloatArray:
+    if _has_boolean_alias(value):
+        raise ValueError("rates must be real-valued, finite, and non-negative")
     try:
         rates = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

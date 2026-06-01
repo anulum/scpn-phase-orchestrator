@@ -104,6 +104,11 @@ schedule-manifest generation.
 
 ### Neurocore Bridge
 
+`NeurocoreBridge` maps bounded UPDE layer coherence to stochastic LIF input
+currents, accepts only non-negative deterministic seeds, and validates
+real-valued non-negative rate vectors from action inputs or Rust backend output
+before producing coupling actions.
+
 ::: scpn_phase_orchestrator.adapters.neurocore_bridge
 
 ## Observability

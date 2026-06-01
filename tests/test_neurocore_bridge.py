@@ -28,6 +28,11 @@ class _MalformedRustEnsemble:
         return np.array([1.0, np.nan])
 
 
+class _BooleanRustEnsemble:
+    def step(self, _layer_currents: np.ndarray, _n_substeps: int) -> np.ndarray:
+        return np.array([True, False])
+
+
 def _make_state(r_values: list[float]) -> UPDEState:
     layers = [LayerState(R=r, psi=0.0) for r in r_values]
     return UPDEState(
@@ -79,6 +84,14 @@ class TestNeurocoreBridge:
         with pytest.raises(ValueError, match="rates"):
             bridge.step(_make_state([0.8, 0.6]), n_substeps=10)
 
+    def test_rust_step_rejects_boolean_backend_rates_before_float_coercion(self):
+        bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
+        bridge._backend = "rust"
+        bridge._rust_ensemble = _BooleanRustEnsemble()
+
+        with pytest.raises(ValueError, match="rates"):
+            bridge.step(_make_state([0.8, 0.6]), n_substeps=10)
+
     def test_high_coherence_higher_rate(self):
         bridge = NeurocoreBridge(
             n_layers=2,
@@ -100,9 +113,12 @@ class TestNeurocoreBridge:
         "rates",
         [
             np.ones((1, 2)),
+            np.array([True, False]),
+            [True, False],
             np.array([1.0, np.nan]),
             np.array([1.0]),
             np.array([1.0, -1.0]),
+            np.array([1.0, 2.0 + 0.0j], dtype=object),
         ],
     )
     def test_rates_to_actions_rejects_invalid_rate_vector(self, rates: object):
@@ -145,6 +161,7 @@ class TestNeurocoreBridge:
             ("noise_std", {"noise_std": -0.1}),
             ("backend", {"backend": True}),
             ("seed", {"seed": True}),
+            ("seed", {"seed": -1}),
         ],
     )
     def test_rejects_malformed_constructor_config(

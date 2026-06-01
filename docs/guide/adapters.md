@@ -166,7 +166,9 @@ tries to enable execution. `qpu_execution_permitted`,
 Live integration with [sc-neurocore](https://github.com/anulum/sc-neurocore)
 `StochasticLIFNeuron` ensembles. Maps UPDE layer coherence R to neuron input
 currents, runs a stochastic LIF ensemble, converts spike rates to coupling
-boost `ControlAction` objects.
+boost `ControlAction` objects. Seeds must be non-negative when provided,
+UPDE layer coherences must remain finite magnitudes in `[0, 1]`, and
+backend/action rate vectors reject boolean aliases before float coercion.
 
 Three backends, selected automatically (best available):
 
