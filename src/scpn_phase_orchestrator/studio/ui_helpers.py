@@ -16,6 +16,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 from math import isfinite
+from numbers import Real
 from pathlib import Path
 from typing import cast
 
@@ -2760,12 +2761,9 @@ def _bounded_information_scalar(
 
 
 def _non_negative_float(value: object, name: str) -> float:
-    if isinstance(value, (bool, complex)):
+    if isinstance(value, (bool, complex)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real value")
-    try:
-        scalar = float(cast("object", value))
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a finite non-negative real value") from exc
+    scalar = float(value)
     if not isfinite(scalar) or scalar < 0.0:
         raise ValueError(f"{name} must be a finite non-negative real value")
     return scalar
@@ -3107,12 +3105,6 @@ def _run_owned_live_adapter(
         )
         return hardware_response.to_audit_record(), hardware.to_audit_record()
     raise ValueError(f"connector transport {transport!r} is not a live runtime")
-
-
-def _non_negative_int(value: object, name: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise ValueError(f"{name} must be a non-negative int")
-    return value
 
 
 def _mapping_count(mapping: Mapping[str, object], name: str) -> int:
