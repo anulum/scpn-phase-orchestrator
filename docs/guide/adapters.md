@@ -140,6 +140,13 @@ evidence from the numpy LIF rate path, and a SHA-256 schedule hash. The manifest
 keeps `actuation_permitted` and `hardware_write_permitted` false; it is a
 simulator-parity handoff, not a live neuromorphic target run.
 
+### LSLBCIBridge
+
+Live BCI ingress uses Lab Streaming Layer samples as a phase-extraction input.
+The buffer accepts only finite real EEG amplitudes with finite non-negative LSL
+timestamps; boolean samples are rejected before Hilbert phase extraction so
+binary flags cannot enter the oscillator phase channel as amplitudes.
+
 ### Hybrid Neuromorphic-Quantum Co-Compiler
 
 The hybrid co-compiler combines a quantum compiler manifest and a neuromorphic

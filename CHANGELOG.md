@@ -87,6 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the Neurocore bridge by rejecting negative deterministic seeds and
   boolean-alias rate vectors before action projection or Rust backend output
   acceptance.
+- Hardened the LSL BCI bridge by rejecting boolean EEG samples and malformed
+  sample timestamps before buffered Hilbert phase extraction.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
   aliases, non-zero layer self-coupling, empty phase snapshots, negative plasma
   ratios, and non-positive safety-factor minima before coupling expansion or

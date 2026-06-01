@@ -219,6 +219,11 @@ class TestGetInstantaneousPhase:
         phase = bridge.get_instantaneous_phase()
         assert np.isfinite(phase)
 
+    def test_boolean_sample_buffer_is_ignored_before_phase_extraction(self) -> None:
+        bridge = LSLBCIBridge()
+        bridge._data_buffer = [True] * 64
+        assert bridge.get_instantaneous_phase() == 0.0
+
     def test_sinusoidal_advances(self) -> None:
         bridge = LSLBCIBridge()
         t1 = np.linspace(0, 4 * np.pi, 128)
@@ -341,3 +346,17 @@ class TestCaptureLoop:
         bridge._buffer_len = 100
         self._run_capture(bridge, [(None, None), ([1.0], 100.0)])
         assert len(bridge._data_buffer) == 1
+
+    def test_boolean_samples_and_invalid_timestamps_are_skipped(self) -> None:
+        bridge = LSLBCIBridge(target_channel=0)
+        bridge._buffer_len = 100
+        self._run_capture(
+            bridge,
+            [
+                ([True], 100.0),
+                ([0.5], -1.0),
+                ([0.6], np.nan),
+                ([0.7], 100.1),
+            ],
+        )
+        assert bridge._data_buffer == [0.7]

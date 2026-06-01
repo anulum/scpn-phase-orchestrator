@@ -208,6 +208,10 @@ It extracts the instantaneous phase of target brainwaves (e.g., Alpha or Gamma
 rhythms) and provides them as input to the `ActiveInferenceAgent` for
 predictive entrainment.
 
+Captured samples must be finite real EEG amplitudes, not boolean aliases, and
+LSL timestamps must be finite non-negative values before samples enter the
+Hilbert phase buffer.
+
 ### Features
 - **Real-Time Phase Extraction:** Uses Hilbert transforms on sliding windows
   to track neural phase state.

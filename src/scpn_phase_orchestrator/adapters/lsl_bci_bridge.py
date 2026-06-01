@@ -88,11 +88,23 @@ def _validate_nominal_srate(nominal_srate: Any) -> float:
 
 
 def _is_valid_sample(sample: Any) -> bool:
+    if isinstance(sample, bool):
+        return False
     try:
         value = float(sample)
     except (TypeError, ValueError):
         return False
     return isfinite(value)
+
+
+def _is_valid_timestamp(timestamp: Any) -> bool:
+    if isinstance(timestamp, bool):
+        return False
+    try:
+        value = float(timestamp)
+    except (TypeError, ValueError):
+        return False
+    return isfinite(value) and value >= 0.0
 
 
 class LSLBCIBridge:
@@ -226,11 +238,13 @@ class LSLBCIBridge:
         """Background thread reading samples into the buffer."""
         while self._running:
             try:
-                sample, _ = self._inlet.pull_sample(timeout=0.1)
+                sample, timestamp = self._inlet.pull_sample(timeout=0.1)
             except (OSError, ValueError, RuntimeError):
                 continue
 
             if sample is None:
+                continue
+            if not _is_valid_timestamp(timestamp):
                 continue
             if not isinstance(sample, Sequence):
                 continue
