@@ -117,6 +117,27 @@ class TestImportKnm:
         with pytest.raises(ValueError, match="finite"):
             bridge.import_knm(np.array([[0.0, np.nan], [1.0, 0.0]]))
 
+    def test_rejects_empty_matrix(self) -> None:
+        bridge = SCPNControlBridge({})
+        with pytest.raises(ValueError, match="non-empty"):
+            bridge.import_knm(np.empty((0, 0)))
+
+    def test_rejects_boolean_alias_matrix_before_float_coercion(self) -> None:
+        bridge = SCPNControlBridge({})
+        with pytest.raises(ValueError, match="real-valued"):
+            bridge.import_knm(np.array([[False, True], [True, False]]))
+
+    def test_rejects_complex_object_alias_matrix_before_float_coercion(self) -> None:
+        bridge = SCPNControlBridge({})
+        knm = np.array([[0.0, 1.0], [1.0 + 0.0j, 0.0]], dtype=object)
+        with pytest.raises(ValueError, match="real-valued"):
+            bridge.import_knm(knm)
+
+    def test_rejects_nonzero_self_coupling_diagonal(self) -> None:
+        bridge = SCPNControlBridge({})
+        with pytest.raises(ValueError, match="self-coupling"):
+            bridge.import_knm(np.array([[0.25, 1.0], [1.0, 0.0]]))
+
 
 class TestImportOmega:
     def test_valid_positive(self) -> None:
@@ -145,6 +166,24 @@ class TestImportOmega:
         bridge = SCPNControlBridge({})
         with pytest.raises(ValueError, match="finite"):
             bridge.import_omega(np.array([1.0, np.inf]))
+
+    def test_rejects_empty_frequency_vector(self) -> None:
+        bridge = SCPNControlBridge({})
+        with pytest.raises(ValueError, match="non-empty"):
+            bridge.import_omega(np.array([], dtype=np.float64))
+
+    def test_rejects_boolean_alias_frequency_vector_before_float_coercion(self) -> None:
+        bridge = SCPNControlBridge({})
+        with pytest.raises(ValueError, match="real-valued"):
+            bridge.import_omega(np.array([True, False]))
+
+    def test_rejects_complex_object_alias_frequency_vector_before_float_coercion(
+        self,
+    ) -> None:
+        bridge = SCPNControlBridge({})
+        omega = np.array([1.0, 2.0 + 0.0j], dtype=object)
+        with pytest.raises(ValueError, match="real-valued"):
+            bridge.import_omega(omega)
 
 
 class TestExportState:

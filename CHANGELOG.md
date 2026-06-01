@@ -78,6 +78,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the FusionCore bridge boundary by rejecting non-positive q-profile
   bounds, negative fusion observables, negative stability ratios, and empty
   phase-feedback vectors before phase encoding or order-parameter export.
+- Hardened the SCPNControl bridge boundary by rejecting empty, boolean-alias,
+  complex-alias, and non-zero self-coupled `K_nm` imports plus empty or
+  non-real natural-frequency imports before orchestration state conversion.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
   aliases, non-zero layer self-coupling, empty phase snapshots, negative plasma
   ratios, and non-positive safety-factor minima before coupling expansion or

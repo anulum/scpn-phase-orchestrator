@@ -53,9 +53,10 @@ They share the Kuramoto/UPDE phase representation but differ in scope:
 | `import_omega` | `(scpn_omega: NDArray) → NDArray` | Validate frequencies |
 | `export_state` | `(upde_state: UPDEState) → dict` | Telemetry export |
 
-`import_knm` validates square matrix shape. `import_omega` validates
-1-D and all-positive. `export_state` produces a dict with `regime`,
-`stability`, `layers` (each with R, ψ, lock signatures).
+`import_knm` validates non-empty finite real-valued square matrices with a zero
+self-coupling diagonal. `import_omega` validates non-empty finite real-valued
+1-D vectors with strictly positive natural frequencies. `export_state` produces
+a dict with `regime`, `stability`, `layers` (each with R, ψ, lock signatures).
 
 ::: scpn_phase_orchestrator.adapters.scpn_control_bridge
 

@@ -93,7 +93,10 @@ preconditions are present. It is release/operator evidence, not a QPU submitter.
 ### SCPNControlBridge
 
 Generic bridge for the SCPN ecosystem. Imports Knm matrices and omega vectors,
-exports `UPDEState` as a telemetry dict with lock signatures.
+exports `UPDEState` as a telemetry dict with lock signatures. Imported
+coupling matrices must be non-empty, finite, real-valued, square, and
+zero-self-coupled; imported natural-frequency vectors must be non-empty,
+finite, real-valued, one-dimensional, and strictly positive.
 
 ```python
 from scpn_phase_orchestrator.adapters import SCPNControlBridge

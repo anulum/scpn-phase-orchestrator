@@ -32,6 +32,28 @@ FloatArray: TypeAlias = NDArray[np.float64]
 JSONConfig: TypeAlias = dict[str, object]
 
 
+def _has_non_real_numeric_alias(value: object) -> bool:
+    if isinstance(value, bool | np.bool_):
+        return True
+    if isinstance(value, complex | np.complexfloating):
+        return True
+    if isinstance(value, np.ndarray):
+        if value.dtype.kind in {"b", "c"}:
+            return True
+        if value.dtype.kind == "O":
+            return any(_has_non_real_numeric_alias(item) for item in value.flat)
+        return False
+    if isinstance(value, list | tuple):
+        return any(_has_non_real_numeric_alias(item) for item in value)
+    return not isinstance(value, Real)
+
+
+def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
+    if _has_non_real_numeric_alias(value):
+        raise ValueError(f"{name} must be real-valued numeric data")
+    return np.asarray(value, dtype=np.float64)
+
+
 def _validate_config_value(value: object, *, path: str) -> object:
     if value is None or isinstance(value, str | bool):
         return value
@@ -69,11 +91,15 @@ class SCPNControlBridge:
 
     def import_knm(self, scpn_knm: FloatArray) -> CouplingState:
         """Wrap an external Knm matrix into a CouplingState."""
-        knm: FloatArray = np.asarray(scpn_knm, dtype=np.float64)
+        knm = _as_real_numeric_array(scpn_knm, name="Knm")
         if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
             raise ValueError(f"Knm must be square, got shape {knm.shape}")
+        if knm.size == 0:
+            raise ValueError("Knm must be non-empty")
         if not np.all(np.isfinite(knm)):
             raise ValueError("Knm must contain only finite values")
+        if np.any(np.diag(knm) != 0.0):
+            raise ValueError("Knm self-coupling diagonal must be zero")
         n = knm.shape[0]
         return CouplingState(
             knm=knm,
@@ -83,9 +109,11 @@ class SCPNControlBridge:
 
     def import_omega(self, scpn_omega: FloatArray) -> FloatArray:
         """Validate and pass through natural frequencies."""
-        omega: FloatArray = np.asarray(scpn_omega, dtype=np.float64)
+        omega = _as_real_numeric_array(scpn_omega, name="omega")
         if omega.ndim != 1:
             raise ValueError(f"omega must be 1-D, got ndim={omega.ndim}")
+        if omega.size == 0:
+            raise ValueError("omega must be non-empty")
         if not np.all(np.isfinite(omega)):
             raise ValueError("omega must contain only finite values")
         if np.any(omega <= 0.0):
