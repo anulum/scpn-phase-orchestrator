@@ -2084,7 +2084,7 @@ def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
             )
         )
         artifact_count = len(texts)
-        accepted = (
+        accepted = bool(
             artifact_count >= thresholds.min_artifacts_per_domain
             and len(rules) >= thresholds.min_rules_per_domain
             and len(stl_specs) >= thresholds.min_stl_specs_per_domain
@@ -2093,7 +2093,7 @@ def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
             >= thresholds.min_checker_command_count
             and deterministic_hash == int(thresholds.require_deterministic_hash)
             and required_labels_present
-            and checker_execution_disabled
+            and checker_execution_disabled == 1
         )
         domain_results.append(
             {
