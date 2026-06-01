@@ -19,6 +19,8 @@ copy.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -52,14 +54,18 @@ def extract_phases(
         fs: sampling frequency in Hz.
         bandpass: optional (low, high) Hz for bandpass filtering before Hilbert.
     """
-    x = np.asarray(signal, dtype=np.float64)
+    sample_rate = _positive_real(fs, "fs")
+    x = _real_signal(signal)
     if x.ndim != 1:
         raise ValueError(f"signal must be 1-D, got shape {x.shape}")
     if len(x) < 4:
         raise ValueError(f"signal too short ({len(x)} samples), need >= 4")
+    if not np.all(np.isfinite(x)):
+        raise ValueError("signal must contain only finite values")
 
     if bandpass is not None:
-        x = _bandpass_filter(x, fs, bandpass[0], bandpass[1])
+        low, high = _validated_bandpass(bandpass, sample_rate)
+        x = _bandpass_filter(x, sample_rate, low, high)
 
     analytic = hilbert(x)
     phases: FloatArray = np.angle(analytic) % (2 * np.pi)
@@ -67,12 +73,17 @@ def extract_phases(
 
     # Instantaneous frequency from phase derivative
     dphase = np.diff(np.unwrap(np.angle(analytic)))
-    inst_freq = np.concatenate([[0.0], dphase * fs / (2 * np.pi)])
+    inst_freq = np.concatenate([[0.0], dphase * sample_rate / (2 * np.pi)])
 
     # Dominant frequency via FFT
     fft_mag = np.abs(np.fft.rfft(x))
-    freqs = np.fft.rfftfreq(len(x), d=1.0 / fs)
-    dominant_freq = float(freqs[np.argmax(fft_mag[1:]) + 1]) if len(freqs) > 1 else 0.0
+    freqs = np.fft.rfftfreq(len(x), d=1.0 / sample_rate)
+    ac_mag = fft_mag[1:]
+    dominant_freq = (
+        float(freqs[np.argmax(ac_mag) + 1])
+        if ac_mag.size > 0 and float(np.max(ac_mag)) > 0.0
+        else 0.0
+    )
 
     return PhaseResult(
         phases=phases,
@@ -91,3 +102,61 @@ def _bandpass_filter(x: FloatArray, fs: float, low: float, high: float) -> Float
     fft[~mask] = 0.0
     result: FloatArray = np.fft.irfft(fft, n=n)
     return result
+
+
+def _real_signal(signal: object) -> FloatArray:
+    raw = np.asarray(signal)
+    if raw.dtype == np.bool_ or _contains_alias(raw, (bool, np.bool_)):
+        raise ValueError("signal must not contain boolean values")
+    if np.iscomplexobj(raw) or _contains_alias(raw, (complex, np.complexfloating)):
+        raise ValueError("signal must be real-valued")
+    try:
+        x: FloatArray = raw.astype(np.float64, copy=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("signal must be real-valued") from exc
+    return x
+
+
+def _validated_bandpass(
+    bandpass: tuple[float, float],
+    fs: float,
+) -> tuple[float, float]:
+    if not isinstance(bandpass, tuple) or len(bandpass) != 2:
+        raise ValueError("bandpass must be a (low, high) frequency tuple")
+    low = _non_negative_real(bandpass[0], "bandpass low")
+    high = _positive_real(bandpass[1], "bandpass high")
+    nyquist = 0.5 * fs
+    if not low < high:
+        raise ValueError("bandpass low must be lower than bandpass high")
+    if high > nyquist:
+        raise ValueError("bandpass high must not exceed Nyquist frequency")
+    return low, high
+
+
+def _positive_real(value: object, name: str) -> float:
+    parsed = _real_scalar(value, name)
+    if parsed <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
+    return parsed
+
+
+def _non_negative_real(value: object, name: str) -> float:
+    parsed = _real_scalar(value, name)
+    if parsed < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return parsed
+
+
+def _real_scalar(value: object, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real value")
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    return parsed
+
+
+def _contains_alias(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+    if raw.dtype != object:
+        return False
+    return any(isinstance(item, aliases) for item in raw.ravel())
