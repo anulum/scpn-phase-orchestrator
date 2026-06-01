@@ -728,7 +728,9 @@ def build_intergenerational_inheritance_studio_panel(
             }
         )
     )
-    fitness_scores = tuple(float(row["fitness_score"]) for row in child_rows)
+    fitness_scores = tuple(
+        float(cast(float, row["fitness_score"])) for row in child_rows
+    )
 
     return {
         "panel_kind": "studio_intergenerational_inheritance_panel",
@@ -746,7 +748,8 @@ def build_intergenerational_inheritance_studio_panel(
         "inheritance_child_rows": child_rows,
         "history_record_total": len(child_rows),
         "signed_metadata_total": sum(
-            int(history["signed_metadata_count"]) for history in normalised_histories
+            int(cast(int, history["signed_metadata_count"]))
+            for history in normalised_histories
         ),
         "replay_domains": replay_domains,
         "replay_domain_count": len(replay_domains),
@@ -3439,7 +3442,9 @@ def _normalise_intergenerational_inheritance_histories(
             raise ValueError(f"{name} signed_metadata_count does not match rows")
         if replay_domain_count != len(set(replay_domains)):
             raise ValueError(f"{name} replay_domain_count does not match rows")
-        fitness_values = tuple(float(row["fitness_score"]) for row in child_rows)
+        fitness_values = tuple(
+            float(cast(float, row["fitness_score"])) for row in child_rows
+        )
         minimum_fitness = _autopoietic_lineage_float(
             history.get("minimum_fitness_score"), f"{name} minimum_fitness_score"
         )

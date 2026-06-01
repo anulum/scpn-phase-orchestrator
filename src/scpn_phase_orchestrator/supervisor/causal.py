@@ -624,7 +624,7 @@ def _causal_baseline_family(
 ) -> list[dict[str, float | int | str]]:
     arrays = _validate_causal_trace(trace, lag, min_abs_weight)
     lagged_linear_score = _baseline_score(graph)
-    records = [
+    records: list[dict[str, float | int | str]] = [
         {
             "name": "lagged_linear_graph",
             "score": lagged_linear_score,

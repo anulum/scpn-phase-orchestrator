@@ -3,7 +3,7 @@
   "counts": {
     "core_engine_modules": 224,
     "domainpacks": 36,
-    "github_workflows": 10,
+    "github_workflows": 11,
     "integration_modules": 24,
     "optional_extras": 15,
     "public_api_exports": 24,
@@ -12,7 +12,7 @@
     "research_experimental_modules": 149,
     "runtime_serving_modules": 47,
     "rust_kernel_files": 91,
-    "test_files": 522
+    "test_files": 524
   },
   "documentation": {
     "public_pages": [
@@ -1218,6 +1218,7 @@
       ".github/workflows/clusterfuzzlite.yml",
       ".github/workflows/codeql.yml",
       ".github/workflows/docs.yml",
+      ".github/workflows/formal-model-checkers.yml",
       ".github/workflows/kani.yml",
       ".github/workflows/pre-commit.yml",
       ".github/workflows/publish.yml",
@@ -1379,6 +1380,7 @@
       "tests/test_ffi_parity.py",
       "tests/test_formal_export.py",
       "tests/test_formal_export_residual.py",
+      "tests/test_formal_model_checker_ci.py",
       "tests/test_free_energy.py",
       "tests/test_freq_id.py",
       "tests/test_fusion_core_bridge.py",
@@ -1581,6 +1583,7 @@
       "tests/test_quantum_control_bridge.py",
       "tests/test_queuewaves_domainpack.py",
       "tests/test_queuewaves_pipeline.py",
+      "tests/test_queuewaves_server.py",
       "tests/test_recurrence.py",
       "tests/test_recurrence_algorithm.py",
       "tests/test_recurrence_backends.py",

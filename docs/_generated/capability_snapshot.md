@@ -15,8 +15,8 @@
 | Domainpack files | 36 |
 | Rust kernel files | 91 |
 | Optional extras | 15 |
-| Python test files | 522 |
+| Python test files | 524 |
 | Public documentation pages | 175 |
-| GitHub Actions workflows | 10 |
+| GitHub Actions workflows | 11 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

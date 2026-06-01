@@ -310,6 +310,7 @@ def _artifact_type(export: PrismExport | TLAExport | FormalTextArtifact) -> str:
 
 
 def _checker_command(property_: FormalSafetyProperty) -> FormalCheckerCommand:
+    command: tuple[str, ...]
     if property_.checker == "prism":
         command = (
             "prism",
