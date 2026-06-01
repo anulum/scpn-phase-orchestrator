@@ -812,8 +812,11 @@ rule-fire counters plus reachability predicates for fired rules and emitted
 actions.
 `--export package` emits a JSON formal verification package manifest that binds
 protocol PRISM/TLA and policy PRISM artefact hashes to named safety properties
-and external PRISM/TLC command records. The package does not run model checkers;
-all command records keep `execution_permitted=false`. Add
+and external PRISM/TLC command records. The package API also accepts reviewed
+Promela and SMT-LIB text artefacts through `FormalTextArtifact`, linking them
+to non-executing SPIN and Z3 command/readiness manifests under the same hash
+and disabled-execution contract. The package does not run model checkers; all
+command records keep `execution_permitted=false`. Add
 `--include-checker-readiness` to append non-executing checker availability
 records to that JSON; `--checker-path executable=/path` can make CI readiness
 evidence deterministic, and `--checker-path executable=` forces a missing

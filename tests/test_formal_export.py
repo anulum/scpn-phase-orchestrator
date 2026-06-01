@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.supervisor import (
     FormalCheckerAvailability,
     FormalCheckerCommand,
     FormalSafetyProperty,
+    FormalTextArtifact,
     FormalVerificationPackage,
     PolicyAction,
     PolicyCondition,
@@ -291,6 +292,91 @@ def test_formal_checker_availability_audit_is_non_executing_and_deterministic() 
     ]
 
 
+def test_formal_package_supports_spin_and_smt_workflow_manifests() -> None:
+    promela = FormalTextArtifact(
+        artifact_type="promela",
+        text="never { /* terminal reachability monitor */ accept_init: skip }\n",
+    )
+    smt = FormalTextArtifact(
+        artifact_type="smt2",
+        text="(set-logic QF_LRA)\n(assert true)\n(check-sat)\n",
+    )
+
+    package = build_formal_verification_package(
+        {
+            "protocol_spin": promela,
+            "barrier_smt": smt,
+        },
+        (
+            FormalSafetyProperty(
+                name="spin_no_bad_cycle",
+                artifact_name="protocol_spin",
+                checker="spin",
+                expression="never_claim_accepts_no_bad_cycle",
+                description="Promela monitor has no accepted bad cycle.",
+            ),
+            FormalSafetyProperty(
+                name="smt_barrier_feasible",
+                artifact_name="barrier_smt",
+                checker="smt",
+                expression="check-sat",
+                description="SMT barrier constraints are satisfiable.",
+            ),
+        ),
+        package_name="spo-frontier-formal-review",
+    )
+    readiness = audit_formal_checker_availability(
+        package,
+        executable_paths={"spin": "/ci/bin/spin", "z3": None},
+    )
+
+    record = package.to_audit_record()
+    assert record["artifact_types"] == {
+        "barrier_smt": "smt2",
+        "protocol_spin": "promela",
+    }
+    assert record["checker_commands"] == [
+        {
+            "property_name": "spin_no_bad_cycle",
+            "checker": "spin",
+            "artifact_name": "protocol_spin",
+            "command": ["spin", "-run", "protocol_spin.pml"],
+            "execution_permitted": False,
+        },
+        {
+            "property_name": "smt_barrier_feasible",
+            "checker": "smt",
+            "artifact_name": "barrier_smt",
+            "command": ["z3", "barrier_smt.smt2"],
+            "execution_permitted": False,
+        },
+    ]
+    assert [item.to_audit_record() for item in readiness] == [
+        {
+            "property_name": "spin_no_bad_cycle",
+            "checker": "spin",
+            "artifact_name": "protocol_spin",
+            "executable": "spin",
+            "command": ["spin", "-run", "protocol_spin.pml"],
+            "available": True,
+            "resolved_path": "/ci/bin/spin",
+            "status": "ready_not_executed",
+            "execution_permitted": False,
+        },
+        {
+            "property_name": "smt_barrier_feasible",
+            "checker": "smt",
+            "artifact_name": "barrier_smt",
+            "executable": "z3",
+            "command": ["z3", "barrier_smt.smt2"],
+            "available": False,
+            "resolved_path": None,
+            "status": "missing_executable",
+            "execution_permitted": False,
+        },
+    ]
+
+
 def test_formal_checker_availability_and_commands_fail_closed() -> None:
     with pytest.raises(PolicyError, match="execution must stay disabled"):
         FormalCheckerCommand(
@@ -509,6 +595,11 @@ def test_formal_verification_package_hash_is_stable_across_artifact_ordering() -
         (
             {"a": export_petri_net_prism(_net(), Marking(tokens={"warmup": 1}))},
             [FormalSafetyProperty("p", "a", "tlc", "Safety")],
+            "checker does not match",
+        ),
+        (
+            {"a": FormalTextArtifact("promela", "never { accept_init: skip }\n")},
+            [FormalSafetyProperty("p", "a", "smt", "check-sat")],
             "checker does not match",
         ),
     ],

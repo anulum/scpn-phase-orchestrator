@@ -38,6 +38,7 @@ __all__ = [
     "FormalCheckerAvailability",
     "FormalCheckerCommand",
     "FormalSafetyProperty",
+    "FormalTextArtifact",
     "FormalVerificationPackage",
     "PrismExport",
     "TLAExport",
@@ -57,6 +58,8 @@ _STL_PREDICATE_RE = re.compile(
     r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|>|<=|<|==)\s*"
     r"([-+]?\d+(?:\.\d+)?)\s*$"
 )
+_SUPPORTED_CHECKERS = {"prism", "tlc", "spin", "smt"}
+_SUPPORTED_TEXT_ARTIFACT_TYPES = {"promela", "smt2"}
 
 
 @dataclass(frozen=True)
@@ -85,6 +88,31 @@ class TLAExport:
 
 
 @dataclass(frozen=True)
+class FormalTextArtifact:
+    """Reviewed external proof artefact text for package manifests.
+
+    This object lets operators add already-reviewed Promela or SMT-LIB artefacts
+    to the same deterministic package contract as generated PRISM/TLA exports.
+    It records text only; it does not generate, write, or execute external
+    checker inputs.
+    """
+
+    artifact_type: str
+    text: str
+
+    def __post_init__(self) -> None:
+        if self.artifact_type not in _SUPPORTED_TEXT_ARTIFACT_TYPES:
+            raise PolicyError("formal text artifact type must be 'promela' or 'smt2'")
+        if not isinstance(self.text, str) or not self.text.strip():
+            raise PolicyError("formal text artifact must contain non-empty text")
+        for char in self.text:
+            if ord(char) < 32 and char not in {"\n", "\r", "\t"}:
+                raise PolicyError(
+                    "formal text artifact must not contain unsafe control characters"
+                )
+
+
+@dataclass(frozen=True)
 class FormalSafetyProperty:
     """Named model-checking property bound to one exported artefact."""
 
@@ -98,8 +126,10 @@ class FormalSafetyProperty:
     def __post_init__(self) -> None:
         _require_package_identifier(self.name, "property name")
         _require_package_identifier(self.artifact_name, "property artifact_name")
-        if self.checker not in {"prism", "tlc"}:
-            raise PolicyError("property checker must be 'prism' or 'tlc'")
+        if self.checker not in _SUPPORTED_CHECKERS:
+            raise PolicyError(
+                "property checker must be 'prism', 'tlc', 'spin', or 'smt'"
+            )
         if not isinstance(self.expression, str) or not self.expression.strip():
             raise PolicyError("property expression must be a non-empty string")
         if any(ord(char) < 32 for char in self.expression):
@@ -133,8 +163,10 @@ class FormalCheckerCommand:
 
     def __post_init__(self) -> None:
         _require_package_identifier(self.property_name, "checker property_name")
-        if self.checker not in {"prism", "tlc"}:
-            raise PolicyError("checker command checker must be 'prism' or 'tlc'")
+        if self.checker not in _SUPPORTED_CHECKERS:
+            raise PolicyError(
+                "checker command checker must be 'prism', 'tlc', 'spin', or 'smt'"
+            )
         _require_package_identifier(self.artifact_name, "checker artifact_name")
         if not self.command:
             raise PolicyError("checker command must not be empty")
@@ -175,8 +207,10 @@ class FormalCheckerAvailability:
 
     def __post_init__(self) -> None:
         _require_package_identifier(self.property_name, "availability property_name")
-        if self.checker not in {"prism", "tlc"}:
-            raise PolicyError("availability checker must be 'prism' or 'tlc'")
+        if self.checker not in _SUPPORTED_CHECKERS:
+            raise PolicyError(
+                "availability checker must be 'prism', 'tlc', 'spin', or 'smt'"
+            )
         _require_package_identifier(self.artifact_name, "availability artifact_name")
         if not isinstance(self.executable, str) or not self.executable.strip():
             raise PolicyError("availability executable must be a non-empty string")
@@ -259,15 +293,19 @@ def _require_package_identifier(value: object, field_name: str) -> str:
     return value
 
 
-def _artifact_text(export: PrismExport | TLAExport) -> str:
+def _artifact_text(export: PrismExport | TLAExport | FormalTextArtifact) -> str:
     if isinstance(export, PrismExport):
         return export.model
+    if isinstance(export, FormalTextArtifact):
+        return export.text
     return export.module
 
 
-def _artifact_type(export: PrismExport | TLAExport) -> str:
+def _artifact_type(export: PrismExport | TLAExport | FormalTextArtifact) -> str:
     if isinstance(export, PrismExport):
         return "prism"
+    if isinstance(export, FormalTextArtifact):
+        return export.artifact_type
     return "tla"
 
 
@@ -280,11 +318,29 @@ def _checker_command(property_: FormalSafetyProperty) -> FormalCheckerCommand:
             property_.expression,
         )
     else:
-        command = (
-            "tlc2.TLC",
-            f"{property_.artifact_name}.tla",
-            "-config",
-            f"{property_.artifact_name}.cfg",
+        if property_.checker == "spin":
+            command = (
+                "spin",
+                "-run",
+                f"{property_.artifact_name}.pml",
+            )
+        elif property_.checker == "smt":
+            command = (
+                "z3",
+                f"{property_.artifact_name}.smt2",
+            )
+        else:
+            command = (
+                "tlc2.TLC",
+                f"{property_.artifact_name}.tla",
+                "-config",
+                f"{property_.artifact_name}.cfg",
+            )
+        return FormalCheckerCommand(
+            property_name=property_.name,
+            checker=property_.checker,
+            artifact_name=property_.artifact_name,
+            command=command,
         )
     return FormalCheckerCommand(
         property_name=property_.name,
@@ -300,7 +356,11 @@ def _checker_matches_artifact(
 ) -> bool:
     if property_.checker == "prism":
         return artifact_type == "prism"
-    return artifact_type == "tla"
+    if property_.checker == "tlc":
+        return artifact_type == "tla"
+    if property_.checker == "spin":
+        return artifact_type == "promela"
+    return artifact_type == "smt2"
 
 
 def audit_formal_checker_availability(
@@ -346,7 +406,7 @@ def audit_formal_checker_availability(
 
 
 def build_formal_verification_package(
-    artifacts: Mapping[str, PrismExport | TLAExport],
+    artifacts: Mapping[str, PrismExport | TLAExport | FormalTextArtifact],
     properties: Sequence[FormalSafetyProperty],
     *,
     package_name: str = "spo-formal-verification",
@@ -369,8 +429,11 @@ def build_formal_verification_package(
     artifact_types: dict[str, str] = {}
     for artifact_name, export in sorted(artifacts.items()):
         _require_package_identifier(artifact_name, "artifact name")
-        if not isinstance(export, PrismExport | TLAExport):
-            raise PolicyError("formal artifacts must be PrismExport or TLAExport")
+        if not isinstance(export, PrismExport | TLAExport | FormalTextArtifact):
+            raise PolicyError(
+                "formal artifacts must be PrismExport, TLAExport, or "
+                "FormalTextArtifact"
+            )
         artifact_text = _artifact_text(export)
         if not artifact_text.strip():
             raise PolicyError(f"formal artifact {artifact_name!r} is empty")
