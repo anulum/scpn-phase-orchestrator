@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   audit records and deterministic domain scenario evidence.
 - Added passive Studio surfacing for Topos semantic-binding validation reports
   and deterministic domain obligation examples.
+- Added passive Studio surfacing for evolutionary supervisor policy-search
+  reports, enriched domain examples, and policy-DSL mutation evidence.
 - Added a lightweight Python API layer with `Orchestrator.from_yaml(...)` and
   `Orchestrator.run(...)`, plus the `scpn` import alias for onboarding scripts
   that should not depend on CLI invocation.

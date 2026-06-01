@@ -32,6 +32,15 @@ from scpn_phase_orchestrator.supervisor import (
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
 )
+from scpn_phase_orchestrator.supervisor.evolutionary_examples import (
+    build_evolutionary_supervisor_search_examples_from_worker_a_api,
+)
+from scpn_phase_orchestrator.supervisor.evolutionary_policy_dsl import (
+    run_offline_evolutionary_policy_dsl_search,
+)
+from scpn_phase_orchestrator.supervisor.evolutionary_search import (
+    run_offline_evolutionary_supervisor_search,
+)
 from scpn_phase_orchestrator.supervisor.information_geometry import (
     propose_information_geometry_control,
 )
@@ -453,6 +462,122 @@ def test_topos_semantic_binding_panel_rejects_malformed_proof_evidence() -> None
             [symbolic_report],
             [policy_report],
             examples=[{**example, "example_hash": "bad"}],
+        )
+
+
+def test_evolutionary_supervisor_policy_search_panel_preserves_review_gates() -> None:
+    search_report = run_offline_evolutionary_supervisor_search(
+        {"K": 0.42, "alpha": 0.18, "zeta": 0.09},
+        [
+            {
+                "replay_id": "nominal",
+                "reward": 0.92,
+                "safety_margin": 0.08,
+                "violations": [],
+            },
+            {
+                "replay_id": "disturbance",
+                "reward": 0.84,
+                "safety_margin": 0.06,
+                "violations": [],
+            },
+        ],
+        stl_spec="always (R >= 0.82)",
+        trace={"R": [0.91, 0.90, 0.89, 0.88]},
+        generation_count=1,
+        population_size=4,
+        mutation_step=0.04,
+        minimum_replay_reward=0.70,
+        minimum_safety_margin=0.04,
+    ).to_audit_record()
+    dsl_report = run_offline_evolutionary_policy_dsl_search(
+        "rule grid_guard: if R < 0.90 and K > 0.10 then set K += 0.03\n"
+        "rule recovery_guard: if R >= 0.20 then set K -= 0.02",
+        generation_count=1,
+        population_size=3,
+        mutation_step=0.01,
+    ).to_audit_record()
+    examples = build_evolutionary_supervisor_search_examples_from_worker_a_api()
+
+    panel = ui.build_evolutionary_supervisor_policy_search_studio_panel(
+        [search_report],
+        examples=examples,
+        dsl_reports=[dsl_report],
+    )
+
+    assert panel["panel_kind"] == ("studio_evolutionary_supervisor_policy_search_panel")
+    assert panel["claim_boundary"] == (
+        "offline_evolutionary_supervisor_review_not_live_actuation"
+    )
+    assert panel["non_actuating"] is True
+    assert panel["execution_disabled"] is True
+    assert panel["operator_review_required"] is True
+    assert panel["hot_patch_permitted"] is False
+    assert panel["live_merge_permitted"] is False
+    assert panel["actuation_permitted"] is False
+    assert panel["search_report_count"] == 1
+    assert panel["dsl_report_count"] == 1
+    assert panel["example_count"] == len(examples)
+    assert panel["candidate_count_range"]["minimum"] >= 3
+    assert panel["accepted_candidate_total"] >= 1
+    assert panel["example_domains"] == tuple(
+        sorted({example["domain"] for example in examples})
+    )
+    assert panel["example_rows"][0]["candidate_count"] == examples[0]["candidate_count"]
+    assert "actions_to_apply" not in panel
+    assert "control_actions" not in panel
+
+
+def test_evolutionary_supervisor_policy_search_panel_rejects_malformed_evidence() -> (
+    None
+):
+    search_report = run_offline_evolutionary_supervisor_search(
+        {"K": 0.42},
+        [
+            {
+                "replay_id": "nominal",
+                "reward": 0.92,
+                "safety_margin": 0.08,
+                "violations": [],
+            }
+        ],
+        stl_spec="always (R >= 0.82)",
+        trace={"R": [0.91, 0.90]},
+        generation_count=1,
+        population_size=2,
+        mutation_step=0.02,
+    ).to_audit_record()
+    dsl_report = run_offline_evolutionary_policy_dsl_search(
+        "rule grid_guard: if R < 0.90 then set K += 0.03",
+        generation_count=1,
+        population_size=2,
+        mutation_step=0.01,
+    ).to_audit_record()
+    example = build_evolutionary_supervisor_search_examples_from_worker_a_api()[0]
+
+    with pytest.raises(ValueError, match="claim_boundary"):
+        ui.build_evolutionary_supervisor_policy_search_studio_panel(
+            [{**search_report, "claim_boundary": "live_policy_merge"}]
+        )
+    with pytest.raises(ValueError, match="candidate_count"):
+        ui.build_evolutionary_supervisor_policy_search_studio_panel(
+            [{**search_report, "candidate_count": 999}]
+        )
+    with pytest.raises(ValueError, match="hot_patch_permitted"):
+        bad_candidate = dict(search_report["candidates"][0])
+        bad_candidate["hot_patch_permitted"] = True
+        ui.build_evolutionary_supervisor_policy_search_studio_panel(
+            [{**search_report, "candidates": [bad_candidate]}]
+        )
+    with pytest.raises(ValueError, match="scenario_hash"):
+        ui.build_evolutionary_supervisor_policy_search_studio_panel(
+            [search_report],
+            examples=[{**example, "scenario_hash": "bad"}],
+        )
+    with pytest.raises(ValueError, match="source_policy_hash"):
+        ui.build_evolutionary_supervisor_policy_search_studio_panel(
+            [search_report],
+            dsl_reports=[{**dsl_report, "source_policy_hash": "bad"}],
         )
 
 

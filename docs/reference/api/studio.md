@@ -97,6 +97,21 @@ display the evidence. The payload sets `actuation_permitted: false` and
 `formal_proof_claim_permitted: false`; it is a review surface, not a
 machine-checked proof or executable policy channel.
 
+`build_evolutionary_supervisor_policy_search_studio_panel(reports,
+examples=..., dsl_reports=...)` renders passive evolutionary supervisor policy
+search evidence into an operator payload. It joins offline replay-search
+reports, enriched deterministic domain examples, and optional policy-DSL
+mutation reports while preserving review-only gates. The helper requires the
+`offline_evolutionary_supervisor_review_not_live_actuation` claim boundary for
+core search reports, `evolutionary_supervisor_search_not_live_actuation` for
+domain examples, true `non_actuating` and `execution_disabled` flags where the
+source schema carries them, disabled live merge, disabled hot patching,
+operator review requirements, SHA-256 report/candidate/scenario hashes,
+matching candidate and accepted/rejected counts, finite replay/STL metrics,
+and candidate-level actuation denial before Studio may display the evidence.
+The payload sets `actuation_permitted: false`,
+`hot_patch_permitted: false`, and `live_merge_permitted: false`.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.ui_helpers

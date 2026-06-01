@@ -23,6 +23,9 @@ from scpn_phase_orchestrator.supervisor import (
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
 )
+from scpn_phase_orchestrator.supervisor.evolutionary_search import (
+    run_offline_evolutionary_supervisor_search,
+)
 from scpn_phase_orchestrator.supervisor.information_geometry import (
     propose_information_geometry_control,
 )
@@ -81,6 +84,22 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
             )
         ]
     ).to_audit_record()
+    evolutionary_report = run_offline_evolutionary_supervisor_search(
+        {"K": 0.4},
+        [
+            {
+                "replay_id": "facade_nominal",
+                "reward": 0.91,
+                "safety_margin": 0.08,
+                "violations": [],
+            }
+        ],
+        stl_spec="always (R >= 0.8)",
+        trace={"R": [0.9, 0.89]},
+        generation_count=1,
+        population_size=2,
+        mutation_step=0.02,
+    ).to_audit_record()
     morphogenetic_artifact = render_morphogenetic_field_svg(
         MorphogeneticFieldState(
             np.array(
@@ -103,6 +122,11 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         [topos_symbolic_report],
         [topos_policy_report],
     )
+    evolutionary_panel = (
+        studio.build_evolutionary_supervisor_policy_search_studio_panel(
+            [evolutionary_report]
+        )
+    )
     morphogenetic_panel = studio.build_morphogenetic_field_studio_panel(
         morphogenetic_artifact
     )
@@ -124,6 +148,10 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     )
     assert topos_panel["formal_proof_claim_permitted"] is False
     assert topos_panel["actuation_permitted"] is False
+    assert evolutionary_panel["claim_boundary"] == (
+        "offline_evolutionary_supervisor_review_not_live_actuation"
+    )
+    assert evolutionary_panel["actuation_permitted"] is False
     assert morphogenetic_panel["panel_kind"] == ("studio_morphogenetic_field_panel")
     assert morphogenetic_panel["actuation_permitted"] is False
     assert morphogenetic_panel["strongest_edge"] == {
@@ -139,3 +167,5 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     assert callable(studio.build_information_geometry_studio_panel)
     assert "build_topos_semantic_binding_studio_panel" in studio.__all__
     assert callable(studio.build_topos_semantic_binding_studio_panel)
+    assert "build_evolutionary_supervisor_policy_search_studio_panel" in studio.__all__
+    assert callable(studio.build_evolutionary_supervisor_policy_search_studio_panel)
