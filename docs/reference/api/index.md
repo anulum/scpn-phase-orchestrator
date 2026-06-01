@@ -5,6 +5,25 @@ Auto-generated from source docstrings via
 Python classes auto-delegate to Rust when the `spo_kernel` extension is
 available; the public interface is identical in both backends.
 
+If you are still deciding what SPO is for, start with the
+[Use Cases and Value Map](../../getting-started/use_cases.md). This API index
+is organised for implementation work after the domain, data source, and safety
+boundary are known.
+
+## API by Job
+
+| Job | Primary API | Supporting docs |
+|-----|-------------|-----------------|
+| Run a reviewed binding from Python | [Python Facade](api.md) | [Quickstart](../../getting-started/quickstart.md) |
+| Validate and resolve domain assumptions | [Binding](binding.md) | [New Domain Checklist](../../tutorials/01_new_domain_checklist.md) |
+| Extract phase from data | [Oscillators](oscillators.md) | [From Raw Sources to Run](../../tutorials/05_from_raw_sources_to_run.md) |
+| Simulate coupled dynamics | [UPDE](upde.md) | [UPDE Numerics](../../specs/upde_numerics.md) |
+| Infer or build coupling | [Coupling](coupling.md) | [Build K_nm Templates](../../tutorials/03_build_knm_templates.md) |
+| Detect coherence and instability | [Monitor](monitor.md) | [Analysis Toolkit](../../guide/analysis_toolkit.md) |
+| Propose bounded control | [Supervisor](supervisor.md) and [Actuation](actuation.md) | [Production Guide](../../guide/production.md) |
+| Replay and audit decisions | [Audit](audit.md) | [Deterministic Replay](../../tutorials/06_deterministic_replay_for_debugging.md) |
+| Optimise differentiable oscillator models | [nn API](nn.md) | [Differentiable Kuramoto](../../tutorials/04_differentiable_kuramoto.md) |
+
 ## Public API entry point
 
 ```python

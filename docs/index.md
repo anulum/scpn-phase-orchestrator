@@ -29,6 +29,22 @@ hide:
 
 Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics. Any hierarchical coupled-cycle system --- plasma, cloud infrastructure, traffic, power grids, factories, biology --- maps onto the same engine.
 
+SPO is best read as a compiler from domain telemetry to phase-control evidence:
+bind signals, extract oscillator phases, run coupled dynamics, measure
+coherence, classify regimes, and emit bounded review artefacts. It is useful
+when a system has repeated behaviour and the operator needs to know whether
+synchrony is helpful, harmful, causal, or controllable.
+
+| If you are asking... | Start here |
+|----------------------|------------|
+| What is this software for? | [Use Cases and Value Map](getting-started/use_cases.md) |
+| How do I run something in five minutes? | [Quickstart](getting-started/quickstart.md) |
+| How do I decide what counts as an oscillator? | [Oscillator Hunt Sheet](tutorials/02_oscillator_hunt_sheet.md) |
+| How do I move from raw data to a run? | [End-to-End From Raw Sources](tutorials/05_from_raw_sources_to_run.md) |
+| How do I use it from Python? | [Python Facade API](reference/api/api.md) |
+| How do I understand notebooks and demos? | [Notebooks and Demos](galleries/notebooks_and_demos.md) |
+| What is implemented versus still open? | [Public Roadmap](roadmap.md) |
+
 ## Architecture
 
 ```
@@ -190,7 +206,7 @@ The current documentation inventory and API-reference guardrails are tracked in
   <br>
   <em>Developed by <a href="https://www.anulum.li">ANULUM</a> / Fortis Studio</em>
   <br><br>
-  <strong>License:</strong> AGPL-3.0-or-later | Commercial licensing available
+  <b>License:</b> AGPL-3.0-or-later | Commercial licensing available
   <br>
   © 1996–2026 Miroslav Šotek. All rights reserved.
 </p>

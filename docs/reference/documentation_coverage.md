@@ -20,7 +20,7 @@ searching the source tree.
 | Onboarding | Role route, first-hour checklist, repository map | [Onboarding Handbook](../getting-started/onboarding.md) |
 | Installation | Package extras, local development install, quick checks | [Installation](../getting-started/installation.md) |
 | Quickstart | Minimal Python and CLI run path | [Quickstart](../getting-started/quickstart.md) |
-| Tutorials | Six task-oriented tutorials | [New Domain Checklist](../tutorials/01_new_domain_checklist.md) |
+| Tutorials | Seven task-oriented tutorials | [New Domain Checklist](../tutorials/01_new_domain_checklist.md) |
 | Guides | Runtime, production, testing, adapters, backend, notebooks | [Guides](../guide/production.md) |
 | Contributor onboarding | setup, repository map, checks, documentation duties | [Contributor Onboarding](../guide/contributor_onboarding.md) |
 | API reference | 67 MkDocs API pages, all wired into navigation | [API Reference](api/index.md) |

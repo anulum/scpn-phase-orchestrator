@@ -13,6 +13,20 @@ evaluating it for a new domain. It links installation, first run,
 domainpack authoring, notebooks, demos, production deployment, and API
 reference in one route.
 
+If the product purpose is still unclear, read the
+[Use Cases and Value Map](use_cases.md) first; it maps domains, market value,
+user roles, evidence boundaries, and API routes.
+
+## First 20 Minutes
+
+| Goal | Page | Outcome |
+|------|------|---------|
+| Understand the product | [Use Cases and Value Map](use_cases.md) | know the domain and user routes |
+| Run a local simulation | [Quickstart](quickstart.md) | validate and run a minimal domainpack |
+| Choose a tutorial path | [Choose a Use Case](../tutorials/00_choose_a_use_case.md) | select the right workflow |
+| Inspect the Python entry point | [Python Facade API](../reference/api/api.md) | embed a reviewed binding in code |
+| Review maturity | [Roadmap](../roadmap.md) | distinguish shipped, open, and research surfaces |
+
 ## Outcome Map
 
 | Goal | Start here | Verify with |

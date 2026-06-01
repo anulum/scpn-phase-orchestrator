@@ -3,6 +3,15 @@
 Welcome to SCPN Phase Orchestrator. This page maps your background to
 the right entry point.
 
+If you are new to SPO, do not start by reading the full API tree. Start with
+the product and domain map, then choose the narrowest runnable path:
+
+1. Read [Use Cases and Value Map](use_cases.md).
+2. Run [Quickstart](quickstart.md).
+3. Pick [Choose a Use Case](../tutorials/00_choose_a_use_case.md).
+4. Use the [API Reference overview](../reference/api/index.md) only after you
+   know which surface you need.
+
 The system is a domain-agnostic engine for coupled oscillator dynamics.
 It does not matter whether your oscillators are neurons, generators,
 servers, or financial instruments — the same equations govern
@@ -34,7 +43,7 @@ You want differentiable oscillator layers for neural networks.
 - `nn.training` — training utilities: curriculum learning, spectral
   alignment loss, coupling budget regularisation.
 - Gradients flow through `order_parameter` and `saf_loss` for topology
-  optimisation (which edges should exist and how strong).
+  optimisation (which edges should exist and how large).
 
 **Install:** `pip install scpn-phase-orchestrator[nn]`
 

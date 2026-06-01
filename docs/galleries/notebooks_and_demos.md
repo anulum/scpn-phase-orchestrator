@@ -12,6 +12,19 @@ This page is the user-facing inventory for runnable learning artefacts:
 notebooks, terminal examples, Streamlit tools, CLI demos, and the browser
 WASM demo.
 
+Use notebooks to understand a capability, then move production work into a
+domainpack, CLI run, Python facade, or audited replay path.
+
+| Learning goal | Notebook or demo | Production path |
+|---------------|------------------|-----------------|
+| First domainpack run | `02_minimal_domain.ipynb` | `spo validate` and `spo run` on a reviewed binding |
+| Queue and retry cascades | `01_queuewaves_retry_storm.ipynb` | QueueWaves guide and production deployment |
+| Geometry and topology | `03_geometry_walk.ipynb` | geometry constraints and coupling templates |
+| Binding specs | `09_binding_spec.ipynb` | binding API plus raw-source tutorial |
+| Audit replay | `08_audit_replay.ipynb` | deterministic replay tutorial and audit API |
+| Autotune | `12_autotune_pipeline.ipynb` | autotune API and replay-only learner guide |
+| Reference domains | power grid, market, sleep, swarmalator notebooks | domainpack gallery plus domain-specific validation |
+
 ## Notebook Inventory
 
 Run notebooks from the repository root:

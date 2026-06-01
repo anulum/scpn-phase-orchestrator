@@ -4,8 +4,25 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 
 > **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. APIs may evolve as this work progresses.
 
-**Version:** 0.6.2
+**Version:** 0.6.3
 **Status:** active development; public inventory is generated below.
+
+## Why This Exists
+
+SPO is for systems where cyclic processes either need to lock together or must
+be kept from locking together: power grids, fusion plasmas, cloud retry storms,
+industrial machines, biological rhythms, traffic networks, robotic swarms,
+digital twins, and differentiable oscillator research. It gives those systems a
+shared language of phase, coupling, coherence, regime, and bounded control.
+
+The product value is not only simulation. The repository combines domain
+binding specs, physical/informational/symbolic phase extraction,
+Kuramoto/UPDE dynamics, supervisor and audit surfaces, optional Rust
+acceleration, bounded adapter bridges, and differentiable JAX layers for
+topology and coupling optimisation.
+
+Start with the [Use Cases and Value Map](docs/getting-started/use_cases.md) if
+you need to understand what the software is for before choosing an API.
 
 <!-- capability-snapshot:start -->
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
@@ -15,7 +32,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.6.2 |
+| Package version | 0.6.3 |
 | Public API exports | 24 |
 | Python package modules | 447 |
 | Core Engine modules | 224 |
@@ -26,7 +43,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 | Rust kernel files | 91 |
 | Optional extras | 15 |
 | Python test files | 520 |
-| Public documentation pages | 173 |
+| Public documentation pages | 175 |
 | GitHub Actions workflows | 10 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
@@ -55,6 +72,14 @@ Evidence boundary: this snapshot is a static inventory. Performance, coverage, h
 Treats Kuramoto phase dynamics as a universal synchrony state-space.
 Any hierarchical coupled-cycle system — plasma, cloud infrastructure,
 traffic, power grids, factories, biology — maps onto the same engine.
+
+SPO then separates three questions that are often mixed together:
+
+1. **Observation:** what cycles, events, and states are present?
+2. **Evidence:** which phase relationships are coherent, unstable, causal, or
+   unsafe?
+3. **Action:** which bounded knob could change the regime without bypassing
+   review, safety tier, or replay evidence?
 
 ## Core Pipeline
 
@@ -273,6 +298,8 @@ For a role-based first-hour path, see the
 [Onboarding Handbook](docs/getting-started/onboarding.md). For the full
 notebook, example, and interactive demo inventory, see
 [Notebooks & Demos](docs/galleries/notebooks_and_demos.md).
+For market-facing and domain-facing orientation, see the
+[Use Cases and Value Map](docs/getting-started/use_cases.md).
 
 ## Platform Support
 

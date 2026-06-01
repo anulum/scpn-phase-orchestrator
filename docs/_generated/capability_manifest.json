@@ -7,7 +7,7 @@
     "integration_modules": 24,
     "optional_extras": 15,
     "public_api_exports": 24,
-    "public_documentation_pages": 173,
+    "public_documentation_pages": 175,
     "python_package_modules": 447,
     "research_experimental_modules": 149,
     "runtime_serving_modules": 47,
@@ -758,7 +758,7 @@
     "name": "scpn-phase-orchestrator",
     "readme": "README.md",
     "requires_python": ">=3.10,<3.14",
-    "version": "0.6.2"
+    "version": "0.6.3"
   },
   "project_label": "SCPN Phase Orchestrator",
   "python_package_modules": [

@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-06-01
+
 ### Added
 
+- Added a release-orientation documentation spine covering use cases, market
+  value, onboarding routes, tutorial selection, notebook production paths, and
+  API-by-job navigation.
 - Added JAX-backed information-geometry and multiverse rollout paths, expanded
   multiverse scenario coverage, added strange-loop drift scenario gates, and
   added review-only sheaf obstruction control proposals with deterministic
@@ -1733,7 +1738,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.11...v0.6.0

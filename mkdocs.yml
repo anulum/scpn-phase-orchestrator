@@ -54,6 +54,7 @@ nav:
   - Home: index.md
   - Getting Started:
       - Onboarding Handbook: getting-started/onboarding.md
+      - Use Cases and Value Map: getting-started/use_cases.md
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
       - Troubleshooting: getting-started/troubleshooting.md
@@ -115,6 +116,7 @@ nav:
       - Knm Calibration: specs/knm_calibration.md
       - Audit Trace: specs/audit_trace.md
   - Tutorials:
+      - "00 — Choose a Use Case": tutorials/00_choose_a_use_case.md
       - "01 — New Domain Checklist": tutorials/01_new_domain_checklist.md
       - "02 — Oscillator Hunt Sheet": tutorials/02_oscillator_hunt_sheet.md
       - "03 — Build Knm Templates": tutorials/03_build_knm_templates.md
