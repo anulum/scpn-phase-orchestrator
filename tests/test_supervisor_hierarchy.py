@@ -1476,6 +1476,25 @@ def test_load_hierarchy_sync_envelope_accepts_reduced_metadata() -> None:
     json.dumps(envelope.to_audit_record(), allow_nan=False)
 
 
+def test_load_hierarchy_sync_envelope_rejects_non_canonical_json_string() -> None:
+    with pytest.raises(ValueError, match="canonical finite JSON"):
+        load_hierarchy_sync_envelope(
+            '{"protocol_version":"spo-hierarchy-sync/v1",'
+            '"source_node":"node-a",'
+            '"sequence":1,'
+            '"summary":{"name":"edge-a","channel":"power","R":NaN,"psi":0.0}}'
+        )
+
+    with pytest.raises(ValueError, match="canonical finite JSON"):
+        load_hierarchy_sync_envelope(
+            '{"protocol_version":"spo-hierarchy-sync/v1",'
+            '"source_node":"node-a",'
+            '"source_node":"node-b",'
+            '"sequence":1,'
+            '"summary":{"name":"edge-a","channel":"power","R":0.8,"psi":0.0}}'
+        )
+
+
 def test_hierarchy_transport_runtime_ingest_batch_rejects_direct_raw_metadata() -> None:
     runtime = HierarchyTransportRuntime()
     envelope = _unchecked_hierarchy_sync_envelope(

@@ -201,6 +201,9 @@ The same reduced summaries can be wrapped in deterministic sync envelopes for
 JSONL replay, message-bus transport, or parent-side cloud ingestion. The parent
 ingestion helper rejects stale or duplicate sequence numbers per source node
 and protocol-version mismatches before building the parent orchestration plan.
+Direct envelope JSON parsing uses canonical finite JSON semantics: non-finite
+constants and duplicate object keys are rejected before the reduced summary is
+validated or admitted to the parent watermark ledger.
 
 ```python
 from scpn_phase_orchestrator.supervisor import (

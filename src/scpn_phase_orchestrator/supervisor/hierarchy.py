@@ -812,14 +812,35 @@ def _load_mapping_record(
 ) -> Mapping[str, object]:
     if isinstance(record, str):
         try:
-            decoded = json.loads(record)
+            decoded = json.loads(
+                record,
+                object_pairs_hook=_unique_json_object,
+                parse_constant=_reject_json_constant,
+            )
         except json.JSONDecodeError as exc:
             raise ValueError("hierarchy sync envelope must be valid JSON") from exc
+        except ValueError as exc:
+            raise ValueError(
+                "hierarchy sync envelope JSON must be canonical finite JSON"
+            ) from exc
         if not isinstance(decoded, Mapping):
             raise ValueError("hierarchy sync envelope JSON must decode to a mapping")
         return decoded
     if not isinstance(record, Mapping):
         raise ValueError("hierarchy sync envelope must be a mapping or JSON string")
+    return record
+
+
+def _reject_json_constant(token: str) -> None:
+    raise ValueError(f"non-finite JSON constant is not allowed: {token}")
+
+
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    record: dict[str, object] = {}
+    for key, value in pairs:
+        if key in record:
+            raise ValueError(f"duplicate JSON object key is not allowed: {key}")
+        record[key] = value
     return record
 
 
