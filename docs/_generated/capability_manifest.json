@@ -12,7 +12,7 @@
     "research_experimental_modules": 149,
     "runtime_serving_modules": 46,
     "rust_kernel_files": 91,
-    "test_files": 511
+    "test_files": 512
   },
   "documentation": {
     "public_pages": [
@@ -1664,6 +1664,7 @@
       "tests/test_stuart_landau_parity.py",
       "tests/test_stuart_landau_replay.py",
       "tests/test_stuart_landau_validation.py",
+      "tests/test_studio_public_facade.py",
       "tests/test_studio_ui_helpers.py",
       "tests/test_studio_workflow.py",
       "tests/test_supervisor_alignment.py",

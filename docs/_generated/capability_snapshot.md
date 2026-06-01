@@ -15,7 +15,7 @@
 | Domainpack files | 36 |
 | Rust kernel files | 91 |
 | Optional extras | 15 |
-| Python test files | 511 |
+| Python test files | 512 |
 | Public documentation pages | 173 |
 | GitHub Actions workflows | 10 |
 
