@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.supervisor.multiverse_examples import (
+    BranchCandidate,
     CounterfactualBoundary,
     DomainScenario,
     _validate_scenario,
@@ -193,3 +194,62 @@ def test_rejects_malformed_scenarios() -> None:
 
     with pytest.raises(ValueError):
         _validate_scenario(bad_scenario)
+
+
+def test_rejects_boolean_and_complex_phase_or_frequency_aliases() -> None:
+    base_candidate = build_multiverse_domain_scenarios()[0]["branch_candidates"][0]
+    candidate = (
+        BranchCandidate(
+            candidate_id=base_candidate["candidate_id"],
+            knob_variations=tuple(
+                (knob, float(value))
+                for knob, value in base_candidate["knob_variations"]
+            ),
+            topology_variations=tuple(base_candidate["topology_variations"]),
+            objective_labels=tuple(base_candidate["objective_labels"]),
+        ),
+    )
+
+    bad_bool = DomainScenario(
+        domain="power_grid",
+        scenario_id="bad_bool_phase",
+        initial_phases=np.array([np.bool_(True), 0.1], dtype=object),
+        initial_omegas=np.array([60.0, 60.1], dtype=np.float64),
+        branch_candidates=candidate,
+        objective_labels=("load_stability",),
+    )
+    with pytest.raises(ValueError, match="initial_phases"):
+        _validate_scenario(bad_bool)
+
+    bad_complex = DomainScenario(
+        domain="power_grid",
+        scenario_id="bad_complex_omega",
+        initial_phases=np.array([0.0, 0.1], dtype=np.float64),
+        initial_omegas=np.array([60.0 + 0.1j, 60.1], dtype=object),
+        branch_candidates=candidate,
+        objective_labels=("load_stability",),
+    )
+    with pytest.raises(ValueError, match="initial_omegas"):
+        _validate_scenario(bad_complex)
+
+
+def test_rejects_boolean_and_complex_branch_knob_aliases() -> None:
+    for knob_value in (True, np.bool_(True), 0.1 + 0.2j, np.complex128(0.1 + 0.2j)):
+        bad_scenario = DomainScenario(
+            domain="power_grid",
+            scenario_id="bad_knob_alias",
+            initial_phases=np.array([0.0, 0.1], dtype=np.float64),
+            initial_omegas=np.array([60.0, 60.1], dtype=np.float64),
+            branch_candidates=(
+                BranchCandidate(
+                    candidate_id="bad_knob_alias",
+                    knob_variations=(("K", knob_value),),
+                    topology_variations=("mesh_reinforced",),
+                    objective_labels=("load_stability",),
+                ),
+            ),
+            objective_labels=("load_stability",),
+        )
+
+        with pytest.raises(ValueError, match="bad_knob_alias"):
+            _validate_scenario(bad_scenario)

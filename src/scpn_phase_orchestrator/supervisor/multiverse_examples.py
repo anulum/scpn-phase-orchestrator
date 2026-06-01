@@ -29,6 +29,10 @@ SupportedCounterfactualKnobs: Final[frozenset[str]] = frozenset(
 def _ensure_float64_vector(
     values: Iterable[float], *, label: str
 ) -> NDArray[np.float64]:
+    if isinstance(values, (bool, np.bool_)) or _contains_boolean_alias(values):
+        raise ValueError(f"{label} must contain numeric values")
+    if _contains_complex_alias(values):
+        raise ValueError(f"{label} must contain real-valued numeric values")
     arr = np.asarray(tuple(values), dtype=np.float64)
     if arr.ndim != 1:
         raise ValueError(f"{label} must be a 1D array, got ndim={arr.ndim}")
@@ -49,6 +53,35 @@ def _summary(values: NDArray[np.float64]) -> dict[str, float]:
         "mean": float(np.mean(values)),
         "std": float(np.std(values)),
     }
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _ensure_real_scalar(value: object, *, label: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or isinstance(
+        value, (complex, np.complexfloating)
+    ):
+        raise ValueError(f"{label} must be a real-valued numeric scalar")
+    if not isinstance(value, (int, float, np.integer, np.floating)):
+        raise ValueError(f"{label} must be a real-valued numeric scalar")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{label} must be finite")
+    return number
 
 
 @dataclass(frozen=True)
@@ -183,15 +216,10 @@ def _validate_branch_candidate(candidate: BranchCandidate) -> None:
                 f"candidate '{candidate.candidate_id}' knob "
                 f"'{knob_name}' is not supported by counterfactual rollouts"
             )
-        if not isinstance(knob_value, (int, float, np.floating)):
-            raise ValueError(
-                f"candidate '{candidate.candidate_id}' knob '{knob_name}' value invalid"
-            )
-        if not math.isfinite(float(knob_value)):
-            raise ValueError(
-                f"candidate '{candidate.candidate_id}' knob "
-                f"'{knob_name}' must be finite"
-            )
+        _ensure_real_scalar(
+            knob_value,
+            label=f"candidate '{candidate.candidate_id}' knob '{knob_name}'",
+        )
 
     if not candidate.topology_variations:
         raise ValueError(

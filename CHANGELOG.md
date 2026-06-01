@@ -89,6 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aliases in direct constraint, score-threshold, and Pareto objective scalars.
 - Hardened information-geometry scenario fixtures by rejecting complex
   distribution and record-gradient aliases before deterministic audit hashing.
+- Hardened multiverse domain scenario fixtures by rejecting boolean and complex
+  phase, frequency, and branch-knob aliases before deterministic review hashing.
 - Hardened the FusionCore bridge boundary by rejecting non-positive q-profile
   bounds, negative fusion observables, negative stability ratios, and empty
   phase-feedback vectors before phase encoding or order-parameter export.
