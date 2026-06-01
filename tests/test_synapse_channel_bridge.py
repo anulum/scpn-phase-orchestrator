@@ -295,6 +295,24 @@ class TestSynapseChannelBridgeAsync:
         assert "synapse.listen_once_invalid_json" in caplog.text
 
     @pytest.mark.asyncio
+    async def test_listen_once_rejects_duplicate_json_object_keys(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        bridge = self._make_bridge()
+        bridge._ws = AsyncMock()
+        bridge._ws.recv = AsyncMock(
+            return_value=(
+                '{"sender":"UnknownAgent","sender":"Agent-A","type":"chat"}'
+            )
+        )
+
+        await bridge.listen_once()
+
+        assert bridge.get_agent_summary()["Agent-A"]["messages"] == 0
+        assert "synapse.listen_once_invalid_json" in caplog.text
+
+    @pytest.mark.asyncio
     async def test_listen_once_non_object_json_is_ignored(self) -> None:
         bridge = self._make_bridge()
         bridge._ws = AsyncMock()

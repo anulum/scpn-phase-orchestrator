@@ -241,6 +241,9 @@ Hilbert phase buffer.
 
 The synapse bridges translate phase-channel and coupling data into sibling
 service contracts while keeping the normal audit path unchanged.
+The channel bridge treats hub WebSocket frames as untrusted JSON: decoded
+messages must use finite JSON values and unique object keys before sender,
+type, or payload fields can affect phase-channel state.
 
 ::: scpn_phase_orchestrator.adapters.synapse_channel_bridge
 

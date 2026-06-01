@@ -56,14 +56,27 @@ def _reject_json_constant(value: str) -> None:
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
+def _reject_duplicate_json_key(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key {key!r} is not allowed")
+        result[key] = value
+    return result
+
+
 def _loads_hub_json(payload: str) -> Any:
     try:
-        return json.loads(payload, parse_constant=_reject_json_constant)
+        return json.loads(
+            payload,
+            parse_constant=_reject_json_constant,
+            object_pairs_hook=_reject_duplicate_json_key,
+        )
     except json.JSONDecodeError:
         raise
     except ValueError as exc:
         raise ValueError(
-            "Synapse hub JSON must contain only finite JSON numbers"
+            "Synapse hub JSON must contain finite JSON numbers and unique object keys"
         ) from exc
 
 
