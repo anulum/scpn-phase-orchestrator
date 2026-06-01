@@ -154,6 +154,8 @@ class HigherOrderTopologySupervisor:
 def _validate_phases(phases: FloatArray) -> FloatArray:
     if _contains_boolean_alias(phases):
         raise ValueError("phases must not contain boolean values")
+    if _contains_complex_alias(phases):
+        raise ValueError("phases must contain real-valued samples")
     arr = np.asarray(phases, dtype=np.float64)
     if arr.ndim != 1:
         raise ValueError("phases must be a one-dimensional array")
@@ -167,6 +169,8 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
 def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
     if _contains_boolean_alias(knm):
         raise ValueError("knm must not contain boolean values")
+    if _contains_complex_alias(knm):
+        raise ValueError("knm must contain real-valued samples")
     arr = np.asarray(knm, dtype=np.float64)
     if arr.shape != (n, n):
         raise ValueError(f"knm must have shape ({n}, {n})")
@@ -174,6 +178,8 @@ def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
         raise ValueError("knm must be finite")
     if np.any(arr < 0.0):
         raise ValueError("knm must be non-negative")
+    if np.any(np.diag(arr) != 0.0):
+        raise ValueError("knm diagonal must be zero")
     return arr
 
 
@@ -211,7 +217,12 @@ def _order_parameter(phases: FloatArray) -> float:
 
 def _contains_boolean_alias(value: object) -> bool:
     raw = np.asarray(value, dtype=object)
-    return any(isinstance(item, bool) for item in raw.ravel())
+    return any(isinstance(item, bool | np.bool_) for item in raw.ravel())
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, complex | np.complexfloating) for item in raw.ravel())
 
 
 def _pairwise_phase_alignment(phases: FloatArray) -> FloatArray:

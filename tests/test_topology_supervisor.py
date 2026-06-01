@@ -226,6 +226,65 @@ class TestHigherOrderTopologySupervisor:
         with pytest.raises(ValueError, match=match):
             supervisor.mutate(phases, knm)
 
+    @pytest.mark.parametrize(
+        ("phases", "knm", "match"),
+        [
+            (
+                np.asarray([0.0, np.bool_(True), 0.2], dtype=object),
+                _zero_knm(3),
+                "phases must not contain boolean",
+            ),
+            (
+                np.asarray([0.0, complex(0.1, 0.0), 0.2], dtype=object),
+                _zero_knm(3),
+                "phases must contain real-valued",
+            ),
+            (
+                np.zeros(3, dtype=np.float64),
+                np.asarray(
+                    [
+                        [0.0, np.bool_(True), 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                    dtype=object,
+                ),
+                "knm must not contain boolean",
+            ),
+            (
+                np.zeros(3, dtype=np.float64),
+                np.asarray(
+                    [
+                        [0.0, complex(0.2, 0.0), 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                    dtype=object,
+                ),
+                "knm must contain real-valued",
+            ),
+        ],
+    )
+    def test_rejects_numpy_boolean_and_complex_topology_aliases(
+        self,
+        phases: object,
+        knm: object,
+        match: str,
+    ) -> None:
+        supervisor = HigherOrderTopologySupervisor()
+
+        with pytest.raises(ValueError, match=match):
+            supervisor.mutate(phases, knm)
+
+    def test_rejects_self_coupled_pairwise_topology(self) -> None:
+        phases = np.array([0.0, 0.1, 0.2], dtype=np.float64)
+        knm = _zero_knm(3)
+        knm[1, 1] = 0.25
+        supervisor = HigherOrderTopologySupervisor()
+
+        with pytest.raises(ValueError, match="knm diagonal must be zero"):
+            supervisor.mutate(phases, knm)
+
     def test_max_new_simplices_limits_candidate_additions(self) -> None:
         phases = np.array([0.0, 0.0, 0.0, np.pi, np.pi, np.pi], dtype=np.float64)
         knm = _zero_knm(6)
