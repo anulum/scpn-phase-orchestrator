@@ -74,6 +74,14 @@ payloads instead of silently converting them into ordinary soft violations.
 
 ### Plasma Control Bridge
 
+`PlasmaControlBridge` is the non-actuating plasma telemetry boundary. It
+accepts finite layer-coupling matrices, phase snapshots, Lyapunov review
+scores, and invariant payloads only after rejecting boolean numeric aliases,
+non-zero layer self-coupling, empty phase snapshots, negative beta and
+Greenwald ratios, and non-positive safety-factor minima. This keeps the
+Kronecker-expanded `K_nm` graph off-diagonal and prevents placeholder
+phase-state exports from entering downstream review paths.
+
 ::: scpn_phase_orchestrator.adapters.plasma_control_bridge
 
 ### Quantum Control Bridge

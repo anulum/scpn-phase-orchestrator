@@ -47,7 +47,13 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 def _finite_array(value: object, *, name: str) -> FloatArray:
     try:
-        array = np.asarray(value, dtype=np.float64)
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if raw.dtype.kind == "b":
+        raise ValueError(f"{name} must be numeric, not boolean")
+    try:
+        array = np.asarray(raw, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
     if not np.all(np.isfinite(array)):
@@ -61,6 +67,20 @@ def _finite_real(value: object, *, name: str) -> float:
     result = float(value)
     if not isfinite(result):
         raise ValueError(f"{name} must be a finite real value")
+    return result
+
+
+def _finite_positive_real(value: object, *, name: str) -> float:
+    result = _finite_real(value, name=name)
+    if result <= 0.0:
+        raise ValueError(f"{name} must be positive")
+    return result
+
+
+def _finite_non_negative_real(value: object, *, name: str) -> float:
+    result = _finite_real(value, name=name)
+    if result < 0.0:
+        raise ValueError(f"{name} must be non-negative")
     return result
 
 
@@ -131,6 +151,8 @@ class PlasmaControlBridge:
                 f"Layer Knm shape {layer_knm.shape} must match "
                 f"n_layers={self._n_layers}"
             )
+        if not np.allclose(np.diag(layer_knm), 0.0, rtol=0.0, atol=1e-12):
+            raise ValueError("Layer Knm self-coupling diagonal must be zero")
 
         # Kronecker expansion: each layer block shares the inter-layer coupling
         n_total = layer_knm.shape[0] * n_per
@@ -183,6 +205,8 @@ class PlasmaControlBridge:
         phases = _finite_array(tick_result["phases"], name="phases")
         if phases.ndim != 1:
             raise ValueError("phases must be a 1-D array")
+        if phases.size == 0:
+            raise ValueError("phases must not be empty")
         phases = phases % TWO_PI
         regime = _label(tick_result.get("regime", "NOMINAL"), name="regime")
         layer_sizes = tick_result.get("layer_sizes")
@@ -262,7 +286,7 @@ class PlasmaControlBridge:
         violations: list[dict] = []
         q_min = values.get("q_min")
         if q_min is not None:
-            q_min = _finite_real(q_min, name="physics invariant q_min")
+            q_min = _finite_positive_real(q_min, name="physics invariant q_min")
         if q_min is not None and q_min < Q_MIN_STABLE:
             violations.append(
                 {
@@ -275,7 +299,10 @@ class PlasmaControlBridge:
             )
         beta_n = values.get("beta_n")
         if beta_n is not None:
-            beta_n = _finite_real(beta_n, name="physics invariant beta_n")
+            beta_n = _finite_non_negative_real(
+                beta_n,
+                name="physics invariant beta_n",
+            )
         if beta_n is not None and beta_n > BETA_N_LIMIT:
             violations.append(
                 {
@@ -288,7 +315,10 @@ class PlasmaControlBridge:
             )
         greenwald = values.get("greenwald")
         if greenwald is not None:
-            greenwald = _finite_real(greenwald, name="physics invariant greenwald")
+            greenwald = _finite_non_negative_real(
+                greenwald,
+                name="physics invariant greenwald",
+            )
         if greenwald is not None and greenwald > GREENWALD_LIMIT:
             violations.append(
                 {

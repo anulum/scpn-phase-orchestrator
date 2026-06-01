@@ -32,6 +32,10 @@ Interface to [scpn-control](https://github.com/anulum/scpn-control) plasma
 telemetry. Imports Knm specs via Kronecker expansion, converts tick results
 to `UPDEState`, exports control actions, and checks physics invariants
 (Kruskal-Shafranov, Troyon, Greenwald limits).
+The bridge rejects boolean numeric aliases, non-zero layer self-coupling,
+empty phase snapshots, negative beta/Greenwald ratios, and non-positive
+safety-factor minima before any plasma payload is expanded into `K_nm` or
+exported as a phase-state review record.
 
 ```python
 from scpn_phase_orchestrator.adapters import PlasmaControlBridge

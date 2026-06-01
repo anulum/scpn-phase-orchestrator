@@ -71,6 +71,16 @@ class TestKnmSpecImport:
         with pytest.raises(ValueError, match="finite"):
             bridge.import_knm_spec(np.array([[0.0, np.nan], [0.0, 0.0]]))
 
+    def test_rejects_boolean_layer_knm_alias(self):
+        bridge = PlasmaControlBridge(n_layers=2)
+        with pytest.raises(ValueError, match="Layer Knm"):
+            bridge.import_knm_spec(np.array([[False, True], [True, False]]))
+
+    def test_rejects_nonzero_layer_self_coupling(self):
+        bridge = PlasmaControlBridge(n_layers=2)
+        with pytest.raises(ValueError, match="self-coupling"):
+            bridge.import_knm_spec(np.array([[0.1, 0.8], [0.8, 0.0]]))
+
     def test_import_knm_spec_copies_input_matrix(self):
         bridge = PlasmaControlBridge(n_layers=2)
         layer_knm = np.array([[0.0, 0.8], [0.8, 0.0]])
@@ -121,6 +131,8 @@ class TestSnapshotImport:
     @pytest.mark.parametrize(
         ("snapshot", "field"),
         [
+            ({"phases": []}, "phases"),
+            ({"phases": [True, False]}, "phases"),
             ({"phases": [0.0, np.nan]}, "phases"),
             ({"phases": [[0.0, 1.0]]}, "phases"),
             ({"phases": [0.0, 1.0], "layer_sizes": [1]}, "layer_sizes"),
@@ -240,8 +252,11 @@ class TestPhysicsInvariantValidation:
         "values",
         [
             {"q_min": np.nan},
+            {"q_min": -0.1},
             {"beta_n": "high"},
+            {"beta_n": -0.1},
             {"greenwald": True},
+            {"greenwald": -0.1},
             "not-a-dict",
         ],
     )
