@@ -61,6 +61,15 @@ They share the Kuramoto/UPDE phase representation but differ in scope:
 
 ### Fusion Core Bridge
 
+`FusionCoreBridge` is a non-executing review bridge for
+`scpn-fusion-core` equilibrium summaries. It maps positive q-profile
+bounds, non-negative normalised beta, confinement time, sawtooth/ELM event
+counts, and non-negative MHD amplitude into bounded phase channels. The
+feedback path rejects empty phase vectors before computing the complex order
+parameter, so exported `R_global`, mean phase, and mean frequency records stay
+finite. Stability checks also reject negative beta and confinement-ratio
+payloads instead of silently converting them into ordinary soft violations.
+
 ::: scpn_phase_orchestrator.adapters.fusion_core_bridge
 
 ### Plasma Control Bridge

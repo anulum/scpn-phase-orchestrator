@@ -9,7 +9,7 @@
 """Fusion-Core bridge for phase encoding and stability-review diagnostics.
 
 The bridge maps fusion equilibrium observables into bounded phase vectors,
-returns aggregate phase feedback summaries, normalizes q-profile/equilibrium
+returns aggregate phase feedback summaries, normalises q-profile/equilibrium
 payloads, and checks local fusion stability invariants. It is pure NumPy/dict
 code and does not require or call a live fusion solver; outputs are review
 signals and feedback dictionaries for explicit downstream handoff.
@@ -53,6 +53,20 @@ def _finite_real(value: object, *, name: str) -> float:
     return result
 
 
+def _finite_positive_real(value: object, *, name: str) -> float:
+    result = _finite_real(value, name=name)
+    if result <= 0.0:
+        raise ValueError(f"{name} must be positive")
+    return result
+
+
+def _finite_non_negative_real(value: object, *, name: str) -> float:
+    result = _finite_real(value, name=name)
+    if result < 0.0:
+        raise ValueError(f"{name} must be non-negative")
+    return result
+
+
 def _non_negative_int(value: object, *, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be a non-negative integer")
@@ -61,11 +75,19 @@ def _non_negative_int(value: object, *, name: str) -> int:
 
 def _finite_vector(value: object, *, name: str) -> FloatArray:
     try:
-        array = np.asarray(value, dtype=np.float64)
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if raw.dtype.kind == "b":
+        raise ValueError(f"{name} must be numeric, not boolean")
+    try:
+        array = np.asarray(raw, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
     if array.ndim != 1:
         raise ValueError(f"{name} must be a 1-D array")
+    if array.size == 0:
+        raise ValueError(f"{name} must not be empty")
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain finite values")
     return array
@@ -109,18 +131,21 @@ class FusionCoreBridge:
         """
         if not isinstance(snapshot, dict):
             raise ValueError("snapshot must be a dict")
-        q = _finite_real(snapshot.get("q_profile", 1.5), name="q_profile")
-        q_min = _finite_real(snapshot.get("q_min", 1.0), name="q_min")
-        q_max = _finite_real(snapshot.get("q_max", 5.0), name="q_max")
+        q = _finite_positive_real(snapshot.get("q_profile", 1.5), name="q_profile")
+        q_min = _finite_positive_real(snapshot.get("q_min", 1.0), name="q_min")
+        q_max = _finite_positive_real(snapshot.get("q_max", 5.0), name="q_max")
         _validate_q_bounds(q_min, q_max)
-        beta_n = _finite_real(snapshot.get("beta_n", 1.0), name="beta_n")
-        tau_e = _finite_real(snapshot.get("tau_e", 1.0), name="tau_e")
+        beta_n = _finite_non_negative_real(snapshot.get("beta_n", 1.0), name="beta_n")
+        tau_e = _finite_non_negative_real(snapshot.get("tau_e", 1.0), name="tau_e")
         saw_count = _non_negative_int(
             snapshot.get("sawtooth_count", 0),
             name="sawtooth_count",
         )
         elm_count = _non_negative_int(snapshot.get("elm_count", 0), name="elm_count")
-        mhd_amp = _finite_real(snapshot.get("mhd_amplitude", 0.0), name="mhd_amplitude")
+        mhd_amp = _finite_non_negative_real(
+            snapshot.get("mhd_amplitude", 0.0),
+            name="mhd_amplitude",
+        )
 
         denom_q = q_max - q_min if q_max != q_min else 1.0
         phases = np.array(
@@ -165,8 +190,14 @@ class FusionCoreBridge:
         Returns normalised dict with keys: q_min, q_max, q_axis, q_edge.
         """
         if isinstance(q_profile_or_dict, dict):
-            q_min = _finite_real(q_profile_or_dict.get("q_min", 1.0), name="q_min")
-            q_max = _finite_real(q_profile_or_dict.get("q_max", 5.0), name="q_max")
+            q_min = _finite_positive_real(
+                q_profile_or_dict.get("q_min", 1.0),
+                name="q_min",
+            )
+            q_max = _finite_positive_real(
+                q_profile_or_dict.get("q_max", 5.0),
+                name="q_max",
+            )
             q_axis = _finite_real(
                 q_profile_or_dict.get("q_axis", q_min),
                 name="q_axis",
@@ -176,8 +207,14 @@ class FusionCoreBridge:
                 name="q_edge",
             )
         else:
-            q_min = _finite_real(getattr(q_profile_or_dict, "q_min", 1.0), name="q_min")
-            q_max = _finite_real(getattr(q_profile_or_dict, "q_max", 5.0), name="q_max")
+            q_min = _finite_positive_real(
+                getattr(q_profile_or_dict, "q_min", 1.0),
+                name="q_min",
+            )
+            q_max = _finite_positive_real(
+                getattr(q_profile_or_dict, "q_max", 5.0),
+                name="q_max",
+            )
             q_axis = _finite_real(
                 getattr(q_profile_or_dict, "q_axis", q_min),
                 name="q_axis",
@@ -198,12 +235,18 @@ class FusionCoreBridge:
         if not isinstance(kernel_result, dict):
             raise ValueError("kernel_result must be a dict")
         return {
-            "q_profile": _finite_real(
+            "q_profile": _finite_positive_real(
                 kernel_result.get("q_profile", 1.5),
                 name="q_profile",
             ),
-            "beta_n": _finite_real(kernel_result.get("beta_n", 1.0), name="beta_n"),
-            "tau_e": _finite_real(kernel_result.get("tau_e", 1.0), name="tau_e"),
+            "beta_n": _finite_non_negative_real(
+                kernel_result.get("beta_n", 1.0),
+                name="beta_n",
+            ),
+            "tau_e": _finite_non_negative_real(
+                kernel_result.get("tau_e", 1.0),
+                name="tau_e",
+            ),
             "sawtooth_count": _non_negative_int(
                 kernel_result.get("sawtooth_count", 0),
                 name="sawtooth_count",
@@ -212,7 +255,7 @@ class FusionCoreBridge:
                 kernel_result.get("elm_count", 0),
                 name="elm_count",
             ),
-            "mhd_amplitude": _finite_real(
+            "mhd_amplitude": _finite_non_negative_real(
                 kernel_result.get("mhd_amplitude", 0.0),
                 name="mhd_amplitude",
             ),
@@ -243,7 +286,7 @@ class FusionCoreBridge:
             )
         beta_n = observables.get("beta_n")
         if beta_n is not None:
-            beta_n = _finite_real(beta_n, name="stability beta_n")
+            beta_n = _finite_non_negative_real(beta_n, name="stability beta_n")
         if beta_n is not None and beta_n > BETA_N_LIMIT:
             violations.append(
                 {
@@ -256,7 +299,10 @@ class FusionCoreBridge:
             )
         tau_ratio = observables.get("tau_e_ratio")
         if tau_ratio is not None:
-            tau_ratio = _finite_real(tau_ratio, name="stability tau_e_ratio")
+            tau_ratio = _finite_non_negative_real(
+                tau_ratio,
+                name="stability tau_e_ratio",
+            )
         if tau_ratio is not None and tau_ratio < 0.5:
             violations.append(
                 {

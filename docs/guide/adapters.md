@@ -12,6 +12,10 @@ construction, SNN process creation) require the target package.
 Bidirectional coupling with [scpn-fusion-core](https://github.com/anulum/scpn-fusion-core).
 Maps 6 Grad-Shafranov equilibrium observables (q-profile, beta_n, tau_e,
 sawtooth count, ELM count, MHD amplitude) to oscillator phases and back.
+The bridge is a review and feedback boundary: it rejects non-positive safety
+factor bounds, negative beta/confinement/MHD observables, empty phase feedback
+vectors, and non-finite values before any equilibrium state is translated into
+SPO phase feedback.
 
 ```python
 from scpn_phase_orchestrator.adapters import FusionCoreBridge

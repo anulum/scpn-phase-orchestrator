@@ -69,9 +69,14 @@ class TestObservablesToPhases:
         ("snapshot", "field"),
         [
             ({"q_profile": np.nan}, "q_profile"),
+            ({"q_profile": -0.1}, "q_profile"),
+            ({"q_min": 0.0}, "q_min"),
             ({"q_min": 2.0, "q_max": 1.0}, "q_max"),
+            ({"beta_n": -0.1}, "beta_n"),
+            ({"tau_e": -0.1}, "tau_e"),
             ({"sawtooth_count": -1}, "sawtooth_count"),
             ({"elm_count": True}, "elm_count"),
+            ({"mhd_amplitude": -0.1}, "mhd_amplitude"),
             ("not-a-dict", "snapshot"),
         ],
     )
@@ -97,6 +102,7 @@ class TestPhasesToFeedback:
         ("phases", "omegas", "field"),
         [
             (np.ones((2, 2)), np.ones(4), "phases"),
+            (np.array([], dtype=np.float64), np.ones(1), "phases"),
             (np.array([0.0, np.nan]), np.ones(2), "phases"),
             (np.ones(2), np.ones((1, 2)), "omegas"),
             (np.ones(2), np.array([1.0, np.inf]), "omegas"),
@@ -162,6 +168,7 @@ class TestQProfileImport:
         "q_data",
         [
             {"q_min": np.nan},
+            {"q_min": 0.0},
             {"q_min": 4.0, "q_max": 3.0},
             {"q_min": 1.0, "q_max": 5.0, "q_axis": 6.0},
             {"q_min": 1.0, "q_max": 5.0, "q_edge": 0.5},
@@ -214,7 +221,9 @@ class TestStabilityChecks:
         [
             {"q_min": np.nan},
             {"beta_n": "high"},
+            {"beta_n": -0.1},
             {"tau_e_ratio": True},
+            {"tau_e_ratio": -0.1},
             "not-a-dict",
         ],
     )
@@ -244,8 +253,12 @@ class TestEquilibriumImport:
         ("kernel_result", "field"),
         [
             ({"q_profile": np.nan}, "q_profile"),
+            ({"q_profile": -0.1}, "q_profile"),
+            ({"beta_n": -0.1}, "beta_n"),
+            ({"tau_e": -0.1}, "tau_e"),
             ({"sawtooth_count": -1}, "sawtooth_count"),
             ({"elm_count": True}, "elm_count"),
+            ({"mhd_amplitude": -0.1}, "mhd_amplitude"),
             ("not-a-dict", "kernel_result"),
         ],
     )
