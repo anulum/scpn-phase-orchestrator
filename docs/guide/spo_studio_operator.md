@@ -17,9 +17,9 @@ without Streamlit.
 
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
-metric inspection, binding apply review, and export review workflows. It still
-needs real hardware evidence before it should be
-described as a good standalone product.
+metric inspection, binding apply review, passive physics-panel discovery, and
+export review workflows. It still needs real hardware evidence before hardware
+packaging can be marked ready.
 
 Run it with:
 
@@ -54,10 +54,18 @@ streamlit run tools/spo_studio.py
    - **Connectors**: memory, JSONL, REST, gRPC, Kafka, and hardware connector
      ownership plan, dry-run execution records, contract hash, auth posture,
      and `connector_plan.json`.
-   - **Exports**: deployment-readiness checklist, deployment package manifest,
-     package materialisation plan, hardware target package, plus review
-     artefacts for binding YAML, audit JSON, Docker manifest, WASM manifest,
-     verified hardware evidence, and project state.
+    - **Exports**: deployment-readiness checklist, deployment package manifest,
+      package materialisation plan, hardware target package, plus review
+      artefacts for binding YAML, audit JSON, Docker manifest, WASM manifest,
+      verified hardware evidence, and project state.
+
+The standalone shell now reads `build_studio_product_manifest()` at startup.
+That manifest lists the passive integrated-information, strange-loop,
+morphogenetic-field, multiverse, hybrid-order, information-geometry,
+Topos semantic-binding, and evolutionary supervisor policy-search panels with
+their required evidence and disabled execution gates. It is product metadata:
+displaying the registry does not execute panel builders, open transports, merge
+policies, hot patch policies, write hardware, or permit actuation.
 
 ## Guided Deployment Path
 

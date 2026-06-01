@@ -18,6 +18,10 @@ connector records.
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.studio.product import (
+    STUDIO_REVIEW_PANEL_REGISTRY,
+    build_studio_product_manifest,
+)
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
@@ -78,6 +82,7 @@ __all__ = [
     "StudioKnobState",
     "StudioProjectState",
     "StudioReplayResult",
+    "STUDIO_REVIEW_PANEL_REGISTRY",
     "apply_canvas_binding_rewrite_candidate",
     "apply_knob_update",
     "binding_spec_project_state",
@@ -92,6 +97,7 @@ __all__ = [
     "build_deployment_package",
     "build_deployment_readiness",
     "build_error_report",
+    "build_studio_product_manifest",
     "build_evolutionary_supervisor_policy_search_studio_panel",
     "build_export_manifests",
     "build_hybrid_order_studio_panel",

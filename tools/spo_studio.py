@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_graph,
     propose_binding_from_time_series_csv,
 )
+from scpn_phase_orchestrator.studio.product import build_studio_product_manifest
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
@@ -57,6 +58,12 @@ st.set_page_config(
 )
 
 st.title("SPO Studio")
+PRODUCT_MANIFEST = build_studio_product_manifest()
+st.caption(
+    "Standalone review shell with "
+    f"{PRODUCT_MANIFEST['review_panel_count']} passive physics review panels; "
+    "all panel contracts remain review-only."
+)
 
 
 def _domainpack_dir() -> Path:
@@ -147,6 +154,9 @@ if not packs:
 
 default_index = packs.index("minimal_domain") if "minimal_domain" in packs else 0
 with st.sidebar:
+    with st.expander("Passive review panels", expanded=False):
+        for panel in PRODUCT_MANIFEST["review_panels"]:
+            st.write(f"- {panel['title']}")
     domain = st.selectbox("Domainpack", packs, index=default_index)
     steps = st.slider("Steps", 10, 500, 100, step=10)
     knobs = StudioKnobState(
