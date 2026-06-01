@@ -21,6 +21,15 @@ Kuramoto/UPDE dynamics, supervisor and audit surfaces, optional Rust
 acceleration, bounded adapter bridges, and differentiable JAX layers for
 topology and coupling optimisation.
 
+SPO is therefore useful in four commercial situations:
+
+| Situation | What SPO adds |
+|-----------|---------------|
+| A plant, grid, service, or biological system has repeated behaviour | converts raw cycles, events, and states into comparable phase variables |
+| Synchrony is valuable in one subsystem and dangerous in another | separates `R_good` from `R_bad` instead of treating coherence as one scalar |
+| Control proposals must be explainable before they reach hardware | emits bounded, rate-limited, replayable review artefacts rather than hidden automation |
+| A team needs one language across physics, software, and operations | represents coupling, lag, forcing, and target phase with the same `K`, `alpha`, `zeta`, and `Psi` contract |
+
 Start with the [Use Cases and Value Map](docs/getting-started/use_cases.md) if
 you need to understand what the software is for before choosing an API.
 

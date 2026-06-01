@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Expanded the public documentation spine with clearer product-value framing,
+  use-case qualification criteria, API-by-reader routing, and notebook-to-
+  production evidence boundaries.
+- Removed obsolete tracked planning artefacts from the public documentation
+  surface; internal planning records now remain under ignored internal paths
+  only.
+
 ## [0.6.3] - 2026-06-01
 
 ### Added

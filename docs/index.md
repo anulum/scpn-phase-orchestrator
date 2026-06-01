@@ -35,6 +35,19 @@ coherence, classify regimes, and emit bounded review artefacts. It is useful
 when a system has repeated behaviour and the operator needs to know whether
 synchrony is helpful, harmful, causal, or controllable.
 
+## What This Means in Practice
+
+SPO gives a team one reviewable path from raw operational traces to bounded
+control evidence:
+
+| Stage | Practical output | Why it matters |
+|-------|------------------|----------------|
+| Bind | `binding_spec.yaml` with sources, channels, boundaries, and assumptions | domain knowledge becomes inspectable instead of living in notebooks |
+| Extract | physical, informational, and symbolic phases on one timeline | waves, events, and states can be compared mathematically |
+| Simulate | Kuramoto, UPDE, Stuart-Landau, delay, stochastic, simplicial, or inertial dynamics | teams can test synchronisation and desynchronisation hypotheses before deployment |
+| Supervise | regimes, Petri nets, value guards, and bounded action proposals | unsafe or unsupported control paths stay behind review gates |
+| Audit | hash-linked logs, deterministic replay, benchmark snapshots, and Studio panels | decisions can be reproduced, rejected, or promoted with evidence |
+
 | If you are asking... | Start here |
 |----------------------|------------|
 | What is this software for? | [Use Cases and Value Map](getting-started/use_cases.md) |

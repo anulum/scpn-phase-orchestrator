@@ -38,18 +38,45 @@ bounded control proposals with deterministic replay evidence.
 
 ## Where It Creates Value
 
-| Market or domain | Operational problem | SPO value path |
-|------------------|---------------------|----------------|
-| Power and energy | Grid oscillations, weak damping, inverter coordination | detect harmful coherence, test coupling policies, produce audit-backed control proposals |
-| Fusion and plasma | MHD mode coupling, transport oscillations, control timing | map multi-rate observables into coupled phase channels and review stabilising proposals |
-| Cloud and platform operations | Retry storms, queue cascades, service-heartbeat lock-in | detect synchronised failure modes and desynchronise overloaded layers |
-| Manufacturing and machinery | Vibration, process drift, cyclic defects, SPC patterns | expose phase coupling between process variables and control loops |
-| Cardiology and neuroscience | rhythm coherence, seizure precursors, band coupling | analyse phase locking, PAC/PLV/ITPC, and multi-scale synchrony without hidden actuation |
-| Robotics and swarms | gait coordination, leader-follower locking, swarm consensus | prototype phase policies before physical deployment |
-| Traffic and logistics | signal timing, platoon waves, queue waves | simulate coordination policies and detect unstable synchronisation patterns |
-| Finance and markets | regime coupling, sector synchrony, crash precursors | review cyclic coherence and coupling shifts as risk evidence, not trading advice |
-| Digital twins | plant/twin drift and residual coherence | bind real telemetry to phase-state twins with replayable audit records |
-| Research platforms | differentiable oscillator models and inverse coupling | optimise coupling matrices and infer topology from trajectory data |
+| Market or domain | Operational problem | SPO value path | Buyer-facing value |
+|------------------|---------------------|----------------|--------------------|
+| Power and energy | Grid oscillations, weak damping, inverter coordination | detect harmful coherence, test coupling policies, produce audit-backed control proposals | fewer unreviewed tuning changes and clearer stability evidence for grid operators |
+| Fusion and plasma | MHD mode coupling, transport oscillations, control timing | map multi-rate observables into coupled phase channels and review stabilising proposals | one evidence layer between plasma diagnostics, control timing, and safety review |
+| Cloud and platform operations | Retry storms, queue cascades, service-heartbeat lock-in | detect synchronised failure modes and desynchronise overloaded layers | lower incident blast radius through earlier cascade evidence and replayable remediation proposals |
+| Manufacturing and machinery | Vibration, process drift, cyclic defects, SPC patterns | expose phase coupling between process variables and control loops | faster root-cause triage for cyclic defects and drift before scrap or downtime grows |
+| Cardiology and neuroscience | rhythm coherence, seizure precursors, band coupling | analyse phase locking, PAC/PLV/ITPC, and multi-scale synchrony without hidden actuation | reproducible research and clinical-review evidence without claiming autonomous treatment |
+| Robotics and swarms | gait coordination, leader-follower locking, swarm consensus | prototype phase policies before physical deployment | safer progression from simulation to robot trials with bounded control envelopes |
+| Traffic and logistics | signal timing, platoon waves, queue waves | simulate coordination policies and detect unstable synchronisation patterns | evidence for congestion-wave mitigation before changing live signal plans |
+| Finance and markets | regime coupling, sector synchrony, crash precursors | review cyclic coherence and coupling shifts as risk evidence, not trading advice | transparent market-regime diagnostics for analysts, not opaque prediction claims |
+| Digital twins | plant/twin drift and residual coherence | bind real telemetry to phase-state twins with replayable audit records | measurable plant/twin mismatch and reviewable predictive-maintenance hypotheses |
+| Research platforms | differentiable oscillator models and inverse coupling | optimise coupling matrices and infer topology from trajectory data | one package for theory, reproducible experiments, and accelerator-backed topology search |
+
+## How to Recognise a Good SPO Use Case
+
+A good candidate has all of these properties:
+
+| Question | Good sign | Poor fit |
+|----------|-----------|----------|
+| Is there repeated behaviour? | waves, cycles, retries, rotations, stages, heartbeats, events, or state loops | one-off static records with no temporal phase meaning |
+| Can each source be timestamped or ordered? | samples, events, and states can be aligned to a common clock or sequence | measurements have no reliable ordering or cadence |
+| Does synchrony matter? | some coherence is desirable, harmful, diagnostic, or causal | the domain only needs scalar threshold alerting |
+| Can assumptions be written down? | coupling, lag, forcing, and safety boundaries are reviewable | the domain requires undocumented black-box decisions |
+| Is actuation sensitive? | proposals need replay, audit, rate limits, and human review | a simple uncontrolled script is acceptable |
+
+## Why the Market Angle Matters
+
+Many organisations already collect cyclic telemetry but keep it split across
+signal dashboards, incident logs, notebooks, and controller-specific tools. SPO
+turns those fragments into a common phase contract. That matters because the
+same questions reappear across sectors: which components are phase-locked, what
+coupling path caused it, whether the lock is good or bad, and which bounded
+knob could move the system without violating review policy.
+
+The commercial value is strongest where wrong control is expensive: energy,
+industrial operations, clinical research, cyber-physical infrastructure,
+robotics, aerospace, and high-value simulation. In those settings the audit
+surface is as important as the mathematics. A proposal that cannot be replayed,
+rejected, or traced should not reach production.
 
 ## Core User Journeys
 

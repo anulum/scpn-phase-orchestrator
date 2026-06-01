@@ -15,6 +15,10 @@ WASM demo.
 Use notebooks to understand a capability, then move production work into a
 domainpack, CLI run, Python facade, or audited replay path.
 
+A notebook is learning evidence, not production evidence. Promote a workflow
+only after the source binding, seed, audit log, replay verification, benchmark
+context, and safety boundary are captured outside the notebook.
+
 | Learning goal | Notebook or demo | Production path |
 |---------------|------------------|-----------------|
 | First domainpack run | `02_minimal_domain.ipynb` | `spo validate` and `spo run` on a reviewed binding |

@@ -12,17 +12,27 @@ boundary are known.
 
 ## API by Job
 
-| Job | Primary API | Supporting docs |
-|-----|-------------|-----------------|
-| Run a reviewed binding from Python | [Python Facade](api.md) | [Quickstart](../../getting-started/quickstart.md) |
-| Validate and resolve domain assumptions | [Binding](binding.md) | [New Domain Checklist](../../tutorials/01_new_domain_checklist.md) |
-| Extract phase from data | [Oscillators](oscillators.md) | [From Raw Sources to Run](../../tutorials/05_from_raw_sources_to_run.md) |
-| Simulate coupled dynamics | [UPDE](upde.md) | [UPDE Numerics](../../specs/upde_numerics.md) |
-| Infer or build coupling | [Coupling](coupling.md) | [Build K_nm Templates](../../tutorials/03_build_knm_templates.md) |
-| Detect coherence and instability | [Monitor](monitor.md) | [Analysis Toolkit](../../guide/analysis_toolkit.md) |
-| Propose bounded control | [Supervisor](supervisor.md) and [Actuation](actuation.md) | [Production Guide](../../guide/production.md) |
-| Replay and audit decisions | [Audit](audit.md) | [Deterministic Replay](../../tutorials/06_deterministic_replay_for_debugging.md) |
-| Optimise differentiable oscillator models | [nn API](nn.md) | [Differentiable Kuramoto](../../tutorials/04_differentiable_kuramoto.md) |
+| Job | Primary API | Supporting docs | Typical output |
+|-----|-------------|-----------------|----------------|
+| Run a reviewed binding from Python | [Python Facade](api.md) | [Quickstart](../../getting-started/quickstart.md) | `OrchestratorState` with phases, coupling, frequencies, and order parameter |
+| Validate and resolve domain assumptions | [Binding](binding.md) | [New Domain Checklist](../../tutorials/01_new_domain_checklist.md) | accepted binding spec or explicit diagnostics |
+| Extract phase from data | [Oscillators](oscillators.md) | [From Raw Sources to Run](../../tutorials/05_from_raw_sources_to_run.md) | physical, informational, or symbolic phase series |
+| Simulate coupled dynamics | [UPDE](upde.md) | [UPDE Numerics](../../specs/upde_numerics.md) | phase trajectory, order parameters, and backend evidence |
+| Infer or build coupling | [Coupling](coupling.md) | [Build K_nm Templates](../../tutorials/03_build_knm_templates.md) | `K_nm`, lag, topology, or causal-coupling evidence |
+| Detect coherence and instability | [Monitor](monitor.md) | [Analysis Toolkit](../../guide/analysis_toolkit.md) | R, PLV, PAC, Lyapunov, entropy, recurrence, and safety signals |
+| Propose bounded control | [Supervisor](supervisor.md) and [Actuation](actuation.md) | [Production Guide](../../guide/production.md) | rate-limited review proposals, not unreviewed hardware writes |
+| Replay and audit decisions | [Audit](audit.md) | [Deterministic Replay](../../tutorials/06_deterministic_replay_for_debugging.md) | hash-linked evidence that can be verified later |
+| Optimise differentiable oscillator models | [nn API](nn.md) | [Differentiable Kuramoto](../../tutorials/04_differentiable_kuramoto.md) | differentiable loss, trained coupling, or topology proposal |
+
+## API by Reader
+
+| Reader | Minimal surface | When to go deeper |
+|--------|-----------------|-------------------|
+| Notebook user | [Python Facade](api.md) | use engine APIs when amplitude, delay, stochastic, or simplicial dynamics are required |
+| Domainpack author | [Binding](binding.md), [Oscillators](oscillators.md), [Coupling](coupling.md) | use supervisor APIs after sources and boundaries validate |
+| Operator or platform engineer | [QueueWaves](queuewaves.md), [Audit](audit.md), [Reporting](reporting.md), [Studio](studio.md) | use distributed sync and adapters only after audit replay is stable |
+| ML researcher | [nn API](nn.md), [Autotune](autotune.md) | use SAF, inverse coupling, and replay learners after reproducible seeds are fixed |
+| Release reviewer | [Documentation Coverage](../documentation_coverage.md), [CLI](../cli.md), [Artifacts](artifacts.md) | compare the public API manifest, changelog, and release hygiene before tagging |
 
 ## Public API entry point
 
