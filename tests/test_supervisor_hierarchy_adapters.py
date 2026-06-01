@@ -118,6 +118,18 @@ def test_jsonl_replay_rejects_blank_and_malformed_lines() -> None:
         replay_hierarchy_jsonl(("[1, 2, 3]",))
 
 
+def test_jsonl_replay_rejects_non_canonical_json_lines_before_ingest() -> None:
+    runtime = HierarchyTransportRuntime()
+
+    with pytest.raises(ValueError, match="canonical finite JSON"):
+        replay_hierarchy_jsonl(('{"source_node":"edge-a","R":NaN}',), runtime=runtime)
+
+    with pytest.raises(ValueError, match="canonical finite JSON"):
+        replay_hierarchy_jsonl(('{"source_node":"edge-a","source_node":"edge-b"}',))
+
+    assert runtime.previous_sequences == {}
+
+
 def test_rest_boundary_rejects_non_json_content_type() -> None:
     with pytest.raises(ValueError, match="content-type must be application/json"):
         handle_hierarchy_rest_payload(

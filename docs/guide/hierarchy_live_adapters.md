@@ -21,6 +21,12 @@ Available boundaries:
 - `handle_hierarchy_frame(frame)`: WebSocket-style frame helper for already
   decoded frames.
 
+JSONL replay parses string records with canonical finite JSON semantics before
+runtime ingestion. Non-finite constants such as `NaN`, duplicate object keys,
+blank lines, arrays, malformed JSON, and non-mapping decoded records fail
+closed, so replay files cannot smuggle ambiguous edge summaries into the parent
+watermark ledger.
+
 Each returns a `HierarchyAdapterResult` with accepted/rejected counts, runtime
 watermarks, parent plan summary, and the underlying sync ledger.
 

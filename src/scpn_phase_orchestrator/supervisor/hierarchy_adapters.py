@@ -172,12 +172,31 @@ def _load_jsonl_record(
     if not text:
         raise ValueError(f"JSONL line {index} must not be blank")
     try:
-        decoded = json.loads(text)
+        decoded = json.loads(
+            text,
+            object_pairs_hook=_unique_json_object,
+            parse_constant=_reject_json_constant,
+        )
     except json.JSONDecodeError as exc:
         raise ValueError(f"JSONL line {index} must be valid JSON") from exc
+    except ValueError as exc:
+        raise ValueError(f"JSONL line {index} must be canonical finite JSON") from exc
     if not isinstance(decoded, Mapping):
         raise ValueError(f"JSONL line {index} must decode to a mapping")
     return decoded
+
+
+def _reject_json_constant(token: str) -> None:
+    raise ValueError(f"non-finite JSON constant is not allowed: {token}")
+
+
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    record: dict[str, object] = {}
+    for key, value in pairs:
+        if key in record:
+            raise ValueError(f"duplicate JSON object key is not allowed: {key}")
+        record[key] = value
+    return record
 
 
 def _require_json_content_type(headers: Mapping[str, object]) -> None:
