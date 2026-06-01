@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from typing import cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -69,8 +69,9 @@ class TestAutoTunePipeline:
 
     def test_n_layers_override(self):
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
-        result = identify_binding_spec(data, fs=200.0, n_layers=4)
+        result = identify_binding_spec(data, fs=200.0, n_layers=np.int64(4))
         assert result.n_layers == 4
+        assert isinstance(result.n_layers, int)
         assert len(result.omegas) == 2
         assert result.K_c_estimate >= 0
 
@@ -85,6 +86,32 @@ class TestAutoTunePipeline:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         np.testing.assert_array_equal(result.alpha, np.zeros((2, 2)))
+
+    @pytest.mark.parametrize(
+        ("time_series", "match"),
+        [
+            ([[False, True, False, True]], "boolean"),
+            ([[0.0, 1.0 + 0.0j, 0.0, -1.0]], "real-valued"),
+            ([[0.0, np.inf, 0.0, -1.0]], "finite"),
+        ],
+    )
+    def test_rejects_non_physical_time_series_payloads(
+        self,
+        time_series: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            identify_binding_spec(cast(np.ndarray, time_series), fs=200.0)
+
+    @pytest.mark.parametrize("fs", [True, 0.0, -1.0, np.inf])
+    def test_rejects_invalid_sample_rates(self, fs: object) -> None:
+        data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
+        with pytest.raises(ValueError, match="fs"):
+            identify_binding_spec(data, fs=cast(float, fs))
+
+    def test_rejects_no_temporal_dynamics(self) -> None:
+        with pytest.raises(ValueError, match="non-zero temporal dynamics"):
+            identify_binding_spec(np.ones((2, 32)), fs=200.0)
 
 
 class TestAutoTunePipelineWiring:

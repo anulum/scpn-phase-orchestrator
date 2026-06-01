@@ -19,7 +19,8 @@ inferred parameters.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from numbers import Integral
+from math import isfinite
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -62,8 +63,15 @@ def identify_binding_spec(
         fs: sampling frequency in Hz.
         n_layers: override number of layers (default: n_channels).
     """
-    data = np.atleast_2d(time_series)
+    sample_rate = _positive_real(fs, "fs")
+    data = np.atleast_2d(_real_time_series(time_series))
     n_ch, n_t = data.shape
+    if n_t < 4:
+        raise ValueError(f"time_series needs >= 4 samples, got {n_t}")
+    if not np.all(np.isfinite(data)):
+        raise ValueError("time_series must contain only finite values")
+    if not np.any(np.abs(data - data.mean(axis=1, keepdims=True)) > 0.0):
+        raise ValueError("time_series must contain non-zero temporal dynamics")
 
     if n_layers is None:
         n_layers = n_ch
@@ -71,12 +79,14 @@ def identify_binding_spec(
         raise TypeError(f"n_layers must be an integer, got {n_layers!r}")
     elif n_layers <= 0:
         raise ValueError("n_layers must be a positive integer")
+    else:
+        n_layers = int(n_layers)
 
     # Step 1: extract phases and frequencies per channel
     channel_phases = []
     dominant_freqs = []
     for ch in range(n_ch):
-        pr = extract_phases(data[ch], fs)
+        pr = extract_phases(data[ch], sample_rate)
         channel_phases.append(pr.phases)
         dominant_freqs.append(pr.dominant_freq)
 
@@ -84,7 +94,7 @@ def identify_binding_spec(
 
     # Step 2: estimate coupling from phase trajectories
     phase_matrix = np.array(channel_phases)
-    dt = 1.0 / fs
+    dt = 1.0 / sample_rate
     knm = estimate_coupling(phase_matrix, np.array(omegas), dt)
 
     # Ensure non-negative coupling
@@ -105,3 +115,31 @@ def identify_binding_spec(
         dominant_freqs=dominant_freqs,
         K_c_estimate=kc_result.K_c_estimate,
     )
+
+
+def _real_time_series(time_series: object) -> FloatArray:
+    raw = np.asarray(time_series)
+    if raw.dtype == np.bool_ or _contains_alias(raw, (bool, np.bool_)):
+        raise ValueError("time_series must not contain boolean values")
+    if np.iscomplexobj(raw) or _contains_alias(raw, (complex, np.complexfloating)):
+        raise ValueError("time_series must be real-valued")
+    try:
+        data: FloatArray = raw.astype(np.float64, copy=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("time_series must be real-valued") from exc
+    return data
+
+
+def _positive_real(value: object, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real value")
+    parsed = float(value)
+    if not isfinite(parsed) or parsed <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
+    return parsed
+
+
+def _contains_alias(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+    if raw.dtype != object:
+        return False
+    return any(isinstance(item, aliases) for item in raw.ravel())
