@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.autotune.discovery import (
+    TimeSeriesDiscoveryConfig,
     TimeSeriesDiscoveryReport,
     discover_time_series_structure,
     infer_sample_rate_from_time_column,
@@ -178,6 +179,75 @@ def test_infer_sample_rate_rejects_irregular_time_column() -> None:
 
     with pytest.raises(ValueError, match="regular sampling interval"):
         infer_sample_rate_from_time_column(rows, ("time", "signal"))
+
+
+def test_discovery_config_rejects_boolean_and_complex_threshold_aliases() -> None:
+    with pytest.raises(ValueError, match="correlation_threshold"):
+        TimeSeriesDiscoveryConfig(correlation_threshold=True)
+
+    with pytest.raises(ValueError, match="sindy_threshold"):
+        TimeSeriesDiscoveryConfig(sindy_threshold=1.0 + 0.0j)
+
+    config = TimeSeriesDiscoveryConfig(
+        correlation_threshold=np.float64(0.5),
+        sindy_threshold=np.float64(0.1),
+        phase_sindy_threshold=np.float64(0.2),
+        learned_graph_threshold=np.float64(0.3),
+    )
+    assert type(config.correlation_threshold) is float
+    assert type(config.sindy_threshold) is float
+    assert type(config.phase_sindy_threshold) is float
+    assert type(config.learned_graph_threshold) is float
+
+
+def test_discover_time_series_structure_rejects_aliasing_inputs() -> None:
+    with pytest.raises(ValueError, match="samples.*boolean"):
+        discover_time_series_structure(
+            np.asarray([[False, True], [True, False]]),
+            columns=("left", "right"),
+            sample_period_s=1.0,
+        )
+
+    with pytest.raises(ValueError, match="samples.*real-valued"):
+        discover_time_series_structure(
+            np.asarray([[0.0, 1.0 + 0.0j], [1.0, 2.0]], dtype=object),
+            columns=("left", "right"),
+            sample_period_s=1.0,
+        )
+
+    with pytest.raises(ValueError, match="sample_period_s"):
+        discover_time_series_structure(
+            np.asarray([[0.0], [1.0]], dtype=np.float64),
+            columns=("signal",),
+            sample_period_s=True,
+        )
+
+    with pytest.raises(ValueError, match="signal column names must be strings"):
+        discover_time_series_structure(
+            np.asarray([[0.0], [1.0]], dtype=np.float64),
+            columns=(1,),
+            sample_period_s=1.0,
+        )
+
+
+def test_infer_sample_rate_rejects_boolean_time_aliases() -> None:
+    rows = [
+        {"time": False, "signal": "1.0"},
+        {"time": True, "signal": "0.5"},
+    ]
+
+    with pytest.raises(ValueError, match="non-numeric sample at row 0"):
+        infer_sample_rate_from_time_column(rows, ("time", "signal"))
+
+
+def test_infer_sample_rate_rejects_non_string_fieldnames() -> None:
+    rows = [
+        {"time": "0.0", "signal": "1.0"},
+        {"time": "1.0", "signal": "0.5"},
+    ]
+
+    with pytest.raises(ValueError, match="fieldnames must be strings"):
+        infer_sample_rate_from_time_column(rows, ("time", 1))
 
 
 def test_discovery_public_array_contracts_are_element_typed() -> None:

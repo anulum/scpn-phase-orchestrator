@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
+from numbers import Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -47,16 +48,31 @@ class TimeSeriesDiscoveryConfig:
     learned_graph_threshold: float = 0.2
 
     def __post_init__(self) -> None:
-        if not 0.0 <= self.correlation_threshold <= 1.0:
+        correlation_threshold = _finite_real_scalar(
+            self.correlation_threshold,
+            "correlation_threshold",
+        )
+        sindy_threshold = _finite_real_scalar(self.sindy_threshold, "sindy_threshold")
+        phase_sindy_threshold = _finite_real_scalar(
+            self.phase_sindy_threshold,
+            "phase_sindy_threshold",
+        )
+        learned_graph_threshold = _finite_real_scalar(
+            self.learned_graph_threshold,
+            "learned_graph_threshold",
+        )
+        if not 0.0 <= correlation_threshold <= 1.0:
             raise ValueError("correlation_threshold must be in [0, 1]")
-        if self.sindy_threshold < 0.0 or not isfinite(self.sindy_threshold):
+        if sindy_threshold < 0.0:
             raise ValueError("sindy_threshold must be finite and non-negative")
-        if self.phase_sindy_threshold < 0.0 or not isfinite(self.phase_sindy_threshold):
+        if phase_sindy_threshold < 0.0:
             raise ValueError("phase_sindy_threshold must be finite and non-negative")
-        if self.learned_graph_threshold < 0.0 or not isfinite(
-            self.learned_graph_threshold
-        ):
+        if learned_graph_threshold < 0.0:
             raise ValueError("learned_graph_threshold must be finite and non-negative")
+        object.__setattr__(self, "correlation_threshold", correlation_threshold)
+        object.__setattr__(self, "sindy_threshold", sindy_threshold)
+        object.__setattr__(self, "phase_sindy_threshold", phase_sindy_threshold)
+        object.__setattr__(self, "learned_graph_threshold", learned_graph_threshold)
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +144,8 @@ def infer_sample_rate_from_time_column(
 ) -> tuple[float, str]:
     """Infer a sampling rate from a regular finite time column."""
 
+    if any(not isinstance(field, str) for field in fieldnames):
+        raise ValueError("fieldnames must be strings")
     time_column = next(
         (field for field in fieldnames if field.strip().lower() in _TIME_COLUMNS),
         None,
@@ -139,15 +157,14 @@ def infer_sample_rate_from_time_column(
     times: list[float] = []
     for row_index, row in enumerate(rows):
         try:
-            value = float(row[time_column])
+            value = _finite_time_sample(
+                row[time_column],
+                f"time column {time_column!r} sample",
+            )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(
                 f"time column {time_column!r} has non-numeric sample at row {row_index}"
             ) from exc
-        if not isfinite(value):
-            raise ValueError(
-                f"time column {time_column!r} contains a non-finite sample"
-            )
         times.append(value)
     deltas = np.diff(np.asarray(times, dtype=np.float64))
     if np.any(deltas <= 0.0):
@@ -170,7 +187,8 @@ def discover_time_series_structure(
     """Extract sparse-derivative, graph, and cluster evidence from a table."""
 
     cfg = config or TimeSeriesDiscoveryConfig()
-    table = np.asarray(samples, dtype=np.float64)
+    sample_period_s = _finite_real_scalar(sample_period_s, "sample_period_s")
+    table = _real_table(samples)
     if table.ndim != 2:
         raise ValueError("samples must be a 2-D table")
     if table.shape[0] < 2:
@@ -179,10 +197,8 @@ def discover_time_series_structure(
         raise ValueError("column count must match samples width")
     if table.shape[1] < 1:
         raise ValueError("samples must contain at least one signal column")
-    if sample_period_s <= 0.0 or not isfinite(sample_period_s):
+    if sample_period_s <= 0.0:
         raise ValueError("sample_period_s must be positive")
-    if not np.all(np.isfinite(table)):
-        raise ValueError("samples must contain only finite values")
     column_names = tuple(_normalised_column_name(column) for column in columns)
     correlation_graph = _correlation_graph(
         table,
@@ -227,8 +243,60 @@ def discover_time_series_structure(
     )
 
 
+def _finite_real_scalar(value: object, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real value")
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    return parsed
+
+
+def _finite_time_sample(value: object, name: str) -> float:
+    if isinstance(value, (bool, np.bool_, complex, np.complexfloating)):
+        raise ValueError(f"{name} must be a finite real value")
+    if isinstance(value, str):
+        try:
+            parsed = float(value)
+        except ValueError as exc:
+            raise ValueError(f"{name} must be a finite real value") from exc
+    elif isinstance(value, Real):
+        parsed = float(value)
+    else:
+        raise ValueError(f"{name} must be a finite real value")
+    if not isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    return parsed
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _real_table(samples: object) -> FloatArray:
+    if _contains_boolean_alias(samples):
+        raise ValueError("samples must not contain boolean values")
+    if _contains_complex_alias(samples):
+        raise ValueError("samples must be real-valued")
+    try:
+        table = np.asarray(samples, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("samples must be a finite real-valued table") from exc
+    if not np.all(np.isfinite(table)):
+        raise ValueError("samples must contain only finite values")
+    return table
+
+
 def _normalised_column_name(column: str) -> str:
-    name = str(column).strip()
+    if not isinstance(column, str):
+        raise ValueError("signal column names must be strings")
+    name = column.strip()
     if not name:
         raise ValueError("signal column names must be non-empty")
     return name
