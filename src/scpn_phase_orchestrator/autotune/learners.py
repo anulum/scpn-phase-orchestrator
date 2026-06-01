@@ -57,10 +57,11 @@ class LearnerPolicyProposal:
     def __post_init__(self) -> None:
         if not isinstance(self.learner_kind, str) or not self.learner_kind.strip():
             raise ValueError("learner_kind must be a non-empty string")
+        object.__setattr__(self, "learner_kind", self.learner_kind.strip())
         if not isinstance(self.policy_search, ReplayPolicySearchResult):
             raise TypeError("policy_search must be a ReplayPolicySearchResult")
-        if self.actuation_permitted:
-            raise ValueError("learner policy proposals are replay-only")
+        if self.actuation_permitted is not False:
+            raise ValueError("actuation_permitted must be exactly False")
         if not isinstance(self.learner_parameters, Mapping):
             raise TypeError("learner_parameters must be a mapping")
         if not isinstance(self.physics_prior, Mapping):
@@ -103,7 +104,7 @@ def _json_safe_value(value: object) -> object:
     if isinstance(value, np.floating):
         value = float(value)
     if isinstance(value, float) and not np.isfinite(value):
-        return repr(value)
+        raise ValueError("audit records must contain only finite real values")
     if isinstance(value, (complex, np.complexfloating)):
         raise ValueError("audit records must not contain complex values")
     return value
@@ -197,7 +198,7 @@ def generate_hybrid_physics_proposal(
         "critical_coupling_estimate",
     )
 
-    current_k = float(np.asarray(seed.K, dtype=np.float64).mean())
+    current_k = _mean_seed_k(seed)
     prior_gap = critical_coupling_estimate - current_k
     prior_step = min(0.5, max(0.01, abs(prior_gap) * 0.25))
     jitter = _uniform(seed_value, low=0.0, high=0.02)
@@ -319,3 +320,27 @@ def _positive_real(value: object, name: str) -> float:
     if not np.isfinite(parsed) or parsed <= 0.0:
         raise ValueError(f"{name} must be finite and positive")
     return parsed
+
+
+def _mean_seed_k(seed: KnobPolicyCandidate) -> float:
+    raw = np.asarray(seed.K)
+    if raw.dtype == np.bool_ or _object_array_contains(raw, (bool, np.bool_)):
+        raise ValueError("seed.K must not contain boolean values")
+    if np.iscomplexobj(raw) or _object_array_contains(
+        raw,
+        (complex, np.complexfloating),
+    ):
+        raise ValueError("seed.K must be real-valued")
+    try:
+        values = raw.astype(np.float64, copy=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("seed.K must be real-valued") from exc
+    if values.size == 0 or not np.all(np.isfinite(values)):
+        raise ValueError("seed.K must be finite and non-empty")
+    return float(values.mean())
+
+
+def _object_array_contains(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+    if raw.dtype != object:
+        return False
+    return any(isinstance(item, aliases) for item in raw.ravel())

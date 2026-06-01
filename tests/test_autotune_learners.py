@@ -101,6 +101,22 @@ def test_hybrid_physics_proposal_rejects_invalid_prior() -> None:
         )
 
 
+def test_hybrid_physics_proposal_rejects_invalid_seed_k_before_prior_math() -> None:
+    with pytest.raises(ValueError, match="seed.K"):
+        generate_hybrid_physics_proposal(
+            KnobPolicyCandidate(K=cast("float", True)),
+            _safe_observation,
+            critical_coupling_estimate=1.4,
+        )
+
+    with pytest.raises(ValueError, match="seed.K"):
+        generate_hybrid_physics_proposal(
+            KnobPolicyCandidate(K=cast("float", 1.0 + 0.0j)),
+            _safe_observation,
+            critical_coupling_estimate=1.4,
+        )
+
+
 @pytest.mark.parametrize("seed_value", [True, -1, 1.25])
 def test_replay_learner_seed_value_rejects_non_integer_aliases(
     seed_value: object,
@@ -137,6 +153,24 @@ def test_learner_policy_proposal_never_permits_actuation() -> None:
             policy_search=proposal.policy_search,
             actuation_permitted=True,
         )
+    with pytest.raises(ValueError, match="actuation_permitted"):
+        LearnerPolicyProposal(
+            learner_kind=proposal.learner_kind,
+            policy_search=proposal.policy_search,
+            actuation_permitted=cast(bool, np.bool_(False)),
+        )
+
+
+def test_learner_kind_is_canonicalised_for_audit_records() -> None:
+    seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
+    proposal = generate_ppo_like_proposal(seed, _safe_observation, seed_value=7)
+    wrapped = LearnerPolicyProposal(
+        learner_kind="  custom_replay  ",
+        policy_search=proposal.policy_search,
+    )
+
+    assert wrapped.learner_kind == "custom_replay"
+    assert wrapped.to_audit_record()["learner_kind"] == "custom_replay"
 
 
 def test_audit_record_is_json_serialisable() -> None:
@@ -154,7 +188,7 @@ def test_audit_record_is_json_serialisable() -> None:
     json.dumps(proposal.to_audit_record(), allow_nan=False, sort_keys=True)
 
 
-def test_audit_record_coerces_numpy_scalars_and_non_finite_values() -> None:
+def test_audit_record_coerces_numpy_scalars_and_rejects_non_finite_values() -> None:
     seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
     proposal = generate_hybrid_physics_proposal(
         seed,
@@ -166,7 +200,6 @@ def test_audit_record_coerces_numpy_scalars_and_non_finite_values() -> None:
         policy_search=proposal.policy_search,
         learner_parameters={
             "clip_range": np.float64(0.125),
-            "diagnostics": [np.float64(np.inf), np.float64(np.nan)],
         },
         physics_prior={"critical_coupling_estimate": np.float64(1.4)},
     )
@@ -174,9 +207,18 @@ def test_audit_record_coerces_numpy_scalars_and_non_finite_values() -> None:
     record = wrapped.to_audit_record()
 
     assert record["learner_parameters"]["clip_range"] == 0.125
-    assert record["learner_parameters"]["diagnostics"] == ["inf", "nan"]
     assert record["physics_prior"]["critical_coupling_estimate"] == 1.4
     json.dumps(record, allow_nan=False, sort_keys=True)
+
+    invalid_value = LearnerPolicyProposal(
+        learner_kind=proposal.learner_kind,
+        policy_search=proposal.policy_search,
+        learner_parameters={
+            "diagnostics": [np.float64(np.inf), np.float64(np.nan)],
+        },
+    )
+    with pytest.raises(ValueError, match="finite"):
+        invalid_value.to_audit_record()
 
 
 def test_audit_record_rejects_invalid_mapping_keys_and_complex_values() -> None:
