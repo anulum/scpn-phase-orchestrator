@@ -72,9 +72,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _ensure_real_scalar(value: object, *, label: str) -> float:
-    if isinstance(value, (bool, np.bool_)) or isinstance(
-        value, (complex, np.complexfloating)
-    ):
+    if isinstance(value, (bool, np.bool_, complex, np.complexfloating)):
         raise ValueError(f"{label} must be a real-valued numeric scalar")
     if not isinstance(value, (int, float, np.integer, np.floating)):
         raise ValueError(f"{label} must be a real-valued numeric scalar")

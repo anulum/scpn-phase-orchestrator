@@ -66,9 +66,7 @@ fn validate_sindy_inputs(
         return Err("Phase-SINDy requires at least two time samples".to_string());
     }
     if n_time - 1 < n_osc {
-        return Err(
-            "Phase-SINDy requires at least one derivative sample per feature".to_string(),
-        );
+        return Err("Phase-SINDy requires at least one derivative sample per feature".to_string());
     }
     if !dt.is_finite() || dt <= 0.0 {
         return Err("Phase-SINDy dt must be finite and positive".to_string());
@@ -354,8 +352,7 @@ mod tests {
 
     #[test]
     fn test_output_size() {
-        let result =
-            sindy_fit(&vec![0.5; 50 * 4], 4, 50, 0.01, 0.05, 10).expect("valid SINDy fit");
+        let result = sindy_fit(&vec![0.5; 50 * 4], 4, 50, 0.01, 0.05, 10).expect("valid SINDy fit");
         assert_eq!(result.len(), 16);
     }
 
@@ -370,18 +367,16 @@ mod tests {
         assert!(sindy_fit(&[0.0; 6], 2, 3, 0.01, 0.05, 0)
             .expect_err("zero iterations must fail closed")
             .contains("max_iter"));
-        assert!(
-            sindy_fit(
-                &[0.0, f64::INFINITY, 0.0, 0.1, 0.2, 0.3],
-                2,
-                3,
-                0.01,
-                0.05,
-                10
-            )
-            .expect_err("non-finite phases must fail closed")
-            .contains("finite")
-        );
+        assert!(sindy_fit(
+            &[0.0, f64::INFINITY, 0.0, 0.1, 0.2, 0.3],
+            2,
+            3,
+            0.01,
+            0.05,
+            10
+        )
+        .expect_err("non-finite phases must fail closed")
+        .contains("finite"));
         assert!(sindy_fit(&[0.0; 5], 2, 3, 0.01, 0.05, 10)
             .expect_err("shape mismatch must fail closed")
             .contains("length mismatch"));

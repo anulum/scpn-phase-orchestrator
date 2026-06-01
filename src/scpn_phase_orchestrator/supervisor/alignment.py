@@ -14,7 +14,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import TypeAlias
+from typing import TypeAlias, TypeGuard
 
 import numpy as np
 
@@ -36,6 +36,7 @@ __all__ = [
 
 ActionTuple: TypeAlias = tuple[ControlAction, ...]
 ObjectiveDeltas: TypeAlias = Mapping[str, float]
+RealNumericScalar: TypeAlias = int | float | np.integer | np.floating
 
 
 @dataclass(frozen=True)
@@ -702,7 +703,7 @@ def _validate_unit_interval_scalar(value: object, name: str) -> None:
         raise ValueError(f"{name} must be finite and in [0, 1]")
 
 
-def _is_real_numeric_scalar(value: object) -> bool:
+def _is_real_numeric_scalar(value: object) -> TypeGuard[RealNumericScalar]:
     return isinstance(value, int | float | np.integer | np.floating) and not isinstance(
         value, bool | np.bool_
     )
