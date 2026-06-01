@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from typing import cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -181,6 +181,13 @@ class TestAutotuneRewardScoring:
         )
         assert penalty_only.reward == full.components["bad_coherence"]
         assert penalty_only.reward < coherence_only.reward
+
+    def test_reward_component_order_rejects_unknown_and_duplicate_terms(self) -> None:
+        with pytest.raises(ValueError, match="unknown reward component"):
+            RewardConfig(component_order=("coherence_gain", "not_a_component"))
+
+        with pytest.raises(ValueError, match="duplicate reward component"):
+            RewardConfig(component_order=("coherence_gain", "coherence_gain"))
 
 
 class TestAutotuneReplayRanking:
@@ -503,6 +510,15 @@ class TestAutotuneRewardValidation:
         with pytest.raises(ValueError, match="top_k"):
             rank_replay_candidates(replay, top_k=0)
 
+    def test_replay_ranking_rejects_boolean_top_k_and_require_safe(self) -> None:
+        replay = ((KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.9)),)
+
+        with pytest.raises(TypeError, match="top_k"):
+            rank_replay_candidates(replay, top_k=cast(int, True))
+
+        with pytest.raises(TypeError, match="require_safe"):
+            rank_replay_candidates(replay, require_safe=cast(bool, np.bool_(True)))
+
     def test_offline_generator_rejects_negative_steps(self) -> None:
         with pytest.raises(ValueError, match="K_step"):
             OfflinePolicySearchConfig(K_step=-0.1)
@@ -510,6 +526,13 @@ class TestAutotuneRewardValidation:
     def test_offline_generator_rejects_zero_clip_bound(self) -> None:
         with pytest.raises(ValueError, match="max_abs_knob"):
             OfflinePolicySearchConfig(max_abs_knob=0.0)
+
+    def test_offline_generator_rejects_boolean_config_aliases(self) -> None:
+        with pytest.raises(ValueError, match="K_step"):
+            OfflinePolicySearchConfig(K_step=cast(float, True))
+
+        with pytest.raises(TypeError, match="include_baseline"):
+            OfflinePolicySearchConfig(include_baseline=cast(bool, np.bool_(True)))
 
     def test_policy_proposal_rejects_invalid_coherence_gate(self) -> None:
         with pytest.raises(ValueError, match="min_coherence"):
@@ -526,3 +549,51 @@ class TestAutotuneRewardValidation:
     def test_policy_proposal_rejects_negative_alternative_limit(self) -> None:
         with pytest.raises(ValueError, match="max_alternatives"):
             PolicyProposalConfig(max_alternatives=-1)
+
+    def test_policy_proposal_rejects_boolean_and_non_integral_controls(self) -> None:
+        with pytest.raises(TypeError, match="max_alternatives"):
+            PolicyProposalConfig(max_alternatives=cast(int, True))
+
+        with pytest.raises(TypeError, match="max_alternatives"):
+            PolicyProposalConfig(max_alternatives=cast(int, 1.5))
+
+        with pytest.raises(TypeError, match="require_safe"):
+            PolicyProposalConfig(require_safe=cast(bool, np.bool_(True)))
+
+    def test_reward_observation_rejects_boolean_probability_aliases(self) -> None:
+        with pytest.raises(ValueError, match="coherence"):
+            RewardObservation(coherence=cast(float, True))
+
+        with pytest.raises(ValueError, match="previous_coherence"):
+            RewardObservation(coherence=0.5, previous_coherence=cast(float, False))
+
+    def test_reward_observation_rejects_numpy_boolean_flags(self) -> None:
+        with pytest.raises(TypeError, match="unsafe"):
+            RewardObservation(coherence=0.5, unsafe=cast(bool, np.bool_(True)))
+
+        with pytest.raises(TypeError, match="regime_changed"):
+            RewardObservation(
+                coherence=0.5,
+                regime_changed=cast(bool, np.bool_(True)),
+            )
+
+    @pytest.mark.parametrize(
+        "candidate",
+        [
+            KnobPolicyCandidate(K=True),
+            KnobPolicyCandidate(alpha=np.array([True], dtype=object)),
+            KnobPolicyCandidate(zeta=np.array([1.0 + 0.0j], dtype=object)),
+            KnobPolicyCandidate(Psi=1.0 + 0.0j),
+            KnobPolicyCandidate(channel_weights=(cast(float, True),)),
+            KnobPolicyCandidate(cross_channel_gains=(cast(float, np.bool_(True)),)),
+        ],
+    )
+    def test_rejects_boolean_and_complex_candidate_aliases(
+        self,
+        candidate: KnobPolicyCandidate,
+    ) -> None:
+        with pytest.raises(
+            ValueError,
+            match="boolean|real-valued|channel weight|cross-channel gain",
+        ):
+            evaluate_knob_policy(candidate, RewardObservation(coherence=0.8))

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -32,6 +33,16 @@ __all__ = [
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+_COMPONENT_NAMES = frozenset(
+    {
+        "coherence_gain",
+        "target_tracking",
+        "bad_coherence",
+        "actuation",
+        "regime_churn",
+        "unsafe",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -59,6 +70,8 @@ class RewardObservation:
         _require_probability(self.coherence, "coherence")
         if self.previous_coherence is not None:
             _require_probability(self.previous_coherence, "previous_coherence")
+        _require_bool(self.unsafe, "unsafe")
+        _require_bool(self.regime_changed, "regime_changed")
 
 
 @dataclass(frozen=True)
@@ -75,6 +88,7 @@ class OfflinePolicySearchConfig:
     max_abs_knob: float | None = None
 
     def __post_init__(self) -> None:
+        _require_bool(self.include_baseline, "include_baseline")
         for label, value in [
             ("K_step", self.K_step),
             ("alpha_step", self.alpha_step),
@@ -123,6 +137,7 @@ class RewardConfig:
             ("unsafe_penalty", self.unsafe_penalty),
         ]:
             _require_non_negative_finite(value, label)
+        _validate_component_order(self.component_order)
 
 
 @dataclass(frozen=True)
@@ -135,11 +150,21 @@ class PolicyProposalConfig:
     require_safe: bool = True
 
     def __post_init__(self) -> None:
-        if not np.isfinite(self.min_reward) and self.min_reward != -np.inf:
+        if isinstance(self.min_reward, (bool, np.bool_)) or not isinstance(
+            self.min_reward, Real
+        ):
+            raise ValueError("min_reward must be finite or -inf")
+        if not np.isfinite(float(self.min_reward)) and self.min_reward != -np.inf:
             raise ValueError("min_reward must be finite or -inf")
         _require_probability(self.min_coherence, "min_coherence")
-        if self.max_alternatives < 0:
+        if isinstance(self.max_alternatives, (bool, np.bool_)) or not isinstance(
+            self.max_alternatives, Integral
+        ):
+            raise TypeError("max_alternatives must be a non-negative integer")
+        if int(self.max_alternatives) < 0:
             raise ValueError("max_alternatives must be non-negative")
+        object.__setattr__(self, "max_alternatives", int(self.max_alternatives))
+        _require_bool(self.require_safe, "require_safe")
 
 
 @dataclass(frozen=True)
@@ -277,8 +302,13 @@ def rank_replay_candidates(
     """
     if not replay_candidates:
         raise ValueError("replay candidate ranking requires at least one candidate")
+    if top_k is not None:
+        if isinstance(top_k, (bool, np.bool_)) or not isinstance(top_k, Integral):
+            raise TypeError("top_k must be a positive integer when provided")
+        top_k = int(top_k)
     if top_k is not None and top_k < 1:
         raise ValueError("top_k must be positive when provided")
+    _require_bool(require_safe, "require_safe")
 
     reports = [
         evaluate_knob_policy(candidate, observation, config)
@@ -426,7 +456,7 @@ def _actuation_energy(candidate: KnobPolicyCandidate) -> float:
 
 
 def _mean_square(value: float | FloatArray) -> float:
-    array = np.asarray(value, dtype=np.float64)
+    array = _real_knob_array(value, "candidate knobs")
     if not np.all(np.isfinite(array)):
         raise ValueError("candidate knobs must be finite")
     if array.size == 0:
@@ -435,6 +465,13 @@ def _mean_square(value: float | FloatArray) -> float:
 
 
 def _validate_candidate(candidate: KnobPolicyCandidate) -> None:
+    for label, value in [
+        ("K", candidate.K),
+        ("alpha", candidate.alpha),
+        ("zeta", candidate.zeta),
+        ("Psi", candidate.Psi),
+    ]:
+        _real_knob_array(value, label)
     for weight in candidate.channel_weights:
         _require_non_negative_finite(weight, "channel weight")
     for gain in candidate.cross_channel_gains:
@@ -469,7 +506,7 @@ def _offset_knob(
     delta: float,
     max_abs_knob: float | None,
 ) -> float | FloatArray:
-    array = np.asarray(value, dtype=np.float64) + delta
+    array = _real_knob_array(value, "candidate knobs") + delta
     if max_abs_knob is not None:
         array = np.clip(array, -max_abs_knob, max_abs_knob)
     if array.ndim == 0:
@@ -540,17 +577,63 @@ def _deduplicate_candidates(
 
 
 def _require_probability(value: float, label: str) -> None:
-    if not np.isfinite(value) or not 0.0 <= value <= 1.0:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{label} must be finite and within [0, 1]")
+    parsed = float(value)
+    if not np.isfinite(parsed) or not 0.0 <= parsed <= 1.0:
         raise ValueError(f"{label} must be finite and within [0, 1]")
 
 
 def _require_non_negative_finite(value: float, label: str) -> None:
-    if not np.isfinite(value) or value < 0.0:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{label} must be finite and non-negative")
+    parsed = float(value)
+    if not np.isfinite(parsed) or parsed < 0.0:
         raise ValueError(f"{label} must be finite and non-negative")
 
 
 def _serialise_array(value: float | FloatArray) -> float | list[object]:
-    array = np.asarray(value, dtype=np.float64)
+    array = _real_knob_array(value, "candidate knobs")
     if array.ndim == 0:
         return float(array)
     return cast("list[object]", array.tolist())
+
+
+def _real_knob_array(value: object, label: str) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_ or _contains_alias(raw, (bool, np.bool_)):
+        raise ValueError(f"{label} must not contain boolean values")
+    if np.iscomplexobj(raw) or _contains_alias(raw, (complex, np.complexfloating)):
+        raise ValueError(f"{label} must be real-valued")
+    try:
+        array: FloatArray = raw.astype(np.float64, copy=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be real-valued") from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{label} must be finite")
+    return array
+
+
+def _contains_alias(raw: np.ndarray, aliases: tuple[type, ...]) -> bool:
+    if raw.dtype != object:
+        return False
+    return any(isinstance(item, aliases) for item in raw.ravel())
+
+
+def _require_bool(value: object, label: str) -> None:
+    if not isinstance(value, bool):
+        raise TypeError(f"{label} must be a boolean")
+
+
+def _validate_component_order(component_order: tuple[str, ...]) -> None:
+    if not isinstance(component_order, tuple) or not component_order:
+        raise ValueError("component_order must be a non-empty tuple")
+    seen: set[str] = set()
+    for component in component_order:
+        if not isinstance(component, str):
+            raise TypeError("component_order entries must be strings")
+        if component not in _COMPONENT_NAMES:
+            raise ValueError(f"unknown reward component {component!r}")
+        if component in seen:
+            raise ValueError(f"duplicate reward component {component!r}")
+        seen.add(component)
