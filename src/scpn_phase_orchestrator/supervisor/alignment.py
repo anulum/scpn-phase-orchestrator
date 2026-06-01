@@ -70,8 +70,7 @@ class ValueConstraint:
             raise ValueError("min_value must be <= max_value")
         if self.max_abs_value is not None and self.max_abs_value < 0.0:
             raise ValueError("max_abs_value must be non-negative")
-        if not np.isfinite(self.weight) or self.weight < 0.0:
-            raise ValueError("weight must be finite and non-negative")
+        _validate_non_negative_scalar(self.weight, "weight")
 
     def applies_to(self, action: ControlAction) -> bool:
         """Return whether this constraint applies to ``action``."""
@@ -142,14 +141,10 @@ class ValueParetoObjective:
     def __post_init__(self) -> None:
         if not isinstance(self.name, str) or not self.name:
             raise ValueError("Pareto objective name must be non-empty")
-        if not np.isfinite(self.min_delta) or self.min_delta < 0.0:
-            raise ValueError(
-                "Pareto objective min_delta must be finite and non-negative"
-            )
-        if not np.isfinite(self.max_regression) or self.max_regression < 0.0:
-            raise ValueError(
-                "Pareto objective max_regression must be finite and non-negative"
-            )
+        _validate_non_negative_scalar(self.min_delta, "Pareto objective min_delta")
+        _validate_non_negative_scalar(
+            self.max_regression, "Pareto objective max_regression"
+        )
 
 
 @dataclass(frozen=True)
@@ -185,8 +180,7 @@ class ValueAlignmentPolicy:
     def __post_init__(self) -> None:
         if not self.constraints:
             raise ValueError("at least one value constraint is required")
-        if not np.isfinite(self.minimum_score) or not 0.0 <= self.minimum_score <= 1.0:
-            raise ValueError("minimum_score must be finite and in [0, 1]")
+        _validate_unit_interval_scalar(self.minimum_score, "minimum_score")
         names = [objective.name for objective in self.pareto_objectives]
         if len(set(names)) != len(names):
             raise ValueError("Pareto objective names must be unique")
@@ -546,9 +540,12 @@ def _template_string(value: object, context: str) -> str:
 
 
 def _template_float(value: object) -> float:
-    if not isinstance(value, int | float) or isinstance(value, bool):
+    if not _is_real_numeric_scalar(value):
         raise ValueError("value_alignment numeric fields must be numbers")
-    return float(value)
+    number = float(value)
+    if not np.isfinite(number):
+        raise ValueError("value_alignment numeric fields must be finite")
+    return number
 
 
 def _optional_template_float(value: object) -> float | None:
@@ -664,7 +661,7 @@ def _pareto_violations(
 
 
 def _finite_objective_delta(value: object, objective: str) -> float:
-    if not isinstance(value, int | float) or isinstance(value, bool):
+    if not _is_real_numeric_scalar(value):
         raise ValueError(f"Pareto objective {objective!r} delta must be numeric")
     delta = float(value)
     if not np.isfinite(delta):
@@ -683,5 +680,29 @@ def _action_record(action: ControlAction) -> dict[str, object]:
 
 
 def _validate_bound(value: float | None, name: str) -> None:
-    if value is not None and not np.isfinite(value):
+    if value is None:
+        return
+    if not _is_real_numeric_scalar(value) or not np.isfinite(float(value)):
         raise ValueError(f"{name} must be finite")
+
+
+def _validate_non_negative_scalar(value: object, name: str) -> None:
+    if not _is_real_numeric_scalar(value):
+        raise ValueError(f"{name} must be finite and non-negative")
+    number = float(value)
+    if not np.isfinite(number) or number < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+
+
+def _validate_unit_interval_scalar(value: object, name: str) -> None:
+    if not _is_real_numeric_scalar(value):
+        raise ValueError(f"{name} must be finite and in [0, 1]")
+    number = float(value)
+    if not np.isfinite(number) or not 0.0 <= number <= 1.0:
+        raise ValueError(f"{name} must be finite and in [0, 1]")
+
+
+def _is_real_numeric_scalar(value: object) -> bool:
+    return isinstance(value, int | float | np.integer | np.floating) and not isinstance(
+        value, bool | np.bool_
+    )

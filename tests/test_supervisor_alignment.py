@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import get_type_hints
 
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
@@ -70,6 +71,43 @@ class TestValueAlignmentContracts:
 
         with pytest.raises(ValueError, match="minimum_score"):
             ValueAlignmentPolicy((constraint,), minimum_score=1.5)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "message"),
+        [
+            ({"name": "bool-min", "min_value": np.bool_(True)}, "min_value"),
+            ({"name": "bool-max", "max_value": np.bool_(False)}, "max_value"),
+            ({"name": "bool-abs", "max_abs_value": np.bool_(True)}, "max_abs_value"),
+            ({"name": "bool-weight", "weight": np.bool_(True)}, "weight"),
+        ],
+    )
+    def test_constraint_rejects_numpy_boolean_numeric_aliases(
+        self, kwargs: dict[str, object], message: str
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            ValueConstraint(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "message"),
+        [
+            ({"name": "safety", "min_delta": np.bool_(True)}, "min_delta"),
+            (
+                {"name": "safety", "max_regression": np.bool_(False)},
+                "max_regression",
+            ),
+        ],
+    )
+    def test_pareto_objective_rejects_numpy_boolean_numeric_aliases(
+        self, kwargs: dict[str, object], message: str
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            ValueParetoObjective(**kwargs)
+
+    def test_policy_rejects_numpy_boolean_minimum_score_alias(self) -> None:
+        constraint = ValueConstraint("limit", max_abs_value=1.0)
+
+        with pytest.raises(ValueError, match="minimum_score"):
+            ValueAlignmentPolicy((constraint,), minimum_score=np.bool_(True))
 
 
 class TestValueAlignmentBehaviour:
@@ -660,6 +698,22 @@ class TestValueAlignmentBehaviour:
         assert decision.pareto_violations[0].counterfactual == (
             "missing_pareto_objective_evidence_forces_fallback"
         )
+
+    def test_numpy_boolean_pareto_delta_evidence_fails_closed(self) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", knob="K", max_abs_value=1.0),),
+                pareto_objectives=(
+                    ValueParetoObjective("safety_margin", min_delta=0.01),
+                ),
+            )
+        )
+
+        with pytest.raises(ValueError, match="safety_margin"):
+            guard.evaluate(
+                [_action(value=0.2)],
+                objective_deltas={"safety_margin": np.bool_(True)},
+            )
 
     def test_template_loader_builds_pareto_objective_constraints(self) -> None:
         policy = value_alignment_policy_from_template(
