@@ -25,6 +25,8 @@ __all__ = [
     "ValueAlignmentGuard",
     "ValueAlignmentPolicy",
     "ValueScoreCounterfactual",
+    "ValueParetoObjective",
+    "ValueParetoViolation",
     "ValueConstraint",
     "ValueViolation",
     "calibrate_value_alignment_replay_evidence",
@@ -33,6 +35,7 @@ __all__ = [
 ]
 
 ActionTuple: TypeAlias = tuple[ControlAction, ...]
+ObjectiveDeltas: TypeAlias = Mapping[str, float]
 
 
 @dataclass(frozen=True)
@@ -129,18 +132,64 @@ class ValueScoreCounterfactual:
 
 
 @dataclass(frozen=True)
+class ValueParetoObjective:
+    """A named objective delta that must stay on the review Pareto frontier."""
+
+    name: str
+    min_delta: float = 0.0
+    max_regression: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name:
+            raise ValueError("Pareto objective name must be non-empty")
+        if not np.isfinite(self.min_delta) or self.min_delta < 0.0:
+            raise ValueError(
+                "Pareto objective min_delta must be finite and non-negative"
+            )
+        if not np.isfinite(self.max_regression) or self.max_regression < 0.0:
+            raise ValueError(
+                "Pareto objective max_regression must be finite and non-negative"
+            )
+
+
+@dataclass(frozen=True)
+class ValueParetoViolation:
+    """A failed Pareto objective review condition."""
+
+    objective: str
+    observed_delta: float | None
+    required_delta: float
+    allowed_regression: float
+    counterfactual: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a serialisable Pareto violation record."""
+        return {
+            "objective": self.objective,
+            "observed_delta": self.observed_delta,
+            "required_delta": self.required_delta,
+            "allowed_regression": self.allowed_regression,
+            "counterfactual": self.counterfactual,
+        }
+
+
+@dataclass(frozen=True)
 class ValueAlignmentPolicy:
     """Configured objective constraints and fallback actuation."""
 
     constraints: tuple[ValueConstraint, ...]
     fallback_actions: ActionTuple = ()
     minimum_score: float = 0.0
+    pareto_objectives: tuple[ValueParetoObjective, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.constraints:
             raise ValueError("at least one value constraint is required")
         if not np.isfinite(self.minimum_score) or not 0.0 <= self.minimum_score <= 1.0:
             raise ValueError("minimum_score must be finite and in [0, 1]")
+        names = [objective.name for objective in self.pareto_objectives]
+        if len(set(names)) != len(names):
+            raise ValueError("Pareto objective names must be unique")
 
 
 @dataclass(frozen=True)
@@ -152,13 +201,18 @@ class ValueAlignmentDecision:
     fallback_actions: ActionTuple
     violations: tuple[ValueViolation, ...]
     score_counterfactuals: tuple[ValueScoreCounterfactual, ...]
+    pareto_violations: tuple[ValueParetoViolation, ...]
     alignment_score: float
     minimum_score: float
 
     @property
     def satisfied(self) -> bool:
         """Return whether the proposed action set passed the guard."""
-        return not self.violations and self.alignment_score >= self.minimum_score
+        return (
+            not self.violations
+            and not self.pareto_violations
+            and self.alignment_score >= self.minimum_score
+        )
 
     @property
     def actions_to_apply(self) -> ActionTuple:
@@ -176,8 +230,12 @@ class ValueAlignmentDecision:
             "approved_count": len(self.approved_actions),
             "blocked_count": len(self.blocked_actions),
             "fallback_count": len(self.fallback_actions),
+            "pareto_violation_count": len(self.pareto_violations),
             "violations": [
                 violation.to_audit_record() for violation in self.violations
+            ],
+            "pareto_violations": [
+                violation.to_audit_record() for violation in self.pareto_violations
             ],
             "score_counterfactuals": [
                 counterfactual.to_audit_record()
@@ -196,7 +254,10 @@ class ValueAlignmentGuard:
         self.policy = policy
 
     def evaluate(
-        self, actions: list[ControlAction] | ActionTuple
+        self,
+        actions: list[ControlAction] | ActionTuple,
+        *,
+        objective_deltas: ObjectiveDeltas | None = None,
     ) -> ValueAlignmentDecision:
         """Evaluate proposed actions and return an auditable decision."""
         proposed = tuple(actions)
@@ -216,11 +277,16 @@ class ValueAlignmentGuard:
                 scores.append(self._score_action(action))
 
         alignment_score = 1.0 if not scores else float(min(scores))
+        pareto_violations = _pareto_violations(
+            self.policy.pareto_objectives,
+            objective_deltas,
+        )
         return ValueAlignmentDecision(
             approved_actions=tuple(approved),
             blocked_actions=tuple(blocked),
             fallback_actions=self.policy.fallback_actions,
             violations=tuple(violations),
+            pareto_violations=pareto_violations,
             score_counterfactuals=_score_counterfactuals(
                 alignment_score,
                 self.policy.minimum_score,
@@ -393,11 +459,16 @@ def value_alignment_policy_from_template(
         _action_from_template(item, index)
         for index, item in enumerate(_template_list(template, "fallback_actions"))
     )
+    pareto_objectives = tuple(
+        _pareto_objective_from_template(item, index)
+        for index, item in enumerate(_template_list(template, "pareto_objectives"))
+    )
     minimum_score = _template_float(template.get("minimum_score", 0.0))
     return ValueAlignmentPolicy(
         constraints=constraints,
         fallback_actions=fallback_actions,
         minimum_score=minimum_score,
+        pareto_objectives=pareto_objectives,
     )
 
 
@@ -443,6 +514,15 @@ def _action_from_template(item: object, index: int) -> ControlAction:
             data.get("justification"),
             f"fallback_actions[{index}].justification",
         ),
+    )
+
+
+def _pareto_objective_from_template(item: object, index: int) -> ValueParetoObjective:
+    data = _template_mapping(item, f"pareto_objectives[{index}]")
+    return ValueParetoObjective(
+        name=_template_string(data.get("name"), f"pareto_objectives[{index}].name"),
+        min_delta=_template_float(data.get("min_delta", 0.0)),
+        max_regression=_template_float(data.get("max_regression", 0.0)),
     )
 
 
@@ -518,6 +598,78 @@ def _one_sided_margin(value: float, bound: float, *, lower: bool) -> float:
     if lower:
         return float(np.clip((value - bound) / scale, 0.0, 1.0))
     return float(np.clip((bound - value) / scale, 0.0, 1.0))
+
+
+def _pareto_violations(
+    objectives: tuple[ValueParetoObjective, ...],
+    objective_deltas: ObjectiveDeltas | None,
+) -> tuple[ValueParetoViolation, ...]:
+    if not objectives:
+        return ()
+    violations: list[ValueParetoViolation] = []
+    observed: dict[str, float] = {}
+    for objective in objectives:
+        raw_delta = (
+            None if objective_deltas is None else objective_deltas.get(objective.name)
+        )
+        if raw_delta is None:
+            violations.append(
+                ValueParetoViolation(
+                    objective=objective.name,
+                    observed_delta=None,
+                    required_delta=objective.min_delta,
+                    allowed_regression=objective.max_regression,
+                    counterfactual="missing_pareto_objective_evidence_forces_fallback",
+                )
+            )
+            continue
+        delta = _finite_objective_delta(raw_delta, objective.name)
+        observed[objective.name] = delta
+        if delta < -objective.max_regression:
+            violations.append(
+                ValueParetoViolation(
+                    objective=objective.name,
+                    observed_delta=delta,
+                    required_delta=objective.min_delta,
+                    allowed_regression=objective.max_regression,
+                    counterfactual=(
+                        "fallback_applied_to_prevent_pareto_objective_regression"
+                    ),
+                )
+            )
+    if violations:
+        return tuple(violations)
+    improving_objectives = [
+        objective
+        for objective in objectives
+        if objective.min_delta > 0.0 and observed[objective.name] >= objective.min_delta
+    ]
+    if (
+        any(objective.min_delta > 0.0 for objective in objectives)
+        and not improving_objectives
+    ):
+        objective = max(objectives, key=lambda item: item.min_delta)
+        return (
+            ValueParetoViolation(
+                objective=objective.name,
+                observed_delta=observed[objective.name],
+                required_delta=objective.min_delta,
+                allowed_regression=objective.max_regression,
+                counterfactual=(
+                    "fallback_applied_because_no_pareto_objective_improved"
+                ),
+            ),
+        )
+    return ()
+
+
+def _finite_objective_delta(value: object, objective: str) -> float:
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        raise ValueError(f"Pareto objective {objective!r} delta must be numeric")
+    delta = float(value)
+    if not np.isfinite(delta):
+        raise ValueError(f"Pareto objective {objective!r} delta must be finite")
+    return delta
 
 
 def _action_record(action: ControlAction) -> dict[str, object]:

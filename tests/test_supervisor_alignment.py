@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.supervisor import (
     ValueAlignmentGuard,
     ValueAlignmentPolicy,
     ValueConstraint,
+    ValueParetoObjective,
     calibrate_value_alignment_replay_evidence,
     value_alignment_policy_from_binding_spec,
     value_alignment_policy_from_template,
@@ -566,3 +567,118 @@ class TestValueAlignmentBehaviour:
         assert decision.violations[0].constraint == "limit-K"
         assert decision.violations[0].knob == "K"
         assert decision.violations[0].failed_bounds == ("max_abs_value",)
+
+    def test_pareto_objective_constraints_allow_non_regressing_improvements(
+        self,
+    ) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", knob="K", max_abs_value=1.0),),
+                pareto_objectives=(
+                    ValueParetoObjective(
+                        "safety_margin",
+                        min_delta=0.01,
+                        max_regression=0.0,
+                    ),
+                    ValueParetoObjective(
+                        "sync_quality",
+                        min_delta=0.01,
+                        max_regression=0.02,
+                    ),
+                ),
+            )
+        )
+
+        decision = guard.evaluate(
+            [_action(value=0.2)],
+            objective_deltas={"safety_margin": 0.02, "sync_quality": -0.01},
+        )
+
+        assert decision.satisfied
+        assert decision.pareto_violations == ()
+        assert decision.actions_to_apply == (_action(value=0.2),)
+
+    def test_pareto_regression_forces_safe_fallback_and_audit_log(self) -> None:
+        fallback = ControlAction(
+            knob="zeta",
+            scope="global",
+            value=0.0,
+            ttl_s=1.0,
+            justification="alignment fallback: Pareto safety hold",
+        )
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", knob="K", max_abs_value=1.0),),
+                fallback_actions=(fallback,),
+                pareto_objectives=(
+                    ValueParetoObjective(
+                        "safety_margin",
+                        min_delta=0.01,
+                        max_regression=0.0,
+                    ),
+                    ValueParetoObjective(
+                        "sync_quality",
+                        min_delta=0.01,
+                        max_regression=0.02,
+                    ),
+                ),
+            )
+        )
+
+        decision = guard.evaluate(
+            [_action(value=0.2)],
+            objective_deltas={"safety_margin": -0.03, "sync_quality": 0.04},
+        )
+        record = decision.to_audit_record()
+
+        assert not decision.satisfied
+        assert decision.actions_to_apply == (fallback,)
+        assert decision.pareto_violations[0].objective == "safety_margin"
+        assert decision.pareto_violations[0].counterfactual == (
+            "fallback_applied_to_prevent_pareto_objective_regression"
+        )
+        assert record["pareto_violation_count"] == 1
+        assert record["pareto_violations"][0]["observed_delta"] == pytest.approx(-0.03)
+        assert record["actions_to_apply"][0]["justification"] == (
+            "alignment fallback: Pareto safety hold"
+        )
+
+    def test_missing_pareto_evidence_fails_closed(self) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", knob="K", max_abs_value=1.0),),
+                pareto_objectives=(
+                    ValueParetoObjective("safety_margin", min_delta=0.01),
+                ),
+            )
+        )
+
+        decision = guard.evaluate([_action(value=0.2)])
+
+        assert not decision.satisfied
+        assert decision.actions_to_apply == ()
+        assert decision.pareto_violations[0].counterfactual == (
+            "missing_pareto_objective_evidence_forces_fallback"
+        )
+
+    def test_template_loader_builds_pareto_objective_constraints(self) -> None:
+        policy = value_alignment_policy_from_template(
+            {
+                "constraints": [{"name": "limit-K", "knob": "K", "max_abs_value": 1.0}],
+                "pareto_objectives": [
+                    {
+                        "name": "safety_margin",
+                        "min_delta": 0.01,
+                        "max_regression": 0.0,
+                    }
+                ],
+            }
+        )
+
+        decision = ValueAlignmentGuard(policy).evaluate(
+            [_action(value=0.2)],
+            objective_deltas={"safety_margin": 0.02},
+        )
+
+        assert policy.pareto_objectives[0].name == "safety_margin"
+        assert decision.satisfied

@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   review panels, carries a deterministic manifest hash, and exposes them to the
   packaged Streamlit shell without enabling execution, transport, hardware, or
   actuation paths.
+- Added explicit Pareto objective constraints to the value-alignment supervisor
+  guard, including fail-closed missing-objective evidence, counterfactual
+  Pareto violation audit records, and fallback preservation.
 - Added a lightweight Python API layer with `Orchestrator.from_yaml(...)` and
   `Orchestrator.run(...)`, plus the `scpn` import alias for onboarding scripts
   that should not depend on CLI invocation.

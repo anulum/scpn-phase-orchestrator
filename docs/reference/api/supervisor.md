@@ -506,6 +506,14 @@ loaded at runtime. Domainpacks can translate their safety or objective priors
 into `ValueConstraint` entries and attach the resulting decision record to the
 normal audit trace.
 
+Policies may also include `ValueParetoObjective` entries. When present,
+`ValueAlignmentGuard.evaluate(..., objective_deltas={...})` requires finite
+objective deltas, blocks regressions beyond each objective's allowed tolerance,
+and requires at least one positive configured objective to improve. Missing
+objective evidence fails closed and forces the same safe fallback path. Audit
+records include `pareto_violations` with the observed delta, required delta,
+allowed regression, and counterfactual reason.
+
 Binding specs may carry the same policy as a reviewable `value_alignment`
 template:
 
@@ -524,12 +532,17 @@ value_alignment:
       value: 0.0
       ttl_s: 1.0
       justification: value guard safe hold
+  pareto_objectives:
+    - name: safety_margin
+      min_delta: 0.01
+      max_regression: 0.0
 ```
 
 Use `value_alignment_policy_from_binding_spec(spec)` to convert that template
-into a `ValueAlignmentPolicy`. Audit records include hard bound violations and
-score-threshold counterfactuals so reviewers can distinguish a blocked unsafe
-action from a fallback forced by the policy's minimum alignment score.
+into a `ValueAlignmentPolicy`. Audit records include hard bound violations,
+Pareto objective violations, and score-threshold counterfactuals so reviewers
+can distinguish a blocked unsafe action, a candidate that regresses a protected
+objective, and a fallback forced by the policy's minimum alignment score.
 
 Domainpack templates now include review-time examples for cardiac rhythm,
 power grid, network security, fusion equilibrium, neuroscience EEG, brain
@@ -543,6 +556,7 @@ from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor import (
     ValueAlignmentGuard,
     ValueAlignmentPolicy,
+    ValueParetoObjective,
     ValueConstraint,
     value_alignment_policy_from_binding_spec,
 )
@@ -552,8 +566,14 @@ policy = ValueAlignmentPolicy(
     fallback_actions=(
         ControlAction("zeta", "global", 0.0, 1.0, "alignment fallback: hold"),
     ),
+    pareto_objectives=(
+        ValueParetoObjective("safety_margin", min_delta=0.01, max_regression=0.0),
+    ),
 )
-decision = ValueAlignmentGuard(policy).evaluate(proposed_actions)
+decision = ValueAlignmentGuard(policy).evaluate(
+    proposed_actions,
+    objective_deltas={"safety_margin": 0.02},
+)
 actions_to_apply = decision.actions_to_apply
 audit_payload = decision.to_audit_record()
 
