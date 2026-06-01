@@ -96,6 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instant metric values.
 - Closed the named Gaian/Prometheus JSON deserialisation roadmap scope and
   moved future adjacent JSON reviews into public boundary maintenance.
+- Expanded the artifacts API reference with QPU data artifact schema, safety,
+  hash, JSON, failure-mode, and file I/O contracts plus a dedicated docs guard.
 - Aligned Gaian mesh peer and local phase validation with circular phase
   semantics by wrapping finite negative `psi` values modulo `2*pi`.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
