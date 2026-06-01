@@ -145,6 +145,7 @@ class TestSimulatedBoard:
             (2, 256, np.array([10.0])),
             (1, 256, np.array([np.nan])),
             (1, 256, np.array([-1.0])),
+            (1, 256, np.array([True])),
         ],
     )
     def test_constructor_rejects_invalid_config(

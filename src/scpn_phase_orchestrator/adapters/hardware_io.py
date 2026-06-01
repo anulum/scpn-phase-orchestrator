@@ -70,6 +70,12 @@ def _validated_frequencies(
 ) -> FloatArray:
     if frequencies is None:
         return np.linspace(1.0, 40.0, n_channels, dtype=np.float64)
+    raw = np.asarray(frequencies)
+    if raw.dtype == np.bool_ or (
+        raw.dtype == object
+        and any(isinstance(item, bool | np.bool_) for item in raw.flat)
+    ):
+        raise ValueError("frequencies must be real numeric values, not boolean")
     array = np.asarray(frequencies, dtype=np.float64)
     if array.shape != (n_channels,):
         raise ValueError(f"frequencies must have shape ({n_channels},)")

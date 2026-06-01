@@ -89,6 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   acceptance.
 - Hardened the LSL BCI bridge by rejecting boolean EEG samples and malformed
   sample timestamps before buffered Hilbert phase extraction.
+- Hardened the hardware I/O simulated-board boundary by rejecting boolean
+  frequency aliases before synthetic EEG generation.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
   aliases, non-zero layer self-coupling, empty phase snapshots, negative plasma
   ratios, and non-positive safety-factor minima before coupling expansion or

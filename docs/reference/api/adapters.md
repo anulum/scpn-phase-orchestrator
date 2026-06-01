@@ -181,6 +181,10 @@ Translates ControlAction to Modbus register writes over TLS.
 
 Generic hardware I/O abstraction for digital/analogue outputs.
 
+Simulated-board frequency configuration accepts only finite positive real
+frequencies; boolean aliases are rejected before synthetic EEG generation so
+digital flags cannot become oscillator frequencies.
+
 ::: scpn_phase_orchestrator.adapters.hardware_io
 
 ## Gaian Mesh Bridge

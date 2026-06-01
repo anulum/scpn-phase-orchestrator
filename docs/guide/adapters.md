@@ -140,6 +140,13 @@ evidence from the numpy LIF rate path, and a SHA-256 schedule hash. The manifest
 keeps `actuation_permitted` and `hardware_write_permitted` false; it is a
 simulator-parity handoff, not a live neuromorphic target run.
 
+### Hardware I/O
+
+The simulated hardware board provides deterministic sinusoidal EEG-like
+channels for local pipeline tests. Custom frequencies must be finite positive
+real values; boolean aliases are rejected before waveform generation so digital
+control flags cannot be interpreted as `1 Hz` oscillator frequencies.
+
 ### LSLBCIBridge
 
 Live BCI ingress uses Lab Streaming Layer samples as a phase-extraction input.
