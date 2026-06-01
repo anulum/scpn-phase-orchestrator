@@ -16,7 +16,7 @@ The implementation lives in
 The public package re-exports the same symbols from
 `scpn_phase_orchestrator.runtime.distributed`.
 
-:::: scpn_phase_orchestrator.runtime.distributed.sync
+::: scpn_phase_orchestrator.runtime.distributed.sync
     options:
       show_root_heading: true
       show_source: false
