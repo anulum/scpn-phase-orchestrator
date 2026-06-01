@@ -247,10 +247,12 @@ exporter.record_regime_change("nominal", "degraded")
 
 Fetches range and instant metrics from a Prometheus endpoint with validated
 HTTP(S) endpoint, timeout, query parameters, decoded response shape, sample
-timestamps, and sample values. Range and instant samples are accepted only when
-their Prometheus timestamps are finite and non-negative and their metric values
-are finite real numbers, so malformed telemetry cannot enter downstream
-oscillator-control metrics.
+timestamps, and sample values. Decoded JSON rejects non-finite constants and
+duplicate object keys before status, data, result, or sample fields can be
+overwritten by last-value-wins parsing. Range and instant samples are accepted
+only when their Prometheus timestamps are finite and non-negative and their
+metric values are finite real numbers, so malformed telemetry cannot enter
+downstream oscillator-control metrics.
 
 ```python
 from scpn_phase_orchestrator.adapters import PrometheusAdapter

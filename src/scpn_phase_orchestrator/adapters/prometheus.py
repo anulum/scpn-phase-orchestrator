@@ -36,6 +36,15 @@ def _reject_json_constant(value: str) -> None:
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
+def _reject_duplicate_json_key(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key {key!r} is not allowed")
+        result[key] = value
+    return result
+
+
 class PrometheusAdapter:
     """Fetch time-series metrics from a Prometheus endpoint."""
 
@@ -140,12 +149,16 @@ def _require_finite_float(value: object, field_name: str) -> float:
 
 def _load_response_body(raw: bytes) -> Mapping[str, Any]:
     try:
-        body = json.loads(raw, parse_constant=_reject_json_constant)
+        body = json.loads(
+            raw,
+            parse_constant=_reject_json_constant,
+            object_pairs_hook=_reject_duplicate_json_key,
+        )
     except json.JSONDecodeError as exc:
         raise ValueError("Prometheus returned malformed JSON") from exc
     except ValueError as exc:
         raise ValueError(
-            "Prometheus JSON must contain only finite JSON numbers"
+            "Prometheus JSON must contain finite JSON numbers and unique object keys"
         ) from exc
     if not isinstance(body, Mapping):
         raise ValueError("Prometheus response must be a JSON object")
