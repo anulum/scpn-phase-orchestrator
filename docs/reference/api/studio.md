@@ -20,10 +20,11 @@ paths or bypassing the review-only safety gates.
 `build_studio_product_manifest()` returns the metadata-only standalone Studio
 product manifest used by the packaged `tools/spo_studio.py` shell. The manifest
 lists every passive physics review panel, the public builder name, the
-claim/proof boundary, required evidence, and disabled execution gates while
-keeping `network_opened`, `hardware_write_permitted`, `qpu_execution_permitted`,
-and `actuation_permitted` false. It does not execute panel builders, import
-optional runtimes, open transports, or touch hardware.
+claim/proof boundary, required evidence, disabled execution gates, and a
+deterministic `manifest_sha256` over the canonical manifest payload while keeping
+`network_opened`, `hardware_write_permitted`, `qpu_execution_permitted`, and
+`actuation_permitted` false. It does not execute panel builders, import optional
+runtimes, open transports, or touch hardware.
 
 `build_integrated_information_panel(records)` renders passive
 `integrated_information` monitor audit records into an operator payload with

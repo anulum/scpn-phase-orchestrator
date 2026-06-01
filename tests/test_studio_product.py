@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
+import json
 import sys
+from hashlib import sha256
 from pathlib import Path
 
 import scpn_phase_orchestrator.studio as studio
@@ -28,6 +30,20 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     assert manifest["hardware_write_permitted"] is False
     assert manifest["qpu_execution_permitted"] is False
     assert manifest["operator_review_required"] is True
+    assert (
+        manifest["manifest_sha256"]
+        == sha256(
+            json.dumps(
+                {
+                    key: value
+                    for key, value in manifest.items()
+                    if key != "manifest_sha256"
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+    )
 
     panels = manifest["review_panels"]
     panel_ids = [panel["panel_id"] for panel in panels]
@@ -67,6 +83,10 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
         "optional policy-DSL mutation report",
         "optional deterministic domain examples",
     )
+    for panel in panels:
+        builder = panel["builder"]
+        assert isinstance(builder, str)
+        assert callable(getattr(studio, builder))
 
 
 def test_studio_product_manifest_is_public_and_streamlit_free() -> None:

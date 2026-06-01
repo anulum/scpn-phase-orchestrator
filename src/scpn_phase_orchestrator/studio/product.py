@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
+from hashlib import sha256
 
 __all__ = [
     "STUDIO_REVIEW_PANEL_REGISTRY",
@@ -189,7 +191,7 @@ def build_studio_product_manifest(
         raise ValueError("panel_registry panel_id values must be unique")
     for panel in panels:
         _require_disabled_panel_gates(panel)
-    return {
+    manifest = {
         "manifest_kind": "studio_product_manifest",
         "product": "spo_studio",
         "standalone_shell": "tools/spo_studio.py",
@@ -204,6 +206,8 @@ def build_studio_product_manifest(
         "hardware_write_permitted": False,
         "qpu_execution_permitted": False,
     }
+    manifest["manifest_sha256"] = _manifest_sha256(manifest)
+    return manifest
 
 
 def _require_disabled_panel_gates(panel: PanelRecord) -> None:
@@ -216,3 +220,11 @@ def _require_disabled_panel_gates(panel: PanelRecord) -> None:
     ):
         if panel.get(field) is not expected:
             raise ValueError(f"{panel.get('panel_id', '<unknown>')} {field} invalid")
+
+
+def _manifest_sha256(manifest: dict[str, object]) -> str:
+    payload = {
+        key: value for key, value in manifest.items() if key != "manifest_sha256"
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return sha256(canonical.encode("utf-8")).hexdigest()

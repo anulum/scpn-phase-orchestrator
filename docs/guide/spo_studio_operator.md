@@ -63,9 +63,10 @@ The standalone shell now reads `build_studio_product_manifest()` at startup.
 That manifest lists the passive integrated-information, strange-loop,
 morphogenetic-field, multiverse, hybrid-order, information-geometry,
 Topos semantic-binding, and evolutionary supervisor policy-search panels with
-their required evidence and disabled execution gates. It is product metadata:
-displaying the registry does not execute panel builders, open transports, merge
-policies, hot patch policies, write hardware, or permit actuation.
+their required evidence, disabled execution gates, and deterministic manifest
+SHA-256. It is product metadata: displaying the registry does not execute panel
+builders, open transports, merge policies, hot patch policies, write hardware,
+or permit actuation.
 
 ## Guided Deployment Path
 

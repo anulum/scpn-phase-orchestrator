@@ -27,8 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added passive Studio surfacing for evolutionary supervisor policy-search
   reports, enriched domain examples, and policy-DSL mutation evidence.
 - Added a standalone Studio product manifest that registers passive physics
-  review panels and exposes them to the packaged Streamlit shell without
-  enabling execution, transport, hardware, or actuation paths.
+  review panels, carries a deterministic manifest hash, and exposes them to the
+  packaged Streamlit shell without enabling execution, transport, hardware, or
+  actuation paths.
 - Added a lightweight Python API layer with `Orchestrator.from_yaml(...)` and
   `Orchestrator.run(...)`, plus the `scpn` import alias for onboarding scripts
   that should not depend on CLI invocation.
