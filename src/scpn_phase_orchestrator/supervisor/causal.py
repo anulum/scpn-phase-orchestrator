@@ -276,8 +276,8 @@ class CausalInterventionEngine:
             raise ValueError(
                 f"alpha.shape={next_alpha.shape}, expected {(self._n, self._n)}"
             )
-        next_zeta = float(zeta)
-        next_psi = float(psi)
+        next_zeta = _require_finite_real(zeta, name="zeta")
+        next_psi = _require_finite_real(psi, name="psi")
 
         for action in actions:
             action_value = _require_finite_real(action.value, name="action.value")

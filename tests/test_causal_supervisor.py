@@ -418,6 +418,29 @@ def test_apply_actions_rejects_non_real_matrix_parameters() -> None:
         engine.apply_actions(knm, boolean_alpha, 0.0, 0.0, ())
 
 
+@pytest.mark.parametrize(
+    ("zeta", "psi", "message"),
+    [
+        (True, 0.0, "zeta must be finite"),
+        (0.0, True, "psi must be finite"),
+        ("0.0", 0.0, "zeta must be finite"),
+        (0.0, "0.0", "psi must be finite"),
+        (np.inf, 0.0, "zeta must be finite"),
+        (0.0, np.nan, "psi must be finite"),
+    ],
+)
+def test_apply_actions_rejects_non_real_drive_scalars(
+    zeta: object,
+    psi: object,
+    message: str,
+) -> None:
+    _, _, knm, alpha = _system(3)
+    engine = CausalInterventionEngine(3, dt=0.01)
+
+    with pytest.raises(ValueError, match=message):
+        engine.apply_actions(knm, alpha, zeta, psi, ())
+
+
 def test_evaluate_actions_accepts_array_like_inputs_after_validation() -> None:
     phases, omegas, knm, alpha = _system(4)
     engine = CausalInterventionEngine(4, dt=0.01, horizon=2)
