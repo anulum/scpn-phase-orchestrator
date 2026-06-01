@@ -185,7 +185,9 @@ def test_intergenerational_policy_inheritance_is_signed_and_review_only() -> Non
     assert first["merge_strategy"] == "reviewed_hot_patch_only"
 
 
-def test_intergenerational_policy_inheritance_history_preserves_review_records() -> None:
+def test_intergenerational_policy_inheritance_history_preserves_review_records() -> (
+    None
+):
     lineage = build_autopoietic_lineage_sandbox(
         {"K": 0.42, "alpha": 0.18, "zeta": 0.09},
         build_autopoietic_lineage_replay_corpus(),

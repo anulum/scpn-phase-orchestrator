@@ -661,9 +661,7 @@ def build_autopoietic_lineage_studio_panel(
         for manifest in normalised_manifests
         for row in cast(tuple[dict[str, object], ...], manifest["replay_corpus"])
     )
-    replay_domains = tuple(
-        sorted({str(row["domain"]) for row in replay_corpus_rows})
-    )
+    replay_domains = tuple(sorted({str(row["domain"]) for row in replay_corpus_rows}))
     child_rows = tuple(
         child
         for manifest in normalised_manifests
@@ -3491,9 +3489,7 @@ def _normalise_intergenerational_child_rows(
     value: object,
     history_name: str,
 ) -> tuple[dict[str, object], ...]:
-    rows = _autopoietic_lineage_mapping_sequence(
-        value, f"{history_name} child_rows"
-    )
+    rows = _autopoietic_lineage_mapping_sequence(value, f"{history_name} child_rows")
     if not rows:
         raise ValueError(f"{history_name} must contain child_rows")
     normalised: list[dict[str, object]] = []
@@ -3716,14 +3712,15 @@ def _autopoietic_lineage_text_tuple(value: object, name: str) -> tuple[str, ...]
         return ()
     if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a sequence of strings")
-    result = tuple(_autopoietic_lineage_text(item, f"{name} item") for item in value)
-    return result
+    return tuple(_autopoietic_lineage_text(item, f"{name} item") for item in value)
 
 
 def _autopoietic_lineage_sha(value: object, name: str) -> str:
     text = _autopoietic_lineage_text(value, name)
-    if len(text) != 64 or text.lower() != text or any(
-        char not in "0123456789abcdef" for char in text
+    if (
+        len(text) != 64
+        or text.lower() != text
+        or any(char not in "0123456789abcdef" for char in text)
     ):
         raise ValueError(f"{name} must be a lowercase SHA-256 digest")
     return text

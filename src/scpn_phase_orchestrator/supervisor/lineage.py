@@ -242,10 +242,7 @@ def build_intergenerational_policy_inheritance_history(
         for domain in lineage.get("replay_domains", ())
         if isinstance(domain, str) and domain
     )
-    fitness_scores = tuple(
-        float(row["fitness_score"])
-        for row in child_rows
-    )
+    fitness_scores = tuple(float(row["fitness_score"]) for row in child_rows)
     history: dict[str, object] = {
         "schema": "scpn_intergenerational_policy_inheritance_history_v1",
         "lineage_sha256": str(lineage["lineage_sha256"]),

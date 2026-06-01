@@ -113,8 +113,8 @@ from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
 from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
-    build_intergenerational_policy_inheritance_history,
     build_intergenerational_policy_inheritance,
+    build_intergenerational_policy_inheritance_history,
 )
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldPolicy,

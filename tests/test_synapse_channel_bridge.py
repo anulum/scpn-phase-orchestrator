@@ -302,9 +302,7 @@ class TestSynapseChannelBridgeAsync:
         bridge = self._make_bridge()
         bridge._ws = AsyncMock()
         bridge._ws.recv = AsyncMock(
-            return_value=(
-                '{"sender":"UnknownAgent","sender":"Agent-A","type":"chat"}'
-            )
+            return_value=('{"sender":"UnknownAgent","sender":"Agent-A","type":"chat"}')
         )
 
         await bridge.listen_once()

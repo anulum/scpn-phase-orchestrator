@@ -431,8 +431,7 @@ def build_formal_verification_package(
         _require_package_identifier(artifact_name, "artifact name")
         if not isinstance(export, PrismExport | TLAExport | FormalTextArtifact):
             raise PolicyError(
-                "formal artifacts must be PrismExport, TLAExport, or "
-                "FormalTextArtifact"
+                "formal artifacts must be PrismExport, TLAExport, or FormalTextArtifact"
             )
         artifact_text = _artifact_text(export)
         if not artifact_text.strip():

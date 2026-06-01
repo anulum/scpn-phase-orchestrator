@@ -2137,9 +2137,7 @@ def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
                 "min_checker_command_count": thresholds.min_checker_command_count,
                 "min_rules_per_domain": thresholds.min_rules_per_domain,
                 "min_stl_specs_per_domain": thresholds.min_stl_specs_per_domain,
-                "min_package_property_count": (
-                    thresholds.min_package_property_count
-                ),
+                "min_package_property_count": (thresholds.min_package_property_count),
                 "require_deterministic_hash": (thresholds.require_deterministic_hash),
             },
             sort_keys=True,

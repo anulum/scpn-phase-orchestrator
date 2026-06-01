@@ -415,8 +415,7 @@ def test_sheaf_cohomology_studio_panel_preserves_review_evidence() -> None:
     assert panel["critical_summary_count"] == 1
     assert len(panel["top_residual_rows"]) == 4
     assert (
-        panel["obstruction_range"]["maximum"]
-        >= panel["obstruction_range"]["minimum"]
+        panel["obstruction_range"]["maximum"] >= panel["obstruction_range"]["minimum"]
     )
     assert (
         panel["control_proposals"][0]["projected_consistency_energy"]
@@ -787,9 +786,7 @@ def test_intergenerational_inheritance_panel_rejects_malformed_history() -> None
         ).encode("utf-8")
     ).hexdigest()
     with pytest.raises(ValueError, match="history_record_count"):
-        ui.build_intergenerational_inheritance_studio_panel(
-            [bad_count_history]
-        )
+        ui.build_intergenerational_inheritance_studio_panel([bad_count_history])
     bad_child = dict(history["child_rows"][0])
     bad_child["direct_hot_patch_permitted"] = True
     bad_history = {**history, "child_rows": (bad_child, history["child_rows"][1])}
