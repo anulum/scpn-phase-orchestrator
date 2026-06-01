@@ -18,6 +18,12 @@ on:
       - "src/scpn_phase_orchestrator/supervisor/__init__.py"
       - "tools/formal_model_checker_ci.py"
       - "tests/test_formal_model_checker_ci.py"
+      - "benchmarks/reference_suite.py"
+      - "tests/test_reference_benchmark_suite.py"
+      - "domainpacks/cardiac_rhythm/binding_spec.yaml"
+      - "domainpacks/chemical_reactor/binding_spec.yaml"
+      - "domainpacks/power_grid/binding_spec.yaml"
+      - "domainpacks/pll_clock/binding_spec.yaml"
   pull_request:
     branches: [main]
     paths:
@@ -26,6 +32,12 @@ on:
       - "src/scpn_phase_orchestrator/supervisor/__init__.py"
       - "tools/formal_model_checker_ci.py"
       - "tests/test_formal_model_checker_ci.py"
+      - "benchmarks/reference_suite.py"
+      - "tests/test_reference_benchmark_suite.py"
+      - "domainpacks/cardiac_rhythm/binding_spec.yaml"
+      - "domainpacks/chemical_reactor/binding_spec.yaml"
+      - "domainpacks/power_grid/binding_spec.yaml"
+      - "domainpacks/pll_clock/binding_spec.yaml"
 
 permissions:
   contents: read
@@ -53,5 +65,5 @@ jobs:
       - name: Install package
         run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
 
-      - name: Execute SPIN/Z3 smoke package
+      - name: Execute SPIN/Z3 smoke and safety-domain packages
         run: python tools/formal_model_checker_ci.py --execute-ci-smoke

@@ -825,6 +825,12 @@ Remote CI owns the first external execution lane through
 `formal-model-checkers.yml`, which installs SPIN and Z3, materialises reviewed
 Promela/SMT-LIB smoke artefacts, validates disabled package/readiness metadata,
 and runs those external checkers only under the CI-only execution guard.
+The same lane now also materialises safety-domain packages for
+`cardiac_rhythm`, `chemical_reactor`, `power_grid`, and `pll_clock`. Each
+domain package binds a SPIN operator-approval gate and a Z3 hard-bound
+feasibility artefact derived from the domainpack safety boundaries, preserving
+the disabled runtime-execution contract while allowing remote CI to execute
+the external checker commands in an isolated environment.
 
 For builtin STL automata, `synthesise_stl_controller_candidates()` provides a
 non-actuating controller-synthesis bridge. It proposes signal-level candidate

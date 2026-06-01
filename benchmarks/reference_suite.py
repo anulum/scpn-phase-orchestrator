@@ -137,6 +137,7 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+from tools.formal_model_checker_ci import build_domainpack_formal_packages
 
 ROOT = Path(__file__).resolve().parent
 RESULTS_PATH = ROOT / "results" / "reference_suite.json"
@@ -217,6 +218,8 @@ class DomainFormalExportThresholds(NamedTuple):
     min_artifacts_per_domain: int
     min_rules_per_domain: int
     min_stl_specs_per_domain: int
+    min_package_property_count: int
+    min_checker_command_count: int
     require_deterministic_hash: bool
 
 
@@ -2000,13 +2003,21 @@ def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
 def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
     """Benchmark domain-style policy/STL formal safety artefacts."""
     thresholds = DomainFormalExportThresholds(
-        min_domain_count=3,
-        min_artifacts_per_domain=3,
+        min_domain_count=4,
+        min_artifacts_per_domain=5,
         min_rules_per_domain=2,
         min_stl_specs_per_domain=2,
+        min_package_property_count=2,
+        min_checker_command_count=2,
         require_deterministic_hash=True,
     )
     fixtures = _domain_formal_export_fixtures()
+    packages = {
+        bundle.domainpack: bundle for bundle in build_domainpack_formal_packages()
+    }
+    repeated_packages = {
+        bundle.domainpack: bundle for bundle in build_domainpack_formal_packages()
+    }
     domain_results: list[dict[str, float | int | str | bool]] = []
     artifact_texts: list[str] = []
 
@@ -2030,13 +2041,31 @@ def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
             rules,
             module_name=f"{fixture.domain} policy",
         )
-        texts = (policy_prism.model, policy_tla.module, stl_prism.model)
+        bundle = packages[fixture.domain]
+        repeated_bundle = repeated_packages[fixture.domain]
+        texts = (
+            policy_prism.model,
+            policy_tla.module,
+            stl_prism.model,
+            *bundle.artifacts.values(),
+        )
+        package_record = bundle.package.to_audit_record()
+        checker_commands = package_record["checker_commands"]
+        if not isinstance(checker_commands, list):
+            raise TypeError("domain formal checker commands must be a list")
         deterministic_hash = int(
             sha256(policy_prism.model.encode()).hexdigest()
             == sha256(repeated.model.encode()).hexdigest()
+            and bundle.package.package_hash == repeated_bundle.package.package_hash
         )
         required_labels_present = all(
             label in "\n".join(texts) for label in fixture.required_labels
+        )
+        checker_execution_disabled = int(
+            all(
+                command.get("execution_permitted") is False
+                for command in checker_commands
+            )
         )
         identifier_map_count = sum(
             len(mapping)
@@ -2053,8 +2082,12 @@ def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
             artifact_count >= thresholds.min_artifacts_per_domain
             and len(rules) >= thresholds.min_rules_per_domain
             and len(stl_specs) >= thresholds.min_stl_specs_per_domain
+            and len(bundle.package.properties) >= thresholds.min_package_property_count
+            and len(bundle.package.checker_commands)
+            >= thresholds.min_checker_command_count
             and deterministic_hash == int(thresholds.require_deterministic_hash)
             and required_labels_present
+            and checker_execution_disabled
         )
         domain_results.append(
             {
@@ -2062,6 +2095,9 @@ def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
                 "artifact_count": artifact_count,
                 "rule_count": len(rules),
                 "stl_spec_count": len(stl_specs),
+                "package_property_count": len(bundle.package.properties),
+                "checker_command_count": len(bundle.package.checker_commands),
+                "checker_execution_disabled": checker_execution_disabled,
                 "identifier_map_count": identifier_map_count,
                 "deterministic_hash": deterministic_hash,
                 "required_labels_present": required_labels_present,
@@ -2092,8 +2128,12 @@ def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
             {
                 "min_artifacts_per_domain": thresholds.min_artifacts_per_domain,
                 "min_domain_count": thresholds.min_domain_count,
+                "min_checker_command_count": thresholds.min_checker_command_count,
                 "min_rules_per_domain": thresholds.min_rules_per_domain,
                 "min_stl_specs_per_domain": thresholds.min_stl_specs_per_domain,
+                "min_package_property_count": (
+                    thresholds.min_package_property_count
+                ),
                 "require_deterministic_hash": (thresholds.require_deterministic_hash),
             },
             sort_keys=True,
@@ -5519,43 +5559,83 @@ def _formal_export_fail_closed_count() -> int:
 def _domain_formal_export_fixtures() -> tuple[DomainFormalExportFixture, ...]:
     return (
         DomainFormalExportFixture(
-            domain="plasma_control",
+            domain="cardiac_rhythm",
             rules=(
                 PolicyRule(
-                    name="suppress edge-localised mode",
+                    name="limit arrhythmia drive",
                     regimes=["DEGRADED", "CRITICAL"],
                     condition=CompoundCondition(
                         conditions=[
-                            PolicyCondition("R_bad", 0, ">", 0.35),
-                            PolicyCondition("stability_proxy", None, "<=", 0.55),
+                            PolicyCondition("R_bad", 0, ">", 0.25),
+                            PolicyCondition("phase_error", None, ">", 0.35),
                         ],
                         logic="AND",
                     ),
-                    actions=(PolicyAction("alpha", "edge_mode", -0.04, 2.0),),
-                    max_fires=2,
+                    actions=(PolicyAction("zeta", "pacemaker_guard", -0.02, 1.5),),
+                    max_fires=1,
                 ),
                 PolicyRule(
-                    name="recover coherent island",
+                    name="restore sinus synchrony",
                     regimes=["RECOVERY"],
-                    condition=PolicyCondition("R_good", 0, "<", 0.72),
-                    actions=(PolicyAction("K", "island", 0.08, 3.0),),
-                    max_fires=3,
+                    condition=PolicyCondition("R_good", 0, "<", 0.75),
+                    actions=(PolicyAction("K", "atrium_ventricle", 0.03, 2.5),),
+                    max_fires=2,
                 ),
             ),
             stl_specs=(
                 PolicySTLSpec(
-                    "bounded plasma instability",
-                    "always (R_bad <= 0.7 and stability_proxy >= 0.2)",
+                    "bounded arrhythmia proxy",
+                    "always (R_bad <= 0.55 and phase_error <= 0.75)",
                     "hard",
                 ),
                 PolicySTLSpec(
-                    "plasma recovery",
-                    "eventually (R_good >= 0.72)",
+                    "sinus synchrony recovers",
+                    "eventually (R_good >= 0.75)",
                 ),
             ),
             required_labels=(
-                'label "fires_suppress_edge_localised_mode"',
-                'label "stl_bounded_plasma_instability_satisfied"',
+                'label "fires_limit_arrhythmia_drive"',
+                'label "stl_bounded_arrhythmia_proxy_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="chemical_reactor",
+            rules=(
+                PolicyRule(
+                    name="quench thermal runaway",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=CompoundCondition(
+                        conditions=[
+                            PolicyCondition("temperature_c", None, ">", 420.0),
+                            PolicyCondition("pressure_bar", None, ">", 13.5),
+                        ],
+                        logic="OR",
+                    ),
+                    actions=(PolicyAction("K", "coolant_loop", 0.07, 2.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="restore process margin",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 1, "<", 0.78),
+                    actions=(PolicyAction("zeta", "feed_rate", -0.03, 2.5),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded reactor envelope",
+                    "always (temperature_c <= 450 and pressure_bar <= 15)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "thermal stability recovers",
+                    "eventually (R_good >= 0.78)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_quench_thermal_runaway"',
+                'label "stl_bounded_reactor_envelope_satisfied"',
             ),
         ),
         DomainFormalExportFixture(
@@ -5599,43 +5679,43 @@ def _domain_formal_export_fixtures() -> tuple[DomainFormalExportFixture, ...]:
             ),
         ),
         DomainFormalExportFixture(
-            domain="medical_cardiac",
+            domain="pll_clock",
             rules=(
                 PolicyRule(
-                    name="limit arrhythmia drive",
+                    name="limit holdover drift",
                     regimes=["DEGRADED", "CRITICAL"],
                     condition=CompoundCondition(
                         conditions=[
-                            PolicyCondition("R_bad", 0, ">", 0.25),
-                            PolicyCondition("phase_error", None, ">", 0.35),
+                            PolicyCondition("phase_error_ns", None, ">", 80.0),
+                            PolicyCondition("freq_drift_ppm", None, ">", 8.0),
                         ],
-                        logic="AND",
+                        logic="OR",
                     ),
-                    actions=(PolicyAction("zeta", "pacemaker_guard", -0.02, 1.5),),
-                    max_fires=1,
+                    actions=(PolicyAction("zeta", "reference_drive", 0.04, 3.0),),
+                    max_fires=2,
                 ),
                 PolicyRule(
-                    name="restore sinus synchrony",
+                    name="restore pll lock",
                     regimes=["RECOVERY"],
-                    condition=PolicyCondition("R_good", 0, "<", 0.75),
-                    actions=(PolicyAction("K", "atrium_ventricle", 0.03, 2.5),),
+                    condition=PolicyCondition("R_good", 0, "<", 0.82),
+                    actions=(PolicyAction("K", "loop_bandwidth", 0.05, 4.0),),
                     max_fires=2,
                 ),
             ),
             stl_specs=(
                 PolicySTLSpec(
-                    "bounded arrhythmia proxy",
-                    "always (R_bad <= 0.55 and phase_error <= 0.75)",
+                    "bounded clock drift",
+                    "always (phase_error_ns <= 100 and freq_drift_ppm <= 10)",
                     "hard",
                 ),
                 PolicySTLSpec(
-                    "sinus synchrony recovers",
-                    "eventually (R_good >= 0.75)",
+                    "pll synchrony recovers",
+                    "eventually (R_good >= 0.82)",
                 ),
             ),
             required_labels=(
-                'label "fires_limit_arrhythmia_drive"',
-                'label "stl_bounded_arrhythmia_proxy_satisfied"',
+                'label "fires_limit_holdover_drift"',
+                'label "stl_bounded_clock_drift_satisfied"',
             ),
         ),
     )

@@ -810,9 +810,9 @@ def test_domain_formal_safety_exports_benchmark_shape() -> None:
     out = benchmark_domain_formal_safety_exports()
 
     assert out["suite"] == "domain_formal_safety_exports"
-    assert out["domain_count"] == 3
-    assert out["artifact_count"] == 9
-    assert out["accepted_domain_count"] == 3
+    assert out["domain_count"] == 4
+    assert out["artifact_count"] == 20
+    assert out["accepted_domain_count"] == 4
     assert out["failed_domain_count"] == 0
     assert out["acceptance_passed"] == 1
     assert len(str(out["artifact_sha256"])) == 64
@@ -825,19 +825,25 @@ def test_domain_formal_safety_exports_reports_thresholds_and_domains() -> None:
     results = json.loads(str(out["domain_results_json"]))
 
     assert thresholds == {
-        "min_artifacts_per_domain": 3,
-        "min_domain_count": 3,
+        "min_artifacts_per_domain": 5,
+        "min_checker_command_count": 2,
+        "min_domain_count": 4,
+        "min_package_property_count": 2,
         "min_rules_per_domain": 2,
         "min_stl_specs_per_domain": 2,
         "require_deterministic_hash": True,
     }
     assert [record["domain"] for record in results] == [
-        "plasma_control",
+        "cardiac_rhythm",
+        "chemical_reactor",
         "power_grid",
-        "medical_cardiac",
+        "pll_clock",
     ]
     assert all(record["accepted"] is True for record in results)
-    assert all(record["artifact_count"] == 3 for record in results)
+    assert all(record["artifact_count"] == 5 for record in results)
+    assert all(record["package_property_count"] == 2 for record in results)
+    assert all(record["checker_command_count"] == 2 for record in results)
+    assert all(record["checker_execution_disabled"] == 1 for record in results)
     assert all(record["rule_count"] == 2 for record in results)
     assert all(record["stl_spec_count"] == 2 for record in results)
     assert all(record["required_labels_present"] is True for record in results)

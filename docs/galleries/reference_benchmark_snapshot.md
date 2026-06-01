@@ -144,6 +144,13 @@ the current deterministic reference-suite evidence for release review.
 
 ### `domain_formal_export`
 
+Current code extends this benchmark from three policy/STL-only fixtures to four
+bundled safety-domain formal packages: `cardiac_rhythm`, `chemical_reactor`,
+`power_grid`, and `pll_clock`. The package layer adds reviewed SPIN
+operator-approval gates and Z3 hard-bound feasibility artefacts for each domain.
+The JSON below is the last measured snapshot and should be refreshed by the
+next benchmark publication run rather than edited by hand.
+
 ```json
 {
   "acceptance_passed": 1,
