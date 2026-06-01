@@ -31,6 +31,9 @@ file. The fitted model exposes an audit-ready `training_summary` with record
 count, domain count, feature keys, knob keys, and reward range. Use
 `to_json_package()` and `from_json_package()` to save and restore a
 deterministic review package for proposal jobs.
+Audit JSONL ingestion and JSON package import reject non-finite constants,
+duplicate object keys, and non-object package payloads before records enter
+the nearest-neighbour proposal surface.
 `to_package_manifest()` emits a packaging-readiness manifest for the optional
 `scpn-meta` surface: it binds the deterministic JSON package SHA-256, public
 import target, console-script name, and training summary while keeping

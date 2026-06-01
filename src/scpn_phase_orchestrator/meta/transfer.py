@@ -41,15 +41,26 @@ def _reject_json_constant(value: str) -> None:
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    record: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in record:
+            raise ValueError(f"duplicate JSON object key is not allowed: {key!r}")
+        record[key] = value
+    return record
+
+
 def _loads_meta_json(payload: str) -> Any:
     try:
-        return json.loads(payload, parse_constant=_reject_json_constant)
+        return json.loads(
+            payload,
+            object_pairs_hook=_unique_json_object,
+            parse_constant=_reject_json_constant,
+        )
     except json.JSONDecodeError:
         raise
     except ValueError as exc:
-        raise ValueError(
-            "meta-transfer JSON must contain only finite JSON numbers"
-        ) from exc
+        raise ValueError("meta-transfer JSON must be canonical finite JSON") from exc
 
 
 @dataclass(frozen=True)

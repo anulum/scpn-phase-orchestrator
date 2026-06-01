@@ -356,6 +356,16 @@ class TestMetaTransferBehaviour:
         with pytest.raises(ValueError, match="finite JSON"):
             CrossDomainMetaTransfer.from_json_package(payload)
 
+    def test_json_package_rejects_duplicate_object_keys(self) -> None:
+        payload = (
+            '{"schema":"scpn_meta_transfer_package_v1",'
+            '"records":[],'
+            '"records":[{"domain":"rewritten","features":{"R":0.3},"knobs":{"K":0.1}}]}'
+        )
+
+        with pytest.raises(ValueError, match="canonical finite JSON"):
+            CrossDomainMetaTransfer.from_json_package(payload)
+
     @pytest.mark.parametrize(
         ("payload", "expected_error"),
         [
@@ -547,6 +557,22 @@ class TestMetaTransferBehaviour:
         )
 
         with pytest.raises(ValueError, match="finite JSON"):
+            records_from_audit_jsonl(audit_path)
+
+    def test_records_from_audit_jsonl_rejects_duplicate_object_keys(
+        self,
+        tmp_path,
+    ) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text(
+            (
+                '{"domain":"trusted","domain":"rewritten",'
+                '"features":{"R":0.4},"knobs":{"K":0.1}}\n'
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="canonical finite JSON"):
             records_from_audit_jsonl(audit_path)
 
     def test_records_from_audit_directory_handles_nested_custom_pattern(
