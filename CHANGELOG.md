@@ -110,6 +110,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expanded the coupling inference API reference with transfer-entropy,
   orientation, thresholding, backend-failure, audit-record, CLI, and
   review-boundary contracts plus a dedicated docs guard.
+- Expanded the visualization API reference with JSON-encoder, streamer,
+  validation, deterministic-rounding, pipeline-wiring, typed-array, and
+  presentation-boundary contracts plus a dedicated docs guard.
 - Aligned Gaian mesh peer and local phase validation with circular phase
   semantics by wrapping finite negative `psi` values modulo `2*pi`.
 - Hardened the PlasmaControl bridge boundary by rejecting boolean numeric
