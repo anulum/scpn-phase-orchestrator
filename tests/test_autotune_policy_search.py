@@ -404,21 +404,15 @@ class TestAdaptiveReplayPolicySearch:
         with pytest.raises(ValueError, match="step_decay"):
             AdaptiveReplayPolicySearchConfig(step_decay=0.0)
         with pytest.raises(ValueError, match="step_decay"):
-            AdaptiveReplayPolicySearchConfig(
-                step_decay=cast("float", np.bool_(True))
-            )
+            AdaptiveReplayPolicySearchConfig(step_decay=cast("float", np.bool_(True)))
         with pytest.raises(ValueError, match="improvement_tolerance"):
             AdaptiveReplayPolicySearchConfig(improvement_tolerance=-0.1)
         with pytest.raises(ValueError, match="improvement_tolerance"):
-            AdaptiveReplayPolicySearchConfig(
-                improvement_tolerance=cast("float", True)
-            )
+            AdaptiveReplayPolicySearchConfig(improvement_tolerance=cast("float", True))
         with pytest.raises(ValueError, match="min_step"):
             AdaptiveReplayPolicySearchConfig(min_step=-0.1)
         with pytest.raises(ValueError, match="min_step"):
-            AdaptiveReplayPolicySearchConfig(
-                min_step=cast("float", np.bool_(False))
-            )
+            AdaptiveReplayPolicySearchConfig(min_step=cast("float", np.bool_(False)))
         with pytest.raises(TypeError, match="base_search_config"):
             AdaptiveReplayPolicySearchConfig(
                 base_search_config=cast("OfflinePolicySearchConfig", object())

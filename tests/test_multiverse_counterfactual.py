@@ -303,9 +303,7 @@ class TestMultiverseCounterfactualRollouts:
                 omegas=omegas,
                 baseline_k=baseline_k,
                 baseline_alpha=baseline_alpha,
-                branch_action_sets=(
-                    (ControlAction("K", "global", 0.1, 1.0, "bad"),),
-                ),
+                branch_action_sets=((ControlAction("K", "global", 0.1, 1.0, "bad"),),),
                 topology_masks=(topology_mask,),
             )
 

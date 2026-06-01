@@ -26,7 +26,7 @@ def test_extract_phases_recovers_sinusoid_dominant_frequency() -> None:
     assert result.phases.shape == signal.shape
     assert result.amplitudes.shape == signal.shape
     assert result.instantaneous_freq.shape == signal.shape
-    assert np.all((0.0 <= result.phases) & (result.phases < 2.0 * np.pi))
+    assert np.all((result.phases >= 0.0) & (result.phases < 2.0 * np.pi))
     assert np.isclose(result.dominant_freq, 6.0)
     assert np.isclose(np.median(result.instantaneous_freq[8:]), 6.0, atol=0.1)
 

@@ -193,9 +193,7 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     # Inter-hemispheric: corpus callosum — homotopic connections largest
     for i in range(min(half, n_regions - half)):
         j = i + half
-        weight = _INTER_HEMI_STRENGTH * np.exp(
-            -0.1 * abs(i - i)
-        )  # homotopic = largest
+        weight = _INTER_HEMI_STRENGTH * np.exp(-0.1 * abs(i - i))  # homotopic = largest
         # Add distance decay for non-homotopic callosal fibres
         spread = min(3, half)
         for offset in range(-spread, spread + 1):

@@ -136,9 +136,7 @@ class AdaptiveReplayPolicySearchResult:
             raise ValueError("rounds must not be empty")
         for index, round_result in enumerate(self.rounds):
             if not isinstance(round_result, ReplayPolicySearchResult):
-                raise TypeError(
-                    f"rounds[{index}] must be ReplayPolicySearchResult"
-                )
+                raise TypeError(f"rounds[{index}] must be ReplayPolicySearchResult")
         if not isinstance(self.proposal, AutotunePolicyProposal):
             raise TypeError("proposal must be AutotunePolicyProposal")
         if not isinstance(self.config, AdaptiveReplayPolicySearchConfig):
