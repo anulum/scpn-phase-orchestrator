@@ -2003,7 +2003,7 @@ def benchmark_stl_closed_loop_plan_quality() -> dict[str, float | int | str]:
 def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
     """Benchmark domain-style policy/STL formal safety artefacts."""
     thresholds = DomainFormalExportThresholds(
-        min_domain_count=4,
+        min_domain_count=11,
         min_artifacts_per_domain=5,
         min_rules_per_domain=2,
         min_stl_specs_per_domain=2,
@@ -5716,6 +5716,268 @@ def _domain_formal_export_fixtures() -> tuple[DomainFormalExportFixture, ...]:
             required_labels=(
                 'label "fires_limit_holdover_drift"',
                 'label "stl_bounded_clock_drift_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="autonomous_vehicles",
+            rules=(
+                PolicyRule(
+                    name="limit platoon unsafe gap",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=CompoundCondition(
+                        conditions=[
+                            PolicyCondition("gap_distance", None, "<", 0.25),
+                            PolicyCondition("brake_reaction", None, ">", 0.25),
+                        ],
+                        logic="OR",
+                    ),
+                    actions=(PolicyAction("zeta", "throttle_drive", -0.03, 0.5),),
+                    max_fires=1,
+                ),
+                PolicyRule(
+                    name="restore follower synchrony",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 1, "<", 0.76),
+                    actions=(PolicyAction("K", "platoon_coupling", 0.04, 2.0),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded vehicle gap",
+                    "always (gap_distance >= 0.2 and brake_reaction <= 0.3)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "platoon synchrony recovers",
+                    "eventually (R_good >= 0.76)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_limit_platoon_unsafe_gap"',
+                'label "stl_bounded_vehicle_gap_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="satellite_constellation",
+            rules=(
+                PolicyRule(
+                    name="hold link budget floor",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=PolicyCondition("link_budget", None, "<", 0.35),
+                    actions=(PolicyAction("zeta", "beam_steering", 0.03, 1.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="restore beam synchrony",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 2, "<", 0.74),
+                    actions=(PolicyAction("K", "global_coupling", 0.04, 2.0),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded satellite link budget",
+                    "always (link_budget >= 0.3)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "beam synchrony recovers",
+                    "eventually (R_good >= 0.74)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_hold_link_budget_floor"',
+                'label "stl_bounded_satellite_link_budget_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="power_safety_nchannel",
+            rules=(
+                PolicyRule(
+                    name="protect dispatch lock floor",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=PolicyCondition("R_2", None, "<", 0.56),
+                    actions=(PolicyAction("alpha", "substation_lag", -0.04, 1.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="restore feeder synchrony",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 0, "<", 0.78),
+                    actions=(PolicyAction("K", "grid_coupling", 0.05, 2.0),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded dispatch lock floor",
+                    "always (R_2 >= 0.52)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "feeder synchrony recovers",
+                    "eventually (R_good >= 0.78)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_protect_dispatch_lock_floor"',
+                'label "stl_bounded_dispatch_lock_floor_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="traffic_flow",
+            rules=(
+                PolicyRule(
+                    name="limit queue overflow",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=PolicyCondition("queue_vehicles", None, ">", 45.0),
+                    actions=(PolicyAction("zeta", "offset", -0.03, 1.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="restore green wave",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 1, "<", 0.72),
+                    actions=(PolicyAction("K", "cycle_length", 0.04, 2.0),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded queue overflow",
+                    "always (queue_vehicles <= 50)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "green wave recovers",
+                    "eventually (R_good >= 0.72)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_limit_queue_overflow"',
+                'label "stl_bounded_queue_overflow_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="swarm_robotics",
+            rules=(
+                PolicyRule(
+                    name="limit formation collision",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=CompoundCondition(
+                        conditions=[
+                            PolicyCondition("formation_error_m", None, ">", 1.8),
+                            PolicyCondition("min_dist_m", None, "<", 0.6),
+                        ],
+                        logic="OR",
+                    ),
+                    actions=(PolicyAction("alpha", "obstacle_avoidance", 0.04, 1.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="restore flock heading",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 0, "<", 0.75),
+                    actions=(PolicyAction("K", "alignment_coupling", 0.04, 2.0),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded swarm formation",
+                    "always (formation_error_m <= 2 and min_dist_m >= 0.5)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "flock heading recovers",
+                    "eventually (R_good >= 0.75)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_limit_formation_collision"',
+                'label "stl_bounded_swarm_formation_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="manufacturing_spc",
+            rules=(
+                PolicyRule(
+                    name="hold process envelope",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=CompoundCondition(
+                        conditions=[
+                            PolicyCondition("temperature", None, ">", 80.0),
+                            PolicyCondition("pressure", None, "<", 2.2),
+                        ],
+                        logic="OR",
+                    ),
+                    actions=(PolicyAction("zeta", "damping_global", 0.03, 1.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="restore line quality",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 2, "<", 0.77),
+                    actions=(PolicyAction("K", "coupling_global", 0.04, 2.0),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded manufacturing envelope",
+                    "always (temperature <= 85 and pressure >= 2)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "line quality recovers",
+                    "eventually (R_good >= 0.77)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_hold_process_envelope"',
+                'label "stl_bounded_manufacturing_envelope_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="robotic_cpg",
+            rules=(
+                PolicyRule(
+                    name="limit joint envelope",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=CompoundCondition(
+                        conditions=[
+                            PolicyCondition("joint_angle_rad", None, ">", 1.8),
+                            PolicyCondition("joint_torque_nm", None, ">", 45.0),
+                        ],
+                        logic="OR",
+                    ),
+                    actions=(PolicyAction("zeta", "stride_frequency", -0.03, 1.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="restore gait synchrony",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 0, "<", 0.78),
+                    actions=(PolicyAction("K", "coupling_global", 0.04, 2.0),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded robotic joint envelope",
+                    "always (joint_angle_rad <= 2 and joint_torque_nm <= 50)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "gait synchrony recovers",
+                    "eventually (R_good >= 0.78)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_limit_joint_envelope"',
+                'label "stl_bounded_robotic_joint_envelope_satisfied"',
             ),
         ),
     )

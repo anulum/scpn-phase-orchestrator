@@ -24,6 +24,13 @@ on:
       - "domainpacks/chemical_reactor/binding_spec.yaml"
       - "domainpacks/power_grid/binding_spec.yaml"
       - "domainpacks/pll_clock/binding_spec.yaml"
+      - "domainpacks/autonomous_vehicles/binding_spec.yaml"
+      - "domainpacks/satellite_constellation/binding_spec.yaml"
+      - "domainpacks/power_safety_nchannel/binding_spec.yaml"
+      - "domainpacks/traffic_flow/binding_spec.yaml"
+      - "domainpacks/swarm_robotics/binding_spec.yaml"
+      - "domainpacks/manufacturing_spc/binding_spec.yaml"
+      - "domainpacks/robotic_cpg/binding_spec.yaml"
   pull_request:
     branches: [main]
     paths:
@@ -38,6 +45,13 @@ on:
       - "domainpacks/chemical_reactor/binding_spec.yaml"
       - "domainpacks/power_grid/binding_spec.yaml"
       - "domainpacks/pll_clock/binding_spec.yaml"
+      - "domainpacks/autonomous_vehicles/binding_spec.yaml"
+      - "domainpacks/satellite_constellation/binding_spec.yaml"
+      - "domainpacks/power_safety_nchannel/binding_spec.yaml"
+      - "domainpacks/traffic_flow/binding_spec.yaml"
+      - "domainpacks/swarm_robotics/binding_spec.yaml"
+      - "domainpacks/manufacturing_spc/binding_spec.yaml"
+      - "domainpacks/robotic_cpg/binding_spec.yaml"
 
 permissions:
   contents: read

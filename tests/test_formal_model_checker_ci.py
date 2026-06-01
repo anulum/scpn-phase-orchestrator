@@ -53,6 +53,13 @@ def test_formal_checker_ci_domainpack_packages_bind_safety_invariants() -> None:
         "chemical_reactor",
         "power_grid",
         "pll_clock",
+        "autonomous_vehicles",
+        "satellite_constellation",
+        "power_safety_nchannel",
+        "traffic_flow",
+        "swarm_robotics",
+        "manufacturing_spc",
+        "robotic_cpg",
     ]
     assert all(record["artifact_count"] == 2 for record in records)
     assert all(

@@ -810,9 +810,9 @@ def test_domain_formal_safety_exports_benchmark_shape() -> None:
     out = benchmark_domain_formal_safety_exports()
 
     assert out["suite"] == "domain_formal_safety_exports"
-    assert out["domain_count"] == 4
-    assert out["artifact_count"] == 20
-    assert out["accepted_domain_count"] == 4
+    assert out["domain_count"] == 11
+    assert out["artifact_count"] == 55
+    assert out["accepted_domain_count"] == 11
     assert out["failed_domain_count"] == 0
     assert out["acceptance_passed"] == 1
     assert len(str(out["artifact_sha256"])) == 64
@@ -827,7 +827,7 @@ def test_domain_formal_safety_exports_reports_thresholds_and_domains() -> None:
     assert thresholds == {
         "min_artifacts_per_domain": 5,
         "min_checker_command_count": 2,
-        "min_domain_count": 4,
+        "min_domain_count": 11,
         "min_package_property_count": 2,
         "min_rules_per_domain": 2,
         "min_stl_specs_per_domain": 2,
@@ -838,6 +838,13 @@ def test_domain_formal_safety_exports_reports_thresholds_and_domains() -> None:
         "chemical_reactor",
         "power_grid",
         "pll_clock",
+        "autonomous_vehicles",
+        "satellite_constellation",
+        "power_safety_nchannel",
+        "traffic_flow",
+        "swarm_robotics",
+        "manufacturing_spc",
+        "robotic_cpg",
     ]
     assert all(record["accepted"] is True for record in results)
     assert all(record["artifact_count"] == 5 for record in results)

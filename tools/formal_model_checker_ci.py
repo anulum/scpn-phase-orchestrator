@@ -139,6 +139,141 @@ DOMAINPACK_SAFETY_CASES: Final[tuple[dict[str, object], ...]] = (
             "frequency-drift limits."
         ),
     },
+    {
+        "domainpack": "autonomous_vehicles",
+        "safety_tier": "research",
+        "smt_artifact": "autonomous_vehicles_hard_bounds",
+        "spin_artifact": "autonomous_vehicles_operator_gate",
+        "smt_text": """\
+(set-logic QF_LRA)
+(declare-const gap_distance Real)
+(declare-const brake_reaction Real)
+(assert (>= gap_distance 0.2))
+(assert (<= brake_reaction 0.3))
+(check-sat)
+""",
+        "smt_property": "autonomous_vehicles_hard_bounds_feasible",
+        "spin_property": "autonomous_vehicles_operator_gate_safe",
+        "smt_description": (
+            "Autonomous-vehicle boundary envelope remains feasible for minimum "
+            "gap distance and brake-reaction limits."
+        ),
+    },
+    {
+        "domainpack": "satellite_constellation",
+        "safety_tier": "research",
+        "smt_artifact": "satellite_constellation_hard_bounds",
+        "spin_artifact": "satellite_constellation_operator_gate",
+        "smt_text": """\
+(set-logic QF_LRA)
+(declare-const link_budget Real)
+(assert (>= link_budget 0.3))
+(check-sat)
+""",
+        "smt_property": "satellite_constellation_hard_bounds_feasible",
+        "spin_property": "satellite_constellation_operator_gate_safe",
+        "smt_description": (
+            "Satellite-constellation boundary envelope remains feasible for the "
+            "minimum link-budget limit."
+        ),
+    },
+    {
+        "domainpack": "power_safety_nchannel",
+        "safety_tier": "research",
+        "smt_artifact": "power_safety_nchannel_hard_bounds",
+        "spin_artifact": "power_safety_nchannel_operator_gate",
+        "smt_text": """\
+(set-logic QF_LRA)
+(declare-const R_2 Real)
+(assert (>= R_2 0.52))
+(check-sat)
+""",
+        "smt_property": "power_safety_nchannel_hard_bounds_feasible",
+        "spin_property": "power_safety_nchannel_operator_gate_safe",
+        "smt_description": (
+            "Power-safety N-channel boundary envelope remains feasible for the "
+            "dispatch-lock coherence floor."
+        ),
+    },
+    {
+        "domainpack": "traffic_flow",
+        "safety_tier": "consumer",
+        "smt_artifact": "traffic_flow_hard_bounds",
+        "spin_artifact": "traffic_flow_operator_gate",
+        "smt_text": """\
+(set-logic QF_LRA)
+(declare-const queue_vehicles Real)
+(assert (<= queue_vehicles 50.0))
+(check-sat)
+""",
+        "smt_property": "traffic_flow_hard_bounds_feasible",
+        "spin_property": "traffic_flow_operator_gate_safe",
+        "smt_description": (
+            "Traffic-flow boundary envelope remains feasible for the hard queue "
+            "overflow limit."
+        ),
+    },
+    {
+        "domainpack": "swarm_robotics",
+        "safety_tier": "consumer",
+        "smt_artifact": "swarm_robotics_hard_bounds",
+        "spin_artifact": "swarm_robotics_operator_gate",
+        "smt_text": """\
+(set-logic QF_LRA)
+(declare-const formation_error_m Real)
+(declare-const min_dist_m Real)
+(assert (<= formation_error_m 2.0))
+(assert (>= min_dist_m 0.5))
+(check-sat)
+""",
+        "smt_property": "swarm_robotics_hard_bounds_feasible",
+        "spin_property": "swarm_robotics_operator_gate_safe",
+        "smt_description": (
+            "Swarm-robotics boundary envelope remains feasible for formation "
+            "error and minimum-distance limits."
+        ),
+    },
+    {
+        "domainpack": "manufacturing_spc",
+        "safety_tier": "consumer",
+        "smt_artifact": "manufacturing_spc_hard_bounds",
+        "spin_artifact": "manufacturing_spc_operator_gate",
+        "smt_text": """\
+(set-logic QF_LRA)
+(declare-const temperature Real)
+(declare-const pressure Real)
+(assert (<= temperature 85.0))
+(assert (>= pressure 2.0))
+(check-sat)
+""",
+        "smt_property": "manufacturing_spc_hard_bounds_feasible",
+        "spin_property": "manufacturing_spc_operator_gate_safe",
+        "smt_description": (
+            "Manufacturing SPC boundary envelope remains feasible for hard "
+            "temperature and pressure limits."
+        ),
+    },
+    {
+        "domainpack": "robotic_cpg",
+        "safety_tier": "consumer",
+        "smt_artifact": "robotic_cpg_hard_bounds",
+        "spin_artifact": "robotic_cpg_operator_gate",
+        "smt_text": """\
+(set-logic QF_LRA)
+(declare-const joint_angle_rad Real)
+(declare-const joint_torque_nm Real)
+(assert (>= joint_angle_rad (- 2.0)))
+(assert (<= joint_angle_rad 2.0))
+(assert (<= joint_torque_nm 50.0))
+(check-sat)
+""",
+        "smt_property": "robotic_cpg_hard_bounds_feasible",
+        "spin_property": "robotic_cpg_operator_gate_safe",
+        "smt_description": (
+            "Robotic CPG boundary envelope remains feasible for joint-angle and "
+            "torque limits."
+        ),
+    },
 )
 
 
