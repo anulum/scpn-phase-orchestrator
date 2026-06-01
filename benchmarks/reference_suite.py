@@ -95,6 +95,7 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     export_stl_specs_prism,
 )
 from scpn_phase_orchestrator.supervisor.lineage import (
+    build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
 )
@@ -313,6 +314,7 @@ class AutopoieticLineageSandboxThresholds(NamedTuple):
     min_accepted_child_count: int
     min_rejected_child_count: int
     min_policy_diff_count: int
+    min_replay_domain_count: int
     require_review_only: bool
     require_deterministic_hash: bool
 
@@ -2826,27 +2828,17 @@ def benchmark_autopoietic_lineage_sandbox_gate() -> dict[str, float | int | str]
         min_accepted_child_count=3,
         min_rejected_child_count=2,
         min_policy_diff_count=5,
+        min_replay_domain_count=4,
         require_review_only=True,
         require_deterministic_hash=True,
     )
     parent_policy = {"K": 0.42, "alpha": 0.18, "zeta": 0.09}
-    safe_replays = [
-        {
-            "replay_id": "nominal_grid_replay",
-            "reward": 0.82,
-            "safety_margin": 0.24,
-            "violations": [],
-        },
-        {
-            "replay_id": "disturbance_grid_replay",
-            "reward": 0.74,
-            "safety_margin": 0.18,
-            "violations": [],
-        },
-    ]
+    safe_replays = list(build_autopoietic_lineage_replay_corpus())
     unsafe_replays = [
         {
             "replay_id": "unsafe_grid_replay",
+            "domain": "power_grid",
+            "scenario": "unsafe_frequency_recovery",
             "reward": 0.3,
             "safety_margin": 0.02,
             "violations": ["stl_margin_breach"],
@@ -2895,10 +2887,13 @@ def benchmark_autopoietic_lineage_sandbox_gate() -> dict[str, float | int | str]
         for manifest in manifests
         for candidate in manifest["child_candidates"]
     )
+    replay_domain_count = int(safe_manifest["replay_domain_count"])
     review_only = int(
         all(
             manifest["review_required"] is True
+            and manifest["execution_disabled"] is True
             and manifest["live_merge_permitted"] is False
+            and manifest["hot_patch_permitted"] is False
             and manifest["actuation_permitted"] is False
             for manifest in manifests
         )
@@ -2911,6 +2906,7 @@ def benchmark_autopoietic_lineage_sandbox_gate() -> dict[str, float | int | str]
         and accepted_child_count >= thresholds.min_accepted_child_count
         and rejected_child_count >= thresholds.min_rejected_child_count
         and policy_diff_count >= thresholds.min_policy_diff_count
+        and replay_domain_count >= thresholds.min_replay_domain_count
         and review_only == int(thresholds.require_review_only)
         and deterministic_hash == int(thresholds.require_deterministic_hash)
     )
@@ -2924,6 +2920,7 @@ def benchmark_autopoietic_lineage_sandbox_gate() -> dict[str, float | int | str]
         "accepted_child_count": accepted_child_count,
         "rejected_child_count": rejected_child_count,
         "policy_diff_count": policy_diff_count,
+        "replay_domain_count": replay_domain_count,
         "review_only": review_only,
         "deterministic_hash": deterministic_hash,
         "safe_lineage_sha256": str(safe_manifest["lineage_sha256"]),
@@ -2933,6 +2930,7 @@ def benchmark_autopoietic_lineage_sandbox_gate() -> dict[str, float | int | str]
                 "min_accepted_child_count": thresholds.min_accepted_child_count,
                 "min_child_candidate_count": thresholds.min_child_candidate_count,
                 "min_policy_diff_count": thresholds.min_policy_diff_count,
+                "min_replay_domain_count": thresholds.min_replay_domain_count,
                 "min_rejected_child_count": thresholds.min_rejected_child_count,
                 "require_deterministic_hash": thresholds.require_deterministic_hash,
                 "require_review_only": thresholds.require_review_only,

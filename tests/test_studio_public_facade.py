@@ -20,6 +20,8 @@ from scpn_phase_orchestrator.binding.topos_semantic import (
 )
 from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldState,
+    build_autopoietic_lineage_replay_corpus,
+    build_autopoietic_lineage_sandbox,
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
 )
@@ -100,6 +102,14 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         population_size=2,
         mutation_step=0.02,
     ).to_audit_record()
+    lineage_manifest = build_autopoietic_lineage_sandbox(
+        {"K": 0.42, "alpha": 0.18},
+        build_autopoietic_lineage_replay_corpus(),
+        child_budget=2,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
     morphogenetic_artifact = render_morphogenetic_field_svg(
         MorphogeneticFieldState(
             np.array(
@@ -127,6 +137,7 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
             [evolutionary_report]
         )
     )
+    lineage_panel = studio.build_autopoietic_lineage_studio_panel([lineage_manifest])
     morphogenetic_panel = studio.build_morphogenetic_field_studio_panel(
         morphogenetic_artifact
     )
@@ -152,6 +163,13 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         "offline_evolutionary_supervisor_review_not_live_actuation"
     )
     assert evolutionary_panel["actuation_permitted"] is False
+    assert lineage_panel["claim_boundary"] == (
+        "autopoietic_lineage_sandbox_review_not_live_merge"
+    )
+    assert lineage_panel["execution_disabled"] is True
+    assert lineage_panel["actuation_permitted"] is False
+    assert lineage_panel["replay_domain_count"] == 4
+    assert "build_autopoietic_lineage_studio_panel" in studio.__all__
     assert morphogenetic_panel["panel_kind"] == ("studio_morphogenetic_field_panel")
     assert morphogenetic_panel["actuation_permitted"] is False
     assert morphogenetic_panel["strongest_edge"] == {

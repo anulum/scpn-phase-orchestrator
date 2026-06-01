@@ -19,6 +19,7 @@ from typing import Any, TypedDict, cast
 import numpy as np
 
 __all__ = [
+    "build_autopoietic_lineage_replay_corpus",
     "build_autopoietic_lineage_sandbox",
     "build_intergenerational_policy_inheritance",
 ]
@@ -31,6 +32,50 @@ class _ReplaySummary(TypedDict):
     mean_safety_margin: float
     min_safety_margin: float
     violation_count: int
+
+
+def build_autopoietic_lineage_replay_corpus() -> tuple[dict[str, object], ...]:
+    """Return a deterministic multi-domain replay corpus for lineage review.
+
+    The corpus is intentionally offline and compact. It gives the lineage
+    sandbox domain-diverse replay evidence without loading partner data,
+    contacting services, or enabling any live merge path.
+    """
+
+    return (
+        {
+            "replay_id": "power_grid_frequency_recovery",
+            "domain": "power_grid",
+            "scenario": "frequency_recovery_after_load_step",
+            "reward": 0.82,
+            "safety_margin": 0.24,
+            "violations": [],
+        },
+        {
+            "replay_id": "cardiac_rhythm_pacing_recovery",
+            "domain": "cardiac_rhythm",
+            "scenario": "ventricular_pacing_recovery",
+            "reward": 0.78,
+            "safety_margin": 0.19,
+            "violations": [],
+        },
+        {
+            "replay_id": "traffic_flow_platoon_recovery",
+            "domain": "traffic_flow",
+            "scenario": "corridor_platoon_recovery",
+            "reward": 0.75,
+            "safety_margin": 0.16,
+            "violations": [],
+        },
+        {
+            "replay_id": "cyber_industrial_recontainment",
+            "domain": "cyber_industrial",
+            "scenario": "lateral_movement_recontainment",
+            "reward": 0.73,
+            "safety_margin": 0.14,
+            "violations": [],
+        },
+    )
 
 
 def build_autopoietic_lineage_sandbox(
@@ -63,6 +108,8 @@ def build_autopoietic_lineage_sandbox(
     replays = _validated_replays(audit_replays)
 
     replay_summary = _replay_summary(replays)
+    replay_corpus = _replay_corpus_rows(replays)
+    replay_domains = tuple(sorted({str(row["domain"]) for row in replay_corpus}))
     child_candidates = [
         _child_candidate(
             parent,
@@ -82,7 +129,7 @@ def build_autopoietic_lineage_sandbox(
         "schema": "scpn_autopoietic_lineage_sandbox_v1",
         "parent_policy_sha256": _stable_hash(parent),
         "parent_policy_genome": parent,
-        "replay_corpus_sha256": _stable_hash(replays),
+        "replay_corpus_sha256": _stable_hash(replay_corpus),
         "child_budget": child_budget,
         "child_candidate_count": len(child_candidates),
         "accepted_child_count": accepted_child_count,
@@ -91,9 +138,14 @@ def build_autopoietic_lineage_sandbox(
         "minimum_safety_margin": min_margin,
         "mutation_step": step,
         "review_required": True,
+        "execution_disabled": True,
         "live_merge_permitted": False,
         "hot_patch_permitted": False,
         "actuation_permitted": False,
+        "replay_corpus": replay_corpus,
+        "replay_corpus_count": len(replay_corpus),
+        "replay_domain_count": len(replay_domains),
+        "replay_domains": replay_domains,
         "replay_summary": replay_summary,
         "child_candidates": child_candidates,
     }
@@ -193,6 +245,12 @@ def _validated_replays(
                 copied["safety_margin"],
                 f"audit_replays[{index}].safety_margin",
             )
+        if "replay_id" in copied:
+            _non_empty_string(copied["replay_id"], f"audit_replays[{index}].replay_id")
+        if "domain" in copied:
+            _non_empty_string(copied["domain"], f"audit_replays[{index}].domain")
+        if "scenario" in copied:
+            _non_empty_string(copied["scenario"], f"audit_replays[{index}].scenario")
         violations = copied.get("violations", [])
         if not isinstance(violations, list) or not all(
             isinstance(item, str) for item in violations
@@ -222,6 +280,39 @@ def _replay_summary(replays: Sequence[Mapping[str, object]]) -> _ReplaySummary:
         "min_safety_margin": float(np.min(margins)),
         "violation_count": int(violation_count),
     }
+
+
+def _replay_corpus_rows(
+    replays: Sequence[Mapping[str, object]],
+) -> tuple[dict[str, object], ...]:
+    rows: list[dict[str, object]] = []
+    for index, replay in enumerate(replays):
+        violations = replay.get("violations", [])
+        if not isinstance(violations, list):
+            raise ValueError("violations must be a list")
+        rows.append(
+            {
+                "replay_id": str(replay.get("replay_id", f"replay_{index + 1:03d}")),
+                "domain": str(replay.get("domain", "unspecified")),
+                "scenario": str(replay.get("scenario", "unspecified")),
+                "reward": _finite_number(replay["reward"], "reward"),
+                "safety_margin": _finite_number(
+                    replay.get("safety_margin", 0.0),
+                    "safety_margin",
+                ),
+                "violation_count": len(violations),
+            }
+        )
+    return tuple(
+        sorted(
+            rows,
+            key=lambda row: (
+                str(row["domain"]),
+                str(row["scenario"]),
+                str(row["replay_id"]),
+            ),
+        )
+    )
 
 
 def _child_candidate(
@@ -261,7 +352,9 @@ def _child_candidate(
         "minimum_safety_margin": minimum_safety_margin,
         "blocked_reasons": blocked_reasons,
         "review_required": True,
+        "execution_disabled": True,
         "live_merge_permitted": False,
+        "hot_patch_permitted": False,
         "actuation_permitted": False,
     }
     record["child_sha256"] = _stable_hash(record)
@@ -325,6 +418,10 @@ def _validated_lineage_manifest(manifest: Mapping[str, object]) -> dict[str, obj
             raise ValueError(f"lineage_manifest.{key} is required")
     if data.get("live_merge_permitted") is not False:
         raise ValueError("lineage_manifest must disable live merge")
+    if data.get("execution_disabled") is not True:
+        raise ValueError("lineage_manifest must disable execution")
+    if data.get("hot_patch_permitted") is not False:
+        raise ValueError("lineage_manifest must disable hot patching")
     if data.get("actuation_permitted") is not False:
         raise ValueError("lineage_manifest must disable actuation")
     candidates = data["child_candidates"]
@@ -347,8 +444,12 @@ def _validated_review_child(candidate: Mapping[str, object]) -> dict[str, object
         raise ValueError("child_candidate must have status accepted_for_review")
     if child.get("review_required") is not True:
         raise ValueError("child_candidate must require review")
+    if child.get("execution_disabled") is not True:
+        raise ValueError("child_candidate must disable execution")
     if child.get("live_merge_permitted") is not False:
         raise ValueError("child_candidate must disable live merge")
+    if child.get("hot_patch_permitted") is not False:
+        raise ValueError("child_candidate must disable hot patching")
     if child.get("actuation_permitted") is not False:
         raise ValueError("child_candidate must disable actuation")
     if not isinstance(child.get("child_sha256"), str):

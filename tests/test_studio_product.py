@@ -55,6 +55,7 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     assert "multiverse_counterfactual_rollout" in panel_ids
     assert "hybrid_order_parameters" in panel_ids
     assert "topos_semantic_binding" in panel_ids
+    assert "autopoietic_lineage_sandbox" in panel_ids
     assert "strange_loop_meta_orchestrator" in panel_ids
 
     evolutionary_panel = next(
@@ -83,6 +84,24 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
         "optional policy-DSL mutation report",
         "optional deterministic domain examples",
     )
+    lineage_panel = next(
+        panel for panel in panels if panel["panel_id"] == "autopoietic_lineage_sandbox"
+    )
+    assert lineage_panel["builder"] == "build_autopoietic_lineage_studio_panel"
+    assert lineage_panel["claim_boundary"] == (
+        "autopoietic_lineage_sandbox_review_not_live_merge"
+    )
+    assert lineage_panel["required_evidence"] == (
+        "offline lineage sandbox manifest",
+        "domain-labelled replay corpus rows",
+        "child-policy SHA-256 hashes",
+        "accepted and rejected child evidence",
+    )
+    assert lineage_panel["actuation_permitted"] is False
+    assert lineage_panel["live_merge_permitted"] is False
+    assert lineage_panel["hot_patch_permitted"] is False
+    assert lineage_panel["execution_disabled"] is True
+    assert lineage_panel["operator_review_required"] is True
     for panel in panels:
         builder = panel["builder"]
         assert isinstance(builder, str)

@@ -121,6 +121,20 @@ and candidate-level actuation denial before Studio may display the evidence.
 The payload sets `actuation_permitted: false`,
 `hot_patch_permitted: false`, and `live_merge_permitted: false`.
 
+`build_autopoietic_lineage_studio_panel(manifests)` renders passive
+autopoietic lineage sandbox evidence into an operator payload. It preserves
+offline lineage manifests, domain-labelled replay corpus rows, child-policy
+SHA-256 hashes, accepted child rows, rejected child rows, and blocked-reason
+evidence under the `autopoietic_lineage_sandbox_review_not_live_merge` claim
+boundary. The helper requires the lineage sandbox schema, true review and
+execution-disabled flags, disabled live merge, disabled hot patching, disabled
+actuation, canonical SHA-256 hashes, matching child/replay/domain counts,
+finite replay metrics, and candidate-level policy diffs before Studio may
+display the evidence. The payload sets `actuation_permitted: false`,
+`hot_patch_permitted: false`, `live_merge_permitted: false`, and
+`operator_review_required: true`; it is a review surface for comparing
+resource-bounded child-policy proposals, not a self-modifying runtime.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.product

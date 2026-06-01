@@ -111,6 +111,7 @@ from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
     build_information_geometry_control_scenarios,
 )
 from scpn_phase_orchestrator.supervisor.lineage import (
+    build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
 )
@@ -313,6 +314,7 @@ __all__ = [
     "assess_fep_hierarchy",
     "audit_formal_checker_availability",
     "build_bft_meta_orchestrator_manifest",
+    "build_autopoietic_lineage_replay_corpus",
     "build_autopoietic_lineage_sandbox",
     "build_evolutionary_supervisor_search_examples",
     "build_evolutionary_supervisor_search_examples_from_worker_a_api",

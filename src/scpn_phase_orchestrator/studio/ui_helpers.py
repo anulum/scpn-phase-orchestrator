@@ -64,6 +64,7 @@ __all__ = [
     "build_deployment_package",
     "build_deployment_readiness",
     "build_error_report",
+    "build_autopoietic_lineage_studio_panel",
     "build_evolutionary_supervisor_policy_search_studio_panel",
     "build_hybrid_order_studio_panel",
     "build_information_geometry_studio_panel",
@@ -126,6 +127,8 @@ _EVOLUTIONARY_SEARCH_BOUNDARY = (
 _EVOLUTIONARY_EXAMPLE_BOUNDARY = "evolutionary_supervisor_search_not_live_actuation"
 _EVOLUTIONARY_SEARCH_SCHEMA = "evolutionary_supervisor_policy_search"
 _EVOLUTIONARY_DSL_SCHEMA = "policy_dsl_evolution"
+_AUTOPOIETIC_LINEAGE_SCHEMA = "scpn_autopoietic_lineage_sandbox_v1"
+_AUTOPOIETIC_LINEAGE_BOUNDARY = "autopoietic_lineage_sandbox_review_not_live_merge"
 
 
 @dataclass(frozen=True, slots=True)
@@ -546,6 +549,66 @@ def build_topos_semantic_binding_studio_panel(
             "render as categorical validation prototype evidence only; preserve "
             "the proof boundary and require a separate formal-methods gate "
             "before claiming machine-checked Topos proofs or applying policy"
+        ),
+    }
+
+
+def build_autopoietic_lineage_studio_panel(
+    manifests: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    """Build a passive Studio panel for autopoietic lineage sandbox review."""
+
+    normalised_manifests = _normalise_autopoietic_lineage_manifests(manifests)
+    replay_corpus_rows = tuple(
+        row
+        for manifest in normalised_manifests
+        for row in cast(tuple[dict[str, object], ...], manifest["replay_corpus"])
+    )
+    replay_domains = tuple(
+        sorted({str(row["domain"]) for row in replay_corpus_rows})
+    )
+    child_rows = tuple(
+        child
+        for manifest in normalised_manifests
+        for child in cast(tuple[dict[str, object], ...], manifest["child_candidates"])
+    )
+    accepted_child_rows = tuple(
+        child for child in child_rows if child["status"] == "accepted_for_review"
+    )
+    rejected_child_rows = tuple(
+        child for child in child_rows if child["status"] == "rejected"
+    )
+
+    return {
+        "panel_kind": "studio_autopoietic_lineage_panel",
+        "supervisor": "autopoietic_lineage_sandbox",
+        "manifest_count": len(normalised_manifests),
+        "claim_boundary": _AUTOPOIETIC_LINEAGE_BOUNDARY,
+        "non_actuating": True,
+        "execution_disabled": True,
+        "operator_review_required": True,
+        "hot_patch_permitted": False,
+        "live_merge_permitted": False,
+        "actuation_permitted": False,
+        "lineage_manifests": normalised_manifests,
+        "replay_corpus_rows": replay_corpus_rows,
+        "replay_domains": replay_domains,
+        "replay_domain_count": len(replay_domains),
+        "child_candidate_total": len(child_rows),
+        "accepted_child_total": len(accepted_child_rows),
+        "rejected_child_total": len(rejected_child_rows),
+        "accepted_child_rows": accepted_child_rows,
+        "rejected_child_rows": rejected_child_rows,
+        "operator_summary": (
+            "autopoietic lineage review: "
+            f"{len(normalised_manifests)} manifest(s), "
+            f"{len(replay_domains)} replay domain(s), "
+            f"{len(accepted_child_rows)} accepted child candidate(s)"
+        ),
+        "operator_action": (
+            "render as offline lineage sandbox evidence only; compare replay "
+            "domains, policy diffs, and blocked reasons before a separately "
+            "reviewed inheritance workflow"
         ),
     }
 
@@ -2788,6 +2851,283 @@ def _normalise_topos_domain_examples(
             }
         )
     return (tuple(normalised), tuple(rows))
+
+
+def _normalise_autopoietic_lineage_manifests(
+    manifests: Sequence[Mapping[str, object]],
+) -> tuple[dict[str, object], ...]:
+    rows = _autopoietic_lineage_mapping_sequence(manifests, "lineage manifests")
+    normalised: list[dict[str, object]] = []
+    seen_lineages: set[str] = set()
+    for index, manifest in enumerate(rows):
+        name = f"lineage manifest {index}"
+        if manifest.get("schema") != _AUTOPOIETIC_LINEAGE_SCHEMA:
+            raise ValueError(f"{name} has unsupported schema")
+        lineage_sha256 = _autopoietic_lineage_sha(
+            manifest.get("lineage_sha256"), f"{name} lineage_sha256"
+        )
+        if lineage_sha256 in seen_lineages:
+            raise ValueError(f"{name} duplicates lineage_sha256")
+        seen_lineages.add(lineage_sha256)
+        _autopoietic_lineage_bool(manifest, "review_required", True, name)
+        _autopoietic_lineage_bool(manifest, "execution_disabled", True, name)
+        _autopoietic_lineage_bool(manifest, "live_merge_permitted", False, name)
+        _autopoietic_lineage_bool(manifest, "hot_patch_permitted", False, name)
+        _autopoietic_lineage_bool(manifest, "actuation_permitted", False, name)
+
+        replay_corpus = _normalise_autopoietic_replay_corpus(
+            manifest.get("replay_corpus"), name
+        )
+        replay_domains = tuple(sorted({str(row["domain"]) for row in replay_corpus}))
+        children = _normalise_autopoietic_lineage_children(
+            manifest.get("child_candidates"), name
+        )
+        accepted_count = sum(
+            1 for child in children if child["status"] == "accepted_for_review"
+        )
+        rejected_count = sum(1 for child in children if child["status"] == "rejected")
+
+        child_candidate_count = _autopoietic_lineage_int(
+            manifest.get("child_candidate_count"), f"{name} child_candidate_count"
+        )
+        accepted_child_count = _autopoietic_lineage_int(
+            manifest.get("accepted_child_count"), f"{name} accepted_child_count"
+        )
+        rejected_child_count = _autopoietic_lineage_int(
+            manifest.get("rejected_child_count"), f"{name} rejected_child_count"
+        )
+        replay_corpus_count = _autopoietic_lineage_int(
+            manifest.get("replay_corpus_count"), f"{name} replay_corpus_count"
+        )
+        replay_domain_count = _autopoietic_lineage_int(
+            manifest.get("replay_domain_count"), f"{name} replay_domain_count"
+        )
+        if child_candidate_count != len(children):
+            raise ValueError(f"{name} child_candidate_count does not match rows")
+        if accepted_child_count != accepted_count:
+            raise ValueError(f"{name} accepted_child_count does not match rows")
+        if rejected_child_count != rejected_count:
+            raise ValueError(f"{name} rejected_child_count does not match rows")
+        if replay_corpus_count != len(replay_corpus):
+            raise ValueError(f"{name} replay_corpus_count does not match rows")
+        if replay_domain_count != len(replay_domains):
+            raise ValueError(f"{name} replay_domain_count does not match rows")
+
+        normalised.append(
+            {
+                "schema": _AUTOPOIETIC_LINEAGE_SCHEMA,
+                "lineage_sha256": lineage_sha256,
+                "parent_policy_sha256": _autopoietic_lineage_sha(
+                    manifest.get("parent_policy_sha256"),
+                    f"{name} parent_policy_sha256",
+                ),
+                "replay_corpus_sha256": _autopoietic_lineage_sha(
+                    manifest.get("replay_corpus_sha256"),
+                    f"{name} replay_corpus_sha256",
+                ),
+                "review_required": True,
+                "execution_disabled": True,
+                "live_merge_permitted": False,
+                "hot_patch_permitted": False,
+                "actuation_permitted": False,
+                "child_candidate_count": child_candidate_count,
+                "accepted_child_count": accepted_child_count,
+                "rejected_child_count": rejected_child_count,
+                "child_candidates": children,
+                "replay_corpus_count": replay_corpus_count,
+                "replay_domain_count": replay_domain_count,
+                "replay_domains": replay_domains,
+                "replay_corpus": replay_corpus,
+                "lineage_summary": _autopoietic_lineage_text(
+                    manifest.get("lineage_summary"), f"{name} lineage_summary"
+                )
+                if "lineage_summary" in manifest
+                else "",
+            }
+        )
+    return tuple(normalised)
+
+
+def _normalise_autopoietic_lineage_children(
+    value: object,
+    manifest_name: str,
+) -> tuple[dict[str, object], ...]:
+    children = _autopoietic_lineage_mapping_sequence(
+        value, f"{manifest_name} child_candidates"
+    )
+    if not children:
+        raise ValueError(f"{manifest_name} must contain child candidates")
+    seen_children: set[str] = set()
+    normalised: list[dict[str, object]] = []
+    for index, child in enumerate(children):
+        name = f"{manifest_name} child {index}"
+        child_sha256 = _autopoietic_lineage_sha(
+            child.get("child_sha256"), f"{name} child_sha256"
+        )
+        if child_sha256 in seen_children:
+            raise ValueError(f"{name} duplicates child_sha256")
+        seen_children.add(child_sha256)
+        _autopoietic_lineage_bool(child, "review_required", True, name)
+        _autopoietic_lineage_bool(child, "execution_disabled", True, name)
+        _autopoietic_lineage_bool(child, "live_merge_permitted", False, name)
+        _autopoietic_lineage_bool(child, "hot_patch_permitted", False, name)
+        _autopoietic_lineage_bool(child, "actuation_permitted", False, name)
+        status = _autopoietic_lineage_text(child.get("status"), f"{name} status")
+        if status not in {"accepted_for_review", "rejected"}:
+            raise ValueError(f"{name} has unsupported status")
+        blocked_reasons = _autopoietic_lineage_text_tuple(
+            child.get("blocked_reasons", ()), f"{name} blocked_reasons"
+        )
+        if status == "accepted_for_review" and blocked_reasons:
+            raise ValueError(f"{name} accepted child cannot have blocked reasons")
+        if status == "rejected" and not blocked_reasons:
+            raise ValueError(f"{name} rejected child must explain blocked reasons")
+        normalised.append(
+            {
+                "child_id": _autopoietic_lineage_text(
+                    child.get("child_id"), f"{name} child_id"
+                ),
+                "child_sha256": child_sha256,
+                "status": status,
+                "review_required": True,
+                "execution_disabled": True,
+                "live_merge_permitted": False,
+                "hot_patch_permitted": False,
+                "actuation_permitted": False,
+                "blocked_reasons": blocked_reasons,
+                "policy_diff": _normalise_autopoietic_policy_diff(
+                    child.get("policy_diff"), name
+                ),
+            }
+        )
+    return tuple(normalised)
+
+
+def _normalise_autopoietic_policy_diff(
+    value: object,
+    child_name: str,
+) -> tuple[dict[str, object], ...]:
+    diff_rows = _autopoietic_lineage_mapping_sequence(
+        value, f"{child_name} policy_diff"
+    )
+    if not diff_rows:
+        raise ValueError(f"{child_name} must contain policy_diff rows")
+    normalised: list[dict[str, object]] = []
+    for index, row in enumerate(diff_rows):
+        name = f"{child_name} policy_diff {index}"
+        normalised.append(
+            {
+                "knob": _autopoietic_lineage_text(row.get("knob"), f"{name} knob"),
+                "parent_value": _autopoietic_lineage_float(
+                    row.get("parent_value"), f"{name} parent_value"
+                ),
+                "child_value": _autopoietic_lineage_float(
+                    row.get("child_value"), f"{name} child_value"
+                ),
+                "delta": _autopoietic_lineage_float(row.get("delta"), f"{name} delta"),
+            }
+        )
+    return tuple(normalised)
+
+
+def _normalise_autopoietic_replay_corpus(
+    value: object,
+    manifest_name: str,
+) -> tuple[dict[str, object], ...]:
+    rows = _autopoietic_lineage_mapping_sequence(
+        value, f"{manifest_name} replay_corpus"
+    )
+    if not rows:
+        raise ValueError(f"{manifest_name} must contain replay corpus rows")
+    normalised: list[dict[str, object]] = []
+    for index, row in enumerate(rows):
+        name = f"{manifest_name} replay {index}"
+        normalised.append(
+            {
+                "replay_id": _autopoietic_lineage_text(
+                    row.get("replay_id"), f"{name} replay_id"
+                ),
+                "domain": _autopoietic_lineage_text(
+                    row.get("domain"), f"{name} domain"
+                ),
+                "scenario": _autopoietic_lineage_text(
+                    row.get("scenario"), f"{name} scenario"
+                ),
+                "reward": _autopoietic_lineage_float(
+                    row.get("reward"), f"{name} reward"
+                ),
+                "safety_margin": _autopoietic_lineage_float(
+                    row.get("safety_margin"), f"{name} safety_margin"
+                ),
+                "violation_count": _autopoietic_lineage_int(
+                    row.get("violation_count"), f"{name} violation_count"
+                ),
+            }
+        )
+    return tuple(normalised)
+
+
+def _autopoietic_lineage_mapping_sequence(
+    value: object,
+    name: str,
+) -> tuple[Mapping[str, object], ...]:
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        raise ValueError(f"{name} must be a sequence")
+    rows: list[Mapping[str, object]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{name} item {index} must be a mapping")
+        rows.append(item)
+    return tuple(rows)
+
+
+def _autopoietic_lineage_text(value: object, name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")
+    return value
+
+
+def _autopoietic_lineage_text_tuple(value: object, name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        raise ValueError(f"{name} must be a sequence of strings")
+    result = tuple(_autopoietic_lineage_text(item, f"{name} item") for item in value)
+    return result
+
+
+def _autopoietic_lineage_sha(value: object, name: str) -> str:
+    text = _autopoietic_lineage_text(value, name)
+    if len(text) != 64 or text.lower() != text or any(
+        char not in "0123456789abcdef" for char in text
+    ):
+        raise ValueError(f"{name} must be a lowercase SHA-256 digest")
+    return text
+
+
+def _autopoietic_lineage_bool(
+    mapping: Mapping[str, object],
+    key: str,
+    expected: bool,
+    name: str,
+) -> None:
+    if mapping.get(key) is not expected:
+        raise ValueError(f"{name} {key} must be {expected}")
+
+
+def _autopoietic_lineage_float(value: object, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number")
+    result = float(value)
+    if not isfinite(result):
+        raise ValueError(f"{name} must be finite")
+    return result
+
+
+def _autopoietic_lineage_int(value: object, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return value
 
 
 def _normalise_evolutionary_search_reports(

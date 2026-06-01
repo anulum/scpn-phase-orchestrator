@@ -1181,6 +1181,13 @@ The information-geometry primitive keeps NumPy as the default audit-stable
 backend and exposes explicit `backend="jax"` acceleration with reference-gated
 parity for Fisher-Rao distance, Wasserstein distance, curvature proxy, and
 natural-gradient proposals. Both paths remain non-actuating review surfaces.
+The lineage sandbox generates deterministic child-policy candidates from a
+parent policy and replay corpus, records accepted/rejected evidence, hashes the
+lineage and replay corpus, and keeps live merge, hot patching, execution, and
+actuation disabled. The curated replay corpus spans power-grid recovery,
+cardiac-rhythm pacing recovery, traffic-flow platooning, and cyber-industrial
+recontainment so operators can compare policy diffs across domains before any
+separate inheritance-review workflow.
 
 ::: scpn_phase_orchestrator.supervisor.information_geometry
 

@@ -29,6 +29,8 @@ from scpn_phase_orchestrator.binding.topos_semantic import (
 from scpn_phase_orchestrator.studio.workflow import BindingProposal
 from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldState,
+    build_autopoietic_lineage_replay_corpus,
+    build_autopoietic_lineage_sandbox,
     evaluate_strange_loop_drift_scenarios,
     render_morphogenetic_field_svg,
 )
@@ -526,6 +528,71 @@ def test_evolutionary_supervisor_policy_search_panel_preserves_review_gates() ->
     assert panel["example_rows"][0]["candidate_count"] == examples[0]["candidate_count"]
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel
+
+
+def test_autopoietic_lineage_panel_preserves_corpus_and_child_evidence() -> None:
+    manifest = build_autopoietic_lineage_sandbox(
+        {"K": 0.42, "alpha": 0.18, "zeta": 0.09},
+        build_autopoietic_lineage_replay_corpus(),
+        child_budget=3,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+
+    panel = ui.build_autopoietic_lineage_studio_panel([manifest])
+
+    assert panel["panel_kind"] == "studio_autopoietic_lineage_panel"
+    assert panel["claim_boundary"] == (
+        "autopoietic_lineage_sandbox_review_not_live_merge"
+    )
+    assert panel["non_actuating"] is True
+    assert panel["execution_disabled"] is True
+    assert panel["operator_review_required"] is True
+    assert panel["hot_patch_permitted"] is False
+    assert panel["live_merge_permitted"] is False
+    assert panel["actuation_permitted"] is False
+    assert panel["manifest_count"] == 1
+    assert panel["replay_domain_count"] == 4
+    assert panel["replay_domains"] == (
+        "cardiac_rhythm",
+        "cyber_industrial",
+        "power_grid",
+        "traffic_flow",
+    )
+    assert panel["child_candidate_total"] == 3
+    assert panel["accepted_child_total"] == 3
+    assert panel["rejected_child_total"] == 0
+    assert len(panel["replay_corpus_rows"]) == 4
+    assert len(panel["accepted_child_rows"]) == 3
+    assert "control_actions" not in panel
+    assert "actions_to_apply" not in panel
+
+
+def test_autopoietic_lineage_panel_rejects_malformed_evidence() -> None:
+    manifest = build_autopoietic_lineage_sandbox(
+        {"K": 0.42, "alpha": 0.18},
+        build_autopoietic_lineage_replay_corpus(),
+        child_budget=2,
+        mutation_step=0.02,
+        minimum_replay_reward=0.7,
+        minimum_safety_margin=0.1,
+    )
+
+    with pytest.raises(ValueError, match="lineage_sha256"):
+        ui.build_autopoietic_lineage_studio_panel(
+            [{**manifest, "lineage_sha256": "bad"}]
+        )
+    with pytest.raises(ValueError, match="replay_domain_count"):
+        ui.build_autopoietic_lineage_studio_panel(
+            [{**manifest, "replay_domain_count": 99}]
+        )
+    bad_child = dict(manifest["child_candidates"][0])
+    bad_child["hot_patch_permitted"] = True
+    with pytest.raises(ValueError, match="hot_patch_permitted"):
+        ui.build_autopoietic_lineage_studio_panel(
+            [{**manifest, "child_candidates": [bad_child]}]
+        )
 
 
 def test_evolutionary_supervisor_policy_search_panel_rejects_malformed_evidence() -> (

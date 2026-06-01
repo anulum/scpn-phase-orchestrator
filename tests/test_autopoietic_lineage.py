@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 from scpn_phase_orchestrator.supervisor.lineage import (
+    build_autopoietic_lineage_replay_corpus,
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
 )
@@ -22,20 +23,7 @@ def test_autopoietic_lineage_sandbox_is_deterministic_and_review_only() -> None:
         "alpha": 0.18,
         "zeta": 0.09,
     }
-    audit_replays = [
-        {
-            "replay_id": "nominal_grid_replay",
-            "reward": 0.82,
-            "safety_margin": 0.24,
-            "violations": [],
-        },
-        {
-            "replay_id": "disturbance_grid_replay",
-            "reward": 0.74,
-            "safety_margin": 0.18,
-            "violations": [],
-        },
-    ]
+    audit_replays = build_autopoietic_lineage_replay_corpus()
 
     first = build_autopoietic_lineage_sandbox(
         parent_policy,
@@ -60,14 +48,47 @@ def test_autopoietic_lineage_sandbox_is_deterministic_and_review_only() -> None:
     assert first["child_candidate_count"] == 3
     assert first["accepted_child_count"] >= 1
     assert first["review_required"] is True
+    assert first["execution_disabled"] is True
     assert first["live_merge_permitted"] is False
+    assert first["hot_patch_permitted"] is False
     assert first["actuation_permitted"] is False
+    assert first["replay_corpus_count"] == len(audit_replays)
+    assert first["replay_domain_count"] == 4
+    assert first["replay_domains"] == (
+        "cardiac_rhythm",
+        "cyber_industrial",
+        "power_grid",
+        "traffic_flow",
+    )
     assert len(str(first["lineage_sha256"])) == 64
+    assert len(str(first["replay_corpus_sha256"])) == 64
+    assert all(
+        candidate["execution_disabled"] is True
+        and candidate["hot_patch_permitted"] is False
+        for candidate in first["child_candidates"]
+    )
     assert all(
         candidate["policy_diff"]
         for candidate in first["child_candidates"]
         if candidate["status"] == "accepted_for_review"
     )
+
+
+def test_autopoietic_lineage_replay_corpus_is_curated_and_deterministic() -> None:
+    first = build_autopoietic_lineage_replay_corpus()
+    second = build_autopoietic_lineage_replay_corpus()
+
+    assert first == second
+    assert len(first) == 4
+    assert {row["domain"] for row in first} == {
+        "cardiac_rhythm",
+        "cyber_industrial",
+        "power_grid",
+        "traffic_flow",
+    }
+    assert all(row["reward"] >= 0.7 for row in first)
+    assert all(row["safety_margin"] >= 0.1 for row in first)
+    assert all(row["violations"] == [] for row in first)
 
 
 def test_autopoietic_lineage_sandbox_rejects_unsafe_child_candidates() -> None:

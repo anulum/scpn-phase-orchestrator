@@ -1139,6 +1139,7 @@ def test_autopoietic_lineage_sandbox_gate_benchmark_shape() -> None:
     assert out["accepted_child_count"] == 3
     assert out["rejected_child_count"] == 2
     assert out["policy_diff_count"] == 5
+    assert out["replay_domain_count"] == 4
     assert out["review_only"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
@@ -1155,6 +1156,7 @@ def test_autopoietic_lineage_sandbox_gate_reports_thresholds_and_records() -> No
         "min_accepted_child_count": 3,
         "min_child_candidate_count": 5,
         "min_policy_diff_count": 5,
+        "min_replay_domain_count": 4,
         "min_rejected_child_count": 2,
         "require_deterministic_hash": True,
         "require_review_only": True,
@@ -1165,7 +1167,16 @@ def test_autopoietic_lineage_sandbox_gate_reports_thresholds_and_records() -> No
     ]
     assert [manifest["accepted_child_count"] for manifest in manifests] == [3, 0]
     assert [manifest["rejected_child_count"] for manifest in manifests] == [0, 2]
+    assert manifests[0]["replay_domain_count"] == 4
+    assert manifests[0]["replay_domains"] == [
+        "cardiac_rhythm",
+        "cyber_industrial",
+        "power_grid",
+        "traffic_flow",
+    ]
+    assert all(manifest["execution_disabled"] is True for manifest in manifests)
     assert all(manifest["live_merge_permitted"] is False for manifest in manifests)
+    assert all(manifest["hot_patch_permitted"] is False for manifest in manifests)
     assert all(manifest["actuation_permitted"] is False for manifest in manifests)
 
 
