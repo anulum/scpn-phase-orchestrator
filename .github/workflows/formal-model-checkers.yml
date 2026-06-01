@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — External formal checker CI
+
+name: Formal Model Checkers
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/formal-model-checkers.yml"
+      - "src/scpn_phase_orchestrator/supervisor/formal_export.py"
+      - "src/scpn_phase_orchestrator/supervisor/__init__.py"
+      - "tools/formal_model_checker_ci.py"
+      - "tests/test_formal_model_checker_ci.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/formal-model-checkers.yml"
+      - "src/scpn_phase_orchestrator/supervisor/formal_export.py"
+      - "src/scpn_phase_orchestrator/supervisor/__init__.py"
+      - "tools/formal_model_checker_ci.py"
+      - "tests/test_formal_model_checker_ci.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  spin-z3-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install external formal checkers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends spin z3
+
+      - name: Install package
+        run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+
+      - name: Execute SPIN/Z3 smoke package
+        run: python tools/formal_model_checker_ci.py --execute-ci-smoke

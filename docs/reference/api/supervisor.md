@@ -821,6 +821,10 @@ command records keep `execution_permitted=false`. Add
 records to that JSON; `--checker-path executable=/path` can make CI readiness
 evidence deterministic, and `--checker-path executable=` forces a missing
 checker record without invoking anything.
+Remote CI owns the first external execution lane through
+`formal-model-checkers.yml`, which installs SPIN and Z3, materialises reviewed
+Promela/SMT-LIB smoke artefacts, validates disabled package/readiness metadata,
+and runs those external checkers only under the CI-only execution guard.
 
 For builtin STL automata, `synthesise_stl_controller_candidates()` provides a
 non-actuating controller-synthesis bridge. It proposes signal-level candidate
