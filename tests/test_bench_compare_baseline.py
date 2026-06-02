@@ -395,7 +395,7 @@ def test_regression_percentages_are_formatted(
     tmp_path: Path, pct_regression: float
 ) -> None:
     """Regression report includes the ``+NN.N%`` formatted delta."""
-    base_val = 10.0
+    base_val = 1000.0
     cur_val = base_val * (1.0 + pct_regression / 100.0)
     baseline = [_entry(8, "euler", "rust", base_val)]
     current = [_entry(8, "euler", "rust", cur_val)]
