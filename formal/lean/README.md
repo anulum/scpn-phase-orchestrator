@@ -47,6 +47,8 @@ validation tasks.
 The script runs the CI-equivalent proof gate:
 
 - reject Lean proof files containing `sorry`, `admit`, `axiom`, or `unsafe`;
+- reject proof-source linter suppression via `set_option linter.* false`;
+- treat Lean warnings as proof-gate failures on direct module checks;
 - directly check `SPOFormal/Projector.lean`;
 - directly check `SPOFormal/Regime.lean`;
 - build the `SPOFormal` Lake library;

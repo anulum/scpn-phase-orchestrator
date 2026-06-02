@@ -19,7 +19,12 @@ if grep -R -n -E '\b(sorry|admit|axiom|unsafe)\b' -- SPOFormal.lean lakefile.lea
   exit 1
 fi
 
-lake env lean SPOFormal/Projector.lean
-lake env lean SPOFormal/Regime.lean
+if grep -R -n -E 'set_option[[:space:]]+linter\.[A-Za-z0-9_.-]+[[:space:]]+false' -- SPOFormal.lean lakefile.lean SPOFormal; then
+  printf 'Lean proof gate rejected disabled linter options in proof sources.\n' >&2
+  exit 1
+fi
+
+lake env lean --error=warning SPOFormal/Projector.lean
+lake env lean --error=warning SPOFormal/Regime.lean
 lake build SPOFormal
-lake env lean SPOFormal.lean
+lake env lean --error=warning SPOFormal.lean
