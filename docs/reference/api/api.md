@@ -18,10 +18,10 @@ research package. It accepts a `BindingSpec`, can load a reviewed
 `binding_spec.yaml`, validates the binding before execution, executes local
 Kuramoto dynamics, and returns an immutable `OrchestratorState` record.
 
-Use it for deterministic local checks and embedded Python workflows. Do not use
-it for hardware actuation, network IO, supervisor policy execution, audit-log
-writing, socket serving, external-device dispatch, or mutation of the source
-binding spec.
+Use it for deterministic local checks and embedded Python workflows. The
+facade contract includes no hardware actuation and no network IO. Do not use
+it for supervisor policy execution, audit-log writing, socket serving,
+external-device dispatch, or mutation of the source binding spec.
 
 ## Public surface
 

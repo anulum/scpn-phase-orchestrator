@@ -410,12 +410,14 @@ jobs:
           key: cargo-benchmark-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-benchmark-
       - run: |
+          python -m venv .venv
+          . .venv/bin/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
-      - run: python bench/run_benchmarks.py --json > bench/current.json
+      - run: . .venv/bin/activate && python bench/run_benchmarks.py --json > bench/current.json
       - name: Compare against baseline
-        run: python bench/compare_baseline.py bench/baseline.json bench/current.json
+        run: . .venv/bin/activate && python bench/compare_baseline.py bench/baseline.json bench/current.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always()
         with:
