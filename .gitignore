@@ -56,6 +56,9 @@ experiments/.eeg_cache/
 # Coordination — local-only session logs and handovers
 .coordination/
 
+# Local stimuli generated for internal workflows — never commit
+04_ARCANE_SAPIENCE/
+
 # Local assistant config — never commit
 CLAUDE.md
 .claude/
