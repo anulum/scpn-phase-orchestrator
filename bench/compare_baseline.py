@@ -28,6 +28,28 @@ BENCHMARK_KEY_FIELDS = ("n_osc", "method", "backend")
 BENCHMARK_VALUE_FIELD = "us_per_step"
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"benchmark JSON must not contain non-finite token {value!r}")
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError(f"benchmark JSON contains duplicate key {key!r}")
+        out[key] = value
+    return out
+
+
+def _load_json(path: Path) -> Any:
+    with path.open(encoding="utf-8") as f:
+        return json.load(
+            f,
+            parse_constant=_reject_json_constant,
+            object_pairs_hook=_unique_json_object,
+        )
+
+
 def _positive_finite_float(value: Any, *, field: str) -> float:
     try:
         out = float(value)
@@ -69,7 +91,19 @@ def _extract_results(data: Any) -> list[dict[str, Any]]:
 
 
 def _benchmark_key(entry: dict[str, Any]) -> tuple[int, str, str]:
-    return (int(entry["n_osc"]), str(entry["method"]), str(entry["backend"]))
+    raw_n = entry["n_osc"]
+    if isinstance(raw_n, bool) or not isinstance(raw_n, int):
+        raise ValueError("benchmark field 'n_osc' must be a positive integer")
+    if raw_n <= 0:
+        raise ValueError("benchmark field 'n_osc' must be a positive integer")
+
+    method = entry["method"]
+    backend = entry["backend"]
+    if not isinstance(method, str) or not method.strip():
+        raise ValueError("benchmark field 'method' must be a non-empty string")
+    if not isinstance(backend, str) or not backend.strip():
+        raise ValueError("benchmark field 'backend' must be a non-empty string")
+    return (raw_n, method, backend)
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -105,10 +139,12 @@ def main() -> int:
         print("threshold percentage must be finite and >= 0", file=sys.stderr)
         return 2
 
-    with args.baseline.open() as f:
-        baseline = _extract_results(json.load(f))
-    with args.current.open() as f:
-        current = _extract_results(json.load(f))
+    try:
+        baseline = _extract_results(_load_json(args.baseline))
+        current = _extract_results(_load_json(args.current))
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     if not baseline:
         print("\nNo comparable baseline benchmark entries found.")
         return 1

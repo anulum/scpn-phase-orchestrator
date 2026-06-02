@@ -417,6 +417,7 @@ jobs:
       - name: Compare against baseline
         run: python bench/compare_baseline.py bench/baseline.json bench/current.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
         with:
           name: benchmark-results
           path: bench/current.json

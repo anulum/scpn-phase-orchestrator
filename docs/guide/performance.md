@@ -130,6 +130,9 @@ the result against `bench/baseline.json`. The regression gate fails closed when:
 
 - no comparable baseline records exist;
 - the current run has no comparable records;
+- the benchmark JSON contains duplicate object keys or non-finite JSON tokens;
+- a benchmark identity field is malformed;
+- a baseline or current benchmark key is duplicated;
 - a checked-in baseline configuration is missing from the current run;
 - any comparable `us_per_step` value is non-finite or non-positive;
 - a step-time increase exceeds the configured threshold, currently 20%.

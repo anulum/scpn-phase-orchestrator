@@ -271,6 +271,72 @@ def test_duplicate_current_key_fails_closed(tmp_path: Path) -> None:
     assert "Duplicate current benchmark entry" in proc.stdout
 
 
+def test_duplicate_json_object_key_fails_closed(tmp_path: Path) -> None:
+    """JSON duplicate keys are rejected before benchmark extraction."""
+    baseline = tmp_path / "b.json"
+    baseline.write_text(
+        '{"results": [{"n_osc": 8, "method": "euler", "backend": "rust", '
+        '"us_per_step": 10.0}], "results": []}',
+        encoding="utf-8",
+    )
+    current = tmp_path / "c.json"
+    _write_json(current, [_entry(8, "euler", "rust", 10.0)])
+    proc = _run(baseline, current)
+    assert proc.returncode == 1
+    assert "duplicate key" in proc.stderr
+
+
+def test_non_finite_json_token_fails_closed(tmp_path: Path) -> None:
+    """Benchmark evidence JSON must not contain NaN/Infinity tokens."""
+    baseline = tmp_path / "b.json"
+    baseline.write_text(
+        '[{"n_osc": 8, "method": "euler", "backend": "rust", '
+        '"us_per_step": NaN}]',
+        encoding="utf-8",
+    )
+    current = tmp_path / "c.json"
+    _write_json(current, [_entry(8, "euler", "rust", 10.0)])
+    proc = _run(baseline, current)
+    assert proc.returncode == 1
+    assert "non-finite token" in proc.stderr
+
+
+@pytest.mark.parametrize(
+    "bad_entry, expected",
+    [
+        (
+            {"n_osc": True, "method": "euler", "backend": "rust", "us_per_step": 10.0},
+            "positive integer",
+        ),
+        (
+            {"n_osc": 8.0, "method": "euler", "backend": "rust", "us_per_step": 10.0},
+            "positive integer",
+        ),
+        (
+            {"n_osc": 8, "method": "", "backend": "rust", "us_per_step": 10.0},
+            "non-empty string",
+        ),
+        (
+            {"n_osc": 8, "method": "euler", "backend": "", "us_per_step": 10.0},
+            "non-empty string",
+        ),
+    ],
+)
+def test_invalid_benchmark_identity_fields_fail_closed(
+    tmp_path: Path,
+    bad_entry: dict[str, object],
+    expected: str,
+) -> None:
+    """Benchmark identity fields are part of the regression contract."""
+    baseline = [bad_entry]
+    current = [_entry(8, "euler", "rust", 10.0)]
+    _write_json(tmp_path / "b.json", baseline)
+    _write_json(tmp_path / "c.json", current)
+    proc = _run(tmp_path / "b.json", tmp_path / "c.json")
+    assert proc.returncode == 1
+    assert expected in proc.stderr
+
+
 # ---------------------------------------------------------------------
 # CLI validation
 # ---------------------------------------------------------------------
