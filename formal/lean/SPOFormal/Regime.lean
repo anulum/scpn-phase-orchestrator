@@ -40,6 +40,30 @@ def isRecovering : Regime -> Bool
   | Regime.recovery => true
   | _ => false
 
+theorem isRecovering_eq_true_iff {regime : Regime} :
+    isRecovering regime = true ↔ regime = Regime.critical ∨ regime = Regime.recovery := by
+  cases regime <;> simp [isRecovering]
+
+/-- Severity rank used by the production transition guard. -/
+def regimeRank : Regime -> Nat
+  | Regime.nominal => 0
+  | Regime.degraded => 1
+  | Regime.recovery => 2
+  | Regime.critical => 3
+
+theorem nominal_has_min_rank {regime : Regime} :
+    regimeRank Regime.nominal <= regimeRank regime := by
+  cases regime <;> decide
+
+theorem critical_has_max_rank {regime : Regime} :
+    regimeRank regime <= regimeRank Regime.critical := by
+  cases regime <;> decide
+
+theorem critical_strictly_above_noncritical {regime : Regime}
+    (hNonCritical : regime ≠ Regime.critical) :
+    regimeRank regime < regimeRank Regime.critical := by
+  cases regime <;> simp [regimeRank] at hNonCritical ⊢
+
 /-- Discrete fixed-point mirror of `classify_regime_from_summary` for finite inputs. -/
 def classify (current : Regime) (meanR hardViolationCount hysteresis : Nat) : Regime :=
   if hardViolationCount > 0 then Regime.critical
@@ -54,6 +78,73 @@ def classify (current : Regime) (meanR hardViolationCount hysteresis : Nat) : Re
     Regime.recovery
   else
     Regime.nominal
+
+/-- Minimal transition-guard mirror for cooldown and downward hold contracts. -/
+structure TransitionGuardState where
+  current : Regime
+  stepCounter : Nat
+  lastTransition : Nat
+  cooldownSteps : Nat
+  holdSteps : Nat
+  downwardStreak : Nat
+
+/-- Next committed regime under the same guard order as the production FSM. -/
+def transitionCore (state : TransitionGuardState) (proposed : Regime) : Regime :=
+  if proposed = state.current then state.current
+  else if regimeRank state.current < regimeRank proposed ∧
+      proposed ≠ Regime.critical ∧
+      0 < state.holdSteps ∧
+      state.downwardStreak + 1 < state.holdSteps then
+    state.current
+  else if 0 < state.lastTransition ∧
+      state.stepCounter.succ - state.lastTransition < state.cooldownSteps ∧
+      proposed ≠ Regime.critical then
+    state.current
+  else
+    proposed
+
+theorem transitionCore_same_current {state : TransitionGuardState} :
+    transitionCore state state.current = state.current := by
+  unfold transitionCore
+  simp
+
+theorem transitionCore_critical_bypasses_hold_and_cooldown
+    {state : TransitionGuardState} :
+    transitionCore state Regime.critical = Regime.critical := by
+  unfold transitionCore
+  cases state.current <;> simp [regimeRank]
+
+theorem transitionCore_soft_downward_hold_blocks
+    {state : TransitionGuardState} {proposed : Regime}
+    (hDifferent : proposed ≠ state.current)
+    (hDownward : regimeRank state.current < regimeRank proposed)
+    (hNotCritical : proposed ≠ Regime.critical)
+    (hHoldEnabled : 0 < state.holdSteps)
+    (hHoldPending : state.downwardStreak + 1 < state.holdSteps) :
+    transitionCore state proposed = state.current := by
+  unfold transitionCore
+  simp [
+    hDifferent,
+    hDownward,
+    hNotCritical,
+    hHoldEnabled,
+    hHoldPending,
+  ]
+
+theorem transitionCore_cooldown_blocks_noncritical
+    {state : TransitionGuardState} {proposed : Regime}
+    (hDifferent : proposed ≠ state.current)
+    (hLastTransition : 0 < state.lastTransition)
+    (hCooldown : state.stepCounter.succ - state.lastTransition < state.cooldownSteps)
+    (hNotCritical : proposed ≠ Regime.critical) :
+    transitionCore state proposed = state.current := by
+  unfold transitionCore
+  simp [
+    hDifferent,
+    hLastTransition,
+    hCooldown,
+    hNotCritical,
+  ]
 
 theorem nominal_safe_summary_never_classifies_critical
     {meanR hysteresis : Nat} (hMean : rCritical <= meanR) :

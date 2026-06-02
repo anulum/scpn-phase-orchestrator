@@ -23,7 +23,9 @@ integer/fixed-point contracts that mirror the Rust supervisor boundary.
   degraded hysteresis hold, critical-to-recovery transition boundaries, and
   recovery-to-nominal release. The proof boundary includes exact
   `R_CRITICAL`/`R_DEGRADED` threshold behaviour and hysteresis release
-  behaviour for degraded and recovery states.
+  behaviour for degraded and recovery states. It also mirrors the finite
+  transition guard for same-state no-ops, critical cooldown bypass,
+  soft-downward hold blocking, and non-critical cooldown blocking.
 
 The Lean lane is intentionally dependency-light: it uses Lean core plus `Std`,
 not Mathlib. It is an independent specification mirror, not a replacement for
