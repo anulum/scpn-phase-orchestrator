@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Lean formal proof CI
+
+name: Lean Proofs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/lean.yml"
+      - "formal/lean/**"
+      - "spo-kernel/crates/spo-supervisor/src/projector.rs"
+      - "spo-kernel/crates/spo-supervisor/src/regime.rs"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/lean.yml"
+      - "formal/lean/**"
+      - "spo-kernel/crates/spo-supervisor/src/projector.rs"
+      - "spo-kernel/crates/spo-supervisor/src/regime.rs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lean-proofs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: formal/lean
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1
+        with:
+          working-directory: formal/lean
+          use-github-cache: false

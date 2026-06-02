@@ -98,26 +98,29 @@ such states produce safe control output depends on the domain.
 
 ## 3. Verification Methods
 
-### 3.1 Formally Verified Properties (Kani)
+### 3.1 Formally Verified Properties (Kani and Lean)
 
 The Rust kernel (`spo-kernel/`) contains crate-owned Kani harnesses for
 supervisor safety properties. Kani is a model checker for Rust that explores
 all possible executions of a function up to a bounded depth. The harnesses live
 in `crates/spo-supervisor/src/formal_safety.rs` and call the same functions
-used at runtime.
+used at runtime. The Lean lane in `formal/lean/` independently mirrors the
+discrete fixed-point actuator and regime-classification contracts so proof
+review is not tied to one verifier.
 
-| Property | Kani Proof | Status |
-|----------|-----------|--------|
-| Control action value within [lo, hi] for all finite bounded inputs | `action_projector_value_clipping_contract` | Kani harness + function contract; unit tests pass |
-| Adaptive fixed-point rate-limited actuator command: `min_limit <= rate_limit(t) <= max_limit` and \|a(t) − a(t−1)\| ≤ rate_limit(t) | `adaptive_rate_limit_contract`, `action_projector_adaptive_fixed_point_rate_limit_contract` | Kani harness + function contract; unit tests pass |
-| Nominal safe envelope cannot classify as Critical when `mean_R >= R_CRITICAL` and no hard violations exist | `nominal_safe_summary_never_classifies_critical` | Kani harness + function contract; unit tests pass |
-| Critical evaluation never returns Nominal directly | `critical_never_evaluates_directly_to_nominal` | Kani harness + function contract; unit tests pass |
-| Nominal degraded-band envelope degrades instead of jumping to Critical | `degraded_band_from_nominal_is_not_critical` | Kani harness; unit tests pass |
+| Property | Proof artefact | Status |
+|----------|----------------|--------|
+| Control action value within [lo, hi] for all finite bounded inputs | `action_projector_value_clipping_contract`; `SPOFormal.Projector.projectFixedNat_lower`; `SPOFormal.Projector.projectFixedNat_upper` | Kani harness + function contract; Lean fixed-point proof; unit tests pass |
+| Adaptive fixed-point rate-limited actuator command: `min_limit <= rate_limit(t) <= max_limit` and \|a(t) − a(t−1)\| ≤ rate_limit(t) | `adaptive_rate_limit_contract`, `action_projector_adaptive_fixed_point_rate_limit_contract`; `SPOFormal.Projector.adaptiveRateLimitNat_lower`; `SPOFormal.Projector.adaptiveRateLimitNat_upper`; `SPOFormal.Projector.limitStepNat_delta_le_limit` | Kani harness + function contract; Lean fixed-point proof; unit tests pass |
+| Nominal safe envelope cannot classify as Critical when `mean_R >= R_CRITICAL` and no hard violations exist | `nominal_safe_summary_never_classifies_critical`; `SPOFormal.Regime.nominal_safe_summary_never_classifies_critical` | Kani harness + function contract; Lean fixed-point proof; unit tests pass |
+| Critical evaluation never returns Nominal directly | `critical_never_evaluates_directly_to_nominal`; `SPOFormal.Regime.critical_never_evaluates_directly_to_nominal` | Kani harness + function contract; Lean fixed-point proof; unit tests pass |
+| Nominal degraded-band envelope degrades instead of jumping to Critical | `degraded_band_from_nominal_is_not_critical`; `SPOFormal.Regime.degraded_band_from_nominal_is_degraded` | Kani harness; Lean fixed-point proof; unit tests pass |
 
 **Honest status.** These are bounded formal proofs over the discrete
-supervisor contracts. They do not prove full continuous-time Lyapunov
-stability of every Kuramoto topology under bounded coupling; that remains a
-separate reachability/stability analysis item.
+supervisor contracts. Kani verifies Rust implementation harnesses; Lean verifies
+an independent fixed-point specification mirror. They do not prove full
+continuous-time Lyapunov stability of every Kuramoto topology under bounded
+coupling; that remains a separate reachability/stability analysis item.
 
 ### 3.2 Lyapunov Stability Monitoring
 

@@ -155,11 +155,11 @@ robustness) shall trigger an immediate regime transition to Critical.
 
 | Property | Method | Location |
 |----------|--------|----------|
-| Value clipping correctness | Kani harness + function contract + unit tests | `formal_safety.rs`, `projector.rs` tests |
-| Adaptive fixed-point rate limiting correctness | Kani harness + function contract + unit tests | `formal_safety.rs`, `projector.rs` tests |
-| Nominal safe-envelope classification | Kani harness + function contract + unit tests | `formal_safety.rs`, `regime.rs` tests |
-| Critical never evaluates directly to Nominal | Kani harness + function contract + unit tests | `formal_safety.rs`, `regime.rs` tests |
-| Degraded-band classification from Nominal | Kani harness + unit tests | `formal_safety.rs`, `regime.rs` tests |
+| Value clipping correctness | Kani harness + function contract + Lean fixed-point proof + unit tests | `formal_safety.rs`, `projector.rs`, `formal/lean/SPOFormal/Projector.lean` |
+| Adaptive fixed-point rate limiting correctness | Kani harness + function contract + Lean fixed-point proof + unit tests | `formal_safety.rs`, `projector.rs`, `formal/lean/SPOFormal/Projector.lean` |
+| Nominal safe-envelope classification | Kani harness + function contract + Lean fixed-point proof + unit tests | `formal_safety.rs`, `regime.rs`, `formal/lean/SPOFormal/Regime.lean` |
+| Critical never evaluates directly to Nominal | Kani harness + function contract + Lean fixed-point proof + unit tests | `formal_safety.rs`, `regime.rs`, `formal/lean/SPOFormal/Regime.lean` |
+| Degraded-band classification from Nominal | Kani harness + Lean fixed-point proof + unit tests | `formal_safety.rs`, `regime.rs`, `formal/lean/SPOFormal/Regime.lean` |
 | Cooldown bypass for Critical | Unit tests | `regime.rs` tests |
 | Log boundedness | Unit tests | `regime.rs` tests |
 | Boundary observer triggers | Unit tests | `tests/test_supervisor_regimes.py` |
@@ -190,6 +190,21 @@ cargo kani -p spo-supervisor -Z function-contracts
 
 The GitHub Actions Kani workflow runs the same harnesses and no longer marks
 proof failures as allowed failures.
+
+### 4.4 Lean Integration Plan
+
+The Lean proof lane lives in `formal/lean/` and mirrors discrete fixed-point
+supervisor contracts independently of the Rust/Kani implementation. To run it:
+
+```bash
+cd formal/lean
+lake build
+```
+
+The GitHub Actions Lean workflow builds the Lake project whenever Lean proofs,
+projector contracts, or regime-classification contracts change. The Lean lane is
+not a continuous-time Kuramoto stability proof; it proves the integer/fixed-point
+contract boundary for projection and finite-input regime decisions.
 
 ---
 
