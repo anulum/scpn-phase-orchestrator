@@ -15,11 +15,15 @@ integer/fixed-point contracts that mirror the Rust supervisor boundary.
 
 - `SPOFormal.Projector`: actuator clamp, bounded projection, fixed-point slew
   step, final bounded-projection slew preservation, and adaptive rate-limit
-  range contracts.
+  range contracts. The proof boundary includes in-bounds clamp identity,
+  signed fixed-point projector bounds, zero-slew immobility, nominal-risk
+  adaptive-rate exactness, and saturated-risk clamping.
 - `SPOFormal.Regime`: finite-input, fixed-point regime-classification contracts
   for hard violations, subcritical coherence, degraded-band behaviour,
   degraded hysteresis hold, critical-to-recovery transition boundaries, and
-  recovery-to-nominal release.
+  recovery-to-nominal release. The proof boundary includes exact
+  `R_CRITICAL`/`R_DEGRADED` threshold behaviour and hysteresis release
+  behaviour for degraded and recovery states.
 
 The Lean lane is intentionally dependency-light: it uses Lean core plus `Std`,
 not Mathlib. It is an independent specification mirror, not a replacement for

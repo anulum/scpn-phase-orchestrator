@@ -51,6 +51,13 @@ theorem clampNat_upper {x lo hi : Nat} (h : lo <= hi) :
     · rename_i hNotLow hNotHigh
       exact Nat.le_of_not_gt hNotHigh
 
+theorem clampNat_in_bounds_eq {x lo hi : Nat}
+    (hLower : lo <= x)
+    (hUpper : x <= hi) :
+    clampNat x lo hi = x := by
+  unfold clampNat
+  simp [Nat.not_lt_of_ge hLower, Nat.not_lt_of_ge hUpper]
+
 theorem projectFixedNat_lower {proposed previous lo hi limit : Nat} (h : lo <= hi) :
     lo <= projectFixedNat proposed previous lo hi limit := by
   unfold projectFixedNat
@@ -119,6 +126,13 @@ theorem clampInt_upper {x lo hi : Int} (h : lo <= hi) :
   · omega
   · split <;> omega
 
+theorem clampInt_in_bounds_eq {x lo hi : Int}
+    (hLower : lo <= x)
+    (hUpper : x <= hi) :
+    clampInt x lo hi = x := by
+  unfold clampInt
+  split <;> omega
+
 theorem limitStepInt_delta_le_limit {bounded previous limit : Int}
     (hLimit : 0 <= limit) :
     absDeltaInt (limitStepInt bounded previous limit) previous <= limit := by
@@ -168,6 +182,31 @@ theorem projectFixedInt_delta_le_limit
     (limitStepInt_window_lower hLimit)
     (limitStepInt_window_upper hLimit)
 
+theorem projectFixedInt_lower {proposed previous lo hi limit : Int}
+    (h : lo <= hi) :
+    lo <= projectFixedInt proposed previous lo hi limit := by
+  unfold projectFixedInt
+  exact clampInt_lower h
+
+theorem projectFixedInt_upper {proposed previous lo hi limit : Int}
+    (h : lo <= hi) :
+    projectFixedInt proposed previous lo hi limit <= hi := by
+  unfold projectFixedInt
+  exact clampInt_upper h
+
+theorem limitStepInt_zero_limit_eq_previous {bounded previous : Int} :
+    limitStepInt bounded previous 0 = previous := by
+  unfold limitStepInt
+  split <;> omega
+
+theorem projectFixedInt_zero_limit_eq_previous
+    {proposed previous lo hi : Int}
+    (hLoPrev : lo <= previous)
+    (hPrevHi : previous <= hi) :
+    projectFixedInt proposed previous lo hi 0 = previous := by
+  unfold projectFixedInt
+  simp [limitStepInt_zero_limit_eq_previous, clampInt_in_bounds_eq hLoPrev hPrevHi]
+
 /-- Adaptive fixed-point rate-limit configuration. -/
 structure AdaptiveRateLimitConfig where
   minLimit : Nat
@@ -215,5 +254,26 @@ theorem adaptiveRateLimitNat_invalid_fallback
     adaptiveRateLimitNat riskSignal cfg = min cfg.minLimit cfg.maxLimit := by
   unfold adaptiveRateLimitNat
   simp [hInvalid]
+
+theorem adaptiveRateLimitNat_zero_risk_eq_nominal
+    {cfg : AdaptiveRateLimitConfig}
+    (hValid : cfg.Valid) :
+    adaptiveRateLimitNat 0 cfg = cfg.nominalLimit := by
+  unfold adaptiveRateLimitNat
+  simp [hValid]
+  exact clampNat_in_bounds_eq hValid.left hValid.right.left
+
+theorem adaptiveRateLimitNat_saturated_risk_eq_clamped_nominal_plus_gain
+    {riskSignal : Nat} {cfg : AdaptiveRateLimitConfig}
+    (hValid : cfg.Valid)
+    (hSaturated : cfg.riskFullScale <= riskSignal) :
+    adaptiveRateLimitNat riskSignal cfg =
+      clampNat (cfg.nominalLimit + cfg.riskGain) cfg.minLimit cfg.maxLimit := by
+  have hMin : min riskSignal cfg.riskFullScale = cfg.riskFullScale :=
+    Nat.min_eq_right hSaturated
+  have hDiv : cfg.riskGain * cfg.riskFullScale / cfg.riskFullScale = cfg.riskGain :=
+    Nat.mul_div_left cfg.riskGain hValid.right.right
+  unfold adaptiveRateLimitNat
+  simp [hValid, hMin, hDiv]
 
 end SPOFormal.Projector
