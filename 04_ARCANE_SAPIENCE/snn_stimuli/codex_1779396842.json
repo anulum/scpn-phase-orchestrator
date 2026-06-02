@@ -1,1 +1,0 @@
-{"text":"Rust hardening: PetriNet firing now uses saturating output-token arithmetic to prevent u32 overflow.", "source":"codex", "project":"SCPN-PHASE-ORCHESTRATOR"}

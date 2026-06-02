@@ -1,1 +1,0 @@
-{"text":"Rust hardening: EventBus now clamps zero history capacity to one to preserve bounded-buffer invariants.", "source":"codex", "project":"SCPN-PHASE-ORCHESTRATOR"}
