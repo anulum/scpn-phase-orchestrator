@@ -74,6 +74,98 @@ theorem limitStepNat_delta_le_limit {bounded previous limit : Nat} :
   · omega
   · omega
 
+theorem limitStepNat_window_lower {bounded previous limit : Nat} :
+    previous - limit <= limitStepNat bounded previous limit := by
+  unfold limitStepNat
+  exact clampNat_lower (by omega)
+
+theorem limitStepNat_window_upper {bounded previous limit : Nat} :
+    limitStepNat bounded previous limit <= previous + limit := by
+  unfold limitStepNat
+  exact clampNat_upper (by omega)
+
+/-- Signed fixed-point clamp, matching the Rust `i32` actuator proof model. -/
+def clampInt (x lo hi : Int) : Int :=
+  if x < lo then lo else if hi < x then hi else x
+
+/-- Absolute distance on signed fixed-point actuator units. -/
+def absDeltaInt (x y : Int) : Int :=
+  if x <= y then y - x else x - y
+
+/-- Signed fixed-point slew step before the final actuator-bound clamp. -/
+def limitStepInt (bounded previous limit : Int) : Int :=
+  if previous + limit < bounded then previous + limit
+  else if bounded + limit < previous then previous - limit
+  else bounded
+
+/-- Signed fixed-point projection mirroring the Rust projector order. -/
+def projectFixedInt (proposed previous lo hi limit : Int) : Int :=
+  let bounded := clampInt proposed lo hi
+  clampInt (limitStepInt bounded previous limit) lo hi
+
+theorem clampInt_lower {x lo hi : Int} (h : lo <= hi) :
+    lo <= clampInt x lo hi := by
+  unfold clampInt
+  split
+  · omega
+  · split <;> omega
+
+theorem clampInt_upper {x lo hi : Int} (h : lo <= hi) :
+    clampInt x lo hi <= hi := by
+  unfold clampInt
+  split
+  · omega
+  · split <;> omega
+
+theorem limitStepInt_delta_le_limit {bounded previous limit : Int}
+    (hLimit : 0 <= limit) :
+    absDeltaInt (limitStepInt bounded previous limit) previous <= limit := by
+  unfold limitStepInt absDeltaInt
+  split
+  · omega
+  · split <;> omega
+
+theorem limitStepInt_window_lower {bounded previous limit : Int}
+    (hLimit : 0 <= limit) :
+    previous - limit <= limitStepInt bounded previous limit := by
+  unfold limitStepInt
+  split
+  · omega
+  · split <;> omega
+
+theorem limitStepInt_window_upper {bounded previous limit : Int}
+    (hLimit : 0 <= limit) :
+    limitStepInt bounded previous limit <= previous + limit := by
+  unfold limitStepInt
+  split
+  · omega
+  · split <;> omega
+
+theorem clampInt_delta_le_limit_of_previous_in_bounds
+    {x previous lo hi limit : Int}
+    (hLoPrev : lo <= previous)
+    (hPrevHi : previous <= hi)
+    (hWindowLower : previous - limit <= x)
+    (hWindowUpper : x <= previous + limit) :
+    absDeltaInt (clampInt x lo hi) previous <= limit := by
+  unfold clampInt absDeltaInt
+  split
+  · omega
+  · split <;> omega
+
+theorem projectFixedInt_delta_le_limit
+    {proposed previous lo hi limit : Int}
+    (hLoPrev : lo <= previous)
+    (hPrevHi : previous <= hi)
+    (hLimit : 0 <= limit) :
+    absDeltaInt (projectFixedInt proposed previous lo hi limit) previous <= limit := by
+  unfold projectFixedInt
+  exact clampInt_delta_le_limit_of_previous_in_bounds
+    hLoPrev
+    hPrevHi
+    (limitStepInt_window_lower hLimit)
+    (limitStepInt_window_upper hLimit)
+
 /-- Adaptive fixed-point rate-limit configuration. -/
 structure AdaptiveRateLimitConfig where
   minLimit : Nat

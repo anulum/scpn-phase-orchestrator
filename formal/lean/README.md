@@ -14,10 +14,12 @@ integer/fixed-point contracts that mirror the Rust supervisor boundary.
 ## Current proof boundary
 
 - `SPOFormal.Projector`: actuator clamp, bounded projection, fixed-point slew
-  step, and adaptive rate-limit range contracts.
+  step, final bounded-projection slew preservation, and adaptive rate-limit
+  range contracts.
 - `SPOFormal.Regime`: finite-input, fixed-point regime-classification contracts
-  for hard violations, subcritical coherence, degraded-band behaviour, and the
-  critical-to-recovery transition boundary.
+  for hard violations, subcritical coherence, degraded-band behaviour,
+  degraded hysteresis hold, critical-to-recovery transition boundaries, and
+  recovery-to-nominal release.
 
 The Lean lane is intentionally dependency-light: it uses Lean core plus `Std`,
 not Mathlib. It is an independent specification mirror, not a replacement for
@@ -36,3 +38,15 @@ validation tasks.
 cd formal/lean
 lake build
 ```
+
+For CI parity, also run the direct module checks:
+
+```bash
+cd formal/lean
+lake env lean SPOFormal/Projector.lean
+lake env lean SPOFormal/Regime.lean
+lake env lean SPOFormal.lean
+```
+
+CI rejects Lean proof files containing proof placeholders or unsafe proof
+surface constructs: `sorry`, `admit`, `axiom`, or `unsafe`.

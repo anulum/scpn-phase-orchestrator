@@ -73,6 +73,33 @@ theorem degraded_band_from_nominal_is_degraded
   unfold classify
   simp [Nat.not_lt_of_ge hLower, hUpper, isRecovering]
 
+theorem degraded_hysteresis_band_stays_degraded
+    {meanR hysteresis : Nat}
+    (hLower : rDegraded <= meanR)
+    (hHold : meanR < rDegraded + hysteresis) :
+    classify Regime.degraded meanR 0 hysteresis = Regime.degraded := by
+  unfold classify
+  simp [Nat.not_lt_of_ge (Nat.le_trans (by decide : rCritical <= rDegraded) hLower)]
+  simp [Nat.not_lt_of_ge hLower, hHold]
+
+theorem critical_high_r_enters_recovery
+    {meanR hysteresis : Nat}
+    (hLower : rDegraded <= meanR)
+    (_hPastRecoveryBand : rDegraded + hysteresis <= meanR) :
+    classify Regime.critical meanR 0 hysteresis = Regime.recovery := by
+  unfold classify
+  simp [Nat.not_lt_of_ge (Nat.le_trans (by decide : rCritical <= rDegraded) hLower)]
+  simp [Nat.not_lt_of_ge hLower, isRecovering]
+
+theorem recovery_high_r_returns_nominal
+    {meanR hysteresis : Nat}
+    (hLower : rDegraded <= meanR)
+    (hPastRecoveryBand : rDegraded + hysteresis <= meanR) :
+    classify Regime.recovery meanR 0 hysteresis = Regime.nominal := by
+  unfold classify
+  simp [Nat.not_lt_of_ge (Nat.le_trans (by decide : rCritical <= rDegraded) hLower)]
+  simp [Nat.not_lt_of_ge hLower, Nat.not_lt_of_ge hPastRecoveryBand, isRecovering]
+
 theorem hard_violation_is_critical
     {current : Regime} {meanR hardViolationCount hysteresis : Nat}
     (hHard : 0 < hardViolationCount) :
