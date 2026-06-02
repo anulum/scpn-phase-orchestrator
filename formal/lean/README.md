@@ -35,18 +35,13 @@ validation tasks.
 ## Build
 
 ```bash
-cd formal/lean
-lake build
+./tools/check_lean_proofs.sh
 ```
 
-For CI parity, also run the direct module checks:
+The script runs the CI-equivalent proof gate:
 
-```bash
-cd formal/lean
-lake env lean SPOFormal/Projector.lean
-lake env lean SPOFormal/Regime.lean
-lake env lean SPOFormal.lean
-```
-
-CI rejects Lean proof files containing proof placeholders or unsafe proof
-surface constructs: `sorry`, `admit`, `axiom`, or `unsafe`.
+- reject Lean proof files containing `sorry`, `admit`, `axiom`, or `unsafe`;
+- directly check `SPOFormal/Projector.lean`;
+- directly check `SPOFormal/Regime.lean`;
+- build the `SPOFormal` Lake library;
+- check the package entry point.

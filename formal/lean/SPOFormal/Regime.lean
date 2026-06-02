@@ -10,6 +10,8 @@ SCPN Phase Orchestrator — Lean regime classifier proofs
 
 import Std
 
+set_option autoImplicit false
+
 namespace SPOFormal.Regime
 
 /-- Discrete supervisor regimes, mirroring the Rust `spo_types::Regime` variants. -/
@@ -25,6 +27,9 @@ def rCritical : Nat := 300000
 
 /-- Fixed-point representation of R=0.6 on a 1_000_000-unit interval. -/
 def rDegraded : Nat := 600000
+
+theorem rCritical_le_rDegraded : rCritical <= rDegraded := by
+  decide
 
 /-- Recovering regimes must pass through recovery before returning nominal. -/
 def isRecovering : Regime -> Bool
@@ -54,6 +59,31 @@ theorem nominal_safe_summary_never_classifies_critical
   simp [Nat.not_lt_of_ge hMean, isRecovering]
   split <;> simp
 
+theorem safe_summary_without_hard_violation_never_classifies_critical
+    {current : Regime} {meanR hysteresis : Nat}
+    (hMean : rCritical <= meanR) :
+    classify current meanR 0 hysteresis ≠ Regime.critical := by
+  cases current
+  · exact nominal_safe_summary_never_classifies_critical hMean
+  · unfold classify
+    simp [Nat.not_lt_of_ge hMean, isRecovering]
+    by_cases hDegraded : meanR < rDegraded
+    · simp [hDegraded]
+    · simp [hDegraded]
+      by_cases hHolding : meanR < rDegraded + hysteresis
+      · simp [hHolding]
+      · simp [hHolding]
+  · unfold classify
+    simp [Nat.not_lt_of_ge hMean, isRecovering]
+    by_cases hDegraded : meanR < rDegraded
+    · simp [hDegraded]
+    · simp [hDegraded]
+      by_cases hHolding : meanR < rDegraded + hysteresis
+      · simp [hHolding]
+      · simp [hHolding]
+  · unfold classify
+    simp [Nat.not_lt_of_ge hMean, isRecovering]
+
 theorem critical_never_evaluates_directly_to_nominal
     {meanR hardViolationCount hysteresis : Nat} :
     classify Regime.critical meanR hardViolationCount hysteresis ≠ Regime.nominal := by
@@ -79,7 +109,7 @@ theorem degraded_hysteresis_band_stays_degraded
     (hHold : meanR < rDegraded + hysteresis) :
     classify Regime.degraded meanR 0 hysteresis = Regime.degraded := by
   unfold classify
-  simp [Nat.not_lt_of_ge (Nat.le_trans (by decide : rCritical <= rDegraded) hLower)]
+  simp [Nat.not_lt_of_ge (Nat.le_trans rCritical_le_rDegraded hLower)]
   simp [Nat.not_lt_of_ge hLower, hHold]
 
 theorem critical_high_r_enters_recovery
@@ -88,7 +118,7 @@ theorem critical_high_r_enters_recovery
     (_hPastRecoveryBand : rDegraded + hysteresis <= meanR) :
     classify Regime.critical meanR 0 hysteresis = Regime.recovery := by
   unfold classify
-  simp [Nat.not_lt_of_ge (Nat.le_trans (by decide : rCritical <= rDegraded) hLower)]
+  simp [Nat.not_lt_of_ge (Nat.le_trans rCritical_le_rDegraded hLower)]
   simp [Nat.not_lt_of_ge hLower, isRecovering]
 
 theorem recovery_high_r_returns_nominal
@@ -97,7 +127,7 @@ theorem recovery_high_r_returns_nominal
     (hPastRecoveryBand : rDegraded + hysteresis <= meanR) :
     classify Regime.recovery meanR 0 hysteresis = Regime.nominal := by
   unfold classify
-  simp [Nat.not_lt_of_ge (Nat.le_trans (by decide : rCritical <= rDegraded) hLower)]
+  simp [Nat.not_lt_of_ge (Nat.le_trans rCritical_le_rDegraded hLower)]
   simp [Nat.not_lt_of_ge hLower, Nat.not_lt_of_ge hPastRecoveryBand, isRecovering]
 
 theorem hard_violation_is_critical

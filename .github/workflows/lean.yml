@@ -46,17 +46,5 @@ jobs:
           working-directory: formal/lean
           use-github-cache: false
 
-      - name: Reject proof placeholders and unsafe declarations
-        run: |
-          ! grep -R -n -E '\b(sorry|admit|axiom|unsafe)\b' -- SPOFormal.lean lakefile.lean SPOFormal
-
-      - name: Directly check Lean proof modules
-        run: |
-          lake env lean SPOFormal/Projector.lean
-          lake env lean SPOFormal/Regime.lean
-
-      - name: Build Lean package
-        run: lake build SPOFormal
-
-      - name: Check Lean package entry point
-        run: lake env lean SPOFormal.lean
+      - name: Check Lean proofs
+        run: ./tools/check_lean_proofs.sh

@@ -10,6 +10,8 @@ SCPN Phase Orchestrator — Lean projector safety proofs
 
 import Std
 
+set_option autoImplicit false
+
 namespace SPOFormal.Projector
 
 /-- Natural-number clamp used as a fixed-point model of actuator bounds. -/
@@ -206,5 +208,12 @@ theorem adaptiveRateLimitNat_upper {riskSignal : Nat} {cfg : AdaptiveRateLimitCo
   unfold adaptiveRateLimitNat
   simp [hValid]
   exact clampNat_upper (Nat.le_trans hValid.left hValid.right.left)
+
+theorem adaptiveRateLimitNat_invalid_fallback
+    {riskSignal : Nat} {cfg : AdaptiveRateLimitConfig}
+    (hInvalid : ¬ cfg.Valid) :
+    adaptiveRateLimitNat riskSignal cfg = min cfg.minLimit cfg.maxLimit := by
+  unfold adaptiveRateLimitNat
+  simp [hInvalid]
 
 end SPOFormal.Projector
