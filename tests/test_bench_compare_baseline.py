@@ -15,8 +15,8 @@ on well-behaved builds. Cover the four behavioural branches:
 * Exit 0 when no config regresses past the 20% threshold.
 * Exit 1 with a human-readable summary when at least one does.
 * Exit 2 with a usage message on the wrong argv length.
-* Baseline entries keyed by (n_osc, method, backend); missing keys in
-  ``current`` are silently ignored (partial runs allowed).
+* Baseline entries keyed by (n_osc, method, backend); missing baseline keys in
+  ``current`` fail by default, with an explicit partial-run flag for local use.
 
 Exercised both the list-form and dict-form baseline JSON layouts.
 """
@@ -39,9 +39,19 @@ def _write_json(path: Path, obj: Any) -> None:
     path.write_text(json.dumps(obj), encoding="utf-8")
 
 
-def _run(baseline_path: Path, current_path: Path) -> subprocess.CompletedProcess[str]:
+def _run(
+    baseline_path: Path,
+    current_path: Path,
+    *extra_args: str,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, str(COMPARE_SCRIPT), str(baseline_path), str(current_path)],
+        [
+            sys.executable,
+            str(COMPARE_SCRIPT),
+            str(baseline_path),
+            str(current_path),
+            *extra_args,
+        ],
         capture_output=True,
         text=True,
         check=False,
@@ -177,20 +187,35 @@ def test_category_form_baseline_accepted(tmp_path: Path) -> None:
     assert "within regression threshold" in proc.stdout
 
 
-def test_missing_current_key_silently_skipped(tmp_path: Path) -> None:
-    """Current entries without a baseline counterpart are ignored: a
-    partial benchmark run does not fail the guard."""
+def test_missing_current_baseline_key_fails_closed(tmp_path: Path) -> None:
+    """Current runs missing a checked-in baseline key fail closed."""
     baseline = [_entry(8, "euler", "rust", 10.0)]
     current = [_entry(64, "rk4", "python", 100.0)]  # completely different key
     _write_json(tmp_path / "b.json", baseline)
     _write_json(tmp_path / "c.json", current)
     proc = _run(tmp_path / "b.json", tmp_path / "c.json")
-    assert proc.returncode == 0
+    assert proc.returncode == 1
+    assert "missing baseline configurations" in proc.stdout
+
+
+def test_missing_current_key_allowed_only_with_partial_run_flag(tmp_path: Path) -> None:
+    """Deliberate local partial runs must opt in explicitly."""
+    baseline = [_entry(8, "euler", "rust", 10.0)]
+    current = [_entry(64, "rk4", "python", 100.0)]
+    _write_json(tmp_path / "b.json", baseline)
+    _write_json(tmp_path / "c.json", current)
+    proc = _run(
+        tmp_path / "b.json",
+        tmp_path / "c.json",
+        "--allow-missing-current",
+    )
+    assert proc.returncode == 1
     assert "No overlapping benchmark entries found" in proc.stdout
 
 
 def test_malformed_benchmark_records_are_ignored(tmp_path: Path) -> None:
-    """Non-comparable records do not crash the guard."""
+    """Non-comparable records do not crash the guard, but no baseline
+    comparisons still fail closed."""
     baseline = {
         "meta": {"generated": "fixture"},
         "results": [
@@ -202,19 +227,48 @@ def test_malformed_benchmark_records_are_ignored(tmp_path: Path) -> None:
     _write_json(tmp_path / "b.json", baseline)
     _write_json(tmp_path / "c.json", current)
     proc = _run(tmp_path / "b.json", tmp_path / "c.json")
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert "No overlapping benchmark entries found" in proc.stdout
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "No comparable baseline benchmark entries found" in proc.stdout
 
 
-def test_zero_baseline_skipped(tmp_path: Path) -> None:
-    """Entries with a zero or negative baseline are skipped to avoid
-    division-by-zero; the run still passes overall."""
+def test_zero_baseline_fails_closed(tmp_path: Path) -> None:
+    """Zero baselines are invalid because they hide division-by-zero and
+    remove the regression budget."""
     baseline = [_entry(8, "euler", "rust", 0.0)]
     current = [_entry(8, "euler", "rust", 5.0)]
     _write_json(tmp_path / "b.json", baseline)
     _write_json(tmp_path / "c.json", current)
     proc = _run(tmp_path / "b.json", tmp_path / "c.json")
-    assert proc.returncode == 0
+    assert proc.returncode != 0
+    assert "finite and > 0" in proc.stderr
+
+
+def test_duplicate_baseline_key_fails_closed(tmp_path: Path) -> None:
+    """Duplicate baseline keys must not silently overwrite each other."""
+    baseline = [
+        _entry(8, "euler", "rust", 10.0),
+        _entry(8, "euler", "rust", 11.0),
+    ]
+    current = [_entry(8, "euler", "rust", 10.0)]
+    _write_json(tmp_path / "b.json", baseline)
+    _write_json(tmp_path / "c.json", current)
+    proc = _run(tmp_path / "b.json", tmp_path / "c.json")
+    assert proc.returncode == 1
+    assert "Duplicate baseline benchmark entry" in proc.stdout
+
+
+def test_duplicate_current_key_fails_closed(tmp_path: Path) -> None:
+    """Duplicate current keys must not double-count or mask a regression."""
+    baseline = [_entry(8, "euler", "rust", 10.0)]
+    current = [
+        _entry(8, "euler", "rust", 10.0),
+        _entry(8, "euler", "rust", 12.0),
+    ]
+    _write_json(tmp_path / "b.json", baseline)
+    _write_json(tmp_path / "c.json", current)
+    proc = _run(tmp_path / "b.json", tmp_path / "c.json")
+    assert proc.returncode == 1
+    assert "Duplicate current benchmark entry" in proc.stdout
 
 
 # ---------------------------------------------------------------------
@@ -231,7 +285,7 @@ def test_wrong_argv_length_prints_usage(tmp_path: Path) -> None:
         check=False,
     )
     assert proc.returncode == 2
-    assert "Usage:" in proc.stderr
+    assert "usage:" in proc.stderr
 
 
 def test_missing_baseline_file_raises(tmp_path: Path) -> None:

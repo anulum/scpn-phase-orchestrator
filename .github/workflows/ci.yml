@@ -400,11 +400,22 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            spo-kernel/target
+          key: cargo-benchmark-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-benchmark-
+      - run: |
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: python bench/run_benchmarks.py --json > bench/current.json
-      - name: Compare against baseline (informational)
+      - name: Compare against baseline
         run: python bench/compare_baseline.py bench/baseline.json bench/current.json
-        continue-on-error: true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: benchmark-results

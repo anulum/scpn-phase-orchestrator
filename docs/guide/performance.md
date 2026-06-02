@@ -97,11 +97,10 @@ Run `bench/run_benchmarks.py` for systematic measurement:
 
 ```bash
 python bench/run_benchmarks.py --json > results.json
-python bench/run_benchmarks.py --python-only  # force numpy path
 ```
 
 Output includes per-N step times, total wall time, and backend identification
-(numpy vs spo_kernel).
+(`python`, `rust`, or `rust_batch`, depending on optional backend availability).
 
 ## Reference Benchmark Suite
 
@@ -126,12 +125,21 @@ same environment and the new JSON artefact is available for review.
 
 ## Baseline Regression
 
-CI compares benchmark results against `bench/baseline.json`. A step-time
-increase of >20% over baseline fails the check. Update baselines after
-intentional algorithm changes:
+CI builds the Rust FFI backend, runs `bench/run_benchmarks.py`, and compares
+the result against `bench/baseline.json`. The regression gate fails closed when:
+
+- no comparable baseline records exist;
+- the current run has no comparable records;
+- a checked-in baseline configuration is missing from the current run;
+- any comparable `us_per_step` value is non-finite or non-positive;
+- a step-time increase exceeds the configured threshold, currently 20%.
+
+Use `--allow-missing-current` only for deliberate local partial comparisons,
+not for CI. Update baselines after intentional algorithm changes:
 
 ```bash
 python bench/run_benchmarks.py --json > bench/baseline.json
+python bench/compare_baseline.py bench/baseline.json bench/current.json
 ```
 
 ## Tips
