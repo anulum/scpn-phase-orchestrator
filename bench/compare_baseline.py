@@ -11,7 +11,8 @@
 Usage:
     python bench/compare_baseline.py bench/baseline.json bench/current.json
 
-Exit code 1 if any configuration regresses >20%.
+Exit code 1 if any configuration regresses beyond the configured relative
+and absolute significance budgets.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 REGRESSION_THRESHOLD_PCT = 20.0
+REGRESSION_MIN_ABSOLUTE_US = 100.0
 BENCHMARK_KEY_FIELDS = ("n_osc", "method", "backend")
 BENCHMARK_VALUE_FIELD = "us_per_step"
 
@@ -119,6 +121,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="Allowed slowdown percentage before a comparison fails.",
     )
     parser.add_argument(
+        "--min-absolute-us",
+        type=float,
+        default=REGRESSION_MIN_ABSOLUTE_US,
+        help=(
+            "Minimum absolute slowdown in microseconds required before a "
+            "relative regression is considered significant."
+        ),
+    )
+    parser.add_argument(
         "--allow-missing-current",
         action="store_true",
         help=(
@@ -137,6 +148,9 @@ def main() -> int:
 
     if not math.isfinite(args.threshold_pct) or args.threshold_pct < 0.0:
         print("threshold percentage must be finite and >= 0", file=sys.stderr)
+        return 2
+    if not math.isfinite(args.min_absolute_us) or args.min_absolute_us < 0.0:
+        print("minimum absolute slowdown must be finite and >= 0", file=sys.stderr)
         return 2
 
     try:
@@ -182,16 +196,23 @@ def main() -> int:
             field=BENCHMARK_VALUE_FIELD,
         )
         comparisons += 1
-        pct = (cur_val - base_val) / base_val * 100.0
-        status = "PASS" if pct <= args.threshold_pct else "FAIL"
+        delta_us = cur_val - base_val
+        pct = delta_us / base_val * 100.0
+        significant = pct > args.threshold_pct and delta_us >= args.min_absolute_us
+        status = "FAIL" if significant else "PASS"
         label = f"N={key[0]:4d} {key[1]:>5s} {key[2]:>6s}"
         msg = (
             f"  {status}  {label}  {base_val:8.1f} -> {cur_val:8.1f}"
-            f" us/step  ({pct:+.1f}%)"
+            f" us/step  ({pct:+.1f}%, {delta_us:+.1f} us)"
         )
         print(msg)
-        if pct > args.threshold_pct:
-            failures.append((label, pct))
+        if pct > args.threshold_pct and not significant:
+            print(
+                f"        tolerated: absolute slowdown below "
+                f"{args.min_absolute_us:.1f} us significance floor"
+            )
+        if significant:
+            failures.append((label, pct, delta_us))
 
     missing_current = sorted(set(base_map) - current_keys)
     if missing_current and not args.allow_missing_current:

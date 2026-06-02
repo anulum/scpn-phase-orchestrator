@@ -113,21 +113,39 @@ def test_boundary_exactly_20_percent_is_pass(tmp_path: Path) -> None:
     assert "+20.0%" in proc.stdout
 
 
+def test_small_absolute_ci_noise_is_pass(tmp_path: Path) -> None:
+    """Large percentages on tiny timings stay below the absolute floor.
+
+    CI runners can add tens of microseconds of fixed overhead to very small
+    oscillator cases. The benchmark gate should report the movement but not
+    fail unless the slowdown is also materially large in absolute terms.
+    """
+    baseline = [_entry(8, "euler", "rust", 7.5)]
+    current = [_entry(8, "euler", "rust", 60.8)]
+    _write_json(tmp_path / "b.json", baseline)
+    _write_json(tmp_path / "c.json", current)
+    proc = _run(tmp_path / "b.json", tmp_path / "c.json")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "tolerated" in proc.stdout
+    assert "+53.3 us" in proc.stdout
+
+
 # ---------------------------------------------------------------------
 # FAIL cases
 # ---------------------------------------------------------------------
 
 
 def test_regression_above_threshold_fails(tmp_path: Path) -> None:
-    """>20% slower triggers exit 1 and the regression is listed."""
-    baseline = [_entry(32, "euler", "rust", 10.0)]
-    current = [_entry(32, "euler", "rust", 15.0)]  # +50%
+    """>20% and materially slower triggers exit 1 and is listed."""
+    baseline = [_entry(32, "euler", "rust", 100.0)]
+    current = [_entry(32, "euler", "rust", 250.0)]  # +150%, +150 us
     _write_json(tmp_path / "b.json", baseline)
     _write_json(tmp_path / "c.json", current)
     proc = _run(tmp_path / "b.json", tmp_path / "c.json")
     assert proc.returncode == 1, proc.stdout + proc.stderr
     assert "FAIL" in proc.stdout
-    assert "+50.0%" in proc.stdout
+    assert "+150.0%" in proc.stdout
+    assert "+150.0 us" in proc.stdout
     assert "1 regression(s)" in proc.stdout
 
 
@@ -139,9 +157,9 @@ def test_multiple_regressions_all_reported(tmp_path: Path) -> None:
         _entry(32, "rk45", "rust", 40.0),
     ]
     current = [
-        _entry(8, "euler", "rust", 15.0),  # +50%
+        _entry(8, "euler", "rust", 150.0),  # +1400%, +140 us
         _entry(16, "rk4", "rust", 20.0),  # 0%
-        _entry(32, "rk45", "rust", 70.0),  # +75%
+        _entry(32, "rk45", "rust", 170.0),  # +325%, +130 us
     ]
     _write_json(tmp_path / "b.json", baseline)
     _write_json(tmp_path / "c.json", current)

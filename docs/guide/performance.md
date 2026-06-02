@@ -135,7 +135,13 @@ the result against `bench/baseline.json`. The regression gate fails closed when:
 - a baseline or current benchmark key is duplicated;
 - a checked-in baseline configuration is missing from the current run;
 - any comparable `us_per_step` value is non-finite or non-positive;
-- a step-time increase exceeds the configured threshold, currently 20%.
+- a step-time increase exceeds both the configured relative threshold, currently
+  20%, and the configured absolute significance floor, currently 100 us.
+
+The absolute floor is deliberate. Very small oscillator cases can move by large
+percentages when a hosted CI runner adds fixed overhead, while larger cases in
+the same run may improve. The gate reports those tiny-case movements as
+tolerated noise, but it still fails closed for materially large slowdowns.
 
 Use `--allow-missing-current` only for deliberate local partial comparisons,
 not for CI. Update baselines after intentional algorithm changes:
