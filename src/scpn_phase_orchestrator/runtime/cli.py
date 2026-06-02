@@ -5400,20 +5400,11 @@ def run(
 
     supervisor = SupervisorPolicy(regime_manager, petri_adapter=petri_adapter)
 
-    # ActionProjector — derive bounds from domainpack actuators
-    value_bounds: dict[str, tuple[float, float]] = {}
-    for act in spec.actuators:
-        if act.limits and len(act.limits) == 2:
-            value_bounds[act.knob] = (act.limits[0], act.limits[1])
-    projector = ActionProjector(
-        rate_limits={"K": 0.1, "zeta": 0.2, "alpha": 0.1, "Psi": 0.5},
-        value_bounds=value_bounds
-        or {
-            "K": (-0.5, 0.5),
-            "zeta": (0.0, 0.5),
-            "alpha": (-1.0, 1.0),
-        },
-    )
+    # ActionProjector -- derive bounds and optional slew limits from domainpack
+    # actuators. Binding specs own actuator-rate provenance through
+    # actuators[].rate_limit_per_step; omitted values intentionally mean
+    # "bounded but not slew-limited" for that knob.
+    projector = ActionProjector.from_actuator_mappings(spec.actuators)
     prev_values: dict[str, float] = {"K": 0.0, "zeta": 0.0, "alpha": 0.0, "Psi": 0.0}
 
     # Policy rules from domainpack (optional)
