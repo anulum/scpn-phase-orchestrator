@@ -47,4 +47,4 @@ jobs:
           use-github-cache: false
 
       - name: Check Lean proofs
-        run: ../../tools/check_lean_proofs.sh
+        run: bash ../../tools/check_lean_proofs.sh
