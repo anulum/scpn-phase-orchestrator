@@ -290,8 +290,7 @@ def test_non_finite_json_token_fails_closed(tmp_path: Path) -> None:
     """Benchmark evidence JSON must not contain NaN/Infinity tokens."""
     baseline = tmp_path / "b.json"
     baseline.write_text(
-        '[{"n_osc": 8, "method": "euler", "backend": "rust", '
-        '"us_per_step": NaN}]',
+        '[{"n_osc": 8, "method": "euler", "backend": "rust", "us_per_step": NaN}]',
         encoding="utf-8",
     )
     current = tmp_path / "c.json"
