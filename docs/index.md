@@ -51,6 +51,7 @@ control evidence:
 | If you are asking... | Start here |
 |----------------------|------------|
 | What is this software for? | [Use Cases and Value Map](getting-started/use_cases.md) |
+| What is the business/operator value? | [Executive Overview](getting-started/executive_overview.md) |
 | How do I run something in five minutes? | [Quickstart](getting-started/quickstart.md) |
 | How do I decide what counts as an oscillator? | [Oscillator Hunt Sheet](tutorials/02_oscillator_hunt_sheet.md) |
 | How do I move from raw data to a run? | [End-to-End From Raw Sources](tutorials/05_from_raw_sources_to_run.md) |
@@ -191,7 +192,7 @@ print("OK")
 
 | Section | Description |
 |---------|-------------|
-| [Getting Started](getting-started/onboarding.md) | Onboarding, install, quickstart, hello world tutorial |
+| [Getting Started](getting-started/onboarding.md) | Executive overview, onboarding, install, quickstart, hello world tutorial |
 | [Concepts](concepts/system_overview.md) | System overview, oscillators, control knobs, imprint model |
 | [Guides](guide/stuart_landau.md) | Stuart-Landau, QueueWaves, Rust FFI, adapters, production |
 | [Specifications](specs/binding_spec.schema.json) | Binding schema, UPDE numerics, policy DSL, all contracts |

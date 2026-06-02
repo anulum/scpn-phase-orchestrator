@@ -22,6 +22,7 @@ user roles, evidence boundaries, and API routes.
 | Goal | Page | Outcome |
 |------|------|---------|
 | Understand the product | [Use Cases and Value Map](use_cases.md) | know the domain and user routes |
+| Understand product value | [Executive Overview](executive_overview.md) | explain the market, operator, and evidence posture |
 | Run a local simulation | [Quickstart](quickstart.md) | validate and run a minimal domainpack |
 | Choose a tutorial path | [Choose a Use Case](../tutorials/00_choose_a_use_case.md) | select the right workflow |
 | Inspect the Python entry point | [Python Facade API](../reference/api/api.md) | embed a reviewed binding in code |
@@ -38,6 +39,7 @@ user roles, evidence boundaries, and API routes.
 | Move from notebook to service | [Notebook to Production](../guide/notebook_to_production.md) | `spo replay audit.jsonl --verify` |
 | Explore APIs | [API Reference](../reference/api/index.md) | import the documented class/function |
 | Present or teach the system | [Notebooks & Demos](../galleries/notebooks_and_demos.md) | run the listed notebook or demo command |
+| Explain adoption value | [Executive Overview](executive_overview.md) | connect use cases, evidence, and buyer-facing value |
 | Fix a local failure | [Troubleshooting](troubleshooting.md) | reproduce with exact command, seed, and environment |
 
 ## First Hour

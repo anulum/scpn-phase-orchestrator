@@ -5,7 +5,7 @@
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.6.4 |
+| Package version | 0.6.5 |
 | Public API exports | 24 |
 | Python package modules | 447 |
 | Core Engine modules | 224 |
@@ -17,6 +17,6 @@
 | Optional extras | 15 |
 | Python test files | 524 |
 | Public documentation pages | 175 |
-| GitHub Actions workflows | 11 |
+| GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

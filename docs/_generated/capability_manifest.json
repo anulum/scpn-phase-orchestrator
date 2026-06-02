@@ -3,7 +3,7 @@
   "counts": {
     "core_engine_modules": 224,
     "domainpacks": 36,
-    "github_workflows": 11,
+    "github_workflows": 12,
     "integration_modules": 24,
     "optional_extras": 15,
     "public_api_exports": 24,
@@ -760,7 +760,7 @@
     "name": "scpn-phase-orchestrator",
     "readme": "README.md",
     "requires_python": ">=3.10,<3.14",
-    "version": "0.6.4"
+    "version": "0.6.5"
   },
   "project_label": "SCPN Phase Orchestrator",
   "python_package_modules": [
@@ -1220,6 +1220,7 @@
       ".github/workflows/docs.yml",
       ".github/workflows/formal-model-checkers.yml",
       ".github/workflows/kani.yml",
+      ".github/workflows/lean.yml",
       ".github/workflows/pre-commit.yml",
       ".github/workflows/publish.yml",
       ".github/workflows/release.yml",

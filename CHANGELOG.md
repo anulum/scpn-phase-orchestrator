@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-06-02
+
+### Changed
+
+- Polished the public README, documentation home page, onboarding route, and
+  Python facade API reference with clearer use-case, operator-value,
+  evidence-boundary, release-posture, and reader-routing guidance.
+- Added an executive overview page for buyer, operator, and technical
+  evaluation paths across domainpacks, dynamics, supervision, evidence, and
+  frontier tracks.
+- Bumped release metadata and regenerated the public capability inventory for
+  the release-preparation pass.
+
 ## [0.6.4] - 2026-06-02
 
 ### Changed
@@ -1749,7 +1762,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.1...v0.6.2

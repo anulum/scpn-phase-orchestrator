@@ -54,6 +54,7 @@ nav:
   - Home: index.md
   - Getting Started:
       - Onboarding Handbook: getting-started/onboarding.md
+      - Executive Overview: getting-started/executive_overview.md
       - Use Cases and Value Map: getting-started/use_cases.md
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md

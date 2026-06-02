@@ -8,41 +8,20 @@
 
 # Python Facade
 
-The Python facade is the smallest stable local simulation entry point.
+The Python facade is the smallest stable local simulation entry point. It exists
+for notebooks, services, validation scripts, and downstream projects that need a
+reviewed binding specification without invoking the `spo` command-line
+interface.
 
-It exists for application code that should not invoke the `spo` command-line interface directly.
+The facade is intentionally narrower than the CLI and narrower than the full
+research package. It accepts a `BindingSpec`, can load a reviewed
+`binding_spec.yaml`, validates the binding before execution, executes local
+Kuramoto dynamics, and returns an immutable `OrchestratorState` record.
 
-It is intentionally narrower than the CLI.
-
-It is intentionally narrower than the full research package.
-
-It gives notebooks, services, validation scripts, and downstream projects a direct import path for a reviewed binding specification.
-
-The facade accepts a `BindingSpec`.
-
-The facade can load a reviewed `binding_spec.yaml`.
-
-The facade validates the binding before execution.
-
-The facade executes local Kuramoto dynamics only.
-
-The facade returns an immutable `OrchestratorState` record.
-
-The facade does no hardware actuation.
-
-The facade does no network IO.
-
-The facade does not evaluate supervisor policy actions.
-
-The facade does not write audit logs.
-
-The facade does not open sockets.
-
-The facade does not dispatch to external devices.
-
-The facade does not mutate the source binding spec.
-
-The facade is suitable for deterministic local checks and embedded Python workflows.
+Use it for deterministic local checks and embedded Python workflows. Do not use
+it for hardware actuation, network IO, supervisor policy execution, audit-log
+writing, socket serving, external-device dispatch, or mutation of the source
+binding spec.
 
 ## Public surface
 
