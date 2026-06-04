@@ -16,6 +16,7 @@ from benchmarks.reference_suite import (
     benchmark_autopoietic_lineage_sandbox_gate,
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
+    benchmark_chimera_polyglot_parity_gate,
     benchmark_dimension_polyglot_parity_gate,
     benchmark_domain_formal_safety_exports,
     benchmark_evolutionary_mutation_grammar_gate,
@@ -2251,6 +2252,70 @@ def test_itpc_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["parity_passed"] is False
 
 
+def test_chimera_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_chimera_polyglot_parity_gate(
+        n=8,
+        density=0.5,
+        calls=1,
+        seed=2026,
+    )
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "chimera_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["parity_pass_count"] == out["available_backend_count"]
+    assert out["acceptance_passed"] == 1
+    assert 0.0 <= float(out["reference_local_order_min"]) <= 1.0
+    assert 0.0 <= float(out["reference_local_order_max"]) <= 1.0
+    assert 0.0 <= float(out["reference_local_order_mean"]) <= 1.0
+    assert abs(float(out["reference_uniform_circle_value"]) - (1.0 / 7.0)) <= 1e-12
+    assert len(str(out["reference_local_order_sha256"])) == 64
+    assert len(str(out["reference_shifted_local_order_sha256"])) == 64
+    assert len(str(out["reference_synchronised_local_order_sha256"])) == 64
+    assert len(str(out["reference_uniform_circle_local_order_sha256"])) == 64
+    assert len(str(out["reference_disconnected_local_order_sha256"])) == 64
+    assert len(str(out["benchmark_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+    assert [record["backend"] for record in records] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds == {
+        "backend_order": ["rust", "mojo", "julia", "go", "python"],
+        "max_mojo_abs_error": 1e-09,
+        "max_native_abs_error": 1e-12,
+        "require_all_available_parity": True,
+        "require_all_declared_backend_records": True,
+        "require_disconnected_zero_local_order": True,
+        "require_global_phase_shift_invariance": True,
+        "require_python_reference": True,
+        "require_synchronised_unit_local_order": True,
+        "require_uniform_circle_reference": True,
+        "require_unit_interval_local_order": True,
+    }
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["reference_contracts_passed"] is True
+            assert record["local_order_sha256"] is not None
+            assert record["shifted_local_order_sha256"] is not None
+            assert record["synchronised_local_order_sha256"] is not None
+            assert record["uniform_circle_local_order_sha256"] is not None
+            assert record["disconnected_local_order_sha256"] is not None
+            assert record["ms_per_call"] is not None
+            assert record["max_abs_error"] <= record["tolerance"]
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["parity_passed"] is False
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -2265,6 +2330,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "autopoietic_lineage",
         "bayesian_backends",
         "bayesian_posterior",
+        "chimera_polyglot",
         "domain_formal_export",
         "formal_export",
         "hybrid_cocompiler",

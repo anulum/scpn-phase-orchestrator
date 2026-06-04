@@ -322,6 +322,7 @@ flags, and steps/s values for each suite. Selected reference suites:
 | `kuramoto_reference_strogatz_2000` | Strogatz/Acebrón synchronisation plus exact two-oscillator locking acceptance | `7372.45` |
 | `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `3710.56` |
 | `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `85707.77` |
+| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `6.88` |
 | `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `4.76` |
 
 Physics invariants are also executable as focused tests:
@@ -347,6 +348,11 @@ The ITPC polyglot record checks the Lachaux inter-trial phase-coherence
 estimator across every declared backend slot, including unit coherence for
 aligned trials, zero coherence for opposite-phase trials, bounded pause
 persistence, and explicit unavailable-toolchain evidence.
+The chimera polyglot record checks the Kuramoto-Battogtokh local-order vector
+across every declared backend slot, including global phase-gauge invariance,
+synchronised unit local order, disconnected zero local order, the exact
+uniform-circle all-to-all reference, and explicit unavailable-toolchain
+evidence.
 
 ## Hardware Integration Boundary
 

@@ -23,6 +23,7 @@ from typing import NamedTuple, TypedDict
 import numpy as np
 from numpy.typing import NDArray
 
+from benchmarks.chimera_benchmark import benchmark_chimera_polyglot_parity_gate
 from benchmarks.dimension_benchmark import benchmark_dimension_polyglot_parity_gate
 from benchmarks.itpc_benchmark import benchmark_itpc_polyglot_parity_gate
 from benchmarks.lyapunov_benchmark import benchmark_lyapunov_polyglot_parity_gate
@@ -7821,6 +7822,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
+            "chimera_polyglot": benchmark_chimera_polyglot_parity_gate(),
             "dimension_polyglot": benchmark_dimension_polyglot_parity_gate(),
             "itpc_polyglot": benchmark_itpc_polyglot_parity_gate(),
             "lyapunov_polyglot": benchmark_lyapunov_polyglot_parity_gate(),

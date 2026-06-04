@@ -39,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   status, inter-trial phase-coherence vector parity, pause-persistence parity,
   aligned-trial unit coherence, and opposite-phase zero coherence in the
   reference-suite snapshot.
+- Added a chimera polyglot benchmark gate that records Rust/Mojo/Julia/Go/Python
+  status, Kuramoto-Battogtokh local-order parity, global phase-gauge
+  invariance, synchronised unit local order, disconnected zero local order, and
+  the exact uniform-circle all-to-all reference in the reference-suite snapshot.
 - Added an order-parameter polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python parity for Kuramoto `R`, mean phase, PLV, and layer
   coherence in the reference-suite snapshot.

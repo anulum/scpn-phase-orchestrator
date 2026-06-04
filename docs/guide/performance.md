@@ -136,6 +136,11 @@ phase-coherence estimator. It records Rust/Mojo/Julia/Go/Python slot status,
 vector parity, pause-persistence parity, aligned-trial unit coherence,
 opposite-phase zero coherence, unit-interval bounds, and unavailable-toolchain
 reasons without mocking the backend boundary.
+The chimera record is a polyglot physics gate for the Kuramoto-Battogtokh
+local-order vector. It records Rust/Mojo/Julia/Go/Python slot status, local
+order parity, global phase-gauge invariance, synchronised unit local order,
+disconnected zero local order, and the exact uniform-circle all-to-all
+reference `1 / (N - 1)`.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the
