@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Rust/Mojo/Julia/Go/Python full-pairs correlation-integral parity,
   monotonicity, unit-interval bounds, and Kaplan-Yorke parity in the
   reference-suite snapshot.
+- Added Strogatz/Acebrón Kuramoto reference acceptance fields for bounded
+  coherence, zero self-coupling, and the exact two-oscillator locked phase-lag
+  law in the reference-suite snapshot.
 - Added a Lyapunov spectrum polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python status, timing, and numerical parity against the
   Python reference in the reference-suite snapshot.

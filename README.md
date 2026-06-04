@@ -319,7 +319,7 @@ flags, and steps/s values for each suite. Selected reference suites:
 
 | Suite | Reference contract | Snapshot steps/s |
 |-------|--------------------|-----------------:|
-| `kuramoto_reference_strogatz_2000` | Kuramoto/Strogatz synchronisation reference | `6941.27` |
+| `kuramoto_reference_strogatz_2000` | Strogatz/Acebrón synchronisation plus exact two-oscillator locking acceptance | `7372.45` |
 | `stuart_landau_reference_pikovsky_2001` | Stuart-Landau limit-cycle reference | `3722.04` |
 | `petri_net_reachability` | Petri-net reachability reference | `244900` |
 
@@ -329,10 +329,13 @@ Physics invariants are also executable as focused tests:
 PYTHONPATH=src pytest tests/test_physics_benchmarks.py
 ```
 
-Those tests cover Strogatz/Kuramoto synchronisation, weak-coupling
-desynchronisation, coupling monotonicity, external-drive entrainment,
-Stuart-Landau limit cycles, subcritical decay, amplitude consensus, and
-zero-coupling independence.
+The Kuramoto reference suite now records acceptance fields for zero
+self-coupling, bounded `R`, identical-oscillator coherence, and the exact
+two-oscillator locking law
+`theta_2 - theta_1 = asin((omega_2 - omega_1) / (2K))`. Focused physics tests
+also cover weak-coupling desynchronisation, coupling monotonicity,
+external-drive entrainment, Stuart-Landau limit cycles, subcritical decay,
+amplitude consensus, and zero-coupling independence.
 
 ## Hardware Integration Boundary
 

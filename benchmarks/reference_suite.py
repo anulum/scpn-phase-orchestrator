@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import NamedTuple, TypedDict
 
 import numpy as np
+from numpy.typing import NDArray
 
 from benchmarks.dimension_benchmark import benchmark_dimension_polyglot_parity_gate
 from benchmarks.lyapunov_benchmark import benchmark_lyapunov_polyglot_parity_gate
@@ -843,22 +844,132 @@ def benchmark_semantic_retrieval_ranking_quality() -> dict[str, float | int | st
     }
 
 
+def _validate_reference_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (int, np.integer),
+    ):
+        raise ValueError(f"{name} must be a non-boolean integer")
+    parsed = int(value)
+    if parsed < 1:
+        raise ValueError(f"{name} must be positive")
+    return parsed
+
+
+def _validate_reference_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (float, int, np.floating, np.integer),
+    ):
+        raise ValueError(f"{name} must be a positive finite real")
+    parsed = float(value)
+    if not np.isfinite(parsed) or parsed <= 0.0:
+        raise ValueError(f"{name} must be a positive finite real")
+    return parsed
+
+
+def _phase_delta(angle: float) -> float:
+    return float(((angle + np.pi) % (2.0 * np.pi)) - np.pi)
+
+
+def _run_kuramoto_reference_case(
+    *,
+    phases: NDArray[np.float64],
+    omegas: NDArray[np.float64],
+    knm: NDArray[np.float64],
+    dt: float,
+    n_steps: int,
+) -> NDArray[np.float64]:
+    alpha = np.zeros_like(knm)
+    engine = UPDEEngine(n_oscillators=phases.size, dt=dt, method="rk4")
+    state = np.ascontiguousarray(phases, dtype=np.float64)
+    for _ in range(n_steps):
+        state = engine.step(state, omegas, knm, 0.0, 0.0, alpha)
+    return state
+
+
 def benchmark_kuramoto_reference(
     n_oscillators: int = 64, n_steps: int = 1000, dt: float = 0.01
 ) -> dict[str, float | int | str]:
+    n_oscillators = _validate_reference_positive_int(
+        n_oscillators,
+        name="n_oscillators",
+    )
+    if n_oscillators < 2:
+        raise ValueError("n_oscillators must be at least 2")
+    n_steps = _validate_reference_positive_int(n_steps, name="n_steps")
+    dt = _validate_reference_positive_float(dt, name="dt")
+
     rng = np.random.default_rng(42)
     phases = rng.uniform(0.0, 2.0 * np.pi, size=n_oscillators)
     omegas = np.zeros(n_oscillators)
     knm = np.full((n_oscillators, n_oscillators), 0.4, dtype=float)
     np.fill_diagonal(knm, 0.0)
-    alpha = np.zeros_like(knm)
-    engine = UPDEEngine(n_oscillators=n_oscillators, dt=dt, method="rk4")
 
     t0 = time.perf_counter()
-    for _ in range(n_steps):
-        phases = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+    phases = _run_kuramoto_reference_case(
+        phases=phases,
+        omegas=omegas,
+        knm=knm,
+        dt=dt,
+        n_steps=n_steps,
+    )
     elapsed = time.perf_counter() - t0
     final_r, _ = compute_order_parameter(phases)
+
+    lock_coupling = 0.35
+    lock_omegas = np.array([-0.2, 0.2], dtype=np.float64)
+    lock_delta_omega = float(lock_omegas[1] - lock_omegas[0])
+    lock_threshold = abs(lock_delta_omega) / 2.0
+    lock_steps = max(1000, n_steps)
+    lock_phases = _run_kuramoto_reference_case(
+        phases=np.array([0.0, 0.1], dtype=np.float64),
+        omegas=lock_omegas,
+        knm=np.array([[0.0, lock_coupling], [lock_coupling, 0.0]], dtype=np.float64),
+        dt=dt,
+        n_steps=lock_steps,
+    )
+    predicted_lock_lag = float(np.arcsin(lock_delta_omega / (2.0 * lock_coupling)))
+    observed_lock_lag = _phase_delta(float(lock_phases[1] - lock_phases[0]))
+    lock_error = abs(_phase_delta(observed_lock_lag - predicted_lock_lag))
+    thresholds = {
+        "max_two_oscillator_lock_error_rad": 1.0e-2,
+        "min_identical_final_order_parameter": 0.99,
+        "require_analytic_lock_condition": True,
+        "require_bounded_order_parameter": True,
+        "require_zero_self_coupling": True,
+    }
+    zero_self_coupling = bool(np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=0.0))
+    analytic_lock_condition = bool(abs(lock_delta_omega) < 2.0 * lock_coupling)
+    identical_coherence_passed = bool(
+        float(final_r) >= thresholds["min_identical_final_order_parameter"]
+    )
+    analytic_lock_passed = bool(
+        lock_error <= thresholds["max_two_oscillator_lock_error_rad"]
+    )
+    bounded_order_parameter = bool(0.0 <= float(final_r) <= 1.0)
+    acceptance_passed = int(
+        zero_self_coupling
+        and analytic_lock_condition
+        and identical_coherence_passed
+        and analytic_lock_passed
+        and bounded_order_parameter
+    )
+    benchmark_payload = {
+        "analytic_lock_condition": analytic_lock_condition,
+        "final_order_parameter": float(final_r),
+        "lock_error": lock_error,
+        "lock_steps": lock_steps,
+        "observed_lock_lag": observed_lock_lag,
+        "predicted_lock_lag": predicted_lock_lag,
+        "thresholds": thresholds,
+        "zero_self_coupling": zero_self_coupling,
+    }
+    benchmark_sha = sha256(
+        json.dumps(benchmark_payload, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+    ).hexdigest()
 
     return {
         "suite": "kuramoto_reference_strogatz_2000",
@@ -867,6 +978,21 @@ def benchmark_kuramoto_reference(
         "wall_time_s": elapsed,
         "steps_per_second": n_steps / elapsed,
         "final_order_parameter": float(final_r),
+        "two_oscillator_coupling": lock_coupling,
+        "two_oscillator_delta_omega": lock_delta_omega,
+        "two_oscillator_lock_threshold": lock_threshold,
+        "two_oscillator_lock_steps": lock_steps,
+        "two_oscillator_predicted_lag_rad": predicted_lock_lag,
+        "two_oscillator_observed_lag_rad": observed_lock_lag,
+        "two_oscillator_lock_error_rad": lock_error,
+        "zero_self_coupling": int(zero_self_coupling),
+        "analytic_lock_condition": int(analytic_lock_condition),
+        "identical_coherence_passed": int(identical_coherence_passed),
+        "analytic_lock_passed": int(analytic_lock_passed),
+        "bounded_order_parameter": int(bounded_order_parameter),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(thresholds, sort_keys=True),
+        "benchmark_sha256": benchmark_sha,
     }
 
 

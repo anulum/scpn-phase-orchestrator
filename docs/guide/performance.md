@@ -105,7 +105,8 @@ Output includes per-N step times, total wall time, and backend identification
 ## Reference Benchmark Suite
 
 Run the v1 reference suite when publishing benchmark snapshots against the
-Kuramoto/Strogatz, Stuart-Landau/Pikovsky, and Petri-net reference surfaces:
+Kuramoto/Strogatz/Acebrón, Stuart-Landau/Pikovsky, and Petri-net reference
+surfaces:
 
 ```bash
 PYTHONPATH=src python benchmarks/reference_suite.py
@@ -117,7 +118,12 @@ contains two top-level fields:
 | Field | Purpose |
 |-------|---------|
 | `metadata` | Snapshot date, exact command, backend label, Python version, NumPy version, executable, and platform string |
-| `benchmarks` | Kuramoto, Stuart-Landau, and Petri reachability timings plus physical summary values |
+| `benchmarks` | Kuramoto, Stuart-Landau, Petri reachability, and frontier gate records with timings, acceptance flags, thresholds, and physical summary values |
+
+The Kuramoto record is an acceptance benchmark, not only a timer. It checks
+zero self-coupling, bounded order parameter, identical-oscillator
+synchronisation, and the exact two-oscillator locked phase lag
+`asin((omega_2 - omega_1) / (2K))` from the pairwise Kuramoto equations.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the

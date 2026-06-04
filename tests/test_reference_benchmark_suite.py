@@ -61,12 +61,43 @@ from benchmarks.reference_suite import (
 
 
 def test_kuramoto_reference_benchmark_shape() -> None:
-    out = benchmark_kuramoto_reference(n_oscillators=8, n_steps=20, dt=0.01)
+    out = benchmark_kuramoto_reference(n_oscillators=2, n_steps=1000, dt=0.01)
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
     assert out["suite"] == "kuramoto_reference_strogatz_2000"
-    assert out["n_oscillators"] == 8
-    assert out["n_steps"] == 20
+    assert out["n_oscillators"] == 2
+    assert out["n_steps"] == 1000
     assert 0.0 <= float(out["final_order_parameter"]) <= 1.0
+    assert out["acceptance_passed"] == 1
+    assert out["zero_self_coupling"] == 1
+    assert out["analytic_lock_condition"] == 1
+    assert out["identical_coherence_passed"] == 1
+    assert out["analytic_lock_passed"] == 1
+    assert out["bounded_order_parameter"] == 1
+    assert float(out["two_oscillator_lock_threshold"]) < float(
+        out["two_oscillator_coupling"]
+    )
+    assert (
+        float(out["two_oscillator_lock_error_rad"])
+        <= thresholds["max_two_oscillator_lock_error_rad"]
+    )
+    assert len(str(out["benchmark_sha256"])) == 64
     assert float(out["steps_per_second"]) > 0.0
+
+
+def test_kuramoto_reference_rejects_invalid_controls() -> None:
+    for kwargs in (
+        {"n_oscillators": True},
+        {"n_oscillators": 1},
+        {"n_steps": 0},
+        {"dt": 0.0},
+        {"dt": float("nan")},
+    ):
+        try:
+            benchmark_kuramoto_reference(**kwargs)
+        except ValueError:
+            continue
+        raise AssertionError(f"invalid controls were accepted: {kwargs!r}")
 
 
 def test_stuart_landau_reference_benchmark_shape() -> None:
