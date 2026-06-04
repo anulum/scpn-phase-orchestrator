@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an NPE polyglot benchmark gate that records Rust/Mojo/Julia/Go/Python
   status, circular-distance parity, scalar persistent-entropy parity, and
   unavailable-toolchain reasons in the reference-suite snapshot.
+- Added an order-parameter polyglot benchmark gate that records
+  Rust/Mojo/Julia/Go/Python parity for Kuramoto `R`, mean phase, PLV, and layer
+  coherence in the reference-suite snapshot.
 - Added the `julia` optional dependency extra and wired `juliacall` into the
   `dev` and `full` dependency sets so installed Julia runtimes resolve through
   the Python bridge for polyglot benchmark gates.

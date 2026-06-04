@@ -293,6 +293,17 @@ Backend outputs are accepted only when physical: `R`, PLV, and layer coherence
 must be finite values in `[0, 1]`, and mean phase must be finite before being
 canonicalised to the public `[0, 2*pi)` convention.
 
+The release benchmark gate for this surface is:
+
+```bash
+python benchmarks/order_params_benchmark.py --parity-gate --sizes 64 --calls 1
+```
+
+It records Rust/Mojo/Julia/Go/Python status, timing, unavailable-toolchain
+reasons, deterministic hashes, and tolerance-bounded parity against the forced
+Python reference for global `R`, mean phase, PLV, and layer coherence. The
+reference-suite snapshot exposes this gate as `order_parameter_polyglot`.
+
 ::: scpn_phase_orchestrator.upde.order_params
 
 ::: scpn_phase_orchestrator.upde.metrics

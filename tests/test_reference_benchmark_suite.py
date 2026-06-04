@@ -38,6 +38,7 @@ from benchmarks.reference_suite import (
     benchmark_multiverse_counterfactual_gate,
     benchmark_neuromorphic_target_readiness_gate,
     benchmark_npe_polyglot_parity_gate,
+    benchmark_order_parameter_polyglot_parity_gate,
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
     benchmark_quantum_target_readiness_gate,
@@ -1866,6 +1867,57 @@ def test_npe_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["parity_passed"] is False
 
 
+def test_order_parameter_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_order_parameter_polyglot_parity_gate(n=12, calls=1, seed=2026)
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "order_parameter_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["parity_pass_count"] == out["available_backend_count"]
+    assert out["acceptance_passed"] == 1
+    assert 0.0 <= float(out["reference_r"]) <= 1.0
+    assert 0.0 <= float(out["reference_plv"]) <= 1.0
+    assert 0.0 <= float(out["reference_layer_coherence"]) <= 1.0
+    assert len(str(out["reference_order_parameter_sha256"])) == 64
+    assert len(str(out["reference_plv_sha256"])) == 64
+    assert len(str(out["reference_layer_coherence_sha256"])) == 64
+    assert len(str(out["benchmark_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+    assert [record["backend"] for record in records] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds == {
+        "backend_order": ["rust", "mojo", "julia", "go", "python"],
+        "max_mojo_abs_error": 1e-9,
+        "max_native_abs_error": 1e-12,
+        "require_all_available_parity": True,
+        "require_all_declared_backend_records": True,
+        "require_layer_coherence_contract": True,
+        "require_plv_contract": True,
+        "require_python_reference": True,
+        "require_unit_interval_outputs": True,
+    }
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["order_parameter_sha256"] is not None
+            assert record["plv_sha256"] is not None
+            assert record["layer_coherence_sha256"] is not None
+            assert record["ms_per_call"] is not None
+            assert record["max_abs_error"] <= record["tolerance"]
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["parity_passed"] is False
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -1897,6 +1949,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "plugin_ecosystem",
         "lyapunov_polyglot",
         "npe_polyglot",
+        "order_parameter_polyglot",
         "quantum_target_readiness",
         "replay_policy",
         "self_model_digital_twin",
