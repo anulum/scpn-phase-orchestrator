@@ -26,6 +26,7 @@ __all__ = [
     "PolicyProposalConfig",
     "RewardConfig",
     "RewardObservation",
+    "SafetyConstraintConfig",
     "evaluate_knob_policy",
     "generate_offline_policy_candidates",
     "propose_replay_policy",
@@ -41,6 +42,9 @@ _COMPONENT_NAMES = frozenset(
         "actuation",
         "regime_churn",
         "unsafe",
+        "lyapunov_stability",
+        "stl_robustness",
+        "safety_cost",
     }
 )
 
@@ -65,6 +69,9 @@ class RewardObservation:
     previous_coherence: float | None = None
     unsafe: bool = False
     regime_changed: bool = False
+    lyapunov_exponent: float | None = None
+    stl_robustness: float | None = None
+    safety_cost: float = 0.0
 
     def __post_init__(self) -> None:
         _require_probability(self.coherence, "coherence")
@@ -72,6 +79,21 @@ class RewardObservation:
             _require_probability(self.previous_coherence, "previous_coherence")
         _require_bool(self.unsafe, "unsafe")
         _require_bool(self.regime_changed, "regime_changed")
+        object.__setattr__(
+            self,
+            "lyapunov_exponent",
+            _optional_finite_real(self.lyapunov_exponent, "lyapunov_exponent"),
+        )
+        object.__setattr__(
+            self,
+            "stl_robustness",
+            _optional_finite_real(self.stl_robustness, "stl_robustness"),
+        )
+        object.__setattr__(
+            self,
+            "safety_cost",
+            _require_non_negative_finite(self.safety_cost, "safety_cost"),
+        )
 
 
 @dataclass(frozen=True)
@@ -115,6 +137,9 @@ class RewardConfig:
     actuation_penalty: float = 0.01
     churn_penalty: float = 0.1
     unsafe_penalty: float = 10.0
+    lyapunov_penalty: float = 1.0
+    stl_penalty: float = 1.0
+    safety_cost_penalty: float = 1.0
     component_order: tuple[str, ...] = field(
         default=(
             "coherence_gain",
@@ -123,6 +148,9 @@ class RewardConfig:
             "actuation",
             "regime_churn",
             "unsafe",
+            "lyapunov_stability",
+            "stl_robustness",
+            "safety_cost",
         )
     )
 
@@ -135,9 +163,66 @@ class RewardConfig:
             ("actuation_penalty", self.actuation_penalty),
             ("churn_penalty", self.churn_penalty),
             ("unsafe_penalty", self.unsafe_penalty),
+            ("lyapunov_penalty", self.lyapunov_penalty),
+            ("stl_penalty", self.stl_penalty),
+            ("safety_cost_penalty", self.safety_cost_penalty),
         ]:
             _require_non_negative_finite(value, label)
         _validate_component_order(self.component_order)
+
+
+@dataclass(frozen=True)
+class SafetyConstraintConfig:
+    """Lyapunov/STL gates for review-only safe-RL proposals."""
+
+    max_lyapunov_exponent: float | None = None
+    min_stl_robustness: float | None = None
+    max_safety_cost: float | None = None
+    require_lyapunov: bool = False
+    require_stl: bool = False
+    require_safety_cost: bool = False
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "max_lyapunov_exponent",
+            _optional_finite_real(
+                self.max_lyapunov_exponent,
+                "max_lyapunov_exponent",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "min_stl_robustness",
+            _optional_finite_real(self.min_stl_robustness, "min_stl_robustness"),
+        )
+        object.__setattr__(
+            self,
+            "max_safety_cost",
+            _optional_non_negative_finite(self.max_safety_cost, "max_safety_cost"),
+        )
+        _require_bool(self.require_lyapunov, "require_lyapunov")
+        _require_bool(self.require_stl, "require_stl")
+        _require_bool(self.require_safety_cost, "require_safety_cost")
+        if self.require_lyapunov and self.max_lyapunov_exponent is None:
+            raise ValueError(
+                "require_lyapunov needs max_lyapunov_exponent evidence bound"
+            )
+        if self.require_stl and self.min_stl_robustness is None:
+            raise ValueError("require_stl needs min_stl_robustness evidence bound")
+        if self.require_safety_cost and self.max_safety_cost is None:
+            raise ValueError("require_safety_cost needs max_safety_cost evidence bound")
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable safety-gate configuration."""
+        return {
+            "max_lyapunov_exponent": self.max_lyapunov_exponent,
+            "min_stl_robustness": self.min_stl_robustness,
+            "max_safety_cost": self.max_safety_cost,
+            "require_lyapunov": self.require_lyapunov,
+            "require_stl": self.require_stl,
+            "require_safety_cost": self.require_safety_cost,
+        }
 
 
 @dataclass(frozen=True)
@@ -148,6 +233,9 @@ class PolicyProposalConfig:
     min_coherence: float = 0.0
     max_alternatives: int = 3
     require_safe: bool = True
+    safety_constraints: SafetyConstraintConfig = field(
+        default_factory=SafetyConstraintConfig
+    )
 
     def __post_init__(self) -> None:
         if isinstance(self.min_reward, (bool, np.bool_)) or not isinstance(
@@ -165,6 +253,8 @@ class PolicyProposalConfig:
             raise ValueError("max_alternatives must be non-negative")
         object.__setattr__(self, "max_alternatives", int(self.max_alternatives))
         _require_bool(self.require_safe, "require_safe")
+        if not isinstance(self.safety_constraints, SafetyConstraintConfig):
+            raise TypeError("safety_constraints must be SafetyConstraintConfig")
 
 
 @dataclass(frozen=True)
@@ -195,6 +285,9 @@ class AutotuneRewardReport:
                 "previous_coherence": self.observation.previous_coherence,
                 "unsafe": self.observation.unsafe,
                 "regime_changed": self.observation.regime_changed,
+                "lyapunov_exponent": self.observation.lyapunov_exponent,
+                "stl_robustness": self.observation.stl_robustness,
+                "safety_cost": self.observation.safety_cost,
             },
             "config": {
                 "target_coherence": self.config.target_coherence,
@@ -204,6 +297,10 @@ class AutotuneRewardReport:
                 "actuation_penalty": self.config.actuation_penalty,
                 "churn_penalty": self.config.churn_penalty,
                 "unsafe_penalty": self.config.unsafe_penalty,
+                "lyapunov_penalty": self.config.lyapunov_penalty,
+                "stl_penalty": self.config.stl_penalty,
+                "safety_cost_penalty": self.config.safety_cost_penalty,
+                "component_order": list(self.config.component_order),
             },
         }
 
@@ -238,6 +335,7 @@ class AutotunePolicyProposal:
                 "min_coherence": self.config.min_coherence,
                 "max_alternatives": self.config.max_alternatives,
                 "require_safe": self.config.require_safe,
+                "safety_constraints": self.config.safety_constraints.to_audit_record(),
             },
         }
 
@@ -271,6 +369,19 @@ def evaluate_knob_policy(
     actuation = -active_config.actuation_penalty * _actuation_energy(candidate)
     regime_churn = -active_config.churn_penalty if observation.regime_changed else 0.0
     unsafe = -active_config.unsafe_penalty if observation.unsafe else 0.0
+    lyapunov_stability = 0.0
+    if observation.lyapunov_exponent is not None:
+        lyapunov_stability = -active_config.lyapunov_penalty * max(
+            0.0,
+            observation.lyapunov_exponent,
+        )
+    stl_robustness = 0.0
+    if observation.stl_robustness is not None:
+        stl_robustness = active_config.stl_penalty * min(
+            0.0,
+            observation.stl_robustness,
+        )
+    safety_cost = -active_config.safety_cost_penalty * observation.safety_cost
 
     components = {
         "coherence_gain": coherence_gain,
@@ -279,6 +390,9 @@ def evaluate_knob_policy(
         "actuation": actuation,
         "regime_churn": regime_churn,
         "unsafe": unsafe,
+        "lyapunov_stability": lyapunov_stability,
+        "stl_robustness": stl_robustness,
+        "safety_cost": safety_cost,
     }
     reward = float(sum(components[name] for name in active_config.component_order))
     return AutotuneRewardReport(
@@ -352,7 +466,23 @@ def propose_replay_policy(
         reward_config,
         require_safe=active_config.require_safe,
     )
-    selected = ranked[0]
+    eligible = tuple(
+        report
+        for report in ranked
+        if not _safety_constraint_reasons(
+            report.observation,
+            active_config.safety_constraints,
+        )
+    )
+    if not eligible:
+        return AutotunePolicyProposal(
+            accepted=False,
+            selected=None,
+            alternatives=tuple(ranked[: active_config.max_alternatives]),
+            reasons=("no replay candidate satisfies Lyapunov/STL safety constraints",),
+            config=active_config,
+        )
+    selected = eligible[0]
     reasons: list[str] = []
     if selected.reward < active_config.min_reward:
         reasons.append(
@@ -366,9 +496,15 @@ def propose_replay_policy(
         )
     if selected.observation.unsafe:
         reasons.append("selected rollout is marked unsafe")
+    reasons.extend(
+        _safety_constraint_reasons(
+            selected.observation,
+            active_config.safety_constraints,
+        )
+    )
 
     accepted = not reasons
-    alternatives = tuple(ranked[1 : 1 + active_config.max_alternatives])
+    alternatives = tuple(eligible[1 : 1 + active_config.max_alternatives])
     return AutotunePolicyProposal(
         accepted=accepted,
         selected=selected if accepted else None,
@@ -588,12 +724,64 @@ def _require_probability(value: float, label: str) -> None:
         raise ValueError(f"{label} must be finite and within [0, 1]")
 
 
-def _require_non_negative_finite(value: float, label: str) -> None:
+def _require_non_negative_finite(value: float, label: str) -> float:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{label} must be finite and non-negative")
     parsed = float(value)
     if not np.isfinite(parsed) or parsed < 0.0:
         raise ValueError(f"{label} must be finite and non-negative")
+    return parsed
+
+
+def _optional_finite_real(value: float | None, label: str) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{label} must be finite when provided")
+    parsed = float(value)
+    if not np.isfinite(parsed):
+        raise ValueError(f"{label} must be finite when provided")
+    return parsed
+
+
+def _optional_non_negative_finite(value: float | None, label: str) -> float | None:
+    if value is None:
+        return None
+    return _require_non_negative_finite(value, label)
+
+
+def _safety_constraint_reasons(
+    observation: RewardObservation,
+    constraints: SafetyConstraintConfig,
+) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if constraints.max_lyapunov_exponent is not None:
+        if observation.lyapunov_exponent is None:
+            reasons.append("missing Lyapunov exponent safety evidence")
+        elif observation.lyapunov_exponent > constraints.max_lyapunov_exponent:
+            reasons.append(
+                "Lyapunov exponent "
+                f"{observation.lyapunov_exponent:.6g} exceeds maximum "
+                f"{constraints.max_lyapunov_exponent:.6g}"
+            )
+    if constraints.min_stl_robustness is not None:
+        if observation.stl_robustness is None:
+            reasons.append("missing STL robustness safety evidence")
+        elif observation.stl_robustness < constraints.min_stl_robustness:
+            reasons.append(
+                "STL robustness "
+                f"{observation.stl_robustness:.6g} below minimum "
+                f"{constraints.min_stl_robustness:.6g}"
+            )
+    if (
+        constraints.max_safety_cost is not None
+        and observation.safety_cost > constraints.max_safety_cost
+    ):
+        reasons.append(
+            f"safety cost {observation.safety_cost:.6g} exceeds maximum "
+            f"{constraints.max_safety_cost:.6g}"
+        )
+    return tuple(reasons)
 
 
 def _serialise_array(value: float | FloatArray) -> float | list[object]:

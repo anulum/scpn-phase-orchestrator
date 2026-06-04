@@ -534,6 +534,7 @@ def test_replay_policy_candidate_quality_benchmark_shape() -> None:
     assert out["acceptance_rate"] == 1.0
     assert out["acceptance_passed"] == 1
     assert out["unsafe_acceptance_count"] == 0
+    assert out["safety_evidence_count"] == 9
     assert out["non_actuating_proposals"] == 1
     assert float(out["min_coherence_improvement"]) >= 0.03
     assert float(out["steps_per_second"]) > 0.0
@@ -547,9 +548,13 @@ def test_replay_policy_candidate_quality_reports_thresholds() -> None:
 
     assert thresholds == {
         "max_unsafe_acceptances": 0,
+        "max_lyapunov_exponent": 0.0,
+        "max_safety_cost": 0.08,
         "min_acceptance_rate": 1.0,
         "min_reward_improvement": 0.03,
+        "min_stl_robustness": 0.0,
         "require_non_actuating": True,
+        "require_safety_evidence": True,
     }
     assert {record["scenario"] for record in scenario_results} == {
         "stability_recovery",
@@ -560,6 +565,7 @@ def test_replay_policy_candidate_quality_reports_thresholds() -> None:
     assert all(record["accepted_learner_count"] == 3 for record in scenario_results)
     assert all(record["failed_learner_count"] == 0 for record in scenario_results)
     assert all(record["unsafe_acceptance_count"] == 0 for record in scenario_results)
+    assert all(record["safety_evidence_count"] == 3 for record in scenario_results)
     assert all(record["non_actuating_proposals"] is True for record in scenario_results)
     assert {record["learner_kind"] for record in results} == {
         "ppo_like_replay",
@@ -573,6 +579,10 @@ def test_replay_policy_candidate_quality_reports_thresholds() -> None:
     }
     assert all(record["accepted"] is True for record in results)
     assert all(record["non_actuating"] is True for record in results)
+    assert all(record["selected_safety_evidence"] is True for record in results)
+    assert all(record["selected_lyapunov_exponent"] <= 0.0 for record in results)
+    assert all(record["selected_stl_robustness"] >= 0.0 for record in results)
+    assert all(record["selected_safety_cost"] <= 0.08 for record in results)
     assert all(record["unsafe_selected"] is False for record in results)
 
 

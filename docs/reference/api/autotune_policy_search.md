@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.autotune import (
     OfflinePolicySearchConfig,
     PolicyProposalConfig,
     RewardObservation,
+    SafetyConstraintConfig,
     search_replay_policy,
 )
 
@@ -38,7 +39,13 @@ seed = KnobPolicyCandidate(
 
 
 def replay(candidate: KnobPolicyCandidate) -> RewardObservation:
-    return RewardObservation(coherence=0.82, previous_coherence=0.74)
+    return RewardObservation(
+        coherence=0.82,
+        previous_coherence=0.74,
+        lyapunov_exponent=-0.015,
+        stl_robustness=0.08,
+        safety_cost=0.01,
+    )
 
 
 result = search_replay_policy(
@@ -50,7 +57,17 @@ result = search_replay_policy(
         cross_channel_gain_step=0.1,
         max_abs_knob=1.0,
     ),
-    proposal_config=PolicyProposalConfig(min_coherence=0.75),
+    proposal_config=PolicyProposalConfig(
+        min_coherence=0.75,
+        safety_constraints=SafetyConstraintConfig(
+            max_lyapunov_exponent=0.0,
+            min_stl_robustness=0.0,
+            max_safety_cost=0.05,
+            require_lyapunov=True,
+            require_stl=True,
+            require_safety_cost=True,
+        ),
+    ),
 )
 
 audit_record = result.to_audit_record()
@@ -85,5 +102,12 @@ adaptive_audit_record = adaptive_result.to_audit_record()
 The result keeps the seed, generated candidates, and proposal together so audit
 logs can prove which replay-only candidates were evaluated before a policy was
 accepted or rejected.
+
+When `SafetyConstraintConfig` is attached to `PolicyProposalConfig`, the search
+will reject candidates that lack required Lyapunov or STL evidence, exceed the
+configured Lyapunov exponent bound, violate the STL robustness floor, or exceed
+the safety-cost ceiling. These gates run after replay scoring and before a
+proposal is accepted, so the search cannot promote a high-reward candidate that
+fails the explicit safety evidence contract.
 
 ::: scpn_phase_orchestrator.autotune.policy_search

@@ -23,6 +23,7 @@ from scpn_phase_orchestrator.autotune import (
     PolicyProposalConfig,
     RewardConfig,
     RewardObservation,
+    SafetyConstraintConfig,
     evaluate_knob_policy,
     generate_offline_policy_candidates,
     propose_replay_policy,
@@ -80,6 +81,9 @@ class TestAutotuneRewardContract:
         assert record["candidate"]["channel_weights"] == [1.0, 0.5]
         assert record["candidate"]["cross_channel_gains"] == [0.25, 0.4]
         assert record["observation"]["coherence"] == 0.8
+        assert record["observation"]["lyapunov_exponent"] is None
+        assert record["observation"]["stl_robustness"] is None
+        assert record["observation"]["safety_cost"] == 0.0
 
 
 class TestAutotuneRewardScoring:
@@ -188,6 +192,40 @@ class TestAutotuneRewardScoring:
 
         with pytest.raises(ValueError, match="duplicate reward component"):
             RewardConfig(component_order=("coherence_gain", "coherence_gain"))
+
+    def test_lyapunov_stl_and_safety_cost_terms_penalise_unsafe_replay(
+        self,
+    ) -> None:
+        candidate = KnobPolicyCandidate(K=0.4)
+
+        stable = evaluate_knob_policy(
+            candidate,
+            RewardObservation(
+                coherence=0.8,
+                previous_coherence=0.75,
+                lyapunov_exponent=-0.02,
+                stl_robustness=0.1,
+                safety_cost=0.0,
+            ),
+        )
+        unstable = evaluate_knob_policy(
+            candidate,
+            RewardObservation(
+                coherence=0.8,
+                previous_coherence=0.75,
+                lyapunov_exponent=0.04,
+                stl_robustness=-0.03,
+                safety_cost=0.2,
+            ),
+        )
+
+        assert stable.components["lyapunov_stability"] == 0.0
+        assert stable.components["stl_robustness"] == 0.0
+        assert stable.components["safety_cost"] == 0.0
+        assert unstable.components["lyapunov_stability"] < 0.0
+        assert unstable.components["stl_robustness"] < 0.0
+        assert unstable.components["safety_cost"] < 0.0
+        assert unstable.reward < stable.reward
 
 
 class TestAutotuneReplayRanking:
@@ -454,6 +492,86 @@ class TestAutotunePolicyProposal:
         assert proposal.reasons == ("selected rollout is marked unsafe",)
         assert proposal.alternatives[0].observation.coherence == 0.55
 
+    def test_safety_constraints_choose_safe_candidate_over_higher_reward(
+        self,
+    ) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(
+                    coherence=0.95,
+                    previous_coherence=0.5,
+                    lyapunov_exponent=0.08,
+                    stl_robustness=0.2,
+                    safety_cost=0.05,
+                ),
+            ),
+            (
+                KnobPolicyCandidate(K=0.2),
+                RewardObservation(
+                    coherence=0.82,
+                    previous_coherence=0.5,
+                    lyapunov_exponent=-0.01,
+                    stl_robustness=0.04,
+                    safety_cost=0.05,
+                ),
+            ),
+        )
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(
+                safety_constraints=SafetyConstraintConfig(
+                    max_lyapunov_exponent=0.0,
+                    min_stl_robustness=0.0,
+                    max_safety_cost=0.1,
+                    require_lyapunov=True,
+                    require_stl=True,
+                    require_safety_cost=True,
+                ),
+            ),
+        )
+
+        assert proposal.accepted
+        assert proposal.selected is not None
+        assert proposal.selected.candidate.K == 0.2
+        assert proposal.selected.observation.lyapunov_exponent == -0.01
+        assert proposal.to_audit_record()["config"]["safety_constraints"] == {
+            "max_lyapunov_exponent": 0.0,
+            "min_stl_robustness": 0.0,
+            "max_safety_cost": 0.1,
+            "require_lyapunov": True,
+            "require_stl": True,
+            "require_safety_cost": True,
+        }
+
+    def test_safety_constraints_reject_missing_evidence(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.9, previous_coherence=0.5),
+            ),
+        )
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(
+                safety_constraints=SafetyConstraintConfig(
+                    max_lyapunov_exponent=0.0,
+                    min_stl_robustness=0.0,
+                    require_lyapunov=True,
+                    require_stl=True,
+                ),
+            ),
+        )
+
+        assert not proposal.accepted
+        assert proposal.selected is None
+        assert proposal.reasons == (
+            "no replay candidate satisfies Lyapunov/STL safety constraints",
+        )
+        assert proposal.alternatives[0].observation.coherence == 0.9
+
 
 class TestAutotuneRewardValidation:
     def test_rejects_non_probability_observations(self) -> None:
@@ -575,6 +693,34 @@ class TestAutotuneRewardValidation:
             RewardObservation(
                 coherence=0.5,
                 regime_changed=cast(bool, np.bool_(True)),
+            )
+
+    def test_reward_observation_rejects_invalid_safety_evidence(self) -> None:
+        with pytest.raises(ValueError, match="lyapunov_exponent"):
+            RewardObservation(coherence=0.5, lyapunov_exponent=cast(float, True))
+
+        with pytest.raises(ValueError, match="stl_robustness"):
+            RewardObservation(coherence=0.5, stl_robustness=float("nan"))
+
+        with pytest.raises(ValueError, match="safety_cost"):
+            RewardObservation(coherence=0.5, safety_cost=-0.01)
+
+    def test_safety_constraint_config_rejects_invalid_bounds_and_flags(self) -> None:
+        with pytest.raises(ValueError, match="max_lyapunov_exponent"):
+            SafetyConstraintConfig(max_lyapunov_exponent=float("nan"))
+
+        with pytest.raises(ValueError, match="max_safety_cost"):
+            SafetyConstraintConfig(max_safety_cost=-0.1)
+
+        with pytest.raises(TypeError, match="require_stl"):
+            SafetyConstraintConfig(require_stl=cast(bool, np.bool_(True)))
+
+        with pytest.raises(ValueError, match="require_lyapunov"):
+            SafetyConstraintConfig(require_lyapunov=True)
+
+        with pytest.raises(TypeError, match="safety_constraints"):
+            PolicyProposalConfig(
+                safety_constraints=cast(SafetyConstraintConfig, object()),
             )
 
     @pytest.mark.parametrize(

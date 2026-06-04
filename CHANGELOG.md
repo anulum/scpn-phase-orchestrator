@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added Lyapunov/STL/safety-cost constrained replay acceptance for
+  RL/autotune policy proposals, including audit serialisation, learner-wrapper
+  forwarding, reference-suite gates, and public API documentation.
+
 ## [0.6.5] - 2026-06-02
 
 ### Changed

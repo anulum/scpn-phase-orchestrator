@@ -24,7 +24,9 @@ from scpn_phase_orchestrator.autotune.learners import (
 )
 from scpn_phase_orchestrator.autotune.reward import (
     KnobPolicyCandidate,
+    PolicyProposalConfig,
     RewardObservation,
+    SafetyConstraintConfig,
 )
 
 
@@ -66,6 +68,30 @@ def test_sac_like_proposal_rejects_unsafe_replay() -> None:
     assert proposal.learner_kind == "sac_like_replay"
     assert proposal.actuation_permitted is False
     assert proposal.policy_search.proposal.accepted is False
+
+
+def test_ppo_like_proposal_rejects_replay_without_required_safety_evidence() -> None:
+    seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
+
+    proposal = generate_ppo_like_proposal(
+        seed,
+        _safe_observation,
+        seed_value=7,
+        proposal_config=PolicyProposalConfig(
+            safety_constraints=SafetyConstraintConfig(
+                max_lyapunov_exponent=0.0,
+                min_stl_robustness=0.0,
+                require_lyapunov=True,
+                require_stl=True,
+            ),
+        ),
+    )
+
+    assert proposal.actuation_permitted is False
+    assert proposal.policy_search.proposal.accepted is False
+    assert proposal.policy_search.proposal.reasons == (
+        "no replay candidate satisfies Lyapunov/STL safety constraints",
+    )
 
 
 def test_hybrid_physics_proposal_records_prior() -> None:

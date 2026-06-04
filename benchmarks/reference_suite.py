@@ -42,6 +42,7 @@ from scpn_phase_orchestrator.autotune.reward import (
     KnobPolicyCandidate,
     PolicyProposalConfig,
     RewardObservation,
+    SafetyConstraintConfig,
 )
 from scpn_phase_orchestrator.binding.semantic import compile_symbolic_binding
 from scpn_phase_orchestrator.exceptions import PolicyError
@@ -175,7 +176,11 @@ class ReplayLearnerBenchmarkThresholds(NamedTuple):
     min_acceptance_rate: float
     min_reward_improvement: float
     max_unsafe_acceptances: int
+    max_lyapunov_exponent: float
+    min_stl_robustness: float
+    max_safety_cost: float
     require_non_actuating: bool
+    require_safety_evidence: bool
 
 
 class ReplayLearnerBenchmarkScenario(NamedTuple):
@@ -1030,7 +1035,11 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
         min_acceptance_rate=1.0,
         min_reward_improvement=0.03,
         max_unsafe_acceptances=0,
+        max_lyapunov_exponent=0.0,
+        min_stl_robustness=0.0,
+        max_safety_cost=0.08,
         require_non_actuating=True,
+        require_safety_evidence=True,
     )
     scenarios = (
         ReplayLearnerBenchmarkScenario(
@@ -1098,6 +1107,14 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
             min_coherence=scenario.min_coherence,
             min_reward=scenario.min_reward,
             max_alternatives=2,
+            safety_constraints=SafetyConstraintConfig(
+                max_lyapunov_exponent=thresholds.max_lyapunov_exponent,
+                min_stl_robustness=thresholds.min_stl_robustness,
+                max_safety_cost=thresholds.max_safety_cost,
+                require_lyapunov=thresholds.require_safety_evidence,
+                require_stl=thresholds.require_safety_evidence,
+                require_safety_cost=thresholds.require_safety_evidence,
+            ),
         )
         baseline_observation = _deterministic_replay_observation(
             scenario.seed_candidate
@@ -1148,6 +1165,27 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
                 reward_improvement,
             )
             selected_unsafe = bool(selected.observation.unsafe) if selected else False
+            selected_lyapunov = (
+                selected.observation.lyapunov_exponent
+                if selected is not None
+                and selected.observation.lyapunov_exponent is not None
+                else np.inf
+            )
+            selected_stl = (
+                selected.observation.stl_robustness
+                if selected is not None
+                and selected.observation.stl_robustness is not None
+                else -np.inf
+            )
+            selected_safety_cost = (
+                selected.observation.safety_cost if selected is not None else np.inf
+            )
+            selected_safety_evidence = (
+                selected is not None
+                and selected.observation.lyapunov_exponent is not None
+                and selected.observation.stl_robustness is not None
+                and selected_safety_cost <= thresholds.max_safety_cost
+            )
             unsafe_acceptances += int(accepted and selected_unsafe)
             scenario_unsafe_acceptances += int(accepted and selected_unsafe)
             learner_results.append(
@@ -1161,6 +1199,10 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
                     "baseline_coherence": baseline_coherence,
                     "coherence_improvement": reward_improvement,
                     "unsafe_selected": selected_unsafe,
+                    "selected_lyapunov_exponent": selected_lyapunov,
+                    "selected_stl_robustness": selected_stl,
+                    "selected_safety_cost": selected_safety_cost,
+                    "selected_safety_evidence": selected_safety_evidence,
                     "candidate_count": len(proposal.policy_search.candidates),
                 }
             )
@@ -1170,6 +1212,15 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
             and scenario_unsafe_acceptances == 0
             and scenario_non_actuating
             and scenario_min_reward_improvement >= thresholds.min_reward_improvement
+            and all(
+                result["selected_safety_evidence"] is True
+                and result["selected_lyapunov_exponent"]
+                <= thresholds.max_lyapunov_exponent
+                and result["selected_stl_robustness"] >= thresholds.min_stl_robustness
+                and result["selected_safety_cost"] <= thresholds.max_safety_cost
+                for result in learner_results
+                if result["scenario"] == scenario.name
+            )
         )
         accepted_scenario_count += int(scenario_accepted)
         scenario_results.append(
@@ -1183,6 +1234,11 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
                 "min_coherence_improvement": scenario_min_reward_improvement,
                 "unsafe_acceptance_count": scenario_unsafe_acceptances,
                 "non_actuating_proposals": scenario_non_actuating,
+                "safety_evidence_count": sum(
+                    int(result["selected_safety_evidence"] is True)
+                    for result in learner_results
+                    if result["scenario"] == scenario.name
+                ),
                 "accepted": scenario_accepted,
             }
         )
@@ -1195,6 +1251,21 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
         and min_reward_improvement >= thresholds.min_reward_improvement
         and unsafe_acceptances <= thresholds.max_unsafe_acceptances
         and all(result["non_actuating"] is True for result in learner_results)
+        and all(
+            result["selected_safety_evidence"] is True for result in learner_results
+        )
+        and all(
+            result["selected_lyapunov_exponent"] <= thresholds.max_lyapunov_exponent
+            for result in learner_results
+        )
+        and all(
+            result["selected_stl_robustness"] >= thresholds.min_stl_robustness
+            for result in learner_results
+        )
+        and all(
+            result["selected_safety_cost"] <= thresholds.max_safety_cost
+            for result in learner_results
+        )
         and accepted_scenario_count == len(scenarios)
     )
 
@@ -1211,6 +1282,10 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
         "acceptance_rate": acceptance_rate,
         "min_coherence_improvement": min_reward_improvement,
         "unsafe_acceptance_count": unsafe_acceptances,
+        "safety_evidence_count": sum(
+            int(result["selected_safety_evidence"] is True)
+            for result in learner_results
+        ),
         "non_actuating_proposals": int(
             all(result["non_actuating"] is True for result in learner_results)
         ),
@@ -1220,7 +1295,11 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
                 "min_acceptance_rate": thresholds.min_acceptance_rate,
                 "min_reward_improvement": thresholds.min_reward_improvement,
                 "max_unsafe_acceptances": thresholds.max_unsafe_acceptances,
+                "max_lyapunov_exponent": thresholds.max_lyapunov_exponent,
+                "min_stl_robustness": thresholds.min_stl_robustness,
+                "max_safety_cost": thresholds.max_safety_cost,
                 "require_non_actuating": thresholds.require_non_actuating,
+                "require_safety_evidence": thresholds.require_safety_evidence,
             },
             sort_keys=True,
         ),
@@ -5441,11 +5520,21 @@ def _deterministic_replay_observation(
         np.clip(0.68 + 0.44 * mean_k + 0.05 * mean_channel_weight, 0.0, 0.95)
     )
     unsafe = mean_k < 0.0 or abs(mean_k) > 1.2
+    lyapunov_exponent = float(-0.02 - 0.05 * max(mean_k, 0.0))
+    stl_robustness = float(coherence - 0.7)
+    safety_cost = float(
+        0.02 * abs(mean_k)
+        + 0.01 * abs(float(np.asarray(candidate.zeta, dtype=np.float64).mean()))
+        + 0.005 * abs(float(np.asarray(candidate.alpha, dtype=np.float64).mean()))
+    )
     return RewardObservation(
         coherence=coherence,
         previous_coherence=0.68,
         unsafe=unsafe,
         regime_changed=False,
+        lyapunov_exponent=lyapunov_exponent,
+        stl_robustness=stl_robustness,
+        safety_cost=safety_cost,
     )
 
 

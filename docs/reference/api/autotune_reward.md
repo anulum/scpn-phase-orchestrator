@@ -13,7 +13,8 @@ autotune track. It scores candidate knob policies from replay or simulation
 metrics without applying control actions directly.
 
 The default reward is coherence improvement minus target deficit, low-coherence
-risk, actuation energy, unsafe rollout flags, and regime churn. The output is an
+risk, actuation energy, unsafe rollout flags, regime churn, positive Lyapunov
+growth, negative STL robustness, and explicit safety cost. The output is an
 audit-ready record that can be used by later PPO/SAC or hybrid physics-RL
 learners.
 
@@ -25,7 +26,13 @@ from scpn_phase_orchestrator.autotune import (
 )
 
 candidate = KnobPolicyCandidate(K=0.2, alpha=0.0, zeta=0.05, Psi=0.1)
-observation = RewardObservation(coherence=0.82, previous_coherence=0.74)
+observation = RewardObservation(
+    coherence=0.82,
+    previous_coherence=0.74,
+    lyapunov_exponent=-0.015,
+    stl_robustness=0.08,
+    safety_cost=0.01,
+)
 report = evaluate_knob_policy(candidate, observation)
 
 assert report.to_audit_record()["reward"] == report.reward
@@ -81,18 +88,43 @@ Proposal records apply simple acceptance gates and remain review artefacts:
 ```python
 from scpn_phase_orchestrator.autotune import (
     PolicyProposalConfig,
+    SafetyConstraintConfig,
     propose_replay_policy,
 )
 
 proposal = propose_replay_policy(
     (
-        (candidate, RewardObservation(coherence=0.82)),
+        (
+            candidate,
+            RewardObservation(
+                coherence=0.82,
+                lyapunov_exponent=-0.015,
+                stl_robustness=0.08,
+                safety_cost=0.01,
+            ),
+        ),
     ),
-    proposal_config=PolicyProposalConfig(min_coherence=0.75),
+    proposal_config=PolicyProposalConfig(
+        min_coherence=0.75,
+        safety_constraints=SafetyConstraintConfig(
+            max_lyapunov_exponent=0.0,
+            min_stl_robustness=0.0,
+            max_safety_cost=0.05,
+            require_lyapunov=True,
+            require_stl=True,
+            require_safety_cost=True,
+        ),
+    ),
 )
 
 audit_record = proposal.to_audit_record()
 ```
+
+The safety-constraint gate is intentionally conservative. If a proposal config
+requires Lyapunov or STL evidence and a replay observation omits it, the
+candidate is rejected even when its coherence reward is high. This keeps
+safe-RL integration reviewable: the learner may optimise, but the acceptance
+record must still carry explicit stability and temporal-logic evidence.
 
 For the higher-level replay-only search wrapper that generates candidates,
 evaluates them through a caller-supplied replay adapter, and returns a proposal
