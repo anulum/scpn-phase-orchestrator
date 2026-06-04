@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Lyapunov/STL/safety-cost constrained replay acceptance for
   RL/autotune policy proposals, including audit serialisation, learner-wrapper
   forwarding, reference-suite gates, and public API documentation.
+- Added deterministic formal runtime-control certificates that bind package
+  hashes, checker readiness, reviewed checker results, and finite runtime
+  bounds into non-actuating fail-closed audit records.
 
 ## [0.6.5] - 2026-06-02
 

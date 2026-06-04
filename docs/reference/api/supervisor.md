@@ -878,6 +878,15 @@ command records keep `execution_permitted=false`. Add
 records to that JSON; `--checker-path executable=/path` can make CI readiness
 evidence deterministic, and `--checker-path executable=` forces a missing
 checker record without invoking anything.
+`build_runtime_control_certificate()` turns a package, checker readiness
+records, externally reviewed checker result records, and finite runtime bounds
+into a deterministic `FormalRuntimeCertificate`. The certificate is the runtime
+handoff contract for verifiable control: every required property must have a
+matching available checker and a passed result bound to the exact package hash.
+Missing, failed, stale, or unavailable evidence produces `status="blocked"`.
+Even `status="verified_non_actuating"` keeps `actuation_permitted=false`; it is
+an auditable precondition for operator review or a separate runtime monitor,
+not permission to execute hardware controls.
 Remote CI owns the first external execution lane through
 `formal-model-checkers.yml`, which installs SPIN and Z3, materialises reviewed
 Promela/SMT-LIB smoke artefacts, validates disabled package/readiness metadata,

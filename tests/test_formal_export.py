@@ -21,6 +21,8 @@ from scpn_phase_orchestrator.supervisor import (
     CompoundCondition,
     FormalCheckerAvailability,
     FormalCheckerCommand,
+    FormalCheckerResult,
+    FormalRuntimeCertificate,
     FormalSafetyProperty,
     FormalTextArtifact,
     FormalVerificationPackage,
@@ -30,6 +32,7 @@ from scpn_phase_orchestrator.supervisor import (
     PolicySTLSpec,
     audit_formal_checker_availability,
     build_formal_verification_package,
+    build_runtime_control_certificate,
     export_petri_net_prism,
     export_petri_net_tla,
     export_policy_rules_prism,
@@ -375,6 +378,211 @@ def test_formal_package_supports_spin_and_smt_workflow_manifests() -> None:
             "execution_permitted": False,
         },
     ]
+
+
+def test_runtime_control_certificate_binds_passed_formal_evidence() -> None:
+    prism_export = export_petri_net_prism(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+    tla_export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+    package = build_formal_verification_package(
+        {
+            "petri_supervisor": prism_export,
+            "petri_supervisor_tla": tla_export,
+        },
+        (
+            FormalSafetyProperty(
+                name="petri_tokens_bounded",
+                artifact_name="petri_supervisor",
+                checker="prism",
+                expression='P>=1 [ G !"active_done" | F "active_done" ]',
+            ),
+            FormalSafetyProperty(
+                name="tla_type_ok",
+                artifact_name="petri_supervisor_tla",
+                checker="tlc",
+                expression="Safety",
+            ),
+        ),
+        package_name="spo-formal-review",
+    )
+    availability = audit_formal_checker_availability(
+        package,
+        executable_paths={
+            "prism": "/opt/prism/bin/prism",
+            "tlc2.TLC": "/opt/tlc/tlc2.TLC",
+        },
+    )
+    results = (
+        FormalCheckerResult(
+            property_name="tla_type_ok",
+            checker="tlc",
+            artifact_name="petri_supervisor_tla",
+            package_hash=package.package_hash,
+            result_hash="b" * 64,
+            status="passed",
+            passed=True,
+            detail="TLC Safety accepted in reviewed CI run.",
+        ),
+        FormalCheckerResult(
+            property_name="petri_tokens_bounded",
+            checker="prism",
+            artifact_name="petri_supervisor",
+            package_hash=package.package_hash,
+            result_hash="a" * 64,
+            status="passed",
+            passed=True,
+            detail="PRISM property accepted in reviewed CI run.",
+        ),
+    )
+
+    certificate = build_runtime_control_certificate(
+        package,
+        tuple(reversed(availability)),
+        results,
+        {"R_min": 0.7, "max_latency_s": 0.05},
+    )
+    repeated = build_runtime_control_certificate(
+        package,
+        availability,
+        tuple(reversed(results)),
+        {"max_latency_s": 0.05, "R_min": 0.7},
+    )
+    record = certificate.to_audit_record()
+
+    assert isinstance(certificate, FormalRuntimeCertificate)
+    assert certificate.certificate_hash == repeated.certificate_hash
+    assert certificate.status == "verified_non_actuating"
+    assert certificate.required_property_count == 2
+    assert certificate.passed_required_count == 2
+    assert certificate.actuation_permitted is False
+    assert record["runtime_bounds"] == {"R_min": 0.7, "max_latency_s": 0.05}
+    assert record["missing_required_properties"] == []
+    assert record["failed_required_properties"] == []
+    assert record["unavailable_checker_properties"] == []
+    assert len(record["certificate_hash"]) == 64
+    assert all(
+        item["execution_permitted"] is False for item in record["checker_results"]
+    )
+
+
+def test_runtime_control_certificate_blocks_incomplete_or_stale_evidence() -> None:
+    prism_export = export_petri_net_prism(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+    tla_export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+    package = build_formal_verification_package(
+        {
+            "petri_supervisor": prism_export,
+            "petri_supervisor_tla": tla_export,
+        },
+        (
+            FormalSafetyProperty(
+                name="petri_tokens_bounded",
+                artifact_name="petri_supervisor",
+                checker="prism",
+                expression='P>=1 [ G !"active_done" | F "active_done" ]',
+            ),
+            FormalSafetyProperty(
+                name="tla_type_ok",
+                artifact_name="petri_supervisor_tla",
+                checker="tlc",
+                expression="Safety",
+            ),
+        ),
+        package_name="spo-formal-review",
+    )
+    blocked = build_runtime_control_certificate(
+        package,
+        audit_formal_checker_availability(
+            package,
+            executable_paths={"prism": "/opt/prism/bin/prism", "tlc2.TLC": None},
+        ),
+        (
+            FormalCheckerResult(
+                property_name="petri_tokens_bounded",
+                checker="prism",
+                artifact_name="petri_supervisor",
+                package_hash=package.package_hash,
+                result_hash="a" * 64,
+                status="passed",
+                passed=True,
+            ),
+        ),
+        {"R_min": 0.7},
+    )
+
+    assert blocked.status == "blocked"
+    assert blocked.passed_required_count == 1
+    assert blocked.missing_required_properties == ("tla_type_ok",)
+    assert blocked.unavailable_checker_properties == ("tla_type_ok",)
+    assert blocked.actuation_permitted is False
+
+    with pytest.raises(PolicyError, match="package_hash does not match"):
+        build_runtime_control_certificate(
+            package,
+            (),
+            (
+                FormalCheckerResult(
+                    property_name="petri_tokens_bounded",
+                    checker="prism",
+                    artifact_name="petri_supervisor",
+                    package_hash="c" * 64,
+                    result_hash="a" * 64,
+                    status="passed",
+                    passed=True,
+                ),
+            ),
+            {"R_min": 0.7},
+        )
+    with pytest.raises(PolicyError, match="runtime bounds"):
+        build_runtime_control_certificate(package, (), (), {"R_min": float("nan")})
+
+
+def test_formal_checker_result_rejects_non_auditable_results() -> None:
+    with pytest.raises(PolicyError, match="status must match"):
+        FormalCheckerResult(
+            property_name="petri_tokens_bounded",
+            checker="prism",
+            artifact_name="petri_supervisor",
+            package_hash="a" * 64,
+            result_hash="b" * 64,
+            status="failed",
+            passed=True,
+        )
+    with pytest.raises(PolicyError, match="execution must stay disabled"):
+        FormalCheckerResult(
+            property_name="petri_tokens_bounded",
+            checker="prism",
+            artifact_name="petri_supervisor",
+            package_hash="a" * 64,
+            result_hash="b" * 64,
+            status="passed",
+            passed=True,
+            execution_permitted=True,
+        )
+    with pytest.raises(PolicyError, match="SHA-256"):
+        FormalCheckerResult(
+            property_name="petri_tokens_bounded",
+            checker="prism",
+            artifact_name="petri_supervisor",
+            package_hash="A" * 64,
+            result_hash="b" * 64,
+            status="passed",
+            passed=True,
+        )
 
 
 def test_formal_checker_availability_and_commands_fail_closed() -> None:

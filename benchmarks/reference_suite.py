@@ -86,9 +86,11 @@ from scpn_phase_orchestrator.supervisor.federated_transport import (
     replay_federated_transport_batch,
 )
 from scpn_phase_orchestrator.supervisor.formal_export import (
+    FormalCheckerResult,
     FormalSafetyProperty,
     audit_formal_checker_availability,
     build_formal_verification_package,
+    build_runtime_control_certificate,
     export_petri_net_prism,
     export_petri_net_tla,
     export_policy_rules_prism,
@@ -216,8 +218,10 @@ class FormalExportThresholds(NamedTuple):
     min_checker_command_count: int
     min_checker_availability_count: int
     min_missing_checker_count: int
+    min_runtime_certificate_count: int
     require_deterministic_hash: bool
     require_checker_execution_disabled: bool
+    require_runtime_certificate_verified: bool
 
 
 class DomainFormalExportThresholds(NamedTuple):
@@ -1714,8 +1718,10 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         min_checker_command_count=3,
         min_checker_availability_count=3,
         min_missing_checker_count=1,
+        min_runtime_certificate_count=1,
         require_deterministic_hash=True,
         require_checker_execution_disabled=True,
+        require_runtime_certificate_verified=True,
     )
     net, marking, rules, stl_specs = _formal_export_fixture()
 
@@ -1819,6 +1825,51 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
     checker_availability_records = [
         item.to_audit_record() for item in checker_availability
     ]
+    certificate_availability = audit_formal_checker_availability(
+        package,
+        executable_paths={
+            "prism": "/opt/prism/bin/prism",
+            "tlc2.TLC": "/opt/tlc/tlc2.TLC",
+        },
+    )
+    checker_results = tuple(
+        FormalCheckerResult(
+            property_name=command.property_name,
+            checker=command.checker,
+            artifact_name=command.artifact_name,
+            package_hash=package.package_hash,
+            result_hash=sha256(
+                (
+                    f"{package.package_hash}:{command.property_name}:"
+                    "reviewed-pass"
+                ).encode()
+            ).hexdigest(),
+            status="passed",
+            passed=True,
+            detail="reference-suite reviewed checker evidence",
+        )
+        for command in package.checker_commands
+    )
+    runtime_certificate = build_runtime_control_certificate(
+        package,
+        certificate_availability,
+        checker_results,
+        {
+            "R_min": 0.7,
+            "max_step_s": 0.05,
+            "max_policy_actions": 4.0,
+        },
+    )
+    runtime_certificate_record = runtime_certificate.to_audit_record()
+    runtime_certificate_verified = int(
+        runtime_certificate.status == "verified_non_actuating"
+        and runtime_certificate.required_property_count
+        == runtime_certificate.passed_required_count
+    )
+    runtime_certificate_execution_disabled = int(
+        runtime_certificate.actuation_permitted is False
+    )
+    runtime_certificate_count = 1
     checker_availability_count = len(checker_availability_records)
     checker_available_count = sum(
         int(record["available"]) for record in checker_availability_records
@@ -1856,6 +1907,11 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         == int(thresholds.require_checker_execution_disabled)
         and checker_availability_execution_disabled
         == int(thresholds.require_checker_execution_disabled)
+        and runtime_certificate_count >= thresholds.min_runtime_certificate_count
+        and runtime_certificate_verified
+        == int(thresholds.require_runtime_certificate_verified)
+        and runtime_certificate_execution_disabled
+        == int(thresholds.require_checker_execution_disabled)
         and "Safety == TypeOK" in petri_tla.module
         and 'label "fires_boost_K"' in policy_prism.model
         and 'label "stl_keep_sync_satisfied"' in stl_prism.model
@@ -1877,9 +1933,15 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         "checker_availability_execution_disabled": (
             checker_availability_execution_disabled
         ),
+        "runtime_certificate_count": runtime_certificate_count,
+        "runtime_certificate_verified": runtime_certificate_verified,
+        "runtime_certificate_execution_disabled": (
+            runtime_certificate_execution_disabled
+        ),
         "deterministic_hash": deterministic_hash,
         "artifact_sha256": artifact_hash,
         "package_sha256": package.package_hash,
+        "runtime_certificate_sha256": runtime_certificate.certificate_hash,
         "petri_prism_bytes": len(petri_prism.model.encode()),
         "petri_tla_bytes": len(petri_tla.module.encode()),
         "policy_prism_bytes": len(policy_prism.model.encode()),
@@ -1897,16 +1959,26 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
                 "min_identifier_map_count": thresholds.min_identifier_map_count,
                 "min_missing_checker_count": thresholds.min_missing_checker_count,
                 "min_package_property_count": thresholds.min_package_property_count,
+                "min_runtime_certificate_count": (
+                    thresholds.min_runtime_certificate_count
+                ),
                 "require_checker_execution_disabled": (
                     thresholds.require_checker_execution_disabled
                 ),
                 "require_deterministic_hash": (thresholds.require_deterministic_hash),
+                "require_runtime_certificate_verified": (
+                    thresholds.require_runtime_certificate_verified
+                ),
             },
             sort_keys=True,
         ),
         "checker_commands_json": json.dumps(checker_commands, sort_keys=True),
         "checker_availability_json": json.dumps(
             checker_availability_records,
+            sort_keys=True,
+        ),
+        "runtime_certificate_json": json.dumps(
+            runtime_certificate_record,
             sort_keys=True,
         ),
     }

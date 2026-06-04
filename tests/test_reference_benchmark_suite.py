@@ -712,10 +712,14 @@ def test_formal_export_artifact_quality_benchmark_shape() -> None:
     assert out["checker_missing_count"] == 1
     assert out["checker_execution_disabled"] == 1
     assert out["checker_availability_execution_disabled"] == 1
+    assert out["runtime_certificate_count"] == 1
+    assert out["runtime_certificate_verified"] == 1
+    assert out["runtime_certificate_execution_disabled"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
     assert len(str(out["artifact_sha256"])) == 64
     assert len(str(out["package_sha256"])) == 64
+    assert len(str(out["runtime_certificate_sha256"])) == 64
     assert int(out["petri_prism_bytes"]) > 0
     assert int(out["petri_tla_bytes"]) > 0
     assert int(out["policy_prism_bytes"]) > 0
@@ -729,6 +733,7 @@ def test_formal_export_artifact_quality_reports_thresholds() -> None:
     thresholds = json.loads(str(out["acceptance_thresholds_json"]))
     checker_commands = json.loads(str(out["checker_commands_json"]))
     checker_availability = json.loads(str(out["checker_availability_json"]))
+    runtime_certificate = json.loads(str(out["runtime_certificate_json"]))
 
     assert thresholds == {
         "min_artifact_count": 5,
@@ -738,8 +743,10 @@ def test_formal_export_artifact_quality_reports_thresholds() -> None:
         "min_identifier_map_count": 12,
         "min_missing_checker_count": 1,
         "min_package_property_count": 3,
+        "min_runtime_certificate_count": 1,
         "require_checker_execution_disabled": True,
         "require_deterministic_hash": True,
+        "require_runtime_certificate_verified": True,
     }
     assert [command["checker"] for command in checker_commands] == [
         "prism",
@@ -765,6 +772,15 @@ def test_formal_export_artifact_quality_reports_thresholds() -> None:
     assert all(
         record["execution_permitted"] is False for record in checker_availability
     )
+    assert runtime_certificate["status"] == "verified_non_actuating"
+    assert runtime_certificate["actuation_permitted"] is False
+    assert runtime_certificate["required_property_count"] == 3
+    assert runtime_certificate["passed_required_count"] == 3
+    assert runtime_certificate["runtime_bounds"] == {
+        "R_min": 0.7,
+        "max_policy_actions": 4.0,
+        "max_step_s": 0.05,
+    }
 
 
 def test_stl_closed_loop_plan_quality_benchmark_shape() -> None:
