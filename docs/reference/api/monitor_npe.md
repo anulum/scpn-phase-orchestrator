@@ -205,6 +205,22 @@ twenty measured ``compute_npe`` calls per backend. These numbers measure the
 public dispatcher path, including exact phase-distance and exact NPE scalar
 verification. Reproduce with
 `python benchmarks/npe_benchmark.py --sizes 16 64 256 --calls 20`.
+The release reference suite also runs a deterministic parity gate:
+
+```bash
+python benchmarks/npe_benchmark.py --parity-gate --sizes 20 --calls 1
+```
+
+The parity gate records every declared backend slot in the canonical order
+Rust, Mojo, Julia, Go, and Python. Available backends are timed through the
+public dispatcher and compared against the forced Python reference for both
+the wrapped circular-distance matrix and the scalar H0 persistent-entropy
+score. Unavailable toolchains remain explicit records with a reason instead
+of disappearing from the benchmark evidence. Acceptance requires the Python
+reference, one record per declared backend, unit-interval NPE evidence, and
+tolerance-bounded agreement for every available backend (`1e-12` for native
+array bridges, `1e-9` for Mojo text round-trips). The stored reference-suite
+snapshot exposes the gate as `npe_polyglot`.
 
 Current available backends for this run: ``rust``, ``mojo``, ``go``,
 ``python``. Julia was not available in the local benchmark environment.
@@ -316,6 +332,7 @@ concurrent code.
 |---|---|---|
 | `tests/test_npe.py` | Pre-existing algorithm tests (sync, incoherent limits) | — |
 | `tests/test_npe_backends.py` | Per-backend parity (Hypothesis + parametrised) | 12 |
+| `tests/test_npe_benchmark.py` | Reference-suite parity-gate contract | 1 |
 | `tests/test_npe_stability.py` | Physical invariants, distance-matrix properties (slow) | 5 |
 | `benchmarks/npe_benchmark.py` | Multi-backend wall-clock harness | — |
 

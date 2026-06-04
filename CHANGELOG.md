@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a Lyapunov spectrum polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python status, timing, and numerical parity against the
   Python reference in the reference-suite snapshot.
+- Added an NPE polyglot benchmark gate that records Rust/Mojo/Julia/Go/Python
+  status, circular-distance parity, scalar persistent-entropy parity, and
+  unavailable-toolchain reasons in the reference-suite snapshot.
 
 ## [0.6.5] - 2026-06-02
 

@@ -23,6 +23,7 @@ from typing import NamedTuple, TypedDict
 import numpy as np
 
 from benchmarks.lyapunov_benchmark import benchmark_lyapunov_polyglot_parity_gate
+from benchmarks.npe_benchmark import benchmark_npe_polyglot_parity_gate
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
     audit_hybrid_target_readiness,
@@ -7498,6 +7499,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
             "lyapunov_polyglot": benchmark_lyapunov_polyglot_parity_gate(),
+            "npe_polyglot": benchmark_npe_polyglot_parity_gate(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
             "petri_reachability": benchmark_petri_reachability(),
