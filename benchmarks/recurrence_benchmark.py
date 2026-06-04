@@ -146,9 +146,7 @@ def _problem(
     frequencies = np.linspace(0.35, 1.15, d, dtype=np.float64)
     offsets = rng.uniform(0.0, TWO_PI, size=d)
     base = grid[:, np.newaxis] * frequencies[np.newaxis, :] + offsets
-    modulation = 0.08 * np.sin(
-        grid[:, np.newaxis] * (frequencies[np.newaxis, :] + 0.2)
-    )
+    modulation = 0.08 * np.sin(grid[:, np.newaxis] * (frequencies[np.newaxis, :] + 0.2))
     cross_shift = 0.17 + 0.05 * np.cos(
         grid[:, np.newaxis] * (frequencies[np.newaxis, :] + 0.5)
     )
@@ -440,9 +438,7 @@ def benchmark_recurrence_polyglot_parity_gate(
             if key.endswith("_cross") and not key.endswith("_self_cross")
         }
         self_cross_bundle = {
-            key: value
-            for key, value in bundle.items()
-            if key.endswith("_self_cross")
+            key: value for key, value in bundle.items() if key.endswith("_self_cross")
         }
         records.append(
             {
@@ -539,15 +535,11 @@ def benchmark_recurrence_polyglot_parity_gate(
         "reference_recurrence_rate": reference_rqa.recurrence_rate,
         "reference_determinism": reference_rqa.determinism,
         "reference_laminarity": reference_rqa.laminarity,
-        "reference_recurrence_sha256": benchmark_payload[
-            "reference_recurrence_sha256"
-        ],
+        "reference_recurrence_sha256": benchmark_payload["reference_recurrence_sha256"],
         "reference_cross_recurrence_sha256": benchmark_payload[
             "reference_cross_recurrence_sha256"
         ],
-        "reference_self_cross_sha256": benchmark_payload[
-            "reference_self_cross_sha256"
-        ],
+        "reference_self_cross_sha256": benchmark_payload["reference_self_cross_sha256"],
         "benchmark_sha256": benchmark_sha,
         "wall_time_s": wall_time,
         "steps_per_second": parity_checked_count / wall_time if wall_time else 0.0,

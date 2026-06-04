@@ -316,9 +316,7 @@ def test_doppler_julia_and_mojo_adapters_validate_before_runtime(
     monkeypatch.setattr(
         doppler_mojo_module,
         "_run",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            AssertionError("mojo loaded")
-        ),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("mojo loaded")),
     )
     args = (
         np.zeros(2),

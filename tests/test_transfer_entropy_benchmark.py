@@ -35,9 +35,10 @@ def test_transfer_entropy_polyglot_parity_gate_reports_contracts() -> None:
     assert out["reference_contracts_passed"] == 1
     assert out["acceptance_passed"] == 1
     assert float(out["reference_forward_te"]) > float(out["reference_reverse_te"])
-    assert float(out["reference_direction_margin"]) > thresholds[
-        "min_causal_direction_margin"
-    ]
+    assert (
+        float(out["reference_direction_margin"])
+        > thresholds["min_causal_direction_margin"]
+    )
     assert float(out["scalar_matrix_forward_error"]) <= 1.0e-12
     assert float(out["scalar_matrix_reverse_error"]) <= 1.0e-12
     assert float(out["diagonal_max_abs"]) <= 1.0e-12

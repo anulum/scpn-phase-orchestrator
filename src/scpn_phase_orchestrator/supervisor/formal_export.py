@@ -412,9 +412,7 @@ class FormalRuntimeCertificate:
             "passed_required_count": self.passed_required_count,
             "missing_required_properties": list(self.missing_required_properties),
             "failed_required_properties": list(self.failed_required_properties),
-            "unavailable_checker_properties": list(
-                self.unavailable_checker_properties
-            ),
+            "unavailable_checker_properties": list(self.unavailable_checker_properties),
             "status": self.status,
             "certificate_hash": self.certificate_hash,
             "actuation_permitted": self.actuation_permitted,

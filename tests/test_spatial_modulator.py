@@ -371,8 +371,7 @@ def test_public_spatial_accelerator_wrappers_forward_to_direct_modules() -> None
         is spatial_validation
     )
     assert (
-        public_spatial_go.spatial_modulate_go
-        is direct_spatial_go.spatial_modulate_go
+        public_spatial_go.spatial_modulate_go is direct_spatial_go.spatial_modulate_go
     )
     assert public_spatial_go._load_lib is direct_spatial_go._load_lib
     assert (

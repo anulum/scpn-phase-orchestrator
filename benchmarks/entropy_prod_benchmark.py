@@ -521,10 +521,7 @@ def bench_sizes(
     alpha: object = 0.5,
     dt: object = 0.01,
 ) -> list[dict]:
-    return [
-        bench_at(size, calls, seed=seed, alpha=alpha, dt=dt)
-        for size in sizes
-    ]
+    return [bench_at(size, calls, seed=seed, alpha=alpha, dt=dt) for size in sizes]
 
 
 def _parse_args() -> argparse.Namespace:

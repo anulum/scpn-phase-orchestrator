@@ -342,9 +342,7 @@ def test_moving_frame_julia_and_mojo_adapters_validate_before_runtime(
     monkeypatch.setattr(
         moving_frame_mojo_module,
         "_run",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            AssertionError("mojo loaded")
-        ),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("mojo loaded")),
     )
     args = list(_moving_frame_adapter_args())
     args[1] = np.array([-1.0, 0.0, 1.0], dtype=np.float64)

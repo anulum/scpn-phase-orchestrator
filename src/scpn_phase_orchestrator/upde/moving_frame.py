@@ -371,7 +371,9 @@ def moving_frame_run_python(
             atol_f,
             rtol_f,
         )
-        z_work = np.ascontiguousarray(z_work + velocities[step] * dt_f, dtype=np.float64)
+        z_work = np.ascontiguousarray(
+            z_work + velocities[step] * dt_f, dtype=np.float64
+        )
     return np.ascontiguousarray(np.concatenate([p_work, z_work]), dtype=np.float64)
 
 
@@ -648,7 +650,9 @@ class MovingFrameUPDEEngine(DopplerEngine):
     def distance_to_reference(self) -> FloatArray:
         """Absolute distance from each oscillator to the chamber reference."""
 
-        return np.ascontiguousarray(np.abs(self._positions - self.reference_point), dtype=np.float64)
+        return np.ascontiguousarray(
+            np.abs(self._positions - self.reference_point), dtype=np.float64
+        )
 
     @property
     def knm_effective(self) -> FloatArray:
@@ -758,7 +762,9 @@ class MovingFrameUPDEEngine(DopplerEngine):
         self.phases = np.ascontiguousarray(flat[:n], dtype=np.float64)
         self._positions = np.ascontiguousarray(flat[n:], dtype=np.float64)
         if steps > 1:
-            last_start_positions = z0 + self._dt * np.sum(velocity_schedule[:-1], axis=0)
+            last_start_positions = z0 + self._dt * np.sum(
+                velocity_schedule[:-1], axis=0
+            )
         else:
             last_start_positions = z0
         self._knm_effective = self._modulated_knm(k, last_start_positions)

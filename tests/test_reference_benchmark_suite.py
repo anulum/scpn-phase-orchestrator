@@ -63,7 +63,6 @@ from benchmarks.reference_suite import (
     benchmark_value_alignment_replay_calibration_gate,
     benchmark_winding_polyglot_parity_gate,
     build_benchmark_metadata,
-    benchmark_upde_moving_frame_polyglot_gate,
     run_reference_suite,
 )
 
