@@ -306,7 +306,7 @@ print(state.order_parameter)
 ## Reference Benchmarks
 
 SPO keeps reference benchmarks as reproducible evidence, not as marketing
-claims. The checked-in snapshot is dated `2026-05-20` and was generated with:
+claims. The checked-in snapshot is dated `2026-06-04` and was generated with:
 
 ```bash
 PYTHONPATH=src python benchmarks/reference_suite.py
@@ -315,16 +315,18 @@ PYTHONPATH=src python benchmarks/reference_suite.py
 The snapshot is published at
 [`docs/galleries/reference_benchmark_snapshot.md`](docs/galleries/reference_benchmark_snapshot.md).
 It records the command, Python/Numpy versions, platform metadata, acceptance
-flags, and steps/s values for each suite. Selected reference suites:
+flags, local non-isolated evidence labels, and steps/s values for each suite.
+Selected reference suites:
 
 | Suite | Reference contract | Snapshot steps/s |
 |-------|--------------------|-----------------:|
-| `kuramoto_reference_strogatz_2000` | Strogatz/Acebrón synchronisation plus exact two-oscillator locking acceptance | `8209.92` |
+| `kuramoto_reference_strogatz_2000` | Strogatz/Acebron synchronisation plus exact two-oscillator locking acceptance | `8209.92` |
 | `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `8030.75` |
 | `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `182139.33` |
 | `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `5.29` |
 | `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `5.46` |
-| `spectral_polyglot_parity_gate` | Dörfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.39` |
+| `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.39` |
+| `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `538.56` |
 
 Physics invariants are also executable as focused tests:
 
@@ -359,6 +361,17 @@ Laplacian contract across every declared backend slot, including algebraic
 connectivity parity, Fiedler-vector direction parity, non-negative spectral
 gap, zero row sums, positive semidefiniteness, and exact uniform-path plus
 complete-graph spectra.
+The Hodge polyglot record checks the Jiang-style decomposition of coupling
+flow into gradient, curl, and harmonic components across every declared backend
+slot. It requires exact reconstruction of total phase-weighted flow,
+near-zero harmonic residual for the clean symmetric plus antisymmetric split,
+global phase-gauge invariance, zero curl for symmetric coupling, zero gradient
+for antisymmetric coupling, the two-node antisymmetric closed form, scale
+covariance, and explicit unavailable-toolchain evidence.
+
+Timing fields in the checked-in reference snapshot are local regression and
+parity evidence unless the run metadata states CPU/core isolation and host-load
+controls. They are not production throughput claims by themselves.
 
 ## Hardware Integration Boundary
 

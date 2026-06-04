@@ -121,6 +121,41 @@
       "unavailable_backend_count": 0,
       "wall_time_s": 1.8427273819688708
     },
+    "hodge_polyglot": {
+      "suite": "hodge_polyglot_parity_gate",
+      "n": 10,
+      "calls": 1,
+      "seed": 2026,
+      "backend_count": 5,
+      "available_backend_count": 5,
+      "unavailable_backend_count": 0,
+      "invalid_backend_count": 0,
+      "parity_passed_count": 5,
+      "python_reference_present": 1,
+      "all_available_passed": 1,
+      "reference_contracts_passed": 1,
+      "acceptance_passed": 1,
+      "reference_gradient_sha256": "f7d3b9aa346f234a6f74a2459eb34e8b4b021d58253f37c2850431855b5636cc",
+      "reference_curl_sha256": "76e206afad8068c4bb8f273a23df4adf5fe72528505882a9c976c3ce922b935b",
+      "reference_harmonic_sha256": "850ecba2167ddc007daddd19a4534dc91b838cb492d0c776b51d7d9254daf987",
+      "reference_bundle_sha256": "0f7b2a2ca93aa8dcdd6f5604fc67cbadbb8bcc221c17d463a830e6017266c46b",
+      "reconstruction_max_abs_error": 5.551115123125783e-17,
+      "harmonic_max_abs_error": 1.1102230246251565e-16,
+      "phase_shift_max_abs_error": 2.220446049250313e-16,
+      "symmetric_curl_max_abs_error": 0.0,
+      "antisymmetric_gradient_max_abs_error": 0.0,
+      "antisymmetric_curl_sum_abs_error": 1.6653345369377348e-16,
+      "two_node_curl_max_abs_error": 0.0,
+      "scale_covariance_max_abs_error": 1.096345236817342e-15,
+      "backend_records_json": "[{\"backend\": \"rust\", \"bundle_sha256\": \"012cc6927ff10c3c584f0a6d93f8e715e6d3c1d67d34a2e00b8deda2430f50eb\", \"curl_abs_error\": 2.7755575615628914e-17, \"curl_sha256\": \"207efb9e48dbe7b7a17e3d637064ea15d91695b1fb4b51735b374b84417c9fe7\", \"gradient_abs_error\": 1.1102230246251565e-16, \"gradient_sha256\": \"e36bd8f46e08d6d0691aa8b8f84c37f09bdaeea67a72e554364a0c7e2d1882b6\", \"harmonic_abs_error\": 3.3306690738754696e-16, \"harmonic_sha256\": \"b7f6b5edba2828d752a9c3d8d053ebb8dded415bca7cf064ff399cdee6831d29\", \"max_abs_error\": 3.3306690738754696e-16, \"ms_per_call\": 0.0285289715975523, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"mojo\", \"bundle_sha256\": \"bc6da067662c2c112f15d22bf982af5134539929cab758ff5a3fb7c53573d67a\", \"curl_abs_error\": 1.1102230246251565e-16, \"curl_sha256\": \"f404fb4cd76e8b32cdd1faade1d141ada964b37dd1689f9d08b92f58cb05bc6d\", \"gradient_abs_error\": 2.220446049250313e-16, \"gradient_sha256\": \"d2ce13e6ea66b113968c6a5711b72d98e1d6a298276ae46d84c3cf93fcd34353\", \"harmonic_abs_error\": 2.220446049250313e-16, \"harmonic_sha256\": \"46c8f35ab718ac4bf4141fdc255b262dcafa19352c6a11b4bcd1bdcae840ec98\", \"max_abs_error\": 2.220446049250313e-16, \"ms_per_call\": 31.998381949961185, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-08, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"bundle_sha256\": \"cc0afa306e65969a036494eff226d3ac994ee04929e4044e617421923fbc8a7c\", \"curl_abs_error\": 5.551115123125783e-17, \"curl_sha256\": \"7d02babee4437852c3e05aed7f6395cbc65c02bc198ebff9aa797a04667a29c8\", \"gradient_abs_error\": 1.1102230246251565e-16, \"gradient_sha256\": \"e36bd8f46e08d6d0691aa8b8f84c37f09bdaeea67a72e554364a0c7e2d1882b6\", \"harmonic_abs_error\": 3.3306690738754696e-16, \"harmonic_sha256\": \"ace48f9f5a0277342da0cf435d8007976371dd175fabd6bae1ff6c8e96f34238\", \"max_abs_error\": 3.3306690738754696e-16, \"ms_per_call\": 55.54059101268649, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"bundle_sha256\": \"a44ecde0810e18b0c594ccc2037fcd166f3b4ce247e2f37bfd1410f3983c462c\", \"curl_abs_error\": 5.551115123125783e-17, \"curl_sha256\": \"098b2d09ac582280c84afddedfba37333b2c78ce76f56bf1663eb4d7921822cb\", \"gradient_abs_error\": 2.220446049250313e-16, \"gradient_sha256\": \"68cff9bb433186bf29c2684b85688548b4f16b94cae2a253ab2db5534e7708d9\", \"harmonic_abs_error\": 3.3306690738754696e-16, \"harmonic_sha256\": \"25a07808ef5b821ac9ce008b3f93102b104e6e04a5c07b49f714ae60384bcb17\", \"max_abs_error\": 3.3306690738754696e-16, \"ms_per_call\": 3.820155980065465, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"bundle_sha256\": \"0f7b2a2ca93aa8dcdd6f5604fc67cbadbb8bcc221c17d463a830e6017266c46b\", \"curl_abs_error\": 0.0, \"curl_sha256\": \"76e206afad8068c4bb8f273a23df4adf5fe72528505882a9c976c3ce922b935b\", \"gradient_abs_error\": 0.0, \"gradient_sha256\": \"f7d3b9aa346f234a6f74a2459eb34e8b4b021d58253f37c2850431855b5636cc\", \"harmonic_abs_error\": 0.0, \"harmonic_sha256\": \"850ecba2167ddc007daddd19a4534dc91b838cb492d0c776b51d7d9254daf987\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.02406397834420204, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]",
+      "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"mojo\", \"julia\", \"go\", \"python\"], \"max_reference_contract_abs_error\": 1e-10, \"parity_tolerances\": {\"go\": 1e-10, \"julia\": 1e-10, \"mojo\": 1e-08, \"python\": 0.0, \"rust\": 1e-10}, \"production_timing_claim\": false, \"require_all_available_backends_pass\": true, \"require_antisymmetric_zero_gradient\": true, \"require_global_phase_shift_invariance\": true, \"require_no_invalid_backend_outputs\": true, \"require_python_reference_present\": true, \"require_reconstruction_contract\": true, \"require_scale_covariance\": true, \"require_symmetric_zero_curl\": true, \"require_two_node_antisymmetric_closed_form\": true}",
+      "benchmark_sha256": "858fe5246c22cdecabfac7133bb3324a2493f7dfb4e99a17dd8c22a6b1645496",
+      "benchmark_evidence_kind": "local_regression_non_isolated",
+      "isolation_method": "none",
+      "production_timing_claim": 0,
+      "wall_time_s": 0.09284092299640179,
+      "steps_per_second": 538.5556108908767
+    },
     "domain_formal_export": {
       "acceptance_passed": 1,
       "acceptance_thresholds_json": "{\"min_artifacts_per_domain\": 5, \"min_checker_command_count\": 2, \"min_domain_count\": 11, \"min_package_property_count\": 2, \"min_rules_per_domain\": 2, \"min_stl_specs_per_domain\": 2, \"require_deterministic_hash\": true}",
@@ -970,6 +1005,9 @@
     "python_implementation": "CPython",
     "python_version": "3.12.3",
     "snapshot_date": "2026-06-04",
-    "suite_version": "reference_suite_v1"
+    "suite_version": "reference_suite_v1",
+    "benchmark_evidence_kind": "local_regression_non_isolated",
+    "isolation_method": "none",
+    "production_timing_claim": "false"
   }
 }

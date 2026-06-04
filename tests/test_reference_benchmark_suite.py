@@ -25,6 +25,7 @@ from benchmarks.reference_suite import (
     benchmark_federated_meta_orchestrator,
     benchmark_federated_production_boundary_gate,
     benchmark_formal_export_artifact_quality,
+    benchmark_hodge_polyglot_parity_gate,
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_hybrid_entanglement_order_parameter_gate,
     benchmark_hybrid_operator_handoff_package_gate,
@@ -2356,6 +2357,53 @@ def test_spectral_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["fiedler_vector_sha256"] is None
 
 
+def test_hodge_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_hodge_polyglot_parity_gate(n=8, calls=1, seed=2026)
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "hodge_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["acceptance_passed"] == 1
+    assert out["reference_contracts_passed"] == 1
+    assert float(out["reconstruction_max_abs_error"]) <= 1.0e-10
+    assert float(out["harmonic_max_abs_error"]) <= 1.0e-10
+    assert float(out["phase_shift_max_abs_error"]) <= 1.0e-10
+    assert float(out["symmetric_curl_max_abs_error"]) <= 1.0e-10
+    assert float(out["antisymmetric_gradient_max_abs_error"]) <= 1.0e-10
+    assert float(out["two_node_curl_max_abs_error"]) <= 1.0e-10
+    assert float(out["scale_covariance_max_abs_error"]) <= 1.0e-10
+    assert thresholds["backend_order"] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds["require_reconstruction_contract"] is True
+    assert thresholds["require_global_phase_shift_invariance"] is True
+    assert thresholds["require_symmetric_zero_curl"] is True
+    assert thresholds["require_antisymmetric_zero_gradient"] is True
+    assert thresholds["require_two_node_antisymmetric_closed_form"] is True
+    assert thresholds["require_scale_covariance"] is True
+    assert thresholds["production_timing_claim"] is False
+
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["reference_contracts_passed"] is True
+            assert record["max_abs_error"] <= record["tolerance"]
+            assert record["gradient_sha256"] is not None
+            assert record["curl_sha256"] is not None
+            assert record["harmonic_sha256"] is not None
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["gradient_sha256"] is None
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -2376,6 +2424,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "hybrid_cocompiler",
         "hybrid_operator_handoff",
         "hybrid_target_readiness",
+        "hodge_polyglot",
         "information_geometry_control",
         "integrated_information_replay_corpus",
         "intergenerational_inheritance",
@@ -2414,6 +2463,9 @@ def test_reference_suite_metadata_labels_reproduction_context() -> None:
     metadata = build_benchmark_metadata(snapshot_date="2026-05-06")
 
     assert metadata["suite_version"] == "reference_suite_v1"
+    assert metadata["benchmark_evidence_kind"] == "local_regression_non_isolated"
+    assert metadata["isolation_method"] == "none"
+    assert metadata["production_timing_claim"] == "false"
     assert metadata["snapshot_date"] == "2026-05-06"
     assert metadata["command"] == BENCHMARK_COMMAND
     assert metadata["backend"] == "python_numpy"

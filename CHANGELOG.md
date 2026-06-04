@@ -48,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   direction parity, non-negative spectral gap, Laplacian row-sum and
   positive-semidefinite contracts, and exact uniform-path plus complete-graph
   spectra in the reference-suite snapshot.
+- Added a Hodge decomposition polyglot benchmark gate that records
+  Rust/Mojo/Julia/Go/Python gradient, curl, and harmonic parity, reconstruction
+  error, harmonic-residual bounds, global phase-shift invariance,
+  symmetric/antisymmetric special cases, two-node antisymmetric closed-form
+  evidence, scale covariance, and local non-isolated benchmark evidence labels.
 - Added an order-parameter polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python parity for Kuramoto `R`, mean phase, PLV, and layer
   coherence in the reference-suite snapshot.

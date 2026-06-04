@@ -117,7 +117,7 @@ contains two top-level fields:
 
 | Field | Purpose |
 |-------|---------|
-| `metadata` | Snapshot date, exact command, backend label, Python version, NumPy version, executable, and platform string |
+| `metadata` | Snapshot date, exact command, backend label, Python version, NumPy version, executable, platform string, and benchmark evidence boundary |
 | `benchmarks` | Kuramoto, Stuart-Landau, Petri reachability, and frontier gate records with timings, acceptance flags, thresholds, and physical summary values |
 
 The Kuramoto record is an acceptance benchmark, not only a timer. It checks
@@ -146,10 +146,21 @@ combinatorial graph Laplacian. It records Rust/Mojo/Julia/Go/Python slot
 status, algebraic-connectivity parity, Fiedler-vector direction parity,
 non-negative spectral gap, zero row sums, positive semidefiniteness, and exact
 uniform-path plus complete-graph spectra.
+The Hodge record is a polyglot mathematics gate for the Jiang decomposition of
+coupling flow into gradient, curl, and harmonic components. It records
+Rust/Mojo/Julia/Go/Python slot status, component parity, exact reconstruction
+of total phase-weighted flow, near-zero harmonic residual for the clean
+symmetric plus antisymmetric split, global phase-shift invariance, symmetric
+zero-curl and antisymmetric zero-gradient special cases, the two-node
+antisymmetric closed form, scale covariance, and unavailable-toolchain reasons.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the
 same environment and the new JSON artefact is available for review.
+Treat checked-in timing fields as local, non-isolated regression evidence
+unless the metadata also records CPU/core isolation and host-load controls.
+Without that isolation evidence, the timing fields prove reproducibility and
+parity execution only; they are not production throughput claims.
 
 ## Baseline Regression
 

@@ -25,6 +25,7 @@ from numpy.typing import NDArray
 
 from benchmarks.chimera_benchmark import benchmark_chimera_polyglot_parity_gate
 from benchmarks.dimension_benchmark import benchmark_dimension_polyglot_parity_gate
+from benchmarks.hodge_benchmark import benchmark_hodge_polyglot_parity_gate
 from benchmarks.itpc_benchmark import benchmark_itpc_polyglot_parity_gate
 from benchmarks.lyapunov_benchmark import benchmark_lyapunov_polyglot_parity_gate
 from benchmarks.npe_benchmark import benchmark_npe_polyglot_parity_gate
@@ -570,6 +571,9 @@ def build_benchmark_metadata(*, snapshot_date: str | None = None) -> dict[str, s
         "numpy_version": np.__version__,
         "platform": platform.platform(),
         "executable": sys.executable,
+        "benchmark_evidence_kind": "local_regression_non_isolated",
+        "isolation_method": "none",
+        "production_timing_claim": "false",
     }
 
 
@@ -2167,8 +2171,7 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
             package_hash=package.package_hash,
             result_hash=sha256(
                 (
-                    f"{package.package_hash}:{command.property_name}:"
-                    "reviewed-pass"
+                    f"{package.package_hash}:{command.property_name}:reviewed-pass"
                 ).encode()
             ).hexdigest(),
             status="passed",
@@ -7825,6 +7828,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
             "chimera_polyglot": benchmark_chimera_polyglot_parity_gate(),
             "dimension_polyglot": benchmark_dimension_polyglot_parity_gate(),
+            "hodge_polyglot": benchmark_hodge_polyglot_parity_gate(),
             "itpc_polyglot": benchmark_itpc_polyglot_parity_gate(),
             "lyapunov_polyglot": benchmark_lyapunov_polyglot_parity_gate(),
             "npe_polyglot": benchmark_npe_polyglot_parity_gate(),
