@@ -638,3 +638,10 @@ For callable sources, `run()` resolves one frequency vector per outer step and
 calls `upde_run_omega_schedule`, which is implemented across the Rust, Go,
 Julia, Mojo, and Python UPDE backend surfaces. See
 [UPDE — Time-varying omega](upde_time_varying_omega.md).
+
+## Doppler-corrected schedule path
+
+`DopplerEngine` builds on the time-varying omega path by resolving one velocity
+vector per outer step, computing the graph-weighted Doppler correction, and
+passing `omega_eff = omega + doppler_term` into the same UPDE integrators. The
+public contract is documented in [UPDE — Doppler Engine](upde_doppler.md).

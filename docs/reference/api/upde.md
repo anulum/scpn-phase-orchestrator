@@ -515,3 +515,15 @@ runner when available.
 Use this for drifting oscillators, moving-agent frequency shifts, chirps,
 thermal detuning, and Doppler preparation. The detailed contract is documented
 in [UPDE — Time-varying omega](upde_time_varying_omega.md).
+
+## PHA-C.2 Doppler-corrected UPDE
+
+`DopplerEngine` adds graph-weighted relative-velocity detuning before each
+UPDE outer step. It consumes the PHA-C.5 `omega(t)` schedule contract and is
+used when phase locking depends on moving oscillators rather than fixed natural
+frequencies, such as counter-propagating plasmoids, mobile acoustic clocks,
+robot/sensor swarms, and moving-grid assets.
+
+See [UPDE — Doppler Engine](upde_doppler.md) for the mathematical contract,
+scalar/vector velocity handling, backend parity surface, and Mach-1
+counter-propagating acceptance scenario.

@@ -352,6 +352,103 @@ fn upde_run_omega_schedule(
             phases[i] = fmod_positive(phases[i], two_pi)
 
 
+fn compute_doppler_term(
+    velocities: List[Float64],
+    knm: List[Float64],
+    strength: Float64,
+    epsilon: Float64,
+    n: Int,
+    mut out: List[Float64],
+) -> None:
+    for i in range(n):
+        var row_mass: Float64 = 0.0
+        var acc: Float64 = 0.0
+        var denom = abs(velocities[i]) + epsilon
+        var offset = i * n
+        for j in range(n):
+            if i == j:
+                continue
+            var weight = abs(knm[offset + j])
+            if weight == 0.0:
+                continue
+            row_mass += weight
+            acc += weight * (velocities[i] - velocities[j]) / denom
+        if row_mass > 0.0:
+            out[i] = strength * acc / row_mass
+        else:
+            out[i] = 0.0
+
+
+fn upde_run_doppler_schedule(
+    mut phases: List[Float64],
+    omega_schedule: List[Float64],
+    knm: List[Float64],
+    alpha: List[Float64],
+    velocity_schedule: List[Float64],
+    n: Int,
+    strength: Float64,
+    epsilon: Float64,
+    zeta: Float64,
+    psi: Float64,
+    dt: Float64,
+    n_steps: Int,
+    method: Int,
+    n_substeps: Int,
+    atol: Float64,
+    rtol: Float64,
+) -> None:
+    var two_pi = 6.283185307179586
+    var k1 = List[Float64](capacity=n)
+    var k2 = List[Float64](capacity=n)
+    var k3 = List[Float64](capacity=n)
+    var k4 = List[Float64](capacity=n)
+    var k5 = List[Float64](capacity=n)
+    var k6 = List[Float64](capacity=n)
+    var k7 = List[Float64](capacity=n)
+    var y5 = List[Float64](capacity=n)
+    var tmp = List[Float64](capacity=n)
+    var omegas = List[Float64](capacity=n)
+    var velocities = List[Float64](capacity=n)
+    var doppler = List[Float64](capacity=n)
+    var effective = List[Float64](capacity=n)
+    for _ in range(n):
+        k1.append(0.0); k2.append(0.0); k3.append(0.0); k4.append(0.0)
+        k5.append(0.0); k6.append(0.0); k7.append(0.0)
+        y5.append(0.0); tmp.append(0.0); omegas.append(0.0)
+        velocities.append(0.0); doppler.append(0.0); effective.append(0.0)
+
+    var last_dt = dt
+    var sub_dt = dt / Float64(n_substeps)
+
+    for step in range(n_steps):
+        var offset = step * n
+        for i in range(n):
+            omegas[i] = omega_schedule[offset + i]
+            velocities[i] = velocity_schedule[offset + i]
+        compute_doppler_term(velocities, knm, strength, epsilon, n, doppler)
+        for i in range(n):
+            effective[i] = omegas[i] + doppler[i]
+        if method == 2:
+            last_dt = rk45_step(
+                phases, effective, knm, alpha, zeta, psi,
+                atol, rtol, dt, last_dt, n,
+                k1, k2, k3, k4, k5, k6, k7, y5, tmp,
+            )
+        elif method == 1:
+            for _ in range(n_substeps):
+                rk4_substep(
+                    phases, effective, knm, alpha, zeta, psi, sub_dt, n,
+                    k1, k2, k3, k4, tmp,
+                )
+        else:
+            for _ in range(n_substeps):
+                euler_substep(
+                    phases, effective, knm, alpha, zeta, psi, sub_dt, n, k1,
+                )
+        for i in range(n):
+            phases[i] = fmod_positive(phases[i], two_pi)
+
+
 fn main() raises:
     var line = input()
     var tokens = List[String]()
@@ -360,11 +457,16 @@ fn main() raises:
 
     var idx = 0
     var op = tokens[idx]; idx += 1
-    if op != "RUN" and op != "RUN_SCHEDULE":
+    if op != "RUN" and op != "RUN_SCHEDULE" and op != "RUN_DOPPLER":
         print(-1)
         return
 
     var n = Int(atol(tokens[idx])); idx += 1
+    var strength: Float64 = 0.0
+    var epsilon: Float64 = 1.0
+    if op == "RUN_DOPPLER":
+        strength = atof(tokens[idx]); idx += 1
+        epsilon = atof(tokens[idx]); idx += 1
     var zeta = atof(tokens[idx]); idx += 1
     var psi = atof(tokens[idx]); idx += 1
     var dt = atof(tokens[idx]); idx += 1
@@ -391,11 +493,21 @@ fn main() raises:
     var alpha_arr = List[Float64](capacity=n * n)
     for _ in range(n * n):
         alpha_arr.append(atof(tokens[idx])); idx += 1
+    var velocity_schedule = List[Float64](capacity=n * n_steps)
+    if op == "RUN_DOPPLER":
+        for _ in range(n * n_steps):
+            velocity_schedule.append(atof(tokens[idx])); idx += 1
 
     if op == "RUN":
         upde_run(
             phases, omegas, knm, alpha_arr,
             n, zeta, psi, dt, n_steps, method, n_substeps, atol_, rtol_,
+        )
+    elif op == "RUN_DOPPLER":
+        upde_run_doppler_schedule(
+            phases, omega_schedule, knm, alpha_arr, velocity_schedule,
+            n, strength, epsilon, zeta, psi, dt, n_steps, method,
+            n_substeps, atol_, rtol_,
         )
     else:
         upde_run_omega_schedule(

@@ -277,6 +277,98 @@ func upderRunOmegaSchedule(
 	}
 }
 
+func computeDopplerTerm(
+	out, velocities, knm []float64,
+	strength, epsilon float64,
+	n int,
+) {
+	for i := 0; i < n; i++ {
+		rowMass := 0.0
+		acc := 0.0
+		denom := math.Abs(velocities[i]) + epsilon
+		offset := i * n
+		for j := 0; j < n; j++ {
+			if i == j {
+				continue
+			}
+			weight := math.Abs(knm[offset+j])
+			if weight == 0.0 {
+				continue
+			}
+			rowMass += weight
+			acc += weight * (velocities[i] - velocities[j]) / denom
+		}
+		if rowMass > 0.0 {
+			out[i] = strength * acc / rowMass
+		} else {
+			out[i] = 0.0
+		}
+	}
+}
+
+func upderRunDopplerSchedule(
+	phases []float64,
+	omegaSchedule, knm, alpha, velocitySchedule []float64,
+	strength, epsilon, zeta, psi, dt float64,
+	nSteps, method int,
+	nSubsteps int,
+	atol, rtol float64,
+	n int,
+) {
+	doppler := make([]float64, n)
+	effective := make([]float64, n)
+	lastDt := dt
+	subDt := dt / float64(nSubsteps)
+	k1 := make([]float64, n)
+	k2 := make([]float64, n)
+	k3 := make([]float64, n)
+	k4 := make([]float64, n)
+	k5 := make([]float64, n)
+	k6 := make([]float64, n)
+	k7 := make([]float64, n)
+	y5 := make([]float64, n)
+	tmp := make([]float64, n)
+
+	for step := 0; step < nSteps; step++ {
+		start := step * n
+		omegas := omegaSchedule[start : start+n]
+		velocities := velocitySchedule[start : start+n]
+		computeDopplerTerm(doppler, velocities, knm, strength, epsilon, n)
+		for i := 0; i < n; i++ {
+			effective[i] = omegas[i] + doppler[i]
+		}
+		switch method {
+		case 2: // rk45
+			lastDt = rk45Step(
+				phases, effective, knm, alpha,
+				k1, k2, k3, k4, k5, k6, k7, y5, tmp,
+				zeta, psi, atol, rtol, dt, lastDt, n,
+			)
+		case 1: // rk4
+			for s := 0; s < nSubsteps; s++ {
+				rk4Substep(
+					phases, effective, knm, alpha,
+					k1, k2, k3, k4, tmp,
+					zeta, psi, subDt, n,
+				)
+			}
+		default: // euler
+			for s := 0; s < nSubsteps; s++ {
+				eulerSubstep(
+					phases, effective, knm, alpha, k1,
+					zeta, psi, subDt, n,
+				)
+			}
+		}
+		for i := 0; i < n; i++ {
+			phases[i] = math.Mod(phases[i], twoPiUPDE)
+			if phases[i] < 0.0 {
+				phases[i] += twoPiUPDE
+			}
+		}
+	}
+}
+
 // UPDERun integrates n_steps of the Kuramoto UPDE starting from the
 // phases slice (modified in place — caller copies in first).
 // “method“ is 0 = Euler, 1 = RK4, 2 = RK45.
@@ -343,6 +435,51 @@ func UPDERunOmegaSchedule(
 	alpha := unsafe.Slice((*float64)(unsafe.Pointer(alphaPtr)), nn*nn)
 	upderRunOmegaSchedule(
 		phases, omegaSchedule, knm, alpha,
+		float64(zeta), float64(psi), float64(dt),
+		ss, int(method),
+		int(nSubsteps),
+		float64(atol), float64(rtol),
+		nn,
+	)
+	return 0
+}
+
+// UPDERunDopplerSchedule integrates with row-major frequency and scalar
+// velocity schedules. Both schedules use schedule[step*n + oscillator].
+//
+//export UPDERunDopplerSchedule
+func UPDERunDopplerSchedule(
+	phasesPtr *C.double,
+	omegaSchedulePtr *C.double,
+	knmPtr *C.double,
+	alphaPtr *C.double,
+	velocitySchedulePtr *C.double,
+	n C.int,
+	strength C.double,
+	epsilon C.double,
+	zeta C.double,
+	psi C.double,
+	dt C.double,
+	nSteps C.int,
+	method C.int,
+	nSubsteps C.int,
+	atol C.double,
+	rtol C.double,
+) C.int {
+	nn := int(n)
+	ss := int(nSteps)
+	phases := unsafe.Slice((*float64)(unsafe.Pointer(phasesPtr)), nn)
+	omegaSchedule := unsafe.Slice(
+		(*float64)(unsafe.Pointer(omegaSchedulePtr)), nn*ss,
+	)
+	knm := unsafe.Slice((*float64)(unsafe.Pointer(knmPtr)), nn*nn)
+	alpha := unsafe.Slice((*float64)(unsafe.Pointer(alphaPtr)), nn*nn)
+	velocitySchedule := unsafe.Slice(
+		(*float64)(unsafe.Pointer(velocitySchedulePtr)), nn*ss,
+	)
+	upderRunDopplerSchedule(
+		phases, omegaSchedule, knm, alpha, velocitySchedule,
+		float64(strength), float64(epsilon),
 		float64(zeta), float64(psi), float64(dt),
 		ss, int(method),
 		int(nSubsteps),

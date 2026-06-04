@@ -132,6 +132,7 @@ nav:
       - UPDE Engine: reference/api/upde.md
       - "UPDE — Core Integrator": reference/api/upde_engine.md
       - "UPDE — Time-varying Omega": reference/api/upde_time_varying_omega.md
+      - "UPDE — Doppler Engine": reference/api/upde_doppler.md
       - "UPDE — Bayesian Uncertainty": reference/api/upde_bayesian.md
       - "UPDE — Simplicial (3-body)": reference/api/upde_simplicial.md
       - "UPDE — Hypergraph (k-body)": reference/api/upde_hypergraph.md

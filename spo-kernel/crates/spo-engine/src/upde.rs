@@ -238,6 +238,69 @@ impl UPDEStepper {
         Ok(())
     }
 
+    /// Advance with one omega vector and one scalar velocity vector per step.
+    ///
+    /// The Doppler correction is graph-weighted by the active absolute
+    /// coupling row and added to the natural frequencies before each UPDE
+    /// step. Both schedules are flattened row-major as
+    /// `schedule[step * n + oscillator]`.
+    ///
+    /// # Errors
+    /// Returns dimension errors for malformed schedule lengths, rejects
+    /// non-finite Doppler controls, and propagates any error from
+    /// [`Self::step`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn run_doppler_schedule(
+        &mut self,
+        phases: &mut [f64],
+        omega_schedule: &[f64],
+        knm: &mut [f64],
+        zeta: f64,
+        psi: f64,
+        alpha: &[f64],
+        velocity_schedule: &[f64],
+        doppler_strength: f64,
+        doppler_epsilon: f64,
+        n_steps: u64,
+    ) -> SpoResult<()> {
+        if !doppler_strength.is_finite() || !doppler_epsilon.is_finite() || doppler_epsilon <= 0.0 {
+            return Err(SpoError::IntegrationDiverged(
+                "invalid Doppler strength or epsilon".into(),
+            ));
+        }
+        let rows = usize::try_from(n_steps)
+            .map_err(|_| SpoError::InvalidDimension("n_steps is too large".into()))?;
+        let expected = rows
+            .checked_mul(self.n)
+            .ok_or_else(|| SpoError::InvalidDimension("Doppler schedule is too large".into()))?;
+        if omega_schedule.len() != expected || velocity_schedule.len() != expected {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected Doppler schedule length {expected}, got omega={} velocity={}",
+                omega_schedule.len(),
+                velocity_schedule.len()
+            )));
+        }
+        let mut doppler = vec![0.0; self.n];
+        let mut effective = vec![0.0; self.n];
+        for step in 0..rows {
+            let start = step * self.n;
+            let end = start + self.n;
+            compute_doppler_term(
+                &mut doppler,
+                &velocity_schedule[start..end],
+                knm,
+                doppler_strength,
+                doppler_epsilon,
+                self.n,
+            )?;
+            for i in 0..self.n {
+                effective[i] = omega_schedule[start + i] + doppler[i];
+            }
+            self.step(phases, &effective, knm, zeta, psi, alpha)?;
+        }
+        Ok(())
+    }
+
     /// Return the configured oscillator count.
     pub fn n(&self) -> usize {
         self.n
@@ -533,6 +596,49 @@ impl UPDEStepper {
     }
 }
 
+fn compute_doppler_term(
+    out: &mut [f64],
+    velocities: &[f64],
+    knm: &[f64],
+    strength: f64,
+    epsilon: f64,
+    n: usize,
+) -> SpoResult<()> {
+    if velocities.len() != n || out.len() != n || knm.len() != n * n {
+        return Err(SpoError::InvalidDimension(
+            "malformed Doppler inputs".into(),
+        ));
+    }
+    if velocities.iter().any(|v| !v.is_finite()) || knm.iter().any(|k| !k.is_finite()) {
+        return Err(SpoError::IntegrationDiverged(
+            "Doppler velocities/knm contain NaN/Inf".into(),
+        ));
+    }
+    for i in 0..n {
+        let mut row_mass = 0.0;
+        let mut acc = 0.0;
+        let denom = velocities[i].abs() + epsilon;
+        let offset = i * n;
+        for j in 0..n {
+            if i == j {
+                continue;
+            }
+            let weight = knm[offset + j].abs();
+            if weight == 0.0 {
+                continue;
+            }
+            row_mass += weight;
+            acc += weight * (velocities[i] - velocities[j]) / denom;
+        }
+        out[i] = if row_mass > 0.0 {
+            strength * acc / row_mass
+        } else {
+            0.0
+        };
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod upde_stepper_tests {
     use super::*;
@@ -598,6 +704,48 @@ mod upde_stepper_tests {
 
         assert!((phases[0] - 0.4).abs() < 1e-12);
         assert!((phases[1] - 0.6).abs() < 1e-12);
+    }
+
+    #[test]
+    fn upde_stepper_runs_doppler_schedule() {
+        let mut stepper = UPDEStepper::new(
+            2,
+            IntegrationConfig {
+                dt: 0.1,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+        let mut phases = vec![0.0, 0.0];
+        let schedule = vec![-2.0, 2.0];
+        let velocities = vec![300.0, -300.0];
+        let mut knm = vec![0.0, 1.0, 1.0, 0.0];
+        let alpha = vec![0.0; 4];
+
+        stepper
+            .run_doppler_schedule(
+                &mut phases,
+                &schedule,
+                &mut knm,
+                0.0,
+                0.0,
+                &alpha,
+                &velocities,
+                1.0,
+                1.0e-9,
+                1,
+            )
+            .expect("Doppler schedule run failed");
+
+        let wrapped_zero_0 = phases[0]
+            .abs()
+            .min((std::f64::consts::TAU - phases[0]).abs());
+        let wrapped_zero_1 = phases[1]
+            .abs()
+            .min((std::f64::consts::TAU - phases[1]).abs());
+        assert!(wrapped_zero_0 < 1e-12);
+        assert!(wrapped_zero_1 < 1e-12);
     }
 }
 

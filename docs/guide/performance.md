@@ -245,3 +245,16 @@ stateless row-major `omega_schedule` backend path. Backend records are reported
 for Rust, WebGPU, Mojo, Julia, Go, and Python. Timings in the committed JSON are
 local, non-isolated regression evidence only and must not be used as production
 throughput claims without a benchmark-isolated rerun.
+
+### UPDE Doppler gate
+
+PHA-C.2 has a dedicated Doppler schedule parity benchmark:
+
+```bash
+PYTHONPATH=src python benchmarks/upde_doppler_benchmark.py --parity-gate
+```
+
+The gate compares Python, Go, Julia, Mojo, and available Rust/PyO3 source
+surfaces on the same velocity-corrected `omega_eff` schedule. Committed JSON
+artefacts are labelled `local_regression_non_isolated`; they prove parity and
+functional regression status, not production throughput.

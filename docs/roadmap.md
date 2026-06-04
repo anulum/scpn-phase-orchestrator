@@ -280,3 +280,9 @@ for the detailed historical release plan and internal planning notes.
 | Item | Current state | Remaining work |
 | --- | --- | --- |
 | PHA-C.5 time-varying `omega(t)` | Implemented in `UPDEEngine` as configured fixed or callable natural frequencies with `omega_current` and `time` diagnostics; callable runs resolve to a finite row-major schedule consumed by Rust, Go, Julia, Mojo, and Python schedule surfaces; documented in the UPDE API; covered by module-specific tests and a polyglot benchmark gate. | Keep benchmark snapshots refreshed as Doppler and moving-frame engines consume this schedule contract. |
+
+## PHA-C Doppler status
+
+| Item | Implemented evidence | Remaining scope |
+|---|---|---|
+| PHA-C.2 DopplerEngine | Implemented as `DopplerEngine` with graph-weighted relative-velocity correction, scalar and vector velocity reduction, configured fixed/callable omega and velocity schedules, Python plus Rust/Go/Julia/Mojo source surfaces, module-specific Mach-1 counter-propagating lock coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as installed optional runtimes are rebuilt and feed this contract into the moving-frame PHA-C.3 lane. |

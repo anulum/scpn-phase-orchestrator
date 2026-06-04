@@ -18,7 +18,7 @@ module UPDEEngineJL
 
 using LinearAlgebra
 
-export upde_run, upde_run_omega_schedule
+export upde_run, upde_run_omega_schedule, upde_run_doppler_schedule
 
 const TWO_PI = 2.0 * pi
 
@@ -362,6 +362,134 @@ function upde_run_omega_schedule(
             for _ in 1:n_substeps
                 euler_substep!(
                     phases, omegas, knm, alpha, zeta, psi, sub_dt,
+                    k1, n,
+                )
+            end
+        else
+            error("unknown method: $method")
+        end
+        @inbounds for i in 1:n
+            phases[i] = mod(phases[i], TWO_PI)
+        end
+    end
+
+    return phases
+end
+
+
+function doppler_term!(
+    out::AbstractVector{Float64},
+    velocities::AbstractVector{Float64},
+    knm::AbstractMatrix{Float64},
+    strength::Float64,
+    epsilon::Float64,
+    n::Int,
+)
+    @inbounds for i in 1:n
+        row_mass = 0.0
+        acc = 0.0
+        denom = abs(velocities[i]) + epsilon
+        for j in 1:n
+            if i == j
+                continue
+            end
+            weight = abs(knm[i, j])
+            if weight == 0.0
+                continue
+            end
+            row_mass += weight
+            acc += weight * (velocities[i] - velocities[j]) / denom
+        end
+        out[i] = row_mass > 0.0 ? strength * acc / row_mass : 0.0
+    end
+    return out
+end
+
+
+"""
+    upde_run_doppler_schedule(phases_init, omega_schedule, knm_flat,
+                              alpha_flat, velocity_schedule, n,
+                              doppler_strength, doppler_epsilon, zeta,
+                              psi, dt, n_steps, method, n_substeps,
+                              atol, rtol)
+        -> Vector{Float64}
+
+Integrate the Kuramoto UPDE with one natural-frequency vector and one scalar
+velocity vector per outer step. The Doppler correction is graph-weighted by the
+active absolute coupling row and added to the frequency schedule before each
+outer step.
+"""
+function upde_run_doppler_schedule(
+    phases_init::AbstractVector{Float64},
+    omega_schedule::AbstractMatrix{Float64},
+    knm_flat::AbstractVector{Float64},
+    alpha_flat::AbstractVector{Float64},
+    velocity_schedule::AbstractMatrix{Float64},
+    n::Integer,
+    doppler_strength::Float64,
+    doppler_epsilon::Float64,
+    zeta::Float64,
+    psi::Float64,
+    dt::Float64,
+    n_steps::Integer,
+    method::AbstractString,
+    n_substeps::Integer,
+    atol::Float64,
+    rtol::Float64,
+)
+    length(phases_init) == n || error("phases shape mismatch")
+    size(omega_schedule, 1) == n_steps || error("omega_schedule step mismatch")
+    size(omega_schedule, 2) == n || error("omega_schedule oscillator mismatch")
+    size(velocity_schedule, 1) == n_steps || error("velocity_schedule step mismatch")
+    size(velocity_schedule, 2) == n || error("velocity_schedule oscillator mismatch")
+    length(knm_flat) == n * n || error("knm shape mismatch")
+    length(alpha_flat) == n * n || error("alpha shape mismatch")
+    n_substeps >= 1 || error("n_substeps must be >= 1")
+    doppler_epsilon > 0.0 || error("doppler_epsilon must be positive")
+
+    knm = permutedims(reshape(collect(knm_flat), n, n))
+    alpha = permutedims(reshape(collect(alpha_flat), n, n))
+    phases = collect(phases_init)
+
+    k1 = zeros(Float64, n)
+    k2 = zeros(Float64, n)
+    k3 = zeros(Float64, n)
+    k4 = zeros(Float64, n)
+    k5 = zeros(Float64, n)
+    k6 = zeros(Float64, n)
+    k7 = zeros(Float64, n)
+    y5 = zeros(Float64, n)
+    tmp = zeros(Float64, n)
+    doppler = zeros(Float64, n)
+    effective = zeros(Float64, n)
+
+    last_dt = dt
+    sub_dt = dt / Float64(n_substeps)
+
+    for step in 1:n_steps
+        omegas = vec(omega_schedule[step, :])
+        velocities = vec(velocity_schedule[step, :])
+        doppler_term!(doppler, velocities, knm, doppler_strength, doppler_epsilon, n)
+        @inbounds for i in 1:n
+            effective[i] = omegas[i] + doppler[i]
+        end
+        if method == "rk45"
+            last_dt = rk45_step!(
+                phases, effective, knm, alpha, zeta, psi,
+                atol, rtol, dt, last_dt,
+                k1, k2, k3, k4, k5, k6, k7, y5, tmp, n,
+            )
+        elseif method == "rk4"
+            for _ in 1:n_substeps
+                rk4_substep!(
+                    phases, effective, knm, alpha, zeta, psi, sub_dt,
+                    k1, k2, k3, k4, tmp, n,
+                )
+            end
+        elseif method == "euler"
+            for _ in 1:n_substeps
+                euler_substep!(
+                    phases, effective, knm, alpha, zeta, psi, sub_dt,
                     k1, n,
                 )
             end
