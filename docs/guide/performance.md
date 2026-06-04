@@ -128,6 +128,9 @@ The Stuart-Landau record is also an acceptance benchmark: it checks positive
 finite coupled amplitude, zero self-coupling, wrapped phase output, convergence
 to the uncoupled Hopf limit-cycle radius `sqrt(mu)`, and decay of a
 subcritical `mu < 0` amplitude trajectory.
+The Petri-net record is the formal-state reference gate. It requires exact
+four-marking reachability, one-token conservation, deterministic transition
+order, and the expected final marking after `n_steps`.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the

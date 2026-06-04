@@ -1150,6 +1150,7 @@ def benchmark_stuart_landau_reference(
 
 
 def benchmark_petri_reachability(n_steps: int = 5000) -> dict[str, float | int | str]:
+    n_steps = _validate_reference_positive_int(n_steps, name="n_steps")
     net = PetriNet(
         places=[
             Place("nominal"),
@@ -1166,20 +1167,90 @@ def benchmark_petri_reachability(n_steps: int = 5000) -> dict[str, float | int |
     )
     marking = Marking(tokens={"nominal": 1})
     visited: set[tuple[tuple[str, int], ...]] = set()
+    expected_places = ("nominal", "degraded", "critical", "recovery")
+    expected_transition_cycle = ("n_to_d", "d_to_c", "c_to_r", "r_to_n")
+    transition_names: list[str] = []
+    token_totals: list[int] = []
+    observed_places: list[str] = []
 
     t0 = time.perf_counter()
     for _ in range(n_steps):
         key = tuple(sorted(marking.tokens.items()))
         visited.add(key)
-        marking, _ = net.step(marking, {})
+        active_places = tuple(
+            place for place, count in marking.tokens.items() if int(count) > 0
+        )
+        observed_places.extend(active_places)
+        token_totals.append(sum(int(count) for count in marking.tokens.values()))
+        marking, transition = net.step(marking, {})
+        transition_names.append(transition.name if transition is not None else "")
     elapsed = time.perf_counter() - t0
+
+    reachable_markings = len(visited)
+    token_conservation = bool(
+        token_totals and all(total == 1 for total in token_totals)
+    )
+    observed_place_set = tuple(sorted(set(observed_places)))
+    exact_reachability = observed_place_set == tuple(sorted(expected_places))
+    expected_prefix = tuple(
+        expected_transition_cycle[index % len(expected_transition_cycle)]
+        for index in range(n_steps)
+    )
+    observed_transition_prefix = tuple(transition_names[:n_steps])
+    deterministic_cycle = observed_transition_prefix == expected_prefix
+    cycle_period = len(expected_transition_cycle)
+    final_expected_place = expected_places[n_steps % cycle_period]
+    final_active_places = tuple(
+        place for place, count in marking.tokens.items() if int(count) > 0
+    )
+    final_marking_correct = final_active_places == (final_expected_place,)
+    thresholds = {
+        "expected_reachable_markings": 4,
+        "expected_token_total": 1,
+        "expected_transition_cycle": list(expected_transition_cycle),
+        "require_deterministic_cycle": True,
+        "require_exact_reachability": True,
+        "require_final_marking": True,
+        "require_token_conservation": True,
+    }
+    acceptance_passed = int(
+        reachable_markings == thresholds["expected_reachable_markings"]
+        and token_conservation
+        and exact_reachability
+        and deterministic_cycle
+        and final_marking_correct
+    )
+    benchmark_payload = {
+        "final_active_places": final_active_places,
+        "reachable_markings": reachable_markings,
+        "thresholds": thresholds,
+        "token_totals": token_totals,
+        "transition_names": transition_names,
+    }
+    benchmark_sha = sha256(
+        json.dumps(benchmark_payload, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+    ).hexdigest()
 
     return {
         "suite": "petri_net_reachability",
         "n_steps": n_steps,
         "wall_time_s": elapsed,
         "steps_per_second": n_steps / elapsed,
-        "reachable_markings": len(visited),
+        "reachable_markings": reachable_markings,
+        "expected_reachable_markings": thresholds["expected_reachable_markings"],
+        "cycle_period": cycle_period,
+        "token_conservation": int(token_conservation),
+        "exact_reachability": int(exact_reachability),
+        "deterministic_cycle": int(deterministic_cycle),
+        "final_marking_correct": int(final_marking_correct),
+        "final_active_place": final_active_places[0] if final_active_places else "",
+        "expected_final_active_place": final_expected_place,
+        "transition_cycle_json": json.dumps(expected_transition_cycle),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(thresholds, sort_keys=True),
+        "benchmark_sha256": benchmark_sha,
     }
 
 

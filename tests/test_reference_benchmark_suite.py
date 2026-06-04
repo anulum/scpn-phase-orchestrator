@@ -144,10 +144,39 @@ def test_stuart_landau_reference_rejects_invalid_controls() -> None:
 
 def test_petri_reachability_benchmark_shape() -> None:
     out = benchmark_petri_reachability(n_steps=20)
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
     assert out["suite"] == "petri_net_reachability"
     assert out["n_steps"] == 20
-    assert int(out["reachable_markings"]) >= 2
+    assert int(out["reachable_markings"]) == thresholds["expected_reachable_markings"]
+    assert out["expected_reachable_markings"] == 4
+    assert out["cycle_period"] == 4
+    assert out["token_conservation"] == 1
+    assert out["exact_reachability"] == 1
+    assert out["deterministic_cycle"] == 1
+    assert out["final_marking_correct"] == 1
+    assert out["final_active_place"] == out["expected_final_active_place"]
+    assert json.loads(str(out["transition_cycle_json"])) == [
+        "n_to_d",
+        "d_to_c",
+        "c_to_r",
+        "r_to_n",
+    ]
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["benchmark_sha256"])) == 64
     assert float(out["steps_per_second"]) > 0.0
+
+
+def test_petri_reachability_rejects_invalid_controls() -> None:
+    for kwargs in (
+        {"n_steps": True},
+        {"n_steps": 0},
+    ):
+        try:
+            benchmark_petri_reachability(**kwargs)
+        except ValueError:
+            continue
+        raise AssertionError(f"invalid controls were accepted: {kwargs!r}")
 
 
 def test_auto_binding_proposal_quality_benchmark_shape() -> None:

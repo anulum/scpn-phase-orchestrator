@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   limit-cycle radius convergence, subcritical amplitude decay, zero
   self-coupling, and wrapped phase-domain evidence in the reference-suite
   snapshot.
+- Added Petri-net reference acceptance fields for exact four-marking
+  reachability, one-token conservation, deterministic transition order, and
+  expected final marking evidence in the reference-suite snapshot.
 - Added a Lyapunov spectrum polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python status, timing, and numerical parity against the
   Python reference in the reference-suite snapshot.
