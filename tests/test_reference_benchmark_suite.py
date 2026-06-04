@@ -20,6 +20,7 @@ from benchmarks.reference_suite import (
     benchmark_dimension_polyglot_parity_gate,
     benchmark_domain_formal_safety_exports,
     benchmark_embedding_polyglot_parity_gate,
+    benchmark_entropy_production_polyglot_parity_gate,
     benchmark_evolutionary_mutation_grammar_gate,
     benchmark_evolutionary_supervisor_search,
     benchmark_federated_deployment_preflight_gate,
@@ -2518,6 +2519,64 @@ def test_transfer_entropy_polyglot_parity_gate_reports_all_language_slots() -> N
             assert record["matrix_sha256"] is None
 
 
+def test_entropy_production_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_entropy_production_polyglot_parity_gate(
+        n=8,
+        calls=1,
+        seed=2026,
+        alpha=0.5,
+        dt=0.01,
+    )
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "entropy_production_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["acceptance_passed"] == 1
+    assert out["reference_contracts_passed"] == 1
+    assert float(out["reference_rate"]) >= 0.0
+    assert float(out["minimum_observed_rate"]) >= -1.0e-12
+    assert float(out["manual_formula_abs_error"]) <= 1.0e-12
+    assert float(out["fixed_point_abs_error"]) <= 1.0e-12
+    assert float(out["zero_dt_abs_error"]) <= 1.0e-12
+    assert float(out["dt_scaling_abs_error"]) <= 1.0e-12
+    assert float(out["phase_shift_abs_error"]) <= 1.0e-12
+    assert float(out["permutation_abs_error"]) <= 1.0e-12
+    assert float(out["alpha_quadratic_abs_error"]) <= 1.0e-12
+    assert thresholds["backend_order"] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds["require_exact_formula_parity"] is True
+    assert thresholds["require_fixed_point_zero"] is True
+    assert thresholds["require_non_negative_rate"] is True
+    assert thresholds["require_dt_linear_scaling"] is True
+    assert thresholds["require_alpha_quadratic_scaling"] is True
+    assert thresholds["require_phase_shift_invariance"] is True
+    assert thresholds["require_permutation_invariance"] is True
+    assert thresholds["require_public_dispatch_parity"] is True
+    assert thresholds["production_timing_claim"] is False
+
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["public_dispatch_parity_passed"] is True
+            assert record["contracts_passed"] is True
+            assert record["non_negative_rate"] is True
+            assert record["rate_abs_error"] <= record["tolerance"]
+            assert record["public_rate_abs_error"] <= record["tolerance"]
+            assert record["rate_sha256"] is not None
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["rate_sha256"] is None
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -2552,6 +2611,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "plugin_ecosystem",
         "dimension_polyglot",
         "embedding_polyglot",
+        "entropy_production_polyglot",
         "lyapunov_polyglot",
         "npe_polyglot",
         "order_parameter_polyglot",

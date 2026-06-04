@@ -22,10 +22,11 @@ if you need it, multiply ``K_{ij}`` by ``cos(α_{ij})`` outside the
 call (the angle-addition identity absorbs a constant lag into a
 rotated coupling).
 
-This is the ninth module migrated to the AttnRes-level standard:
-five-language backend chain (Rust → Mojo → Julia → Go → Python),
-bit-exact parity across all four non-Python backends, multi-backend
-benchmark, and ``pytest.mark.slow`` stability tests.
+This module has a five-language backend chain (Rust → Mojo → Julia → Go →
+Python), direct-backend parity checks, local multi-backend benchmarks, and
+slow stability tests. Checked-in timing fields are local non-isolated
+regression evidence unless the benchmark metadata records CPU/core isolation
+and host-load controls.
 
 ---
 
@@ -197,7 +198,30 @@ square-sum. Competitive on small ``N``.
 
 ---
 
-## 5. Benchmarks
+## 5. Benchmarks and reference gate
+
+The reference suite includes
+`entropy_production_polyglot_parity_gate`. The gate records every declared
+Rust/Mojo/Julia/Go/Python slot and accepts only when available backends match
+the forced Python reference. The benchmark contract is behavioural rather than
+line-coverage based:
+
+| Contract | Reason |
+|----------|--------|
+| exact formula parity with `sum(dtheta_dt ** 2) * dt` | prevents backend drift from the overdamped-Kuramoto definition |
+| non-negative rates | follows from the squared velocity form |
+| zero fixed-point and zero-timestep limits | checks physical equilibria and timestep semantics |
+| linear timestep scaling | verifies the per-step dissipation factor |
+| quadratic global-coupling scaling when `omega = 0` | verifies that `alpha` enters inside the squared velocity |
+| global phase-shift invariance | protects phase-gauge symmetry |
+| oscillator permutation invariance | protects index-labelling symmetry |
+| public dispatch parity | ensures the fallback chain returns the validated backend output |
+
+Run the parity gate with:
+
+```bash
+PYTHONPATH=src python benchmarks/entropy_prod_benchmark.py --parity-gate --sizes 16 --calls 1
+```
 
 Measured on the local Ubuntu 24.04 host, 16-thread x86_64 CPU,
 NumPy 2.3.4 / MKL, Julia 1.11.2, Go 1.23.4, Mojo 0.26.2,

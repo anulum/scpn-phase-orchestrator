@@ -167,6 +167,14 @@ consistency for `TE(i -> j)`, zero diagonal, non-negative entropy-bounded
 scores, known causal-direction preservation, phase-wrapping invariance,
 short-series zero behaviour, public fallback-dispatch parity, and
 unavailable-toolchain reasons without mocking the backend boundary.
+The entropy-production record is a polyglot thermodynamic gate for the Acebrón
+overdamped-Kuramoto dissipation rate. It records Rust/Mojo/Julia/Go/Python
+slot status, exact formula parity against `sum(dtheta_dt ** 2) * dt`,
+non-negative rates, fixed-point and zero-timestep limits, linear timestep
+scaling, quadratic global-coupling scaling in the zero-frequency case, global
+phase-shift invariance, oscillator permutation invariance, public
+fallback-dispatch parity, and unavailable-toolchain reasons without mocking
+the backend boundary.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the

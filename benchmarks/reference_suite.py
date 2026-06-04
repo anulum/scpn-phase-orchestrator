@@ -26,6 +26,9 @@ from numpy.typing import NDArray
 from benchmarks.chimera_benchmark import benchmark_chimera_polyglot_parity_gate
 from benchmarks.dimension_benchmark import benchmark_dimension_polyglot_parity_gate
 from benchmarks.embedding_benchmark import benchmark_embedding_polyglot_parity_gate
+from benchmarks.entropy_prod_benchmark import (
+    benchmark_entropy_production_polyglot_parity_gate,
+)
 from benchmarks.hodge_benchmark import benchmark_hodge_polyglot_parity_gate
 from benchmarks.itpc_benchmark import benchmark_itpc_polyglot_parity_gate
 from benchmarks.lyapunov_benchmark import benchmark_lyapunov_polyglot_parity_gate
@@ -7833,6 +7836,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "chimera_polyglot": benchmark_chimera_polyglot_parity_gate(),
             "dimension_polyglot": benchmark_dimension_polyglot_parity_gate(),
             "embedding_polyglot": benchmark_embedding_polyglot_parity_gate(),
+            "entropy_production_polyglot": (
+                benchmark_entropy_production_polyglot_parity_gate()
+            ),
             "hodge_polyglot": benchmark_hodge_polyglot_parity_gate(),
             "itpc_polyglot": benchmark_itpc_polyglot_parity_gate(),
             "lyapunov_polyglot": benchmark_lyapunov_polyglot_parity_gate(),

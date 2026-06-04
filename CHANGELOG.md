@@ -64,6 +64,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   causal-direction preservation, scalar-matrix consistency, zero-diagonal
   matrix structure, entropy bounds, phase-wrapping invariance, public dispatch
   parity, and local non-isolated benchmark evidence labels.
+- Added an entropy-production polyglot benchmark gate that records
+  Rust/Mojo/Julia/Go/Python exact overdamped-Kuramoto dissipation parity,
+  non-negative rate contracts, fixed-point and zero-timestep limits, linear
+  timestep scaling, quadratic coupling-scalar scaling, phase-shift invariance,
+  permutation invariance, public dispatch parity, and local non-isolated
+  benchmark evidence labels.
 - Added an order-parameter polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python parity for Kuramoto `R`, mean phase, PLV, and layer
   coherence in the reference-suite snapshot.

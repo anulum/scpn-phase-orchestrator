@@ -329,6 +329,7 @@ Selected reference suites:
 | `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `664.34` |
 | `embedding_polyglot_parity_gate` | Takens delay-indexing, Fraser-Swinney mutual information, and nearest-neighbour geometry parity across Rust/Mojo/Julia/Go/Python slots | `1451.73` |
 | `transfer_entropy_polyglot_parity_gate` | Schreiber transfer-entropy causal-direction and exact histogram matrix parity across Rust/Mojo/Julia/Go/Python slots | `1052.38` |
+| `entropy_production_polyglot_parity_gate` | Acebrón overdamped-Kuramoto dissipation parity and thermodynamic invariants across Rust/Mojo/Julia/Go/Python slots | `5/5 backend parity; 466.973 steps/s; 0.171316 s wall time; local_regression_non_isolated; not a production throughput claim` |
 
 Physics invariants are also executable as focused tests:
 
@@ -383,6 +384,13 @@ pairwise-matrix parity, scalar-matrix consistency for `TE(i -> j)`, zero
 matrix diagonal, non-negative entropy-bounded scores, preservation of a known
 causal direction, phase-wrapping invariance, short-series zero behaviour,
 public fallback-dispatch parity, and explicit unavailable-toolchain evidence.
+The entropy-production polyglot record checks the Acebrón overdamped-Kuramoto
+dissipation rate. It requires exact formula parity against
+`sum(dtheta_dt ** 2) * dt`, non-negative rates, zero dissipation at fixed
+points and zero timestep, linear timestep scaling, quadratic scaling under
+the global coupling scalar when natural frequencies are zero, global
+phase-gauge invariance, oscillator permutation invariance, public
+fallback-dispatch parity, and explicit unavailable-toolchain evidence.
 
 Timing fields in the checked-in reference snapshot are local regression and
 parity evidence unless the run metadata states CPU/core isolation and host-load
