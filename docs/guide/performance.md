@@ -141,6 +141,11 @@ local-order vector. It records Rust/Mojo/Julia/Go/Python slot status, local
 order parity, global phase-gauge invariance, synchronised unit local order,
 disconnected zero local order, and the exact uniform-circle all-to-all
 reference `1 / (N - 1)`.
+The spectral record is a polyglot mathematics gate for the Dörfler-Bullo
+combinatorial graph Laplacian. It records Rust/Mojo/Julia/Go/Python slot
+status, algebraic-connectivity parity, Fiedler-vector direction parity,
+non-negative spectral gap, zero row sums, positive semidefiniteness, and exact
+uniform-path plus complete-graph spectra.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the

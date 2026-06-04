@@ -319,11 +319,12 @@ flags, and steps/s values for each suite. Selected reference suites:
 
 | Suite | Reference contract | Snapshot steps/s |
 |-------|--------------------|-----------------:|
-| `kuramoto_reference_strogatz_2000` | Strogatz/Acebrón synchronisation plus exact two-oscillator locking acceptance | `7372.45` |
-| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `3710.56` |
-| `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `85707.77` |
-| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `6.88` |
-| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `4.76` |
+| `kuramoto_reference_strogatz_2000` | Strogatz/Acebrón synchronisation plus exact two-oscillator locking acceptance | `8209.92` |
+| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `8030.75` |
+| `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `182139.33` |
+| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `5.29` |
+| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `5.46` |
+| `spectral_polyglot_parity_gate` | Dörfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.39` |
 
 Physics invariants are also executable as focused tests:
 
@@ -353,6 +354,11 @@ across every declared backend slot, including global phase-gauge invariance,
 synchronised unit local order, disconnected zero local order, the exact
 uniform-circle all-to-all reference, and explicit unavailable-toolchain
 evidence.
+The spectral polyglot record checks the Dörfler-Bullo combinatorial graph
+Laplacian contract across every declared backend slot, including algebraic
+connectivity parity, Fiedler-vector direction parity, non-negative spectral
+gap, zero row sums, positive semidefiniteness, and exact uniform-path plus
+complete-graph spectra.
 
 ## Hardware Integration Boundary
 

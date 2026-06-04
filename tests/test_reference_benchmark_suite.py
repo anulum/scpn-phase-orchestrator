@@ -50,6 +50,7 @@ from benchmarks.reference_suite import (
     benchmark_self_model_digital_twin,
     benchmark_semantic_retrieval_ranking_quality,
     benchmark_sheaf_obstruction_domain_gate,
+    benchmark_spectral_polyglot_parity_gate,
     benchmark_stl_closed_loop_plan_quality,
     benchmark_strange_loop_drift_scenario_gate,
     benchmark_stuart_landau_reference,
@@ -2316,6 +2317,45 @@ def test_chimera_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["parity_passed"] is False
 
 
+def test_spectral_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_spectral_polyglot_parity_gate(n=8, calls=1, seed=2026)
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "spectral_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["acceptance_passed"] == 1
+    assert out["laplacian_contracts_passed"] == 1
+    assert float(out["reference_fiedler_value"]) > 0.0
+    assert float(out["reference_spectral_gap"]) >= 0.0
+    assert float(out["uniform_path_abs_error"]) <= 1.0e-10
+    assert float(out["complete_graph_abs_error"]) <= 1.0e-10
+    assert abs(float(out["complete_graph_spectral_gap"])) <= 1.0e-10
+    assert thresholds["backend_order"] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds["require_laplacian_psd_row_sum_contract"] is True
+    assert thresholds["require_uniform_path_exact_lambda2"] is True
+    assert thresholds["require_complete_graph_exact_lambda2"] is True
+
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["max_abs_error"] <= record["tolerance"]
+            assert record["fiedler_vector_sha256"] is not None
+            assert record["fiedler_value_sha256"] is not None
+            assert record["spectral_gap_sha256"] is not None
+        else:
+            assert record["unavailable_reason"]
+            assert record["fiedler_vector_sha256"] is None
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -2352,6 +2392,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "npe_polyglot",
         "order_parameter_polyglot",
         "recurrence_polyglot",
+        "spectral_polyglot",
         "winding_polyglot",
         "quantum_target_readiness",
         "replay_policy",
