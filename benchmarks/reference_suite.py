@@ -27,6 +27,7 @@ from benchmarks.npe_benchmark import benchmark_npe_polyglot_parity_gate
 from benchmarks.order_params_benchmark import (
     benchmark_order_parameter_polyglot_parity_gate,
 )
+from benchmarks.recurrence_benchmark import benchmark_recurrence_polyglot_parity_gate
 from benchmarks.winding_benchmark import benchmark_winding_polyglot_parity_gate
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
@@ -7507,6 +7508,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "order_parameter_polyglot": (
                 benchmark_order_parameter_polyglot_parity_gate()
             ),
+            "recurrence_polyglot": benchmark_recurrence_polyglot_parity_gate(),
             "winding_polyglot": benchmark_winding_polyglot_parity_gate(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
