@@ -59,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dispatch parity, constant-signal mutual-information zero contracts,
   zero-lag information dominance, time-shift row consistency, and
   nearest-neighbour self-exclusion evidence.
+- Added a transfer-entropy polyglot benchmark gate that records
+  Rust/Mojo/Julia/Go/Python exact histogram-estimator scalar and matrix parity,
+  causal-direction preservation, scalar-matrix consistency, zero-diagonal
+  matrix structure, entropy bounds, phase-wrapping invariance, public dispatch
+  parity, and local non-isolated benchmark evidence labels.
 - Added an order-parameter polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python parity for Kuramoto `R`, mean phase, PLV, and layer
   coherence in the reference-suite snapshot.

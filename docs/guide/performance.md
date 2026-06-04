@@ -160,6 +160,13 @@ where the backend exposes that primitive, nearest-neighbour geometry parity
 where exposed, public fallback-dispatch parity, constant-signal zero mutual
 information, zero-lag information dominance over distant lags, time-shift row
 consistency, and nearest-neighbour self-exclusion on a line lattice.
+The transfer-entropy record is a polyglot information-physics gate for the
+Schreiber directed-information estimator. It records Rust/Mojo/Julia/Go/Python
+slot status, exact scalar parity, pairwise-matrix parity, scalar-matrix
+consistency for `TE(i -> j)`, zero diagonal, non-negative entropy-bounded
+scores, known causal-direction preservation, phase-wrapping invariance,
+short-series zero behaviour, public fallback-dispatch parity, and
+unavailable-toolchain reasons without mocking the backend boundary.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the

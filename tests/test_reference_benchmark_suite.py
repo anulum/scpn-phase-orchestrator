@@ -58,6 +58,7 @@ from benchmarks.reference_suite import (
     benchmark_stuart_landau_reference,
     benchmark_temporal_causal_hypergraph_experiment_gate,
     benchmark_topos_semantic_binding_gate,
+    benchmark_transfer_entropy_polyglot_parity_gate,
     benchmark_value_alignment_replay_calibration_gate,
     benchmark_winding_polyglot_parity_gate,
     build_benchmark_metadata,
@@ -2457,6 +2458,66 @@ def test_embedding_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["delay_sha256"] is None
 
 
+def test_transfer_entropy_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_transfer_entropy_polyglot_parity_gate(
+        n=64,
+        calls=1,
+        seed=2026,
+        n_bins=16,
+    )
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "transfer_entropy_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["acceptance_passed"] == 1
+    assert out["reference_contracts_passed"] == 1
+    assert float(out["reference_forward_te"]) > float(out["reference_reverse_te"])
+    assert float(out["reference_direction_margin"]) > thresholds[
+        "min_causal_direction_margin"
+    ]
+    assert float(out["scalar_matrix_forward_error"]) <= 1.0e-12
+    assert float(out["scalar_matrix_reverse_error"]) <= 1.0e-12
+    assert float(out["diagonal_max_abs"]) <= 1.0e-12
+    assert float(out["matrix_min_value"]) >= -1.0e-12
+    assert float(out["matrix_max_entropy_excess"]) <= 1.0e-12
+    assert float(out["phase_wrap_scalar_abs_error"]) <= 1.0e-12
+    assert float(out["phase_wrap_matrix_max_abs_error"]) <= 1.0e-12
+    assert float(out["short_series_abs_error"]) <= 1.0e-12
+    assert thresholds["backend_order"] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds["require_causal_direction_preservation"] is True
+    assert thresholds["require_matrix_scalar_consistency"] is True
+    assert thresholds["require_phase_wrapping_invariance"] is True
+    assert thresholds["require_zero_diagonal_matrix"] is True
+    assert thresholds["require_public_dispatch_parity"] is True
+    assert thresholds["production_timing_claim"] is False
+
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["public_dispatch_parity_passed"] is True
+            assert record["contracts_passed"] is True
+            assert record["causal_direction_preserved"] is True
+            assert record["scalar_forward_abs_error"] <= record["tolerance"]
+            assert record["scalar_reverse_abs_error"] <= record["tolerance"]
+            assert record["matrix_max_abs_error"] <= record["matrix_tolerance"]
+            assert record["forward_te_sha256"] is not None
+            assert record["reverse_te_sha256"] is not None
+            assert record["matrix_sha256"] is not None
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["matrix_sha256"] is None
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -2496,6 +2557,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "order_parameter_polyglot",
         "recurrence_polyglot",
         "spectral_polyglot",
+        "transfer_entropy_polyglot",
         "winding_polyglot",
         "quantum_target_readiness",
         "replay_policy",

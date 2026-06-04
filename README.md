@@ -320,14 +320,15 @@ Selected reference suites:
 
 | Suite | Reference contract | Snapshot steps/s |
 |-------|--------------------|-----------------:|
-| `kuramoto_reference_strogatz_2000` | Strogatz/Acebron synchronisation plus exact two-oscillator locking acceptance | `8209.92` |
-| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `8030.75` |
-| `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `182139.33` |
-| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `5.29` |
-| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `5.46` |
-| `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.39` |
-| `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `538.56` |
-| `embedding_polyglot_parity_gate` | Takens delay-indexing, Fraser-Swinney mutual information, and nearest-neighbour geometry parity across Rust/Mojo/Julia/Go/Python slots | `895.31` |
+| `kuramoto_reference_strogatz_2000` | Strogatz/Acebron synchronisation plus exact two-oscillator locking acceptance | `14089.31` |
+| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `10094.66` |
+| `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `176708.12` |
+| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `8.18` |
+| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `12.46` |
+| `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.75` |
+| `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `664.34` |
+| `embedding_polyglot_parity_gate` | Takens delay-indexing, Fraser-Swinney mutual information, and nearest-neighbour geometry parity across Rust/Mojo/Julia/Go/Python slots | `1451.73` |
+| `transfer_entropy_polyglot_parity_gate` | Schreiber transfer-entropy causal-direction and exact histogram matrix parity across Rust/Mojo/Julia/Go/Python slots | `1052.38` |
 
 Physics invariants are also executable as focused tests:
 
@@ -376,6 +377,12 @@ and constant-signal zero behaviour, zero-lag information dominance over a
 distant lag, nearest-neighbour self-exclusion on a line lattice, direct
 primitive parity where a backend exposes the primitive, and public dispatch
 parity for the complete Rust/Mojo/Julia/Go/Python fallback chain.
+The transfer-entropy polyglot record checks the Schreiber histogram estimator
+used for directed information flow. It requires direct scalar parity,
+pairwise-matrix parity, scalar-matrix consistency for `TE(i -> j)`, zero
+matrix diagonal, non-negative entropy-bounded scores, preservation of a known
+causal direction, phase-wrapping invariance, short-series zero behaviour,
+public fallback-dispatch parity, and explicit unavailable-toolchain evidence.
 
 Timing fields in the checked-in reference snapshot are local regression and
 parity evidence unless the run metadata states CPU/core isolation and host-load
