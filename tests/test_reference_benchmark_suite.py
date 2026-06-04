@@ -63,6 +63,7 @@ from benchmarks.reference_suite import (
     benchmark_value_alignment_replay_calibration_gate,
     benchmark_winding_polyglot_parity_gate,
     build_benchmark_metadata,
+    benchmark_upde_moving_frame_polyglot_gate,
     run_reference_suite,
 )
 
@@ -2620,6 +2621,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "spectral_polyglot",
         "spatial_modulator_polyglot",
         "upde_doppler_polyglot",
+        "upde_moving_frame_polyglot",
         "upde_time_varying_omega_polyglot",
         "transfer_entropy_polyglot",
         "winding_polyglot",

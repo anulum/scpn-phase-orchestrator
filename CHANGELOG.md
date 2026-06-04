@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added PHA-C.3 `MovingFrameUPDEEngine` support for joint phase and axial-position UPDE runs, including distance-modulated coupling, Doppler-corrected moving-frame schedules, collision/crossing predicates, Rust/Go/Julia/Mojo source surfaces, module-specific merger coverage, and a polyglot benchmark gate.
 - Added PHA-C.2 `DopplerEngine` support for velocity-corrected UPDE runs, including scalar/vector velocity handling, Rust/Go/Julia/Mojo schedule source surfaces, module-specific tests, Mach-1 counter-propagating lock coverage, and a polyglot benchmark gate.
 - Added PHA-C.5 time-varying `omega(t)` support for `UPDEEngine`, including configured fixed or callable frequencies, schedule-resolved backend dispatch, Rust/Go/Julia/Mojo schedule entry points, module-specific tests, and a polyglot benchmark gate.
 - Added `SpatialCouplingModulator` and `spatial_modulate` as the PHA-C.1 spatial coupling surface, including Euclidean distance kernels, analytic Jacobians, Rust/Go/Julia/Mojo adapter contracts, and a polyglot benchmark gate.

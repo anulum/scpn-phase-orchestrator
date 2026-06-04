@@ -286,3 +286,9 @@ for the detailed historical release plan and internal planning notes.
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
 | PHA-C.2 DopplerEngine | Implemented as `DopplerEngine` with graph-weighted relative-velocity correction, scalar and vector velocity reduction, configured fixed/callable omega and velocity schedules, Python plus Rust/Go/Julia/Mojo source surfaces, module-specific Mach-1 counter-propagating lock coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as installed optional runtimes are rebuilt and feed this contract into the moving-frame PHA-C.3 lane. |
+
+## PHA-C moving-frame status
+
+| Item | Implemented evidence | Remaining scope |
+|---|---|---|
+| PHA-C.3 MovingFrameUPDEEngine | Implemented as `MovingFrameUPDEEngine` with absolute axial `positions`, chamber-frame `distance_to_reference`, collision/crossing detection, distance-modulated coupling through `SpatialCouplingModulator`, Doppler-corrected phase dynamics, Python plus Rust/Go/Julia/Mojo source surfaces, module-specific merger and fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as optional accelerators are rebuilt and feed the position/phase contract into the PHA-C.4 merge-window monitor lane. |

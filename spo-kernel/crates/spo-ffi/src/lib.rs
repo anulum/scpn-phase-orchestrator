@@ -437,6 +437,70 @@ impl PyUPDEStepper {
         Ok(PyArray1::from_vec(py, p))
     }
 
+    /// Run n_steps with omega, velocity, and axial position schedules.
+    #[allow(clippy::too_many_arguments)]
+    fn run_moving_frame_schedule<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        positions: PyReadonlyArray1<'py, f64>,
+        omega_schedule: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        alpha: PyReadonlyArray1<'py, f64>,
+        velocity_schedule: PyReadonlyArray1<'py, f64>,
+        spatial_k_base: f64,
+        spatial_decay_form: u8,
+        spatial_decay_exponent: f64,
+        spatial_decay_length_scale: f64,
+        spatial_epsilon: f64,
+        doppler_strength: f64,
+        doppler_epsilon: f64,
+        n_steps: u64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let mut z = positions
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("positions not contiguous"))?;
+        let schedule = omega_schedule
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let velocities = velocity_schedule
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        self.inner
+            .run_moving_frame_schedule(
+                &mut p,
+                &mut z,
+                schedule,
+                k,
+                zeta,
+                psi,
+                a,
+                velocities,
+                spatial_k_base,
+                spatial_decay_form,
+                spatial_decay_exponent,
+                spatial_decay_length_scale,
+                spatial_epsilon,
+                doppler_strength,
+                doppler_epsilon,
+                n_steps,
+            )
+            .map_err(spo_err)?;
+        p.extend_from_slice(&z);
+        Ok(PyArray1::from_vec(py, p))
+    }
+
     #[pyo3(signature = (lr, decay = 0.0, modulator = 1.0))]
     fn set_plasticity(&mut self, lr: f64, decay: f64, modulator: f64) -> PyResult<()> {
         self.inner.plasticity = Some(PlasticityModel::new(lr, decay).map_err(spo_err)?);

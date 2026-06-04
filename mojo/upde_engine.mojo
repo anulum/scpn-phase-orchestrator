@@ -448,6 +448,142 @@ fn upde_run_doppler_schedule(
         for i in range(n):
             phases[i] = fmod_positive(phases[i], two_pi)
 
+fn spatial_weight(
+    distance: Float64,
+    k_base: Float64,
+    decay_form: Int,
+    decay_exponent: Float64,
+    decay_length_scale: Float64,
+    epsilon: Float64,
+) -> Float64:
+    from std.math import exp, sqrt
+    if decay_form == 1:
+        return k_base * exp(-distance / decay_length_scale)
+    if decay_form == 2:
+        return k_base / pow_f64(1.0 + distance / decay_length_scale, decay_exponent)
+    if decay_form == 3:
+        return k_base / sqrt(distance * distance + epsilon)
+    return k_base / (1.0 + distance)
+
+
+fn modulate_axial_coupling(
+    knm: List[Float64],
+    positions: List[Float64],
+    n: Int,
+    k_base: Float64,
+    decay_form: Int,
+    decay_exponent: Float64,
+    decay_length_scale: Float64,
+    epsilon: Float64,
+    mut out: List[Float64],
+) -> None:
+    for i in range(n):
+        var offset = i * n
+        for j in range(n):
+            if i == j:
+                out[offset + j] = 0.0
+                continue
+            var distance = abs(positions[i] - positions[j])
+            out[offset + j] = knm[offset + j] * spatial_weight(
+                distance,
+                k_base,
+                decay_form,
+                decay_exponent,
+                decay_length_scale,
+                epsilon,
+            )
+
+
+fn upde_run_moving_frame_schedule(
+    mut phases: List[Float64],
+    mut positions: List[Float64],
+    omega_schedule: List[Float64],
+    knm: List[Float64],
+    alpha: List[Float64],
+    velocity_schedule: List[Float64],
+    n: Int,
+    k_base: Float64,
+    decay_form: Int,
+    decay_exponent: Float64,
+    decay_length_scale: Float64,
+    spatial_epsilon: Float64,
+    strength: Float64,
+    doppler_epsilon: Float64,
+    zeta: Float64,
+    psi: Float64,
+    dt: Float64,
+    n_steps: Int,
+    method: Int,
+    n_substeps: Int,
+    atol: Float64,
+    rtol: Float64,
+) -> None:
+    var two_pi = 6.283185307179586
+    var k1 = List[Float64](capacity=n)
+    var k2 = List[Float64](capacity=n)
+    var k3 = List[Float64](capacity=n)
+    var k4 = List[Float64](capacity=n)
+    var k5 = List[Float64](capacity=n)
+    var k6 = List[Float64](capacity=n)
+    var k7 = List[Float64](capacity=n)
+    var y5 = List[Float64](capacity=n)
+    var tmp = List[Float64](capacity=n)
+    var omegas = List[Float64](capacity=n)
+    var velocities = List[Float64](capacity=n)
+    var doppler = List[Float64](capacity=n)
+    var effective = List[Float64](capacity=n)
+    var modulated = List[Float64](capacity=n * n)
+    for _ in range(n):
+        k1.append(0.0); k2.append(0.0); k3.append(0.0); k4.append(0.0)
+        k5.append(0.0); k6.append(0.0); k7.append(0.0)
+        y5.append(0.0); tmp.append(0.0); omegas.append(0.0)
+        velocities.append(0.0); doppler.append(0.0); effective.append(0.0)
+    for _ in range(n * n):
+        modulated.append(0.0)
+
+    var last_dt = dt
+    var sub_dt = dt / Float64(n_substeps)
+
+    for step in range(n_steps):
+        var offset = step * n
+        for i in range(n):
+            omegas[i] = omega_schedule[offset + i]
+            velocities[i] = velocity_schedule[offset + i]
+        modulate_axial_coupling(
+            knm,
+            positions,
+            n,
+            k_base,
+            decay_form,
+            decay_exponent,
+            decay_length_scale,
+            spatial_epsilon,
+            modulated,
+        )
+        compute_doppler_term(velocities, modulated, strength, doppler_epsilon, n, doppler)
+        for i in range(n):
+            effective[i] = omegas[i] + doppler[i]
+        if method == 2:
+            last_dt = rk45_step(
+                phases, effective, modulated, alpha, zeta, psi,
+                atol, rtol, dt, last_dt, n,
+                k1, k2, k3, k4, k5, k6, k7, y5, tmp,
+            )
+        elif method == 1:
+            for _ in range(n_substeps):
+                rk4_substep(
+                    phases, effective, modulated, alpha, zeta, psi, sub_dt, n,
+                    k1, k2, k3, k4, tmp,
+                )
+        else:
+            for _ in range(n_substeps):
+                euler_substep(
+                    phases, effective, modulated, alpha, zeta, psi, sub_dt, n, k1,
+                )
+        for i in range(n):
+            phases[i] = fmod_positive(phases[i], two_pi)
+            positions[i] = positions[i] + velocities[i] * dt
+
 
 fn main() raises:
     var line = input()
@@ -457,14 +593,27 @@ fn main() raises:
 
     var idx = 0
     var op = tokens[idx]; idx += 1
-    if op != "RUN" and op != "RUN_SCHEDULE" and op != "RUN_DOPPLER":
+    if op != "RUN" and op != "RUN_SCHEDULE" and op != "RUN_DOPPLER" and op != "RUN_MOVING_FRAME":
         print(-1)
         return
 
     var n = Int(atol(tokens[idx])); idx += 1
+    var k_base: Float64 = 1.0
+    var decay_form: Int = 0
+    var decay_exponent: Float64 = 1.0
+    var decay_length_scale: Float64 = 1.0
+    var spatial_epsilon: Float64 = 0.000000000001
     var strength: Float64 = 0.0
     var epsilon: Float64 = 1.0
-    if op == "RUN_DOPPLER":
+    if op == "RUN_MOVING_FRAME":
+        k_base = atof(tokens[idx]); idx += 1
+        decay_form = Int(atol(tokens[idx])); idx += 1
+        decay_exponent = atof(tokens[idx]); idx += 1
+        decay_length_scale = atof(tokens[idx]); idx += 1
+        spatial_epsilon = atof(tokens[idx]); idx += 1
+        strength = atof(tokens[idx]); idx += 1
+        epsilon = atof(tokens[idx]); idx += 1
+    elif op == "RUN_DOPPLER":
         strength = atof(tokens[idx]); idx += 1
         epsilon = atof(tokens[idx]); idx += 1
     var zeta = atof(tokens[idx]); idx += 1
@@ -479,6 +628,10 @@ fn main() raises:
     var phases = List[Float64](capacity=n)
     for _ in range(n):
         phases.append(atof(tokens[idx])); idx += 1
+    var positions = List[Float64](capacity=n)
+    if op == "RUN_MOVING_FRAME":
+        for _ in range(n):
+            positions.append(atof(tokens[idx])); idx += 1
     var omegas = List[Float64](capacity=n)
     var omega_schedule = List[Float64](capacity=n * n_steps)
     if op == "RUN":
@@ -494,7 +647,7 @@ fn main() raises:
     for _ in range(n * n):
         alpha_arr.append(atof(tokens[idx])); idx += 1
     var velocity_schedule = List[Float64](capacity=n * n_steps)
-    if op == "RUN_DOPPLER":
+    if op == "RUN_DOPPLER" or op == "RUN_MOVING_FRAME":
         for _ in range(n * n_steps):
             velocity_schedule.append(atof(tokens[idx])); idx += 1
 
@@ -509,6 +662,31 @@ fn main() raises:
             n, strength, epsilon, zeta, psi, dt, n_steps, method,
             n_substeps, atol_, rtol_,
         )
+    elif op == "RUN_MOVING_FRAME":
+        upde_run_moving_frame_schedule(
+            phases,
+            positions,
+            omega_schedule,
+            knm,
+            alpha_arr,
+            velocity_schedule,
+            n,
+            k_base,
+            decay_form,
+            decay_exponent,
+            decay_length_scale,
+            spatial_epsilon,
+            strength,
+            epsilon,
+            zeta,
+            psi,
+            dt,
+            n_steps,
+            method,
+            n_substeps,
+            atol_,
+            rtol_,
+        )
     else:
         upde_run_omega_schedule(
             phases, omega_schedule, knm, alpha_arr,
@@ -516,3 +694,6 @@ fn main() raises:
         )
     for i in range(n):
         print(phases[i])
+    if op == "RUN_MOVING_FRAME":
+        for i in range(n):
+            print(positions[i])

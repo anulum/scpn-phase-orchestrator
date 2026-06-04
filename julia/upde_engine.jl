@@ -18,7 +18,8 @@ module UPDEEngineJL
 
 using LinearAlgebra
 
-export upde_run, upde_run_omega_schedule, upde_run_doppler_schedule
+export upde_run, upde_run_omega_schedule, upde_run_doppler_schedule,
+       upde_run_moving_frame_schedule
 
 const TWO_PI = 2.0 * pi
 
@@ -502,6 +503,181 @@ function upde_run_doppler_schedule(
     end
 
     return phases
+end
+
+function spatial_weight(
+    distance::Float64,
+    k_base::Float64,
+    decay_form::Integer,
+    decay_exponent::Float64,
+    decay_length_scale::Float64,
+    epsilon::Float64,
+)
+    if decay_form == 1
+        return k_base * exp(-distance / decay_length_scale)
+    elseif decay_form == 2
+        return k_base / (1.0 + distance / decay_length_scale)^decay_exponent
+    elseif decay_form == 3
+        return k_base / sqrt(distance * distance + epsilon)
+    end
+    return k_base / (1.0 + distance)
+end
+
+
+function modulate_axial_coupling!(
+    out::AbstractMatrix{Float64},
+    knm::AbstractMatrix{Float64},
+    positions::AbstractVector{Float64},
+    k_base::Float64,
+    decay_form::Integer,
+    decay_exponent::Float64,
+    decay_length_scale::Float64,
+    epsilon::Float64,
+    n::Int,
+)
+    @inbounds for i in 1:n
+        for j in 1:n
+            if i == j
+                out[i, j] = 0.0
+                continue
+            end
+            distance = abs(positions[i] - positions[j])
+            out[i, j] = knm[i, j] * spatial_weight(
+                distance,
+                k_base,
+                decay_form,
+                decay_exponent,
+                decay_length_scale,
+                epsilon,
+            )
+        end
+    end
+    return out
+end
+
+
+"""
+    upde_run_moving_frame_schedule(phases_init, positions_init, omega_schedule,
+                                   knm_flat, alpha_flat, velocity_schedule, n,
+                                   spatial_k_base, spatial_decay_form,
+                                   spatial_decay_exponent,
+                                   spatial_decay_length_scale, spatial_epsilon,
+                                   doppler_strength, doppler_epsilon, zeta,
+                                   psi, dt, n_steps, method, n_substeps,
+                                   atol, rtol)
+        -> Vector{Float64}
+
+Integrate phase and axial chamber-frame positions jointly. The returned vector
+is `vcat(final_phases, final_positions)`.
+"""
+function upde_run_moving_frame_schedule(
+    phases_init::AbstractVector{Float64},
+    positions_init::AbstractVector{Float64},
+    omega_schedule::AbstractMatrix{Float64},
+    knm_flat::AbstractVector{Float64},
+    alpha_flat::AbstractVector{Float64},
+    velocity_schedule::AbstractMatrix{Float64},
+    n::Integer,
+    spatial_k_base::Float64,
+    spatial_decay_form::Integer,
+    spatial_decay_exponent::Float64,
+    spatial_decay_length_scale::Float64,
+    spatial_epsilon::Float64,
+    doppler_strength::Float64,
+    doppler_epsilon::Float64,
+    zeta::Float64,
+    psi::Float64,
+    dt::Float64,
+    n_steps::Integer,
+    method::AbstractString,
+    n_substeps::Integer,
+    atol::Float64,
+    rtol::Float64,
+)
+    length(phases_init) == n || error("phases shape mismatch")
+    length(positions_init) == n || error("positions shape mismatch")
+    size(omega_schedule, 1) == n_steps || error("omega_schedule step mismatch")
+    size(omega_schedule, 2) == n || error("omega_schedule oscillator mismatch")
+    size(velocity_schedule, 1) == n_steps || error("velocity_schedule step mismatch")
+    size(velocity_schedule, 2) == n || error("velocity_schedule oscillator mismatch")
+    length(knm_flat) == n * n || error("knm shape mismatch")
+    length(alpha_flat) == n * n || error("alpha shape mismatch")
+    n_substeps >= 1 || error("n_substeps must be >= 1")
+    spatial_k_base >= 0.0 || error("spatial_k_base must be non-negative")
+    spatial_decay_exponent > 0.0 || error("spatial_decay_exponent must be positive")
+    spatial_decay_length_scale > 0.0 || error("spatial_decay_length_scale must be positive")
+    spatial_epsilon > 0.0 || error("spatial_epsilon must be positive")
+    doppler_epsilon > 0.0 || error("doppler_epsilon must be positive")
+
+    knm = permutedims(reshape(collect(knm_flat), n, n))
+    alpha = permutedims(reshape(collect(alpha_flat), n, n))
+    phases = collect(phases_init)
+    positions = collect(positions_init)
+
+    k1 = zeros(Float64, n)
+    k2 = zeros(Float64, n)
+    k3 = zeros(Float64, n)
+    k4 = zeros(Float64, n)
+    k5 = zeros(Float64, n)
+    k6 = zeros(Float64, n)
+    k7 = zeros(Float64, n)
+    y5 = zeros(Float64, n)
+    tmp = zeros(Float64, n)
+    doppler = zeros(Float64, n)
+    effective = zeros(Float64, n)
+    modulated = zeros(Float64, n, n)
+
+    last_dt = dt
+    sub_dt = dt / Float64(n_substeps)
+
+    for step in 1:n_steps
+        omegas = vec(omega_schedule[step, :])
+        velocities = vec(velocity_schedule[step, :])
+        modulate_axial_coupling!(
+            modulated,
+            knm,
+            positions,
+            spatial_k_base,
+            spatial_decay_form,
+            spatial_decay_exponent,
+            spatial_decay_length_scale,
+            spatial_epsilon,
+            n,
+        )
+        doppler_term!(doppler, velocities, modulated, doppler_strength, doppler_epsilon, n)
+        @inbounds for i in 1:n
+            effective[i] = omegas[i] + doppler[i]
+        end
+        if method == "rk45"
+            last_dt = rk45_step!(
+                phases, effective, modulated, alpha, zeta, psi,
+                atol, rtol, dt, last_dt,
+                k1, k2, k3, k4, k5, k6, k7, y5, tmp, n,
+            )
+        elseif method == "rk4"
+            for _ in 1:n_substeps
+                rk4_substep!(
+                    phases, effective, modulated, alpha, zeta, psi, sub_dt,
+                    k1, k2, k3, k4, tmp, n,
+                )
+            end
+        elseif method == "euler"
+            for _ in 1:n_substeps
+                euler_substep!(
+                    phases, effective, modulated, alpha, zeta, psi, sub_dt,
+                    k1, n,
+                )
+            end
+        else
+            error("unknown method: $method")
+        end
+        @inbounds for i in 1:n
+            phases[i] = mod(phases[i], TWO_PI)
+            positions[i] += velocities[i] * dt
+        end
+    end
+
+    return vcat(phases, positions)
 end
 
 end  # module

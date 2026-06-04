@@ -258,3 +258,21 @@ The gate compares Python, Go, Julia, Mojo, and available Rust/PyO3 source
 surfaces on the same velocity-corrected `omega_eff` schedule. Committed JSON
 artefacts are labelled `local_regression_non_isolated`; they prove parity and
 functional regression status, not production throughput.
+
+### UPDE moving-frame gate
+
+PHA-C.3 has a dedicated moving-frame parity benchmark:
+
+```bash
+PYTHONPATH=src python benchmarks/upde_moving_frame_benchmark.py --parity-gate
+```
+
+The gate composes distance-modulated coupling, graph-weighted Doppler detuning,
+and ballistic axial position transport in one row-major schedule contract. It
+reports Rust, WebGPU, Mojo, Julia, Go, and Python slots separately and compares
+the flat `[final_phases, final_positions]` vector against the Python reference.
+
+Timing fields are local, non-isolated regression evidence. They demonstrate
+backend parity for the moving-frame contract and must not be presented as
+production throughput without CPU/GPU pinning, dependency capture, backend build
+metadata, and benchmark-isolation notes.

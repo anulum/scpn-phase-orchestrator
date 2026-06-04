@@ -45,6 +45,9 @@ from benchmarks.transfer_entropy_benchmark import (
     benchmark_transfer_entropy_polyglot_parity_gate,
 )
 from benchmarks.upde_doppler_benchmark import benchmark_upde_doppler_polyglot_gate
+from benchmarks.upde_moving_frame_benchmark import (
+    benchmark_upde_moving_frame_polyglot_gate,
+)
 from benchmarks.upde_time_varying_omega_benchmark import (
     benchmark_upde_time_varying_omega_polyglot_gate,
 )
@@ -7859,6 +7862,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
                 benchmark_spatial_modulator_polyglot_parity_gate()
             ),
             "upde_doppler_polyglot": benchmark_upde_doppler_polyglot_gate(),
+            "upde_moving_frame_polyglot": benchmark_upde_moving_frame_polyglot_gate(),
             "upde_time_varying_omega_polyglot": (
                 benchmark_upde_time_varying_omega_polyglot_gate()
             ),

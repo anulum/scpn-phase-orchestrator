@@ -369,6 +369,123 @@ func upderRunDopplerSchedule(
 	}
 }
 
+func spatialWeight(
+	distance, kBase float64,
+	decayForm int,
+	decayExponent, decayLengthScale, epsilon float64,
+) float64 {
+	switch decayForm {
+	case 1:
+		return kBase * math.Exp(-distance/decayLengthScale)
+	case 2:
+		return kBase / math.Pow(1.0+distance/decayLengthScale, decayExponent)
+	case 3:
+		return kBase / math.Sqrt(distance*distance+epsilon)
+	default:
+		return kBase / (1.0 + distance)
+	}
+}
+
+func modulateAxialCoupling(
+	out, knm, positions []float64,
+	kBase float64,
+	decayForm int,
+	decayExponent, decayLengthScale, epsilon float64,
+	n int,
+) {
+	for i := 0; i < n; i++ {
+		offset := i * n
+		for j := 0; j < n; j++ {
+			if i == j {
+				out[offset+j] = 0.0
+				continue
+			}
+			distance := math.Abs(positions[i] - positions[j])
+			out[offset+j] = knm[offset+j] * spatialWeight(
+				distance,
+				kBase,
+				decayForm,
+				decayExponent,
+				decayLengthScale,
+				epsilon,
+			)
+		}
+	}
+}
+
+func upderRunMovingFrameSchedule(
+	phases, positions []float64,
+	omegaSchedule, knm, alpha, velocitySchedule []float64,
+	kBase float64,
+	decayForm int,
+	decayExponent, decayLengthScale, spatialEpsilon float64,
+	strength, dopplerEpsilon, zeta, psi, dt float64,
+	nSteps, method int,
+	nSubsteps int,
+	atol, rtol float64,
+	n int,
+) {
+	doppler := make([]float64, n)
+	effective := make([]float64, n)
+	modulated := make([]float64, n*n)
+	lastDt := dt
+	subDt := dt / float64(nSubsteps)
+	k1 := make([]float64, n)
+	k2 := make([]float64, n)
+	k3 := make([]float64, n)
+	k4 := make([]float64, n)
+	k5 := make([]float64, n)
+	k6 := make([]float64, n)
+	k7 := make([]float64, n)
+	y5 := make([]float64, n)
+	tmp := make([]float64, n)
+
+	for step := 0; step < nSteps; step++ {
+		start := step * n
+		omegas := omegaSchedule[start : start+n]
+		velocities := velocitySchedule[start : start+n]
+		modulateAxialCoupling(
+			modulated, knm, positions,
+			kBase, decayForm, decayExponent, decayLengthScale, spatialEpsilon,
+			n,
+		)
+		computeDopplerTerm(doppler, velocities, modulated, strength, dopplerEpsilon, n)
+		for i := 0; i < n; i++ {
+			effective[i] = omegas[i] + doppler[i]
+		}
+		switch method {
+		case 2: // rk45
+			lastDt = rk45Step(
+				phases, effective, modulated, alpha,
+				k1, k2, k3, k4, k5, k6, k7, y5, tmp,
+				zeta, psi, atol, rtol, dt, lastDt, n,
+			)
+		case 1: // rk4
+			for s := 0; s < nSubsteps; s++ {
+				rk4Substep(
+					phases, effective, modulated, alpha,
+					k1, k2, k3, k4, tmp,
+					zeta, psi, subDt, n,
+				)
+			}
+		default: // euler
+			for s := 0; s < nSubsteps; s++ {
+				eulerSubstep(
+					phases, effective, modulated, alpha, k1,
+					zeta, psi, subDt, n,
+				)
+			}
+		}
+		for i := 0; i < n; i++ {
+			phases[i] = math.Mod(phases[i], twoPiUPDE)
+			if phases[i] < 0.0 {
+				phases[i] += twoPiUPDE
+			}
+			positions[i] += velocities[i] * dt
+		}
+	}
+}
+
 // UPDERun integrates n_steps of the Kuramoto UPDE starting from the
 // phases slice (modified in place — caller copies in first).
 // “method“ is 0 = Euler, 1 = RK4, 2 = RK45.
@@ -480,6 +597,61 @@ func UPDERunDopplerSchedule(
 	upderRunDopplerSchedule(
 		phases, omegaSchedule, knm, alpha, velocitySchedule,
 		float64(strength), float64(epsilon),
+		float64(zeta), float64(psi), float64(dt),
+		ss, int(method),
+		int(nSubsteps),
+		float64(atol), float64(rtol),
+		nn,
+	)
+	return 0
+}
+
+// UPDERunMovingFrameSchedule integrates row-major frequency and scalar
+// velocity schedules while also carrying one absolute axial position per
+// oscillator. The phases and positions slices are both modified in place.
+//
+//export UPDERunMovingFrameSchedule
+func UPDERunMovingFrameSchedule(
+	phasesPtr *C.double,
+	positionsPtr *C.double,
+	omegaSchedulePtr *C.double,
+	knmPtr *C.double,
+	alphaPtr *C.double,
+	velocitySchedulePtr *C.double,
+	n C.int,
+	kBase C.double,
+	decayForm C.int,
+	decayExponent C.double,
+	decayLengthScale C.double,
+	spatialEpsilon C.double,
+	strength C.double,
+	dopplerEpsilon C.double,
+	zeta C.double,
+	psi C.double,
+	dt C.double,
+	nSteps C.int,
+	method C.int,
+	nSubsteps C.int,
+	atol C.double,
+	rtol C.double,
+) C.int {
+	nn := int(n)
+	ss := int(nSteps)
+	phases := unsafe.Slice((*float64)(unsafe.Pointer(phasesPtr)), nn)
+	positions := unsafe.Slice((*float64)(unsafe.Pointer(positionsPtr)), nn)
+	omegaSchedule := unsafe.Slice(
+		(*float64)(unsafe.Pointer(omegaSchedulePtr)), nn*ss,
+	)
+	knm := unsafe.Slice((*float64)(unsafe.Pointer(knmPtr)), nn*nn)
+	alpha := unsafe.Slice((*float64)(unsafe.Pointer(alphaPtr)), nn*nn)
+	velocitySchedule := unsafe.Slice(
+		(*float64)(unsafe.Pointer(velocitySchedulePtr)), nn*ss,
+	)
+	upderRunMovingFrameSchedule(
+		phases, positions, omegaSchedule, knm, alpha, velocitySchedule,
+		float64(kBase), int(decayForm),
+		float64(decayExponent), float64(decayLengthScale), float64(spatialEpsilon),
+		float64(strength), float64(dopplerEpsilon),
 		float64(zeta), float64(psi), float64(dt),
 		ss, int(method),
 		int(nSubsteps),

@@ -301,6 +301,117 @@ impl UPDEStepper {
         Ok(())
     }
 
+    /// Advance with one omega vector, one scalar velocity vector, and one
+    /// chamber-frame axial position vector per step.
+    ///
+    /// Coupling is recomputed from the current axial distances before each
+    /// phase step, Doppler correction is evaluated against that modulated
+    /// coupling graph, and positions are then advanced ballistically by
+    /// `velocity * dt`.
+    ///
+    /// # Errors
+    /// Returns dimension errors for malformed schedules, rejects non-finite or
+    /// non-positive controls, and propagates any error from [`Self::step`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn run_moving_frame_schedule(
+        &mut self,
+        phases: &mut [f64],
+        positions: &mut [f64],
+        omega_schedule: &[f64],
+        knm: &[f64],
+        zeta: f64,
+        psi: f64,
+        alpha: &[f64],
+        velocity_schedule: &[f64],
+        spatial_k_base: f64,
+        spatial_decay_form: u8,
+        spatial_decay_exponent: f64,
+        spatial_decay_length_scale: f64,
+        spatial_epsilon: f64,
+        doppler_strength: f64,
+        doppler_epsilon: f64,
+        n_steps: u64,
+    ) -> SpoResult<()> {
+        if positions.len() != self.n || phases.len() != self.n {
+            return Err(SpoError::InvalidDimension(
+                "moving-frame phases/positions shape mismatch".into(),
+            ));
+        }
+        if knm.len() != self.n * self.n || alpha.len() != self.n * self.n {
+            return Err(SpoError::InvalidDimension(
+                "moving-frame knm/alpha shape mismatch".into(),
+            ));
+        }
+        if !spatial_k_base.is_finite()
+            || spatial_k_base < 0.0
+            || !spatial_decay_exponent.is_finite()
+            || spatial_decay_exponent <= 0.0
+            || !spatial_decay_length_scale.is_finite()
+            || spatial_decay_length_scale <= 0.0
+            || !spatial_epsilon.is_finite()
+            || spatial_epsilon <= 0.0
+            || !doppler_strength.is_finite()
+            || !doppler_epsilon.is_finite()
+            || doppler_epsilon <= 0.0
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "invalid moving-frame controls".into(),
+            ));
+        }
+        let rows = usize::try_from(n_steps)
+            .map_err(|_| SpoError::InvalidDimension("n_steps is too large".into()))?;
+        let expected = rows.checked_mul(self.n).ok_or_else(|| {
+            SpoError::InvalidDimension("moving-frame schedule is too large".into())
+        })?;
+        if omega_schedule.len() != expected || velocity_schedule.len() != expected {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected moving-frame schedule length {expected}, got omega={} velocity={}",
+                omega_schedule.len(),
+                velocity_schedule.len()
+            )));
+        }
+        if positions.iter().any(|z| !z.is_finite()) || knm.iter().any(|k| !k.is_finite()) {
+            return Err(SpoError::IntegrationDiverged(
+                "moving-frame positions/knm contain NaN/Inf".into(),
+            ));
+        }
+
+        let mut modulated = vec![0.0; self.n * self.n];
+        let mut doppler = vec![0.0; self.n];
+        let mut effective = vec![0.0; self.n];
+        for step in 0..rows {
+            let start = step * self.n;
+            let end = start + self.n;
+            modulate_axial_coupling(
+                &mut modulated,
+                knm,
+                positions,
+                spatial_k_base,
+                spatial_decay_form,
+                spatial_decay_exponent,
+                spatial_decay_length_scale,
+                spatial_epsilon,
+                self.n,
+            )?;
+            compute_doppler_term(
+                &mut doppler,
+                &velocity_schedule[start..end],
+                &modulated,
+                doppler_strength,
+                doppler_epsilon,
+                self.n,
+            )?;
+            for i in 0..self.n {
+                effective[i] = omega_schedule[start + i] + doppler[i];
+            }
+            self.step(phases, &effective, &mut modulated, zeta, psi, alpha)?;
+            for i in 0..self.n {
+                positions[i] += velocity_schedule[start + i] * self.dt;
+            }
+        }
+        Ok(())
+    }
+
     /// Return the configured oscillator count.
     pub fn n(&self) -> usize {
         self.n
@@ -635,6 +746,66 @@ fn compute_doppler_term(
         } else {
             0.0
         };
+    }
+    Ok(())
+}
+
+fn spatial_weight(
+    distance: f64,
+    k_base: f64,
+    decay_form: u8,
+    decay_exponent: f64,
+    decay_length_scale: f64,
+    epsilon: f64,
+) -> f64 {
+    match decay_form {
+        1 => k_base * (-distance / decay_length_scale).exp(),
+        2 => k_base / (1.0 + distance / decay_length_scale).powf(decay_exponent),
+        3 => k_base / (distance * distance + epsilon).sqrt(),
+        _ => k_base / (1.0 + distance),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn modulate_axial_coupling(
+    out: &mut [f64],
+    knm: &[f64],
+    positions: &[f64],
+    k_base: f64,
+    decay_form: u8,
+    decay_exponent: f64,
+    decay_length_scale: f64,
+    epsilon: f64,
+    n: usize,
+) -> SpoResult<()> {
+    if out.len() != n * n || knm.len() != n * n || positions.len() != n {
+        return Err(SpoError::InvalidDimension(
+            "malformed spatial modulation inputs".into(),
+        ));
+    }
+    if positions.iter().any(|z| !z.is_finite()) || knm.iter().any(|k| !k.is_finite()) {
+        return Err(SpoError::IntegrationDiverged(
+            "spatial modulation inputs contain NaN/Inf".into(),
+        ));
+    }
+    for i in 0..n {
+        let offset = i * n;
+        for j in 0..n {
+            if i == j {
+                out[offset + j] = 0.0;
+                continue;
+            }
+            let distance = (positions[i] - positions[j]).abs();
+            out[offset + j] = knm[offset + j]
+                * spatial_weight(
+                    distance,
+                    k_base,
+                    decay_form,
+                    decay_exponent,
+                    decay_length_scale,
+                    epsilon,
+                );
+        }
     }
     Ok(())
 }
