@@ -4,7 +4,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 
 > **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. APIs may evolve as this work progresses.
 
-**Version:** 0.6.5
+**Version:** 0.6.6
 **Status:** active development; public inventory is generated below.
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
@@ -73,6 +73,29 @@ evidence is attached.
 | ML researcher | [Differentiable Kuramoto](docs/guide/differentiable_kuramoto.md) | use JAX layers, SAF loss, inverse coupling, and accelerator checks |
 | Reviewer | [Release Hygiene](docs/RELEASE_HYGIENE.md) | verify docs, benchmarks, CI, security, and release evidence |
 
+## Evaluate It in This Order
+
+The repository is large because it covers modelling, supervision, evidence,
+and deployment boundaries. Use this short route when deciding whether SPO fits
+a project:
+
+1. **Confirm the domain has phase structure.** Read the [Use Cases and Value
+   Map](docs/getting-started/use_cases.md) and reject static problems that do
+   not contain cycles, events, waves, stages, or repeated decisions.
+2. **Run a deterministic baseline.** Use the
+   [Quickstart](docs/getting-started/quickstart.md) or
+   `spo demo --domain minimal_domain --steps 20` before adding a custom
+   binding.
+3. **Bind real assumptions.** Move domain knowledge into
+   `binding_spec.yaml`, then validate it with `spo validate`.
+4. **Preserve evidence.** Run with an audit log and replay it before using
+   benchmark, dashboard, or policy outputs for review.
+5. **Escalate only bounded proposals.** Keep hardware, external services, and
+   controller writes behind adapter-specific safety gates.
+
+This order keeps the first experience practical while making the evidence
+boundary visible from the start.
+
 ## Value Chain
 
 SPO is most useful when a team needs all four layers together:
@@ -96,18 +119,18 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.6.5 |
+| Package version | 0.6.6 |
 | Public API exports | 24 |
-| Python package modules | 447 |
-| Core Engine modules | 224 |
+| Python package modules | 463 |
+| Core Engine modules | 230 |
 | Runtime/Serving modules | 47 |
 | Integration modules | 24 |
-| Research/Experimental modules | 149 |
+| Research/Experimental modules | 159 |
 | Domainpack files | 36 |
-| Rust kernel files | 91 |
-| Optional extras | 15 |
-| Python test files | 524 |
-| Public documentation pages | 176 |
+| Rust kernel files | 92 |
+| Optional extras | 16 |
+| Python test files | 539 |
+| Public documentation pages | 180 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
@@ -436,6 +459,22 @@ For market-facing and domain-facing orientation, see the
 | Benchmarks | regression gate and dated reference snapshots | `bench/`, `benchmarks/`, and `docs/galleries/reference_benchmark_snapshot.md` |
 | Security | CodeQL, dependency scanning, secret scanning, ingress hardening, and safe config loaders | GitHub Security tab and security docs |
 | Release | semantic versioned package metadata and changelog | `pyproject.toml`, `CHANGELOG.md`, tags, and GitHub releases |
+
+## Production Judgement Checklist
+
+Before presenting an SPO result as operational evidence, capture:
+
+| Requirement | Evidence |
+|-------------|----------|
+| Domain assumptions | reviewed binding spec, source mapping, and safety tier |
+| Numerical path | engine, solver, timestep, seed, and backend status |
+| Replayability | hash-linked audit log plus `spo replay --verify` output |
+| Benchmark context | command, platform, dependency versions, and isolation label |
+| Human review | bounded `ControlAction` proposal and projector limits |
+| Documentation route | guide, tutorial, notebook, or API page for the used surface |
+
+If one of these entries is missing, treat the result as exploratory until the
+evidence is attached.
 
 ## Platform Support
 

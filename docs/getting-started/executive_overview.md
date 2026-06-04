@@ -44,7 +44,7 @@ around that evidence boundary.
 
 ## What It Is For
 
-SPO is strongest where a system has repeated behaviour and synchrony affects
+SPO is most useful where a system has repeated behaviour and synchrony affects
 risk, performance, or diagnosis.
 
 | Domain | Typical use case | SPO contribution |

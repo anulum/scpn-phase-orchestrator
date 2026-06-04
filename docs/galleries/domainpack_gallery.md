@@ -113,7 +113,7 @@ NumPy fallback — no Rust kernel). Zero failures.
 **Notes:** R values at step 20 from random initial phases. "degraded" =
 R < 0.6 (not yet synchronised). Longer runs converge for all domainpacks.
 Financial markets and gene oscillator reach R=1.0 within 20 steps due to
-strong coupling topology.
+high coupling topology.
 
 ## Running Locally
 

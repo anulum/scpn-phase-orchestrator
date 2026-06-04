@@ -9,8 +9,8 @@ the product and domain map, then choose the narrowest runnable path:
 1. Read [Use Cases and Value Map](use_cases.md).
 2. Read [Executive Overview](executive_overview.md) when you need the operator, market, and evidence framing.
 3. Run [Quickstart](quickstart.md).
-3. Pick [Choose a Use Case](../tutorials/00_choose_a_use_case.md).
-4. Use the [API Reference overview](../reference/api/index.md) only after you
+4. Pick [Choose a Use Case](../tutorials/00_choose_a_use_case.md).
+5. Use the [API Reference overview](../reference/api/index.md) only after you
    know which surface you need.
 
 The system is a domain-agnostic engine for coupled oscillator dynamics.

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-06-04
+
 ### Added
 - Added PHA-C.3 `MovingFrameUPDEEngine` support for joint phase and axial-position UPDE runs, including distance-modulated coupling, Doppler-corrected moving-frame schedules, collision/crossing predicates, Rust/Go/Julia/Mojo source surfaces, module-specific merger coverage, and a polyglot benchmark gate.
 - Added PHA-C.2 `DopplerEngine` support for velocity-corrected UPDE runs, including scalar/vector velocity handling, Rust/Go/Julia/Mojo schedule source surfaces, module-specific tests, Mach-1 counter-propagating lock coverage, and a polyglot benchmark gate.
@@ -87,6 +89,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the `julia` optional dependency extra and wired `juliacall` into the
   `dev` and `full` dependency sets so installed Julia runtimes resolve through
   the Python bridge for polyglot benchmark gates.
+
+### Changed
+
+- Polished the README, documentation home page, onboarding path, use-case
+  guide, notebook/demo inventory, and API reference routing so new readers can
+  understand the product purpose, evaluation order, market applications, and
+  evidence boundaries before entering the full API tree.
+- Bumped package metadata and regenerated the public capability inventory for
+  the release-preparation pass.
 
 ## [0.6.5] - 2026-06-02
 
@@ -1843,7 +1854,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.2...v0.6.3

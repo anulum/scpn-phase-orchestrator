@@ -21,7 +21,7 @@ hide:
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/.pre-commit-config.yaml)
 [![REUSE](https://img.shields.io/badge/REUSE-compliant-green)](https://reuse.software/)
 
-**Dedicated module-owned test surfaces in active rebuild | 567 Rust tests | 60% coverage gate | 53 Rust engine modules | 36 domainpacks | 28 examples**
+**Generated capability inventory | dedicated module-owned tests | Rust and Python backends | 36 domainpacks | reviewed evidence boundaries**
 
 </div>
 
@@ -34,6 +34,12 @@ bind signals, extract oscillator phases, run coupled dynamics, measure
 coherence, classify regimes, and emit bounded review artefacts. It is useful
 when a system has repeated behaviour and the operator needs to know whether
 synchrony is helpful, harmful, causal, or controllable.
+
+For evaluation, start with the practical question: does the target system have
+waves, cycles, retries, stages, rotations, or event loops whose timing matters?
+If yes, SPO can express those sources as phase, test coupling hypotheses,
+separate useful from harmful synchrony, and preserve a replayable control
+review record.
 
 ## What This Means in Practice
 
@@ -58,6 +64,15 @@ control evidence:
 | How do I use it from Python? | [Python Facade API](reference/api/api.md) |
 | How do I understand notebooks and demos? | [Notebooks and Demos](galleries/notebooks_and_demos.md) |
 | What is implemented versus still open? | [Public Roadmap](roadmap.md) |
+
+## First Evaluation Path
+
+1. Read the [Use Cases and Value Map](getting-started/use_cases.md).
+2. Run `spo demo --domain minimal_domain --steps 20`.
+3. Validate one binding spec with `spo validate`.
+4. Replay one audited run with `spo replay --verify`.
+5. Use the [API Reference](reference/api/index.md) only after choosing the
+   relevant surface.
 
 ## Architecture
 

@@ -88,4 +88,4 @@ run is repeated under the repository benchmark-isolation requirements.
 
 ## Public API
 
-:::: scpn_phase_orchestrator.upde.engine.upde_run_omega_schedule
+::: scpn_phase_orchestrator.upde.engine.upde_run_omega_schedule

@@ -24,6 +24,16 @@ boundary are known.
 | Replay and audit decisions | [Audit](audit.md) | [Deterministic Replay](../../tutorials/06_deterministic_replay_for_debugging.md) | hash-linked evidence that can be verified later |
 | Optimise differentiable oscillator models | [nn API](nn.md) | [Differentiable Kuramoto](../../tutorials/04_differentiable_kuramoto.md) | differentiable loss, trained coupling, or topology proposal |
 
+## Minimal Imports by Task
+
+| Task | Import first | Escalate when |
+|------|--------------|---------------|
+| Run a local binding | `from scpn import Orchestrator` | you need amplitude, delay, stochastic, or hardware-adjacent adapters |
+| Inspect final coherence | `OrchestratorState.order_parameter` | you need per-layer, PLV, PAC, Lyapunov, or transfer-entropy monitors |
+| Build a domainpack | `load_binding_spec`, `validate_binding_spec` | you need auto-binding proposals or generated scaffolds |
+| Optimise coupling | `scpn_phase_orchestrator.nn.functional` | you need Equinox layers, SAF loss, or inverse coupling |
+| Review evidence | `AuditLogger` and replay APIs | you need deterministic comparison across environments |
+
 ## API by Reader
 
 | Reader | Minimal surface | When to go deeper |

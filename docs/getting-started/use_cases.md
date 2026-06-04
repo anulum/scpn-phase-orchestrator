@@ -72,7 +72,7 @@ same questions reappear across sectors: which components are phase-locked, what
 coupling path caused it, whether the lock is good or bad, and which bounded
 knob could move the system without violating review policy.
 
-The commercial value is strongest where wrong control is expensive: energy,
+The commercial value is highest where wrong control is expensive: energy,
 industrial operations, clinical research, cyber-physical infrastructure,
 robotics, aerospace, and high-value simulation. In those settings the audit
 surface is as important as the mathematics. A proposal that cannot be replayed,

@@ -27,6 +27,7 @@ context, and safety boundary are captured outside the notebook.
 | Binding specs | `09_binding_spec.ipynb` | binding API plus raw-source tutorial |
 | Audit replay | `08_audit_replay.ipynb` | deterministic replay tutorial and audit API |
 | Autotune | `12_autotune_pipeline.ipynb` | autotune API and replay-only learner guide |
+| Real-data review demo | `spo demo --dataset heartbeat.csv --target coherence --steps 100` | review-only auto-binding and dashboard handoff |
 | Reference domains | power grid, market, sleep, swarmalator notebooks | domainpack gallery plus domain-specific validation |
 
 ## Notebook Inventory
@@ -94,6 +95,7 @@ There are `27` Python example scripts in `examples/`.
 | Policy Studio | `streamlit run tools/policy_studio.py` | Build and dry-run policy rules |
 | Browser WASM demo | `docs/demo/index.html` or GitHub Pages `/demo/` | Runs the WASM Kuramoto engine in a browser |
 | CLI demo | `spo demo --domain minimal_domain --steps 20` | Terminal demo for any packaged domainpack |
+| Real-data review demo | `spo demo --dataset heartbeat.csv --target coherence --steps 100` | Downloads the cited PhysioNet heart-rate-belt CSV, proposes a review-only binding, and prints dashboard commands |
 
 ## Production Continuation
 

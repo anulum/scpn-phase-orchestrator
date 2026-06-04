@@ -42,6 +42,20 @@ user roles, evidence boundaries, and API routes.
 | Explain adoption value | [Executive Overview](executive_overview.md) | connect use cases, evidence, and buyer-facing value |
 | Fix a local failure | [Troubleshooting](troubleshooting.md) | reproduce with exact command, seed, and environment |
 
+## What to Explain First
+
+When introducing SPO to a new reader, use this sequence:
+
+1. The software is for repeated behaviour: waves, cycles, events, states, and
+   coupled timing.
+2. It converts those sources into phase variables so different telemetry can be
+   compared with one mathematical contract.
+3. It distinguishes useful coherence from harmful coherence.
+4. It produces bounded proposals and replay records rather than hidden
+   controller changes.
+5. It supports research, simulation, and operator review without claiming that
+   example domainpacks are calibrated for every live system.
+
 ## First Hour
 
 1. Install the package:
@@ -83,7 +97,7 @@ user roles, evidence boundaries, and API routes.
 | Domain author | [New Domain Checklist](../tutorials/01_new_domain_checklist.md) | `spo validate` | `domainpacks/<name>/binding_spec.yaml` |
 | Research user | [Kuramoto Theory](../concepts/kuramoto_theory.md) | notebooks `02`, `06`, `17`, `18`, `19` | engine parameters and monitors |
 | Platform operator | [Production Deployment](../guide/production.md) | `spo serve ...` | Prometheus, OpenTelemetry, gRPC |
-| API integrator | [Core API](../reference/api/core.md) | Python imports | adapters, server, CLI |
+| API integrator | [Python Facade API](../reference/api/api.md) | Python imports | adapters, server, CLI |
 | Demo presenter | [Interactive Tools](../guide/interactive_tools.md) | Streamlit, WASM, `spo demo` | domainpack gallery |
 | Contributor | [Contributor Onboarding](../guide/contributor_onboarding.md) | scoped checks | docs, tests, examples |
 
