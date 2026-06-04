@@ -15,6 +15,20 @@
 use spo_types::{SpoError, SpoResult};
 use std::f64::consts::{PI, TAU};
 
+const DEFAULT_PHASE_TOL_RAD: f64 = 0.01;
+const DEFAULT_SPATIAL_TOL_M: f64 = 0.002;
+
+/// Resolved PHA-C tolerance profile.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MergeWindowToleranceProfile {
+    pub name: String,
+    pub phase_tol_rad: f64,
+    pub spatial_tol_m: f64,
+    pub multiplier: f64,
+    pub baseline_phase_tol_rad: f64,
+    pub baseline_spatial_tol_m: f64,
+}
+
 /// Audit-ready merge-window state for one sampled instant.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MergeWindowReport {
@@ -108,6 +122,56 @@ pub fn evaluate_merge_window(
     })
 }
 
+/// Resolve a named PHA-C merge-window tolerance profile.
+///
+/// # Errors
+/// Returns `InvalidConfig` for unknown profile names or invalid baselines.
+pub fn resolve_merge_window_tolerance_profile(
+    profile: &str,
+    phase_baseline_rad: f64,
+    spatial_baseline_m: f64,
+) -> SpoResult<MergeWindowToleranceProfile> {
+    if !phase_baseline_rad.is_finite() || !spatial_baseline_m.is_finite() {
+        return Err(SpoError::InvalidConfig(
+            "merge-window tolerance baselines must be finite".into(),
+        ));
+    }
+    if phase_baseline_rad < 0.0 || spatial_baseline_m < 0.0 {
+        return Err(SpoError::InvalidConfig(
+            "merge-window tolerance baselines must be non-negative".into(),
+        ));
+    }
+    let normalised = profile.trim().to_ascii_lowercase();
+    let multiplier = match normalised.as_str() {
+        "baseline_1x" => 1.0,
+        "buffer_3x" => 3.0,
+        "review_5x" => 5.0,
+        _ => {
+            return Err(SpoError::InvalidConfig(
+                "unknown merge-window tolerance profile".into(),
+            ));
+        }
+    };
+    Ok(MergeWindowToleranceProfile {
+        name: normalised,
+        phase_tol_rad: phase_baseline_rad * multiplier,
+        spatial_tol_m: spatial_baseline_m * multiplier,
+        multiplier,
+        baseline_phase_tol_rad: phase_baseline_rad,
+        baseline_spatial_tol_m: spatial_baseline_m,
+    })
+}
+
+/// Resolve a named tolerance profile against the default PHA-C baselines.
+///
+/// # Errors
+/// Returns `InvalidConfig` for unknown profile names.
+pub fn resolve_default_merge_window_tolerance_profile(
+    profile: &str,
+) -> SpoResult<MergeWindowToleranceProfile> {
+    resolve_merge_window_tolerance_profile(profile, DEFAULT_PHASE_TOL_RAD, DEFAULT_SPATIAL_TOL_M)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,6 +234,54 @@ mod tests {
     }
 
     #[test]
+    fn resolves_named_tolerance_profiles() {
+        let baseline = resolve_default_merge_window_tolerance_profile("baseline_1x")
+            .expect("valid baseline profile");
+        let buffer = resolve_default_merge_window_tolerance_profile("buffer_3x")
+            .expect("valid buffer profile");
+        let review = resolve_default_merge_window_tolerance_profile("review_5x")
+            .expect("valid review profile");
+        assert_eq!(baseline.phase_tol_rad, 0.01);
+        assert_eq!(baseline.spatial_tol_m, 0.002);
+        assert_eq!(buffer.phase_tol_rad, 0.03);
+        assert_eq!(buffer.spatial_tol_m, 0.006);
+        assert_eq!(review.phase_tol_rad, 0.05);
+        assert_eq!(review.spatial_tol_m, 0.01);
+    }
+
+    #[test]
+    fn profile_tolerance_accepts_buffered_sample() {
+        let profile = resolve_default_merge_window_tolerance_profile("buffer_3x")
+            .expect("valid buffer profile");
+        let strict = evaluate_merge_window(
+            &[0.0, 0.024],
+            &[0.0, 0.0045],
+            0.0,
+            0.0,
+            0.0,
+            DEFAULT_PHASE_TOL_RAD,
+            DEFAULT_SPATIAL_TOL_M,
+            1,
+            0,
+        )
+        .expect("valid strict report");
+        let profiled = evaluate_merge_window(
+            &[0.0, 0.024],
+            &[0.0, 0.0045],
+            0.0,
+            0.0,
+            0.0,
+            profile.phase_tol_rad,
+            profile.spatial_tol_m,
+            1,
+            0,
+        )
+        .expect("valid profiled report");
+        assert!(!strict.lock_achieved);
+        assert!(profiled.lock_achieved);
+    }
+
+    #[test]
     fn rejects_invalid_boundaries() {
         assert!(matches!(
             evaluate_merge_window(&[], &[], 0.0, 0.0, 0.0, 0.01, 0.002, 1, 0),
@@ -181,6 +293,10 @@ mod tests {
         ));
         assert!(matches!(
             evaluate_merge_window(&[f64::NAN], &[0.0], 0.0, 0.0, 0.0, 0.01, 0.002, 1, 0,),
+            Err(SpoError::InvalidConfig(_))
+        ));
+        assert!(matches!(
+            resolve_default_merge_window_tolerance_profile("unknown"),
             Err(SpoError::InvalidConfig(_))
         ));
     }

@@ -87,6 +87,7 @@ def _record_max_abs_error(
             "spatial_dispersion_m",
             "phase_order_parameter",
             "distance_to_reference_max_m",
+            "tolerance_profile_multiplier",
         )
     )
     discrete_error = max(
@@ -97,6 +98,7 @@ def _record_max_abs_error(
             "spatial_locked",
             "lock_achieved",
             "consecutive_lock_samples",
+            "tolerance_profile_name",
             "claim_boundary",
             "execution_disabled",
             "actuating",
@@ -122,6 +124,7 @@ def _bench_backend(
         spatial_tol_m=0.002,
         required_consecutive_samples=3,
         prior_consecutive_lock_samples=2,
+        tolerance_profile="buffer_3x",
     )
     t0 = time.perf_counter()
     for _ in range(calls):
@@ -133,6 +136,7 @@ def _bench_backend(
             spatial_tol_m=0.002,
             required_consecutive_samples=3,
             prior_consecutive_lock_samples=2,
+            tolerance_profile="buffer_3x",
         )
     return time.perf_counter() - t0, record
 
@@ -144,6 +148,8 @@ def _reference_contracts(record: PHACHandoffRecord) -> dict[str, Any]:
         "non_actuating": int(not record.actuating),
         "execution_disabled": int(record.execution_disabled),
         "claim_boundary": record.claim_boundary,
+        "tolerance_profile_name": record.tolerance_profile_name,
+        "tolerance_profile_multiplier": record.tolerance_profile_multiplier,
         "has_source_chain_hash": int(len(record.source_chain_sha256) == 64),
         "has_record_hash": int(len(record.record_sha256) == 64),
     }
@@ -203,6 +209,8 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_HANDOFF_CLAIM_BOUNDARY
+        and contracts["tolerance_profile_name"] == "buffer_3x"
+        and contracts["tolerance_profile_multiplier"] == 3.0
         and contracts["has_source_chain_hash"] == 1
         and contracts["has_record_hash"] == 1
     )
@@ -234,6 +242,8 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "joint_lock_required": contracts["joint_lock_required"],
         "non_actuating": contracts["non_actuating"],
         "execution_disabled": contracts["execution_disabled"],
+        "tolerance_profile_name": contracts["tolerance_profile_name"],
+        "tolerance_profile_multiplier": contracts["tolerance_profile_multiplier"],
         "benchmark_sha256": benchmark_sha,
         "benchmark_evidence_kind": BENCHMARK_EVIDENCE_KIND,
         "isolation_method": "none",

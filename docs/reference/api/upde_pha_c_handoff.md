@@ -39,6 +39,8 @@ It then adds:
 
 - `phase_order_parameter = |mean(exp(i theta_i))|`;
 - `distance_to_reference_max_m = max_i |z_i - z_ref|`;
+- the tolerance profile name and multiplier when `baseline_1x`, `buffer_3x`,
+  or `review_5x` is used;
 - SHA-256 digests for the phase vector, position vector, merge report,
   source-chain, and final record;
 - `execution_disabled=True` and `actuating=False`;
@@ -63,6 +65,7 @@ record = build_pha_c_handoff_record(
     spatial_tol_m=0.002,
     required_consecutive_samples=3,
     prior_consecutive_lock_samples=2,
+    tolerance_profile="baseline_1x",
 )
 
 assert record.lock_achieved

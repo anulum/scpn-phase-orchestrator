@@ -151,6 +151,21 @@ def _reference_contracts() -> dict[str, Any]:
         required_consecutive_samples=3,
         prior_consecutive_lock_samples=2,
     )
+    profile_pass = evaluate_merge_window(
+        np.array([0.0, 0.024], dtype=np.float64),
+        np.array([0.0, 0.0045], dtype=np.float64),
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=1,
+        tolerance_profile="buffer_3x",
+    )
+    profile_fail = evaluate_merge_window(
+        np.array([0.0, 0.024], dtype=np.float64),
+        np.array([0.0, 0.0045], dtype=np.float64),
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=1,
+    )
     return {
         "wrapped_phase_locked": bool(wrapped.phase_locked),
         "wrapped_phase_dispersion_rad": wrapped.phase_dispersion_rad,
@@ -160,6 +175,8 @@ def _reference_contracts() -> dict[str, Any]:
             not phase_fail.lock_achieved and not spatial_fail.lock_achieved
         ),
         "consecutive_gate_passes_at_threshold": int(consecutive_pass.lock_achieved),
+        "buffer_profile_accepts_within_3x": int(profile_pass.lock_achieved),
+        "explicit_profile_rejects_same_sample": int(not profile_fail.lock_achieved),
     }
 
 
@@ -204,6 +221,7 @@ def benchmark_merge_window_polyglot_parity_gate(
         "require_all_declared_backend_records": True,
         "require_consecutive_gate": True,
         "require_joint_phase_spatial_lock": True,
+        "require_tolerance_profile_contract": True,
         "require_python_reference": True,
         "require_wrapped_phase": True,
     }
@@ -216,6 +234,8 @@ def benchmark_merge_window_polyglot_parity_gate(
         and contracts["spatial_failure_resets"] == 1
         and contracts["joint_lock_required"] == 1
         and contracts["consecutive_gate_passes_at_threshold"] == 1
+        and contracts["buffer_profile_accepts_within_3x"] == 1
+        and contracts["explicit_profile_rejects_same_sample"] == 1
     )
     benchmark_payload = {
         "n": n,
@@ -246,6 +266,12 @@ def benchmark_merge_window_polyglot_parity_gate(
         "joint_lock_required": contracts["joint_lock_required"],
         "consecutive_gate_passes_at_threshold": contracts[
             "consecutive_gate_passes_at_threshold"
+        ],
+        "buffer_profile_accepts_within_3x": contracts[
+            "buffer_profile_accepts_within_3x"
+        ],
+        "explicit_profile_rejects_same_sample": contracts[
+            "explicit_profile_rejects_same_sample"
         ],
         "benchmark_sha256": benchmark_sha,
         "benchmark_evidence_kind": BENCHMARK_EVIDENCE_KIND,

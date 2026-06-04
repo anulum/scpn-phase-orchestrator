@@ -27,8 +27,11 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from scpn_phase_orchestrator.monitor.merge_window import (
+    DEFAULT_PHASE_TOL_RAD,
+    DEFAULT_SPATIAL_TOL_M,
     MergeReport,
     evaluate_merge_window,
+    resolve_merge_window_tolerance_profile,
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -69,6 +72,8 @@ class PHACHandoffRecord:
     reference_point: float
     phase_tol_rad: float
     spatial_tol_m: float
+    tolerance_profile_name: str
+    tolerance_profile_multiplier: float
     required_consecutive_samples: int
     claim_boundary: str
     evidence_kind: str
@@ -173,6 +178,8 @@ def _record_dict_without_hash(
     reference_point: float,
     phase_tol_rad: float,
     spatial_tol_m: float,
+    tolerance_profile_name: str,
+    tolerance_profile_multiplier: float,
     required_consecutive_samples: int,
     phase_state_sha256: str,
     position_state_sha256: str,
@@ -194,6 +201,8 @@ def _record_dict_without_hash(
         "reference_point": float(reference_point),
         "phase_tol_rad": float(phase_tol_rad),
         "spatial_tol_m": float(spatial_tol_m),
+        "tolerance_profile_name": str(tolerance_profile_name),
+        "tolerance_profile_multiplier": float(tolerance_profile_multiplier),
         "required_consecutive_samples": int(required_consecutive_samples),
         "claim_boundary": PHA_C_HANDOFF_CLAIM_BOUNDARY,
         "evidence_kind": PHA_C_HANDOFF_EVIDENCE_KIND,
@@ -213,10 +222,11 @@ def build_pha_c_handoff_record(
     t: object = 0.0,
     reference_phase: object = 0.0,
     reference_point: object = 0.0,
-    phase_tol_rad: object = 0.01,
-    spatial_tol_m: object = 0.002,
+    phase_tol_rad: object = DEFAULT_PHASE_TOL_RAD,
+    spatial_tol_m: object = DEFAULT_SPATIAL_TOL_M,
     required_consecutive_samples: object = 3,
     prior_consecutive_lock_samples: object = 0,
+    tolerance_profile: object | None = None,
 ) -> PHACHandoffRecord:
     """Build a deterministic PHA-C event/state handoff record.
 
@@ -234,8 +244,21 @@ def build_pha_c_handoff_record(
     timestamp = _validate_real_scalar(t, name="t")
     phase_reference = _validate_real_scalar(reference_phase, name="reference_phase")
     spatial_reference = _validate_real_scalar(reference_point, name="reference_point")
-    phase_tol = _validate_tolerance(phase_tol_rad, name="phase_tol_rad")
-    spatial_tol = _validate_tolerance(spatial_tol_m, name="spatial_tol_m")
+    tolerance_profile_name = "explicit"
+    tolerance_profile_multiplier = 1.0
+    if tolerance_profile is None:
+        phase_tol = _validate_tolerance(phase_tol_rad, name="phase_tol_rad")
+        spatial_tol = _validate_tolerance(spatial_tol_m, name="spatial_tol_m")
+    else:
+        profile = resolve_merge_window_tolerance_profile(
+            tolerance_profile,
+            phase_baseline_rad=phase_tol_rad,
+            spatial_baseline_m=spatial_tol_m,
+        )
+        phase_tol = profile.phase_tol_rad
+        spatial_tol = profile.spatial_tol_m
+        tolerance_profile_name = profile.name
+        tolerance_profile_multiplier = profile.multiplier
     required = _validate_sample_count(
         required_consecutive_samples,
         name="required_consecutive_samples",
@@ -279,6 +302,8 @@ def build_pha_c_handoff_record(
         reference_point=spatial_reference,
         phase_tol_rad=phase_tol,
         spatial_tol_m=spatial_tol,
+        tolerance_profile_name=tolerance_profile_name,
+        tolerance_profile_multiplier=tolerance_profile_multiplier,
         required_consecutive_samples=required,
         phase_state_sha256=phase_hash,
         position_state_sha256=position_hash,
@@ -312,6 +337,8 @@ def pha_c_handoff_record_to_dict(
         "reference_point": float(record.reference_point),
         "phase_tol_rad": float(record.phase_tol_rad),
         "spatial_tol_m": float(record.spatial_tol_m),
+        "tolerance_profile_name": str(record.tolerance_profile_name),
+        "tolerance_profile_multiplier": float(record.tolerance_profile_multiplier),
         "required_consecutive_samples": int(record.required_consecutive_samples),
         "claim_boundary": str(record.claim_boundary),
         "evidence_kind": str(record.evidence_kind),

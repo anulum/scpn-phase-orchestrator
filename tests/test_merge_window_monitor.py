@@ -33,10 +33,14 @@ from scpn_phase_orchestrator.monitor import _merge_window_julia as public_merge_
 from scpn_phase_orchestrator.monitor import _merge_window_mojo as public_merge_mojo
 from scpn_phase_orchestrator.monitor import _merge_window_rust as public_merge_rust
 from scpn_phase_orchestrator.monitor.merge_window import (
+    MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS,
     MergeReport,
     MergeWindowMonitor,
+    MergeWindowToleranceProfile,
     evaluate_merge_window,
     merge_window_report_to_dict,
+    merge_window_tolerance_profile_to_dict,
+    resolve_merge_window_tolerance_profile,
 )
 
 TWO_PI = 2.0 * np.pi
@@ -134,8 +138,70 @@ def test_report_serialisation_and_lazy_export() -> None:
     assert payload["t"] == 7.5
     assert isinstance(payload["lock_achieved"], bool)
     assert monitor_pkg.MergeReport is MergeReport
+    assert monitor_pkg.MergeWindowToleranceProfile is MergeWindowToleranceProfile
     assert monitor_pkg.MergeWindowMonitor is MergeWindowMonitor
     assert monitor_pkg.evaluate_merge_window is evaluate_merge_window
+
+
+def test_tolerance_profiles_resolve_reviewed_buffers() -> None:
+    baseline = resolve_merge_window_tolerance_profile("baseline_1x")
+    buffer = resolve_merge_window_tolerance_profile("buffer_3x")
+    review = resolve_merge_window_tolerance_profile("review_5x")
+
+    assert MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS["buffer_3x"] == 3.0
+    assert baseline.phase_tol_rad == pytest.approx(0.01)
+    assert baseline.spatial_tol_m == pytest.approx(0.002)
+    assert buffer.phase_tol_rad == pytest.approx(0.03)
+    assert buffer.spatial_tol_m == pytest.approx(0.006)
+    assert review.phase_tol_rad == pytest.approx(0.05)
+    assert review.spatial_tol_m == pytest.approx(0.01)
+    assert merge_window_tolerance_profile_to_dict(buffer) == buffer.to_dict()
+
+    custom = MergeWindowToleranceProfile(
+        name="buffer_3x",
+        phase_tol_rad=0.6,
+        spatial_tol_m=0.12,
+        multiplier=3.0,
+        baseline_phase_tol_rad=0.2,
+        baseline_spatial_tol_m=0.04,
+    )
+    assert resolve_merge_window_tolerance_profile(custom) is custom
+
+
+def test_tolerance_profile_controls_monitor_and_function() -> None:
+    phases = np.array([0.0, 0.024], dtype=np.float64)
+    positions = np.array([0.0, 0.0045], dtype=np.float64)
+
+    strict = evaluate_merge_window(
+        phases,
+        positions,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=1,
+    )
+    profiled = evaluate_merge_window(
+        phases,
+        positions,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=1,
+        tolerance_profile="buffer_3x",
+    )
+    monitor = MergeWindowMonitor(
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=1,
+        tolerance_profile="buffer_3x",
+    )
+    monitored = monitor.evaluate(phases, positions)
+
+    assert not strict.lock_achieved
+    assert profiled.lock_achieved
+    assert monitored.lock_achieved
+    assert monitor.tolerance_profile is not None
+    assert monitor.tolerance_profile.name == "buffer_3x"
+    assert monitor.phase_tol_rad == pytest.approx(0.03)
+    assert monitor.spatial_tol_m == pytest.approx(0.006)
 
 
 def test_invalid_inputs_fail_closed() -> None:
@@ -162,6 +228,17 @@ def test_invalid_inputs_fail_closed() -> None:
         evaluate_merge_window([0.0], [0.0], prior_consecutive_lock_samples=-1)
     with pytest.raises(ValueError, match="t"):
         evaluate_merge_window([0.0], [0.0], t=True)
+    with pytest.raises(ValueError, match="tolerance_profile"):
+        evaluate_merge_window([0.0], [0.0], tolerance_profile="unknown")
+    with pytest.raises(ValueError, match="multiplier"):
+        MergeWindowToleranceProfile(
+            name="baseline_1x",
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+            multiplier=0.0,
+            baseline_phase_tol_rad=0.01,
+            baseline_spatial_tol_m=0.002,
+        )
 
 
 @st.composite
@@ -275,6 +352,7 @@ def test_polyglot_adapter_contracts_match_python_reference() -> None:
             spatial_tol_m=0.002,
             required_consecutive_samples=2,
             prior_consecutive_lock_samples=1,
+            tolerance_profile="baseline_1x",
         )
         assert merge_validation.validate_merge_window_report(got, expected) is got
 
@@ -285,5 +363,7 @@ def test_merge_window_polyglot_benchmark_gate() -> None:
     assert result["backend_count"] == 5
     assert result["all_available_passed"] == 1
     assert result["acceptance_passed"] == 1
+    assert result["buffer_profile_accepts_within_3x"] == 1
+    assert result["explicit_profile_rejects_same_sample"] == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
     assert result["production_timing_claim"] == 0

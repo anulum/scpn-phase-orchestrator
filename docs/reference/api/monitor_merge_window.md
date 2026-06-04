@@ -22,6 +22,8 @@ alone is not enough evidence that the population has spatially merged.
 - Consecutive gate: both predicates must pass for `required_consecutive_samples`.
 - Default tolerances: `phase_tol_rad=0.01`, `spatial_tol_m=0.002`,
   `required_consecutive_samples=3`.
+- Named profiles multiply the reviewed baseline: `baseline_1x`, `buffer_3x`,
+  and `review_5x`.
 - Evidence boundary: benchmark timings are local regression evidence unless run
   under the documented isolated-core benchmark protocol.
 
@@ -44,6 +46,28 @@ for t in range(3):
 
 assert report.lock_achieved
 ```
+
+## Tolerance profiles
+
+PHA-C and MIF/FRC review lanes often need to separate the reviewed baseline
+window from wider diagnostic buffers. `resolve_merge_window_tolerance_profile`
+keeps that boundary explicit:
+
+```python
+from scpn_phase_orchestrator.monitor.merge_window import (
+    MergeWindowMonitor,
+    resolve_merge_window_tolerance_profile,
+)
+
+profile = resolve_merge_window_tolerance_profile("buffer_3x")
+assert profile.spatial_tol_m == 0.006
+
+monitor = MergeWindowMonitor(tolerance_profile="buffer_3x")
+```
+
+The default baseline is `0.01` rad and `0.002` m. Passing explicit
+`phase_tol_rad` or `spatial_tol_m` with a profile treats those values as the
+baseline before applying the multiplier.
 
 ## Polyglot surfaces
 

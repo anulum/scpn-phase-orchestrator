@@ -24,6 +24,50 @@ from numpy.typing import ArrayLike, NDArray
 
 FloatArray = NDArray[np.float64]
 TWO_PI = 2.0 * np.pi
+DEFAULT_PHASE_TOL_RAD = 0.01
+DEFAULT_SPATIAL_TOL_M = 0.002
+MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS = {
+    "baseline_1x": 1.0,
+    "buffer_3x": 3.0,
+    "review_5x": 5.0,
+}
+
+
+@dataclass(frozen=True, slots=True)
+class MergeWindowToleranceProfile:
+    """Resolved phase and spatial tolerances for a PHA-C merge window."""
+
+    name: str
+    phase_tol_rad: float
+    spatial_tol_m: float
+    multiplier: float
+    baseline_phase_tol_rad: float
+    baseline_spatial_tol_m: float
+
+    def __post_init__(self) -> None:
+        name = _validate_profile_name(self.name)
+        phase_tol = _validate_tolerance(self.phase_tol_rad, name="phase_tol_rad")
+        spatial_tol = _validate_tolerance(self.spatial_tol_m, name="spatial_tol_m")
+        multiplier = _validate_positive_scalar(self.multiplier, name="multiplier")
+        baseline_phase = _validate_tolerance(
+            self.baseline_phase_tol_rad,
+            name="baseline_phase_tol_rad",
+        )
+        baseline_spatial = _validate_tolerance(
+            self.baseline_spatial_tol_m,
+            name="baseline_spatial_tol_m",
+        )
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "phase_tol_rad", phase_tol)
+        object.__setattr__(self, "spatial_tol_m", spatial_tol)
+        object.__setattr__(self, "multiplier", multiplier)
+        object.__setattr__(self, "baseline_phase_tol_rad", baseline_phase)
+        object.__setattr__(self, "baseline_spatial_tol_m", baseline_spatial)
+
+    def to_dict(self) -> dict[str, float | str]:
+        """Return a JSON-safe tolerance-profile payload."""
+
+        return merge_window_tolerance_profile_to_dict(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +117,23 @@ def _validate_tolerance(value: object, *, name: str) -> float:
     return parsed
 
 
+def _validate_positive_scalar(value: object, *, name: str) -> float:
+    parsed = _validate_real_scalar(value, name=name)
+    if parsed <= 0.0:
+        raise ValueError(f"{name} must be positive")
+    return parsed
+
+
+def _validate_profile_name(value: object) -> str:
+    if not isinstance(value, str):
+        raise ValueError("tolerance_profile must be a named profile string")
+    name = value.strip().lower()
+    if name not in MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS:
+        valid = ", ".join(sorted(MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS))
+        raise ValueError(f"tolerance_profile must be one of: {valid}")
+    return name
+
+
 def _validate_sample_count(value: object, *, name: str, minimum: int) -> int:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
@@ -112,6 +173,36 @@ def _spatial_dispersion_m(positions: FloatArray, reference_point: float) -> floa
     return float(np.max(np.abs(positions - reference_point)))
 
 
+def resolve_merge_window_tolerance_profile(
+    tolerance_profile: object,
+    *,
+    phase_baseline_rad: object = DEFAULT_PHASE_TOL_RAD,
+    spatial_baseline_m: object = DEFAULT_SPATIAL_TOL_M,
+) -> MergeWindowToleranceProfile:
+    """Resolve a named PHA-C tolerance profile into numeric tolerances."""
+
+    if isinstance(tolerance_profile, MergeWindowToleranceProfile):
+        return tolerance_profile
+    name = _validate_profile_name(tolerance_profile)
+    phase_baseline = _validate_tolerance(
+        phase_baseline_rad,
+        name="phase_baseline_rad",
+    )
+    spatial_baseline = _validate_tolerance(
+        spatial_baseline_m,
+        name="spatial_baseline_m",
+    )
+    multiplier = MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS[name]
+    return MergeWindowToleranceProfile(
+        name=name,
+        phase_tol_rad=phase_baseline * multiplier,
+        spatial_tol_m=spatial_baseline * multiplier,
+        multiplier=multiplier,
+        baseline_phase_tol_rad=phase_baseline,
+        baseline_spatial_tol_m=spatial_baseline,
+    )
+
+
 def evaluate_merge_window(
     phases: ArrayLike,
     positions: ArrayLike,
@@ -119,10 +210,11 @@ def evaluate_merge_window(
     t: object = 0.0,
     reference_phase: object = 0.0,
     reference_point: object = 0.0,
-    phase_tol_rad: object = 0.01,
-    spatial_tol_m: object = 0.002,
+    phase_tol_rad: object = DEFAULT_PHASE_TOL_RAD,
+    spatial_tol_m: object = DEFAULT_SPATIAL_TOL_M,
     required_consecutive_samples: object = 3,
     prior_consecutive_lock_samples: object = 0,
+    tolerance_profile: object | None = None,
 ) -> MergeReport:
     """Evaluate one PHA-C merge-window sample.
 
@@ -143,8 +235,17 @@ def evaluate_merge_window(
     timestamp = _validate_real_scalar(t, name="t")
     phase_reference = _validate_real_scalar(reference_phase, name="reference_phase")
     spatial_reference = _validate_real_scalar(reference_point, name="reference_point")
-    phase_tol = _validate_tolerance(phase_tol_rad, name="phase_tol_rad")
-    spatial_tol = _validate_tolerance(spatial_tol_m, name="spatial_tol_m")
+    if tolerance_profile is None:
+        phase_tol = _validate_tolerance(phase_tol_rad, name="phase_tol_rad")
+        spatial_tol = _validate_tolerance(spatial_tol_m, name="spatial_tol_m")
+    else:
+        profile = resolve_merge_window_tolerance_profile(
+            tolerance_profile,
+            phase_baseline_rad=phase_tol_rad,
+            spatial_baseline_m=spatial_tol_m,
+        )
+        phase_tol = profile.phase_tol_rad
+        spatial_tol = profile.spatial_tol_m
     required = _validate_sample_count(
         required_consecutive_samples,
         name="required_consecutive_samples",
@@ -178,18 +279,30 @@ class MergeWindowMonitor:
     def __init__(
         self,
         *,
-        phase_tol_rad: object = 0.01,
-        spatial_tol_m: object = 0.002,
+        phase_tol_rad: object = DEFAULT_PHASE_TOL_RAD,
+        spatial_tol_m: object = DEFAULT_SPATIAL_TOL_M,
         required_consecutive_samples: object = 3,
+        tolerance_profile: object | None = None,
     ) -> None:
-        self.phase_tol_rad = _validate_tolerance(
-            phase_tol_rad,
-            name="phase_tol_rad",
-        )
-        self.spatial_tol_m = _validate_tolerance(
-            spatial_tol_m,
-            name="spatial_tol_m",
-        )
+        self.tolerance_profile = None
+        if tolerance_profile is None:
+            self.phase_tol_rad = _validate_tolerance(
+                phase_tol_rad,
+                name="phase_tol_rad",
+            )
+            self.spatial_tol_m = _validate_tolerance(
+                spatial_tol_m,
+                name="spatial_tol_m",
+            )
+        else:
+            profile = resolve_merge_window_tolerance_profile(
+                tolerance_profile,
+                phase_baseline_rad=phase_tol_rad,
+                spatial_baseline_m=spatial_tol_m,
+            )
+            self.tolerance_profile = profile
+            self.phase_tol_rad = profile.phase_tol_rad
+            self.spatial_tol_m = profile.spatial_tol_m
         self.required_consecutive_samples = _validate_sample_count(
             required_consecutive_samples,
             name="required_consecutive_samples",
@@ -264,4 +377,19 @@ def merge_window_report_to_dict(report: MergeReport) -> dict[str, float | int | 
         "spatial_locked": bool(report.spatial_locked),
         "lock_achieved": bool(report.lock_achieved),
         "consecutive_lock_samples": int(report.consecutive_lock_samples),
+    }
+
+
+def merge_window_tolerance_profile_to_dict(
+    profile: MergeWindowToleranceProfile,
+) -> dict[str, float | str]:
+    """Convert a resolved tolerance profile into a JSON-safe dictionary."""
+
+    return {
+        "name": str(profile.name),
+        "phase_tol_rad": float(profile.phase_tol_rad),
+        "spatial_tol_m": float(profile.spatial_tol_m),
+        "multiplier": float(profile.multiplier),
+        "baseline_phase_tol_rad": float(profile.baseline_phase_tol_rad),
+        "baseline_spatial_tol_m": float(profile.baseline_spatial_tol_m),
     }

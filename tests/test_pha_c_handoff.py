@@ -62,6 +62,7 @@ def test_handoff_record_is_hash_stable_and_review_only() -> None:
         spatial_tol_m=0.002,
         required_consecutive_samples=3,
         prior_consecutive_lock_samples=2,
+        tolerance_profile="baseline_1x",
     )
     repeated = build_pha_c_handoff_record(
         phases,
@@ -71,6 +72,7 @@ def test_handoff_record_is_hash_stable_and_review_only() -> None:
         spatial_tol_m=0.002,
         required_consecutive_samples=3,
         prior_consecutive_lock_samples=2,
+        tolerance_profile="baseline_1x",
     )
 
     assert record.lock_achieved
@@ -80,6 +82,8 @@ def test_handoff_record_is_hash_stable_and_review_only() -> None:
     assert record.claim_boundary == PHA_C_HANDOFF_CLAIM_BOUNDARY
     assert record.execution_disabled
     assert not record.actuating
+    assert record.tolerance_profile_name == "baseline_1x"
+    assert record.tolerance_profile_multiplier == pytest.approx(1.0)
     assert len(record.phase_state_sha256) == 64
     assert len(record.position_state_sha256) == 64
     assert len(record.merge_report_sha256) == 64
@@ -106,6 +110,24 @@ def test_handoff_reports_phase_and_spatial_failures_without_actuation() -> None:
     assert record.consecutive_lock_samples == 0
     assert record.execution_disabled
     assert not record.actuating
+    assert record.tolerance_profile_name == "explicit"
+
+
+def test_handoff_tolerance_profile_records_review_boundary() -> None:
+    record = build_pha_c_handoff_record(
+        np.array([0.0, 0.024], dtype=np.float64),
+        np.array([0.0, 0.0045], dtype=np.float64),
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=1,
+        tolerance_profile="buffer_3x",
+    )
+
+    assert record.lock_achieved
+    assert record.phase_tol_rad == pytest.approx(0.03)
+    assert record.spatial_tol_m == pytest.approx(0.006)
+    assert record.tolerance_profile_name == "buffer_3x"
+    assert record.tolerance_profile_multiplier == pytest.approx(3.0)
 
 
 def test_invalid_handoff_inputs_fail_closed() -> None:
@@ -134,6 +156,8 @@ def test_invalid_handoff_inputs_fail_closed() -> None:
             [0.0],
             prior_consecutive_lock_samples=-1,
         )
+    with pytest.raises(ValueError, match="tolerance_profile"):
+        build_pha_c_handoff_record([0.0], [0.0], tolerance_profile="unknown")
 
 
 @st.composite
@@ -229,6 +253,7 @@ def test_polyglot_handoff_adapter_contracts_match_reference() -> None:
         spatial_tol_m=0.002,
         required_consecutive_samples=2,
         prior_consecutive_lock_samples=1,
+        tolerance_profile="buffer_3x",
     )
     adapters = (
         _pha_c_handoff_rust.build_pha_c_handoff_record_rust,
@@ -245,6 +270,7 @@ def test_polyglot_handoff_adapter_contracts_match_reference() -> None:
             spatial_tol_m=0.002,
             required_consecutive_samples=2,
             prior_consecutive_lock_samples=1,
+            tolerance_profile="buffer_3x",
         )
         assert (
             _pha_c_handoff_validation.validate_pha_c_handoff_record(got, expected)
@@ -261,4 +287,6 @@ def test_pha_c_handoff_benchmark_gate_accepts_declared_backends() -> None:
     assert result["acceptance_passed"] == 1
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
+    assert result["tolerance_profile_name"] == "buffer_3x"
+    assert result["tolerance_profile_multiplier"] == 3.0
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"

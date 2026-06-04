@@ -25,6 +25,7 @@ _NUMERIC_FIELDS = (
     "reference_point",
     "phase_tol_rad",
     "spatial_tol_m",
+    "tolerance_profile_multiplier",
 )
 _DISCRETE_FIELDS = (
     "oscillator_count",
@@ -33,6 +34,7 @@ _DISCRETE_FIELDS = (
     "lock_achieved",
     "consecutive_lock_samples",
     "required_consecutive_samples",
+    "tolerance_profile_name",
     "claim_boundary",
     "evidence_kind",
     "execution_disabled",

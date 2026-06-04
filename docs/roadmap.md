@@ -297,13 +297,13 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C.4 MergeWindowMonitor | Implemented as `MergeWindowMonitor` with wrapped phase dispersion, axial spatial dispersion, consecutive joint-lock gating, JSON-safe `MergeReport` evidence, Python plus Rust/Go/Julia/Mojo source-contract surfaces, module-specific fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol as optional accelerators are rebuilt and feed the lock report into downstream PHA-C event/state lanes. |
+| PHA-C.4 MergeWindowMonitor | Implemented as `MergeWindowMonitor` with wrapped phase dispersion, axial spatial dispersion, consecutive joint-lock gating, named `baseline_1x`/`buffer_3x`/`review_5x` tolerance profiles, JSON-safe `MergeReport` evidence, Python plus Rust/Go/Julia/Mojo source-contract surfaces, module-specific fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol as optional accelerators are rebuilt and feed the lock report into downstream PHA-C event/state lanes. |
 
 ## PHA-C event/state handoff status
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C.4 downstream handoff | Implemented as `PHACHandoffRecord` with merge-window evidence, Kuramoto order parameter, source vector digests, source-chain hash, canonical record hash, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol if native handoff kernels are later introduced; downstream MIF/FRC lanes can now consume the review-only record instead of raw moving-frame arrays. |
+| PHA-C.4 downstream handoff | Implemented as `PHACHandoffRecord` with merge-window evidence, tolerance-profile provenance, Kuramoto order parameter, source vector digests, source-chain hash, canonical record hash, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol if native handoff kernels are later introduced; downstream MIF/FRC lanes can now consume the review-only record instead of raw moving-frame arrays. |
 
 ## PHA-C Lean kinematic safety status
 
