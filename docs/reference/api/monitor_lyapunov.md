@@ -408,6 +408,22 @@ Observations:
 `--output /tmp/ly_bench.json`; SPO CI publishes this file as a build
 artifact so regressions across backends are visible in release notes.
 
+The release reference suite also runs a deterministic parity gate:
+
+```bash
+python benchmarks/lyapunov_benchmark.py --parity-gate --sizes 4 --n-steps 120
+```
+
+That gate records every declared language slot in a single JSON matrix:
+Rust, Mojo, Julia, Go, and Python. Available backends are timed and compared
+against the forced Python reference on the same Kuramoto/Sakaguchi problem.
+Unavailable auxiliary toolchains remain explicit records with a reason, instead
+of disappearing from the report. Acceptance requires the Python reference to be
+present and every available backend to satisfy its tolerance (`1e-12` for
+Rust/Julia/Go, `1e-6` for Mojo's text round-trip, exact equality for Python
+against itself). The stored reference-suite snapshot exposes this as
+`lyapunov_polyglot`.
+
 ---
 
 ## 6. Usage examples
@@ -538,7 +554,14 @@ against the forced Python reference. Classes:
 * `TestDirectBackendBoundaryContracts` — direct adapter inputs, backend output
   spectra, and Mojo stdout cardinality fail closed at the bridge boundary.
 
-### 7.3 `tests/test_lyapunov_stability.py` — long-run invariants
+### 7.3 `tests/test_lyapunov_benchmark.py` — benchmark parity gate
+
+Pins the release benchmark contract for the polyglot Lyapunov spectrum matrix.
+The test requires records for all declared language slots, verifies Python as
+the reference, and checks that every available backend reports bounded numerical
+error before the reference-suite gate can pass.
+
+### 7.4 `tests/test_lyapunov_stability.py` — long-run invariants
 
 `@pytest.mark.slow`. Three scenarios:
 

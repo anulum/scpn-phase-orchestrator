@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added deterministic formal runtime-control certificates that bind package
   hashes, checker readiness, reviewed checker results, and finite runtime
   bounds into non-actuating fail-closed audit records.
+- Added a Lyapunov spectrum polyglot benchmark gate that records
+  Rust/Mojo/Julia/Go/Python status, timing, and numerical parity against the
+  Python reference in the reference-suite snapshot.
 
 ## [0.6.5] - 2026-06-02
 
