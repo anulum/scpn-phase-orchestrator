@@ -52,6 +52,7 @@ from benchmarks.reference_suite import (
     benchmark_temporal_causal_hypergraph_experiment_gate,
     benchmark_topos_semantic_binding_gate,
     benchmark_value_alignment_replay_calibration_gate,
+    benchmark_winding_polyglot_parity_gate,
     build_benchmark_metadata,
     run_reference_suite,
 )
@@ -1918,6 +1919,49 @@ def test_order_parameter_polyglot_parity_gate_reports_all_language_slots() -> No
             assert record["parity_passed"] is False
 
 
+def test_winding_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_winding_polyglot_parity_gate(t=64, n=5, calls=1, seed=2026)
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "winding_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["parity_pass_count"] == out["available_backend_count"]
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["reference_winding_sha256"])) == 64
+    assert len(str(out["benchmark_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+    assert [record["backend"] for record in records] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds == {
+        "backend_order": ["rust", "mojo", "julia", "go", "python"],
+        "require_all_available_parity": True,
+        "require_all_declared_backend_records": True,
+        "require_exact_integer_winding": True,
+        "require_exact_wrapped_increment_reference": True,
+        "require_python_reference": True,
+        "tolerance": 0,
+    }
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["exact_match"] is True
+            assert record["winding_sha256"] is not None
+            assert record["ms_per_call"] is not None
+            assert record["max_abs_error"] == 0
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["parity_passed"] is False
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -1950,6 +1994,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "lyapunov_polyglot",
         "npe_polyglot",
         "order_parameter_polyglot",
+        "winding_polyglot",
         "quantum_target_readiness",
         "replay_policy",
         "self_model_digital_twin",

@@ -204,6 +204,15 @@ Observations:
 
 Raw JSON: `python benchmarks/winding_benchmark.py --output /tmp/wind_bench.json`.
 
+Release-gate JSON:
+`python benchmarks/winding_benchmark.py --parity-gate --T-list 256 --N 8 --calls 1`.
+The parity gate emits Rust/Mojo/Julia/Go/Python slot records, direct-backend
+timings, unavailable-toolchain reasons, deterministic winding-vector hashes,
+and exact integer parity against the NumPy wrapped-increment reference. Unlike
+the public runtime API, the gate calls resolved backends directly so a backend
+contract failure cannot be hidden by the production Python fallback. The
+reference-suite snapshot exposes the same gate as `winding_polyglot`.
+
 ---
 
 ## 6. Usage examples
