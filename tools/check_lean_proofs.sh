@@ -14,17 +14,19 @@ LEAN_DIR="$ROOT_DIR/formal/lean"
 
 cd "$LEAN_DIR"
 
-if grep -R -n -E '\b(sorry|admit|axiom|unsafe)\b' -- SPOFormal.lean lakefile.lean SPOFormal; then
+if grep -R -n -E '\b(sorry|admit|axiom|unsafe)\b' -- SPOFormal.lean lakefile.lean SPOFormal test; then
   printf 'Lean proof gate rejected proof placeholders or unsafe declarations.\n' >&2
   exit 1
 fi
 
-if grep -R -n -E 'set_option[[:space:]]+linter\.[A-Za-z0-9_.-]+[[:space:]]+false' -- SPOFormal.lean lakefile.lean SPOFormal; then
+if grep -R -n -E 'set_option[[:space:]]+linter\.[A-Za-z0-9_.-]+[[:space:]]+false' -- SPOFormal.lean lakefile.lean SPOFormal test; then
   printf 'Lean proof gate rejected disabled linter options in proof sources.\n' >&2
   exit 1
 fi
 
 lake env lean --error=warning SPOFormal/Projector.lean
 lake env lean --error=warning SPOFormal/Regime.lean
+lake env lean --error=warning SPOFormal/Kinematic.lean
 lake build SPOFormal
 lake env lean --error=warning SPOFormal.lean
+lake env lean --error=warning test/KinematicTest.lean

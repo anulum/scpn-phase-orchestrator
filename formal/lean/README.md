@@ -26,6 +26,11 @@ integer/fixed-point contracts that mirror the Rust supervisor boundary.
   behaviour for degraded and recovery states. It also mirrors the finite
   transition guard for same-state no-ops, critical cooldown bypass,
   soft-downward hold blocking, and non-critical cooldown blocking.
+- `SPOFormal.Kinematic`: finite-horizon, fixed-point kinematic safety
+  templates for PHA-C moving-frame and merge-window pipelines. The proof
+  boundary includes a discrete Gronwall-style relative-distance budget,
+  zero-gain linear horizon certification, and a Boolean phase-plus-spatial
+  merge-window mirror.
 
 The Lean lane is intentionally dependency-light: it uses Lean core plus `Std`,
 not Mathlib. It is an independent specification mirror, not a replacement for
@@ -35,8 +40,10 @@ Kani harnesses over the Rust implementation.
 
 These proofs do not claim continuous-time Kuramoto stability, nonlinear
 Lyapunov stability under arbitrary topology, hardware deadline guarantees, or
-site-specific actuator safety. Those remain separate research and deployment
-validation tasks.
+site-specific actuator safety. The kinematic lane proves fixed-point
+finite-step budget logic; callers must still justify the runtime conversion
+from physical units and numerical trajectories into the fixed-point
+`KinematicBounds` assumptions.
 
 ## Build
 
@@ -51,5 +58,7 @@ The script runs the CI-equivalent proof gate:
 - treat Lean warnings as proof-gate failures on direct module checks;
 - directly check `SPOFormal/Projector.lean`;
 - directly check `SPOFormal/Regime.lean`;
+- directly check `SPOFormal/Kinematic.lean`;
 - build the `SPOFormal` Lake library;
-- check the package entry point.
+- check the package entry point;
+- directly check `test/KinematicTest.lean`.

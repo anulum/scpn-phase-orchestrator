@@ -298,3 +298,9 @@ for the detailed historical release plan and internal planning notes.
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
 | PHA-C.4 MergeWindowMonitor | Implemented as `MergeWindowMonitor` with wrapped phase dispersion, axial spatial dispersion, consecutive joint-lock gating, JSON-safe `MergeReport` evidence, Python plus Rust/Go/Julia/Mojo source-contract surfaces, module-specific fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol as optional accelerators are rebuilt and feed the lock report into downstream PHA-C event/state lanes. |
+
+## PHA-C Lean kinematic safety status
+
+| Item | Implemented evidence | Remaining scope |
+|---|---|---|
+| PHA-C.6 Lean 4 kinematic safety lemmas | Implemented as `SPOFormal.Kinematic` with finite-horizon fixed-point `KinematicBounds`, a discrete Gronwall-style relative-distance budget, zero-gain linear horizon certification, Boolean phase-plus-spatial merge-window lock proof, smoke instantiation under `formal/lean/test/KinematicTest.lean`, and proof-gate integration that rejects placeholders and linter suppression. | SCPN-MIF-CORE can now specialise the fixed-point assumptions for FRC constants; broader continuous-time Kuramoto/Gronwall mechanisation remains a separate research lane. |

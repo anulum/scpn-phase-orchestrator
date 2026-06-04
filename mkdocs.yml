@@ -228,6 +228,7 @@ nav:
   - Validation:
       - "V&V Report": VALIDATION_REPORT.md
       - "Clinical Study Protocol": VALIDATION_STUDY_PROTOCOL.md
+      - "Formal Kinematic Safety": formal/kinematic_safety.md
   - FAQ: faq.md
   - Pricing: pricing.md
 

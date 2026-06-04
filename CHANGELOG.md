@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   spatial merge detection, including consecutive-sample lock evidence,
   Rust/Go/Julia/Mojo source-contract surfaces, module-specific tests, public
   API documentation, and a polyglot benchmark gate.
+- Added PHA-C.6 Lean 4 kinematic safety templates for finite-horizon
+  fixed-point relative-distance bounds, including a discrete Gronwall-style
+  budget proof, zero-gain merge-window invariant, Boolean phase-plus-spatial
+  lock mirror, smoke instantiation, proof-gate integration, and public
+  documentation.
 
 ## [0.6.6] - 2026-06-04
 

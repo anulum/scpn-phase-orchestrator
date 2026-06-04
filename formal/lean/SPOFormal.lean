@@ -10,3 +10,4 @@ SCPN Phase Orchestrator — Lean proof entry point
 
 import SPOFormal.Projector
 import SPOFormal.Regime
+import SPOFormal.Kinematic

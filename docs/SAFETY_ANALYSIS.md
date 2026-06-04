@@ -160,6 +160,7 @@ robustness) shall trigger an immediate regime transition to Critical.
 | Nominal safe-envelope classification | Kani harness + function contract + Lean fixed-point proof + unit tests | `formal_safety.rs`, `regime.rs`, `formal/lean/SPOFormal/Regime.lean` |
 | Critical never evaluates directly to Nominal | Kani harness + function contract + Lean fixed-point proof + unit tests | `formal_safety.rs`, `regime.rs`, `formal/lean/SPOFormal/Regime.lean` |
 | Degraded-band classification from Nominal | Kani harness + Lean fixed-point proof + unit tests | `formal_safety.rs`, `regime.rs`, `formal/lean/SPOFormal/Regime.lean` |
+| PHA-C finite-horizon kinematic merge-window bounds | Lean fixed-point proof + smoke instantiation | `formal/lean/SPOFormal/Kinematic.lean`, `formal/lean/test/KinematicTest.lean` |
 | Cooldown bypass for Critical | Unit tests | `regime.rs` tests |
 | Log boundedness | Unit tests | `regime.rs` tests |
 | Boundary observer triggers | Unit tests | `tests/test_supervisor_regimes.py` |
@@ -194,7 +195,8 @@ proof failures as allowed failures.
 ### 4.4 Lean Integration Plan
 
 The Lean proof lane lives in `formal/lean/` and mirrors discrete fixed-point
-supervisor contracts independently of the Rust/Kani implementation. To run it:
+supervisor and PHA-C kinematic contracts independently of the Rust/Kani
+implementation. To run it:
 
 ```bash
 cd formal/lean
@@ -202,9 +204,13 @@ lake build
 ```
 
 The GitHub Actions Lean workflow builds the Lake project whenever Lean proofs,
-projector contracts, or regime-classification contracts change. The Lean lane is
-not a continuous-time Kuramoto stability proof; it proves the integer/fixed-point
-contract boundary for projection and finite-input regime decisions.
+projector contracts, regime-classification contracts, or kinematic proof
+templates change. The Lean lane is not a continuous-time Kuramoto stability
+proof; it proves the integer/fixed-point contract boundary for projection,
+finite-input regime decisions, finite-horizon relative-distance budgets, and
+phase-plus-spatial merge-window lock predicates. Callers must still justify the
+fixed-point unit conversion and step-bound assumptions for each physical
+domain.
 
 ---
 
