@@ -320,7 +320,7 @@ flags, and steps/s values for each suite. Selected reference suites:
 | Suite | Reference contract | Snapshot steps/s |
 |-------|--------------------|-----------------:|
 | `kuramoto_reference_strogatz_2000` | Strogatz/Acebrón synchronisation plus exact two-oscillator locking acceptance | `7372.45` |
-| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau limit-cycle reference | `3722.04` |
+| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `3710.56` |
 | `petri_net_reachability` | Petri-net reachability reference | `244900` |
 
 Physics invariants are also executable as focused tests:
@@ -335,7 +335,9 @@ two-oscillator locking law
 `theta_2 - theta_1 = asin((omega_2 - omega_1) / (2K))`. Focused physics tests
 also cover weak-coupling desynchronisation, coupling monotonicity,
 external-drive entrainment, Stuart-Landau limit cycles, subcritical decay,
-amplitude consensus, and zero-coupling independence.
+amplitude consensus, and zero-coupling independence. The Stuart-Landau record
+now also checks the uncoupled Hopf radius `sqrt(mu)` and subcritical amplitude
+decay before publishing acceptance.
 
 ## Hardware Integration Boundary
 

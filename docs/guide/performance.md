@@ -124,6 +124,10 @@ The Kuramoto record is an acceptance benchmark, not only a timer. It checks
 zero self-coupling, bounded order parameter, identical-oscillator
 synchronisation, and the exact two-oscillator locked phase lag
 `asin((omega_2 - omega_1) / (2K))` from the pairwise Kuramoto equations.
+The Stuart-Landau record is also an acceptance benchmark: it checks positive
+finite coupled amplitude, zero self-coupling, wrapped phase output, convergence
+to the uncoupled Hopf limit-cycle radius `sqrt(mu)`, and decay of a
+subcritical `mu < 0` amplitude trajectory.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the

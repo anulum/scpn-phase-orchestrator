@@ -101,12 +101,45 @@ def test_kuramoto_reference_rejects_invalid_controls() -> None:
 
 
 def test_stuart_landau_reference_benchmark_shape() -> None:
-    out = benchmark_stuart_landau_reference(n_oscillators=8, n_steps=20, dt=0.01)
+    out = benchmark_stuart_landau_reference(n_oscillators=2, n_steps=1000, dt=0.01)
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
     assert out["suite"] == "stuart_landau_reference_pikovsky_2001"
-    assert out["n_oscillators"] == 8
-    assert out["n_steps"] == 20
+    assert out["n_oscillators"] == 2
+    assert out["n_steps"] == 1000
     assert float(out["final_mean_amplitude"]) > 0.0
+    assert out["acceptance_passed"] == 1
+    assert out["zero_self_coupling"] == 1
+    assert out["finite_positive_amplitude"] == 1
+    assert out["coupled_mean_amplitude_passed"] == 1
+    assert out["limit_cycle_passed"] == 1
+    assert out["subcritical_decay_passed"] == 1
+    assert out["wrapped_phase_domain"] == 1
+    assert (
+        float(out["limit_cycle_max_radius_error"])
+        <= thresholds["max_limit_cycle_radius_error"]
+    )
+    assert (
+        float(out["subcritical_mean_radius"])
+        <= thresholds["max_subcritical_mean_radius"]
+    )
+    assert len(str(out["benchmark_sha256"])) == 64
     assert float(out["steps_per_second"]) > 0.0
+
+
+def test_stuart_landau_reference_rejects_invalid_controls() -> None:
+    for kwargs in (
+        {"n_oscillators": True},
+        {"n_oscillators": 0},
+        {"n_steps": 0},
+        {"dt": 0.0},
+        {"dt": float("inf")},
+    ):
+        try:
+            benchmark_stuart_landau_reference(**kwargs)
+        except ValueError:
+            continue
+        raise AssertionError(f"invalid controls were accepted: {kwargs!r}")
 
 
 def test_petri_reachability_benchmark_shape() -> None:

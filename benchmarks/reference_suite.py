@@ -999,6 +999,13 @@ def benchmark_kuramoto_reference(
 def benchmark_stuart_landau_reference(
     n_oscillators: int = 64, n_steps: int = 1000, dt: float = 0.01
 ) -> dict[str, float | int | str]:
+    n_oscillators = _validate_reference_positive_int(
+        n_oscillators,
+        name="n_oscillators",
+    )
+    n_steps = _validate_reference_positive_int(n_steps, name="n_steps")
+    dt = _validate_reference_positive_float(dt, name="dt")
+
     rng = np.random.default_rng(7)
     theta = rng.uniform(0.0, 2.0 * np.pi, size=n_oscillators)
     radius = np.ones(n_oscillators)
@@ -1020,6 +1027,105 @@ def benchmark_stuart_landau_reference(
     elapsed = time.perf_counter() - t0
     final_r = float(engine.compute_mean_amplitude(state))
 
+    limit_mu = 0.5
+    expected_limit_radius = float(np.sqrt(limit_mu))
+    limit_state = np.concatenate(
+        (
+            np.linspace(0.0, np.pi, 4, dtype=np.float64),
+            np.array([0.2, 0.6, 1.2, 1.8], dtype=np.float64),
+        )
+    )
+    limit_engine = StuartLandauEngine(n_oscillators=4, dt=dt, method="rk4")
+    zero_4 = np.zeros((4, 4), dtype=np.float64)
+    limit_omegas = np.ones(4, dtype=np.float64)
+    limit_mu_vec = np.full(4, limit_mu, dtype=np.float64)
+    limit_steps = max(1000, n_steps)
+    for _ in range(limit_steps):
+        limit_state = limit_engine.step(
+            limit_state,
+            limit_omegas,
+            limit_mu_vec,
+            zero_4,
+            zero_4,
+            zeta=0.0,
+            psi=0.0,
+            alpha=zero_4,
+            epsilon=0.0,
+        )
+    limit_radii = np.asarray(limit_state[4:], dtype=np.float64)
+    limit_radius_error = float(np.max(np.abs(limit_radii - expected_limit_radius)))
+    limit_phase_domain = bool(
+        np.all((limit_state[:4] >= 0.0) & (limit_state[:4] < 2.0 * np.pi))
+    )
+
+    decay_state = np.concatenate(
+        (
+            np.linspace(0.0, np.pi / 2.0, 3, dtype=np.float64),
+            np.array([0.4, 0.8, 1.2], dtype=np.float64),
+        )
+    )
+    decay_engine = StuartLandauEngine(n_oscillators=3, dt=dt, method="rk4")
+    zero_3 = np.zeros((3, 3), dtype=np.float64)
+    decay_mu_vec = np.full(3, -0.25, dtype=np.float64)
+    for _ in range(limit_steps):
+        decay_state = decay_engine.step(
+            decay_state,
+            np.ones(3, dtype=np.float64),
+            decay_mu_vec,
+            zero_3,
+            zero_3,
+            zeta=0.0,
+            psi=0.0,
+            alpha=zero_3,
+            epsilon=0.0,
+        )
+    decay_mean_radius = float(np.mean(decay_state[3:]))
+    thresholds = {
+        "max_limit_cycle_radius_error": 5.0e-3,
+        "max_subcritical_mean_radius": 0.10,
+        "min_coupled_mean_amplitude": 0.10,
+        "require_finite_positive_amplitude": True,
+        "require_limit_cycle_contract": True,
+        "require_subcritical_decay_contract": True,
+        "require_wrapped_phase_domain": True,
+        "require_zero_self_coupling": True,
+    }
+    zero_self_coupling = bool(
+        np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=0.0)
+        and np.allclose(np.diag(knm_r), 0.0, rtol=0.0, atol=0.0)
+    )
+    finite_positive_amplitude = bool(np.isfinite(final_r) and final_r > 0.0)
+    coupled_mean_amplitude_passed = bool(
+        final_r >= thresholds["min_coupled_mean_amplitude"]
+    )
+    limit_cycle_passed = bool(
+        limit_radius_error <= thresholds["max_limit_cycle_radius_error"]
+    )
+    subcritical_decay_passed = bool(
+        decay_mean_radius <= thresholds["max_subcritical_mean_radius"]
+    )
+    acceptance_passed = int(
+        zero_self_coupling
+        and finite_positive_amplitude
+        and coupled_mean_amplitude_passed
+        and limit_cycle_passed
+        and subcritical_decay_passed
+        and limit_phase_domain
+    )
+    benchmark_payload = {
+        "decay_mean_radius": decay_mean_radius,
+        "final_mean_amplitude": final_r,
+        "limit_phase_domain": limit_phase_domain,
+        "limit_radius_error": limit_radius_error,
+        "thresholds": thresholds,
+        "zero_self_coupling": zero_self_coupling,
+    }
+    benchmark_sha = sha256(
+        json.dumps(benchmark_payload, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+    ).hexdigest()
+
     return {
         "suite": "stuart_landau_reference_pikovsky_2001",
         "n_oscillators": n_oscillators,
@@ -1027,6 +1133,19 @@ def benchmark_stuart_landau_reference(
         "wall_time_s": elapsed,
         "steps_per_second": n_steps / elapsed,
         "final_mean_amplitude": final_r,
+        "expected_limit_cycle_radius": expected_limit_radius,
+        "limit_cycle_steps": limit_steps,
+        "limit_cycle_max_radius_error": limit_radius_error,
+        "subcritical_mean_radius": decay_mean_radius,
+        "zero_self_coupling": int(zero_self_coupling),
+        "finite_positive_amplitude": int(finite_positive_amplitude),
+        "coupled_mean_amplitude_passed": int(coupled_mean_amplitude_passed),
+        "limit_cycle_passed": int(limit_cycle_passed),
+        "subcritical_decay_passed": int(subcritical_decay_passed),
+        "wrapped_phase_domain": int(limit_phase_domain),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(thresholds, sort_keys=True),
+        "benchmark_sha256": benchmark_sha,
     }
 
 

@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Strogatz/Acebrón Kuramoto reference acceptance fields for bounded
   coherence, zero self-coupling, and the exact two-oscillator locked phase-lag
   law in the reference-suite snapshot.
+- Added Stuart-Landau/Pikovsky reference acceptance fields for Hopf
+  limit-cycle radius convergence, subcritical amplitude decay, zero
+  self-coupling, and wrapped phase-domain evidence in the reference-suite
+  snapshot.
 - Added a Lyapunov spectrum polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python status, timing, and numerical parity against the
   Python reference in the reference-suite snapshot.
