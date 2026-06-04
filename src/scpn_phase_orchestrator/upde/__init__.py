@@ -46,6 +46,9 @@ __all__ = [
     "MovingFrameUPDEEngine",
     "NoiseProfile",
     "OAState",
+    "PHA_C_HANDOFF_CLAIM_BOUNDARY",
+    "PHA_C_HANDOFF_EVIDENCE_KIND",
+    "PHACHandoffRecord",
     "OttAntonsenReduction",
     "PredictionModel",
     "PredictionState",
@@ -85,9 +88,11 @@ __all__ = [
     "multi_basin_stability",
     "pac_gate",
     "pac_matrix",
+    "pha_c_handoff_record_to_dict",
     "sync_warning",
     "trace_sync_transition",
     "upde_run_omega_schedule",
+    "build_pha_c_handoff_record",
 ]
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
@@ -120,6 +125,23 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "MovingFrameState": (".moving_frame", "MovingFrameState"),
     "MovingFrameUPDEEngine": (".moving_frame", "MovingFrameUPDEEngine"),
     "moving_frame_run": (".moving_frame", "moving_frame_run"),
+    "PHA_C_HANDOFF_CLAIM_BOUNDARY": (
+        ".pha_c_handoff",
+        "PHA_C_HANDOFF_CLAIM_BOUNDARY",
+    ),
+    "PHA_C_HANDOFF_EVIDENCE_KIND": (
+        ".pha_c_handoff",
+        "PHA_C_HANDOFF_EVIDENCE_KIND",
+    ),
+    "PHACHandoffRecord": (".pha_c_handoff", "PHACHandoffRecord"),
+    "build_pha_c_handoff_record": (
+        ".pha_c_handoff",
+        "build_pha_c_handoff_record",
+    ),
+    "pha_c_handoff_record_to_dict": (
+        ".pha_c_handoff",
+        "pha_c_handoff_record_to_dict",
+    ),
     "UPDEEngine": (".engine", "UPDEEngine"),
     "upde_run_omega_schedule": (".engine", "upde_run_omega_schedule"),
     "EnvelopeState": (".envelope", "EnvelopeState"),

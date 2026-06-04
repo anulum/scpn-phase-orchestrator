@@ -56,4 +56,26 @@ labels the local workstation timing data as non-isolated evidence.
 uv run python benchmarks/merge_window_benchmark.py --parity-gate
 ```
 
+## Event/state handoff
+
+When the merge-window report must cross into MIF, Studio, audit replay, or
+another downstream PHA-C lane, use
+`build_pha_c_handoff_record(...)`. It binds the merge report to the source
+phase and position digests, adds the order parameter, and fixes the
+non-actuating claim boundary for later review.
+
+```python
+from scpn_phase_orchestrator.upde.pha_c_handoff import (
+    build_pha_c_handoff_record,
+)
+
+handoff = build_pha_c_handoff_record(
+    phases,
+    positions,
+    phase_tol_rad=0.01,
+    spatial_tol_m=0.002,
+    required_consecutive_samples=3,
+)
+```
+
 ::: scpn_phase_orchestrator.monitor.merge_window

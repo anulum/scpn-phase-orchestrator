@@ -21,6 +21,7 @@ boundary are known.
 | Infer or build coupling | [Coupling](coupling.md) | [Build K_nm Templates](../../tutorials/03_build_knm_templates.md) | `K_nm`, lag, topology, or causal-coupling evidence |
 | Detect coherence and instability | [Monitor](monitor.md) | [Analysis Toolkit](../../guide/analysis_toolkit.md) | R, PLV, PAC, Lyapunov, entropy, recurrence, and safety signals |
 | Detect phase-space merge readiness | [Merge Window](monitor_merge_window.md) | [UPDE Moving Frame](upde_moving_frame.md) | consecutive phase-plus-position lock evidence |
+| Emit review-only PHA-C event state | [PHA-C Handoff](upde_pha_c_handoff.md) | [Merge Window](monitor_merge_window.md) | hashed non-actuating handoff record for replay, MIF, or Studio review |
 | Propose bounded control | [Supervisor](supervisor.md) and [Actuation](actuation.md) | [Production Guide](../../guide/production.md) | rate-limited review proposals, not unreviewed hardware writes |
 | Replay and audit decisions | [Audit](audit.md) | [Deterministic Replay](../../tutorials/06_deterministic_replay_for_debugging.md) | hash-linked evidence that can be verified later |
 | Optimise differentiable oscillator models | [nn API](nn.md) | [Differentiable Kuramoto](../../tutorials/04_differentiable_kuramoto.md) | differentiable loss, trained coupling, or topology proposal |
@@ -90,6 +91,7 @@ the compatibility impact.
 | [Core & Exceptions](core.md) | Exception hierarchy, Rust/Python compat constants |
 | [Binding](binding.md) | Configuration loading and validation for binding specs |
 | [UPDE Engine](upde.md) | Kuramoto ODE, Stuart-Landau amplitude ODE, metrics, PAC |
+| [UPDE — PHA-C Handoff](upde_pha_c_handoff.md) | Review-only event/state bridge from moving-frame samples and merge-window evidence |
 | [Oscillators](oscillators.md) | Phase extraction: Physical, Informational, Symbolic channels |
 | [Coupling](coupling.md) | K_nm matrix construction, geometry constraints, lag estimation |
 | [Supervisor](supervisor.md) | Regime management, policy engine, Petri net FSM, event bus |

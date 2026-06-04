@@ -87,6 +87,29 @@ the chamber reference. With `threshold_m=0.0`, exact crossing is still detected.
 This makes it useful for merge-window monitors without forcing every caller to
 manually inspect signed positions.
 
+## Downstream handoff
+
+Moving-frame outputs can be passed to `build_pha_c_handoff_record(...)` after a
+merge-window evaluation when a downstream lane needs compact event evidence
+instead of full phase/position arrays. The handoff keeps scalar lock evidence,
+order-parameter evidence, vector digests, and a canonical event hash while
+remaining non-actuating.
+
+```python
+from scpn_phase_orchestrator.upde.pha_c_handoff import (
+    build_pha_c_handoff_record,
+)
+
+record = build_pha_c_handoff_record(
+    phases,
+    positions,
+    t=engine.time,
+    phase_tol_rad=0.01,
+    spatial_tol_m=0.002,
+    required_consecutive_samples=1,
+)
+```
+
 ## Backend contract
 
 The backend-neutral function `moving_frame_run(...)` accepts row-major schedules

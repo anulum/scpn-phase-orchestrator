@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added PHA-C event/state handoff records that bind moving-frame phase/position
+  samples to merge-window lock evidence, Kuramoto order-parameter evidence,
+  source-chain hashes, a fixed non-actuating claim boundary, Rust/Go/Julia/Mojo
+  source-contract parity adapters, module-specific tests, public API
+  documentation, and a dedicated local-regression benchmark snapshot.
 - Added PHA-C.4 `MergeWindowMonitor` support for joint wrapped-phase and axial
   spatial merge detection, including consecutive-sample lock evidence,
   Rust/Go/Julia/Mojo source-contract surfaces, module-specific tests, public
