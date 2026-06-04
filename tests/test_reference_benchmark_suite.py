@@ -16,6 +16,7 @@ from benchmarks.reference_suite import (
     benchmark_autopoietic_lineage_sandbox_gate,
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
+    benchmark_dimension_polyglot_parity_gate,
     benchmark_domain_formal_safety_exports,
     benchmark_evolutionary_mutation_grammar_gate,
     benchmark_evolutionary_supervisor_search,
@@ -2026,6 +2027,68 @@ def test_recurrence_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["parity_passed"] is False
 
 
+def test_dimension_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_dimension_polyglot_parity_gate(
+        t=24,
+        d=3,
+        n_k=8,
+        calls=1,
+        seed=2026,
+    )
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "dimension_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["parity_pass_count"] == out["available_backend_count"]
+    assert out["acceptance_passed"] == 1
+    assert 0.0 <= float(out["reference_ci_min"]) <= 1.0
+    assert 0.0 <= float(out["reference_ci_max"]) <= 1.0
+    assert 0.0 <= float(out["reference_kaplan_yorke"]) <= 5.0
+    assert len(str(out["reference_correlation_integral_sha256"])) == 64
+    assert len(str(out["reference_kaplan_yorke_sha256"])) == 64
+    assert len(str(out["benchmark_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+    assert [record["backend"] for record in records] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds == {
+        "backend_order": ["rust", "mojo", "julia", "go", "python"],
+        "max_mojo_abs_error": 1e-09,
+        "max_native_abs_error": 1e-12,
+        "require_all_available_parity": True,
+        "require_all_declared_backend_records": True,
+        "require_correlation_integral_monotonic": True,
+        "require_exact_full_pairs_reference": True,
+        "require_kaplan_yorke_bounds": True,
+        "require_kaplan_yorke_contract": True,
+        "require_python_reference": True,
+        "require_unit_interval_correlation_integral": True,
+    }
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["ci_monotonic"] is True
+            assert record["ci_unit_interval"] is True
+            assert record["ky_bounds_passed"] is True
+            assert record["correlation_integral_sha256"] is not None
+            assert record["kaplan_yorke_sha256"] is not None
+            assert record["ms_per_call"] is not None
+            assert record["ci_max_abs_error"] <= record["tolerance"]
+            assert record["ky_abs_error"] <= record["tolerance"]
+            assert record["max_abs_error"] <= record["tolerance"]
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["parity_passed"] is False
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -2055,6 +2118,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "multiverse_counterfactual",
         "neuromorphic_target_readiness",
         "plugin_ecosystem",
+        "dimension_polyglot",
         "lyapunov_polyglot",
         "npe_polyglot",
         "order_parameter_polyglot",

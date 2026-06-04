@@ -239,13 +239,13 @@ threaded through to every non-Rust backend.
 
 Measured on the local Ubuntu 24.04 host, ``d = 3``, ``K = 20``, one
 warm-up + five measured calls. Reproduce with
-`python benchmarks/dimension_benchmark.py --T-list 50 150 400`.
+`PYTHONPATH=src:. .venv/bin/python benchmarks/dimension_benchmark.py --T-list 50 150 400 --d 3 --n-k 20 --calls 5`.
 
 | T   | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
 | --- | --------: | --------: | ---------: | ------: | ----------: |
-| 50  |     1.041 |     44.65 |      0.245 |   0.995 |       0.169 |
-| 150 |     1.224 |     50.91 |      0.475 |   1.982 |       1.110 |
-| 400 |     2.997 |    104.61 |      2.056 |   3.704 |       8.350 |
+| 50  |    2.6892 |   54.3128 |     0.9735 |  1.8144 |      0.2983 |
+| 150 |    3.6439 |   54.9813 |     5.4222 | 10.4022 |      1.3629 |
+| 400 |   30.7320 |  168.0808 |    52.9558 | 61.7603 |     12.2240 |
 
 Observations:
 
@@ -265,6 +265,21 @@ Each emitted benchmark row includes
 ``"boundary_contract": "exact_numpy_dimension_reference_validated"`` so
 stored benchmark artefacts identify the validation boundary in force when
 timings were measured.
+
+### 5.1 Release parity gate
+
+The reference-suite gate is stricter than the timing table:
+
+```bash
+PYTHONPATH=src:. .venv/bin/python benchmarks/dimension_benchmark.py \
+  --parity-gate --T-list 64 --d 3 --n-k 12 --calls 1
+```
+
+It records all five declared backend slots and compares every available
+backend against the full-pairs NumPy reference. The gate checks exact
+Grassberger-Procaccia ``C(ε)`` preservation, monotonicity and unit-interval
+bounds, exact Kaplan-Yorke preservation, and ``0 ≤ D_KY ≤ N``. The reference
+suite records the result under ``dimension_polyglot``.
 
 ---
 
