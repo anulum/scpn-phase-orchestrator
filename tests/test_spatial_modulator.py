@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import ctypes
+import importlib
 import json
 import sys
 import types
@@ -25,12 +26,33 @@ from benchmarks.spatial_modulator_benchmark import (
     benchmark_spatial_modulator_polyglot_parity_gate,
 )
 from scpn_phase_orchestrator.coupling import SpatialCouplingModulator
+from scpn_phase_orchestrator.coupling import (
+    _spatial_modulator_go as public_spatial_go,
+)
+from scpn_phase_orchestrator.coupling import (
+    _spatial_modulator_julia as public_spatial_julia,
+)
+from scpn_phase_orchestrator.coupling import (
+    _spatial_modulator_mojo as public_spatial_mojo,
+)
 from scpn_phase_orchestrator.coupling import spatial_modulator as sm_mod
 from scpn_phase_orchestrator.coupling.spatial_modulator import spatial_modulate
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _spatial_modulator_go,
     _spatial_modulator_julia,
     _spatial_modulator_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spatial_modulator_go as direct_spatial_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spatial_modulator_julia as direct_spatial_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spatial_modulator_mojo as direct_spatial_mojo,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spatial_modulator_validation as spatial_validation,
 )
 from scpn_phase_orchestrator.upde import swarmalator as sw_mod
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
@@ -303,6 +325,87 @@ def test_direct_go_julia_mojo_outputs_are_validated(
         _spatial_modulator_mojo.spatial_modulate_mojo(*_direct_args()),
         [0.0, 0.3, 0.3, 0.0],
     )
+
+
+def test_public_spatial_accelerator_wrappers_forward_to_direct_modules() -> None:
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.coupling._spatial_modulator_go"
+        )
+        is public_spatial_go
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.coupling._spatial_modulator_julia"
+        )
+        is public_spatial_julia
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.coupling._spatial_modulator_mojo"
+        )
+        is public_spatial_mojo
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spatial_modulator_go"
+        )
+        is direct_spatial_go
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spatial_modulator_julia"
+        )
+        is direct_spatial_julia
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spatial_modulator_mojo"
+        )
+        is direct_spatial_mojo
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spatial_modulator_validation"
+        )
+        is spatial_validation
+    )
+    assert (
+        public_spatial_go.spatial_modulate_go
+        is direct_spatial_go.spatial_modulate_go
+    )
+    assert public_spatial_go._load_lib is direct_spatial_go._load_lib
+    assert (
+        public_spatial_julia.spatial_modulate_julia
+        is direct_spatial_julia.spatial_modulate_julia
+    )
+    assert (
+        public_spatial_mojo.spatial_modulate_mojo
+        is direct_spatial_mojo.spatial_modulate_mojo
+    )
+    assert public_spatial_mojo._ensure_exe is direct_spatial_mojo._ensure_exe
+
+
+def test_spatial_backend_validation_rejects_bad_output_invariants() -> None:
+    with pytest.raises(ValueError, match="output length"):
+        spatial_validation.validate_spatial_modulator_output([0.0, 1.0], n=2)
+    with pytest.raises(ValueError, match="diagonal"):
+        spatial_validation.validate_spatial_modulator_output(
+            np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+            n=2,
+        )
+    with pytest.raises(ValueError, match="finite"):
+        spatial_validation.validate_spatial_modulator_inputs(
+            np.zeros(4, dtype=np.float64),
+            np.array([0.0, np.inf], dtype=np.float64),
+            2,
+            1,
+            1.0,
+            0,
+            1.0,
+            1.0,
+            1.0e-12,
+        )
 
 
 def test_rust_loader_contract(monkeypatch: pytest.MonkeyPatch) -> None:

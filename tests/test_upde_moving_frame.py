@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import importlib
+
 import numpy as np
 import pytest
 
@@ -19,6 +21,15 @@ from benchmarks.upde_moving_frame_benchmark import (
     benchmark_upde_moving_frame_polyglot_gate,
 )
 from scpn_phase_orchestrator.coupling import SpatialCouplingModulator
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _moving_frame_go as moving_frame_go_module,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _moving_frame_julia as moving_frame_julia_module,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _moving_frame_mojo as moving_frame_mojo_module,
+)
 from scpn_phase_orchestrator.upde import MovingFrameUPDEEngine as ExportedMovingFrame
 from scpn_phase_orchestrator.upde._ref_kernel import upde_run_omega_schedule_python
 from scpn_phase_orchestrator.upde.doppler import doppler_term
@@ -47,6 +58,27 @@ def _zero_alpha(n: int = 2) -> np.ndarray:
 
 def test_public_lazy_export_exposes_moving_frame_engine() -> None:
     assert ExportedMovingFrame is MovingFrameUPDEEngine
+
+
+def test_moving_frame_adapter_modules_import_by_full_path() -> None:
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._moving_frame_go"
+        )
+        is moving_frame_go_module
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._moving_frame_julia"
+        )
+        is moving_frame_julia_module
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._moving_frame_mojo"
+        )
+        is moving_frame_mojo_module
+    )
 
 
 def test_zero_coupling_position_update_is_ballistic(
@@ -257,3 +289,67 @@ def test_moving_frame_polyglot_benchmark_reports_available_language_slots() -> N
     assert out["acceptance_passed"] == 1
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] >= 1
+
+
+def _moving_frame_adapter_args() -> tuple[object, ...]:
+    return (
+        np.zeros(2),
+        np.array([-1.0, 1.0], dtype=np.float64),
+        np.zeros((1, 2), dtype=np.float64),
+        _two_body_knm(),
+        np.zeros((2, 2), dtype=np.float64),
+        np.zeros((1, 2), dtype=np.float64),
+        1.0,
+        0,
+        1.0,
+        1.0,
+        1.0e-12,
+        1.0,
+        1.0e-9,
+        0.0,
+        0.0,
+        0.01,
+        "rk4",
+        1,
+        1.0e-6,
+        1.0e-3,
+    )
+
+
+def test_moving_frame_go_adapter_validates_before_loading_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        moving_frame_go_module,
+        "_load_lib",
+        lambda: (_ for _ in ()).throw(AssertionError("runtime loaded")),
+    )
+    args = list(_moving_frame_adapter_args())
+    args[3] = np.eye(2)
+
+    with pytest.raises(ValueError, match="diagonal"):
+        moving_frame_go_module.moving_frame_run_go(*args)
+
+
+def test_moving_frame_julia_and_mojo_adapters_validate_before_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        moving_frame_julia_module,
+        "_ensure",
+        lambda: (_ for _ in ()).throw(AssertionError("julia loaded")),
+    )
+    monkeypatch.setattr(
+        moving_frame_mojo_module,
+        "_run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("mojo loaded")
+        ),
+    )
+    args = list(_moving_frame_adapter_args())
+    args[1] = np.array([-1.0, 0.0, 1.0], dtype=np.float64)
+
+    with pytest.raises(ValueError, match="positions"):
+        moving_frame_julia_module.moving_frame_run_julia(*args)
+    with pytest.raises(ValueError, match="positions"):
+        moving_frame_mojo_module.moving_frame_run_mojo(*args)

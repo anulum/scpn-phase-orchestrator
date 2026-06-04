@@ -10,12 +10,23 @@
 
 from __future__ import annotations
 
+import importlib
+
 import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.upde.doppler as doppler_module
 import scpn_phase_orchestrator.upde.engine as engine_module
 from benchmarks.upde_doppler_benchmark import benchmark_upde_doppler_polyglot_gate
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _doppler_go as doppler_go_module,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _doppler_julia as doppler_julia_module,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _doppler_mojo as doppler_mojo_module,
+)
 from scpn_phase_orchestrator.upde import DopplerEngine as ExportedDopplerEngine
 from scpn_phase_orchestrator.upde._ref_kernel import upde_run_omega_schedule_python
 from scpn_phase_orchestrator.upde.doppler import (
@@ -51,6 +62,27 @@ def _wrapped_abs_delta(phases: np.ndarray) -> float:
 
 def test_public_lazy_export_exposes_doppler_engine() -> None:
     assert ExportedDopplerEngine is DopplerEngine
+
+
+def test_doppler_adapter_modules_import_by_full_path() -> None:
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._doppler_go"
+        )
+        is doppler_go_module
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._doppler_julia"
+        )
+        is doppler_julia_module
+    )
+    assert (
+        importlib.import_module(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._doppler_mojo"
+        )
+        is doppler_mojo_module
+    )
 
 
 def test_doppler_term_matches_two_body_velocity_formula() -> None:
@@ -243,3 +275,69 @@ def test_doppler_polyglot_benchmark_reports_available_language_slots() -> None:
     assert out["acceptance_passed"] == 1
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] >= 1
+
+
+def test_doppler_go_adapter_validates_before_loading_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        doppler_go_module,
+        "_load_lib",
+        lambda: (_ for _ in ()).throw(AssertionError("runtime loaded")),
+    )
+
+    with pytest.raises(ValueError, match="diagonal"):
+        doppler_go_module.doppler_run_go(
+            np.zeros(2),
+            np.zeros((1, 2)),
+            np.eye(2),
+            np.zeros((2, 2)),
+            np.zeros((1, 2)),
+            1.0,
+            1.0e-9,
+            0.0,
+            0.0,
+            0.01,
+            "rk4",
+            1,
+            1.0e-6,
+            1.0e-3,
+        )
+
+
+def test_doppler_julia_and_mojo_adapters_validate_before_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        doppler_julia_module,
+        "_ensure",
+        lambda: (_ for _ in ()).throw(AssertionError("julia loaded")),
+    )
+    monkeypatch.setattr(
+        doppler_mojo_module,
+        "_run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("mojo loaded")
+        ),
+    )
+    args = (
+        np.zeros(2),
+        np.zeros((1, 2)),
+        _two_body_knm(),
+        np.zeros((2, 2)),
+        np.zeros((1, 3)),
+        1.0,
+        1.0e-9,
+        0.0,
+        0.0,
+        0.01,
+        "rk4",
+        1,
+        1.0e-6,
+        1.0e-3,
+    )
+
+    with pytest.raises(ValueError, match="velocity_schedule"):
+        doppler_julia_module.doppler_run_julia(*args)
+    with pytest.raises(ValueError, match="velocity_schedule"):
+        doppler_mojo_module.doppler_run_mojo(*args)
