@@ -150,6 +150,7 @@ nav:
       - "UPDE — Swarmalator": reference/api/upde_swarmalator.md
       - Oscillators: reference/api/oscillators.md
       - Coupling: reference/api/coupling.md
+      - Coupling - Spatial Modulator: reference/api/coupling_spatial_modulator.md
       - "Coupling — Causal Inference": reference/api/coupling_infer.md
       - "Coupling — Attention Residuals": reference/api/coupling_attention_residuals.md
       - "Coupling — TE Adaptive": reference/api/coupling_te_adaptive.md

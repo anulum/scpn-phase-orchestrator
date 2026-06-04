@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added `SpatialCouplingModulator` and `spatial_modulate` as the PHA-C.1 spatial coupling surface, including Euclidean distance kernels, analytic Jacobians, Rust/Go/Julia/Mojo adapter contracts, and a polyglot benchmark gate.
 
 - Added Lyapunov/STL/safety-cost constrained replay acceptance for
   RL/autotune policy proposals, including audit serialisation, learner-wrapper

@@ -475,3 +475,15 @@ verified in `tests/test_rust_python_parity_performance.py`.
 | `validate_knm(64)` | < 1 ms | ~0.1 ms |
 | `graph_laplacian(64)` | < 1 ms | ~0.007 ms |
 | `fiedler_value(64)` | < 1 ms | ~0.12 ms |
+
+## Spatial coupling modulation
+
+`SpatialCouplingModulator` is the public PHA-C.1 coupling surface for systems where the effective phase coupling must depend on moving geometry instead of static oscillator labels. It turns a zero-diagonal base `K_nm` matrix and a position matrix into a physically constrained modulated coupling matrix.
+
+Use it when spatial proximity, mobile agents, tissue geometry, sensor placement, or edge-node distance changes the strength of phase transfer. The default kernel is `1 / (1 + distance)`, which is bounded, finite at zero separation, symmetric for Euclidean positions, and preserves the zero self-coupling diagonal required by the oscillator engines.
+
+The module also exposes exponential, power-law, and inverse-distance kernels. The inverse-distance form is reserved for Swarmalator compatibility and uses an epsilon-regularised denominator so the historical kernel remains bit-true without introducing singularities.
+
+The reference implementation is NumPy. Rust, Go, Julia, and Mojo adapters are validated as optional accelerators and must reproduce the same invariants before their output is accepted: finite real-valued matrices, exact shape, non-negative entries, zero diagonal, and symmetry preservation for symmetric inputs.
+
+See [Coupling - Spatial Modulator](coupling_spatial_modulator.md) for examples, backend notes, and the benchmark contract.

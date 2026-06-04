@@ -268,3 +268,9 @@ Speculative priority order after the first tranche:
 
 Use this page for public orientation. Use `ROADMAP.md` in the repository root
 for the detailed historical release plan and internal planning notes.
+
+## PHA-C spatial coupling status
+
+| Item | Current state | Remaining work |
+| --- | --- | --- |
+| PHA-C.1 spatial coupling modulation | Implemented as `SpatialCouplingModulator` with bounded inverse-plus-one, exponential, power-law, and epsilon-regularised inverse-distance kernels; integrated into the Swarmalator Python reference path; exposed through NumPy plus optional Rust, Go, Julia, and Mojo adapter contracts; documented in the coupling API; and covered by a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as accelerators evolve and reuse the same contract when downstream PHA-C graph lanes consume spatially modulated `K_nm`. |

@@ -32,6 +32,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.coupling.spatial_modulator import (
+    SpatialCouplingModulator,
+)
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -253,6 +256,11 @@ def _python_step(
     ``dist³`` variant. All non-Rust backends now match Rust.
     """
     eps = 1e-6
+    phase_distance_weights = SpatialCouplingModulator(
+        K_base=1.0,
+        decay_form="inverse_distance",
+        epsilon=eps,
+    ).modulation_matrix(pos)
     new_pos = pos.copy()
     new_phases = phases.copy()
     for i in range(n):
@@ -271,7 +279,7 @@ def _python_step(
             / n
         )
         new_pos[i] = pos[i] + dt * vel
-        dth = omegas[i] + k * float(np.mean(sin_diff / dist))
+        dth = omegas[i] + k * float(np.mean(sin_diff * phase_distance_weights[i]))
         new_phases[i] = (phases[i] + dt * dth) % TWO_PI
     return new_pos, new_phases
 

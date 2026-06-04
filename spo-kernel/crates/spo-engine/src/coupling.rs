@@ -11,6 +11,9 @@
 
 use spo_types::{CouplingConfig, SpoError, SpoResult};
 
+pub mod spatial_modulator;
+pub use spatial_modulator::{spatial_modulate_flat, SpatialCouplingModulator, SpatialDecayForm};
+
 /// Coupling matrix state: Knm (row-major N×N) plus phase-lag α matrix.
 #[derive(Debug, Clone)]
 pub struct CouplingState {

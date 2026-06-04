@@ -219,3 +219,15 @@ python bench/compare_baseline.py bench/baseline.json bench/current.json
   Rust path batches all N steps in a single FFI call
 - Profile with `--python-only` to isolate numpy performance from Rust FFI
 - For N > 256, Rust FFI is strongly recommended
+
+### Spatial coupling modulator gate
+
+The PHA-C.1 spatial modulator has a dedicated polyglot parity benchmark:
+
+```bash
+PYTHONPATH=src python benchmarks/spatial_modulator_benchmark.py --parity-gate
+```
+
+The gate checks more than runtime. It verifies the closed-form inverse-plus-one kernel, translation invariance, permutation equivariance, zero self-coupling, symmetry preservation, and the physically required monotonic relation that nearer oscillator pairs receive stronger spatial coupling than farther pairs. Rust, Mojo, Julia, Go, and Python slots are reported separately so missing optional accelerators are visible without weakening the acceptance contract.
+
+Timing fields from this benchmark are local, non-isolated regression evidence. They are not production throughput claims unless the surrounding run records isolation, CPU/GPU binding, dependency versions, and backend build metadata.

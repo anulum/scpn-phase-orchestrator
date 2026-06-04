@@ -24,7 +24,7 @@ use pyo3::types::PyDict;
 
 use spo_engine::{
     basin_stability, bifurcation, carrier, chimera, connectome,
-    coupling::{project_knm, CouplingBuilder},
+    coupling::{project_knm, spatial_modulate_flat, CouplingBuilder, SpatialDecayForm},
     coupling_est, delay, dimension, ei_balance, embedding, entropy_prod, envelope, ethical, evs,
     free_energy, freq_id, geometric, hodge, hypergraph,
     imprint::ImprintModel,
@@ -420,6 +420,34 @@ impl PyCouplingBuilder {
         project_knm(&mut knm, n).map_err(spo_err)?;
         Ok(knm)
     }
+}
+
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn spatial_modulate_rust(
+    knm: Vec<f64>,
+    positions: Vec<f64>,
+    n: usize,
+    dim: usize,
+    k_base: f64,
+    decay_form_code: i32,
+    decay_exponent: f64,
+    decay_length_scale: f64,
+    epsilon: f64,
+) -> PyResult<Vec<f64>> {
+    let decay_form = SpatialDecayForm::from_code(decay_form_code).map_err(spo_err)?;
+    spatial_modulate_flat(
+        &knm,
+        &positions,
+        n,
+        dim,
+        k_base,
+        decay_form,
+        decay_exponent,
+        decay_length_scale,
+        epsilon,
+    )
+    .map_err(spo_err)
 }
 
 // ─── PyRegimeManager ────────────────────────────────────────────────
@@ -3733,6 +3761,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hodge_decomposition_rust, m)?)?;
     m.add_function(wrap_pyfunction!(compute_ei_balance_rust, m)?)?;
     m.add_function(wrap_pyfunction!(adjust_ei_ratio_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(spatial_modulate_rust, m)?)?;
     m.add_function(wrap_pyfunction!(inertial_step_rust, m)?)?;
     m.add_function(wrap_pyfunction!(inertial_run_rust, m)?)?;
     m.add_function(wrap_pyfunction!(market_order_parameter_rust, m)?)?;

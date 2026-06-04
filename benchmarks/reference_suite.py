@@ -37,6 +37,9 @@ from benchmarks.order_params_benchmark import (
     benchmark_order_parameter_polyglot_parity_gate,
 )
 from benchmarks.recurrence_benchmark import benchmark_recurrence_polyglot_parity_gate
+from benchmarks.spatial_modulator_benchmark import (
+    benchmark_spatial_modulator_polyglot_parity_gate,
+)
 from benchmarks.spectral_benchmark import benchmark_spectral_polyglot_parity_gate
 from benchmarks.transfer_entropy_benchmark import (
     benchmark_transfer_entropy_polyglot_parity_gate,
@@ -7848,6 +7851,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             ),
             "recurrence_polyglot": benchmark_recurrence_polyglot_parity_gate(),
             "spectral_polyglot": benchmark_spectral_polyglot_parity_gate(),
+            "spatial_modulator_polyglot": (
+                benchmark_spatial_modulator_polyglot_parity_gate()
+            ),
             "transfer_entropy_polyglot": (
                 benchmark_transfer_entropy_polyglot_parity_gate()
             ),
