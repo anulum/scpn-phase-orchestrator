@@ -131,6 +131,11 @@ subcritical `mu < 0` amplitude trajectory.
 The Petri-net record is the formal-state reference gate. It requires exact
 four-marking reachability, one-token conservation, deterministic transition
 order, and the expected final marking after `n_steps`.
+The ITPC record is a polyglot physics gate for the Lachaux inter-trial
+phase-coherence estimator. It records Rust/Mojo/Julia/Go/Python slot status,
+vector parity, pause-persistence parity, aligned-trial unit coherence,
+opposite-phase zero coherence, unit-interval bounds, and unavailable-toolchain
+reasons without mocking the backend boundary.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the

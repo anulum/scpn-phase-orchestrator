@@ -322,6 +322,7 @@ flags, and steps/s values for each suite. Selected reference suites:
 | `kuramoto_reference_strogatz_2000` | Strogatz/Acebrón synchronisation plus exact two-oscillator locking acceptance | `7372.45` |
 | `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `3710.56` |
 | `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `85707.77` |
+| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `4.76` |
 
 Physics invariants are also executable as focused tests:
 
@@ -342,6 +343,10 @@ The Petri-net record checks a four-place safety automaton as a formal
 mathematics reference: every run must conserve exactly one token, visit the
 four reachable markings, follow the deterministic transition cycle, and finish
 on the analytically expected marking.
+The ITPC polyglot record checks the Lachaux inter-trial phase-coherence
+estimator across every declared backend slot, including unit coherence for
+aligned trials, zero coherence for opposite-phase trials, bounded pause
+persistence, and explicit unavailable-toolchain evidence.
 
 ## Hardware Integration Boundary
 

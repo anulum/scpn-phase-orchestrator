@@ -31,6 +31,7 @@ from benchmarks.reference_suite import (
     benchmark_information_geometry_control_gate,
     benchmark_integrated_information_replay_corpus_gate,
     benchmark_intergenerational_policy_inheritance_gate,
+    benchmark_itpc_polyglot_parity_gate,
     benchmark_kuramoto_reference,
     benchmark_lyapunov_polyglot_parity_gate,
     benchmark_meta_transfer_audit_corpus_quality,
@@ -2182,6 +2183,74 @@ def test_dimension_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["parity_passed"] is False
 
 
+def test_itpc_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_itpc_polyglot_parity_gate(
+        n_trials=8,
+        n_tp=16,
+        calls=1,
+        seed=2026,
+    )
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "itpc_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["parity_pass_count"] == out["available_backend_count"]
+    assert out["acceptance_passed"] == 1
+    assert 0.0 <= float(out["reference_itpc_min"]) <= 1.0
+    assert 0.0 <= float(out["reference_itpc_max"]) <= 1.0
+    assert 0.0 <= float(out["reference_itpc_mean"]) <= 1.0
+    assert 0.0 <= float(out["reference_persistence"]) <= 1.0
+    assert float(out["reference_aligned_persistence"]) == 1.0
+    assert float(out["reference_out_of_bounds_persistence"]) == 0.0
+    assert len(str(out["reference_itpc_sha256"])) == 64
+    assert len(str(out["reference_aligned_itpc_sha256"])) == 64
+    assert len(str(out["reference_opposed_itpc_sha256"])) == 64
+    assert len(str(out["reference_persistence_sha256"])) == 64
+    assert len(str(out["reference_aligned_persistence_sha256"])) == 64
+    assert len(str(out["reference_out_of_bounds_persistence_sha256"])) == 64
+    assert len(str(out["benchmark_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+    assert [record["backend"] for record in records] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds == {
+        "backend_order": ["rust", "mojo", "julia", "go", "python"],
+        "max_mojo_abs_error": 1e-09,
+        "max_native_abs_error": 1e-12,
+        "require_aligned_trials_unit_coherence": True,
+        "require_all_available_parity": True,
+        "require_all_declared_backend_records": True,
+        "require_opposed_trials_zero_coherence": True,
+        "require_out_of_bounds_pause_zero": True,
+        "require_pause_persistence_contract": True,
+        "require_python_reference": True,
+        "require_unit_interval_itpc": True,
+    }
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["reference_contracts_passed"] is True
+            assert record["itpc_sha256"] is not None
+            assert record["aligned_itpc_sha256"] is not None
+            assert record["opposed_itpc_sha256"] is not None
+            assert record["persistence_sha256"] is not None
+            assert record["aligned_persistence_sha256"] is not None
+            assert record["out_of_bounds_persistence_sha256"] is not None
+            assert record["ms_per_call"] is not None
+            assert record["max_abs_error"] <= record["tolerance"]
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["parity_passed"] is False
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -2205,6 +2274,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "integrated_information_replay_corpus",
         "intergenerational_inheritance",
         "hybrid_entanglement_order",
+        "itpc_polyglot",
         "meta_transfer",
         "meta_transfer_corpus",
         "morphogenetic_domain_demos",
