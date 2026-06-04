@@ -327,6 +327,7 @@ Selected reference suites:
 | `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `5.46` |
 | `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.39` |
 | `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `538.56` |
+| `embedding_polyglot_parity_gate` | Takens delay-indexing, Fraser-Swinney mutual information, and nearest-neighbour geometry parity across Rust/Mojo/Julia/Go/Python slots | `895.31` |
 
 Physics invariants are also executable as focused tests:
 
@@ -368,6 +369,13 @@ near-zero harmonic residual for the clean symmetric plus antisymmetric split,
 global phase-gauge invariance, zero curl for symmetric coupling, zero gradient
 for antisymmetric coupling, the two-node antisymmetric closed form, scale
 covariance, and explicit unavailable-toolchain evidence.
+The embedding polyglot record checks the Takens delay-coordinate construction
+used before nonlinear-state reconstruction. It requires exact delay indexing,
+time-shift row consistency, Fraser-Swinney mutual-information non-negativity
+and constant-signal zero behaviour, zero-lag information dominance over a
+distant lag, nearest-neighbour self-exclusion on a line lattice, direct
+primitive parity where a backend exposes the primitive, and public dispatch
+parity for the complete Rust/Mojo/Julia/Go/Python fallback chain.
 
 Timing fields in the checked-in reference snapshot are local regression and
 parity evidence unless the run metadata states CPU/core isolation and host-load

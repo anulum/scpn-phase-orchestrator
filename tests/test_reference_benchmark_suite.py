@@ -19,6 +19,7 @@ from benchmarks.reference_suite import (
     benchmark_chimera_polyglot_parity_gate,
     benchmark_dimension_polyglot_parity_gate,
     benchmark_domain_formal_safety_exports,
+    benchmark_embedding_polyglot_parity_gate,
     benchmark_evolutionary_mutation_grammar_gate,
     benchmark_evolutionary_supervisor_search,
     benchmark_federated_deployment_preflight_gate,
@@ -2404,6 +2405,58 @@ def test_hodge_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["gradient_sha256"] is None
 
 
+def test_embedding_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_embedding_polyglot_parity_gate(n=96, calls=1, seed=2026)
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "embedding_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["acceptance_passed"] == 1
+    assert out["reference_contracts_passed"] == 1
+    assert float(out["exact_indexing_max_abs_error"]) <= 1.0e-12
+    assert float(out["time_shift_row_max_abs_error"]) <= 1.0e-12
+    assert float(out["nearest_neighbor_line_distance_error"]) <= 1.0e-12
+    assert int(out["nearest_neighbor_line_index_contract"]) == 1
+    assert float(out["constant_signal_mi_abs_error"]) <= 1.0e-12
+    assert int(out["zero_lag_mi_exceeds_distant_lag"]) == 1
+    assert thresholds["backend_order"] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds["require_exact_delay_indexing"] is True
+    assert thresholds["require_time_shift_row_consistency"] is True
+    assert thresholds["require_constant_signal_zero_mutual_information"] is True
+    assert thresholds["require_zero_lag_mi_exceeds_distant_lag"] is True
+    assert thresholds["require_nearest_neighbor_self_exclusion"] is True
+    assert thresholds["require_public_dispatch_parity"] is True
+    assert thresholds["production_timing_claim"] is False
+
+    for record in records:
+        if record["status"] == "available":
+            assert record["delay_parity_passed"] is True
+            assert record["mi_parity_passed"] is True
+            assert record["nn_parity_passed"] is True
+            assert record["public_dispatch_parity_passed"] is True
+            assert record["contracts_passed"] is True
+            assert record["delay_max_abs_error"] <= thresholds["delay_tolerance"]
+            assert record["delay_sha256"] is not None
+            if record["mi_supported"]:
+                assert record["mi_abs_error"] <= thresholds["mi_tolerance"]
+            if record["nn_supported"]:
+                assert record["nn_distance_max_abs_error"] <= thresholds["nn_tolerance"]
+                assert record["nn_index_exact"] is True
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["delay_sha256"] is None
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -2437,6 +2490,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "neuromorphic_target_readiness",
         "plugin_ecosystem",
         "dimension_polyglot",
+        "embedding_polyglot",
         "lyapunov_polyglot",
         "npe_polyglot",
         "order_parameter_polyglot",

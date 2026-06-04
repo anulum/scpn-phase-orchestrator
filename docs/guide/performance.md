@@ -153,6 +153,13 @@ of total phase-weighted flow, near-zero harmonic residual for the clean
 symmetric plus antisymmetric split, global phase-shift invariance, symmetric
 zero-curl and antisymmetric zero-gradient special cases, the two-node
 antisymmetric closed form, scale covariance, and unavailable-toolchain reasons.
+The embedding record is a polyglot mathematics gate for Takens
+delay-coordinate reconstruction. It records Rust/Mojo/Julia/Go/Python slot
+status, exact delay-indexing parity, Fraser-Swinney mutual-information parity
+where the backend exposes that primitive, nearest-neighbour geometry parity
+where exposed, public fallback-dispatch parity, constant-signal zero mutual
+information, zero-lag information dominance over distant lags, time-shift row
+consistency, and nearest-neighbour self-exclusion on a line lattice.
 
 Treat the emitted `snapshot_date` as a historical measurement label. Do not
 copy the timings into current documentation unless the command was rerun in the

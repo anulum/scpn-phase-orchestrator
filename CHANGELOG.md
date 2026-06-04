@@ -53,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error, harmonic-residual bounds, global phase-shift invariance,
   symmetric/antisymmetric special cases, two-node antisymmetric closed-form
   evidence, scale covariance, and local non-isolated benchmark evidence labels.
+- Added a Takens delay-embedding polyglot benchmark gate that records
+  Rust/Mojo/Julia/Go/Python delay-indexing parity, standalone mutual
+  information and nearest-neighbour primitive parity where exposed, public
+  dispatch parity, constant-signal mutual-information zero contracts,
+  zero-lag information dominance, time-shift row consistency, and
+  nearest-neighbour self-exclusion evidence.
 - Added an order-parameter polyglot benchmark gate that records
   Rust/Mojo/Julia/Go/Python parity for Kuramoto `R`, mean phase, PLV, and layer
   coherence in the reference-suite snapshot.

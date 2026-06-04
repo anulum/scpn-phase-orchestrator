@@ -28,6 +28,7 @@ Timing fields are local non-isolated regression evidence unless metadata records
 | `bayesian_posterior` | `bayesian_posterior_fit_quality` | `1` | `n/a` | `n/a` | `0.012049030978232622` | `7967.445695295364` | `local_regression_non_isolated` |
 | `chimera_polyglot` | `chimera_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.9457532800734043` | `5.286791074741952` | `local_regression_non_isolated` |
 | `dimension_polyglot` | `dimension_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `1.8427273819688708` | `2.713369350737995` | `local_regression_non_isolated` |
+| `embedding_polyglot` | `embedding_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.8935429800767452` | `895.3122768994158` | `local_regression_non_isolated` |
 | `hodge_polyglot` | `hodge_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.09284092299640179` | `538.5556108908767` | `local_regression_non_isolated` |
 | `domain_formal_export` | `domain_formal_safety_exports` | `1` | `n/a` | `n/a` | `0.0015392599161714315` | `35731.4573206066` | `local_regression_non_isolated` |
 | `evolutionary_mutation_grammars` | `evolutionary_mutation_grammar_gate` | `1` | `n/a` | `n/a` | `0.052387277130037546` | `381.77208466771987` | `local_regression_non_isolated` |
