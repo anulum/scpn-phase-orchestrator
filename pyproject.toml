@@ -64,6 +64,7 @@ nengo = []  # pure-numpy LIF engine, no external deps
 lava = []  # external Lava runtime is operator-managed; lava-nc pins vulnerable asteval
 otel = ["opentelemetry-api>=1.20,<2.0", "opentelemetry-sdk>=1.20,<2.0"]
 plot = ["matplotlib>=3.7,<4.0"]
+julia = ["juliacall>=0.9,<0.10"]
 notebook = [
     "jupyter>=1.0,<2.0",
     "jupyterlab>=4.5.7,<5.0",
@@ -78,6 +79,7 @@ full = [
     "pymodbus>=3.5,<4.0",
     "jax>=0.4,<1.0",
     "diffrax>=0.5,<1.0",
+    "juliacall>=0.9,<0.10",
     "rtamt>=0.3,<1.0",
     "ripser>=0.6,<1.0",
 ]
@@ -104,6 +106,7 @@ dev = [
     "pre-commit>=3.5,<5.0",
     "twine>=6.2,<7.0",
     "pytest-benchmark>=5.0,<6.0",
+    "juliacall>=0.9,<0.10",
 ]
 
 [project.scripts]
