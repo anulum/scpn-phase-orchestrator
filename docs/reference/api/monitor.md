@@ -65,6 +65,20 @@ from acting on transient startup dynamics.
 
 ::: scpn_phase_orchestrator.monitor.session_start
 
+## Merge Window Monitor
+
+`MergeWindowMonitor` is the PHA-C.4 gate for moving-frame runs where phase lock
+and axial position lock must both hold before a merge is accepted. It computes
+wrapped phase dispersion around `theta_ref`, axial spatial dispersion around
+`z_ref`, and a consecutive joint-lock counter. The monitor reports
+`lock_achieved=True` only after the configured number of consecutive samples
+passes both predicates.
+
+See the [Merge Window reference](monitor_merge_window.md) for the contract,
+use cases, and benchmark command.
+
+::: scpn_phase_orchestrator.monitor.merge_window
+
 ## Signal Temporal Logic Runtime Verification
 
 `STLMonitor` evaluates runtime safety formulas over scalar monitor traces.

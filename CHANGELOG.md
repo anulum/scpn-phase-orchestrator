@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added PHA-C.4 `MergeWindowMonitor` support for joint wrapped-phase and axial
+  spatial merge detection, including consecutive-sample lock evidence,
+  Rust/Go/Julia/Mojo source-contract surfaces, module-specific tests, public
+  API documentation, and a polyglot benchmark gate.
+
 ## [0.6.6] - 2026-06-04
 
 ### Added

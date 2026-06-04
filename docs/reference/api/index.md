@@ -20,6 +20,7 @@ boundary are known.
 | Simulate coupled dynamics | [UPDE](upde.md) | [UPDE Numerics](../../specs/upde_numerics.md) | phase trajectory, order parameters, and backend evidence |
 | Infer or build coupling | [Coupling](coupling.md) | [Build K_nm Templates](../../tutorials/03_build_knm_templates.md) | `K_nm`, lag, topology, or causal-coupling evidence |
 | Detect coherence and instability | [Monitor](monitor.md) | [Analysis Toolkit](../../guide/analysis_toolkit.md) | R, PLV, PAC, Lyapunov, entropy, recurrence, and safety signals |
+| Detect phase-space merge readiness | [Merge Window](monitor_merge_window.md) | [UPDE Moving Frame](upde_moving_frame.md) | consecutive phase-plus-position lock evidence |
 | Propose bounded control | [Supervisor](supervisor.md) and [Actuation](actuation.md) | [Production Guide](../../guide/production.md) | rate-limited review proposals, not unreviewed hardware writes |
 | Replay and audit decisions | [Audit](audit.md) | [Deterministic Replay](../../tutorials/06_deterministic_replay_for_debugging.md) | hash-linked evidence that can be verified later |
 | Optimise differentiable oscillator models | [nn API](nn.md) | [Differentiable Kuramoto](../../tutorials/04_differentiable_kuramoto.md) | differentiable loss, trained coupling, or topology proposal |
@@ -93,6 +94,7 @@ the compatibility impact.
 | [Coupling](coupling.md) | K_nm matrix construction, geometry constraints, lag estimation |
 | [Supervisor](supervisor.md) | Regime management, policy engine, Petri net FSM, event bus |
 | [Monitor](monitor.md) | Boundary violation detection, coherence monitoring |
+| [Monitor — Merge Window](monitor_merge_window.md) | PHA-C phase-plus-position merge lock gate with consecutive-sample evidence |
 | [Actuation](actuation.md) | Control output mapping, action projection |
 | [Imprint](imprint.md) | History-dependent coupling modulation |
 | [Drivers](drivers.md) | External forcing functions (Physical, Informational, Symbolic) |

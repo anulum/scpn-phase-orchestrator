@@ -292,3 +292,9 @@ for the detailed historical release plan and internal planning notes.
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
 | PHA-C.3 MovingFrameUPDEEngine | Implemented as `MovingFrameUPDEEngine` with absolute axial `positions`, chamber-frame `distance_to_reference`, collision/crossing detection, distance-modulated coupling through `SpatialCouplingModulator`, Doppler-corrected phase dynamics, Python plus Rust/Go/Julia/Mojo source surfaces, module-specific merger and fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as optional accelerators are rebuilt and feed the position/phase contract into the PHA-C.4 merge-window monitor lane. |
+
+## PHA-C merge-window status
+
+| Item | Implemented evidence | Remaining scope |
+|---|---|---|
+| PHA-C.4 MergeWindowMonitor | Implemented as `MergeWindowMonitor` with wrapped phase dispersion, axial spatial dispersion, consecutive joint-lock gating, JSON-safe `MergeReport` evidence, Python plus Rust/Go/Julia/Mojo source-contract surfaces, module-specific fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol as optional accelerators are rebuilt and feed the lock report into downstream PHA-C event/state lanes. |
