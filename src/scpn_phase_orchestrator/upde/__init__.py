@@ -81,6 +81,7 @@ __all__ = [
     "pac_matrix",
     "sync_warning",
     "trace_sync_transition",
+    "upde_run_omega_schedule",
 ]
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
@@ -108,6 +109,7 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "DelayBuffer": (".delay", "DelayBuffer"),
     "DelayedEngine": (".delay", "DelayedEngine"),
     "UPDEEngine": (".engine", "UPDEEngine"),
+    "upde_run_omega_schedule": (".engine", "upde_run_omega_schedule"),
     "EnvelopeState": (".envelope", "EnvelopeState"),
     "TorusEngine": (".geometric", "TorusEngine"),
     "Hyperedge": (".hypergraph", "Hyperedge"),

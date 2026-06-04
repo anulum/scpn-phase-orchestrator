@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added PHA-C.5 time-varying `omega(t)` support for `UPDEEngine`, including configured fixed or callable frequencies, schedule-resolved backend dispatch, Rust/Go/Julia/Mojo schedule entry points, module-specific tests, and a polyglot benchmark gate.
 - Added `SpatialCouplingModulator` and `spatial_modulate` as the PHA-C.1 spatial coupling surface, including Euclidean distance kernels, analytic Jacobians, Rust/Go/Julia/Mojo adapter contracts, and a polyglot benchmark gate.
 
 - Added Lyapunov/STL/safety-cost constrained replay acceptance for

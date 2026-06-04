@@ -1,0 +1,23 @@
+{
+  "acceptance_passed": 1,
+  "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"webgpu\", \"mojo\", \"julia\", \"go\", \"python\"], \"production_timing_claim\": false, \"require_all_available_parity\": true, \"require_python_reference\": true, \"require_stateful_vs_schedule_parity\": true}",
+  "all_available_passed": 1,
+  "available_backend_count": 4,
+  "backend_count": 6,
+  "backend_records_json": "[{\"backend\": \"rust\", \"matrix_sha256\": null, \"max_abs_error\": null, \"ms_per_call\": null, \"parity_passed\": false, \"status\": \"unavailable\", \"tolerance\": 1e-12, \"unavailable_reason\": \"schedule backend is not installed\"}, {\"backend\": \"webgpu\", \"matrix_sha256\": null, \"max_abs_error\": null, \"ms_per_call\": null, \"parity_passed\": false, \"status\": \"unavailable\", \"tolerance\": 1e-09, \"unavailable_reason\": \"schedule backend is not installed\"}, {\"backend\": \"mojo\", \"matrix_sha256\": \"12881e03e5addde323c5b35673196dec63b903d12708071f29b81b5ef1975706\", \"max_abs_error\": 0.0, \"ms_per_call\": 52.464955020695925, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"matrix_sha256\": \"12881e03e5addde323c5b35673196dec63b903d12708071f29b81b5ef1975706\", \"max_abs_error\": 0.0, \"ms_per_call\": 1217.4626239575446, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"matrix_sha256\": \"12881e03e5addde323c5b35673196dec63b903d12708071f29b81b5ef1975706\", \"max_abs_error\": 0.0, \"ms_per_call\": 37.83034812659025, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"matrix_sha256\": \"12881e03e5addde323c5b35673196dec63b903d12708071f29b81b5ef1975706\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.3056451678276062, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]",
+  "benchmark_evidence_kind": "local_regression_non_isolated",
+  "benchmark_sha256": "12bd9a1fb7aa64b49cb14eda37d35528a33faba702938233502598a08b43f040",
+  "calls": 1,
+  "isolation_method": "none",
+  "n": 6,
+  "n_steps": 4,
+  "parity_pass_count": 4,
+  "production_timing_claim": 0,
+  "reference_matrix_sha256": "12881e03e5addde323c5b35673196dec63b903d12708071f29b81b5ef1975706",
+  "schedule_sha256": "b1f9dad0fb191a9ba6512df40d44fff6bae632ffa9121dacdc6e5f5169834162",
+  "seed": 2026,
+  "stateful_schedule_abs_error": 0.0,
+  "suite": "upde_time_varying_omega_polyglot_gate",
+  "unavailable_backend_count": 2,
+  "wall_time_s": 1.308678634930402
+}

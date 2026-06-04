@@ -626,3 +626,15 @@ Total: **53 tests** covering the core engine.
 - Python: `src/scpn_phase_orchestrator/upde/engine.py` (278 lines)
 - Rust: `spo-kernel/crates/spo-engine/src/upde.rs` (~400 lines)
 - FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (PyUPDEStepper binding)
+
+## Time-varying omega support
+
+The stateful engine accepts `omega=` at construction time. The value may be a
+fixed vector or a callable `omega(t)` returning a finite real vector with shape
+`(n_oscillators,)`. Existing explicit `step(phases, omegas, ...)` and
+`run(phases, omegas, ...)` calls retain precedence over configured omega.
+
+For callable sources, `run()` resolves one frequency vector per outer step and
+calls `upde_run_omega_schedule`, which is implemented across the Rust, Go,
+Julia, Mojo, and Python UPDE backend surfaces. See
+[UPDE — Time-varying omega](upde_time_varying_omega.md).

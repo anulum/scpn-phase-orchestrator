@@ -20,9 +20,10 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation import (
     validate_upde_backend_inputs,
     validate_upde_backend_output,
+    validate_upde_schedule_backend_inputs,
 )
 
-__all__ = ["_ensure_exe", "upde_run_mojo"]
+__all__ = ["_ensure_exe", "upde_run_mojo", "upde_run_omega_schedule_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _METHOD_IDS = {"euler": 0, "rk4": 1, "rk45": 2}
@@ -131,6 +132,68 @@ def upde_run_mojo(
     ]
     tokens.extend(repr(float(x)) for x in p.tolist())
     tokens.extend(repr(float(x)) for x in o.tolist())
+    tokens.extend(repr(float(x)) for x in k.tolist())
+    tokens.extend(repr(float(x)) for x in a.tolist())
+    result = _run(" ".join(tokens) + "\n", expected_count=n)
+    return validate_upde_backend_output(np.array(result, dtype=np.float64), n=n)
+
+
+def upde_run_omega_schedule_mojo(
+    phases: FloatArray,
+    omega_schedule: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    method: str,
+    n_substeps: int,
+    atol: float,
+    rtol: float,
+) -> FloatArray:
+    """Run UPDE with one frequency vector per outer step in Mojo."""
+
+    (
+        p,
+        schedule,
+        k,
+        a,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+        method_s,
+        n_substeps_i,
+        atol_f,
+        rtol_f,
+    ) = validate_upde_schedule_backend_inputs(
+        phases,
+        omega_schedule,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        dt,
+        method,
+        n_substeps,
+        atol,
+        rtol,
+    )
+    n = int(p.size)
+    tokens: list[str] = [
+        "RUN_SCHEDULE",
+        str(n),
+        repr(zeta_f),
+        repr(psi_f),
+        repr(dt_f),
+        str(n_steps_i),
+        str(_METHOD_IDS[method_s]),
+        str(n_substeps_i),
+        repr(atol_f),
+        repr(rtol_f),
+    ]
+    tokens.extend(repr(float(x)) for x in p.tolist())
+    tokens.extend(repr(float(x)) for x in schedule.ravel().tolist())
     tokens.extend(repr(float(x)) for x in k.tolist())
     tokens.extend(repr(float(x)) for x in a.tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=n)

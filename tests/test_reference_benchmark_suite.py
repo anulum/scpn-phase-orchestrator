@@ -2619,6 +2619,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "recurrence_polyglot",
         "spectral_polyglot",
         "spatial_modulator_polyglot",
+        "upde_time_varying_omega_polyglot",
         "transfer_entropy_polyglot",
         "winding_polyglot",
         "quantum_target_readiness",

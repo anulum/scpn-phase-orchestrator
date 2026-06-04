@@ -20,9 +20,10 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation import (
     validate_upde_backend_inputs,
     validate_upde_backend_output,
+    validate_upde_schedule_backend_inputs,
 )
 
-__all__ = ["upde_run_go"]
+__all__ = ["upde_run_go", "upde_run_omega_schedule_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _METHOD_IDS = {"euler": 0, "rk4": 1, "rk45": 2}
@@ -58,6 +59,23 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.c_double,  # atol
         ctypes.c_double,  # rtol
     ]
+    if hasattr(lib, "UPDERunOmegaSchedule"):
+        lib.UPDERunOmegaSchedule.restype = ctypes.c_int
+        lib.UPDERunOmegaSchedule.argtypes = [
+            ctypes.POINTER(ctypes.c_double),  # phases (in/out)
+            ctypes.POINTER(ctypes.c_double),  # omega schedule
+            ctypes.POINTER(ctypes.c_double),  # knm
+            ctypes.POINTER(ctypes.c_double),  # alpha
+            ctypes.c_int,  # n
+            ctypes.c_double,  # zeta
+            ctypes.c_double,  # psi
+            ctypes.c_double,  # dt
+            ctypes.c_int,  # n_steps
+            ctypes.c_int,  # method (0/1/2)
+            ctypes.c_int,  # n_substeps
+            ctypes.c_double,  # atol
+            ctypes.c_double,  # rtol
+        ]
     _LIB = lib
     return lib
 
@@ -129,4 +147,69 @@ def upde_run_go(
     )
     if rc != 0:
         raise ValueError(f"Go UPDERun rc={rc}")
+    return validate_upde_backend_output(p, n=n)
+
+
+def upde_run_omega_schedule_go(
+    phases: FloatArray,
+    omega_schedule: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    method: str,
+    n_substeps: int,
+    atol: float,
+    rtol: float,
+) -> FloatArray:
+    """Run UPDE with one frequency vector per outer step in the Go backend."""
+
+    (
+        p,
+        schedule,
+        k,
+        a,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+        method_s,
+        n_substeps_i,
+        atol_f,
+        rtol_f,
+    ) = validate_upde_schedule_backend_inputs(
+        phases,
+        omega_schedule,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        dt,
+        method,
+        n_substeps,
+        atol,
+        rtol,
+    )
+    n = int(p.size)
+    lib = _load_lib()
+    if not hasattr(lib, "UPDERunOmegaSchedule"):
+        raise ImportError("Go UPDERunOmegaSchedule symbol is not available")
+    rc = lib.UPDERunOmegaSchedule(
+        p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        schedule.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        k.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_int(n),
+        ctypes.c_double(zeta_f),
+        ctypes.c_double(psi_f),
+        ctypes.c_double(dt_f),
+        ctypes.c_int(n_steps_i),
+        ctypes.c_int(_METHOD_IDS[method_s]),
+        ctypes.c_int(n_substeps_i),
+        ctypes.c_double(atol_f),
+        ctypes.c_double(rtol_f),
+    )
+    if rc != 0:
+        raise ValueError(f"Go UPDERunOmegaSchedule rc={rc}")
     return validate_upde_backend_output(p, n=n)

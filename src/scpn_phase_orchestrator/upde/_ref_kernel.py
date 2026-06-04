@@ -28,7 +28,7 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
-__all__ = ["upde_run_python"]
+__all__ = ["upde_run_omega_schedule_python", "upde_run_python"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
@@ -231,3 +231,57 @@ def upde_run_python(
                 phases = phases + sub_dt * deriv
         phases = phases % TWO_PI
     return phases
+
+
+def upde_run_omega_schedule_python(
+    phases: FloatArray,
+    omega_schedule: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    method: str,
+    n_substeps: int,
+    atol: float,
+    rtol: float,
+) -> FloatArray:
+    """Python fallback for one frequency vector per outer UPDE step."""
+    if omega_schedule.ndim != 2:
+        raise ValueError("omega_schedule must be a two-dimensional matrix")
+    phases_out = phases.copy()
+    last_dt = dt
+    sub_dt = dt / n_substeps
+    for omegas in omega_schedule:
+        if method == "rk45":
+            phases_out, last_dt = _rk45_step(
+                phases_out,
+                omegas,
+                knm,
+                alpha,
+                zeta,
+                psi,
+                atol,
+                rtol,
+                dt,
+                last_dt,
+            )
+        elif method == "rk4":
+            for _ in range(n_substeps):
+                phases_out = _rk4_substep(
+                    phases_out,
+                    omegas,
+                    knm,
+                    alpha,
+                    zeta,
+                    psi,
+                    sub_dt,
+                )
+        elif method == "euler":
+            for _ in range(n_substeps):
+                deriv = _compute_derivative(phases_out, omegas, knm, alpha, zeta, psi)
+                phases_out = phases_out + sub_dt * deriv
+        else:
+            raise ValueError(f"unknown method {method!r}")
+        phases_out = phases_out % TWO_PI
+    return phases_out

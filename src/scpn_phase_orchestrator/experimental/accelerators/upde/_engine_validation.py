@@ -16,10 +16,28 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-__all__ = ["validate_upde_backend_inputs", "validate_upde_backend_output"]
+__all__ = [
+    "validate_upde_backend_inputs",
+    "validate_upde_backend_output",
+    "validate_upde_schedule_backend_inputs",
+]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 ValidatedInputs: TypeAlias = tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    float,
+    float,
+    float,
+    int,
+    str,
+    int,
+    float,
+    float,
+]
+ValidatedScheduleInputs: TypeAlias = tuple[
     FloatArray,
     FloatArray,
     FloatArray,
@@ -146,6 +164,50 @@ def validate_upde_backend_inputs(
         _as_finite_real(psi, name="psi"),
         _as_finite_real(dt, name="dt", positive=True),
         _as_non_negative_int(n_steps, name="n_steps"),
+        _as_method(method),
+        _as_positive_int(n_substeps, name="n_substeps"),
+        _as_finite_real(atol, name="atol", positive=True),
+        _as_finite_real(rtol, name="rtol", positive=True),
+    )
+
+
+def validate_upde_schedule_backend_inputs(
+    phases: FloatArray,
+    omega_schedule: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    method: str,
+    n_substeps: int,
+    atol: float,
+    rtol: float,
+) -> ValidatedScheduleInputs:
+    """Normalise direct UPDE backend arguments with per-step frequencies."""
+
+    p = _as_vector(phases, name="phases").copy()
+    schedule = _as_real_finite_array(omega_schedule, name="omega_schedule")
+    if schedule.ndim != 2:
+        raise ValueError("omega_schedule must be a two-dimensional matrix")
+    if schedule.shape[0] == 0:
+        raise ValueError("omega_schedule must contain at least one step")
+    if schedule.shape[1] != p.size:
+        raise ValueError("omega_schedule column count must match phases")
+    schedule = np.ascontiguousarray(schedule, dtype=np.float64)
+    k = _as_square_flat(knm, name="knm", n=int(p.size))
+    if np.any(np.diag(k.reshape((p.size, p.size))) != 0.0):
+        raise ValueError("knm diagonal must be exactly zero")
+    a = _as_square_flat(alpha, name="alpha", n=int(p.size))
+    return (
+        p,
+        schedule,
+        k,
+        a,
+        _as_finite_real(zeta, name="zeta"),
+        _as_finite_real(psi, name="psi"),
+        _as_finite_real(dt, name="dt", positive=True),
+        int(schedule.shape[0]),
         _as_method(method),
         _as_positive_int(n_substeps, name="n_substeps"),
         _as_finite_real(atol, name="atol", positive=True),

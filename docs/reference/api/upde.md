@@ -502,3 +502,16 @@ Instead of a single phase $\theta_i$, each oscillator maintains a vector $\vec{\
 - **Rust Kernel:** Fully offloaded to the  via  for real-time multi-dimensional integration.
 
 ::: scpn_phase_orchestrator.upde.sheaf_engine
+
+## Time-varying natural frequencies
+
+`UPDEEngine` now accepts configured fixed or callable natural frequencies via
+`omega=`. If a call omits the `omegas` argument, the engine resolves the
+configured source at the current outer-step time and stores the resolved vector
+in `omega_current`. Callable schedules are materialised as finite `(steps, n)`
+matrices and dispatched through the Rust, Go, Julia, Mojo, or Python schedule
+runner when available.
+
+Use this for drifting oscillators, moving-agent frequency shifts, chirps,
+thermal detuning, and Doppler preparation. The detailed contract is documented
+in [UPDE — Time-varying omega](upde_time_varying_omega.md).

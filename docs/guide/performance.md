@@ -231,3 +231,17 @@ PYTHONPATH=src python benchmarks/spatial_modulator_benchmark.py --parity-gate
 The gate checks more than runtime. It verifies the closed-form inverse-plus-one kernel, translation invariance, permutation equivariance, zero self-coupling, symmetry preservation, and the physically required monotonic relation that nearer oscillator pairs receive stronger spatial coupling than farther pairs. Rust, Mojo, Julia, Go, and Python slots are reported separately so missing optional accelerators are visible without weakening the acceptance contract.
 
 Timing fields from this benchmark are local, non-isolated regression evidence. They are not production throughput claims unless the surrounding run records isolation, CPU/GPU binding, dependency versions, and backend build metadata.
+
+### UPDE time-varying omega gate
+
+PHA-C.5 has a dedicated schedule-parity benchmark:
+
+```bash
+PYTHONPATH=src python benchmarks/upde_time_varying_omega_benchmark.py --parity-gate
+```
+
+The gate checks the stateful `UPDEEngine(omega=lambda t: ...)` path against the
+stateless row-major `omega_schedule` backend path. Backend records are reported
+for Rust, WebGPU, Mojo, Julia, Go, and Python. Timings in the committed JSON are
+local, non-isolated regression evidence only and must not be used as production
+throughput claims without a benchmark-isolated rerun.

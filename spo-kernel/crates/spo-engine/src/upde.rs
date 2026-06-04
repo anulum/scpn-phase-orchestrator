@@ -201,6 +201,43 @@ impl UPDEStepper {
         Ok(())
     }
 
+    /// Advance the dense UPDE system with one omega vector per outer step.
+    ///
+    /// The schedule is flattened row-major as
+    /// `omega_schedule[step * n + oscillator]`.
+    ///
+    /// # Errors
+    /// Returns dimension errors for malformed schedule length and propagates
+    /// any error returned by [`Self::step`].
+    pub fn run_omega_schedule(
+        &mut self,
+        phases: &mut [f64],
+        omega_schedule: &[f64],
+        knm: &mut [f64],
+        zeta: f64,
+        psi: f64,
+        alpha: &[f64],
+        n_steps: u64,
+    ) -> SpoResult<()> {
+        let rows = usize::try_from(n_steps)
+            .map_err(|_| SpoError::InvalidDimension("n_steps is too large".into()))?;
+        let expected = rows
+            .checked_mul(self.n)
+            .ok_or_else(|| SpoError::InvalidDimension("omega schedule is too large".into()))?;
+        if omega_schedule.len() != expected {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected omega_schedule length {expected}, got {}",
+                omega_schedule.len()
+            )));
+        }
+        for step in 0..rows {
+            let start = step * self.n;
+            let end = start + self.n;
+            self.step(phases, &omega_schedule[start..end], knm, zeta, psi, alpha)?;
+        }
+        Ok(())
+    }
+
     /// Return the configured oscillator count.
     pub fn n(&self) -> usize {
         self.n
@@ -537,6 +574,30 @@ mod upde_stepper_tests {
             stepper.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha),
             Err(SpoError::InvalidDimension(_))
         ));
+    }
+
+    #[test]
+    fn upde_stepper_runs_omega_schedule() {
+        let mut stepper = UPDEStepper::new(
+            2,
+            IntegrationConfig {
+                dt: 0.1,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+        let mut phases = vec![0.0, 0.0];
+        let schedule = vec![1.0, 2.0, 3.0, 4.0];
+        let mut knm = vec![0.0; 4];
+        let alpha = vec![0.0; 4];
+
+        stepper
+            .run_omega_schedule(&mut phases, &schedule, &mut knm, 0.0, 0.0, &alpha, 2)
+            .expect("schedule run failed");
+
+        assert!((phases[0] - 0.4).abs() < 1e-12);
+        assert!((phases[1] - 0.6).abs() < 1e-12);
     }
 }
 

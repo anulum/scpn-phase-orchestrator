@@ -19,6 +19,7 @@ RK45 step calls.
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from numbers import Integral, Real
 from typing import TypeAlias
 
@@ -34,9 +35,11 @@ __all__ = [
     "AVAILABLE_BACKENDS",
     "UPDEEngine",
     "upde_run",
+    "upde_run_omega_schedule",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+OmegaSource: TypeAlias = FloatArray | Callable[[float], object]
 
 ACTIVE_BACKEND = _run_mod.ACTIVE_BACKEND
 AVAILABLE_BACKENDS = _run_mod.AVAILABLE_BACKENDS
@@ -73,6 +76,40 @@ def upde_run(
             psi,
             dt,
             n_steps,
+            method,
+            n_substeps,
+            atol,
+            rtol,
+        )
+    finally:
+        _run_mod.ACTIVE_BACKEND = previous
+
+
+def upde_run_omega_schedule(
+    phases: FloatArray,
+    omega_schedule: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    method: str = "euler",
+    n_substeps: int = 1,
+    atol: float = 1e-6,
+    rtol: float = 1e-3,
+) -> FloatArray:
+    """Run UPDE with one resolved natural-frequency vector per outer step."""
+    previous = _run_mod.ACTIVE_BACKEND
+    _run_mod.ACTIVE_BACKEND = ACTIVE_BACKEND
+    try:
+        return _run_mod.upde_run_omega_schedule(
+            phases,
+            omega_schedule,
+            knm,
+            alpha,
+            zeta,
+            psi,
+            dt,
             method,
             n_substeps,
             atol,
@@ -159,6 +196,9 @@ class UPDEEngine:
         method: str = "euler",
         atol: float = 1e-6,
         rtol: float = 1e-3,
+        *,
+        omega: object | None = None,
+        t0: float = 0.0,
     ):
         n_oscillators = _validate_positive_int(
             n_oscillators,
@@ -167,6 +207,7 @@ class UPDEEngine:
         dt = _validate_positive_float(dt, name="dt")
         atol = _validate_positive_float(atol, name="atol")
         rtol = _validate_positive_float(rtol, name="rtol")
+        t0 = _validate_finite_real(t0, name="t0")
         if method not in ("euler", "rk4", "rk45"):
             msg = f"Unknown method {method!r}, expected 'euler', 'rk4', or 'rk45'"
             raise ValueError(msg)
@@ -176,6 +217,11 @@ class UPDEEngine:
         self._atol = atol
         self._rtol = rtol
         self._last_dt = dt
+        self._time = t0
+        self._omega_source: object | None = omega
+        self._omega_current = np.zeros(n_oscillators, dtype=np.float64)
+        if omega is not None:
+            self._omega_current = self._resolve_omega(omega, t0)
 
         self._rust = None
         if _HAS_RUST:  # pragma: no cover
@@ -201,14 +247,24 @@ class UPDEEngine:
         """Actual dt used on the last accepted step (relevant for rk45)."""
         return self._last_dt
 
+    @property
+    def time(self) -> float:
+        """Current outer-step clock used when resolving ``omega(t)``."""
+        return self._time
+
+    @property
+    def omega_current(self) -> FloatArray:
+        """Most recently resolved natural-frequency vector."""
+        return self._omega_current.copy()
+
     def step(
         self,
         phases: FloatArray,
-        omegas: FloatArray,
-        knm: FloatArray,
-        zeta: float,
-        psi: float,
-        alpha: FloatArray,
+        omegas: object | None = None,
+        knm: FloatArray | None = None,
+        zeta: float = 0.0,
+        psi: float = 0.0,
+        alpha: FloatArray | None = None,
     ) -> FloatArray:
         """Advance one UPDE integration step.
 
@@ -240,47 +296,85 @@ class UPDEEngine:
             If input shapes do not match the configured oscillator count
             or any scalar/array input is non-finite.
         """
-        self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
+        if knm is None:
+            raise ValueError("knm is required")
+        if alpha is None:
+            raise ValueError("alpha is required")
+        omega_vec = self._omega_for_step(omegas)
+        self._validate_inputs(phases, omega_vec, knm, alpha, zeta, psi)
         with self._lock:
+            step_dt = self._last_dt if self._method == "rk45" else self._dt
             if self._rust is not None:  # pragma: no cover
-                return self._validate_rust_output(
+                result = self._validate_rust_output(
                     self._rust.step(
                         np.ascontiguousarray(phases.ravel()),
-                        np.ascontiguousarray(omegas.ravel()),
+                        np.ascontiguousarray(omega_vec.ravel()),
                         np.ascontiguousarray(knm.ravel()),
                         float(zeta),
                         float(psi),
                         np.ascontiguousarray(alpha.ravel()),
                     )
                 )
-            if self._method == "euler":
-                return self._euler_step(phases, omegas, knm, zeta, psi, alpha)
-            if self._method == "rk45":
-                return self._rk45_step(phases, omegas, knm, zeta, psi, alpha)
-            return self._rk4_step(phases, omegas, knm, zeta, psi, alpha)
+            elif self._method == "euler":
+                result = self._euler_step(phases, omega_vec, knm, zeta, psi, alpha)
+            elif self._method == "rk45":
+                result = self._rk45_step(phases, omega_vec, knm, zeta, psi, alpha)
+            else:
+                result = self._rk4_step(phases, omega_vec, knm, zeta, psi, alpha)
+            self._time += step_dt
+            self._omega_current = omega_vec.copy()
+            return result
 
     def run(
         self,
         phases: FloatArray,
-        omegas: FloatArray,
-        knm: FloatArray,
-        zeta: float,
-        psi: float,
-        alpha: FloatArray,
-        n_steps: int,
+        omegas: object | None = None,
+        knm: FloatArray | None = None,
+        zeta: float = 0.0,
+        psi: float = 0.0,
+        alpha: FloatArray | None = None,
+        n_steps: int = 1,
     ) -> FloatArray:
         """Run n_steps, return final phases. Dispatches to the fastest
         available backend via the module-level ``upde_run``."""
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
-        self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
+        if knm is None:
+            raise ValueError("knm is required")
+        if alpha is None:
+            raise ValueError("alpha is required")
         if n_steps == 0:
             return np.asarray(phases, dtype=np.float64).copy()
+        omega_source = self._resolve_omega_source_arg(omegas)
         with self._lock:
+            if callable(omega_source):
+                schedule = self._build_omega_schedule(omega_source, n_steps)
+                self._validate_inputs(phases, schedule[0], knm, alpha, zeta, psi)
+                result = self._validate_rust_output(
+                    upde_run_omega_schedule(
+                        phases,
+                        schedule,
+                        knm,
+                        alpha,
+                        float(zeta),
+                        float(psi),
+                        self._dt,
+                        self._method,
+                        1,
+                        self._atol,
+                        self._rtol,
+                    )
+                )
+                self._omega_current = schedule[-1].copy()
+                self._time += n_steps * self._dt
+                return result
+
+            omega_vec = self._resolve_omega(omega_source, self._time)
+            self._validate_inputs(phases, omega_vec, knm, alpha, zeta, psi)
             if self._rust is not None:  # pragma: no cover
-                return self._validate_rust_output(
+                result = self._validate_rust_output(
                     self._rust.run(
                         np.ascontiguousarray(phases.ravel()),
-                        np.ascontiguousarray(omegas.ravel()),
+                        np.ascontiguousarray(omega_vec.ravel()),
                         np.ascontiguousarray(knm.ravel()),
                         float(zeta),
                         float(psi),
@@ -288,21 +382,24 @@ class UPDEEngine:
                         int(n_steps),
                     )
                 )
-
-            return upde_run(
-                phases,
-                omegas,
-                knm,
-                alpha,
-                float(zeta),
-                float(psi),
-                self._dt,
-                n_steps,
-                self._method,
-                1,
-                self._atol,
-                self._rtol,
-            )
+            else:
+                result = upde_run(
+                    phases,
+                    omega_vec,
+                    knm,
+                    alpha,
+                    float(zeta),
+                    float(psi),
+                    self._dt,
+                    n_steps,
+                    self._method,
+                    1,
+                    self._atol,
+                    self._rtol,
+                )
+            self._omega_current = omega_vec.copy()
+            self._time += n_steps * self._dt
+            return result
 
     def compute_order_parameter(self, phases: FloatArray) -> tuple[float, float]:
         """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""
@@ -366,6 +463,37 @@ class UPDEEngine:
         if np.any(output < 0.0) or np.any(output >= TWO_PI):
             raise ValueError("Rust output phases must be in [0, 2*pi)")
         return np.asarray(output, dtype=np.float64)
+
+    def _resolve_omega_source_arg(self, omegas: object | None) -> object:
+        if omegas is not None:
+            return omegas
+        if self._omega_source is None:
+            raise ValueError("omegas are required unless omega was configured")
+        return self._omega_source
+
+    def _resolve_omega(self, source: object, t: float) -> FloatArray:
+        value = source(t) if callable(source) else source
+        array = _validate_real_array(value, name="omegas")
+        if array.shape != (self._n,):
+            raise ValueError(f"omegas.shape={array.shape}, expected {(self._n,)}")
+        if not np.all(np.isfinite(array)):
+            raise ValueError("omegas contains NaN/Inf")
+        return np.ascontiguousarray(array, dtype=np.float64)
+
+    def _omega_for_step(self, omegas: object | None) -> FloatArray:
+        source = self._resolve_omega_source_arg(omegas)
+        return self._resolve_omega(source, self._time)
+
+    def _build_omega_schedule(
+        self,
+        source: Callable[[float], object],
+        n_steps: int,
+    ) -> FloatArray:
+        rows = [
+            self._resolve_omega(source, self._time + step * self._dt)
+            for step in range(n_steps)
+        ]
+        return np.ascontiguousarray(np.vstack(rows), dtype=np.float64)
 
     def _derivative(
         self,

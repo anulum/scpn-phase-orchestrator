@@ -19,9 +19,10 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation import (
     validate_upde_backend_inputs,
     validate_upde_backend_output,
+    validate_upde_schedule_backend_inputs,
 )
 
-__all__ = ["upde_run_julia"]
+__all__ = ["upde_run_julia", "upde_run_omega_schedule_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "upde_engine.jl"
@@ -96,6 +97,72 @@ def upde_run_julia(
             jl.upde_run(
                 p,
                 o,
+                k,
+                a,
+                n,
+                zeta_f,
+                psi_f,
+                dt_f,
+                n_steps_i,
+                method_s,
+                n_substeps_i,
+                atol_f,
+                rtol_f,
+            ),
+            dtype=np.float64,
+        ),
+        n=n,
+    )
+
+
+def upde_run_omega_schedule_julia(
+    phases: FloatArray,
+    omega_schedule: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    method: str,
+    n_substeps: int,
+    atol: float,
+    rtol: float,
+) -> FloatArray:
+    """Run UPDE with one frequency vector per outer step in Julia."""
+
+    (
+        p,
+        schedule,
+        k,
+        a,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+        method_s,
+        n_substeps_i,
+        atol_f,
+        rtol_f,
+    ) = validate_upde_schedule_backend_inputs(
+        phases,
+        omega_schedule,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        dt,
+        method,
+        n_substeps,
+        atol,
+        rtol,
+    )
+    n = int(p.size)
+    jl = _ensure()
+    return validate_upde_backend_output(
+        np.asarray(
+            jl.upde_run_omega_schedule(
+                p,
+                schedule,
                 k,
                 a,
                 n,

@@ -293,6 +293,65 @@ fn upde_run(
             phases[i] = fmod_positive(phases[i], two_pi)
 
 
+fn upde_run_omega_schedule(
+    mut phases: List[Float64],
+    omega_schedule: List[Float64],
+    knm: List[Float64],
+    alpha: List[Float64],
+    n: Int,
+    zeta: Float64,
+    psi: Float64,
+    dt: Float64,
+    n_steps: Int,
+    method: Int,
+    n_substeps: Int,
+    atol: Float64,
+    rtol: Float64,
+) -> None:
+    var two_pi = 6.283185307179586
+    var k1 = List[Float64](capacity=n)
+    var k2 = List[Float64](capacity=n)
+    var k3 = List[Float64](capacity=n)
+    var k4 = List[Float64](capacity=n)
+    var k5 = List[Float64](capacity=n)
+    var k6 = List[Float64](capacity=n)
+    var k7 = List[Float64](capacity=n)
+    var y5 = List[Float64](capacity=n)
+    var tmp = List[Float64](capacity=n)
+    var omegas = List[Float64](capacity=n)
+    for _ in range(n):
+        k1.append(0.0); k2.append(0.0); k3.append(0.0); k4.append(0.0)
+        k5.append(0.0); k6.append(0.0); k7.append(0.0)
+        y5.append(0.0); tmp.append(0.0); omegas.append(0.0)
+
+    var last_dt = dt
+    var sub_dt = dt / Float64(n_substeps)
+
+    for step in range(n_steps):
+        var offset = step * n
+        for i in range(n):
+            omegas[i] = omega_schedule[offset + i]
+        if method == 2:
+            last_dt = rk45_step(
+                phases, omegas, knm, alpha, zeta, psi,
+                atol, rtol, dt, last_dt, n,
+                k1, k2, k3, k4, k5, k6, k7, y5, tmp,
+            )
+        elif method == 1:
+            for _ in range(n_substeps):
+                rk4_substep(
+                    phases, omegas, knm, alpha, zeta, psi, sub_dt, n,
+                    k1, k2, k3, k4, tmp,
+                )
+        else:
+            for _ in range(n_substeps):
+                euler_substep(
+                    phases, omegas, knm, alpha, zeta, psi, sub_dt, n, k1,
+                )
+        for i in range(n):
+            phases[i] = fmod_positive(phases[i], two_pi)
+
+
 fn main() raises:
     var line = input()
     var tokens = List[String]()
@@ -301,7 +360,7 @@ fn main() raises:
 
     var idx = 0
     var op = tokens[idx]; idx += 1
-    if op != "RUN":
+    if op != "RUN" and op != "RUN_SCHEDULE":
         print(-1)
         return
 
@@ -319,8 +378,13 @@ fn main() raises:
     for _ in range(n):
         phases.append(atof(tokens[idx])); idx += 1
     var omegas = List[Float64](capacity=n)
-    for _ in range(n):
-        omegas.append(atof(tokens[idx])); idx += 1
+    var omega_schedule = List[Float64](capacity=n * n_steps)
+    if op == "RUN":
+        for _ in range(n):
+            omegas.append(atof(tokens[idx])); idx += 1
+    else:
+        for _ in range(n * n_steps):
+            omega_schedule.append(atof(tokens[idx])); idx += 1
     var knm = List[Float64](capacity=n * n)
     for _ in range(n * n):
         knm.append(atof(tokens[idx])); idx += 1
@@ -328,9 +392,15 @@ fn main() raises:
     for _ in range(n * n):
         alpha_arr.append(atof(tokens[idx])); idx += 1
 
-    upde_run(
-        phases, omegas, knm, alpha_arr,
-        n, zeta, psi, dt, n_steps, method, n_substeps, atol_, rtol_,
-    )
+    if op == "RUN":
+        upde_run(
+            phases, omegas, knm, alpha_arr,
+            n, zeta, psi, dt, n_steps, method, n_substeps, atol_, rtol_,
+        )
+    else:
+        upde_run_omega_schedule(
+            phases, omega_schedule, knm, alpha_arr,
+            n, zeta, psi, dt, n_steps, method, n_substeps, atol_, rtol_,
+        )
     for i in range(n):
         print(phases[i])

@@ -274,3 +274,9 @@ for the detailed historical release plan and internal planning notes.
 | Item | Current state | Remaining work |
 | --- | --- | --- |
 | PHA-C.1 spatial coupling modulation | Implemented as `SpatialCouplingModulator` with bounded inverse-plus-one, exponential, power-law, and epsilon-regularised inverse-distance kernels; integrated into the Swarmalator Python reference path; exposed through NumPy plus optional Rust, Go, Julia, and Mojo adapter contracts; documented in the coupling API; and covered by a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as accelerators evolve and reuse the same contract when downstream PHA-C graph lanes consume spatially modulated `K_nm`. |
+
+## PHA-C time-varying frequency status
+
+| Item | Current state | Remaining work |
+| --- | --- | --- |
+| PHA-C.5 time-varying `omega(t)` | Implemented in `UPDEEngine` as configured fixed or callable natural frequencies with `omega_current` and `time` diagnostics; callable runs resolve to a finite row-major schedule consumed by Rust, Go, Julia, Mojo, and Python schedule surfaces; documented in the UPDE API; covered by module-specific tests and a polyglot benchmark gate. | Keep benchmark snapshots refreshed as Doppler and moving-frame engines consume this schedule contract. |

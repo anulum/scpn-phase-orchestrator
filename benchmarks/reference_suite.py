@@ -44,6 +44,9 @@ from benchmarks.spectral_benchmark import benchmark_spectral_polyglot_parity_gat
 from benchmarks.transfer_entropy_benchmark import (
     benchmark_transfer_entropy_polyglot_parity_gate,
 )
+from benchmarks.upde_time_varying_omega_benchmark import (
+    benchmark_upde_time_varying_omega_polyglot_gate,
+)
 from benchmarks.winding_benchmark import benchmark_winding_polyglot_parity_gate
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
@@ -7853,6 +7856,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "spectral_polyglot": benchmark_spectral_polyglot_parity_gate(),
             "spatial_modulator_polyglot": (
                 benchmark_spatial_modulator_polyglot_parity_gate()
+            ),
+            "upde_time_varying_omega_polyglot": (
+                benchmark_upde_time_varying_omega_polyglot_gate()
             ),
             "transfer_entropy_polyglot": (
                 benchmark_transfer_entropy_polyglot_parity_gate()

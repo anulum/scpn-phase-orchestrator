@@ -356,6 +356,38 @@ impl PyUPDEStepper {
         Ok(PyArray1::from_vec(py, p))
     }
 
+    /// Run n_steps with one omega vector per outer step.
+    #[allow(clippy::too_many_arguments)]
+    fn run_omega_schedule<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omega_schedule: PyReadonlyArray1<'py, f64>,
+        knm: Bound<'py, PyArray1<f64>>,
+        zeta: f64,
+        psi: f64,
+        alpha: PyReadonlyArray1<'py, f64>,
+        n_steps: u64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let schedule = omega_schedule
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let mut k_bound = knm.readwrite();
+        let k = k_bound
+            .as_slice_mut()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        self.inner
+            .run_omega_schedule(&mut p, schedule, k, zeta, psi, a, n_steps)
+            .map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
     #[pyo3(signature = (lr, decay = 0.0, modulator = 1.0))]
     fn set_plasticity(&mut self, lr: f64, decay: f64, modulator: f64) -> PyResult<()> {
         self.inner.plasticity = Some(PlasticityModel::new(lr, decay).map_err(spo_err)?);
