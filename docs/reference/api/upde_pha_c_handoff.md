@@ -9,6 +9,11 @@ digests, and a canonical record hash.
 The handoff is intentionally review-only. It does not write to actuators,
 modify coupling, schedule hardware, or mutate supervisor state.
 
+For trajectory-level evidence, use
+[`PHACTimelineRecord`](upde_pha_c_timeline.md). The timeline consumes the same
+handoff contract across all samples and reports first lock, lock loss, reset
+counts, tolerance-profile provenance, and a canonical trajectory hash.
+
 ## Use cases
 
 Use the PHA-C handoff when a downstream lane needs a compact, verifiable event

@@ -303,7 +303,13 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C.4 downstream handoff | Implemented as `PHACHandoffRecord` with merge-window evidence, tolerance-profile provenance, Kuramoto order parameter, source vector digests, source-chain hash, canonical record hash, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol if native handoff kernels are later introduced; downstream MIF/FRC lanes can now consume the review-only record instead of raw moving-frame arrays. |
+| PHA-C.4 downstream handoff | Implemented as `PHACHandoffRecord` with merge-window evidence, tolerance-profile provenance, Kuramoto order parameter, source vector digests, source-chain hash, canonical record hash, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Trajectory-level event/state consumption is now handled by `PHACTimelineRecord`; keep handoff benchmark snapshots refreshed under the benchmark-isolation protocol if native handoff kernels are later introduced. |
+
+## PHA-C event timeline status
+
+| Item | Implemented evidence | Remaining scope |
+|---|---|---|
+| PHA-C.4 trajectory event timeline | Implemented as `PHACTimelineRecord` with deterministic per-sample handoff chaining, first-lock time/index evidence, final-lock state, lock-loss counts, reset counts, tolerance-profile provenance, time/sample/transition/timeline hashes, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol if native timeline kernels are later introduced; downstream MIF/FRC lanes can consume the review-only timeline without raw moving-frame arrays. |
 
 ## PHA-C Lean kinematic safety status
 

@@ -48,7 +48,10 @@ __all__ = [
     "OAState",
     "PHA_C_HANDOFF_CLAIM_BOUNDARY",
     "PHA_C_HANDOFF_EVIDENCE_KIND",
+    "PHA_C_TIMELINE_CLAIM_BOUNDARY",
+    "PHA_C_TIMELINE_EVIDENCE_KIND",
     "PHACHandoffRecord",
+    "PHACTimelineRecord",
     "OttAntonsenReduction",
     "PredictionModel",
     "PredictionState",
@@ -89,10 +92,12 @@ __all__ = [
     "pac_gate",
     "pac_matrix",
     "pha_c_handoff_record_to_dict",
+    "pha_c_event_timeline_to_dict",
     "sync_warning",
     "trace_sync_transition",
     "upde_run_omega_schedule",
     "build_pha_c_handoff_record",
+    "build_pha_c_event_timeline",
 ]
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
@@ -141,6 +146,23 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "pha_c_handoff_record_to_dict": (
         ".pha_c_handoff",
         "pha_c_handoff_record_to_dict",
+    ),
+    "PHA_C_TIMELINE_CLAIM_BOUNDARY": (
+        ".pha_c_timeline",
+        "PHA_C_TIMELINE_CLAIM_BOUNDARY",
+    ),
+    "PHA_C_TIMELINE_EVIDENCE_KIND": (
+        ".pha_c_timeline",
+        "PHA_C_TIMELINE_EVIDENCE_KIND",
+    ),
+    "PHACTimelineRecord": (".pha_c_timeline", "PHACTimelineRecord"),
+    "build_pha_c_event_timeline": (
+        ".pha_c_timeline",
+        "build_pha_c_event_timeline",
+    ),
+    "pha_c_event_timeline_to_dict": (
+        ".pha_c_timeline",
+        "pha_c_event_timeline_to_dict",
     ),
     "UPDEEngine": (".engine", "UPDEEngine"),
     "upde_run_omega_schedule": (".engine", "upde_run_omega_schedule"),

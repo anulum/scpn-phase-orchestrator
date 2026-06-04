@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added PHA-C event timeline records that consume moving-frame phase/position
+  trajectories through the handoff contract, report first lock, lock losses,
+  reset counts, tolerance-profile provenance, deterministic trajectory hashes,
+  Rust/Go/Julia/Mojo source-contract parity adapters, module-specific tests,
+  public API documentation, and a dedicated local-regression benchmark snapshot.
 - Added PHA-C event/state handoff records that bind moving-frame phase/position
   samples to merge-window lock evidence, Kuramoto order-parameter evidence,
   source-chain hashes, a fixed non-actuating claim boundary, Rust/Go/Julia/Mojo
