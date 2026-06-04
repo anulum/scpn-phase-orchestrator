@@ -1,0 +1,342 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — PHA-C acceptance tests
+
+"""Behavioural tests for ``upde.pha_c_acceptance``."""
+
+from __future__ import annotations
+
+import importlib
+
+import numpy as np
+import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+
+from benchmarks.pha_c_acceptance_benchmark import (
+    benchmark_pha_c_acceptance_polyglot_gate,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _pha_c_acceptance_go,
+    _pha_c_acceptance_julia,
+    _pha_c_acceptance_mojo,
+    _pha_c_acceptance_rust,
+    _pha_c_acceptance_validation,
+)
+from scpn_phase_orchestrator.upde import PHACAcceptanceRecord as ExportedRecord
+from scpn_phase_orchestrator.upde.pha_c_acceptance import (
+    PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
+    PHACAcceptanceRecord,
+    build_pha_c_acceptance_record,
+    pha_c_acceptance_record_to_dict,
+)
+
+MODULE_LINKAGE_PATHS = (
+    "scpn_phase_orchestrator.upde.pha_c_acceptance",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._pha_c_acceptance_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._pha_c_acceptance_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._pha_c_acceptance_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._pha_c_acceptance_rust",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._pha_c_acceptance_validation",
+)
+
+
+def _problem(
+    n: int = 5,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    phases = np.linspace(-0.002, 0.002, n, dtype=np.float64)
+    positions = np.linspace(-0.0006, 0.0006, n, dtype=np.float64)
+    omega = np.zeros((4, n), dtype=np.float64)
+    knm = np.full((n, n), 0.04, dtype=np.float64)
+    np.fill_diagonal(knm, 0.0)
+    velocity_base = np.linspace(0.10, 0.12, n, dtype=np.float64)
+    velocities = np.vstack(
+        [velocity_base + 1.0e-3 * step for step in range(4)],
+    ).astype(np.float64, copy=False)
+    return phases, positions, omega, knm, velocities
+
+
+def test_module_linkage_paths_cover_pha_c_acceptance_chain() -> None:
+    for import_path in MODULE_LINKAGE_PATHS:
+        assert importlib.import_module(import_path).__name__ == import_path
+
+
+def test_acceptance_record_spans_complete_review_only_chain() -> None:
+    phases, positions, omega, knm, velocities = _problem()
+
+    record = build_pha_c_acceptance_record(
+        phases,
+        positions,
+        omega,
+        knm,
+        velocities,
+        dt=1.0e-3,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+        backend="python",
+    )
+    repeated = build_pha_c_acceptance_record(
+        phases,
+        positions,
+        omega,
+        knm,
+        velocities,
+        dt=1.0e-3,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+        backend="python",
+    )
+
+    assert record.sample_count == 5
+    assert record.step_count == 4
+    assert record.oscillator_count == 5
+    assert record.first_lock_observed
+    assert record.first_lock_index == 2
+    assert record.final_lock_achieved
+    assert record.lock_loss_count == 0
+    assert record.reset_count == 0
+    assert record.max_consecutive_lock_samples == 5
+    assert record.max_abs_doppler_term > 0.0
+    assert record.max_abs_spatial_coupling > 0.0
+    assert record.claim_boundary == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
+    assert record.execution_disabled
+    assert not record.actuating
+    assert record.tolerance_profile_name == "baseline_1x"
+    assert record.tolerance_profile_multiplier == pytest.approx(1.0)
+    assert len(record.phase_trajectory_sha256) == 64
+    assert len(record.position_trajectory_sha256) == 64
+    assert len(record.timeline_sha256) == 64
+    assert len(record.acceptance_sha256) == 64
+    assert record.acceptance_sha256 == repeated.acceptance_sha256
+    assert pha_c_acceptance_record_to_dict(record) == record.to_dict()
+    assert ExportedRecord is PHACAcceptanceRecord
+
+
+def test_acceptance_tolerance_profile_records_review_boundary() -> None:
+    phases, positions, omega, knm, velocities = _problem()
+
+    record = build_pha_c_acceptance_record(
+        phases,
+        positions,
+        omega,
+        knm,
+        velocities,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        tolerance_profile="buffer_3x",
+        required_consecutive_samples=1,
+        backend="python",
+    )
+
+    assert record.first_lock_observed
+    assert record.final_lock_achieved
+    assert record.phase_tol_rad == pytest.approx(0.03)
+    assert record.spatial_tol_m == pytest.approx(0.006)
+    assert record.tolerance_profile_name == "buffer_3x"
+    assert record.tolerance_profile_multiplier == pytest.approx(3.0)
+
+
+def test_invalid_acceptance_inputs_fail_closed() -> None:
+    phases, positions, omega, knm, velocities = _problem()
+    invalid_cases = (
+        ([], positions, omega, knm, velocities, "phases_t0"),
+        (phases, positions[:-1], omega, knm, velocities, "same shape"),
+        ([[0.0]], positions, omega, knm, velocities, "one-dimensional"),
+        ([np.nan] * phases.size, positions, omega, knm, velocities, "finite"),
+        ([True] * phases.size, positions, omega, knm, velocities, "real-valued"),
+        (phases, positions, omega[:, :-1], knm, velocities, "omega_schedule"),
+        (phases, positions, omega, knm[:-1], velocities, "knm"),
+        (phases, positions, omega, knm, velocities[:-1], "step count"),
+    )
+    for case in invalid_cases:
+        (
+            phase_values,
+            position_values,
+            omega_values,
+            knm_values,
+            velocity_values,
+            match,
+        ) = case
+        with pytest.raises(ValueError, match=match):
+            build_pha_c_acceptance_record(
+                phase_values,
+                position_values,
+                omega_values,
+                knm_values,
+                velocity_values,
+            )
+
+    with pytest.raises(ValueError, match="dt"):
+        build_pha_c_acceptance_record(phases, positions, omega, knm, velocities, dt=0.0)
+    with pytest.raises(ValueError, match="n_substeps"):
+        build_pha_c_acceptance_record(
+            phases,
+            positions,
+            omega,
+            knm,
+            velocities,
+            n_substeps=0,
+        )
+    with pytest.raises(ValueError, match="tolerance_profile"):
+        build_pha_c_acceptance_record(
+            phases,
+            positions,
+            omega,
+            knm,
+            velocities,
+            tolerance_profile="unknown",
+        )
+
+
+@st.composite
+def _shifted_acceptance_inputs(
+    draw: st.DrawFn,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+    n = draw(st.integers(min_value=3, max_value=6))
+    shift = draw(
+        st.floats(
+            min_value=-np.pi,
+            max_value=np.pi,
+            allow_nan=False,
+            allow_infinity=False,
+        ),
+    )
+    phase_values = draw(
+        st.lists(
+            st.floats(
+                min_value=-0.002,
+                max_value=0.002,
+                allow_nan=False,
+                allow_infinity=False,
+            ),
+            min_size=n,
+            max_size=n,
+        ),
+    )
+    position_values = draw(
+        st.lists(
+            st.floats(
+                min_value=-0.0006,
+                max_value=0.0006,
+                allow_nan=False,
+                allow_infinity=False,
+            ),
+            min_size=n,
+            max_size=n,
+        ),
+    )
+    phases = np.array(phase_values, dtype=np.float64)
+    positions = np.array(position_values, dtype=np.float64)
+    omega = np.zeros((3, n), dtype=np.float64)
+    knm = np.full((n, n), 0.03, dtype=np.float64)
+    np.fill_diagonal(knm, 0.0)
+    velocity_base = np.linspace(0.10, 0.12, n, dtype=np.float64)
+    velocities = np.vstack(
+        [velocity_base + 1.0e-3 * step for step in range(3)],
+    ).astype(np.float64, copy=False)
+    return phases, positions, omega, knm, velocities, float(shift)
+
+
+@given(inputs=_shifted_acceptance_inputs())
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_acceptance_lock_counts_survive_global_phase_shift(
+    inputs: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, float],
+) -> None:
+    phases, positions, omega, knm, velocities, shift = inputs
+    reference = build_pha_c_acceptance_record(
+        phases,
+        positions,
+        omega,
+        knm,
+        velocities,
+        reference_phase=0.0,
+        required_consecutive_samples=2,
+        backend="python",
+    )
+    shifted = build_pha_c_acceptance_record(
+        phases + shift,
+        positions,
+        omega,
+        knm,
+        velocities,
+        reference_phase=shift,
+        required_consecutive_samples=2,
+        backend="python",
+    )
+
+    assert shifted.first_lock_index == reference.first_lock_index
+    assert shifted.final_lock_achieved is reference.final_lock_achieved
+    assert shifted.lock_sample_count == reference.lock_sample_count
+    assert shifted.lock_loss_count == reference.lock_loss_count
+    assert shifted.reset_count == reference.reset_count
+    assert shifted.min_phase_order_parameter == pytest.approx(
+        reference.min_phase_order_parameter,
+        abs=1.0e-12,
+    )
+    assert shifted.max_distance_to_reference_m == pytest.approx(
+        reference.max_distance_to_reference_m,
+        abs=1.0e-12,
+    )
+
+
+def test_polyglot_acceptance_adapter_contracts_match_reference() -> None:
+    phases, positions, omega, knm, velocities = _problem()
+    expected = build_pha_c_acceptance_record(
+        phases,
+        positions,
+        omega,
+        knm,
+        velocities,
+        dt=1.0e-3,
+        required_consecutive_samples=3,
+        backend="python",
+    )
+    adapters = (
+        _pha_c_acceptance_rust.build_pha_c_acceptance_record_rust,
+        _pha_c_acceptance_mojo.build_pha_c_acceptance_record_mojo,
+        _pha_c_acceptance_julia.build_pha_c_acceptance_record_julia,
+        _pha_c_acceptance_go.build_pha_c_acceptance_record_go,
+    )
+    for adapter in adapters:
+        got = adapter(
+            phases,
+            positions,
+            omega,
+            knm,
+            velocities,
+            dt=1.0e-3,
+            required_consecutive_samples=3,
+            backend="python",
+        )
+        assert (
+            _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
+                got,
+                expected,
+            )
+            is got
+        )
+
+
+def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
+    result = benchmark_pha_c_acceptance_polyglot_gate(
+        n=5,
+        calls=1,
+        include_subgates=False,
+    )
+
+    assert result["suite"] == "pha_c_acceptance_polyglot_gate"
+    assert result["backend_count"] == 5
+    assert result["parity_pass_count"] == 5
+    assert result["acceptance_passed"] == 1
+    assert result["first_lock_observed"] == 1
+    assert result["first_lock_index"] == 2
+    assert result["final_lock_achieved"] == 1
+    assert result["lock_loss_count"] == 0
+    assert result["reset_count"] == 0
+    assert result["non_actuating"] == 1
+    assert result["execution_disabled"] == 1
+    assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"

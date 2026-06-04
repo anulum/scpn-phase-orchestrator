@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a PHA-C end-to-end acceptance gate that spans spatial modulation,
+  Doppler correction, moving-frame propagation, merge-window timeline
+  conversion, deterministic schedule/trajectory/hash evidence, Rust/Go/Julia/Mojo
+  source-contract parity adapters, aggregate PHA-C subgate benchmark evidence,
+  module-specific tests, public API documentation, and a dedicated
+  local-regression benchmark snapshot.
 - Added PHA-C event timeline records that consume moving-frame phase/position
   trajectories through the handoff contract, report first lock, lock losses,
   reset counts, tolerance-profile provenance, deterministic trajectory hashes,

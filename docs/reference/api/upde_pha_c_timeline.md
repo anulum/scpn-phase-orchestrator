@@ -8,6 +8,10 @@ lock/loss/reset timeline for downstream review lanes.
 The timeline is intentionally review-only. It never writes to actuators, changes
 coupling, schedules hardware, or mutates supervisor state.
 
+For the full PHA-C chain from spatial modulation through moving-frame dynamics
+and timeline hashing, use
+[`PHACAcceptanceRecord`](upde_pha_c_acceptance.md).
+
 ## Use cases
 
 Use the PHA-C event timeline when a downstream lane needs event evidence across

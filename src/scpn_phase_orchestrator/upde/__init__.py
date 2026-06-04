@@ -48,8 +48,11 @@ __all__ = [
     "OAState",
     "PHA_C_HANDOFF_CLAIM_BOUNDARY",
     "PHA_C_HANDOFF_EVIDENCE_KIND",
+    "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY",
+    "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
     "PHA_C_TIMELINE_CLAIM_BOUNDARY",
     "PHA_C_TIMELINE_EVIDENCE_KIND",
+    "PHACAcceptanceRecord",
     "PHACHandoffRecord",
     "PHACTimelineRecord",
     "OttAntonsenReduction",
@@ -92,11 +95,13 @@ __all__ = [
     "pac_gate",
     "pac_matrix",
     "pha_c_handoff_record_to_dict",
+    "pha_c_acceptance_record_to_dict",
     "pha_c_event_timeline_to_dict",
     "sync_warning",
     "trace_sync_transition",
     "upde_run_omega_schedule",
     "build_pha_c_handoff_record",
+    "build_pha_c_acceptance_record",
     "build_pha_c_event_timeline",
 ]
 
@@ -146,6 +151,23 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "pha_c_handoff_record_to_dict": (
         ".pha_c_handoff",
         "pha_c_handoff_record_to_dict",
+    ),
+    "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY": (
+        ".pha_c_acceptance",
+        "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY",
+    ),
+    "PHA_C_ACCEPTANCE_EVIDENCE_KIND": (
+        ".pha_c_acceptance",
+        "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
+    ),
+    "PHACAcceptanceRecord": (".pha_c_acceptance", "PHACAcceptanceRecord"),
+    "build_pha_c_acceptance_record": (
+        ".pha_c_acceptance",
+        "build_pha_c_acceptance_record",
+    ),
+    "pha_c_acceptance_record_to_dict": (
+        ".pha_c_acceptance",
+        "pha_c_acceptance_record_to_dict",
     ),
     "PHA_C_TIMELINE_CLAIM_BOUNDARY": (
         ".pha_c_timeline",

@@ -23,6 +23,7 @@ boundary are known.
 | Detect phase-space merge readiness | [Merge Window](monitor_merge_window.md) | [UPDE Moving Frame](upde_moving_frame.md) | consecutive phase-plus-position lock evidence |
 | Emit review-only PHA-C event state | [PHA-C Handoff](upde_pha_c_handoff.md) | [Merge Window](monitor_merge_window.md) | hashed non-actuating handoff record for replay, MIF, or Studio review |
 | Emit review-only PHA-C event timeline | [PHA-C Event Timeline](upde_pha_c_timeline.md) | [PHA-C Handoff](upde_pha_c_handoff.md) | first lock, lock loss, reset counts, and trajectory hash evidence |
+| Gate the full PHA-C chain | [PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | [PHA-C Event Timeline](upde_pha_c_timeline.md) | end-to-end spatial, Doppler, moving-frame, merge, handoff, and timeline evidence |
 | Propose bounded control | [Supervisor](supervisor.md) and [Actuation](actuation.md) | [Production Guide](../../guide/production.md) | rate-limited review proposals, not unreviewed hardware writes |
 | Replay and audit decisions | [Audit](audit.md) | [Deterministic Replay](../../tutorials/06_deterministic_replay_for_debugging.md) | hash-linked evidence that can be verified later |
 | Optimise differentiable oscillator models | [nn API](nn.md) | [Differentiable Kuramoto](../../tutorials/04_differentiable_kuramoto.md) | differentiable loss, trained coupling, or topology proposal |
@@ -94,6 +95,7 @@ the compatibility impact.
 | [UPDE Engine](upde.md) | Kuramoto ODE, Stuart-Landau amplitude ODE, metrics, PAC |
 | [UPDE — PHA-C Handoff](upde_pha_c_handoff.md) | Review-only event/state bridge from moving-frame samples and merge-window evidence |
 | [UPDE — PHA-C Event Timeline](upde_pha_c_timeline.md) | Review-only trajectory evidence for first lock, lock loss, resets, and timeline hashes |
+| [UPDE — PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | End-to-end review gate spanning spatial coupling, Doppler, moving-frame dynamics, merge evidence, handoff, and timeline hashes |
 | [Oscillators](oscillators.md) | Phase extraction: Physical, Informational, Symbolic channels |
 | [Coupling](coupling.md) | K_nm matrix construction, geometry constraints, lag estimation |
 | [Supervisor](supervisor.md) | Regime management, policy engine, Petri net FSM, event bus |

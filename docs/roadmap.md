@@ -311,6 +311,12 @@ for the detailed historical release plan and internal planning notes.
 |---|---|---|
 | PHA-C.4 trajectory event timeline | Implemented as `PHACTimelineRecord` with deterministic per-sample handoff chaining, first-lock time/index evidence, final-lock state, lock-loss counts, reset counts, tolerance-profile provenance, time/sample/transition/timeline hashes, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol if native timeline kernels are later introduced; downstream MIF/FRC lanes can consume the review-only timeline without raw moving-frame arrays. |
 
+## PHA-C acceptance-chain status
+
+| Item | Implemented evidence | Remaining scope |
+|---|---|---|
+| PHA-C end-to-end acceptance gate | Implemented as `PHACAcceptanceRecord` with spatial modulation, graph-weighted Doppler correction, moving-frame propagation, merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline hashes, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, aggregate PHA-C subgate benchmark evidence, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol; native acceptance kernels may be introduced only if they preserve the same review-only hashes and fail-closed boundaries. |
+
 ## PHA-C Lean kinematic safety status
 
 | Item | Implemented evidence | Remaining scope |
