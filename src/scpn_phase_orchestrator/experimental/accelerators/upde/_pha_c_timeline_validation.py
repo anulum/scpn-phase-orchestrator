@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from scpn_phase_orchestrator.upde.pha_c_timeline import (
     PHACTimelineRecord,
     build_pha_c_event_timeline,
@@ -64,7 +66,7 @@ def expected_pha_c_event_timeline(
 ) -> PHACTimelineRecord:
     """Return the Python reference timeline after fail-closed validation."""
 
-    return build_pha_c_event_timeline(*args, **kwargs)
+    return build_pha_c_event_timeline(*cast(Any, args), **cast(Any, kwargs))
 
 
 def validate_pha_c_event_timeline(

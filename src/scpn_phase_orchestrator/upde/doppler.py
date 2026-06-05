@@ -67,6 +67,8 @@ def _reject_non_real_array(values: object, *, name: str) -> np.ndarray:
 def _finite_float(value: object, *, name: str) -> float:
     if isinstance(value, bool):
         raise ValueError(f"{name} must be a finite real scalar")
+    if not isinstance(value, (int, float, np.integer, np.floating)):
+        raise ValueError(f"{name} must be a finite real scalar")
     out = float(value)
     if not np.isfinite(out):
         raise ValueError(f"{name} must be finite")
@@ -143,6 +145,8 @@ def _validate_phases(phases: object, *, n: int) -> FloatArray:
 
 def _validate_positive_step_count(value: object, *, name: str) -> int:
     if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer")
+    if not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be a positive integer")
     out = int(value)
     if out < 1 or out != value:
