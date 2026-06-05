@@ -96,9 +96,12 @@ def validate_spatial_modulator_inputs(
 
     n_int = _validate_positive_int(n, name="n")
     dim_int = _validate_positive_int(dim, name="dim")
-    form_int = (
-        _validate_positive_int(int(decay_form_code) + 1, name="decay_form_code") - 1
-    )
+    if isinstance(decay_form_code, (bool, np.bool_)) or not isinstance(
+        decay_form_code,
+        Integral,
+    ):
+        raise ValueError("decay_form_code must be 0, 1, 2, or 3")
+    form_int = int(decay_form_code)
     if form_int not in {0, 1, 2, 3}:
         raise ValueError("decay_form_code must be 0, 1, 2, or 3")
     k = _validate_flat(k_nm_flat, name="k_nm_flat", expected=n_int * n_int)
