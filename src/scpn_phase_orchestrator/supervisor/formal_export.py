@@ -350,13 +350,13 @@ class FormalRuntimeCertificate:
         _require_package_identifier(self.package_name, "certificate package_name")
         _require_sha256(self.package_hash, "certificate package_hash")
         _validate_runtime_bounds(self.runtime_bounds)
-        for item in self.checker_availability:
-            if not isinstance(item, FormalCheckerAvailability):
+        for availability in self.checker_availability:
+            if not isinstance(availability, FormalCheckerAvailability):
                 raise PolicyError(
                     "certificate checker_availability must contain availability records"
                 )
-        for item in self.checker_results:
-            if not isinstance(item, FormalCheckerResult):
+        for result in self.checker_results:
+            if not isinstance(result, FormalCheckerResult):
                 raise PolicyError(
                     "certificate checker_results must contain result records"
                 )

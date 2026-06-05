@@ -21,7 +21,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from math import isfinite
-from typing import TypeAlias
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -411,7 +411,7 @@ def build_pha_c_event_timeline(
         transition_table_sha256=transition_table_sha256,
     )
     return PHACTimelineRecord(
-        **timeline_payload,
+        **cast(Any, timeline_payload),
         timeline_sha256=_sha256_json(timeline_payload),
     )
 

@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from scpn_phase_orchestrator.upde.pha_c_handoff import (
     PHACHandoffRecord,
     build_pha_c_handoff_record,
@@ -53,7 +55,7 @@ _DISCRETE_FIELDS = (
 def expected_pha_c_handoff_record(*args: object, **kwargs: object) -> PHACHandoffRecord:
     """Return the Python reference handoff after fail-closed validation."""
 
-    return build_pha_c_handoff_record(*args, **kwargs)
+    return build_pha_c_handoff_record(*cast(Any, args), **cast(Any, kwargs))
 
 
 def validate_pha_c_handoff_record(

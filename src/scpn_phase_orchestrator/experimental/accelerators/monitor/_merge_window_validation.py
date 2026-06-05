@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from scpn_phase_orchestrator.monitor.merge_window import (
     MergeReport,
     evaluate_merge_window,
@@ -28,7 +30,7 @@ _BOOL_FIELDS = ("phase_locked", "spatial_locked", "lock_achieved")
 def expected_merge_window_report(*args: object, **kwargs: object) -> MergeReport:
     """Return the Python reference report after fail-closed input validation."""
 
-    return evaluate_merge_window(*args, **kwargs)
+    return evaluate_merge_window(*cast(Any, args), **cast(Any, kwargs))
 
 
 def validate_merge_window_report(
