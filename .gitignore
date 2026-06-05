@@ -37,6 +37,18 @@ site/
 # Rust
 target/
 
+# Lean build state
+formal/lean/.lake/
+
+# Local ImageMagick/PostScript render residue from accidental scratch renders
+/importlib
+/json
+/np
+/platform
+/sys
+/tempfile
+/time
+
 # IDE
 .idea/
 .vscode/
