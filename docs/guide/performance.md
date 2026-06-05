@@ -297,7 +297,8 @@ evidence, Kuramoto order-parameter evidence, source-vector digests, and a
 canonical non-actuating record hash, including signed phase/spatial margins.
 The timeline gate consumes the same handoff contract across a trajectory and
 checks first-lock index/time, lock-loss counts, reset counts, transition
-hashes, minimum signed margins, and tolerance-profile provenance. The
+hashes, minimum signed margins, signed-margin equations, and
+tolerance-profile provenance. The
 acceptance gate composes the full PHA-C path: spatial
 modulation, graph-weighted Doppler correction, moving-frame propagation,
 merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline
@@ -312,6 +313,12 @@ timeline rows call `verify_pha_c_event_timeline(...)`, and acceptance rows call
 forged signed margins, malformed SHA-256 fields, unsafe actuation flags, or
 altered claim boundaries even when the original phase/position arrays are no
 longer present.
+Timeline rows now publish
+`phase_margin_equation_validated`, `spatial_margin_equation_validated`,
+`signed_margin_equations_validated`, and `margin_replay_tolerance`; the
+timeline gate fails unless every declared backend row proves the same
+`min_margin = tolerance - max_dispersion` relation before the aggregate
+acceptance gate consumes the timeline hash.
 The acceptance benchmark now publishes
 `phase_margin_equation_validated`, `spatial_margin_equation_validated`,
 `signed_margin_equations_validated`, and `margin_replay_tolerance`, and the

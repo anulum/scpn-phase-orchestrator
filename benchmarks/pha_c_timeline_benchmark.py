@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 )
 from scpn_phase_orchestrator.upde.pha_c_timeline import (
     PHA_C_TIMELINE_CLAIM_BOUNDARY,
+    PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
     PHACTimelineRecord,
     build_pha_c_event_timeline,
     verify_pha_c_event_timeline,
@@ -182,7 +183,33 @@ def _bench_backend(
     return time.perf_counter() - t0, verify_pha_c_event_timeline(record)
 
 
+def _margin_equation_contracts(record: PHACTimelineRecord) -> dict[str, object]:
+    phase_validated = (
+        abs(
+            record.min_phase_margin_rad
+            - (record.phase_tol_rad - record.max_phase_dispersion_rad)
+        )
+        <= PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE
+    )
+    spatial_validated = (
+        abs(
+            record.min_spatial_margin_m
+            - (record.spatial_tol_m - record.max_spatial_dispersion_m)
+        )
+        <= PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE
+    )
+    return {
+        "phase_margin_equation_validated": int(phase_validated),
+        "spatial_margin_equation_validated": int(spatial_validated),
+        "signed_margin_equations_validated": int(
+            phase_validated and spatial_validated
+        ),
+        "margin_replay_tolerance": PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
+    }
+
+
 def _reference_contracts(record: PHACTimelineRecord) -> dict[str, Any]:
+    margin_contracts = _margin_equation_contracts(record)
     return {
         "first_lock_observed": int(record.first_lock_observed),
         "first_lock_index": record.first_lock_index,
@@ -191,6 +218,7 @@ def _reference_contracts(record: PHACTimelineRecord) -> dict[str, Any]:
         "reset_count": record.reset_count,
         "phase_margin_loss_observed": int(record.min_phase_margin_rad < 0.0),
         "spatial_margin_loss_observed": int(record.min_spatial_margin_m < 0.0),
+        **margin_contracts,
         "non_actuating": int(not record.actuating),
         "execution_disabled": int(record.execution_disabled),
         "claim_boundary": record.claim_boundary,
@@ -221,6 +249,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         tolerance = PARITY_TOLERANCES[backend]
         elapsed, got = _bench_backend(backend, phases, positions, times, calls)
         error = _record_max_abs_error(got, reference)
+        margin_contracts = _margin_equation_contracts(got)
         passed = error <= tolerance
         parity_pass_count += int(passed)
         records.append(
@@ -237,6 +266,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
                 "transition_table_sha256": got.transition_table_sha256,
                 "min_phase_margin_rad": got.min_phase_margin_rad,
                 "min_spatial_margin_m": got.min_spatial_margin_m,
+                **margin_contracts,
                 "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
@@ -257,6 +287,8 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "require_hash_chain": True,
         "require_hash_replay_validation": True,
         "require_signed_margin_contract": True,
+        "require_signed_margin_equations": True,
+        "margin_replay_tolerance": PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
         "require_no_native_kernel_claim": True,
@@ -279,6 +311,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         and contracts["reset_count"] == 1
         and contracts["phase_margin_loss_observed"] == 1
         and contracts["spatial_margin_loss_observed"] == 1
+        and contracts["signed_margin_equations_validated"] == 1
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_TIMELINE_CLAIM_BOUNDARY
@@ -287,6 +320,10 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         and contracts["has_sample_records_hash"] == 1
         and contracts["has_timeline_hash"] == 1
         and contracts["hash_replay_validated"] == 1
+        and all(
+            int(record["signed_margin_equations_validated"]) == 1
+            for record in records
+        )
         and all(int(record["hash_replay_validated"]) == 1 for record in records)
     )
     benchmark_payload = {
@@ -324,6 +361,16 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "reset_count": contracts["reset_count"],
         "phase_margin_loss_observed": contracts["phase_margin_loss_observed"],
         "spatial_margin_loss_observed": contracts["spatial_margin_loss_observed"],
+        "phase_margin_equation_validated": contracts[
+            "phase_margin_equation_validated"
+        ],
+        "spatial_margin_equation_validated": contracts[
+            "spatial_margin_equation_validated"
+        ],
+        "signed_margin_equations_validated": contracts[
+            "signed_margin_equations_validated"
+        ],
+        "margin_replay_tolerance": contracts["margin_replay_tolerance"],
         "non_actuating": contracts["non_actuating"],
         "execution_disabled": contracts["execution_disabled"],
         "tolerance_profile_name": contracts["tolerance_profile_name"],

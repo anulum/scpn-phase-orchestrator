@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.upde import PHACTimelineRecord as ExportedRecord
 from scpn_phase_orchestrator.upde import verify_pha_c_event_timeline as exported_verify
 from scpn_phase_orchestrator.upde.pha_c_timeline import (
     PHA_C_TIMELINE_CLAIM_BOUNDARY,
+    PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
     PHACTimelineRecord,
     build_pha_c_event_timeline,
     pha_c_event_timeline_to_dict,
@@ -354,6 +355,12 @@ def test_pha_c_timeline_benchmark_gate_accepts_declared_backends() -> None:
     assert result["reset_count"] == 1
     assert result["phase_margin_loss_observed"] == 1
     assert result["spatial_margin_loss_observed"] == 1
+    assert result["phase_margin_equation_validated"] == 1
+    assert result["spatial_margin_equation_validated"] == 1
+    assert result["signed_margin_equations_validated"] == 1
+    assert result["margin_replay_tolerance"] == (
+        PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE
+    )
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
@@ -364,6 +371,10 @@ def test_pha_c_timeline_benchmark_gate_accepts_declared_backends() -> None:
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
     assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)
+    assert all(
+        int(record["signed_margin_equations_validated"]) == 1
+        for record in backend_records
+    )
 
 
 def test_timeline_min_signed_margins_are_hash_replayed() -> None:
@@ -400,11 +411,11 @@ def test_timeline_min_signed_margins_are_hash_replayed() -> None:
 
     assert timeline.min_phase_margin_rad == pytest.approx(
         timeline.phase_tol_rad - timeline.max_phase_dispersion_rad,
-        abs=1.0e-12,
+        abs=PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
     )
     assert timeline.min_spatial_margin_m == pytest.approx(
         timeline.spatial_tol_m - timeline.max_spatial_dispersion_m,
-        abs=1.0e-12,
+        abs=PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
     )
     assert timeline.min_phase_margin_rad < 0.0
     assert timeline.min_spatial_margin_m < 0.0
@@ -413,3 +424,19 @@ def test_timeline_min_signed_margins_are_hash_replayed() -> None:
     forged = replace(timeline, min_spatial_margin_m=0.0)
     with pytest.raises(ValueError, match="min_spatial_margin_m"):
         verify_pha_c_event_timeline(forged)
+
+    forged_phase = replace(
+        timeline,
+        min_phase_margin_rad=timeline.min_phase_margin_rad
+        + 100.0 * PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
+    )
+    with pytest.raises(ValueError, match="min_phase_margin_rad"):
+        verify_pha_c_event_timeline(forged_phase)
+
+    forged_spatial = replace(
+        timeline,
+        min_spatial_margin_m=timeline.min_spatial_margin_m
+        + 100.0 * PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
+    )
+    with pytest.raises(ValueError, match="min_spatial_margin_m"):
+        verify_pha_c_event_timeline(forged_spatial)

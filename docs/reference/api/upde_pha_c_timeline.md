@@ -48,6 +48,9 @@ For each sample, the builder calls `build_pha_c_handoff_record(...)` and carries
 - maximum phase dispersion, maximum spatial dispersion, minimum Kuramoto order
   parameter, maximum distance to the reference position, and minimum signed
   phase/spatial margins over the trajectory;
+- replay validation that each minimum signed margin equals the resolved
+  tolerance minus the corresponding maximum dispersion under
+  `PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE`;
 - tolerance profile name, multiplier, resolved phase tolerance, and resolved
   spatial tolerance;
 - SHA-256 digests for the time vector, all sample records, transition table,
@@ -105,7 +108,9 @@ verify_pha_c_event_timeline(timeline)
 Use `verify_pha_c_event_timeline(...)` when replaying a stored trajectory
 record. It rechecks timeline counts, first-lock semantics, transition-count
 bounds, review-only flags, signed margin equations, SHA-256 fields, and the
-canonical timeline hash without requiring raw trajectory matrices.
+canonical timeline hash without requiring raw trajectory matrices. The signed
+margin replay rejects records whose positive-looking phase or spatial margin no
+longer matches `tolerance - maximum_dispersion`.
 
 ## Handoff versus timeline
 
@@ -124,7 +129,10 @@ The benchmark gate records Rust, Mojo, Julia, Go, and Python source-contract
 slots. The current timeline path is evidence construction, not a numerical hot
 loop, so the non-Python slots validate parity against the Python reference
 contract. If native kernels are later added, they must preserve the same hashes
-signed margins, and fail-closed input boundaries.
+signed margins, signed-margin equations, and fail-closed input boundaries. The
+benchmark payload publishes `phase_margin_equation_validated`,
+`spatial_margin_equation_validated`, `signed_margin_equations_validated`, and
+`margin_replay_tolerance` for every backend row.
 
 ```bash
 uv run python benchmarks/pha_c_timeline_benchmark.py \
