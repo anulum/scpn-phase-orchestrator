@@ -2,6 +2,35 @@
 
 SPO supports multiple deployment targets from browser to FPGA.
 
+## Deployment decision model
+
+Use this page as a lane-selection map, not a ranking list. All lanes share a common
+control model and same binding/spec contract; they differ in latency envelope,
+determinism profile, and operational dependency footprint.
+
+Choose a lane by answering:
+
+1. What is the maximum acceptable control loop latency?
+2. Is hardware determinism required for every actuation cycle?
+3. Is local/offline edge execution a hard constraint?
+4. Are audit and replay requirements satisfied in the target path?
+
+If a lane cannot satisfy one requirement directly, use a fallback lane with
+explicitly documented performance trade-offs rather than changing core control logic.
+
+## Why this matters for safety review
+
+The same supervisory policy can run in all lanes, but only some lanes meet strict
+timing and audit constraints for regulated deployment:
+
+- **Rust/FFI and FPGA**: low-latency deterministic behavior.
+- **JAX**: higher throughput when differentiable training or sensitivity analysis is a priority.
+- **WASM and browser**: low-friction validation, training, and visualization use cases.
+- **Docker + managed hosting**: strong packaging and CI reproducibility for team rollout.
+
+Document the chosen lane in domainpack onboarding so operators can trace why an
+implementation path was selected.
+
 ## Rust FFI Ecosystem
 
 12 PyO3 bindings providing native-speed implementations of core modules:

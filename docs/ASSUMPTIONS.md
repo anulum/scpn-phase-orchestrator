@@ -7,6 +7,42 @@ judgement, subject to domain tuning).
 
 See [references.bib](references.bib) for full bibliographic entries.
 
+## Purpose and operating contract
+
+This registry is the canonical boundary between exploratory tuning and production
+behavioral guarantees. It exists so an operator can answer three questions quickly:
+
+- What did we change?
+- Why was that value chosen?
+- Which code path it actually controls?
+
+Use this document as the source-of-truth for reproducibility when a scenario
+deviates from expectation, when a domainpack is adapted to a new plant, or when a
+reviewer asks for a justification trail.
+
+## How changes are managed
+
+Every entry in this file is expected to be:
+
+- discoverable from the runtime source implementation,
+- tied to a stable provenance class,
+- and reflected in release notes when it materially shifts runtime behavior.
+
+Preferred adjustment sequence for any constant is:
+
+1. Update the constant in the owning module or spec loader.
+2. Add a short rationale in the relevant section below.
+3. Validate through the affected deterministic gate(s) before merging.
+4. Confirm the resulting behavior in the matching evaluation protocol and
+   benchmark surface.
+
+## Why empirical constants remain visible
+
+Empirical values are not “temporary”. They are intentionally visible because they
+are where domain and operations teams inject calibrated behavior. Keeping them in one
+file lets teams reason about trade-offs explicitly and avoid silent, distributed
+changes across YAML, scripts, or notebooks.
+
 ## Regime Thresholds
 
 | Constant | Value | Provenance | Used in |

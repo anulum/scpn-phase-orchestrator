@@ -5,6 +5,22 @@ Auto-generated from source docstrings via
 Python classes auto-delegate to Rust when the `spo_kernel` extension is
 available; the public interface is identical in both backends.
 
+## What this index is for
+
+This index is the operational entrypoint for implementation teams. It is organized by
+what users are trying to do (run, validate, control, prove, report), not by internal
+file layout.
+
+Use it in this order when starting from a requirement:
+
+1. Pick a goal in the **API by Job** section.
+2. Follow the corresponding guide or tutorial for domain, adapter, and benchmark context.
+3. Move to the **Minimal Imports by Task** section before any exploratory refactor.
+4. Confirm review requirements via the **PHA-C acceptance evidence chain** and the
+   matching benchmark lane.
+
+This keeps navigation aligned with production outcomes instead of code structure.
+
 If you are still deciding what SPO is for, start with the
 [Use Cases and Value Map](../../getting-started/use_cases.md). This API index
 is organised for implementation work after the domain, data source, and safety

@@ -9,6 +9,17 @@
 # Top-level `scpn_phase_orchestrator.__all__` exports covered by the v1 API
 # freeze gate. Additions, removals, or renames require this file, API docs,
 # and compatibility notes to change in the same review.
+#
+# This manifest is the compatibility boundary for downstream users who import
+# stable SPO contracts by symbol name. The list is not just a convenience index;
+# it is the authoritative export map used by release review to determine whether a
+# change is a bugfix, a behavior change, or a breaking API change.
+#
+# Governance requirements:
+# - Any change here must be accompanied by matching docs updates.
+# - Any export change must reference the impact category in release notes.
+# - Any new symbol requires `api.md` import parity and test validation in the same
+#   change set.
 AuditLogger
 BifurcationDiagram
 BindingSpec

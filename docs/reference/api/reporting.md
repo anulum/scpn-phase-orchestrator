@@ -7,6 +7,21 @@ Requires the `plot` optional extra:
 pip install scpn-phase-orchestrator[plot]
 ```
 
+## Purpose in operations
+
+This is the production evidence surface for post-run understanding. `CoherencePlot`
+intentionally reads from the same audit records that operators and reviewers already use
+for compliance and replay, so every figure can be traced back to immutable records.
+
+Use this API when:
+
+- you need trend evidence for safety gate review (coherence and regime trajectories),
+- you need a compact action audit before a change-control meeting,
+- or you need explainable outputs from a run that is already fully replayable.
+
+The module is deterministic by construction: identical audit inputs produce identical
+plot assets and JSON summaries.
+
 ## CoherencePlot
 
 The reporting module provides a single class `CoherencePlot` that

@@ -13,6 +13,24 @@ It is intentionally practical: users should be able to install, learn,
 run notebooks, run demos, inspect APIs, and move to production without
 searching the source tree.
 
+This is the quality gate document for documentation discoverability. If a user can
+operate the product, onboard a new domainpack, and audit decisions without
+consulting source code, then the public documentation surface is complete for that
+user path.
+
+The counts and mappings below should therefore be treated as a release input, not
+as static inventory. When implementation coverage expands (new adapters, modules,
+frontier surfaces), the matrix must be updated before release and before any
+roadmap milestone is announced.
+
+## Owner model
+
+- **Maintainers**: keep this page aligned with `mkdocs.yml` and API source exports.
+- **Release owners**: verify that any feature or benchmark launch includes matching
+  documentation entries here.
+- **Contributors**: when touching a public surface, add/update the corresponding
+  documentation row in the same change to avoid “code-first” drift.
+
 ## Current Inventory
 
 | Surface | Current coverage | Entry point |
