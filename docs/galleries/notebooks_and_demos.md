@@ -19,6 +19,30 @@ A notebook is learning evidence, not production evidence. Promote a workflow
 only after the source binding, seed, audit log, replay verification, benchmark
 context, and safety boundary are captured outside the notebook.
 
+## Why this inventory is separated from production tutorials
+
+Notebooks accelerate exploration and comprehension. They are intentionally placed
+outside the production approval path because their runtime context is often
+episodic, local, and dependency-flexible.
+
+The promotion rule is therefore explicit:
+
+- notebook for understanding,
+- CLI/API path for production replay,
+- release-time evidence for policy and deployment.
+
+## Migration pattern from notebook to production
+
+Use this sequence when converting a tutorial output to deployment:
+
+1. capture seed and command sequence,
+2. recreate the same scenario with `spo validate` and `spo run`,
+3. collect deterministic audit output,
+4. compare with the original notebook behavior,
+5. only then enable supervisor and actuation controls in controlled environments.
+
+This pattern keeps the first production adaptation conservative and reviewable.
+
 | Learning goal | Notebook or demo | Production path |
 |---------------|------------------|-----------------|
 | First domainpack run | `02_minimal_domain.ipynb` | `spo validate` and `spo run` on a reviewed binding |

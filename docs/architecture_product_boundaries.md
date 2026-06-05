@@ -84,3 +84,19 @@ This guard deliberately starts with the highest-value invariant: Core Engine is
 the stable lower layer. Later migration batches should add stricter rules for
 Runtime-to-Experimental coupling and optional integration dependency isolation
 after those imports are inventoried and production forwarding surfaces are in place.
+
+## Why boundary enforcement protects release quality
+
+The checker is intentionally strict because it is cheaper to reject a bad
+dependency edge at build time than to debug a production import path after a
+live rollout.
+
+Operationally this gives:
+
+- bounded change impact for integration updates,
+- predictable CI outcomes across optional stack combinations,
+- and a clear escalation path when an experimental module must move toward
+  production obligations.
+
+Every boundary review cycle should end with a deliberate classification decision
+and explicit evidence that the decision is reflected in the checker configuration.

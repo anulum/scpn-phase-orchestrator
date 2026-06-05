@@ -79,3 +79,31 @@ Iterate on coupling values until these criteria are met.
 
 - **[acebron2005]** J. A. Acebrón et al. (2005). The Kuramoto model: a simple paradigm for synchronization phenomena. *Rev. Mod. Phys.* 77, 137–185. — Coupling strength ranges and their effect on synchronisation.
 - **[lachaux1999]** J.-P. Lachaux et al. (1999). Measuring phase synchrony in brain signals. *Human Brain Mapping* 8, 194–208. — PLV as coupling-strength proxy (Step 3).
+
+## Why template transitions matter
+
+Template switching is the operational switch from static topology assumptions to
+state-aware coupling management. In production-like runs, this lets teams keep one
+base model and apply bounded regime-dependent coupling adjustments without rebuilding
+binding definitions on every intervention.
+
+The practical governance model is:
+
+- default template for normal operation,
+- constrained stress template for fault mode,
+- recovery template to restore coherence under supervision.
+
+These three profiles map directly to supervisor regimes and provide a clean audit
+surface for later review.
+
+## Validation before rollout
+
+Before using template logic in a review queue, confirm that all three templates are
+numerically stable and that every regime switch preserves:
+
+- zero diagonal couplings,
+- symmetry constraints where required,
+- and the intended `R_good`/`R_bad` envelope.
+
+Template logic should fail closed through the existing monitor and audit checks if
+those invariants break.

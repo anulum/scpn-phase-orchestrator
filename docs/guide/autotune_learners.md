@@ -73,3 +73,31 @@ compared under controlled replay datasets before any runtime policy override.
 
 When this posture is respected, teams gain faster proposal discovery while keeping
 live control logic bound to explicit safety gates.
+
+## Practical operating pattern
+
+The intended path for this surface is an explicit sequence:
+
+1. replay-based scoring of learner candidates,
+2. proposal evidence serialization,
+3. safety gate re-evaluation,
+4. manual/qualified operator approval.
+
+This ordering prevents reward-chasing proposals from bypassing explicit safety
+and audit expectations.
+
+## Proposal governance
+
+All learner outputs are treated as review input, not control input. The same
+`actuation_permitted=false` boundary used by other replay-only lanes applies
+here, so every high-performing proposal still needs explicit promotion through the
+production control gate before any live actuation.
+
+When teams compare PPO-like and SAC-like proposals, record:
+
+- reward trend,
+- Lyapunov/stability evidence,
+- STL robustness margin,
+- and audit-replay hash lineage.
+
+That evidence set is the minimum for an auditable tuning review.

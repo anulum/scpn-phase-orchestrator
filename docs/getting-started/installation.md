@@ -108,3 +108,35 @@ Commands:
   scaffold    Create a domainpack directory structure with template files.
   validate    Validate a binding specification file.
 ```
+
+## Installation strategy by lane
+
+Use this sequence when onboarding a new environment:
+
+1. Start with a base install.
+2. Verify CLI import and CLI command surface.
+3. Add one optional dependency group for the intended lane.
+4. Re-run `spo validate` and `spo report` smoke checks.
+
+This keeps optional runtime stacks out of environments that do not need them,
+reducing support complexity before CI-equivalent verification starts.
+
+## Why this page stays explicit
+
+The matrix of extras is long because it reflects real integration touchpoints,
+not marketing breadth. Each explicit extra maps to a concrete optional stack.
+
+For production, the practical guidance is to install only what is needed for the
+deployment target, then treat any additional integrations as opt-in operational
+steps after replay and stability checks pass.
+
+## Environment readiness check (post-install)
+
+At the end of installation, confirm:
+
+- importability of the runtime core,
+- basic CLI function,
+- one bounded simulation path,
+- and one persisted audit output path if policy control is in scope.
+
+That check is what converts an install into an operationally ready workspace.

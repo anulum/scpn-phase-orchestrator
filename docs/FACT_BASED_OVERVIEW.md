@@ -82,3 +82,22 @@ SPO occupies the **High-Frequency Coherence Control** market. It is positioned b
 1.  **VS Neuroscience Simulators (Brian2/NEST):** SPO is 10-100x faster for phase-oscillator systems because it doesn't carry the overhead of full spiking neuron morphologies.
 2.  **VS General ODE Libraries (Julia/SciPy):** SPO provides a specialized "Control Compiler" layer (Regime Managers, Policies, Audits) that generic math libraries lack.
 3.  **VS Modern ML Components (AKOrN):** SPO adds **Amplitude (Stuart-Landau)** and **Higher-Order Coupling (Simplicial)**, avoiding the degradation issues seen in phase-only attention mechanisms.
+
+## Evidence and maintenance note
+
+This page is a market-facing overview and should be used alongside the project
+benchmark and benchmark-suite artifacts for strict claims verification. Several numeric
+claims are environment- and build-configuration-dependent, so reproduce-time context
+matters for direct comparison.
+
+For claim-grounding in production discussions, use:
+
+- `benchmarks/` result snapshots and suite metadata,
+- CI benchmark gates,
+- and changelog/release notes for version-specific interpretation.
+
+When numbers are re-used externally, include run metadata (platform, Python, backend,
+lockfile, evidence-kind) so stakeholders can compare against the same context.
+
+This keeps the overview aligned with reproducible evidence and reduces the risk of
+reusing stale figures as static guarantees.

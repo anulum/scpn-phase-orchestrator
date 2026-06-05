@@ -79,3 +79,22 @@ review workflow output.
 After you have run the first cycle, capture the resolved runtime defaults and
 review audit output before changing knobs. This keeps your second cycle focused on
 the right axis: execution shape, coupling assumptions, and safety boundaries.
+
+## Readiness rule before moving to implementation
+
+Treat the row in this page as a hypothesis, not a design decision. Before writing
+engine glue or custom automation, answer all routing questions with artifacts:
+
+1. one selected tutorial or reference page,
+2. one binding and one validation command,
+3. one replay or report artifact for evidence.
+
+Skipping this step is the common source of false starts in complex domains: teams
+build custom code while the fundamental routing decision was still unresolved.
+
+## Why this index is structured this way
+
+Each row maps business problem → executable path → governance path, because the
+repository contains both research surfaces and production surfaces. This page is
+therefore meant to reduce mode confusion by forcing the first choice between
+learning and operationalisation paths.

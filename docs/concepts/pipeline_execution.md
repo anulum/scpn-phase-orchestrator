@@ -118,3 +118,34 @@ spo validate domainpacks/minimal_domain/binding_spec.yaml
 spo run domainpacks/minimal_domain/binding_spec.yaml --steps 100 --audit run.jsonl
 spo report run.jsonl
 ```
+
+## Operational interpretation of the flow
+
+This flow intentionally separates declaration, resolution, execution, and audit:
+
+- declaration: what the domain owner says,
+- resolution: what the runtime infers,
+- execution: what numeric contracts are computed,
+- audit: what can be replayed and proved later.
+
+That separation supports safe changes. Teams can change coupling/driver logic in
+the execution stage knowing that audit metadata still captures the resolved runtime
+state for review.
+
+## Why `validate` before `run`
+
+Running validation first converts many structural and schema issues into fast,
+human-readable feedback. It reduces the chance of consuming compute on long runs
+that later fail on config mismatch, and it creates a first deterministic checkpoint
+for the same spec used in `run`.
+
+## Mapping failures
+
+Use the “Common Misreads” table as a triage shortcut:
+
+- cadence mismatch often indicates timing configuration,
+- missing channels usually indicate binding-family mapping,
+- and unexpected engine selection usually indicates wrong model intent.
+
+Resolving these with the summary table makes reruns faster and makes changes more
+traceable across incident logs.
