@@ -110,7 +110,7 @@ the safety-cost ceiling. These gates run after replay scoring and before a
 proposal is accepted, so the search cannot promote a high-reward candidate that
 fails the explicit safety evidence contract.
 
-## Practical narrative
+## Practical overview
 
 This page is the control bridge between experimentation and controlled deployment:
 

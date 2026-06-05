@@ -165,7 +165,7 @@ Every domainpack README must include these sections:
 4. **Boundaries** — list with standard/source
 5. **Actuators** — table with Actuator, Knob, Physical Meaning
 6. **Imprint** — physical basis or "None" with justification
-7. **Scenario** — step count and narrative arc
+7. **Scenario** — step count and scenario timeline
 
 See `domainpacks/cardiac_rhythm/README.md` as the gold standard.
 

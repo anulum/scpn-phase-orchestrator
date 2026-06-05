@@ -130,7 +130,7 @@ For the higher-level replay-only search wrapper that generates candidates,
 evaluates them through a caller-supplied replay adapter, and returns a proposal
 record, see [Autotune Replay Policy Search](autotune_policy_search.md).
 
-## Operational narrative
+## Operational overview
 
 This module is the scoring seam between raw simulation outcomes and policy action.
 Rewards are structured to preserve risk awareness while still allowing optimization

@@ -58,7 +58,7 @@ behaviour before production or benchmark runs.
 3. Run focused tests for your active subsystem.
 4. For release candidates, run project CI-equivalent checks.
 
-## Profile selection narrative
+## Profile selection overview
 
 The profile matrix is designed to align infrastructure constraints with deployment
 risk posture:

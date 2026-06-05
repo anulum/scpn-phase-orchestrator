@@ -35,7 +35,7 @@ time-series inspection, not just end state values.
 - Mask-aware finite behaviour is the guard rail for sparse-graph studies where
   topology is inferred automatically and may contain structured exclusions.
 
-## Operational narrative
+## Operational overview
 
 In practice, teams adopt this contract when they need a single canonical layer
 that can be inserted into policy, optimization, or replay tooling without

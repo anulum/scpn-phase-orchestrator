@@ -104,7 +104,7 @@ decision logic can enforce explicit safety thresholds before proposing changes.
   can justify higher coupling, while a wider sigma should force conservative
   action bounds.
 
-## Practical narrative
+## Practical overview
 
 Bayesian UPDE is the uncertainty surface for domains where a single trajectory is
 not enough to support operational action.

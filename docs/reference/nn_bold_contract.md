@@ -48,7 +48,7 @@ contract stability over advanced parameterization. That is aligned with producti
 expectations where downstream teams need predictable interfaces for longitudinal
 analysis, model calibration, and compliance reporting.
 
-## Operational narrative
+## Operational overview
 
 In teams that combine scientific simulation and operations reporting, the BOLD
 layer is often the first place where phase dynamics are converted into

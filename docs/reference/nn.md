@@ -704,7 +704,7 @@ actions = control_actions_from_supervisor(policy(scenario), ttl_s=5.0)
 
 Canonical generated API details for `scpn_phase_orchestrator.nn.supervisor`
 live in [Neural Network (nn)](api/nn.md). This page keeps the supervisor
-training narrative and examples, while the API page owns the mkdocstrings
+training overview and examples, while the API page owns the mkdocstrings
 anchors for the same symbols.
 
 ---

@@ -49,7 +49,7 @@ without forcing a binary interpretation too early.
 The bounded and disjoint outputs are what make it safe to use in chained monitoring
 pipelines, because each alarm signal maps cleanly to a single interpretation.
 
-## Operational narrative
+## Operational overview
 
 The contract is useful whenever a control stack needs a stable indicator for
 mixed synchrony rather than a binary "locked vs. unlocked" answer.

@@ -74,7 +74,7 @@ SPO is therefore useful in four commercial situations:
 Start with the [Use Cases and Value Map](docs/getting-started/use_cases.md) if
 you need to understand what the software is for before choosing an API.
 
-## Executive Narrative (What SPO Is and What It Is Not)
+## Executive overview (What SPO Is and What It Is Not)
 
 SPO is a production-oriented control compiler for systems that can be expressed as coupled oscillatory processes. It gives teams a single interface for turning telemetry into phase variables, evaluating coherence risk, and proposing bounded control updates with replay evidence.
 
