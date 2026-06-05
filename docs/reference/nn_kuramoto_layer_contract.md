@@ -25,3 +25,12 @@ be composed across model and supervisor layers.
 
 Trajectory output is included because production workflows frequently depend on
 time-series inspection, not just end state values.
+
+## Enterprise usage notes
+
+- This contract is the standard backbone for differentiable policy and inverse
+  coupling surfaces because it guarantees both single-shot and trajectory outputs.
+- Keeping output shapes stable allows shared controller code to run across Python,
+  Rust, and experimental language adapters without per-call branching.
+- Mask-aware finite behaviour is the guard rail for sparse-graph studies where
+  topology is inferred automatically and may contain structured exclusions.

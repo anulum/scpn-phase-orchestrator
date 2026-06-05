@@ -24,3 +24,13 @@ dynamics inputs stay in a numerically safe domain for those analyses.
 Finite fallback behaviour for disconnected or degenerate graphs is a practical
 safety clause: it avoids silent numerical failures in large, irregular coupling
 topologies.
+
+## Operational interpretation
+
+- This contract is the first checkpoint before control proposals are promoted from
+  simulation to action planning.
+- A bounded `sync_threshold` in disconnected cases allows the same policy code to
+  run on sparse production topologies without special-case handling for empty
+  components.
+- Deterministic ordering of the spectrum is required for reproducible stability
+  reports across audit snapshots.

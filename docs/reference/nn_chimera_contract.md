@@ -24,3 +24,14 @@ globally synchronized phase toward fragmented structure.
 By keeping output semantics bounded and threshold masks disjoint, supervisory
 logic can consume the diagnostic signals without introducing contradictory
 interpretation paths.
+
+## Why this contract matters in operations
+
+- In high-asset environments, partial synchrony is often operationally important.
+  You need to know where coherence is localised before applying global
+  control.
+- The disjoint-coherence invariant prevents a single oscillator from being
+  simultaneously tagged as both coherent and incoherent at one threshold pair,
+  which protects downstream action logic from ambiguous telemetry.
+- Bounded outputs reduce the chance that monitor fusion layers accidentally
+  interpret numerical drift as structural drift.

@@ -26,3 +26,12 @@ without reengineering the broader orchestration stack.
 The contract distinguishes when the higher-order path is active (`sigma2 != 0`) so
 teams can A/B compare pairwise and simplicial dynamics with measurable output
 differences.
+
+## When to engage simplicial coupling
+
+- Use simplicial coupling when pairwise interaction models under-explain coherence
+  transitions in empirical datasets.
+- The active-path requirement (`sigma2 != 0`) is an explicit switch that lets teams
+  separate model-complexity experiments from base-pairwise baseline experiments.
+- Shape invariants and deterministic trajectory output keep higher-order terms
+  auditable against baseline pairwise runs.

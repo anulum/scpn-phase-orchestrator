@@ -26,3 +26,12 @@ preprocessing layer.
 
 The finite-state and stride clamps are explicitly part of the contract because they
 prevent unstable numerical states from silently contaminating gradient paths.
+
+## Practical positioning
+
+- Use this layer when SPO workflows need model-compatible BOLD-like trajectories
+  for neuroimaging-style downstream pipelines.
+- The stride clamp protects against silent no-op downsampling in mixed `dt` regimes,
+  which preserves continuity between physics and hemodynamic abstractions.
+- Maintaining shape and state positivity is especially important when chained into
+  ML baselines that assume finite non-negative input features.

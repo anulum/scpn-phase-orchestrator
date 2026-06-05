@@ -53,3 +53,25 @@ Blocking exceptions for v1.0 closure:
 - NNVAL-016 (entropy-production contract gap)
 
 All other listed exceptions are explicitly non-blocking with current evidence.
+
+## Governance interpretation
+
+This register has two operational roles:
+
+1. **Release safety**: entries with `v1.0 blocking = Yes` are release-blockers
+   until fixed or reclassified.
+2. **Predictive planning**: non-blocking exceptions are tracked as controlled
+   technical debt so teams can forecast risk by release train.
+
+When a blocking item is resolved, re-run the linked test file and record the
+evidence in this table before removing the row or flipping disposition.
+For large sweeps, keep the owner and rationale so the same operational decision can
+be audited during release review.
+
+## Expected evidence cadence
+
+- Review quarterly or before any production tag.
+- Keep `NNVAL-*` links stable even after fixes; they provide historical context for
+  why the contract required that tolerance or implementation policy.
+- Escalate conditional skips that are repeatedly hit in release CI into explicit
+  runtime capability notes.

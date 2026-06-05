@@ -25,3 +25,12 @@ sufficient and amplitude dynamics are required for meaningful control signals.
 The shape and finiteness guarantees are production-critical because controllers
 and monitors downstream often assume synchronized tuple dimensions for trajectory
 alignment.
+
+## Deployment context
+
+- Amplitude-aware models are required when phase-only assumptions fail (for
+  example, when transient growth/decay is operationally meaningful).
+- The dual output contract (`phases`, `amplitudes`) is what allows a single policy
+  graph to monitor convergence in both state dimensions.
+- Trajectory retention is essential for evidence replay in release audits because it
+  preserves temporal shape alignment from discovery through replay.

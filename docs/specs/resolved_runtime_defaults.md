@@ -68,3 +68,15 @@ an outcome without recomputing all defaults from scratch.
 2. Run `spo inspect` when reviewing channel algebra and cross-channel coupling.
 3. Run `spo run --audit ...` and verify `binding_summary` is present in the
    generated audit header before promoting the run artifact.
+
+## Operational consequence
+
+Resolved defaults are the boundary between intent and execution:
+
+- they make the runtime effective configuration explicit before simulation begins,
+- they preserve operator trust by making inferred execution defaults reproducible,
+- and they reduce ambiguity when comparing failures across environments.
+
+When an operator reports unexpected behavior, this page is the first artifact to
+compare: if the runtime summary differs from the declared spec intent, the issue
+is usually in binding declaration or adapter pre-processing, not in core dynamics.

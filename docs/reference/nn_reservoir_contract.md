@@ -27,3 +27,12 @@ experiment.
 The linear readout contract is specifically relevant for explainability and
 deployment reproducibility because it defines exactly which model dimensions are
 trusted for prediction in the differentiable path.
+
+## Deployment value
+
+- Reservoir extraction is the lightweight bridge from nonlinear phase dynamics to
+  downstream regression or controller policies.
+- Deterministic feature shape is the minimum requirement for reproducible model
+  cards and replay-based diagnostics across environments.
+- The ridge predict path is used where explainability and compactness are as
+  important as raw predictive accuracy.

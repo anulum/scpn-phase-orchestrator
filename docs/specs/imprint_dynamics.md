@@ -55,6 +55,23 @@ Oscillators with asymmetric exposure histories develop phase lead/lag relative t
 - Decay is exponential: without exposure, `m_k -> 0` as `t -> inf`.
 - With constant exposure `e`, steady state is `m_k = min(e / decay_rate, saturation)`.
 
+## Operational impact
+
+Imprint can be interpreted as a tunable memory prior:
+
+- `decay_rate` controls how quickly memory is forgotten.
+- `saturation` controls how strongly long-running exposure can dominate coupling.
+
+For production control, this gives a direct way to encode recency bias without
+modifying the primary UPDE equations. Teams typically validate imprint settings by:
+
+1. starting from zero imprint,
+2. increasing exposure on a known coherent segment,
+3. confirming expected coupling/lag shift direction before enabling actuation.
+
+The same integration point works for both simulation experiments and hardware-adjacent
+dry runs, which is why it is documented here rather than embedded only in code comments.
+
 ## Integration Point
 
 When `binding_spec.imprint_model` is present, the CLI `run` loop:

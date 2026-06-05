@@ -69,3 +69,15 @@ Compatibility guarantees:
 
 Verification:
 - `tests/test_grpc_gen_aliases.py::test_top_level_grpc_aliases_resolve_to_runtime_modules`
+
+## Why compatibility aliases are kept
+
+Client tooling often depends on historical import paths. These aliases preserve
+that surface while still centralizing runtime behavior in one location.
+
+- Backward compatibility is preserved for environments that import through top-level
+  `scpn_phase_orchestrator.grpc_gen` paths.
+- Runtime tests prove that aliases do not change observable service symbols, so
+  adapter consumers keep stable behavior across refactors.
+- The alias indirection pattern makes runtime module upgrades safer because public
+  import paths remain unchanged.
