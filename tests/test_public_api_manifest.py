@@ -39,3 +39,19 @@ def test_api_index_lists_every_top_level_manifest_export() -> None:
 
     for name in _manifest_exports():
         assert name in api_index
+
+
+def test_api_index_surfaces_pha_c_acceptance_certificate_chain() -> None:
+    api_index = API_INDEX.read_text(encoding="utf-8")
+
+    required_markers = (
+        "PHA-C acceptance evidence chain",
+        "KinematicBounds.acceptanceCertificate",
+        "acceptance_certificate_discharges_runtime_preconditions",
+        "final-position, maximum-velocity, path-length",
+        "Rust, Go, Julia,",
+        "benchmark-isolation protocol",
+    )
+
+    for marker in required_markers:
+        assert marker in api_index

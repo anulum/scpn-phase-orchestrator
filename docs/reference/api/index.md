@@ -23,8 +23,8 @@ boundary are known.
 | Detect phase-space merge readiness | [Merge Window](monitor_merge_window.md) | [UPDE Moving Frame](upde_moving_frame.md) | consecutive phase-plus-position lock evidence |
 | Emit review-only PHA-C event state | [PHA-C Handoff](upde_pha_c_handoff.md) | [Merge Window](monitor_merge_window.md) | hashed non-actuating handoff record for replay, MIF, or Studio review |
 | Emit review-only PHA-C event timeline | [PHA-C Event Timeline](upde_pha_c_timeline.md) | [PHA-C Handoff](upde_pha_c_handoff.md) | first lock, lock loss, reset counts, and trajectory hash evidence |
-| Gate the full PHA-C chain | [PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | [PHA-C Event Timeline](upde_pha_c_timeline.md) | end-to-end spatial, Doppler, moving-frame, merge, handoff, and timeline evidence |
-| Bind PHA-C runtime evidence to Lean | [PHA-C Lean Proof Obligation](upde_pha_c_formal_obligation.md) | [PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | fixed-point `KinematicBounds` plus continuous-envelope manifest and formal certificate hash |
+| Gate the full PHA-C chain | [PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | [PHA-C Event Timeline](upde_pha_c_timeline.md) | end-to-end spatial, Doppler, moving-frame, merge, handoff, timeline, and formal-obligation evidence |
+| Bind PHA-C runtime evidence to Lean | [PHA-C Lean Proof Obligation](upde_pha_c_formal_obligation.md) | [PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | fixed-point `KinematicBounds.acceptanceCertificate` discharge plus continuous-envelope manifest and formal certificate hash |
 | Propose bounded control | [Supervisor](supervisor.md) and [Actuation](actuation.md) | [Production Guide](../../guide/production.md) | rate-limited review proposals, not unreviewed hardware writes |
 | Replay and audit decisions | [Audit](audit.md) | [Deterministic Replay](../../tutorials/06_deterministic_replay_for_debugging.md) | hash-linked evidence that can be verified later |
 | Optimise differentiable oscillator models | [nn API](nn.md) | [Differentiable Kuramoto](../../tutorials/04_differentiable_kuramoto.md) | differentiable loss, trained coupling, or topology proposal |
@@ -48,6 +48,26 @@ boundary are known.
 | Operator or platform engineer | [QueueWaves](queuewaves.md), [Audit](audit.md), [Reporting](reporting.md), [Studio](studio.md) | use distributed sync and adapters only after audit replay is stable |
 | ML researcher | [nn API](nn.md), [Autotune](autotune.md) | use SAF, inverse coupling, and replay learners after reproducible seeds are fixed |
 | Release reviewer | [Documentation Coverage](../documentation_coverage.md), [CLI](../cli.md), [Artifacts](artifacts.md) | compare the public API manifest, changelog, and release hygiene before tagging |
+
+## PHA-C acceptance evidence chain
+
+PHA-C records are review-only evidence surfaces. They never actuate hardware,
+mutate a supervisor, or change coupling policy. Use them when a downstream
+MIF/FRC lane, release reviewer, benchmark gate, or operator dashboard needs
+auditable proof that the accelerator-facing physics chain stayed inside its
+declared phase, spatial, and kinematic envelopes.
+
+| Surface | Evidence boundary | Formal or replay guarantee |
+|---------|-------------------|----------------------------|
+| [PHA-C Handoff](upde_pha_c_handoff.md) | one moving-frame sample plus merge-window margins | canonical non-actuating record hash and signed-margin replay |
+| [PHA-C Event Timeline](upde_pha_c_timeline.md) | complete phase/position trajectory | first-lock, lock-loss, reset, transition-hash, and timeline-hash replay |
+| [PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | spatial modulation, Doppler correction, moving-frame propagation, merge evidence, handoff, timeline, and aggregate subgate evidence | final-position, maximum-velocity, path-length, signed-margin, schedule, trajectory, and acceptance-hash replay |
+| [PHA-C Lean Proof Obligation](upde_pha_c_formal_obligation.md) | fixed-point manifest derived from a verified acceptance record | `KinematicBounds.acceptanceCertificate` plus `acceptance_certificate_discharges_runtime_preconditions` binding spatial budget, phase budget, and acceptance equation replay |
+
+The acceptance benchmark row preserves this same chain across Rust, Go, Julia,
+Mojo, and Python source-contract slots. Local committed benchmark JSON is a
+regression snapshot only; production timing claims require the documented
+benchmark-isolation protocol.
 
 ## Public API entry point
 
@@ -96,8 +116,8 @@ the compatibility impact.
 | [UPDE Engine](upde.md) | Kuramoto ODE, Stuart-Landau amplitude ODE, metrics, PAC |
 | [UPDE — PHA-C Handoff](upde_pha_c_handoff.md) | Review-only event/state bridge from moving-frame samples and merge-window evidence |
 | [UPDE — PHA-C Event Timeline](upde_pha_c_timeline.md) | Review-only trajectory evidence for first lock, lock loss, resets, and timeline hashes |
-| [UPDE — PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | End-to-end review gate spanning spatial coupling, Doppler, moving-frame dynamics, merge evidence, handoff, and timeline hashes |
-| [UPDE — PHA-C Lean Proof Obligation](upde_pha_c_formal_obligation.md) | Fixed-point Lean `KinematicBounds` and `SPOFormal.Continuous` proof-obligation manifest derived from a verified PHA-C acceptance record |
+| [UPDE — PHA-C Acceptance Chain](upde_pha_c_acceptance.md) | End-to-end review gate spanning spatial coupling, Doppler, moving-frame dynamics, merge evidence, handoff, timeline hashes, and Lean-facing formal-obligation evidence |
+| [UPDE — PHA-C Lean Proof Obligation](upde_pha_c_formal_obligation.md) | Fixed-point Lean `KinematicBounds.acceptanceCertificate`, `SPOFormal.Continuous`, and phase-budget proof-obligation manifest derived from a verified PHA-C acceptance record |
 | [Oscillators](oscillators.md) | Phase extraction: Physical, Informational, Symbolic channels |
 | [Coupling](coupling.md) | K_nm matrix construction, geometry constraints, lag estimation |
 | [Supervisor](supervisor.md) | Regime management, policy engine, Petri net FSM, event bus |
