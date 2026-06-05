@@ -14,6 +14,7 @@ import scpn_phase_orchestrator as spo
 
 MANIFEST = Path("docs/specs/public_api_manifest.txt")
 API_INDEX = Path("docs/reference/api/index.md")
+PHA_C_ACCEPTANCE_REFERENCE = Path("docs/reference/api/upde_pha_c_acceptance.md")
 
 
 def _manifest_exports() -> list[str]:
@@ -55,3 +56,17 @@ def test_api_index_surfaces_pha_c_acceptance_certificate_chain() -> None:
 
     for marker in required_markers:
         assert marker in api_index
+
+
+def test_pha_c_acceptance_reference_names_combined_lean_certificate() -> None:
+    reference = PHA_C_ACCEPTANCE_REFERENCE.read_text(encoding="utf-8")
+
+    required_markers = (
+        "KinematicBounds.acceptanceCertificate",
+        "acceptance_certificate_discharges_runtime_preconditions",
+        "acceptance kinematic-equation replay certificate",
+        "combined spatial-budget, phase-budget, and acceptance-replay certificate",
+    )
+
+    for marker in required_markers:
+        assert marker in reference

@@ -124,8 +124,11 @@ original schedules or trajectories. The signed margin
 replay rejects records whose positive-looking phase or spatial margin no longer
 matches `tolerance - maximum_dispersion`.
 Use `verify_pha_c_kinematic_proof_obligation(...)` when release review also
-needs the accepted runtime envelope bound to the Lean
-`budget_certificate_discharges_budget` theorem.
+needs the accepted runtime envelope bound to Lean. The release-facing boundary
+is the combined `KinematicBounds.acceptanceCertificate` predicate and
+`acceptance_certificate_discharges_runtime_preconditions` theorem; that
+certificate includes the spatial budget theorem, phase-budget theorem, and
+acceptance kinematic-equation replay certificate.
 
 ## Relationship to other PHA-C records
 
@@ -157,13 +160,16 @@ proof-obligation manifest for every backend row. The
 acceptance gate fails unless the manifest names `SPOFormal.Kinematic`, targets
 `budget_certificate_discharges_budget`, replays its canonical hash, replays the
 finite-horizon Gronwall budget trace, and discharges the fixed-point
-merge-window and phase-margin checks. The same manifest publishes sampled
-continuous-rate fields for `dt`, horizon time, velocity-rate bounds, and
-residual-rate bounds so Rust, Mojo, Julia, Go, and Python source-contract rows
-carry the same time-normalised formal assumptions. The rows now also publish
-the `SPOFormal.Continuous` horizon theorem, continuous drive-rate sum,
-continuous horizon-drive replay, continuous budget, continuous margin, and a
-Boolean continuous-envelope discharge flag.
+merge-window and phase-margin checks. The final formal row must also name
+`KinematicBounds.acceptanceCertificate`, name
+`acceptance_certificate_discharges_runtime_preconditions`, and discharge the
+combined spatial-budget, phase-budget, and acceptance-replay certificate. The
+same manifest publishes sampled continuous-rate fields for `dt`, horizon time,
+velocity-rate bounds, and residual-rate bounds so Rust, Mojo, Julia, Go, and
+Python source-contract rows carry the same time-normalised formal assumptions.
+The rows now also publish the `SPOFormal.Continuous` horizon theorem,
+continuous drive-rate sum, continuous horizon-drive replay, continuous budget,
+continuous margin, and a Boolean continuous-envelope discharge flag.
 The formal manifest now also publishes
 `formal_obligation_acceptance_kinematic_equations_validated` and
 `formal_obligation_acceptance_kinematic_summary_replay_tolerance`, binding the
