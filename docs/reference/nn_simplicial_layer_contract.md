@@ -48,3 +48,16 @@ whether observed differences are from model structure or from random run varianc
 
 When this contract is respected, higher-order coupling becomes a controlled
 experiment variable rather than a hidden change in numerical behavior.
+
+## Practical gate design
+
+Treat `sigma2` as a scoped experiment parameter. The contract is most useful when
+you can show whether higher-order coupling improves coherence forecasts before you
+commit to any topology-change decisions.
+
+Recommended pattern:
+
+- Run a baseline with `sigma2=0`.
+- Run one bounded comparison with `sigma2>0` under identical seeds.
+- Compare trajectories and objective deltas before moving complexity into production
+  controller workflows.

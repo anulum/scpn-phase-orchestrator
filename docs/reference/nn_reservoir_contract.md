@@ -50,3 +50,15 @@ pinning the feature map shape and the readout expectations.
 
 Operationally, that means regression tests can validate not only one-off prediction
 accuracy, but also the structural contract used by monitoring and replay tools.
+
+## Deployment value in review workflows
+
+Reservoir features are often evaluated alongside model card evidence because they
+provide compact summaries while preserving signal continuity. This contract ensures the feature
+semantics are stable before forecast heads are compared.
+
+In practice:
+
+- Record feature shape and prediction shape alongside timing metrics in replay artifacts.
+- Keep stride and horizon assumptions explicit when comparing runs from different schedulers.
+- Use `ridge_readout` checks as a low-cost regression gate before any higher-order policy update.

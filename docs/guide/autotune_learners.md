@@ -101,3 +101,16 @@ When teams compare PPO-like and SAC-like proposals, record:
 - and audit-replay hash lineage.
 
 That evidence set is the minimum for an auditable tuning review.
+
+## Governance boundary and rollout flow
+
+This learner surface is kept separate from live control by design. The boundary is
+an operational control measure to prevent reward-optimised behavior from crossing
+into actuation without explicit checks.
+
+Rollout sequence:
+
+1. Capture proposal payload and gate signals with fixed seeds and deterministic replay settings.
+2. Store safety evidence and replay artefacts in the same evidence bundle.
+3. Route candidates through explicit operator or policy owner approval.
+4. Promote only through the existing production actuation gate.

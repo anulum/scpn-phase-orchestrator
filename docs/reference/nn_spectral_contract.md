@@ -47,3 +47,18 @@ fallbacks, so downstream policy code does not consume unstable intermediate valu
 
 By keeping this contract narrowly defined and machine-testable, the same module
 can serve both offline science experiments and regulated deployment evidence trails.
+
+## Practical role in control gating
+
+Spectral values and synchronizability thresholds are consumed before optimization
+or actuation proposals are promoted. In this role they are not a research output;
+they are a safety gate.
+
+Operationally, this means:
+
+- Use the contract to detect unstable topology shapes before running expensive controller
+  search.
+- Keep eigenvalue ordering deterministic so stability evidence is stable across replay
+  and audit re-runs.
+- Treat disconnected or near-disconnected graphs as explicit edge cases and keep
+  their finite fallback behaviour active.

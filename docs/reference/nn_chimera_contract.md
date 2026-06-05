@@ -59,6 +59,20 @@ telemetry for partial-order states. This is frequently where physical systems
 enter practical instability first: not as a global meltdown, but as a shift into
 patchy coherence.
 
+## Operational value for mixed-order regimes
+
+This contract is intended for environments where global coherence is not the
+only stable state. It gives an explicit way to monitor localized structure while
+avoiding ambiguous alarms when the system is not fully synchronized.
+
+Deployment guidance:
+
+- Keep threshold pairs explicit (`coherent_threshold > incoherent_threshold`).
+- Use local order and index outputs together; one is a fine-grained trace, the
+  other is a scalar summary.
+- Include chimera outputs in escalation bundles before switching from advisory to
+  command channels.
+
 ### Why this matters in review and handoff
 
 - `local_order_parameter` provides a bounded local coherence signal that can be

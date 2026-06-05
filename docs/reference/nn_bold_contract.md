@@ -64,8 +64,20 @@ analysis deterministic even when experimental scheduling changes `dt` and
 ### For deployment planning
 
 - Use BOLD outputs as the measurable interface between oscillatory physics and
-  downstream tooling that expects continuous observables.
+ downstream tooling that expects continuous observables.
 - Keep stride clamp behaviour documented with your benchmark notes so teams can
   explain any downsample-driven latency changes.
 - Treat BOLD contract checks as part of release smoke checks when a new
   preprocessing or export path is introduced.
+
+## Why teams keep this in production-grade stacks
+
+The BOLD interface is the only place where phase dynamics are translated into a
+measurement-like stream that can be consumed by monitoring systems that do not
+understand oscillator primitives directly.
+
+In deployment terms, it reduces translation risk:
+
+- It preserves dimension and sign expectations through the conversion boundary.
+- It constrains invalid physiological states through floor-based state handling.
+- It makes downstream dashboards and anomaly tools consume one stable signal contract.

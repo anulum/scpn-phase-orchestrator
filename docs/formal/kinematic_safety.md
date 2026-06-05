@@ -92,3 +92,17 @@ theorem merge_window_invariant_zero_gain
 That command rejects placeholders, rejects disabled proof-source linters, checks
 each proof module with warnings treated as errors, builds the Lake library, and
 checks the smoke instantiation.
+
+## Production boundary for formal claims
+
+The `SPOFormal.Kinematic` lane is a contract-level proof surface for the merge-window
+safety invariant. It does not replace runtime monitoring and does not certify end-to-end
+actuation safety by itself.
+
+To keep this boundary explicit:
+
+- Keep proof assumptions close to runtime invariants.
+- Keep Lean proof checks in the same evidence trail as numerical checks and replay
+  artefacts.
+- Record which parts of the stack are covered by Lean and which remain under simulation,
+  test, or policy review procedures.

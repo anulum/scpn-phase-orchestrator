@@ -49,3 +49,16 @@ dimensions and mask-path finiteness.
 When this contract is upheld, the orchestrator can route Kuramoto experiments
 through either research-oriented training runs or strict deployment runs with the
 same shape expectations.
+
+## Deployment boundary
+
+The layer sits at the boundary between model discovery and policy control in both
+phase-only and mixed topologies. Every caller assumes this contract when moving from
+parameter search to replay and then to governance review.
+
+Recommended usage:
+
+- Keep trajectory mode enabled when evidence replay is required for operator approval.
+- Use masked layers in sparse topology studies only after verifying the same shape contract under both
+  dense and masked paths.
+- If a downstream supervisor reads phase outputs from this layer, do not alter output semantics at the caller.

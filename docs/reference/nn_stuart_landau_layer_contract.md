@@ -47,3 +47,21 @@ without introducing a parallel interface for amplitude fields.
 
 The trajectory contract also prevents silent replay mismatches: every training,
 validation, or audit run can be aligned on both phase and amplitude timelines.
+
+## Practical deployment implication
+- This contract is the first gate for adding amplitude-aware control into an established phase-only pipeline.
+- It is intended to keep training, replay, and policy optimization paths shape-compatible.
+- Use this interface when controllers need explicit damping and growth signals in addition to phase state.
+
+## Engineering handoff note
+
+Amplitude-aware control is typically introduced as a second phase after baseline
+phase-only validation. Keep this contract fixed while you compare three runs:
+
+1. phase-only baseline,
+2. phase-only + controller change,
+3. phase+amplitude control candidates.
+
+This three-run structure helps isolate whether observed gains come from control law
+changes or from amplitude channels entering the policy path. The contract is the
+common shape anchor across all three.
