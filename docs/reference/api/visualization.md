@@ -571,7 +571,7 @@ public visualization contracts remain documented.
 - Keep this page updated when visualization exports change.
 - Keep changelog entries factual when this page changes.
 - Keep roadmap entries tied to documented evidence.
-- Keep internal TODO closure evidence module-specific.
+- Keep closure evidence module-specific.
 - Review visualization output with representative domain data.
 - Review visual labels for operator clarity.
 - Review heatmap color scales outside this encoder.

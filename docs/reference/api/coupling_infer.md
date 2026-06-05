@@ -643,7 +643,7 @@ public contract terms remain documented.
 - Review whether future docs keep Python examples aligned with public imports.
 - Review whether future docs keep audit examples aligned with result fields.
 - Review whether future docs keep operational checklist actionable.
-- Review whether future docs keep closure evidence in the internal TODO.
+- Review whether future docs keep public roadmap claims evidence-backed.
 - Review whether future docs keep public roadmap claims evidence-backed.
 
 ## Release-note summary

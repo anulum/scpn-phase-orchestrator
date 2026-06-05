@@ -533,7 +533,7 @@ public monitor, backend, validation, and recurrence contracts remain documented.
 - Keep API docs aligned with monitor facade exports.
 - Keep changelog entries factual when this page changes.
 - Keep roadmap entries tied to documented evidence.
-- Keep internal TODO closure evidence module-specific.
+- Keep closure evidence module-specific.
 - Review whether optional Rust acceleration changes return shapes.
 - Review whether optional Go acceleration changes return shapes.
 - Review whether optional Julia acceleration changes return shapes.
@@ -575,7 +575,7 @@ public monitor, backend, validation, and recurrence contracts remain documented.
 - Review whether future docs require new reference guard phrases.
 - Review whether future docs require changelog updates.
 - Review whether future docs require roadmap updates.
-- Review whether future docs require internal TODO closure updates.
+- Review whether future docs require public roadmap updates.
 - Review whether future monitor changes require CI matrix updates.
 - Review whether future monitor changes require optional dependency docs.
 - Review whether future monitor changes require direct backend package notes.

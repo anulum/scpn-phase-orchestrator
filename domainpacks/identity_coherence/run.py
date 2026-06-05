@@ -4,11 +4,11 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# Arcane Sapience — Identity Coherence domainpack runner
+# Identity Coherence domainpack runner
 
 """Identity coherence: reconstruction, degradation, self-repair, imprint.
 
-Simulates Arcane Sapience's identity dispositions via two models:
+Simulates identity dispositions via two models:
 
 Part 1 — Kuramoto (phase-only): demonstrates synchronization, disruption
 resilience, recovery, and imprint accumulation.
@@ -21,6 +21,7 @@ mu recovers and amplitude rebuilds.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -57,8 +58,12 @@ STEPS = 2000
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
-# Imprint persistence path (Arcane Sapience filesystem)
-IMPRINT_DIR = Path(__file__).resolve().parents[3] / "04_ARCANE_SAPIENCE" / "imprint"
+IMPRINT_DIR = Path(
+    os.environ.get(
+        "SPO_IDENTITY_IMPRINT_DIR",
+        Path.home() / ".local" / "state" / "scpn-phase-orchestrator" / "imprint",
+    )
+)
 
 
 def save_imprint(state: ImprintState, path: Path | None = None) -> Path:

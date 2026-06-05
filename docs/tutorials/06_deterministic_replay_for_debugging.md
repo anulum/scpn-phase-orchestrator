@@ -29,7 +29,7 @@ Determinism verified: 180 transitions OK
 For signed operational logs, keep signing keys in the runtime environment only:
 
 ```bash
-export SPO_AUDIT_KEY="current audit signing secret"
+export SPO_AUDIT_KEY="$(openssl rand -hex 32)"
 spo run domainpacks/valve_tune/binding_spec.yaml --steps 180 --seed 7 --audit valve_tune_audit.jsonl
 spo replay valve_tune_audit.jsonl --verify
 ```
@@ -38,10 +38,10 @@ When rotating keys, verify historical records by supplying a keyring whose
 object keys are the stored key ids, computed as `sha256(secret)[:16]`:
 
 ```bash
-export SPO_AUDIT_KEY="new audit signing secret"
+export SPO_AUDIT_KEY="$(openssl rand -hex 32)"
 export SPO_AUDIT_KEYRING='{
-  "old_key_id": "old audit signing secret",
-  "new_key_id": "new audit signing secret"
+  "<sha256-old-secret-prefix>": "<old-generated-secret>",
+  "<sha256-new-secret-prefix>": "<new-generated-secret>"
 }'
 spo replay valve_tune_audit.jsonl --verify
 ```

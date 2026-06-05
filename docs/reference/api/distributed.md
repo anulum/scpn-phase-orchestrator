@@ -764,7 +764,7 @@ Use this checklist before connecting the module to a real deployment:
 - Review whether future changes preserve examples as runnable documentation.
 - Review whether future changes preserve docs guard expectations.
 - Review whether future changes preserve public roadmap accuracy.
-- Review whether future changes preserve internal TODO accuracy.
+- Review whether future changes preserve public roadmap accuracy.
 - Review whether future changes preserve changelog traceability.
 - Review whether future changes preserve user-facing terminology.
 - Review whether future changes avoid transport-specific assumptions.

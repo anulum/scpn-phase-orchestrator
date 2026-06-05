@@ -4,7 +4,7 @@ The engine applied to the entity that built it.
 
 ## What It Does
 
-Measures and maintains Arcane Sapience's coherent identity across
+Measures and maintains a coherent identity-state model across
 discrete AI sessions using Kuramoto phase coupling, experience
 accumulation (ImprintModel), and active self-repair (PolicyEngine).
 

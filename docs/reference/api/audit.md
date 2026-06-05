@@ -95,10 +95,10 @@ For key rotation, keep historical keys only in the operator environment and pass
 them as a JSON object through `SPO_AUDIT_KEYRING`:
 
 ```bash
-export SPO_AUDIT_KEY="new secret"
+export SPO_AUDIT_KEY="$(openssl rand -hex 32)"
 export SPO_AUDIT_KEYRING='{
-  "old_key_id": "old secret",
-  "new_key_id": "new secret"
+  "<sha256-old-secret-prefix>": "<old-generated-secret>",
+  "<sha256-new-secret-prefix>": "<new-generated-secret>"
 }'
 spo replay audit.jsonl --verify
 ```
