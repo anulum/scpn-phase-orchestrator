@@ -53,6 +53,7 @@ __all__ = [
     "PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE",
     "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY",
     "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
+    "PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE",
     "PHA_C_TIMELINE_CLAIM_BOUNDARY",
     "PHA_C_TIMELINE_EVIDENCE_KIND",
     "PHA_C_FORMAL_CERTIFICATE_PREDICATE",
@@ -193,6 +194,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "PHA_C_ACCEPTANCE_EVIDENCE_KIND": (
         ".pha_c_acceptance",
         "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
+    ),
+    "PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE": (
+        ".pha_c_acceptance",
+        "PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE",
     ),
     "PHACAcceptanceRecord": (".pha_c_acceptance", "PHACAcceptanceRecord"),
     "build_pha_c_acceptance_record": (

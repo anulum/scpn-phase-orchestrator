@@ -35,7 +35,10 @@ from scpn_phase_orchestrator.monitor.merge_window import (
     DEFAULT_SPATIAL_TOL_M,
 )
 from scpn_phase_orchestrator.upde.doppler import doppler_term
-from scpn_phase_orchestrator.upde.moving_frame import moving_frame_run
+from scpn_phase_orchestrator.upde.moving_frame import (
+    KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
+    moving_frame_run,
+)
 from scpn_phase_orchestrator.upde.pha_c_timeline import build_pha_c_event_timeline
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -44,9 +47,13 @@ PHA_C_ACCEPTANCE_CLAIM_BOUNDARY = "pha_c_end_to_end_acceptance_review_only"
 PHA_C_ACCEPTANCE_EVIDENCE_KIND = "deterministic_non_actuating_acceptance"
 PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M = 1.0e-9
 PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE = 1.0e-12
+PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE = (
+    KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+)
 
 __all__ = [
     "PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE",
+    "PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE",
     "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY",
     "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
     "PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M",
@@ -82,6 +89,11 @@ class PHACAcceptanceRecord:
     kinematic_residual_max_m: float
     max_abs_velocity_m_per_s: float
     path_length_max_m: float
+    final_position_equation_validated: bool
+    max_abs_velocity_equation_validated: bool
+    path_length_equation_validated: bool
+    kinematic_equations_validated: bool
+    kinematic_summary_replay_tolerance: float
     min_phase_margin_rad: float
     min_spatial_margin_m: float
     min_phase_order_parameter: float
@@ -278,6 +290,11 @@ def _record_dict_without_hash(
     kinematic_residual_max_m: float,
     max_abs_velocity_m_per_s: float,
     path_length_max_m: float,
+    final_position_equation_validated: bool,
+    max_abs_velocity_equation_validated: bool,
+    path_length_equation_validated: bool,
+    kinematic_equations_validated: bool,
+    kinematic_summary_replay_tolerance: float,
     min_phase_margin_rad: float,
     min_spatial_margin_m: float,
     min_phase_order_parameter: float,
@@ -321,6 +338,17 @@ def _record_dict_without_hash(
         "kinematic_residual_max_m": float(kinematic_residual_max_m),
         "max_abs_velocity_m_per_s": float(max_abs_velocity_m_per_s),
         "path_length_max_m": float(path_length_max_m),
+        "final_position_equation_validated": bool(
+            final_position_equation_validated
+        ),
+        "max_abs_velocity_equation_validated": bool(
+            max_abs_velocity_equation_validated
+        ),
+        "path_length_equation_validated": bool(path_length_equation_validated),
+        "kinematic_equations_validated": bool(kinematic_equations_validated),
+        "kinematic_summary_replay_tolerance": float(
+            kinematic_summary_replay_tolerance
+        ),
         "min_phase_margin_rad": float(min_phase_margin_rad),
         "min_spatial_margin_m": float(min_spatial_margin_m),
         "min_phase_order_parameter": float(min_phase_order_parameter),
@@ -464,8 +492,35 @@ def build_pha_c_acceptance_record(
     kinematic_residual_max_m = float(
         np.max(np.abs(position_trajectory[1:] - predicted_position_steps))
     )
+    expected_final_positions = positions + np.sum(velocities * dt_s, axis=0)
+    final_position_residual_m = float(
+        np.max(np.abs(position_trajectory[-1] - expected_final_positions))
+    )
     max_abs_velocity_m_per_s = float(np.max(np.abs(velocities)))
-    path_length_max_m = float(np.max(np.sum(np.abs(velocities * dt_s), axis=0)))
+    replayed_max_abs_velocity_m_per_s = float(np.max(np.abs(velocities)))
+    expected_path_length_max_m = float(
+        np.max(np.sum(np.abs(velocities * dt_s), axis=0))
+    )
+    path_length_max_m = expected_path_length_max_m
+    replayed_path_length_max_m = float(
+        np.max(np.sum(np.abs(velocities * dt_s), axis=0))
+    )
+    final_position_equation_validated = (
+        final_position_residual_m <= PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M
+    )
+    max_abs_velocity_equation_validated = (
+        abs(max_abs_velocity_m_per_s - replayed_max_abs_velocity_m_per_s)
+        <= PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    )
+    path_length_equation_validated = (
+        abs(path_length_max_m - replayed_path_length_max_m)
+        <= PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    )
+    kinematic_equations_validated = (
+        final_position_equation_validated
+        and max_abs_velocity_equation_validated
+        and path_length_equation_validated
+    )
     times = np.arange(phase_trajectory.shape[0], dtype=np.float64) * dt_s
     timeline = build_pha_c_event_timeline(
         phase_trajectory,
@@ -501,6 +556,13 @@ def build_pha_c_acceptance_record(
         kinematic_residual_max_m=kinematic_residual_max_m,
         max_abs_velocity_m_per_s=max_abs_velocity_m_per_s,
         path_length_max_m=path_length_max_m,
+        final_position_equation_validated=final_position_equation_validated,
+        max_abs_velocity_equation_validated=max_abs_velocity_equation_validated,
+        path_length_equation_validated=path_length_equation_validated,
+        kinematic_equations_validated=kinematic_equations_validated,
+        kinematic_summary_replay_tolerance=(
+            PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+        ),
         min_phase_margin_rad=timeline.min_phase_margin_rad,
         min_spatial_margin_m=timeline.min_spatial_margin_m,
         min_phase_order_parameter=timeline.min_phase_order_parameter,
@@ -555,6 +617,15 @@ def pha_c_acceptance_record_to_dict(
         kinematic_residual_max_m=record.kinematic_residual_max_m,
         max_abs_velocity_m_per_s=record.max_abs_velocity_m_per_s,
         path_length_max_m=record.path_length_max_m,
+        final_position_equation_validated=record.final_position_equation_validated,
+        max_abs_velocity_equation_validated=(
+            record.max_abs_velocity_equation_validated
+        ),
+        path_length_equation_validated=record.path_length_equation_validated,
+        kinematic_equations_validated=record.kinematic_equations_validated,
+        kinematic_summary_replay_tolerance=(
+            record.kinematic_summary_replay_tolerance
+        ),
         min_phase_margin_rad=record.min_phase_margin_rad,
         min_spatial_margin_m=record.min_spatial_margin_m,
         min_phase_order_parameter=record.min_phase_order_parameter,
@@ -720,6 +791,25 @@ def verify_pha_c_acceptance_record(
         raise ValueError(
             "kinematic_residual_max_m must not exceed "
             f"{PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M} m"
+        )
+    for field in (
+        "final_position_equation_validated",
+        "max_abs_velocity_equation_validated",
+        "path_length_equation_validated",
+        "kinematic_equations_validated",
+    ):
+        if _validate_record_bool(getattr(record, field), name=field) is not True:
+            raise ValueError(f"{field} must be true")
+    kinematic_replay_tolerance = _validate_positive_scalar(
+        record.kinematic_summary_replay_tolerance,
+        name="kinematic_summary_replay_tolerance",
+    )
+    if (
+        kinematic_replay_tolerance
+        != PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    ):
+        raise ValueError(
+            "kinematic_summary_replay_tolerance must match the acceptance constant"
         )
     phase_tol = _validate_nonnegative_record_scalar(
         record.phase_tol_rad,

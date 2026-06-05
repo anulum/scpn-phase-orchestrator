@@ -333,6 +333,11 @@ The acceptance benchmark now publishes
 `signed_margin_equations_validated`, and `margin_replay_tolerance`, and the
 gate fails unless every declared backend row proves
 `min_margin = tolerance - max_dispersion` for both phase and spatial margins.
+It also publishes `final_position_equation_validated`,
+`max_abs_velocity_equation_validated`, `path_length_equation_validated`,
+`kinematic_equations_validated`, and `kinematic_summary_replay_tolerance`; the
+aggregate gate fails unless every declared backend row preserves the
+moving-frame final-position, velocity, and path-length equations.
 Acceptance rows also call
 `build_pha_c_kinematic_proof_obligation(...)` and
 `verify_pha_c_kinematic_proof_obligation(...)`. This projects the verified

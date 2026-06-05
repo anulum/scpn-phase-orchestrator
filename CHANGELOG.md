@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added explicit final-position, maximum-velocity, and path-length equation
+  replay to `PHACAcceptanceRecord` and the PHA-C acceptance benchmark gate so
+  aggregate acceptance must preserve the moving-frame kinematic summary
+  equations before Rust, Go, Julia, Mojo, or Python rows can pass.
+- Added explicit final-position, maximum-velocity, and path-length equation
   replay to the PHA-C moving-frame benchmark gate so kinematic summaries must
   derive from the row-major velocity schedule before acceptance passes.
 - Added explicit signed-margin equation replay to the PHA-C merge-window

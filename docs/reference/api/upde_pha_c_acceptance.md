@@ -57,6 +57,8 @@ The record carries:
 - maximum absolute Doppler correction and spatial coupling;
 - maximum moving-frame kinematic residual, maximum absolute velocity, and
   maximum per-oscillator axial path length;
+- final-position, maximum-velocity, and path-length equation replay under
+  `PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE`;
 - fixed-point Lean proof-obligation compatibility through
   `build_pha_c_kinematic_proof_obligation(...)`;
 - maximum phase/spatial dispersion, minimum signed phase/spatial margins,
@@ -116,8 +118,9 @@ verify_pha_c_kinematic_proof_obligation(obligation)
 Use `verify_pha_c_acceptance_record(...)` when replaying a stored acceptance
 record. It rechecks sample/step consistency, first-lock semantics, review-only
 flags, signed margin equations, the moving-frame kinematic residual bound,
-SHA-256 fields, the timeline digest reference, and the canonical acceptance hash
-without requiring the original schedules or trajectories. The signed margin
+kinematic equation replay flags and tolerance, SHA-256 fields, the timeline
+digest reference, and the canonical acceptance hash without requiring the
+original schedules or trajectories. The signed margin
 replay rejects records whose positive-looking phase or spatial margin no longer
 matches `tolerance - maximum_dispersion`.
 Use `verify_pha_c_kinematic_proof_obligation(...)` when release review also
@@ -144,7 +147,12 @@ evidence exposes both the distance to the reviewed merge envelope and the
 mechanical validity of the axial schedule. The benchmark row now also records
 `phase_margin_equation_validated`, `spatial_margin_equation_validated`,
 `signed_margin_equations_validated`, and `margin_replay_tolerance` for every
-backend slot. The same benchmark now builds and verifies a Lean kinematic
+backend slot. It also records `final_position_equation_validated`,
+`max_abs_velocity_equation_validated`, `path_length_equation_validated`,
+`kinematic_equations_validated`, and `kinematic_summary_replay_tolerance` for
+every backend slot so the aggregate acceptance record preserves the
+moving-frame summary equations rather than only scalar residuals. The same
+benchmark now builds and verifies a Lean kinematic
 proof-obligation manifest for every backend row. The
 acceptance gate fails unless the manifest names `SPOFormal.Kinematic`, targets
 `budget_certificate_discharges_budget`, replays its canonical hash, replays the

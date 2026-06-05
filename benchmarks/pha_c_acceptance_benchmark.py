@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 )
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
+    PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
     PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
@@ -127,6 +128,7 @@ def _record_max_abs_error(
             "kinematic_residual_max_m",
             "max_abs_velocity_m_per_s",
             "path_length_max_m",
+            "kinematic_summary_replay_tolerance",
             "min_phase_margin_rad",
             "min_spatial_margin_m",
             "min_phase_order_parameter",
@@ -146,6 +148,10 @@ def _record_max_abs_error(
             "lock_sample_count",
             "lock_loss_count",
             "reset_count",
+            "final_position_equation_validated",
+            "max_abs_velocity_equation_validated",
+            "path_length_equation_validated",
+            "kinematic_equations_validated",
             "tolerance_profile_name",
             "moving_frame_backend_request",
             "claim_boundary",
@@ -295,6 +301,17 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "kinematic_residual_max_m": record.kinematic_residual_max_m,
         "max_abs_velocity_m_per_s": record.max_abs_velocity_m_per_s,
         "path_length_max_m": record.path_length_max_m,
+        "final_position_equation_validated": int(
+            record.final_position_equation_validated
+        ),
+        "max_abs_velocity_equation_validated": int(
+            record.max_abs_velocity_equation_validated
+        ),
+        "path_length_equation_validated": int(record.path_length_equation_validated),
+        "kinematic_equations_validated": int(record.kinematic_equations_validated),
+        "kinematic_summary_replay_tolerance": (
+            record.kinematic_summary_replay_tolerance
+        ),
         "non_actuating": int(not record.actuating),
         "execution_disabled": int(record.execution_disabled),
         "claim_boundary": record.claim_boundary,
@@ -417,6 +434,21 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "kinematic_residual_max_m": got.kinematic_residual_max_m,
                 "max_abs_velocity_m_per_s": got.max_abs_velocity_m_per_s,
                 "path_length_max_m": got.path_length_max_m,
+                "final_position_equation_validated": int(
+                    got.final_position_equation_validated
+                ),
+                "max_abs_velocity_equation_validated": int(
+                    got.max_abs_velocity_equation_validated
+                ),
+                "path_length_equation_validated": int(
+                    got.path_length_equation_validated
+                ),
+                "kinematic_equations_validated": int(
+                    got.kinematic_equations_validated
+                ),
+                "kinematic_summary_replay_tolerance": (
+                    got.kinematic_summary_replay_tolerance
+                ),
                 "formal_obligation_sha256": obligation.record_sha256,
                 "formal_obligation_discharged": int(
                     obligation.proof_obligations_discharged,
@@ -503,6 +535,10 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "require_signed_margin_equations": True,
         "margin_replay_tolerance": PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
         "require_kinematic_residual_contract": True,
+        "require_kinematic_equations": True,
+        "kinematic_summary_replay_tolerance": (
+            PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+        ),
         "require_formal_kinematic_obligation": True,
         "max_kinematic_residual_m": 1.0e-12,
         "require_python_reference": True,
@@ -529,6 +565,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["spatial_margin_positive"] == 1
         and contracts["signed_margin_equations_validated"] == 1
         and contracts["kinematic_residual_contract_passed"] == 1
+        and contracts["kinematic_equations_validated"] == 1
         and contracts["formal_obligation_present"] == 1
         and contracts["formal_obligation_discharged"] == 1
         and contracts["formal_obligation_margin_units"] >= 0
@@ -551,6 +588,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             int(record["signed_margin_equations_validated"]) == 1
             for record in records
         )
+        and all(int(record["kinematic_equations_validated"]) == 1 for record in records)
         and all(int(record["hash_replay_validated"]) == 1 for record in records)
         and (not include_subgates or subgate_pass_count == len(subgates))
     )
@@ -579,6 +617,21 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "kinematic_residual_max_m": record["kinematic_residual_max_m"],
                 "max_abs_velocity_m_per_s": record["max_abs_velocity_m_per_s"],
                 "path_length_max_m": record["path_length_max_m"],
+                "final_position_equation_validated": (
+                    record["final_position_equation_validated"]
+                ),
+                "max_abs_velocity_equation_validated": (
+                    record["max_abs_velocity_equation_validated"]
+                ),
+                "path_length_equation_validated": (
+                    record["path_length_equation_validated"]
+                ),
+                "kinematic_equations_validated": (
+                    record["kinematic_equations_validated"]
+                ),
+                "kinematic_summary_replay_tolerance": (
+                    record["kinematic_summary_replay_tolerance"]
+                ),
                 "formal_obligation_sha256": record["formal_obligation_sha256"],
                 "formal_obligation_discharged": (
                     record["formal_obligation_discharged"]
@@ -705,6 +758,19 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             "kinematic_residual_contract_passed"
         ],
         "kinematic_residual_max_m": contracts["kinematic_residual_max_m"],
+        "final_position_equation_validated": contracts[
+            "final_position_equation_validated"
+        ],
+        "max_abs_velocity_equation_validated": contracts[
+            "max_abs_velocity_equation_validated"
+        ],
+        "path_length_equation_validated": contracts[
+            "path_length_equation_validated"
+        ],
+        "kinematic_equations_validated": contracts["kinematic_equations_validated"],
+        "kinematic_summary_replay_tolerance": contracts[
+            "kinematic_summary_replay_tolerance"
+        ],
         "formal_obligation_discharged": contracts["formal_obligation_discharged"],
         "formal_obligation_margin_units": contracts[
             "formal_obligation_margin_units"

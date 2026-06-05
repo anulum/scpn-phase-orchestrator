@@ -454,7 +454,8 @@ axial certificate
 `z[t+1] = z[t] + v[t] * dt`, max absolute velocity, and path-length evidence so
 polyglot phase parity cannot mask a mechanically invalid coordinate update;
 moving-frame rows now publish explicit equation validation for final position,
-maximum absolute velocity, and path length.
+maximum absolute velocity, and path length, and acceptance rows now require the
+same kinematic equation validation before the aggregate PHA-C chain can pass.
 Merge-window, handoff, and acceptance benchmark rows also publish
 `phase_margin_equation_validated`, `spatial_margin_equation_validated`,
 `signed_margin_equations_validated`, and `margin_replay_tolerance`; the gate

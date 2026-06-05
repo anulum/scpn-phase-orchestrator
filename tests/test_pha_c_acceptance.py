@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.upde import (
 )
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
+    PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
     PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
@@ -113,6 +114,13 @@ def test_acceptance_record_spans_complete_review_only_chain() -> None:
     assert record.kinematic_residual_max_m <= 1.0e-12
     assert record.max_abs_velocity_m_per_s == pytest.approx(0.123)
     assert record.path_length_max_m > 0.0
+    assert record.final_position_equation_validated
+    assert record.max_abs_velocity_equation_validated
+    assert record.path_length_equation_validated
+    assert record.kinematic_equations_validated
+    assert record.kinematic_summary_replay_tolerance == (
+        PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    )
     assert record.claim_boundary == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
     assert record.execution_disabled
     assert not record.actuating
@@ -388,6 +396,13 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     )
     assert result["kinematic_residual_contract_passed"] == 1
     assert result["kinematic_residual_max_m"] <= 1.0e-12
+    assert result["final_position_equation_validated"] == 1
+    assert result["max_abs_velocity_equation_validated"] == 1
+    assert result["path_length_equation_validated"] == 1
+    assert result["kinematic_equations_validated"] == 1
+    assert result["kinematic_summary_replay_tolerance"] == (
+        PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    )
     assert result["formal_obligation_discharged"] == 1
     assert result["formal_obligation_margin_units"] >= 0
     assert result["formal_obligation_time_step_units"] > 0
@@ -475,6 +490,10 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         record["kinematic_residual_max_m"] <= 1.0e-12
         for record in backend_records
     )
+    assert all(
+        int(record["kinematic_equations_validated"]) == 1
+        for record in backend_records
+    )
 
 
 def test_acceptance_signed_margins_are_hash_replayed() -> None:
@@ -509,6 +528,7 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
         abs=PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
     )
     assert record.kinematic_residual_max_m <= 1.0e-12
+    assert record.kinematic_equations_validated
     assert record.min_phase_margin_rad >= 0.0
     assert record.min_spatial_margin_m >= 0.0
     assert verify_pha_c_acceptance_record(record) is record
@@ -536,3 +556,10 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
     forged_residual = replace(record, kinematic_residual_max_m=1.0e-3)
     with pytest.raises(ValueError, match="kinematic_residual_max_m"):
         verify_pha_c_acceptance_record(forged_residual)
+
+    forged_kinematic_equation = replace(
+        record,
+        path_length_equation_validated=False,
+    )
+    with pytest.raises(ValueError, match="path_length_equation_validated"):
+        verify_pha_c_acceptance_record(forged_kinematic_equation)
