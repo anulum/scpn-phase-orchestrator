@@ -46,7 +46,10 @@ z_i(s + dt) = z_i(s) + v_i(s) * dt
 `inverse_plus_one`, `exponential`, `power_law`, or `inverse_distance`. The
 position update is ballistic over each outer step, which is exact for fixed
 velocity over that step and consistent with the row-major velocity schedule used
-by the backend contract.
+by the backend contract. Production validation signs this kinematic identity
+explicitly: the expected final coordinate is
+`z(0) + dt * sum_s velocity_schedule[s]`, and every backend row must keep the
+maximum absolute residual below `1e-9 m` before the run is accepted.
 
 ## Public API
 
@@ -72,6 +75,7 @@ engine = MovingFrameUPDEEngine(
 phases = engine.run(n_steps=2)
 positions = engine.positions
 near_reference = engine.collision_imminent(threshold_m=1.0e-9)
+residual_m = engine.state.kinematic_residual_max_m
 ```
 
 `positions_t0` must be a finite axial vector with shape `(n,)`. `velocities`
@@ -122,6 +126,11 @@ and returns a flat vector:
 Python, Rust/PyO3, Go, Julia, and Mojo source surfaces share the same contract.
 Optional accelerator runtimes are feature-detected; unavailable runtimes are
 reported by the benchmark rather than hidden.
+The benchmark also records `expected_final_position_sha256`,
+`reference_kinematic_residual_max_m`, `kinematic_residual_contract_passed`,
+`max_abs_velocity_m_per_s`, and `path_length_max_m` so polyglot rows cannot
+pass with a numerically correct phase vector but a physically wrong coordinate
+update.
 
 ```bash
 PYTHONPATH=src python benchmarks/upde_moving_frame_benchmark.py --parity-gate
@@ -141,7 +150,8 @@ The moving-frame engine fails closed on:
 - malformed schedule shapes or mismatched oscillator counts;
 - negative collision thresholds;
 - non-positive spatial decay scale, spatial epsilon, or Doppler epsilon;
-- backend output with non-finite positions or phases outside `[0, 2*pi)`.
+- backend output with non-finite positions, phases outside `[0, 2*pi)`, or
+  final positions that violate the ballistic schedule residual tolerance.
 
 ::: scpn_phase_orchestrator.upde.moving_frame.MovingFrameUPDEEngine
 

@@ -271,6 +271,9 @@ The gate composes distance-modulated coupling, graph-weighted Doppler detuning,
 and ballistic axial position transport in one row-major schedule contract. It
 reports Rust, WebGPU, Mojo, Julia, Go, and Python slots separately and compares
 the flat `[final_phases, final_positions]` vector against the Python reference.
+It also signs the kinematic certificate
+`final_positions = initial_positions + dt * sum(velocity_schedule)` and rejects
+available backend rows whose maximum residual exceeds `1e-9 m`.
 
 Timing fields are local, non-isolated regression evidence. They demonstrate
 backend parity for the moving-frame contract and must not be presented as

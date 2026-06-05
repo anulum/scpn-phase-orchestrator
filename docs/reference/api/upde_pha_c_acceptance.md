@@ -42,8 +42,10 @@ For each schedule row, the builder:
 2. computes the graph-weighted Doppler correction;
 3. advances one moving-frame UPDE step;
 4. records phase and position trajectory rows;
-5. builds a `PHACTimelineRecord` over the trajectory;
-6. hashes schedules, trajectories, spatial couplings, Doppler trace, timeline,
+5. computes the signed moving-frame kinematic residual
+   `max |z[t+1] - (z[t] + v[t] * dt)|`;
+6. builds a `PHACTimelineRecord` over the trajectory;
+7. hashes schedules, trajectories, spatial couplings, Doppler trace, timeline,
    and final acceptance payload.
 
 The record carries:
@@ -51,6 +53,8 @@ The record carries:
 - first-lock index/time and final-lock state;
 - lock sample, lock-loss, reset, and maximum consecutive-lock counts;
 - maximum absolute Doppler correction and spatial coupling;
+- maximum moving-frame kinematic residual, maximum absolute velocity, and
+  maximum per-oscillator axial path length;
 - maximum phase/spatial dispersion, minimum signed phase/spatial margins,
   minimum Kuramoto order parameter, and maximum distance to reference;
 - resolved tolerance profile provenance;
@@ -88,6 +92,7 @@ record = build_pha_c_acceptance_record(
 
 assert record.first_lock_index == 2
 assert record.final_lock_achieved
+assert record.kinematic_residual_max_m <= 1.0e-12
 assert record.execution_disabled
 assert not record.actuating
 acceptance_payload = record.to_dict()
@@ -96,9 +101,9 @@ verify_pha_c_acceptance_record(record)
 
 Use `verify_pha_c_acceptance_record(...)` when replaying a stored acceptance
 record. It rechecks sample/step consistency, first-lock semantics, review-only
-flags, signed margin equations, SHA-256 fields, the timeline digest reference,
-and the canonical acceptance hash without requiring the original schedules or
-trajectories.
+flags, signed margin equations, the moving-frame kinematic residual bound,
+SHA-256 fields, the timeline digest reference, and the canonical acceptance hash
+without requiring the original schedules or trajectories.
 
 ## Relationship to other PHA-C records
 
@@ -114,8 +119,9 @@ The benchmark gate records Rust, Mojo, Julia, Go, and Python source-contract
 slots for the acceptance builder, then aggregates the existing PHA-C subgates:
 spatial modulation, time-varying omega, Doppler, moving-frame, merge window,
 handoff, and timeline. Acceptance rows also publish the minimum signed margins
-copied from the timeline, so release evidence exposes the distance to the
-reviewed merge envelope.
+copied from the timeline plus the moving-frame kinematic residual, so release
+evidence exposes both the distance to the reviewed merge envelope and the
+mechanical validity of the axial schedule.
 
 ```bash
 uv run python benchmarks/pha_c_acceptance_benchmark.py \

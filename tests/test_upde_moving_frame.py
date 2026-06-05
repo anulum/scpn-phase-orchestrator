@@ -34,7 +34,9 @@ from scpn_phase_orchestrator.upde import MovingFrameUPDEEngine as ExportedMoving
 from scpn_phase_orchestrator.upde._ref_kernel import upde_run_omega_schedule_python
 from scpn_phase_orchestrator.upde.doppler import doppler_term
 from scpn_phase_orchestrator.upde.moving_frame import (
+    KINEMATIC_RESIDUAL_TOLERANCE_M,
     MovingFrameUPDEEngine,
+    moving_frame_run,
     moving_frame_run_python,
 )
 
@@ -103,6 +105,10 @@ def test_zero_coupling_position_update_is_ballistic(
     np.testing.assert_allclose(engine.positions, np.array([2.0, -3.0]), atol=1.0e-12)
     np.testing.assert_allclose(engine.distance_to_reference, np.array([2.0, 3.0]))
     assert engine.time == pytest.approx(1.0)
+    assert engine.kinematic_residual_max_m <= KINEMATIC_RESIDUAL_TOLERANCE_M
+    assert engine.state.kinematic_residual_max_m <= KINEMATIC_RESIDUAL_TOLERANCE_M
+    assert engine.state.path_length_max_m == pytest.approx(3.0)
+    assert engine.state.max_abs_velocity_m_per_s == pytest.approx(3.0)
 
 
 def test_collision_predicate_detects_near_exact_and_crossing_cases(
@@ -253,6 +259,39 @@ def test_stationary_positions_match_doppler_schedule_with_static_spatial_knm(
     np.testing.assert_allclose(flat[3:], positions, atol=1.0e-12)
 
 
+def test_moving_frame_run_reports_exact_velocity_schedule_kinematics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _force_python(monkeypatch)
+    phases = np.array([0.1, 0.3, 0.8], dtype=np.float64)
+    positions = np.array([-0.25, 0.0, 0.4], dtype=np.float64)
+    omega_schedule = np.zeros((3, 3), dtype=np.float64)
+    velocity_schedule = np.array(
+        [[1.0, -2.0, 0.5], [0.25, -0.5, 0.0], [-0.75, 0.25, 1.5]],
+        dtype=np.float64,
+    )
+    knm = np.zeros((3, 3), dtype=np.float64)
+    alpha = np.zeros((3, 3), dtype=np.float64)
+    dt = 0.125
+    modulator = SpatialCouplingModulator(K_base=1.0)
+
+    flat = moving_frame_run(
+        phases,
+        positions,
+        omega_schedule,
+        knm,
+        alpha,
+        velocity_schedule,
+        modulator,
+        dt=dt,
+        method="rk4",
+        backend="python",
+    )
+
+    expected_positions = positions + dt * np.sum(velocity_schedule, axis=0)
+    np.testing.assert_allclose(flat[3:], expected_positions, atol=1.0e-12)
+
+
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     [
@@ -289,6 +328,11 @@ def test_moving_frame_polyglot_benchmark_reports_available_language_slots() -> N
     assert out["acceptance_passed"] == 1
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] >= 1
+    assert out["kinematic_residual_contract_passed"] == 1
+    assert (
+        out["reference_kinematic_residual_max_m"]
+        <= KINEMATIC_RESIDUAL_TOLERANCE_M
+    )
 
 
 def _moving_frame_adapter_args() -> tuple[object, ...]:

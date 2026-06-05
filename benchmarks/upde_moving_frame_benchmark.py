@@ -30,7 +30,10 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._moving_frame_julia 
 from scpn_phase_orchestrator.experimental.accelerators.upde._moving_frame_mojo import (
     moving_frame_run_mojo,
 )
-from scpn_phase_orchestrator.upde.moving_frame import moving_frame_run_python
+from scpn_phase_orchestrator.upde.moving_frame import (
+    KINEMATIC_RESIDUAL_TOLERANCE_M,
+    moving_frame_run_python,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 BackendFn: TypeAlias = Callable[..., FloatArray]
@@ -48,6 +51,26 @@ TOLERANCES = {
 
 def _hash_array(values: FloatArray) -> str:
     return sha256(np.ascontiguousarray(values, dtype=np.float64).tobytes()).hexdigest()
+
+
+def _expected_final_positions(
+    positions: FloatArray,
+    velocities: FloatArray,
+    dt: float,
+) -> FloatArray:
+    return np.ascontiguousarray(
+        positions + dt * np.sum(velocities, axis=0),
+        dtype=np.float64,
+    )
+
+
+def _kinematic_residual_max(
+    flat_state: FloatArray,
+    *,
+    n: int,
+    expected_positions: FloatArray,
+) -> float:
+    return float(np.max(np.abs(flat_state[n:] - expected_positions)))
 
 
 def _problem(n: int, n_steps: int, seed: int) -> dict[str, FloatArray]:
@@ -191,6 +214,12 @@ def benchmark_upde_moving_frame_polyglot_gate(
         1.0e-6,
         1.0e-3,
     )
+    expected_positions = _expected_final_positions(positions, velocities, dt)
+    reference_kinematic_residual = _kinematic_residual_max(
+        reference,
+        n=n,
+        expected_positions=expected_positions,
+    )
 
     records: list[dict[str, Any]] = []
     parity_pass_count = 0
@@ -208,6 +237,8 @@ def benchmark_upde_moving_frame_polyglot_gate(
                     "max_abs_error": None,
                     "ms_per_call": None,
                     "matrix_sha256": None,
+                    "kinematic_residual_max_m": None,
+                    "kinematic_residual_passed": False,
                     "tolerance": TOLERANCES[backend],
                     "unavailable_reason": "moving-frame backend is not installed",
                 }
@@ -241,7 +272,13 @@ def benchmark_upde_moving_frame_polyglot_gate(
                 )
             elapsed = time.perf_counter() - elapsed_start
             max_abs = float(np.max(np.abs(got - reference)))
-            passed = max_abs <= TOLERANCES[backend]
+            kinematic_residual = _kinematic_residual_max(
+                got,
+                n=n,
+                expected_positions=expected_positions,
+            )
+            kinematic_passed = kinematic_residual <= KINEMATIC_RESIDUAL_TOLERANCE_M
+            passed = max_abs <= TOLERANCES[backend] and kinematic_passed
             available_count += 1
             parity_pass_count += int(passed)
             records.append(
@@ -252,6 +289,8 @@ def benchmark_upde_moving_frame_polyglot_gate(
                     "max_abs_error": max_abs,
                     "ms_per_call": 1000.0 * elapsed / max(1, calls),
                     "matrix_sha256": _hash_array(got),
+                    "kinematic_residual_max_m": kinematic_residual,
+                    "kinematic_residual_passed": kinematic_passed,
                     "tolerance": TOLERANCES[backend],
                     "unavailable_reason": "",
                 }
@@ -265,6 +304,8 @@ def benchmark_upde_moving_frame_polyglot_gate(
                     "max_abs_error": None,
                     "ms_per_call": None,
                     "matrix_sha256": None,
+                    "kinematic_residual_max_m": None,
+                    "kinematic_residual_passed": False,
                     "tolerance": TOLERANCES[backend],
                     "unavailable_reason": str(exc),
                 }
@@ -273,7 +314,19 @@ def benchmark_upde_moving_frame_polyglot_gate(
     all_available_passed = all(
         bool(row["parity_passed"]) for row in records if row["status"] == "available"
     )
-    acceptance = bool(all_available_passed and available_count >= 1)
+    kinematic_residual_contract_passed = bool(
+        reference_kinematic_residual <= KINEMATIC_RESIDUAL_TOLERANCE_M
+        and all(
+            bool(row["kinematic_residual_passed"])
+            for row in records
+            if row["status"] == "available"
+        )
+    )
+    acceptance = bool(
+        all_available_passed
+        and available_count >= 1
+        and kinematic_residual_contract_passed
+    )
     return {
         "suite": "upde_moving_frame_polyglot_gate",
         "n": n,
@@ -290,6 +343,13 @@ def benchmark_upde_moving_frame_polyglot_gate(
         "omega_schedule_sha256": _hash_array(omega),
         "velocity_schedule_sha256": _hash_array(velocities),
         "position_initial_sha256": _hash_array(positions),
+        "expected_final_position_sha256": _hash_array(expected_positions),
+        "reference_kinematic_residual_max_m": reference_kinematic_residual,
+        "kinematic_residual_contract_passed": int(
+            kinematic_residual_contract_passed
+        ),
+        "max_abs_velocity_m_per_s": float(np.max(np.abs(velocities))),
+        "path_length_max_m": float(np.max(np.sum(np.abs(velocities * dt), axis=0))),
         "benchmark_sha256": sha256(
             json.dumps(records, sort_keys=True).encode("utf-8")
         ).hexdigest(),
@@ -299,6 +359,8 @@ def benchmark_upde_moving_frame_polyglot_gate(
                 "backend_order": list(BACKEND_ORDER),
                 "require_python_reference": True,
                 "require_all_available_parity": True,
+                "require_kinematic_residual_contract": True,
+                "max_kinematic_residual_m": KINEMATIC_RESIDUAL_TOLERANCE_M,
                 "production_timing_claim": False,
             },
             sort_keys=True,

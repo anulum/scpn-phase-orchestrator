@@ -42,6 +42,7 @@ from scpn_phase_orchestrator.upde.doppler import (
 )
 
 __all__ = [
+    "KINEMATIC_RESIDUAL_TOLERANCE_M",
     "MovingFrameState",
     "MovingFrameUPDEEngine",
     "moving_frame_run",
@@ -53,6 +54,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 BackendFn: TypeAlias = Callable[..., FloatArray]
 
 _TWO_PI = 2.0 * np.pi
+KINEMATIC_RESIDUAL_TOLERANCE_M = 1.0e-9
 _BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
 _DECAY_TO_CODE = {
     "inverse_plus_one": 0,
@@ -73,6 +75,9 @@ class MovingFrameState:
     knm_effective: FloatArray
     doppler_term: FloatArray
     time: float
+    kinematic_residual_max_m: float = 0.0
+    max_abs_velocity_m_per_s: float = 0.0
+    path_length_max_m: float = 0.0
 
 
 def _validate_positions_vector(value: object, *, n: int) -> FloatArray:
@@ -259,7 +264,30 @@ def validate_moving_frame_backend_inputs(
     )
 
 
-def _validate_backend_output(value: object, *, n: int) -> FloatArray:
+def _expected_positions_from_schedule(
+    positions: FloatArray,
+    velocities: FloatArray,
+    dt: float,
+) -> FloatArray:
+    return np.ascontiguousarray(
+        positions + dt * np.sum(velocities, axis=0),
+        dtype=np.float64,
+    )
+
+
+def _kinematic_residual_max(
+    observed_positions: FloatArray,
+    expected_positions: FloatArray,
+) -> float:
+    return float(np.max(np.abs(observed_positions - expected_positions)))
+
+
+def _validate_backend_output(
+    value: object,
+    *,
+    n: int,
+    expected_positions: FloatArray | None = None,
+) -> FloatArray:
     out = _reject_non_real_array(value, name="moving_frame_backend_output")
     if out.shape != (2 * n,):
         raise ValueError("moving-frame backend output shape must be (2*n,)")
@@ -269,6 +297,17 @@ def _validate_backend_output(value: object, *, n: int) -> FloatArray:
         raise ValueError("moving-frame backend phases must be in [0, 2*pi)")
     if not np.all(np.isfinite(positions)):
         raise ValueError("moving-frame backend positions must be finite")
+    if expected_positions is not None:
+        expected = np.ascontiguousarray(expected_positions, dtype=np.float64)
+        if expected.shape != positions.shape or not np.all(np.isfinite(expected)):
+            raise ValueError("expected_positions must match finite backend positions")
+        residual = _kinematic_residual_max(positions, expected)
+        if residual > KINEMATIC_RESIDUAL_TOLERANCE_M:
+            raise ValueError(
+                "moving-frame backend positions violate ballistic kinematics: "
+                f"max residual {residual} m exceeds "
+                f"{KINEMATIC_RESIDUAL_TOLERANCE_M} m"
+            )
     return np.ascontiguousarray(out, dtype=np.float64)
 
 
@@ -528,6 +567,7 @@ def moving_frame_run(
         atol_f,
         rtol_f,
     ) = validated
+    expected_positions = _expected_positions_from_schedule(z, velocities, dt_f)
     backends = _backend_map()
     if backend != "auto" and backend not in backends:
         raise ImportError(f"moving-frame backend {backend!r} is not available")
@@ -560,33 +600,41 @@ def moving_frame_run(
                 atol_f,
                 rtol_f,
             )
-            return _validate_backend_output(out, n=int(p.size))
+            return _validate_backend_output(
+                out,
+                n=int(p.size),
+                expected_positions=expected_positions,
+            )
         except (AttributeError, ImportError) as exc:
             last_error = exc
             continue
     if backend != "auto" and last_error is not None:
         raise last_error
-    return moving_frame_run_python(
-        p,
-        z,
-        omega,
-        k,
-        a,
-        velocities,
-        k_base,
-        decay_code,
-        decay_exponent,
-        decay_length_scale,
-        spatial_eps,
-        strength,
-        doppler_eps,
-        zeta_f,
-        psi_f,
-        dt_f,
-        method_s,
-        n_substeps_i,
-        atol_f,
-        rtol_f,
+    return _validate_backend_output(
+        moving_frame_run_python(
+            p,
+            z,
+            omega,
+            k,
+            a,
+            velocities,
+            k_base,
+            decay_code,
+            decay_exponent,
+            decay_length_scale,
+            spatial_eps,
+            strength,
+            doppler_eps,
+            zeta_f,
+            psi_f,
+            dt_f,
+            method_s,
+            n_substeps_i,
+            atol_f,
+            rtol_f,
+        ),
+        n=int(p.size),
+        expected_positions=expected_positions,
     )
 
 
@@ -639,6 +687,9 @@ class MovingFrameUPDEEngine(DopplerEngine):
             doppler_strength=self.doppler_strength,
             doppler_epsilon=self.doppler_epsilon,
         )
+        self._kinematic_residual_max_m = 0.0
+        self._max_abs_velocity_m_per_s = float(np.max(np.abs(self.velocity_current)))
+        self._path_length_max_m = 0.0
 
     @property
     def positions(self) -> FloatArray:
@@ -661,6 +712,24 @@ class MovingFrameUPDEEngine(DopplerEngine):
         return self._knm_effective.copy()
 
     @property
+    def kinematic_residual_max_m(self) -> float:
+        """Maximum residual against ``z_next = z + v*dt`` in the last run."""
+
+        return float(self._kinematic_residual_max_m)
+
+    @property
+    def max_abs_velocity_m_per_s(self) -> float:
+        """Maximum absolute axial velocity used by the last step or run."""
+
+        return float(self._max_abs_velocity_m_per_s)
+
+    @property
+    def path_length_max_m(self) -> float:
+        """Maximum per-oscillator axial path length in the last step or run."""
+
+        return float(self._path_length_max_m)
+
+    @property
     def state(self) -> MovingFrameState:
         """Return the current moving-frame diagnostic snapshot."""
 
@@ -671,6 +740,9 @@ class MovingFrameUPDEEngine(DopplerEngine):
             knm_effective=self._knm_effective.copy(),
             doppler_term=self.doppler_term,
             time=float(self._time),
+            kinematic_residual_max_m=self._kinematic_residual_max_m,
+            max_abs_velocity_m_per_s=self._max_abs_velocity_m_per_s,
+            path_length_max_m=self._path_length_max_m,
         )
 
     def _modulated_knm(self, k_nm: FloatArray, positions: FloatArray) -> FloatArray:
@@ -718,6 +790,15 @@ class MovingFrameUPDEEngine(DopplerEngine):
             positions_start + self.velocity_current * self._dt,
             dtype=np.float64,
         )
+        expected_positions = positions_start + self.velocity_current * self._dt
+        self._kinematic_residual_max_m = _kinematic_residual_max(
+            self._positions,
+            expected_positions,
+        )
+        self._max_abs_velocity_m_per_s = float(np.max(np.abs(self.velocity_current)))
+        self._path_length_max_m = float(
+            np.max(np.abs(self.velocity_current * self._dt))
+        )
         return out
 
     def run(
@@ -761,6 +842,19 @@ class MovingFrameUPDEEngine(DopplerEngine):
         n = self._n
         self.phases = np.ascontiguousarray(flat[:n], dtype=np.float64)
         self._positions = np.ascontiguousarray(flat[n:], dtype=np.float64)
+        expected_positions = _expected_positions_from_schedule(
+            z0,
+            velocity_schedule,
+            self._dt,
+        )
+        self._kinematic_residual_max_m = _kinematic_residual_max(
+            self._positions,
+            expected_positions,
+        )
+        self._max_abs_velocity_m_per_s = float(np.max(np.abs(velocity_schedule)))
+        self._path_length_max_m = float(
+            np.max(np.sum(np.abs(velocity_schedule * self._dt), axis=0))
+        )
         if steps > 1:
             last_start_positions = z0 + self._dt * np.sum(
                 velocity_schedule[:-1], axis=0

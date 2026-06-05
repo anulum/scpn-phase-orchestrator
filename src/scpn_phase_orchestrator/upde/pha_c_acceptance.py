@@ -42,10 +42,12 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 PHA_C_ACCEPTANCE_CLAIM_BOUNDARY = "pha_c_end_to_end_acceptance_review_only"
 PHA_C_ACCEPTANCE_EVIDENCE_KIND = "deterministic_non_actuating_acceptance"
+PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M = 1.0e-9
 
 __all__ = [
     "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY",
     "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
+    "PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M",
     "PHACAcceptanceRecord",
     "build_pha_c_acceptance_record",
     "pha_c_acceptance_record_to_dict",
@@ -75,6 +77,9 @@ class PHACAcceptanceRecord:
     max_abs_spatial_coupling: float
     max_phase_dispersion_rad: float
     max_spatial_dispersion_m: float
+    kinematic_residual_max_m: float
+    max_abs_velocity_m_per_s: float
+    path_length_max_m: float
     min_phase_margin_rad: float
     min_spatial_margin_m: float
     min_phase_order_parameter: float
@@ -268,6 +273,9 @@ def _record_dict_without_hash(
     max_abs_spatial_coupling: float,
     max_phase_dispersion_rad: float,
     max_spatial_dispersion_m: float,
+    kinematic_residual_max_m: float,
+    max_abs_velocity_m_per_s: float,
+    path_length_max_m: float,
     min_phase_margin_rad: float,
     min_spatial_margin_m: float,
     min_phase_order_parameter: float,
@@ -308,6 +316,9 @@ def _record_dict_without_hash(
         "max_abs_spatial_coupling": float(max_abs_spatial_coupling),
         "max_phase_dispersion_rad": float(max_phase_dispersion_rad),
         "max_spatial_dispersion_m": float(max_spatial_dispersion_m),
+        "kinematic_residual_max_m": float(kinematic_residual_max_m),
+        "max_abs_velocity_m_per_s": float(max_abs_velocity_m_per_s),
+        "path_length_max_m": float(path_length_max_m),
         "min_phase_margin_rad": float(min_phase_margin_rad),
         "min_spatial_margin_m": float(min_spatial_margin_m),
         "min_phase_order_parameter": float(min_phase_order_parameter),
@@ -447,6 +458,12 @@ def build_pha_c_acceptance_record(
     position_trajectory = np.vstack(position_rows).astype(np.float64, copy=False)
     doppler_trace = np.vstack(doppler_rows).astype(np.float64, copy=False)
     spatial_trace = np.stack(spatial_rows).astype(np.float64, copy=False)
+    predicted_position_steps = position_trajectory[:-1] + velocities * dt_s
+    kinematic_residual_max_m = float(
+        np.max(np.abs(position_trajectory[1:] - predicted_position_steps))
+    )
+    max_abs_velocity_m_per_s = float(np.max(np.abs(velocities)))
+    path_length_max_m = float(np.max(np.sum(np.abs(velocities * dt_s), axis=0)))
     times = np.arange(phase_trajectory.shape[0], dtype=np.float64) * dt_s
     timeline = build_pha_c_event_timeline(
         phase_trajectory,
@@ -479,6 +496,9 @@ def build_pha_c_acceptance_record(
         max_abs_spatial_coupling=float(np.max(np.abs(spatial_trace))),
         max_phase_dispersion_rad=timeline.max_phase_dispersion_rad,
         max_spatial_dispersion_m=timeline.max_spatial_dispersion_m,
+        kinematic_residual_max_m=kinematic_residual_max_m,
+        max_abs_velocity_m_per_s=max_abs_velocity_m_per_s,
+        path_length_max_m=path_length_max_m,
         min_phase_margin_rad=timeline.min_phase_margin_rad,
         min_spatial_margin_m=timeline.min_spatial_margin_m,
         min_phase_order_parameter=timeline.min_phase_order_parameter,
@@ -530,6 +550,9 @@ def pha_c_acceptance_record_to_dict(
         max_abs_spatial_coupling=record.max_abs_spatial_coupling,
         max_phase_dispersion_rad=record.max_phase_dispersion_rad,
         max_spatial_dispersion_m=record.max_spatial_dispersion_m,
+        kinematic_residual_max_m=record.kinematic_residual_max_m,
+        max_abs_velocity_m_per_s=record.max_abs_velocity_m_per_s,
+        path_length_max_m=record.path_length_max_m,
         min_phase_margin_rad=record.min_phase_margin_rad,
         min_spatial_margin_m=record.min_spatial_margin_m,
         min_phase_order_parameter=record.min_phase_order_parameter,
@@ -671,6 +694,9 @@ def verify_pha_c_acceptance_record(
         "max_abs_spatial_coupling",
         "max_phase_dispersion_rad",
         "max_spatial_dispersion_m",
+        "kinematic_residual_max_m",
+        "max_abs_velocity_m_per_s",
+        "path_length_max_m",
         "max_distance_to_reference_m",
         "phase_tol_rad",
         "spatial_tol_m",
@@ -684,6 +710,15 @@ def verify_pha_c_acceptance_record(
         record.max_spatial_dispersion_m,
         name="max_spatial_dispersion_m",
     )
+    kinematic_residual = _validate_nonnegative_record_scalar(
+        record.kinematic_residual_max_m,
+        name="kinematic_residual_max_m",
+    )
+    if kinematic_residual > PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M:
+        raise ValueError(
+            "kinematic_residual_max_m must not exceed "
+            f"{PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M} m"
+        )
     phase_tol = _validate_nonnegative_record_scalar(
         record.phase_tol_rad,
         name="phase_tol_rad",

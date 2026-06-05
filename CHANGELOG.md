@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added signed PHA-C moving-frame kinematic residual evidence across
+  `MovingFrameUPDEEngine`, `moving_frame_run(...)`, the end-to-end acceptance
+  record, Rust/Go/Julia/Mojo source-contract validation, benchmark thresholds,
+  module-specific tests, API docs, roadmap, README, and benchmark snapshots.
 - Added signed PHA-C merge-window safety margins across `MergeReport`,
   handoff, event timeline, and end-to-end acceptance records, with replay
   verifiers, Rust/Go/Julia/Mojo source-contract parity checks, benchmark

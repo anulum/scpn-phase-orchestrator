@@ -291,7 +291,7 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C.3 MovingFrameUPDEEngine | Implemented as `MovingFrameUPDEEngine` with absolute axial `positions`, chamber-frame `distance_to_reference`, collision/crossing detection, distance-modulated coupling through `SpatialCouplingModulator`, Doppler-corrected phase dynamics, Python plus Rust/Go/Julia/Mojo source surfaces, module-specific merger and fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as optional accelerators are rebuilt and feed the position/phase contract into the PHA-C.4 merge-window monitor lane. |
+| PHA-C.3 MovingFrameUPDEEngine | Implemented as `MovingFrameUPDEEngine` with absolute axial `positions`, chamber-frame `distance_to_reference`, collision/crossing detection, distance-modulated coupling through `SpatialCouplingModulator`, Doppler-corrected phase dynamics, signed ballistic kinematic residual evidence, Python plus Rust/Go/Julia/Mojo source surfaces, module-specific merger and fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as optional accelerators are rebuilt and feed the position/phase contract into the PHA-C.4 merge-window monitor lane. |
 
 ## PHA-C merge-window status
 
@@ -315,7 +315,7 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C end-to-end acceptance gate | Implemented as `PHACAcceptanceRecord` with spatial modulation, graph-weighted Doppler correction, moving-frame propagation, merge-window timeline conversion, max phase/spatial dispersion and minimum signed margin evidence, schedule/trajectory/spatial/Doppler/timeline hashes, fixed non-actuating claim boundary, independent hash-replay verification, Rust/Go/Julia/Mojo source-contract parity adapters with explicit non-native provenance, aggregate PHA-C subgate benchmark evidence, module-specific fail-closed coverage, public API documentation, a dedicated local-regression benchmark snapshot, and canonical reference-suite integration. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol; native acceptance kernels may be introduced only if they preserve the same review-only hashes, provenance fields, signed margins, and fail-closed boundaries. |
+| PHA-C end-to-end acceptance gate | Implemented as `PHACAcceptanceRecord` with spatial modulation, graph-weighted Doppler correction, moving-frame propagation, signed kinematic residual/path-length/velocity evidence, merge-window timeline conversion, max phase/spatial dispersion and minimum signed margin evidence, schedule/trajectory/spatial/Doppler/timeline hashes, fixed non-actuating claim boundary, independent hash-replay verification, Rust/Go/Julia/Mojo source-contract parity adapters with explicit non-native provenance, aggregate PHA-C subgate benchmark evidence, module-specific fail-closed coverage, public API documentation, a dedicated local-regression benchmark snapshot, and canonical reference-suite integration. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol; native acceptance kernels may be introduced only if they preserve the same review-only hashes, provenance fields, signed margins, kinematic residual fields, and fail-closed boundaries. |
 
 ## PHA-C Lean kinematic safety status
 

@@ -108,6 +108,9 @@ def test_acceptance_record_spans_complete_review_only_chain() -> None:
     assert record.max_consecutive_lock_samples == 5
     assert record.max_abs_doppler_term > 0.0
     assert record.max_abs_spatial_coupling > 0.0
+    assert record.kinematic_residual_max_m <= 1.0e-12
+    assert record.max_abs_velocity_m_per_s == pytest.approx(0.123)
+    assert record.path_length_max_m > 0.0
     assert record.claim_boundary == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
     assert record.execution_disabled
     assert not record.actuating
@@ -375,6 +378,8 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["reset_count"] == 0
     assert result["phase_margin_positive"] == 1
     assert result["spatial_margin_positive"] == 1
+    assert result["kinematic_residual_contract_passed"] == 1
+    assert result["kinematic_residual_max_m"] <= 1.0e-12
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
@@ -385,6 +390,10 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
     assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)
+    assert all(
+        record["kinematic_residual_max_m"] <= 1.0e-12
+        for record in backend_records
+    )
 
 
 def test_acceptance_signed_margins_are_hash_replayed() -> None:
@@ -418,6 +427,7 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
         record.spatial_tol_m - record.max_spatial_dispersion_m,
         abs=1.0e-12,
     )
+    assert record.kinematic_residual_max_m <= 1.0e-12
     assert record.min_phase_margin_rad >= 0.0
     assert record.min_spatial_margin_m >= 0.0
     assert verify_pha_c_acceptance_record(record) is record
@@ -425,3 +435,7 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
     forged = replace(record, min_phase_margin_rad=-1.0)
     with pytest.raises(ValueError, match="min_phase_margin_rad"):
         verify_pha_c_acceptance_record(forged)
+
+    forged_residual = replace(record, kinematic_residual_max_m=1.0e-3)
+    with pytest.raises(ValueError, match="kinematic_residual_max_m"):
+        verify_pha_c_acceptance_record(forged_residual)
