@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-05
+
 ### Added
+
+- Released the completed PHA-C formal-acceptance boundary across the public
+  documentation, package metadata, generated capability inventory, reference
+  benchmark snapshot, and release-readiness notes.
 
 - Added acceptance kinematic-equation provenance to
   `PHACKinematicProofObligation` and the PHA-C acceptance benchmark gate so
@@ -113,6 +119,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   budget proof, zero-gain merge-window invariant, Boolean phase-plus-spatial
   lock mirror, smoke instantiation, proof-gate integration, and public
   documentation.
+
+### Security
+
+- Raised the FastAPI/Starlette deployment floor so QueueWaves-style services
+  require Starlette `>=1.0.1`, which includes the Host-header validation fix
+  for GHSA-86qp-5c8j-p5mr.
 
 ## [0.6.6] - 2026-06-04
 
@@ -1961,7 +1973,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.6...v0.8.0
 [0.6.6]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.3...v0.6.4

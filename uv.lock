@@ -4956,7 +4956,7 @@ wheels = [
 
 [[package]]
 name = "scpn-phase-orchestrator"
-version = "0.6.6"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -4989,6 +4989,7 @@ dev = [
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "starlette" },
     { name = "twine" },
     { name = "types-protobuf" },
     { name = "types-pyyaml" },
@@ -5040,6 +5041,7 @@ quantum = [
 queuewaves = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
 ]
@@ -5058,8 +5060,8 @@ requires-dist = [
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=7.3,<8.0" },
     { name = "diffrax", marker = "extra == 'full'", specifier = ">=0.5,<1.0" },
     { name = "equinox", marker = "extra == 'nn'", specifier = ">=0.11,<1.0" },
-    { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.110,<1.0" },
-    { name = "fastapi", marker = "extra == 'queuewaves'", specifier = ">=0.110,<1.0" },
+    { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.136.1,<1.0" },
+    { name = "fastapi", marker = "extra == 'queuewaves'", specifier = ">=0.136.1,<1.0" },
     { name = "grpcio", marker = "extra == 'full'", specifier = ">=1.60,<2.0" },
     { name = "grpcio-tools", marker = "extra == 'full'", specifier = ">=1.60,<2.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27,<1.0" },
@@ -5107,6 +5109,8 @@ requires-dist = [
     { name = "scpn-quantum-control", marker = "extra == 'scpn-all'", specifier = ">=0.1.0" },
     { name = "spo-kernel", marker = "extra == 'rust'", specifier = ">=0.2.0" },
     { name = "spo-kernel", marker = "extra == 'scpn-all'", specifier = ">=0.2.0" },
+    { name = "starlette", marker = "extra == 'dev'", specifier = ">=1.0.1,<2.0" },
+    { name = "starlette", marker = "extra == 'queuewaves'", specifier = ">=1.0.1,<2.0" },
     { name = "streamlit", marker = "extra == 'studio'", specifier = ">=1.36,<2.0" },
     { name = "twine", marker = "extra == 'dev'", specifier = ">=6.2,<7.0" },
     { name = "types-protobuf", marker = "extra == 'dev'", specifier = ">=6.30,<8.0" },

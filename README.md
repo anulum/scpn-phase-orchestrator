@@ -4,7 +4,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 
 > **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. APIs may evolve as this work progresses.
 
-**Version:** 0.6.6
+**Version:** 0.8.0
 **Status:** active development; public inventory is generated below.
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
@@ -29,6 +29,24 @@ benchmark, hardware, security, and release claims require their dedicated
 evidence pages and GitHub run records.
 
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
+
+## Current Release Boundary
+
+Version `0.8.0` is the PHA-C formal-acceptance release. It promotes the
+completed downstream accelerator chain from scattered implementation evidence
+into a single documented review boundary:
+
+| Release surface | What is now reviewable |
+|-----------------|------------------------|
+| PHA-C.1 to PHA-C.5 | spatial modulation, time-varying omega, Doppler correction, moving-frame propagation, and merge-window handoff evidence |
+| PHA-C.6 | Lean-facing fixed-point safety manifests for kinematic, continuous-envelope, phase-budget, and aggregate acceptance certificates |
+| Polyglot gates | Rust, Go, Julia, Mojo, and Python source-contract rows with unavailable-toolchain evidence where native execution is not yet claimed |
+| Benchmark posture | canonical reference-suite rows labelled as local non-isolated regression evidence unless production isolation metadata is present |
+| Security posture | FastAPI/Starlette deployment floor includes the patched Host-header validation boundary for QueueWaves-style services |
+
+This release does not claim live accelerator, quantum, neuromorphic, PLC, or
+medical actuation. Those remain adapter-scoped and disabled until a separate
+operator-approved hardware evidence chain exists.
 
 ## Why This Exists
 
@@ -131,18 +149,18 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.6.6 |
+| Package version | 0.8.0 |
 | Public API exports | 24 |
-| Python package modules | 463 |
-| Core Engine modules | 230 |
+| Python package modules | 492 |
+| Core Engine modules | 239 |
 | Runtime/Serving modules | 47 |
 | Integration modules | 24 |
-| Research/Experimental modules | 159 |
+| Research/Experimental modules | 179 |
 | Domainpack files | 36 |
-| Rust kernel files | 92 |
+| Rust kernel files | 93 |
 | Optional extras | 16 |
-| Python test files | 539 |
-| Public documentation pages | 180 |
+| Python test files | 544 |
+| Public documentation pages | 186 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

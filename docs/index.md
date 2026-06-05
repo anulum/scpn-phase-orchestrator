@@ -41,6 +41,25 @@ If yes, SPO can express those sources as phase, test coupling hypotheses,
 separate useful from harmful synchrony, and preserve a replayable control
 review record.
 
+## Current Release Boundary
+
+Version `0.8.0` marks the PHA-C formal-acceptance release. The public docs now
+route readers from use-case selection through Python APIs, tutorials, notebooks,
+benchmark snapshots, and PHA-C proof-obligation pages without requiring them to
+reverse-engineer the source tree.
+
+| Reader concern | Where the release answers it |
+|----------------|------------------------------|
+| What problem does SPO solve? | [Use Cases and Value Map](getting-started/use_cases.md) and [Executive Overview](getting-started/executive_overview.md) |
+| How do I run it? | [Quickstart](getting-started/quickstart.md), [Hello World](getting-started/hello_world.md), and [From Raw Sources to Run](tutorials/05_from_raw_sources_to_run.md) |
+| How do I embed it? | [Python Facade API](reference/api/api.md) and [API Overview](reference/api/index.md) |
+| What evidence supports PHA-C? | [PHA-C Acceptance Chain](reference/api/upde_pha_c_acceptance.md), [PHA-C Lean Proof Obligation](reference/api/upde_pha_c_formal_obligation.md), and [Reference Benchmark Snapshot](galleries/reference_benchmark_snapshot.md) |
+| What remains review-only? | [Public Roadmap](roadmap.md), [Adapters](guide/adapters.md), and [Release Hygiene](RELEASE_HYGIENE.md) |
+
+The benchmark snapshot remains local regression evidence unless the raw run
+records CPU/core isolation and host-load controls. Live hardware writes remain
+adapter-scoped and disabled by default.
+
 ## What This Means in Practice
 
 SPO gives a team one reviewable path from raw operational traces to bounded

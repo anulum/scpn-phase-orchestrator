@@ -5,18 +5,18 @@
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.6.6 |
+| Package version | 0.8.0 |
 | Public API exports | 24 |
-| Python package modules | 463 |
-| Core Engine modules | 230 |
+| Python package modules | 492 |
+| Core Engine modules | 239 |
 | Runtime/Serving modules | 47 |
 | Integration modules | 24 |
-| Research/Experimental modules | 159 |
+| Research/Experimental modules | 179 |
 | Domainpack files | 36 |
-| Rust kernel files | 92 |
+| Rust kernel files | 93 |
 | Optional extras | 16 |
-| Python test files | 539 |
-| Public documentation pages | 180 |
+| Python test files | 544 |
+| Public documentation pages | 186 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
