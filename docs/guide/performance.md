@@ -274,6 +274,10 @@ the flat `[final_phases, final_positions]` vector against the Python reference.
 It also signs the kinematic certificate
 `final_positions = initial_positions + dt * sum(velocity_schedule)` and rejects
 available backend rows whose maximum residual exceeds `1e-9 m`.
+The same row now publishes `final_position_equation_validated`,
+`max_abs_velocity_equation_validated`, `path_length_equation_validated`, and
+`kinematic_equations_validated`, so velocity and path-length summaries must
+replay from the schedule rather than drift as independent benchmark metadata.
 
 Timing fields are local, non-isolated regression evidence. They demonstrate
 backend parity for the moving-frame contract and must not be presented as

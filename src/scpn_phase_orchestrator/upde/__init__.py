@@ -42,6 +42,8 @@ __all__ = [
     "JaxUPDEEngine",
     "LayerState",
     "LockSignature",
+    "KINEMATIC_RESIDUAL_TOLERANCE_M",
+    "KINEMATIC_SUMMARY_REPLAY_TOLERANCE",
     "MovingFrameState",
     "MovingFrameUPDEEngine",
     "NoiseProfile",
@@ -150,6 +152,14 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "doppler_term": (".doppler", "doppler_term"),
     "MovingFrameState": (".moving_frame", "MovingFrameState"),
     "MovingFrameUPDEEngine": (".moving_frame", "MovingFrameUPDEEngine"),
+    "KINEMATIC_RESIDUAL_TOLERANCE_M": (
+        ".moving_frame",
+        "KINEMATIC_RESIDUAL_TOLERANCE_M",
+    ),
+    "KINEMATIC_SUMMARY_REPLAY_TOLERANCE": (
+        ".moving_frame",
+        "KINEMATIC_SUMMARY_REPLAY_TOLERANCE",
+    ),
     "moving_frame_run": (".moving_frame", "moving_frame_run"),
     "PHA_C_HANDOFF_CLAIM_BOUNDARY": (
         ".pha_c_handoff",

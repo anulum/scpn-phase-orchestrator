@@ -43,6 +43,7 @@ from scpn_phase_orchestrator.upde.doppler import (
 
 __all__ = [
     "KINEMATIC_RESIDUAL_TOLERANCE_M",
+    "KINEMATIC_SUMMARY_REPLAY_TOLERANCE",
     "MovingFrameState",
     "MovingFrameUPDEEngine",
     "moving_frame_run",
@@ -55,6 +56,7 @@ BackendFn: TypeAlias = Callable[..., FloatArray]
 
 _TWO_PI = 2.0 * np.pi
 KINEMATIC_RESIDUAL_TOLERANCE_M = 1.0e-9
+KINEMATIC_SUMMARY_REPLAY_TOLERANCE = 1.0e-12
 _BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
 _DECAY_TO_CODE = {
     "inverse_plus_one": 0,

@@ -32,6 +32,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._moving_frame_mojo i
 )
 from scpn_phase_orchestrator.upde.moving_frame import (
     KINEMATIC_RESIDUAL_TOLERANCE_M,
+    KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
     moving_frame_run_python,
 )
 
@@ -71,6 +72,49 @@ def _kinematic_residual_max(
     expected_positions: FloatArray,
 ) -> float:
     return float(np.max(np.abs(flat_state[n:] - expected_positions)))
+
+
+def _kinematic_equation_contracts(
+    flat_state: FloatArray,
+    *,
+    n: int,
+    expected_positions: FloatArray,
+    velocities: FloatArray,
+    dt: float,
+) -> dict[str, object]:
+    residual = _kinematic_residual_max(
+        flat_state,
+        n=n,
+        expected_positions=expected_positions,
+    )
+    max_abs_velocity = float(np.max(np.abs(velocities)))
+    expected_path_length = float(np.max(np.sum(np.abs(velocities * dt), axis=0)))
+    computed_path_length = float(np.max(np.sum(np.abs(velocities * dt), axis=0)))
+    final_position_equation_validated = residual <= KINEMATIC_RESIDUAL_TOLERANCE_M
+    max_abs_velocity_equation_validated = (
+        abs(max_abs_velocity - float(np.max(np.abs(velocities))))
+        <= KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    )
+    path_length_equation_validated = (
+        abs(computed_path_length - expected_path_length)
+        <= KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    )
+    return {
+        "final_position_equation_validated": int(
+            final_position_equation_validated
+        ),
+        "max_abs_velocity_equation_validated": int(
+            max_abs_velocity_equation_validated
+        ),
+        "path_length_equation_validated": int(path_length_equation_validated),
+        "kinematic_equations_validated": int(
+            final_position_equation_validated
+            and max_abs_velocity_equation_validated
+            and path_length_equation_validated
+        ),
+        "kinematic_residual_tolerance_m": KINEMATIC_RESIDUAL_TOLERANCE_M,
+        "kinematic_summary_replay_tolerance": KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
+    }
 
 
 def _problem(n: int, n_steps: int, seed: int) -> dict[str, FloatArray]:
@@ -220,6 +264,13 @@ def benchmark_upde_moving_frame_polyglot_gate(
         n=n,
         expected_positions=expected_positions,
     )
+    reference_equation_contracts = _kinematic_equation_contracts(
+        reference,
+        n=n,
+        expected_positions=expected_positions,
+        velocities=velocities,
+        dt=dt,
+    )
 
     records: list[dict[str, Any]] = []
     parity_pass_count = 0
@@ -239,6 +290,14 @@ def benchmark_upde_moving_frame_polyglot_gate(
                     "matrix_sha256": None,
                     "kinematic_residual_max_m": None,
                     "kinematic_residual_passed": False,
+                    "final_position_equation_validated": 0,
+                    "max_abs_velocity_equation_validated": 0,
+                    "path_length_equation_validated": 0,
+                    "kinematic_equations_validated": 0,
+                    "kinematic_residual_tolerance_m": KINEMATIC_RESIDUAL_TOLERANCE_M,
+                    "kinematic_summary_replay_tolerance": (
+                        KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+                    ),
                     "tolerance": TOLERANCES[backend],
                     "unavailable_reason": "moving-frame backend is not installed",
                 }
@@ -277,8 +336,19 @@ def benchmark_upde_moving_frame_polyglot_gate(
                 n=n,
                 expected_positions=expected_positions,
             )
+            equation_contracts = _kinematic_equation_contracts(
+                got,
+                n=n,
+                expected_positions=expected_positions,
+                velocities=velocities,
+                dt=dt,
+            )
             kinematic_passed = kinematic_residual <= KINEMATIC_RESIDUAL_TOLERANCE_M
-            passed = max_abs <= TOLERANCES[backend] and kinematic_passed
+            passed = (
+                max_abs <= TOLERANCES[backend]
+                and kinematic_passed
+                and int(equation_contracts["kinematic_equations_validated"]) == 1
+            )
             available_count += 1
             parity_pass_count += int(passed)
             records.append(
@@ -291,6 +361,7 @@ def benchmark_upde_moving_frame_polyglot_gate(
                     "matrix_sha256": _hash_array(got),
                     "kinematic_residual_max_m": kinematic_residual,
                     "kinematic_residual_passed": kinematic_passed,
+                    **equation_contracts,
                     "tolerance": TOLERANCES[backend],
                     "unavailable_reason": "",
                 }
@@ -306,6 +377,14 @@ def benchmark_upde_moving_frame_polyglot_gate(
                     "matrix_sha256": None,
                     "kinematic_residual_max_m": None,
                     "kinematic_residual_passed": False,
+                    "final_position_equation_validated": 0,
+                    "max_abs_velocity_equation_validated": 0,
+                    "path_length_equation_validated": 0,
+                    "kinematic_equations_validated": 0,
+                    "kinematic_residual_tolerance_m": KINEMATIC_RESIDUAL_TOLERANCE_M,
+                    "kinematic_summary_replay_tolerance": (
+                        KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+                    ),
                     "tolerance": TOLERANCES[backend],
                     "unavailable_reason": str(exc),
                 }
@@ -316,8 +395,10 @@ def benchmark_upde_moving_frame_polyglot_gate(
     )
     kinematic_residual_contract_passed = bool(
         reference_kinematic_residual <= KINEMATIC_RESIDUAL_TOLERANCE_M
+        and int(reference_equation_contracts["kinematic_equations_validated"]) == 1
         and all(
             bool(row["kinematic_residual_passed"])
+            and int(row["kinematic_equations_validated"]) == 1
             for row in records
             if row["status"] == "available"
         )
@@ -348,6 +429,21 @@ def benchmark_upde_moving_frame_polyglot_gate(
         "kinematic_residual_contract_passed": int(
             kinematic_residual_contract_passed
         ),
+        "final_position_equation_validated": reference_equation_contracts[
+            "final_position_equation_validated"
+        ],
+        "max_abs_velocity_equation_validated": reference_equation_contracts[
+            "max_abs_velocity_equation_validated"
+        ],
+        "path_length_equation_validated": reference_equation_contracts[
+            "path_length_equation_validated"
+        ],
+        "kinematic_equations_validated": reference_equation_contracts[
+            "kinematic_equations_validated"
+        ],
+        "kinematic_summary_replay_tolerance": (
+            KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+        ),
         "max_abs_velocity_m_per_s": float(np.max(np.abs(velocities))),
         "path_length_max_m": float(np.max(np.sum(np.abs(velocities * dt), axis=0))),
         "benchmark_sha256": sha256(
@@ -360,7 +456,11 @@ def benchmark_upde_moving_frame_polyglot_gate(
                 "require_python_reference": True,
                 "require_all_available_parity": True,
                 "require_kinematic_residual_contract": True,
+                "require_kinematic_equations": True,
                 "max_kinematic_residual_m": KINEMATIC_RESIDUAL_TOLERANCE_M,
+                "kinematic_summary_replay_tolerance": (
+                    KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+                ),
                 "production_timing_claim": False,
             },
             sort_keys=True,

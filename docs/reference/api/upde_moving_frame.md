@@ -50,6 +50,10 @@ by the backend contract. Production validation signs this kinematic identity
 explicitly: the expected final coordinate is
 `z(0) + dt * sum_s velocity_schedule[s]`, and every backend row must keep the
 maximum absolute residual below `1e-9 m` before the run is accepted.
+The benchmark also replays the derived summary equations
+`max_abs_velocity = max(|velocity_schedule|)` and
+`path_length_max = max_i sum_s |velocity_schedule[s, i] * dt|` under
+`KINEMATIC_SUMMARY_REPLAY_TOLERANCE`.
 
 ## Public API
 
@@ -128,9 +132,11 @@ Optional accelerator runtimes are feature-detected; unavailable runtimes are
 reported by the benchmark rather than hidden.
 The benchmark also records `expected_final_position_sha256`,
 `reference_kinematic_residual_max_m`, `kinematic_residual_contract_passed`,
+`final_position_equation_validated`, `max_abs_velocity_equation_validated`,
+`path_length_equation_validated`, `kinematic_equations_validated`,
 `max_abs_velocity_m_per_s`, and `path_length_max_m` so polyglot rows cannot
-pass with a numerically correct phase vector but a physically wrong coordinate
-update.
+pass with a numerically correct phase vector but a physically wrong coordinate,
+velocity, or path-length summary.
 
 ```bash
 PYTHONPATH=src python benchmarks/upde_moving_frame_benchmark.py --parity-gate

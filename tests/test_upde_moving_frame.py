@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.upde._ref_kernel import upde_run_omega_schedule_pyt
 from scpn_phase_orchestrator.upde.doppler import doppler_term
 from scpn_phase_orchestrator.upde.moving_frame import (
     KINEMATIC_RESIDUAL_TOLERANCE_M,
+    KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
     MovingFrameUPDEEngine,
     moving_frame_run,
     moving_frame_run_python,
@@ -329,6 +330,14 @@ def test_moving_frame_polyglot_benchmark_reports_available_language_slots() -> N
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] >= 1
     assert out["kinematic_residual_contract_passed"] == 1
+    assert out["final_position_equation_validated"] == 1
+    assert out["max_abs_velocity_equation_validated"] == 1
+    assert out["path_length_equation_validated"] == 1
+    assert out["kinematic_equations_validated"] == 1
+    assert (
+        out["kinematic_summary_replay_tolerance"]
+        == KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    )
     assert (
         out["reference_kinematic_residual_max_m"]
         <= KINEMATIC_RESIDUAL_TOLERANCE_M

@@ -291,7 +291,7 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C.3 MovingFrameUPDEEngine | Implemented as `MovingFrameUPDEEngine` with absolute axial `positions`, chamber-frame `distance_to_reference`, collision/crossing detection, distance-modulated coupling through `SpatialCouplingModulator`, Doppler-corrected phase dynamics, signed ballistic kinematic residual evidence, Python plus Rust/Go/Julia/Mojo source surfaces, module-specific merger and fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as optional accelerators are rebuilt and feed the position/phase contract into the PHA-C.4 merge-window monitor lane. |
+| PHA-C.3 MovingFrameUPDEEngine | Implemented as `MovingFrameUPDEEngine` with absolute axial `positions`, chamber-frame `distance_to_reference`, collision/crossing detection, distance-modulated coupling through `SpatialCouplingModulator`, Doppler-corrected phase dynamics, signed ballistic kinematic residual evidence, explicit final-position/max-velocity/path-length equation replay under `KINEMATIC_SUMMARY_REPLAY_TOLERANCE`, Python plus Rust/Go/Julia/Mojo source surfaces, module-specific merger and fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as optional accelerators are rebuilt and feed the position/phase contract into the PHA-C.4 merge-window monitor lane; native moving-frame kernels must preserve the kinematic summary equations. |
 
 ## PHA-C merge-window status
 
