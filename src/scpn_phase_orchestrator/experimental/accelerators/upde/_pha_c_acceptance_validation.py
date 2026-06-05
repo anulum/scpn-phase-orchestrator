@@ -10,6 +10,11 @@
 
 from __future__ import annotations
 
+from numpy.typing import ArrayLike
+
+from scpn_phase_orchestrator.coupling.spatial_modulator import (
+    SpatialCouplingModulator,
+)
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
@@ -74,12 +79,58 @@ _DISCRETE_FIELDS = (
 
 
 def expected_pha_c_acceptance_record(
-    *args: object,
-    **kwargs: object,
+    phases_t0: ArrayLike,
+    positions_t0: ArrayLike,
+    omega_schedule: ArrayLike,
+    knm: ArrayLike,
+    velocity_schedule: ArrayLike,
+    *,
+    alpha: object = 0.0,
+    spatial_modulator: SpatialCouplingModulator | None = None,
+    doppler_strength: object = 1.0e-3,
+    doppler_epsilon: object = 1.0e-9,
+    zeta: object = 0.0,
+    psi: object = 0.0,
+    dt: object = 1.0e-3,
+    method: str = "rk4",
+    n_substeps: object = 1,
+    atol: object = 1.0e-9,
+    rtol: object = 1.0e-9,
+    reference_phase: object = 0.0,
+    reference_point: object = 0.0,
+    phase_tol_rad: object = 0.05,
+    spatial_tol_m: object = 2.0e-3,
+    required_consecutive_samples: object = 3,
+    tolerance_profile: object | None = "baseline_1x",
+    backend: object = "python",
 ) -> PHACAcceptanceRecord:
     """Return the Python reference acceptance after fail-closed validation."""
 
-    return build_pha_c_acceptance_record(*args, **kwargs)
+    return build_pha_c_acceptance_record(
+        phases_t0,
+        positions_t0,
+        omega_schedule,
+        knm,
+        velocity_schedule,
+        alpha=alpha,
+        spatial_modulator=spatial_modulator,
+        doppler_strength=doppler_strength,
+        doppler_epsilon=doppler_epsilon,
+        zeta=zeta,
+        psi=psi,
+        dt=dt,
+        method=method,
+        n_substeps=n_substeps,
+        atol=atol,
+        rtol=rtol,
+        reference_phase=reference_phase,
+        reference_point=reference_point,
+        phase_tol_rad=phase_tol_rad,
+        spatial_tol_m=spatial_tol_m,
+        required_consecutive_samples=required_consecutive_samples,
+        tolerance_profile=tolerance_profile,
+        backend=backend,
+    )
 
 
 def validate_pha_c_acceptance_record(

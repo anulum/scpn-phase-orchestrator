@@ -103,6 +103,8 @@ def _validate_decay_code(value: object) -> int:
         return _DECAY_TO_CODE[value]
     if isinstance(value, bool):
         raise ValueError("spatial_decay_form must be a decay name or code")
+    if not isinstance(value, (int, np.integer)):
+        raise ValueError("spatial_decay_form code must be 0, 1, 2, or 3")
     code = int(value)
     if code != value or code not in _CODE_TO_DECAY:
         raise ValueError("spatial_decay_form code must be 0, 1, 2, or 3")
