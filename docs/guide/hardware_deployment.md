@@ -85,3 +85,43 @@ observability:
 - Prometheus-compatible metrics export
 
 See: [Control Systems Guide](control_systems.md)
+
+## Deployment lane guidance
+
+This page spans multiple environments that differ in deployment constraints:
+
+- **Edge / browser:** Wasm path for deterministic local execution and lightweight
+  visualization.
+- **Performance-sensitive services:** Rust/FFI path for lower-latency control loops.
+- **GPU-rich workloads:** JAX path where batch throughput and differentiable backends
+  are prioritized.
+- **Deterministic industrial I/O:** FPGA path where fixed-latency closed-loop behaviour
+  is required.
+
+Use these lanes as a routing choice, not a replacement order. The same binding and
+supervisor contracts are the baseline regardless of backend shape.
+
+## Why fixed-latency paths matter
+
+For control workloads that need bounded actuation windows, fixed-latency execution
+paths reduce uncertainty in supervisory timing. The design intent is to preserve
+correctness under latency pressure:
+
+- deterministic control cadence,
+- auditable fallback behavior when optional paths are missing,
+- and a shared audit chain across lanes.
+
+## Deployment readiness check
+
+Before a production promotion, map each required surface to an explicit lane and
+confirm the corresponding prerequisites:
+
+1. install profile success,
+2. optional dependency availability,
+3. backend health checks,
+4. deterministic audit export in a dry-run path.
+
+This keeps deployment sign-off tied to evidence and avoids accidental rollout where
+critical path assumptions are absent.
+
+See: [Control Systems Guide](control_systems.md)

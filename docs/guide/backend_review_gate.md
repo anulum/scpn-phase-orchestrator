@@ -92,6 +92,34 @@ Use this checklist as a release evidence log. Keeping it complete lets downstrea
 users understand what is guaranteed today versus what is retained for research
 continuity.
 
+## Practical interpretation
+
+This gate converts architecture ambition into an auditable, staged support policy.
+Without this review artifact, production adopters face hidden variance in what is
+“supported” versus merely “present.”
+
+The output of this gate should answer two operator questions quickly:
+
+1. Which backends are allowed in production and who owns support?
+2. Which backends must be treated as research-only or deprecated in release notes?
+
+## Why this matters in release control
+
+A stable status in this gate prevents release drift where experimental backends
+accidentally gain production assumptions. It also shortens CI triage because
+failure patterns are interpreted in the context of explicit support status instead of
+implicit expectations.
+
+## Governance outcome
+
+Treat each cycle’s completion as a publishable artifact for external stakeholders.
+At minimum it should include:
+
+- support classification, 
+- evidence links (parity artifacts and CI summaries),
+- dependency/toolchain burden, and
+- an explicit exception record when a backend remains experimental.
+
 ## Related
 
 - [Backend Fallback Chain](backend_fallbacks.md)

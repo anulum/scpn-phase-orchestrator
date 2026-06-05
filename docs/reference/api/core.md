@@ -117,3 +117,37 @@ SPO follows a fail-fast strategy at system boundaries:
 
 Internal code trusts validated data — no redundant checks on hot paths.
 This keeps engine step latency under 1 ms for N ≤ 64.
+
+## Role in the production boundary
+
+This module is the project-wide seam between raw exceptions and deterministic
+control outcomes. Every subsystem raises typed SPO errors into the same hierarchy,
+so operational handlers can route failures consistently across CLI, services, and
+embedded drivers.
+
+In practice this gives operators a bounded failure vocabulary:
+
+- **Validation faults** are recoverable through corrected input or fallback
+  profiles.
+- **Engine faults** can trigger deterministic supervisor actions.
+- **Audit faults** stop replay promotion by default to protect chain integrity.
+
+## Why optional dependency handling matters
+
+The documented optional import and `HAS_*` flags are part of reliability policy, not
+just packaging convenience. They prevent import-time crashes when one runtime path is
+unavailable, while keeping production-facing Python behavior explicit:
+
+- Required behaviour remains available on the baseline path.
+- Optional accelerators are additive when present.
+- Audit and CLI surfaces can still start on minimal environments.
+
+This pattern prevents “one package drift takes down all controls” incidents by
+making capability and observability dependencies explicit in the import graph.
+
+## Enterprise usage note
+
+When teams evaluate SPO for regulated or multi-region deployment, this contract is a
+critical documentation checkpoint because it documents which failures are expected to
+halt, which failures are reviewed, and which can be auto-recovered without risking
+audit continuity.

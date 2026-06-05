@@ -81,3 +81,34 @@ actions, and coupling state. Enables deterministic replay and
 cryptographic verification of simulation reproducibility.
 
 ::: scpn_phase_orchestrator.audit
+
+## What makes this closed-loop in production
+
+Most oscillator libraries expose observability but stop before actuation.
+SPO’s control surface pushes into action selection with three constraints in the
+same loop:
+
+- **Prediction:** expected coherence trend via MPC proxy.
+- **Safety:** regime and evidence checks before promotion.
+- **Governance:** audit-ready proposal records for every non-trivial action.
+
+This changes operational posture from “watch and decide” to
+“predict-then-verify-then-act” under explicit constraints.
+
+## Operator operating model
+
+For day-to-day deployment, teams typically configure:
+
+1. A baseline monitor that maps `R` and `chimera_index` to supervisory inputs.
+2. A policy layer with conservative defaults.
+3. A Petri-NET-safe transition set for state changes.
+4. An audit sink that captures state transitions and proposal rationale.
+
+That model keeps tuning sessions reviewable and supports post-incident replay
+without manual reconstruction of transient state.
+
+## Stability and rollback behavior
+
+Because state transitions are explicit and regime-gated, operators can define clear
+rollback boundaries: if coherence drops or monitor evidence regresses after an action,
+policy proposals can be bounded and reverted before the next control cycle.

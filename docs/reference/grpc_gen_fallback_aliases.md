@@ -81,3 +81,29 @@ that surface while still centralizing runtime behavior in one location.
   adapter consumers keep stable behavior across refactors.
 - The alias indirection pattern makes runtime module upgrades safer because public
   import paths remain unchanged.
+
+## Operational role
+
+These aliases are release-time compatibility shims. In production rollouts, teams
+often pin downstream integrations (dashboards, operator tools, orchestration
+scripts) to historical module paths. The fallback alias layer allows internal runtime
+module replacements without forcing simultaneous consumer refactors.
+
+The practical effect is simpler rollout sequencing:
+
+- Internal implementations can move between generated and fallback modules.
+- Consumers continue importing stable top-level paths.
+- CI and parity validation can target one canonical runtime contract while preserving
+  public surface stability.
+
+## Risk posture and governance
+
+The module surface is intentionally narrow:
+
+- Aliases never expand the public protocol schema.
+- Alias failures are test-gated so contract mismatches are caught before release.
+- Runtime module replacement is evaluated through existing CI checks on import/route
+  parity, not through silent import-path drift.
+
+This keeps compatibility work auditable: what changed is the module owner, not
+the operator contract.
