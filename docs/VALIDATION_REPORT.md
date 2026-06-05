@@ -193,3 +193,8 @@ pip install mutmut==2.4.5
 mutmut run --paths-to-mutate src/scpn_phase_orchestrator/upde/order_params.py \
   --runner "pytest tests/test_mutation_killers.py -x -q --tb=no"
 ```
+
+## Reporting boundary
+- This report is evidence-driven and should be interpreted with environment and hardware context in every release package.
+- Keep any execution commands above synchronized with the actual CI profile used at merge time.
+- Record environment details with each benchmark claim so reproducibility and drift analysis remain auditable.

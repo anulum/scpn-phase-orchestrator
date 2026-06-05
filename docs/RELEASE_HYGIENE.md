@@ -38,6 +38,11 @@ optional meta-transfer console surface. It verifies package metadata, the
 publishing remains disabled unless an explicit future publication step is added.
 
 Download-and-run installer steps must also be pinned to explicit tool versions.
+
+## Release control outcome
+- This page defines the operational boundary for what gets published, and it is used as a hard gate before any version movement.
+- Treat release hygiene evidence as mandatory evidence for runtime assumptions, action compatibility, and package metadata integrity.
+- Keep all tooling references current so a tag cannot depend on stale action revisions or unverified metadata.
 For example, the Kani workflow installs `kani-verifier` with a fixed
 `--version` before running `cargo kani setup`; do not reintroduce an unbounded
 `cargo install <tool>` path in CI.

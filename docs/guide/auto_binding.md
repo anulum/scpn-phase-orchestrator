@@ -22,6 +22,11 @@ The auto-binding prototype converts raw source families into reviewable
 `binding_spec.yaml` proposals. It never overwrites a domainpack and never marks
 the proposal as trusted without validation.
 
+## Operational role
+- Use auto-binding as the first-pass discovery step, then treat generated bindings as draft input requiring review.
+- Keep source assumptions explicit at the same time as the proposal to avoid hidden defaulting.
+- Pair every generated proposal with the downstream validation command before allowing policy execution.
+
 Supported inputs:
 
 - Time-series CSV with a header, one optional time column, and one or more

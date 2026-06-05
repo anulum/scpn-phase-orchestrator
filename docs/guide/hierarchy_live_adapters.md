@@ -109,3 +109,8 @@ and quorum agreement. It reports the winning policy hash, accepted nodes,
 rejected nodes, blocked reasons, and a hash-linked audit-chain digest.
 `actuation_permitted` and `network_opened` remain false; accepted proposals still
 have to pass the normal supervisor review gate before use.
+
+## Operational role
+- Adapter-level validation is a replay and transport boundary; do not add policy logic in these helper layers.
+- Keep adapter outputs deterministic to preserve forensic replay and audit comparisons across reruns.
+- Verify adapters against malformed inputs with a regression test set before promoting any adapter change.

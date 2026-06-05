@@ -95,3 +95,8 @@ For release decisions, compare:
 Because timing and throughput are environment-sensitive, teams should use these
 values as directional indicators and pair them with the benchmark provenance
 record (command and runtime metadata) before capacity or SLO claims are made.
+
+## Scope and refresh rule
+- This page is a directional evidence snapshot and should not be copied as a production guarantee.
+- Refresh the snapshot with matching command and environment metadata whenever dependency stacks or benchmark baselines change.
+- Keep the provenance fields visible with any pull request that updates benchmark numbers or adds new test matrices.

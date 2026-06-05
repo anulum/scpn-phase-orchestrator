@@ -39,3 +39,8 @@ actual module count, workflow count, and test footprint.
 
 The file is generated; do not change values manually. Regenerate through the
 toolchain whenever package structure or module ownership changes.
+
+## Maintenance contract
+- Generated counts are a release- and audit-facing artifact; do not treat any single number as a performance claim.
+- Regenerate immediately after module moves, deletions, or major new surface additions.
+- Store the generation command used for each refresh in the corresponding release notes.
