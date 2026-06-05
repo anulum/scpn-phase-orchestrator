@@ -43,6 +43,13 @@ PHA_C_FORMAL_CERTIFICATE_PREDICATE = "KinematicBounds.budgetCertificate"
 PHA_C_FORMAL_CERTIFICATE_THEOREM = "budget_certificate_discharges_budget"
 PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_PREDICATE = "KinematicBounds.zeroGainCertificate"
 PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_THEOREM = "zero_gain_certificate_discharges_budget"
+PHA_C_FORMAL_CONTINUOUS_LEAN_MODULE = "SPOFormal.Continuous"
+PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE = (
+    "ContinuousEnvelopeBounds.budgetCertificate"
+)
+PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM = (
+    "continuous_envelope_certificate_discharges_horizon"
+)
 PHA_C_FORMAL_DEFAULT_SCALE_M = 1.0e-6
 PHA_C_FORMAL_DEFAULT_SCALE_RAD = 1.0e-6
 PHA_C_FORMAL_DEFAULT_TIME_SCALE_S = 1.0e-6
@@ -50,6 +57,9 @@ PHA_C_FORMAL_DEFAULT_TIME_SCALE_S = 1.0e-6
 __all__ = [
     "PHA_C_FORMAL_CERTIFICATE_PREDICATE",
     "PHA_C_FORMAL_CERTIFICATE_THEOREM",
+    "PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE",
+    "PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM",
+    "PHA_C_FORMAL_CONTINUOUS_LEAN_MODULE",
     "PHA_C_FORMAL_DEFAULT_SCALE_M",
     "PHA_C_FORMAL_DEFAULT_SCALE_RAD",
     "PHA_C_FORMAL_DEFAULT_TIME_SCALE_S",
@@ -79,6 +89,9 @@ class PHACKinematicProofObligation:
     lean_module: str
     lean_certificate_predicate: str
     lean_theorem: str
+    continuous_lean_module: str
+    continuous_certificate_predicate: str
+    continuous_theorem: str
     fixed_point_scale_m: float
     fixed_point_scale_rad: float
     fixed_point_time_scale_s: float
@@ -92,6 +105,10 @@ class PHACKinematicProofObligation:
     relative_velocity_step_bound_units: int
     coupling_residual_rate_bound_units_per_second: int
     coupling_residual_step_bound_units: int
+    continuous_drive_rate_bound_units_per_second: int
+    continuous_horizon_drive_bound_units: int
+    continuous_linear_budget_units: int
+    continuous_margin_units: int
     drive_bound_units: int
     merge_window_tolerance_units: int
     horizon_steps: int
@@ -107,6 +124,7 @@ class PHACKinematicProofObligation:
     kinematic_residual_units: int
     path_length_units: int
     max_spatial_dispersion_units: int
+    continuous_envelope_discharged: bool
     proof_obligations_discharged: bool
     acceptance_sha256: str
     timeline_sha256: str
@@ -242,6 +260,11 @@ def _dict_without_record_hash(
         "lean_module": obligation.lean_module,
         "lean_certificate_predicate": obligation.lean_certificate_predicate,
         "lean_theorem": obligation.lean_theorem,
+        "continuous_lean_module": obligation.continuous_lean_module,
+        "continuous_certificate_predicate": (
+            obligation.continuous_certificate_predicate
+        ),
+        "continuous_theorem": obligation.continuous_theorem,
         "fixed_point_scale_m": obligation.fixed_point_scale_m,
         "fixed_point_scale_rad": obligation.fixed_point_scale_rad,
         "fixed_point_time_scale_s": obligation.fixed_point_time_scale_s,
@@ -263,6 +286,14 @@ def _dict_without_record_hash(
         "coupling_residual_step_bound_units": (
             obligation.coupling_residual_step_bound_units
         ),
+        "continuous_drive_rate_bound_units_per_second": (
+            obligation.continuous_drive_rate_bound_units_per_second
+        ),
+        "continuous_horizon_drive_bound_units": (
+            obligation.continuous_horizon_drive_bound_units
+        ),
+        "continuous_linear_budget_units": obligation.continuous_linear_budget_units,
+        "continuous_margin_units": obligation.continuous_margin_units,
         "drive_bound_units": obligation.drive_bound_units,
         "merge_window_tolerance_units": obligation.merge_window_tolerance_units,
         "horizon_steps": obligation.horizon_steps,
@@ -278,6 +309,7 @@ def _dict_without_record_hash(
         "kinematic_residual_units": obligation.kinematic_residual_units,
         "path_length_units": obligation.path_length_units,
         "max_spatial_dispersion_units": obligation.max_spatial_dispersion_units,
+        "continuous_envelope_discharged": obligation.continuous_envelope_discharged,
         "proof_obligations_discharged": obligation.proof_obligations_discharged,
         "acceptance_sha256": obligation.acceptance_sha256,
         "timeline_sha256": obligation.timeline_sha256,
@@ -409,6 +441,15 @@ def build_pha_c_kinematic_proof_obligation(
         scale=scale_m,
         name="spatial_tol_m",
     )
+    continuous_drive_rate_units = relative_velocity_rate_units + residual_rate_units
+    continuous_horizon_drive_units = _ceil_div_units(
+        continuous_drive_rate_units * horizon_time_units,
+        time_scale_units_per_second,
+        name="continuous_horizon_drive_bound_units",
+    )
+    continuous_linear_budget_units = initial_units + continuous_horizon_drive_units
+    continuous_margin_units = merge_tolerance_units - continuous_linear_budget_units
+    continuous_envelope_discharged = continuous_margin_units >= 0
     linear_budget_units = initial_units + horizon_steps * drive_units
     gronwall_trace_units = _gronwall_budget_trace(
         initial_tolerance_units=initial_units,
@@ -447,6 +488,7 @@ def build_pha_c_kinematic_proof_obligation(
     discharged = (
         window_margin_units >= 0
         and phase_margin_units >= 0
+        and continuous_envelope_discharged
         and verified_record.execution_disabled
         and not verified_record.actuating
         and verified_record.claim_boundary == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
@@ -461,6 +503,11 @@ def build_pha_c_kinematic_proof_obligation(
         "lean_module": PHA_C_FORMAL_LEAN_MODULE,
         "lean_certificate_predicate": PHA_C_FORMAL_CERTIFICATE_PREDICATE,
         "lean_theorem": PHA_C_FORMAL_CERTIFICATE_THEOREM,
+        "continuous_lean_module": PHA_C_FORMAL_CONTINUOUS_LEAN_MODULE,
+        "continuous_certificate_predicate": (
+            PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE
+        ),
+        "continuous_theorem": PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM,
         "fixed_point_scale_m": scale_m,
         "fixed_point_scale_rad": scale_rad,
         "fixed_point_time_scale_s": time_scale,
@@ -474,6 +521,10 @@ def build_pha_c_kinematic_proof_obligation(
         "relative_velocity_step_bound_units": relative_velocity_units,
         "coupling_residual_rate_bound_units_per_second": residual_rate_units,
         "coupling_residual_step_bound_units": residual_units,
+        "continuous_drive_rate_bound_units_per_second": continuous_drive_rate_units,
+        "continuous_horizon_drive_bound_units": continuous_horizon_drive_units,
+        "continuous_linear_budget_units": continuous_linear_budget_units,
+        "continuous_margin_units": continuous_margin_units,
         "drive_bound_units": drive_units,
         "merge_window_tolerance_units": merge_tolerance_units,
         "horizon_steps": horizon_steps,
@@ -489,6 +540,7 @@ def build_pha_c_kinematic_proof_obligation(
         "kinematic_residual_units": raw_residual_units,
         "path_length_units": path_length_units,
         "max_spatial_dispersion_units": initial_units,
+        "continuous_envelope_discharged": continuous_envelope_discharged,
         "proof_obligations_discharged": discharged,
         "acceptance_sha256": verified_record.acceptance_sha256,
         "timeline_sha256": verified_record.timeline_sha256,
@@ -514,6 +566,11 @@ def verify_pha_c_kinematic_proof_obligation(
         "lean_module": PHA_C_FORMAL_LEAN_MODULE,
         "lean_certificate_predicate": PHA_C_FORMAL_CERTIFICATE_PREDICATE,
         "lean_theorem": PHA_C_FORMAL_CERTIFICATE_THEOREM,
+        "continuous_lean_module": PHA_C_FORMAL_CONTINUOUS_LEAN_MODULE,
+        "continuous_certificate_predicate": (
+            PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE
+        ),
+        "continuous_theorem": PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM,
     }
     for field, expected in exact_strings.items():
         got = getattr(obligation, field)
@@ -550,6 +607,9 @@ def verify_pha_c_kinematic_proof_obligation(
         "relative_velocity_step_bound_units",
         "coupling_residual_rate_bound_units_per_second",
         "coupling_residual_step_bound_units",
+        "continuous_drive_rate_bound_units_per_second",
+        "continuous_horizon_drive_bound_units",
+        "continuous_linear_budget_units",
         "drive_bound_units",
         "merge_window_tolerance_units",
         "horizon_steps",
@@ -574,6 +634,11 @@ def verify_pha_c_kinematic_proof_obligation(
         name="window_budget_margin_units",
         minimum=-10**18,
     )
+    _validate_int(
+        obligation.continuous_margin_units,
+        name="continuous_margin_units",
+        minimum=-10**18,
+    )
     _validate_sha256_hex(
         obligation.gronwall_budget_trace_sha256,
         name="gronwall_budget_trace_sha256",
@@ -582,6 +647,10 @@ def verify_pha_c_kinematic_proof_obligation(
         obligation.phase_margin_units,
         name="phase_margin_units",
         minimum=-10**18,
+    )
+    _validate_bool(
+        obligation.continuous_envelope_discharged,
+        name="continuous_envelope_discharged",
     )
     _validate_bool(
         obligation.proof_obligations_discharged,
@@ -631,6 +700,50 @@ def verify_pha_c_kinematic_proof_obligation(
     if obligation.coupling_residual_step_bound_units != expected_residual_units:
         raise ValueError(
             "coupling_residual_step_bound_units must match sampled rate bound",
+        )
+
+    expected_continuous_drive_rate = (
+        obligation.relative_velocity_rate_bound_units_per_second
+        + obligation.coupling_residual_rate_bound_units_per_second
+    )
+    if (
+        obligation.continuous_drive_rate_bound_units_per_second
+        != expected_continuous_drive_rate
+    ):
+        raise ValueError(
+            "continuous_drive_rate_bound_units_per_second must equal rate sum",
+        )
+    expected_continuous_horizon_drive = _ceil_div_units(
+        expected_continuous_drive_rate * obligation.horizon_time_units,
+        obligation.time_scale_units_per_second,
+        name="continuous_horizon_drive_bound_units",
+    )
+    if (
+        obligation.continuous_horizon_drive_bound_units
+        != expected_continuous_horizon_drive
+    ):
+        raise ValueError(
+            "continuous_horizon_drive_bound_units must match sampled horizon rate",
+        )
+    expected_continuous_linear_budget = (
+        obligation.initial_tolerance_units + expected_continuous_horizon_drive
+    )
+    if obligation.continuous_linear_budget_units != (
+        expected_continuous_linear_budget
+    ):
+        raise ValueError(
+            "continuous_linear_budget_units must match continuous envelope",
+        )
+    expected_continuous_margin = (
+        obligation.merge_window_tolerance_units
+        - expected_continuous_linear_budget
+    )
+    if obligation.continuous_margin_units != expected_continuous_margin:
+        raise ValueError("continuous_margin_units must match continuous envelope")
+    expected_continuous_discharged = expected_continuous_margin >= 0
+    if obligation.continuous_envelope_discharged != expected_continuous_discharged:
+        raise ValueError(
+            "continuous_envelope_discharged does not match certificate math",
         )
 
     expected_drive = (
@@ -684,6 +797,7 @@ def verify_pha_c_kinematic_proof_obligation(
     expected_discharged = (
         expected_margin >= 0
         and expected_phase_margin >= 0
+        and expected_continuous_discharged
         and obligation.execution_disabled
         and not obligation.actuating
     )

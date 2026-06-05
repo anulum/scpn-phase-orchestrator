@@ -27,6 +27,7 @@ fi
 lake env lean --error=warning SPOFormal/Projector.lean
 lake env lean --error=warning SPOFormal/Regime.lean
 lake env lean --error=warning SPOFormal/Kinematic.lean
+lake env lean --error=warning SPOFormal/Continuous.lean
 lake build SPOFormal
 lake env lean --error=warning SPOFormal.lean
 lake env lean --error=warning test/KinematicTest.lean

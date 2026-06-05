@@ -144,7 +144,10 @@ finite-horizon Gronwall budget trace, and discharges the fixed-point
 merge-window and phase-margin checks. The same manifest publishes sampled
 continuous-rate fields for `dt`, horizon time, velocity-rate bounds, and
 residual-rate bounds so Rust, Mojo, Julia, Go, and Python source-contract rows
-carry the same time-normalised formal assumptions.
+carry the same time-normalised formal assumptions. The rows now also publish
+the `SPOFormal.Continuous` horizon theorem, continuous drive-rate sum,
+continuous horizon-drive replay, continuous budget, continuous margin, and a
+Boolean continuous-envelope discharge flag.
 
 ```bash
 uv run python benchmarks/pha_c_acceptance_benchmark.py \

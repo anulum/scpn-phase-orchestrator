@@ -13,6 +13,9 @@ certificate predicate that a reviewer or CI proof gate must use:
 - Lean module: `SPOFormal.Kinematic`
 - Predicate: `KinematicBounds.budgetCertificate`
 - Theorem: `budget_certificate_discharges_budget`
+- Continuous-envelope module: `SPOFormal.Continuous`
+- Continuous predicate: `ContinuousEnvelopeBounds.budgetCertificate`
+- Continuous theorem: `continuous_envelope_certificate_discharges_horizon`
 
 ## Use cases
 
@@ -45,6 +48,10 @@ runtime envelope into integer units:
 | `relative_velocity_step_bound_units` | explicit predictive slack, default `0` | `KinematicBounds.relativeVelocityStepBound` |
 | `coupling_residual_rate_bound_units_per_second` | moving-frame residual divided by `dt` | `SampledRateKinematicBounds.couplingResidualRateBound` |
 | `coupling_residual_step_bound_units` | moving-frame kinematic residual | `KinematicBounds.couplingResidualStepBound` |
+| `continuous_drive_rate_bound_units_per_second` | velocity-rate plus residual-rate bound | `ContinuousEnvelopeBounds.driveRateBound` |
+| `continuous_horizon_drive_bound_units` | sampled continuous drive over `horizon_time_units` | `ContinuousEnvelopeBounds.sampledDriveBoundAt` |
+| `continuous_linear_budget_units` | initial dispersion plus sampled horizon drive | `ContinuousEnvelopeBounds.budgetAt` |
+| `continuous_margin_units` | merge tolerance minus continuous budget | `ContinuousEnvelopeBounds.budgetCertificate` |
 | `merge_window_tolerance_units` | spatial merge tolerance | `KinematicBounds.mergeWindowTolerance` |
 | `horizon_steps` | accepted PHA-C step count | `KinematicBounds.horizonSteps` |
 
@@ -69,6 +76,13 @@ per-second relative-velocity and residual bounds are sampled through
 Lean budget. The Lean side names this bridge `SampledRateKinematicBounds` and
 proves that a sampled-rate certificate discharges the same finite-horizon
 merge-window budget after conversion to `KinematicBounds`.
+
+The manifest also records the continuous-envelope theorem target. That layer
+samples the same per-second rates over `horizon_time_units`, records the
+continuous horizon drive, and requires the signed continuous margin to be
+non-negative before `proof_obligations_discharged` can be true. The Lean side
+names this boundary `ContinuousEnvelopeBounds`; it is a dependency-light
+fixed-point continuous envelope, not a Mathlib real-analysis proof.
 
 ## Minimal example
 
@@ -101,6 +115,8 @@ verify_pha_c_kinematic_proof_obligation(obligation)
 - natural-number fields and the Lean equations for drive, linear zero-gain
   reference budget, Gronwall budget trace, terminal budget, and merge-window
   margin;
+- continuous-envelope theorem metadata, drive-rate sum, horizon-drive replay,
+  continuous budget, and continuous margin;
 - phase tolerance margin consistency;
 - lower-case SHA-256 fields; and
 - canonical manifest hash replay.

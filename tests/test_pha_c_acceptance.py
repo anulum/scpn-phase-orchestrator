@@ -389,6 +389,11 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     )
     assert result["formal_obligation_relative_velocity_rate_units_per_second"] == 0
     assert result["formal_obligation_residual_rate_units_per_second"] == 0
+    assert result["formal_obligation_continuous_drive_rate_units_per_second"] == 0
+    assert result["formal_obligation_continuous_horizon_drive_units"] == 0
+    assert result["formal_obligation_continuous_linear_budget_units"] >= 0
+    assert result["formal_obligation_continuous_margin_units"] >= 0
+    assert result["formal_obligation_continuous_envelope_discharged"] == 1
     assert result["formal_obligation_gronwall_margin_units"] == (
         result["formal_obligation_margin_units"]
     )
@@ -396,6 +401,9 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["formal_obligation_phase_margin_units"] >= 0
     assert result["formal_obligation_theorem"] == (
         "budget_certificate_discharges_budget"
+    )
+    assert result["formal_obligation_continuous_theorem"] == (
+        "continuous_envelope_certificate_discharges_horizon"
     )
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
@@ -423,6 +431,18 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     )
     assert all(
         record["formal_obligation_relative_velocity_rate_units_per_second"] == 0
+        for record in backend_records
+    )
+    assert all(
+        record["formal_obligation_continuous_drive_rate_units_per_second"] == 0
+        for record in backend_records
+    )
+    assert all(
+        record["formal_obligation_continuous_horizon_drive_units"] == 0
+        for record in backend_records
+    )
+    assert all(
+        int(record["formal_obligation_continuous_envelope_discharged"]) == 1
         for record in backend_records
     )
     assert all(

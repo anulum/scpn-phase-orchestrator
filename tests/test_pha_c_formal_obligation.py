@@ -32,6 +32,9 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
 from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
     PHA_C_FORMAL_CERTIFICATE_PREDICATE,
     PHA_C_FORMAL_CERTIFICATE_THEOREM,
+    PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE,
+    PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM,
+    PHA_C_FORMAL_CONTINUOUS_LEAN_MODULE,
     PHA_C_FORMAL_DEFAULT_TIME_SCALE_S,
     PHA_C_FORMAL_LEAN_MODULE,
     PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY,
@@ -90,6 +93,11 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     assert obligation.lean_module == PHA_C_FORMAL_LEAN_MODULE
     assert obligation.lean_certificate_predicate == PHA_C_FORMAL_CERTIFICATE_PREDICATE
     assert obligation.lean_theorem == PHA_C_FORMAL_CERTIFICATE_THEOREM
+    assert obligation.continuous_lean_module == PHA_C_FORMAL_CONTINUOUS_LEAN_MODULE
+    assert obligation.continuous_certificate_predicate == (
+        PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE
+    )
+    assert obligation.continuous_theorem == PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM
     assert obligation.fixed_point_time_scale_s == PHA_C_FORMAL_DEFAULT_TIME_SCALE_S
     assert obligation.time_step_s == pytest.approx(record.dt)
     assert obligation.time_scale_units_per_second == 1_000_000
@@ -100,6 +108,16 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     assert obligation.relative_velocity_step_bound_units == 0
     assert obligation.coupling_residual_rate_bound_units_per_second == 0
     assert obligation.coupling_residual_step_bound_units == 0
+    assert obligation.continuous_drive_rate_bound_units_per_second == 0
+    assert obligation.continuous_horizon_drive_bound_units == 0
+    assert obligation.continuous_linear_budget_units == (
+        obligation.initial_tolerance_units
+    )
+    assert obligation.continuous_margin_units == (
+        obligation.merge_window_tolerance_units
+        - obligation.continuous_linear_budget_units
+    )
+    assert obligation.continuous_envelope_discharged
     assert obligation.drive_bound_units == 0
     assert obligation.horizon_steps == record.step_count
     assert obligation.initial_tolerance_units == _ceil_units(
@@ -161,6 +179,21 @@ def test_kinematic_obligation_supports_predictive_relative_velocity_slack() -> N
         expected_rate_units
     )
     assert obligation.relative_velocity_step_bound_units == expected_slack_units
+    assert obligation.continuous_drive_rate_bound_units_per_second == (
+        expected_rate_units
+    )
+    assert obligation.continuous_horizon_drive_bound_units == (
+        expected_slack_units * obligation.horizon_steps
+    )
+    assert obligation.continuous_linear_budget_units == (
+        obligation.initial_tolerance_units
+        + obligation.continuous_horizon_drive_bound_units
+    )
+    assert obligation.continuous_margin_units == (
+        obligation.merge_window_tolerance_units
+        - obligation.continuous_linear_budget_units
+    )
+    assert obligation.continuous_envelope_discharged
     assert obligation.drive_bound_units == expected_slack_units
     assert obligation.linear_budget_units == (
         obligation.initial_tolerance_units
@@ -200,6 +233,12 @@ def test_kinematic_obligation_supports_nonzero_lipschitz_gain() -> None:
     assert obligation.gronwall_budget_margin_units == (
         obligation.merge_window_tolerance_units - expected_budget
     )
+    assert obligation.continuous_linear_budget_units == (
+        obligation.initial_tolerance_units
+        + obligation.continuous_horizon_drive_bound_units
+    )
+    assert obligation.continuous_margin_units >= 0
+    assert obligation.continuous_envelope_discharged
     assert obligation.window_budget_margin_units == (
         obligation.gronwall_budget_margin_units
     )
@@ -245,6 +284,23 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
     with pytest.raises(ValueError, match="gronwall_budget_trace_sha256"):
         verify_pha_c_kinematic_proof_obligation(
             replace(obligation, gronwall_budget_trace_sha256="0" * 64),
+        )
+    with pytest.raises(ValueError, match="continuous_theorem"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(obligation, continuous_theorem="unchecked"),
+        )
+    with pytest.raises(ValueError, match="continuous_horizon_drive_bound_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(
+                obligation,
+                continuous_horizon_drive_bound_units=(
+                    obligation.continuous_horizon_drive_bound_units + 1
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="continuous_envelope_discharged"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(obligation, continuous_envelope_discharged=False),
         )
     with pytest.raises(ValueError, match="proof_obligations_discharged"):
         verify_pha_c_kinematic_proof_obligation(

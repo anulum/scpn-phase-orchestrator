@@ -325,7 +325,9 @@ remain inside the same formal review boundary.
 It also records `time_step_units`, `horizon_time_units`, and sampled
 per-second velocity/residual rate bounds so the continuous-time assumptions
 behind a PHA-C schedule are reviewed before they are projected into the
-discrete Lean budget.
+discrete Lean budget. The same manifest now records the
+`SPOFormal.Continuous` horizon certificate: per-second drive-rate sum,
+horizon-drive replay, continuous budget, and signed continuous margin.
 
 Those Rust, Go, Julia, and Mojo rows are intentionally labelled
 `source_contract_reference_validation` until native downstream kernels are

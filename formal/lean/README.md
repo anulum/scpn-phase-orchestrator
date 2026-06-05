@@ -31,6 +31,11 @@ integer/fixed-point contracts that mirror the Rust supervisor boundary.
   boundary includes a discrete Gronwall-style relative-distance budget,
   zero-gain linear horizon certification, and a Boolean phase-plus-spatial
   merge-window mirror.
+- `SPOFormal.Continuous`: fixed-point continuous-envelope templates for PHA-C
+  handoffs. The proof boundary records per-second relative-velocity and
+  residual rate bounds, samples those rates over the reviewed horizon time,
+  proves the continuous horizon certificate, and bridges the same assumptions
+  back into the sampled discrete kinematic budget.
 
 The Lean lane is intentionally dependency-light: it uses Lean core plus `Std`,
 not Mathlib. It is an independent specification mirror, not a replacement for
@@ -38,12 +43,12 @@ Kani harnesses over the Rust implementation.
 
 ## Out of scope
 
-These proofs do not claim continuous-time Kuramoto stability, nonlinear
-Lyapunov stability under arbitrary topology, hardware deadline guarantees, or
-site-specific actuator safety. The kinematic lane proves fixed-point
-finite-step budget logic; callers must still justify the runtime conversion
-from physical units and numerical trajectories into the fixed-point
-`KinematicBounds` assumptions.
+These proofs do not claim nonlinear Lyapunov stability under arbitrary
+topology, hardware deadline guarantees, or site-specific actuator safety. The
+continuous lane proves dependency-light fixed-point envelope arithmetic rather
+than importing Mathlib real analysis; callers must still justify the runtime
+conversion from physical units and numerical trajectories into the fixed-point
+`ContinuousEnvelopeBounds` and `KinematicBounds` assumptions.
 
 ## Build
 
@@ -59,6 +64,7 @@ The script runs the CI-equivalent proof gate:
 - directly check `SPOFormal/Projector.lean`;
 - directly check `SPOFormal/Regime.lean`;
 - directly check `SPOFormal/Kinematic.lean`;
+- directly check `SPOFormal/Continuous.lean`;
 - build the `SPOFormal` Lake library;
 - check the package entry point;
 - directly check `test/KinematicTest.lean`.

@@ -288,6 +288,21 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "formal_obligation_residual_rate_units_per_second": (
             obligation.coupling_residual_rate_bound_units_per_second
         ),
+        "formal_obligation_continuous_drive_rate_units_per_second": (
+            obligation.continuous_drive_rate_bound_units_per_second
+        ),
+        "formal_obligation_continuous_horizon_drive_units": (
+            obligation.continuous_horizon_drive_bound_units
+        ),
+        "formal_obligation_continuous_linear_budget_units": (
+            obligation.continuous_linear_budget_units
+        ),
+        "formal_obligation_continuous_margin_units": (
+            obligation.continuous_margin_units
+        ),
+        "formal_obligation_continuous_envelope_discharged": int(
+            obligation.continuous_envelope_discharged,
+        ),
         "formal_obligation_gronwall_budget_units": obligation.gronwall_budget_units,
         "formal_obligation_gronwall_margin_units": (
             obligation.gronwall_budget_margin_units
@@ -295,6 +310,7 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "formal_obligation_trace_sha256": obligation.gronwall_budget_trace_sha256,
         "formal_obligation_phase_margin_units": obligation.phase_margin_units,
         "formal_obligation_theorem": obligation.lean_theorem,
+        "formal_obligation_continuous_theorem": obligation.continuous_theorem,
         "hash_replay_validated": int(verify_pha_c_acceptance_record(record) is record),
     }
 
@@ -371,6 +387,21 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "formal_obligation_residual_rate_units_per_second": (
                     obligation.coupling_residual_rate_bound_units_per_second
                 ),
+                "formal_obligation_continuous_drive_rate_units_per_second": (
+                    obligation.continuous_drive_rate_bound_units_per_second
+                ),
+                "formal_obligation_continuous_horizon_drive_units": (
+                    obligation.continuous_horizon_drive_bound_units
+                ),
+                "formal_obligation_continuous_linear_budget_units": (
+                    obligation.continuous_linear_budget_units
+                ),
+                "formal_obligation_continuous_margin_units": (
+                    obligation.continuous_margin_units
+                ),
+                "formal_obligation_continuous_envelope_discharged": int(
+                    obligation.continuous_envelope_discharged,
+                ),
                 "formal_obligation_gronwall_budget_units": (
                     obligation.gronwall_budget_units
                 ),
@@ -381,6 +412,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                     obligation.gronwall_budget_trace_sha256
                 ),
                 "formal_obligation_phase_margin_units": obligation.phase_margin_units,
+                "formal_obligation_continuous_theorem": (
+                    obligation.continuous_theorem
+                ),
                 "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
@@ -484,6 +518,23 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "formal_obligation_residual_rate_units_per_second": (
                     record["formal_obligation_residual_rate_units_per_second"]
                 ),
+                "formal_obligation_continuous_drive_rate_units_per_second": (
+                    record[
+                        "formal_obligation_continuous_drive_rate_units_per_second"
+                    ]
+                ),
+                "formal_obligation_continuous_horizon_drive_units": (
+                    record["formal_obligation_continuous_horizon_drive_units"]
+                ),
+                "formal_obligation_continuous_linear_budget_units": (
+                    record["formal_obligation_continuous_linear_budget_units"]
+                ),
+                "formal_obligation_continuous_margin_units": (
+                    record["formal_obligation_continuous_margin_units"]
+                ),
+                "formal_obligation_continuous_envelope_discharged": (
+                    record["formal_obligation_continuous_envelope_discharged"]
+                ),
                 "formal_obligation_gronwall_budget_units": (
                     record["formal_obligation_gronwall_budget_units"]
                 ),
@@ -557,6 +608,21 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "formal_obligation_residual_rate_units_per_second": contracts[
             "formal_obligation_residual_rate_units_per_second"
         ],
+        "formal_obligation_continuous_drive_rate_units_per_second": contracts[
+            "formal_obligation_continuous_drive_rate_units_per_second"
+        ],
+        "formal_obligation_continuous_horizon_drive_units": contracts[
+            "formal_obligation_continuous_horizon_drive_units"
+        ],
+        "formal_obligation_continuous_linear_budget_units": contracts[
+            "formal_obligation_continuous_linear_budget_units"
+        ],
+        "formal_obligation_continuous_margin_units": contracts[
+            "formal_obligation_continuous_margin_units"
+        ],
+        "formal_obligation_continuous_envelope_discharged": contracts[
+            "formal_obligation_continuous_envelope_discharged"
+        ],
         "formal_obligation_gronwall_budget_units": contracts[
             "formal_obligation_gronwall_budget_units"
         ],
@@ -568,6 +634,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             "formal_obligation_phase_margin_units"
         ],
         "formal_obligation_theorem": contracts["formal_obligation_theorem"],
+        "formal_obligation_continuous_theorem": contracts[
+            "formal_obligation_continuous_theorem"
+        ],
         "max_abs_velocity_m_per_s": contracts["max_abs_velocity_m_per_s"],
         "path_length_max_m": contracts["path_length_max_m"],
         "non_actuating": contracts["non_actuating"],

@@ -9,12 +9,14 @@ SCPN Phase Orchestrator — Lean kinematic smoke tests
 -/
 
 import SPOFormal.Kinematic
+import SPOFormal.Continuous
 
 set_option autoImplicit false
 
 namespace SPOFormal.KinematicTest
 
 open SPOFormal.Kinematic
+open SPOFormal.Continuous
 
 def mifSmokeBounds : KinematicBounds := {
   initialTolerance := 2
@@ -121,5 +123,55 @@ example : mergeWindowLocked 9 8 10 10 = false := by
 example :
     mergeWindowLocked 7 8 10 10 = true ↔ 7 <= 8 ∧ 10 <= 10 := by
   exact mergeWindowLocked_eq_true_iff
+
+def mifContinuousEnvelopeBounds : ContinuousEnvelopeBounds := {
+  initialTolerance := 1
+  relativeVelocityRateBound := 5
+  couplingResidualRateBound := 0
+  timeScaleUnitsPerSecond := 10
+  horizonTimeUnits := 6
+  mergeWindowTolerance := 4
+}
+
+example : mifContinuousEnvelopeBounds.driveRateBound = 5 := by
+  decide
+
+example : mifContinuousEnvelopeBounds.sampledDriveBoundAt 6 = 3 := by
+  decide
+
+example : mifContinuousEnvelopeBounds.budgetAt 6 = 4 := by
+  decide
+
+example : mifContinuousEnvelopeBounds.budgetCertificate = true := by
+  decide
+
+example :
+    mifContinuousEnvelopeBounds.budgetAt
+      mifContinuousEnvelopeBounds.horizonTimeUnits <=
+        mifContinuousEnvelopeBounds.mergeWindowTolerance := by
+  exact continuous_envelope_certificate_discharges_horizon
+    (cfg := mifContinuousEnvelopeBounds)
+    (by decide)
+
+example :
+    (mifContinuousEnvelopeBounds.toSampledRateKinematicBounds
+      0
+      2
+      3).toKinematicBounds.driveBound = 1 := by
+  decide
+
+example :
+    ∀ k, k <= 3 ->
+      (mifContinuousEnvelopeBounds.toSampledRateKinematicBounds
+        0
+        2
+        3).toKinematicBounds.budget k <=
+          mifContinuousEnvelopeBounds.mergeWindowTolerance := by
+  exact continuous_envelope_sampled_step_certificate_discharges_budget
+    (cfg := mifContinuousEnvelopeBounds)
+    (lipschitzStepGain := 0)
+    (stepTimeUnits := 2)
+    (horizonSteps := 3)
+    (by decide)
 
 end SPOFormal.KinematicTest
