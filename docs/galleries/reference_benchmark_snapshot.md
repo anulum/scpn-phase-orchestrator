@@ -6,14 +6,14 @@ Timing fields are local non-isolated regression evidence unless metadata records
 ## Metadata
 
 - `suite_version`: `reference_suite_v1`
-- `snapshot_date`: `2026-06-04`
-- `command`: `PYTHONPATH=src python benchmarks/reference_suite.py`
+- `snapshot_date`: `2026-06-05`
+- `command`: `PYTHONPATH=.:src python benchmarks/reference_suite.py`
 - `backend`: `python_numpy`
 - `python_version`: `3.12.3`
 - `python_implementation`: `CPython`
 - `numpy_version`: `2.4.6`
 - `platform`: `Linux-6.17.0-29-generic-x86_64-with-glibc2.39`
-- `executable`: `/media/anulum/724AA8E84AA8AA75/aaa_God_of_the_Math_Collection/03_CODE/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python`
+- `executable`: `/media/anulum/724AA8E84AA8AA75/aaa_God_of_the_Math_Collection/03_CODE/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python3`
 - `benchmark_evidence_kind`: `local_regression_non_isolated`
 - `isolation_method`: `none`
 - `production_timing_claim`: `false`
@@ -22,53 +22,60 @@ Timing fields are local non-isolated regression evidence unless metadata records
 
 | Key | Suite | Acceptance | N steps | Fixtures | Wall time s | Steps/s | Evidence |
 |-----|-------|-----------:|--------:|---------:|------------:|--------:|----------|
-| `auto_binding` | `auto_binding_synthetic_quality` | `n/a` | `n/a` | `4` | `0.08063074201345444` | `49.60887001799563` | `local_regression_non_isolated` |
-| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | `1` | `n/a` | `n/a` | `0.0006986509542912245` | `7156.649496131381` | `local_regression_non_isolated` |
-| `bayesian_backends` | `bayesian_backend_fail_closed` | `1` | `n/a` | `n/a` | `0.002720535034313798` | `1102.7242664260311` | `local_regression_non_isolated` |
-| `bayesian_posterior` | `bayesian_posterior_fit_quality` | `1` | `n/a` | `n/a` | `0.014721490908414125` | `6521.07864599032` | `local_regression_non_isolated` |
-| `chimera_polyglot` | `chimera_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.9834565469063818` | `5.084108714033468` | `local_regression_non_isolated` |
-| `dimension_polyglot` | `dimension_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `1.7575838649645448` | `2.8448144635766006` | `local_regression_non_isolated` |
-| `domain_formal_export` | `domain_formal_safety_exports` | `1` | `n/a` | `n/a` | `0.0017075720243155956` | `32209.475920668297` | `local_regression_non_isolated` |
-| `embedding_polyglot` | `embedding_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.8692543709184974` | `920.3289931745528` | `local_regression_non_isolated` |
-| `entropy_production_polyglot` | `entropy_production_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.17131602601148188` | `466.9732415730812` | `local_regression_non_isolated` |
-| `evolutionary_mutation_grammars` | `evolutionary_mutation_grammar_gate` | `1` | `n/a` | `n/a` | `0.04665314010344446` | `428.6956881284691` | `local_regression_non_isolated` |
-| `evolutionary_supervisor_search` | `evolutionary_supervisor_search` | `1` | `n/a` | `n/a` | `0.0067436047829687595` | `3114.0614961654233` | `local_regression_non_isolated` |
-| `federated_deployment_preflight` | `federated_deployment_preflight_gate` | `1` | `n/a` | `n/a` | `0.0019809301011264324` | `1514.4401098726732` | `local_regression_non_isolated` |
-| `federated_meta_orchestrator` | `federated_meta_orchestrator` | `1` | `n/a` | `n/a` | `0.0005461149848997593` | `5493.348622452939` | `local_regression_non_isolated` |
-| `federated_production_boundary` | `federated_production_boundary_gate` | `1` | `n/a` | `n/a` | `0.001497115008533001` | `2003.854067924716` | `local_regression_non_isolated` |
-| `formal_export` | `formal_export_artifact_quality` | `1` | `n/a` | `n/a` | `0.0013915840536355972` | `3593.0276629264317` | `local_regression_non_isolated` |
-| `hodge_polyglot` | `hodge_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.15853202599100769` | `315.3936858337767` | `local_regression_non_isolated` |
-| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | `1` | `n/a` | `n/a` | `0.0002477040980011225` | `4037.0749134536663` | `local_regression_non_isolated` |
-| `hybrid_entanglement_order` | `hybrid_entanglement_order_parameter_gate` | `1` | `n/a` | `n/a` | `0.004130686167627573` | `1936.724233057564` | `local_regression_non_isolated` |
-| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | `1` | `n/a` | `n/a` | `0.0001670350320637226` | `11973.536181541936` | `local_regression_non_isolated` |
-| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | `1` | `n/a` | `n/a` | `0.0001745619811117649` | `11457.248521483505` | `local_regression_non_isolated` |
-| `information_geometry_control` | `information_geometry_control_gate` | `1` | `n/a` | `n/a` | `1.6497080330736935` | `2.4246714690158253` | `local_regression_non_isolated` |
-| `integrated_information_replay_corpus` | `integrated_information_replay_corpus_gate` | `1` | `n/a` | `n/a` | `0.09521218994632363` | `126.03428202591562` | `local_regression_non_isolated` |
-| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | `1` | `n/a` | `n/a` | `0.0007825889624655247` | `2555.619994561456` | `local_regression_non_isolated` |
-| `itpc_polyglot` | `itpc_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.8559016440995038` | `5.841792727551671` | `local_regression_non_isolated` |
-| `kuramoto` | `kuramoto_reference_strogatz_2000` | `1` | `1000` | `n/a` | `0.1517782099545002` | `6588.561034550205` | `local_regression_non_isolated` |
-| `lyapunov_polyglot` | `lyapunov_polyglot_parity_gate` | `1` | `120` | `n/a` | `0.06788993184454739` | `73.64862306017439` | `local_regression_non_isolated` |
-| `meta_transfer` | `meta_transfer_package_manifest_quality` | `1` | `n/a` | `n/a` | `0.0007976491469889879` | `5014.736134426309` | `local_regression_non_isolated` |
-| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | `1` | `n/a` | `n/a` | `0.007004382088780403` | `856.6066105403903` | `local_regression_non_isolated` |
-| `morphogenetic_domain_demos` | `morphogenetic_domain_demo_gate` | `1` | `n/a` | `n/a` | `0.12310171080753207` | `24.370091855916293` | `local_regression_non_isolated` |
-| `multiverse_counterfactual` | `multiverse_counterfactual_gate` | `1` | `n/a` | `n/a` | `13.910108417039737` | `0.28756066308584927` | `local_regression_non_isolated` |
-| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | `1` | `n/a` | `n/a` | `0.0006925452034920454` | `2887.8981327360707` | `local_regression_non_isolated` |
-| `npe_polyglot` | `npe_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `1.5635866140946746` | `3.1977761608652733` | `local_regression_non_isolated` |
-| `order_parameter_polyglot` | `order_parameter_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `1.6368226618506014` | `3.054698665001968` | `local_regression_non_isolated` |
-| `petri_reachability` | `petri_net_reachability` | `1` | `5000` | `n/a` | `0.03466777014546096` | `144226.1783501137` | `local_regression_non_isolated` |
-| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | `1` | `n/a` | `n/a` | `0.00047772214747965336` | `6279.800959254821` | `local_regression_non_isolated` |
-| `quantum_target_readiness` | `quantum_target_readiness_gate` | `1` | `n/a` | `n/a` | `0.0004036261234432459` | `4955.080664597323` | `local_regression_non_isolated` |
-| `recurrence_polyglot` | `recurrence_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.8191091099288315` | `6.104192883942441` | `local_regression_non_isolated` |
-| `replay_policy` | `replay_policy_candidate_quality` | `1` | `n/a` | `n/a` | `0.05480720195919275` | `164.21199547280372` | `local_regression_non_isolated` |
-| `self_model_digital_twin` | `self_model_digital_twin` | `1` | `n/a` | `n/a` | `0.005123878130689263` | `780.6586921031865` | `local_regression_non_isolated` |
-| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | `1` | `n/a` | `n/a` | `0.028370453976094723` | `105.74381370590105` | `local_regression_non_isolated` |
-| `sheaf_obstruction_domains` | `sheaf_obstruction_domain_gate` | `1` | `n/a` | `n/a` | `0.29193486901931465` | `20.552529473973305` | `local_regression_non_isolated` |
-| `spectral_polyglot` | `spectral_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `2.26629363396205` | `1.7649963535426767` | `local_regression_non_isolated` |
-| `stl_closed_loop` | `stl_closed_loop_plan_quality` | `1` | `n/a` | `n/a` | `0.0013169809244573116` | `2277.937321860763` | `local_regression_non_isolated` |
-| `strange_loop_drift_scenarios` | `strange_loop_drift_scenario_gate` | `1` | `n/a` | `n/a` | `0.03768516797572374` | `4245.702184558916` | `local_regression_non_isolated` |
-| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | `1` | `1000` | `n/a` | `0.17728676297701895` | `5640.579043849012` | `local_regression_non_isolated` |
-| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | `1` | `n/a` | `n/a` | `0.0031063398346304893` | `643.8445587000327` | `local_regression_non_isolated` |
-| `topos_semantic_binding` | `topos_semantic_binding_gate` | `1` | `n/a` | `n/a` | `0.10993845015764236` | `54.575992215612565` | `local_regression_non_isolated` |
-| `transfer_entropy_polyglot` | `transfer_entropy_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `2.206095721805468` | `362.6315903216023` | `local_regression_non_isolated` |
-| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | `1` | `n/a` | `n/a` | `0.0003159409388899803` | `9495.445606195042` | `local_regression_non_isolated` |
-| `winding_polyglot` | `winding_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.19868263392709196` | `25.16576260930176` | `local_regression_non_isolated` |
+| `auto_binding` | `auto_binding_synthetic_quality` | `n/a` | `n/a` | `4` | `0.06049458798952401` | `66.12161737001482` | `n/a` |
+| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | `1` | `n/a` | `n/a` | `0.0006294278427958488` | `7943.72231420611` | `n/a` |
+| `bayesian_backends` | `bayesian_backend_fail_closed` | `1` | `n/a` | `n/a` | `0.0011847980786114931` | `2532.0770299659894` | `n/a` |
+| `bayesian_posterior` | `bayesian_posterior_fit_quality` | `1` | `n/a` | `n/a` | `0.009102588053792715` | `10546.451122766159` | `n/a` |
+| `chimera_polyglot` | `chimera_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.6457676431164145` | `7.742723026304733` | `n/a` |
+| `dimension_polyglot` | `dimension_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `1.2024149729404598` | `4.158298185336707` | `n/a` |
+| `domain_formal_export` | `domain_formal_safety_exports` | `1` | `n/a` | `n/a` | `0.001658349996432662` | `33165.495895506094` | `n/a` |
+| `embedding_polyglot` | `embedding_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.6397198650520295` | `1250.5473781636197` | `local_regression_non_isolated` |
+| `entropy_production_polyglot` | `entropy_production_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.11442167102359235` | `699.1682544428579` | `local_regression_non_isolated` |
+| `evolutionary_mutation_grammars` | `evolutionary_mutation_grammar_gate` | `1` | `n/a` | `n/a` | `0.026115993969142437` | `765.8142371923949` | `n/a` |
+| `evolutionary_supervisor_search` | `evolutionary_supervisor_search` | `1` | `n/a` | `n/a` | `0.005169017938897014` | `4062.6672703095837` | `n/a` |
+| `federated_deployment_preflight` | `federated_deployment_preflight_gate` | `1` | `n/a` | `n/a` | `0.002008984098210931` | `1493.2920587433234` | `n/a` |
+| `federated_meta_orchestrator` | `federated_meta_orchestrator` | `1` | `n/a` | `n/a` | `0.00048491708002984524` | `6186.624731418738` | `n/a` |
+| `federated_production_boundary` | `federated_production_boundary_gate` | `1` | `n/a` | `n/a` | `0.0016353859100490808` | `1834.4294038279716` | `n/a` |
+| `formal_export` | `formal_export_artifact_quality` | `1` | `n/a` | `n/a` | `0.0005604119505733252` | `8922.008167179141` | `n/a` |
+| `hodge_polyglot` | `hodge_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.0821873159147799` | `608.3663816426982` | `local_regression_non_isolated` |
+| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | `1` | `n/a` | `n/a` | `0.00014308909885585308` | `6988.652580776909` | `n/a` |
+| `hybrid_entanglement_order` | `hybrid_entanglement_order_parameter_gate` | `1` | `n/a` | `n/a` | `0.00434129498898983` | `1842.7681187961634` | `n/a` |
+| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | `1` | `n/a` | `n/a` | `0.00022578914649784565` | `8857.821693475787` | `n/a` |
+| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | `1` | `n/a` | `n/a` | `0.00015108101069927216` | `13237.931032782237` | `n/a` |
+| `information_geometry_control` | `information_geometry_control_gate` | `1` | `n/a` | `n/a` | `1.0669131739996374` | `3.7491335728893715` | `n/a` |
+| `integrated_information_replay_corpus` | `integrated_information_replay_corpus_gate` | `1` | `n/a` | `n/a` | `0.07033095392398536` | `170.6218859617596` | `n/a` |
+| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | `1` | `n/a` | `n/a` | `0.0007373439148068428` | `2712.438469806762` | `n/a` |
+| `itpc_polyglot` | `itpc_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.4792384079191834` | `10.433220537789571` | `n/a` |
+| `kuramoto` | `kuramoto_reference_strogatz_2000` | `1` | `1000` | `n/a` | `0.11899392888881266` | `8403.790086924477` | `n/a` |
+| `lyapunov_polyglot` | `lyapunov_polyglot_parity_gate` | `1` | `120` | `n/a` | `0.03599900612607598` | `138.8927233848891` | `n/a` |
+| `meta_transfer` | `meta_transfer_package_manifest_quality` | `1` | `n/a` | `n/a` | `0.0005968490149825811` | `6701.862446931807` | `n/a` |
+| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | `1` | `n/a` | `n/a` | `0.0037008679937571287` | `1621.241289913934` | `n/a` |
+| `morphogenetic_domain_demos` | `morphogenetic_domain_demo_gate` | `1` | `n/a` | `n/a` | `0.07522566709667444` | `39.88000526661495` | `n/a` |
+| `multiverse_counterfactual` | `multiverse_counterfactual_gate` | `1` | `n/a` | `n/a` | `1.959374836878851` | `2.04146747458068` | `n/a` |
+| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | `1` | `n/a` | `n/a` | `0.0002727191895246506` | `7333.550688112557` | `n/a` |
+| `npe_polyglot` | `npe_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.8290427818428725` | `6.031051846185236` | `n/a` |
+| `order_parameter_polyglot` | `order_parameter_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.31295827589929104` | `15.976570632722249` | `n/a` |
+| `petri_reachability` | `petri_net_reachability` | `1` | `5000` | `n/a` | `0.13126136199571192` | `38091.94056788273` | `n/a` |
+| `pha_c_acceptance_polyglot` | `pha_c_acceptance_polyglot_gate` | `1` | `n/a` | `n/a` | `0.19418629887513816` | `25.74846953139058` | `local_regression_non_isolated` |
+| `pha_c_handoff_polyglot` | `pha_c_handoff_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.0023185699246823788` | `2156.5017068376537` | `local_regression_non_isolated` |
+| `pha_c_timeline_polyglot` | `pha_c_timeline_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.013210603035986423` | `378.48385773001576` | `local_regression_non_isolated` |
+| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | `1` | `n/a` | `n/a` | `0.00034120306372642517` | `8792.41811968425` | `n/a` |
+| `quantum_target_readiness` | `quantum_target_readiness_gate` | `1` | `n/a` | `n/a` | `0.00015224493108689785` | `13136.726364035376` | `n/a` |
+| `recurrence_polyglot` | `recurrence_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.5089778290130198` | `9.823610607353388` | `n/a` |
+| `replay_policy` | `replay_policy_candidate_quality` | `1` | `n/a` | `n/a` | `0.034437590977177024` | `261.34232228858895` | `n/a` |
+| `self_model_digital_twin` | `self_model_digital_twin` | `1` | `n/a` | `n/a` | `0.005657376954331994` | `707.0414491184118` | `n/a` |
+| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | `1` | `n/a` | `n/a` | `0.017702843993902206` | `169.46429630365373` | `n/a` |
+| `sheaf_obstruction_domains` | `sheaf_obstruction_domain_gate` | `1` | `n/a` | `n/a` | `0.1144044860266149` | `52.44549587508455` | `n/a` |
+| `spatial_modulator_polyglot` | `spatial_modulator_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.07017243304289877` | `28.501220682733525` | `local_regression_non_isolated` |
+| `spectral_polyglot` | `spectral_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `1.7495333841070533` | `2.286323905754771` | `n/a` |
+| `stl_closed_loop` | `stl_closed_loop_plan_quality` | `1` | `n/a` | `n/a` | `0.0005437710788100958` | `5517.027508275604` | `n/a` |
+| `strange_loop_drift_scenarios` | `strange_loop_drift_scenario_gate` | `1` | `n/a` | `n/a` | `0.023375059012323618` | `6844.902505514362` | `n/a` |
+| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | `1` | `1000` | `n/a` | `0.16326062893494964` | `6125.17547263918` | `n/a` |
+| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | `1` | `n/a` | `n/a` | `0.004001490073278546` | `499.8138101992934` | `n/a` |
+| `topos_semantic_binding` | `topos_semantic_binding_gate` | `1` | `n/a` | `n/a` | `0.09571960405446589` | `62.68308419439251` | `n/a` |
+| `transfer_entropy_polyglot` | `transfer_entropy_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.8808866878971457` | `908.1758312295096` | `local_regression_non_isolated` |
+| `upde_doppler_polyglot` | `upde_doppler_polyglot_gate` | `1` | `8` | `n/a` | `0.4901002428960055` | `16.32319125721699` | `local_regression_non_isolated` |
+| `upde_moving_frame_polyglot` | `upde_moving_frame_polyglot_gate` | `1` | `8` | `n/a` | `0.22748251096345484` | `35.167538665357895` | `local_regression_non_isolated` |
+| `upde_time_varying_omega_polyglot` | `upde_time_varying_omega_polyglot_gate` | `1` | `8` | `n/a` | `0.12767927208915353` | `62.6569988150771` | `local_regression_non_isolated` |
+| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | `1` | `n/a` | `n/a` | `0.00022820592857897282` | `13146.021309265949` | `n/a` |
+| `winding_polyglot` | `winding_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `0.11353808920830488` | `44.03808479484494` | `n/a` |

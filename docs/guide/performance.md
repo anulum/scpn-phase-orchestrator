@@ -109,7 +109,7 @@ Kuramoto/Strogatz/Acebrón, Stuart-Landau/Pikovsky, and Petri-net reference
 surfaces:
 
 ```bash
-PYTHONPATH=src python benchmarks/reference_suite.py
+PYTHONPATH=.:src python benchmarks/reference_suite.py
 ```
 
 The JSON output is written to `benchmarks/results/reference_suite.json` and
@@ -118,7 +118,7 @@ contains two top-level fields:
 | Field | Purpose |
 |-------|---------|
 | `metadata` | Snapshot date, exact command, backend label, Python version, NumPy version, executable, platform string, and benchmark evidence boundary |
-| `benchmarks` | Kuramoto, Stuart-Landau, Petri reachability, and frontier gate records with timings, acceptance flags, thresholds, and physical summary values |
+| `benchmarks` | Kuramoto, Stuart-Landau, Petri reachability, PHA-C, and frontier gate records with timings, acceptance flags, thresholds, and physical summary values |
 
 The Kuramoto record is an acceptance benchmark, not only a timer. It checks
 zero self-coupling, bounded order parameter, identical-oscillator
@@ -276,3 +276,31 @@ Timing fields are local, non-isolated regression evidence. They demonstrate
 backend parity for the moving-frame contract and must not be presented as
 production throughput without CPU/GPU pinning, dependency capture, backend build
 metadata, and benchmark-isolation notes.
+
+### PHA-C handoff, timeline, and acceptance gates
+
+The downstream PHA-C chain now has dedicated review-only benchmark gates and is
+also included in the canonical reference suite:
+
+```bash
+PYTHONPATH=src python benchmarks/pha_c_handoff_benchmark.py --parity-gate
+PYTHONPATH=src python benchmarks/pha_c_timeline_benchmark.py --parity-gate
+PYTHONPATH=src python benchmarks/pha_c_acceptance_benchmark.py --parity-gate
+PYTHONPATH=.:src python benchmarks/reference_suite.py
+```
+
+The handoff gate binds moving-frame phase/position samples to merge-window
+evidence, Kuramoto order-parameter evidence, source-vector digests, and a
+canonical non-actuating record hash. The timeline gate consumes the same
+handoff contract across a trajectory and checks first-lock index/time,
+lock-loss counts, reset counts, transition hashes, and tolerance-profile
+provenance. The acceptance gate composes the full PHA-C path: spatial
+modulation, graph-weighted Doppler correction, moving-frame propagation,
+merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline
+hashing, aggregate subgate evidence, and Rust/Go/Julia/Mojo source-contract
+parity adapters.
+
+These gates are mathematical and physical contract checks, not live actuation
+claims. Their JSON artefacts and reference-suite rows remain
+`local_regression_non_isolated` evidence unless a future run records benchmark
+isolation, backend build metadata, and host-load controls.

@@ -307,6 +307,7 @@ def benchmark_upde_moving_frame_polyglot_gate(
         "isolation_method": "none",
         "production_timing_claim": 0,
         "wall_time_s": wall_time,
+        "steps_per_second": (n_steps * calls) / wall_time if wall_time > 0.0 else 0.0,
     }
 
 

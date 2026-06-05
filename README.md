@@ -329,10 +329,10 @@ print(state.order_parameter)
 ## Reference Benchmarks
 
 SPO keeps reference benchmarks as reproducible evidence, not as marketing
-claims. The checked-in snapshot is dated `2026-06-04` and was generated with:
+claims. The checked-in snapshot is dated `2026-06-05` and was generated with:
 
 ```bash
-PYTHONPATH=src python benchmarks/reference_suite.py
+PYTHONPATH=.:src python benchmarks/reference_suite.py
 ```
 
 The snapshot is published at
@@ -343,16 +343,21 @@ Selected reference suites:
 
 | Suite | Reference contract | Snapshot steps/s |
 |-------|--------------------|-----------------:|
-| `kuramoto_reference_strogatz_2000` | Strogatz/Acebron synchronisation plus exact two-oscillator locking acceptance | `14089.31` |
-| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `10094.66` |
-| `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `176708.12` |
-| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `8.18` |
-| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `12.46` |
-| `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.75` |
-| `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `664.34` |
-| `embedding_polyglot_parity_gate` | Takens delay-indexing, Fraser-Swinney mutual information, and nearest-neighbour geometry parity across Rust/Mojo/Julia/Go/Python slots | `1451.73` |
-| `transfer_entropy_polyglot_parity_gate` | Schreiber transfer-entropy causal-direction and exact histogram matrix parity across Rust/Mojo/Julia/Go/Python slots | `1052.38` |
-| `entropy_production_polyglot_parity_gate` | Acebrón overdamped-Kuramoto dissipation parity and thermodynamic invariants across Rust/Mojo/Julia/Go/Python slots | `5/5 backend parity; 466.973 steps/s; 0.171316 s wall time; local_regression_non_isolated; not a production throughput claim` |
+| `kuramoto_reference_strogatz_2000` | Strogatz/Acebron synchronisation plus exact two-oscillator locking acceptance | `8403.790086924477` |
+| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `6125.17547263918` |
+| `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `38091.94056788273` |
+| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `7.742723026304733` |
+| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `10.433220537789571` |
+| `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.286323905754771` |
+| `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `608.3663816426982` |
+| `embedding_polyglot_parity_gate` | Takens delay-indexing, Fraser-Swinney mutual information, and nearest-neighbour geometry parity across Rust/Mojo/Julia/Go/Python slots | `1250.5473781636197` |
+| `transfer_entropy_polyglot_parity_gate` | Schreiber transfer-entropy causal-direction and exact histogram matrix parity across Rust/Mojo/Julia/Go/Python slots | `908.1758312295096` |
+| `entropy_production_polyglot_parity_gate` | Acebron overdamped-Kuramoto dissipation parity and thermodynamic invariants across Rust/Mojo/Julia/Go/Python slots | `699.1682544428579` |
+| `pha_c_handoff_polyglot_parity_gate` | PHA-C moving-frame handoff parity for merge-window evidence, source digests, order-parameter evidence, and non-actuating record hashes | `2156.5017068376537` |
+| `pha_c_timeline_polyglot_parity_gate` | PHA-C trajectory timeline parity for first-lock, lock-loss, reset-count, transition-hash, and tolerance-profile evidence | `378.48385773001576` |
+| `pha_c_acceptance_polyglot_gate` | PHA-C end-to-end acceptance parity across spatial modulation, Doppler correction, moving-frame propagation, timeline conversion, and aggregate subgate evidence | `25.74846953139058` |
+
+
 
 Physics invariants are also executable as focused tests:
 
@@ -414,6 +419,8 @@ points and zero timestep, linear timestep scaling, quadratic scaling under
 the global coupling scalar when natural frequencies are zero, global
 phase-gauge invariance, oscillator permutation invariance, public
 fallback-dispatch parity, and explicit unavailable-toolchain evidence.
+
+The PHA-C reference rows check the downstream accelerator acceptance chain: moving-frame handoff records, trajectory timeline records, and the aggregate spatial/Doppler/moving-frame/merge-window acceptance record. They keep the claim boundary review-only and non-actuating while making the full PHA-C chain visible in the canonical benchmark snapshot.
 
 Timing fields in the checked-in reference snapshot are local regression and
 parity evidence unless the run metadata states CPU/core isolation and host-load

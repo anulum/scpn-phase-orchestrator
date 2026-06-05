@@ -315,7 +315,7 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C end-to-end acceptance gate | Implemented as `PHACAcceptanceRecord` with spatial modulation, graph-weighted Doppler correction, moving-frame propagation, merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline hashes, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, aggregate PHA-C subgate benchmark evidence, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol; native acceptance kernels may be introduced only if they preserve the same review-only hashes and fail-closed boundaries. |
+| PHA-C end-to-end acceptance gate | Implemented as `PHACAcceptanceRecord` with spatial modulation, graph-weighted Doppler correction, moving-frame propagation, merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline hashes, fixed non-actuating claim boundary, Rust/Go/Julia/Mojo source-contract parity adapters, aggregate PHA-C subgate benchmark evidence, module-specific fail-closed coverage, public API documentation, a dedicated local-regression benchmark snapshot, and canonical reference-suite integration. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol; native acceptance kernels may be introduced only if they preserve the same review-only hashes and fail-closed boundaries. |
 
 ## PHA-C Lean kinematic safety status
 

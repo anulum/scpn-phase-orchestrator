@@ -36,6 +36,15 @@ from benchmarks.npe_benchmark import benchmark_npe_polyglot_parity_gate
 from benchmarks.order_params_benchmark import (
     benchmark_order_parameter_polyglot_parity_gate,
 )
+from benchmarks.pha_c_acceptance_benchmark import (
+    benchmark_pha_c_acceptance_polyglot_gate,
+)
+from benchmarks.pha_c_handoff_benchmark import (
+    benchmark_pha_c_handoff_polyglot_parity_gate,
+)
+from benchmarks.pha_c_timeline_benchmark import (
+    benchmark_pha_c_timeline_polyglot_parity_gate,
+)
 from benchmarks.recurrence_benchmark import benchmark_recurrence_polyglot_parity_gate
 from benchmarks.spatial_modulator_benchmark import (
     benchmark_spatial_modulator_polyglot_parity_gate,
@@ -176,7 +185,7 @@ from tools.formal_model_checker_ci import build_domainpack_formal_packages
 
 ROOT = Path(__file__).resolve().parent
 RESULTS_PATH = ROOT / "results" / "reference_suite.json"
-BENCHMARK_COMMAND = "PYTHONPATH=src python benchmarks/reference_suite.py"
+BENCHMARK_COMMAND = "PYTHONPATH=.:src python benchmarks/reference_suite.py"
 REFERENCE_SUITE_VERSION = "reference_suite_v1"
 
 
@@ -7866,6 +7875,13 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "upde_time_varying_omega_polyglot": (
                 benchmark_upde_time_varying_omega_polyglot_gate()
             ),
+            "pha_c_handoff_polyglot": (
+                benchmark_pha_c_handoff_polyglot_parity_gate()
+            ),
+            "pha_c_timeline_polyglot": (
+                benchmark_pha_c_timeline_polyglot_parity_gate()
+            ),
+            "pha_c_acceptance_polyglot": benchmark_pha_c_acceptance_polyglot_gate(),
             "transfer_entropy_polyglot": (
                 benchmark_transfer_entropy_polyglot_parity_gate()
             ),
