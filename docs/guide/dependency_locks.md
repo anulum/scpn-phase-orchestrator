@@ -8,6 +8,25 @@
 
 # Dependency Locks
 
+# Why this page exists
+
+Dependency locking is a production control surface in this repository, not just a
+build convenience. The same dependency set can execute differently across
+machines and time unless constraints are explicit and immutable.
+
+In practical terms, this page is the operational boundary for deterministic
+reproducibility:
+
+- every workflow that claims deterministic installation must install from a
+  hash-pinned lockfile,
+- every lockfile change must be reviewed with the corresponding dependency
+  surface,
+- every release run must be able to reproduce both the build inputs and the
+  runtime environment from the repository snapshot that defines it.
+
+That is why this project treats lockfile maintenance as part of release
+readiness, not a post-hoc cleanup chore.
+
 SPO uses `pip-tools` (`pip-compile`) as the authoritative lock generator.
 `uv` was evaluated, but `pip-tools` is kept as the project standard because it
 already drives the existing hash-pinned lockfiles used by local workflows,
@@ -68,6 +87,21 @@ debugging resolver drift.
 1. Existing cross-platform lock matrix is already in `pip-compile` format.
 2. Hash-pinned `--require-hashes` installs are already enforced in workflows.
 3. No migration cost or dual-tool drift risk for current CI and Docker paths.
+
+## Operating with lockfiles in a live service chain
+
+For on-call and release operators, the lockfiles reduce ambiguity during outages:
+
+- if a runtime image diverges from expected behaviour, matching lockfile snapshots
+  in `requirements/` lets you isolate whether behaviour changed because of code or
+  dependency drift,
+- if a CI matrix suddenly fails to resolve, the lock history helps identify if
+  solver changes or upstream package yanking caused the break,
+- if a security team requests origin traceability, the lock hashes provide
+  install-time evidence for every direct and transitive pinned package version.
+
+Use this as part of change review. A dependency bump without lock regeneration is
+an installation change that is not auditable from the repository alone.
 
 ## Related
 

@@ -1,5 +1,14 @@
 # Backend Strategy
 
+## Why this strategy matters
+
+SPO exposes multiple numerical backends so teams can move between portability and
+performance without changing orchestration code. This strategy is the control layer
+that keeps that choice explicit and repeatable.
+
+Without it, environment differences tend to become hidden defaults. With it, each
+deployment state is mapped to one expected default and one explicit fallback path.
+
 SCPN Phase Orchestrator has several implementation backends. The supported
 path is deliberately narrow:
 
@@ -42,8 +51,16 @@ else
     -> use NumPy/SciPy Python fallback
 ```
 
+This sequence is not only a runtime heuristic. It encodes the support boundary:
+Rust and JAX carry production expectations; WebGPU and Python are constrained by
+deployment context.
+
 Julia, Go, and Mojo are not automatic production fallbacks. Treat them as
 opt-in experiments until their maintenance cost is justified by measured value.
+
+Use this as a decision chain for release and incident response: when a runtime
+target cannot satisfy the first match, operators can predict which path will be
+chosen and what observability/accuracy trade-offs follow.
 
 ## Rust Path
 
@@ -79,6 +96,9 @@ Use it when:
 JAX should not replace the Rust path for ordinary CPU production stepping unless
 measurements show it is better for that workload.
 
+This keeps optimization goals separate: use JAX for learning and gradient workflows,
+Rust for deterministic production stepping and monitoring.
+
 ## WebGPU Path
 
 WebGPU is the first browser/edge compute path. It is designed for deployments
@@ -112,6 +132,17 @@ Use it when:
 
 The Python path is not a failure mode. It is the portable reference
 implementation.
+
+## Decision workflow for production onboarding
+
+When onboarding a new workload, use this order:
+
+1. Confirm the deployment contract (latency, hardware, reproducibility).
+2. Select the first backend path that satisfies both requirements and evidence.
+3. Require parity validation for that workload before changing any default.
+4. Document the fallback path for unsupported or transient backend outages.
+
+This workflow prevents silent strategy drift between teams and environments.
 
 ## Experimental Backends
 

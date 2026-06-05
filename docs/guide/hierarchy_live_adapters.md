@@ -8,6 +8,16 @@
 
 # Hierarchy Adapter Boundaries
 
+## What These Boundaries Are For
+
+These adapters are non-networked normalization points. Their role is to take
+already-decoded runtime records and transform them into the strict internal audit
+shape expected by `HierarchyTransportRuntime`.
+
+From a product perspective, they keep replay and policy review logic separated
+from transport plumbing. A transport error should become a structured decode
+failure at the boundary; it should not leak ambiguous data into a shared ledger.
+
 Hierarchy adapter helpers are decoded, non-socket boundaries over
 `HierarchyTransportRuntime`. They validate caller-supplied records and return
 deterministic audit payloads without owning HTTP servers, sockets, threads,
@@ -48,6 +58,11 @@ print(result.to_audit_record()["watermarks"])
 The runtime accepts reduced child summaries only. Raw time-series, graph
 payloads, actuator handles, raw coupling matrices, and raw evidence aliases are
 rejected before audit serialisation.
+
+That constraint is the design point for safe composability: each boundary does
+not promise transport correctness or trust; it guarantees that once a payload is
+inside the boundary contract, downstream replay and policy logic can proceed on
+one coherent record format.
 
 ## Byzantine Meta-Orchestrator Review
 

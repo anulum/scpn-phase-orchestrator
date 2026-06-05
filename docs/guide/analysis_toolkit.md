@@ -1,7 +1,31 @@
 # Analysis Toolkit
 
+## Purpose and scope
+
+The toolkit is structured for operational readability: each monitor returns a
+different failure or regime signal before the scalar order parameter alone would
+show anything unusual. In practice, teams use this page as a first-pass
+selection guide, then tune thresholds against their domain trajectories.
+
+The sections below are ordered from global coherence to higher-order coupling
+relationships because that mirrors a typical diagnostic flow:
+global stability -> phase alignment structure -> causality and stability risk ->
+topological and thermodynamic drift.
+
 SPO provides 12 dynamical monitors — most oscillator simulators have 1-2.
 Each monitor detects a different aspect of the dynamics that scalar R misses.
+
+## Selecting a minimal monitor set
+
+For a first production run, teams usually start with:
+
+- `order_parameter` for synchronization trend and collapse detection,
+- `lyapunov` for local stability margin,
+- `plv` for pairwise synchrony topology,
+- one supervisory metric (`evs` or `pid`) for domain-facing interpretability.
+
+Expanding to all monitors is recommended only after a baseline is stable; this
+keeps false alarm fatigue manageable while keeping observability depth.
 
 ## Order Parameter & PLV
 
@@ -107,6 +131,18 @@ The harmonics method captures real biological coupling shapes
 (Stankovski 2017).
 
 ::: scpn_phase_orchestrator.autotune.coupling_est
+
+## Read with operational intent
+
+Most monitors are most useful when compared over time and context, not as single
+point alarms. A practical dashboard should show short-term and rolling-window
+views side by side, then correlate alarms with known interventions.
+
+The intended use is:
+
+- detect onset conditions with one or two fast indicators,
+- confirm with a slower structural monitor,
+- only then trigger policy or supervisory changes.
 
 ## Synthetic HCP Connectome Generation
 

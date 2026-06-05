@@ -1,5 +1,20 @@
 # Release Hygiene
 
+## Why Release Hygiene Is a Product Surface
+
+Release hygiene in this repository is a delivery-control surface, not a clerical
+appendix. It is where a project decision is converted into a stable public
+artifact under explicit constraints.
+
+The practical reason for this page is to keep release outputs bounded and
+reproducible:
+
+- release tags should advance only when dependency and workflow drift are validated,
+- publishing should fail fast when toolchain assumptions change,
+- rollback paths must be deterministic when a late job fails.
+
+In short: release hygiene reduces the operational risk of version churn.
+
 This project pins GitHub Actions by full commit SHA in release workflows. Before
 tagging a release, validate those pins so GitHub Actions does not fail during
 job setup after the tag has already been pushed.
