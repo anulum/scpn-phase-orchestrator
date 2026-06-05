@@ -181,6 +181,40 @@ theorem sampled_rate_certificate_discharges_budget
     (cfg := cfg.toKinematicBounds)
     hCertificate
 
+/-- Fixed-point phase-lock budget for PHA-C merge-window proof mirrors.
+
+The accepted replay dispersion and configured predictive phase drift are kept
+separate so runtime manifests cannot hide future uncertainty inside the
+observed replay envelope.
+-/
+structure PhaseBudgetBounds where
+  maxPhaseDispersion : Nat
+  configuredPhaseDrift : Nat
+  phaseTolerance : Nat
+  deriving DecidableEq, Repr
+
+/-- Total reviewed phase budget: replay dispersion plus predictive drift. -/
+def PhaseBudgetBounds.phaseBudget (cfg : PhaseBudgetBounds) : Nat :=
+  cfg.maxPhaseDispersion + cfg.configuredPhaseDrift
+
+/-- Runtime-facing Boolean certificate for reviewed phase-lock budgets. -/
+def PhaseBudgetBounds.budgetCertificate (cfg : PhaseBudgetBounds) : Bool :=
+  cfg.phaseBudget <= cfg.phaseTolerance
+
+/-- Boolean certificate reflection for the phase-lock budget. -/
+theorem phaseBudgetCertificate_eq_true_iff {cfg : PhaseBudgetBounds} :
+    cfg.budgetCertificate = true ↔
+      cfg.phaseBudget <= cfg.phaseTolerance := by
+  unfold PhaseBudgetBounds.budgetCertificate
+  simp
+
+/-- A true phase-budget certificate discharges the fixed-point phase lock. -/
+theorem phase_budget_certificate_discharges_phase_lock
+    {cfg : PhaseBudgetBounds}
+    (hCertificate : cfg.budgetCertificate = true) :
+    cfg.phaseBudget <= cfg.phaseTolerance := by
+  exact (phaseBudgetCertificate_eq_true_iff (cfg := cfg)).mp hCertificate
+
 /-- Zero Lipschitz gain reduces the recurrence to a linear finite-step budget. -/
 theorem gronwallBudget_zero_gain_eq_linear
     {initial drive : Nat} :
@@ -309,6 +343,26 @@ theorem mergeWindowLocked_eq_true_iff
   unfold mergeWindowLocked
   simp
 
+/-- Merge-window decision using a reviewed phase-budget certificate rather than
+raw replay dispersion alone. -/
+def mergeWindowLockedWithPhaseBudget
+    (phaseCfg : PhaseBudgetBounds)
+    (spatialDistance spatialTolerance : Nat) : Bool :=
+  phaseCfg.budgetCertificate && spatialDistance <= spatialTolerance
+
+/-- The phase-budget merge-window mirror is true exactly when both reviewed
+phase and spatial bounds hold. -/
+theorem mergeWindowLockedWithPhaseBudget_eq_true_iff
+    {phaseCfg : PhaseBudgetBounds} {spatialDistance spatialTolerance : Nat} :
+    mergeWindowLockedWithPhaseBudget
+      phaseCfg
+      spatialDistance
+      spatialTolerance = true ↔
+      phaseCfg.phaseBudget <= phaseCfg.phaseTolerance ∧
+        spatialDistance <= spatialTolerance := by
+  unfold mergeWindowLockedWithPhaseBudget
+  simp [phaseBudgetCertificate_eq_true_iff]
+
 /-- Spatial invariant plus phase-lock evidence implies the finite merge-window
 Boolean stays locked over the reviewed horizon. -/
 theorem merge_window_locked_over_horizon
@@ -328,5 +382,23 @@ theorem merge_window_locked_over_horizon
         cfg.mergeWindowTolerance = true := by
   intro k hk
   exact (mergeWindowLocked_eq_true_iff).mpr ⟨hPhase k hk, hSpatial k hk⟩
+
+/-- Spatial invariant plus a reviewed phase-budget certificate implies the
+finite merge-window Boolean stays locked over the reviewed horizon. -/
+theorem merge_window_locked_with_phase_budget_over_horizon
+    (spatialDistance : Nat -> Nat)
+    (phaseCfg : PhaseBudgetBounds)
+    (cfg : KinematicBounds)
+    (hSpatial : ∀ k, k <= cfg.horizonSteps ->
+      spatialDistance k <= cfg.mergeWindowTolerance)
+    (hPhase : phaseCfg.budgetCertificate = true) :
+    ∀ k, k <= cfg.horizonSteps ->
+      mergeWindowLockedWithPhaseBudget
+        phaseCfg
+        (spatialDistance k)
+        cfg.mergeWindowTolerance = true := by
+  intro k hk
+  exact (mergeWindowLockedWithPhaseBudget_eq_true_iff).mpr
+    ⟨phase_budget_certificate_discharges_phase_lock hPhase, hSpatial k hk⟩
 
 end SPOFormal.Kinematic

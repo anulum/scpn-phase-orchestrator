@@ -98,6 +98,10 @@ moving-frame merge safety. Those manifests keep observed replay evidence,
 predictive residual slack, and predictive phase-drift slack in separate
 fixed-point fields before the Lean-targeted margins are accepted, so downstream
 MIF/FRC consumers can review what was observed and what was explicitly budgeted.
+The phase side is bound to the Lean `PhaseBudgetBounds.budgetCertificate`
+predicate and `phase_budget_certificate_discharges_phase_lock` theorem, keeping
+phase-drift review inside the same fixed-point proof lane as the spatial
+merge-window budget.
 
 This order keeps the first experience practical while making the evidence
 boundary visible from the start.

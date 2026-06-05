@@ -406,6 +406,9 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         result["formal_obligation_phase_tolerance_units"]
         - result["formal_obligation_phase_budget_units"]
     )
+    assert result["formal_obligation_phase_theorem"] == (
+        "phase_budget_certificate_discharges_phase_lock"
+    )
     assert result["formal_obligation_theorem"] == (
         "budget_certificate_discharges_budget"
     )

@@ -320,6 +320,7 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         ),
         "formal_obligation_phase_budget_units": obligation.phase_budget_units,
         "formal_obligation_phase_margin_units": obligation.phase_margin_units,
+        "formal_obligation_phase_theorem": obligation.phase_theorem,
         "formal_obligation_theorem": obligation.lean_theorem,
         "formal_obligation_continuous_theorem": obligation.continuous_theorem,
         "hash_replay_validated": int(verify_pha_c_acceptance_record(record) is record),
@@ -436,6 +437,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 ),
                 "formal_obligation_phase_budget_units": obligation.phase_budget_units,
                 "formal_obligation_phase_margin_units": obligation.phase_margin_units,
+                "formal_obligation_phase_theorem": obligation.phase_theorem,
                 "formal_obligation_continuous_theorem": (
                     obligation.continuous_theorem
                 ),
@@ -588,6 +590,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "formal_obligation_phase_margin_units": (
                     record["formal_obligation_phase_margin_units"]
                 ),
+                "formal_obligation_phase_theorem": (
+                    record["formal_obligation_phase_theorem"]
+                ),
                 "hash_replay_validated": record["hash_replay_validated"],
                 "execution_mode": record["execution_mode"],
                 "native_kernel_present": record["native_kernel_present"],
@@ -689,6 +694,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "formal_obligation_phase_margin_units": contracts[
             "formal_obligation_phase_margin_units"
         ],
+        "formal_obligation_phase_theorem": contracts["formal_obligation_phase_theorem"],
         "formal_obligation_theorem": contracts["formal_obligation_theorem"],
         "formal_obligation_continuous_theorem": contracts[
             "formal_obligation_continuous_theorem"

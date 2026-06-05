@@ -16,6 +16,9 @@ certificate predicate that a reviewer or CI proof gate must use:
 - Continuous-envelope module: `SPOFormal.Continuous`
 - Continuous predicate: `ContinuousEnvelopeBounds.budgetCertificate`
 - Continuous theorem: `continuous_envelope_certificate_discharges_horizon`
+- Phase-budget module: `SPOFormal.Kinematic`
+- Phase predicate: `PhaseBudgetBounds.budgetCertificate`
+- Phase theorem: `phase_budget_certificate_discharges_phase_lock`
 
 ## Use cases
 
@@ -78,7 +81,10 @@ drift in addition to the accepted replay dispersion. The manifest records that
 slack as `configured_phase_drift_bound_units`, records
 `phase_budget_units = max_phase_dispersion_units +
 configured_phase_drift_bound_units`, and derives `phase_margin_units` from the
-budget rather than from replay dispersion alone.
+budget rather than from replay dispersion alone. The manifest names the Lean
+`PhaseBudgetBounds.budgetCertificate` predicate and
+`phase_budget_certificate_discharges_phase_lock` theorem so the phase budget is
+reviewed by a formal fixed-point mirror instead of only by Python arithmetic.
 
 For non-zero gain, the runtime manifest replays the Lean recurrence
 `previous + gain * previous + drive`, records the terminal
@@ -125,8 +131,8 @@ verify_pha_c_kinematic_proof_obligation(obligation)
 
 `verify_pha_c_kinematic_proof_obligation(...)` checks:
 
-- exact schema, evidence kind, claim boundary, Lean module, predicate, and
-  theorem names;
+- exact schema, evidence kind, claim boundary, Lean kinematic, continuous, and
+  phase-budget module, predicate, and theorem names;
 - review-only flags: `execution_disabled=True` and `actuating=False`;
 - finite positive metric and phase fixed-point scales;
 - finite positive time scale and accepted time-step sampling fields;

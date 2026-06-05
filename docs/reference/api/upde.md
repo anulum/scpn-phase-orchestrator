@@ -545,8 +545,10 @@ combined with the observed moving-frame kinematic residual before the sampled
 residual rate, discrete drive bound, and continuous drive bound are accepted.
 The phase drift bound is recorded separately as
 `configured_phase_drift_bound_units`, then added to observed phase dispersion
-before the phase margin is accepted. This keeps FRC or MIF specialisations from
-hiding residual uncertainty inside the relative-velocity term or phase
-uncertainty inside replay dispersion.
+before the phase margin is accepted. The manifest now also names the Lean
+`PhaseBudgetBounds.budgetCertificate` predicate and
+`phase_budget_certificate_discharges_phase_lock` theorem for that phase budget.
+This keeps FRC or MIF specialisations from hiding residual uncertainty inside
+the relative-velocity term or phase uncertainty inside replay dispersion.
 
 ::: scpn_phase_orchestrator.upde.pha_c_formal_obligation

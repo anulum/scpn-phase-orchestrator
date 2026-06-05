@@ -101,6 +101,24 @@ example :
     (cfg := mifSampledRateBounds)
     (by decide)
 
+def mifPhaseBudgetBounds : PhaseBudgetBounds := {
+  maxPhaseDispersion := 2
+  configuredPhaseDrift := 1
+  phaseTolerance := 4
+}
+
+example : mifPhaseBudgetBounds.phaseBudget = 3 := by
+  decide
+
+example : mifPhaseBudgetBounds.budgetCertificate = true := by
+  decide
+
+example :
+    mifPhaseBudgetBounds.phaseBudget <= mifPhaseBudgetBounds.phaseTolerance := by
+  exact phase_budget_certificate_discharges_phase_lock
+    (cfg := mifPhaseBudgetBounds)
+    (by decide)
+
 example (distance : Nat -> Nat)
     (hInitial : distance 0 <= mifSmokeBounds.initialTolerance)
     (hStep : ∀ k, distance (k + 1) <= distance k + mifSmokeBounds.driveBound) :
@@ -123,6 +141,34 @@ example : mergeWindowLocked 9 8 10 10 = false := by
 example :
     mergeWindowLocked 7 8 10 10 = true ↔ 7 <= 8 ∧ 10 <= 10 := by
   exact mergeWindowLocked_eq_true_iff
+
+example : mergeWindowLockedWithPhaseBudget mifPhaseBudgetBounds 10 10 = true := by
+  decide
+
+example :
+    mergeWindowLockedWithPhaseBudget mifPhaseBudgetBounds 11 10 = false := by
+  decide
+
+example :
+    mergeWindowLockedWithPhaseBudget mifPhaseBudgetBounds 10 10 = true ↔
+      mifPhaseBudgetBounds.phaseBudget <= mifPhaseBudgetBounds.phaseTolerance ∧
+        10 <= 10 := by
+  exact mergeWindowLockedWithPhaseBudget_eq_true_iff
+
+example (spatialDistance : Nat -> Nat)
+    (hSpatial : ∀ k, k <= mifSmokeBounds.horizonSteps ->
+      spatialDistance k <= mifSmokeBounds.mergeWindowTolerance) :
+    ∀ k, k <= mifSmokeBounds.horizonSteps ->
+      mergeWindowLockedWithPhaseBudget
+        mifPhaseBudgetBounds
+        (spatialDistance k)
+        mifSmokeBounds.mergeWindowTolerance = true := by
+  exact merge_window_locked_with_phase_budget_over_horizon
+    spatialDistance
+    mifPhaseBudgetBounds
+    mifSmokeBounds
+    hSpatial
+    (by decide)
 
 def mifContinuousEnvelopeBounds : ContinuousEnvelopeBounds := {
   initialTolerance := 1

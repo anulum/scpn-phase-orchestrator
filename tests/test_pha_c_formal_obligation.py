@@ -39,6 +39,9 @@ from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
     PHA_C_FORMAL_LEAN_MODULE,
     PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY,
     PHA_C_FORMAL_OBLIGATION_SCHEMA,
+    PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE,
+    PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM,
+    PHA_C_FORMAL_PHASE_LEAN_MODULE,
     PHACKinematicProofObligation,
     build_pha_c_kinematic_proof_obligation,
     pha_c_kinematic_proof_obligation_to_dict,
@@ -98,6 +101,11 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
         PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE
     )
     assert obligation.continuous_theorem == PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM
+    assert obligation.phase_lean_module == PHA_C_FORMAL_PHASE_LEAN_MODULE
+    assert obligation.phase_certificate_predicate == (
+        PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE
+    )
+    assert obligation.phase_theorem == PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM
     assert obligation.fixed_point_time_scale_s == PHA_C_FORMAL_DEFAULT_TIME_SCALE_S
     assert obligation.time_step_s == pytest.approx(record.dt)
     assert obligation.time_scale_units_per_second == 1_000_000
@@ -395,6 +403,10 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
     with pytest.raises(ValueError, match="continuous_theorem"):
         verify_pha_c_kinematic_proof_obligation(
             replace(obligation, continuous_theorem="unchecked"),
+        )
+    with pytest.raises(ValueError, match="phase_theorem"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(obligation, phase_theorem="unchecked"),
         )
     with pytest.raises(ValueError, match="continuous_horizon_drive_bound_units"):
         verify_pha_c_kinematic_proof_obligation(

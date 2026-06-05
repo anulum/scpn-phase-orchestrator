@@ -330,7 +330,11 @@ configured fixed-point residual bound, separate from the observed kinematic
 residual, before the combined residual rate enters the discrete and continuous
 drive budgets. Predictive phase-drift slack is likewise recorded as a
 configured fixed-point phase bound, separate from observed replay dispersion,
-before the phase-lock margin is accepted. The same manifest now records the
+before the phase-lock margin is accepted. The phase-budget side names Lean
+`PhaseBudgetBounds.budgetCertificate` and
+`phase_budget_certificate_discharges_phase_lock`, so downstream reviewers can
+audit the phase certificate independently of the spatial Gronwall certificate.
+The same manifest now records the
 `SPOFormal.Continuous`
 horizon certificate: per-second drive-rate sum, horizon-drive replay,
 continuous budget, and signed continuous margin.

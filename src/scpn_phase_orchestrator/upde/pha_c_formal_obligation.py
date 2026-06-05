@@ -50,6 +50,11 @@ PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE = (
 PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM = (
     "continuous_envelope_certificate_discharges_horizon"
 )
+PHA_C_FORMAL_PHASE_LEAN_MODULE = "SPOFormal.Kinematic"
+PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE = "PhaseBudgetBounds.budgetCertificate"
+PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM = (
+    "phase_budget_certificate_discharges_phase_lock"
+)
 PHA_C_FORMAL_DEFAULT_SCALE_M = 1.0e-6
 PHA_C_FORMAL_DEFAULT_SCALE_RAD = 1.0e-6
 PHA_C_FORMAL_DEFAULT_TIME_SCALE_S = 1.0e-6
@@ -67,6 +72,9 @@ __all__ = [
     "PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY",
     "PHA_C_FORMAL_OBLIGATION_EVIDENCE_KIND",
     "PHA_C_FORMAL_OBLIGATION_SCHEMA",
+    "PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE",
+    "PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM",
+    "PHA_C_FORMAL_PHASE_LEAN_MODULE",
     "PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_PREDICATE",
     "PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_THEOREM",
     "PHACKinematicProofObligation",
@@ -92,6 +100,9 @@ class PHACKinematicProofObligation:
     continuous_lean_module: str
     continuous_certificate_predicate: str
     continuous_theorem: str
+    phase_lean_module: str
+    phase_certificate_predicate: str
+    phase_theorem: str
     fixed_point_scale_m: float
     fixed_point_scale_rad: float
     fixed_point_time_scale_s: float
@@ -273,6 +284,9 @@ def _dict_without_record_hash(
             obligation.continuous_certificate_predicate
         ),
         "continuous_theorem": obligation.continuous_theorem,
+        "phase_lean_module": obligation.phase_lean_module,
+        "phase_certificate_predicate": obligation.phase_certificate_predicate,
+        "phase_theorem": obligation.phase_theorem,
         "fixed_point_scale_m": obligation.fixed_point_scale_m,
         "fixed_point_scale_rad": obligation.fixed_point_scale_rad,
         "fixed_point_time_scale_s": obligation.fixed_point_time_scale_s,
@@ -547,6 +561,9 @@ def build_pha_c_kinematic_proof_obligation(
             PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE
         ),
         "continuous_theorem": PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM,
+        "phase_lean_module": PHA_C_FORMAL_PHASE_LEAN_MODULE,
+        "phase_certificate_predicate": PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE,
+        "phase_theorem": PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM,
         "fixed_point_scale_m": scale_m,
         "fixed_point_scale_rad": scale_rad,
         "fixed_point_time_scale_s": time_scale,
@@ -613,6 +630,9 @@ def verify_pha_c_kinematic_proof_obligation(
             PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE
         ),
         "continuous_theorem": PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_THEOREM,
+        "phase_lean_module": PHA_C_FORMAL_PHASE_LEAN_MODULE,
+        "phase_certificate_predicate": PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE,
+        "phase_theorem": PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM,
     }
     for field, expected in exact_strings.items():
         got = getattr(obligation, field)

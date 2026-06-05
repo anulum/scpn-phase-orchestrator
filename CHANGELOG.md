@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added Lean `PhaseBudgetBounds` for PHA-C fixed-point phase-lock budgets,
+  including theorem metadata in `PHACKinematicProofObligation`, smoke proof
+  coverage, benchmark acceptance fields, and API documentation updates.
 - Added explicit predictive phase-drift slack to
   `PHACKinematicProofObligation`, including fixed-point phase-budget
   provenance, fail-closed verifier checks, module-specific tests, PHA-C
