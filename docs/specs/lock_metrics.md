@@ -58,3 +58,12 @@ See [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Quality Gating and § Regime Threshol
 
 - **[kuramoto1975]** Y. Kuramoto (1975). Self-entrainment of a population of coupled non-linear oscillators. *Lecture Notes in Physics* 39, 420–422. — Order parameter R definition.
 - **[lachaux1999]** J.-P. Lachaux et al. (1999). Measuring phase synchrony in brain signals. *Human Brain Mapping* 8, 194–208. — PLV definition and significance thresholds.
+
+## Operational meaning
+
+- `R` and `PLV` are used as machine-safe gates, not only for analysis charts.
+- `LockSignatures` gives layer-level provenance for downstream policy rules that need
+  traceable evidence before action projection.
+- The empty-series rule (zero with empty-empty, hard reject empty/non-empty mismatch)
+  is intentionally strict to prevent silent invalid windows from entering a control
+  decision.

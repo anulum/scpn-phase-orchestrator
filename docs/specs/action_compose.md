@@ -82,3 +82,12 @@ SupervisorPolicy.decide()
 ## References
 
 Rate limits and value bounds are empirical — see [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Rate Limits. Knob definitions follow the Sakaguchi–Kuramoto model documented in [knobs_K_alpha_zeta_Psi.md](../concepts/knobs_K_alpha_zeta_Psi.md).
+
+## Production interpretation
+
+- This is the canonical place where high-level intent is converted into bounded,
+  auditable actuator commands.
+- Layer scope and knob validation are both policy boundaries: they prevent
+  accidental cross-layer bleed-through.
+- Projection + mapping order is intentional; it ensures every downstream command is
+  clamped and constrained before domain adapters execute.

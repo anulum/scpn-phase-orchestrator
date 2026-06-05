@@ -95,4 +95,13 @@ Use Bayesian runs when estimates are sparse, noisy, or manually inferred.
 In that setting the output carries both central tendency and uncertainty so
 decision logic can enforce explicit safety thresholds before proposing changes.
 
+## Production interpretation
+
+- Use Bayesian UPDE when uncertainty is itself a policy input, not an afterthought.
+- The fail-closed backend status check is a compliance boundary: unavailable
+  advanced samplers must not silently become “best effort” paths.
+- `r_plus_minus` is intended for risk-aware controller policy: a narrower sigma
+  can justify higher coupling, while a wider sigma should force conservative
+  action bounds.
+
 ::: scpn_phase_orchestrator.upde.bayesian

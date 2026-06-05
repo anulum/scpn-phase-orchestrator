@@ -111,4 +111,13 @@ handoff = build_pha_c_handoff_record(
 )
 ```
 
+## Operational role
+
+- This monitor is the gate where “mostly synchronized” becomes “merged” in a
+  replayable way.
+- Signed-margin outputs are what operators use to tune recovery aggressiveness
+  without guessing how close the signal was to the boundary.
+- The handoff record keeps review lanes deterministic: MIF, Studio, and audit
+  replay all receive the same lock/evidence contract.
+
 ::: scpn_phase_orchestrator.monitor.merge_window

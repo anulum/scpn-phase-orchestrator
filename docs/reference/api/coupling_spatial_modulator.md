@@ -47,6 +47,16 @@ surfaces. The benchmark gate records each declared backend slot and accepts only
 when available backends match the Python reference within the documented
 tolerance.
 
+## Why spatial modulation is an operations control
+
+- In moving populations, coupling strength should not be treated as static.
+  Distance-aware modulation makes control decisions sensitive to geometry drift
+  before supervisory actions are emitted.
+- The kernel-level invariant `K'_ii = 0` prevents self-loop amplification in both
+  mobile and static modes.
+- Row-wise decay choices are what lets teams keep a single coupling topology and
+  switch physical assumptions per domain.
+
 ## API
 
 ```python

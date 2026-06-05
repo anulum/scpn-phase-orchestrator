@@ -86,6 +86,15 @@ The committed result is local regression evidence only. It records backend
 availability and parity, but does not make production timing claims unless the
 run is repeated under the repository benchmark-isolation requirements.
 
+## When to apply time-varying omega
+
+- Real systems drift. This API is the contract-safe path for adding that drift without
+  changing every engine call-site.
+- It is most useful when clocks or sensors have predictable schedules (thermal drift,
+  rotational speedup, moving-frame corrections).
+- Validation remains strict before dispatch to any backend, so you get predictable
+  behavior under missing toolchains and mixed-precision runners.
+
 ## Public API
 
 ::: scpn_phase_orchestrator.upde.engine.upde_run_omega_schedule

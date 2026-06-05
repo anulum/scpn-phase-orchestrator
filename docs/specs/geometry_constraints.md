@@ -44,6 +44,17 @@ When `binding_spec.geometry_prior` is present, the CLI `run` loop applies `proje
 - **Non-negativity**: after projection, `K_nm >= 0` elementwise.
 - **Diagonal**: diagonal of K_nm is not modified by these constraints. Domainpacks that require zero self-coupling should set `diag(K) = 0` in the coupling builder.
 
+## Operations rationale
+
+Geometry constraints are a safety surface between a mathematically designed control
+policy and deployment reality:
+
+- Symmetric projection removes asymmetry that can be introduced by estimation noise.
+- Non-negativity preserves physically interpretable excitatory coupling in the standard
+  production profile.
+- Projections are deterministic and ordered, so audit evidence can attribute later
+  changes to explicit constraints rather than optimizer side effects.
+
 ## References
 
 - `src/scpn_phase_orchestrator/coupling/geometry_constraints.py` — constraint classes.

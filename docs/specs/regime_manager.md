@@ -66,3 +66,10 @@ regime   = transition(current, proposed)
 
 - **[acebron2005]** J. A. Acebrón et al. (2005). The Kuramoto model: a simple paradigm for synchronization phenomena. *Rev. Mod. Phys.* 77, 137–185. — Incoherence / partial-sync boundaries motivating R thresholds.
 - **[dorfler2014]** F. Dörfler & F. Bullo (2014). Synchronization in complex networks of phase oscillators: a survey. *Automatica* 50, 1539–1564. — Finite-N synchronisation conditions and hysteresis.
+
+## Why this manager exists
+
+- The manager converts noisy numeric signals into bounded, auditable control states.
+- Cooldown is a practical anti-oscillation control that avoids rapid action churn on measurement noise.
+- CRITICAL bypass keeps safety priority explicit: hard faults move the system into
+  protective behavior without waiting for cool-off cycles.

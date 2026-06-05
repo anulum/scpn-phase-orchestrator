@@ -84,6 +84,15 @@ rerun with the repository benchmark-isolation protocol.
 - malformed scalar or vector velocity shapes;
 - backend outputs outside `[0, 2*pi)`.
 
+## Operational use case
+
+- Doppler correction is used when velocity mismatch can destabilise the intended phase
+  order before a policy loop can react.
+- The row-normalised coupling form keeps response characteristics comparable across
+  changing communication density and moving graph topologies.
+- In review mode, compare `doppler_term` trends with regime transitions so you can
+  separate physical transport effects from control-induced desynchronization.
+
 ::: scpn_phase_orchestrator.upde.doppler.DopplerEngine
 
 ::: scpn_phase_orchestrator.upde.doppler.doppler_term
