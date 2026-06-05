@@ -71,6 +71,34 @@ example :
     (cfg := mifGainSmokeBounds)
     (by decide)
 
+def mifSampledRateBounds : SampledRateKinematicBounds := {
+  initialTolerance := 1
+  lipschitzStepGain := 0
+  relativeVelocityRateBound := 5
+  couplingResidualRateBound := 0
+  timeScaleUnitsPerSecond := 10
+  stepTimeUnits := 2
+  mergeWindowTolerance := 4
+  horizonSteps := 3
+}
+
+example : mifSampledRateBounds.sampledStepBound 5 = 1 := by
+  decide
+
+example : mifSampledRateBounds.toKinematicBounds.driveBound = 1 := by
+  decide
+
+example : mifSampledRateBounds.budgetCertificate = true := by
+  decide
+
+example :
+    ∀ k, k <= mifSampledRateBounds.horizonSteps ->
+      mifSampledRateBounds.toKinematicBounds.budget k <=
+        mifSampledRateBounds.mergeWindowTolerance := by
+  exact sampled_rate_certificate_discharges_budget
+    (cfg := mifSampledRateBounds)
+    (by decide)
+
 example (distance : Nat -> Nat)
     (hInitial : distance 0 <= mifSmokeBounds.initialTolerance)
     (hStep : ∀ k, distance (k + 1) <= distance k + mifSmokeBounds.driveBound) :

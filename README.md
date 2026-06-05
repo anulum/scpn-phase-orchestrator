@@ -444,6 +444,9 @@ source-contract validation rows until native downstream kernels land;
 The manifest carries the terminal Gronwall budget, signed Gronwall margin, and
 budget-trace hash, which keeps non-zero Lipschitz gain envelopes reviewable
 instead of forcing every PHA-C formal handoff into a zero-gain replay.
+It also carries the sampled time-step, horizon-time, velocity-rate, and
+residual-rate assumptions used to derive the discrete Lean drive bound, so the
+continuous-rate layer is explicit in every benchmark row.
 
 Timing fields in the checked-in reference snapshot are local regression and
 parity evidence unless the run metadata states CPU/core isolation and host-load

@@ -322,6 +322,10 @@ backend row can pass.
 The proof manifest records both the zero-gain linear reference budget and the
 general finite-horizon Gronwall budget trace, so non-zero Lipschitz gain lanes
 remain inside the same formal review boundary.
+It also records `time_step_units`, `horizon_time_units`, and sampled
+per-second velocity/residual rate bounds so the continuous-time assumptions
+behind a PHA-C schedule are reviewed before they are projected into the
+discrete Lean budget.
 
 Those Rust, Go, Julia, and Mojo rows are intentionally labelled
 `source_contract_reference_validation` until native downstream kernels are

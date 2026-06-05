@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from decimal import ROUND_CEILING, Decimal
 from math import ceil
 
 import numpy as np
@@ -31,6 +32,7 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
 from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
     PHA_C_FORMAL_CERTIFICATE_PREDICATE,
     PHA_C_FORMAL_CERTIFICATE_THEOREM,
+    PHA_C_FORMAL_DEFAULT_TIME_SCALE_S,
     PHA_C_FORMAL_LEAN_MODULE,
     PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY,
     PHA_C_FORMAL_OBLIGATION_SCHEMA,
@@ -39,6 +41,14 @@ from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
     pha_c_kinematic_proof_obligation_to_dict,
     verify_pha_c_kinematic_proof_obligation,
 )
+
+
+def _ceil_units(value: float, scale: float) -> int:
+    return int(
+        (Decimal(str(value)) / Decimal(str(scale))).to_integral_value(
+            rounding=ROUND_CEILING,
+        )
+    )
 
 
 def _record(*, spatial_tol_m: float | None = None):
@@ -80,16 +90,25 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     assert obligation.lean_module == PHA_C_FORMAL_LEAN_MODULE
     assert obligation.lean_certificate_predicate == PHA_C_FORMAL_CERTIFICATE_PREDICATE
     assert obligation.lean_theorem == PHA_C_FORMAL_CERTIFICATE_THEOREM
+    assert obligation.fixed_point_time_scale_s == PHA_C_FORMAL_DEFAULT_TIME_SCALE_S
+    assert obligation.time_step_s == pytest.approx(record.dt)
+    assert obligation.time_scale_units_per_second == 1_000_000
+    assert obligation.time_step_units == 1000
+    assert obligation.horizon_time_units == obligation.horizon_steps * 1000
     assert obligation.lipschitz_step_gain_units == 0
+    assert obligation.relative_velocity_rate_bound_units_per_second == 0
     assert obligation.relative_velocity_step_bound_units == 0
+    assert obligation.coupling_residual_rate_bound_units_per_second == 0
     assert obligation.coupling_residual_step_bound_units == 0
     assert obligation.drive_bound_units == 0
     assert obligation.horizon_steps == record.step_count
-    assert obligation.initial_tolerance_units == ceil(
-        record.max_spatial_dispersion_m / obligation.fixed_point_scale_m,
+    assert obligation.initial_tolerance_units == _ceil_units(
+        record.max_spatial_dispersion_m,
+        obligation.fixed_point_scale_m,
     )
-    assert obligation.merge_window_tolerance_units == ceil(
-        record.spatial_tol_m / obligation.fixed_point_scale_m,
+    assert obligation.merge_window_tolerance_units == _ceil_units(
+        record.spatial_tol_m,
+        obligation.fixed_point_scale_m,
     )
     assert obligation.linear_budget_units == obligation.initial_tolerance_units
     assert obligation.gronwall_budget_units == obligation.linear_budget_units
@@ -99,11 +118,13 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     assert len(obligation.gronwall_budget_trace_sha256) == 64
     assert obligation.window_budget_margin_units >= 0
     assert obligation.phase_margin_units >= 0
-    assert obligation.observed_velocity_step_units == ceil(
-        record.max_abs_velocity_m_per_s * record.dt / obligation.fixed_point_scale_m,
+    assert obligation.observed_velocity_step_units == _ceil_units(
+        record.max_abs_velocity_m_per_s * record.dt,
+        obligation.fixed_point_scale_m,
     )
-    assert obligation.path_length_units == ceil(
-        record.path_length_max_m / obligation.fixed_point_scale_m,
+    assert obligation.path_length_units == _ceil_units(
+        record.path_length_max_m,
+        obligation.fixed_point_scale_m,
     )
     assert obligation.proof_obligations_discharged
     assert len(obligation.record_sha256) == 64
@@ -125,7 +146,20 @@ def test_kinematic_obligation_supports_predictive_relative_velocity_slack() -> N
         relative_velocity_step_bound_m=1.0e-5,
     )
 
-    expected_slack_units = ceil(1.0e-5 / obligation.fixed_point_scale_m)
+    expected_slack_units = _ceil_units(1.0e-5, obligation.fixed_point_scale_m)
+    expected_rate_units = _ceil_units(
+        1.0e-5 / record.dt,
+        obligation.fixed_point_scale_m,
+    )
+    expected_sampled_units = ceil(
+        expected_rate_units
+        * obligation.time_step_units
+        / obligation.time_scale_units_per_second,
+    )
+    assert expected_sampled_units == expected_slack_units
+    assert obligation.relative_velocity_rate_bound_units_per_second == (
+        expected_rate_units
+    )
     assert obligation.relative_velocity_step_bound_units == expected_slack_units
     assert obligation.drive_bound_units == expected_slack_units
     assert obligation.linear_budget_units == (
@@ -158,6 +192,10 @@ def test_kinematic_obligation_supports_nonzero_lipschitz_gain() -> None:
         )
 
     assert obligation.lipschitz_step_gain_units == 1
+    assert obligation.time_step_units > 0
+    assert obligation.horizon_time_units == (
+        obligation.horizon_steps * obligation.time_step_units
+    )
     assert obligation.gronwall_budget_units == expected_budget
     assert obligation.gronwall_budget_margin_units == (
         obligation.merge_window_tolerance_units - expected_budget
@@ -179,6 +217,23 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
     with pytest.raises(ValueError, match="drive_bound_units"):
         verify_pha_c_kinematic_proof_obligation(
             replace(obligation, drive_bound_units=obligation.drive_bound_units + 1),
+        )
+    with pytest.raises(ValueError, match="time_step_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(obligation, time_step_units=obligation.time_step_units + 1),
+        )
+    with pytest.raises(ValueError, match="relative_velocity_step_bound_units"):
+        predictive = build_pha_c_kinematic_proof_obligation(
+            _record(),
+            relative_velocity_step_bound_m=1.0e-5,
+        )
+        verify_pha_c_kinematic_proof_obligation(
+            replace(
+                predictive,
+                relative_velocity_step_bound_units=(
+                    predictive.relative_velocity_step_bound_units + 1
+                ),
+            ),
         )
     with pytest.raises(ValueError, match="gronwall_budget_units"):
         verify_pha_c_kinematic_proof_obligation(
@@ -208,6 +263,8 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
         build_pha_c_kinematic_proof_obligation(record, fixed_point_scale_m=0.0)
     with pytest.raises(ValueError, match="fixed_point_scale_rad"):
         build_pha_c_kinematic_proof_obligation(record, fixed_point_scale_rad=np.inf)
+    with pytest.raises(ValueError, match="fixed_point_time_scale_s"):
+        build_pha_c_kinematic_proof_obligation(record, fixed_point_time_scale_s=0.0)
     with pytest.raises(ValueError, match="relative_velocity_step_bound_m"):
         build_pha_c_kinematic_proof_obligation(
             record,

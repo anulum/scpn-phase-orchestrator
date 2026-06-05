@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added sampled continuous-rate evidence to the PHA-C runtime-to-Lean
+  kinematic proof bridge, including fixed-point time-step fields,
+  per-second velocity and residual rate bounds, Lean
+  `SampledRateKinematicBounds` smoke proofs, benchmark acceptance fields,
+  module-specific tests, API docs, README, roadmap, and performance-guide
+  updates.
 - Generalised the PHA-C runtime-to-Lean kinematic proof bridge from the
   zero-gain replay certificate to the finite-horizon Gronwall
   `budget_certificate_discharges_budget` theorem, including non-zero

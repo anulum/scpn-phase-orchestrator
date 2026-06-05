@@ -141,7 +141,10 @@ verifies a Lean kinematic proof-obligation manifest for every backend row. The
 acceptance gate fails unless the manifest names `SPOFormal.Kinematic`, targets
 `budget_certificate_discharges_budget`, replays its canonical hash, replays the
 finite-horizon Gronwall budget trace, and discharges the fixed-point
-merge-window and phase-margin checks.
+merge-window and phase-margin checks. The same manifest publishes sampled
+continuous-rate fields for `dt`, horizon time, velocity-rate bounds, and
+residual-rate bounds so Rust, Mojo, Julia, Go, and Python source-contract rows
+carry the same time-normalised formal assumptions.
 
 ```bash
 uv run python benchmarks/pha_c_acceptance_benchmark.py \

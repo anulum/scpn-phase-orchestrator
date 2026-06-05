@@ -54,6 +54,10 @@ def gronwallBudget (initial gain drive : Nat) : Nat -> Nat
       let previous := gronwallBudget initial gain drive k
       previous + gain * previous + drive
 
+/-- Integer ceiling division used by sampled continuous-rate proof mirrors. -/
+def ceilDiv (numerator denominator : Nat) : Nat :=
+  (numerator + denominator - 1) / denominator
+
 @[simp]
 theorem gronwallBudget_zero {initial gain drive : Nat} :
     gronwallBudget initial gain drive 0 = initial := by
@@ -125,6 +129,57 @@ theorem budget_certificate_discharges_budget
   intro k hk
   have hHorizon := (budgetCertificate_eq_true_iff (cfg := cfg)).mp hCertificate
   exact Nat.le_trans (KinematicBounds.budget_monotone (cfg := cfg) hk) hHorizon
+
+/-- Fixed-point sampled-rate assumptions for continuous-time PHA-C lanes.
+
+Rate bounds are expressed in metric units per second. `stepTimeUnits` and
+`timeScaleUnitsPerSecond` sample those rates onto the discrete PHA-C step
+before reusing the finite-horizon `KinematicBounds` certificate.
+-/
+structure SampledRateKinematicBounds where
+  initialTolerance : Nat
+  lipschitzStepGain : Nat
+  relativeVelocityRateBound : Nat
+  couplingResidualRateBound : Nat
+  timeScaleUnitsPerSecond : Nat
+  stepTimeUnits : Nat
+  mergeWindowTolerance : Nat
+  horizonSteps : Nat
+  deriving DecidableEq, Repr
+
+/-- Sample a per-second rate bound onto one discrete PHA-C time step. -/
+def SampledRateKinematicBounds.sampledStepBound
+    (cfg : SampledRateKinematicBounds)
+    (rateBound : Nat) : Nat :=
+  ceilDiv (rateBound * cfg.stepTimeUnits) cfg.timeScaleUnitsPerSecond
+
+/-- Convert sampled continuous-rate assumptions into the discrete certificate
+already consumed by the runtime proof-obligation manifest. -/
+def SampledRateKinematicBounds.toKinematicBounds
+    (cfg : SampledRateKinematicBounds) : KinematicBounds := {
+  initialTolerance := cfg.initialTolerance
+  lipschitzStepGain := cfg.lipschitzStepGain
+  relativeVelocityStepBound := cfg.sampledStepBound cfg.relativeVelocityRateBound
+  couplingResidualStepBound := cfg.sampledStepBound cfg.couplingResidualRateBound
+  mergeWindowTolerance := cfg.mergeWindowTolerance
+  horizonSteps := cfg.horizonSteps
+}
+
+/-- Runtime-facing certificate for sampled continuous-rate assumptions. -/
+def SampledRateKinematicBounds.budgetCertificate
+    (cfg : SampledRateKinematicBounds) : Bool :=
+  cfg.toKinematicBounds.budgetCertificate
+
+/-- Sampled continuous-rate certificates discharge the same discrete
+finite-horizon merge-window budget after conversion. -/
+theorem sampled_rate_certificate_discharges_budget
+    {cfg : SampledRateKinematicBounds}
+    (hCertificate : cfg.budgetCertificate = true) :
+    ∀ k, k <= cfg.horizonSteps ->
+      cfg.toKinematicBounds.budget k <= cfg.mergeWindowTolerance := by
+  exact budget_certificate_discharges_budget
+    (cfg := cfg.toKinematicBounds)
+    hCertificate
 
 /-- Zero Lipschitz gain reduces the recurrence to a linear finite-step budget. -/
 theorem gronwallBudget_zero_gain_eq_linear

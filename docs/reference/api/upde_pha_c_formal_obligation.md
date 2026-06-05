@@ -34,9 +34,16 @@ runtime envelope into integer units:
 
 | Manifest field | Runtime source | Lean role |
 |----------------|----------------|-----------|
+| `time_step_s` | accepted integration `dt` | sampled-rate time step |
+| `fixed_point_time_scale_s` | manifest time scale, default `1e-6` | sampled-rate fixed-point clock |
+| `time_scale_units_per_second` | `ceil(1 / fixed_point_time_scale_s)` | sampled-rate denominator |
+| `time_step_units` | `ceil(time_step_s / fixed_point_time_scale_s)` | sampled-rate numerator |
+| `horizon_time_units` | `horizon_steps * time_step_units` | reviewed horizon duration |
 | `initial_tolerance_units` | max observed spatial dispersion | `KinematicBounds.initialTolerance` |
 | `lipschitz_step_gain_units` | explicit control, default `0` | `KinematicBounds.lipschitzStepGain` |
+| `relative_velocity_rate_bound_units_per_second` | predictive slack divided by `dt` | `SampledRateKinematicBounds.relativeVelocityRateBound` |
 | `relative_velocity_step_bound_units` | explicit predictive slack, default `0` | `KinematicBounds.relativeVelocityStepBound` |
+| `coupling_residual_rate_bound_units_per_second` | moving-frame residual divided by `dt` | `SampledRateKinematicBounds.couplingResidualRateBound` |
 | `coupling_residual_step_bound_units` | moving-frame kinematic residual | `KinematicBounds.couplingResidualStepBound` |
 | `merge_window_tolerance_units` | spatial merge tolerance | `KinematicBounds.mergeWindowTolerance` |
 | `horizon_steps` | accepted PHA-C step count | `KinematicBounds.horizonSteps` |
@@ -55,6 +62,13 @@ For non-zero gain, the runtime manifest replays the Lean recurrence
 `gronwall_budget_trace_sha256`. The legacy `linear_budget_units` field remains
 as the zero-gain reference budget; the merge-window margin is now derived from
 the Gronwall terminal budget.
+
+For continuous-rate handoffs, the manifest also records a sampled-rate mirror:
+per-second relative-velocity and residual bounds are sampled through
+`time_step_units / time_scale_units_per_second` before they enter the discrete
+Lean budget. The Lean side names this bridge `SampledRateKinematicBounds` and
+proves that a sampled-rate certificate discharges the same finite-horizon
+merge-window budget after conversion to `KinematicBounds`.
 
 ## Minimal example
 
@@ -83,6 +97,7 @@ verify_pha_c_kinematic_proof_obligation(obligation)
   theorem names;
 - review-only flags: `execution_disabled=True` and `actuating=False`;
 - finite positive metric and phase fixed-point scales;
+- finite positive time scale and accepted time-step sampling fields;
 - natural-number fields and the Lean equations for drive, linear zero-gain
   reference budget, Gronwall budget trace, terminal budget, and merge-window
   margin;

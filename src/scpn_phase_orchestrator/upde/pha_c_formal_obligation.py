@@ -21,7 +21,8 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from math import ceil, isfinite
+from decimal import ROUND_CEILING, Decimal
+from math import isfinite
 from typing import Any
 
 import numpy as np
@@ -44,12 +45,14 @@ PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_PREDICATE = "KinematicBounds.zeroGainCertific
 PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_THEOREM = "zero_gain_certificate_discharges_budget"
 PHA_C_FORMAL_DEFAULT_SCALE_M = 1.0e-6
 PHA_C_FORMAL_DEFAULT_SCALE_RAD = 1.0e-6
+PHA_C_FORMAL_DEFAULT_TIME_SCALE_S = 1.0e-6
 
 __all__ = [
     "PHA_C_FORMAL_CERTIFICATE_PREDICATE",
     "PHA_C_FORMAL_CERTIFICATE_THEOREM",
     "PHA_C_FORMAL_DEFAULT_SCALE_M",
     "PHA_C_FORMAL_DEFAULT_SCALE_RAD",
+    "PHA_C_FORMAL_DEFAULT_TIME_SCALE_S",
     "PHA_C_FORMAL_LEAN_MODULE",
     "PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY",
     "PHA_C_FORMAL_OBLIGATION_EVIDENCE_KIND",
@@ -78,9 +81,16 @@ class PHACKinematicProofObligation:
     lean_theorem: str
     fixed_point_scale_m: float
     fixed_point_scale_rad: float
+    fixed_point_time_scale_s: float
+    time_step_s: float
+    time_scale_units_per_second: int
+    time_step_units: int
+    horizon_time_units: int
     initial_tolerance_units: int
     lipschitz_step_gain_units: int
+    relative_velocity_rate_bound_units_per_second: int
     relative_velocity_step_bound_units: int
+    coupling_residual_rate_bound_units_per_second: int
     coupling_residual_step_bound_units: int
     drive_bound_units: int
     merge_window_tolerance_units: int
@@ -166,7 +176,32 @@ def _nonnegative_units(value: object, *, scale: float, name: str) -> int:
         raise ValueError(f"{name} must be a finite non-negative scalar") from exc
     if not isfinite(parsed) or parsed < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
-    return int(ceil(parsed / scale))
+    return int(
+        (Decimal(str(parsed)) / Decimal(str(scale))).to_integral_value(
+            rounding=ROUND_CEILING,
+        )
+    )
+
+
+def _ceil_div_units(numerator: int, denominator: int, *, name: str) -> int:
+    if denominator <= 0:
+        raise ValueError(f"{name} denominator must be positive")
+    return (numerator + denominator - 1) // denominator
+
+
+def _ceil_positive_ratio_units(
+    numerator: float,
+    denominator: float,
+    *,
+    name: str,
+) -> int:
+    if denominator <= 0.0:
+        raise ValueError(f"{name} denominator must be positive")
+    return int(
+        (Decimal(str(numerator)) / Decimal(str(denominator))).to_integral_value(
+            rounding=ROUND_CEILING,
+        )
+    )
 
 
 def _validate_int(value: object, *, name: str, minimum: int) -> int:
@@ -209,10 +244,21 @@ def _dict_without_record_hash(
         "lean_theorem": obligation.lean_theorem,
         "fixed_point_scale_m": obligation.fixed_point_scale_m,
         "fixed_point_scale_rad": obligation.fixed_point_scale_rad,
+        "fixed_point_time_scale_s": obligation.fixed_point_time_scale_s,
+        "time_step_s": obligation.time_step_s,
+        "time_scale_units_per_second": obligation.time_scale_units_per_second,
+        "time_step_units": obligation.time_step_units,
+        "horizon_time_units": obligation.horizon_time_units,
         "initial_tolerance_units": obligation.initial_tolerance_units,
         "lipschitz_step_gain_units": obligation.lipschitz_step_gain_units,
+        "relative_velocity_rate_bound_units_per_second": (
+            obligation.relative_velocity_rate_bound_units_per_second
+        ),
         "relative_velocity_step_bound_units": (
             obligation.relative_velocity_step_bound_units
+        ),
+        "coupling_residual_rate_bound_units_per_second": (
+            obligation.coupling_residual_rate_bound_units_per_second
         ),
         "coupling_residual_step_bound_units": (
             obligation.coupling_residual_step_bound_units
@@ -253,6 +299,7 @@ def build_pha_c_kinematic_proof_obligation(
     *,
     fixed_point_scale_m: float = PHA_C_FORMAL_DEFAULT_SCALE_M,
     fixed_point_scale_rad: float = PHA_C_FORMAL_DEFAULT_SCALE_RAD,
+    fixed_point_time_scale_s: float = PHA_C_FORMAL_DEFAULT_TIME_SCALE_S,
     relative_velocity_step_bound_m: float = 0.0,
     lipschitz_step_gain_units: int = 0,
 ) -> PHACKinematicProofObligation:
@@ -273,20 +320,83 @@ def build_pha_c_kinematic_proof_obligation(
         fixed_point_scale_rad,
         name="fixed_point_scale_rad",
     )
+    time_scale = _validate_positive_scale(
+        fixed_point_time_scale_s,
+        name="fixed_point_time_scale_s",
+    )
+    time_step_s = _validate_positive_scale(verified_record.dt, name="time_step_s")
+    time_scale_units_per_second = _validate_int(
+        _ceil_positive_ratio_units(
+            1.0,
+            time_scale,
+            name="time_scale_units_per_second",
+        ),
+        name="time_scale_units_per_second",
+        minimum=1,
+    )
+    time_step_units = _validate_int(
+        _ceil_positive_ratio_units(
+            time_step_s,
+            time_scale,
+            name="time_step_units",
+        ),
+        name="time_step_units",
+        minimum=1,
+    )
+    horizon_steps = _validate_int(
+        verified_record.step_count,
+        name="step_count",
+        minimum=1,
+    )
+    horizon_time_units = horizon_steps * time_step_units
     gain_units = _validate_int(
         lipschitz_step_gain_units,
         name="lipschitz_step_gain_units",
         minimum=0,
     )
-    relative_velocity_units = _nonnegative_units(
+    raw_relative_velocity_units = _nonnegative_units(
         relative_velocity_step_bound_m,
         scale=scale_m,
         name="relative_velocity_step_bound_m",
     )
-    residual_units = _nonnegative_units(
+    raw_residual_units = _nonnegative_units(
         verified_record.kinematic_residual_max_m,
         scale=scale_m,
         name="kinematic_residual_max_m",
+    )
+    relative_velocity_rate_units = max(
+        _nonnegative_units(
+            relative_velocity_step_bound_m / time_step_s,
+            scale=scale_m,
+            name="relative_velocity_rate_bound_m_per_s",
+        ),
+        _ceil_div_units(
+            raw_relative_velocity_units * time_scale_units_per_second,
+            time_step_units,
+            name="relative_velocity_rate_bound_units_per_second",
+        ),
+    )
+    residual_rate_units = max(
+        _nonnegative_units(
+            verified_record.kinematic_residual_max_m / time_step_s,
+            scale=scale_m,
+            name="coupling_residual_rate_bound_m_per_s",
+        ),
+        _ceil_div_units(
+            raw_residual_units * time_scale_units_per_second,
+            time_step_units,
+            name="coupling_residual_rate_bound_units_per_second",
+        ),
+    )
+    relative_velocity_units = _ceil_div_units(
+        relative_velocity_rate_units * time_step_units,
+        time_scale_units_per_second,
+        name="relative_velocity_step_bound_units",
+    )
+    residual_units = _ceil_div_units(
+        residual_rate_units * time_step_units,
+        time_scale_units_per_second,
+        name="coupling_residual_step_bound_units",
     )
     drive_units = relative_velocity_units + residual_units
     initial_units = _nonnegative_units(
@@ -298,11 +408,6 @@ def build_pha_c_kinematic_proof_obligation(
         verified_record.spatial_tol_m,
         scale=scale_m,
         name="spatial_tol_m",
-    )
-    horizon_steps = _validate_int(
-        verified_record.step_count,
-        name="step_count",
-        minimum=1,
     )
     linear_budget_units = initial_units + horizon_steps * drive_units
     gronwall_trace_units = _gronwall_budget_trace(
@@ -358,9 +463,16 @@ def build_pha_c_kinematic_proof_obligation(
         "lean_theorem": PHA_C_FORMAL_CERTIFICATE_THEOREM,
         "fixed_point_scale_m": scale_m,
         "fixed_point_scale_rad": scale_rad,
+        "fixed_point_time_scale_s": time_scale,
+        "time_step_s": time_step_s,
+        "time_scale_units_per_second": time_scale_units_per_second,
+        "time_step_units": time_step_units,
+        "horizon_time_units": horizon_time_units,
         "initial_tolerance_units": initial_units,
         "lipschitz_step_gain_units": gain_units,
+        "relative_velocity_rate_bound_units_per_second": relative_velocity_rate_units,
         "relative_velocity_step_bound_units": relative_velocity_units,
+        "coupling_residual_rate_bound_units_per_second": residual_rate_units,
         "coupling_residual_step_bound_units": residual_units,
         "drive_bound_units": drive_units,
         "merge_window_tolerance_units": merge_tolerance_units,
@@ -374,7 +486,7 @@ def build_pha_c_kinematic_proof_obligation(
         "max_phase_dispersion_units": phase_dispersion_units,
         "phase_margin_units": phase_margin_units,
         "observed_velocity_step_units": observed_velocity_step_units,
-        "kinematic_residual_units": residual_units,
+        "kinematic_residual_units": raw_residual_units,
         "path_length_units": path_length_units,
         "max_spatial_dispersion_units": initial_units,
         "proof_obligations_discharged": discharged,
@@ -423,10 +535,20 @@ def verify_pha_c_kinematic_proof_obligation(
         obligation.fixed_point_scale_rad,
         name="fixed_point_scale_rad",
     )
+    _validate_positive_scale(
+        obligation.fixed_point_time_scale_s,
+        name="fixed_point_time_scale_s",
+    )
+    _validate_positive_scale(obligation.time_step_s, name="time_step_s")
     nat_fields = (
+        "time_scale_units_per_second",
+        "time_step_units",
+        "horizon_time_units",
         "initial_tolerance_units",
         "lipschitz_step_gain_units",
+        "relative_velocity_rate_bound_units_per_second",
         "relative_velocity_step_bound_units",
+        "coupling_residual_rate_bound_units_per_second",
         "coupling_residual_step_bound_units",
         "drive_bound_units",
         "merge_window_tolerance_units",
@@ -469,16 +591,58 @@ def verify_pha_c_kinematic_proof_obligation(
     _validate_sha256_hex(obligation.timeline_sha256, name="timeline_sha256")
     _validate_sha256_hex(obligation.record_sha256, name="record_sha256")
 
+    expected_time_scale_units = _ceil_positive_ratio_units(
+        1.0,
+        obligation.fixed_point_time_scale_s,
+        name="time_scale_units_per_second",
+    )
+    if obligation.time_scale_units_per_second != expected_time_scale_units:
+        raise ValueError("time_scale_units_per_second must match time scale")
+    expected_time_step_units = _ceil_positive_ratio_units(
+        obligation.time_step_s,
+        obligation.fixed_point_time_scale_s,
+        name="time_step_units",
+    )
+    if obligation.time_step_units != expected_time_step_units:
+        raise ValueError("time_step_units must match time step")
+    expected_horizon_time_units = obligation.horizon_steps * obligation.time_step_units
+    if obligation.horizon_time_units != expected_horizon_time_units:
+        raise ValueError("horizon_time_units must match horizon and time step")
+
+    expected_relative_velocity_units = _ceil_div_units(
+        obligation.relative_velocity_rate_bound_units_per_second
+        * obligation.time_step_units,
+        obligation.time_scale_units_per_second,
+        name="relative_velocity_step_bound_units",
+    )
+    if (
+        obligation.relative_velocity_step_bound_units
+        != expected_relative_velocity_units
+    ):
+        raise ValueError(
+            "relative_velocity_step_bound_units must match sampled rate bound",
+        )
+    expected_residual_units = _ceil_div_units(
+        obligation.coupling_residual_rate_bound_units_per_second
+        * obligation.time_step_units,
+        obligation.time_scale_units_per_second,
+        name="coupling_residual_step_bound_units",
+    )
+    if obligation.coupling_residual_step_bound_units != expected_residual_units:
+        raise ValueError(
+            "coupling_residual_step_bound_units must match sampled rate bound",
+        )
+
     expected_drive = (
         obligation.relative_velocity_step_bound_units
         + obligation.coupling_residual_step_bound_units
     )
     if obligation.drive_bound_units != expected_drive:
         raise ValueError("drive_bound_units must equal relative velocity plus residual")
-    if obligation.kinematic_residual_units != (
+    if obligation.kinematic_residual_units > (
         obligation.coupling_residual_step_bound_units
     ):
-        raise ValueError("kinematic_residual_units must mirror residual bound")
+        raise ValueError("kinematic_residual_units must fit sampled residual bound")
     if obligation.max_spatial_dispersion_units != obligation.initial_tolerance_units:
         raise ValueError("max_spatial_dispersion_units must mirror initial tolerance")
     expected_budget = (

@@ -280,6 +280,14 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         ),
         "formal_obligation_sha256": obligation.record_sha256,
         "formal_obligation_margin_units": obligation.window_budget_margin_units,
+        "formal_obligation_time_step_units": obligation.time_step_units,
+        "formal_obligation_horizon_time_units": obligation.horizon_time_units,
+        "formal_obligation_relative_velocity_rate_units_per_second": (
+            obligation.relative_velocity_rate_bound_units_per_second
+        ),
+        "formal_obligation_residual_rate_units_per_second": (
+            obligation.coupling_residual_rate_bound_units_per_second
+        ),
         "formal_obligation_gronwall_budget_units": obligation.gronwall_budget_units,
         "formal_obligation_gronwall_margin_units": (
             obligation.gronwall_budget_margin_units
@@ -354,6 +362,14 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 ),
                 "formal_obligation_margin_units": (
                     obligation.window_budget_margin_units
+                ),
+                "formal_obligation_time_step_units": obligation.time_step_units,
+                "formal_obligation_horizon_time_units": obligation.horizon_time_units,
+                "formal_obligation_relative_velocity_rate_units_per_second": (
+                    obligation.relative_velocity_rate_bound_units_per_second
+                ),
+                "formal_obligation_residual_rate_units_per_second": (
+                    obligation.coupling_residual_rate_bound_units_per_second
                 ),
                 "formal_obligation_gronwall_budget_units": (
                     obligation.gronwall_budget_units
@@ -454,6 +470,20 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "formal_obligation_margin_units": (
                     record["formal_obligation_margin_units"]
                 ),
+                "formal_obligation_time_step_units": (
+                    record["formal_obligation_time_step_units"]
+                ),
+                "formal_obligation_horizon_time_units": (
+                    record["formal_obligation_horizon_time_units"]
+                ),
+                "formal_obligation_relative_velocity_rate_units_per_second": (
+                    record[
+                        "formal_obligation_relative_velocity_rate_units_per_second"
+                    ]
+                ),
+                "formal_obligation_residual_rate_units_per_second": (
+                    record["formal_obligation_residual_rate_units_per_second"]
+                ),
                 "formal_obligation_gronwall_budget_units": (
                     record["formal_obligation_gronwall_budget_units"]
                 ),
@@ -514,6 +544,18 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "formal_obligation_discharged": contracts["formal_obligation_discharged"],
         "formal_obligation_margin_units": contracts[
             "formal_obligation_margin_units"
+        ],
+        "formal_obligation_time_step_units": contracts[
+            "formal_obligation_time_step_units"
+        ],
+        "formal_obligation_horizon_time_units": contracts[
+            "formal_obligation_horizon_time_units"
+        ],
+        "formal_obligation_relative_velocity_rate_units_per_second": contracts[
+            "formal_obligation_relative_velocity_rate_units_per_second"
+        ],
+        "formal_obligation_residual_rate_units_per_second": contracts[
+            "formal_obligation_residual_rate_units_per_second"
         ],
         "formal_obligation_gronwall_budget_units": contracts[
             "formal_obligation_gronwall_budget_units"

@@ -383,6 +383,12 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["kinematic_residual_max_m"] <= 1.0e-12
     assert result["formal_obligation_discharged"] == 1
     assert result["formal_obligation_margin_units"] >= 0
+    assert result["formal_obligation_time_step_units"] > 0
+    assert result["formal_obligation_horizon_time_units"] == (
+        result["formal_obligation_time_step_units"] * 4
+    )
+    assert result["formal_obligation_relative_velocity_rate_units_per_second"] == 0
+    assert result["formal_obligation_residual_rate_units_per_second"] == 0
     assert result["formal_obligation_gronwall_margin_units"] == (
         result["formal_obligation_margin_units"]
     )
@@ -408,6 +414,15 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert all(
         record["formal_obligation_gronwall_margin_units"]
         == record["formal_obligation_margin_units"]
+        for record in backend_records
+    )
+    assert all(
+        record["formal_obligation_horizon_time_units"]
+        == record["formal_obligation_time_step_units"] * 4
+        for record in backend_records
+    )
+    assert all(
+        record["formal_obligation_relative_velocity_rate_units_per_second"] == 0
         for record in backend_records
     )
     assert all(
