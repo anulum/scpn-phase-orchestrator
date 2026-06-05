@@ -89,3 +89,7 @@ rerun with the repository benchmark-isolation protocol.
 ::: scpn_phase_orchestrator.upde.doppler.doppler_term
 
 ::: scpn_phase_orchestrator.upde.doppler.doppler_run
+
+## API documentation
+
+::: scpn_phase_orchestrator.upde.doppler

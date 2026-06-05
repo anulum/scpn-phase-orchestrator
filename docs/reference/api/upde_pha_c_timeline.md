@@ -163,3 +163,7 @@ The timeline fails closed on:
 ::: scpn_phase_orchestrator.upde.pha_c_timeline.pha_c_event_timeline_to_dict
 
 ::: scpn_phase_orchestrator.upde.pha_c_timeline.verify_pha_c_event_timeline
+
+## API documentation
+
+::: scpn_phase_orchestrator.upde.pha_c_timeline

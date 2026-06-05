@@ -132,3 +132,7 @@ The handoff fails closed on:
 ::: scpn_phase_orchestrator.upde.pha_c_handoff.pha_c_handoff_record_to_dict
 
 ::: scpn_phase_orchestrator.upde.pha_c_handoff.verify_pha_c_handoff_record
+
+## API documentation
+
+::: scpn_phase_orchestrator.upde.pha_c_handoff

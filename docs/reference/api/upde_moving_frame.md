@@ -164,3 +164,7 @@ The moving-frame engine fails closed on:
 ::: scpn_phase_orchestrator.upde.moving_frame.moving_frame_run
 
 ::: scpn_phase_orchestrator.upde.moving_frame.moving_frame_run_python
+
+## API documentation
+
+::: scpn_phase_orchestrator.upde.moving_frame

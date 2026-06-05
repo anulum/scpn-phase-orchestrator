@@ -210,3 +210,7 @@ The acceptance builder fails closed on:
 ::: scpn_phase_orchestrator.upde.pha_c_acceptance.pha_c_acceptance_record_to_dict
 
 ::: scpn_phase_orchestrator.upde.pha_c_acceptance.verify_pha_c_acceptance_record
+
+## API documentation
+
+::: scpn_phase_orchestrator.upde.pha_c_acceptance
