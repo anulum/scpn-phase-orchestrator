@@ -155,6 +155,28 @@ theorem zero_gain_budget_within_horizon
     (Nat.add_le_add_left (Nat.mul_le_mul_right cfg.driveBound hk) cfg.initialTolerance)
     hWindow
 
+/-- Boolean mirror used by runtime PHA-C proof-obligation manifests. -/
+def KinematicBounds.zeroGainCertificate (cfg : KinematicBounds) : Bool :=
+  cfg.lipschitzStepGain == 0 &&
+    cfg.initialTolerance + cfg.horizonSteps * cfg.driveBound <=
+      cfg.mergeWindowTolerance
+
+theorem zeroGainCertificate_eq_true_iff {cfg : KinematicBounds} :
+    cfg.zeroGainCertificate = true ↔
+      cfg.lipschitzStepGain = 0 ∧
+        cfg.initialTolerance + cfg.horizonSteps * cfg.driveBound <=
+          cfg.mergeWindowTolerance := by
+  unfold KinematicBounds.zeroGainCertificate
+  simp
+
+/-- Runtime zero-gain certificates discharge every finite-horizon budget row. -/
+theorem zero_gain_certificate_discharges_budget
+    {cfg : KinematicBounds}
+    (hCertificate : cfg.zeroGainCertificate = true) :
+    ∀ k, k <= cfg.horizonSteps -> cfg.budget k <= cfg.mergeWindowTolerance := by
+  have h := (zeroGainCertificate_eq_true_iff (cfg := cfg)).mp hCertificate
+  exact zero_gain_budget_within_horizon h.1 h.2
+
 /-- Linear finite-step invariant for the common no-Lipschitz-residual case. -/
 theorem merge_window_invariant_zero_gain
     (distance : Nat -> Nat)

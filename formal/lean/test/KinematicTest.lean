@@ -36,6 +36,16 @@ example :
       mifSmokeBounds.budget k <= mifSmokeBounds.mergeWindowTolerance := by
   exact zero_gain_budget_within_horizon (cfg := mifSmokeBounds) rfl (by decide)
 
+example : mifSmokeBounds.zeroGainCertificate = true := by
+  decide
+
+example :
+    ∀ k, k <= mifSmokeBounds.horizonSteps ->
+      mifSmokeBounds.budget k <= mifSmokeBounds.mergeWindowTolerance := by
+  exact zero_gain_certificate_discharges_budget
+    (cfg := mifSmokeBounds)
+    (by decide)
+
 example (distance : Nat -> Nat)
     (hInitial : distance 0 <= mifSmokeBounds.initialTolerance)
     (hStep : ∀ k, distance (k + 1) <= distance k + mifSmokeBounds.driveBound) :

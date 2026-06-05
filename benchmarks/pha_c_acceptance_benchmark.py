@@ -35,6 +35,10 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     build_pha_c_acceptance_record,
     verify_pha_c_acceptance_record,
 )
+from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
+    build_pha_c_kinematic_proof_obligation,
+    verify_pha_c_kinematic_proof_obligation,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -246,6 +250,9 @@ def _subgate_records() -> list[dict[str, object]]:
 
 
 def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
+    obligation = verify_pha_c_kinematic_proof_obligation(
+        build_pha_c_kinematic_proof_obligation(record),
+    )
     return {
         "first_lock_observed": int(record.first_lock_observed),
         "first_lock_index": record.first_lock_index,
@@ -267,6 +274,14 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "tolerance_profile_multiplier": record.tolerance_profile_multiplier,
         "has_acceptance_hash": int(len(record.acceptance_sha256) == 64),
         "has_timeline_hash": int(len(record.timeline_sha256) == 64),
+        "formal_obligation_present": 1,
+        "formal_obligation_discharged": int(
+            obligation.proof_obligations_discharged,
+        ),
+        "formal_obligation_sha256": obligation.record_sha256,
+        "formal_obligation_margin_units": obligation.window_budget_margin_units,
+        "formal_obligation_phase_margin_units": obligation.phase_margin_units,
+        "formal_obligation_theorem": obligation.lean_theorem,
         "hash_replay_validated": int(verify_pha_c_acceptance_record(record) is record),
     }
 
@@ -307,6 +322,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             calls,
         )
         error = _record_max_abs_error(got, reference)
+        obligation = verify_pha_c_kinematic_proof_obligation(
+            build_pha_c_kinematic_proof_obligation(got),
+        )
         passed = error <= tolerance
         parity_pass_count += int(passed)
         records.append(
@@ -325,6 +343,14 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "kinematic_residual_max_m": got.kinematic_residual_max_m,
                 "max_abs_velocity_m_per_s": got.max_abs_velocity_m_per_s,
                 "path_length_max_m": got.path_length_max_m,
+                "formal_obligation_sha256": obligation.record_sha256,
+                "formal_obligation_discharged": int(
+                    obligation.proof_obligations_discharged,
+                ),
+                "formal_obligation_margin_units": (
+                    obligation.window_budget_margin_units
+                ),
+                "formal_obligation_phase_margin_units": obligation.phase_margin_units,
                 "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
@@ -349,6 +375,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "require_hash_replay_validation": True,
         "require_signed_margin_contract": True,
         "require_kinematic_residual_contract": True,
+        "require_formal_kinematic_obligation": True,
         "max_kinematic_residual_m": 1.0e-12,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
@@ -373,6 +400,10 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["phase_margin_positive"] == 1
         and contracts["spatial_margin_positive"] == 1
         and contracts["kinematic_residual_contract_passed"] == 1
+        and contracts["formal_obligation_present"] == 1
+        and contracts["formal_obligation_discharged"] == 1
+        and contracts["formal_obligation_margin_units"] >= 0
+        and contracts["formal_obligation_phase_margin_units"] >= 0
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
@@ -381,6 +412,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["has_acceptance_hash"] == 1
         and contracts["has_timeline_hash"] == 1
         and contracts["hash_replay_validated"] == 1
+        and all(
+            int(record["formal_obligation_discharged"]) == 1 for record in records
+        )
         and all(int(record["hash_replay_validated"]) == 1 for record in records)
         and (not include_subgates or subgate_pass_count == len(subgates))
     )
@@ -399,6 +433,16 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "kinematic_residual_max_m": record["kinematic_residual_max_m"],
                 "max_abs_velocity_m_per_s": record["max_abs_velocity_m_per_s"],
                 "path_length_max_m": record["path_length_max_m"],
+                "formal_obligation_sha256": record["formal_obligation_sha256"],
+                "formal_obligation_discharged": (
+                    record["formal_obligation_discharged"]
+                ),
+                "formal_obligation_margin_units": (
+                    record["formal_obligation_margin_units"]
+                ),
+                "formal_obligation_phase_margin_units": (
+                    record["formal_obligation_phase_margin_units"]
+                ),
                 "hash_replay_validated": record["hash_replay_validated"],
                 "execution_mode": record["execution_mode"],
                 "native_kernel_present": record["native_kernel_present"],
@@ -431,6 +475,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "calls": calls,
         "reference_acceptance_sha256": reference.acceptance_sha256,
         "reference_timeline_sha256": reference.timeline_sha256,
+        "reference_formal_obligation_sha256": contracts["formal_obligation_sha256"],
         "hash_replay_validated": contracts["hash_replay_validated"],
         "first_lock_observed": contracts["first_lock_observed"],
         "first_lock_index": contracts["first_lock_index"],
@@ -443,6 +488,14 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             "kinematic_residual_contract_passed"
         ],
         "kinematic_residual_max_m": contracts["kinematic_residual_max_m"],
+        "formal_obligation_discharged": contracts["formal_obligation_discharged"],
+        "formal_obligation_margin_units": contracts[
+            "formal_obligation_margin_units"
+        ],
+        "formal_obligation_phase_margin_units": contracts[
+            "formal_obligation_phase_margin_units"
+        ],
+        "formal_obligation_theorem": contracts["formal_obligation_theorem"],
         "max_abs_velocity_m_per_s": contracts["max_abs_velocity_m_per_s"],
         "path_length_max_m": contracts["path_length_max_m"],
         "non_actuating": contracts["non_actuating"],

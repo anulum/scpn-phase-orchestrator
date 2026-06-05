@@ -48,6 +48,7 @@ MODULE_LINKAGE_PATHS = (
     "scpn_phase_orchestrator.experimental.accelerators.upde._pha_c_acceptance_mojo",
     "scpn_phase_orchestrator.experimental.accelerators.upde._pha_c_acceptance_rust",
     "scpn_phase_orchestrator.experimental.accelerators.upde._pha_c_acceptance_validation",
+    "scpn_phase_orchestrator.upde.pha_c_formal_obligation",
 )
 
 
@@ -380,6 +381,12 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["spatial_margin_positive"] == 1
     assert result["kinematic_residual_contract_passed"] == 1
     assert result["kinematic_residual_max_m"] <= 1.0e-12
+    assert result["formal_obligation_discharged"] == 1
+    assert result["formal_obligation_margin_units"] >= 0
+    assert result["formal_obligation_phase_margin_units"] >= 0
+    assert result["formal_obligation_theorem"] == (
+        "zero_gain_certificate_discharges_budget"
+    )
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
@@ -390,6 +397,10 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
     assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)
+    assert all(
+        int(record["formal_obligation_discharged"]) == 1
+        for record in backend_records
+    )
     assert all(
         record["kinematic_residual_max_m"] <= 1.0e-12
         for record in backend_records

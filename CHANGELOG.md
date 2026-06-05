@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `PHACKinematicProofObligation` as the runtime-to-Lean PHA-C formal
+  bridge, including fixed-point `KinematicBounds` manifest hashing, lazy UPDE
+  exports, Lean `zeroGainCertificate` theorem discharge, benchmark acceptance
+  fields, module-specific tests, API docs, roadmap, README, and benchmark
+  snapshot integration.
 - Added signed PHA-C moving-frame kinematic residual evidence across
   `MovingFrameUPDEEngine`, `moving_frame_run(...)`, the end-to-end acceptance
   record, Rust/Go/Julia/Mojo source-contract validation, benchmark thresholds,

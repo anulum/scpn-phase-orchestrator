@@ -52,8 +52,17 @@ __all__ = [
     "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
     "PHA_C_TIMELINE_CLAIM_BOUNDARY",
     "PHA_C_TIMELINE_EVIDENCE_KIND",
+    "PHA_C_FORMAL_CERTIFICATE_PREDICATE",
+    "PHA_C_FORMAL_CERTIFICATE_THEOREM",
+    "PHA_C_FORMAL_DEFAULT_SCALE_M",
+    "PHA_C_FORMAL_DEFAULT_SCALE_RAD",
+    "PHA_C_FORMAL_LEAN_MODULE",
+    "PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY",
+    "PHA_C_FORMAL_OBLIGATION_EVIDENCE_KIND",
+    "PHA_C_FORMAL_OBLIGATION_SCHEMA",
     "PHACAcceptanceRecord",
     "PHACHandoffRecord",
+    "PHACKinematicProofObligation",
     "PHACTimelineRecord",
     "OttAntonsenReduction",
     "PredictionModel",
@@ -96,15 +105,18 @@ __all__ = [
     "pac_matrix",
     "pha_c_handoff_record_to_dict",
     "pha_c_acceptance_record_to_dict",
+    "pha_c_kinematic_proof_obligation_to_dict",
     "pha_c_event_timeline_to_dict",
     "verify_pha_c_handoff_record",
     "verify_pha_c_acceptance_record",
+    "verify_pha_c_kinematic_proof_obligation",
     "verify_pha_c_event_timeline",
     "sync_warning",
     "trace_sync_transition",
     "upde_run_omega_schedule",
     "build_pha_c_handoff_record",
     "build_pha_c_acceptance_record",
+    "build_pha_c_kinematic_proof_obligation",
     "build_pha_c_event_timeline",
 ]
 
@@ -179,6 +191,54 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "verify_pha_c_acceptance_record": (
         ".pha_c_acceptance",
         "verify_pha_c_acceptance_record",
+    ),
+    "PHA_C_FORMAL_CERTIFICATE_PREDICATE": (
+        ".pha_c_formal_obligation",
+        "PHA_C_FORMAL_CERTIFICATE_PREDICATE",
+    ),
+    "PHA_C_FORMAL_CERTIFICATE_THEOREM": (
+        ".pha_c_formal_obligation",
+        "PHA_C_FORMAL_CERTIFICATE_THEOREM",
+    ),
+    "PHA_C_FORMAL_DEFAULT_SCALE_M": (
+        ".pha_c_formal_obligation",
+        "PHA_C_FORMAL_DEFAULT_SCALE_M",
+    ),
+    "PHA_C_FORMAL_DEFAULT_SCALE_RAD": (
+        ".pha_c_formal_obligation",
+        "PHA_C_FORMAL_DEFAULT_SCALE_RAD",
+    ),
+    "PHA_C_FORMAL_LEAN_MODULE": (
+        ".pha_c_formal_obligation",
+        "PHA_C_FORMAL_LEAN_MODULE",
+    ),
+    "PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY": (
+        ".pha_c_formal_obligation",
+        "PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY",
+    ),
+    "PHA_C_FORMAL_OBLIGATION_EVIDENCE_KIND": (
+        ".pha_c_formal_obligation",
+        "PHA_C_FORMAL_OBLIGATION_EVIDENCE_KIND",
+    ),
+    "PHA_C_FORMAL_OBLIGATION_SCHEMA": (
+        ".pha_c_formal_obligation",
+        "PHA_C_FORMAL_OBLIGATION_SCHEMA",
+    ),
+    "PHACKinematicProofObligation": (
+        ".pha_c_formal_obligation",
+        "PHACKinematicProofObligation",
+    ),
+    "build_pha_c_kinematic_proof_obligation": (
+        ".pha_c_formal_obligation",
+        "build_pha_c_kinematic_proof_obligation",
+    ),
+    "pha_c_kinematic_proof_obligation_to_dict": (
+        ".pha_c_formal_obligation",
+        "pha_c_kinematic_proof_obligation_to_dict",
+    ),
+    "verify_pha_c_kinematic_proof_obligation": (
+        ".pha_c_formal_obligation",
+        "verify_pha_c_kinematic_proof_obligation",
     ),
     "PHA_C_TIMELINE_CLAIM_BOUNDARY": (
         ".pha_c_timeline",

@@ -302,7 +302,8 @@ acceptance gate composes the full PHA-C path: spatial
 modulation, graph-weighted Doppler correction, moving-frame propagation,
 merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline
 hashing, maximum dispersion and minimum margin evidence, aggregate subgate
-evidence, and Rust/Go/Julia/Mojo source-contract parity adapters.
+evidence, Lean kinematic proof-obligation hashing, and Rust/Go/Julia/Mojo
+source-contract parity adapters.
 
 Each downstream PHA-C gate now also replays the canonical record hash before a
 backend row can pass. Handoff rows call `verify_pha_c_handoff_record(...)`,
@@ -311,6 +312,13 @@ timeline rows call `verify_pha_c_event_timeline(...)`, and acceptance rows call
 forged signed margins, malformed SHA-256 fields, unsafe actuation flags, or
 altered claim boundaries even when the original phase/position arrays are no
 longer present.
+Acceptance rows also call
+`build_pha_c_kinematic_proof_obligation(...)` and
+`verify_pha_c_kinematic_proof_obligation(...)`. This projects the verified
+runtime envelope into the fixed-point `KinematicBounds` fields used by
+`SPOFormal.Kinematic` and requires the
+`zero_gain_certificate_discharges_budget` certificate to discharge before a
+backend row can pass.
 
 Those Rust, Go, Julia, and Mojo rows are intentionally labelled
 `source_contract_reference_validation` until native downstream kernels are

@@ -45,8 +45,10 @@ For each schedule row, the builder:
 5. computes the signed moving-frame kinematic residual
    `max |z[t+1] - (z[t] + v[t] * dt)|`;
 6. builds a `PHACTimelineRecord` over the trajectory;
-7. hashes schedules, trajectories, spatial couplings, Doppler trace, timeline,
-   and final acceptance payload.
+7. can project the verified acceptance payload into a Lean
+   `PHACKinematicProofObligation` for `SPOFormal.Kinematic`; and
+8. hashes schedules, trajectories, spatial couplings, Doppler trace, timeline,
+   proof-obligation references, and final acceptance payload.
 
 The record carries:
 
@@ -55,6 +57,8 @@ The record carries:
 - maximum absolute Doppler correction and spatial coupling;
 - maximum moving-frame kinematic residual, maximum absolute velocity, and
   maximum per-oscillator axial path length;
+- fixed-point Lean proof-obligation compatibility through
+  `build_pha_c_kinematic_proof_obligation(...)`;
 - maximum phase/spatial dispersion, minimum signed phase/spatial margins,
   minimum Kuramoto order parameter, and maximum distance to reference;
 - resolved tolerance profile provenance;
@@ -68,6 +72,10 @@ import numpy as np
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     build_pha_c_acceptance_record,
     verify_pha_c_acceptance_record,
+)
+from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
+    build_pha_c_kinematic_proof_obligation,
+    verify_pha_c_kinematic_proof_obligation,
 )
 
 n = 5
@@ -97,6 +105,9 @@ assert record.execution_disabled
 assert not record.actuating
 acceptance_payload = record.to_dict()
 verify_pha_c_acceptance_record(record)
+obligation = build_pha_c_kinematic_proof_obligation(record)
+assert obligation.proof_obligations_discharged
+verify_pha_c_kinematic_proof_obligation(obligation)
 ```
 
 Use `verify_pha_c_acceptance_record(...)` when replaying a stored acceptance
@@ -104,6 +115,9 @@ record. It rechecks sample/step consistency, first-lock semantics, review-only
 flags, signed margin equations, the moving-frame kinematic residual bound,
 SHA-256 fields, the timeline digest reference, and the canonical acceptance hash
 without requiring the original schedules or trajectories.
+Use `verify_pha_c_kinematic_proof_obligation(...)` when release review also
+needs the accepted runtime envelope bound to the Lean
+`zero_gain_certificate_discharges_budget` theorem.
 
 ## Relationship to other PHA-C records
 
@@ -112,6 +126,7 @@ without requiring the original schedules or trajectories.
 | `PHACHandoffRecord` | one phase/position sample | a downstream lane needs one reviewed event-state atom |
 | `PHACTimelineRecord` | complete phase/position trajectory | a downstream lane needs lock/loss/reset history |
 | `PHACAcceptanceRecord` | full PHA-C physics chain plus timeline | a release, MIF/FRC, or benchmark gate needs end-to-end evidence |
+| `PHACKinematicProofObligation` | fixed-point Lean assumptions derived from verified acceptance | a formal gate or downstream lane needs a signed theorem-specific obligation |
 
 ## Polyglot parity and benchmark snapshot
 
@@ -121,7 +136,11 @@ spatial modulation, time-varying omega, Doppler, moving-frame, merge window,
 handoff, and timeline. Acceptance rows also publish the minimum signed margins
 copied from the timeline plus the moving-frame kinematic residual, so release
 evidence exposes both the distance to the reviewed merge envelope and the
-mechanical validity of the axial schedule.
+mechanical validity of the axial schedule. The same benchmark now builds and
+verifies a Lean kinematic proof-obligation manifest for every backend row. The
+acceptance gate fails unless the manifest names `SPOFormal.Kinematic`, targets
+`zero_gain_certificate_discharges_budget`, replays its canonical hash, and
+discharges the fixed-point merge-window and phase-margin checks.
 
 ```bash
 uv run python benchmarks/pha_c_acceptance_benchmark.py \
