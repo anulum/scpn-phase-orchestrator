@@ -19,9 +19,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from math import isfinite
-from typing import TypeAlias
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -145,7 +146,7 @@ def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
     return out
 
 
-def _sha256_json(payload: dict[str, object]) -> str:
+def _sha256_json(payload: Mapping[str, object]) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -354,7 +355,7 @@ def build_pha_c_handoff_record(
     )
     record_hash = _sha256_json(record_payload)
     return PHACHandoffRecord(
-        **record_payload,
+        **cast(Any, record_payload),
         record_sha256=record_hash,
     )
 
