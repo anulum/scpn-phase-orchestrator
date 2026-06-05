@@ -15,6 +15,7 @@ import scpn_phase_orchestrator as spo
 MANIFEST = Path("docs/specs/public_api_manifest.txt")
 API_INDEX = Path("docs/reference/api/index.md")
 PHA_C_ACCEPTANCE_REFERENCE = Path("docs/reference/api/upde_pha_c_acceptance.md")
+PHA_C_FORMAL_REFERENCE = Path("docs/reference/api/upde_pha_c_formal_obligation.md")
 README = Path("README.md")
 PERFORMANCE_GUIDE = Path("docs/guide/performance.md")
 
@@ -68,6 +69,22 @@ def test_pha_c_acceptance_reference_names_combined_lean_certificate() -> None:
         "acceptance_certificate_discharges_runtime_preconditions",
         "acceptance kinematic-equation replay certificate",
         "combined spatial-budget, phase-budget, and acceptance-replay certificate",
+    )
+
+    for marker in required_markers:
+        assert marker in reference
+
+
+def test_pha_c_formal_reference_example_checks_acceptance_certificate() -> None:
+    reference = PHA_C_FORMAL_REFERENCE.read_text(encoding="utf-8")
+
+    required_markers = (
+        "assert obligation.acceptance_certificate_predicate",
+        "KinematicBounds.acceptanceCertificate",
+        "assert obligation.acceptance_certificate_theorem",
+        "acceptance_certificate_discharges_runtime_preconditions",
+        "assert obligation.acceptance_replay_certificate_discharged",
+        "assert obligation.acceptance_certificate_discharged",
     )
 
     for marker in required_markers:

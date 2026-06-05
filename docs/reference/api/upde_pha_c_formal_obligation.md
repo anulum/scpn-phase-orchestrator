@@ -152,6 +152,14 @@ record = build_pha_c_acceptance_record(...)
 obligation = build_pha_c_kinematic_proof_obligation(record)
 
 assert obligation.lean_theorem == "budget_certificate_discharges_budget"
+assert obligation.acceptance_certificate_predicate == (
+    "KinematicBounds.acceptanceCertificate"
+)
+assert obligation.acceptance_certificate_theorem == (
+    "acceptance_certificate_discharges_runtime_preconditions"
+)
+assert obligation.acceptance_replay_certificate_discharged
+assert obligation.acceptance_certificate_discharged
 assert obligation.proof_obligations_discharged
 verify_pha_c_kinematic_proof_obligation(obligation)
 ```
