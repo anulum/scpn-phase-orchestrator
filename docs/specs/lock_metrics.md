@@ -81,3 +81,20 @@ common source of false actuation in production monitoring.
 `LockSignatures` exists to preserve explainability: each lock event can be traced to
 its source and target layers with numeric context, instead of being treated as a
 single opaque score.
+
+## Why these metrics are operationally central
+
+Control stacks in SPO use `R` and `PLV` as precondition checks for policy actions.
+That means metric drift or undefined windows become control safety issues, not only
+analysis issues.
+
+In practice this has two effects:
+
+- **Decision stability**: thresholds have meaningful operational interpretation
+  (`R_good`, `R_bad`, and PLV lock gates).
+- **Auditability**: lock signatures carry source-target provenance so investigations
+  can explain why a particular regime transition triggered.
+
+The empty-window rule is intentionally strict by design; it prevents control logic from
+making inferences on malformed input that can happen in sparse logging or delayed
+telemetry.

@@ -47,3 +47,25 @@ The contract here is deliberately conservative: it prioritizes state validity an
 contract stability over advanced parameterization. That is aligned with production
 expectations where downstream teams need predictable interfaces for longitudinal
 analysis, model calibration, and compliance reporting.
+
+## Operational narrative
+
+In teams that combine scientific simulation and operations reporting, the BOLD
+layer is often the first place where phase dynamics are converted into
+consumable monitoring features. The practical value is not only predictive power
+but confidence that downstream dashboards, regressors, and replay systems can
+reuse outputs with the same assumptions every run.
+
+This contract makes the conversion behavior explicit: finite state floors and
+shape constraints are preserved across execution paths, which keeps downstream
+analysis deterministic even when experimental scheduling changes `dt` and
+`dt_bold`.
+
+### For deployment planning
+
+- Use BOLD outputs as the measurable interface between oscillatory physics and
+  downstream tooling that expects continuous observables.
+- Keep stride clamp behaviour documented with your benchmark notes so teams can
+  explain any downsample-driven latency changes.
+- Treat BOLD contract checks as part of release smoke checks when a new
+  preprocessing or export path is introduced.

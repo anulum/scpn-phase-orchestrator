@@ -120,4 +120,19 @@ handoff = build_pha_c_handoff_record(
 - The handoff record keeps review lanes deterministic: MIF, Studio, and audit
   replay all receive the same lock/evidence contract.
 
+## What this means for operations
+
+Merge-window gates are most useful when teams need a binary operational decision
+(`lock_achieved`) plus a continuous confidence context (`margins`).
+
+The signed-margin design makes recovery tuning possible without guesswork:
+
+- `phase_margin_rad` and `spatial_margin_m` quantify how far the current state is
+  from the lock boundary.
+- `required_consecutive_samples` filters transients and reduces false
+  merge-on-spike behaviour.
+
+In production review lanes, that combination is what allows teams to avoid both
+premature lock declarations and excessive delay in returning to active control.
+
 ::: scpn_phase_orchestrator.monitor.merge_window

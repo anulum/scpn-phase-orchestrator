@@ -58,6 +58,29 @@ behaviour before production or benchmark runs.
 3. Run focused tests for your active subsystem.
 4. For release candidates, run project CI-equivalent checks.
 
+## Profile selection narrative
+
+The profile matrix is designed to align infrastructure constraints with deployment
+risk posture:
+
+- `Python-only` keeps the operational surface minimal for analysis, docs, and
+  benchmark reproduction.
+- `Rust FFI` buys runtime throughput on supported hosts and is appropriate when
+  deterministic parity evidence already covers the pure-Python path.
+- `JAX` is selected when differentiable training or gradient-based
+  investigations are part of normal operation.
+- `QueueWaves` adds the telemetry and alerting surface needed for live
+  microservice resilience use-cases.
+- `Full extras` is the least ambiguous option for release prep because it
+  exercises the documented capability surface in one run.
+
+### Preflight as release control
+
+The profile preflight should be viewed as a contract check, not a convenience.
+When a team moves from lab to production, these checks give a reproducible
+evidence artifact that says, *which capabilities are active and which are
+explicitly unavailable* under that deployment profile.
+
 ## Related
 
 - [Backend Fallback Chain](backend_fallbacks.md)

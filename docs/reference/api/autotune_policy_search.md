@@ -110,4 +110,31 @@ the safety-cost ceiling. These gates run after replay scoring and before a
 proposal is accepted, so the search cannot promote a high-reward candidate that
 fails the explicit safety evidence contract.
 
+## Practical narrative
+
+This page is the control bridge between experimentation and controlled deployment:
+
+- Generate candidates (bounded).
+- Score in replay/simulation (comparative).
+- Enforce safety gates (governance).
+- Emit one auditable proposal record (promotion boundary).
+
+The design is intentionally conservative because it prevents “good-scoring but
+unsafe” candidates from silently entering a deployment lane. This pattern is the
+same pattern used across safety-critical control stacks where model uncertainty and
+environmental shift can produce false positives.
+
+## Review and audit interpretation
+
+Replay search is only as useful as its provenance. Keep the evaluator deterministic
+for a given seed and profile, and record search configurations so repeated runs can
+compare:
+
+- candidate envelopes,
+- proposal thresholds,
+- safety boundary settings.
+
+That evidence makes it possible to justify in review why a specific search depth or
+step size was chosen, and why rejected candidates were blocked.
+
 ::: scpn_phase_orchestrator.autotune.policy_search

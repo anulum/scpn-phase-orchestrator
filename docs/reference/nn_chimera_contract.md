@@ -48,3 +48,22 @@ without forcing a binary interpretation too early.
 
 The bounded and disjoint outputs are what make it safe to use in chained monitoring
 pipelines, because each alarm signal maps cleanly to a single interpretation.
+
+## Operational narrative
+
+The contract is useful whenever a control stack needs a stable indicator for
+mixed synchrony rather than a binary "locked vs. unlocked" answer.
+
+In these conditions, `chimera_index` and `detect_chimera` provide interpretable
+telemetry for partial-order states. This is frequently where physical systems
+enter practical instability first: not as a global meltdown, but as a shift into
+patchy coherence.
+
+### Why this matters in review and handoff
+
+- `local_order_parameter` provides a bounded local coherence signal that can be
+  compared across layers and domains.
+- `chimera_index` collapses regional coherence asymmetry into a single scalar for
+  alert dashboards.
+- Threshold masks with explicit disjoint constraints reduce ambiguity at escalation
+  points where operator policy decisions are made.

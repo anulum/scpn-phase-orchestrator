@@ -95,6 +95,25 @@ run is repeated under the repository benchmark-isolation requirements.
 - Validation remains strict before dispatch to any backend, so you get predictable
   behavior under missing toolchains and mixed-precision runners.
 
+## Business context
+
+Time-varying frequency support is the reliability bridge between textbook
+simulation and real hardware timing realities.
+
+In production settings, intrinsic frequencies drift due to thermal, mechanical,
+and environmental effects. The callable schedule path lets teams keep a single
+engine contract while modeling these drifts explicitly.
+
+That design also helps with auditability: the same run record captures both the
+nominal model and the frequency evolution used to drive it.
+
+### When to enable this path
+
+- If your telemetry or schedule is predictable enough to encode as an explicit
+  function.
+- If you need consistent backend behavior across Python and acceleration runtimes.
+- If you require schedule-aware replay evidence for review or safety-case packages.
+
 ## Public API
 
 ::: scpn_phase_orchestrator.upde.engine.upde_run_omega_schedule

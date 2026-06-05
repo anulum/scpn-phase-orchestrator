@@ -79,6 +79,32 @@ SupervisorPolicy.decide()
     → Domain-specific execution
 ```
 
+## Positioning in an operations stack
+
+This is the boundary where policy intent becomes safe executable action.
+
+By keeping this path explicit, teams can independently inspect each stage:
+
+- Which knobs were requested.
+- Which constraints were applied.
+- Which actuators received each command.
+
+That auditability is valuable because policy rules, safety limits, and actuator
+interfaces evolve at different cadences. This module keeps those cadences
+ordered and reviewable.
+
+## Why this shape matters
+
+- `ControlAction` enforces a compact, typed command vocabulary.
+- `ActionProjector` makes transient oscillation shocks less likely to create unsafe
+  actuator jumps.
+- `ActuationMapper` centralizes domain adaptation so supervisory logic stays
+  platform-agnostic.
+
+When this interface is respected, a policy change can be tested in replay,
+simulated in the same composition path, and only then promoted with full context
+and command traces.
+
 ## References
 
 Rate limits and value bounds are empirical — see [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Rate Limits. Knob definitions follow the Sakaguchi–Kuramoto model documented in [knobs_K_alpha_zeta_Psi.md](../concepts/knobs_K_alpha_zeta_Psi.md).

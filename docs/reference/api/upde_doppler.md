@@ -93,6 +93,18 @@ rerun with the repository benchmark-isolation protocol.
 - In review mode, compare `doppler_term` trends with regime transitions so you can
   separate physical transport effects from control-induced desynchronization.
 
+## Operational context
+
+The Doppler surface makes motion effects explicit instead of forcing operators to
+absorb them as unexplained model error. That reduces false positives in review
+lanes that otherwise appear as sudden synchronization loss.
+
+For fleets, moving swarms, or rotating hardware, this surface enables consistent
+comparisons by normalising relative-velocity effects by coupling structure.
+
+Because output includes the per-step `doppler_term`, teams can attribute recovery
+latency either to transport effects or to control actuation.
+
 ::: scpn_phase_orchestrator.upde.doppler.DopplerEngine
 
 ::: scpn_phase_orchestrator.upde.doppler.doppler_term

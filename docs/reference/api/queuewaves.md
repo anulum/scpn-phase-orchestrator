@@ -108,3 +108,19 @@ alert channels.
 In this setup, the alert layer is the last mile. The earlier layers are
 responsible for making sure phase and coupling evidence is structurally valid
 before escalation.
+
+## Business interpretation
+
+QueueWaves demonstrates how the SPO control contract translates into service
+operations workflows:
+
+- telemetry normalisation,
+- phase extraction,
+- synchrony risk scoring,
+- deterministic escalation handoff.
+
+The goal is not perfect prediction of every incident. It is early, explainable
+detection with bounded false-merge behaviour and auditable alert evidence.
+
+For operations teams, this page is useful as a reference implementation pattern:
+same engine, different domain surface, predictable failure boundaries.

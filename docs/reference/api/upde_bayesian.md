@@ -104,4 +104,24 @@ decision logic can enforce explicit safety thresholds before proposing changes.
   can justify higher coupling, while a wider sigma should force conservative
   action bounds.
 
+## Practical narrative
+
+Bayesian UPDE is the uncertainty surface for domains where a single trajectory is
+not enough to support operational action.
+
+The module keeps one strict boundary: uncertainty must remain explicit in the
+audit record. `r_plus_minus` is not a display-only value; it is intended to feed
+risk-aware decision logic and conservative policy envelopes.
+
+That is why backend-gated execution is important here. The code path refuses to
+promote incomplete uncertainty backends into a production claim while preserving
+the deterministic NumPy baseline as an auditable anchor.
+
+### How teams usually use this surface
+
+- Start from deterministic fitting (`fit_gaussian_upde_posterior`) on observed
+  trajectories.
+- Pass distributions through `bayesian_upde_run`.
+- Compare posterior spread against control limits before accepting aggressive knob
+  proposals.
 ::: scpn_phase_orchestrator.upde.bayesian

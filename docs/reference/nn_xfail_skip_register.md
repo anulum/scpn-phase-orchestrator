@@ -68,6 +68,19 @@ evidence in this table before removing the row or flipping disposition.
 For large sweeps, keep the owner and rationale so the same operational decision can
 be audited during release review.
 
+## Practical rollout guidance
+
+Treat this register as a living risk ledger:
+
+- Before release, verify each `v1.0 blocking = Yes` row is either fixed or reclassified.
+- Before CI-heavy milestones, run this file’s linked tests so blockers are surfaced
+  before documentation or roadmap milestones mask execution signals.
+- Keep owner and rationale fields synchronized with ticket status and code comments so
+  no blocker is resolved without shared evidence.
+
+This format is intentionally strict because `nn` parity and safety surfaces are
+most useful when every known exception has a defined control path.
+
 ## Expected evidence cadence
 
 - Review quarterly or before any production tag.

@@ -130,4 +130,33 @@ For the higher-level replay-only search wrapper that generates candidates,
 evaluates them through a caller-supplied replay adapter, and returns a proposal
 record, see [Autotune Replay Policy Search](autotune_policy_search.md).
 
+## Operational narrative
+
+This module is the scoring seam between raw simulation outcomes and policy action.
+Rewards are structured to preserve risk awareness while still allowing optimization
+experiments.
+
+When used in a staged autonomy lane, teams typically:
+
+- score candidates with replay evidence first,
+- enforce explicit safety gates,
+- only then promote a candidate into a proposal record.
+
+That order is important because it separates numeric optimisation from safety
+admissibility. A candidate can look strong on raw coherence and still fail safe policy
+constraints.
+
+## Safe RL readiness
+
+The shape and fields in `evaluate_knob_policy` are aligned with later RL loop
+integration:
+
+- Observations carry stability, coherence, and safety fields together.
+- Proposal records contain audit-ready traces and gating decisions.
+- Rejection reasons are represented in the proposal output, not only in external
+  logs.
+
+This makes the reward module usable as the first hard requirement layer for PPO/SAC
+or other search learners without changing governance rules later.
+
 ::: scpn_phase_orchestrator.autotune.reward
