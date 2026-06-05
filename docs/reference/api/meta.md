@@ -1,5 +1,15 @@
 # Meta-Transfer
 
+## Why this subsystem exists
+
+This is a bootstrap surface for policy transfer between domains, not a production
+adaptive controller. Its role is to make replay history reusable by giving operators
+an interpretable first proposal from prior domains.
+
+In enterprise contexts, this reduces “blank start” risk for new deployments: teams
+can start from documented historical baselines rather than writing new policy
+defaults from scratch.
+
 The meta-transfer subsystem provides a deterministic first slice for
 cross-domain policy bootstrapping. It reads replay or audit-derived records,
 embeds domain metrics into a shared feature vector, and proposes initial
@@ -57,5 +67,17 @@ Installed packages also expose the same review-only command as `scpn-meta`.
 This console script is intentionally narrow: it points to the manifest exporter,
 not the full SPO runtime CLI, so packaging metadata matches the manifest without
 adding a live training or execution surface.
+
+## How teams typically use it
+
+The operational path is usually:
+
+1. Collect comparable replay corpus (or nested history directory),
+2. Fit and inspect `training_summary`,
+3. Generate proposals and review neighbour evidence,
+4. Export a manifest for reproducible transfer handoff.
+
+That sequence keeps transfer evidence, not just transfer parameters, part of the
+release documentation.
 
 ::: scpn_phase_orchestrator.meta.transfer

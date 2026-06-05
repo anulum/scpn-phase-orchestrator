@@ -8,6 +8,15 @@
 
 # Replay-Only Autotune Learners
 
+## Why this surface is replay-only
+
+Learner proposal contracts are intentionally placed behind non-actuating gates.
+The practical safety objective is to let users compare control candidates with
+traceable evidence before any actuator can ever be touched.
+
+That separation is why these interfaces are suitable for experimentation and policy
+research without introducing a production autonomy path by default.
+
 The learner surface provides PPO-like, SAC-like, and hybrid-physics proposal
 generators behind the existing non-actuating replay gates. These are
 learner-shaped proposal interfaces, not claims of trained production policies.
@@ -55,3 +64,12 @@ Use this surface to compare replay candidates and export review records. A
 candidate whose reward is high but whose Lyapunov/STL evidence is missing or
 violating remains rejected. Do not feed learner proposals directly to hardware
 or live actuation.
+
+## Operational posture
+
+In production pipelines, the learner interface is most useful during policy
+benchmarking and review simulation runs where reward, stability, and cost can be
+compared under controlled replay datasets before any runtime policy override.
+
+When this posture is respected, teams gain faster proposal discovery while keeping
+live control logic bound to explicit safety gates.
