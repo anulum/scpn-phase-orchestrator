@@ -342,14 +342,18 @@ Acceptance rows also call
 `build_pha_c_kinematic_proof_obligation(...)` and
 `verify_pha_c_kinematic_proof_obligation(...)`. This projects the verified
 runtime envelope into the fixed-point `KinematicBounds` fields used by
-`SPOFormal.Kinematic` and requires the
-`budget_certificate_discharges_budget` certificate to discharge before a
-backend row can pass.
+`SPOFormal.Kinematic` and requires the combined
+`KinematicBounds.acceptanceCertificate` predicate to discharge through
+`acceptance_certificate_discharges_runtime_preconditions` before a backend row
+can pass.
 The formal obligation rows additionally publish
 `formal_obligation_acceptance_kinematic_equations_validated` and
 `formal_obligation_acceptance_kinematic_summary_replay_tolerance`, so the Lean
 manifest is bound to the verified moving-frame final-position, velocity, and
-path-length equations.
+path-length equations. The combined acceptance certificate joins the spatial
+Gronwall budget, phase-budget certificate, and acceptance kinematic-equation
+replay certificate rather than treating the spatial budget theorem as the whole
+formal release boundary.
 The proof manifest records both the zero-gain linear reference budget and the
 general finite-horizon Gronwall budget trace, so non-zero Lipschitz gain lanes
 remain inside the same formal review boundary.

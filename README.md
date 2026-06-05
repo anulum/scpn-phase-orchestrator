@@ -466,10 +466,14 @@ Acceptance rows additionally emit and verify a
 onto `SPOFormal.Kinematic.KinematicBounds` and requires the Lean
 manifest to carry the acceptance record's kinematic equation replay status,
 so formal review remains bound to mechanically valid moving-frame summaries.
-`budget_certificate_discharges_budget` target to discharge before the row can
-pass. The Rust, Go, Julia, and Mojo downstream rows are explicitly labelled as
-source-contract validation rows until native downstream kernels land;
-`native_kernel_count` remains zero in the current snapshot.
+The row must discharge the combined `KinematicBounds.acceptanceCertificate`
+predicate through
+`acceptance_certificate_discharges_runtime_preconditions`, which joins the
+spatial Gronwall budget, phase-budget certificate, and acceptance
+kinematic-equation replay certificate before the row can pass. The Rust, Go,
+Julia, and Mojo downstream rows are explicitly labelled as source-contract
+validation rows until native downstream kernels land; `native_kernel_count`
+remains zero in the current snapshot.
 The manifest carries the terminal Gronwall budget, signed Gronwall margin, and
 budget-trace hash, which keeps non-zero Lipschitz gain envelopes reviewable
 instead of forcing every PHA-C formal handoff into a zero-gain replay.
