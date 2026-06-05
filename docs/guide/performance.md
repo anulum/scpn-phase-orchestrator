@@ -389,3 +389,20 @@ These gates are mathematical and physical contract checks, not live actuation
 claims. Their JSON artefacts and reference-suite rows remain
 `local_regression_non_isolated` evidence unless a future run records benchmark
 isolation, backend build metadata, and host-load controls.
+
+## Interpreting benchmark evidence in practice
+
+Treat every benchmark number in this document as conditional on its recorded
+execution envelope (`host`, `backend`, `numba/jit` state, driver versions,
+isolation notes). If the same command is rerun under different host conditions,
+the result can shift without indicating a regression.
+
+When preparing an internal or client-facing performance decision, use this order:
+
+1. Validate correctness first (same acceptance criteria and invariants).
+2. Use the parity gates to confirm model contract across backends.
+3. Compare non-isolated baselines only to detect large regressions.
+4. Add isolated reruns only for budgeted capacity planning.
+
+This keeps speed comparisons from becoming false-positive signals while still
+preserving traceable evidence for release and architecture decisions.

@@ -31,6 +31,25 @@ roadmap milestone is announced.
 - **Contributors**: when touching a public surface, add/update the corresponding
   documentation row in the same change to avoid “code-first” drift.
 
+## How to use this as a release gate
+
+This matrix is a production-readiness artifact, not a documentation convenience
+index. It is used to answer three operational questions before a milestone:
+
+- Can a user reproduce the same path from install to first successful run without
+  reading source?
+- Is every advertised runtime path represented in API pages, guides, and walkthroughs?
+- Do docs indicate where implementation evidence stops and claim scope begins?
+
+Before release, the page is validated by:
+
+1. `mkdocs build --strict --clean` (navigation completeness),
+2. the API navigation coverage test (`tests/test_api_docs_navigation.py`),
+3. roadmap and release note linkage for each externally announced capability.
+
+If any major path lacks onboarding/tutorial coverage, that path is treated as
+`documentation incomplete` even if code exists and tests pass.
+
 ## Current Inventory
 
 | Surface | Current coverage | Entry point |

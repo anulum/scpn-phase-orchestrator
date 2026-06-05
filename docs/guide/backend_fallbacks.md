@@ -191,6 +191,26 @@ Before relying on a backend in a deployment:
 - Keep auxiliary backends out of production images unless explicitly needed.
 - Record the backend in benchmark and audit metadata when comparing runs.
 
+## Practical backend governance
+
+This page is the decision boundary for deployment teams:
+
+- keep Python as the guaranteed fallback,
+- keep Rust as the default production first-class path for synchronous control workloads,
+- keep JAX as the specialized differentiable and accelerator path,
+- keep WebGPU/auxiliary paths behind explicit integration requirements.
+
+Before a production rollout, confirm:
+
+1. backend selection policy is logged at startup,
+2. the target module has a parity test for the fallback chain it may demote to,
+3. documentation and benchmark metadata list the active backend and its known
+   precision mode,
+4. no critical behavior depends on non-core optional toolchains.
+
+This avoids silent drift where runtime behavior changes because a toolchain
+disappeared or a new backend became importable without documentation updates.
+
 ## Related Pages
 
 - [Rust FFI Acceleration](rust_ffi.md)

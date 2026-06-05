@@ -96,3 +96,17 @@ against:
 - implementation presence in linked modules,
 - validation tests in the corresponding suite,
 - and audit records when policy actions are involved.
+
+## How to interpret this page for adoption decisions
+
+This document is a technical fit check, not a general leaderboard. Use it to reduce
+integration risk with a simple sequence:
+
+1. Confirm your problem needs supervised synchronisation control (not pure simulation).
+2. Verify whether your required safety envelope is present (bounded actions, replay, regime checks).
+3. Confirm benchmark relevance to your workload scale and hardware constraints.
+4. Compare SPO's differentiable path only when learning/gradient tooling is required.
+5. Read linked validation pages before committing to benchmark claims.
+
+If step 2 fails, SPO should not be selected as the primary engine despite SPO
+having partial feature overlap.
