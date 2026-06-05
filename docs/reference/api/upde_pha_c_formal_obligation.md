@@ -55,6 +55,11 @@ runtime envelope into integer units:
 | `continuous_margin_units` | merge tolerance minus continuous budget | `ContinuousEnvelopeBounds.budgetCertificate` |
 | `merge_window_tolerance_units` | spatial merge tolerance | `KinematicBounds.mergeWindowTolerance` |
 | `horizon_steps` | accepted PHA-C step count | `KinematicBounds.horizonSteps` |
+| `phase_tolerance_units` | accepted phase tolerance | phase-lock certificate input |
+| `max_phase_dispersion_units` | max observed phase dispersion | replayed phase evidence |
+| `configured_phase_drift_bound_units` | explicit predictive phase-drift slack, default `0` | phase-bound provenance |
+| `phase_budget_units` | observed dispersion plus configured phase drift | phase-lock budget |
+| `phase_margin_units` | phase tolerance minus phase budget | phase-lock certificate margin |
 
 The default is a replay certificate. The observed spatial dispersion already
 includes the accepted moving-frame trajectory, while the residual term proves
@@ -66,6 +71,14 @@ configured residual units to fit inside the sampled residual bound before the
 same Lean theorem can certify a future horizon rather than the replay envelope.
 Non-zero `lipschitz_step_gain_units` can then be added for finite-horizon
 growth.
+
+The phase side is also explicit. Downstream lanes can provide
+`phase_drift_bound_rad` when the reviewed handoff must budget future phase
+drift in addition to the accepted replay dispersion. The manifest records that
+slack as `configured_phase_drift_bound_units`, records
+`phase_budget_units = max_phase_dispersion_units +
+configured_phase_drift_bound_units`, and derives `phase_margin_units` from the
+budget rather than from replay dispersion alone.
 
 For non-zero gain, the runtime manifest replays the Lean recurrence
 `previous + gain * previous + drive`, records the terminal
@@ -124,7 +137,8 @@ verify_pha_c_kinematic_proof_obligation(obligation)
   continuous budget, and continuous margin;
 - configured residual-bound provenance and its fit inside the sampled residual
   drive bound;
-- phase tolerance margin consistency;
+- configured phase-drift provenance, phase-budget replay, and phase tolerance
+  margin consistency;
 - lower-case SHA-256 fields; and
 - canonical manifest hash replay.
 

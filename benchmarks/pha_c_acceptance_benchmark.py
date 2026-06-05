@@ -311,6 +311,14 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
             obligation.gronwall_budget_margin_units
         ),
         "formal_obligation_trace_sha256": obligation.gronwall_budget_trace_sha256,
+        "formal_obligation_phase_tolerance_units": obligation.phase_tolerance_units,
+        "formal_obligation_max_phase_dispersion_units": (
+            obligation.max_phase_dispersion_units
+        ),
+        "formal_obligation_configured_phase_drift_units": (
+            obligation.configured_phase_drift_bound_units
+        ),
+        "formal_obligation_phase_budget_units": obligation.phase_budget_units,
         "formal_obligation_phase_margin_units": obligation.phase_margin_units,
         "formal_obligation_theorem": obligation.lean_theorem,
         "formal_obligation_continuous_theorem": obligation.continuous_theorem,
@@ -417,6 +425,16 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "formal_obligation_trace_sha256": (
                     obligation.gronwall_budget_trace_sha256
                 ),
+                "formal_obligation_phase_tolerance_units": (
+                    obligation.phase_tolerance_units
+                ),
+                "formal_obligation_max_phase_dispersion_units": (
+                    obligation.max_phase_dispersion_units
+                ),
+                "formal_obligation_configured_phase_drift_units": (
+                    obligation.configured_phase_drift_bound_units
+                ),
+                "formal_obligation_phase_budget_units": obligation.phase_budget_units,
                 "formal_obligation_phase_margin_units": obligation.phase_margin_units,
                 "formal_obligation_continuous_theorem": (
                     obligation.continuous_theorem
@@ -473,6 +491,8 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["formal_obligation_present"] == 1
         and contracts["formal_obligation_discharged"] == 1
         and contracts["formal_obligation_margin_units"] >= 0
+        and contracts["formal_obligation_phase_budget_units"]
+        <= contracts["formal_obligation_phase_tolerance_units"]
         and contracts["formal_obligation_phase_margin_units"] >= 0
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
@@ -552,6 +572,18 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 ),
                 "formal_obligation_trace_sha256": (
                     record["formal_obligation_trace_sha256"]
+                ),
+                "formal_obligation_phase_tolerance_units": (
+                    record["formal_obligation_phase_tolerance_units"]
+                ),
+                "formal_obligation_max_phase_dispersion_units": (
+                    record["formal_obligation_max_phase_dispersion_units"]
+                ),
+                "formal_obligation_configured_phase_drift_units": (
+                    record["formal_obligation_configured_phase_drift_units"]
+                ),
+                "formal_obligation_phase_budget_units": (
+                    record["formal_obligation_phase_budget_units"]
                 ),
                 "formal_obligation_phase_margin_units": (
                     record["formal_obligation_phase_margin_units"]
@@ -642,6 +674,18 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             "formal_obligation_gronwall_margin_units"
         ],
         "formal_obligation_trace_sha256": contracts["formal_obligation_trace_sha256"],
+        "formal_obligation_phase_tolerance_units": contracts[
+            "formal_obligation_phase_tolerance_units"
+        ],
+        "formal_obligation_max_phase_dispersion_units": contracts[
+            "formal_obligation_max_phase_dispersion_units"
+        ],
+        "formal_obligation_configured_phase_drift_units": contracts[
+            "formal_obligation_configured_phase_drift_units"
+        ],
+        "formal_obligation_phase_budget_units": contracts[
+            "formal_obligation_phase_budget_units"
+        ],
         "formal_obligation_phase_margin_units": contracts[
             "formal_obligation_phase_margin_units"
         ],

@@ -93,6 +93,12 @@ a project:
 5. **Escalate only bounded proposals.** Keep hardware, external services, and
    controller writes behind adapter-specific safety gates.
 
+The PHA-C downstream chain now publishes review-only formal obligations for
+moving-frame merge safety. Those manifests keep observed replay evidence,
+predictive residual slack, and predictive phase-drift slack in separate
+fixed-point fields before the Lean-targeted margins are accepted, so downstream
+MIF/FRC consumers can review what was observed and what was explicitly budgeted.
+
 This order keeps the first experience practical while making the evidence
 boundary visible from the start.
 

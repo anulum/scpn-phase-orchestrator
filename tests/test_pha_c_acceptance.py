@@ -390,6 +390,8 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["formal_obligation_relative_velocity_rate_units_per_second"] == 0
     assert result["formal_obligation_configured_residual_step_units"] == 0
     assert result["formal_obligation_residual_rate_units_per_second"] == 0
+    assert result["formal_obligation_configured_phase_drift_units"] == 0
+    assert result["formal_obligation_phase_budget_units"] >= 0
     assert result["formal_obligation_continuous_drive_rate_units_per_second"] == 0
     assert result["formal_obligation_continuous_horizon_drive_units"] == 0
     assert result["formal_obligation_continuous_linear_budget_units"] >= 0
@@ -400,6 +402,10 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     )
     assert len(str(result["formal_obligation_trace_sha256"])) == 64
     assert result["formal_obligation_phase_margin_units"] >= 0
+    assert result["formal_obligation_phase_margin_units"] == (
+        result["formal_obligation_phase_tolerance_units"]
+        - result["formal_obligation_phase_budget_units"]
+    )
     assert result["formal_obligation_theorem"] == (
         "budget_certificate_discharges_budget"
     )

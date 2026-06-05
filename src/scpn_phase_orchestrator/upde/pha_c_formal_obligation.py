@@ -120,6 +120,8 @@ class PHACKinematicProofObligation:
     window_budget_margin_units: int
     phase_tolerance_units: int
     max_phase_dispersion_units: int
+    configured_phase_drift_bound_units: int
+    phase_budget_units: int
     phase_margin_units: int
     observed_velocity_step_units: int
     kinematic_residual_units: int
@@ -313,6 +315,10 @@ def _dict_without_record_hash(
         "window_budget_margin_units": obligation.window_budget_margin_units,
         "phase_tolerance_units": obligation.phase_tolerance_units,
         "max_phase_dispersion_units": obligation.max_phase_dispersion_units,
+        "configured_phase_drift_bound_units": (
+            obligation.configured_phase_drift_bound_units
+        ),
+        "phase_budget_units": obligation.phase_budget_units,
         "phase_margin_units": obligation.phase_margin_units,
         "observed_velocity_step_units": obligation.observed_velocity_step_units,
         "kinematic_residual_units": obligation.kinematic_residual_units,
@@ -343,6 +349,7 @@ def build_pha_c_kinematic_proof_obligation(
     fixed_point_time_scale_s: float = PHA_C_FORMAL_DEFAULT_TIME_SCALE_S,
     relative_velocity_step_bound_m: float = 0.0,
     coupling_residual_step_bound_m: float = 0.0,
+    phase_drift_bound_rad: float = 0.0,
     lipschitz_step_gain_units: int = 0,
 ) -> PHACKinematicProofObligation:
     """Project a verified PHA-C acceptance record into Lean proof obligations.
@@ -352,9 +359,9 @@ def build_pha_c_kinematic_proof_obligation(
     Lean drive term only includes explicitly supplied future relative-velocity
     slack and the signed moving-frame residual. MIF/FRC specialisations can
     provide non-zero ``relative_velocity_step_bound_m`` and
-    ``coupling_residual_step_bound_m`` and ``lipschitz_step_gain_units`` values
-    when they want a predictive finite-horizon Gronwall certificate instead of
-    a replay-only envelope.
+    ``coupling_residual_step_bound_m``, ``phase_drift_bound_rad``, and
+    ``lipschitz_step_gain_units`` values when they want a predictive
+    finite-horizon Gronwall certificate instead of a replay-only envelope.
     """
 
     verified_record = verify_pha_c_acceptance_record(record)
@@ -500,7 +507,13 @@ def build_pha_c_kinematic_proof_obligation(
         scale=scale_rad,
         name="max_phase_dispersion_rad",
     )
-    phase_margin_units = phase_tolerance_units - phase_dispersion_units
+    configured_phase_drift_units = _nonnegative_units(
+        phase_drift_bound_rad,
+        scale=scale_rad,
+        name="phase_drift_bound_rad",
+    )
+    phase_budget_units = phase_dispersion_units + configured_phase_drift_units
+    phase_margin_units = phase_tolerance_units - phase_budget_units
     observed_velocity_step_units = _nonnegative_units(
         verified_record.max_abs_velocity_m_per_s * verified_record.dt,
         scale=scale_m,
@@ -562,6 +575,8 @@ def build_pha_c_kinematic_proof_obligation(
         "window_budget_margin_units": window_margin_units,
         "phase_tolerance_units": phase_tolerance_units,
         "max_phase_dispersion_units": phase_dispersion_units,
+        "configured_phase_drift_bound_units": configured_phase_drift_units,
+        "phase_budget_units": phase_budget_units,
         "phase_margin_units": phase_margin_units,
         "observed_velocity_step_units": observed_velocity_step_units,
         "kinematic_residual_units": observed_residual_units,
@@ -645,6 +660,8 @@ def verify_pha_c_kinematic_proof_obligation(
         "gronwall_budget_units",
         "phase_tolerance_units",
         "max_phase_dispersion_units",
+        "configured_phase_drift_bound_units",
+        "phase_budget_units",
         "observed_velocity_step_units",
         "kinematic_residual_units",
         "path_length_units",
@@ -821,12 +838,18 @@ def verify_pha_c_kinematic_proof_obligation(
     expected_margin = expected_gronwall_margin
     if obligation.window_budget_margin_units != expected_margin:
         raise ValueError("window_budget_margin_units must match the Lean margin")
-    expected_phase_margin = (
-        obligation.phase_tolerance_units - obligation.max_phase_dispersion_units
+    expected_phase_budget = (
+        obligation.max_phase_dispersion_units
+        + obligation.configured_phase_drift_bound_units
     )
+    if obligation.phase_budget_units != expected_phase_budget:
+        raise ValueError(
+            "phase_budget_units must match dispersion plus configured drift",
+        )
+    expected_phase_margin = obligation.phase_tolerance_units - expected_phase_budget
     if obligation.phase_margin_units != expected_phase_margin:
         raise ValueError(
-            "phase_margin_units must match phase tolerance minus dispersion",
+            "phase_margin_units must match phase tolerance minus phase budget",
         )
     expected_discharged = (
         expected_margin >= 0

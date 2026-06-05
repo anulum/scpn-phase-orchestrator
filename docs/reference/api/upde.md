@@ -538,12 +538,15 @@ tolerance, phase tolerance, time-step units, horizon-time units, Gronwall
 budget trace, continuous horizon-drive budget, and certificate theorem names.
 
 Predictive downstream consumers can now supply both
-`relative_velocity_step_bound_m` and `coupling_residual_step_bound_m` when
-building the obligation. The residual bound is recorded separately as
-`configured_coupling_residual_step_bound_units`, then combined with the
-observed moving-frame kinematic residual before the sampled residual rate,
-discrete drive bound, and continuous drive bound are accepted. This keeps FRC
-or MIF specialisations from hiding residual uncertainty inside the
-relative-velocity term.
+`relative_velocity_step_bound_m`, `coupling_residual_step_bound_m`, and
+`phase_drift_bound_rad` when building the obligation. The residual bound is
+recorded separately as `configured_coupling_residual_step_bound_units`, then
+combined with the observed moving-frame kinematic residual before the sampled
+residual rate, discrete drive bound, and continuous drive bound are accepted.
+The phase drift bound is recorded separately as
+`configured_phase_drift_bound_units`, then added to observed phase dispersion
+before the phase margin is accepted. This keeps FRC or MIF specialisations from
+hiding residual uncertainty inside the relative-velocity term or phase
+uncertainty inside replay dispersion.
 
 ::: scpn_phase_orchestrator.upde.pha_c_formal_obligation

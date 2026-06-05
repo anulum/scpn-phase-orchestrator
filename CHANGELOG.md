@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added explicit predictive phase-drift slack to
+  `PHACKinematicProofObligation`, including fixed-point phase-budget
+  provenance, fail-closed verifier checks, module-specific tests, PHA-C
+  benchmark acceptance fields, and API documentation updates.
 - Added explicit predictive coupling-residual slack to
   `PHACKinematicProofObligation`, including fixed-point residual-bound
   provenance, fail-closed verifier checks, module-specific tests, and PHA-C

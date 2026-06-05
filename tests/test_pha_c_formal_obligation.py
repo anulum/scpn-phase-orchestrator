@@ -136,6 +136,11 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     )
     assert len(obligation.gronwall_budget_trace_sha256) == 64
     assert obligation.window_budget_margin_units >= 0
+    assert obligation.configured_phase_drift_bound_units == 0
+    assert obligation.phase_budget_units == obligation.max_phase_dispersion_units
+    assert obligation.phase_margin_units == (
+        obligation.phase_tolerance_units - obligation.phase_budget_units
+    )
     assert obligation.phase_margin_units >= 0
     assert obligation.observed_velocity_step_units == _ceil_units(
         record.max_abs_velocity_m_per_s * record.dt,
@@ -194,6 +199,29 @@ def test_kinematic_obligation_supports_predictive_residual_slack() -> None:
         obligation.initial_tolerance_units
         + obligation.horizon_steps * obligation.drive_bound_units
     )
+    assert obligation.proof_obligations_discharged
+    assert verify_pha_c_kinematic_proof_obligation(obligation) is obligation
+
+
+def test_kinematic_obligation_supports_predictive_phase_drift_slack() -> None:
+    record = _record()
+    obligation = build_pha_c_kinematic_proof_obligation(
+        record,
+        phase_drift_bound_rad=2.5e-3,
+    )
+
+    expected_drift_units = _ceil_units(
+        2.5e-3,
+        obligation.fixed_point_scale_rad,
+    )
+    assert obligation.configured_phase_drift_bound_units == expected_drift_units
+    assert obligation.phase_budget_units == (
+        obligation.max_phase_dispersion_units + expected_drift_units
+    )
+    assert obligation.phase_margin_units == (
+        obligation.phase_tolerance_units - obligation.phase_budget_units
+    )
+    assert obligation.phase_margin_units >= 0
     assert obligation.proof_obligations_discharged
     assert verify_pha_c_kinematic_proof_obligation(obligation) is obligation
 
@@ -331,6 +359,28 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
                 ),
             ),
         )
+    with pytest.raises(ValueError, match="phase_budget_units"):
+        predictive = build_pha_c_kinematic_proof_obligation(
+            _record(),
+            phase_drift_bound_rad=2.5e-3,
+        )
+        verify_pha_c_kinematic_proof_obligation(
+            replace(
+                predictive,
+                phase_budget_units=predictive.phase_budget_units + 1,
+            ),
+        )
+    with pytest.raises(ValueError, match="phase_margin_units"):
+        predictive = build_pha_c_kinematic_proof_obligation(
+            _record(),
+            phase_drift_bound_rad=2.5e-3,
+        )
+        verify_pha_c_kinematic_proof_obligation(
+            replace(
+                predictive,
+                phase_margin_units=predictive.phase_margin_units + 1,
+            ),
+        )
     with pytest.raises(ValueError, match="gronwall_budget_units"):
         verify_pha_c_kinematic_proof_obligation(
             replace(
@@ -387,6 +437,11 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
         build_pha_c_kinematic_proof_obligation(
             record,
             coupling_residual_step_bound_m=np.inf,
+        )
+    with pytest.raises(ValueError, match="phase_drift_bound_rad"):
+        build_pha_c_kinematic_proof_obligation(
+            record,
+            phase_drift_bound_rad=-1.0,
         )
     with pytest.raises(TypeError, match="PHACKinematicProofObligation"):
         verify_pha_c_kinematic_proof_obligation(object())  # type: ignore[arg-type]
