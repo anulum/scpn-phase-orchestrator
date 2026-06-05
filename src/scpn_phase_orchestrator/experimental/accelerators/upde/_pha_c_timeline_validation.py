@@ -13,6 +13,7 @@ from __future__ import annotations
 from scpn_phase_orchestrator.upde.pha_c_timeline import (
     PHACTimelineRecord,
     build_pha_c_event_timeline,
+    verify_pha_c_event_timeline,
 )
 
 _NUMERIC_FIELDS = (
@@ -72,6 +73,8 @@ def validate_pha_c_event_timeline(
 ) -> PHACTimelineRecord:
     """Validate an accelerator timeline against the Python reference contract."""
 
+    verify_pha_c_event_timeline(got)
+    verify_pha_c_event_timeline(expected)
     got_dict = got.to_dict()
     expected_dict = expected.to_dict()
     for field in _NUMERIC_FIELDS:

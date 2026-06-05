@@ -300,12 +300,20 @@ merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline
 hashing, aggregate subgate evidence, and Rust/Go/Julia/Mojo source-contract
 parity adapters.
 
+Each downstream PHA-C gate now also replays the canonical record hash before a
+backend row can pass. Handoff rows call `verify_pha_c_handoff_record(...)`,
+timeline rows call `verify_pha_c_event_timeline(...)`, and acceptance rows call
+`verify_pha_c_acceptance_record(...)`. This rejects tampered scalar evidence,
+malformed SHA-256 fields, unsafe actuation flags, or altered claim boundaries
+even when the original phase/position arrays are no longer present.
+
 Those Rust, Go, Julia, and Mojo rows are intentionally labelled
 `source_contract_reference_validation` until native downstream kernels are
 implemented. The PHA-C benchmark payloads publish `native_kernel_count`,
-`source_contract_backend_count`, and `polyglot_claim_boundary` fields so review
-tools and release notes cannot confuse source-contract parity with native
-execution. The Python row remains the executable reference.
+`source_contract_backend_count`, `hash_replay_validated`, and
+`polyglot_claim_boundary` fields so review tools and release notes cannot
+confuse source-contract parity with native execution. The Python row remains
+the executable reference.
 
 These gates are mathematical and physical contract checks, not live actuation
 claims. Their JSON artefacts and reference-suite rows remain

@@ -62,6 +62,7 @@ The record carries:
 import numpy as np
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     build_pha_c_acceptance_record,
+    verify_pha_c_acceptance_record,
 )
 
 n = 5
@@ -89,7 +90,13 @@ assert record.final_lock_achieved
 assert record.execution_disabled
 assert not record.actuating
 acceptance_payload = record.to_dict()
+verify_pha_c_acceptance_record(record)
 ```
+
+Use `verify_pha_c_acceptance_record(...)` when replaying a stored acceptance
+record. It rechecks sample/step consistency, first-lock semantics, review-only
+flags, SHA-256 fields, the timeline digest reference, and the canonical
+acceptance hash without requiring the original schedules or trajectories.
 
 ## Relationship to other PHA-C records
 
@@ -133,3 +140,5 @@ The acceptance builder fails closed on:
 ::: scpn_phase_orchestrator.upde.pha_c_acceptance.build_pha_c_acceptance_record
 
 ::: scpn_phase_orchestrator.upde.pha_c_acceptance.pha_c_acceptance_record_to_dict
+
+::: scpn_phase_orchestrator.upde.pha_c_acceptance.verify_pha_c_acceptance_record

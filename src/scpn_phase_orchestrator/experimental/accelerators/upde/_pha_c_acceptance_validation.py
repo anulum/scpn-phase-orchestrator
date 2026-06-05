@@ -13,6 +13,7 @@ from __future__ import annotations
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
+    verify_pha_c_acceptance_record,
 )
 
 _NUMERIC_FIELDS = (
@@ -77,6 +78,8 @@ def validate_pha_c_acceptance_record(
 ) -> PHACAcceptanceRecord:
     """Validate an accelerator acceptance record against the reference."""
 
+    verify_pha_c_acceptance_record(got)
+    verify_pha_c_acceptance_record(expected)
     got_dict = got.to_dict()
     expected_dict = expected.to_dict()
     for field in _NUMERIC_FIELDS:

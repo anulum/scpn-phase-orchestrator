@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib
 import json
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -29,11 +30,13 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _pha_c_timeline_validation,
 )
 from scpn_phase_orchestrator.upde import PHACTimelineRecord as ExportedRecord
+from scpn_phase_orchestrator.upde import verify_pha_c_event_timeline as exported_verify
 from scpn_phase_orchestrator.upde.pha_c_timeline import (
     PHA_C_TIMELINE_CLAIM_BOUNDARY,
     PHACTimelineRecord,
     build_pha_c_event_timeline,
     pha_c_event_timeline_to_dict,
+    verify_pha_c_event_timeline,
 )
 
 MODULE_LINKAGE_PATHS = (
@@ -122,6 +125,28 @@ def test_timeline_records_lock_loss_reset_and_review_only_hashes() -> None:
     assert timeline.timeline_sha256 == repeated.timeline_sha256
     assert pha_c_event_timeline_to_dict(timeline) == timeline.to_dict()
     assert ExportedRecord is PHACTimelineRecord
+    assert exported_verify is verify_pha_c_event_timeline
+    assert verify_pha_c_event_timeline(timeline) is timeline
+
+
+def test_timeline_replay_verifier_rejects_tampered_evidence() -> None:
+    phases, positions, times = _trajectory()
+    timeline = build_pha_c_event_timeline(
+        phases,
+        positions,
+        times=times,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+    )
+
+    with pytest.raises(ValueError, match="timeline_sha256"):
+        verify_pha_c_event_timeline(replace(timeline, timeline_sha256="0" * 64))
+    with pytest.raises(ValueError, match="sample_count"):
+        verify_pha_c_event_timeline(replace(timeline, lock_sample_count=99))
+    with pytest.raises(ValueError, match="claim_boundary"):
+        verify_pha_c_event_timeline(replace(timeline, claim_boundary="actuating"))
 
 
 def test_timeline_tolerance_profile_records_boundary() -> None:
@@ -322,6 +347,7 @@ def test_pha_c_timeline_benchmark_gate_accepts_declared_backends() -> None:
     assert result["native_kernel_count"] == 0
     assert result["polyglot_claim_boundary"] == "source_contract_not_native_kernel"
     assert result["acceptance_passed"] == 1
+    assert result["hash_replay_validated"] == 1
     assert result["first_lock_observed"] == 1
     assert result["first_lock_index"] == 3
     assert result["lock_loss_count"] == 1
@@ -335,3 +361,4 @@ def test_pha_c_timeline_benchmark_gate_accepts_declared_backends() -> None:
         "source_contract_reference_validation",
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
+    assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)

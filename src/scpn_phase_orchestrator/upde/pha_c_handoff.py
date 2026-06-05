@@ -46,6 +46,7 @@ __all__ = [
     "PHACHandoffRecord",
     "build_pha_c_handoff_record",
     "pha_c_handoff_record_to_dict",
+    "verify_pha_c_handoff_record",
 ]
 
 
@@ -143,6 +144,41 @@ def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
 def _sha256_json(payload: dict[str, object]) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+_SHA256_HEX_DIGITS = frozenset("0123456789abcdef")
+
+
+def _validate_sha256_hex(value: object, *, name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(char not in _SHA256_HEX_DIGITS for char in value)
+    ):
+        raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+    return value
+
+
+def _validate_record_bool(value: object, *, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError(f"{name} must be a boolean")
+    return value
+
+
+def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be an integer")
+    parsed = int(value)
+    if parsed < minimum:
+        raise ValueError(f"{name} must be at least {minimum}")
+    return parsed
+
+
+def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
+    parsed = _validate_real_scalar(value, name=name)
+    if parsed < 0.0:
+        raise ValueError(f"{name} must be non-negative")
+    return parsed
 
 
 def _vector_sha256(values: FloatArray) -> str:
@@ -350,3 +386,92 @@ def pha_c_handoff_record_to_dict(
         "source_chain_sha256": str(record.source_chain_sha256),
         "record_sha256": str(record.record_sha256),
     }
+
+
+def verify_pha_c_handoff_record(record: PHACHandoffRecord) -> PHACHandoffRecord:
+    """Replay and validate a PHA-C handoff record hash and safety boundary.
+
+    The verifier is intentionally independent of the builder path: it checks the
+    scalar invariants carried by an existing record, validates all SHA-256 digest
+    fields, and recomputes the canonical payload hash from ``to_dict()``. This
+    lets benchmark gates, replay ledgers, and downstream MIF/FRC lanes reject
+    tampered evidence without access to the original phase and position vectors.
+    """
+
+    if not isinstance(record, PHACHandoffRecord):
+        raise ValueError("record must be a PHACHandoffRecord")
+    _validate_sha256_hex(record.phase_state_sha256, name="phase_state_sha256")
+    _validate_sha256_hex(record.position_state_sha256, name="position_state_sha256")
+    _validate_sha256_hex(record.merge_report_sha256, name="merge_report_sha256")
+    _validate_sha256_hex(record.source_chain_sha256, name="source_chain_sha256")
+    record_hash = _validate_sha256_hex(record.record_sha256, name="record_sha256")
+    if record.claim_boundary != PHA_C_HANDOFF_CLAIM_BOUNDARY:
+        raise ValueError("claim_boundary must be the PHA-C handoff review boundary")
+    if record.evidence_kind != PHA_C_HANDOFF_EVIDENCE_KIND:
+        raise ValueError("evidence_kind must be deterministic handoff evidence")
+    if (
+        _validate_record_bool(
+            record.execution_disabled,
+            name="execution_disabled",
+        )
+        is not True
+    ):
+        raise ValueError("execution_disabled must be true")
+    if _validate_record_bool(record.actuating, name="actuating") is not False:
+        raise ValueError("actuating must be false")
+
+    _validate_record_int(record.oscillator_count, name="oscillator_count", minimum=1)
+    required = _validate_record_int(
+        record.required_consecutive_samples,
+        name="required_consecutive_samples",
+        minimum=1,
+    )
+    consecutive = _validate_record_int(
+        record.consecutive_lock_samples,
+        name="consecutive_lock_samples",
+        minimum=0,
+    )
+    phase_locked = _validate_record_bool(record.phase_locked, name="phase_locked")
+    spatial_locked = _validate_record_bool(record.spatial_locked, name="spatial_locked")
+    lock_achieved = _validate_record_bool(record.lock_achieved, name="lock_achieved")
+    if lock_achieved and (not phase_locked or not spatial_locked):
+        raise ValueError("lock_achieved requires phase and spatial locks")
+    if lock_achieved and consecutive < required:
+        raise ValueError("lock_achieved requires the consecutive-sample threshold")
+    if (not phase_locked or not spatial_locked) and consecutive != 0:
+        raise ValueError("unlocked samples must reset consecutive_lock_samples")
+
+    for field in (
+        "phase_dispersion_rad",
+        "spatial_dispersion_m",
+        "distance_to_reference_max_m",
+        "phase_tol_rad",
+        "spatial_tol_m",
+    ):
+        _validate_nonnegative_record_scalar(getattr(record, field), name=field)
+    order_parameter = _validate_nonnegative_record_scalar(
+        record.phase_order_parameter,
+        name="phase_order_parameter",
+    )
+    if order_parameter > 1.0 + 1.0e-12:
+        raise ValueError("phase_order_parameter must be inside [0, 1]")
+    multiplier = _validate_real_scalar(
+        record.tolerance_profile_multiplier,
+        name="tolerance_profile_multiplier",
+    )
+    if multiplier <= 0.0:
+        raise ValueError("tolerance_profile_multiplier must be positive")
+    if (
+        not isinstance(record.tolerance_profile_name, str)
+        or not record.tolerance_profile_name
+    ):
+        raise ValueError("tolerance_profile_name must be a non-empty string")
+    for field in ("t", "reference_phase", "reference_point"):
+        _validate_real_scalar(getattr(record, field), name=field)
+
+    payload = pha_c_handoff_record_to_dict(record)
+    replay_payload = dict(payload)
+    replay_payload.pop("record_sha256")
+    if _sha256_json(replay_payload) != record_hash:
+        raise ValueError("record_sha256 does not match the canonical handoff payload")
+    return record

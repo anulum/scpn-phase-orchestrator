@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
+    verify_pha_c_acceptance_record,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -169,7 +170,7 @@ def _bench_backend(
     t0 = time.perf_counter()
     for _ in range(calls):
         record = fn(phases, positions, omega, knm, velocities, **kwargs)
-    return time.perf_counter() - t0, record
+    return time.perf_counter() - t0, verify_pha_c_acceptance_record(record)
 
 
 def _gate_passed(payload: dict[str, object]) -> bool:
@@ -229,6 +230,9 @@ def _subgate_records() -> list[dict[str, object]]:
                     "benchmark_evidence_kind",
                     BENCHMARK_EVIDENCE_KIND,
                 ),
+                "hash_replay_validated": int(
+                    payload.get("hash_replay_validated", 0),
+                ),
             },
         )
     return records
@@ -248,6 +252,7 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "tolerance_profile_multiplier": record.tolerance_profile_multiplier,
         "has_acceptance_hash": int(len(record.acceptance_sha256) == 64),
         "has_timeline_hash": int(len(record.timeline_sha256) == 64),
+        "hash_replay_validated": int(verify_pha_c_acceptance_record(record) is record),
     }
 
 
@@ -300,6 +305,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "acceptance_sha256": got.acceptance_sha256,
                 "payload_sha256": _record_sha256(got),
                 "timeline_sha256": got.timeline_sha256,
+                "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
                 "parity_passed": passed,
@@ -320,6 +326,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "require_non_actuating": True,
         "require_execution_disabled": True,
         "require_acceptance_hash": True,
+        "require_hash_replay_validation": True,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
         "require_no_native_kernel_claim": True,
@@ -347,6 +354,8 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["tolerance_profile_multiplier"] == 1.0
         and contracts["has_acceptance_hash"] == 1
         and contracts["has_timeline_hash"] == 1
+        and contracts["hash_replay_validated"] == 1
+        and all(int(record["hash_replay_validated"]) == 1 for record in records)
         and (not include_subgates or subgate_pass_count == len(subgates))
     )
     benchmark_payload = {
@@ -359,6 +368,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "parity_passed": record["parity_passed"],
                 "max_abs_error": record["max_abs_error"],
                 "acceptance_sha256": record["acceptance_sha256"],
+                "hash_replay_validated": record["hash_replay_validated"],
                 "execution_mode": record["execution_mode"],
                 "native_kernel_present": record["native_kernel_present"],
                 "source_contract_validation": record["source_contract_validation"],
@@ -390,6 +400,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "calls": calls,
         "reference_acceptance_sha256": reference.acceptance_sha256,
         "reference_timeline_sha256": reference.timeline_sha256,
+        "hash_replay_validated": contracts["hash_replay_validated"],
         "first_lock_observed": contracts["first_lock_observed"],
         "first_lock_index": contracts["first_lock_index"],
         "final_lock_achieved": contracts["final_lock_achieved"],

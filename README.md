@@ -343,20 +343,19 @@ Selected reference suites:
 
 | Suite | Reference contract | Snapshot steps/s |
 |-------|--------------------|-----------------:|
-| `kuramoto_reference_strogatz_2000` | Strogatz/Acebron synchronisation plus exact two-oscillator locking acceptance | `12942.810273211335` |
-| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `10252.514078223372` |
-| `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `172473.66546009408` |
-| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `9.631426979796634` |
-| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `12.537032767764593` |
-| `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `2.8226626077895425` |
-| `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `749.68100280608` |
-| `embedding_polyglot_parity_gate` | Takens delay-indexing, Fraser-Swinney mutual information, and nearest-neighbour geometry parity across Rust/Mojo/Julia/Go/Python slots | `1554.683485863831` |
-| `transfer_entropy_polyglot_parity_gate` | Schreiber transfer-entropy causal-direction and exact histogram matrix parity across Rust/Mojo/Julia/Go/Python slots | `1126.4237577886813` |
-| `entropy_production_polyglot_parity_gate` | Acebron overdamped-Kuramoto dissipation parity and thermodynamic invariants across Rust/Mojo/Julia/Go/Python slots | `732.0032248012761` |
-| `pha_c_handoff_polyglot_parity_gate` | PHA-C moving-frame handoff parity for merge-window evidence, source digests, order-parameter evidence, and non-actuating record hashes | `1231.8095325174095` |
-| `pha_c_timeline_polyglot_parity_gate` | PHA-C trajectory timeline parity for first-lock, lock-loss, reset-count, transition-hash, and tolerance-profile evidence | `243.5849111819699` |
-| `pha_c_acceptance_polyglot_gate` | PHA-C end-to-end acceptance parity across spatial modulation, Doppler correction, moving-frame propagation, timeline conversion, and aggregate subgate evidence | `32.175130314615` |
-
+| `kuramoto_reference_strogatz_2000` | Strogatz/Acebron synchronisation plus exact two-oscillator locking acceptance | `12837.215355745857` |
+| `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `10705.539125010457` |
+| `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `152770.63830548577` |
+| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `9.742644765518387` |
+| `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `12.763705751240689` |
+| `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `3.136200818564687` |
+| `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `882.7126471369874` |
+| `embedding_polyglot_parity_gate` | Takens delay-indexing, Fraser-Swinney mutual information, and nearest-neighbour geometry parity across Rust/Mojo/Julia/Go/Python slots | `1562.1099451665864` |
+| `transfer_entropy_polyglot_parity_gate` | Schreiber transfer-entropy causal-direction and exact histogram matrix parity across Rust/Mojo/Julia/Go/Python slots | `1133.9685129430118` |
+| `entropy_production_polyglot_parity_gate` | Acebron overdamped-Kuramoto dissipation parity and thermodynamic invariants across Rust/Mojo/Julia/Go/Python slots | `862.3921574725011` |
+| `pha_c_handoff_polyglot_parity_gate` | PHA-C moving-frame handoff parity for merge-window evidence, source digests, order-parameter evidence, and non-actuating record hashes | `1444.6724567920237` |
+| `pha_c_timeline_polyglot_parity_gate` | PHA-C trajectory timeline parity for first-lock, lock-loss, reset-count, transition-hash, and tolerance-profile evidence | `333.41895131418994` |
+| `pha_c_acceptance_polyglot_gate` | PHA-C end-to-end acceptance parity across spatial modulation, Doppler correction, moving-frame propagation, timeline conversion, and aggregate subgate evidence | `34.99292339117502` |
 
 
 
@@ -421,7 +420,17 @@ the global coupling scalar when natural frequencies are zero, global
 phase-gauge invariance, oscillator permutation invariance, public
 fallback-dispatch parity, and explicit unavailable-toolchain evidence.
 
-The PHA-C reference rows check the downstream accelerator acceptance chain: moving-frame handoff records, trajectory timeline records, and the aggregate spatial/Doppler/moving-frame/merge-window acceptance record. They keep the claim boundary review-only and non-actuating while making the full PHA-C chain visible in the canonical benchmark snapshot. The Rust, Go, Julia, and Mojo downstream rows are explicitly labelled as source-contract validation rows until native downstream kernels land; `native_kernel_count` remains zero in the current snapshot.
+The PHA-C reference rows check the downstream accelerator acceptance chain:
+moving-frame handoff records, trajectory timeline records, and the aggregate
+spatial/Doppler/moving-frame/merge-window acceptance record. They keep the
+claim boundary review-only and non-actuating while making the full PHA-C chain
+visible in the canonical benchmark snapshot. Each downstream PHA-C row now
+requires hash-replay validation of the canonical handoff, timeline, or
+acceptance payload before acceptance, so tampered scalar evidence and unsafe
+claim-boundary edits are rejected without needing the original raw arrays. The
+Rust, Go, Julia, and Mojo downstream rows are explicitly labelled as
+source-contract validation rows until native downstream kernels land;
+`native_kernel_count` remains zero in the current snapshot.
 
 Timing fields in the checked-in reference snapshot are local regression and
 parity evidence unless the run metadata states CPU/core isolation and host-load

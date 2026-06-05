@@ -60,6 +60,7 @@ phase or position vectors into public evidence records.
 import numpy as np
 from scpn_phase_orchestrator.upde.pha_c_handoff import (
     build_pha_c_handoff_record,
+    verify_pha_c_handoff_record,
 )
 
 record = build_pha_c_handoff_record(
@@ -77,7 +78,13 @@ assert record.lock_achieved
 assert record.execution_disabled
 assert not record.actuating
 event_payload = record.to_dict()
+verify_pha_c_handoff_record(record)
 ```
+
+Use `verify_pha_c_handoff_record(...)` when replaying a stored record. It
+rechecks the review-only claim boundary, non-actuating flags, SHA-256 field
+formats, scalar lock invariants, and canonical record hash without requiring
+the original phase or position vectors.
 
 ## Polyglot parity
 
@@ -112,3 +119,5 @@ The handoff fails closed on:
 ::: scpn_phase_orchestrator.upde.pha_c_handoff.build_pha_c_handoff_record
 
 ::: scpn_phase_orchestrator.upde.pha_c_handoff.pha_c_handoff_record_to_dict
+
+::: scpn_phase_orchestrator.upde.pha_c_handoff.verify_pha_c_handoff_record

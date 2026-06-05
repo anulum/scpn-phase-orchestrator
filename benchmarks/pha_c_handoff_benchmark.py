@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.upde.pha_c_handoff import (
     PHA_C_HANDOFF_CLAIM_BOUNDARY,
     PHACHandoffRecord,
     build_pha_c_handoff_record,
+    verify_pha_c_handoff_record,
 )
 
 BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
@@ -146,7 +147,7 @@ def _bench_backend(
             prior_consecutive_lock_samples=2,
             tolerance_profile="buffer_3x",
         )
-    return time.perf_counter() - t0, record
+    return time.perf_counter() - t0, verify_pha_c_handoff_record(record)
 
 
 def _reference_contracts(record: PHACHandoffRecord) -> dict[str, Any]:
@@ -160,6 +161,7 @@ def _reference_contracts(record: PHACHandoffRecord) -> dict[str, Any]:
         "tolerance_profile_multiplier": record.tolerance_profile_multiplier,
         "has_source_chain_hash": int(len(record.source_chain_sha256) == 64),
         "has_record_hash": int(len(record.record_sha256) == 64),
+        "hash_replay_validated": int(verify_pha_c_handoff_record(record) is record),
     }
 
 
@@ -195,6 +197,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
                 "record_sha256": got.record_sha256,
                 "payload_sha256": _record_sha256(got),
                 "source_chain_sha256": got.source_chain_sha256,
+                "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
                 "parity_passed": passed,
@@ -210,6 +213,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "require_non_actuating": True,
         "require_execution_disabled": True,
         "require_hash_chain": True,
+        "require_hash_replay_validation": True,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
         "require_no_native_kernel_claim": True,
@@ -234,6 +238,8 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         and contracts["tolerance_profile_multiplier"] == 3.0
         and contracts["has_source_chain_hash"] == 1
         and contracts["has_record_hash"] == 1
+        and contracts["hash_replay_validated"] == 1
+        and all(int(record["hash_replay_validated"]) == 1 for record in records)
     )
     benchmark_payload = {
         "n": n,
@@ -262,6 +268,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "calls": calls,
         "reference_record_sha256": reference.record_sha256,
         "reference_source_chain_sha256": reference.source_chain_sha256,
+        "hash_replay_validated": contracts["hash_replay_validated"],
         "lock_achieved": contracts["lock_achieved"],
         "joint_lock_required": contracts["joint_lock_required"],
         "non_actuating": contracts["non_actuating"],

@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.upde.pha_c_timeline import (
     PHA_C_TIMELINE_CLAIM_BOUNDARY,
     PHACTimelineRecord,
     build_pha_c_event_timeline,
+    verify_pha_c_event_timeline,
 )
 
 BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
@@ -176,7 +177,7 @@ def _bench_backend(
             required_consecutive_samples=3,
             tolerance_profile="baseline_1x",
         )
-    return time.perf_counter() - t0, record
+    return time.perf_counter() - t0, verify_pha_c_event_timeline(record)
 
 
 def _reference_contracts(record: PHACTimelineRecord) -> dict[str, Any]:
@@ -193,6 +194,7 @@ def _reference_contracts(record: PHACTimelineRecord) -> dict[str, Any]:
         "tolerance_profile_multiplier": record.tolerance_profile_multiplier,
         "has_sample_records_hash": int(len(record.sample_records_sha256) == 64),
         "has_timeline_hash": int(len(record.timeline_sha256) == 64),
+        "hash_replay_validated": int(verify_pha_c_event_timeline(record) is record),
     }
 
 
@@ -229,6 +231,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
                 "payload_sha256": _timeline_sha256(got),
                 "sample_records_sha256": got.sample_records_sha256,
                 "transition_table_sha256": got.transition_table_sha256,
+                "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
                 "parity_passed": passed,
@@ -246,6 +249,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "require_non_actuating": True,
         "require_execution_disabled": True,
         "require_hash_chain": True,
+        "require_hash_replay_validation": True,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
         "require_no_native_kernel_claim": True,
@@ -273,6 +277,8 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         and contracts["tolerance_profile_multiplier"] == 1.0
         and contracts["has_sample_records_hash"] == 1
         and contracts["has_timeline_hash"] == 1
+        and contracts["hash_replay_validated"] == 1
+        and all(int(record["hash_replay_validated"]) == 1 for record in records)
     )
     benchmark_payload = {
         "n": n,
@@ -301,6 +307,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "calls": calls,
         "reference_timeline_sha256": reference.timeline_sha256,
         "reference_sample_records_sha256": reference.sample_records_sha256,
+        "hash_replay_validated": contracts["hash_replay_validated"],
         "first_lock_observed": contracts["first_lock_observed"],
         "first_lock_index": contracts["first_lock_index"],
         "final_lock_achieved": contracts["final_lock_achieved"],

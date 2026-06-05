@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib
 import json
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -29,11 +30,15 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _pha_c_acceptance_validation,
 )
 from scpn_phase_orchestrator.upde import PHACAcceptanceRecord as ExportedRecord
+from scpn_phase_orchestrator.upde import (
+    verify_pha_c_acceptance_record as exported_verify,
+)
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
     pha_c_acceptance_record_to_dict,
+    verify_pha_c_acceptance_record,
 )
 
 MODULE_LINKAGE_PATHS = (
@@ -115,6 +120,32 @@ def test_acceptance_record_spans_complete_review_only_chain() -> None:
     assert record.acceptance_sha256 == repeated.acceptance_sha256
     assert pha_c_acceptance_record_to_dict(record) == record.to_dict()
     assert ExportedRecord is PHACAcceptanceRecord
+    assert exported_verify is verify_pha_c_acceptance_record
+    assert verify_pha_c_acceptance_record(record) is record
+
+
+def test_acceptance_replay_verifier_rejects_tampered_evidence() -> None:
+    phases, positions, omega, knm, velocities = _problem()
+    record = build_pha_c_acceptance_record(
+        phases,
+        positions,
+        omega,
+        knm,
+        velocities,
+        dt=1.0e-3,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+        backend="python",
+    )
+
+    with pytest.raises(ValueError, match="acceptance_sha256"):
+        verify_pha_c_acceptance_record(
+            replace(record, acceptance_sha256="0" * 64),
+        )
+    with pytest.raises(ValueError, match="sample_count"):
+        verify_pha_c_acceptance_record(replace(record, sample_count=record.step_count))
+    with pytest.raises(ValueError, match="claim_boundary"):
+        verify_pha_c_acceptance_record(replace(record, claim_boundary="actuating"))
 
 
 def test_acceptance_tolerance_profile_records_review_boundary() -> None:
@@ -336,6 +367,7 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["native_kernel_count"] == 0
     assert result["polyglot_claim_boundary"] == "source_contract_not_native_kernel"
     assert result["acceptance_passed"] == 1
+    assert result["hash_replay_validated"] == 1
     assert result["first_lock_observed"] == 1
     assert result["first_lock_index"] == 2
     assert result["final_lock_achieved"] == 1
@@ -350,3 +382,4 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         "source_contract_reference_validation",
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
+    assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)

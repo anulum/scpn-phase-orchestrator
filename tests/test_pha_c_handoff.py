@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib
 import json
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -29,11 +30,13 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _pha_c_handoff_validation,
 )
 from scpn_phase_orchestrator.upde import PHACHandoffRecord as ExportedRecord
+from scpn_phase_orchestrator.upde import verify_pha_c_handoff_record as exported_verify
 from scpn_phase_orchestrator.upde.pha_c_handoff import (
     PHA_C_HANDOFF_CLAIM_BOUNDARY,
     PHACHandoffRecord,
     build_pha_c_handoff_record,
     pha_c_handoff_record_to_dict,
+    verify_pha_c_handoff_record,
 )
 
 MODULE_LINKAGE_PATHS = (
@@ -93,6 +96,33 @@ def test_handoff_record_is_hash_stable_and_review_only() -> None:
     assert record.record_sha256 == repeated.record_sha256
     assert pha_c_handoff_record_to_dict(record) == record.to_dict()
     assert ExportedRecord is PHACHandoffRecord
+    assert exported_verify is verify_pha_c_handoff_record
+    assert verify_pha_c_handoff_record(record) is record
+
+
+def test_handoff_replay_verifier_rejects_tampered_evidence() -> None:
+    record = build_pha_c_handoff_record(
+        np.array([0.0, 0.003, -0.004], dtype=np.float64),
+        np.array([0.0, 0.0005, -0.0008], dtype=np.float64),
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        prior_consecutive_lock_samples=2,
+        tolerance_profile="baseline_1x",
+    )
+
+    with pytest.raises(ValueError, match="record_sha256"):
+        verify_pha_c_handoff_record(replace(record, record_sha256="0" * 64))
+    with pytest.raises(ValueError, match="claim_boundary"):
+        verify_pha_c_handoff_record(replace(record, claim_boundary="actuating"))
+    with pytest.raises(ValueError, match="phase_order_parameter"):
+        verify_pha_c_handoff_record(
+            replace(
+                record,
+                phase_order_parameter=1.2,
+                record_sha256=record.record_sha256,
+            ),
+        )
 
 
 def test_handoff_reports_phase_and_spatial_failures_without_actuation() -> None:
@@ -289,6 +319,7 @@ def test_pha_c_handoff_benchmark_gate_accepts_declared_backends() -> None:
     assert result["native_kernel_count"] == 0
     assert result["polyglot_claim_boundary"] == "source_contract_not_native_kernel"
     assert result["acceptance_passed"] == 1
+    assert result["hash_replay_validated"] == 1
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["tolerance_profile_name"] == "buffer_3x"
@@ -300,3 +331,4 @@ def test_pha_c_handoff_benchmark_gate_accepts_declared_backends() -> None:
         "source_contract_reference_validation",
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
+    assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)

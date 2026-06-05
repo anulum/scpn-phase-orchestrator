@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added PHA-C hash-replay verifiers for handoff, event-timeline, and
+  end-to-end acceptance records, wired them through the Rust/Go/Julia/Mojo
+  source-contract validation helpers, benchmark acceptance thresholds, module
+  tests, public API exports, and documentation.
 - Added explicit source-contract versus native-kernel provenance to PHA-C
   handoff, timeline, and acceptance benchmark records so Rust/Go/Julia/Mojo
   adapters cannot be mistaken for native execution until reviewed kernels land.

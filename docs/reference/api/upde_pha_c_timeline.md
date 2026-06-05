@@ -60,6 +60,7 @@ For each sample, the builder calls `build_pha_c_handoff_record(...)` and carries
 import numpy as np
 from scpn_phase_orchestrator.upde.pha_c_timeline import (
     build_pha_c_event_timeline,
+    verify_pha_c_event_timeline,
 )
 
 phases = np.array(
@@ -97,7 +98,13 @@ assert timeline.lock_loss_count == 1
 assert timeline.execution_disabled
 assert not timeline.actuating
 evidence_payload = timeline.to_dict()
+verify_pha_c_event_timeline(timeline)
 ```
+
+Use `verify_pha_c_event_timeline(...)` when replaying a stored trajectory
+record. It rechecks timeline counts, first-lock semantics, transition-count
+bounds, review-only flags, SHA-256 fields, and the canonical timeline hash
+without requiring raw trajectory matrices.
 
 ## Handoff versus timeline
 
@@ -145,3 +152,5 @@ The timeline fails closed on:
 ::: scpn_phase_orchestrator.upde.pha_c_timeline.build_pha_c_event_timeline
 
 ::: scpn_phase_orchestrator.upde.pha_c_timeline.pha_c_event_timeline_to_dict
+
+::: scpn_phase_orchestrator.upde.pha_c_timeline.verify_pha_c_event_timeline

@@ -49,6 +49,7 @@ __all__ = [
     "PHACAcceptanceRecord",
     "build_pha_c_acceptance_record",
     "pha_c_acceptance_record_to_dict",
+    "verify_pha_c_acceptance_record",
 ]
 
 
@@ -196,6 +197,41 @@ def _validate_backend_request(value: object) -> str:
 def _sha256_json(payload: object) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+_SHA256_HEX_DIGITS = frozenset("0123456789abcdef")
+
+
+def _validate_sha256_hex(value: object, *, name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(char not in _SHA256_HEX_DIGITS for char in value)
+    ):
+        raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+    return value
+
+
+def _validate_record_bool(value: object, *, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError(f"{name} must be a boolean")
+    return value
+
+
+def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be an integer")
+    parsed = int(value)
+    if parsed < minimum:
+        raise ValueError(f"{name} must be at least {minimum}")
+    return parsed
+
+
+def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
+    parsed = _validate_real_scalar(value, name=name)
+    if parsed < 0.0:
+        raise ValueError(f"{name} must be non-negative")
+    return parsed
 
 
 def _array_sha256(values: FloatArray) -> str:
@@ -497,3 +533,152 @@ def pha_c_acceptance_record_to_dict(
     )
     payload["acceptance_sha256"] = record.acceptance_sha256
     return payload
+
+
+def verify_pha_c_acceptance_record(
+    record: PHACAcceptanceRecord,
+) -> PHACAcceptanceRecord:
+    """Replay and validate a complete PHA-C acceptance record."""
+
+    if not isinstance(record, PHACAcceptanceRecord):
+        raise ValueError("record must be a PHACAcceptanceRecord")
+    for field in (
+        "omega_schedule_sha256",
+        "velocity_schedule_sha256",
+        "phase_trajectory_sha256",
+        "position_trajectory_sha256",
+        "initial_spatial_coupling_sha256",
+        "final_spatial_coupling_sha256",
+        "doppler_trace_sha256",
+        "timeline_sha256",
+    ):
+        _validate_sha256_hex(getattr(record, field), name=field)
+    acceptance_hash = _validate_sha256_hex(
+        record.acceptance_sha256,
+        name="acceptance_sha256",
+    )
+    if record.claim_boundary != PHA_C_ACCEPTANCE_CLAIM_BOUNDARY:
+        raise ValueError("claim_boundary must be the PHA-C acceptance review boundary")
+    if record.evidence_kind != PHA_C_ACCEPTANCE_EVIDENCE_KIND:
+        raise ValueError("evidence_kind must be deterministic acceptance evidence")
+    if (
+        _validate_record_bool(
+            record.execution_disabled,
+            name="execution_disabled",
+        )
+        is not True
+    ):
+        raise ValueError("execution_disabled must be true")
+    if _validate_record_bool(record.actuating, name="actuating") is not False:
+        raise ValueError("actuating must be false")
+    if (
+        not isinstance(record.moving_frame_backend_request, str)
+        or not record.moving_frame_backend_request
+    ):
+        raise ValueError("moving_frame_backend_request must be a non-empty string")
+
+    sample_count = _validate_record_int(
+        record.sample_count,
+        name="sample_count",
+        minimum=2,
+    )
+    step_count = _validate_record_int(record.step_count, name="step_count", minimum=1)
+    if sample_count != step_count + 1:
+        raise ValueError("sample_count must equal step_count + 1")
+    _validate_record_int(record.oscillator_count, name="oscillator_count", minimum=1)
+    required = _validate_record_int(
+        record.required_consecutive_samples,
+        name="required_consecutive_samples",
+        minimum=1,
+    )
+    count_fields = (
+        "lock_sample_count",
+        "lock_loss_count",
+        "reset_count",
+        "max_consecutive_lock_samples",
+    )
+    counts = {
+        field: _validate_record_int(getattr(record, field), name=field, minimum=0)
+        for field in count_fields
+    }
+    if counts["lock_sample_count"] > sample_count:
+        raise ValueError("lock_sample_count cannot exceed sample_count")
+    if counts["max_consecutive_lock_samples"] > sample_count:
+        raise ValueError("max_consecutive_lock_samples cannot exceed sample_count")
+    for field in ("lock_loss_count", "reset_count"):
+        if counts[field] > step_count:
+            raise ValueError(f"{field} cannot exceed step_count")
+    final_lock_achieved = _validate_record_bool(
+        record.final_lock_achieved,
+        name="final_lock_achieved",
+    )
+    if counts["max_consecutive_lock_samples"] < required and final_lock_achieved:
+        raise ValueError("final_lock_achieved requires the consecutive threshold")
+
+    start_time = _validate_real_scalar(record.start_time, name="start_time")
+    end_time = _validate_real_scalar(record.end_time, name="end_time")
+    dt = _validate_positive_scalar(record.dt, name="dt")
+    if end_time < start_time:
+        raise ValueError("end_time must be greater than or equal to start_time")
+    if abs(end_time - (start_time + dt * step_count)) > 1.0e-12:
+        raise ValueError("end_time must equal start_time + dt * step_count")
+    first_lock_index = _validate_record_int(
+        record.first_lock_index,
+        name="first_lock_index",
+        minimum=-1,
+    )
+    first_lock_observed = _validate_record_bool(
+        record.first_lock_observed,
+        name="first_lock_observed",
+    )
+    first_lock_time = _validate_real_scalar(
+        record.first_lock_time,
+        name="first_lock_time",
+    )
+    if first_lock_observed:
+        if first_lock_index < 0 or first_lock_index >= sample_count:
+            raise ValueError("first_lock_index must refer to an observed sample")
+        if first_lock_time < start_time or first_lock_time > end_time:
+            raise ValueError("first_lock_time must be inside the acceptance range")
+    else:
+        if first_lock_index != -1:
+            raise ValueError("first_lock_index must be -1 when no lock is observed")
+        if first_lock_time != 0.0:
+            raise ValueError("first_lock_time must be 0.0 when no lock is observed")
+
+    for field in (
+        "max_abs_doppler_term",
+        "max_abs_spatial_coupling",
+        "max_distance_to_reference_m",
+        "phase_tol_rad",
+        "spatial_tol_m",
+    ):
+        _validate_nonnegative_record_scalar(getattr(record, field), name=field)
+    order_parameter = _validate_nonnegative_record_scalar(
+        record.min_phase_order_parameter,
+        name="min_phase_order_parameter",
+    )
+    if order_parameter > 1.0 + 1.0e-12:
+        raise ValueError("min_phase_order_parameter must be inside [0, 1]")
+    multiplier = _validate_real_scalar(
+        record.tolerance_profile_multiplier,
+        name="tolerance_profile_multiplier",
+    )
+    if multiplier <= 0.0:
+        raise ValueError("tolerance_profile_multiplier must be positive")
+    if (
+        not isinstance(record.tolerance_profile_name, str)
+        or not record.tolerance_profile_name
+    ):
+        raise ValueError("tolerance_profile_name must be a non-empty string")
+    for field in ("reference_phase", "reference_point"):
+        _validate_real_scalar(getattr(record, field), name=field)
+
+    payload = pha_c_acceptance_record_to_dict(record)
+    replay_payload = dict(payload)
+    replay_payload.pop("acceptance_sha256")
+    if _sha256_json(replay_payload) != acceptance_hash:
+        raise ValueError(
+            "acceptance_sha256 does not match the canonical acceptance payload",
+        )
+    return record

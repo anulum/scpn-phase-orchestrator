@@ -97,6 +97,9 @@ __all__ = [
     "pha_c_handoff_record_to_dict",
     "pha_c_acceptance_record_to_dict",
     "pha_c_event_timeline_to_dict",
+    "verify_pha_c_handoff_record",
+    "verify_pha_c_acceptance_record",
+    "verify_pha_c_event_timeline",
     "sync_warning",
     "trace_sync_transition",
     "upde_run_omega_schedule",
@@ -152,6 +155,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
         ".pha_c_handoff",
         "pha_c_handoff_record_to_dict",
     ),
+    "verify_pha_c_handoff_record": (
+        ".pha_c_handoff",
+        "verify_pha_c_handoff_record",
+    ),
     "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY": (
         ".pha_c_acceptance",
         "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY",
@@ -169,6 +176,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
         ".pha_c_acceptance",
         "pha_c_acceptance_record_to_dict",
     ),
+    "verify_pha_c_acceptance_record": (
+        ".pha_c_acceptance",
+        "verify_pha_c_acceptance_record",
+    ),
     "PHA_C_TIMELINE_CLAIM_BOUNDARY": (
         ".pha_c_timeline",
         "PHA_C_TIMELINE_CLAIM_BOUNDARY",
@@ -185,6 +196,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "pha_c_event_timeline_to_dict": (
         ".pha_c_timeline",
         "pha_c_event_timeline_to_dict",
+    ),
+    "verify_pha_c_event_timeline": (
+        ".pha_c_timeline",
+        "verify_pha_c_event_timeline",
     ),
     "UPDEEngine": (".engine", "UPDEEngine"),
     "upde_run_omega_schedule": (".engine", "upde_run_omega_schedule"),

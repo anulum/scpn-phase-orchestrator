@@ -46,6 +46,7 @@ __all__ = [
     "PHACTimelineRecord",
     "build_pha_c_event_timeline",
     "pha_c_event_timeline_to_dict",
+    "verify_pha_c_event_timeline",
 ]
 
 
@@ -163,6 +164,41 @@ def _as_time_vector(times: ArrayLike | None, *, sample_count: int) -> FloatArray
 def _sha256_json(payload: object) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+_SHA256_HEX_DIGITS = frozenset("0123456789abcdef")
+
+
+def _validate_sha256_hex(value: object, *, name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(char not in _SHA256_HEX_DIGITS for char in value)
+    ):
+        raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+    return value
+
+
+def _validate_record_bool(value: object, *, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError(f"{name} must be a boolean")
+    return value
+
+
+def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be an integer")
+    parsed = int(value)
+    if parsed < minimum:
+        raise ValueError(f"{name} must be at least {minimum}")
+    return parsed
+
+
+def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
+    parsed = _validate_real_scalar(value, name=name)
+    if parsed < 0.0:
+        raise ValueError(f"{name} must be non-negative")
+    return parsed
 
 
 def _vector_sha256(values: FloatArray) -> str:
@@ -408,3 +444,151 @@ def pha_c_event_timeline_to_dict(
     )
     payload["timeline_sha256"] = timeline.timeline_sha256
     return payload
+
+
+def verify_pha_c_event_timeline(
+    timeline: PHACTimelineRecord,
+) -> PHACTimelineRecord:
+    """Replay and validate a PHA-C event timeline hash and safety boundary."""
+
+    if not isinstance(timeline, PHACTimelineRecord):
+        raise ValueError("timeline must be a PHACTimelineRecord")
+    _validate_sha256_hex(timeline.time_state_sha256, name="time_state_sha256")
+    _validate_sha256_hex(
+        timeline.sample_records_sha256,
+        name="sample_records_sha256",
+    )
+    _validate_sha256_hex(
+        timeline.transition_table_sha256,
+        name="transition_table_sha256",
+    )
+    timeline_hash = _validate_sha256_hex(
+        timeline.timeline_sha256,
+        name="timeline_sha256",
+    )
+    if timeline.claim_boundary != PHA_C_TIMELINE_CLAIM_BOUNDARY:
+        raise ValueError("claim_boundary must be the PHA-C timeline review boundary")
+    if timeline.evidence_kind != PHA_C_TIMELINE_EVIDENCE_KIND:
+        raise ValueError("evidence_kind must be deterministic timeline evidence")
+    if (
+        _validate_record_bool(
+            timeline.execution_disabled,
+            name="execution_disabled",
+        )
+        is not True
+    ):
+        raise ValueError("execution_disabled must be true")
+    if _validate_record_bool(timeline.actuating, name="actuating") is not False:
+        raise ValueError("actuating must be false")
+
+    sample_count = _validate_record_int(
+        timeline.sample_count,
+        name="sample_count",
+        minimum=1,
+    )
+    _validate_record_int(timeline.oscillator_count, name="oscillator_count", minimum=1)
+    required = _validate_record_int(
+        timeline.required_consecutive_samples,
+        name="required_consecutive_samples",
+        minimum=1,
+    )
+    count_fields = (
+        "lock_sample_count",
+        "phase_lock_sample_count",
+        "spatial_lock_sample_count",
+        "lock_loss_count",
+        "reset_count",
+        "max_consecutive_lock_samples",
+    )
+    counts = {
+        field: _validate_record_int(getattr(timeline, field), name=field, minimum=0)
+        for field in count_fields
+    }
+    for field in (
+        "lock_sample_count",
+        "phase_lock_sample_count",
+        "spatial_lock_sample_count",
+        "max_consecutive_lock_samples",
+    ):
+        if counts[field] > sample_count:
+            raise ValueError(f"{field} cannot exceed sample_count")
+    for field in ("lock_loss_count", "reset_count"):
+        if counts[field] > max(sample_count - 1, 0):
+            raise ValueError(f"{field} cannot exceed the transition count")
+    final_lock_achieved = _validate_record_bool(
+        timeline.final_lock_achieved,
+        name="final_lock_achieved",
+    )
+    if counts["max_consecutive_lock_samples"] < required and final_lock_achieved:
+        raise ValueError("final_lock_achieved requires the consecutive threshold")
+
+    start_time = _validate_real_scalar(timeline.start_time, name="start_time")
+    end_time = _validate_real_scalar(timeline.end_time, name="end_time")
+    duration_s = _validate_nonnegative_record_scalar(
+        timeline.duration_s,
+        name="duration_s",
+    )
+    if end_time < start_time:
+        raise ValueError("end_time must be greater than or equal to start_time")
+    if abs(duration_s - (end_time - start_time)) > 1.0e-12:
+        raise ValueError("duration_s must equal end_time - start_time")
+    first_lock_index = _validate_record_int(
+        timeline.first_lock_index,
+        name="first_lock_index",
+        minimum=-1,
+    )
+    first_lock_observed = _validate_record_bool(
+        timeline.first_lock_observed,
+        name="first_lock_observed",
+    )
+    first_lock_time = _validate_real_scalar(
+        timeline.first_lock_time,
+        name="first_lock_time",
+    )
+    if first_lock_observed:
+        if first_lock_index < 0 or first_lock_index >= sample_count:
+            raise ValueError("first_lock_index must refer to an observed sample")
+        if first_lock_time < start_time or first_lock_time > end_time:
+            raise ValueError("first_lock_time must be inside the timeline range")
+    else:
+        if first_lock_index != -1:
+            raise ValueError("first_lock_index must be -1 when no lock is observed")
+        if first_lock_time != 0.0:
+            raise ValueError("first_lock_time must be 0.0 when no lock is observed")
+
+    for field in (
+        "max_phase_dispersion_rad",
+        "max_spatial_dispersion_m",
+        "max_distance_to_reference_m",
+        "phase_tol_rad",
+        "spatial_tol_m",
+    ):
+        _validate_nonnegative_record_scalar(getattr(timeline, field), name=field)
+    order_parameter = _validate_nonnegative_record_scalar(
+        timeline.min_phase_order_parameter,
+        name="min_phase_order_parameter",
+    )
+    if order_parameter > 1.0 + 1.0e-12:
+        raise ValueError("min_phase_order_parameter must be inside [0, 1]")
+    multiplier = _validate_real_scalar(
+        timeline.tolerance_profile_multiplier,
+        name="tolerance_profile_multiplier",
+    )
+    if multiplier <= 0.0:
+        raise ValueError("tolerance_profile_multiplier must be positive")
+    if (
+        not isinstance(timeline.tolerance_profile_name, str)
+        or not timeline.tolerance_profile_name
+    ):
+        raise ValueError("tolerance_profile_name must be a non-empty string")
+    for field in ("reference_phase", "reference_point"):
+        _validate_real_scalar(getattr(timeline, field), name=field)
+
+    payload = pha_c_event_timeline_to_dict(timeline)
+    replay_payload = dict(payload)
+    replay_payload.pop("timeline_sha256")
+    if _sha256_json(replay_payload) != timeline_hash:
+        raise ValueError(
+            "timeline_sha256 does not match the canonical timeline payload",
+        )
+    return timeline
