@@ -3,6 +3,20 @@
 SPO supports the full lifecycle from exploratory analysis to
 production deployment. This guide traces the path.
 
+## Transition Principle
+
+Moving from notebook analysis to production is not a command swap; it is a
+control-boundary upgrade.
+
+The notebook phase optimises understanding and hypotheses. The production phase
+adds three non-negotiable properties:
+
+- **Reproducibility**: every result can be re-run from deterministic inputs,
+- **Reviewability**: every intervention path has explicit policy and rate controls,
+- **Auditability**: every run can be replayed and traced to decision events.
+
+Treat the transition itself as risk control, not convenience plumbing.
+
 ## Stage 1: Explore (Notebook)
 
 Start with a Jupyter notebook. Load data, extract phases, run the engine.
@@ -85,7 +99,23 @@ R(t), regime transitions, and per-layer coherence.
 - **Health checks**: `/api/health` verifies engine + R + regime subsystems
 - **Rate limiting**: actuation projector prevents discontinuous jumps
 
-## Stage 6: Scale
+### Stage 6: Evidence Gate for Live Use
+
+Before routing a run to any external control surface, keep the following checks
+as hard requirements:
+
+- fixed seed and deterministic inputs recorded in metadata,
+- full CLI `spo validate` success on the deployment binding,
+- replay verification of at least one pre-prod run,
+- policy and safety boundaries confirmed for the target regime profile,
+- health and metrics continuity for the intended traffic pattern.
+
+If any one of these checks is missing, keep that surface in review-only mode.
+
+This gate is the operational difference between a technical demo and an
+auditable deployment path.
+
+## Stage 7: Scale
 
 - **Single instance**: handles N=1000+ oscillators at <1ms/step
 - **Rust kernel**: 3-9x faster than pure Python for large N

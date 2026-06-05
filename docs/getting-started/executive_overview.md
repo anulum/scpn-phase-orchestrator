@@ -111,3 +111,19 @@ proposal, replay log, and benchmark context.
 That is most valuable in domains where drift, lock-in, cascade, or unsafe
 control can become expensive: energy, fusion, industrial operations, clinical
 research, robotics, aerospace, cloud platforms, and high-value digital twins.
+
+## Why this matters commercially
+
+The commercial distinction is not only performance speed. It is the reduction of
+decision ambiguity in synchrony control. Many teams already have partial
+telemetry, partial models, and partial evidence, then use separate tools to fill
+gaps under incident pressure.
+
+SPO compresses that pre-production path by making three assumptions explicit
+before any control proposal is considered:
+
+1. a bounded, auditable phase contract (`theta`, `omega`, `K`, `alpha`, `zeta`, `Psi`),
+2. a measurable coherence and coupling evidence trail (`R`, `PLV`, `PAC`, `TE`, `Lyapunov`, etc.),
+3. a replayable proposal path with limits and human review surfaces.
+
+That shifts the default from "ad-hoc tuning" to "evidence-backed iteration", which is usually the key commercial difference in safety-critical and regulated settings.

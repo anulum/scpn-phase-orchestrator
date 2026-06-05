@@ -1,5 +1,23 @@
 # Production Deployment
 
+## Production Purpose and Risk Scope
+
+This guide is for teams promoting SPO from a controlled simulation path to a
+reviewable service path. The key control objective is not speed first, but
+failure predictability and controlled blast radius.
+
+SPO is suitable for production only when each layer in the path has clear
+evidence and boundaries:
+
+- container and dependency immutability for repeatable startup,
+- explicit health checks for simulator and regime state,
+- bounded actuator interfaces and explicit rate limits,
+- durable audit logging plus replay checks,
+- clear separation between simulation outputs and any external write action.
+
+That structure is what makes the deployment claim auditable instead of merely
+operational.
+
 ## Docker
 
 The repository includes a production-ready `Dockerfile` with three stages:

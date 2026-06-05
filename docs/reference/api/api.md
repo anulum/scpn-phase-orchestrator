@@ -13,6 +13,23 @@ for notebooks, services, validation scripts, and downstream projects that need a
 reviewed binding specification without invoking the `spo` command-line
 interface.
 
+## Positioning (Why this facade exists)
+
+The facade is intentionally minimal because its purpose is to make phase-control
+logic embeddable without inheriting full CLI execution complexity.
+
+Use this for:
+
+- product teams that already own orchestration and only need deterministic local
+  runs,
+- application code that requires a stable import surface,
+- reproducibility workflows where explicit replay metadata and bounded state are
+  required.
+
+Avoid using it when you need hardware dispatch, policy execution, or service
+topology management. Those concerns remain on CLI/research-surface flows with
+their own guardrails.
+
 The facade is intentionally narrower than the CLI and narrower than the full
 research package. It accepts a `BindingSpec`, can load a reviewed
 `binding_spec.yaml`, validates the binding before execution, executes local

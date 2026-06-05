@@ -3,6 +3,21 @@
 The `nn` module exposes Kuramoto phase dynamics as a differentiable building block
 for JAX-based machine learning pipelines.
 
+## Strategic Use Case for Differentiability
+
+This section is for teams that need gradient-based design or inference, not only
+forward simulation.
+
+Use this stack when you need one of the following:
+
+- infer coupling structure from observed trajectories,
+- enforce structure under wiring or cost constraints,
+- train residual models around a physical oscillator backbone,
+- compare topology hypotheses with differentiable ranking metrics.
+
+In those settings, JAX backprop is the mechanism; phase-coupling dynamics remain
+the physical contract.
+
 ## Installation
 
 ```bash

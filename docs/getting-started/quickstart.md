@@ -2,6 +2,22 @@
 
 Five minutes from install to synchronized oscillators.
 
+## Why Start Here
+
+This quickstart exists to create one verifiable proof point before any broader
+integration: a minimal run that is deterministic, auditable, and easy to
+reproduce.
+
+For teams evaluating SPO, this page answers three immediate questions:
+
+- Can our environment execute a coupled-oscillator simulation end-to-end?
+- Do we get coherent outputs from known initial conditions?
+- Can we verify the same output with fixed seeds and immutable input files?
+
+Those three checks are intentionally practical. If they pass, the same domain
+can move into CLI workflows, policy review, and production staging using the
+later pages.
+
 ## 1. Install
 
 ```bash
