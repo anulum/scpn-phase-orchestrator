@@ -36,3 +36,17 @@ trusted for prediction in the differentiable path.
   cards and replay-based diagnostics across environments.
 - The ridge predict path is used where explainability and compactness are as
   important as raw predictive accuracy.
+
+## Deployment interpretation
+
+Reservoir blocks are most often used where teams need a concise, differentiable
+state representation with minimal overhead. This contract defines that interface so
+policy experiments and forecasting experiments stay aligned on the same feature
+semantics.
+
+In real deployments, this consistency is less about model novelty and more about
+repeatability across hardware and environment changes. The contract supports that by
+pinning the feature map shape and the readout expectations.
+
+Operationally, that means regression tests can validate not only one-off prediction
+accuracy, but also the structural contract used by monitoring and replay tools.

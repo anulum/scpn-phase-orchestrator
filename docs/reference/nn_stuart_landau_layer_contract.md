@@ -34,3 +34,16 @@ alignment.
   graph to monitor convergence in both state dimensions.
 - Trajectory retention is essential for evidence replay in release audits because it
   preserves temporal shape alignment from discovery through replay.
+
+## Deployment interpretation
+
+Amplitude-sensitive control paths are typically introduced only after phase-only
+experiments establish a baseline. This contract protects that migration by defining
+exactly which dimensional guarantees must hold when the extra state enters the stack.
+
+The contract is operationally useful because it makes phase and amplitude states
+first-class peers; policy graphs can reason about divergence, damping, and lock-in
+without introducing a parallel interface for amplitude fields.
+
+The trajectory contract also prevents silent replay mismatches: every training,
+validation, or audit run can be aligned on both phase and amplitude timelines.

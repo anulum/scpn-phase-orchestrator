@@ -35,3 +35,16 @@ differences.
   separate model-complexity experiments from base-pairwise baseline experiments.
 - Shape invariants and deterministic trajectory output keep higher-order terms
   auditable against baseline pairwise runs.
+
+## Practical deployment notes
+
+The simplicial contract is primarily a complexity dial: teams do not switch on
+`sigma2` by default. They activate it when baseline pairwise dynamics fail to match
+cross-time coherence structure in the target domain.
+
+From an operations perspective, the strict difference contract between
+`sigma2=0` and `sigma2!=0` avoids the most common source of ambiguity:
+whether observed differences are from model structure or from random run variance.
+
+When this contract is respected, higher-order coupling becomes a controlled
+experiment variable rather than a hidden change in numerical behavior.

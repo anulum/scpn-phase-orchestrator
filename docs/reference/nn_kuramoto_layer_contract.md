@@ -34,3 +34,18 @@ time-series inspection, not just end state values.
   Rust, and experimental language adapters without per-call branching.
 - Mask-aware finite behaviour is the guard rail for sparse-graph studies where
   topology is inferred automatically and may contain structured exclusions.
+
+## Operational narrative
+
+In practice, teams adopt this contract when they need a single canonical layer
+that can be inserted into policy, optimization, or replay tooling without
+rebuilding control glue.
+
+The trajectory mode is not an optional analytics feature in production; it is the
+artifact most operations teams use to prove that a control adjustment produced the
+claimed state path over time. This is why the contract is explicit about output
+dimensions and mask-path finiteness.
+
+When this contract is upheld, the orchestrator can route Kuramoto experiments
+through either research-oriented training runs or strict deployment runs with the
+same shape expectations.

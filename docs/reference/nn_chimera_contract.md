@@ -35,3 +35,16 @@ interpretation paths.
   which protects downstream action logic from ambiguous telemetry.
 - Bounded outputs reduce the chance that monitor fusion layers accidentally
   interpret numerical drift as structural drift.
+
+## Operator interpretation
+
+Partial synchrony diagnostics are often used in escalation decisions where global
+coherence is not yet a sufficient signal. Teams may still need a coherent subgroup
+to stabilise while preserving other modes that carry important structure.
+
+This contract therefore serves as a semantic guard around ambiguous transitions:
+it gives strict rules so alerting and supervisor logic can separate mixed regimes
+without forcing a binary interpretation too early.
+
+The bounded and disjoint outputs are what make it safe to use in chained monitoring
+pipelines, because each alarm signal maps cleanly to a single interpretation.

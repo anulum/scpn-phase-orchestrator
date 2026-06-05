@@ -34,3 +34,16 @@ topologies.
   components.
 - Deterministic ordering of the spectrum is required for reproducible stability
   reports across audit snapshots.
+
+## Why this contract sits in the front of safety-critical loops
+
+Spectral checks are usually the earliest diagnostic in this stack because they
+signal whether a coupling graph can sustain coherent control action before policy
+logic is allowed to act.
+
+In a production lane, this contract gives an invariant baseline: topology-related
+failure modes are bounded through explicit eigenvalue ordering and disconnected-graph
+fallbacks, so downstream policy code does not consume unstable intermediate values.
+
+By keeping this contract narrowly defined and machine-testable, the same module
+can serve both offline science experiments and regulated deployment evidence trails.

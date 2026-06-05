@@ -67,3 +67,17 @@ See [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Quality Gating and § Regime Threshol
 - The empty-series rule (zero with empty-empty, hard reject empty/non-empty mismatch)
   is intentionally strict to prevent silent invalid windows from entering a control
   decision.
+
+## Operational interpretation
+
+This metric surface is the control system’s alarm grammar. `R` and `PLV` are not
+standalone analysis conveniences; they are decision features that feed action
+projection thresholds.
+
+The hard-guarded handling of empty windows and mask alignment is a practical safety
+measure. It avoids control loops making decisions from malformed telemetry, which is a
+common source of false actuation in production monitoring.
+
+`LockSignatures` exists to preserve explainability: each lock event can be traced to
+its source and target layers with numeric context, instead of being treated as a
+single opaque score.

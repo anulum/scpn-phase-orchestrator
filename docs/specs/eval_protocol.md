@@ -56,3 +56,24 @@ at 0.7, 100-step default) are empirical engineering judgements calibrated on
 the bundled domainpacks. They are not derived from analytical results.
 See [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Evaluation Protocol for the full
 constant registry.
+
+## Why this protocol is structured this way
+
+The protocol is arranged to separate measurement, control action, and evidence
+generation into deterministic steps. That structure allows reproducible comparisons
+between baseline runs and control-enhanced runs.
+
+The default 100-step window is an engineering benchmark, not a theorem: it is
+chosen to expose divergence or convergence tendencies quickly while keeping replay
+time practical in CI and integration checks.
+
+The replay rule makes this protocol production-grade because it requires the same
+audit trail to regenerate the exact trajectory, rather than only reproducing a final
+summary score.
+
+## Operational usage
+
+- Use `eval_protocol` for release gating before promoting a configuration to shared
+  runtime.
+- Run ablations to confirm each control subsystem contributes to the target metrics
+  instead of masking regressions in another module.
