@@ -101,7 +101,9 @@ MIF/FRC consumers can review what was observed and what was explicitly budgeted.
 The phase side is bound to the Lean `PhaseBudgetBounds.budgetCertificate`
 predicate and `phase_budget_certificate_discharges_phase_lock` theorem, keeping
 phase-drift review inside the same fixed-point proof lane as the spatial
-merge-window budget.
+merge-window budget. Acceptance benchmark records expose
+`formal_obligation_phase_budget_discharged` so theorem metadata and arithmetic
+discharge must agree before the PHA-C row passes.
 
 This order keeps the first experience practical while making the evidence
 boundary visible from the start.

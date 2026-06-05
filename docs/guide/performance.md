@@ -334,6 +334,9 @@ before the phase-lock margin is accepted. The phase-budget side names Lean
 `PhaseBudgetBounds.budgetCertificate` and
 `phase_budget_certificate_discharges_phase_lock`, so downstream reviewers can
 audit the phase certificate independently of the spatial Gronwall certificate.
+The benchmark payload now also records `formal_obligation_phase_budget_discharged`
+so the local-regression gate fails if theorem metadata is present but the
+reviewed phase budget does not actually discharge.
 The same manifest now records the
 `SPOFormal.Continuous`
 horizon certificate: per-second drive-rate sum, horizon-drive replay,

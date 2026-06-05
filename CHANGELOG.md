@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added explicit `phase_budget_discharged` replay to
+  `PHACKinematicProofObligation` and PHA-C acceptance benchmarks so Lean
+  phase-budget theorem metadata must agree with the fixed-point certificate
+  arithmetic.
 - Added Lean `PhaseBudgetBounds` for PHA-C fixed-point phase-lock budgets,
   including theorem metadata in `PHACKinematicProofObligation`, smoke proof
   coverage, benchmark acceptance fields, and API documentation updates.

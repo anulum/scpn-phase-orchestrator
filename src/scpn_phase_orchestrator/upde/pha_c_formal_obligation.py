@@ -134,6 +134,7 @@ class PHACKinematicProofObligation:
     configured_phase_drift_bound_units: int
     phase_budget_units: int
     phase_margin_units: int
+    phase_budget_discharged: bool
     observed_velocity_step_units: int
     kinematic_residual_units: int
     path_length_units: int
@@ -334,6 +335,7 @@ def _dict_without_record_hash(
         ),
         "phase_budget_units": obligation.phase_budget_units,
         "phase_margin_units": obligation.phase_margin_units,
+        "phase_budget_discharged": obligation.phase_budget_discharged,
         "observed_velocity_step_units": obligation.observed_velocity_step_units,
         "kinematic_residual_units": obligation.kinematic_residual_units,
         "path_length_units": obligation.path_length_units,
@@ -528,6 +530,7 @@ def build_pha_c_kinematic_proof_obligation(
     )
     phase_budget_units = phase_dispersion_units + configured_phase_drift_units
     phase_margin_units = phase_tolerance_units - phase_budget_units
+    phase_budget_discharged = phase_margin_units >= 0
     observed_velocity_step_units = _nonnegative_units(
         verified_record.max_abs_velocity_m_per_s * verified_record.dt,
         scale=scale_m,
@@ -541,6 +544,7 @@ def build_pha_c_kinematic_proof_obligation(
     discharged = (
         window_margin_units >= 0
         and phase_margin_units >= 0
+        and phase_budget_discharged
         and continuous_envelope_discharged
         and verified_record.execution_disabled
         and not verified_record.actuating
@@ -595,6 +599,7 @@ def build_pha_c_kinematic_proof_obligation(
         "configured_phase_drift_bound_units": configured_phase_drift_units,
         "phase_budget_units": phase_budget_units,
         "phase_margin_units": phase_margin_units,
+        "phase_budget_discharged": phase_budget_discharged,
         "observed_velocity_step_units": observed_velocity_step_units,
         "kinematic_residual_units": observed_residual_units,
         "path_length_units": path_length_units,
@@ -712,6 +717,10 @@ def verify_pha_c_kinematic_proof_obligation(
         obligation.phase_margin_units,
         name="phase_margin_units",
         minimum=-10**18,
+    )
+    _validate_bool(
+        obligation.phase_budget_discharged,
+        name="phase_budget_discharged",
     )
     _validate_bool(
         obligation.continuous_envelope_discharged,
@@ -871,9 +880,14 @@ def verify_pha_c_kinematic_proof_obligation(
         raise ValueError(
             "phase_margin_units must match phase tolerance minus phase budget",
         )
+    expected_phase_budget_discharged = expected_phase_margin >= 0
+    if obligation.phase_budget_discharged != expected_phase_budget_discharged:
+        raise ValueError(
+            "phase_budget_discharged does not match phase certificate math",
+        )
     expected_discharged = (
         expected_margin >= 0
-        and expected_phase_margin >= 0
+        and expected_phase_budget_discharged
         and expected_continuous_discharged
         and obligation.execution_disabled
         and not obligation.actuating

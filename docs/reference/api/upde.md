@@ -548,7 +548,9 @@ The phase drift bound is recorded separately as
 before the phase margin is accepted. The manifest now also names the Lean
 `PhaseBudgetBounds.budgetCertificate` predicate and
 `phase_budget_certificate_discharges_phase_lock` theorem for that phase budget.
-This keeps FRC or MIF specialisations from hiding residual uncertainty inside
-the relative-velocity term or phase uncertainty inside replay dispersion.
+The `phase_budget_discharged` field must replay that theorem condition exactly
+before the combined proof obligation can discharge. This keeps FRC or MIF
+specialisations from hiding residual uncertainty inside the relative-velocity
+term or phase uncertainty inside replay dispersion.
 
 ::: scpn_phase_orchestrator.upde.pha_c_formal_obligation

@@ -149,6 +149,7 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     assert obligation.phase_margin_units == (
         obligation.phase_tolerance_units - obligation.phase_budget_units
     )
+    assert obligation.phase_budget_discharged
     assert obligation.phase_margin_units >= 0
     assert obligation.observed_velocity_step_units == _ceil_units(
         record.max_abs_velocity_m_per_s * record.dt,
@@ -229,6 +230,7 @@ def test_kinematic_obligation_supports_predictive_phase_drift_slack() -> None:
     assert obligation.phase_margin_units == (
         obligation.phase_tolerance_units - obligation.phase_budget_units
     )
+    assert obligation.phase_budget_discharged
     assert obligation.phase_margin_units >= 0
     assert obligation.proof_obligations_discharged
     assert verify_pha_c_kinematic_proof_obligation(obligation) is obligation
@@ -388,6 +390,14 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
                 predictive,
                 phase_margin_units=predictive.phase_margin_units + 1,
             ),
+        )
+    with pytest.raises(ValueError, match="phase_budget_discharged"):
+        predictive = build_pha_c_kinematic_proof_obligation(
+            _record(),
+            phase_drift_bound_rad=2.5e-3,
+        )
+        verify_pha_c_kinematic_proof_obligation(
+            replace(predictive, phase_budget_discharged=False),
         )
     with pytest.raises(ValueError, match="gronwall_budget_units"):
         verify_pha_c_kinematic_proof_obligation(

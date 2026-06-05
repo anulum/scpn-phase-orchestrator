@@ -63,6 +63,7 @@ runtime envelope into integer units:
 | `configured_phase_drift_bound_units` | explicit predictive phase-drift slack, default `0` | phase-bound provenance |
 | `phase_budget_units` | observed dispersion plus configured phase drift | phase-lock budget |
 | `phase_margin_units` | phase tolerance minus phase budget | phase-lock certificate margin |
+| `phase_budget_discharged` | `phase_budget_units <= phase_tolerance_units` | `PhaseBudgetBounds.budgetCertificate` |
 
 The default is a replay certificate. The observed spatial dispersion already
 includes the accepted moving-frame trajectory, while the residual term proves
@@ -85,6 +86,8 @@ budget rather than from replay dispersion alone. The manifest names the Lean
 `PhaseBudgetBounds.budgetCertificate` predicate and
 `phase_budget_certificate_discharges_phase_lock` theorem so the phase budget is
 reviewed by a formal fixed-point mirror instead of only by Python arithmetic.
+The Boolean `phase_budget_discharged` must match that theorem condition exactly
+before the combined PHA-C proof obligations can discharge.
 
 For non-zero gain, the runtime manifest replays the Lean recurrence
 `previous + gain * previous + drive`, records the terminal
@@ -145,6 +148,8 @@ verify_pha_c_kinematic_proof_obligation(obligation)
   drive bound;
 - configured phase-drift provenance, phase-budget replay, and phase tolerance
   margin consistency;
+- `phase_budget_discharged` replay against the Lean
+  `PhaseBudgetBounds.budgetCertificate` condition;
 - lower-case SHA-256 fields; and
 - canonical manifest hash replay.
 

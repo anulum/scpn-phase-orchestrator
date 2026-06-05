@@ -320,6 +320,9 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         ),
         "formal_obligation_phase_budget_units": obligation.phase_budget_units,
         "formal_obligation_phase_margin_units": obligation.phase_margin_units,
+        "formal_obligation_phase_budget_discharged": int(
+            obligation.phase_budget_discharged,
+        ),
         "formal_obligation_phase_theorem": obligation.phase_theorem,
         "formal_obligation_theorem": obligation.lean_theorem,
         "formal_obligation_continuous_theorem": obligation.continuous_theorem,
@@ -437,6 +440,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 ),
                 "formal_obligation_phase_budget_units": obligation.phase_budget_units,
                 "formal_obligation_phase_margin_units": obligation.phase_margin_units,
+                "formal_obligation_phase_budget_discharged": int(
+                    obligation.phase_budget_discharged,
+                ),
                 "formal_obligation_phase_theorem": obligation.phase_theorem,
                 "formal_obligation_continuous_theorem": (
                     obligation.continuous_theorem
@@ -496,6 +502,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["formal_obligation_phase_budget_units"]
         <= contracts["formal_obligation_phase_tolerance_units"]
         and contracts["formal_obligation_phase_margin_units"] >= 0
+        and contracts["formal_obligation_phase_budget_discharged"] == 1
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
@@ -589,6 +596,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 ),
                 "formal_obligation_phase_margin_units": (
                     record["formal_obligation_phase_margin_units"]
+                ),
+                "formal_obligation_phase_budget_discharged": (
+                    record["formal_obligation_phase_budget_discharged"]
                 ),
                 "formal_obligation_phase_theorem": (
                     record["formal_obligation_phase_theorem"]
@@ -693,6 +703,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         ],
         "formal_obligation_phase_margin_units": contracts[
             "formal_obligation_phase_margin_units"
+        ],
+        "formal_obligation_phase_budget_discharged": contracts[
+            "formal_obligation_phase_budget_discharged"
         ],
         "formal_obligation_phase_theorem": contracts["formal_obligation_phase_theorem"],
         "formal_obligation_theorem": contracts["formal_obligation_theorem"],
