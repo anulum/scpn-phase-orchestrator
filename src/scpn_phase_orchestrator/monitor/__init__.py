@@ -38,6 +38,7 @@ __all__ = [
     "IntegratedInformationResult",
     "LyapunovGuard",
     "LyapunovState",
+    "MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE",
     "MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS",
     "MergeReport",
     "MergeWindowToleranceProfile",
@@ -191,6 +192,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
         "MergeWindowToleranceProfile",
     ),
     "MergeWindowMonitor": (".merge_window", "MergeWindowMonitor"),
+    "MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE": (
+        ".merge_window",
+        "MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE",
+    ),
     "MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS": (
         ".merge_window",
         "MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS",

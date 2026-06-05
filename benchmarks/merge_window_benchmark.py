@@ -28,6 +28,7 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _merge_window_rust,
 )
 from scpn_phase_orchestrator.monitor.merge_window import (
+    MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE,
     MergeReport,
     evaluate_merge_window,
 )
@@ -127,6 +128,32 @@ def _report_max_abs_error(got: MergeReport, reference: MergeReport) -> float:
     return max(numeric_error, float(discrete_error))
 
 
+def _margin_equation_contracts(
+    report: MergeReport,
+    *,
+    phase_tol_rad: float,
+    spatial_tol_m: float,
+) -> dict[str, object]:
+    phase_margin_equation_validated = (
+        abs(report.phase_margin_rad - (phase_tol_rad - report.phase_dispersion_rad))
+        <= MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE
+    )
+    spatial_margin_equation_validated = (
+        abs(report.spatial_margin_m - (spatial_tol_m - report.spatial_dispersion_m))
+        <= MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE
+    )
+    return {
+        "phase_margin_equation_validated": int(phase_margin_equation_validated),
+        "spatial_margin_equation_validated": int(
+            spatial_margin_equation_validated
+        ),
+        "signed_margin_equations_validated": int(
+            phase_margin_equation_validated and spatial_margin_equation_validated
+        ),
+        "margin_replay_tolerance": MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE,
+    }
+
+
 def _reference_contracts() -> dict[str, Any]:
     wrapped = evaluate_merge_window(
         np.array([2.0 * np.pi - 0.004, 0.003], dtype=np.float64),
@@ -172,6 +199,41 @@ def _reference_contracts() -> dict[str, Any]:
         spatial_tol_m=0.002,
         required_consecutive_samples=1,
     )
+    margin_contract_records = (
+        _margin_equation_contracts(
+            consecutive_pass,
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+        ),
+        _margin_equation_contracts(
+            phase_fail,
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+        ),
+        _margin_equation_contracts(
+            spatial_fail,
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+        ),
+        _margin_equation_contracts(
+            profile_pass,
+            phase_tol_rad=0.03,
+            spatial_tol_m=0.006,
+        ),
+        _margin_equation_contracts(
+            profile_fail,
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+        ),
+    )
+    phase_margin_equation_validated = all(
+        int(contracts["phase_margin_equation_validated"]) == 1
+        for contracts in margin_contract_records
+    )
+    spatial_margin_equation_validated = all(
+        int(contracts["spatial_margin_equation_validated"]) == 1
+        for contracts in margin_contract_records
+    )
     return {
         "wrapped_phase_locked": bool(wrapped.phase_locked),
         "wrapped_phase_dispersion_rad": wrapped.phase_dispersion_rad,
@@ -199,6 +261,12 @@ def _reference_contracts() -> dict[str, Any]:
         "consecutive_gate_passes_at_threshold": int(consecutive_pass.lock_achieved),
         "buffer_profile_accepts_within_3x": int(profile_pass.lock_achieved),
         "explicit_profile_rejects_same_sample": int(not profile_fail.lock_achieved),
+        "phase_margin_equation_validated": int(phase_margin_equation_validated),
+        "spatial_margin_equation_validated": int(spatial_margin_equation_validated),
+        "signed_margin_equations_validated": int(
+            phase_margin_equation_validated and spatial_margin_equation_validated
+        ),
+        "margin_replay_tolerance": MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE,
     }
 
 
@@ -221,6 +289,11 @@ def benchmark_merge_window_polyglot_parity_gate(
         tolerance = PARITY_TOLERANCES[backend]
         elapsed, got = _bench_backend(backend, phases, positions, calls)
         error = _report_max_abs_error(got, reference)
+        margin_contracts = _margin_equation_contracts(
+            got,
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+        )
         passed = error <= tolerance
         parity_pass_count += int(passed)
         records.append(
@@ -229,6 +302,9 @@ def benchmark_merge_window_polyglot_parity_gate(
                 "status": "available",
                 "ms_per_call": (elapsed / calls) * 1000.0,
                 "report_sha256": _report_sha256(got),
+                "phase_margin_rad": got.phase_margin_rad,
+                "spatial_margin_m": got.spatial_margin_m,
+                **margin_contracts,
                 "max_abs_error": error,
                 "tolerance": tolerance,
                 "parity_passed": passed,
@@ -245,6 +321,8 @@ def benchmark_merge_window_polyglot_parity_gate(
         "require_joint_phase_spatial_lock": True,
         "require_tolerance_profile_contract": True,
         "require_signed_margin_contract": True,
+        "require_signed_margin_equations": True,
+        "margin_replay_tolerance": MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE,
         "require_python_reference": True,
         "require_wrapped_phase": True,
     }
@@ -267,6 +345,11 @@ def benchmark_merge_window_polyglot_parity_gate(
         and contracts["consecutive_gate_passes_at_threshold"] == 1
         and contracts["buffer_profile_accepts_within_3x"] == 1
         and contracts["explicit_profile_rejects_same_sample"] == 1
+        and contracts["signed_margin_equations_validated"] == 1
+        and all(
+            int(record["signed_margin_equations_validated"]) == 1
+            for record in records
+        )
     )
     benchmark_payload = {
         "n": n,
@@ -320,6 +403,16 @@ def benchmark_merge_window_polyglot_parity_gate(
         "explicit_profile_rejects_same_sample": contracts[
             "explicit_profile_rejects_same_sample"
         ],
+        "phase_margin_equation_validated": contracts[
+            "phase_margin_equation_validated"
+        ],
+        "spatial_margin_equation_validated": contracts[
+            "spatial_margin_equation_validated"
+        ],
+        "signed_margin_equations_validated": contracts[
+            "signed_margin_equations_validated"
+        ],
+        "margin_replay_tolerance": contracts["margin_replay_tolerance"],
         "benchmark_sha256": benchmark_sha,
         "benchmark_evidence_kind": BENCHMARK_EVIDENCE_KIND,
         "isolation_method": "none",

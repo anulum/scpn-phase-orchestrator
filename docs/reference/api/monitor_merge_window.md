@@ -21,6 +21,7 @@ alone is not enough evidence that the population has spatially merged.
 - Spatial dispersion: `max_i |z_i - z_ref| <= spatial_tol_m`.
 - Signed margins: `phase_margin_rad = phase_tol_rad - phase_dispersion_rad`
   and `spatial_margin_m = spatial_tol_m - spatial_dispersion_m`.
+- Signed-margin replay tolerance: `MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE`.
 - Consecutive gate: both predicates must pass for `required_consecutive_samples`.
 - Default tolerances: `phase_tol_rad=0.01`, `spatial_tol_m=0.002`,
   `required_consecutive_samples=3`.
@@ -78,7 +79,10 @@ source-contract adapter modules are present for parity gates and downstream
 accelerator wiring. The benchmark gate records all declared backend slots and
 labels the local workstation timing data as non-isolated evidence. Adapter
 parity includes the signed margin fields, so a backend cannot pass with only
-boolean lock evidence.
+boolean lock evidence. The benchmark payload also publishes
+`phase_margin_equation_validated`, `spatial_margin_equation_validated`,
+`signed_margin_equations_validated`, and `margin_replay_tolerance`; the gate
+fails unless every declared backend row proves both signed-margin equations.
 
 ```bash
 uv run python benchmarks/merge_window_benchmark.py --parity-gate

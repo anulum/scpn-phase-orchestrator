@@ -297,7 +297,7 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C.4 MergeWindowMonitor | Implemented as `MergeWindowMonitor` with wrapped phase dispersion, axial spatial dispersion, signed phase/spatial safety margins, consecutive joint-lock gating, named `baseline_1x`/`buffer_3x`/`review_5x` tolerance profiles, JSON-safe `MergeReport` evidence, Python plus Rust/Go/Julia/Mojo source-contract surfaces, module-specific fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol as optional accelerators are rebuilt and feed the lock report into downstream PHA-C event/state lanes. |
+| PHA-C.4 MergeWindowMonitor | Implemented as `MergeWindowMonitor` with wrapped phase dispersion, axial spatial dispersion, signed phase/spatial safety margins, explicit signed-margin equation replay under `MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE`, consecutive joint-lock gating, named `baseline_1x`/`buffer_3x`/`review_5x` tolerance profiles, JSON-safe `MergeReport` evidence, Python plus Rust/Go/Julia/Mojo source-contract surfaces, module-specific fail-closed coverage, and a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol as optional accelerators are rebuilt and feed the lock report into downstream PHA-C event/state lanes; native merge-window kernels must preserve the signed-margin equations. |
 
 ## PHA-C event/state handoff status
 

@@ -292,6 +292,10 @@ PYTHONPATH=src python benchmarks/pha_c_acceptance_benchmark.py --parity-gate
 PYTHONPATH=.:src python benchmarks/reference_suite.py
 ```
 
+The merge-window gate checks the upstream PHA-C.4 lock predicate itself:
+wrapped phase dispersion, axial spatial dispersion, consecutive joint-lock
+state, tolerance profiles, and signed-margin equations across Rust, Mojo,
+Julia, Go, and Python source-contract rows.
 The handoff gate binds moving-frame phase/position samples to merge-window
 evidence, Kuramoto order-parameter evidence, source-vector digests, and a
 canonical non-actuating record hash, including signed phase/spatial margins
@@ -314,7 +318,7 @@ timeline rows call `verify_pha_c_event_timeline(...)`, and acceptance rows call
 forged signed margins, malformed SHA-256 fields, unsafe actuation flags, or
 altered claim boundaries even when the original phase/position arrays are no
 longer present.
-Handoff and timeline rows now publish
+Merge-window, handoff, and timeline rows now publish
 `phase_margin_equation_validated`, `spatial_margin_equation_validated`,
 `signed_margin_equations_validated`, and `margin_replay_tolerance`; the
 corresponding gate fails unless every declared backend row proves the same

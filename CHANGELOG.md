@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added explicit signed-margin equation replay to the PHA-C merge-window
+  benchmark gate so phase and spatial lock margins must equal tolerance minus
+  dispersion before merge-window acceptance passes.
 - Added explicit signed-margin equation replay to the PHA-C handoff verifier
   and polyglot benchmark gate so per-sample phase and spatial margins must
   equal tolerance minus dispersion before handoff acceptance passes.

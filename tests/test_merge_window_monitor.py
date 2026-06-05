@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -33,6 +35,7 @@ from scpn_phase_orchestrator.monitor import _merge_window_julia as public_merge_
 from scpn_phase_orchestrator.monitor import _merge_window_mojo as public_merge_mojo
 from scpn_phase_orchestrator.monitor import _merge_window_rust as public_merge_rust
 from scpn_phase_orchestrator.monitor.merge_window import (
+    MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE,
     MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS,
     MergeReport,
     MergeWindowMonitor,
@@ -81,11 +84,11 @@ def test_truth_table_requires_phase_and_spatial_lock() -> None:
         assert report.spatial_locked is spatial_locked
         assert report.phase_margin_rad == pytest.approx(
             0.01 - report.phase_dispersion_rad,
-            abs=1.0e-12,
+            abs=MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE,
         )
         assert report.spatial_margin_m == pytest.approx(
             0.002 - report.spatial_dispersion_m,
-            abs=1.0e-12,
+            abs=MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE,
         )
         assert report.phase_locked is (report.phase_margin_rad >= 0.0)
         assert report.spatial_locked is (report.spatial_margin_m >= 0.0)
@@ -159,6 +162,10 @@ def test_report_serialisation_and_lazy_export() -> None:
     assert monitor_pkg.MergeWindowToleranceProfile is MergeWindowToleranceProfile
     assert monitor_pkg.MergeWindowMonitor is MergeWindowMonitor
     assert monitor_pkg.evaluate_merge_window is evaluate_merge_window
+    assert (
+        monitor_pkg.MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE
+        == MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE
+    )
 
 
 def test_tolerance_profiles_resolve_reviewed_buffers() -> None:
@@ -391,5 +398,11 @@ def test_merge_window_polyglot_benchmark_gate() -> None:
     assert result["buffer_profile_spatial_margin_positive"] == 1
     assert result["explicit_profile_phase_margin_negative"] == 1
     assert result["explicit_profile_spatial_margin_negative"] == 1
+    assert result["phase_margin_equation_validated"] == 1
+    assert result["spatial_margin_equation_validated"] == 1
+    assert result["signed_margin_equations_validated"] == 1
+    assert result["margin_replay_tolerance"] == MERGE_WINDOW_MARGIN_REPLAY_TOLERANCE
+    for record in json.loads(str(result["backend_records_json"])):
+        assert int(record["signed_margin_equations_validated"]) == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
     assert result["production_timing_claim"] == 0
