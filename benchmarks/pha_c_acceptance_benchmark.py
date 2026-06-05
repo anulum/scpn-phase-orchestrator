@@ -38,6 +38,8 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     verify_pha_c_acceptance_record,
 )
 from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
+    PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE,
+    PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM,
     build_pha_c_kinematic_proof_obligation,
     verify_pha_c_kinematic_proof_obligation,
 )
@@ -595,6 +597,13 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         ),
         "require_formal_kinematic_obligation": True,
         "require_formal_acceptance_certificate": True,
+        "require_formal_acceptance_certificate_identity": True,
+        "formal_acceptance_certificate_predicate": (
+            PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
+        ),
+        "formal_acceptance_certificate_theorem": (
+            PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
+        ),
         "max_kinematic_residual_m": 1.0e-12,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
@@ -637,6 +646,10 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         ]
         == 1
         and contracts["formal_obligation_acceptance_certificate_discharged"] == 1
+        and contracts["formal_obligation_acceptance_certificate_predicate"]
+        == PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
+        and contracts["formal_obligation_acceptance_certificate_theorem"]
+        == PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
@@ -660,6 +673,16 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         )
         and all(
             int(record["formal_obligation_acceptance_certificate_discharged"]) == 1
+            for record in records
+        )
+        and all(
+            record["formal_obligation_acceptance_certificate_predicate"]
+            == PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
+            for record in records
+        )
+        and all(
+            record["formal_obligation_acceptance_certificate_theorem"]
+            == PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
             for record in records
         )
         and all(

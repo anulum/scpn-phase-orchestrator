@@ -42,6 +42,10 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     pha_c_acceptance_record_to_dict,
     verify_pha_c_acceptance_record,
 )
+from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
+    PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE,
+    PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM,
+)
 
 MODULE_LINKAGE_PATHS = (
     "scpn_phase_orchestrator.upde.pha_c_acceptance",
@@ -436,6 +440,12 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["formal_obligation_phase_theorem"] == (
         "phase_budget_certificate_discharges_phase_lock"
     )
+    assert result["formal_obligation_acceptance_certificate_predicate"] == (
+        PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
+    )
+    assert result["formal_obligation_acceptance_certificate_theorem"] == (
+        PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
+    )
     assert result["formal_obligation_theorem"] == (
         "budget_certificate_discharges_budget"
     )
@@ -458,6 +468,16 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     )
     assert all(
         int(record["formal_obligation_discharged"]) == 1
+        for record in backend_records
+    )
+    assert all(
+        record["formal_obligation_acceptance_certificate_predicate"]
+        == PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
+        for record in backend_records
+    )
+    assert all(
+        record["formal_obligation_acceptance_certificate_theorem"]
+        == PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
         for record in backend_records
     )
     assert all(
