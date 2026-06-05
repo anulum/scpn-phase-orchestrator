@@ -59,3 +59,18 @@ policy and deployment reality:
 
 - `src/scpn_phase_orchestrator/coupling/geometry_constraints.py` — constraint classes.
 - H. H. Bauschke & P. L. Combettes (2011). *Convex Analysis and Monotone Operator Theory in Hilbert Spaces*. Springer. — alternating projections convergence.
+
+## Why geometry projection is a production gate
+
+Geometry projection is one of the few places where numerical updates become
+governance decisions. It is deliberately placed on the control path because it
+normalises effective couplings before physics integration, reducing surprise from
+late-bound estimator noise.
+
+This constraint stack is intentionally small and interpretable:
+it does not hide optimization logic, but it does prevent accidental topology
+pathologies from reaching downstream integration.
+
+In deployment, this is typically where an incident review starts:
+if simulation diverges but constraints were applied deterministically, the issue is
+more likely in policy, monitoring, or binding intent than in numerical plumbing.

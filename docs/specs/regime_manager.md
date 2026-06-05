@@ -73,3 +73,18 @@ regime   = transition(current, proposed)
 - Cooldown is a practical anti-oscillation control that avoids rapid action churn on measurement noise.
 - CRITICAL bypass keeps safety priority explicit: hard faults move the system into
   protective behavior without waiting for cool-off cycles.
+
+## Incident response interpretation
+
+Regime state is what allows teams to treat synchronization as an operations signal.
+Because transitions are gated, this manager protects against noisy oscillations
+creating unnecessary action churn.
+
+Typical runbook mapping:
+- NOMINAL: monitor for drift only; policy remains passive.
+- DEGRADED: allow preparatory control actions while preserving normal posture.
+- CRITICAL: enforce hard safety behavior immediately.
+- RECOVERY: phase actions back into stable trajectory with bounded restoration.
+
+This mapping is intentionally compact and deterministic so operators can reason
+about expected state behavior from one run to the next.

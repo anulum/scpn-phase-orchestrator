@@ -79,3 +79,19 @@ Timing values are local, non-isolated regression evidence unless the metadata st
 | `kuramoto` | `kuramoto_reference_strogatz_2000` | `1` | `n/a` | `1000` | `n/a` | `n/a` | `0.1205948709975928` | `8292.22662396613` | `n/a` |
 | `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | `1` | `n/a` | `1000` | `n/a` | `n/a` | `0.12387648108415306` | `8072.557367210566` | `n/a` |
 | `petri_reachability` | `petri_net_reachability` | `1` | `n/a` | `5000` | `n/a` | `n/a` | `0.02606109785847366` | `191856.8445256143` | `n/a` |
+
+## How to read this snapshot
+
+This is an evidence surface for automation trend lines, not a standalone proof
+of production readiness. Individual rows show execution-time behavior for configured
+benchmarks under a single local environment and single Python backend unless
+specifically noted by `evidence kind`.
+
+For release decisions, compare:
+- `evidence kind` and isolation method,
+- `suite_version` and command metadata,
+- and consistency of pass/fail over repeated snapshots.
+
+Because timing and throughput are environment-sensitive, teams should use these
+values as directional indicators and pair them with the benchmark provenance
+record (command and runtime metadata) before capacity or SLO claims are made.

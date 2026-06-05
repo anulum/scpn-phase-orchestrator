@@ -83,3 +83,15 @@ Row-wise scaling. High imprint on oscillator i increases its receptivity to all 
   coupling changes auditable.
 - The imprint scaling term is the operational bridge between memory and interaction
   strength without rewriting the supervisor policy.
+
+## Deployment interpretation
+
+The `K_ij` convention and row-wise semantics are the primary anti-footgun
+guardrails when teams migrate from toy scripts to operator runs.
+
+Two practical effects in production are:
+- deterministic controller behavior during template transitions, and
+- explainable coupling changes after imprint or recovery actions.
+
+Because `K` changes materially affect stability, this spec should be treated as a
+control contract, not just a simulation constant table.

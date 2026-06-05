@@ -90,3 +90,21 @@ circuit breaking or load shedding.
 ## Server
 
 ::: scpn_phase_orchestrator.apps.queuewaves.server
+
+## Operational interpretation
+
+QueueWaves is a reference application of the same reusable SPO pipeline, so this
+page should be read as a production playbook example, not a side experiment.
+
+The full cascade-response loop depends on three invariants:
+- deterministic extraction,
+- bounded synchronization metrics,
+- auditable alert generation.
+
+That pattern allows teams in service operations to test "is this model
+behaving like a control instrument" before adding new collectors, targets, or
+alert channels.
+
+In this setup, the alert layer is the last mile. The earlier layers are
+responsible for making sure phase and coupling evidence is structurally valid
+before escalation.

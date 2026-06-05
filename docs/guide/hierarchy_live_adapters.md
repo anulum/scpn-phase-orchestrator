@@ -64,6 +64,21 @@ not promise transport correctness or trust; it guarantees that once a payload is
 inside the boundary contract, downstream replay and policy logic can proceed on
 one coherent record format.
 
+## Operational rationale
+
+In deployment, these boundaries are the "shape firewall" between dynamic runtime
+systems and deterministic audit workflows.
+
+By keeping these adapters minimal and closed-form, the runtime gains two practical
+benefits:
+- fewer acceptance paths for malformed runtime payloads, and
+- higher confidence that replay systems are evaluating the same payload schema
+  that triggered decisions.
+
+This lets teams diagnose issues at the right layer: parsing behavior at the
+boundary, policy behavior in the supervisor, and integration behavior in
+connectors.
+
 ## Byzantine Meta-Orchestrator Review
 
 The Byzantine meta-orchestrator helper is also offline and non-networked. It

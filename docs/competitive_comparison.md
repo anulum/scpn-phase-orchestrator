@@ -72,3 +72,27 @@ From `test_physics_benchmarks.py`:
 
 SPO is for systems where you need to *control* synchronisation,
 not just *observe* it.
+
+## Market and operator interpretation
+
+This comparison page is written as a positioning document, not a benchmark table.
+Its intent is to reduce technical ambiguity for teams deciding whether SPO matches
+their workflow.
+
+In operational terms, SPO is strongest when the target problem is:
+- persistent phase coupling control,
+- auditable safety gates,
+- and reproducible intervention evidence.
+
+The table therefore maps directly to deployment posture: if the requirement is
+closed-loop control with traceable action outcomes, SPO is the library that
+already assumes that workflow end-to-end.
+
+## Evidence and validation boundary
+
+Claims above are grounded in repo-visible modules, tests, and benchmark suites.
+For each differentiated capability, the documentation should be cross-checked
+against:
+- implementation presence in linked modules,
+- validation tests in the corresponding suite,
+- and audit records when policy actions are involved.

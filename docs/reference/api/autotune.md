@@ -88,3 +88,22 @@ generators behind the existing replay gates. These helpers emit audit records
 and keep `actuation_permitted` false.
 
 ::: scpn_phase_orchestrator.autotune.learners
+
+## Operator use model
+
+Autotune in this system is intended as a discovery and review surface first.
+Its outputs should be understood as candidate proposals with evidence, not as
+immediate production actions.
+
+That separation is reflected by the `actuation_permitted=false` audit flag and
+the existing replay-only flow: operators can inspect candidate dynamics, compare
+against domain constraints, and explicitly promote a policy only through normal
+supervision gates.
+
+In practical terms, autotune is most valuable in three moments:
+- preflight analysis on unknown domains,
+- topological recovery after a major drift event,
+- and proposal generation for domain-specific handoff when new systems are onboarded.
+
+The same evidence record model used here is what allows these candidate policies to
+be replayed and compared across time windows and boundary profiles.
