@@ -128,7 +128,7 @@ def _validate_real_scalar(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite real scalar")
     try:
-        parsed = float(value)  # type: ignore[arg-type]
+        parsed = float(value)  # type: ignore[arg-type]  # type ignore: runtime validator coerces object input
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite real scalar") from exc
     if not isfinite(parsed):

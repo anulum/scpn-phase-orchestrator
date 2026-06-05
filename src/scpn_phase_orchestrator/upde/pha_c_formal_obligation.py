@@ -205,7 +205,7 @@ def _validate_positive_scale(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite positive scalar")
     try:
-        parsed = float(value)  # type: ignore[arg-type]
+        parsed = float(value)  # type: ignore[arg-type]  # type ignore: runtime validator coerces object input
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite positive scalar") from exc
     if not isfinite(parsed) or parsed <= 0.0:
@@ -217,7 +217,7 @@ def _validate_nonnegative_scalar(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite non-negative scalar")
     try:
-        parsed = float(value)  # type: ignore[arg-type]
+        parsed = float(value)  # type: ignore[arg-type]  # type ignore: runtime validator coerces object input
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite non-negative scalar") from exc
     if not isfinite(parsed) or parsed < 0.0:
