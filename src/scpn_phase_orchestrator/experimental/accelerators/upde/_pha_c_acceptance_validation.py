@@ -16,6 +16,8 @@ from scpn_phase_orchestrator.coupling.spatial_modulator import (
     SpatialCouplingModulator,
 )
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
+    DEFAULT_PHASE_TOL_RAD,
+    DEFAULT_SPATIAL_TOL_M,
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
     verify_pha_c_acceptance_record,
@@ -98,8 +100,8 @@ def expected_pha_c_acceptance_record(
     rtol: object = 1.0e-9,
     reference_phase: object = 0.0,
     reference_point: object = 0.0,
-    phase_tol_rad: object = 0.05,
-    spatial_tol_m: object = 2.0e-3,
+    phase_tol_rad: object = DEFAULT_PHASE_TOL_RAD,
+    spatial_tol_m: object = DEFAULT_SPATIAL_TOL_M,
     required_consecutive_samples: object = 3,
     tolerance_profile: object | None = "baseline_1x",
     backend: object = "python",
