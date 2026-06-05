@@ -137,6 +137,7 @@ nav:
       - "UPDE — PHA-C Handoff": reference/api/upde_pha_c_handoff.md
       - "UPDE — PHA-C Event Timeline": reference/api/upde_pha_c_timeline.md
       - "UPDE — PHA-C Acceptance Chain": reference/api/upde_pha_c_acceptance.md
+      - "UPDE — PHA-C Formal Obligation": reference/api/upde_pha_c_formal_obligation.md
       - "UPDE — Bayesian Uncertainty": reference/api/upde_bayesian.md
       - "UPDE — Simplicial (3-body)": reference/api/upde_simplicial.md
       - "UPDE — Hypergraph (k-body)": reference/api/upde_hypergraph.md
