@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 
 import numpy as np
 import pytest
@@ -284,9 +285,18 @@ def test_pha_c_handoff_benchmark_gate_accepts_declared_backends() -> None:
     assert result["suite"] == "pha_c_handoff_polyglot_parity_gate"
     assert result["backend_count"] == 5
     assert result["parity_pass_count"] == 5
+    assert result["source_contract_backend_count"] == 4
+    assert result["native_kernel_count"] == 0
+    assert result["polyglot_claim_boundary"] == "source_contract_not_native_kernel"
     assert result["acceptance_passed"] == 1
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["tolerance_profile_name"] == "buffer_3x"
     assert result["tolerance_profile_multiplier"] == 3.0
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
+    backend_records = json.loads(str(result["backend_records_json"]))
+    assert {record["execution_mode"] for record in backend_records} == {
+        "python_reference",
+        "source_contract_reference_validation",
+    }
+    assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0

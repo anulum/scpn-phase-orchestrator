@@ -34,6 +34,14 @@ from scpn_phase_orchestrator.upde.pha_c_timeline import (
 )
 
 BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
+BACKEND_EXECUTION_MODES = {
+    "rust": "source_contract_reference_validation",
+    "mojo": "source_contract_reference_validation",
+    "julia": "source_contract_reference_validation",
+    "go": "source_contract_reference_validation",
+    "python": "python_reference",
+}
+POLYGLOT_CLAIM_BOUNDARY = "source_contract_not_native_kernel"
 PARITY_TOLERANCES = {
     "rust": 1.0e-12,
     "mojo": 1.0e-12,
@@ -213,6 +221,9 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
             {
                 "backend": backend,
                 "status": "available",
+                "execution_mode": BACKEND_EXECUTION_MODES[backend],
+                "native_kernel_present": 0,
+                "source_contract_validation": int(backend != "python"),
                 "ms_per_call": (elapsed / calls) * 1000.0,
                 "timeline_sha256": got.timeline_sha256,
                 "payload_sha256": _timeline_sha256(got),
@@ -236,10 +247,20 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "require_execution_disabled": True,
         "require_hash_chain": True,
         "require_python_reference": True,
+        "require_source_contract_disclosure": True,
+        "require_no_native_kernel_claim": True,
     }
+    source_contract_count = sum(
+        int(record["source_contract_validation"]) for record in records
+    )
+    native_kernel_count = sum(
+        int(record["native_kernel_present"]) for record in records
+    )
     acceptance_passed = (
         len(records) == len(BACKEND_ORDER)
         and parity_pass_count == len(BACKEND_ORDER)
+        and source_contract_count == len(BACKEND_ORDER) - 1
+        and native_kernel_count == 0
         and contracts["first_lock_observed"] == 1
         and contracts["first_lock_index"] == 3
         and contracts["final_lock_achieved"] == 0
@@ -271,6 +292,9 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "unavailable_backend_count": 0,
         "parity_checked_count": len(records),
         "parity_pass_count": parity_pass_count,
+        "source_contract_backend_count": source_contract_count,
+        "native_kernel_count": native_kernel_count,
+        "polyglot_claim_boundary": POLYGLOT_CLAIM_BOUNDARY,
         "all_available_passed": int(parity_pass_count == len(records)),
         "python_reference_present": 1,
         "n": n,

@@ -300,6 +300,13 @@ merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline
 hashing, aggregate subgate evidence, and Rust/Go/Julia/Mojo source-contract
 parity adapters.
 
+Those Rust, Go, Julia, and Mojo rows are intentionally labelled
+`source_contract_reference_validation` until native downstream kernels are
+implemented. The PHA-C benchmark payloads publish `native_kernel_count`,
+`source_contract_backend_count`, and `polyglot_claim_boundary` fields so review
+tools and release notes cannot confuse source-contract parity with native
+execution. The Python row remains the executable reference.
+
 These gates are mathematical and physical contract checks, not live actuation
 claims. Their JSON artefacts and reference-suite rows remain
 `local_regression_non_isolated` evidence unless a future run records benchmark

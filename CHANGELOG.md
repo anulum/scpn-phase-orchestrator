@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added explicit source-contract versus native-kernel provenance to PHA-C
+  handoff, timeline, and acceptance benchmark records so Rust/Go/Julia/Mojo
+  adapters cannot be mistaken for native execution until reviewed kernels land.
 - Added a PHA-C end-to-end acceptance gate that spans spatial modulation,
   Doppler correction, moving-frame propagation, merge-window timeline
   conversion, deterministic schedule/trajectory/hash evidence, Rust/Go/Julia/Mojo
