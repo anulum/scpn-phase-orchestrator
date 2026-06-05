@@ -345,6 +345,11 @@ runtime envelope into the fixed-point `KinematicBounds` fields used by
 `SPOFormal.Kinematic` and requires the
 `budget_certificate_discharges_budget` certificate to discharge before a
 backend row can pass.
+The formal obligation rows additionally publish
+`formal_obligation_acceptance_kinematic_equations_validated` and
+`formal_obligation_acceptance_kinematic_summary_replay_tolerance`, so the Lean
+manifest is bound to the verified moving-frame final-position, velocity, and
+path-length equations.
 The proof manifest records both the zero-gain linear reference budget and the
 general finite-horizon Gronwall budget trace, so non-zero Lipschitz gain lanes
 remain inside the same formal review boundary.

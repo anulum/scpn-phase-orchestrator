@@ -64,6 +64,8 @@ runtime envelope into integer units:
 | `phase_budget_units` | observed dispersion plus configured phase drift | phase-lock budget |
 | `phase_margin_units` | phase tolerance minus phase budget | phase-lock certificate margin |
 | `phase_budget_discharged` | `phase_budget_units <= phase_tolerance_units` | `PhaseBudgetBounds.budgetCertificate` |
+| `acceptance_kinematic_equations_validated` | verified acceptance record preserved final-position, velocity, and path-length equations | runtime-to-formal acceptance precondition |
+| `acceptance_kinematic_summary_replay_tolerance` | replay tolerance inherited from `PHACAcceptanceRecord` | runtime-to-formal tolerance provenance |
 
 The default is a replay certificate. The observed spatial dispersion already
 includes the accepted moving-frame trajectory, while the residual term proves
@@ -88,6 +90,12 @@ budget rather than from replay dispersion alone. The manifest names the Lean
 reviewed by a formal fixed-point mirror instead of only by Python arithmetic.
 The Boolean `phase_budget_discharged` must match that theorem condition exactly
 before the combined PHA-C proof obligations can discharge.
+
+The manifest also carries `acceptance_kinematic_equations_validated` and
+`acceptance_kinematic_summary_replay_tolerance`. These fields bind the Lean
+obligation to the verified acceptance record's final-position,
+maximum-velocity, and path-length equation replay, so a formal manifest cannot
+be detached from mechanically valid moving-frame summary evidence.
 
 For non-zero gain, the runtime manifest replays the Lean recurrence
 `previous + gain * previous + drive`, records the terminal
@@ -150,6 +158,8 @@ verify_pha_c_kinematic_proof_obligation(obligation)
   margin consistency;
 - `phase_budget_discharged` replay against the Lean
   `PhaseBudgetBounds.budgetCertificate` condition;
+- `acceptance_kinematic_equations_validated` replay against the verified
+  acceptance record's moving-frame summary equations;
 - lower-case SHA-256 fields; and
 - canonical manifest hash replay.
 

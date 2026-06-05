@@ -464,6 +464,8 @@ fails unless every declared backend row proves
 Acceptance rows additionally emit and verify a
 `PHACKinematicProofObligation` manifest that maps the accepted runtime envelope
 onto `SPOFormal.Kinematic.KinematicBounds` and requires the Lean
+manifest to carry the acceptance record's kinematic equation replay status,
+so formal review remains bound to mechanically valid moving-frame summaries.
 `budget_certificate_discharges_budget` target to discharge before the row can
 pass. The Rust, Go, Julia, and Mojo downstream rows are explicitly labelled as
 source-contract validation rows until native downstream kernels land;

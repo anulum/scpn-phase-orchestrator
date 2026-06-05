@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added acceptance kinematic-equation provenance to
+  `PHACKinematicProofObligation` and the PHA-C acceptance benchmark gate so
+  Lean-facing formal manifests must remain bound to verified final-position,
+  maximum-velocity, and path-length replay evidence.
 - Added explicit final-position, maximum-velocity, and path-length equation
   replay to `PHACAcceptanceRecord` and the PHA-C acceptance benchmark gate so
   aggregate acceptance must preserve the moving-frame kinematic summary

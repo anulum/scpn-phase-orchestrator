@@ -429,6 +429,10 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         - result["formal_obligation_phase_budget_units"]
     )
     assert result["formal_obligation_phase_budget_discharged"] == 1
+    assert result["formal_obligation_acceptance_kinematic_equations_validated"] == 1
+    assert result[
+        "formal_obligation_acceptance_kinematic_summary_replay_tolerance"
+    ] == PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
     assert result["formal_obligation_phase_theorem"] == (
         "phase_budget_certificate_discharges_phase_lock"
     )
@@ -454,6 +458,11 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     )
     assert all(
         int(record["formal_obligation_discharged"]) == 1
+        for record in backend_records
+    )
+    assert all(
+        int(record["formal_obligation_acceptance_kinematic_equations_validated"])
+        == 1
         for record in backend_records
     )
     assert all(

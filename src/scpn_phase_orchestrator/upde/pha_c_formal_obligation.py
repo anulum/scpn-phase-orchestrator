@@ -29,6 +29,7 @@ import numpy as np
 
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
+    PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
     PHACAcceptanceRecord,
     verify_pha_c_acceptance_record,
 )
@@ -135,6 +136,8 @@ class PHACKinematicProofObligation:
     phase_budget_units: int
     phase_margin_units: int
     phase_budget_discharged: bool
+    acceptance_kinematic_equations_validated: bool
+    acceptance_kinematic_summary_replay_tolerance: float
     observed_velocity_step_units: int
     kinematic_residual_units: int
     path_length_units: int
@@ -336,6 +339,12 @@ def _dict_without_record_hash(
         "phase_budget_units": obligation.phase_budget_units,
         "phase_margin_units": obligation.phase_margin_units,
         "phase_budget_discharged": obligation.phase_budget_discharged,
+        "acceptance_kinematic_equations_validated": (
+            obligation.acceptance_kinematic_equations_validated
+        ),
+        "acceptance_kinematic_summary_replay_tolerance": (
+            obligation.acceptance_kinematic_summary_replay_tolerance
+        ),
         "observed_velocity_step_units": obligation.observed_velocity_step_units,
         "kinematic_residual_units": obligation.kinematic_residual_units,
         "path_length_units": obligation.path_length_units,
@@ -546,6 +555,7 @@ def build_pha_c_kinematic_proof_obligation(
         and phase_margin_units >= 0
         and phase_budget_discharged
         and continuous_envelope_discharged
+        and verified_record.kinematic_equations_validated
         and verified_record.execution_disabled
         and not verified_record.actuating
         and verified_record.claim_boundary == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
@@ -600,6 +610,12 @@ def build_pha_c_kinematic_proof_obligation(
         "phase_budget_units": phase_budget_units,
         "phase_margin_units": phase_margin_units,
         "phase_budget_discharged": phase_budget_discharged,
+        "acceptance_kinematic_equations_validated": (
+            verified_record.kinematic_equations_validated
+        ),
+        "acceptance_kinematic_summary_replay_tolerance": (
+            verified_record.kinematic_summary_replay_tolerance
+        ),
         "observed_velocity_step_units": observed_velocity_step_units,
         "kinematic_residual_units": observed_residual_units,
         "path_length_units": path_length_units,
@@ -722,6 +738,25 @@ def verify_pha_c_kinematic_proof_obligation(
         obligation.phase_budget_discharged,
         name="phase_budget_discharged",
     )
+    if (
+        not _validate_bool(
+            obligation.acceptance_kinematic_equations_validated,
+            name="acceptance_kinematic_equations_validated",
+        )
+    ):
+        raise ValueError("acceptance_kinematic_equations_validated must be true")
+    kinematic_replay_tolerance = _validate_positive_scale(
+        obligation.acceptance_kinematic_summary_replay_tolerance,
+        name="acceptance_kinematic_summary_replay_tolerance",
+    )
+    if (
+        kinematic_replay_tolerance
+        != PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    ):
+        raise ValueError(
+            "acceptance_kinematic_summary_replay_tolerance must match "
+            "the acceptance constant"
+        )
     _validate_bool(
         obligation.continuous_envelope_discharged,
         name="continuous_envelope_discharged",
@@ -889,6 +924,7 @@ def verify_pha_c_kinematic_proof_obligation(
         expected_margin >= 0
         and expected_phase_budget_discharged
         and expected_continuous_discharged
+        and obligation.acceptance_kinematic_equations_validated
         and obligation.execution_disabled
         and not obligation.actuating
     )

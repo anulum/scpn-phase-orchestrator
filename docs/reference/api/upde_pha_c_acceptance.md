@@ -164,6 +164,11 @@ carry the same time-normalised formal assumptions. The rows now also publish
 the `SPOFormal.Continuous` horizon theorem, continuous drive-rate sum,
 continuous horizon-drive replay, continuous budget, continuous margin, and a
 Boolean continuous-envelope discharge flag.
+The formal manifest now also publishes
+`formal_obligation_acceptance_kinematic_equations_validated` and
+`formal_obligation_acceptance_kinematic_summary_replay_tolerance`, binding the
+Lean-facing proof obligation to the verified acceptance record's moving-frame
+summary equations.
 
 ```bash
 uv run python benchmarks/pha_c_acceptance_benchmark.py \
