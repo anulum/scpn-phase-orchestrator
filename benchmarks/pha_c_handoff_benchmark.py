@@ -189,9 +189,7 @@ def _margin_equation_contracts(record: PHACHandoffRecord) -> dict[str, object]:
     )
     return {
         "phase_margin_equation_validated": int(phase_margin_equation_validated),
-        "spatial_margin_equation_validated": int(
-            spatial_margin_equation_validated
-        ),
+        "spatial_margin_equation_validated": int(spatial_margin_equation_validated),
         "signed_margin_equations_validated": int(
             phase_margin_equation_validated and spatial_margin_equation_validated
         ),
@@ -285,8 +283,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         and contracts["signed_margin_equations_validated"] == 1
         and all(int(record["hash_replay_validated"]) == 1 for record in records)
         and all(
-            int(record["signed_margin_equations_validated"]) == 1
-            for record in records
+            int(record["signed_margin_equations_validated"]) == 1 for record in records
         )
     )
     benchmark_payload = {
@@ -321,9 +318,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "joint_lock_required": contracts["joint_lock_required"],
         "phase_margin_positive": contracts["phase_margin_positive"],
         "spatial_margin_positive": contracts["spatial_margin_positive"],
-        "phase_margin_equation_validated": contracts[
-            "phase_margin_equation_validated"
-        ],
+        "phase_margin_equation_validated": contracts["phase_margin_equation_validated"],
         "spatial_margin_equation_validated": contracts[
             "spatial_margin_equation_validated"
         ],

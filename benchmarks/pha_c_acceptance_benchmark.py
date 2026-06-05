@@ -224,9 +224,7 @@ def _margin_equation_contracts(record: PHACAcceptanceRecord) -> dict[str, object
     return {
         "phase_margin_equation_validated": int(phase_validated),
         "spatial_margin_equation_validated": int(spatial_validated),
-        "signed_margin_equations_validated": int(
-            phase_validated and spatial_validated
-        ),
+        "signed_margin_equations_validated": int(phase_validated and spatial_validated),
         "margin_replay_tolerance": PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
     }
 
@@ -475,9 +473,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "path_length_equation_validated": int(
                     got.path_length_equation_validated
                 ),
-                "kinematic_equations_validated": int(
-                    got.kinematic_equations_validated
-                ),
+                "kinematic_equations_validated": int(got.kinematic_equations_validated),
                 "kinematic_summary_replay_tolerance": (
                     got.kinematic_summary_replay_tolerance
                 ),
@@ -562,9 +558,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                     obligation.acceptance_certificate_theorem
                 ),
                 "formal_obligation_phase_theorem": obligation.phase_theorem,
-                "formal_obligation_continuous_theorem": (
-                    obligation.continuous_theorem
-                ),
+                "formal_obligation_continuous_theorem": (obligation.continuous_theorem),
                 "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
@@ -637,14 +631,8 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         <= contracts["formal_obligation_phase_tolerance_units"]
         and contracts["formal_obligation_phase_margin_units"] >= 0
         and contracts["formal_obligation_phase_budget_discharged"] == 1
-        and contracts[
-            "formal_obligation_acceptance_kinematic_equations_validated"
-        ]
-        == 1
-        and contracts[
-            "formal_obligation_acceptance_replay_certificate_discharged"
-        ]
-        == 1
+        and contracts["formal_obligation_acceptance_kinematic_equations_validated"] == 1
+        and contracts["formal_obligation_acceptance_replay_certificate_discharged"] == 1
         and contracts["formal_obligation_acceptance_certificate_discharged"] == 1
         and contracts["formal_obligation_acceptance_certificate_predicate"]
         == PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
@@ -658,9 +646,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["has_acceptance_hash"] == 1
         and contracts["has_timeline_hash"] == 1
         and contracts["hash_replay_validated"] == 1
-        and all(
-            int(record["formal_obligation_discharged"]) == 1 for record in records
-        )
+        and all(int(record["formal_obligation_discharged"]) == 1 for record in records)
         and all(
             int(record["formal_obligation_acceptance_kinematic_equations_validated"])
             == 1
@@ -686,8 +672,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             for record in records
         )
         and all(
-            int(record["signed_margin_equations_validated"]) == 1
-            for record in records
+            int(record["signed_margin_equations_validated"]) == 1 for record in records
         )
         and all(int(record["kinematic_equations_validated"]) == 1 for record in records)
         and all(int(record["hash_replay_validated"]) == 1 for record in records)
@@ -747,9 +732,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                     record["formal_obligation_horizon_time_units"]
                 ),
                 "formal_obligation_relative_velocity_rate_units_per_second": (
-                    record[
-                        "formal_obligation_relative_velocity_rate_units_per_second"
-                    ]
+                    record["formal_obligation_relative_velocity_rate_units_per_second"]
                 ),
                 "formal_obligation_configured_residual_step_units": (
                     record["formal_obligation_configured_residual_step_units"]
@@ -758,9 +741,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                     record["formal_obligation_residual_rate_units_per_second"]
                 ),
                 "formal_obligation_continuous_drive_rate_units_per_second": (
-                    record[
-                        "formal_obligation_continuous_drive_rate_units_per_second"
-                    ]
+                    record["formal_obligation_continuous_drive_rate_units_per_second"]
                 ),
                 "formal_obligation_continuous_horizon_drive_units": (
                     record["formal_obligation_continuous_horizon_drive_units"]
@@ -802,9 +783,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                     record["formal_obligation_phase_budget_discharged"]
                 ),
                 "formal_obligation_acceptance_kinematic_equations_validated": (
-                    record[
-                        "formal_obligation_acceptance_kinematic_equations_validated"
-                    ]
+                    record["formal_obligation_acceptance_kinematic_equations_validated"]
                 ),
                 "formal_obligation_acceptance_kinematic_summary_replay_tolerance": (
                     record[
@@ -818,9 +797,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                     record[FORMAL_REPLAY_TOLERANCE_LIMIT_UNITS_FIELD]
                 ),
                 "formal_obligation_acceptance_replay_certificate_discharged": (
-                    record[
-                        "formal_obligation_acceptance_replay_certificate_discharged"
-                    ]
+                    record["formal_obligation_acceptance_replay_certificate_discharged"]
                 ),
                 "formal_obligation_acceptance_certificate_discharged": (
                     record["formal_obligation_acceptance_certificate_discharged"]
@@ -875,9 +852,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "reset_count": contracts["reset_count"],
         "phase_margin_positive": contracts["phase_margin_positive"],
         "spatial_margin_positive": contracts["spatial_margin_positive"],
-        "phase_margin_equation_validated": contracts[
-            "phase_margin_equation_validated"
-        ],
+        "phase_margin_equation_validated": contracts["phase_margin_equation_validated"],
         "spatial_margin_equation_validated": contracts[
             "spatial_margin_equation_validated"
         ],
@@ -895,17 +870,13 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "max_abs_velocity_equation_validated": contracts[
             "max_abs_velocity_equation_validated"
         ],
-        "path_length_equation_validated": contracts[
-            "path_length_equation_validated"
-        ],
+        "path_length_equation_validated": contracts["path_length_equation_validated"],
         "kinematic_equations_validated": contracts["kinematic_equations_validated"],
         "kinematic_summary_replay_tolerance": contracts[
             "kinematic_summary_replay_tolerance"
         ],
         "formal_obligation_discharged": contracts["formal_obligation_discharged"],
-        "formal_obligation_margin_units": contracts[
-            "formal_obligation_margin_units"
-        ],
+        "formal_obligation_margin_units": contracts["formal_obligation_margin_units"],
         "formal_obligation_time_step_units": contracts[
             "formal_obligation_time_step_units"
         ],

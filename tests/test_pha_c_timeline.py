@@ -358,9 +358,7 @@ def test_pha_c_timeline_benchmark_gate_accepts_declared_backends() -> None:
     assert result["phase_margin_equation_validated"] == 1
     assert result["spatial_margin_equation_validated"] == 1
     assert result["signed_margin_equations_validated"] == 1
-    assert result["margin_replay_tolerance"] == (
-        PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE
-    )
+    assert result["margin_replay_tolerance"] == (PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE)
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"

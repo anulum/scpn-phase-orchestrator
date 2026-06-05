@@ -47,9 +47,7 @@ PHA_C_ACCEPTANCE_CLAIM_BOUNDARY = "pha_c_end_to_end_acceptance_review_only"
 PHA_C_ACCEPTANCE_EVIDENCE_KIND = "deterministic_non_actuating_acceptance"
 PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M = 1.0e-9
 PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE = 1.0e-12
-PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE = (
-    KINEMATIC_SUMMARY_REPLAY_TOLERANCE
-)
+PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE = KINEMATIC_SUMMARY_REPLAY_TOLERANCE
 
 __all__ = [
     "PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE",
@@ -338,17 +336,13 @@ def _record_dict_without_hash(
         "kinematic_residual_max_m": float(kinematic_residual_max_m),
         "max_abs_velocity_m_per_s": float(max_abs_velocity_m_per_s),
         "path_length_max_m": float(path_length_max_m),
-        "final_position_equation_validated": bool(
-            final_position_equation_validated
-        ),
+        "final_position_equation_validated": bool(final_position_equation_validated),
         "max_abs_velocity_equation_validated": bool(
             max_abs_velocity_equation_validated
         ),
         "path_length_equation_validated": bool(path_length_equation_validated),
         "kinematic_equations_validated": bool(kinematic_equations_validated),
-        "kinematic_summary_replay_tolerance": float(
-            kinematic_summary_replay_tolerance
-        ),
+        "kinematic_summary_replay_tolerance": float(kinematic_summary_replay_tolerance),
         "min_phase_margin_rad": float(min_phase_margin_rad),
         "min_spatial_margin_m": float(min_spatial_margin_m),
         "min_phase_order_parameter": float(min_phase_order_parameter),
@@ -623,9 +617,7 @@ def pha_c_acceptance_record_to_dict(
         ),
         path_length_equation_validated=record.path_length_equation_validated,
         kinematic_equations_validated=record.kinematic_equations_validated,
-        kinematic_summary_replay_tolerance=(
-            record.kinematic_summary_replay_tolerance
-        ),
+        kinematic_summary_replay_tolerance=(record.kinematic_summary_replay_tolerance),
         min_phase_margin_rad=record.min_phase_margin_rad,
         min_spatial_margin_m=record.min_spatial_margin_m,
         min_phase_order_parameter=record.min_phase_order_parameter,

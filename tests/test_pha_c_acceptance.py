@@ -423,8 +423,9 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["formal_obligation_continuous_linear_budget_units"] >= 0
     assert result["formal_obligation_continuous_margin_units"] >= 0
     assert result["formal_obligation_continuous_envelope_discharged"] == 1
-    assert result["formal_obligation_gronwall_margin_units"] == (
-        result["formal_obligation_margin_units"]
+    assert (
+        result["formal_obligation_gronwall_margin_units"]
+        == (result["formal_obligation_margin_units"])
     )
     assert len(str(result["formal_obligation_trace_sha256"])) == 64
     assert result["formal_obligation_phase_margin_units"] >= 0
@@ -434,9 +435,10 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     )
     assert result["formal_obligation_phase_budget_discharged"] == 1
     assert result["formal_obligation_acceptance_kinematic_equations_validated"] == 1
-    assert result[
-        "formal_obligation_acceptance_kinematic_summary_replay_tolerance"
-    ] == PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    assert (
+        result["formal_obligation_acceptance_kinematic_summary_replay_tolerance"]
+        == PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+    )
     assert result["formal_obligation_phase_theorem"] == (
         "phase_budget_certificate_discharges_phase_lock"
     )
@@ -467,8 +469,7 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         for record in backend_records
     )
     assert all(
-        int(record["formal_obligation_discharged"]) == 1
-        for record in backend_records
+        int(record["formal_obligation_discharged"]) == 1 for record in backend_records
     )
     assert all(
         record["formal_obligation_acceptance_certificate_predicate"]
@@ -481,8 +482,7 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         for record in backend_records
     )
     assert all(
-        int(record["formal_obligation_acceptance_kinematic_equations_validated"])
-        == 1
+        int(record["formal_obligation_acceptance_kinematic_equations_validated"]) == 1
         for record in backend_records
     )
     assert all(
@@ -516,12 +516,10 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         for record in backend_records
     )
     assert all(
-        record["kinematic_residual_max_m"] <= 1.0e-12
-        for record in backend_records
+        record["kinematic_residual_max_m"] <= 1.0e-12 for record in backend_records
     )
     assert all(
-        int(record["kinematic_equations_validated"]) == 1
-        for record in backend_records
+        int(record["kinematic_equations_validated"]) == 1 for record in backend_records
     )
 
 

@@ -144,9 +144,7 @@ def _margin_equation_contracts(
     )
     return {
         "phase_margin_equation_validated": int(phase_margin_equation_validated),
-        "spatial_margin_equation_validated": int(
-            spatial_margin_equation_validated
-        ),
+        "spatial_margin_equation_validated": int(spatial_margin_equation_validated),
         "signed_margin_equations_validated": int(
             phase_margin_equation_validated and spatial_margin_equation_validated
         ),
@@ -347,8 +345,7 @@ def benchmark_merge_window_polyglot_parity_gate(
         and contracts["explicit_profile_rejects_same_sample"] == 1
         and contracts["signed_margin_equations_validated"] == 1
         and all(
-            int(record["signed_margin_equations_validated"]) == 1
-            for record in records
+            int(record["signed_margin_equations_validated"]) == 1 for record in records
         )
     )
     benchmark_payload = {
@@ -403,9 +400,7 @@ def benchmark_merge_window_polyglot_parity_gate(
         "explicit_profile_rejects_same_sample": contracts[
             "explicit_profile_rejects_same_sample"
         ],
-        "phase_margin_equation_validated": contracts[
-            "phase_margin_equation_validated"
-        ],
+        "phase_margin_equation_validated": contracts["phase_margin_equation_validated"],
         "spatial_margin_equation_validated": contracts[
             "spatial_margin_equation_validated"
         ],

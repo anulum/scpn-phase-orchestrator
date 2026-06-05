@@ -7875,9 +7875,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "upde_time_varying_omega_polyglot": (
                 benchmark_upde_time_varying_omega_polyglot_gate()
             ),
-            "pha_c_handoff_polyglot": (
-                benchmark_pha_c_handoff_polyglot_parity_gate()
-            ),
+            "pha_c_handoff_polyglot": (benchmark_pha_c_handoff_polyglot_parity_gate()),
             "pha_c_timeline_polyglot": (
                 benchmark_pha_c_timeline_polyglot_parity_gate()
             ),

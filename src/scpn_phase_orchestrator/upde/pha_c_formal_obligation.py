@@ -34,9 +34,7 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     verify_pha_c_acceptance_record,
 )
 
-PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY = (
-    "pha_c_lean_kinematic_obligation_review_only"
-)
+PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY = "pha_c_lean_kinematic_obligation_review_only"
 PHA_C_FORMAL_OBLIGATION_EVIDENCE_KIND = "deterministic_lean_kinematic_obligation"
 PHA_C_FORMAL_OBLIGATION_SCHEMA = "pha_c_lean_kinematic_obligation_v1"
 PHA_C_FORMAL_LEAN_MODULE = "SPOFormal.Kinematic"
@@ -56,9 +54,7 @@ PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE = "PhaseBudgetBounds.budgetCertificate"
 PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM = (
     "phase_budget_certificate_discharges_phase_lock"
 )
-PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE = (
-    "KinematicBounds.acceptanceCertificate"
-)
+PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE = "KinematicBounds.acceptanceCertificate"
 PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM = (
     "acceptance_certificate_discharges_runtime_preconditions"
 )
@@ -630,9 +626,7 @@ def build_pha_c_kinematic_proof_obligation(
         "acceptance_certificate_predicate": (
             PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
         ),
-        "acceptance_certificate_theorem": (
-            PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
-        ),
+        "acceptance_certificate_theorem": (PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM),
         "fixed_point_scale_m": scale_m,
         "fixed_point_scale_rad": scale_rad,
         "fixed_point_time_scale_s": time_scale,
@@ -722,9 +716,7 @@ def verify_pha_c_kinematic_proof_obligation(
         "acceptance_certificate_predicate": (
             PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
         ),
-        "acceptance_certificate_theorem": (
-            PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
-        ),
+        "acceptance_certificate_theorem": (PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM),
     }
     for field, expected in exact_strings.items():
         got = getattr(obligation, field)
@@ -786,17 +778,17 @@ def verify_pha_c_kinematic_proof_obligation(
     _validate_int(
         obligation.gronwall_budget_margin_units,
         name="gronwall_budget_margin_units",
-        minimum=-10**18,
+        minimum=-(10**18),
     )
     _validate_int(
         obligation.window_budget_margin_units,
         name="window_budget_margin_units",
-        minimum=-10**18,
+        minimum=-(10**18),
     )
     _validate_int(
         obligation.continuous_margin_units,
         name="continuous_margin_units",
-        minimum=-10**18,
+        minimum=-(10**18),
     )
     _validate_sha256_hex(
         obligation.gronwall_budget_trace_sha256,
@@ -805,17 +797,15 @@ def verify_pha_c_kinematic_proof_obligation(
     _validate_int(
         obligation.phase_margin_units,
         name="phase_margin_units",
-        minimum=-10**18,
+        minimum=-(10**18),
     )
     _validate_bool(
         obligation.phase_budget_discharged,
         name="phase_budget_discharged",
     )
-    if (
-        not _validate_bool(
-            obligation.acceptance_kinematic_equations_validated,
-            name="acceptance_kinematic_equations_validated",
-        )
+    if not _validate_bool(
+        obligation.acceptance_kinematic_equations_validated,
+        name="acceptance_kinematic_equations_validated",
     ):
         raise ValueError("acceptance_kinematic_equations_validated must be true")
     kinematic_replay_tolerance = _validate_positive_scale(
@@ -942,15 +932,12 @@ def verify_pha_c_kinematic_proof_obligation(
     expected_continuous_linear_budget = (
         obligation.initial_tolerance_units + expected_continuous_horizon_drive
     )
-    if obligation.continuous_linear_budget_units != (
-        expected_continuous_linear_budget
-    ):
+    if obligation.continuous_linear_budget_units != (expected_continuous_linear_budget):
         raise ValueError(
             "continuous_linear_budget_units must match continuous envelope",
         )
     expected_continuous_margin = (
-        obligation.merge_window_tolerance_units
-        - expected_continuous_linear_budget
+        obligation.merge_window_tolerance_units - expected_continuous_linear_budget
     )
     if obligation.continuous_margin_units != expected_continuous_margin:
         raise ValueError("continuous_margin_units must match continuous envelope")

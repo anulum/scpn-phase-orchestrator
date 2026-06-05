@@ -335,13 +335,9 @@ def test_moving_frame_polyglot_benchmark_reports_available_language_slots() -> N
     assert out["path_length_equation_validated"] == 1
     assert out["kinematic_equations_validated"] == 1
     assert (
-        out["kinematic_summary_replay_tolerance"]
-        == KINEMATIC_SUMMARY_REPLAY_TOLERANCE
+        out["kinematic_summary_replay_tolerance"] == KINEMATIC_SUMMARY_REPLAY_TOLERANCE
     )
-    assert (
-        out["reference_kinematic_residual_max_m"]
-        <= KINEMATIC_RESIDUAL_TOLERANCE_M
-    )
+    assert out["reference_kinematic_residual_max_m"] <= KINEMATIC_RESIDUAL_TOLERANCE_M
 
 
 def _moving_frame_adapter_args() -> tuple[object, ...]:

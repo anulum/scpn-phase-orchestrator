@@ -201,9 +201,7 @@ def _margin_equation_contracts(record: PHACTimelineRecord) -> dict[str, object]:
     return {
         "phase_margin_equation_validated": int(phase_validated),
         "spatial_margin_equation_validated": int(spatial_validated),
-        "signed_margin_equations_validated": int(
-            phase_validated and spatial_validated
-        ),
+        "signed_margin_equations_validated": int(phase_validated and spatial_validated),
         "margin_replay_tolerance": PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE,
     }
 
@@ -321,8 +319,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         and contracts["has_timeline_hash"] == 1
         and contracts["hash_replay_validated"] == 1
         and all(
-            int(record["signed_margin_equations_validated"]) == 1
-            for record in records
+            int(record["signed_margin_equations_validated"]) == 1 for record in records
         )
         and all(int(record["hash_replay_validated"]) == 1 for record in records)
     )
@@ -361,9 +358,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "reset_count": contracts["reset_count"],
         "phase_margin_loss_observed": contracts["phase_margin_loss_observed"],
         "spatial_margin_loss_observed": contracts["spatial_margin_loss_observed"],
-        "phase_margin_equation_validated": contracts[
-            "phase_margin_equation_validated"
-        ],
+        "phase_margin_equation_validated": contracts["phase_margin_equation_validated"],
         "spatial_margin_equation_validated": contracts[
             "spatial_margin_equation_validated"
         ],

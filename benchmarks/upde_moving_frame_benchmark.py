@@ -100,12 +100,8 @@ def _kinematic_equation_contracts(
         <= KINEMATIC_SUMMARY_REPLAY_TOLERANCE
     )
     return {
-        "final_position_equation_validated": int(
-            final_position_equation_validated
-        ),
-        "max_abs_velocity_equation_validated": int(
-            max_abs_velocity_equation_validated
-        ),
+        "final_position_equation_validated": int(final_position_equation_validated),
+        "max_abs_velocity_equation_validated": int(max_abs_velocity_equation_validated),
         "path_length_equation_validated": int(path_length_equation_validated),
         "kinematic_equations_validated": int(
             final_position_equation_validated
@@ -426,9 +422,7 @@ def benchmark_upde_moving_frame_polyglot_gate(
         "position_initial_sha256": _hash_array(positions),
         "expected_final_position_sha256": _hash_array(expected_positions),
         "reference_kinematic_residual_max_m": reference_kinematic_residual,
-        "kinematic_residual_contract_passed": int(
-            kinematic_residual_contract_passed
-        ),
+        "kinematic_residual_contract_passed": int(kinematic_residual_contract_passed),
         "final_position_equation_validated": reference_equation_contracts[
             "final_position_equation_validated"
         ],
@@ -441,9 +435,7 @@ def benchmark_upde_moving_frame_polyglot_gate(
         "kinematic_equations_validated": reference_equation_contracts[
             "kinematic_equations_validated"
         ],
-        "kinematic_summary_replay_tolerance": (
-            KINEMATIC_SUMMARY_REPLAY_TOLERANCE
-        ),
+        "kinematic_summary_replay_tolerance": (KINEMATIC_SUMMARY_REPLAY_TOLERANCE),
         "max_abs_velocity_m_per_s": float(np.max(np.abs(velocities))),
         "path_length_max_m": float(np.max(np.sum(np.abs(velocities * dt), axis=0))),
         "benchmark_sha256": sha256(
