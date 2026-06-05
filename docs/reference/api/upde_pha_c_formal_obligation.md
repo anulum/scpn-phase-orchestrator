@@ -19,6 +19,9 @@ certificate predicate that a reviewer or CI proof gate must use:
 - Phase-budget module: `SPOFormal.Kinematic`
 - Phase predicate: `PhaseBudgetBounds.budgetCertificate`
 - Phase theorem: `phase_budget_certificate_discharges_phase_lock`
+- Combined acceptance predicate: `KinematicBounds.acceptanceCertificate`
+- Combined acceptance theorem:
+  `acceptance_certificate_discharges_runtime_preconditions`
 
 ## Use cases
 
@@ -66,6 +69,10 @@ runtime envelope into integer units:
 | `phase_budget_discharged` | `phase_budget_units <= phase_tolerance_units` | `PhaseBudgetBounds.budgetCertificate` |
 | `acceptance_kinematic_equations_validated` | verified acceptance record preserved final-position, velocity, and path-length equations | runtime-to-formal acceptance precondition |
 | `acceptance_kinematic_summary_replay_tolerance` | replay tolerance inherited from `PHACAcceptanceRecord` | runtime-to-formal tolerance provenance |
+| `acceptance_kinematic_summary_replay_tolerance_units` | fixed-point replay tolerance | `AcceptanceKinematicReplayBounds.summaryReplayTolerance` |
+| `acceptance_kinematic_summary_replay_tolerance_limit_units` | fixed-point replay tolerance limit | `AcceptanceKinematicReplayBounds.summaryReplayToleranceLimit` |
+| `acceptance_replay_certificate_discharged` | equation flag plus tolerance bound | `AcceptanceKinematicReplayBounds.replayCertificate` |
+| `acceptance_certificate_discharged` | spatial budget plus phase budget plus replay certificate | `KinematicBounds.acceptanceCertificate` |
 
 The default is a replay certificate. The observed spatial dispersion already
 includes the accepted moving-frame trajectory, while the residual term proves
@@ -102,7 +109,11 @@ The Lean mirror now names the same requirement as
 `KinematicBounds.acceptanceCertificate`. A release reviewer can therefore check
 one Boolean fixed-point acceptance certificate that joins the spatial Gronwall
 budget, phase-lock budget, and runtime equation-replay provenance instead of
-reviewing the replay flag as loose metadata.
+reviewing the replay flag as loose metadata. The Python manifest now records
+`acceptance_certificate_predicate`,
+`acceptance_certificate_theorem`, `acceptance_replay_certificate_discharged`,
+and `acceptance_certificate_discharged`, and the verifier recomputes each field
+from the same fixed-point units before accepting the manifest hash.
 
 For non-zero gain, the runtime manifest replays the Lean recurrence
 `previous + gain * previous + drive`, records the terminal
@@ -167,6 +178,8 @@ verify_pha_c_kinematic_proof_obligation(obligation)
   `PhaseBudgetBounds.budgetCertificate` condition;
 - `acceptance_kinematic_equations_validated` replay against the verified
   acceptance record's moving-frame summary equations;
+- fixed-point replay-tolerance units, replay certificate discharge, and the
+  combined `KinematicBounds.acceptanceCertificate` discharge;
 - lower-case SHA-256 fields; and
 - canonical manifest hash replay.
 

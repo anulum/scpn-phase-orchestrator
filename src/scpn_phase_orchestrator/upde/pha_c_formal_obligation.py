@@ -56,11 +56,19 @@ PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE = "PhaseBudgetBounds.budgetCertificate"
 PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM = (
     "phase_budget_certificate_discharges_phase_lock"
 )
+PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE = (
+    "KinematicBounds.acceptanceCertificate"
+)
+PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM = (
+    "acceptance_certificate_discharges_runtime_preconditions"
+)
 PHA_C_FORMAL_DEFAULT_SCALE_M = 1.0e-6
 PHA_C_FORMAL_DEFAULT_SCALE_RAD = 1.0e-6
 PHA_C_FORMAL_DEFAULT_TIME_SCALE_S = 1.0e-6
 
 __all__ = [
+    "PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE",
+    "PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM",
     "PHA_C_FORMAL_CERTIFICATE_PREDICATE",
     "PHA_C_FORMAL_CERTIFICATE_THEOREM",
     "PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE",
@@ -104,6 +112,8 @@ class PHACKinematicProofObligation:
     phase_lean_module: str
     phase_certificate_predicate: str
     phase_theorem: str
+    acceptance_certificate_predicate: str
+    acceptance_certificate_theorem: str
     fixed_point_scale_m: float
     fixed_point_scale_rad: float
     fixed_point_time_scale_s: float
@@ -138,6 +148,10 @@ class PHACKinematicProofObligation:
     phase_budget_discharged: bool
     acceptance_kinematic_equations_validated: bool
     acceptance_kinematic_summary_replay_tolerance: float
+    acceptance_kinematic_summary_replay_tolerance_units: int
+    acceptance_kinematic_summary_replay_tolerance_limit_units: int
+    acceptance_replay_certificate_discharged: bool
+    acceptance_certificate_discharged: bool
     observed_velocity_step_units: int
     kinematic_residual_units: int
     path_length_units: int
@@ -291,6 +305,10 @@ def _dict_without_record_hash(
         "phase_lean_module": obligation.phase_lean_module,
         "phase_certificate_predicate": obligation.phase_certificate_predicate,
         "phase_theorem": obligation.phase_theorem,
+        "acceptance_certificate_predicate": (
+            obligation.acceptance_certificate_predicate
+        ),
+        "acceptance_certificate_theorem": obligation.acceptance_certificate_theorem,
         "fixed_point_scale_m": obligation.fixed_point_scale_m,
         "fixed_point_scale_rad": obligation.fixed_point_scale_rad,
         "fixed_point_time_scale_s": obligation.fixed_point_time_scale_s,
@@ -344,6 +362,18 @@ def _dict_without_record_hash(
         ),
         "acceptance_kinematic_summary_replay_tolerance": (
             obligation.acceptance_kinematic_summary_replay_tolerance
+        ),
+        "acceptance_kinematic_summary_replay_tolerance_units": (
+            obligation.acceptance_kinematic_summary_replay_tolerance_units
+        ),
+        "acceptance_kinematic_summary_replay_tolerance_limit_units": (
+            obligation.acceptance_kinematic_summary_replay_tolerance_limit_units
+        ),
+        "acceptance_replay_certificate_discharged": (
+            obligation.acceptance_replay_certificate_discharged
+        ),
+        "acceptance_certificate_discharged": (
+            obligation.acceptance_certificate_discharged
         ),
         "observed_velocity_step_units": obligation.observed_velocity_step_units,
         "kinematic_residual_units": obligation.kinematic_residual_units,
@@ -540,6 +570,25 @@ def build_pha_c_kinematic_proof_obligation(
     phase_budget_units = phase_dispersion_units + configured_phase_drift_units
     phase_margin_units = phase_tolerance_units - phase_budget_units
     phase_budget_discharged = phase_margin_units >= 0
+    acceptance_tolerance_units = _nonnegative_units(
+        verified_record.kinematic_summary_replay_tolerance,
+        scale=scale_m,
+        name="acceptance_kinematic_summary_replay_tolerance",
+    )
+    acceptance_tolerance_limit_units = _nonnegative_units(
+        PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
+        scale=scale_m,
+        name="acceptance_kinematic_summary_replay_tolerance_limit",
+    )
+    acceptance_replay_certificate_discharged = (
+        verified_record.kinematic_equations_validated
+        and acceptance_tolerance_units <= acceptance_tolerance_limit_units
+    )
+    acceptance_certificate_discharged = (
+        gronwall_budget_margin_units >= 0
+        and phase_budget_discharged
+        and acceptance_replay_certificate_discharged
+    )
     observed_velocity_step_units = _nonnegative_units(
         verified_record.max_abs_velocity_m_per_s * verified_record.dt,
         scale=scale_m,
@@ -554,8 +603,8 @@ def build_pha_c_kinematic_proof_obligation(
         window_margin_units >= 0
         and phase_margin_units >= 0
         and phase_budget_discharged
+        and acceptance_certificate_discharged
         and continuous_envelope_discharged
-        and verified_record.kinematic_equations_validated
         and verified_record.execution_disabled
         and not verified_record.actuating
         and verified_record.claim_boundary == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
@@ -578,6 +627,12 @@ def build_pha_c_kinematic_proof_obligation(
         "phase_lean_module": PHA_C_FORMAL_PHASE_LEAN_MODULE,
         "phase_certificate_predicate": PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE,
         "phase_theorem": PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM,
+        "acceptance_certificate_predicate": (
+            PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
+        ),
+        "acceptance_certificate_theorem": (
+            PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
+        ),
         "fixed_point_scale_m": scale_m,
         "fixed_point_scale_rad": scale_rad,
         "fixed_point_time_scale_s": time_scale,
@@ -616,6 +671,16 @@ def build_pha_c_kinematic_proof_obligation(
         "acceptance_kinematic_summary_replay_tolerance": (
             verified_record.kinematic_summary_replay_tolerance
         ),
+        "acceptance_kinematic_summary_replay_tolerance_units": (
+            acceptance_tolerance_units
+        ),
+        "acceptance_kinematic_summary_replay_tolerance_limit_units": (
+            acceptance_tolerance_limit_units
+        ),
+        "acceptance_replay_certificate_discharged": (
+            acceptance_replay_certificate_discharged
+        ),
+        "acceptance_certificate_discharged": acceptance_certificate_discharged,
         "observed_velocity_step_units": observed_velocity_step_units,
         "kinematic_residual_units": observed_residual_units,
         "path_length_units": path_length_units,
@@ -654,6 +719,12 @@ def verify_pha_c_kinematic_proof_obligation(
         "phase_lean_module": PHA_C_FORMAL_PHASE_LEAN_MODULE,
         "phase_certificate_predicate": PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE,
         "phase_theorem": PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM,
+        "acceptance_certificate_predicate": (
+            PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
+        ),
+        "acceptance_certificate_theorem": (
+            PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
+        ),
     }
     for field, expected in exact_strings.items():
         got = getattr(obligation, field)
@@ -703,6 +774,8 @@ def verify_pha_c_kinematic_proof_obligation(
         "max_phase_dispersion_units",
         "configured_phase_drift_bound_units",
         "phase_budget_units",
+        "acceptance_kinematic_summary_replay_tolerance_units",
+        "acceptance_kinematic_summary_replay_tolerance_limit_units",
         "observed_velocity_step_units",
         "kinematic_residual_units",
         "path_length_units",
@@ -757,6 +830,38 @@ def verify_pha_c_kinematic_proof_obligation(
             "acceptance_kinematic_summary_replay_tolerance must match "
             "the acceptance constant"
         )
+    expected_acceptance_tolerance_units = _nonnegative_units(
+        kinematic_replay_tolerance,
+        scale=obligation.fixed_point_scale_m,
+        name="acceptance_kinematic_summary_replay_tolerance",
+    )
+    if (
+        obligation.acceptance_kinematic_summary_replay_tolerance_units
+        != expected_acceptance_tolerance_units
+    ):
+        raise ValueError(
+            "acceptance_kinematic_summary_replay_tolerance_units must replay",
+        )
+    expected_acceptance_tolerance_limit_units = _nonnegative_units(
+        PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
+        scale=obligation.fixed_point_scale_m,
+        name="acceptance_kinematic_summary_replay_tolerance_limit",
+    )
+    if (
+        obligation.acceptance_kinematic_summary_replay_tolerance_limit_units
+        != expected_acceptance_tolerance_limit_units
+    ):
+        raise ValueError(
+            "acceptance_kinematic_summary_replay_tolerance_limit_units must replay",
+        )
+    _validate_bool(
+        obligation.acceptance_replay_certificate_discharged,
+        name="acceptance_replay_certificate_discharged",
+    )
+    _validate_bool(
+        obligation.acceptance_certificate_discharged,
+        name="acceptance_certificate_discharged",
+    )
     _validate_bool(
         obligation.continuous_envelope_discharged,
         name="continuous_envelope_discharged",
@@ -920,11 +1025,35 @@ def verify_pha_c_kinematic_proof_obligation(
         raise ValueError(
             "phase_budget_discharged does not match phase certificate math",
         )
+    expected_acceptance_replay_discharged = (
+        obligation.acceptance_kinematic_equations_validated
+        and obligation.acceptance_kinematic_summary_replay_tolerance_units
+        <= obligation.acceptance_kinematic_summary_replay_tolerance_limit_units
+    )
+    if (
+        obligation.acceptance_replay_certificate_discharged
+        != expected_acceptance_replay_discharged
+    ):
+        raise ValueError(
+            "acceptance_replay_certificate_discharged does not match Lean replay",
+        )
+    expected_acceptance_certificate_discharged = (
+        expected_margin >= 0
+        and expected_phase_budget_discharged
+        and expected_acceptance_replay_discharged
+    )
+    if (
+        obligation.acceptance_certificate_discharged
+        != expected_acceptance_certificate_discharged
+    ):
+        raise ValueError(
+            "acceptance_certificate_discharged does not match Lean certificate",
+        )
     expected_discharged = (
         expected_margin >= 0
         and expected_phase_budget_discharged
+        and expected_acceptance_certificate_discharged
         and expected_continuous_discharged
-        and obligation.acceptance_kinematic_equations_validated
         and obligation.execution_disabled
         and not obligation.actuating
     )

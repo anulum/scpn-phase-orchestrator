@@ -553,4 +553,11 @@ before the combined proof obligation can discharge. This keeps FRC or MIF
 specialisations from hiding residual uncertainty inside the relative-velocity
 term or phase uncertainty inside replay dispersion.
 
+The same manifest now records the Lean
+`KinematicBounds.acceptanceCertificate` predicate and
+`acceptance_certificate_discharges_runtime_preconditions` theorem. The
+`acceptance_certificate_discharged` field is recomputed from the spatial
+Gronwall margin, phase-budget discharge, and moving-frame equation replay
+certificate before the manifest hash is accepted.
+
 ::: scpn_phase_orchestrator.upde.pha_c_formal_obligation

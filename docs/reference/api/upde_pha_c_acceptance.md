@@ -168,7 +168,12 @@ The formal manifest now also publishes
 `formal_obligation_acceptance_kinematic_equations_validated` and
 `formal_obligation_acceptance_kinematic_summary_replay_tolerance`, binding the
 Lean-facing proof obligation to the verified acceptance record's moving-frame
-summary equations.
+summary equations. The same benchmark row now publishes
+`formal_obligation_acceptance_replay_certificate_discharged`,
+`formal_obligation_acceptance_certificate_discharged`,
+`formal_obligation_acceptance_certificate_predicate`, and
+`formal_obligation_acceptance_certificate_theorem`, and the parity gate fails
+unless every backend row discharges the combined Lean acceptance certificate.
 
 ```bash
 uv run python benchmarks/pha_c_acceptance_benchmark.py \

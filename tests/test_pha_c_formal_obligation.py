@@ -31,6 +31,8 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     build_pha_c_acceptance_record,
 )
 from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
+    PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE,
+    PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM,
     PHA_C_FORMAL_CERTIFICATE_PREDICATE,
     PHA_C_FORMAL_CERTIFICATE_THEOREM,
     PHA_C_FORMAL_CONTINUOUS_CERTIFICATE_PREDICATE,
@@ -107,6 +109,12 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
         PHA_C_FORMAL_PHASE_CERTIFICATE_PREDICATE
     )
     assert obligation.phase_theorem == PHA_C_FORMAL_PHASE_CERTIFICATE_THEOREM
+    assert obligation.acceptance_certificate_predicate == (
+        PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE
+    )
+    assert obligation.acceptance_certificate_theorem == (
+        PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM
+    )
     assert obligation.fixed_point_time_scale_s == PHA_C_FORMAL_DEFAULT_TIME_SCALE_S
     assert obligation.time_step_s == pytest.approx(record.dt)
     assert obligation.time_scale_units_per_second == 1_000_000
@@ -156,6 +164,10 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     assert obligation.acceptance_kinematic_summary_replay_tolerance == (
         PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
     )
+    assert obligation.acceptance_kinematic_summary_replay_tolerance_units == 1
+    assert obligation.acceptance_kinematic_summary_replay_tolerance_limit_units == 1
+    assert obligation.acceptance_replay_certificate_discharged
+    assert obligation.acceptance_certificate_discharged
     assert obligation.observed_velocity_step_units == _ceil_units(
         record.max_abs_velocity_m_per_s * record.dt,
         obligation.fixed_point_scale_m,
@@ -418,6 +430,34 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
                 acceptance_kinematic_summary_replay_tolerance=1.0e-9,
             ),
         )
+    with pytest.raises(
+        ValueError,
+        match="acceptance_kinematic_summary_replay_tolerance_units",
+    ):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(
+                obligation,
+                acceptance_kinematic_summary_replay_tolerance_units=2,
+            ),
+        )
+    with pytest.raises(
+        ValueError,
+        match="acceptance_kinematic_summary_replay_tolerance_limit_units",
+    ):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(
+                obligation,
+                acceptance_kinematic_summary_replay_tolerance_limit_units=2,
+            ),
+        )
+    with pytest.raises(ValueError, match="acceptance_replay_certificate_discharged"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(obligation, acceptance_replay_certificate_discharged=False),
+        )
+    with pytest.raises(ValueError, match="acceptance_certificate_discharged"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(obligation, acceptance_certificate_discharged=False),
+        )
     with pytest.raises(ValueError, match="gronwall_budget_units"):
         verify_pha_c_kinematic_proof_obligation(
             replace(
@@ -436,6 +476,10 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
     with pytest.raises(ValueError, match="phase_theorem"):
         verify_pha_c_kinematic_proof_obligation(
             replace(obligation, phase_theorem="unchecked"),
+        )
+    with pytest.raises(ValueError, match="acceptance_certificate_theorem"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(obligation, acceptance_certificate_theorem="unchecked"),
         )
     with pytest.raises(ValueError, match="continuous_horizon_drive_bound_units"):
         verify_pha_c_kinematic_proof_obligation(

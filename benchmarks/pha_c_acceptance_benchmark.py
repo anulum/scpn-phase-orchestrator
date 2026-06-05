@@ -61,6 +61,12 @@ PARITY_TOLERANCES = {
     "python": 0.0,
 }
 BENCHMARK_EVIDENCE_KIND = "local_regression_non_isolated"
+FORMAL_REPLAY_TOLERANCE_UNITS_FIELD = (
+    "formal_obligation_acceptance_kinematic_summary_replay_tolerance_units"
+)
+FORMAL_REPLAY_TOLERANCE_LIMIT_UNITS_FIELD = (
+    "formal_obligation_acceptance_kinematic_summary_replay_tolerance_limit_units"
+)
 BackendFn = Callable[..., PHACAcceptanceRecord]
 BACKEND_FUNCTIONS: dict[str, BackendFn] = {
     "rust": _pha_c_acceptance_rust.build_pha_c_acceptance_record_rust,
@@ -374,6 +380,24 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "formal_obligation_acceptance_kinematic_summary_replay_tolerance": (
             obligation.acceptance_kinematic_summary_replay_tolerance
         ),
+        FORMAL_REPLAY_TOLERANCE_UNITS_FIELD: (
+            obligation.acceptance_kinematic_summary_replay_tolerance_units
+        ),
+        FORMAL_REPLAY_TOLERANCE_LIMIT_UNITS_FIELD: (
+            obligation.acceptance_kinematic_summary_replay_tolerance_limit_units
+        ),
+        "formal_obligation_acceptance_replay_certificate_discharged": int(
+            obligation.acceptance_replay_certificate_discharged,
+        ),
+        "formal_obligation_acceptance_certificate_discharged": int(
+            obligation.acceptance_certificate_discharged,
+        ),
+        "formal_obligation_acceptance_certificate_predicate": (
+            obligation.acceptance_certificate_predicate
+        ),
+        "formal_obligation_acceptance_certificate_theorem": (
+            obligation.acceptance_certificate_theorem
+        ),
         "formal_obligation_phase_theorem": obligation.phase_theorem,
         "formal_obligation_theorem": obligation.lean_theorem,
         "formal_obligation_continuous_theorem": obligation.continuous_theorem,
@@ -517,6 +541,24 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "formal_obligation_acceptance_kinematic_summary_replay_tolerance": (
                     obligation.acceptance_kinematic_summary_replay_tolerance
                 ),
+                FORMAL_REPLAY_TOLERANCE_UNITS_FIELD: (
+                    obligation.acceptance_kinematic_summary_replay_tolerance_units
+                ),
+                FORMAL_REPLAY_TOLERANCE_LIMIT_UNITS_FIELD: (
+                    obligation.acceptance_kinematic_summary_replay_tolerance_limit_units
+                ),
+                "formal_obligation_acceptance_replay_certificate_discharged": int(
+                    obligation.acceptance_replay_certificate_discharged,
+                ),
+                "formal_obligation_acceptance_certificate_discharged": int(
+                    obligation.acceptance_certificate_discharged,
+                ),
+                "formal_obligation_acceptance_certificate_predicate": (
+                    obligation.acceptance_certificate_predicate
+                ),
+                "formal_obligation_acceptance_certificate_theorem": (
+                    obligation.acceptance_certificate_theorem
+                ),
                 "formal_obligation_phase_theorem": obligation.phase_theorem,
                 "formal_obligation_continuous_theorem": (
                     obligation.continuous_theorem
@@ -552,6 +594,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
         ),
         "require_formal_kinematic_obligation": True,
+        "require_formal_acceptance_certificate": True,
         "max_kinematic_residual_m": 1.0e-12,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
@@ -589,6 +632,11 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             "formal_obligation_acceptance_kinematic_equations_validated"
         ]
         == 1
+        and contracts[
+            "formal_obligation_acceptance_replay_certificate_discharged"
+        ]
+        == 1
+        and contracts["formal_obligation_acceptance_certificate_discharged"] == 1
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
@@ -603,6 +651,15 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and all(
             int(record["formal_obligation_acceptance_kinematic_equations_validated"])
             == 1
+            for record in records
+        )
+        and all(
+            int(record["formal_obligation_acceptance_replay_certificate_discharged"])
+            == 1
+            for record in records
+        )
+        and all(
+            int(record["formal_obligation_acceptance_certificate_discharged"]) == 1
             for record in records
         )
         and all(
@@ -730,6 +787,26 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                     record[
                         "formal_obligation_acceptance_kinematic_summary_replay_tolerance"
                     ]
+                ),
+                FORMAL_REPLAY_TOLERANCE_UNITS_FIELD: (
+                    record[FORMAL_REPLAY_TOLERANCE_UNITS_FIELD]
+                ),
+                FORMAL_REPLAY_TOLERANCE_LIMIT_UNITS_FIELD: (
+                    record[FORMAL_REPLAY_TOLERANCE_LIMIT_UNITS_FIELD]
+                ),
+                "formal_obligation_acceptance_replay_certificate_discharged": (
+                    record[
+                        "formal_obligation_acceptance_replay_certificate_discharged"
+                    ]
+                ),
+                "formal_obligation_acceptance_certificate_discharged": (
+                    record["formal_obligation_acceptance_certificate_discharged"]
+                ),
+                "formal_obligation_acceptance_certificate_predicate": (
+                    record["formal_obligation_acceptance_certificate_predicate"]
+                ),
+                "formal_obligation_acceptance_certificate_theorem": (
+                    record["formal_obligation_acceptance_certificate_theorem"]
                 ),
                 "formal_obligation_phase_theorem": (
                     record["formal_obligation_phase_theorem"]
@@ -866,6 +943,24 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         ],
         "formal_obligation_acceptance_kinematic_summary_replay_tolerance": contracts[
             "formal_obligation_acceptance_kinematic_summary_replay_tolerance"
+        ],
+        FORMAL_REPLAY_TOLERANCE_UNITS_FIELD: (
+            contracts[FORMAL_REPLAY_TOLERANCE_UNITS_FIELD]
+        ),
+        FORMAL_REPLAY_TOLERANCE_LIMIT_UNITS_FIELD: (
+            contracts[FORMAL_REPLAY_TOLERANCE_LIMIT_UNITS_FIELD]
+        ),
+        "formal_obligation_acceptance_replay_certificate_discharged": contracts[
+            "formal_obligation_acceptance_replay_certificate_discharged"
+        ],
+        "formal_obligation_acceptance_certificate_discharged": contracts[
+            "formal_obligation_acceptance_certificate_discharged"
+        ],
+        "formal_obligation_acceptance_certificate_predicate": contracts[
+            "formal_obligation_acceptance_certificate_predicate"
+        ],
+        "formal_obligation_acceptance_certificate_theorem": contracts[
+            "formal_obligation_acceptance_certificate_theorem"
         ],
         "formal_obligation_phase_theorem": contracts["formal_obligation_phase_theorem"],
         "formal_obligation_theorem": contracts["formal_obligation_theorem"],
