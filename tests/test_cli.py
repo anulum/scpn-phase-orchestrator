@@ -109,6 +109,12 @@ def test_validate_valid(runner, valid_spec_path):
     assert "engine: kuramoto" in result.output
 
 
+def test_validate_security_valid(runner, valid_spec_path):
+    result = runner.invoke(main, ["validate", "--security", valid_spec_path])
+    assert result.exit_code == 0
+    assert "Security checks passed" in result.output
+
+
 def test_validate_invalid(runner, invalid_spec_path):
     result = runner.invoke(main, ["validate", invalid_spec_path])
     assert result.exit_code != 0

@@ -374,6 +374,54 @@ jobs:
       - name: Audit Cargo.lock
         run: cargo audit --file Cargo.lock
 
+  cargo-deny:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: spo-kernel
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-deny
+          key: cargo-deny-0.18.7-${{ hashFiles('spo-kernel/Cargo.lock', 'spo-kernel/deny.toml') }}
+          restore-keys: cargo-deny-0.18.7-
+      - name: Install cargo-deny
+        run: |
+          if ! cargo deny --version | grep -q '0\.18\.7'; then
+            cargo install cargo-deny --version 0.18.7 --locked --force
+          fi
+      - name: Check Rust advisories, bans, and sources
+        run: cargo deny check advisories bans sources
+
+  rust-miri:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: spo-kernel
+    env:
+      MIRIFLAGS: -Zmiri-strict-provenance
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # nightly with miri
+        with:
+          toolchain: nightly
+          components: miri
+      - name: Prepare Miri sysroot
+        run: cargo miri setup
+      - name: Miri pure-Rust boundary smoke
+        run: |
+          cargo miri test -p spo-types --lib
+          cargo miri test -p spo-supervisor --lib
+
   rust-msrv:
     runs-on: ubuntu-latest
     defaults:
@@ -425,7 +473,7 @@ jobs:
           path: bench/current.json
 
   ci-gate:
-    needs: [lint, typecheck, test, slow-tests, security, rust-check, cargo-audit, rust-msrv, coverage-guard, module-linkage, ffi-test, benchmark]
+    needs: [lint, typecheck, test, slow-tests, security, rust-check, cargo-audit, cargo-deny, rust-miri, rust-msrv, coverage-guard, module-linkage, ffi-test, benchmark]
     runs-on: ubuntu-latest
     steps:
       - run: echo "All checks passed"

@@ -47,6 +47,7 @@ from scpn_phase_orchestrator.binding import (
     load_binding_spec,
     resolved_binding_config,
     validate_binding_spec,
+    validate_binding_spec_security,
 )
 from scpn_phase_orchestrator.binding.types import ProtocolNetSpec
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
@@ -169,15 +170,25 @@ def main() -> None:
 
 @main.command()
 @click.argument("binding_spec", type=click.Path(exists=True))
-def validate(binding_spec: str) -> None:
+@click.option(
+    "--security",
+    "security_checks",
+    is_flag=True,
+    help="Run stricter security linting for production-facing binding specs.",
+)
+def validate(binding_spec: str, security_checks: bool) -> None:
     """Validate a binding specification file."""
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
+    if security_checks:
+        errors.extend(validate_binding_spec_security(spec))
     if errors:
         for e in errors:
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
     click.echo("Valid")
+    if security_checks:
+        click.echo("Security checks passed")
     summary = resolved_binding_config(spec)
     for line in format_resolved_binding_config(summary):
         click.echo(line)

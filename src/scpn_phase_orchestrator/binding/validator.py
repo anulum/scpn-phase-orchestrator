@@ -18,6 +18,8 @@ protocol-net consistency before a binding is used by runtime code.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
+from dataclasses import fields, is_dataclass
 
 from scpn_phase_orchestrator.binding.types import (
     STANDARD_CHANNELS,
@@ -29,12 +31,30 @@ from scpn_phase_orchestrator.binding.types import (
     is_valid_channel_id,
 )
 
-__all__ = ["validate_binding_spec"]
+__all__ = ["validate_binding_spec", "validate_binding_spec_security"]
 
 _VALID_CROSS_CHANNEL_MODES = frozenset(
     {"bidirectional", "directed", "excitatory", "inhibitory"}
 )
 _VALID_REPLAY_SEMANTICS = frozenset({"phase", "event", "state", "derived", "external"})
+_EXECUTABLE_CONFIG_MARKERS = (
+    "!!python",
+    "python/object",
+    "__import__",
+    "eval(",
+    "exec(",
+    "compile(",
+    "subprocess",
+    "os.system",
+    "pickle.loads",
+    "marshal.loads",
+    "lambda ",
+    "builtins.",
+    "globals(",
+    "locals(",
+    "getattr(",
+    "setattr(",
+)
 
 
 def validate_binding_spec(spec: BindingSpec) -> list[str]:
@@ -258,3 +278,55 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
             )
 
     return errors
+
+
+def validate_binding_spec_security(spec: BindingSpec) -> list[str]:
+    """Return security-review findings for a loaded binding spec.
+
+    Normal binding validation checks structure and cross-field consistency.
+    This stricter pass is intended for ``spo validate --security`` and rejects
+    executable-looking payloads in free-form configuration fields. Binding specs
+    remain declarative data; they must not carry Python code, loader tags,
+    import expressions, subprocess references, or deserialisation gadgets.
+    """
+
+    findings: list[str] = []
+    for location, value in _walk_security_values(spec, "binding"):
+        if isinstance(value, str):
+            normalised = value.strip().lower()
+            marker = next(
+                (
+                    marker
+                    for marker in _EXECUTABLE_CONFIG_MARKERS
+                    if marker in normalised
+                ),
+                None,
+            )
+            if marker is not None:
+                findings.append(
+                    f"{location}: executable-looking marker {marker!r} is not "
+                    "allowed in binding specs"
+                )
+    return findings
+
+
+def _walk_security_values(value: object, location: str) -> list[tuple[str, object]]:
+    if is_dataclass(value) and not isinstance(value, type):
+        items: list[tuple[str, object]] = []
+        for field in fields(value):
+            child = getattr(value, field.name)
+            items.extend(_walk_security_values(child, f"{location}.{field.name}"))
+        return items
+    if isinstance(value, Mapping):
+        items = []
+        for key, child in value.items():
+            key_location = f"{location}.{key}"
+            items.append((key_location, key))
+            items.extend(_walk_security_values(child, key_location))
+        return items
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
+        items = []
+        for idx, child in enumerate(value):
+            items.extend(_walk_security_values(child, f"{location}[{idx}]"))
+        return items
+    return [(location, value)]

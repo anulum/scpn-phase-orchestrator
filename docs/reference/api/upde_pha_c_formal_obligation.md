@@ -6,6 +6,24 @@ converts the accepted PHA-C trajectory envelope into fixed-point natural-number
 fields that match `KinematicBounds`, then signs the manifest with a
 deterministic SHA-256 hash.
 
+## Formal guarantee boundary
+
+The Lean files prove arithmetic certificate predicates over the fixed-point
+manifest fields named below. They do not prove that a live plant, accelerator,
+hardware bridge, QPU, neuromorphic target, or external controller will remain
+safe. The runtime still needs sensor calibration, actuator bounds, deployment
+network controls, and operator approval before any result can be promoted from
+review evidence to operational evidence.
+
+Current release guarantees are therefore scoped as follows:
+
+| Surface | What is proven or checked | What is not claimed |
+|---------|---------------------------|---------------------|
+| Lean `SPOFormal.Kinematic` | fixed-point kinematic, sampled-rate, phase-budget, and acceptance certificate implications | real-analysis proof of the physical system or hardware actuation safety |
+| Python verifier | schema, theorem names, fixed-point arithmetic replay, hash replay, and disabled-execution flags | independent theorem proving |
+| Rust/Go/Julia/Mojo PHA-C rows | source-contract parity and benchmark/reference gates where toolchains are available | universal native execution across every downstream language row |
+| Release docs | review-only handoff evidence for MIF/FRC consumers | automatic permission to actuate live systems |
+
 The obligation does not execute Lean, write to hardware, mutate a supervisor,
 or change a coupling policy. It records the exact theorem and Boolean
 certificate predicate that a reviewer or CI proof gate must use:

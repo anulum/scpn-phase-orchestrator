@@ -310,7 +310,9 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         import yaml
 
         try:
-            data = yaml.safe_load(raw)
+            # SafeLoader subclass only: blocks arbitrary Python constructors
+            # while rejecting duplicate mapping keys.
+            data = yaml.load(raw, Loader=_binding_spec_safe_loader(yaml))  # noqa: S506
         except (RecursionError, yaml.YAMLError) as exc:
             raise BindingLoadError(f"YAML parse error in {path.name}: {exc}") from exc
     elif path.suffix == ".json":
@@ -566,3 +568,46 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
             data.get("value_alignment"), "value_alignment"
         ),
     )
+
+
+def _binding_spec_safe_loader(yaml_module: Any) -> type:
+    """Return a SafeLoader variant that rejects duplicate mapping keys.
+
+    PyYAML's ``safe_load`` blocks arbitrary Python constructors, but its default
+    mapping constructor silently accepts duplicate keys. Binding specs are
+    security-sensitive configuration, so a repeated key must fail closed instead
+    of letting the last value win.
+    """
+
+    class BindingSpecSafeLoader(yaml_module.SafeLoader):
+        pass
+
+    def construct_mapping(loader: Any, node: Any, deep: bool = False) -> dict[Any, Any]:
+        loader.flatten_mapping(node)
+        pairs = loader.construct_pairs(node, deep=deep)
+        mapping: dict[Any, Any] = {}
+        for key, value in pairs:
+            try:
+                duplicate = key in mapping
+            except TypeError as exc:
+                raise yaml_module.constructor.ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    "found an unhashable key",
+                    node.start_mark,
+                ) from exc
+            if duplicate:
+                raise yaml_module.constructor.ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    f"found duplicate key {key!r}",
+                    node.start_mark,
+                )
+            mapping[key] = value
+        return mapping
+
+    BindingSpecSafeLoader.add_constructor(
+        yaml_module.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+        construct_mapping,
+    )
+    return BindingSpecSafeLoader

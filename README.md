@@ -42,7 +42,7 @@ into a single documented review boundary:
 | PHA-C.6 | Lean-facing fixed-point safety manifests for kinematic, continuous-envelope, phase-budget, and aggregate acceptance certificates |
 | Polyglot gates | Rust, Go, Julia, Mojo, and Python source-contract rows with unavailable-toolchain evidence where native execution is not yet claimed |
 | Benchmark posture | canonical reference-suite rows labelled as local non-isolated regression evidence unless production isolation metadata is present |
-| Security posture | FastAPI/Starlette deployment floor includes the patched Host-header validation boundary for QueueWaves-style services |
+| Security posture | FastAPI/Starlette deployment floor includes the patched Host-header validation boundary for QueueWaves-style services, and production-mode QueueWaves tests assert malformed `Host` headers cannot bypass API-key checks |
 
 This release does not claim live accelerator, quantum, neuromorphic, PLC, or
 medical actuation. Those remain adapter-scoped and disabled until a separate
@@ -125,6 +125,21 @@ discharge must agree before the PHA-C row passes.
 
 This order keeps the first experience practical while making the evidence
 boundary visible from the start.
+
+## Security and Formal Boundary Notes
+
+- FastAPI/Starlette surfaces require `starlette>=1.0.1,<2.0`; QueueWaves
+  production endpoints authenticate the matched route dependency and do not use
+  `request.url.path` for authorization decisions.
+- Binding specs are declarative data. `spo validate --security <spec>` adds a
+  stricter lint pass for production-facing specs and rejects duplicate YAML keys
+  plus executable-looking configuration strings.
+- Release automation emits a CycloneDX SBOM, Python dependencies install from
+  hash-pinned lockfiles in CI, and Rust CI includes `cargo audit`, `cargo deny`,
+  and Miri smoke coverage for pure-Rust boundaries.
+- Lean proof artefacts prove fixed-point certificate predicates over review
+  manifests. They do not prove live hardware, plant, QPU, neuromorphic, or PLC
+  safety without separate deployment evidence and operator approval.
 
 ## Value Chain
 

@@ -79,7 +79,10 @@ from scpn_phase_orchestrator.binding.topos_semantic import (
     validate_symbolic_binding_functor,
 )
 from scpn_phase_orchestrator.binding.types import BindingSpec
-from scpn_phase_orchestrator.binding.validator import validate_binding_spec
+from scpn_phase_orchestrator.binding.validator import (
+    validate_binding_spec,
+    validate_binding_spec_security,
+)
 
 __all__ = [
     "BindingLoadError",
@@ -129,6 +132,7 @@ __all__ = [
     "read_digital_twin_sync_jsonl",
     "resolved_binding_config",
     "validate_binding_spec",
+    "validate_binding_spec_security",
     "validate_digital_twin_sync_envelope",
     "validate_symbolic_binding_functor",
     "write_digital_twin_sync_jsonl",

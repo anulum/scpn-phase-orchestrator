@@ -133,6 +133,25 @@ All pure-logic crates (`spo-types`, `spo-engine`, `spo-oscillators`,
 `spo-supervisor`) have `#![no_std]` aspirations but currently use `std` for
 `HashMap` and `Vec`. Only `spo-ffi` depends on PyO3 and numpy.
 
+## FFI Numeric Precision Contract
+
+The Python/Rust boundary is a float64 contract:
+
+- Python passes contiguous numeric arrays after shape, finite-value, and domain
+  validation.
+- Rust kernels return float64-compatible values and Python revalidates shape,
+  finiteness, and physical bounds before accepting the result.
+- Phase outputs are normalised to `[0, 2π)` unless the documented monitor
+  contract returns a unitless score or matrix.
+- Fixed-point formal manifests are separate review artefacts; they do not
+  change the runtime float64 solver contract.
+
+Any new FFI path must add a module-specific parity test that compares Python
+and Rust on the same seeded input and documents the tolerated absolute or
+relative error. Safety-critical gates must fail closed when either backend
+emits NaN, infinity, shape drift, or a value outside the declared physical
+range.
+
 ## Contributing Rust Code
 
 Run all three before submitting:
@@ -148,9 +167,11 @@ The CI pipeline runs:
 | Job | Matrix | What |
 |-----|--------|------|
 | `rust-check` | 3 OS (Linux, macOS, Windows) | `cargo fmt --check`, `clippy -D warnings`, `cargo test` |
-| `ffi-test` | 3 OS x 2 Python (3.10, 3.12) | `maturin develop --release`, `pytest tests/` |
+| `ffi-test` | 3 OS x 2 Python (3.11, 3.12) | `maturin develop --release`, `pytest tests/` |
 | `cargo-audit` | Linux | `cargo audit` for known vulnerabilities |
-| `rust-msrv` | Linux | Verify builds on Rust 1.75.0 |
+| `cargo-deny` | Linux | RustSec advisories, banned wildcard dependencies, and source registry policy |
+| `rust-miri` | Linux nightly | Miri smoke tests for pure-Rust type/supervisor crates |
+| `rust-msrv` | Linux | Verify builds on Rust 1.83.0 |
 
 ## Numerical Parity
 

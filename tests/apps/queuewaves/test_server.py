@@ -252,6 +252,38 @@ def test_production_requires_request_api_key(
     assert present.status_code == 200
 
 
+@pytest.mark.parametrize(
+    "host",
+    [
+        "queuewaves.example/api/v1/health",
+        "queuewaves.example?next=/api/v1/health",
+        "queuewaves.example#/api/v1/health",
+    ],
+)
+def test_production_badhost_headers_do_not_bypass_api_key(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    host: str,
+) -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=SecurityConfig(mode="production"),
+    )
+    monkeypatch.setenv("QUEUEWAVES_API_KEY", "test-key")
+    client = TestClient(create_app(cfg))
+
+    response = client.get("/api/v1/health", headers={"Host": host})
+
+    assert response.status_code == 401
+
+
 def test_production_rate_limits_requests(
     minimal_config: QueueWavesConfig,
     monkeypatch: pytest.MonkeyPatch,

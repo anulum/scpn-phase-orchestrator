@@ -27,12 +27,36 @@ from scpn_phase_orchestrator.binding.types import (
     ObjectivePartition,
     OscillatorFamily,
 )
-from scpn_phase_orchestrator.binding.validator import validate_binding_spec
+from scpn_phase_orchestrator.binding.validator import (
+    validate_binding_spec,
+    validate_binding_spec_security,
+)
 
 
 def test_valid_spec_no_errors(sample_binding_spec):
     errors = validate_binding_spec(sample_binding_spec)
     assert errors == []
+
+
+def test_valid_spec_security_no_errors(sample_binding_spec):
+    errors = validate_binding_spec_security(sample_binding_spec)
+    assert errors == []
+
+
+def test_security_validation_rejects_executable_config_strings(sample_binding_spec):
+    families = {
+        "phys": OscillatorFamily(
+            channel="P",
+            extractor_type="hilbert",
+            config={"expression": "__import__('os').system('id')"},
+        ),
+    }
+    bad = replace(sample_binding_spec, oscillator_families=families)
+
+    errors = validate_binding_spec_security(bad)
+
+    assert errors
+    assert "__import__" in errors[0]
 
 
 def test_empty_name_error(sample_binding_spec):

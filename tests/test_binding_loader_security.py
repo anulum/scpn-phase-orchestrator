@@ -45,10 +45,37 @@ class TestMalformedYAML:
         p = tmp_path / "recursive.yaml"
         p.write_text("rules: []\n", encoding="utf-8")
 
-        def raise_recursion(_: str) -> object:
+        def raise_recursion(_raw: str, **_kwargs: object) -> object:
             raise RecursionError("nested YAML")
 
-        monkeypatch.setattr(yaml, "safe_load", raise_recursion)
+        monkeypatch.setattr(yaml, "load", raise_recursion)
+        with pytest.raises(BindingLoadError, match="YAML parse error"):
+            load_binding_spec(p)
+
+    def test_duplicate_yaml_keys_fail_closed(self, tmp_path: Path) -> None:
+        p = tmp_path / "duplicate.yaml"
+        p.write_text(
+            "name: first\n"
+            "name: second\n"
+            "version: '1.0.0'\n"
+            "layers: []\n"
+            "oscillator_families: {}\n"
+            "coupling: {base_strength: 1, decay_alpha: 0.3}\n"
+            "drivers: {}\n"
+            "objectives: {good_layers: [], bad_layers: []}\n"
+            "safety_tier: research\n"
+            "sample_period_s: 0.01\n"
+            "control_period_s: 0.1\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(BindingLoadError, match="duplicate key"):
+            load_binding_spec(p)
+
+    def test_python_yaml_tags_remain_blocked(self, tmp_path: Path) -> None:
+        p = tmp_path / "python_tag.yaml"
+        p.write_text("name: !!python/object/apply:os.system ['id']\n", encoding="utf-8")
+
         with pytest.raises(BindingLoadError, match="YAML parse error"):
             load_binding_spec(p)
 
