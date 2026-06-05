@@ -8,6 +8,21 @@ parameter. This creates a memory effect: frequently synchronised
 oscillator pairs develop stronger coupling over time, analogous to
 Hebbian synaptic strengthening in neural systems.
 
+## Why this module exists
+
+Imprint provides bounded adaptation instead of unbounded recalibration. It lets the
+system retain useful coupling history in a form that remains auditable through
+release-time surfaces.
+
+From an operations perspective, this matters when:
+
+- recurring synchronization structures should be reinforced without replacing the base topology;
+- transient disturbances should not cause permanent control changes unless replayed and validated;
+- and policy handoff teams need an interpretable memory signal with attribution.
+
+The module is designed to be explainable: every modulation path is explicit and
+each state update is constrained by saturation and decay checks.
+
 ## Theory
 
 The imprint model draws from three theoretical traditions:

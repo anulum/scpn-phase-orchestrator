@@ -14,6 +14,23 @@ scalar oscillator traces. It provides delay-coordinate embedding,
 Fraser-Swinney average mutual information, nearest-neighbor distances,
 and Python-side wrappers for optimal delay and embedding dimension.
 
+## Operational use
+
+Use this module when a monitor needs geometry and short-term predictability from
+non-vector observations (for example, single-channel physiology traces mapped into
+state-space structure).
+
+A practical sequence is:
+
+1. Build a validated embedded matrix (`delay_embed` or `auto_embed`);
+2. Select delay/dimension from information-theoretic and neighborhood diagnostics;
+3. Feed the reconstructed state to downstream monitor logic;
+4. Validate resulting geometrical signals against replay baselines before using them
+   in policy experiments.
+
+Keep this boundary explicit: embedding is a feature-construction layer, not a
+replacement for raw trace quality checks.
+
 ## API
 
 ```python

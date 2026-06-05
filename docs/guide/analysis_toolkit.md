@@ -7,6 +7,18 @@ different failure or regime signal before the scalar order parameter alone would
 show anything unusual. In practice, teams use this page as a first-pass
 selection guide, then tune thresholds against their domain trajectories.
 
+## How operators should use this layer
+
+Treat the toolkit as a **multi-signal diagnostic funnel** rather than a single
+alarm source:
+
+- start with fast, broad monitors (`order_parameter`, `lyapunov`);
+- add structural monitors (`plv`, `chimera`, `winding`) when patterns localise;
+- then confirm causal or thermodynamic interpretations (`coupling_est`, `entropy_prod`, `itpc`, `pid`).
+
+This sequencing reduces false positives and gives policy teams a reproducible rationale
+for each escalation before any actuation change is promoted.
+
 The sections below are ordered from global coherence to higher-order coupling
 relationships because that mirrors a typical diagnostic flow:
 global stability -> phase alignment structure -> causality and stability risk ->

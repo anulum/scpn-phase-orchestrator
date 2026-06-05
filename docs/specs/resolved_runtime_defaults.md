@@ -14,6 +14,21 @@ Operators often debug failures in the gap between declared bindings and inferred
 execution state. This page closes that gap by listing exact inferences made from
 input declarations before runtime.
 
+## Operator perspective
+
+This page is the “intent-to-runtime translator.” If you change YAML, this page is
+the first check to confirm what those changes actually become at execution time.
+
+Use it as a preflight artifact when:
+
+- a domainpack import appears to run with unexpected layer or channel counts;
+- an actuator seems unbounded or missing controls in a live run;
+- or replay audits are compared across environments and need explicit alignment.
+
+The goal is to prevent hidden behavior from entering a control loop: if the
+resolved defaults are wrong, the run should be corrected at configuration level
+before any high-confidence control assumptions are made.
+
 That makes execution behavior reviewable before a long simulation starts.
 
 This page makes YAML-default behavior explicit by documenting runtime choices

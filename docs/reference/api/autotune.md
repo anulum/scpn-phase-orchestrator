@@ -3,6 +3,22 @@
 The autotune subsystem provides tools for identifying unknown system
 parameters and discovering governing dynamics from raw data.
 
+## Why this subsystem is review-oriented
+
+Autotune is designed as an evidence generator before controller changes, not as a
+direct production control channel. It turns observed traces into candidate hypotheses
+that humans can review against domain constraints and safety policy.
+
+In practical usage, teams typically use it to:
+
+- discover coupling hypotheses in previously unmapped domains,
+- validate model-form assumptions before full policy activation,
+- and generate bounded transfer proposals that can be replayed and compared.
+
+The review-only boundary is intentional: it preserves explainability and prevents
+autonomous, opaque changes from entering live control surfaces without policy
+inspection.
+
 ## Phase-SINDy Symbolic Discovery
 
 The `PhaseSINDy` module implements **Sparse Identification of Nonlinear
