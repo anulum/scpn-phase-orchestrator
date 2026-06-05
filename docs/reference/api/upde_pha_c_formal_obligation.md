@@ -11,8 +11,8 @@ or change a coupling policy. It records the exact theorem and Boolean
 certificate predicate that a reviewer or CI proof gate must use:
 
 - Lean module: `SPOFormal.Kinematic`
-- Predicate: `KinematicBounds.zeroGainCertificate`
-- Theorem: `zero_gain_certificate_discharges_budget`
+- Predicate: `KinematicBounds.budgetCertificate`
+- Theorem: `budget_certificate_discharges_budget`
 
 ## Use cases
 
@@ -23,7 +23,7 @@ Use this manifest when the PHA-C acceptance chain needs a formal review bridge:
 - release evidence that must prove runtime PHA-C acceptance has a named Lean
   theorem target, not only empirical trajectory hashes;
 - benchmark gates that must fail when the accepted trajectory no longer fits
-  the zero-gain finite-horizon merge-window certificate;
+  the finite-horizon Gronwall merge-window certificate;
 - Studio or audit panels that need a compact proof-obligation hash without
   exposing raw trajectory arrays.
 
@@ -44,8 +44,17 @@ runtime envelope into integer units:
 The default is a replay certificate. The observed spatial dispersion already
 includes the accepted moving-frame trajectory, while the residual term proves
 the ballistic coordinate update was mechanically valid. Downstream predictive
-lanes can provide non-zero `relative_velocity_step_bound_m` when they want the
-same Lean theorem to certify a future horizon rather than the replay envelope.
+lanes can provide non-zero `relative_velocity_step_bound_m` and non-zero
+`lipschitz_step_gain_units` when they want the same Lean theorem to certify a
+future horizon rather than the replay envelope.
+
+For non-zero gain, the runtime manifest replays the Lean recurrence
+`previous + gain * previous + drive`, records the terminal
+`gronwall_budget_units`, records the signed
+`gronwall_budget_margin_units`, and hashes the full budget trace as
+`gronwall_budget_trace_sha256`. The legacy `linear_budget_units` field remains
+as the zero-gain reference budget; the merge-window margin is now derived from
+the Gronwall terminal budget.
 
 ## Minimal example
 
@@ -61,7 +70,7 @@ from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
 record = build_pha_c_acceptance_record(...)
 obligation = build_pha_c_kinematic_proof_obligation(record)
 
-assert obligation.lean_theorem == "zero_gain_certificate_discharges_budget"
+assert obligation.lean_theorem == "budget_certificate_discharges_budget"
 assert obligation.proof_obligations_discharged
 verify_pha_c_kinematic_proof_obligation(obligation)
 ```
@@ -74,8 +83,9 @@ verify_pha_c_kinematic_proof_obligation(obligation)
   theorem names;
 - review-only flags: `execution_disabled=True` and `actuating=False`;
 - finite positive metric and phase fixed-point scales;
-- natural-number fields and the Lean equations for drive, linear budget, and
-  merge-window margin;
+- natural-number fields and the Lean equations for drive, linear zero-gain
+  reference budget, Gronwall budget trace, terminal budget, and merge-window
+  margin;
 - phase tolerance margin consistency;
 - lower-case SHA-256 fields; and
 - canonical manifest hash replay.

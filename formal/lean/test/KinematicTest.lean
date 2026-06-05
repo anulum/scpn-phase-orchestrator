@@ -46,6 +46,31 @@ example :
     (cfg := mifSmokeBounds)
     (by decide)
 
+example : mifSmokeBounds.budgetCertificate = true := by
+  decide
+
+def mifGainSmokeBounds : KinematicBounds := {
+  initialTolerance := 1
+  lipschitzStepGain := 1
+  relativeVelocityStepBound := 1
+  couplingResidualStepBound := 0
+  mergeWindowTolerance := 7
+  horizonSteps := 2
+}
+
+example : mifGainSmokeBounds.budget 2 = 7 := by
+  decide
+
+example : mifGainSmokeBounds.budgetCertificate = true := by
+  decide
+
+example :
+    ∀ k, k <= mifGainSmokeBounds.horizonSteps ->
+      mifGainSmokeBounds.budget k <= mifGainSmokeBounds.mergeWindowTolerance := by
+  exact budget_certificate_discharges_budget
+    (cfg := mifGainSmokeBounds)
+    (by decide)
+
 example (distance : Nat -> Nat)
     (hInitial : distance 0 <= mifSmokeBounds.initialTolerance)
     (hStep : ∀ k, distance (k + 1) <= distance k + mifSmokeBounds.driveBound) :

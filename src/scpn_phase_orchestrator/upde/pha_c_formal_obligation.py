@@ -38,8 +38,10 @@ PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY = (
 PHA_C_FORMAL_OBLIGATION_EVIDENCE_KIND = "deterministic_lean_kinematic_obligation"
 PHA_C_FORMAL_OBLIGATION_SCHEMA = "pha_c_lean_kinematic_obligation_v1"
 PHA_C_FORMAL_LEAN_MODULE = "SPOFormal.Kinematic"
-PHA_C_FORMAL_CERTIFICATE_PREDICATE = "KinematicBounds.zeroGainCertificate"
-PHA_C_FORMAL_CERTIFICATE_THEOREM = "zero_gain_certificate_discharges_budget"
+PHA_C_FORMAL_CERTIFICATE_PREDICATE = "KinematicBounds.budgetCertificate"
+PHA_C_FORMAL_CERTIFICATE_THEOREM = "budget_certificate_discharges_budget"
+PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_PREDICATE = "KinematicBounds.zeroGainCertificate"
+PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_THEOREM = "zero_gain_certificate_discharges_budget"
 PHA_C_FORMAL_DEFAULT_SCALE_M = 1.0e-6
 PHA_C_FORMAL_DEFAULT_SCALE_RAD = 1.0e-6
 
@@ -52,6 +54,8 @@ __all__ = [
     "PHA_C_FORMAL_OBLIGATION_CLAIM_BOUNDARY",
     "PHA_C_FORMAL_OBLIGATION_EVIDENCE_KIND",
     "PHA_C_FORMAL_OBLIGATION_SCHEMA",
+    "PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_PREDICATE",
+    "PHA_C_FORMAL_ZERO_GAIN_CERTIFICATE_THEOREM",
     "PHACKinematicProofObligation",
     "build_pha_c_kinematic_proof_obligation",
     "pha_c_kinematic_proof_obligation_to_dict",
@@ -82,6 +86,9 @@ class PHACKinematicProofObligation:
     merge_window_tolerance_units: int
     horizon_steps: int
     linear_budget_units: int
+    gronwall_budget_units: int
+    gronwall_budget_margin_units: int
+    gronwall_budget_trace_sha256: str
     window_budget_margin_units: int
     phase_tolerance_units: int
     max_phase_dispersion_units: int
@@ -107,6 +114,35 @@ _SHA256_HEX_DIGITS = frozenset("0123456789abcdef")
 def _sha256_json(payload: object) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _gronwall_budget_trace(
+    *,
+    initial_tolerance_units: int,
+    lipschitz_step_gain_units: int,
+    drive_bound_units: int,
+    horizon_steps: int,
+) -> tuple[int, ...]:
+    budget = initial_tolerance_units
+    trace = [budget]
+    for _ in range(horizon_steps):
+        budget = budget + lipschitz_step_gain_units * budget + drive_bound_units
+        trace.append(budget)
+    return tuple(trace)
+
+
+def _gronwall_budget_trace_sha256(
+    *,
+    trace_units: tuple[int, ...],
+    horizon_steps: int,
+) -> str:
+    return _sha256_json(
+        {
+            "budget_trace_units": list(trace_units),
+            "horizon_steps": horizon_steps,
+            "lean_recurrence": "previous + gain * previous + drive",
+        }
+    )
 
 
 def _validate_positive_scale(value: object, *, name: str) -> float:
@@ -185,6 +221,9 @@ def _dict_without_record_hash(
         "merge_window_tolerance_units": obligation.merge_window_tolerance_units,
         "horizon_steps": obligation.horizon_steps,
         "linear_budget_units": obligation.linear_budget_units,
+        "gronwall_budget_units": obligation.gronwall_budget_units,
+        "gronwall_budget_margin_units": obligation.gronwall_budget_margin_units,
+        "gronwall_budget_trace_sha256": obligation.gronwall_budget_trace_sha256,
         "window_budget_margin_units": obligation.window_budget_margin_units,
         "phase_tolerance_units": obligation.phase_tolerance_units,
         "max_phase_dispersion_units": obligation.max_phase_dispersion_units,
@@ -223,8 +262,9 @@ def build_pha_c_kinematic_proof_obligation(
     spatial dispersion is already measured over the accepted trajectory, so the
     Lean drive term only includes explicitly supplied future relative-velocity
     slack and the signed moving-frame residual. MIF/FRC specialisations can
-    provide a non-zero ``relative_velocity_step_bound_m`` when they want a
-    predictive horizon certificate instead of a replay-only envelope.
+    provide non-zero ``relative_velocity_step_bound_m`` and
+    ``lipschitz_step_gain_units`` values when they want a predictive
+    finite-horizon Gronwall certificate instead of a replay-only envelope.
     """
 
     verified_record = verify_pha_c_acceptance_record(record)
@@ -265,7 +305,19 @@ def build_pha_c_kinematic_proof_obligation(
         minimum=1,
     )
     linear_budget_units = initial_units + horizon_steps * drive_units
-    window_margin_units = merge_tolerance_units - linear_budget_units
+    gronwall_trace_units = _gronwall_budget_trace(
+        initial_tolerance_units=initial_units,
+        lipschitz_step_gain_units=gain_units,
+        drive_bound_units=drive_units,
+        horizon_steps=horizon_steps,
+    )
+    gronwall_budget_units = gronwall_trace_units[-1]
+    gronwall_budget_margin_units = merge_tolerance_units - gronwall_budget_units
+    gronwall_trace_sha256 = _gronwall_budget_trace_sha256(
+        trace_units=gronwall_trace_units,
+        horizon_steps=horizon_steps,
+    )
+    window_margin_units = gronwall_budget_margin_units
     phase_tolerance_units = _nonnegative_units(
         verified_record.phase_tol_rad,
         scale=scale_rad,
@@ -288,8 +340,7 @@ def build_pha_c_kinematic_proof_obligation(
         name="path_length_max_m",
     )
     discharged = (
-        gain_units == 0
-        and window_margin_units >= 0
+        window_margin_units >= 0
         and phase_margin_units >= 0
         and verified_record.execution_disabled
         and not verified_record.actuating
@@ -315,6 +366,9 @@ def build_pha_c_kinematic_proof_obligation(
         "merge_window_tolerance_units": merge_tolerance_units,
         "horizon_steps": horizon_steps,
         "linear_budget_units": linear_budget_units,
+        "gronwall_budget_units": gronwall_budget_units,
+        "gronwall_budget_margin_units": gronwall_budget_margin_units,
+        "gronwall_budget_trace_sha256": gronwall_trace_sha256,
         "window_budget_margin_units": window_margin_units,
         "phase_tolerance_units": phase_tolerance_units,
         "max_phase_dispersion_units": phase_dispersion_units,
@@ -378,6 +432,7 @@ def verify_pha_c_kinematic_proof_obligation(
         "merge_window_tolerance_units",
         "horizon_steps",
         "linear_budget_units",
+        "gronwall_budget_units",
         "phase_tolerance_units",
         "max_phase_dispersion_units",
         "observed_velocity_step_units",
@@ -388,9 +443,18 @@ def verify_pha_c_kinematic_proof_obligation(
     for field in nat_fields:
         _validate_int(getattr(obligation, field), name=field, minimum=0)
     _validate_int(
+        obligation.gronwall_budget_margin_units,
+        name="gronwall_budget_margin_units",
+        minimum=-10**18,
+    )
+    _validate_int(
         obligation.window_budget_margin_units,
         name="window_budget_margin_units",
         minimum=-10**18,
+    )
+    _validate_sha256_hex(
+        obligation.gronwall_budget_trace_sha256,
+        name="gronwall_budget_trace_sha256",
     )
     _validate_int(
         obligation.phase_margin_units,
@@ -423,7 +487,27 @@ def verify_pha_c_kinematic_proof_obligation(
     )
     if obligation.linear_budget_units != expected_budget:
         raise ValueError("linear_budget_units must match the Lean linear budget")
-    expected_margin = obligation.merge_window_tolerance_units - expected_budget
+    expected_gronwall_trace = _gronwall_budget_trace(
+        initial_tolerance_units=obligation.initial_tolerance_units,
+        lipschitz_step_gain_units=obligation.lipschitz_step_gain_units,
+        drive_bound_units=obligation.drive_bound_units,
+        horizon_steps=obligation.horizon_steps,
+    )
+    expected_gronwall_budget = expected_gronwall_trace[-1]
+    if obligation.gronwall_budget_units != expected_gronwall_budget:
+        raise ValueError("gronwall_budget_units must match the Lean Gronwall budget")
+    expected_gronwall_margin = (
+        obligation.merge_window_tolerance_units - expected_gronwall_budget
+    )
+    if obligation.gronwall_budget_margin_units != expected_gronwall_margin:
+        raise ValueError("gronwall_budget_margin_units must match the Lean margin")
+    expected_trace_hash = _gronwall_budget_trace_sha256(
+        trace_units=expected_gronwall_trace,
+        horizon_steps=obligation.horizon_steps,
+    )
+    if obligation.gronwall_budget_trace_sha256 != expected_trace_hash:
+        raise ValueError("gronwall_budget_trace_sha256 does not replay")
+    expected_margin = expected_gronwall_margin
     if obligation.window_budget_margin_units != expected_margin:
         raise ValueError("window_budget_margin_units must match the Lean margin")
     expected_phase_margin = (
@@ -434,8 +518,7 @@ def verify_pha_c_kinematic_proof_obligation(
             "phase_margin_units must match phase tolerance minus dispersion",
         )
     expected_discharged = (
-        obligation.lipschitz_step_gain_units == 0
-        and expected_margin >= 0
+        expected_margin >= 0
         and expected_phase_margin >= 0
         and obligation.execution_disabled
         and not obligation.actuating

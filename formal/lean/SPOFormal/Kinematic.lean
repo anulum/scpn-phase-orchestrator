@@ -82,6 +82,50 @@ theorem budget_succ {cfg : KinematicBounds} {k : Nat} :
       cfg.budget k + cfg.lipschitzStepGain * cfg.budget k + cfg.driveBound := by
   rfl
 
+/-- The finite-horizon Gronwall budget is monotone in the horizon. -/
+theorem gronwallBudget_monotone
+    {initial gain drive : Nat} :
+    ∀ {k m : Nat}, k <= m ->
+      gronwallBudget initial gain drive k <= gronwallBudget initial gain drive m := by
+  intro k m h
+  induction h with
+  | refl =>
+      exact Nat.le_refl _
+  | step h ih =>
+      exact Nat.le_trans ih (by
+        rw [gronwallBudget_succ]
+        exact Nat.le_trans
+          (Nat.le_add_right _ _)
+          (Nat.le_add_right _ _))
+
+/-- The bundled budget is monotone in the horizon. -/
+theorem KinematicBounds.budget_monotone
+    {cfg : KinematicBounds} {k m : Nat}
+    (h : k <= m) :
+    cfg.budget k <= cfg.budget m := by
+  unfold KinematicBounds.budget
+  exact gronwallBudget_monotone h
+
+/-- Runtime-facing certificate for arbitrary non-negative finite-horizon gain. -/
+def KinematicBounds.budgetCertificate (cfg : KinematicBounds) : Bool :=
+  cfg.budget cfg.horizonSteps <= cfg.mergeWindowTolerance
+
+/-- Boolean certificate reflection for the general finite-horizon budget. -/
+theorem budgetCertificate_eq_true_iff {cfg : KinematicBounds} :
+    cfg.budgetCertificate = true ↔
+      cfg.budget cfg.horizonSteps <= cfg.mergeWindowTolerance := by
+  unfold KinematicBounds.budgetCertificate
+  simp
+
+/-- A true finite-horizon certificate discharges every prefix budget. -/
+theorem budget_certificate_discharges_budget
+    {cfg : KinematicBounds}
+    (hCertificate : cfg.budgetCertificate = true) :
+    ∀ k, k <= cfg.horizonSteps -> cfg.budget k <= cfg.mergeWindowTolerance := by
+  intro k hk
+  have hHorizon := (budgetCertificate_eq_true_iff (cfg := cfg)).mp hCertificate
+  exact Nat.le_trans (KinematicBounds.budget_monotone (cfg := cfg) hk) hHorizon
+
 /-- Zero Lipschitz gain reduces the recurrence to a linear finite-step budget. -/
 theorem gronwallBudget_zero_gain_eq_linear
     {initial drive : Nat} :

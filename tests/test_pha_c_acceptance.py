@@ -383,9 +383,13 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["kinematic_residual_max_m"] <= 1.0e-12
     assert result["formal_obligation_discharged"] == 1
     assert result["formal_obligation_margin_units"] >= 0
+    assert result["formal_obligation_gronwall_margin_units"] == (
+        result["formal_obligation_margin_units"]
+    )
+    assert len(str(result["formal_obligation_trace_sha256"])) == 64
     assert result["formal_obligation_phase_margin_units"] >= 0
     assert result["formal_obligation_theorem"] == (
-        "zero_gain_certificate_discharges_budget"
+        "budget_certificate_discharges_budget"
     )
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
@@ -399,6 +403,15 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)
     assert all(
         int(record["formal_obligation_discharged"]) == 1
+        for record in backend_records
+    )
+    assert all(
+        record["formal_obligation_gronwall_margin_units"]
+        == record["formal_obligation_margin_units"]
+        for record in backend_records
+    )
+    assert all(
+        len(str(record["formal_obligation_trace_sha256"])) == 64
         for record in backend_records
     )
     assert all(

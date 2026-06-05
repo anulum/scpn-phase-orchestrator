@@ -437,10 +437,13 @@ polyglot phase parity cannot mask a mechanically invalid coordinate update.
 Acceptance rows additionally emit and verify a
 `PHACKinematicProofObligation` manifest that maps the accepted runtime envelope
 onto `SPOFormal.Kinematic.KinematicBounds` and requires the Lean
-`zero_gain_certificate_discharges_budget` target to discharge before the row can
+`budget_certificate_discharges_budget` target to discharge before the row can
 pass. The Rust, Go, Julia, and Mojo downstream rows are explicitly labelled as
 source-contract validation rows until native downstream kernels land;
 `native_kernel_count` remains zero in the current snapshot.
+The manifest carries the terminal Gronwall budget, signed Gronwall margin, and
+budget-trace hash, which keeps non-zero Lipschitz gain envelopes reviewable
+instead of forcing every PHA-C formal handoff into a zero-gain replay.
 
 Timing fields in the checked-in reference snapshot are local regression and
 parity evidence unless the run metadata states CPU/core isolation and host-load

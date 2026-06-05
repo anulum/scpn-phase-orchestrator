@@ -317,8 +317,11 @@ Acceptance rows also call
 `verify_pha_c_kinematic_proof_obligation(...)`. This projects the verified
 runtime envelope into the fixed-point `KinematicBounds` fields used by
 `SPOFormal.Kinematic` and requires the
-`zero_gain_certificate_discharges_budget` certificate to discharge before a
+`budget_certificate_discharges_budget` certificate to discharge before a
 backend row can pass.
+The proof manifest records both the zero-gain linear reference budget and the
+general finite-horizon Gronwall budget trace, so non-zero Lipschitz gain lanes
+remain inside the same formal review boundary.
 
 Those Rust, Go, Julia, and Mojo rows are intentionally labelled
 `source_contract_reference_validation` until native downstream kernels are

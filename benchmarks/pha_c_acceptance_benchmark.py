@@ -280,6 +280,11 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         ),
         "formal_obligation_sha256": obligation.record_sha256,
         "formal_obligation_margin_units": obligation.window_budget_margin_units,
+        "formal_obligation_gronwall_budget_units": obligation.gronwall_budget_units,
+        "formal_obligation_gronwall_margin_units": (
+            obligation.gronwall_budget_margin_units
+        ),
+        "formal_obligation_trace_sha256": obligation.gronwall_budget_trace_sha256,
         "formal_obligation_phase_margin_units": obligation.phase_margin_units,
         "formal_obligation_theorem": obligation.lean_theorem,
         "hash_replay_validated": int(verify_pha_c_acceptance_record(record) is record),
@@ -349,6 +354,15 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 ),
                 "formal_obligation_margin_units": (
                     obligation.window_budget_margin_units
+                ),
+                "formal_obligation_gronwall_budget_units": (
+                    obligation.gronwall_budget_units
+                ),
+                "formal_obligation_gronwall_margin_units": (
+                    obligation.gronwall_budget_margin_units
+                ),
+                "formal_obligation_trace_sha256": (
+                    obligation.gronwall_budget_trace_sha256
                 ),
                 "formal_obligation_phase_margin_units": obligation.phase_margin_units,
                 "hash_replay_validated": 1,
@@ -440,6 +454,15 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "formal_obligation_margin_units": (
                     record["formal_obligation_margin_units"]
                 ),
+                "formal_obligation_gronwall_budget_units": (
+                    record["formal_obligation_gronwall_budget_units"]
+                ),
+                "formal_obligation_gronwall_margin_units": (
+                    record["formal_obligation_gronwall_margin_units"]
+                ),
+                "formal_obligation_trace_sha256": (
+                    record["formal_obligation_trace_sha256"]
+                ),
                 "formal_obligation_phase_margin_units": (
                     record["formal_obligation_phase_margin_units"]
                 ),
@@ -492,6 +515,13 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "formal_obligation_margin_units": contracts[
             "formal_obligation_margin_units"
         ],
+        "formal_obligation_gronwall_budget_units": contracts[
+            "formal_obligation_gronwall_budget_units"
+        ],
+        "formal_obligation_gronwall_margin_units": contracts[
+            "formal_obligation_gronwall_margin_units"
+        ],
+        "formal_obligation_trace_sha256": contracts["formal_obligation_trace_sha256"],
         "formal_obligation_phase_margin_units": contracts[
             "formal_obligation_phase_margin_units"
         ],

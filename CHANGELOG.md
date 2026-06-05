@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Generalised the PHA-C runtime-to-Lean kinematic proof bridge from the
+  zero-gain replay certificate to the finite-horizon Gronwall
+  `budget_certificate_discharges_budget` theorem, including non-zero
+  Lipschitz-gain manifest fields, trace hashing, Lean smoke proofs,
+  benchmark acceptance fields, module-specific tests, API docs, README, and
+  performance-guide updates.
 - Added `PHACKinematicProofObligation` as the runtime-to-Lean PHA-C formal
   bridge, including fixed-point `KinematicBounds` manifest hashing, lazy UPDE
   exports, Lean `zeroGainCertificate` theorem discharge, benchmark acceptance

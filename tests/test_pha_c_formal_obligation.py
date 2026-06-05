@@ -41,7 +41,7 @@ from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
 )
 
 
-def _record():
+def _record(*, spatial_tol_m: float | None = None):
     n = 5
     phases = np.linspace(-0.002, 0.002, n, dtype=np.float64)
     positions = np.linspace(-0.0006, 0.0006, n, dtype=np.float64)
@@ -52,6 +52,9 @@ def _record():
     velocities = np.vstack(
         [velocity_base + 1.0e-3 * step for step in range(4)],
     ).astype(np.float64, copy=False)
+    kwargs = {}
+    if spatial_tol_m is not None:
+        kwargs["spatial_tol_m"] = spatial_tol_m
     return build_pha_c_acceptance_record(
         phases,
         positions,
@@ -62,6 +65,7 @@ def _record():
         required_consecutive_samples=3,
         tolerance_profile="baseline_1x",
         backend="python",
+        **kwargs,
     )
 
 
@@ -88,6 +92,11 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
         record.spatial_tol_m / obligation.fixed_point_scale_m,
     )
     assert obligation.linear_budget_units == obligation.initial_tolerance_units
+    assert obligation.gronwall_budget_units == obligation.linear_budget_units
+    assert obligation.gronwall_budget_margin_units == (
+        obligation.window_budget_margin_units
+    )
+    assert len(obligation.gronwall_budget_trace_sha256) == 64
     assert obligation.window_budget_margin_units >= 0
     assert obligation.phase_margin_units >= 0
     assert obligation.observed_velocity_step_units == ceil(
@@ -123,7 +132,39 @@ def test_kinematic_obligation_supports_predictive_relative_velocity_slack() -> N
         obligation.initial_tolerance_units
         + obligation.horizon_steps * obligation.drive_bound_units
     )
+    assert obligation.gronwall_budget_units == obligation.linear_budget_units
+    assert obligation.gronwall_budget_margin_units == (
+        obligation.window_budget_margin_units
+    )
     assert obligation.window_budget_margin_units >= 0
+    assert obligation.proof_obligations_discharged
+    assert verify_pha_c_kinematic_proof_obligation(obligation) is obligation
+
+
+def test_kinematic_obligation_supports_nonzero_lipschitz_gain() -> None:
+    record = _record(spatial_tol_m=0.1)
+    obligation = build_pha_c_kinematic_proof_obligation(
+        record,
+        lipschitz_step_gain_units=1,
+        relative_velocity_step_bound_m=1.0e-5,
+    )
+
+    expected_budget = obligation.initial_tolerance_units
+    for _ in range(obligation.horizon_steps):
+        expected_budget = (
+            expected_budget
+            + obligation.lipschitz_step_gain_units * expected_budget
+            + obligation.drive_bound_units
+        )
+
+    assert obligation.lipschitz_step_gain_units == 1
+    assert obligation.gronwall_budget_units == expected_budget
+    assert obligation.gronwall_budget_margin_units == (
+        obligation.merge_window_tolerance_units - expected_budget
+    )
+    assert obligation.window_budget_margin_units == (
+        obligation.gronwall_budget_margin_units
+    )
     assert obligation.proof_obligations_discharged
     assert verify_pha_c_kinematic_proof_obligation(obligation) is obligation
 
@@ -138,6 +179,17 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
     with pytest.raises(ValueError, match="drive_bound_units"):
         verify_pha_c_kinematic_proof_obligation(
             replace(obligation, drive_bound_units=obligation.drive_bound_units + 1),
+        )
+    with pytest.raises(ValueError, match="gronwall_budget_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(
+                obligation,
+                gronwall_budget_units=obligation.gronwall_budget_units + 1,
+            ),
+        )
+    with pytest.raises(ValueError, match="gronwall_budget_trace_sha256"):
+        verify_pha_c_kinematic_proof_obligation(
+            replace(obligation, gronwall_budget_trace_sha256="0" * 64),
         )
     with pytest.raises(ValueError, match="proof_obligations_discharged"):
         verify_pha_c_kinematic_proof_obligation(
