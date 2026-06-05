@@ -285,6 +285,9 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "formal_obligation_relative_velocity_rate_units_per_second": (
             obligation.relative_velocity_rate_bound_units_per_second
         ),
+        "formal_obligation_configured_residual_step_units": (
+            obligation.configured_coupling_residual_step_bound_units
+        ),
         "formal_obligation_residual_rate_units_per_second": (
             obligation.coupling_residual_rate_bound_units_per_second
         ),
@@ -383,6 +386,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "formal_obligation_horizon_time_units": obligation.horizon_time_units,
                 "formal_obligation_relative_velocity_rate_units_per_second": (
                     obligation.relative_velocity_rate_bound_units_per_second
+                ),
+                "formal_obligation_configured_residual_step_units": (
+                    obligation.configured_coupling_residual_step_bound_units
                 ),
                 "formal_obligation_residual_rate_units_per_second": (
                     obligation.coupling_residual_rate_bound_units_per_second
@@ -515,6 +521,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                         "formal_obligation_relative_velocity_rate_units_per_second"
                     ]
                 ),
+                "formal_obligation_configured_residual_step_units": (
+                    record["formal_obligation_configured_residual_step_units"]
+                ),
                 "formal_obligation_residual_rate_units_per_second": (
                     record["formal_obligation_residual_rate_units_per_second"]
                 ),
@@ -604,6 +613,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         ],
         "formal_obligation_relative_velocity_rate_units_per_second": contracts[
             "formal_obligation_relative_velocity_rate_units_per_second"
+        ],
+        "formal_obligation_configured_residual_step_units": contracts[
+            "formal_obligation_configured_residual_step_units"
         ],
         "formal_obligation_residual_rate_units_per_second": contracts[
             "formal_obligation_residual_rate_units_per_second"

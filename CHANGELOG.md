@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added explicit predictive coupling-residual slack to
+  `PHACKinematicProofObligation`, including fixed-point residual-bound
+  provenance, fail-closed verifier checks, module-specific tests, and PHA-C
+  documentation updates.
 - Added `SPOFormal.Continuous` for PHA-C fixed-point continuous-envelope
   certificates, including horizon-drive sampling, Python manifest fields,
   benchmark row propagation, proof-gate integration, and API documentation.

@@ -445,10 +445,14 @@ The manifest carries the terminal Gronwall budget, signed Gronwall margin, and
 budget-trace hash, which keeps non-zero Lipschitz gain envelopes reviewable
 instead of forcing every PHA-C formal handoff into a zero-gain replay.
 It also carries the sampled time-step, horizon-time, velocity-rate, and
-residual-rate assumptions used to derive the discrete Lean drive bound, so the
-continuous-rate layer is explicit in every benchmark row. The formal manifest
-also targets `SPOFormal.Continuous`, where per-second drive rates are sampled
-over the full reviewed horizon and discharged by
+residual-rate assumptions used to derive the discrete Lean drive bound. The
+residual lane now records explicit configured coupling-residual slack as
+separate provenance from the observed moving-frame kinematic residual, so
+MIF/FRC consumers can review predictive residual envelopes without overloading
+the relative-velocity term. The continuous-rate layer is explicit in every
+benchmark row. The formal manifest also targets `SPOFormal.Continuous`, where
+per-second drive rates are sampled over the full reviewed horizon and
+discharged by
 `continuous_envelope_certificate_discharges_horizon` before the row can pass.
 
 Timing fields in the checked-in reference snapshot are local regression and

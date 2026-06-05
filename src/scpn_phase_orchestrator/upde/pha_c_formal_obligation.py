@@ -103,6 +103,7 @@ class PHACKinematicProofObligation:
     lipschitz_step_gain_units: int
     relative_velocity_rate_bound_units_per_second: int
     relative_velocity_step_bound_units: int
+    configured_coupling_residual_step_bound_units: int
     coupling_residual_rate_bound_units_per_second: int
     coupling_residual_step_bound_units: int
     continuous_drive_rate_bound_units_per_second: int
@@ -185,7 +186,7 @@ def _validate_positive_scale(value: object, *, name: str) -> float:
     return parsed
 
 
-def _nonnegative_units(value: object, *, scale: float, name: str) -> int:
+def _validate_nonnegative_scalar(value: object, *, name: str) -> float:
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite non-negative scalar")
     try:
@@ -194,6 +195,11 @@ def _nonnegative_units(value: object, *, scale: float, name: str) -> int:
         raise ValueError(f"{name} must be a finite non-negative scalar") from exc
     if not isfinite(parsed) or parsed < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
+    return parsed
+
+
+def _nonnegative_units(value: object, *, scale: float, name: str) -> int:
+    parsed = _validate_nonnegative_scalar(value, name=name)
     return int(
         (Decimal(str(parsed)) / Decimal(str(scale))).to_integral_value(
             rounding=ROUND_CEILING,
@@ -280,6 +286,9 @@ def _dict_without_record_hash(
         "relative_velocity_step_bound_units": (
             obligation.relative_velocity_step_bound_units
         ),
+        "configured_coupling_residual_step_bound_units": (
+            obligation.configured_coupling_residual_step_bound_units
+        ),
         "coupling_residual_rate_bound_units_per_second": (
             obligation.coupling_residual_rate_bound_units_per_second
         ),
@@ -333,6 +342,7 @@ def build_pha_c_kinematic_proof_obligation(
     fixed_point_scale_rad: float = PHA_C_FORMAL_DEFAULT_SCALE_RAD,
     fixed_point_time_scale_s: float = PHA_C_FORMAL_DEFAULT_TIME_SCALE_S,
     relative_velocity_step_bound_m: float = 0.0,
+    coupling_residual_step_bound_m: float = 0.0,
     lipschitz_step_gain_units: int = 0,
 ) -> PHACKinematicProofObligation:
     """Project a verified PHA-C acceptance record into Lean proof obligations.
@@ -342,8 +352,9 @@ def build_pha_c_kinematic_proof_obligation(
     Lean drive term only includes explicitly supplied future relative-velocity
     slack and the signed moving-frame residual. MIF/FRC specialisations can
     provide non-zero ``relative_velocity_step_bound_m`` and
-    ``lipschitz_step_gain_units`` values when they want a predictive
-    finite-horizon Gronwall certificate instead of a replay-only envelope.
+    ``coupling_residual_step_bound_m`` and ``lipschitz_step_gain_units`` values
+    when they want a predictive finite-horizon Gronwall certificate instead of
+    a replay-only envelope.
     """
 
     verified_record = verify_pha_c_acceptance_record(record)
@@ -391,11 +402,26 @@ def build_pha_c_kinematic_proof_obligation(
         scale=scale_m,
         name="relative_velocity_step_bound_m",
     )
-    raw_residual_units = _nonnegative_units(
+    configured_residual_m = _validate_nonnegative_scalar(
+        coupling_residual_step_bound_m,
+        name="coupling_residual_step_bound_m",
+    )
+    observed_residual_m = _validate_nonnegative_scalar(
         verified_record.kinematic_residual_max_m,
+        name="kinematic_residual_max_m",
+    )
+    configured_residual_units = _nonnegative_units(
+        configured_residual_m,
+        scale=scale_m,
+        name="coupling_residual_step_bound_m",
+    )
+    observed_residual_units = _nonnegative_units(
+        observed_residual_m,
         scale=scale_m,
         name="kinematic_residual_max_m",
     )
+    raw_residual_units = max(configured_residual_units, observed_residual_units)
+    residual_bound_m = max(configured_residual_m, observed_residual_m)
     relative_velocity_rate_units = max(
         _nonnegative_units(
             relative_velocity_step_bound_m / time_step_s,
@@ -410,7 +436,7 @@ def build_pha_c_kinematic_proof_obligation(
     )
     residual_rate_units = max(
         _nonnegative_units(
-            verified_record.kinematic_residual_max_m / time_step_s,
+            residual_bound_m / time_step_s,
             scale=scale_m,
             name="coupling_residual_rate_bound_m_per_s",
         ),
@@ -519,6 +545,7 @@ def build_pha_c_kinematic_proof_obligation(
         "lipschitz_step_gain_units": gain_units,
         "relative_velocity_rate_bound_units_per_second": relative_velocity_rate_units,
         "relative_velocity_step_bound_units": relative_velocity_units,
+        "configured_coupling_residual_step_bound_units": configured_residual_units,
         "coupling_residual_rate_bound_units_per_second": residual_rate_units,
         "coupling_residual_step_bound_units": residual_units,
         "continuous_drive_rate_bound_units_per_second": continuous_drive_rate_units,
@@ -537,7 +564,7 @@ def build_pha_c_kinematic_proof_obligation(
         "max_phase_dispersion_units": phase_dispersion_units,
         "phase_margin_units": phase_margin_units,
         "observed_velocity_step_units": observed_velocity_step_units,
-        "kinematic_residual_units": raw_residual_units,
+        "kinematic_residual_units": observed_residual_units,
         "path_length_units": path_length_units,
         "max_spatial_dispersion_units": initial_units,
         "continuous_envelope_discharged": continuous_envelope_discharged,
@@ -605,6 +632,7 @@ def verify_pha_c_kinematic_proof_obligation(
         "lipschitz_step_gain_units",
         "relative_velocity_rate_bound_units_per_second",
         "relative_velocity_step_bound_units",
+        "configured_coupling_residual_step_bound_units",
         "coupling_residual_rate_bound_units_per_second",
         "coupling_residual_step_bound_units",
         "continuous_drive_rate_bound_units_per_second",
@@ -756,6 +784,12 @@ def verify_pha_c_kinematic_proof_obligation(
         obligation.coupling_residual_step_bound_units
     ):
         raise ValueError("kinematic_residual_units must fit sampled residual bound")
+    if obligation.configured_coupling_residual_step_bound_units > (
+        obligation.coupling_residual_step_bound_units
+    ):
+        raise ValueError(
+            "configured_coupling_residual_step_bound_units must fit residual bound",
+        )
     if obligation.max_spatial_dispersion_units != obligation.initial_tolerance_units:
         raise ValueError("max_spatial_dispersion_units must mirror initial tolerance")
     expected_budget = (

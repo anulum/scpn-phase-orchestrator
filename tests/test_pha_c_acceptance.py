@@ -388,6 +388,7 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         result["formal_obligation_time_step_units"] * 4
     )
     assert result["formal_obligation_relative_velocity_rate_units_per_second"] == 0
+    assert result["formal_obligation_configured_residual_step_units"] == 0
     assert result["formal_obligation_residual_rate_units_per_second"] == 0
     assert result["formal_obligation_continuous_drive_rate_units_per_second"] == 0
     assert result["formal_obligation_continuous_horizon_drive_units"] == 0

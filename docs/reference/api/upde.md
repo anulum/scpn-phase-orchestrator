@@ -527,3 +527,23 @@ robot/sensor swarms, and moving-grid assets.
 See [UPDE — Doppler Engine](upde_doppler.md) for the mathematical contract,
 scalar/vector velocity handling, backend parity surface, and Mach-1
 counter-propagating acceptance scenario.
+
+## PHA-C formal proof-obligation bridge
+
+`PHACKinematicProofObligation` projects a verified end-to-end PHA-C acceptance
+record into fixed-point Lean obligations for `SPOFormal.Kinematic` and
+`SPOFormal.Continuous`. The manifest is review-only and non-actuating: it
+binds the accepted timeline hash, acceptance hash, spatial merge-window
+tolerance, phase tolerance, time-step units, horizon-time units, Gronwall
+budget trace, continuous horizon-drive budget, and certificate theorem names.
+
+Predictive downstream consumers can now supply both
+`relative_velocity_step_bound_m` and `coupling_residual_step_bound_m` when
+building the obligation. The residual bound is recorded separately as
+`configured_coupling_residual_step_bound_units`, then combined with the
+observed moving-frame kinematic residual before the sampled residual rate,
+discrete drive bound, and continuous drive bound are accepted. This keeps FRC
+or MIF specialisations from hiding residual uncertainty inside the
+relative-velocity term.
+
+::: scpn_phase_orchestrator.upde.pha_c_formal_obligation

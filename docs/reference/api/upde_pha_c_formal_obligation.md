@@ -46,8 +46,9 @@ runtime envelope into integer units:
 | `lipschitz_step_gain_units` | explicit control, default `0` | `KinematicBounds.lipschitzStepGain` |
 | `relative_velocity_rate_bound_units_per_second` | predictive slack divided by `dt` | `SampledRateKinematicBounds.relativeVelocityRateBound` |
 | `relative_velocity_step_bound_units` | explicit predictive slack, default `0` | `KinematicBounds.relativeVelocityStepBound` |
-| `coupling_residual_rate_bound_units_per_second` | moving-frame residual divided by `dt` | `SampledRateKinematicBounds.couplingResidualRateBound` |
-| `coupling_residual_step_bound_units` | moving-frame kinematic residual | `KinematicBounds.couplingResidualStepBound` |
+| `configured_coupling_residual_step_bound_units` | explicit predictive residual slack, default `0` | residual-bound provenance |
+| `coupling_residual_rate_bound_units_per_second` | max of configured residual slack and observed moving-frame residual, divided by `dt` | `SampledRateKinematicBounds.couplingResidualRateBound` |
+| `coupling_residual_step_bound_units` | max of configured residual slack and observed moving-frame residual | `KinematicBounds.couplingResidualStepBound` |
 | `continuous_drive_rate_bound_units_per_second` | velocity-rate plus residual-rate bound | `ContinuousEnvelopeBounds.driveRateBound` |
 | `continuous_horizon_drive_bound_units` | sampled continuous drive over `horizon_time_units` | `ContinuousEnvelopeBounds.sampledDriveBoundAt` |
 | `continuous_linear_budget_units` | initial dispersion plus sampled horizon drive | `ContinuousEnvelopeBounds.budgetAt` |
@@ -59,8 +60,12 @@ The default is a replay certificate. The observed spatial dispersion already
 includes the accepted moving-frame trajectory, while the residual term proves
 the ballistic coordinate update was mechanically valid. Downstream predictive
 lanes can provide non-zero `relative_velocity_step_bound_m` and non-zero
-`lipschitz_step_gain_units` when they want the same Lean theorem to certify a
-future horizon rather than the replay envelope.
+`coupling_residual_step_bound_m` values when they need a reviewed residual
+envelope beyond the observed replay residual. The verifier requires the
+configured residual units to fit inside the sampled residual bound before the
+same Lean theorem can certify a future horizon rather than the replay envelope.
+Non-zero `lipschitz_step_gain_units` can then be added for finite-horizon
+growth.
 
 For non-zero gain, the runtime manifest replays the Lean recurrence
 `previous + gain * previous + drive`, records the terminal
@@ -117,6 +122,8 @@ verify_pha_c_kinematic_proof_obligation(obligation)
   margin;
 - continuous-envelope theorem metadata, drive-rate sum, horizon-drive replay,
   continuous budget, and continuous margin;
+- configured residual-bound provenance and its fit inside the sampled residual
+  drive bound;
 - phase tolerance margin consistency;
 - lower-case SHA-256 fields; and
 - canonical manifest hash replay.

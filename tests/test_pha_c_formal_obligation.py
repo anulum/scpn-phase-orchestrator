@@ -106,6 +106,7 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     assert obligation.lipschitz_step_gain_units == 0
     assert obligation.relative_velocity_rate_bound_units_per_second == 0
     assert obligation.relative_velocity_step_bound_units == 0
+    assert obligation.configured_coupling_residual_step_bound_units == 0
     assert obligation.coupling_residual_rate_bound_units_per_second == 0
     assert obligation.coupling_residual_step_bound_units == 0
     assert obligation.continuous_drive_rate_bound_units_per_second == 0
@@ -154,6 +155,46 @@ def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
     assert ExportedObligation is PHACKinematicProofObligation
     assert exported_build is build_pha_c_kinematic_proof_obligation
     assert exported_verify is verify_pha_c_kinematic_proof_obligation
+    assert verify_pha_c_kinematic_proof_obligation(obligation) is obligation
+
+
+def test_kinematic_obligation_supports_predictive_residual_slack() -> None:
+    record = _record(spatial_tol_m=0.1)
+    obligation = build_pha_c_kinematic_proof_obligation(
+        record,
+        coupling_residual_step_bound_m=2.0e-5,
+    )
+
+    expected_residual_units = _ceil_units(2.0e-5, obligation.fixed_point_scale_m)
+    expected_residual_rate_units = _ceil_units(
+        2.0e-5 / record.dt,
+        obligation.fixed_point_scale_m,
+    )
+    assert obligation.configured_coupling_residual_step_bound_units == (
+        expected_residual_units
+    )
+    assert obligation.coupling_residual_step_bound_units == expected_residual_units
+    assert obligation.coupling_residual_rate_bound_units_per_second == (
+        expected_residual_rate_units
+    )
+    assert obligation.drive_bound_units == expected_residual_units
+    assert obligation.continuous_drive_rate_bound_units_per_second == (
+        expected_residual_rate_units
+    )
+    assert obligation.continuous_horizon_drive_bound_units == (
+        expected_residual_units * obligation.horizon_steps
+    )
+    assert obligation.continuous_linear_budget_units == (
+        obligation.initial_tolerance_units
+        + obligation.continuous_horizon_drive_bound_units
+    )
+    assert obligation.continuous_margin_units >= 0
+    assert obligation.continuous_envelope_discharged
+    assert obligation.gronwall_budget_units == (
+        obligation.initial_tolerance_units
+        + obligation.horizon_steps * obligation.drive_bound_units
+    )
+    assert obligation.proof_obligations_discharged
     assert verify_pha_c_kinematic_proof_obligation(obligation) is obligation
 
 
@@ -274,6 +315,22 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
                 ),
             ),
         )
+    with pytest.raises(
+        ValueError,
+        match="configured_coupling_residual_step_bound_units",
+    ):
+        predictive = build_pha_c_kinematic_proof_obligation(
+            _record(spatial_tol_m=0.1),
+            coupling_residual_step_bound_m=2.0e-5,
+        )
+        verify_pha_c_kinematic_proof_obligation(
+            replace(
+                predictive,
+                configured_coupling_residual_step_bound_units=(
+                    predictive.coupling_residual_step_bound_units + 1
+                ),
+            ),
+        )
     with pytest.raises(ValueError, match="gronwall_budget_units"):
         verify_pha_c_kinematic_proof_obligation(
             replace(
@@ -325,6 +382,11 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
         build_pha_c_kinematic_proof_obligation(
             record,
             relative_velocity_step_bound_m=-1.0,
+        )
+    with pytest.raises(ValueError, match="coupling_residual_step_bound_m"):
+        build_pha_c_kinematic_proof_obligation(
+            record,
+            coupling_residual_step_bound_m=np.inf,
         )
     with pytest.raises(TypeError, match="PHACKinematicProofObligation"):
         verify_pha_c_kinematic_proof_obligation(object())  # type: ignore[arg-type]
