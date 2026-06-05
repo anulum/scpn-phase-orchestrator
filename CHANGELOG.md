@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added explicit signed-margin equation replay to the PHA-C acceptance
+  verifier and polyglot benchmark gate so phase and spatial safety margins must
+  equal tolerance minus maximum dispersion before acceptance passes.
 - Added explicit `phase_budget_discharged` replay to
   `PHACKinematicProofObligation` and PHA-C acceptance benchmarks so Lean
   phase-budget theorem metadata must agree with the fixed-point certificate

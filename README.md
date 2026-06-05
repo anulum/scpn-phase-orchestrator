@@ -446,6 +446,11 @@ dispersion/minimum margin evidence in the acceptance record. Moving-frame and
 acceptance rows also sign the ballistic axial certificate
 `z[t+1] = z[t] + v[t] * dt`, max absolute velocity, and path-length evidence so
 polyglot phase parity cannot mask a mechanically invalid coordinate update.
+Acceptance benchmark rows also publish
+`phase_margin_equation_validated`, `spatial_margin_equation_validated`,
+`signed_margin_equations_validated`, and `margin_replay_tolerance`; the gate
+fails unless every declared backend row proves
+`min_margin = tolerance - max_dispersion` for both phase and spatial evidence.
 Acceptance rows additionally emit and verify a
 `PHACKinematicProofObligation` manifest that maps the accepted runtime envelope
 onto `SPOFormal.Kinematic.KinematicBounds` and requires the Lean

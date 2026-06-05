@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 )
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
+    PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
     verify_pha_c_acceptance_record,
@@ -191,6 +192,31 @@ def _gate_passed(payload: dict[str, object]) -> bool:
     return False
 
 
+def _margin_equation_contracts(record: PHACAcceptanceRecord) -> dict[str, object]:
+    phase_validated = (
+        abs(
+            record.min_phase_margin_rad
+            - (record.phase_tol_rad - record.max_phase_dispersion_rad)
+        )
+        <= PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE
+    )
+    spatial_validated = (
+        abs(
+            record.min_spatial_margin_m
+            - (record.spatial_tol_m - record.max_spatial_dispersion_m)
+        )
+        <= PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE
+    )
+    return {
+        "phase_margin_equation_validated": int(phase_validated),
+        "spatial_margin_equation_validated": int(spatial_validated),
+        "signed_margin_equations_validated": int(
+            phase_validated and spatial_validated
+        ),
+        "margin_replay_tolerance": PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
+    }
+
+
 def _subgate_records() -> list[dict[str, object]]:
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
@@ -253,6 +279,7 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
     obligation = verify_pha_c_kinematic_proof_obligation(
         build_pha_c_kinematic_proof_obligation(record),
     )
+    margin_contracts = _margin_equation_contracts(record)
     return {
         "first_lock_observed": int(record.first_lock_observed),
         "first_lock_index": record.first_lock_index,
@@ -261,6 +288,7 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "reset_count": record.reset_count,
         "phase_margin_positive": int(record.min_phase_margin_rad >= 0.0),
         "spatial_margin_positive": int(record.min_spatial_margin_m >= 0.0),
+        **margin_contracts,
         "kinematic_residual_contract_passed": int(
             record.kinematic_residual_max_m <= 1.0e-12
         ),
@@ -369,6 +397,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         obligation = verify_pha_c_kinematic_proof_obligation(
             build_pha_c_kinematic_proof_obligation(got),
         )
+        margin_contracts = _margin_equation_contracts(got)
         passed = error <= tolerance
         parity_pass_count += int(passed)
         records.append(
@@ -384,6 +413,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "timeline_sha256": got.timeline_sha256,
                 "min_phase_margin_rad": got.min_phase_margin_rad,
                 "min_spatial_margin_m": got.min_spatial_margin_m,
+                **margin_contracts,
                 "kinematic_residual_max_m": got.kinematic_residual_max_m,
                 "max_abs_velocity_m_per_s": got.max_abs_velocity_m_per_s,
                 "path_length_max_m": got.path_length_max_m,
@@ -470,6 +500,8 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "require_acceptance_hash": True,
         "require_hash_replay_validation": True,
         "require_signed_margin_contract": True,
+        "require_signed_margin_equations": True,
+        "margin_replay_tolerance": PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
         "require_kinematic_residual_contract": True,
         "require_formal_kinematic_obligation": True,
         "max_kinematic_residual_m": 1.0e-12,
@@ -495,6 +527,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["reset_count"] == 0
         and contracts["phase_margin_positive"] == 1
         and contracts["spatial_margin_positive"] == 1
+        and contracts["signed_margin_equations_validated"] == 1
         and contracts["kinematic_residual_contract_passed"] == 1
         and contracts["formal_obligation_present"] == 1
         and contracts["formal_obligation_discharged"] == 1
@@ -514,6 +547,10 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and all(
             int(record["formal_obligation_discharged"]) == 1 for record in records
         )
+        and all(
+            int(record["signed_margin_equations_validated"]) == 1
+            for record in records
+        )
         and all(int(record["hash_replay_validated"]) == 1 for record in records)
         and (not include_subgates or subgate_pass_count == len(subgates))
     )
@@ -529,6 +566,16 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "acceptance_sha256": record["acceptance_sha256"],
                 "min_phase_margin_rad": record["min_phase_margin_rad"],
                 "min_spatial_margin_m": record["min_spatial_margin_m"],
+                "phase_margin_equation_validated": (
+                    record["phase_margin_equation_validated"]
+                ),
+                "spatial_margin_equation_validated": (
+                    record["spatial_margin_equation_validated"]
+                ),
+                "signed_margin_equations_validated": (
+                    record["signed_margin_equations_validated"]
+                ),
+                "margin_replay_tolerance": record["margin_replay_tolerance"],
                 "kinematic_residual_max_m": record["kinematic_residual_max_m"],
                 "max_abs_velocity_m_per_s": record["max_abs_velocity_m_per_s"],
                 "path_length_max_m": record["path_length_max_m"],
@@ -644,6 +691,16 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "reset_count": contracts["reset_count"],
         "phase_margin_positive": contracts["phase_margin_positive"],
         "spatial_margin_positive": contracts["spatial_margin_positive"],
+        "phase_margin_equation_validated": contracts[
+            "phase_margin_equation_validated"
+        ],
+        "spatial_margin_equation_validated": contracts[
+            "spatial_margin_equation_validated"
+        ],
+        "signed_margin_equations_validated": contracts[
+            "signed_margin_equations_validated"
+        ],
+        "margin_replay_tolerance": contracts["margin_replay_tolerance"],
         "kinematic_residual_contract_passed": contracts[
             "kinematic_residual_contract_passed"
         ],

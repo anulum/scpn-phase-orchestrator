@@ -43,8 +43,10 @@ FloatArray: TypeAlias = NDArray[np.float64]
 PHA_C_ACCEPTANCE_CLAIM_BOUNDARY = "pha_c_end_to_end_acceptance_review_only"
 PHA_C_ACCEPTANCE_EVIDENCE_KIND = "deterministic_non_actuating_acceptance"
 PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M = 1.0e-9
+PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE = 1.0e-12
 
 __all__ = [
+    "PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE",
     "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY",
     "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
     "PHA_C_KINEMATIC_RESIDUAL_TOLERANCE_M",
@@ -735,11 +737,17 @@ def verify_pha_c_acceptance_record(
         record.min_spatial_margin_m,
         name="min_spatial_margin_m",
     )
-    if abs(min_phase_margin - (phase_tol - max_phase_dispersion)) > 1.0e-12:
+    if (
+        abs(min_phase_margin - (phase_tol - max_phase_dispersion))
+        > PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE
+    ):
         raise ValueError(
             "min_phase_margin_rad must equal phase_tol_rad - max_phase_dispersion_rad"
         )
-    if abs(min_spatial_margin - (spatial_tol - max_spatial_dispersion)) > 1.0e-12:
+    if (
+        abs(min_spatial_margin - (spatial_tol - max_spatial_dispersion))
+        > PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE
+    ):
         raise ValueError(
             "min_spatial_margin_m must equal spatial_tol_m - max_spatial_dispersion_m"
         )

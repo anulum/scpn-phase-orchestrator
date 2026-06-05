@@ -312,6 +312,11 @@ timeline rows call `verify_pha_c_event_timeline(...)`, and acceptance rows call
 forged signed margins, malformed SHA-256 fields, unsafe actuation flags, or
 altered claim boundaries even when the original phase/position arrays are no
 longer present.
+The acceptance benchmark now publishes
+`phase_margin_equation_validated`, `spatial_margin_equation_validated`,
+`signed_margin_equations_validated`, and `margin_replay_tolerance`, and the
+gate fails unless every declared backend row proves
+`min_margin = tolerance - max_dispersion` for both phase and spatial margins.
 Acceptance rows also call
 `build_pha_c_kinematic_proof_obligation(...)` and
 `verify_pha_c_kinematic_proof_obligation(...)`. This projects the verified

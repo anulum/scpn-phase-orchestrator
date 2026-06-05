@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.upde import (
 )
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
+    PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
     pha_c_acceptance_record_to_dict,
@@ -379,6 +380,12 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["reset_count"] == 0
     assert result["phase_margin_positive"] == 1
     assert result["spatial_margin_positive"] == 1
+    assert result["phase_margin_equation_validated"] == 1
+    assert result["spatial_margin_equation_validated"] == 1
+    assert result["signed_margin_equations_validated"] == 1
+    assert result["margin_replay_tolerance"] == (
+        PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE
+    )
     assert result["kinematic_residual_contract_passed"] == 1
     assert result["kinematic_residual_max_m"] <= 1.0e-12
     assert result["formal_obligation_discharged"] == 1
@@ -426,6 +433,10 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
     assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)
+    assert all(
+        int(record["signed_margin_equations_validated"]) == 1
+        for record in backend_records
+    )
     assert all(
         int(record["formal_obligation_discharged"]) == 1
         for record in backend_records
@@ -491,11 +502,11 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
 
     assert record.min_phase_margin_rad == pytest.approx(
         record.phase_tol_rad - record.max_phase_dispersion_rad,
-        abs=1.0e-12,
+        abs=PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
     )
     assert record.min_spatial_margin_m == pytest.approx(
         record.spatial_tol_m - record.max_spatial_dispersion_m,
-        abs=1.0e-12,
+        abs=PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
     )
     assert record.kinematic_residual_max_m <= 1.0e-12
     assert record.min_phase_margin_rad >= 0.0
@@ -505,6 +516,22 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
     forged = replace(record, min_phase_margin_rad=-1.0)
     with pytest.raises(ValueError, match="min_phase_margin_rad"):
         verify_pha_c_acceptance_record(forged)
+
+    forged_positive_phase = replace(
+        record,
+        min_phase_margin_rad=record.min_phase_margin_rad
+        + 100.0 * PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
+    )
+    with pytest.raises(ValueError, match="min_phase_margin_rad"):
+        verify_pha_c_acceptance_record(forged_positive_phase)
+
+    forged_positive_spatial = replace(
+        record,
+        min_spatial_margin_m=record.min_spatial_margin_m
+        + 100.0 * PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE,
+    )
+    with pytest.raises(ValueError, match="min_spatial_margin_m"):
+        verify_pha_c_acceptance_record(forged_positive_spatial)
 
     forged_residual = replace(record, kinematic_residual_max_m=1.0e-3)
     with pytest.raises(ValueError, match="kinematic_residual_max_m"):
