@@ -32,7 +32,10 @@ integer/fixed-point contracts that mirror the Rust supervisor boundary.
   zero-gain linear horizon certification, and a Boolean phase-plus-spatial
   merge-window mirror. It also includes `PhaseBudgetBounds`, which keeps
   accepted replay phase dispersion separate from configured predictive
-  phase-drift slack before proving the reviewed phase-lock certificate.
+  phase-drift slack before proving the reviewed phase-lock certificate, plus
+  `AcceptanceKinematicReplayBounds`, which keeps final-position,
+  maximum-velocity, and path-length equation replay provenance explicit before
+  a combined PHA-C acceptance certificate can discharge.
 - `SPOFormal.Continuous`: fixed-point continuous-envelope templates for PHA-C
   handoffs. The proof boundary records per-second relative-velocity and
   residual rate bounds, samples those rates over the reviewed horizon time,

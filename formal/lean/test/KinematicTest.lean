@@ -107,6 +107,12 @@ def mifPhaseBudgetBounds : PhaseBudgetBounds := {
   phaseTolerance := 4
 }
 
+def mifAcceptanceReplayBounds : AcceptanceKinematicReplayBounds := {
+  equationsValidated := true
+  summaryReplayTolerance := 1
+  summaryReplayToleranceLimit := 1
+}
+
 example : mifPhaseBudgetBounds.phaseBudget = 3 := by
   decide
 
@@ -117,6 +123,37 @@ example :
     mifPhaseBudgetBounds.phaseBudget <= mifPhaseBudgetBounds.phaseTolerance := by
   exact phase_budget_certificate_discharges_phase_lock
     (cfg := mifPhaseBudgetBounds)
+    (by decide)
+
+example : mifAcceptanceReplayBounds.replayCertificate = true := by
+  decide
+
+example :
+    mifAcceptanceReplayBounds.equationsValidated = true ∧
+      mifAcceptanceReplayBounds.summaryReplayTolerance <=
+        mifAcceptanceReplayBounds.summaryReplayToleranceLimit := by
+  exact acceptance_replay_certificate_discharges_runtime_preconditions
+    (cfg := mifAcceptanceReplayBounds)
+    (by decide)
+
+example :
+    mifSmokeBounds.acceptanceCertificate
+      mifPhaseBudgetBounds
+      mifAcceptanceReplayBounds = true := by
+  decide
+
+example :
+    mifSmokeBounds.budget mifSmokeBounds.horizonSteps <=
+      mifSmokeBounds.mergeWindowTolerance ∧
+        mifPhaseBudgetBounds.phaseBudget <=
+          mifPhaseBudgetBounds.phaseTolerance ∧
+            mifAcceptanceReplayBounds.equationsValidated = true ∧
+              mifAcceptanceReplayBounds.summaryReplayTolerance <=
+                mifAcceptanceReplayBounds.summaryReplayToleranceLimit := by
+  exact acceptance_certificate_discharges_runtime_preconditions
+    (kinCfg := mifSmokeBounds)
+    (phaseCfg := mifPhaseBudgetBounds)
+    (replayCfg := mifAcceptanceReplayBounds)
     (by decide)
 
 example (distance : Nat -> Nat)

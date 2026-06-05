@@ -193,13 +193,42 @@ structure PhaseBudgetBounds where
   phaseTolerance : Nat
   deriving DecidableEq, Repr
 
+/-- Runtime acceptance replay provenance for PHA-C moving-frame equations.
+
+The Python acceptance chain verifies final-position, maximum-velocity, and
+path-length replay equations before exporting a proof-obligation manifest. This
+fixed-point mirror keeps that runtime precondition explicit: Lean consumers can
+require the equations flag and a bounded replay tolerance before accepting the
+kinematic certificate.
+-/
+structure AcceptanceKinematicReplayBounds where
+  equationsValidated : Bool
+  summaryReplayTolerance : Nat
+  summaryReplayToleranceLimit : Nat
+  deriving DecidableEq, Repr
+
 /-- Total reviewed phase budget: replay dispersion plus predictive drift. -/
 def PhaseBudgetBounds.phaseBudget (cfg : PhaseBudgetBounds) : Nat :=
   cfg.maxPhaseDispersion + cfg.configuredPhaseDrift
 
+/-- Runtime-facing Boolean certificate for PHA-C equation replay provenance. -/
+def AcceptanceKinematicReplayBounds.replayCertificate
+    (cfg : AcceptanceKinematicReplayBounds) : Bool :=
+  cfg.equationsValidated &&
+    cfg.summaryReplayTolerance <= cfg.summaryReplayToleranceLimit
+
 /-- Runtime-facing Boolean certificate for reviewed phase-lock budgets. -/
 def PhaseBudgetBounds.budgetCertificate (cfg : PhaseBudgetBounds) : Bool :=
   cfg.phaseBudget <= cfg.phaseTolerance
+
+/-- Boolean certificate reflection for PHA-C equation replay provenance. -/
+theorem acceptanceReplayCertificate_eq_true_iff
+    {cfg : AcceptanceKinematicReplayBounds} :
+    cfg.replayCertificate = true ↔
+      cfg.equationsValidated = true ∧
+        cfg.summaryReplayTolerance <= cfg.summaryReplayToleranceLimit := by
+  unfold AcceptanceKinematicReplayBounds.replayCertificate
+  simp
 
 /-- Boolean certificate reflection for the phase-lock budget. -/
 theorem phaseBudgetCertificate_eq_true_iff {cfg : PhaseBudgetBounds} :
@@ -214,6 +243,70 @@ theorem phase_budget_certificate_discharges_phase_lock
     (hCertificate : cfg.budgetCertificate = true) :
     cfg.phaseBudget <= cfg.phaseTolerance := by
   exact (phaseBudgetCertificate_eq_true_iff (cfg := cfg)).mp hCertificate
+
+/-- A true replay certificate exposes the runtime equation-replay preconditions
+that must hold before the formal PHA-C acceptance bridge is reviewable. -/
+theorem acceptance_replay_certificate_discharges_runtime_preconditions
+    {cfg : AcceptanceKinematicReplayBounds}
+    (hCertificate : cfg.replayCertificate = true) :
+    cfg.equationsValidated = true ∧
+      cfg.summaryReplayTolerance <= cfg.summaryReplayToleranceLimit := by
+  exact (acceptanceReplayCertificate_eq_true_iff (cfg := cfg)).mp hCertificate
+
+/-- Combined runtime-facing PHA-C acceptance certificate.
+
+The certificate joins the spatial Gronwall budget, phase-lock budget, and
+acceptance replay provenance. It is deliberately Boolean so a runtime manifest
+can mirror it without embedding proof terms.
+-/
+def KinematicBounds.acceptanceCertificate
+    (kinCfg : KinematicBounds)
+    (phaseCfg : PhaseBudgetBounds)
+    (replayCfg : AcceptanceKinematicReplayBounds) : Bool :=
+  kinCfg.budgetCertificate &&
+    phaseCfg.budgetCertificate &&
+      replayCfg.replayCertificate
+
+/-- Boolean reflection for the combined PHA-C acceptance certificate. -/
+theorem acceptanceCertificate_eq_true_iff
+    {kinCfg : KinematicBounds}
+    {phaseCfg : PhaseBudgetBounds}
+    {replayCfg : AcceptanceKinematicReplayBounds} :
+    kinCfg.acceptanceCertificate phaseCfg replayCfg = true ↔
+      kinCfg.budget kinCfg.horizonSteps <= kinCfg.mergeWindowTolerance ∧
+        phaseCfg.phaseBudget <= phaseCfg.phaseTolerance ∧
+          replayCfg.equationsValidated = true ∧
+            replayCfg.summaryReplayTolerance <=
+              replayCfg.summaryReplayToleranceLimit := by
+  unfold KinematicBounds.acceptanceCertificate
+  simp only [
+    budgetCertificate_eq_true_iff,
+    phaseBudgetCertificate_eq_true_iff,
+    acceptanceReplayCertificate_eq_true_iff,
+    Bool.and_eq_true,
+  ]
+  constructor
+  · intro h
+    exact ⟨h.1.1, h.1.2, h.2.1, h.2.2⟩
+  · intro h
+    exact ⟨⟨h.1, h.2.1⟩, h.2.2.1, h.2.2.2⟩
+
+/-- A true combined acceptance certificate discharges the three reviewed
+runtime-to-formal PHA-C preconditions. -/
+theorem acceptance_certificate_discharges_runtime_preconditions
+    {kinCfg : KinematicBounds}
+    {phaseCfg : PhaseBudgetBounds}
+    {replayCfg : AcceptanceKinematicReplayBounds}
+    (hCertificate : kinCfg.acceptanceCertificate phaseCfg replayCfg = true) :
+    kinCfg.budget kinCfg.horizonSteps <= kinCfg.mergeWindowTolerance ∧
+      phaseCfg.phaseBudget <= phaseCfg.phaseTolerance ∧
+        replayCfg.equationsValidated = true ∧
+          replayCfg.summaryReplayTolerance <=
+            replayCfg.summaryReplayToleranceLimit := by
+  exact (acceptanceCertificate_eq_true_iff
+    (kinCfg := kinCfg)
+    (phaseCfg := phaseCfg)
+    (replayCfg := replayCfg)).mp hCertificate
 
 /-- Zero Lipschitz gain reduces the recurrence to a linear finite-step budget. -/
 theorem gronwallBudget_zero_gain_eq_linear

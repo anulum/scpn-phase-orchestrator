@@ -97,6 +97,13 @@ obligation to the verified acceptance record's final-position,
 maximum-velocity, and path-length equation replay, so a formal manifest cannot
 be detached from mechanically valid moving-frame summary evidence.
 
+The Lean mirror now names the same requirement as
+`AcceptanceKinematicReplayBounds.replayCertificate` and folds it into
+`KinematicBounds.acceptanceCertificate`. A release reviewer can therefore check
+one Boolean fixed-point acceptance certificate that joins the spatial Gronwall
+budget, phase-lock budget, and runtime equation-replay provenance instead of
+reviewing the replay flag as loose metadata.
+
 For non-zero gain, the runtime manifest replays the Lean recurrence
 `previous + gain * previous + drive`, records the terminal
 `gronwall_budget_units`, records the signed
