@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 )
 from scpn_phase_orchestrator.upde.pha_c_handoff import (
     PHA_C_HANDOFF_CLAIM_BOUNDARY,
+    PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE,
     PHACHandoffRecord,
     build_pha_c_handoff_record,
     verify_pha_c_handoff_record,
@@ -153,6 +154,7 @@ def _bench_backend(
 
 
 def _reference_contracts(record: PHACHandoffRecord) -> dict[str, Any]:
+    margin_contracts = _margin_equation_contracts(record)
     return {
         "lock_achieved": int(record.lock_achieved),
         "joint_lock_required": int(record.phase_locked and record.spatial_locked),
@@ -166,6 +168,34 @@ def _reference_contracts(record: PHACHandoffRecord) -> dict[str, Any]:
         "has_source_chain_hash": int(len(record.source_chain_sha256) == 64),
         "has_record_hash": int(len(record.record_sha256) == 64),
         "hash_replay_validated": int(verify_pha_c_handoff_record(record) is record),
+        **margin_contracts,
+    }
+
+
+def _margin_equation_contracts(record: PHACHandoffRecord) -> dict[str, object]:
+    phase_margin_equation_validated = (
+        abs(
+            record.phase_margin_rad
+            - (record.phase_tol_rad - record.phase_dispersion_rad)
+        )
+        <= PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE
+    )
+    spatial_margin_equation_validated = (
+        abs(
+            record.spatial_margin_m
+            - (record.spatial_tol_m - record.spatial_dispersion_m)
+        )
+        <= PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE
+    )
+    return {
+        "phase_margin_equation_validated": int(phase_margin_equation_validated),
+        "spatial_margin_equation_validated": int(
+            spatial_margin_equation_validated
+        ),
+        "signed_margin_equations_validated": int(
+            phase_margin_equation_validated and spatial_margin_equation_validated
+        ),
+        "margin_replay_tolerance": PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE,
     }
 
 
@@ -188,6 +218,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         tolerance = PARITY_TOLERANCES[backend]
         elapsed, got = _bench_backend(backend, phases, positions, calls)
         error = _record_max_abs_error(got, reference)
+        margin_contracts = _margin_equation_contracts(got)
         passed = error <= tolerance
         parity_pass_count += int(passed)
         records.append(
@@ -203,6 +234,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
                 "source_chain_sha256": got.source_chain_sha256,
                 "phase_margin_rad": got.phase_margin_rad,
                 "spatial_margin_m": got.spatial_margin_m,
+                **margin_contracts,
                 "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
@@ -221,6 +253,8 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "require_hash_chain": True,
         "require_hash_replay_validation": True,
         "require_signed_margin_contract": True,
+        "require_signed_margin_equations": True,
+        "margin_replay_tolerance": PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
         "require_no_native_kernel_claim": True,
@@ -248,7 +282,12 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         and contracts["has_source_chain_hash"] == 1
         and contracts["has_record_hash"] == 1
         and contracts["hash_replay_validated"] == 1
+        and contracts["signed_margin_equations_validated"] == 1
         and all(int(record["hash_replay_validated"]) == 1 for record in records)
+        and all(
+            int(record["signed_margin_equations_validated"]) == 1
+            for record in records
+        )
     )
     benchmark_payload = {
         "n": n,
@@ -282,6 +321,16 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "joint_lock_required": contracts["joint_lock_required"],
         "phase_margin_positive": contracts["phase_margin_positive"],
         "spatial_margin_positive": contracts["spatial_margin_positive"],
+        "phase_margin_equation_validated": contracts[
+            "phase_margin_equation_validated"
+        ],
+        "spatial_margin_equation_validated": contracts[
+            "spatial_margin_equation_validated"
+        ],
+        "signed_margin_equations_validated": contracts[
+            "signed_margin_equations_validated"
+        ],
+        "margin_replay_tolerance": contracts["margin_replay_tolerance"],
         "non_actuating": contracts["non_actuating"],
         "execution_disabled": contracts["execution_disabled"],
         "tolerance_profile_name": contracts["tolerance_profile_name"],

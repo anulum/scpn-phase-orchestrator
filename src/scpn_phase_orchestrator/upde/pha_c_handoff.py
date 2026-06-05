@@ -38,11 +38,13 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 PHA_C_HANDOFF_CLAIM_BOUNDARY = "pha_c_event_state_handoff_review_only"
 PHA_C_HANDOFF_EVIDENCE_KIND = "deterministic_non_actuating_handoff"
+PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE = 1.0e-12
 _TWO_PI = 2.0 * np.pi
 
 __all__ = [
     "PHA_C_HANDOFF_CLAIM_BOUNDARY",
     "PHA_C_HANDOFF_EVIDENCE_KIND",
+    "PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE",
     "PHACHandoffRecord",
     "build_pha_c_handoff_record",
     "pha_c_handoff_record_to_dict",
@@ -479,19 +481,25 @@ def verify_pha_c_handoff_record(record: PHACHandoffRecord) -> PHACHandoffRecord:
         record.spatial_margin_m,
         name="spatial_margin_m",
     )
-    if abs(phase_margin - (phase_tol - phase_dispersion)) > 1.0e-12:
+    if (
+        abs(phase_margin - (phase_tol - phase_dispersion))
+        > PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE
+    ):
         raise ValueError(
             "phase_margin_rad must equal phase_tol_rad - phase_dispersion_rad"
         )
-    if abs(spatial_margin - (spatial_tol - spatial_dispersion)) > 1.0e-12:
+    if (
+        abs(spatial_margin - (spatial_tol - spatial_dispersion))
+        > PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE
+    ):
         raise ValueError(
             "spatial_margin_m must equal spatial_tol_m - spatial_dispersion_m"
         )
-    if phase_locked and phase_margin < -1.0e-12:
+    if phase_locked and phase_margin < -PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE:
         raise ValueError("phase_locked requires a non-negative phase_margin_rad")
     if not phase_locked and phase_margin >= 0.0:
         raise ValueError("phase-unlocked records require a negative phase_margin_rad")
-    if spatial_locked and spatial_margin < -1.0e-12:
+    if spatial_locked and spatial_margin < -PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE:
         raise ValueError("spatial_locked requires a non-negative spatial_margin_m")
     if not spatial_locked and spatial_margin >= 0.0:
         raise ValueError("spatial-unlocked records require a negative spatial_margin_m")

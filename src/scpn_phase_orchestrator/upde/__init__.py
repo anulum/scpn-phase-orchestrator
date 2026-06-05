@@ -48,6 +48,7 @@ __all__ = [
     "OAState",
     "PHA_C_HANDOFF_CLAIM_BOUNDARY",
     "PHA_C_HANDOFF_EVIDENCE_KIND",
+    "PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE",
     "PHA_C_ACCEPTANCE_CLAIM_BOUNDARY",
     "PHA_C_ACCEPTANCE_EVIDENCE_KIND",
     "PHA_C_TIMELINE_CLAIM_BOUNDARY",
@@ -157,6 +158,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "PHA_C_HANDOFF_EVIDENCE_KIND": (
         ".pha_c_handoff",
         "PHA_C_HANDOFF_EVIDENCE_KIND",
+    ),
+    "PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE": (
+        ".pha_c_handoff",
+        "PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE",
     ),
     "PHACHandoffRecord": (".pha_c_handoff", "PHACHandoffRecord"),
     "build_pha_c_handoff_record": (

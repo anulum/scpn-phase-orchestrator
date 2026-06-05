@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.upde import PHACHandoffRecord as ExportedRecord
 from scpn_phase_orchestrator.upde import verify_pha_c_handoff_record as exported_verify
 from scpn_phase_orchestrator.upde.pha_c_handoff import (
     PHA_C_HANDOFF_CLAIM_BOUNDARY,
+    PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE,
     PHACHandoffRecord,
     build_pha_c_handoff_record,
     pha_c_handoff_record_to_dict,
@@ -120,6 +121,48 @@ def test_handoff_replay_verifier_rejects_tampered_evidence() -> None:
             replace(
                 record,
                 phase_order_parameter=1.2,
+                record_sha256=record.record_sha256,
+            ),
+        )
+
+
+def test_handoff_replay_verifier_rejects_forged_signed_margins() -> None:
+    record = build_pha_c_handoff_record(
+        np.array([0.0, 0.003, -0.004], dtype=np.float64),
+        np.array([0.0, 0.0005, -0.0008], dtype=np.float64),
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        prior_consecutive_lock_samples=2,
+    )
+
+    assert record.phase_margin_rad == pytest.approx(
+        record.phase_tol_rad - record.phase_dispersion_rad,
+        abs=PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE,
+    )
+    assert record.spatial_margin_m == pytest.approx(
+        record.spatial_tol_m - record.spatial_dispersion_m,
+        abs=PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE,
+    )
+    with pytest.raises(ValueError, match="phase_margin_rad"):
+        verify_pha_c_handoff_record(
+            replace(
+                record,
+                phase_margin_rad=(
+                    record.phase_margin_rad
+                    + 100.0 * PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE
+                ),
+                record_sha256=record.record_sha256,
+            ),
+        )
+    with pytest.raises(ValueError, match="spatial_margin_m"):
+        verify_pha_c_handoff_record(
+            replace(
+                record,
+                spatial_margin_m=(
+                    record.spatial_margin_m
+                    + 100.0 * PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE
+                ),
                 record_sha256=record.record_sha256,
             ),
         )
@@ -318,6 +361,12 @@ def test_pha_c_handoff_benchmark_gate_accepts_declared_backends() -> None:
     assert result["source_contract_backend_count"] == 4
     assert result["native_kernel_count"] == 0
     assert result["polyglot_claim_boundary"] == "source_contract_not_native_kernel"
+    assert result["phase_margin_equation_validated"] == 1
+    assert result["spatial_margin_equation_validated"] == 1
+    assert result["signed_margin_equations_validated"] == 1
+    assert result["margin_replay_tolerance"] == PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE
+    for record in json.loads(str(result["backend_records_json"])):
+        assert int(record["signed_margin_equations_validated"]) == 1
     assert result["acceptance_passed"] == 1
     assert result["hash_replay_validated"] == 1
     assert result["phase_margin_positive"] == 1

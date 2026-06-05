@@ -88,7 +88,10 @@ verify_pha_c_handoff_record(record)
 Use `verify_pha_c_handoff_record(...)` when replaying a stored record. It
 rechecks the review-only claim boundary, non-actuating flags, SHA-256 field
 formats, scalar lock invariants, signed margin equations, and canonical record
-hash without requiring the original phase or position vectors.
+hash without requiring the original phase or position vectors. The signed
+margin replay tolerance is published as
+`PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE`; both phase and spatial margins must
+replay as `tolerance - dispersion` inside that bound.
 
 ## Polyglot parity
 
@@ -96,7 +99,7 @@ The benchmark gate records Rust, Mojo, Julia, Go, and Python source-contract
 slots. The current handoff path is evidence construction, not a numerical hot
 loop, so the non-Python slots validate parity against the Python reference
 contract. If native kernels are later added, they must preserve the same hashes
-signed margins, and fail-closed input boundaries.
+signed margins, signed-margin equations, and fail-closed input boundaries.
 
 ```bash
 uv run python benchmarks/pha_c_handoff_benchmark.py \
@@ -107,6 +110,10 @@ uv run python benchmarks/pha_c_handoff_benchmark.py \
 
 Committed benchmark JSON is local regression evidence only. It is not a
 production timing claim unless rerun under the benchmark-isolation protocol.
+The payload exposes `phase_margin_equation_validated`,
+`spatial_margin_equation_validated`, `signed_margin_equations_validated`, and
+`margin_replay_tolerance`; the parity gate fails unless every declared backend
+row proves the phase and spatial margin equations.
 
 ## Failure boundaries
 

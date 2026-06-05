@@ -442,14 +442,15 @@ acceptance payload before acceptance, so tampered scalar evidence and unsafe
 claim-boundary edits are rejected without needing the original raw arrays. The
 same rows also publish signed phase/spatial margins: per-sample margins in the
 handoff, minimum trajectory margins in the timeline, and aggregate maximum
-dispersion/minimum margin evidence in the acceptance record. Timeline and
-acceptance benchmark rows expose signed-margin equation validation so the
+dispersion/minimum margin evidence in the acceptance record. Handoff,
+timeline, and acceptance benchmark rows expose signed-margin equation
+validation so the
 reviewed margin must equal tolerance minus maximum dispersion for both phase
 and spatial evidence. Moving-frame and acceptance rows also sign the ballistic
 axial certificate
 `z[t+1] = z[t] + v[t] * dt`, max absolute velocity, and path-length evidence so
 polyglot phase parity cannot mask a mechanically invalid coordinate update.
-Acceptance benchmark rows also publish
+Handoff and acceptance benchmark rows also publish
 `phase_margin_equation_validated`, `spatial_margin_equation_validated`,
 `signed_margin_equations_validated`, and `margin_replay_tolerance`; the gate
 fails unless every declared backend row proves
