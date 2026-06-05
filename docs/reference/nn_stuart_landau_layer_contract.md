@@ -16,3 +16,12 @@ Verification:
 - `tests/test_stuart_landau_nn.py::TestStuartLandauLayer::test_forward_shapes`
 - `tests/test_stuart_landau_nn.py::TestStuartLandauLayer::test_trajectory`
 - `tests/test_stuart_landau_nn.py::TestStuartLandauLayer::test_mean_amplitude_is_finite_scalar`
+
+## Why this matters for deployment
+
+The Stuart-Landau contract supports workflows where phase-only models are not
+sufficient and amplitude dynamics are required for meaningful control signals.
+
+The shape and finiteness guarantees are production-critical because controllers
+and monitors downstream often assume synchronized tuple dimensions for trajectory
+alignment.

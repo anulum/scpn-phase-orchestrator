@@ -20,3 +20,22 @@
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
+
+## Why this inventory is maintained
+
+This file is a stable, non-interpretive ledger of repository shape for release
+reviews and compliance checks. It allows reviewers to quickly verify where the
+engineering surface is expanding and whether operational claims remain aligned with
+actual module count, workflow count, and test footprint.
+
+## Practical use
+
+- Use for release readiness reviews to confirm the repository scale changed only by
+  intended work.
+- Use for roadmap tracking when module counts or test counts are used as rollout
+  signals.
+- Use as a checkpoint when evaluating whether a new capability claim has the
+  expected repository support footprint.
+
+The file is generated; do not change values manually. Regenerate through the
+toolchain whenever package structure or module ownership changes.

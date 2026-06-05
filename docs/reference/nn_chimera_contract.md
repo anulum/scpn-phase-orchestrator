@@ -14,3 +14,13 @@ Verification:
 - `tests/test_nn_chimera.py::TestLocalOrderParameter::test_range`
 - `tests/test_nn_chimera.py::TestChimeraIndex::test_scalar_output`
 - `tests/test_nn_chimera.py::TestDetectChimera::test_threshold_masks_disjoint`
+
+## Production interpretation
+
+This contract supports state diagnostics in mixed-coherence regimes. In practice,
+chimera indicators are used as an early warning when the system is moving from a
+globally synchronized phase toward fragmented structure.
+
+By keeping output semantics bounded and threshold masks disjoint, supervisory
+logic can consume the diagnostic signals without introducing contradictory
+interpretation paths.

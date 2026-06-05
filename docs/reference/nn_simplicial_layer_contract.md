@@ -16,3 +16,13 @@ Verification:
 - `tests/test_simplicial_layer.py::TestForward::test_output_shape`
 - `tests/test_simplicial_layer.py::TestTrajectory::test_trajectory_shape`
 - `tests/test_simplicial_layer.py::TestSigma2Activation::test_sigma2_changes_dynamics`
+
+## Operational meaning
+
+This contract covers higher-order coupling support. In production terms, the
+3-body term is the explicit mechanism for representing non-pairwise interactions
+without reengineering the broader orchestration stack.
+
+The contract distinguishes when the higher-order path is active (`sigma2 != 0`) so
+teams can A/B compare pairwise and simplicial dynamics with measurable output
+differences.

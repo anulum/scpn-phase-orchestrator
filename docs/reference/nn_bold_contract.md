@@ -16,3 +16,13 @@ Verification:
 - `tests/test_bold.py::TestBalloonWindkesselStep::test_output_shapes`
 - `tests/test_bold.py::TestBOLDFromNeural::test_output_shape`
 - `tests/test_bold.py::TestBOLDFromNeural::test_dt_bold_smaller_than_dt_uses_no_downsample`
+
+## Operational context
+
+The BOLD contract is the bridge between phase dynamics and hemodynamic-style
+measurement abstractions. It is used when users need differentiable signals that
+are compatible with neuroimaging-style pipelines without adding a separate
+preprocessing layer.
+
+The finite-state and stride clamps are explicitly part of the contract because they
+prevent unstable numerical states from silently contaminating gradient paths.

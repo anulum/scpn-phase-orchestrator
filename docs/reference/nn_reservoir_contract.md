@@ -16,3 +16,14 @@ Verification:
 - `tests/test_reservoir.py::TestReservoirDrive::test_output_shape`
 - `tests/test_reservoir.py::TestRidgeReadout::test_perfect_linear_fit`
 - `tests/test_reservoir.py::TestReservoirPredict::test_output_shape`
+
+## Why this contract is production-relevant
+
+Reservoir methods are used when SPO needs compact, model-derived feature streams
+for lightweight predictors. Keeping shape and deterministic mapping guarantees
+means these outputs can drive downstream controllers without custom glue per
+experiment.
+
+The linear readout contract is specifically relevant for explainability and
+deployment reproducibility because it defines exactly which model dimensions are
+trusted for prediction in the differentiable path.
