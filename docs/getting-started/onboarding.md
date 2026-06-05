@@ -56,6 +56,19 @@ When introducing SPO to a new reader, use this sequence:
 5. It supports research, simulation, and operator review without claiming that
    example domainpacks are calibrated for every live system.
 
+## Explain the Value in One Page
+
+When introducing SPO to a new stakeholder, keep this sequence:
+
+1. **Phase is the shared language.** Different signals are converted into phase-aligned state variables.
+2. **Coherence is context-dependent.** One system may need coupling, another may need de-synchronisation.
+3. **Interventions are bounded by design.** Limits and rate caps prevent abrupt changes.
+4. **Every recommendation is reviewable.** Audit records and replay commands create operational traceability.
+5. **Deployment is staged by evidence.** Simulation-first, policy-first, and hardware-gated roll-outs keep risk visible.
+
+If this sequence is not clear in the first meeting, route the audience back to
+[Use Cases and Value Map](use_cases.md) before discussing any control surfaces.
+
 ## First Hour
 
 1. Install the package:

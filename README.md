@@ -74,6 +74,20 @@ SPO is therefore useful in four commercial situations:
 Start with the [Use Cases and Value Map](docs/getting-started/use_cases.md) if
 you need to understand what the software is for before choosing an API.
 
+## Executive Narrative (What SPO Is and What It Is Not)
+
+SPO is a production-oriented control compiler for systems that can be expressed as coupled oscillatory processes. It gives teams a single interface for turning telemetry into phase variables, evaluating coherence risk, and proposing bounded control updates with replay evidence.
+
+In practical terms, SPO is useful when:
+
+- A domain has reusable cycle structure (time-of-day shifts, wave timing, phase-locked loops, rhythm-driven events, spatially propagating oscillations).
+- Operational teams need explainable interventions before actuation, not black-box controller outputs.
+- Governance requires deterministic evidence trails, policy guardrails, and cross-language consistency checks.
+
+SPO is not a universal AI controller, a live PLC hardening platform, or a ready-made certified hardware stack. It is a synchrony-aware simulation and control framework that can be embedded in those ecosystems after domain validation and adapter-specific evidence are attached.
+
+The immediate commercial value is the reduction of uncertainty in phase-control projects: instead of asking whether a system is "stable" from a single metric, teams get shared, auditable artefacts for **what was measured, what was proposed, what was bounded, and what was replayed**.
+
 For a compact business, operator, and technical orientation, read the
 [Executive Overview](docs/getting-started/executive_overview.md). It explains
 where SPO creates value, how the pieces fit together, which surfaces are
