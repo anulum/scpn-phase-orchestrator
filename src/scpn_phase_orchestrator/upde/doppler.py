@@ -48,7 +48,7 @@ _TWO_PI = 2.0 * np.pi
 _BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
 
 
-def _reject_non_real_array(values: object, *, name: str) -> np.ndarray:
+def _reject_non_real_array(values: object, *, name: str) -> FloatArray:
     arr = np.asarray(values)
     if arr.dtype == np.bool_ or np.issubdtype(arr.dtype, np.bool_):
         raise ValueError(f"{name} must be real-valued, not boolean")
