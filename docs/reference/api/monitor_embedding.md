@@ -1,5 +1,14 @@
 # Delay Embedding — Phase-Space Reconstruction
 
+## Why this module is exposed
+
+Delay embedding is how SPO can recover state-space structure when only scalar
+observations are available. It lets monitoring and anomaly workflows operate from
+raw traces without requiring a separate external embedding stack.
+
+The module is intentionally strict at boundaries so a downstream controller uses
+phase-space features with deterministic semantics.
+
 The `monitor.embedding` module reconstructs phase-space trajectories from
 scalar oscillator traces. It provides delay-coordinate embedding,
 Fraser-Swinney average mutual information, nearest-neighbor distances,
@@ -64,5 +73,16 @@ no self-neighbor for non-trivial inputs. Optional backend outputs that violate
 those invariants are rejected and the dispatcher falls back to the next
 available backend rather than returning a corrupted embedding or a truncated
 neighbor index.
+
+## Practical usage profile
+
+Teams typically use this module during inspection and replay pipelines:
+
+- validate embedding settings with `optimal_delay`/`optimal_dimension`,
+- extract trajectory geometry with delay coordinates,
+- use downstream monitors on the reconstructed state space instead of direct raw
+  samples.
+
+That pattern keeps signal reconstruction and control logic in one audited path.
 
 ::: scpn_phase_orchestrator.monitor.embedding

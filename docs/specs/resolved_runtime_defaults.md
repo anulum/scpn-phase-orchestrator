@@ -8,6 +8,14 @@
 
 # Resolved Runtime Defaults
 
+## Why resolved defaults are documented
+
+Operators often debug failures in the gap between declared bindings and inferred
+execution state. This page closes that gap by listing exact inferences made from
+input declarations before runtime.
+
+That makes execution behavior reviewable before a long simulation starts.
+
 This page makes YAML-default behavior explicit by documenting runtime choices
 that are inferred from `binding_spec.yaml` and shown via:
 
@@ -44,6 +52,10 @@ that are inferred from `binding_spec.yaml` and shown via:
 | `actuators` | Actuator names, knobs, scopes, and limits | `actuators` |
 
 ## Visibility contract
+
+This contract keeps run intent readable in two places: CLI output and audit
+records. The same summary is visible in both review surfaces so one can validate
+an outcome without recomputing all defaults from scratch.
 
 1. CLI output prints the resolved summary before execution.
 2. Audit header stores the same `binding_summary` payload for replay/report.

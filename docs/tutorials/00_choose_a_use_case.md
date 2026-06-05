@@ -8,6 +8,15 @@
 
 # 00 — Choose a Use Case
 
+## Purpose of this index page
+
+This page is the starting point for teams that need a fast route into the
+repository. It exists to reduce ambiguity between domain onboarding and execution
+path selection.
+
+The table below is a routing layer only: it maps intent to the most relevant
+tutorial or reference first, then to supporting pages.
+
 Start here when the repository feels too broad. Pick the row closest to your
 problem, then follow the linked tutorial path.
 
@@ -37,6 +46,8 @@ not deployment.
 
 ## Fastest Runnable Path
 
+Use this when you want a bounded first experiment and a reproducible trail:
+
 Use this sequence for a first concrete result:
 
 ```bash
@@ -62,3 +73,9 @@ print(state.to_record())
 
 Use the CLI when you need operator-facing validation, audit files, reports, or
 review workflow output.
+
+## Suggested follow-up once this is clear
+
+After you have run the first cycle, capture the resolved runtime defaults and
+review audit output before changing knobs. This keeps your second cycle focused on
+the right axis: execution shape, coupling assumptions, and safety boundaries.

@@ -8,6 +8,16 @@
 
 # Auto-Binding Proposals
 
+## Why this workflow exists
+
+Auto-binding is the data-onboarding path for teams that need a first domain
+definition without hand-maintained YAML. It converts source structure into a
+reviewable proposal so teams can start from something concrete and auditable.
+
+The core safety principle is to keep discovery and inference in a draft form.
+Every proposal stays machine-readable, provenance-rich, and explicit about what
+was inferred versus what was declared.
+
 The auto-binding prototype converts raw source families into reviewable
 `binding_spec.yaml` proposals. It never overwrites a domainpack and never marks
 the proposal as trusted without validation.
@@ -103,6 +113,18 @@ claim.
 
 The output is suitable for human review in SPO Studio or for tests that need a
 deterministic proposal package.
+
+## Usage posture
+
+In production onboarding, this is typically run as a pre-processing step before
+domainpack authoring. Its value is twofold:
+
+- it speeds initial setup from raw data,
+- it preserves traceable evidence for every inferred family, coupling, and
+  parameter suggestion.
+
+Because the output is a proposal surface, downstream actuation and policy
+decisions still require explicit validation gates.
 
 Symbolic binding proposals carry the same review-only boundary. Free-text
 intent is sanitised before compilation, generated output is checked against the

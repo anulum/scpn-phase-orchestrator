@@ -8,6 +8,16 @@
 
 # UPDE — Bayesian Uncertainty
 
+## Why Bayesian uncertainty exists in this project
+
+Deterministic UPDE runs provide a single trajectory. Bayesian uncertainty
+surfaces how sensitive that trajectory is to uncertainty in estimated
+frequencies and couplings. For production planning and safety review, that
+difference is material.
+
+The module exposes uncertainty in a structured way so teams can make explicit
+risk decisions rather than relying only on point estimates.
+
 `scpn_phase_orchestrator.upde.bayesian` propagates uncertainty in natural
 frequencies `omega` and coupling matrices `K_nm` through the existing UPDE
 integrator. It reports posterior-predictive order parameter summaries as
@@ -78,5 +88,11 @@ r_mean, r_sigma = result.r_plus_minus
   validation, phase wrapping, and backend dispatch semantics are preserved.
 - `BayesianUPDEResult.to_audit_record()` emits JSON-safe uncertainty
   diagnostics suitable for safety review and replay logs.
+
+## How this is used operationally
+
+Use Bayesian runs when estimates are sparse, noisy, or manually inferred.
+In that setting the output carries both central tendency and uncertainty so
+decision logic can enforce explicit safety thresholds before proposing changes.
 
 ::: scpn_phase_orchestrator.upde.bayesian
