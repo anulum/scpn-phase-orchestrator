@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from scpn_phase_orchestrator.upde.pha_c_acceptance import PHACAcceptanceRecord
 
 from ._pha_c_acceptance_validation import (
@@ -24,5 +26,5 @@ def build_pha_c_acceptance_record_mojo(
 ) -> PHACAcceptanceRecord:
     """Evaluate the mojo acceptance contract against the reference."""
 
-    expected = expected_pha_c_acceptance_record(*args, **kwargs)
+    expected = expected_pha_c_acceptance_record(*cast(Any, args), **cast(Any, kwargs))
     return validate_pha_c_acceptance_record(expected, expected)
