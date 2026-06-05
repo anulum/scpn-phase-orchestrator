@@ -63,6 +63,8 @@ class PHACHandoffRecord:
     oscillator_count: int
     phase_dispersion_rad: float
     spatial_dispersion_m: float
+    phase_margin_rad: float
+    spatial_margin_m: float
     phase_locked: bool
     spatial_locked: bool
     lock_achieved: bool
@@ -227,6 +229,8 @@ def _record_dict_without_hash(
         "oscillator_count": int(oscillator_count),
         "phase_dispersion_rad": float(report.phase_dispersion_rad),
         "spatial_dispersion_m": float(report.spatial_dispersion_m),
+        "phase_margin_rad": float(report.phase_margin_rad),
+        "spatial_margin_m": float(report.spatial_margin_m),
         "phase_locked": bool(report.phase_locked),
         "spatial_locked": bool(report.spatial_locked),
         "lock_achieved": bool(report.lock_achieved),
@@ -363,6 +367,8 @@ def pha_c_handoff_record_to_dict(
         "oscillator_count": int(record.oscillator_count),
         "phase_dispersion_rad": float(record.phase_dispersion_rad),
         "spatial_dispersion_m": float(record.spatial_dispersion_m),
+        "phase_margin_rad": float(record.phase_margin_rad),
+        "spatial_margin_m": float(record.spatial_margin_m),
         "phase_locked": bool(record.phase_locked),
         "spatial_locked": bool(record.spatial_locked),
         "lock_achieved": bool(record.lock_achieved),
@@ -449,6 +455,46 @@ def verify_pha_c_handoff_record(record: PHACHandoffRecord) -> PHACHandoffRecord:
         "spatial_tol_m",
     ):
         _validate_nonnegative_record_scalar(getattr(record, field), name=field)
+    phase_dispersion = _validate_nonnegative_record_scalar(
+        record.phase_dispersion_rad,
+        name="phase_dispersion_rad",
+    )
+    spatial_dispersion = _validate_nonnegative_record_scalar(
+        record.spatial_dispersion_m,
+        name="spatial_dispersion_m",
+    )
+    phase_tol = _validate_nonnegative_record_scalar(
+        record.phase_tol_rad,
+        name="phase_tol_rad",
+    )
+    spatial_tol = _validate_nonnegative_record_scalar(
+        record.spatial_tol_m,
+        name="spatial_tol_m",
+    )
+    phase_margin = _validate_real_scalar(
+        record.phase_margin_rad,
+        name="phase_margin_rad",
+    )
+    spatial_margin = _validate_real_scalar(
+        record.spatial_margin_m,
+        name="spatial_margin_m",
+    )
+    if abs(phase_margin - (phase_tol - phase_dispersion)) > 1.0e-12:
+        raise ValueError(
+            "phase_margin_rad must equal phase_tol_rad - phase_dispersion_rad"
+        )
+    if abs(spatial_margin - (spatial_tol - spatial_dispersion)) > 1.0e-12:
+        raise ValueError(
+            "spatial_margin_m must equal spatial_tol_m - spatial_dispersion_m"
+        )
+    if phase_locked and phase_margin < -1.0e-12:
+        raise ValueError("phase_locked requires a non-negative phase_margin_rad")
+    if not phase_locked and phase_margin >= 0.0:
+        raise ValueError("phase-unlocked records require a negative phase_margin_rad")
+    if spatial_locked and spatial_margin < -1.0e-12:
+        raise ValueError("spatial_locked requires a non-negative spatial_margin_m")
+    if not spatial_locked and spatial_margin >= 0.0:
+        raise ValueError("spatial-unlocked records require a negative spatial_margin_m")
     order_parameter = _validate_nonnegative_record_scalar(
         record.phase_order_parameter,
         name="phase_order_parameter",

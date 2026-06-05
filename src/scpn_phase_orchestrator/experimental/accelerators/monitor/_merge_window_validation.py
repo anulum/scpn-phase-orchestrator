@@ -15,7 +15,13 @@ from scpn_phase_orchestrator.monitor.merge_window import (
     evaluate_merge_window,
 )
 
-_NUMERIC_FIELDS = ("t", "phase_dispersion_rad", "spatial_dispersion_m")
+_NUMERIC_FIELDS = (
+    "t",
+    "phase_dispersion_rad",
+    "spatial_dispersion_m",
+    "phase_margin_rad",
+    "spatial_margin_m",
+)
 _BOOL_FIELDS = ("phase_locked", "spatial_locked", "lock_achieved")
 
 

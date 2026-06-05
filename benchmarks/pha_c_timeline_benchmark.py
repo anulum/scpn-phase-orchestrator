@@ -120,6 +120,8 @@ def _record_max_abs_error(
             "first_lock_time",
             "max_phase_dispersion_rad",
             "max_spatial_dispersion_m",
+            "min_phase_margin_rad",
+            "min_spatial_margin_m",
             "min_phase_order_parameter",
             "max_distance_to_reference_m",
             "tolerance_profile_multiplier",
@@ -187,6 +189,8 @@ def _reference_contracts(record: PHACTimelineRecord) -> dict[str, Any]:
         "final_lock_achieved": int(record.final_lock_achieved),
         "lock_loss_count": record.lock_loss_count,
         "reset_count": record.reset_count,
+        "phase_margin_loss_observed": int(record.min_phase_margin_rad < 0.0),
+        "spatial_margin_loss_observed": int(record.min_spatial_margin_m < 0.0),
         "non_actuating": int(not record.actuating),
         "execution_disabled": int(record.execution_disabled),
         "claim_boundary": record.claim_boundary,
@@ -231,6 +235,8 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
                 "payload_sha256": _timeline_sha256(got),
                 "sample_records_sha256": got.sample_records_sha256,
                 "transition_table_sha256": got.transition_table_sha256,
+                "min_phase_margin_rad": got.min_phase_margin_rad,
+                "min_spatial_margin_m": got.min_spatial_margin_m,
                 "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
@@ -250,6 +256,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "require_execution_disabled": True,
         "require_hash_chain": True,
         "require_hash_replay_validation": True,
+        "require_signed_margin_contract": True,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
         "require_no_native_kernel_claim": True,
@@ -270,6 +277,8 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         and contracts["final_lock_achieved"] == 0
         and contracts["lock_loss_count"] == 1
         and contracts["reset_count"] == 1
+        and contracts["phase_margin_loss_observed"] == 1
+        and contracts["spatial_margin_loss_observed"] == 1
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_TIMELINE_CLAIM_BOUNDARY
@@ -313,6 +322,8 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "final_lock_achieved": contracts["final_lock_achieved"],
         "lock_loss_count": contracts["lock_loss_count"],
         "reset_count": contracts["reset_count"],
+        "phase_margin_loss_observed": contracts["phase_margin_loss_observed"],
+        "spatial_margin_loss_observed": contracts["spatial_margin_loss_observed"],
         "non_actuating": contracts["non_actuating"],
         "execution_disabled": contracts["execution_disabled"],
         "tolerance_profile_name": contracts["tolerance_profile_name"],

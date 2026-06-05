@@ -291,21 +291,23 @@ PYTHONPATH=.:src python benchmarks/reference_suite.py
 
 The handoff gate binds moving-frame phase/position samples to merge-window
 evidence, Kuramoto order-parameter evidence, source-vector digests, and a
-canonical non-actuating record hash. The timeline gate consumes the same
-handoff contract across a trajectory and checks first-lock index/time,
-lock-loss counts, reset counts, transition hashes, and tolerance-profile
-provenance. The acceptance gate composes the full PHA-C path: spatial
+canonical non-actuating record hash, including signed phase/spatial margins.
+The timeline gate consumes the same handoff contract across a trajectory and
+checks first-lock index/time, lock-loss counts, reset counts, transition
+hashes, minimum signed margins, and tolerance-profile provenance. The
+acceptance gate composes the full PHA-C path: spatial
 modulation, graph-weighted Doppler correction, moving-frame propagation,
 merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline
-hashing, aggregate subgate evidence, and Rust/Go/Julia/Mojo source-contract
-parity adapters.
+hashing, maximum dispersion and minimum margin evidence, aggregate subgate
+evidence, and Rust/Go/Julia/Mojo source-contract parity adapters.
 
 Each downstream PHA-C gate now also replays the canonical record hash before a
 backend row can pass. Handoff rows call `verify_pha_c_handoff_record(...)`,
 timeline rows call `verify_pha_c_event_timeline(...)`, and acceptance rows call
 `verify_pha_c_acceptance_record(...)`. This rejects tampered scalar evidence,
-malformed SHA-256 fields, unsafe actuation flags, or altered claim boundaries
-even when the original phase/position arrays are no longer present.
+forged signed margins, malformed SHA-256 fields, unsafe actuation flags, or
+altered claim boundaries even when the original phase/position arrays are no
+longer present.
 
 Those Rust, Go, Julia, and Mojo rows are intentionally labelled
 `source_contract_reference_validation` until native downstream kernels are

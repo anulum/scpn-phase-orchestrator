@@ -46,7 +46,8 @@ For each sample, the builder calls `build_pha_c_handoff_record(...)` and carries
 - `final_lock_achieved` for the last sample;
 - phase-lock, spatial-lock, full-lock, lock-loss, and reset counts;
 - maximum phase dispersion, maximum spatial dispersion, minimum Kuramoto order
-  parameter, and maximum distance to the reference position;
+  parameter, maximum distance to the reference position, and minimum signed
+  phase/spatial margins over the trajectory;
 - tolerance profile name, multiplier, resolved phase tolerance, and resolved
   spatial tolerance;
 - SHA-256 digests for the time vector, all sample records, transition table,
@@ -103,8 +104,8 @@ verify_pha_c_event_timeline(timeline)
 
 Use `verify_pha_c_event_timeline(...)` when replaying a stored trajectory
 record. It rechecks timeline counts, first-lock semantics, transition-count
-bounds, review-only flags, SHA-256 fields, and the canonical timeline hash
-without requiring raw trajectory matrices.
+bounds, review-only flags, signed margin equations, SHA-256 fields, and the
+canonical timeline hash without requiring raw trajectory matrices.
 
 ## Handoff versus timeline
 
@@ -115,7 +116,7 @@ without requiring raw trajectory matrices.
 
 The timeline is built from handoff records. If native accelerator kernels are
 added later, they must preserve both the per-sample handoff hashes and the final
-timeline hash.
+timeline hash, including the minimum signed margins.
 
 ## Polyglot parity
 
@@ -123,7 +124,7 @@ The benchmark gate records Rust, Mojo, Julia, Go, and Python source-contract
 slots. The current timeline path is evidence construction, not a numerical hot
 loop, so the non-Python slots validate parity against the Python reference
 contract. If native kernels are later added, they must preserve the same hashes
-and fail-closed input boundaries.
+signed margins, and fail-closed input boundaries.
 
 ```bash
 uv run python benchmarks/pha_c_timeline_benchmark.py \

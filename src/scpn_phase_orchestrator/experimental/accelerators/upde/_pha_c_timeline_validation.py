@@ -23,6 +23,8 @@ _NUMERIC_FIELDS = (
     "first_lock_time",
     "max_phase_dispersion_rad",
     "max_spatial_dispersion_m",
+    "min_phase_margin_rad",
+    "min_spatial_margin_m",
     "min_phase_order_parameter",
     "max_distance_to_reference_m",
     "reference_phase",

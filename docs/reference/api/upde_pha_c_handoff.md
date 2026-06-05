@@ -3,8 +3,8 @@
 `PHACHandoffRecord` is the PHA-C event/state bridge between moving-frame
 simulation, merge-window monitoring, replay, MIF import, and Studio review.
 It converts one phase-plus-position sample into deterministic scalar evidence:
-phase dispersion, spatial dispersion, order parameter, lock status, source
-digests, and a canonical record hash.
+phase dispersion, spatial dispersion, signed phase/spatial safety margins,
+order parameter, lock status, source digests, and a canonical record hash.
 
 The handoff is intentionally review-only. It does not write to actuators,
 modify coupling, schedule hardware, or mutate supervisor state.
@@ -37,11 +37,15 @@ The handoff first evaluates `MergeWindowMonitor` semantics:
 ```text
 phase_locked   = max_i |wrap(theta_i - theta_ref)| <= phase_tol_rad
 spatial_locked = max_i |z_i - z_ref| <= spatial_tol_m
+phase_margin   = phase_tol_rad - phase_dispersion_rad
+spatial_margin = spatial_tol_m - spatial_dispersion_m
 lock_achieved  = consecutive joint locks >= required_consecutive_samples
 ```
 
 It then adds:
 
+- signed margins that expose the distance to the reviewed phase and spatial
+  envelopes, with negative values for failed predicates;
 - `phase_order_parameter = |mean(exp(i theta_i))|`;
 - `distance_to_reference_max_m = max_i |z_i - z_ref|`;
 - the tolerance profile name and multiplier when `baseline_1x`, `buffer_3x`,
@@ -83,8 +87,8 @@ verify_pha_c_handoff_record(record)
 
 Use `verify_pha_c_handoff_record(...)` when replaying a stored record. It
 rechecks the review-only claim boundary, non-actuating flags, SHA-256 field
-formats, scalar lock invariants, and canonical record hash without requiring
-the original phase or position vectors.
+formats, scalar lock invariants, signed margin equations, and canonical record
+hash without requiring the original phase or position vectors.
 
 ## Polyglot parity
 
@@ -92,7 +96,7 @@ The benchmark gate records Rust, Mojo, Julia, Go, and Python source-contract
 slots. The current handoff path is evidence construction, not a numerical hot
 loop, so the non-Python slots validate parity against the Python reference
 contract. If native kernels are later added, they must preserve the same hashes
-and fail-closed input boundaries.
+signed margins, and fail-closed input boundaries.
 
 ```bash
 uv run python benchmarks/pha_c_handoff_benchmark.py \

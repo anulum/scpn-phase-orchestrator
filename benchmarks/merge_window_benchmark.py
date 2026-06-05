@@ -107,7 +107,13 @@ def _report_max_abs_error(got: MergeReport, reference: MergeReport) -> float:
     ref_dict = reference.to_dict()
     numeric_error = max(
         abs(float(got_dict[field]) - float(ref_dict[field]))
-        for field in ("t", "phase_dispersion_rad", "spatial_dispersion_m")
+        for field in (
+            "t",
+            "phase_dispersion_rad",
+            "spatial_dispersion_m",
+            "phase_margin_rad",
+            "spatial_margin_m",
+        )
     )
     discrete_error = max(
         int(got_dict[field] != ref_dict[field])
@@ -171,6 +177,22 @@ def _reference_contracts() -> dict[str, Any]:
         "wrapped_phase_dispersion_rad": wrapped.phase_dispersion_rad,
         "phase_failure_resets": int(phase_fail.consecutive_lock_samples == 0),
         "spatial_failure_resets": int(spatial_fail.consecutive_lock_samples == 0),
+        "phase_pass_margin_positive": int(consecutive_pass.phase_margin_rad >= 0.0),
+        "spatial_pass_margin_positive": int(consecutive_pass.spatial_margin_m >= 0.0),
+        "phase_fail_margin_negative": int(phase_fail.phase_margin_rad < 0.0),
+        "spatial_fail_margin_negative": int(spatial_fail.spatial_margin_m < 0.0),
+        "buffer_profile_phase_margin_positive": int(
+            profile_pass.phase_margin_rad >= 0.0
+        ),
+        "buffer_profile_spatial_margin_positive": int(
+            profile_pass.spatial_margin_m >= 0.0
+        ),
+        "explicit_profile_phase_margin_negative": int(
+            profile_fail.phase_margin_rad < 0.0
+        ),
+        "explicit_profile_spatial_margin_negative": int(
+            profile_fail.spatial_margin_m < 0.0
+        ),
         "joint_lock_required": int(
             not phase_fail.lock_achieved and not spatial_fail.lock_achieved
         ),
@@ -222,6 +244,7 @@ def benchmark_merge_window_polyglot_parity_gate(
         "require_consecutive_gate": True,
         "require_joint_phase_spatial_lock": True,
         "require_tolerance_profile_contract": True,
+        "require_signed_margin_contract": True,
         "require_python_reference": True,
         "require_wrapped_phase": True,
     }
@@ -232,6 +255,14 @@ def benchmark_merge_window_polyglot_parity_gate(
         and contracts["wrapped_phase_dispersion_rad"] <= 0.004 + 1.0e-12
         and contracts["phase_failure_resets"] == 1
         and contracts["spatial_failure_resets"] == 1
+        and contracts["phase_pass_margin_positive"] == 1
+        and contracts["spatial_pass_margin_positive"] == 1
+        and contracts["phase_fail_margin_negative"] == 1
+        and contracts["spatial_fail_margin_negative"] == 1
+        and contracts["buffer_profile_phase_margin_positive"] == 1
+        and contracts["buffer_profile_spatial_margin_positive"] == 1
+        and contracts["explicit_profile_phase_margin_negative"] == 1
+        and contracts["explicit_profile_spatial_margin_negative"] == 1
         and contracts["joint_lock_required"] == 1
         and contracts["consecutive_gate_passes_at_threshold"] == 1
         and contracts["buffer_profile_accepts_within_3x"] == 1
@@ -263,6 +294,22 @@ def benchmark_merge_window_polyglot_parity_gate(
         "wrapped_phase_locked": int(bool(contracts["wrapped_phase_locked"])),
         "phase_failure_resets": contracts["phase_failure_resets"],
         "spatial_failure_resets": contracts["spatial_failure_resets"],
+        "phase_pass_margin_positive": contracts["phase_pass_margin_positive"],
+        "spatial_pass_margin_positive": contracts["spatial_pass_margin_positive"],
+        "phase_fail_margin_negative": contracts["phase_fail_margin_negative"],
+        "spatial_fail_margin_negative": contracts["spatial_fail_margin_negative"],
+        "buffer_profile_phase_margin_positive": contracts[
+            "buffer_profile_phase_margin_positive"
+        ],
+        "buffer_profile_spatial_margin_positive": contracts[
+            "buffer_profile_spatial_margin_positive"
+        ],
+        "explicit_profile_phase_margin_negative": contracts[
+            "explicit_profile_phase_margin_negative"
+        ],
+        "explicit_profile_spatial_margin_negative": contracts[
+            "explicit_profile_spatial_margin_negative"
+        ],
         "joint_lock_required": contracts["joint_lock_required"],
         "consecutive_gate_passes_at_threshold": contracts[
             "consecutive_gate_passes_at_threshold"

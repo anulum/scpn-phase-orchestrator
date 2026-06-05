@@ -117,6 +117,10 @@ def _record_max_abs_error(
             "first_lock_time",
             "max_abs_doppler_term",
             "max_abs_spatial_coupling",
+            "max_phase_dispersion_rad",
+            "max_spatial_dispersion_m",
+            "min_phase_margin_rad",
+            "min_spatial_margin_m",
             "min_phase_order_parameter",
             "max_distance_to_reference_m",
             "tolerance_profile_multiplier",
@@ -245,6 +249,8 @@ def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
         "final_lock_achieved": int(record.final_lock_achieved),
         "lock_loss_count": record.lock_loss_count,
         "reset_count": record.reset_count,
+        "phase_margin_positive": int(record.min_phase_margin_rad >= 0.0),
+        "spatial_margin_positive": int(record.min_spatial_margin_m >= 0.0),
         "non_actuating": int(not record.actuating),
         "execution_disabled": int(record.execution_disabled),
         "claim_boundary": record.claim_boundary,
@@ -305,6 +311,8 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "acceptance_sha256": got.acceptance_sha256,
                 "payload_sha256": _record_sha256(got),
                 "timeline_sha256": got.timeline_sha256,
+                "min_phase_margin_rad": got.min_phase_margin_rad,
+                "min_spatial_margin_m": got.min_spatial_margin_m,
                 "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
@@ -327,6 +335,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "require_execution_disabled": True,
         "require_acceptance_hash": True,
         "require_hash_replay_validation": True,
+        "require_signed_margin_contract": True,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
         "require_no_native_kernel_claim": True,
@@ -347,6 +356,8 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["final_lock_achieved"] == 1
         and contracts["lock_loss_count"] == 0
         and contracts["reset_count"] == 0
+        and contracts["phase_margin_positive"] == 1
+        and contracts["spatial_margin_positive"] == 1
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_ACCEPTANCE_CLAIM_BOUNDARY
@@ -368,6 +379,8 @@ def benchmark_pha_c_acceptance_polyglot_gate(
                 "parity_passed": record["parity_passed"],
                 "max_abs_error": record["max_abs_error"],
                 "acceptance_sha256": record["acceptance_sha256"],
+                "min_phase_margin_rad": record["min_phase_margin_rad"],
+                "min_spatial_margin_m": record["min_spatial_margin_m"],
                 "hash_replay_validated": record["hash_replay_validated"],
                 "execution_mode": record["execution_mode"],
                 "native_kernel_present": record["native_kernel_present"],
@@ -406,6 +419,8 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "final_lock_achieved": contracts["final_lock_achieved"],
         "lock_loss_count": contracts["lock_loss_count"],
         "reset_count": contracts["reset_count"],
+        "phase_margin_positive": contracts["phase_margin_positive"],
+        "spatial_margin_positive": contracts["spatial_margin_positive"],
         "non_actuating": contracts["non_actuating"],
         "execution_disabled": contracts["execution_disabled"],
         "tolerance_profile_name": contracts["tolerance_profile_name"],

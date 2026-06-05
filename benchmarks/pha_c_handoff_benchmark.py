@@ -94,6 +94,8 @@ def _record_max_abs_error(
             "t",
             "phase_dispersion_rad",
             "spatial_dispersion_m",
+            "phase_margin_rad",
+            "spatial_margin_m",
             "phase_order_parameter",
             "distance_to_reference_max_m",
             "tolerance_profile_multiplier",
@@ -154,6 +156,8 @@ def _reference_contracts(record: PHACHandoffRecord) -> dict[str, Any]:
     return {
         "lock_achieved": int(record.lock_achieved),
         "joint_lock_required": int(record.phase_locked and record.spatial_locked),
+        "phase_margin_positive": int(record.phase_margin_rad >= 0.0),
+        "spatial_margin_positive": int(record.spatial_margin_m >= 0.0),
         "non_actuating": int(not record.actuating),
         "execution_disabled": int(record.execution_disabled),
         "claim_boundary": record.claim_boundary,
@@ -197,6 +201,8 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
                 "record_sha256": got.record_sha256,
                 "payload_sha256": _record_sha256(got),
                 "source_chain_sha256": got.source_chain_sha256,
+                "phase_margin_rad": got.phase_margin_rad,
+                "spatial_margin_m": got.spatial_margin_m,
                 "hash_replay_validated": 1,
                 "max_abs_error": error,
                 "tolerance": tolerance,
@@ -214,6 +220,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "require_execution_disabled": True,
         "require_hash_chain": True,
         "require_hash_replay_validation": True,
+        "require_signed_margin_contract": True,
         "require_python_reference": True,
         "require_source_contract_disclosure": True,
         "require_no_native_kernel_claim": True,
@@ -231,6 +238,8 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         and native_kernel_count == 0
         and contracts["lock_achieved"] == 1
         and contracts["joint_lock_required"] == 1
+        and contracts["phase_margin_positive"] == 1
+        and contracts["spatial_margin_positive"] == 1
         and contracts["non_actuating"] == 1
         and contracts["execution_disabled"] == 1
         and contracts["claim_boundary"] == PHA_C_HANDOFF_CLAIM_BOUNDARY
@@ -271,6 +280,8 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "hash_replay_validated": contracts["hash_replay_validated"],
         "lock_achieved": contracts["lock_achieved"],
         "joint_lock_required": contracts["joint_lock_required"],
+        "phase_margin_positive": contracts["phase_margin_positive"],
+        "spatial_margin_positive": contracts["spatial_margin_positive"],
         "non_actuating": contracts["non_actuating"],
         "execution_disabled": contracts["execution_disabled"],
         "tolerance_profile_name": contracts["tolerance_profile_name"],

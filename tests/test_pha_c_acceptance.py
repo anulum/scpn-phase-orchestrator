@@ -373,6 +373,8 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     assert result["final_lock_achieved"] == 1
     assert result["lock_loss_count"] == 0
     assert result["reset_count"] == 0
+    assert result["phase_margin_positive"] == 1
+    assert result["spatial_margin_positive"] == 1
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
@@ -383,3 +385,43 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
     assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)
+
+
+def test_acceptance_signed_margins_are_hash_replayed() -> None:
+    from dataclasses import replace
+
+    n = 5
+    phases = np.linspace(-0.002, 0.002, n, dtype=np.float64)
+    positions = np.linspace(-0.0006, 0.0006, n, dtype=np.float64)
+    omega = np.zeros((4, n), dtype=np.float64)
+    knm = np.full((n, n), 0.04, dtype=np.float64)
+    np.fill_diagonal(knm, 0.0)
+    velocities = np.vstack(
+        [np.linspace(0.10, 0.12, n, dtype=np.float64) for _ in range(4)]
+    )
+    record = build_pha_c_acceptance_record(
+        phases,
+        positions,
+        omega,
+        knm,
+        velocities,
+        dt=1.0e-3,
+        required_consecutive_samples=3,
+        backend="python",
+    )
+
+    assert record.min_phase_margin_rad == pytest.approx(
+        record.phase_tol_rad - record.max_phase_dispersion_rad,
+        abs=1.0e-12,
+    )
+    assert record.min_spatial_margin_m == pytest.approx(
+        record.spatial_tol_m - record.max_spatial_dispersion_m,
+        abs=1.0e-12,
+    )
+    assert record.min_phase_margin_rad >= 0.0
+    assert record.min_spatial_margin_m >= 0.0
+    assert verify_pha_c_acceptance_record(record) is record
+
+    forged = replace(record, min_phase_margin_rad=-1.0)
+    with pytest.raises(ValueError, match="min_phase_margin_rad"):
+        verify_pha_c_acceptance_record(forged)

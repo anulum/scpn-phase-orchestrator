@@ -20,6 +20,8 @@ _NUMERIC_FIELDS = (
     "t",
     "phase_dispersion_rad",
     "spatial_dispersion_m",
+    "phase_margin_rad",
+    "spatial_margin_m",
     "phase_order_parameter",
     "distance_to_reference_max_m",
     "reference_phase",

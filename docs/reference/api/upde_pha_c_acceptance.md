@@ -51,7 +51,8 @@ The record carries:
 - first-lock index/time and final-lock state;
 - lock sample, lock-loss, reset, and maximum consecutive-lock counts;
 - maximum absolute Doppler correction and spatial coupling;
-- minimum Kuramoto order parameter and maximum distance to reference;
+- maximum phase/spatial dispersion, minimum signed phase/spatial margins,
+  minimum Kuramoto order parameter, and maximum distance to reference;
 - resolved tolerance profile provenance;
 - `execution_disabled=True`, `actuating=False`, and the fixed claim boundary
   `pha_c_end_to_end_acceptance_review_only`.
@@ -95,8 +96,9 @@ verify_pha_c_acceptance_record(record)
 
 Use `verify_pha_c_acceptance_record(...)` when replaying a stored acceptance
 record. It rechecks sample/step consistency, first-lock semantics, review-only
-flags, SHA-256 fields, the timeline digest reference, and the canonical
-acceptance hash without requiring the original schedules or trajectories.
+flags, signed margin equations, SHA-256 fields, the timeline digest reference,
+and the canonical acceptance hash without requiring the original schedules or
+trajectories.
 
 ## Relationship to other PHA-C records
 
@@ -111,7 +113,9 @@ acceptance hash without requiring the original schedules or trajectories.
 The benchmark gate records Rust, Mojo, Julia, Go, and Python source-contract
 slots for the acceptance builder, then aggregates the existing PHA-C subgates:
 spatial modulation, time-varying omega, Doppler, moving-frame, merge window,
-handoff, and timeline.
+handoff, and timeline. Acceptance rows also publish the minimum signed margins
+copied from the timeline, so release evidence exposes the distance to the
+reviewed merge envelope.
 
 ```bash
 uv run python benchmarks/pha_c_acceptance_benchmark.py \

@@ -77,6 +77,8 @@ class PHACTimelineRecord:
     max_consecutive_lock_samples: int
     max_phase_dispersion_rad: float
     max_spatial_dispersion_m: float
+    min_phase_margin_rad: float
+    min_spatial_margin_m: float
     min_phase_order_parameter: float
     max_distance_to_reference_m: float
     reference_phase: float
@@ -252,6 +254,8 @@ def _timeline_dict_without_hash(
     max_consecutive_lock_samples: int,
     max_phase_dispersion_rad: float,
     max_spatial_dispersion_m: float,
+    min_phase_margin_rad: float,
+    min_spatial_margin_m: float,
     min_phase_order_parameter: float,
     max_distance_to_reference_m: float,
     reference_phase: float,
@@ -283,6 +287,8 @@ def _timeline_dict_without_hash(
         "max_consecutive_lock_samples": int(max_consecutive_lock_samples),
         "max_phase_dispersion_rad": float(max_phase_dispersion_rad),
         "max_spatial_dispersion_m": float(max_spatial_dispersion_m),
+        "min_phase_margin_rad": float(min_phase_margin_rad),
+        "min_spatial_margin_m": float(min_spatial_margin_m),
         "min_phase_order_parameter": float(min_phase_order_parameter),
         "max_distance_to_reference_m": float(max_distance_to_reference_m),
         "reference_phase": float(reference_phase),
@@ -383,6 +389,8 @@ def build_pha_c_event_timeline(
         ),
         max_phase_dispersion_rad=max(record.phase_dispersion_rad for record in records),
         max_spatial_dispersion_m=max(record.spatial_dispersion_m for record in records),
+        min_phase_margin_rad=min(record.phase_margin_rad for record in records),
+        min_spatial_margin_m=min(record.spatial_margin_m for record in records),
         min_phase_order_parameter=min(
             record.phase_order_parameter for record in records
         ),
@@ -429,6 +437,8 @@ def pha_c_event_timeline_to_dict(
         max_consecutive_lock_samples=timeline.max_consecutive_lock_samples,
         max_phase_dispersion_rad=timeline.max_phase_dispersion_rad,
         max_spatial_dispersion_m=timeline.max_spatial_dispersion_m,
+        min_phase_margin_rad=timeline.min_phase_margin_rad,
+        min_spatial_margin_m=timeline.min_spatial_margin_m,
         min_phase_order_parameter=timeline.min_phase_order_parameter,
         max_distance_to_reference_m=timeline.max_distance_to_reference_m,
         reference_phase=timeline.reference_phase,
@@ -564,6 +574,38 @@ def verify_pha_c_event_timeline(
         "spatial_tol_m",
     ):
         _validate_nonnegative_record_scalar(getattr(timeline, field), name=field)
+    max_phase_dispersion = _validate_nonnegative_record_scalar(
+        timeline.max_phase_dispersion_rad,
+        name="max_phase_dispersion_rad",
+    )
+    max_spatial_dispersion = _validate_nonnegative_record_scalar(
+        timeline.max_spatial_dispersion_m,
+        name="max_spatial_dispersion_m",
+    )
+    phase_tol = _validate_nonnegative_record_scalar(
+        timeline.phase_tol_rad,
+        name="phase_tol_rad",
+    )
+    spatial_tol = _validate_nonnegative_record_scalar(
+        timeline.spatial_tol_m,
+        name="spatial_tol_m",
+    )
+    min_phase_margin = _validate_real_scalar(
+        timeline.min_phase_margin_rad,
+        name="min_phase_margin_rad",
+    )
+    min_spatial_margin = _validate_real_scalar(
+        timeline.min_spatial_margin_m,
+        name="min_spatial_margin_m",
+    )
+    if abs(min_phase_margin - (phase_tol - max_phase_dispersion)) > 1.0e-12:
+        raise ValueError(
+            "min_phase_margin_rad must equal phase_tol_rad - max_phase_dispersion_rad"
+        )
+    if abs(min_spatial_margin - (spatial_tol - max_spatial_dispersion)) > 1.0e-12:
+        raise ValueError(
+            "min_spatial_margin_m must equal spatial_tol_m - max_spatial_dispersion_m"
+        )
     order_parameter = _validate_nonnegative_record_scalar(
         timeline.min_phase_order_parameter,
         name="min_phase_order_parameter",

@@ -78,8 +78,10 @@ class MergeReport:
         t: Sample timestamp in the caller's runtime units.
         phase_dispersion_rad: Maximum wrapped distance to the reference phase.
         spatial_dispersion_m: Maximum axial distance to the reference point.
-        phase_locked: True when phase dispersion is within tolerance.
-        spatial_locked: True when spatial dispersion is within tolerance.
+        phase_margin_rad: Signed distance from phase tolerance to dispersion.
+        spatial_margin_m: Signed distance from spatial tolerance to dispersion.
+        phase_locked: True when phase margin is non-negative.
+        spatial_locked: True when spatial margin is non-negative.
         lock_achieved: True after the required consecutive joint-lock count.
         consecutive_lock_samples: Current consecutive joint-lock count.
     """
@@ -87,6 +89,8 @@ class MergeReport:
     t: float
     phase_dispersion_rad: float
     spatial_dispersion_m: float
+    phase_margin_rad: float
+    spatial_margin_m: float
     phase_locked: bool
     spatial_locked: bool
     lock_achieved: bool
@@ -228,9 +232,7 @@ def evaluate_merge_window(
     phase_vector = _as_float_vector(phases, name="phases")
     position_vector = _as_float_vector(positions, name="positions")
     if position_vector.shape != phase_vector.shape:
-        raise ValueError(
-            "positions must have the same one-dimensional shape as phases"
-        )
+        raise ValueError("positions must have the same one-dimensional shape as phases")
 
     timestamp = _validate_real_scalar(t, name="t")
     phase_reference = _validate_real_scalar(reference_phase, name="reference_phase")
@@ -259,13 +261,17 @@ def evaluate_merge_window(
 
     phase_dispersion = _phase_dispersion_rad(phase_vector, phase_reference)
     spatial_dispersion = _spatial_dispersion_m(position_vector, spatial_reference)
-    phase_locked = phase_dispersion <= phase_tol
-    spatial_locked = spatial_dispersion <= spatial_tol
+    phase_margin = phase_tol - phase_dispersion
+    spatial_margin = spatial_tol - spatial_dispersion
+    phase_locked = phase_margin >= 0.0
+    spatial_locked = spatial_margin >= 0.0
     consecutive = prior + 1 if phase_locked and spatial_locked else 0
     return MergeReport(
         t=timestamp,
         phase_dispersion_rad=phase_dispersion,
         spatial_dispersion_m=spatial_dispersion,
+        phase_margin_rad=phase_margin,
+        spatial_margin_m=spatial_margin,
         phase_locked=bool(phase_locked),
         spatial_locked=bool(spatial_locked),
         lock_achieved=bool(consecutive >= required),
@@ -373,6 +379,8 @@ def merge_window_report_to_dict(report: MergeReport) -> dict[str, float | int | 
         "t": float(report.t),
         "phase_dispersion_rad": float(report.phase_dispersion_rad),
         "spatial_dispersion_m": float(report.spatial_dispersion_m),
+        "phase_margin_rad": float(report.phase_margin_rad),
+        "spatial_margin_m": float(report.spatial_margin_m),
         "phase_locked": bool(report.phase_locked),
         "spatial_locked": bool(report.spatial_locked),
         "lock_achieved": bool(report.lock_achieved),

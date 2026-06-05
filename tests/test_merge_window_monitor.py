@@ -79,6 +79,16 @@ def test_truth_table_requires_phase_and_spatial_lock() -> None:
         )
         assert report.phase_locked is phase_locked
         assert report.spatial_locked is spatial_locked
+        assert report.phase_margin_rad == pytest.approx(
+            0.01 - report.phase_dispersion_rad,
+            abs=1.0e-12,
+        )
+        assert report.spatial_margin_m == pytest.approx(
+            0.002 - report.spatial_dispersion_m,
+            abs=1.0e-12,
+        )
+        assert report.phase_locked is (report.phase_margin_rad >= 0.0)
+        assert report.spatial_locked is (report.spatial_margin_m >= 0.0)
         assert report.lock_achieved is achieved
 
 
@@ -136,6 +146,14 @@ def test_report_serialisation_and_lazy_export() -> None:
     payload = merge_window_report_to_dict(report)
     assert payload == report.to_dict()
     assert payload["t"] == 7.5
+    assert payload["phase_margin_rad"] == pytest.approx(
+        report.phase_margin_rad,
+        abs=1.0e-12,
+    )
+    assert payload["spatial_margin_m"] == pytest.approx(
+        report.spatial_margin_m,
+        abs=1.0e-12,
+    )
     assert isinstance(payload["lock_achieved"], bool)
     assert monitor_pkg.MergeReport is MergeReport
     assert monitor_pkg.MergeWindowToleranceProfile is MergeWindowToleranceProfile
@@ -365,5 +383,13 @@ def test_merge_window_polyglot_benchmark_gate() -> None:
     assert result["acceptance_passed"] == 1
     assert result["buffer_profile_accepts_within_3x"] == 1
     assert result["explicit_profile_rejects_same_sample"] == 1
+    assert result["phase_pass_margin_positive"] == 1
+    assert result["spatial_pass_margin_positive"] == 1
+    assert result["phase_fail_margin_negative"] == 1
+    assert result["spatial_fail_margin_negative"] == 1
+    assert result["buffer_profile_phase_margin_positive"] == 1
+    assert result["buffer_profile_spatial_margin_positive"] == 1
+    assert result["explicit_profile_phase_margin_negative"] == 1
+    assert result["explicit_profile_spatial_margin_negative"] == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
     assert result["production_timing_claim"] == 0

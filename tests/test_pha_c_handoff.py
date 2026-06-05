@@ -320,6 +320,8 @@ def test_pha_c_handoff_benchmark_gate_accepts_declared_backends() -> None:
     assert result["polyglot_claim_boundary"] == "source_contract_not_native_kernel"
     assert result["acceptance_passed"] == 1
     assert result["hash_replay_validated"] == 1
+    assert result["phase_margin_positive"] == 1
+    assert result["spatial_margin_positive"] == 1
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["tolerance_profile_name"] == "buffer_3x"
@@ -332,3 +334,51 @@ def test_pha_c_handoff_benchmark_gate_accepts_declared_backends() -> None:
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
     assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)
+
+
+def test_handoff_signed_margins_are_hash_replayed() -> None:
+    from dataclasses import replace
+
+    record = build_pha_c_handoff_record(
+        np.array([0.0, 0.003, -0.004], dtype=np.float64),
+        np.array([0.0, 0.0005, -0.0008], dtype=np.float64),
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=1,
+    )
+
+    assert record.phase_margin_rad == pytest.approx(
+        record.phase_tol_rad - record.phase_dispersion_rad,
+        abs=1.0e-12,
+    )
+    assert record.spatial_margin_m == pytest.approx(
+        record.spatial_tol_m - record.spatial_dispersion_m,
+        abs=1.0e-12,
+    )
+    assert record.phase_margin_rad >= 0.0
+    assert record.spatial_margin_m >= 0.0
+    assert record.to_dict()["phase_margin_rad"] == pytest.approx(
+        record.phase_margin_rad,
+        abs=1.0e-12,
+    )
+    assert verify_pha_c_handoff_record(record) is record
+
+    forged = replace(record, phase_margin_rad=record.phase_margin_rad + 1.0e-3)
+    with pytest.raises(ValueError, match="phase_margin_rad"):
+        verify_pha_c_handoff_record(forged)
+
+
+def test_handoff_failed_lock_exposes_negative_margins() -> None:
+    record = build_pha_c_handoff_record(
+        np.array([0.0, 0.02], dtype=np.float64),
+        np.array([0.0, 0.003], dtype=np.float64),
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=1,
+    )
+
+    assert not record.phase_locked
+    assert not record.spatial_locked
+    assert record.phase_margin_rad < 0.0
+    assert record.spatial_margin_m < 0.0
+    assert record.consecutive_lock_samples == 0

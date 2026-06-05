@@ -352,6 +352,8 @@ def test_pha_c_timeline_benchmark_gate_accepts_declared_backends() -> None:
     assert result["first_lock_index"] == 3
     assert result["lock_loss_count"] == 1
     assert result["reset_count"] == 1
+    assert result["phase_margin_loss_observed"] == 1
+    assert result["spatial_margin_loss_observed"] == 1
     assert result["non_actuating"] == 1
     assert result["execution_disabled"] == 1
     assert result["benchmark_evidence_kind"] == "local_regression_non_isolated"
@@ -362,3 +364,52 @@ def test_pha_c_timeline_benchmark_gate_accepts_declared_backends() -> None:
     }
     assert sum(int(record["native_kernel_present"]) for record in backend_records) == 0
     assert all(int(record["hash_replay_validated"]) == 1 for record in backend_records)
+
+
+def test_timeline_min_signed_margins_are_hash_replayed() -> None:
+    from dataclasses import replace
+
+    phases = np.array(
+        [
+            [-0.02, 0.0, 0.02],
+            [-0.002, 0.0, 0.002],
+            [-0.0015, 0.0, 0.0015],
+            [-0.001, 0.0, 0.001],
+            [-0.02, 0.0, 0.02],
+        ],
+        dtype=np.float64,
+    )
+    positions = np.array(
+        [
+            [-0.003, 0.0, 0.003],
+            [-0.0005, 0.0, 0.0005],
+            [-0.0004, 0.0, 0.0004],
+            [-0.0003, 0.0, 0.0003],
+            [-0.003, 0.0, 0.003],
+        ],
+        dtype=np.float64,
+    )
+    timeline = build_pha_c_event_timeline(
+        phases,
+        positions,
+        times=np.arange(phases.shape[0], dtype=np.float64) * 0.5,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+    )
+
+    assert timeline.min_phase_margin_rad == pytest.approx(
+        timeline.phase_tol_rad - timeline.max_phase_dispersion_rad,
+        abs=1.0e-12,
+    )
+    assert timeline.min_spatial_margin_m == pytest.approx(
+        timeline.spatial_tol_m - timeline.max_spatial_dispersion_m,
+        abs=1.0e-12,
+    )
+    assert timeline.min_phase_margin_rad < 0.0
+    assert timeline.min_spatial_margin_m < 0.0
+    assert verify_pha_c_event_timeline(timeline) is timeline
+
+    forged = replace(timeline, min_spatial_margin_m=0.0)
+    with pytest.raises(ValueError, match="min_spatial_margin_m"):
+        verify_pha_c_event_timeline(forged)
