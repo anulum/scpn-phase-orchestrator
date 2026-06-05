@@ -48,6 +48,18 @@ All lockfiles are hash-pinned and committed under `requirements/`:
   installed with dependencies from the hashed lock because `build` and `twine`
   need their runtime dependency graphs during isolated artifact checks.
 
+## Operational impact of lock hygiene
+
+Treat lockfile drift as an installation-level behavior change. If two environments run the same code with different resolved dependencies, they are no longer in the same reproducibility boundary, even if their source tree is identical.
+
+For production and regulated contexts:
+
+- lockfile updates are release-scope changes;
+- `pip install --require-hashes` is mandatory in deterministic build lanes;
+- security or CVE remediation must include lock regeneration in the same commit set.
+
+This keeps dependency posture and behavior traceability part of the same review cycle as code changes.
+
 ## Refresh workflow
 
 Prerequisites:

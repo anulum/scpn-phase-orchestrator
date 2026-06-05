@@ -10,6 +10,20 @@ In enterprise contexts, this reduces “blank start” risk for new deployments:
 can start from documented historical baselines rather than writing new policy
 defaults from scratch.
 
+## Decision point for operators
+
+Meta-transfer is a **bootstrap, not a controller**. Its value is highest during:
+
+- first-day onboarding of a new domainpack,
+- recovery after a topology drift event,
+- and cross-domain comparison when handoff teams need a first proposal quickly.
+
+Because every output is review-only, teams preserve human authority over policy promotion while gaining a deterministic starting point from prior audited history.
+
+## Governance rule
+
+All proposals from this surface remain advisory until the normal policy stack approves them. Evidence packages should be treated as hypothesis-generating artefacts and validated through the same deterministic replay channels as any other control-change candidate.
+
 The meta-transfer subsystem provides a deterministic first slice for
 cross-domain policy bootstrapping. It reads replay or audit-derived records,
 embeds domain metrics into a shared feature vector, and proposes initial

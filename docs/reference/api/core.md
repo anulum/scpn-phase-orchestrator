@@ -2,6 +2,19 @@
 
 Foundation types shared across all SPO subsystems.
 
+## Purpose for production teams
+
+This page is the reliability seam for the entire runtime. The shared error family and compatibility controls are what allow subsystems to fail with bounded, actionable behaviour instead of cascading into undefined control actions.
+
+When reading this page:
+
+- use the exception section to align operational alerting and fallback policy,
+- use the compatibility section to understand optional dependency fallbacks,
+- use the observability entry points to verify what metrics and telemetry remain
+  available when optional stacks are missing.
+
+The intent is to make runtime limits and optional paths explicit before deployment planning begins.
+
 ## Exception Hierarchy
 
 SPO defines a hierarchy of domain-specific exceptions rooted at

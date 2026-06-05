@@ -1,5 +1,21 @@
 # Evaluation Protocol
 
+## Purpose and scope
+
+This protocol defines the baseline proof surface for a SPO run before it is treated as a release-grade control artifact. It separates three goals:
+
+- **Performance**: whether the configured intervention improves synchronisation and suppresses unhealthy layers;
+- **Safety**: whether boundary rules are respected under the configured policy;
+- **Evidence quality**: whether the same outcome can be replayed from immutable audit records.
+
+The protocol is intentionally narrow and deterministic so a reviewer can reproduce outcomes in a fixed, finite window before launching a broader production experiment.
+
+## Boundaries of this protocol
+
+Use this protocol as the minimum quality surface for default releases and CI-backed comparisons. It is not the only valid benchmark style, and it is not a substitute for domain-specific acceptance tests in regulated environments.
+
+When a domain has additional medical, grid, or transport constraints, extend this protocol by adding a domain annex that records those explicit thresholds while preserving the same fixed-seed and replay contract.
+
 ## Metrics
 
 | Metric | Computation | Target |
