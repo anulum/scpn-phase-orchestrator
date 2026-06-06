@@ -5,6 +5,21 @@ neural simulator. It occupies a different niche from spiking-network simulators 
 NEST, Nengo), general ODE libraries (SciPy), and recent ML-oriented Kuramoto papers (AKOrN).
 This document clarifies the positioning.
 
+## How to read this comparison
+
+This matrix is a feature and integration scope guide, not a universal benchmark.
+Use it to answer deployment-shape questions before reading engine-level measurements.
+
+For each highlighted capability, the review rule is:
+
+- confirm the module path in `src/scpn_phase_orchestrator` or `docs/specs`,
+- confirm supporting tests or reproducible examples,
+- and keep benchmark claims paired with run context before sharing externally.
+
+If two entries are equal in principle but not in operating posture, treat the one with
+explicit evidence and review surfaces (run specs, replay, policy boundaries) as the safer first
+selection candidate.
+
 ## Feature Matrix
 
 | Capability | SPO | Brian2 | NEST | Nengo | SciPy | DynSys.jl | AKOrN | XGI |

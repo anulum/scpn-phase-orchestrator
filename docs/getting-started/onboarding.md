@@ -80,6 +80,18 @@ When introducing SPO to a new stakeholder, keep this sequence:
 If this sequence is not clear in the first meeting, route the audience back to
 [Use Cases and Value Map](use_cases.md) before discussing any control surfaces.
 
+## Evidence checkpoint before expansion
+
+Before moving from onboarding to domainpack work, confirm three conditions:
+
+1. baseline run reproducibility with fixed seed and command log,
+2. validated phase contract and binding schema against local artifacts,
+3. a review condition for why each control action is approved, delayed, or blocked.
+
+The project is introduced as a reproducible platform, not a tuning cookbook. If any one
+condition is missing, keep the team in learning mode and complete that gap before
+adding production-facing automation.
+
 ## First Hour
 
 1. Install the package:

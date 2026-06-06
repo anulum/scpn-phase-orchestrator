@@ -2,6 +2,21 @@
 
 # Pricing
 
+## What this pricing tier split means
+
+SCPN Phase Orchestrator ships under a dual-license model so teams can choose the legal
+and operational posture that matches deployment needs.
+
+Use this page for operational decisions only after you have confirmed whether:
+
+- your team only needs the open-source kernel and community support,
+- your deployment includes proprietary integration work (UI, adapters, or cloud services), or
+- your organization needs direct support and contractual delivery obligations.
+
+Commercial packages are a faster path to production support and can reduce legal review time,
+while the AGPL community plan provides access to the full feature set for non-proprietary
+use.
+
 SCPN Phase Orchestrator is dual-licensed: open-source for research and education,
 commercial licenses for proprietary integration.
 

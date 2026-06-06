@@ -45,6 +45,19 @@ Use this as the coordination anchor when analysts, platform owners, and product
 owners meet. If any one of those points is unresolved, stay in analysis mode and
 complete that gap before continuing into domain-specific tutorials.
 
+## Decision criteria for role tracks
+
+The role pages that follow are intentionally specialized, but this page keeps the
+entry contract shared:
+
+- choose **exactly one primary role** first,
+- complete the first runnable commands from that path,
+- confirm evidence artifacts before branching to a second specialization.
+
+If a user starts from a role-specific page too early, force a return to this
+checklist. It prevents mixing assumptions across scientist, operator, and integrator
+flows before the same baseline is established.
+
 ---
 
 ## I'm an ML Researcher

@@ -4,6 +4,18 @@ This page documents specific capabilities that distinguish SPO from
 every other oscillator / synchronisation library. Claims are grounded
 in the actual codebase, not aspirations.
 
+## Evidence-first usage notes
+
+The table and list are best-read in this order:
+
+1. identify required control behavior (loop, actuation limits, safety boundaries),
+2. check whether the related module path is present and documented, and
+3. validate with the linked experiment or test command before procurement.
+
+The goal is to avoid assuming equivalence from terminology alone. A module path with
+replay evidence and validation gates is treated as higher operational confidence than a
+standalone benchmark row.
+
 ## Closed-Loop Supervisory Control
 
 **SPO has it. No one else does.**
