@@ -164,6 +164,23 @@ Studio may display the evidence. The payload sets
 `operator_review_required: true`; it is a signed review surface, not an
 executable patch channel.
 
+## Operational role
+
+The Studio API is the fixed review boundary between interactive analysis and
+runtime actuation logic. This module collects deterministic payloads from validated
+evidence sources and intentionally keeps execution-disabled behavior visible in each
+panel.
+
+Use these helpers when you need to:
+
+- prepare human-readable summaries for a control meeting,
+- export reviewer-facing context from replay outputs,
+- compare model outputs under the same binding assumptions across runs,
+- keep policy review evidence separated from any command that can mutate system state.
+
+All panel builders preserve claim markers and hash references so each display can be
+reconciled against its source artifacts.
+
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.product

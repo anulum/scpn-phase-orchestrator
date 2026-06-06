@@ -137,4 +137,20 @@ compare:
 That evidence makes it possible to justify in review why a specific search depth or
 step size was chosen, and why rejected candidates were blocked.
 
+## Why this module exists in the control chain
+
+This module is the non-actuating candidate-evaluation stage for the autotune path.
+Its output is a proposal record with explicit admission decisions, not a control
+command.
+
+In practice:
+
+- it produces bounded candidate candidates from a seed profile,
+- evaluates those candidates through an external replay/adaptation function,
+- enforces safety and stability gates,
+- returns a single auditable record for downstream review and promotion.
+
+That structure is the reason this page stays review-first: replay and offline
+validation complete before any policy path that may write to a physical actuator.
+
 ::: scpn_phase_orchestrator.autotune.policy_search

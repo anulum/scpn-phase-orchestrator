@@ -211,6 +211,22 @@ Before a production rollout, confirm:
 This avoids silent drift where runtime behavior changes because a toolchain
 disappeared or a new backend became importable without documentation updates.
 
+## Why this is not a generic compatibility layer
+
+The fallback graph is written to preserve deterministic control contracts, not to
+maximize available imports. Each lane has explicit acceptance conditions and each
+experimental lane has an explicit exit condition.
+
+Before changing the active lane:
+
+- confirm evidence requirements (benchmarks and parity tests),
+- confirm the acceptance envelope (latency, precision, reproducibility),
+- confirm audit replay remains enabled for the resulting control path.
+
+Treating backends as optional does not reduce control obligations.
+It adds explicitness so deployment teams can predict what will happen if Rust, JAX,
+or a research backend is temporarily unavailable.
+
 ## Related Pages
 
 - [Rust FFI Acceleration](rust_ffi.md)

@@ -110,3 +110,19 @@ integration risk with a simple sequence:
 
 If step 2 fails, SPO should not be selected as the primary engine despite SPO
 having partial feature overlap.
+
+## Practical adoption sequence
+
+Use this page only as the first selection filter. After deciding SPO is in scope:
+
+- map your requirement to the closest operational control profile (supervision,
+  safety enforcement, replay requirements),
+- match required monitors and regulators in the linked concept and guide pages,
+- then switch to implementation-level validation before any production trial.
+
+The final decision should include:
+
+- a working command path from this architecture page into your target guide page,
+- explicit evidence that safety gates are enforced on the same branch you plan to
+  promote,
+- and a release note or roadmap checkpoint that acknowledges the governance boundary.

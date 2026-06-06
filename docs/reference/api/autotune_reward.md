@@ -159,4 +159,20 @@ integration:
 This makes the reward module usable as the first hard requirement layer for PPO/SAC
 or other search learners without changing governance rules later.
 
+## Why this function is separated from control execution
+
+`evaluate_knob_policy` is intentionally scoped to scoring and evidence generation.
+It computes reward and audit fields so a learner can rank candidates, but it does not
+decide control actions by itself.
+
+When integrating with RL stacks, keep the same sequence:
+
+- replay or simulation produces observations,
+- reward scoring evaluates candidates with coherence, stability, and safety terms,
+- proposal gating enforces the hard safety thresholds,
+- deployment code consumes only accepted proposals that preserve evidence boundaries.
+
+This keeps model-driven optimisation inside a constrained review envelope rather
+than directly connecting policy gradients to hardware or external actuators.
+
 ::: scpn_phase_orchestrator.autotune.reward

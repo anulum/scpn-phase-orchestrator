@@ -221,6 +221,19 @@ exploration, 10 random restarts, and soft coloring extraction achieves
 zero violations on standard test graphs. Previous raw dynamics had
 11-22% violation rates.
 
+## Why this section is useful in adoption decisions
+
+This comparison is a starting point for planning, not a final procurement claim.
+Each row should be interpreted with:
+
+- runtime contract (backend, precision mode, host shape),
+- benchmark provenance (script, seed, and environment),
+- and control boundary assumptions (actuation disabled during most comparison runs).
+
+Use the measured rows to shortlist candidate workflows, then confirm implementation
+and risk posture with the release, roadmap, and production pages before selecting
+an execution profile.
+
 ## Target Use Cases
 
 1. **Fusion plasma control** — phase-coupled MHD mode suppression with boundary monitoring
