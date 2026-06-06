@@ -2,6 +2,16 @@
 
 ## Production Purpose and Risk Scope
 
+## Reader intent for this guide
+
+This guide is for teams that have already completed a replay-validated control
+loop and now need to move under operational governance. It is not a first-step
+tuning tutorial; it is the transition contract from validated simulation to service
+runtime.
+
+Treat every subsection as a governance checkpoint, and keep the audit/replay
+surface active until the review policy explicitly allows external action.
+
 This guide is for teams promoting SPO from a controlled simulation path to a
 reviewable service path. The key control objective is not speed first, but
 failure predictability and controlled blast radius.

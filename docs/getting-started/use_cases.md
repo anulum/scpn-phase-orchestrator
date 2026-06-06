@@ -89,6 +89,19 @@ rejected, or traced should not reach production.
 | Documentation reader | start with this page and the quickstart | follow the tutorial sequence and API reference for the selected surface |
 | Investor or product reviewer | inspect use cases, evidence boundaries, and roadmap | review validated capabilities, commercial licensing path, and open frontier items |
 
+## Expected value pattern
+
+Across domains, value is most predictable when teams keep the same sequence:
+
+1. define what should synchronize and what should remain decoupled,
+2. represent inputs consistently across physical, informational, and symbolic channels,
+3. test bounded control candidates in replay-first mode,
+4. keep only candidates with explicit regime, metric, and evidence gates.
+
+This produces a consistent operating language for operators, platform owners, and
+product reviewers because "good coherence", "harmful coherence", and "bounded
+response" are handled in the same contracts for different sectors.
+
 ## What SPO Is Not
 
 SPO is not a black-box automation system. Hardware writes are adapter-scoped,

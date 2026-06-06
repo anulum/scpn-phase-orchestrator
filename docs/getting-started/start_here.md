@@ -32,6 +32,19 @@ servers, or financial instruments — the same equations govern
 synchronisation in all of them. What differs is how you extract phases
 from your signals and how you configure the coupling topology.
 
+## What this page confirms before you move forward
+
+By the time you leave this route, the team should have a common contract for:
+
+- what is being modelled as a phase-bearing channel,
+- what outcomes are treated as desirable or risky synchrony,
+- what command path will be validated first (`spo demo`, `spo validate`, `spo run`),
+- and what evidence is required before any review path accepts control proposals.
+
+Use this as the coordination anchor when analysts, platform owners, and product
+owners meet. If any one of those points is unresolved, stay in analysis mode and
+complete that gap before continuing into domain-specific tutorials.
+
 ---
 
 ## I'm an ML Researcher

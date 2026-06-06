@@ -39,6 +39,18 @@ If you are still deciding what SPO is for, start with the
 is organised for implementation work after the domain, data source, and safety
 boundary are known.
 
+## How this API boundary is intended to be used
+
+The index is not a complete replacement for the pipeline pages. It is the
+implementation anchor for readers who already know:
+
+- which domain assumption is being modelled,
+- what decision boundary defines acceptable intervention,
+- and which replay or audit checks are mandatory before exposure to actuators.
+
+Use this page to confirm "which API surface can be used under which safety
+assumption" before changing imports, defaults, or policy rules.
+
 ## API by Job
 
 | Job | Primary API | Supporting docs | Typical output |

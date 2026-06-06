@@ -57,6 +57,18 @@ logged control decision:
 It is designed for both R&D proving-ground use and production services that
 require explicit review boundaries between proposal, validation, and actuation.
 
+## Why it is different from generic monitoring
+
+Standard observability systems report symptoms. SPO turns symptoms into
+phase-aligned state models before proposing changes. That makes it suitable when:
+
+- the same telemetry appears in multiple domains (service queues, power loads, rhythms),
+- operators need synchronized evidence across simulation, policy, and audit lanes,
+- and teams need a hard stop on unsafe actions when replay or policy checks fail.
+
+This does not replace existing controllers. It standardizes what is being
+controlled and how that control is justified before it reaches any actuator surface.
+
 For evaluation, start with the practical question: does the target system have
 waves, cycles, retries, stages, rotations, or event loops whose timing matters?
 If yes, SPO can express those sources as phase, test coupling hypotheses,
