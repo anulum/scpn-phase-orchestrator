@@ -1,5 +1,17 @@
 # Installation
 
+## Install lane model
+
+This page is split by operational lane, not by preference:
+
+- **Base lane:** Python-only path for first-pass evaluation and smoke validation.
+- **FFI lane:** add `rust` when deterministic performance checks are needed.
+- **Domain lane:** add scoped extras (`queuewaves`, `quantum`, `fusion`, `plasma`)
+  once base and smoke checks are stable.
+
+The lane model is intended to avoid unnecessary dependency drift in early stages.
+Every optional dependency adds operational risk if added before evidence gates pass.
+
 ## From PyPI
 
 ```bash

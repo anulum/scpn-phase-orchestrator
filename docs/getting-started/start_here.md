@@ -3,6 +3,19 @@
 Welcome to SCPN Phase Orchestrator. This page maps your background to
 the right entry point.
 
+## What this route is for
+
+The route in this page is intended to reduce onboarding ambiguity across mixed teams.
+Each reader starts at the same outcome layer, then follows a path that matches
+their role:
+
+- research users validate models and monitor outputs,
+- operators validate policy and audit boundaries,
+- integrators validate embedding points and adapters.
+
+The practical goal is to avoid early architecture debates and get to a
+replayable first run first.
+
 If you are new to SPO, do not start by reading the full API tree. Start with
 the product and domain map, then choose the narrowest runnable path:
 

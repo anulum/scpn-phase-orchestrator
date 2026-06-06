@@ -2,6 +2,18 @@
 
 Build a custom 4-oscillator domain from scratch, run it, inspect the audit trail, and plot the results.
 
+## Why this tutorial exists
+
+This is the controlled baseline for domain authors. It proves three non-negotiable
+requirements before any advanced workflow:
+
+- the binding schema can be authored from scratch and validated,
+- policy proposals can be tied to explicit, bounded actions,
+- replay logs can be validated independently of the live command output.
+
+Use this as the last unscoped tutorial in your sequence before adding
+autotune, topology inference, or hardware adapters.
+
 ## 1. Scaffold a New Domainpack
 
 ```bash

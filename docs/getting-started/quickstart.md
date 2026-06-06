@@ -18,6 +18,20 @@ Those three checks are intentionally practical. If they pass, the same domain
 can move into CLI workflows, policy review, and production staging using the
 later pages.
 
+## Practical evidence for this page
+
+Each step in this quickstart maps to a verification checkpoint:
+
+- first simulation verifies engine execution and deterministic seeding,
+- `spo validate` verifies configuration integrity,
+- `spo run` verifies bounded execution path,
+- `spo replay --verify` verifies reproducibility,
+- `spo report` verifies summarised evidence ready for review.
+
+This page is the first production-entry gate. The recommended sequence is to
+complete the checkpoints in order, then widen scope only after the same profile
+reproduces stable outputs in a second run.
+
 ## 1. Install
 
 ```bash

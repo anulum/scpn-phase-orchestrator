@@ -13,6 +13,17 @@ evaluating it for a new domain. It links installation, first run,
 domainpack authoring, notebooks, demos, production deployment, and API
 reference in one route.
 
+## Why this handbook exists
+
+It is structured as a single evidence ladder for teams with mixed roles:
+
+- people choosing a domain pack get a direct validation path,
+- operators get a review path with auditable replay,
+- integrators get explicit API and adapter entry points.
+
+The page is not a feature list. It is a sequence that reduces early confusion
+between exploratory simulation and review-ready execution.
+
 If the product purpose is still unclear, read the
 [Use Cases and Value Map](use_cases.md) first; it maps domains, market value,
 user roles, evidence boundaries, and API routes.
