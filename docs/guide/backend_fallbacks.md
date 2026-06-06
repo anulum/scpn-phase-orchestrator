@@ -218,3 +218,20 @@ disappeared or a new backend became importable without documentation updates.
 - [Differentiable Kuramoto Layer](differentiable_kuramoto.md)
 - [Performance Tuning](performance.md)
 - [Testing](testing.md)
+
+## Operational meaning
+
+This chain is designed so one runtime can be replaced without changing the
+control contract. The same `UPDEState`, `BindingSpec`, and policy inputs remain
+the API surface; only the execution backend changes.
+
+For operations teams this has three direct effects:
+
+- reproducible behaviour if Rust is temporarily unavailable,
+- predictable precision mode when switching between production and lab environments,
+- a bounded risk profile for optional backends because fallback behavior is explicit.
+
+In release planning, log the backend selected for the target host (`spo_kernel`
+path, JAX availability, WebGPU bridge, auxiliary backends) before final
+acceptance. If that log is not present, it is impossible to compare evidence
+runs across environments.

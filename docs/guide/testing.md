@@ -231,3 +231,15 @@ mutmut results
 
 The Kaggle kernel `anulum/spo-mutmut-v2` is configured for batch
 mutation testing across multiple modules.
+
+## Release governance from test surfaces
+
+For each release train, this section is treated as a pre-merge control list:
+
+- confirm module-owned unit and property tests for all modified production modules,
+- confirm parity tests for every execution path in scope,
+- confirm slow/scale suites were run for benchmark or performance-affecting edits,
+- confirm mutation coverage updates were included when risk-sensitive code changed.
+
+The result is not just a pass/fail signal. It is evidence that a regression in
+control, safety, or replay logic is likely to be detected before deployment.

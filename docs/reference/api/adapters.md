@@ -248,3 +248,31 @@ type, or payload fields can affect phase-channel state.
 ::: scpn_phase_orchestrator.adapters.synapse_channel_bridge
 
 ::: scpn_phase_orchestrator.adapters.synapse_coupling_bridge
+
+## Adapter selection guidance
+
+Choose adapter layers by failure tolerance and change management profile:
+
+| Deployment pattern | Recommended adapter set | Primary constraint |
+|--------------------|-----------------------|-------------------|
+| Internal production control loop | `control` or `hardware` adapters only where bounded actuators are required | bounded actuation and deterministic replay |
+| Observability-first rollout | `opentelemetry`, `metrics_exporter`, `prometheus` | low-latency visibility before actuation |
+| Cross-repo data exchange | `fusion_core_bridge`, `scpn_control_bridge`, `neurocore_bridge` | schema compatibility and replayability |
+| Hardware field trial | `modbus_tls`, `hardware_io` with explicit opt-in flags | physical safety and rollback path |
+| Research and co-compilation | `hybrid_cocompiler`, `quantum_control_bridge` | review-only policy and explicit scope notes |
+
+Every adapter contributes a conversion boundary. Production changes should only
+depend on adapters that are covered by active parity and boundary tests for the
+target release.
+
+## Security and quality boundary
+
+Adapter boundaries should remain explicit in runtime runbooks:
+
+- validate all external payloads before deriving phase or coupling state,
+- keep non-production adapters out of critical paths by default,
+- keep adapter version, endpoint, and mode in audit metadata so post-hoc reviews
+  can identify where control decisions changed.
+
+That boundary allows teams to reuse the same internal core while keeping
+external dependencies isolated from safety-critical decision flow.

@@ -224,6 +224,22 @@ for deterministic replay. When `phases` is provided, `omegas`, `knm`, and
 `alpha` are required (raises `AuditError` otherwise). Stuart-Landau fields
 (`amplitudes`, `mu`, `knm_r`, `epsilon`) are optional.
 
+## Audit in operational workflows
+
+Audit records are used in three recurring workflows:
+
+- **Incident reconstruction**: replay the same binding spec and input state,
+  then compare `verify_determinism()` against the original trace.
+- **Release review**: use `log_header` and per-step metadata to confirm that
+  backend choice, precision mode, and adapter set were constant across
+  candidate runs.
+- **Policy validation**: compare regime transitions, action frequency, and
+  boundary hits before promoting rules to wider environments.
+
+Use signed mode when operational evidence is required (`SPO_AUDIT_KEY` or
+`SPO_AUDIT_KEYRING`). Unsigned logs remain available for local development,
+but they are explicitly flagged and must not be used as production evidence.
+
 ## ReplayEngine API
 
 ```python

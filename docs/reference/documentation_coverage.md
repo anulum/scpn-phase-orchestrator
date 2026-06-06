@@ -180,3 +180,31 @@ When adding a module, domainpack, notebook, or demo:
 - Add the page to `mkdocs.yml`.
 - Update this matrix if counts or coverage categories change.
 - Run `mkdocs build --strict --clean`.
+
+## Reader-path coverage map
+
+Different teams read the repository for different outcomes. The table below maps the
+same surface to the most common operational intent.
+
+| Reader goal | Primary source path | Supporting evidence pages |
+|-------------|---------------------|-------------------------|
+| first-run success | `getting-started/quickstart.md` | `getting-started/installation.md`, `getting-started/hello_world.md` |
+| evidence-first adoption | `getting-started/executive_overview.md` | `VALIDATION_REPORT.md`, `guide/production.md`, `guide/notebook_to_production.md` |
+| API integration | `reference/api/index.md` | `guide/studio.md`, `reference/api/core.md`, `reference/api/queuewaves.md` |
+| operations and runtime rollout | `guide/production.md` | `guide/queuewaves.md`, `guide/hardware_deployment.md`, `guide/rust_ffi.md` |
+| formal or safety review | `reference/api/upde_pha_c_formal_obligation.md` | `formal/kinematic_safety.md`, `guide/backend_review_gate.md`, `RELEASE_HYGIENE.md` |
+
+This map is used to avoid documentation dead zones where one role has all required
+facts and another role receives only implementation hints.
+
+## Documentation debt policy for new work
+
+For any merge request that ships a new capability in production scope:
+
+- add or update at least one getting-started page for first-time operators,
+- ensure the API reference links to the touched module,
+- add or update a test or benchmark reference if performance, safety, or numerics change,
+- update this matrix before merge.
+
+Missing one of those checkpoints blocks release-signoff unless the change is
+explicitly tagged as review-only.

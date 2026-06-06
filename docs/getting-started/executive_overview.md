@@ -127,3 +127,21 @@ before any control proposal is considered:
 3. a replayable proposal path with limits and human review surfaces.
 
 That shifts the default from "ad-hoc tuning" to "evidence-backed iteration", which is usually the key commercial difference in safety-critical and regulated settings.
+
+## How teams usually adopt this
+
+Teams that deploy this platform successfully follow a common sequence:
+
+1. encode the target process as a binding spec and set measurable objectives,
+2. run a closed loop in simulation until replay matches domain expectations,
+3. connect only the required adapter set and keep actuation clipped,
+4. validate policy transitions and boundary checks with benchmark and replay,
+5. promote to production controls only with explicit operator sign-off.
+
+That sequence is why the repository keeps the same controls and metrics on both
+simulation and runtime surfaces. There are fewer hidden conversion steps and fewer
+places where telemetry semantics can drift.
+
+Commercially, the value sits at the junction of reduced setup cost and reduced
+operational ambiguity: teams usually see faster pilot-to-production transitions
+when they can reuse the same evidence path for internal review and live rollout.
