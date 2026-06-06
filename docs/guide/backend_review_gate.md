@@ -124,3 +124,16 @@ At minimum it should include:
 
 - [Backend Fallback Chain](backend_fallbacks.md)
 - Governance: `GOVERNANCE.md` in the repository root
+
+## How this gate is used in practice
+
+This gate is tied to release risk decisions, not code style. The same set of
+evidence is used to justify whether a backend is available for operator-facing
+runs, developer-only runs, or research-only runs.
+
+Use this sequence before major release windows:
+
+- gather parity summaries and CI outcomes,
+- evaluate support obligations for each backend,
+- update the status in this gate,
+- and keep the status visible before changing onboarding defaults.

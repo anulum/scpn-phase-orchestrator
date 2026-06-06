@@ -100,3 +100,20 @@ Operationally this gives:
 
 Every boundary review cycle should end with a deliberate classification decision
 and explicit evidence that the decision is reflected in the checker configuration.
+
+## Why boundary splits are operationally required
+
+The four-boundary model is not only a design diagram. It is the way release
+control avoids accidental coupling between optional experimental code and the
+stable runtime path.
+
+For each lane:
+
+- production failures in one boundary should not require changes in unrelated
+  boundaries,
+- optional adapter layers can be removed or replaced without changing Core Engine
+  contracts,
+- and import violations are detected with the same checks used for every release.
+
+Use the boundary map as the first step before adding a new module:
+classify it, add the ownership, then validate imports.

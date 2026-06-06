@@ -124,6 +124,20 @@ L(K, ω) = Σ_t (1 - cos(θ_predicted(t) - θ_observed(t))) + λ·‖K‖₁
 The L1 penalty on K promotes sparsity (topology discovery). Gradients
 computed via JAX autodiff through the ODE solver.
 
+## How this maps to controls in the product
+
+Each mathematical form links to a concrete engineering path:
+
+- pairwise and lagged couplings feed the standard UPDE derivatives,
+- amplitude terms map to Stuart-Landau and related imprint experiments,
+- higher-order terms map to simplicial coupling studies,
+- inertial terms map to swing-domain workflows where stability boundaries are
+  evaluated against grid-like operating constraints.
+
+This model page is used to keep mathematical assumptions visible next to control
+behavior. The same equations inform guard thresholds, action constraints, and the
+conditions under which a policy is allowed to adjust coupling or phase forcing.
+
 ## References
 
 - Kuramoto Y (1975). Self-entrainment of a population of coupled

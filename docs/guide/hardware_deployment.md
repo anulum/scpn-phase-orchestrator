@@ -154,3 +154,15 @@ This keeps deployment sign-off tied to evidence and avoids accidental rollout wh
 critical path assumptions are absent.
 
 See: [Control Systems Guide](control_systems.md)
+
+## Deployment evidence checks
+
+Select a lane only after matching deployment assumptions to explicit checks:
+
+- hardware determinism required vs. acceptable jitter,
+- audit export availability for the active lane,
+- and fallback behavior when optional dependencies are missing.
+
+When a lane is promoted to service, keep the corresponding lane choice and
+health checks in the release package. That avoids silent drift when same binding
+specs are run on different infrastructure later.

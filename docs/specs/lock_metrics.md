@@ -98,3 +98,14 @@ In practice this has two effects:
 The empty-window rule is intentionally strict by design; it prevents control logic from
 making inferences on malformed input that can happen in sparse logging or delayed
 telemetry.
+
+## Review checkpoints for lock metrics
+
+Use the same metric values as a gate in both tuning and incident workflows:
+
+- confirm that input windows are not empty-mismatched before any action projection,
+- validate `R` and PLV transitions against your selected threshold set,
+- verify `LockSignatures` when a control action is disputed.
+
+Keeping this data in the same evidence bundle as audit output prevents
+post-incident ambiguity over which lock threshold produced a given action.

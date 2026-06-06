@@ -95,3 +95,14 @@ Two practical effects in production are:
 
 Because `K` changes materially affect stability, this spec should be treated as a
 control contract, not just a simulation constant table.
+
+## Practical validation sequence
+
+Before a run, validate these contract points:
+
+- symmetry enforcement and zero diagonal in the constructed matrix,
+- active template selection against runtime regime state,
+- imprint scaling assumptions for every row.
+
+These checks should be included in pre-run summaries because a coupling change is
+one of the highest-impact configuration moves and must be explicit in evidence logs.

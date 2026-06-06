@@ -86,3 +86,16 @@ explicitly unavailable* under that deployment profile.
 - [Backend Fallback Chain](backend_fallbacks.md)
 - [Multi-Language Backend Review Gate](backend_review_gate.md)
 - [Dependency Locks](dependency_locks.md)
+
+## Why this section is kept in release preparation
+
+Profiles are the first operational control point for reproducibility. Each row
+in this table gives both what is enabled and what is not, which is essential when
+incident reports require capability evidence.
+
+Recommended use:
+
+- capture profile result in release notes,
+- keep the preflight command output with benchmark inputs,
+- and keep dependency overrides explicit when environment constraints prevent a
+  profile from being fully enabled.

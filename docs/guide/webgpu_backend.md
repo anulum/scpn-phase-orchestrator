@@ -126,3 +126,14 @@ Run:
 ```bash
 PYTHONPATH=src python -m pytest -q tests/test_upde_webgpu_backend.py
 ```
+
+## Deployment decision note
+
+This backend is positioned as a portability-first path. It is useful for browser and
+edge validation, with explicit limits on kernel scale and floating-point precision.
+
+Keep WebGPU in that posture by default:
+
+- use it for fast visual or distribution-level checks,
+- keep numeric parity checks visible when comparing against `rust` and `jax`,
+- route deterministic production control through lanes with established timing contracts.

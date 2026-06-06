@@ -149,3 +149,14 @@ Use the “Common Misreads” table as a triage shortcut:
 
 Resolving these with the summary table makes reruns faster and makes changes more
 traceable across incident logs.
+
+## Operational playbook after validation
+
+Use the execution table as a replay boundary:
+
+- keep the resolved summary and audit header together with the run artifacts,
+- use the “Common Misreads” list before changing model parameters,
+- only change one major stage at a time (spec, driver, policy, thresholds) and
+  re-run `spo validate` first.
+
+This ordering turns repeatability into a repeatable operational practice.

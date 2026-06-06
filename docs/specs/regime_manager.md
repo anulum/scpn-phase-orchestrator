@@ -88,3 +88,13 @@ Typical runbook mapping:
 
 This mapping is intentionally compact and deterministic so operators can reason
 about expected state behavior from one run to the next.
+
+## Control implications for operators
+
+Treat regime transitions as a first-order operating model for action timing:
+
+- keep `cooldown_steps` enabled for non-critical transitions to avoid state flip-flop,
+- keep the CRITICAL bypass in place so safety transitions are not delayed,
+- include regime trace in post-run evidence when tuning controllers.
+
+This mapping is the main guard against control chatter in noisy telemetry periods.
