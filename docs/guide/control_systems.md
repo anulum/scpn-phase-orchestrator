@@ -112,3 +112,19 @@ without manual reconstruction of transient state.
 Because state transitions are explicit and regime-gated, operators can define clear
 rollback boundaries: if coherence drops or monitor evidence regresses after an action,
 policy proposals can be bounded and reverted before the next control cycle.
+
+## Control posture and evidence contract
+
+Every production setup using this page should keep three artifacts versioned:
+
+- policy definition files (rules, cooldowns, caps),
+- latest audit configuration and lockfile choice,
+- baseline replay traces from the last accepted tuning cycle.
+
+That set is what allows an operator to compare one control action against
+history and answer whether the action improved or degraded the system trajectory.
+
+The supervisor surfaces are intentionally split into prediction, policy, and
+governance layers. If one layer is changed, replay the full sequence before
+promotion so you can isolate the effect of that change without mixing it with
+backend or extractor drift.

@@ -119,3 +119,24 @@ an installation change that is not auditable from the repository alone.
 
 - [Install Profiles](install_profiles.md)
 - [Production Deployment](production.md)
+
+## Failure handling when lockfiles drift
+
+When a lockfile mismatch appears during CI or deployment:
+
+1. Compare `requirements/` snapshots by lane (Python version + OS + extra
+   profile).
+2. Confirm dependency constraints in `pyproject.toml` are unchanged.
+3. Regenerate the affected lockfile set with the project-standard command.
+4. Re-run `make lock-check` and the relevant matrix jobs before release.
+
+If the same dependency set cannot be reproduced from committed inputs, treat the
+change as a release risk even when simulation tests are still green. Lockfiles are
+part of operational determinism, not optional metadata.
+
+## Reproducibility boundary
+
+A release is reproducible only when both source inputs and pinned install inputs
+are unchanged for the target lane. Keep lockfile commits grouped with code changes
+that rely on them so audit review can attribute behavior differences to the correct
+surface.

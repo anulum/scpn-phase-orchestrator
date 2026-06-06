@@ -166,3 +166,26 @@ Human Connectome Project:
 - Default Mode Network hub structure
 
 ::: scpn_phase_orchestrator.coupling.connectome
+
+## Monitoring stack as a decision chain
+
+Treat this page as a decision chain for escalation, not a list of separate tools.
+The intended order is:
+
+1. start with one global stability indicator,
+2. confirm structural coherence with pairwise and topology-aware indicators,
+3. apply causal or energetic checks before any bounded actuation proposal.
+
+The sequence is designed to reduce false positives and preserve audit quality.
+
+## Minimal observability profile
+
+A practical minimum profile for a first production pilot is:
+
+- `order_parameter` for baseline synchrony,
+- `lyapunov` for local stability trend,
+- one causal or directional metric (`coupling_est` or `itpc`),
+- one action governance metric (`evs` or `pid`).
+
+This gives enough signal to decide whether a policy should stay static,
+reduce its scope, or escalate to broader review.

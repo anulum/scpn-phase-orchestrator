@@ -143,3 +143,22 @@ spo demo --domain cardiac_rhythm --steps 50
 Lists available domainpacks if the specified domain is not found.
 See the [domainpack gallery](../galleries/domainpack_gallery.md) for
 benchmark results across the measured domainpack snapshot.
+
+## Safe usage guidelines
+
+All interactive tools are intended for exploration and review, not for implicit
+actuation. In production, run them in this order:
+
+- open the interface with a bound and reviewed domainpack,
+- validate `spo validate` before loading any policy or control controls,
+- compare outputs against a replayed CLI run,
+- only then use outputs to build deployment documentation.
+
+That sequence prevents a visual tuning pass from being mistaken for validated
+operational change.
+
+## Data handling expectation
+
+Interactive sessions that read external files should not be used as policy
+authorities. They are for assessment and recommendation. The project control
+boundary remains replayed and approved policy execution.

@@ -114,3 +114,16 @@ have to pass the normal supervisor review gate before use.
 - Adapter-level validation is a replay and transport boundary; do not add policy logic in these helper layers.
 - Keep adapter outputs deterministic to preserve forensic replay and audit comparisons across reruns.
 - Verify adapters against malformed inputs with a regression test set before promoting any adapter change.
+
+## Boundary role in deployment lanes
+
+These adapters are designed for deterministic ingestion and replay consistency.
+For each new deployment lane, they should be validated in the same order as
+other control boundaries:
+
+- payload shape validation,
+- adapter output shape validation,
+- replay + supervisor gate replayability.
+
+That sequence keeps transport-specific details from masking control-layer
+regressions and reduces the number of layers involved in incident triage.

@@ -136,3 +136,30 @@ intent is sanitised before compilation, generated output is checked against the
 expected binding schema, and the result includes review metadata. Treat the
 proposal as an auditable draft until an operator approves and validates the
 domainpack through the normal binding loader.
+
+## Operational placement in the project flow
+
+Auto-binding is typically used for first-pass structure discovery, not final
+control deployment. The intended sequence is:
+
+1. generate a proposal from a supported source,
+2. review the discovered channels and confidence signals,
+3. validate the proposal with the standard binding validator,
+4. adjust explicit controls (`K`, `zeta`, `actuators`, bounds),
+5. re-run replay-based checks before any hardware or live service path uses
+   the output.
+
+This separates discovery from actuation and keeps proposal errors from becoming
+runtime decisions.
+
+## Evidence expectations
+
+Every generated proposal should be paired with:
+
+- source hash and sample count,
+- explicit extractor parameter rationale,
+- validator output for each generated section,
+- and a deterministic artifact path for downstream review.
+
+Those items make audit review practical and shorten the time from data import to
+safe domain review.

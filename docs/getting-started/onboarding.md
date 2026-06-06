@@ -145,3 +145,28 @@ current public documentation inventory and the policy for API, guide,
 notebook, and demo coverage.
 
 For planned work, see the [Public Roadmap](../roadmap.md).
+
+## Suggested onboarding milestones
+
+Recommended order for an engineering team:
+
+1. **Understand**: read use cases and run quickstart.
+2. **Validate**: execute the full install validation and a minimal domainpack run.
+3. **Review**: inspect generated audit output before any control action.
+4. **Harden**: set backend selection, lock policy, and dependency posture.
+5. **Extend**: move through tutorial and domainpack authoring only after each
+   milestone passes.
+
+This sequence minimizes drift between documentation claims and what a team can
+reproduce on day one.
+
+## Operator handoff format
+
+When passing the workspace to another operator, include four artifacts in one place:
+
+- environment details (Python/Rust versions and backend lane),
+- last successful simulation command and seed,
+- latest audit report and replay command,
+- validation pass result and lockfile choice.
+
+The same four artifacts are the minimum evidence set for safe incident follow-up.

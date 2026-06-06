@@ -145,3 +145,17 @@ with its evidence boundary:
 That boundary is intentional. SPO is designed for systems where incorrect
 control claims are expensive, so documentation must separate executable
 capability, review-only evidence, and future research scope.
+
+## Adoption sequence by role
+
+For each use case, apply this sequence before live recommendations:
+
+1. define the target coherence outcome (desirable lock, avoidable lock, or
+   neutral synchrony),
+2. map signals into physical/informational/symbolic channels,
+3. run at least one audit-backed deterministic run,
+4. validate policy and monitor settings on replay,
+5. only then promote to review cadence with bounded actuation.
+
+This keeps the evidence boundary explicit and prevents overreach from
+unvalidated inference.

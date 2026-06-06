@@ -176,3 +176,27 @@ New backend code should answer these questions in the PR:
 - What happens when the backend is missing?
 
 Without those answers, prefer improving Rust, JAX, or the Python reference path.
+
+## Practical deployment mapping
+
+Use this quick mapping before switching backend defaults:
+
+- **Latency-sensitive production API**: prefer Rust FFI and keep JAX as a separate
+  research lane.
+- **Differentiable research and autotune**: prefer JAX, then validate with Python
+  reference parity for audit checks.
+- **Browser or edge demo**: prefer WebGPU for deployment compatibility, and define
+  explicit f32 constraints in the project notes.
+- **Regulated review or offline investigation**: prefer Python reference or Rust
+  with full replay gates enabled.
+
+Each backend shift should include at least one documented parity command and one
+documented replay command so teams can confirm both trajectory shape and replay
+integrity after switching.
+
+## Governance rule for backend experiments
+
+Experimental backends (Julia, Go, Mojo) are only moved out of experiment status
+after all three are true: measurable production benefit, parity evidence, and
+maintenance ownership. Until then, treat their outputs as comparative artifacts,
+not default execution policy.

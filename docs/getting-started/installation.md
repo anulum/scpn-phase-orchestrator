@@ -140,3 +140,36 @@ At the end of installation, confirm:
 - and one persisted audit output path if policy control is in scope.
 
 That check is what converts an install into an operationally ready workspace.
+
+## Post-install decision flow
+
+Use this flow whenever you are preparing a new environment:
+
+1. **Install only required extras**
+   - Start with the base package and add integrations (`queuewaves`, `quantum`,
+     `fusion`, `plasma`) only after the base command path works.
+2. **Run validation gates**
+   - Confirm `python -c "from scpn_phase_orchestrator import UPDEEngine; ..."`
+   - Confirm `spo validate` and `spo report` can execute on a known domainpack.
+3. **Lock dependency surface**
+   - Record selected lockfile and optional extras in deployment notes before
+     first policy run.
+4. **Run an audit-backed smoke path**
+   - Execute one deterministic run and one `spo replay --verify` to prove
+     reproducibility.
+
+Each environment should document its lane choice (base, queuewaves, quantum,
+WASM, or production Rust) so incident response can map a behavior change to either
+code or dependency drift.
+
+## Security and compliance checkpoints at install time
+
+Installations that support external actuation keep two extra controls active:
+
+- **Deterministic inputs**: fixed seed and fixed domainpack versions for first runs.
+- **Audit-first promotion**: store generated audit files before enabling persistent
+  control outputs.
+
+This is the reason this project distinguishes local simulation readiness from
+production readiness: both can look healthy, but only the latter has deterministic
+replay and explicit policy gate checks completed.

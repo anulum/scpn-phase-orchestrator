@@ -194,3 +194,27 @@ print(f"Amplitudes: {amplitudes.round(3)}")
 - [Domainpack Gallery](../galleries/domainpack_gallery.md) -- all 36 domainpacks
 - [Notebooks & Demos](../galleries/notebooks_and_demos.md) -- notebooks, examples, and interactive demos
 - [Notebook Execution Matrix](../galleries/notebook_execution_matrix.md) -- notebook extras, CI status, and runtime expectations
+
+## What this gives you after this page
+
+After the quickstart, you should have these verifiable outcomes:
+
+- a deterministic simulation seed and at least one bounded run,
+- an auditable command trail (`spo validate`, `spo run`, `spo replay`, `spo report`),
+- a reproducible import path for Python embedding (`from scpn_phase_orchestrator import ...`).
+
+Treat the quickstart as the production-entry boundary, not the finish line.
+Before moving to domain tuning or topology inference, confirm:
+
+- replay output is stable under repeated execution,
+- the default safety gates produce non-empty regime and action traces,
+- lockfile and optional extras are aligned with your target profile.
+
+## Recommended hardening sequence
+
+1. Extend one use case at a time, not all channels.
+2. Keep the first control policy conservative and reversible.
+3. Add one monitor family at a time and compare false-positive rates before
+   adding additional supervisors.
+4. Promote from dashboard-only exploration to policy execution only after
+   replay validation succeeds.

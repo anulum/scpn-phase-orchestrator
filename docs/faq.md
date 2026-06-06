@@ -216,3 +216,18 @@ Do not open a public issue.
 Use the metadata in
 [CITATION.cff](https://github.com/anulum/scpn-phase-orchestrator/blob/main/CITATION.cff),
 which is machine-readable by Zenodo, GitHub, and most reference managers.
+
+## How to use this FAQ in evaluations
+
+For technical reviews, this FAQ is best used as a route map:
+
+- read the domain or control question first,
+- confirm the implementation path in the linked guides,
+- verify the answer in a smoke command or replay output.
+
+For procurement or operator review, pair each answer with one reproducible proof
+artifact (`spo validate`, replay log, benchmark command, or lockfile snapshot).
+That makes each response auditable instead of declarative.
+
+For implementation review, prioritize links that map to explicit code paths and
+gated commands over broad capability descriptions.
