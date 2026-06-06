@@ -12,6 +12,20 @@ For most applications, `rk4` with a dt satisfying the CFL bound is the right
 choice. `euler` is acceptable for real-time applications where latency budgets
 are tight and dt is small enough.
 
+## Practical method selection by rollout risk
+
+The integration method is a control-architecture choice, not only a speed
+choice. A practical selection starts with constraints:
+
+- `euler`: choose when step budget dominates and numerical envelope is strict,
+- `rk4`: choose for most production validation runs,
+- `rk45`: choose when frequency spread and transient coupling are high or drift
+  is expected within a single control period.
+
+Use one method during baseline benchmarking and keep it fixed until the baseline
+is updated. Changing method inside a release candidate can mask model changes
+and creates ambiguous benchmark comparisons.
+
 ## CFL Stability Bound
 
 ```

@@ -3,6 +3,25 @@
 The `spo` command is the primary entry point. Install with
 `pip install scpn-phase-orchestrator` and the `spo` command becomes available.
 
+## Operational position
+
+The CLI is the orchestration boundary between raw domain inputs and reviewable
+evidence. It is deliberately split into three planes:
+
+- validation plane: binding parsing, schema checks, and resolved runtime defaults,
+- execution plane: deterministic simulation, replayable audits, and proposal
+  generation,
+- reporting plane: deterministic summaries, regulator-oriented explanations, and
+  transport checks.
+
+A typical production workflow starts with `spo validate`, moves to
+`spo inspect` or `spo run` on an accepted binding, then uses
+`spo replay` plus `spo report` before any dashboard or platform review.
+
+That separation keeps intent and actuation boundaries explicit. Even when the
+same user runs each command on one terminal session, each command has an
+independent evidence contract and explicit pass/fail output.
+
 ---
 
 ## `spo validate`
@@ -268,3 +287,16 @@ spo queuewaves check [OPTIONS]
 ```bash
 spo queuewaves check --config qw_config.yaml
 ```
+
+## Choosing commands by objective
+
+Use this sequence when you need a production-level audit trail:
+
+1. validate that the domain spec is structurally correct,
+2. inspect resolved settings before any simulation run,
+3. execute with `--audit` so later replay can confirm every step,
+4. report and explain before handing results to operators.
+
+Use `spo run --audit` for deterministic replay support.
+Use `spo replay --verify` whenever a new dependency, backend, or host profile is
+introduced.

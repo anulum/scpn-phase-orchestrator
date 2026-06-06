@@ -21,6 +21,19 @@ Use it in this order when starting from a requirement:
 
 This keeps navigation aligned with production outcomes instead of code structure.
 
+## How to use this map in execution planning
+
+Use this page as the first gate in implementation planning:
+
+- choose one operational objective in **API by Job**,
+- move to the supporting guide or tutorial for context,
+- use the linked API entrypoints only with a specific test scope,
+- confirm the related evidence contracts before moving into deployment flow.
+
+This order keeps review scope stable. The link graph is complete enough for
+single-path decisions, and it avoids parallel API exploration that can create
+hidden dependency risk.
+
 If you are still deciding what SPO is for, start with the
 [Use Cases and Value Map](../../getting-started/use_cases.md). This API index
 is organised for implementation work after the domain, data source, and safety

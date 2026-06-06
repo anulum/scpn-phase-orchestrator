@@ -113,6 +113,29 @@ Because state transitions are explicit and regime-gated, operators can define cl
 rollback boundaries: if coherence drops or monitor evidence regresses after an action,
 policy proposals can be bounded and reverted before the next control cycle.
 
+## Operational placement in closed-loop projects
+
+Use this page when the target outcome is a stable control loop, not just a
+monitoring dashboard. The control stack in this repository is built in layers:
+
+- prediction: MPC and monitors produce a near-term risk estimate,
+- policy and regime selection: Petri-Net and policy DSL select candidate actions,
+- constraint application: projector, boundaries, and imprint constraints limit
+  per-cycle movement,
+- governance: audit logging and replay preserve every non-trivial change.
+
+A common rollout order is:
+
+1. choose monitor set (`R`, `PLV`, boundary metrics),
+2. define objectives and regime thresholds,
+3. dry-run policy and projection limits,
+4. replay the same sequence with fixed seeds,
+5. promote only when both expected and observed lock metrics match the decision
+   gate.
+
+Keep this page as a production entry for teams that need a predictable control
+path after data onboarding and domain calibration.
+
 ## Control posture and evidence contract
 
 Every production setup using this page should keep three artifacts versioned:
