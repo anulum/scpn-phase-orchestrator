@@ -170,3 +170,27 @@ When passing the workspace to another operator, include four artifacts in one pl
 - validation pass result and lockfile choice.
 
 The same four artifacts are the minimum evidence set for safe incident follow-up.
+
+## Use this page when alignment is unclear
+
+If a team is uncertain about where to start, use this order:
+
+1. read this onboarding page with one agreed role,
+2. open one domainpack example (`minimal_domain`) and run the listed validation
+   commands,
+3. compare expected outputs with `docs/reference/documentation_coverage.md`,
+4. only then open tool-specific pages (`studio`, `api`, `production`).
+
+This avoids switching between guides before the team shares a common baseline
+for what counts as verified evidence.
+
+## What to send after onboarding
+
+After completing this page, pass three artifacts to operations:
+
+- a pinned environment spec (`Python`, optional extras, backend lane),
+- the latest validation command set and outcomes,
+- the first replay reference file for review.
+
+That package is usually enough to decide whether the team is ready for domain
+authoring or should stay in evaluation mode for one more cycle.

@@ -145,3 +145,32 @@ places where telemetry semantics can drift.
 Commercially, the value sits at the junction of reduced setup cost and reduced
 operational ambiguity: teams usually see faster pilot-to-production transitions
 when they can reuse the same evidence path for internal review and live rollout.
+
+## Operational positioning
+
+The product is positioned for teams that already have telemetry and need a
+reusable control chain from data to policy proposals.
+
+In practice, teams use it in three ways:
+
+- as a simulation-first decision aid when introducing a new control strategy,
+- as a bounded intervention planner when they already run review gates,
+- as a common language for synchrony evidence across research, operations, and
+  platform teams.
+
+The platform is not intended to replace all domain control stacks in one change;
+it standardises phase contracts, evidence artifacts, and promotion gates where those
+control stacks already exist.
+
+## Why this is a commercial fit for regulated environments
+
+In regulated settings, the differentiator is not a richer chart but evidence
+continuity:
+
+- traceable bindings,
+- deterministic replay, and
+- policy proposals that can be reviewed before output is allowed.
+
+These properties reduce ambiguity between simulation teams, safety teams, and
+production operators, especially when timelines are short and decisions are
+high-impact.

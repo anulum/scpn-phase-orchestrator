@@ -162,3 +162,18 @@ operational change.
 Interactive sessions that read external files should not be used as policy
 authorities. They are for assessment and recommendation. The project control
 boundary remains replayed and approved policy execution.
+
+## Recommended sequence for tool-based reviews
+
+Use interactive tools only as a pre-action evidence layer:
+
+1. validate and inspect a bound domainpack with CLI commands first,
+2. open the interactive surface with fixed runtime defaults,
+3. compare interface outputs against one replayed command sequence,
+4. export a review packet before any operational proposal is discussed.
+
+This keeps interface exploration from becoming an implicit controller change.
+
+For teams with mixed expertise, this order also keeps domain authors, ML users,
+and operations staff aligned on what was actually executed versus what was only
+visualised.

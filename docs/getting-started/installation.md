@@ -173,3 +173,16 @@ Installations that support external actuation keep two extra controls active:
 This is the reason this project distinguishes local simulation readiness from
 production readiness: both can look healthy, but only the latter has deterministic
 replay and explicit policy gate checks completed.
+
+## Where this fits in rollout planning
+
+This page is the environment gate before any operational control path is
+activated. Use the sequence below before enabling live actions:
+
+1. install the minimal package set for the target lane,
+2. verify `import`, `spo --help`, and one deterministic smoke command,
+3. lock optional extras and dependency constraints for the lane,
+4. verify audit and replay before any control output is consumed.
+
+If step 4 cannot be completed in the same host profile, keep policy logic in
+review mode and schedule the live lane on a separate controlled environment.

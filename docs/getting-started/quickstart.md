@@ -218,3 +218,29 @@ Before moving to domain tuning or topology inference, confirm:
    adding additional supervisors.
 4. Promote from dashboard-only exploration to policy execution only after
    replay validation succeeds.
+
+## When this path is complete
+
+This page is intended to create three verifiable artifacts before any broader rollout:
+
+- a deterministic minimal-domain run,
+- a replay file that can be reverified by a separate operator,
+- and a reviewed execution command list for the same environment.
+
+Treat this as the entry gate for simulation-based confidence. If those three
+artifacts do not align, keep the workspace in analysis mode and delay any
+control-surface demonstration until the next pass.
+
+## How to avoid premature promotion
+
+The most common operational error is treating command success as evidence of
+deployment readiness. This page prevents that by making command families
+explicit:
+
+- `spo validate`: structural and semantic entry checks,
+- `spo run`: bounded execution output,
+- `spo replay --verify`: reproducibility check,
+- `spo report`: audit summary suitable for peer review.
+
+Promotion is only appropriate when all four commands are repeatable in the same
+runtime lane.
