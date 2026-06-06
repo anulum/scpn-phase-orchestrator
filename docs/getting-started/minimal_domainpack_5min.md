@@ -219,3 +219,18 @@ Before treating the domainpack as more than a tutorial:
 
 Next: use the [New Domain Checklist](../tutorials/01_new_domain_checklist.md)
 when the minimal path works end to end.
+
+## Practical decision point
+
+This is the earliest point to decide whether a domainpack should move into review:
+
+- yes if validation, run, and replay are consistent and documented,
+- no if assumptions are still missing in binding fields or if boundaries are empty.
+
+For review, keep this file as the handoff record for:
+
+- data location and schema contract,
+- one deterministic seed and command sequence,
+- first safety boundary outcomes.
+
+Then proceed to full policy engineering.

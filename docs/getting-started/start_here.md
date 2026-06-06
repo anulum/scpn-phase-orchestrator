@@ -294,6 +294,21 @@ scpn_phase_orchestrator/
     apps/            Domain applications (queuewaves)
 ```
 
+## How to use this map in a rollout
+
+Use this page when aligning scope across teams. The recommended flow is:
+
+1. map the target process to a use case,
+2. select one starting role path (ML, domain expert, operator, integrator),
+3. run the corresponding starter tutorial, then return here only once.
+
+This keeps planning friction low and avoids switching contexts before a shared baseline
+is in place.
+
+If teams disagree on the intended control objective, pause at this page and
+resolve outcome language (`increase synchrony`, `reduce lock-in`, or `detect drift`)
+before continuing.
+
 ## FAQ
 
 **Q: How many oscillators can SPO handle?**

@@ -219,3 +219,15 @@ Capture:
 - whether Rust FFI was installed or Python fallback was used
 
 Do not include credentials, tokens, `.env` contents, or private data paths.
+
+## Standard triage flow for repeatable failures
+
+For failures that reproduce on two runs, apply this sequence:
+
+1. run `git status --short` to confirm a clean baseline,
+2. run the documented baseline command for the failing area,
+3. include `--seed` and lockfile in the issue packet,
+4. rerun with `spo replay --verify` in the same environment.
+
+If a failure appears only after a backend swap (Python ↔ Rust), capture both
+runs and compare recorded command outputs before changing test cases.

@@ -236,3 +236,14 @@ print(f"R={R:.4f}, psi={psi:.4f}")
 - [Tutorial 02: Oscillator Hunt Sheet](../tutorials/02_oscillator_hunt_sheet.md) -- how to find the right signals to extract phases from
 - [Concepts: Control Knobs](../concepts/knobs_K_alpha_zeta_Psi.md) -- K, alpha, zeta, Psi equations and supervisor use
 - [API Reference](../reference/api/index.md) -- full Python API documentation
+
+## What this tutorial establishes
+
+This tutorial is your proof gate for controlled, reproducible authoring:
+
+- a valid scaffolded binding spec,
+- a stable policy file with explicit scope and effect,
+- and a replay-verified audit record.
+
+Do not add advanced topology inference, topology mutation, or causal discovery
+steps in this path until these checks remain stable under a second operator run.

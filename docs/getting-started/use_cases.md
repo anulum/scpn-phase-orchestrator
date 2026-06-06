@@ -159,3 +159,17 @@ For each use case, apply this sequence before live recommendations:
 
 This keeps the evidence boundary explicit and prevents overreach from
 unvalidated inference.
+
+## Use this page to select a first domain
+
+Before opening implementation guides, define:
+
+- target signal class (continuous, event, state),
+- expected control direction (synchronise, desynchronise, classify),
+- and the first evidence package (minimal domainpack + replay file).
+
+If those three items are not agreed, the remaining process should stay in
+evaluation mode and avoid actuator exports.
+
+Use this page as the final business-value filter before any advanced engine
+choice is made.
