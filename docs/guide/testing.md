@@ -18,6 +18,27 @@ py -3.12 -m pytest tests/test_prop_*.py -v
 py -3.12 -m pytest tests/ --cov=scpn_phase_orchestrator --cov-report=term-missing
 ```
 
+## What this test surface is designed to prove
+
+This test surface is organized around decision risk, not only pass/fail:
+
+- **Numerical risk** is covered by property checks and degenerate edge fixtures.
+- **Cross-engine consistency risk** is covered by parity suites and analytical
+  limits.
+- **Runtime risk** is covered by stress profiles and bounded slow tests.
+- **Regression risk** is covered by mutation testing and module-level ownership checks.
+
+For a production-affecting change, treat these four checks as minimum evidence:
+
+1. property and edge tests for the changed module family,
+2. parity or analytical checks for any coupled path,
+3. at least one replay or slow validation path on realistic scale,
+4. release-note and docs updates for changed behavior.
+
+This ordering mirrors the internal release checklist: mathematics and safety
+signals are validated first, throughput and scale are validated next, and
+documentation is updated before any external claim changes.
+
 ## Hypothesis Profiles
 
 The project defines hypothesis profiles in `pyproject.toml`:

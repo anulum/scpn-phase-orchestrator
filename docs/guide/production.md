@@ -31,6 +31,22 @@ docker build -t spo .
 docker run --rm spo run domainpacks/queuewaves/binding_spec.yaml --steps 1000
 ```
 
+## Deployment readiness checkpoints
+
+The production deployment path is treated as an evidence gate, not a one-step
+promotion. Before external traffic reaches this path, operators should record:
+
+- backend selection evidence (Python fallback or `spo-kernel`),
+- reproducible image metadata (`--sha`-pinned base images and lockfiles),
+- health endpoint behaviour under restart, degraded, and normal modes,
+- deterministic audit replay command and retention policy,
+- explicit actuator approval policy (policy DSL + projection + execution mapper).
+
+These checkpoints are meant to separate simulation-only validation from any
+runtime write path. The same checklist is reused in incident response:
+if any checkpoint fails to produce a fresh artifact, suspend deployment and
+continue in replay-only mode.
+
 The image runs as non-root user `spo` (UID 1000) and includes a deep
 HEALTHCHECK against `/api/health`. Base images are pinned by SHA digest
 for reproducible builds.

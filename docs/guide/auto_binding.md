@@ -119,6 +119,24 @@ claim.
 The output is suitable for human review in SPO Studio or for tests that need a
 deterministic proposal package.
 
+## Operational impact and review handoff
+
+In day-to-day adoption, auto-binding is a discovery phase, not a deployment phase:
+
+- it shortens the first-run cycle for new domains,
+- it creates a machine-auditable record of how inference and assumptions were made,
+- it gives operators a consistent artifact (`binding_spec.yaml`) to validate before any control logic consumes it.
+
+A reliable onboarding flow is typically:
+
+1. ingest data with the correct source adapter (`time-series`, `event-log`, or graph),
+2. review inferred channels and the evidence envelope (`provenance`),
+3. run `spo validate` and domain-specific simulator checks,
+4. adjust bounds, rates, and policy gates explicitly,
+5. replay the candidate run and store the resulting run record as evidence.
+
+This keeps discovery errors from becoming automated runtime actions.
+
 ## Usage posture
 
 In production onboarding, this is typically run as a pre-processing step before

@@ -6,6 +6,24 @@ The **SCPN Phase Orchestrator (SPO)** is a domain-agnostic **Closed-Loop Coheren
 At its core, SPO solves the **Universal Phase Dynamics Equation (UPDE)**:
 945741 \dot{\theta}_i = \omega_i + \sum_j K_{ij} \sin(\theta_j - \theta_i - \alpha_{ij}) + \zeta \sin(\Psi - \theta_i) 945741
 
+## 1a. Deployment intent and operational role
+
+SPO is positioned for teams that need three specific capabilities:
+
+- a formalized way to represent domain dynamics as coupled oscillatory structure,
+- a controlled simulation path with reproducible replay evidence,
+- and a constrained policy path from model output to actuator command.
+
+This differentiates it from generic simulation libraries in two ways:
+
+1. **Separation of concerns** between discovery (binding), dynamics, supervision, and execution gating.
+2. **Evidence-first control** where every runtime-affecting step is logged, bounded,
+   and reviewable.
+
+The project is also intended to bridge engineering domains: it supports power,
+traffic, neuroscience, plasma, and compute-operations teams with a shared internal
+contract for synchronization state and safety boundaries.
+
 ## 2. Key Capabilities (Measured Reality)
 SPO is built on a hybrid architecture: a high-performance **Rust Kernel (spo-kernel)** for integration and a **JAX Differentiable Backend** for AI-driven inference.
 

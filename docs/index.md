@@ -35,6 +35,28 @@ coherence, classify regimes, and emit bounded review artefacts. It is useful
 when a system has repeated behaviour and the operator needs to know whether
 synchrony is helpful, harmful, causal, or controllable.
 
+## What this project is for
+
+The software is intended for teams that must make control decisions from
+time-structured signals where phase relationships carry operational value.
+That includes systems where:
+
+- instability grows from delayed feedback loops,
+- oscillatory phases drift across regions or services,
+- and operators need evidence of both safety and effectiveness before actuation.
+
+In practical terms, SPO gives teams a repeatable path from raw signals to a
+logged control decision:
+
+1. identify phase-bearing signals and build a binding specification,
+2. choose a validated backend with explicit evidence thresholds,
+3. run bounded simulation and replay checks,
+4. promote only actions that pass policy and audit gates,
+5. keep all decisions reconstructible from JSONL records.
+
+It is designed for both R&D proving-ground use and production services that
+require explicit review boundaries between proposal, validation, and actuation.
+
 For evaluation, start with the practical question: does the target system have
 waves, cycles, retries, stages, rotations, or event loops whose timing matters?
 If yes, SPO can express those sources as phase, test coupling hypotheses,

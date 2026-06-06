@@ -108,6 +108,20 @@ one-line docstrings across unrelated code.
 
 ## v0.6.0 Code-to-Documentation Reconciliation
 
+## Reader-facing evidence flow
+
+The documentation matrix is used as a practical chain-of-custody structure:
+
+- onboarding starts with operational objective and install path,
+- guides and tutorials map each objective to a validated execution path,
+- API pages define the stable contract for each executable surface,
+- release and validation references define what can be claimed after tests pass.
+
+Every new external statement should have a corresponding trace from source code to
+test evidence to documentation path. This avoids splitting implementation detail
+across files and helps new reviewers understand both expected behavior and
+evidence boundaries in one pass.
+
 The v0.6.0 release preparation reconciled the changed source tree against the
 public documentation surface using `git diff --name-only v0.5.11..HEAD`.
 
