@@ -115,7 +115,7 @@ implicit expectations.
 Treat each cycle’s completion as a publishable artifact for external stakeholders.
 At minimum it should include:
 
-- support classification, 
+- support classification,
 - evidence links (parity artifacts and CI summaries),
 - dependency/toolchain burden, and
 - an explicit exception record when a backend remains experimental.

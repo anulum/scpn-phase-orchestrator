@@ -312,7 +312,7 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         try:
             # SafeLoader subclass only: blocks arbitrary Python constructors
             # while rejecting duplicate mapping keys.
-            data = yaml.load(raw, Loader=_binding_spec_safe_loader(yaml))  # noqa: S506
+            data = yaml.load(raw, Loader=_binding_spec_safe_loader(yaml))  # noqa: S506  # nosec B506
         except (RecursionError, yaml.YAMLError) as exc:
             raise BindingLoadError(f"YAML parse error in {path.name}: {exc}") from exc
     elif path.suffix == ".json":
