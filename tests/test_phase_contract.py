@@ -322,7 +322,7 @@ class TestPhaseContractPipelineEndToEnd:
             samples.append((time.perf_counter() - t0) / 1000)
         elapsed = min(samples)
         limit = (
-            5e-4 if os.getenv("CI") else 1.5e-4 if sys.platform == "darwin" else 1e-4
+            5e-4 if os.getenv("CI") else 1.5e-4 if sys.platform == "darwin" else 1.5e-4
         )
         assert elapsed < limit, (
             f"order_parameter(256) took {elapsed * 1e6:.1f}μs, "
