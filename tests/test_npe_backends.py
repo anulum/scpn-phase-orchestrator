@@ -346,12 +346,11 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(ValueError, match="exact NPE"):
             compute_npe_mojo(np.array([0.0, 0.1, 2.8, 3.0]), np.pi)
 
-    def test_public_phase_distance_falls_back_from_wrong_backend(
+    def test_public_phase_distance_rejects_wrong_backend(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         phases = np.array([0.0, np.pi / 2.0, np.pi], dtype=np.float64)
-        ref_pdm, _ = _reference(phases)
 
         def _wrong_backend(phases_in: np.ndarray) -> np.ndarray:
             n = phases_in.size
@@ -361,9 +360,10 @@ class TestDirectBackendBoundaryContracts:
 
         monkeypatch.setattr(npe_mod, "_dispatch", lambda _name: _wrong_backend)
 
-        np.testing.assert_allclose(phase_distance_matrix(phases), ref_pdm, atol=0.0)
+        with pytest.raises(ValueError, match="exact circular phase distances"):
+            phase_distance_matrix(phases)
 
-    def test_public_compute_npe_falls_back_from_wrong_backend(
+    def test_public_compute_npe_rejects_wrong_backend(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -376,7 +376,8 @@ class TestDirectBackendBoundaryContracts:
 
         monkeypatch.setattr(npe_mod, "_dispatch", lambda _name: _wrong_backend)
 
-        assert abs(compute_npe(phases) - ref_npe) <= 1.0e-12
+        with pytest.raises(ValueError, match="exact persistent-entropy reference"):
+            compute_npe(phases)
 
 
 class TestRustParity:

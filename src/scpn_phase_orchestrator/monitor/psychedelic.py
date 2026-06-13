@@ -120,7 +120,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -142,7 +142,7 @@ def _dispatch() -> Callable[..., float] | None:
             return None
         try:
             loaded_fn = _load_backend(backend)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         return loaded_fn
     return None
@@ -344,7 +344,7 @@ def entropy_from_phases(phases: FloatArray, n_bins: int = 36) -> float:
                 backend_fn(phase_values, bin_count),
                 n_bins=bin_count,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     wrapped = phase_values % (2.0 * np.pi)

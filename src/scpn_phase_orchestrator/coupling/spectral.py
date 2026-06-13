@@ -261,7 +261,7 @@ def _spectral_eig_checked(
     primitive = _primitive()
     try:
         return _validate_spectral_output(primitive(knm_flat, n), n=n)
-    except Exception:
+    except (ImportError, RuntimeError, OSError, KeyError):
         if primitive is _python_spectral_eig:
             raise
     return _validate_spectral_output(_python_spectral_eig(knm_flat, n), n=n)
@@ -365,7 +365,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
                 _LOADERS[name]()
             else:
                 _load_primitive_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")

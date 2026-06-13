@@ -84,6 +84,13 @@ production recommendation. Keep them behind explicit module boundaries and
 avoid making application behaviour depend on an auxiliary toolchain being
 installed.
 
+Fallback is intentionally narrow. Import failures, missing dynamic libraries,
+missing optional symbols, and runtime-loader failures may demote to the next
+backend in the chain. Physics-contract faults do not demote: invalid shapes,
+non-finite results, boolean or complex aliases, invalid self-coupling, ABI
+cardinality mismatches, and other validation errors must propagate so an
+invalid compiled backend cannot be hidden by a Python result.
+
 The implementation files with names such as `_hodge_go.py`,
 `_spectral_julia.py`, `_psychedelic_mojo.py`, and `_swarmalator_go.py` are
 private auxiliary backend shims. They are intentionally not documented as

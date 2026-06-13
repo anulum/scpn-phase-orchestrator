@@ -159,7 +159,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -417,7 +417,7 @@ def delay_embed(
                 t_effective=t_eff,
                 dimension=dimension,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     indices = np.arange(dimension) * delay
@@ -452,7 +452,7 @@ def mutual_information(
                 fn(s, lag, n_bins),
                 name="mutual_information",
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     t_total = s.size - lag
@@ -491,9 +491,9 @@ def nearest_neighbor_distances(
             backend_fn,
         )
         try:
-            dist, idx = fn(e, t, m)
+            dist, idx = fn(np.ascontiguousarray(e.ravel(), dtype=np.float64), t, m)
             return _validate_nn_output(dist, idx, n_points=t)
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     nn_dist = np.full(t, np.inf)
@@ -525,7 +525,7 @@ def optimal_delay(
                 _load_backend("rust")["optimal_delay"],
             )
             return int(fn(s, max_lag, n_bins))
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             max_lag = int(max_lag)
 
     max_lag = min(max_lag, s.size // 2)
@@ -562,7 +562,7 @@ def optimal_dimension(
             return int(
                 fn(s, delay, max_dim, rtol, atol),
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             max_dim = int(max_dim)
 
     for m in range(1, max_dim + 1):

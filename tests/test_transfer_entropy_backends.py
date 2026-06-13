@@ -627,7 +627,7 @@ class TestDirectBackendBoundaryContracts:
             fn(**kwargs)
 
 
-def test_public_transfer_entropy_falls_back_on_exact_contract_divergence(
+def test_public_transfer_entropy_rejects_exact_contract_divergence(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = np.array([0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1, 4.0])
@@ -642,14 +642,11 @@ def test_public_transfer_entropy_falls_back_on_exact_contract_divergence(
     monkeypatch.setitem(te_mod._BACKEND_CACHE, "go", kernels)
     monkeypatch.setitem(te_mod._LOADERS, "go", lambda: kernels)
 
-    assert phase_transfer_entropy(source, target, 2) == _reference_te(
-        source,
-        target,
-        2,
-    )
+    with pytest.raises(ValueError, match="exact reference"):
+        phase_transfer_entropy(source, target, 2)
 
 
-def test_public_transfer_entropy_matrix_falls_back_on_exact_contract_divergence(
+def test_public_transfer_entropy_matrix_rejects_exact_contract_divergence(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = np.array([0.1, 0.1, 4.0, 0.1, 4.0, 4.0, 0.1, 4.0])
@@ -670,8 +667,5 @@ def test_public_transfer_entropy_matrix_falls_back_on_exact_contract_divergence(
     monkeypatch.setitem(te_mod._BACKEND_CACHE, "go", kernels)
     monkeypatch.setitem(te_mod._LOADERS, "go", lambda: kernels)
 
-    np.testing.assert_allclose(
-        transfer_entropy_matrix(series, 2),
-        _reference_matrix(series, 2),
-        atol=0.0,
-    )
+    with pytest.raises(ValueError, match="exact reference|diverged"):
+        transfer_entropy_matrix(series, 2)

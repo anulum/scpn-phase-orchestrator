@@ -479,7 +479,7 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(ValueError, match="exact reference"):
             kaplan_yorke_dimension_mojo(np.array([0.5, 0.1, -0.2, -0.5]))
 
-    def test_public_correlation_integral_falls_back_on_exact_divergence(
+    def test_public_correlation_integral_rejects_exact_divergence(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -496,28 +496,26 @@ class TestDirectBackendBoundaryContracts:
         monkeypatch.setattr(dim_mod, "_dispatch", lambda name: _bad_backend)
         prev = _force("go")
         try:
-            got = correlation_integral(
-                np.array([[0.0], [0.05]]),
-                np.array([0.1]),
-                max_pairs=10,
-            )
+            with pytest.raises(ValueError, match="exact reference"):
+                correlation_integral(
+                    np.array([[0.0], [0.05]]),
+                    np.array([0.1]),
+                    max_pairs=10,
+                )
         finally:
             _reset(prev)
 
-        np.testing.assert_allclose(got, np.array([1.0]), atol=1e-12)
-
-    def test_public_kaplan_yorke_falls_back_on_exact_divergence(
+    def test_public_kaplan_yorke_rejects_exact_divergence(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         monkeypatch.setattr(dim_mod, "_dispatch", lambda name: lambda le: 1.0)
         prev = _force("go")
         try:
-            got = kaplan_yorke_dimension(np.array([0.4, -0.2, -0.8]))
+            with pytest.raises(ValueError, match="exact reference"):
+                kaplan_yorke_dimension(np.array([0.4, -0.2, -0.8]))
         finally:
             _reset(prev)
-
-        assert abs(got - 2.25) < 1e-12
 
 
 class TestRustParity:

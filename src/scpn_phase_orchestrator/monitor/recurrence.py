@@ -159,7 +159,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -184,7 +184,7 @@ def _dispatch(fn_name: str) -> object | None:
             continue
         try:
             fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         if fn is None:
             continue
@@ -419,7 +419,7 @@ def recurrence_matrix(
                 name="recurrence_matrix",
                 expected=expected,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             angular = bool(angular)
 
     return expected
@@ -467,7 +467,7 @@ def cross_recurrence_matrix(
                 name="cross_recurrence_matrix",
                 expected=expected,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             angular = bool(angular)
 
     return expected

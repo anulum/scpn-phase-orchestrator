@@ -103,7 +103,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -248,7 +248,7 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
                 t=t,
                 expected=expected,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             n = int(n)
 
     return _validate_backend_winding(expected, n=n, t=t, expected=expected)

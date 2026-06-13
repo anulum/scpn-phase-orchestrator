@@ -207,7 +207,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -247,7 +247,7 @@ def _dispatch(fn_name: str) -> object:
             return None
         try:
             fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         if fn is None:
             continue

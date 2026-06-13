@@ -119,7 +119,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -141,7 +141,7 @@ def _dispatch(fn_name: str) -> object | None:
             return None
         try:
             backend_cache = _load_backend(backend)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         fn = backend_cache.get(fn_name)
         if fn is None:
@@ -501,7 +501,7 @@ def correlation_integral(
                 rust_output,
                 expected_size=int(eps_sorted.size),
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     if backend_fn is not None:
@@ -523,7 +523,7 @@ def correlation_integral(
                 expected=expected,
                 atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     return expected
@@ -659,7 +659,7 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
                 expected=expected,
                 atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     return expected

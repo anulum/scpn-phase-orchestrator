@@ -247,3 +247,89 @@ class TestTEAdaptivePipelineWiring:
             )
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+
+class TestTEAdaptiveBackendContracts:
+    def test_public_inputs_reject_boolean_complex_and_non_finite_values(self):
+        with pytest.raises(ValueError, match="knm must not contain boolean values"):
+            te_adapt_coupling(
+                np.array([[False, True], [True, False]]),
+                np.ones((2, 10)),
+            )
+        with pytest.raises(ValueError, match="knm must be finite and real-valued"):
+            te_adapt_coupling(
+                np.array([[0.0, 1.0j], [1.0, 0.0]], dtype=complex),
+                np.ones((2, 10)),
+            )
+        with pytest.raises(
+            ValueError, match="phase_history must contain only finite values"
+        ):
+            te_adapt_coupling(
+                np.zeros((2, 2)),
+                np.array([[0.0, np.nan], [0.0, 1.0]]),
+            )
+        with pytest.raises(ValueError, match="n_bins must be an integer >= 2"):
+            te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)), n_bins=1)
+
+    def test_transfer_entropy_backend_wrong_shape(self, monkeypatch):
+        monkeypatch.setattr(
+            te_mod,
+            "transfer_entropy_matrix",
+            lambda *a, **kw: np.zeros((3, 3)),
+        )
+        with pytest.raises(RuntimeError, match="wrong shape"):
+            te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)))
+
+    def test_transfer_entropy_backend_non_zero_diagonal(self, monkeypatch):
+        monkeypatch.setattr(
+            te_mod,
+            "transfer_entropy_matrix",
+            lambda *a, **kw: np.eye(2),
+        )
+        with pytest.raises(RuntimeError, match="non-zero self scores"):
+            te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)))
+
+    def test_rust_backend_wrong_shape(self, monkeypatch):
+        monkeypatch.setattr(te_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            te_mod,
+            "_rust_te_adapt",
+            lambda *a: np.zeros(3),
+            raising=False,
+        )
+        monkeypatch.setattr(
+            te_mod,
+            "transfer_entropy_matrix",
+            lambda *a, **kw: np.zeros((2, 2)),
+        )
+        with pytest.raises(RuntimeError, match="wrong shape"):
+            te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)))
+
+    def test_rust_backend_non_zero_diagonal(self, monkeypatch):
+        monkeypatch.setattr(te_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            te_mod,
+            "_rust_te_adapt",
+            lambda *a: np.array([1.0, 0.0, 0.0, 1.0]),
+            raising=False,
+        )
+        monkeypatch.setattr(
+            te_mod,
+            "transfer_entropy_matrix",
+            lambda *a, **kw: np.zeros((2, 2)),
+        )
+        with pytest.raises(RuntimeError, match="non-zero self coupling"):
+            te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)))
+
+    def test_pure_python_fallback(self, monkeypatch):
+        monkeypatch.setattr(te_mod, "_HAS_RUST", False)
+        monkeypatch.setattr(
+            te_mod,
+            "transfer_entropy_matrix",
+            lambda *a, **kw: np.array([[0.0, 0.1], [0.1, 0.0]]),
+        )
+        knm = np.array([[0.0, 0.5], [0.5, 0.0]])
+        history = np.ones((2, 10))
+        result = te_adapt_coupling(knm, history, lr=0.1, decay=0.1)
+        expected = np.array([[0.0, 0.46], [0.46, 0.0]])
+        np.testing.assert_allclose(result, expected, atol=1e-12)

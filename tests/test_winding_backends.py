@@ -279,7 +279,7 @@ class TestDirectBackendBoundaryContracts:
             winding_numbers_mojo(traj.ravel(), 4, 1)
 
 
-def test_public_winding_falls_back_when_backend_breaks_exact_contract(
+def test_public_winding_rejects_backend_that_breaks_exact_contract(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     traj = np.array(
@@ -300,7 +300,8 @@ def test_public_winding_falls_back_when_backend_breaks_exact_contract(
     monkeypatch.setitem(w_mod._BACKEND_CACHE, "go", fake_backend)
     monkeypatch.setitem(w_mod._LOADERS, "go", lambda: fake_backend)
 
-    np.testing.assert_array_equal(winding_numbers(traj), _reference(traj))
+    with pytest.raises(ValueError, match="exact winding reference"):
+        winding_numbers(traj)
 
 
 class TestRustParity:

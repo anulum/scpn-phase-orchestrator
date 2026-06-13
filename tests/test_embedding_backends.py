@@ -582,11 +582,10 @@ class TestDispatcherFallthroughForRust:
         monkeypatch.setitem(em_mod._BACKEND_CACHE, "go", bad_loader())
         prev = _force("go")
         try:
-            got = delay_embed(sig, 2, 2)
+            with pytest.raises(ValueError, match="output shape|exact indexing"):
+                delay_embed(sig, 2, 2)
         finally:
             _reset(prev)
-
-        np.testing.assert_array_equal(got, _reference_de(sig, 2, 2))
 
     def test_dispatch_rejects_fractional_nearest_neighbor_indices(
         self,
@@ -609,13 +608,10 @@ class TestDispatcherFallthroughForRust:
         monkeypatch.setitem(em_mod._BACKEND_CACHE, "go", bad_loader())
         prev = _force("go")
         try:
-            dist, idx = nearest_neighbor_distances(emb)
+            with pytest.raises(ValueError, match="indices must be integral"):
+                nearest_neighbor_distances(emb)
         finally:
             _reset(prev)
-
-        ref_dist, ref_idx = _reference_nn(emb)
-        np.testing.assert_allclose(dist, ref_dist)
-        np.testing.assert_array_equal(idx, ref_idx)
 
     def test_dispatch_returns_python_fallback_when_chain_reaches_python(
         self,

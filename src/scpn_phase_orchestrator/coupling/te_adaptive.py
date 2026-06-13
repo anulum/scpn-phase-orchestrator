@@ -175,6 +175,8 @@ def te_adapt_coupling(
             _rust_te_adapt(k_flat, t_flat, n, lr, decay),
             dtype=np.float64,
         )
+        if result_flat.size != n * n:
+            raise RuntimeError("TE adaptive backend returned wrong shape")
         return _validate_adapted_coupling(result_flat.reshape(n, n), n=n)
     knm_new = (1.0 - decay) * knm + lr * te
     np.fill_diagonal(knm_new, 0.0)

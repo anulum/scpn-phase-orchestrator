@@ -365,7 +365,7 @@ class TestDirectBackendBoundaryContracts:
                 False,
             )
 
-    def test_public_recurrence_falls_back_from_shape_correct_wrong_backend(
+    def test_public_recurrence_rejects_shape_correct_wrong_backend(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         traj = np.array([0.0, 2.0, 5.0], dtype=np.float64)
@@ -382,12 +382,10 @@ class TestDirectBackendBoundaryContracts:
 
         monkeypatch.setattr(r_mod, "_dispatch", lambda _name: _wrong_backend)
 
-        np.testing.assert_array_equal(
-            recurrence_matrix(traj, 0.5),
-            _reference_rm(traj, 0.5),
-        )
+        with pytest.raises(ValueError, match="exact recurrence threshold"):
+            recurrence_matrix(traj, 0.5)
 
-    def test_public_cross_recurrence_falls_back_from_wrong_binary_backend(
+    def test_public_cross_recurrence_rejects_wrong_binary_backend(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         traj_a = np.array([0.0, 2.0], dtype=np.float64)
@@ -406,10 +404,8 @@ class TestDirectBackendBoundaryContracts:
 
         monkeypatch.setattr(r_mod, "_dispatch", lambda _name: _wrong_backend)
 
-        np.testing.assert_array_equal(
-            cross_recurrence_matrix(traj_a, traj_b, 0.5),
-            _reference_cross(traj_a, traj_b, 0.5),
-        )
+        with pytest.raises(ValueError, match="exact recurrence threshold"):
+            cross_recurrence_matrix(traj_a, traj_b, 0.5)
 
 
 class TestRustParity:

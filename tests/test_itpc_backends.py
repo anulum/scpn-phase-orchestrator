@@ -643,7 +643,7 @@ def test_non_rust_persistence_dispatch_passes_pause_indices(
     np.testing.assert_array_equal(pause_indices, np.array([0, 2]))
 
 
-def test_public_itpc_falls_back_when_backend_breaks_exact_contract(
+def test_public_itpc_rejects_backend_that_breaks_exact_contract(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     phases = np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
@@ -664,10 +664,11 @@ def test_public_itpc_falls_back_when_backend_breaks_exact_contract(
         lambda: {"itpc": fake_itpc, "persistence": lambda *_args: 0.0},
     )
 
-    np.testing.assert_allclose(compute_itpc(phases), _reference_itpc(phases))
+    with pytest.raises(ValueError, match="exact reference"):
+        compute_itpc(phases)
 
 
-def test_public_persistence_falls_back_when_backend_breaks_exact_contract(
+def test_public_persistence_rejects_backend_that_breaks_exact_contract(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     phases = np.array([[0.0, 0.25, 0.5], [1.0, 1.25, 1.5]], dtype=np.float64)
@@ -694,10 +695,8 @@ def test_public_persistence_falls_back_when_backend_breaks_exact_contract(
         lambda: {"itpc": lambda *_args: np.array([]), "persistence": fake_persistence},
     )
 
-    assert itpc_persistence(phases, pause_indices) == _reference_pers(
-        phases,
-        pause_indices,
-    )
+    with pytest.raises(ValueError, match="exact reference"):
+        itpc_persistence(phases, pause_indices)
 
 
 class TestRustParity:

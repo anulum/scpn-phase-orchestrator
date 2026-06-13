@@ -115,7 +115,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -137,7 +137,7 @@ def _dispatch(fn_name: str) -> object:
             return None
         try:
             fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         if fn is None:
             continue
@@ -194,6 +194,8 @@ def _validate_distance_matrix(
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phase distance matrix must be numeric") from exc
+    if matrix.shape == (n_phases * n_phases,):
+        matrix = matrix.reshape(n_phases, n_phases)
     if matrix.shape != (n_phases, n_phases):
         raise ValueError(
             f"phase distance matrix shape {matrix.shape} does not match "
@@ -331,7 +333,7 @@ def phase_distance_matrix(phases: FloatArray) -> FloatArray:
         try:
             flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
             return _validate_distance_matrix(flat, n_phases=n, expected=expected)
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     return expected
@@ -364,7 +366,7 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
                 ),
                 expected=expected,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     return expected

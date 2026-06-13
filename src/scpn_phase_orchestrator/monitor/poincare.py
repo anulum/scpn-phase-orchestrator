@@ -158,7 +158,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -180,7 +180,7 @@ def _dispatch(fn_name: str) -> object | None:
             return None
         try:
             fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         if fn is not None:
             return fn
@@ -464,7 +464,7 @@ def poincare_section(
                 int(direction_id),
             )
             return _assemble_result(cr_flat, times, n_cr, d)
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             direction_id = int(direction_id)
 
     n = norm_vec / norm_mag
@@ -536,7 +536,7 @@ def phase_poincare(
                 section_phase,
             )
             return _assemble_result(cr_flat, times, n_cr, n)
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             oscillator_idx = int(oscillator_idx)
 
     target = np.unwrap(phases[:, oscillator_idx])

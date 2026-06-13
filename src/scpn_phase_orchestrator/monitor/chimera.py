@@ -122,7 +122,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -302,7 +302,7 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
             return _validate_local_order(
                 backend_fn(phases, knm_flat, n), n_oscillators=n
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
     r_local = np.zeros(n, dtype=np.float64)

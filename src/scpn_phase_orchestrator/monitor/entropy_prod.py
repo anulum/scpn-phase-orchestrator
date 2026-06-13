@@ -114,7 +114,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -264,7 +264,7 @@ def entropy_production_rate(
     if backend_fn is not None:
         try:
             backend_rate = backend_fn(phases, omegas, knm, alpha, dt)
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
         else:
             return _validate_entropy_rate(

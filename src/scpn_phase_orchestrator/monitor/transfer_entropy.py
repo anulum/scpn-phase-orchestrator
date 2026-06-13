@@ -117,7 +117,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
     for name in _BACKEND_NAMES[:-1]:
         try:
             _load_backend(name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         available.append(name)
     available.append("python")
@@ -139,7 +139,7 @@ def _dispatch(fn_name: str) -> object:
             return None
         try:
             fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError):
+        except (ImportError, RuntimeError, OSError, KeyError):
             continue
         if fn is None:
             continue
@@ -362,7 +362,7 @@ def phase_transfer_entropy(
                     "backend transfer entropy diverged from exact reference"
                 )
             return result
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             bin_count = int(bin_count)
 
     return expected
@@ -392,7 +392,7 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
                 expected=expected,
                 atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
             )
-        except Exception:
+        except (ImportError, RuntimeError, OSError, KeyError):
             n_time = int(n_time)
 
     return expected
