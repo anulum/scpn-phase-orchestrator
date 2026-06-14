@@ -38,8 +38,9 @@ pub fn winding_numbers(phases_history: &[f64], t: usize, n: usize) -> Vec<i64> {
         let curr_row = &phases_history[step * n..(step + 1) * n];
         for j in 0..n {
             let dtheta = curr_row[j] - prev_row[j];
-            // Wrap to [-π, π]
-            let wrapped = (dtheta + PI).rem_euclid(TAU) - PI;
+            // Wrap to the half-open interval (-π, π] so an exact forward
+            // half-turn (+π) counts forward rather than aliasing to -π.
+            let wrapped = PI - (PI - dtheta).rem_euclid(TAU);
             cumulative[j] += wrapped;
         }
     }
@@ -90,6 +91,15 @@ mod tests {
             phases.push((i as f64 * dt) % TAU);
         }
         let w = winding_numbers(&phases, steps, n);
+        assert_eq!(w[0], 2);
+    }
+
+    #[test]
+    fn exact_forward_half_turns_count_forward() {
+        // Four increments of exactly +π → +4π → 2 forward windings.
+        // The spurious [-π, π) wrap would alias each +π to -π → -2.
+        let phases = vec![0.0, PI, 2.0 * PI, 3.0 * PI, 4.0 * PI];
+        let w = winding_numbers(&phases, 5, 1);
         assert_eq!(w[0], 2);
     }
 

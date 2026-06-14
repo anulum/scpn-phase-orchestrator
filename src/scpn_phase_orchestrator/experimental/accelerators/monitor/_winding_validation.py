@@ -97,7 +97,9 @@ def expected_winding_backend_output(
 
     phases = np.asarray(phases_flat, dtype=np.float64).reshape(t, n)
     dtheta = np.diff(phases, axis=0)
-    dtheta_wrapped = (dtheta + np.pi) % TWO_PI - np.pi
+    # Wrap into the half-open interval (-π, π] so an exact forward
+    # half-turn (+π) counts forward rather than aliasing to -π.
+    dtheta_wrapped = np.pi - (np.pi - dtheta) % TWO_PI
     cumulative = np.sum(dtheta_wrapped, axis=0)
     return np.ascontiguousarray(np.floor(cumulative / TWO_PI).astype(np.int64))
 

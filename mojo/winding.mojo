@@ -24,11 +24,13 @@ from std.collections import List
 
 
 fn wrap(delta: Float64, two_pi: Float64, pi_val: Float64) -> Float64:
-    var r = delta + pi_val
+    # Wrap to (-π, π] so an exact forward half-turn (+π) counts forward
+    # rather than aliasing to -π.
+    var r = pi_val - delta
     r = r - Float64(Int(r / two_pi)) * two_pi
     if r < 0.0:
         r += two_pi
-    return r - pi_val
+    return pi_val - r
 
 
 fn winding_numbers(

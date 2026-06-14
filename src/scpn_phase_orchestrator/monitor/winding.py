@@ -173,7 +173,9 @@ def _validate_phase_history(phases_history: object) -> FloatArray:
 
 def _winding_reference(phases_history: FloatArray) -> IntArray:
     dtheta = np.diff(phases_history, axis=0)
-    dtheta_wrapped = (dtheta + np.pi) % TWO_PI - np.pi
+    # Wrap each increment into the half-open interval (-π, π] so an exact
+    # forward half-turn (+π) counts forward rather than aliasing to -π.
+    dtheta_wrapped = np.pi - (np.pi - dtheta) % TWO_PI
     cumulative = np.sum(dtheta_wrapped, axis=0)
     return cast("IntArray", np.floor(cumulative / TWO_PI).astype(np.int64))
 

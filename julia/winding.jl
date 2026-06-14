@@ -41,7 +41,9 @@ function winding_numbers(
         base_prev = (step - 2) * n
         for i in 1:n
             δ = phases_flat[base_now + i] - phases_flat[base_prev + i]
-            wrapped = mod(δ + pi, TWO_PI) - pi
+            # Wrap to (-π, π] so an exact forward half-turn (+π) counts
+            # forward rather than aliasing to -π.
+            wrapped = pi - mod(pi - δ, TWO_PI)
             cumulative[i] += wrapped
         end
     end

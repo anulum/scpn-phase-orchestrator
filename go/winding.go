@@ -6,7 +6,7 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Phase winding numbers (Go port)
 
-// Package main builds ``libwinding.so`` — a C-shared library
+// Package main builds “libwinding.so“ — a C-shared library
 // exporting the cumulative winding number per oscillator.
 //
 // Build with::
@@ -23,12 +23,14 @@ import (
 
 const twoPiWind = 2.0 * math.Pi
 
+// wrap maps an increment into the half-open interval (-π, π] so an exact
+// forward half-turn (+π) counts forward rather than aliasing to -π.
 func wrap(delta float64) float64 {
-	r := math.Mod(delta+math.Pi, twoPiWind)
+	r := math.Mod(math.Pi-delta, twoPiWind)
 	if r < 0.0 {
 		r += twoPiWind
 	}
-	return r - math.Pi
+	return math.Pi - r
 }
 
 func windingNumbers(phases []float64, t, n int, out []int64) {
@@ -52,10 +54,10 @@ func windingNumbers(phases []float64, t, n int, out []int64) {
 	}
 }
 
-//export WindingNumbers
-//
 // WindingNumbers writes n int64 winding numbers into outPtr.
 // phasesPtr is the flat row-major (T, N) matrix.
+//
+//export WindingNumbers
 func WindingNumbers(
 	phasesPtr *C.double,
 	t C.int,

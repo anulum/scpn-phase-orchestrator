@@ -71,6 +71,37 @@ class TestAnalyticIdentity:
         assert np.all(w == 0)
 
 
+class TestHalfTurnBoundary:
+    """The wrap interval is (-π, π]: an exact forward half-turn (+π)
+    counts forward, not backward (Nyquist boundary convention)."""
+
+    @_python
+    def test_exact_forward_half_turns_count_forward(self):
+        # Four increments of exactly +π → +4π → 2 forward windings.
+        # The spurious [-π, π) wrap would alias each +π to -π → -2.
+        traj = (np.arange(5) * np.pi).reshape(5, 1)
+        w = winding_numbers(traj)
+        assert w.tolist() == [2]
+
+    @_python
+    def test_exact_backward_half_turns_alias_forward(self):
+        # Exact -π increments are indistinguishable from +π after wrapping
+        # to (-π, π]; both map to +π, so the count is forward.
+        traj = (-np.arange(5) * np.pi).reshape(5, 1)
+        w = winding_numbers(traj)
+        assert w.tolist() == [2]
+
+    @_python
+    def test_just_below_half_turn_unaffected(self):
+        # Increments just under +π still count forward and match the
+        # interior behaviour shared by both wrap conventions.
+        step = np.pi - 1e-6
+        traj = (np.arange(5) * step).reshape(5, 1)
+        w = winding_numbers(traj)
+        expected = int(np.floor(4 * step / TWO_PI))
+        assert w.tolist() == [expected]
+
+
 class TestSignConvention:
     @_python
     def test_positive_omega_positive_winding(self):
