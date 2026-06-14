@@ -70,12 +70,24 @@ def _validate_target_ratio(value: object) -> float:
 
 @dataclass
 class EIBalance:
-    """Summary of excitatory and inhibitory coupling balance."""
+    """Summary of excitatory and inhibitory coupling balance.
+
+    ``excitatory_strength`` / ``inhibitory_strength`` aggregate the mean
+    coupling from each source group over all targets, and ``ratio`` is their
+    quotient. The four ``*_to_*`` block means resolve this into the directed
+    interaction-type strengths (source group → target group) that Kuroki &
+    Mizuseki 2025 identify as the control parameters of the synchronised,
+    bistable, and desynchronised regimes of the EI-Kuramoto model.
+    """
 
     ratio: float
     excitatory_strength: float
     inhibitory_strength: float
     is_balanced: bool
+    e_to_e: float
+    e_to_i: float
+    i_to_e: float
+    i_to_i: float
 
 
 def _validate_indices(indices: list[int], n: int, name: str) -> list[int]:
@@ -90,6 +102,20 @@ def _validate_indices(indices: list[int], n: int, name: str) -> list[int]:
         if idx < n:
             valid.append(idx)
     return valid
+
+
+def _block_mean(
+    knm: FloatArray,
+    source_mask: NDArray[np.bool_],
+    target_mask: NDArray[np.bool_],
+) -> float:
+    """Mean coupling from ``source_mask`` rows to ``target_mask`` columns.
+
+    Returns ``0.0`` when either group is empty.
+    """
+    if not (np.any(source_mask) and np.any(target_mask)):
+        return 0.0
+    return float(np.mean(knm[np.ix_(source_mask, target_mask)]))
 
 
 def compute_ei_balance(
@@ -115,12 +141,18 @@ def compute_ei_balance(
         k_flat = np.ascontiguousarray(knm.ravel())
         e_arr = np.array(excitatory_indices, dtype=np.int64)
         i_arr = np.array(inhibitory_indices, dtype=np.int64)
-        ratio, e_str, i_str, balanced = _rust_ei(k_flat, n, e_arr, i_arr)
+        ratio, e_str, i_str, balanced, e_to_e, e_to_i, i_to_e, i_to_i = _rust_ei(
+            k_flat, n, e_arr, i_arr
+        )
         return EIBalance(
             ratio=float(ratio),
             excitatory_strength=float(e_str),
             inhibitory_strength=float(i_str),
             is_balanced=bool(balanced),
+            e_to_e=float(e_to_e),
+            e_to_i=float(e_to_i),
+            i_to_e=float(i_to_e),
+            i_to_i=float(i_to_i),
         )
 
     e_mask = np.zeros(n, dtype=bool)
@@ -145,6 +177,10 @@ def compute_ei_balance(
         excitatory_strength=e_strength,
         inhibitory_strength=i_strength,
         is_balanced=0.8 <= ratio <= 1.2,
+        e_to_e=_block_mean(knm, e_mask, e_mask),
+        e_to_i=_block_mean(knm, e_mask, i_mask),
+        i_to_e=_block_mean(knm, i_mask, e_mask),
+        i_to_i=_block_mean(knm, i_mask, i_mask),
     )
 
 

@@ -12,11 +12,45 @@
 //! critical parameter for synchronisation, not K or D.
 
 /// E/I balance result.
+///
+/// `excitatory_strength` / `inhibitory_strength` aggregate the mean coupling
+/// from each source group over all targets. The four `*_to_*` block means
+/// resolve this into the directed interaction-type strengths (source group →
+/// target group) that Kuroki & Mizuseki 2025 identify as the control
+/// parameters of the synchronised / bistable / desynchronised regimes.
 pub struct EIBalanceResult {
     pub ratio: f64,
     pub excitatory_strength: f64,
     pub inhibitory_strength: f64,
     pub is_balanced: bool,
+    pub e_to_e: f64,
+    pub e_to_i: f64,
+    pub i_to_e: f64,
+    pub i_to_i: f64,
+}
+
+/// Mean of `knm[source, target]` over `source ∈ rows`, `target ∈ cols`.
+/// Out-of-range indices are skipped; an empty block returns `0.0`.
+fn block_mean(knm_flat: &[f64], n: usize, rows: &[usize], cols: &[usize]) -> f64 {
+    let mut sum = 0.0;
+    let mut count = 0usize;
+    for &i in rows {
+        if i >= n {
+            continue;
+        }
+        for &j in cols {
+            if j >= n {
+                continue;
+            }
+            sum += knm_flat[i * n + j];
+            count += 1;
+        }
+    }
+    if count > 0 {
+        sum / count as f64
+    } else {
+        0.0
+    }
 }
 
 /// Compute E/I balance from coupling matrix and layer typing.
@@ -92,6 +126,10 @@ pub fn compute_ei_balance(
         excitatory_strength: e_strength,
         inhibitory_strength: i_strength,
         is_balanced: (0.8..=1.2).contains(&ratio),
+        e_to_e: block_mean(knm_flat, n, excitatory_indices, excitatory_indices),
+        e_to_i: block_mean(knm_flat, n, excitatory_indices, inhibitory_indices),
+        i_to_e: block_mean(knm_flat, n, inhibitory_indices, excitatory_indices),
+        i_to_i: block_mean(knm_flat, n, inhibitory_indices, inhibitory_indices),
     }
 }
 
@@ -141,6 +179,39 @@ mod tests {
         let result = compute_ei_balance(&knm, n, &e_idx, &i_idx);
         assert!((result.ratio - 1.0).abs() < 1e-10);
         assert!(result.is_balanced);
+    }
+
+    #[test]
+    fn test_interaction_type_breakdown() {
+        // 4 oscillators, E = {0, 1}, I = {2, 3}. Each block has a distinct
+        // constant value so the directed means are exactly recoverable.
+        let n = 4;
+        let mut knm = vec![0.0; n * n];
+        for &i in &[0usize, 1] {
+            for &j in &[0usize, 1] {
+                knm[i * n + j] = 2.0; // E→E
+            }
+            for &j in &[2usize, 3] {
+                knm[i * n + j] = 0.5; // E→I
+            }
+        }
+        for &i in &[2usize, 3] {
+            for &j in &[0usize, 1] {
+                knm[i * n + j] = 1.5; // I→E
+            }
+            for &j in &[2usize, 3] {
+                knm[i * n + j] = 3.0; // I→I
+            }
+        }
+        let r = compute_ei_balance(&knm, n, &[0, 1], &[2, 3]);
+        assert!((r.e_to_e - 2.0).abs() < 1e-12);
+        assert!((r.e_to_i - 0.5).abs() < 1e-12);
+        assert!((r.i_to_e - 1.5).abs() < 1e-12);
+        assert!((r.i_to_i - 3.0).abs() < 1e-12);
+        // Aggregate excitatory strength = mean over E rows (all targets) =
+        // (2.0 + 0.5) / 2 = 1.25; inhibitory = (1.5 + 3.0) / 2 = 2.25.
+        assert!((r.excitatory_strength - 1.25).abs() < 1e-12);
+        assert!((r.inhibitory_strength - 2.25).abs() < 1e-12);
     }
 
     #[test]

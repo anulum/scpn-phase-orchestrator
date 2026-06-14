@@ -424,16 +424,29 @@ Spatiotemporal Filter."
 
 ## E/I Balance
 
-Computes and adjusts excitatory/inhibitory coupling balance.
+Computes and adjusts excitatory/inhibitory coupling balance. The aggregate
+`ratio` summarises overall balance, while the four directed interaction-type
+means resolve it into the source→target block strengths that Kuroki &
+Mizuseki 2025 (*Neural Computation* **37** (7):1353–1372) identify as the
+control parameters of the EI-Kuramoto synchronised / bistable /
+desynchronised regimes.
 
 ### EIBalance (dataclass)
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `ratio` | `float` | E/I balance ratio |
-| `excitatory_strength` | `float` | Mean excitatory coupling |
-| `inhibitory_strength` | `float` | Mean inhibitory coupling |
+| `ratio` | `float` | E/I balance ratio (`excitatory_strength / inhibitory_strength`) |
+| `excitatory_strength` | `float` | Mean coupling from excitatory sources over all targets |
+| `inhibitory_strength` | `float` | Mean coupling from inhibitory sources over all targets |
 | `is_balanced` | `bool` | True if 0.8 ≤ ratio ≤ 1.2 |
+| `e_to_e` | `float` | Mean E→E interaction-type coupling |
+| `e_to_i` | `float` | Mean E→I interaction-type coupling |
+| `i_to_e` | `float` | Mean I→E interaction-type coupling |
+| `i_to_i` | `float` | Mean I→I interaction-type coupling |
+
+Each aggregate strength is the count-weighted blend of its two outgoing
+interaction-type blocks (e.g. `excitatory_strength` blends `e_to_e` and
+`e_to_i` over the target-group sizes).
 
 ### Functions
 

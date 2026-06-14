@@ -60,6 +60,45 @@ class TestComputeEIBalance:
         assert bal.ratio == pytest.approx(expected_e / expected_i)
         assert bal.is_balanced is True
 
+    def test_interaction_type_breakdown_matches_blocks(self):
+        """The four directed interaction-type means (Kuroki & Mizuseki
+        2025) equal the corresponding source→target sub-block means."""
+        knm = np.array(
+            [
+                [0.0, 2.0, 4.0, 6.0],
+                [8.0, 0.0, 10.0, 12.0],
+                [1.0, 3.0, 0.0, 5.0],
+                [7.0, 9.0, 11.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        e, i = [0, 1], [2, 3]
+        bal = compute_ei_balance(knm, e, i)
+        assert bal.e_to_e == pytest.approx(float(np.mean(knm[np.ix_(e, e)])))
+        assert bal.e_to_i == pytest.approx(float(np.mean(knm[np.ix_(e, i)])))
+        assert bal.i_to_e == pytest.approx(float(np.mean(knm[np.ix_(i, e)])))
+        assert bal.i_to_i == pytest.approx(float(np.mean(knm[np.ix_(i, i)])))
+
+    def test_aggregate_strength_is_block_blend(self):
+        """Each aggregate strength is the count-weighted blend of its two
+        outgoing interaction-type blocks (equal group sizes → mean)."""
+        knm = _uniform_knm(6)
+        bal = compute_ei_balance(knm, [0, 1, 2], [3, 4, 5])
+        assert bal.excitatory_strength == pytest.approx(
+            0.5 * (bal.e_to_e + bal.e_to_i)
+        )
+        assert bal.inhibitory_strength == pytest.approx(
+            0.5 * (bal.i_to_e + bal.i_to_i)
+        )
+
+    def test_empty_groups_zero_interaction_types(self):
+        knm = _uniform_knm(4)
+        bal = compute_ei_balance(knm, [0, 1], [])
+        assert bal.e_to_i == 0.0
+        assert bal.i_to_e == 0.0
+        assert bal.i_to_i == 0.0
+        assert bal.e_to_e == pytest.approx(float(np.mean(knm[np.ix_([0, 1], [0, 1])])))
+
     def test_equal_groups_balanced(self):
         knm = _uniform_knm(6)
         bal = compute_ei_balance(knm, [0, 1, 2], [3, 4, 5])
@@ -123,6 +162,10 @@ class TestComputeEIBalance:
             excitatory_strength=0.75,
             inhibitory_strength=0.75,
             is_balanced=True,
+            e_to_e=0.5,
+            e_to_i=1.0,
+            i_to_e=1.0,
+            i_to_i=0.5,
         )
 
 
@@ -203,7 +246,7 @@ class TestAdjustEIRatio:
             calls.append(
                 ("ei", flat_knm.copy(), n, excitatory.copy(), inhibitory.copy())
             )
-            return 2.0, 4.0, 2.0, False
+            return 2.0, 4.0, 2.0, False, 5.0, 6.0, 7.0, 8.0
 
         def fake_rust_adjust(flat_knm, n, excitatory, inhibitory, target_ratio):
             calls.append(
@@ -233,6 +276,10 @@ class TestAdjustEIRatio:
             excitatory_strength=4.0,
             inhibitory_strength=2.0,
             is_balanced=False,
+            e_to_e=5.0,
+            e_to_i=6.0,
+            i_to_e=7.0,
+            i_to_i=8.0,
         )
         np.testing.assert_array_equal(adjusted, knm * 3.0)
         assert calls[0][0] == "ei"

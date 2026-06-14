@@ -2820,7 +2820,7 @@ fn compute_ei_balance_rust(
     n: usize,
     excitatory_indices: PyReadonlyArray1<'_, i64>,
     inhibitory_indices: PyReadonlyArray1<'_, i64>,
-) -> PyResult<(f64, f64, f64, bool)> {
+) -> PyResult<(f64, f64, f64, bool, f64, f64, f64, f64)> {
     let k = knm_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -2846,6 +2846,10 @@ fn compute_ei_balance_rust(
         r.excitatory_strength,
         r.inhibitory_strength,
         r.is_balanced,
+        r.e_to_e,
+        r.e_to_i,
+        r.i_to_e,
+        r.i_to_i,
     ))
 }
 
