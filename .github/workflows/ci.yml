@@ -127,6 +127,47 @@ jobs:
           --ignore-glob=tests/test_nn_physics_validation*.py
           -m slow
 
+  julia-backend:
+    # The Julia backend cannot be exercised under the main coverage matrix:
+    # coverage's thread tracer stops juliacall/PythonCall from injecting
+    # ``juliacall.Main`` during its C-level ``using PythonCall``, so the Julia
+    # path is correctly skipped there. This lane installs juliacall and runs the
+    # native-backend parity tests WITHOUT coverage, so the Julia path is
+    # actually verified end to end. juliacall is an optional experimental extra
+    # and is installed outside the hashed lock; juliapkg fetches the Julia
+    # runtime on demand (cached in ~/.julia).
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HYPOTHESIS_PROFILE: ci
+      PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Cache Julia depot
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ hashFiles('pyproject.toml') }}
+          restore-keys: julia-depot-
+      - name: Install base + optional Julia backend
+        run: |
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --no-deps -e .
+          pip install "juliacall>=0.9,<0.10"
+      - name: Warm up Julia runtime (juliapkg resolves Julia + precompiles PythonCall)
+        run: python -c "from juliacall import Main; print('Julia ready:', Main is not None)"
+      - name: Assert Julia backend is available without coverage
+        run: >
+          python -c "from scpn_phase_orchestrator.upde._run import AVAILABLE_BACKENDS;
+          assert 'julia' in AVAILABLE_BACKENDS, AVAILABLE_BACKENDS;
+          print('backends:', AVAILABLE_BACKENDS)"
+      - name: Run native-backend parity tests without coverage
+        run: pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
+
   coverage-guard:
     needs: [test, ffi-test]
     runs-on: ubuntu-latest
