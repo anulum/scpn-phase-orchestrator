@@ -6,7 +6,7 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Poincaré section kernels (Go port)
 
-// Package main builds ``libpoincare.so`` — a C-shared library
+// Package main builds “libpoincare.so“ — a C-shared library
 // exporting two Poincaré-section kernels with variable-length
 // output: PoincareSection and PhasePoincare. Caller pre-allocates
 // crossings + times buffers; the call returns the populated count.
@@ -136,10 +136,13 @@ func phasePoincare(
 	nCr := 0
 	for i := 0; i < t-1; i++ {
 		if shifted[i] > math.Pi && shifted[i+1] < math.Pi {
-			denom := shifted[i] - shifted[i+1] + twoPiPoin
+			// Fraction of the step at which the wrapped phase reaches the
+			// 2π≡0 section boundary: (2π − shifted[i]) over the wrapped step.
+			toBoundary := twoPiPoin - shifted[i]
+			denom := toBoundary + shifted[i+1]
 			alpha := 0.5
-			if denom != 0.0 {
-				alpha = shifted[i] / denom
+			if denom > 1e-15 {
+				alpha = toBoundary / denom
 			}
 			if alpha < 0.0 {
 				alpha = 0.0

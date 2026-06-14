@@ -12,7 +12,7 @@
     "research_experimental_modules": 179,
     "runtime_serving_modules": 47,
     "rust_kernel_files": 93,
-    "test_files": 545
+    "test_files": 546
   },
   "documentation": {
     "public_pages": [
@@ -1647,6 +1647,7 @@
       "tests/test_poincare.py",
       "tests/test_poincare_algorithm.py",
       "tests/test_poincare_backends.py",
+      "tests/test_poincare_benchmark.py",
       "tests/test_poincare_stability.py",
       "tests/test_policy.py",
       "tests/test_policy_amplitude.py",

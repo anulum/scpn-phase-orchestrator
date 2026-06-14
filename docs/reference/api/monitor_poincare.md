@@ -91,6 +91,22 @@ Both generic and phase monitors linearly interpolate between adjacent samples.
 When a crossing lies between sample `i` and `i + 1`, the monitor computes a
 fractional crossing time `i + alpha` and an interpolated state vector.
 
+For the generic hyperplane section the crossing fraction is
+`alpha = -d0 / (d1 - d0)`, where `d0`/`d1` are the signed distances at samples
+`i`/`i + 1`.
+
+For the phase section the wrapped phase advances from `shifted[i]` up through
+the `2*pi`-equivalent-`0` section boundary into `shifted[i + 1]`, so the
+fraction at which it reaches the boundary is
+
+```text
+alpha = (2*pi - shifted[i]) / ((2*pi - shifted[i]) + shifted[i + 1])
+```
+
+i.e. the remaining distance to the boundary over the full wrapped step. This
+makes the interpolated section-oscillator value land exactly on `section_phase`
+modulo `2*pi`.
+
 This means crossing times are sample-index times, not physical seconds, unless
 the caller's sample spacing is one second.
 To convert to physical time, multiply return times by the sampling interval used
@@ -419,12 +435,24 @@ to be deployed opportunistically.
 
 ## Polyglot and benchmark notes
 
-This documentation update does not change production algorithms, optional direct
-backend code, Rust kernels, Go wrappers, Julia wrappers, Mojo wrappers, or
-benchmark outputs.
-The current slice documents existing Python and direct-backend contracts and
-adds a documentation guard.
-No benchmark update is required because no runtime algorithm changed.
+The phase-section interpolation fraction is the wrapped-step boundary fraction
+`(2*pi - shifted[i]) / ((2*pi - shifted[i]) + shifted[i + 1])` across all five
+backends (Python, Rust, Mojo, Julia, Go). An earlier
+`shifted[i] / (shifted[i] - shifted[i + 1] + 2*pi)` form drifted the crossing
+fraction toward the step midpoint, leaving the interpolated crossing roughly
+`0.09 rad` off the section; the corrected fraction recovers `section_phase`
+exactly.
+
+The polyglot parity gate `benchmark_poincare_polyglot_parity_gate`
+(`benchmarks/poincare_benchmark.py`, wired into
+`benchmarks/reference_suite.py` as `poincare_polyglot`) times every available
+backend, verifies bit-close parity of the generic and phase crossing points,
+times, and counts against the Python reference, and enforces the geometric
+contracts: section crossings lie on the hyperplane, phase crossings recover the
+section phase, both crossing-time sequences are strictly increasing, both
+produce at least one crossing, and every backend reports the same crossing
+count. Run it with
+`PYTHONPATH=.:src python benchmarks/poincare_benchmark.py --parity-gate`.
 
 Future backend changes must preserve:
 
@@ -453,7 +481,9 @@ The dedicated monitor test surfaces are:
 - `tests/test_poincare_stability.py`, covering stability-oriented recurrence
   behaviour,
 - `tests/test_prop_embedding_poincare.py`, covering property-style embedding
-  and Poincare monitor invariants.
+  and Poincare monitor invariants,
+- `tests/test_poincare_benchmark.py`, covering the polyglot parity-gate
+  contracts, control validation, and per-backend wall-clock timing.
 
 The reference depth guard is `tests/test_reference_api_monitor_poincare.py`.
 It prevents this page from regressing to a shallow overview and checks that the

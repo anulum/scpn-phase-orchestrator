@@ -45,6 +45,7 @@ from benchmarks.pha_c_handoff_benchmark import (
 from benchmarks.pha_c_timeline_benchmark import (
     benchmark_pha_c_timeline_polyglot_parity_gate,
 )
+from benchmarks.poincare_benchmark import benchmark_poincare_polyglot_parity_gate
 from benchmarks.recurrence_benchmark import benchmark_recurrence_polyglot_parity_gate
 from benchmarks.spatial_modulator_benchmark import (
     benchmark_spatial_modulator_polyglot_parity_gate,
@@ -7865,6 +7866,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "order_parameter_polyglot": (
                 benchmark_order_parameter_polyglot_parity_gate()
             ),
+            "poincare_polyglot": benchmark_poincare_polyglot_parity_gate(),
             "recurrence_polyglot": benchmark_recurrence_polyglot_parity_gate(),
             "spectral_polyglot": benchmark_spectral_polyglot_parity_gate(),
             "spatial_modulator_polyglot": (

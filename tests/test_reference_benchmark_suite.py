@@ -47,6 +47,7 @@ from benchmarks.reference_suite import (
     benchmark_order_parameter_polyglot_parity_gate,
     benchmark_petri_reachability,
     benchmark_plugin_ecosystem_catalog_quality,
+    benchmark_poincare_polyglot_parity_gate,
     benchmark_quantum_target_readiness_gate,
     benchmark_recurrence_polyglot_parity_gate,
     benchmark_replay_policy_candidate_quality,
@@ -2021,6 +2022,51 @@ def test_order_parameter_polyglot_parity_gate_reports_all_language_slots() -> No
             assert record["parity_passed"] is False
 
 
+def test_poincare_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_poincare_polyglot_parity_gate(
+        n_steps=240, n_osc=4, calls=1, seed=2026
+    )
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "poincare_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["parity_pass_count"] == out["available_backend_count"]
+    assert out["reference_contracts_passed"] == 1
+    assert out["acceptance_passed"] == 1
+    assert float(out["section_plane_residual"]) <= 1.0e-9
+    assert float(out["phase_value_residual"]) <= 1.0e-9
+    assert int(out["reference_section_count"]) > 0
+    assert int(out["reference_phase_count"]) > 0
+    assert len(str(out["reference_section_crossings_sha256"])) == 64
+    assert len(str(out["reference_phase_crossings_sha256"])) == 64
+    assert len(str(out["benchmark_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+    assert [record["backend"] for record in records] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds["require_section_on_plane"] is True
+    assert thresholds["require_phase_recovers_section"] is True
+    assert thresholds["require_matching_crossing_counts"] is True
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["reference_contracts_passed"] is True
+            assert record["count_match"] is True
+            assert record["max_abs_error"] <= record["tolerance"]
+            assert record["section_crossings_sha256"] is not None
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["parity_passed"] is False
+
+
 def test_winding_polyglot_parity_gate_reports_all_language_slots() -> None:
     out = benchmark_winding_polyglot_parity_gate(t=64, n=5, calls=1, seed=2026)
     records = json.loads(str(out["backend_records_json"]))
@@ -2621,6 +2667,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "lyapunov_polyglot",
         "npe_polyglot",
         "order_parameter_polyglot",
+        "poincare_polyglot",
         "recurrence_polyglot",
         "spectral_polyglot",
         "spatial_modulator_polyglot",

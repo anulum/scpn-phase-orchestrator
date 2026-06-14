@@ -126,8 +126,11 @@ function phase_poincare(
     n_cr = 0
     @inbounds for i in 1:(t - 1)
         if shifted[i] > pi && shifted[i + 1] < pi
-            denom = shifted[i] - shifted[i + 1] + TWO_PI
-            α = denom != 0.0 ? shifted[i] / denom : 0.5
+            # Fraction of the step at which the wrapped phase reaches the
+            # 2π≡0 section boundary: (2π − shifted[i]) over the wrapped step.
+            to_boundary = TWO_PI - shifted[i]
+            denom = to_boundary + shifted[i + 1]
+            α = denom > 1e-15 ? to_boundary / denom : 0.5
             if α < 0.0
                 α = 0.0
             elseif α > 1.0

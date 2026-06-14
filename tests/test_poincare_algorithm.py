@@ -147,6 +147,26 @@ class TestPhasePoincare:
             )
 
     @_python
+    def test_crossing_recovers_section_phase(self):
+        """The interpolated crossing point of the section oscillator must
+        sit exactly on the section phase (mod 2π). The spurious
+        ``shifted[i]/(shifted[i]-shifted[i+1]+2π)`` interpolation left a
+        residual of ~0.09 rad; the correct (2π−shifted[i])/step fraction
+        recovers the section exactly."""
+        omega = 0.21
+        section_phase = 0.0
+        phases = (omega * np.arange(200.0)).reshape(-1, 1)
+        res = phase_poincare(phases, oscillator_idx=0, section_phase=section_phase)
+        assert len(res.crossings) > 0
+        wrapped = (res.crossings[:, 0] - section_phase) % (2 * math.pi)
+        residual = np.minimum(wrapped, 2 * math.pi - wrapped)
+        assert float(np.max(residual)) < 1e-9
+        # Constant-frequency crossing times are evenly spaced by the period.
+        period = 2 * math.pi / omega
+        if len(res.return_times) > 0:
+            np.testing.assert_allclose(res.return_times, period, atol=1e-6)
+
+    @_python
     def test_no_rotation_no_crossings(self):
         phases = np.full((50, 4), 0.5)
         res = phase_poincare(phases, oscillator_idx=0, section_phase=0.0)

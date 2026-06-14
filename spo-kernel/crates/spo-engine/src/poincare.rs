@@ -188,7 +188,16 @@ pub fn phase_poincare(
         .into_par_iter()
         .filter_map(|i| {
             if shifted[i] > PI && shifted[i + 1] < PI {
-                let alpha = (shifted[i] / (shifted[i] - shifted[i + 1] + two_pi)).clamp(0.0, 1.0);
+                // Fraction of the step at which the wrapped phase reaches the
+                // 2π≡0 section boundary: (2π − shifted[i]) over the wrapped
+                // step (2π − shifted[i]) + shifted[i+1].
+                let to_boundary = two_pi - shifted[i];
+                let denom = to_boundary + shifted[i + 1];
+                let alpha = if denom > 1e-15 {
+                    (to_boundary / denom).clamp(0.0, 1.0)
+                } else {
+                    0.5
+                };
                 let mut cross = Vec::with_capacity(n);
                 let p0 = &phases_flat[i * n..(i + 1) * n];
                 let p1 = &phases_flat[(i + 1) * n..(i + 2) * n];

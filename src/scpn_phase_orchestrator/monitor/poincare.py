@@ -547,7 +547,12 @@ def phase_poincare(
     n_cr = 0
     for i in range(t - 1):
         if shifted[i] > np.pi and shifted[i + 1] < np.pi:
-            alpha = shifted[i] / (shifted[i] - shifted[i + 1] + 2 * np.pi)
+            # The wrapped phase advances from shifted[i] up through the 2π≡0
+            # section boundary into shifted[i+1]. The fraction of the step at
+            # which it reaches the boundary is (2π − shifted[i]) over the
+            # wrapped step (2π − shifted[i]) + shifted[i+1].
+            denom = (2 * np.pi - shifted[i]) + shifted[i + 1]
+            alpha = (2 * np.pi - shifted[i]) / denom if denom > 1e-15 else 0.5
             alpha = min(max(alpha, 0.0), 1.0)
             pt = phases[i] + alpha * (phases[i + 1] - phases[i])
             cr_flat[n_cr * n : (n_cr + 1) * n] = pt

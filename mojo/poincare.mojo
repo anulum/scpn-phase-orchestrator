@@ -125,10 +125,13 @@ fn phase_poincare(
     var n_cr = 0
     for i in range(t - 1):
         if shifted[i] > pi_val and shifted[i + 1] < pi_val:
-            var denom = shifted[i] - shifted[i + 1] + two_pi
+            # Fraction of the step at which the wrapped phase reaches the
+            # 2π≡0 section boundary: (2π − shifted[i]) over the wrapped step.
+            var to_boundary = two_pi - shifted[i]
+            var denom = to_boundary + shifted[i + 1]
             var alpha: Float64 = 0.5
-            if denom != 0.0:
-                alpha = shifted[i] / denom
+            if denom > 1e-15:
+                alpha = to_boundary / denom
             if alpha < 0.0:
                 alpha = 0.0
             elif alpha > 1.0:
