@@ -506,8 +506,7 @@ Going to ``d = 8`` adds three higher harmonics (``\cos 2θ, \sin 2θ,
 \cos 3θ, \sin 3θ, \cos 4θ, \sin 4θ``) that let ``H = 4`` heads
 specialise on different phase-coherence scales. Without the
 Fourier lift the multi-head architecture degenerates into a
-simplistic Hebbian proxy that was blocked by
-``feedback_no_simplistic_models.md``.
+simplistic Hebbian proxy, which the design explicitly avoids.
 
 ### 11.2 Why symmetrise via averaging?
 
@@ -598,7 +597,3 @@ bridge if it reproduces.
   scaling used in ``default_projections``.
 * Kuramoto 1984, *Chemical Oscillations, Waves, and Turbulence* —
   baseline dynamics the modulation reshapes.
-* Internal Phase-3 research brief — validation criteria source.
-* `feedback_no_simplistic_models.md`,
-  `feedback_module_standard_attnres.md`,
-  `feedback_multi_language_accel.md` — governing rules.

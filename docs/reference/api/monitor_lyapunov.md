@@ -213,8 +213,8 @@ class LyapunovState:
 
 ## 3. Backend fallback chain
 
-Per `feedback_module_standard_attnres.md` the module resolves backends
-in the order **Rust → Mojo → Julia → Go → Python** at import time.
+The module resolves backends in the order
+**Rust → Mojo → Julia → Go → Python** at import time.
 The first backend that loads without raising `ImportError`,
 `RuntimeError`, or `OSError` becomes `ACTIVE_BACKEND`. Python is
 always appended as the guaranteed fallback.

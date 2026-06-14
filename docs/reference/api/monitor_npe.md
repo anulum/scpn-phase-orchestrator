@@ -641,7 +641,10 @@ input through all loaded backends.
 * Kruskal 1956 — original union-find algorithm used here with
   union-by-rank + path compression.
 * `tests/test_npe_backends.py`, `tests/test_npe_stability.py` — the
-  reference bodies of invariants used in the rule-compliance audit.
-* `feedback_module_standard_attnres.md`,
-  `feedback_multi_language_accel.md`,
-  `feedback_doc_quality_standard.md` — governing rules.
+  reference bodies of invariants used in the parity and stability audit.
+
+---
+
+## 15. API reference
+
+::: scpn_phase_orchestrator.monitor.npe

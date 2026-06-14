@@ -635,6 +635,3 @@ reflects tight inner-loop code generation, not cache effects.
   missed connections*. Physical Review E 75(5):056211 — the
   paper that motivated the SPO choice to clamp TE to the
   non-negative range.
-* `feedback_module_standard_attnres.md`,
-  `feedback_multi_language_accel.md`,
-  `feedback_doc_quality_standard.md` — governing rules.
