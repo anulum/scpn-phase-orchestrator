@@ -306,24 +306,21 @@ class TestSyncConvergenceRate:
 
 
 class TestHodgeDecompositionInvariants:
-    """gradient + curl + harmonic = total coupling force."""
+    """gradient ⊕ curl ⊕ harmonic = coupling current (Hodge theory)."""
 
     @given(
         n=st.integers(min_value=2, max_value=10),
         seed=st.integers(min_value=0, max_value=200),
     )
     @settings(max_examples=60, deadline=None)
-    def test_sum_equals_total(self, n: int, seed: int) -> None:
-        """Reconstruction: gradient + curl + harmonic = total."""
+    def test_sum_equals_flow(self, n: int, seed: int) -> None:
+        """Reconstruction: gradient + curl + harmonic = input current."""
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0, TWO_PI, n)
         knm = _asymmetric_knm(n, seed=seed)
         res = hodge_decomposition(knm, phases)
-        total = np.sum(
-            knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]), axis=1
-        )
         np.testing.assert_allclose(
-            res.gradient + res.curl + res.harmonic, total, atol=1e-10
+            res.gradient + res.curl + res.harmonic, res.flow, atol=1e-10
         )
 
     @given(
@@ -331,60 +328,81 @@ class TestHodgeDecompositionInvariants:
         seed=st.integers(min_value=0, max_value=200),
     )
     @settings(max_examples=40, deadline=None)
-    def test_symmetric_k_zero_curl(self, n: int, seed: int) -> None:
-        """Symmetric K → K_anti = 0 → curl = 0."""
+    def test_components_l2_orthogonal(self, n: int, seed: int) -> None:
+        """The three Hodge components are mutually L²-orthogonal."""
+        rng = np.random.default_rng(seed)
+        phases = rng.uniform(0, TWO_PI, n)
+        knm = _asymmetric_knm(n, seed=seed)
+        res = hodge_decomposition(knm, phases)
+        upper = np.triu_indices(n, k=1)
+        for a, b in (
+            (res.gradient, res.curl),
+            (res.gradient, res.harmonic),
+            (res.curl, res.harmonic),
+        ):
+            assert abs(float(np.sum(a[upper] * b[upper]))) < 1e-9
+
+    @given(
+        n=st.integers(min_value=2, max_value=10),
+        seed=st.integers(min_value=0, max_value=200),
+    )
+    @settings(max_examples=40, deadline=None)
+    def test_curl_and_harmonic_divergence_free(self, n: int, seed: int) -> None:
+        """Curl and harmonic flows have zero node divergence (row sums)."""
+        rng = np.random.default_rng(seed)
+        phases = rng.uniform(0, TWO_PI, n)
+        knm = _asymmetric_knm(n, seed=seed)
+        res = hodge_decomposition(knm, phases)
+        np.testing.assert_allclose(res.curl.sum(axis=1), 0.0, atol=1e-9)
+        np.testing.assert_allclose(res.harmonic.sum(axis=1), 0.0, atol=1e-9)
+
+    @given(
+        n=st.integers(min_value=2, max_value=10),
+        seed=st.integers(min_value=0, max_value=200),
+    )
+    @settings(max_examples=40, deadline=None)
+    def test_complete_graph_zero_harmonic(self, n: int, seed: int) -> None:
+        """Triangle-filled connected graph → β₁ = 0, no harmonic flow."""
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0, TWO_PI, n)
         knm = _connected_knm(n, seed=seed)
         res = hodge_decomposition(knm, phases)
-        np.testing.assert_allclose(res.curl, 0.0, atol=1e-12)
+        np.testing.assert_allclose(res.harmonic, 0.0, atol=1e-9)
+        assert res.betti_one == 0
 
     @given(
         n=st.integers(min_value=2, max_value=10),
         seed=st.integers(min_value=0, max_value=200),
     )
     @settings(max_examples=40, deadline=None)
-    def test_harmonic_near_zero(self, n: int, seed: int) -> None:
-        """For exact sym/anti split, harmonic = numerical residual ≈ 0."""
+    def test_all_finite_and_antisymmetric(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0, TWO_PI, n)
         knm = _asymmetric_knm(n, seed=seed)
         res = hodge_decomposition(knm, phases)
-        np.testing.assert_allclose(res.harmonic, 0.0, atol=1e-10)
-
-    @given(
-        n=st.integers(min_value=2, max_value=10),
-        seed=st.integers(min_value=0, max_value=200),
-    )
-    @settings(max_examples=40, deadline=None)
-    def test_all_finite(self, n: int, seed: int) -> None:
-        rng = np.random.default_rng(seed)
-        phases = rng.uniform(0, TWO_PI, n)
-        knm = _asymmetric_knm(n, seed=seed)
-        res = hodge_decomposition(knm, phases)
-        assert np.all(np.isfinite(res.gradient))
-        assert np.all(np.isfinite(res.curl))
-        assert np.all(np.isfinite(res.harmonic))
+        for comp in (res.gradient, res.curl, res.harmonic):
+            assert np.all(np.isfinite(comp))
+            np.testing.assert_allclose(comp, -comp.T, atol=1e-10)
 
     @given(
         n=st.integers(min_value=2, max_value=10),
         seed=st.integers(min_value=0, max_value=200),
     )
     @settings(max_examples=30, deadline=None)
-    def test_length_n(self, n: int, seed: int) -> None:
+    def test_shape_is_square(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0, TWO_PI, n)
         knm = _asymmetric_knm(n, seed=seed)
         res = hodge_decomposition(knm, phases)
-        assert len(res.gradient) == n
-        assert len(res.curl) == n
-        assert len(res.harmonic) == n
+        assert res.gradient.shape == (n, n)
+        assert res.curl.shape == (n, n)
+        assert res.harmonic.shape == (n, n)
 
     def test_empty_phases(self) -> None:
         res = hodge_decomposition(np.zeros((0, 0)), np.array([]))
-        assert len(res.gradient) == 0
-        assert len(res.curl) == 0
-        assert len(res.harmonic) == 0
+        assert res.gradient.size == 0
+        assert res.curl.size == 0
+        assert res.harmonic.size == 0
 
     @given(
         n=st.integers(min_value=2, max_value=8),

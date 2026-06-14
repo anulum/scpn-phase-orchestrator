@@ -4,7 +4,7 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Hodge decomposition benchmark gate
+# SCPN Phase Orchestrator — Combinatorial Hodge decomposition benchmark gate
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.coupling import hodge as hodge_module
 from scpn_phase_orchestrator.coupling.hodge import hodge_decomposition
 
 FloatArray = NDArray[np.float64]
+IntArray = NDArray[np.int64]
 HodgeTuple = tuple[FloatArray, FloatArray, FloatArray]
 
 BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
@@ -33,6 +34,9 @@ PARITY_TOLERANCES = {
     "python": 0.0,
 }
 REFERENCE_TOLERANCE = 1.0e-10
+# A non-trivial harmonic component must dominate this floor on the
+# triangle-free cycle so the topological content is demonstrably present.
+HARMONIC_PRESENCE_FLOOR = 1.0e-3
 BENCHMARK_EVIDENCE_KIND = "local_regression_non_isolated"
 
 
@@ -55,9 +59,11 @@ def _problem(n: int, seed: int) -> tuple[FloatArray, FloatArray]:
     return structured.astype(np.float64), phases.astype(np.float64)
 
 
-def _total_flow(knm: FloatArray, phases: FloatArray) -> FloatArray:
-    phase_diff = phases[np.newaxis, :] - phases[:, np.newaxis]
-    return np.sum(knm * np.cos(phase_diff), axis=1, dtype=np.float64)
+def _complex(knm: FloatArray, phases: FloatArray) -> tuple[IntArray, IntArray]:
+    k_sym = 0.5 * (knm + knm.T)
+    return hodge_module._simplicial_complex(  # noqa: SLF001
+        k_sym, int(phases.size), None
+    )
 
 
 def _array_sha256(value: FloatArray) -> str:
@@ -93,73 +99,100 @@ def _tuple_component_errors(
     }
 
 
+def _antisymmetry_error(component: FloatArray) -> float:
+    return float(np.max(np.abs(component + component.T))) if component.size else 0.0
+
+
+def _flow_inner(a: FloatArray, b: FloatArray) -> float:
+    """L² inner product of two antisymmetric flow matrices (each edge once)."""
+    if a.size == 0:
+        return 0.0
+    upper = np.triu_indices(a.shape[0], k=1)
+    return float(np.sum(a[upper] * b[upper]))
+
+
+def _cycle_contracts() -> dict[str, float | int]:
+    """Triangle-free 4-cycle: β₁ = 1, curl vanishes, harmonic is non-trivial."""
+    n = 4
+    knm = np.zeros((n, n), dtype=np.float64)
+    for i, j in ((0, 1), (1, 2), (2, 3), (0, 3)):
+        knm[i, j] = 1.0
+        knm[j, i] = 1.0
+    phases = np.array([0.0, 0.7, 1.9, 2.8], dtype=np.float64)
+    result = hodge_decomposition(knm, phases)
+    return {
+        "cycle_curl_max_abs_error": float(np.max(np.abs(result.curl))),
+        "cycle_harmonic_max_abs": float(np.max(np.abs(result.harmonic))),
+        "cycle_betti_one": int(result.betti_one),
+    }
+
+
 def _reference_contracts(
-    knm: FloatArray, phases: FloatArray, reference: HodgeTuple
+    knm: FloatArray,
+    phases: FloatArray,
+    reference: HodgeTuple,
+    flow: FloatArray,
 ) -> dict[str, float | int]:
-    total = _total_flow(knm, phases)
-    reconstruction = reference[0] + reference[1] + reference[2]
+    gradient, curl, harmonic = reference
+    reconstruction = gradient + curl + harmonic
     shifted = hodge_module._python_decomposition(knm, phases + 1.2345)  # noqa: SLF001
     scale = 2.5
     scaled = hodge_module._python_decomposition(scale * knm, phases)  # noqa: SLF001
 
-    symmetric = (knm + knm.T) / 2.0
-    antisymmetric = (knm - knm.T) / 2.0
-    symmetric_result = hodge_module._python_decomposition(symmetric, phases)  # noqa: SLF001
-    antisymmetric_result = hodge_module._python_decomposition(  # noqa: SLF001
-        antisymmetric,
-        phases,
+    # Divergence of an antisymmetric flow at node i is the row sum.
+    curl_divergence = float(np.max(np.abs(curl.sum(axis=1)))) if curl.size else 0.0
+    harmonic_divergence = (
+        float(np.max(np.abs(harmonic.sum(axis=1)))) if harmonic.size else 0.0
     )
-
-    two_node_weight = 0.7
-    two_node_phases = np.array([0.3, 1.1], dtype=np.float64)
-    two_node_knm = np.array(
-        [[0.0, two_node_weight], [-two_node_weight, 0.0]],
-        dtype=np.float64,
+    orthogonality = max(
+        abs(_flow_inner(gradient, curl)),
+        abs(_flow_inner(gradient, harmonic)),
+        abs(_flow_inner(curl, harmonic)),
     )
-    two_node = hodge_module._python_decomposition(two_node_knm, two_node_phases)  # noqa: SLF001
-    two_node_expected_curl = np.array(
-        [
-            two_node_weight * np.cos(two_node_phases[1] - two_node_phases[0]),
-            -two_node_weight * np.cos(two_node_phases[1] - two_node_phases[0]),
-        ],
-        dtype=np.float64,
+    antisymmetry = max(
+        _antisymmetry_error(gradient),
+        _antisymmetry_error(curl),
+        _antisymmetry_error(harmonic),
     )
-
     finite_components = all(np.all(np.isfinite(component)) for component in reference)
-    return {
-        "reconstruction_max_abs_error": _max_abs_error(reconstruction, total),
-        "harmonic_max_abs_error": float(np.max(np.abs(reference[2]))),
+    contracts: dict[str, float | int] = {
+        "reconstruction_max_abs_error": _max_abs_error(reconstruction, flow),
+        "antisymmetry_max_abs_error": antisymmetry,
+        "orthogonality_max_abs_error": orthogonality,
+        "curl_divergence_max_abs_error": curl_divergence,
+        "harmonic_divergence_max_abs_error": harmonic_divergence,
         "phase_shift_max_abs_error": max(
             _max_abs_error(actual, expected)
             for actual, expected in zip(shifted, reference, strict=True)
         ),
-        "symmetric_curl_max_abs_error": float(np.max(np.abs(symmetric_result[1]))),
-        "antisymmetric_gradient_max_abs_error": float(
-            np.max(np.abs(antisymmetric_result[0]))
-        ),
-        "antisymmetric_curl_sum_abs_error": float(abs(np.sum(antisymmetric_result[1]))),
-        "two_node_gradient_max_abs_error": float(np.max(np.abs(two_node[0]))),
-        "two_node_curl_max_abs_error": _max_abs_error(
-            two_node[1],
-            two_node_expected_curl,
-        ),
-        "two_node_harmonic_max_abs_error": float(np.max(np.abs(two_node[2]))),
         "scale_covariance_max_abs_error": max(
             _max_abs_error(actual, scale * expected)
             for actual, expected in zip(scaled, reference, strict=True)
         ),
         "finite_components": int(finite_components),
     }
+    contracts.update(_cycle_contracts())
+    return contracts
 
 
 def _contracts_passed(contracts: dict[str, float | int]) -> bool:
     if int(contracts["finite_components"]) != 1:
         return False
-    return all(
-        float(value) <= REFERENCE_TOLERANCE
-        for key, value in contracts.items()
-        if key != "finite_components"
+    if int(contracts["cycle_betti_one"]) != 1:
+        return False
+    if float(contracts["cycle_harmonic_max_abs"]) <= HARMONIC_PRESENCE_FLOOR:
+        return False
+    bounded_keys = (
+        "reconstruction_max_abs_error",
+        "antisymmetry_max_abs_error",
+        "orthogonality_max_abs_error",
+        "curl_divergence_max_abs_error",
+        "harmonic_divergence_max_abs_error",
+        "phase_shift_max_abs_error",
+        "scale_covariance_max_abs_error",
+        "cycle_curl_max_abs_error",
     )
+    return all(float(contracts[key]) <= REFERENCE_TOLERANCE for key in bounded_keys)
 
 
 def _unavailable_reason(backend: str, exc: BaseException) -> str:
@@ -167,26 +200,42 @@ def _unavailable_reason(backend: str, exc: BaseException) -> str:
     return f"{backend} backend unavailable for coupling.hodge: {reason}"
 
 
-def _run_backend_once(backend: str, knm: FloatArray, phases: FloatArray) -> HodgeTuple:
+def _run_backend_once(
+    backend: str,
+    knm: FloatArray,
+    phases: FloatArray,
+    edges: IntArray,
+    triangles: IntArray,
+) -> HodgeTuple:
     if backend == "python":
         return hodge_module._python_decomposition(knm, phases)  # noqa: SLF001
     backend_fn = hodge_module._load_backend(backend)  # noqa: SLF001
     raw = backend_fn(
-        np.ascontiguousarray(knm.ravel(), dtype=np.float64), phases, phases.size
+        np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+        phases,
+        int(phases.size),
+        np.ascontiguousarray(edges.ravel(), dtype=np.int64),
+        int(edges.shape[0]),
+        np.ascontiguousarray(triangles.ravel(), dtype=np.int64),
+        int(triangles.shape[0]),
     )
-    return hodge_module._normalise_backend_output(raw, expected_n=phases.size)  # noqa: SLF001
+    return hodge_module._normalise_backend_output(  # noqa: SLF001
+        raw, expected_n=int(phases.size)
+    )
 
 
 def _bench_backend(
     backend: str,
     knm: FloatArray,
     phases: FloatArray,
+    edges: IntArray,
+    triangles: IntArray,
     calls: int,
 ) -> tuple[float, HodgeTuple]:
     t0 = time.perf_counter()
     result: HodgeTuple | None = None
     for _ in range(calls):
-        result = _run_backend_once(backend, knm, phases)
+        result = _run_backend_once(backend, knm, phases, edges, triangles)
     elapsed = time.perf_counter() - t0
     if result is None:
         raise RuntimeError("benchmark did not produce a Hodge result")
@@ -197,7 +246,10 @@ def _backend_record(
     backend: str,
     knm: FloatArray,
     phases: FloatArray,
+    edges: IntArray,
+    triangles: IntArray,
     reference: HodgeTuple,
+    flow: FloatArray,
     calls: int,
 ) -> dict[str, Any]:
     tolerance = PARITY_TOLERANCES[backend]
@@ -219,7 +271,9 @@ def _backend_record(
         "unavailable_reason": "",
     }
     try:
-        elapsed, result = _bench_backend(backend, knm, phases, calls)
+        elapsed, result = _bench_backend(
+            backend, knm, phases, edges, triangles, calls
+        )
     except (ImportError, ModuleNotFoundError, OSError, RuntimeError) as exc:
         base["unavailable_reason"] = _unavailable_reason(backend, exc)
         return base
@@ -232,7 +286,7 @@ def _backend_record(
 
     errors = _tuple_component_errors(result, reference)
     max_error = max(errors.values())
-    contracts = _reference_contracts(knm, phases, result)
+    contracts = _reference_contracts(knm, phases, result, flow)
     parity_passed = max_error <= tolerance and _contracts_passed(contracts)
     base.update(
         {
@@ -268,18 +322,22 @@ def benchmark_hodge_polyglot_parity_gate(
     calls: int = 1,
     seed: int = 2026,
 ) -> dict[str, float | int | str]:
-    """Run the Hodge polyglot parity and mathematical-invariant gate."""
+    """Run the Hodge polyglot parity and combinatorial-invariant gate."""
     n = _validate_int_control(n, name="n", minimum=2)
     calls = _validate_int_control(calls, name="calls", minimum=1)
     seed = _validate_int_control(seed, name="seed", minimum=0)
     knm, phases = _problem(n, seed)
+    edges, triangles = _complex(knm, phases)
     reference = hodge_module._python_decomposition(knm, phases)  # noqa: SLF001
-    reference_contracts = _reference_contracts(knm, phases, reference)
+    flow = hodge_decomposition(knm, phases).flow
+    reference_contracts = _reference_contracts(knm, phases, reference, flow)
 
     _clear_backend_cache()
     t0 = time.perf_counter()
     records = [
-        _backend_record(backend, knm, phases, reference, calls)
+        _backend_record(
+            backend, knm, phases, edges, triangles, reference, flow, calls
+        )
         for backend in BACKEND_ORDER
     ]
     elapsed = time.perf_counter() - t0
@@ -322,14 +380,17 @@ def benchmark_hodge_polyglot_parity_gate(
         "backend_order": list(BACKEND_ORDER),
         "parity_tolerances": PARITY_TOLERANCES,
         "max_reference_contract_abs_error": REFERENCE_TOLERANCE,
+        "harmonic_presence_floor": HARMONIC_PRESENCE_FLOOR,
         "require_python_reference_present": True,
         "require_all_available_backends_pass": True,
         "require_reconstruction_contract": True,
+        "require_antisymmetric_flow_components": True,
+        "require_component_orthogonality": True,
+        "require_divergence_free_curl_and_harmonic": True,
         "require_global_phase_shift_invariance": True,
-        "require_symmetric_zero_curl": True,
-        "require_antisymmetric_zero_gradient": True,
-        "require_two_node_antisymmetric_closed_form": True,
         "require_scale_covariance": True,
+        "require_cycle_betti_one": True,
+        "require_nontrivial_cycle_harmonic": True,
         "require_no_invalid_backend_outputs": True,
         "production_timing_claim": False,
     }
@@ -356,25 +417,29 @@ def benchmark_hodge_polyglot_parity_gate(
         "reconstruction_max_abs_error": float(
             reference_contracts["reconstruction_max_abs_error"]
         ),
-        "harmonic_max_abs_error": float(reference_contracts["harmonic_max_abs_error"]),
+        "antisymmetry_max_abs_error": float(
+            reference_contracts["antisymmetry_max_abs_error"]
+        ),
+        "orthogonality_max_abs_error": float(
+            reference_contracts["orthogonality_max_abs_error"]
+        ),
+        "curl_divergence_max_abs_error": float(
+            reference_contracts["curl_divergence_max_abs_error"]
+        ),
+        "harmonic_divergence_max_abs_error": float(
+            reference_contracts["harmonic_divergence_max_abs_error"]
+        ),
         "phase_shift_max_abs_error": float(
             reference_contracts["phase_shift_max_abs_error"]
-        ),
-        "symmetric_curl_max_abs_error": float(
-            reference_contracts["symmetric_curl_max_abs_error"]
-        ),
-        "antisymmetric_gradient_max_abs_error": float(
-            reference_contracts["antisymmetric_gradient_max_abs_error"]
-        ),
-        "antisymmetric_curl_sum_abs_error": float(
-            reference_contracts["antisymmetric_curl_sum_abs_error"]
-        ),
-        "two_node_curl_max_abs_error": float(
-            reference_contracts["two_node_curl_max_abs_error"]
         ),
         "scale_covariance_max_abs_error": float(
             reference_contracts["scale_covariance_max_abs_error"]
         ),
+        "cycle_curl_max_abs_error": float(
+            reference_contracts["cycle_curl_max_abs_error"]
+        ),
+        "cycle_harmonic_max_abs": float(reference_contracts["cycle_harmonic_max_abs"]),
+        "cycle_betti_one": int(reference_contracts["cycle_betti_one"]),
         "backend_records_json": json.dumps(records, sort_keys=True),
         "acceptance_thresholds_json": json.dumps(thresholds, sort_keys=True),
         "benchmark_sha256": _deterministic_hash(deterministic_payload),

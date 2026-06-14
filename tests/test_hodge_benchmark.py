@@ -35,20 +35,24 @@ def test_hodge_polyglot_parity_gate_reports_declared_backend_slots() -> None:
     assert float(out["wall_time_s"]) > 0.0
     assert float(out["steps_per_second"]) > 0.0
     assert float(out["reconstruction_max_abs_error"]) <= 1.0e-10
-    assert float(out["harmonic_max_abs_error"]) <= 1.0e-10
+    assert float(out["antisymmetry_max_abs_error"]) <= 1.0e-10
+    assert float(out["orthogonality_max_abs_error"]) <= 1.0e-10
+    assert float(out["curl_divergence_max_abs_error"]) <= 1.0e-10
+    assert float(out["harmonic_divergence_max_abs_error"]) <= 1.0e-10
     assert float(out["phase_shift_max_abs_error"]) <= 1.0e-10
-    assert float(out["symmetric_curl_max_abs_error"]) <= 1.0e-10
-    assert float(out["antisymmetric_gradient_max_abs_error"]) <= 1.0e-10
-    assert float(out["antisymmetric_curl_sum_abs_error"]) <= 1.0e-10
-    assert float(out["two_node_curl_max_abs_error"]) <= 1.0e-10
     assert float(out["scale_covariance_max_abs_error"]) <= 1.0e-10
+    assert float(out["cycle_curl_max_abs_error"]) <= 1.0e-10
+    assert float(out["cycle_harmonic_max_abs"]) > 1.0e-3
+    assert int(out["cycle_betti_one"]) == 1
     assert thresholds["backend_order"] == ["rust", "mojo", "julia", "go", "python"]
     assert thresholds["require_reconstruction_contract"] is True
+    assert thresholds["require_antisymmetric_flow_components"] is True
+    assert thresholds["require_component_orthogonality"] is True
+    assert thresholds["require_divergence_free_curl_and_harmonic"] is True
     assert thresholds["require_global_phase_shift_invariance"] is True
-    assert thresholds["require_symmetric_zero_curl"] is True
-    assert thresholds["require_antisymmetric_zero_gradient"] is True
-    assert thresholds["require_two_node_antisymmetric_closed_form"] is True
     assert thresholds["require_scale_covariance"] is True
+    assert thresholds["require_cycle_betti_one"] is True
+    assert thresholds["require_nontrivial_cycle_harmonic"] is True
     assert thresholds["production_timing_claim"] is False
 
     assert [record["backend"] for record in records] == thresholds["backend_order"]

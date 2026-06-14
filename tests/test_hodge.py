@@ -4,11 +4,9 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Tests for Hodge decomposition
+# SCPN Phase Orchestrator — Tests for the combinatorial Hodge decomposition
 
 from __future__ import annotations
-
-import math
 
 import numpy as np
 import pytest
@@ -23,135 +21,102 @@ def _symmetric_coupling(n: int, k: float = 1.0) -> np.ndarray:
 
 
 class TestHodgeDecomposition:
-    def test_symmetric_coupling_no_curl(self):
-        """Symmetric K → all coupling in gradient component, zero curl."""
-        knm = _symmetric_coupling(4)
-        phases = np.array([0.0, 0.5, 1.0, 1.5])
-        result = hodge_decomposition(knm, phases)
-        total = np.sum(
-            knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]),
-            axis=1,
-        )
-        np.testing.assert_allclose(result.gradient, total, atol=1e-12)
-        np.testing.assert_allclose(result.curl, 0.0, atol=1e-12)
-        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-12)
-
-    def test_antisymmetric_coupling_no_gradient(self):
-        """Antisymmetric K → all coupling in curl component, zero gradient."""
-        knm = np.array([[0.0, 1.0, -0.5], [-1.0, 0.0, 2.0], [0.5, -2.0, 0.0]])
-        phases = np.array([0.0, 0.5, 1.0])
-        result = hodge_decomposition(knm, phases)
-        total = np.sum(
-            knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]),
-            axis=1,
-        )
-        np.testing.assert_allclose(result.gradient, 0.0, atol=1e-12)
-        np.testing.assert_allclose(result.curl, total, atol=1e-12)
-        np.testing.assert_allclose(np.sum(result.curl), 0.0, atol=1e-12)
-
-    def test_two_node_antisymmetric_curl_matches_closed_form(self):
-        """For K_01=a, K_10=-a, curl=[a cos Δθ, -a cos Δθ]."""
-        a = 1.7
-        phases = np.array([0.25, 1.1])
-        knm = np.array([[0.0, a], [-a, 0.0]])
-        result = hodge_decomposition(knm, phases)
-        expected = np.array([a, -a]) * math.cos(phases[1] - phases[0])
-
-        np.testing.assert_allclose(result.gradient, 0.0, atol=1e-12)
-        np.testing.assert_allclose(result.curl, expected, atol=1e-12)
-        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-12)
-
-    def test_global_phase_shift_invariance(self):
-        """Hodge components depend on phase differences, not absolute phase."""
-        rng = np.random.default_rng(7)
-        knm = rng.standard_normal((5, 5))
-        np.fill_diagonal(knm, 0.0)
-        phases = rng.uniform(-np.pi, np.pi, 5)
-        shifted = phases + 17.25
-
-        base = hodge_decomposition(knm, phases)
-        translated = hodge_decomposition(knm, shifted)
-
-        np.testing.assert_allclose(translated.gradient, base.gradient, atol=1e-12)
-        np.testing.assert_allclose(translated.curl, base.curl, atol=1e-12)
-        np.testing.assert_allclose(translated.harmonic, base.harmonic, atol=1e-12)
+    def test_returns_hodge_result_dataclass(self):
+        res = hodge_decomposition(_symmetric_coupling(3), np.zeros(3))
+        assert isinstance(res, HodgeResult)
+        assert res.gradient.shape == (3, 3)
+        assert res.curl.shape == (3, 3)
+        assert res.harmonic.shape == (3, 3)
+        assert res.flow.shape == (3, 3)
+        assert res.potential.shape == (3,)
+        assert isinstance(res.betti_one, int)
 
     def test_reconstruction(self):
-        """gradient + curl + harmonic = total coupling force."""
+        """gradient + curl + harmonic = input coupling current."""
         rng = np.random.default_rng(42)
         knm = rng.standard_normal((5, 5))
-        np.fill_diagonal(knm, 0.0)
         phases = rng.uniform(0, 2 * np.pi, 5)
-        result = hodge_decomposition(knm, phases)
-        total = np.sum(
-            knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]),
-            axis=1,
-        )
+        res = hodge_decomposition(knm, phases)
         np.testing.assert_allclose(
-            result.gradient + result.curl + result.harmonic, total, atol=1e-10
+            res.gradient + res.curl + res.harmonic, res.flow, atol=1e-10
         )
 
-    def test_harmonic_near_zero(self):
-        """For any K, sym+anti decomposition is exact → harmonic ≈ 0."""
-        rng = np.random.default_rng(99)
-        knm = rng.standard_normal((6, 6))
-        phases = rng.uniform(0, 2 * np.pi, 6)
-        result = hodge_decomposition(knm, phases)
-        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-10)
+    def test_zero_coupling_is_all_zero(self):
+        res = hodge_decomposition(np.zeros((4, 4)), np.linspace(0, 1, 4))
+        np.testing.assert_allclose(res.flow, 0.0, atol=1e-15)
+        np.testing.assert_allclose(res.gradient, 0.0, atol=1e-15)
+        np.testing.assert_allclose(res.curl, 0.0, atol=1e-15)
+        np.testing.assert_allclose(res.harmonic, 0.0, atol=1e-15)
+        assert res.betti_one == 0
+
+    def test_complete_graph_curl_free_and_harmonic_free(self):
+        """A triangle-filled complete graph carries no harmonic flow."""
+        knm = _symmetric_coupling(4)
+        phases = np.array([0.0, 0.5, 1.0, 1.5])
+        res = hodge_decomposition(knm, phases)
+        np.testing.assert_allclose(res.harmonic, 0.0, atol=1e-10)
+        assert res.betti_one == 0
+
+    def test_two_node_flow_closed_form(self):
+        """Two coupled oscillators: a single edge, pure gradient flow."""
+        a = 1.7
+        phases = np.array([0.25, 1.1])
+        knm = np.array([[0.0, a], [a, 0.0]])
+        res = hodge_decomposition(knm, phases)
+        expected = a * np.sin(phases[1] - phases[0])
+        assert res.flow[0, 1] == pytest.approx(expected)
+        np.testing.assert_allclose(res.gradient, res.flow, atol=1e-12)
+        np.testing.assert_allclose(res.curl, 0.0, atol=1e-12)
+        np.testing.assert_allclose(res.harmonic, 0.0, atol=1e-12)
+        assert res.betti_one == 0
+
+    def test_global_phase_shift_invariance(self):
+        rng = np.random.default_rng(7)
+        knm = rng.standard_normal((5, 5))
+        knm = 0.5 * (knm + knm.T)
+        phases = rng.uniform(-np.pi, np.pi, 5)
+        base = hodge_decomposition(knm, phases)
+        shifted = hodge_decomposition(knm, phases + 17.25)
+        np.testing.assert_allclose(shifted.gradient, base.gradient, atol=1e-12)
+        np.testing.assert_allclose(shifted.curl, base.curl, atol=1e-12)
+        np.testing.assert_allclose(shifted.harmonic, base.harmonic, atol=1e-12)
 
     def test_empty_phases(self):
-        result = hodge_decomposition(np.zeros((0, 0)), np.array([]))
-        assert len(result.gradient) == 0
-        assert len(result.curl) == 0
-        assert len(result.harmonic) == 0
-
-    def test_returns_hodge_result_dataclass(self):
-        knm = _symmetric_coupling(3)
-        phases = np.zeros(3)
-        result = hodge_decomposition(knm, phases)
-        assert isinstance(result, HodgeResult)
-        np.testing.assert_allclose(
-            result.gradient + result.curl + result.harmonic,
-            np.array([2.0, 2.0, 2.0]),
-            atol=1e-12,
-        )
+        res = hodge_decomposition(np.zeros((0, 0)), np.array([]))
+        assert res.gradient.size == 0
+        assert res.curl.size == 0
+        assert res.harmonic.size == 0
+        assert res.betti_one == 0
 
     def test_single_oscillator(self):
-        """N=1 → no coupling, all components zero."""
-        knm = np.array([[0.0]])
-        phases = np.array([1.0])
-        result = hodge_decomposition(knm, phases)
-        assert result.gradient[0] == pytest.approx(0.0)
-        assert result.curl[0] == pytest.approx(0.0)
+        res = hodge_decomposition(np.array([[0.0]]), np.array([1.0]))
+        np.testing.assert_allclose(res.flow, 0.0)
+        np.testing.assert_allclose(res.gradient, 0.0)
+        np.testing.assert_allclose(res.curl, 0.0)
 
     def test_uniform_scale_scales_all_components(self, monkeypatch):
-        """Scaling K_nm by a scalar scales every component linearly."""
+        """Scaling K_nm by a scalar scales every flow component linearly."""
         import scpn_phase_orchestrator.coupling.hodge as hodge_mod
 
         monkeypatch.setattr(hodge_mod, "ACTIVE_BACKEND", "python")
         monkeypatch.setattr(hodge_mod, "AVAILABLE_BACKENDS", ["python"])
         rng = np.random.default_rng(123)
         knm = rng.standard_normal((5, 5))
-        np.fill_diagonal(knm, 0.0)
-        phases = rng.uniform(0.0, 2 * math.pi, 5)
+        phases = rng.uniform(0.0, 2 * np.pi, 5)
         base = hodge_decomposition(knm, phases)
         doubled = hodge_decomposition(2.5 * knm, phases)
-
-        np.testing.assert_allclose(doubled.gradient, 2.5 * base.gradient, rtol=1e-12)
-        np.testing.assert_allclose(doubled.curl, 2.5 * base.curl, rtol=1e-12)
-        np.testing.assert_allclose(base.harmonic, 0.0, atol=3e-15)
-        np.testing.assert_allclose(doubled.harmonic, 0.0, atol=3e-15)
+        np.testing.assert_allclose(doubled.gradient, 2.5 * base.gradient, rtol=1e-10)
+        np.testing.assert_allclose(doubled.curl, 2.5 * base.curl, rtol=1e-10)
+        np.testing.assert_allclose(doubled.harmonic, 2.5 * base.harmonic, atol=1e-10)
 
     def test_boolean_phase_alias_is_rejected(self):
         knm = np.zeros((2, 2), dtype=np.float64)
-
         with pytest.raises(ValueError, match="phases must not contain boolean"):
             hodge_decomposition(knm, [True, 0.5])
 
     def test_boolean_coupling_alias_is_rejected(self):
         phases = np.array([0.0, 0.5], dtype=np.float64)
         knm = [[0.0, True], [0.0, 0.0]]
-
         with pytest.raises(ValueError, match="knm must not contain boolean"):
             hodge_decomposition(knm, phases)
 
@@ -160,8 +125,9 @@ class TestHodgePipelineWiring:
     """Pipeline: engine phases → Hodge decomposition → coupling analysis."""
 
     def test_engine_phases_to_hodge(self):
-        """UPDEEngine → phases → hodge_decomposition: gradient + curl
-        + harmonic reconstruct total coupling flow."""
+        """UPDEEngine → phases → hodge_decomposition: the three flow
+        components reconstruct the coupling current and the complete
+        graph carries no harmonic part."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         n = 6
@@ -176,8 +142,12 @@ class TestHodgePipelineWiring:
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
 
-        result = hodge_decomposition(knm, phases)
-        assert np.all(np.isfinite(result.gradient))
-        assert np.all(np.isfinite(result.curl))
-        # Symmetric K → curl = 0
-        np.testing.assert_allclose(result.curl, 0.0, atol=1e-10)
+        res = hodge_decomposition(knm, phases)
+        assert np.all(np.isfinite(res.gradient))
+        assert np.all(np.isfinite(res.curl))
+        np.testing.assert_allclose(
+            res.gradient + res.curl + res.harmonic, res.flow, atol=1e-10
+        )
+        # Complete graph (all triangles present) → no harmonic content.
+        np.testing.assert_allclose(res.harmonic, 0.0, atol=1e-10)
+        assert res.betti_one == 0

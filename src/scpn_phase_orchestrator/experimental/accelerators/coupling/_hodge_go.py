@@ -41,6 +41,10 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
         ctypes.c_int,
+        ctypes.POINTER(ctypes.c_longlong),
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_longlong),
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
@@ -53,25 +57,45 @@ def hodge_decomposition_go(
     knm_flat: FloatArray,
     phases: FloatArray,
     n: int,
+    edges_flat: NDArray[np.int64],
+    n_edges: int,
+    tris_flat: NDArray[np.int64],
+    n_tris: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
-    """Compute Hodge gradient, curl, and harmonic terms with the Go backend."""
+    """Compute the Hodge gradient, curl, and harmonic flow matrices with Go."""
 
-    k, p, n = validate_hodge_backend_inputs(knm_flat, phases, n)
+    k, p, n, edges, n_edges, tris, n_tris = validate_hodge_backend_inputs(
+        knm_flat,
+        phases,
+        n,
+        edges_flat,
+        n_edges,
+        tris_flat,
+        n_tris,
+    )
     if n == 0:
-        empty = np.zeros(0, dtype=np.float64)
+        empty = np.zeros((0, 0), dtype=np.float64)
         return empty, empty.copy(), empty.copy()
     lib = _load_lib()
-    gradient = np.zeros(n, dtype=np.float64)
-    curl = np.zeros(n, dtype=np.float64)
-    harmonic = np.zeros(n, dtype=np.float64)
+    gradient = np.zeros(n * n, dtype=np.float64)
+    curl = np.zeros(n * n, dtype=np.float64)
+    harmonic = np.zeros(n * n, dtype=np.float64)
     rc = lib.HodgeDecomposition(
         k.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(int(n)),
+        edges.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
+        ctypes.c_int(int(n_edges)),
+        tris.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
+        ctypes.c_int(int(n_tris)),
         gradient.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         curl.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         harmonic.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
         raise ValueError(f"Go HodgeDecomposition rc={rc}")
-    return gradient, curl, harmonic
+    return (
+        gradient.reshape(n, n),
+        curl.reshape(n, n),
+        harmonic.reshape(n, n),
+    )

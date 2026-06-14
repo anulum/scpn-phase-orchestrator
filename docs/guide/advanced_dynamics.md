@@ -23,21 +23,31 @@ predictor = VariationalPredictor(n=16, dt=0.01)
 
 ::: scpn_phase_orchestrator.upde.prediction
 
-## Hodge Decomposition of Coupling
+## Combinatorial Hodge Decomposition of Coupling
 
-Decomposes the coupling matrix K into three orthogonal components
-via Hodge theory (Jiang et al. 2011):
+Decomposes the Kuramoto coupling current `f_ij = ½(K_ij + K_ji)·sin(θ_j
+− θ_i)` into three L²-orthogonal edge flows via combinatorial Hodge
+theory on the simplicial complex of oscillators (Jiang, Lim, Yao & Ye
+2011):
 
-- **Gradient**: conservative phase-locking flow (symmetric part)
-- **Curl**: rotational circulation flow (antisymmetric part)
-- **Harmonic**: topological residual (invariant under dynamics)
+- **Gradient**: conservative, curl-free flow `grad(s)` from a node
+  potential.
+- **Curl**: divergence-free rotational flow bounded by triangles.
+- **Harmonic**: topological residual in the kernel of the Hodge
+  1-Laplacian; its dimension is the first Betti number `β₁` — non-zero
+  only when the graph carries cycles that no triangle fills.
 
-Answers: "Is this synchronization conservative or rotational?"
+Answers: "Is this synchronisation conservative, rotational, or carried by
+an irreducible topological cycle?"
 
 ```python
-from scpn_phase_orchestrator.coupling.hodge import hodge_decompose
+from scpn_phase_orchestrator.coupling.hodge import hodge_decomposition
 
-gradient, curl, harmonic = hodge_decompose(K)
+result = hodge_decomposition(K, phases)
+result.gradient   # (N, N) antisymmetric conservative flow
+result.curl       # (N, N) rotational flow
+result.harmonic   # (N, N) topological flow
+result.betti_one  # number of independent unfilled cycles
 ```
 
 ::: scpn_phase_orchestrator.coupling.hodge

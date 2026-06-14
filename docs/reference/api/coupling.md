@@ -233,35 +233,77 @@ when entering DEGRADED regime).
 
 ---
 
-## Hodge Decomposition
+## Combinatorial Hodge Decomposition
 
-Decomposes coupling dynamics into three orthogonal components via
-Hodge theory (Jiang et al. 2011):
+Decomposes the Kuramoto coupling current into three L²-orthogonal
+edge-flow components via combinatorial Hodge theory (Jiang, Lim, Yao &
+Ye 2011, *Statistical ranking and combinatorial Hodge theory*,
+Math. Program. **127** (1):203–244):
 
 ```
-total coupling flow = gradient + curl + harmonic
+coupling current  f = gradient ⊕ curl ⊕ harmonic
 ```
+
+The oscillator network is treated as a simplicial complex `(V, E, T)`:
+vertices are oscillators, edges are the pairs `{i, j}` with non-zero
+symmetric coupling, and triangles are the 3-cliques of that graph (or an
+explicit user-supplied set). The decomposed object is the alternating
+edge flow
+
+```
+f_ij = ½(K_ij + K_ji) · sin(θ_j − θ_i)
+```
+
+— the canonical coupling current, built from the symmetric coupling part
+so it satisfies `f_ji = −f_ij`. With node–edge incidence `B1` and
+edge–triangle incidence `B2`:
+
+```
+gradient = B1ᵀ · L0⁺ · (B1 f)     # curl-free conservative flow
+curl     = B2  · L2⁺ · (B2ᵀ f)    # divergence-free rotational flow
+harmonic = f − gradient − curl    # ker of the Hodge 1-Laplacian
+```
+
+where `L0 = B1 B1ᵀ` and `L2 = B2ᵀ B2`. Because `B1 B2 = 0`, the three
+components are mutually L²-orthogonal.
 
 ### HodgeResult (dataclass)
 
 | Field | Type | Physical meaning |
 |-------|------|-----------------|
-| `gradient` | `NDArray` | Conservative phase-locking (from potential) |
-| `curl` | `NDArray` | Rotational circulation (antisymmetric flow) |
-| `harmonic` | `NDArray` | Topological residual (null space of Laplacian) |
+| `gradient` | `NDArray (N, N)` | Conservative (curl-free) flow `grad(s)` |
+| `curl` | `NDArray (N, N)` | Rotational (divergence-free) flow bounded by triangles |
+| `harmonic` | `NDArray (N, N)` | Topological residual in `ker(L1)` (non-zero only on cycles not filled by triangles) |
+| `flow` | `NDArray (N, N)` | The input alternating coupling current |
+| `potential` | `NDArray (N,)` | Minimum-norm node potential `s` with `gradient = grad(s)` |
+| `betti_one` | `int` | First Betti number `β₁` — dimension of the harmonic subspace |
+
+Each flow matrix is antisymmetric (`M[i, j]` is the flow on the oriented
+edge `i → j`, `M[j, i] = −M[i, j]`).
 
 ### Interpretation
 
-- **Gradient-dominated:** system converges to fixed phase configuration.
-  Common in strongly coupled networks.
-- **Curl-dominated:** phases cycle through relationships without
-  converging. Common in networks with asymmetric coupling.
-- **Harmonic component:** topologically invariant under continuous
-  deformation of coupling. In the SCPN consciousness model, this
-  represents the identity invariant — the part of synchronisation
-  that persists across regime changes.
+- **Gradient-dominated:** the current is a node-potential difference and
+  the system relaxes towards a fixed phase configuration.
+- **Curl-dominated:** circulation around filled triangles — local cyclic
+  frustration with no global potential.
+- **Harmonic component:** flows around topological cycles that no
+  triangle bounds; its dimension equals the first Betti number `β₁`. On
+  a triangle-free graph carrying a cycle (for example, a 4-cycle), a
+  circulating current is *purely harmonic* — the topological content
+  that a plain symmetric/antisymmetric matrix split cannot represent. In
+  the SCPN consciousness model this is the identity invariant that
+  persists across regime changes.
 
-`hodge_decomposition(knm, phases)` computes all three components.
+`hodge_decomposition(knm, phases, triangles=None)` computes all three
+components; pass an explicit `triangles` list of node triples to override
+the default 3-clique fill.
+
+Because the decomposition relies on two least-squares pseudoinverse
+solves, exact cross-language parity is not attainable; the dispatcher
+validates each accelerated backend against the NumPy reference within
+`rtol = 1e-10` / `atol = 1e-12` (matching the spectral solver) and falls
+back to NumPy on any mismatch.
 
 Direct accelerator boundary contract: Go, Julia, and Mojo Hodge adapters use a
 single typed `float64` validation path before loading shared-library, Julia, or

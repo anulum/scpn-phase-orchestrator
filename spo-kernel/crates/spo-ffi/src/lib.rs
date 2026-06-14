@@ -2777,11 +2777,16 @@ fn add_langevin_noise_rust<'py>(
 // ─── Hodge Decomposition ──────────────────────────────────────────
 
 #[pyfunction]
+#[allow(clippy::too_many_arguments)]
 fn hodge_decomposition_rust<'py>(
     py: Python<'py>,
     knm_flat: PyReadonlyArray1<'py, f64>,
     phases: PyReadonlyArray1<'py, f64>,
     n: usize,
+    edges_flat: PyReadonlyArray1<'py, i64>,
+    n_edges: usize,
+    tris_flat: PyReadonlyArray1<'py, i64>,
+    n_tris: usize,
 ) -> PyResult<(
     Bound<'py, PyArray1<f64>>,
     Bound<'py, PyArray1<f64>>,
@@ -2793,7 +2798,13 @@ fn hodge_decomposition_rust<'py>(
     let p = phases
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (g, c, h) = hodge::hodge_decomposition(k, p, n);
+    let edges = edges_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let tris = tris_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (g, c, h) = hodge::hodge_decomposition(k, p, n, edges, n_edges, tris, n_tris);
     Ok((
         PyArray1::from_vec(py, g),
         PyArray1::from_vec(py, c),

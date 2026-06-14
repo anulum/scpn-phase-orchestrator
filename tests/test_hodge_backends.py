@@ -4,13 +4,15 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Per-backend parity for Hodge decomposition
+# SCPN Phase Orchestrator — Per-backend parity for the Hodge decomposition
 
 """Cross-backend parity for :func:`hodge_decomposition`.
 
-All four non-Python backends must match the reference within 1e-12
-on gradient + curl + harmonic; Mojo at 1e-9 due to subprocess text
-round-trip.
+All four accelerated backends must match the NumPy reference on the
+gradient, curl, and harmonic flow matrices within 1e-10 (Rust / Julia /
+Go) or 1e-8 (Mojo, subprocess text round-trip). Direct backend adapters
+validate the coupling, phase, edge, and triangle inputs before any
+runtime is loaded.
 """
 
 from __future__ import annotations
@@ -48,10 +50,11 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo impo
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
-HodgeDirectBackend = Callable[
-    [np.ndarray, np.ndarray, object],
-    tuple[np.ndarray, np.ndarray, np.ndarray],
-]
+HodgeDirectBackend = Callable[..., tuple[np.ndarray, np.ndarray, np.ndarray]]
+
+# Complete graph K3: edges (0,1),(0,2),(1,2) and the single 2-simplex.
+_K3_EDGES = np.array([0, 1, 0, 2, 1, 2], dtype=np.int64)
+_K3_TRIS = np.array([0, 1, 2], dtype=np.int64)
 
 
 def test__hodge_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -84,6 +87,10 @@ def _problem(seed: int, n: int = 16):
     return k, phases
 
 
+def _zeros_int() -> np.ndarray:
+    return np.zeros(0, dtype=np.int64)
+
+
 def _mojo_proc(stdout: str) -> object:
     return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
 
@@ -100,32 +107,20 @@ class TestDirectBackendBoundaryContracts:
         ],
     )
     @pytest.mark.parametrize(
-        ("knm_flat", "phases", "n", "error", "match"),
+        ("knm_flat", "phases", "n", "match"),
         [
-            (
-                np.array([True, False, False, True]),
-                np.zeros(2),
-                2,
-                ValueError,
-                "knm_flat",
-            ),
-            (np.array([0.0, np.nan, 0.0, 0.0]), np.zeros(2), 2, ValueError, "finite"),
-            (
-                np.array([0.0, 1.0 + 0.0j, 0.0, 0.0]),
-                np.zeros(2),
-                2,
-                ValueError,
-                "real-valued",
-            ),
-            (np.zeros((2, 2)), np.zeros(2), 2, ValueError, "knm_flat"),
-            (np.zeros(3), np.zeros(2), 2, ValueError, "n\\*n"),
-            (np.zeros(4), np.array([True, False]), 2, ValueError, "phases"),
-            (np.zeros(4), np.array([0.0, np.inf]), 2, ValueError, "finite"),
-            (np.zeros(4), np.array([0.0, 1.0 + 0.0j]), 2, ValueError, "real-valued"),
-            (np.zeros(4), np.array([[0.0, 1.0]]), 2, ValueError, "one-dimensional"),
-            (np.zeros(4), np.zeros(1), 2, ValueError, "phases length"),
-            (np.zeros(4), np.zeros(2), True, ValueError, "n"),
-            (np.zeros(4), np.zeros(2), -1, ValueError, "n"),
+            (np.array([True, False, False, True]), np.zeros(2), 2, "knm_flat"),
+            (np.array([0.0, np.nan, 0.0, 0.0]), np.zeros(2), 2, "finite"),
+            (np.array([0.0, 1.0 + 0.0j, 0.0, 0.0]), np.zeros(2), 2, "real-valued"),
+            (np.zeros((2, 2)), np.zeros(2), 2, "knm_flat"),
+            (np.zeros(3), np.zeros(2), 2, "n\\*n"),
+            (np.zeros(4), np.array([True, False]), 2, "phases"),
+            (np.zeros(4), np.array([0.0, np.inf]), 2, "finite"),
+            (np.zeros(4), np.array([0.0, 1.0 + 0.0j]), 2, "real-valued"),
+            (np.zeros(4), np.array([[0.0, 1.0]]), 2, "one-dimensional"),
+            (np.zeros(4), np.zeros(1), 2, "phases length"),
+            (np.zeros(4), np.zeros(2), True, "n"),
+            (np.zeros(4), np.zeros(2), -1, "n"),
         ],
     )
     def test_validation_precedes_runtime_load(
@@ -134,11 +129,52 @@ class TestDirectBackendBoundaryContracts:
         knm_flat: np.ndarray,
         phases: np.ndarray,
         n: object,
-        error: type[Exception],
         match: str,
     ) -> None:
-        with pytest.raises(error, match=match):
-            backend(knm_flat, phases, n)
+        with pytest.raises(ValueError, match=match):
+            backend(knm_flat, phases, n, _zeros_int(), 0, _zeros_int(), 0)
+
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            hodge_decomposition_go,
+            hodge_decomposition_julia,
+            hodge_decomposition_mojo,
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("edges", "n_edges", "tris", "n_tris", "match"),
+        [
+            (np.array([0, 1, 0, 9], dtype=np.int64), 2, _zeros_int(), 0, r"\[0, 2\)"),
+            (np.array([0, 1], dtype=np.int64), 2, _zeros_int(), 0, "edges_flat length"),
+            (np.array([True, False], dtype=object), 1, _zeros_int(), 0, "boolean"),
+            (
+                np.array([0, 1], dtype=np.int64),
+                1,
+                np.array([0, 1, 9], dtype=np.int64),
+                1,
+                r"\[0, 2\)",
+            ),
+            (
+                np.array([0, 1], dtype=np.int64),
+                1,
+                np.array([0, 1], dtype=np.int64),
+                1,
+                "tris_flat length",
+            ),
+        ],
+    )
+    def test_simplex_validation_rejects_malformed_complex(
+        self,
+        backend: HodgeDirectBackend,
+        edges: np.ndarray,
+        n_edges: int,
+        tris: np.ndarray,
+        n_tris: int,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            backend(np.zeros(4), np.zeros(2), 2, edges, n_edges, tris, n_tris)
 
     @pytest.mark.parametrize(
         "backend",
@@ -156,11 +192,15 @@ class TestDirectBackendBoundaryContracts:
             np.array([], dtype=np.float64),
             np.array([], dtype=np.float64),
             0,
+            _zeros_int(),
+            0,
+            _zeros_int(),
+            0,
         )
         assert gradient.dtype == np.float64
         assert curl.dtype == np.float64
         assert harmonic.dtype == np.float64
-        assert gradient.shape == curl.shape == harmonic.shape == (0,)
+        assert gradient.shape == curl.shape == harmonic.shape == (0, 0)
 
 
 class TestDirectMojoBoundaryContracts:
@@ -169,13 +209,12 @@ class TestDirectMojoBoundaryContracts:
     @pytest.mark.parametrize(
         ("stdout", "match"),
         [
-            ("", "Mojo HODGE returned 0 lines, expected 9"),
-            ("0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n", "expected 9"),
-            ("0\n1\n2\n\n4\n5\n6\n7\n8\n", "finite gradient"),
-            ("0\nbad\n2\n3\n4\n5\n6\n7\n8\n", "finite gradient"),
-            ("0\nnan\n2\n3\n4\n5\n6\n7\n8\n", "finite gradient"),
-            ("0\n1\n2\n3\ninf\n5\n6\n7\n8\n", "finite gradient"),
-            ("0\n1\n2\n3\n4\n5\n6\n7\n-inf\n", "finite gradient"),
+            ("", "Mojo HODGE returned 0 lines, expected 27"),
+            ("\n".join(str(i) for i in range(28)) + "\n", "expected 27"),
+            ("\n".join(["1"] * 13 + [""] + ["1"] * 13) + "\n", "finite gradient"),
+            ("\n".join(["1"] * 13 + ["bad"] + ["1"] * 13) + "\n", "finite gradient"),
+            ("\n".join(["1"] * 13 + ["nan"] + ["1"] * 13) + "\n", "finite gradient"),
+            ("\n".join(["1"] * 13 + ["inf"] + ["1"] * 13) + "\n", "finite gradient"),
         ],
     )
     def test_mojo_runner_rejects_malformed_raw_stdout(
@@ -184,7 +223,8 @@ class TestDirectMojoBoundaryContracts:
         stdout: str,
         match: str,
     ) -> None:
-        knm, phases = _problem(23, n=3)
+        knm = (np.ones((3, 3)) - np.eye(3)).ravel()
+        phases = np.array([0.0, 1.0, 2.3], dtype=np.float64)
         monkeypatch.setattr(_hodge_mojo, "_ensure_exe", lambda: "hodge")
         monkeypatch.setattr(
             _hodge_mojo.subprocess,
@@ -193,7 +233,9 @@ class TestDirectMojoBoundaryContracts:
         )
 
         with pytest.raises(ValueError, match=match):
-            _hodge_mojo.hodge_decomposition_mojo(knm.ravel(), phases, 3)
+            _hodge_mojo.hodge_decomposition_mojo(
+                knm, phases, 3, _K3_EDGES, 3, _K3_TRIS, 1
+            )
 
 
 class TestRustParity:
@@ -219,9 +261,9 @@ class TestRustParity:
             got = hodge_decomposition(knm, phases)
         finally:
             _reset(prev)
-        np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-12)
-        np.testing.assert_allclose(got.curl, ref.curl, atol=1e-12)
-        np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-12)
+        np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-10)
+        np.testing.assert_allclose(got.curl, ref.curl, atol=1e-10)
+        np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-10)
 
 
 class TestJuliaParity:
@@ -239,9 +281,9 @@ class TestJuliaParity:
             got = hodge_decomposition(knm, phases)
         finally:
             _reset(prev)
-        np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-12)
-        np.testing.assert_allclose(got.curl, ref.curl, atol=1e-12)
-        np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-12)
+        np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-10)
+        np.testing.assert_allclose(got.curl, ref.curl, atol=1e-10)
+        np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-10)
 
 
 class TestGoParity:
@@ -267,9 +309,9 @@ class TestGoParity:
             got = hodge_decomposition(knm, phases)
         finally:
             _reset(prev)
-        np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-12)
-        np.testing.assert_allclose(got.curl, ref.curl, atol=1e-12)
-        np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-12)
+        np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-10)
+        np.testing.assert_allclose(got.curl, ref.curl, atol=1e-10)
+        np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-10)
 
 
 class TestMojoParity:
@@ -287,9 +329,9 @@ class TestMojoParity:
             got = hodge_decomposition(knm, phases)
         finally:
             _reset(prev)
-        np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-9)
-        np.testing.assert_allclose(got.curl, ref.curl, atol=1e-9)
-        np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-9)
+        np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-8)
+        np.testing.assert_allclose(got.curl, ref.curl, atol=1e-8)
+        np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-8)
 
 
 class TestCrossBackendConsistency:
@@ -298,13 +340,13 @@ class TestCrossBackendConsistency:
         reason="Only Python fallback available",
     )
     def test_all_backends_agree(self) -> None:
-        knm, phases = _problem(2026, n=20)
+        knm, phases = _problem(2026, n=12)
         ref = _reference(knm, phases)
         tolerances = {
-            "rust": 1e-12,
-            "julia": 1e-12,
-            "go": 1e-12,
-            "mojo": 1e-9,
+            "rust": 1e-10,
+            "julia": 1e-10,
+            "go": 1e-10,
+            "mojo": 1e-8,
             "python": 0.0,
         }
         for backend in AVAILABLE_BACKENDS:
@@ -317,6 +359,7 @@ class TestCrossBackendConsistency:
             np.testing.assert_allclose(got.gradient, ref.gradient, atol=atol)
             np.testing.assert_allclose(got.curl, ref.curl, atol=atol)
             np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=atol)
+            assert got.betti_one == ref.betti_one
 
 
 class TestBackendTypingContracts:
@@ -332,24 +375,27 @@ class TestBackendTypingContracts:
         hints = get_type_hints(fn)
         for name in ("knm_flat", "phases", "return"):
             text = str(hints[name])
-            assert_precise_ndarray_hint(
-                hints[name],
-                context=f"{label}:{name}",
-            )
+            assert_precise_ndarray_hint(hints[name], context=f"{label}:{name}")
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
+
+
+def _matrix_backend(*args: object) -> tuple:
+    n = int(args[2])  # type: ignore[arg-type]
+    return (
+        np.full((n, n), 1.0, dtype=np.float64),
+        np.full((n, n), 2.0, dtype=np.float64),
+        np.full((n, n), 3.0, dtype=np.float64),
+    )
 
 
 class TestBackendLoaderDispatch:
     def test_rust_loader_wraps_spo_kernel_flattened_arrays(self, monkeypatch) -> None:
-        calls: list[tuple[np.ndarray, np.ndarray, int]] = []
+        calls: list[tuple] = []
 
-        def fake_rust(knm_flat, phases, n):
-            calls.append((knm_flat, phases, n))
-            return (
-                np.full(n, 1.0, dtype=np.float64),
-                np.full(n, 2.0, dtype=np.float64),
-                np.full(n, 3.0, dtype=np.float64),
-            )
+        def fake_rust(knm_flat, phases, n, edges, n_edges, tris, n_tris):
+            calls.append((knm_flat, phases, n, n_edges, n_tris))
+            flat = np.arange(n * n, dtype=np.float64)
+            return (flat, flat + 1.0, flat + 2.0)
 
         fake_module = types.ModuleType("spo_kernel")
         fake_module.hodge_decomposition_rust = fake_rust
@@ -359,11 +405,12 @@ class TestBackendLoaderDispatch:
         knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
         phases = np.array([0.1, 0.4], dtype=np.float64)
 
-        gradient, curl, harmonic = backend(knm, phases, 2)
+        gradient, curl, harmonic = backend(
+            knm, phases, 2, _K3_EDGES[:2], 1, _zeros_int(), 0
+        )
 
-        np.testing.assert_array_equal(gradient, [1.0, 1.0])
-        np.testing.assert_array_equal(curl, [2.0, 2.0])
-        np.testing.assert_array_equal(harmonic, [3.0, 3.0])
+        assert gradient.shape == (2, 2)
+        np.testing.assert_array_equal(gradient, np.arange(4).reshape(2, 2))
         assert calls[0][2] == 2
         assert calls[0][0].flags.c_contiguous
         np.testing.assert_array_equal(calls[0][0], knm.ravel())
@@ -396,13 +443,9 @@ class TestBackendLoaderDispatch:
         def fake_ensure_exe() -> None:
             events.append("ensure")
 
-        def fake_backend(knm_flat: np.ndarray, phases: np.ndarray, n: int) -> tuple:
+        def fake_backend(*args: object) -> tuple:
             events.append("called")
-            return (
-                np.full(n, 1.0, dtype=np.float64),
-                np.full(n, 2.0, dtype=np.float64),
-                np.full(n, 3.0, dtype=np.float64),
-            )
+            return _matrix_backend(*args)
 
         fake_module = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo"
@@ -418,11 +461,13 @@ class TestBackendLoaderDispatch:
         backend = h_mod._load_mojo_fn()
         knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
         phases = np.array([0.1, 0.4], dtype=np.float64)
-        gradient, curl, harmonic = backend(knm, phases, 2)
+        gradient, curl, harmonic = backend(
+            knm, phases, 2, _K3_EDGES[:2], 1, _zeros_int(), 0
+        )
 
-        np.testing.assert_array_equal(gradient, np.full(2, 1.0, dtype=np.float64))
-        np.testing.assert_array_equal(curl, np.full(2, 2.0, dtype=np.float64))
-        np.testing.assert_array_equal(harmonic, np.full(2, 3.0, dtype=np.float64))
+        np.testing.assert_array_equal(gradient, np.full((2, 2), 1.0))
+        np.testing.assert_array_equal(curl, np.full((2, 2), 2.0))
+        np.testing.assert_array_equal(harmonic, np.full((2, 2), 3.0))
         assert events == ["ensure", "called"]
 
     def test_go_loader_invokes_shared_object_loader(self, monkeypatch) -> None:
@@ -431,13 +476,9 @@ class TestBackendLoaderDispatch:
         def fake_load_lib() -> None:
             events.append("load")
 
-        def fake_backend(knm_flat: np.ndarray, phases: np.ndarray, n: int) -> tuple:
+        def fake_backend(*args: object) -> tuple:
             events.append("called")
-            return (
-                np.full(n, 1.0, dtype=np.float64),
-                np.full(n, 2.0, dtype=np.float64),
-                np.full(n, 3.0, dtype=np.float64),
-            )
+            return _matrix_backend(*args)
 
         fake_module = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go"
@@ -453,12 +494,14 @@ class TestBackendLoaderDispatch:
         backend = h_mod._load_go_fn()
         knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
         phases = np.array([0.1, 0.4], dtype=np.float64)
-        gradient, curl, harmonic = backend(knm, phases, 2)
+        gradient, curl, harmonic = backend(
+            knm, phases, 2, _K3_EDGES[:2], 1, _zeros_int(), 0
+        )
 
         assert events == ["load", "called"]
-        np.testing.assert_array_equal(gradient, np.full(2, 1.0, dtype=np.float64))
-        np.testing.assert_array_equal(curl, np.full(2, 2.0, dtype=np.float64))
-        np.testing.assert_array_equal(harmonic, np.full(2, 3.0, dtype=np.float64))
+        np.testing.assert_array_equal(gradient, np.full((2, 2), 1.0))
+        np.testing.assert_array_equal(curl, np.full((2, 2), 2.0))
+        np.testing.assert_array_equal(harmonic, np.full((2, 2), 3.0))
 
 
 class TestBackendResolution:
@@ -474,17 +517,7 @@ class TestBackendResolution:
 
         def _go() -> h_mod.HodgeBackend:
             calls.append("go")
-
-            def _backend(
-                knm_flat: np.ndarray, phases: np.ndarray, n: int
-            ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-                return (
-                    np.zeros(n, dtype=np.float64),
-                    np.zeros(n, dtype=np.float64),
-                    np.zeros(n, dtype=np.float64),
-                )
-
-            return _backend
+            return _matrix_backend
 
         monkeypatch.setitem(h_mod._LOADERS, "rust", _fail)
         monkeypatch.setitem(h_mod._LOADERS, "mojo", _fail)

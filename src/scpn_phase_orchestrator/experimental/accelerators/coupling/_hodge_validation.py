@@ -17,6 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = ["validate_hodge_backend_inputs"]
 
@@ -57,11 +58,53 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     return np.ascontiguousarray(vector, dtype=np.float64)
 
 
+def _validate_simplex_array(
+    value: object,
+    *,
+    name: str,
+    arity: int,
+    count: int,
+    n: int,
+) -> IntArray:
+    """Validate a flattened simplex index array (edges or triangles)."""
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be integer-valued")
+    try:
+        indices = raw.astype(np.int64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be an integer index array") from exc
+    if indices.ndim != 1:
+        raise ValueError(f"{name} must be one-dimensional, got shape {indices.shape}")
+    if indices.size != arity * count:
+        raise ValueError(
+            f"{name} length {indices.size} does not match {arity}*{count}"
+        )
+    if count > 0 and (np.any(indices < 0) or np.any(indices >= n)):
+        raise ValueError(f"{name} indices must lie in [0, {n})")
+    return np.ascontiguousarray(indices, dtype=np.int64)
+
+
+def _validate_count(value: object, *, name: str) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a non-negative integer")
+    count = int(value)
+    if count < 0:
+        raise ValueError(f"{name} must be non-negative, got {count}")
+    return count
+
+
 def validate_hodge_backend_inputs(
     knm_flat: object,
     phases: object,
     n: object,
-) -> tuple[FloatArray, FloatArray, int]:
+    edges_flat: object,
+    n_edges: object,
+    tris_flat: object,
+    n_tris: object,
+) -> tuple[FloatArray, FloatArray, int, IntArray, int, IntArray, int]:
     """Validate direct Hodge inputs before optional runtime loading."""
 
     n_int = _validate_n(n)
@@ -72,4 +115,20 @@ def validate_hodge_backend_inputs(
     p = _validate_float_vector(phases, name="phases")
     if p.size != n_int:
         raise ValueError(f"phases length {p.size} does not match n={n_int}")
-    return k, p, n_int
+    n_edges_int = _validate_count(n_edges, name="n_edges")
+    edges = _validate_simplex_array(
+        edges_flat,
+        name="edges_flat",
+        arity=2,
+        count=n_edges_int,
+        n=n_int,
+    )
+    n_tris_int = _validate_count(n_tris, name="n_tris")
+    tris = _validate_simplex_array(
+        tris_flat,
+        name="tris_flat",
+        arity=3,
+        count=n_tris_int,
+        n=n_int,
+    )
+    return k, p, n_int, edges, n_edges_int, tris, n_tris_int

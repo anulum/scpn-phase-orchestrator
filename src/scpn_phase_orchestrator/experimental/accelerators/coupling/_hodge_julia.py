@@ -42,21 +42,37 @@ def hodge_decomposition_julia(
     knm_flat: FloatArray,
     phases: FloatArray,
     n: int,
+    edges_flat: NDArray[np.int64],
+    n_edges: int,
+    tris_flat: NDArray[np.int64],
+    n_tris: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
-    """Compute Hodge gradient, curl, and harmonic terms with Julia."""
+    """Compute the Hodge gradient, curl, and harmonic flow matrices with Julia."""
 
-    k, p, n = validate_hodge_backend_inputs(knm_flat, phases, n)
+    k, p, n, edges, n_edges, tris, n_tris = validate_hodge_backend_inputs(
+        knm_flat,
+        phases,
+        n,
+        edges_flat,
+        n_edges,
+        tris_flat,
+        n_tris,
+    )
     if n == 0:
-        empty = np.zeros(0, dtype=np.float64)
+        empty = np.zeros((0, 0), dtype=np.float64)
         return empty, empty.copy(), empty.copy()
     jl = _ensure()
     g, c, h = jl.hodge_decomposition(
         k,
         p,
         n,
+        edges,
+        n_edges,
+        tris,
+        n_tris,
     )
     return (
-        np.asarray(g, dtype=np.float64),
-        np.asarray(c, dtype=np.float64),
-        np.asarray(h, dtype=np.float64),
+        np.asarray(g, dtype=np.float64).reshape(n, n),
+        np.asarray(c, dtype=np.float64).reshape(n, n),
+        np.asarray(h, dtype=np.float64).reshape(n, n),
     )
