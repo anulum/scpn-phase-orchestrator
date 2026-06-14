@@ -188,12 +188,8 @@ def _valid_domain_obligation() -> ToposDomainObligation:
             PolicyRule(
                 name="grid_coherence_recovery",
                 regimes=["CRITICAL"],
-                condition=PolicyCondition(
-                    metric="R", layer=0, op="<", threshold=0.5
-                ),
-                actions=[
-                    PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)
-                ],
+                condition=PolicyCondition(metric="R", layer=0, op="<", threshold=0.5),
+                actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
             ),
         ),
         obligations=(
@@ -235,11 +231,7 @@ def test_valid_domain_obligation_serialises_cleanly():
             "obligations must contain only ToposProofObligation values",
         ),
         (
-            {
-                "obligations": (
-                    ToposProofObligation(name="", description="blank name"),
-                )
-            },
+            {"obligations": (ToposProofObligation(name="", description="blank name"),)},
             "obligation names must be non-empty",
         ),
         ({"proof_boundary": "wrong_boundary"}, "unexpected proof boundary"),

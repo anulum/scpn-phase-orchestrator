@@ -162,9 +162,7 @@ def _require_juliacall_runtime() -> None:
     # that as an unavailable backend rather than letting the later engine call
     # crash with ImportError after dispatch.
     if not hasattr(juliacall, "Main"):
-        raise ImportError(
-            "juliacall.Main unavailable; Julia runtime not initialised"
-        )
+        raise ImportError("juliacall.Main unavailable; Julia runtime not initialised")
 
 
 def _load_julia_fn() -> Callable[..., FloatArray]:

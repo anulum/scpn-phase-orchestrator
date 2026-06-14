@@ -149,9 +149,7 @@ class TestJuliaSignalHandlingGuard:
     def test_operator_override_is_preserved(self):
         """An operator-provided value must not be overwritten by the package."""
         assert (
-            self._handle_signals_after_import(
-                {"PYTHON_JULIACALL_HANDLE_SIGNALS": "no"}
-            )
+            self._handle_signals_after_import({"PYTHON_JULIACALL_HANDLE_SIGNALS": "no"})
             == "no"
         )
 
