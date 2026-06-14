@@ -1,10 +1,39 @@
 # SCPN Phase Orchestrator
 
-Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics.
+**Many systems succeed or fail on timing.** When thousands of microservices
+retry in the same instant, the synchronised surge takes the cluster down. When
+generators on a power grid drift out of step, the grid trips. When neurons fire
+in lockstep, it looks like a seizure. When fusion-plasma modes phase-lock, the
+reactor disrupts. These look like unrelated incidents, but they are one problem
+wearing different clothes: **coupled rhythms drifting into — or out of — sync.**
+
+SCPN Phase Orchestrator (SPO) is a Python library and CLI for that problem. It
+takes the repeating signals a system already produces — waveforms, event
+streams, state changes — turns them into a shared language of **phase** (where
+each rhythm sits in its cycle), and answers three operational questions:
+
+1. **What is locking together,** and is that lock useful or dangerous?
+2. **How close is the system to a regime change** — a blackout, a cascade, a
+   desync, a seizure?
+3. **Which single, bounded knob** can steer it back — leaving a reviewable,
+   replayable record *before* anything touches hardware?
+
+The same engine serves a grid operator, an SRE chasing retry storms, a plasma
+physicist, and a neuroscientist, because underneath they are all
+coupled-oscillator systems. SPO ships **36 ready-made domain packs** (power
+grids, fusion, cloud queues, cardiac and EEG rhythms, swarm robotics, traffic,
+markets, and more) plus the tools to bind a new one — and it never actuates
+blindly: every proposed change is bounded, rate-limited, and audit-logged for
+human review.
+
+*For specialists, in one line:* a domain-agnostic coherence-control compiler
+built on Kuramoto/UPDE phase dynamics. New here? Start with
+[Use Cases and Value Map](docs/getting-started/use_cases.md) or the
+[Executive Overview](docs/getting-started/executive_overview.md).
 
 > **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. APIs may evolve as this work progresses.
 
-**Version:** 0.8.0
+**Version:** 0.9.0
 **Status:** active development; public inventory is generated below.
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
@@ -32,9 +61,13 @@ evidence pages and GitHub run records.
 
 ## Current Release Boundary
 
-Version `0.8.0` is the PHA-C formal-acceptance release. It promotes the
-completed downstream accelerator chain from scattered implementation evidence
-into a single documented review boundary:
+Version `0.9.0` builds on the `0.8.0` PHA-C formal-acceptance baseline. It
+completes the fastest-first polyglot compute chain (Rust → Mojo → Julia → Go →
+Python, parity-gated) across the delay, PID, Hodge, E/I-balance, swarmalator,
+winding, and Poincaré surfaces, and front-loads the documentation so newcomers
+can grasp the purpose before the evidence boundary. The release continues to
+promote the downstream accelerator chain into a single documented review
+boundary:
 
 | Release surface | What is now reviewable |
 |-----------------|------------------------|
@@ -178,7 +211,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.8.0 |
+| Package version | 0.9.0 |
 | Public API exports | 24 |
 | Python package modules | 500 |
 | Core Engine modules | 239 |

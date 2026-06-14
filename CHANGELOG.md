@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-15
+
+### Added
+
+- Fastest-first polyglot compute chain (Rust, Mojo, Julia, Go, Python) with
+  per-backend parity gates registered in the aggregate reference suite for
+  time-delayed Kuramoto integration, time-series Williams-Beer PID
+  decomposition, combinatorial Hodge decomposition, and E/I-balance
+  interaction typing.
+- Plain-language introduction on the README and documentation landing page
+  covering the problem, cross-domain applications, and value ahead of the
+  technical and evidence boundaries.
+
+### Changed
+
+- E/I balance now resolves into the four EI-Kuramoto interaction types.
+- Williams-Beer PID rebuilt as a time-series redundancy and synergy estimator
+  over a phase history, replacing the constant-target formulation that returned
+  zero for all inputs.
+- Hodge analysis replaced with a true combinatorial Hodge decomposition across
+  the full polyglot chain.
+- Version bumped to 0.9.0 across package metadata, the Rust workspace, the
+  citation file, and the generated capability inventory.
+
+### Fixed
+
+- Swarmalator coupling uses the canonical OHS inverse-distance repulsion across
+  the full polyglot chain.
+- Winding-number phase increments wrap to the documented (-pi, pi] interval.
+- Poincare phase-section interpolation corrected and covered by a polyglot
+  parity gate.
+
 ## [0.8.0] - 2026-06-05
 
 ### Added

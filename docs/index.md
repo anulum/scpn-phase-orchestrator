@@ -27,13 +27,26 @@ hide:
 
 ---
 
-Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics. Any hierarchical coupled-cycle system --- plasma, cloud infrastructure, traffic, power grids, factories, biology --- maps onto the same engine.
+**Many systems succeed or fail on timing.** A retry storm that synchronises
+takes down a cluster; generators that drift out of step trip a power grid;
+neurons firing in lockstep look like a seizure; fusion-plasma modes that
+phase-lock disrupt the reactor. Different domains, one underlying problem:
+**coupled rhythms drifting into — or out of — sync.**
 
-SPO is best read as a compiler from domain telemetry to phase-control evidence:
-bind signals, extract oscillator phases, run coupled dynamics, measure
-coherence, classify regimes, and emit bounded review artefacts. It is useful
-when a system has repeated behaviour and the operator needs to know whether
-synchrony is helpful, harmful, causal, or controllable.
+SCPN Phase Orchestrator (SPO) is a Python library and CLI for that problem. It
+takes the repeating signals a system already produces — waveforms, event
+streams, state changes — turns them into a shared language of **phase**, and
+tells you what is locking together, how close the system is to a regime change,
+and which single bounded knob can steer it back. Every proposed change is
+bounded, rate-limited, and audit-logged for human review before it reaches
+hardware. The same engine maps onto plasma, cloud infrastructure, traffic,
+power grids, factories, and biology, because underneath they are all
+coupled-cycle systems.
+
+*For specialists, in one line:* a domain-agnostic coherence-control compiler
+built on Kuramoto/UPDE phase dynamics — bind signals, extract oscillator
+phases, run coupled dynamics, measure coherence, classify regimes, and emit
+bounded review artefacts.
 
 ## What this project is for
 
@@ -77,8 +90,11 @@ review record.
 
 ## Current Release Boundary
 
-Version `0.8.0` marks the PHA-C formal-acceptance release. The public docs now
-route readers from use-case selection through Python APIs, tutorials, notebooks,
+Version `0.9.0` builds on the `0.8.0` PHA-C formal-acceptance baseline,
+completes the parity-gated polyglot compute chain across the delay, PID, Hodge,
+E/I-balance, swarmalator, winding, and Poincaré surfaces, and front-loads the
+documentation so newcomers grasp the purpose first. The public docs route
+readers from use-case selection through Python APIs, tutorials, notebooks,
 benchmark snapshots, and PHA-C proof-obligation pages without requiring them to
 reverse-engineer the source tree.
 
