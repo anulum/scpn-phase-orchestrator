@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
+import time
 
 import pytest
 
@@ -166,3 +168,179 @@ def test_non_finite_policy_numbers_are_rejected_from_example_hash():
 
     with pytest.raises(ValueError, match="finite JSON"):
         example.to_audit_record()
+
+
+def _valid_domain_obligation() -> ToposDomainObligation:
+    """Build one fully valid example so error tests can mutate single fields."""
+    artifacts = compile_symbolic_binding(
+        "A 1 layer power grid symbolic control prompt",
+        name="topos_domain_obligation_valid_base",
+        oscillators_per_layer=1,
+        dry_run_steps=1,
+        retrieval_root=None,
+        docs_root=None,
+    )
+    return ToposDomainObligation(
+        domain="power_grid",
+        symbolic_prompt="A 1 layer power grid symbolic control prompt",
+        binding_spec=artifacts.binding_spec,
+        policy_rules=(
+            PolicyRule(
+                name="grid_coherence_recovery",
+                regimes=["CRITICAL"],
+                condition=PolicyCondition(
+                    metric="R", layer=0, op="<", threshold=0.5
+                ),
+                actions=[
+                    PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)
+                ],
+            ),
+        ),
+        obligations=(
+            ToposProofObligation(
+                name="power_grid_coherence_guard",
+                description="Maintain categorical coherence under load shifts.",
+            ),
+        ),
+        binding_object_count=1,
+        policy_object_count=1,
+        non_actuating=True,
+        proof_boundary=BOUNDARY_TAG,
+        passed=True,
+    )
+
+
+def test_valid_domain_obligation_serialises_cleanly():
+    record = _valid_domain_obligation().to_audit_record()
+
+    assert REQUIRED_KEYS.issubset(record.keys())
+    assert record["domain"] == "power_grid"
+    assert record["non_actuating"] is True
+    assert record["proof_boundary"] == BOUNDARY_TAG
+    assert isinstance(record["example_hash"], str) and record["example_hash"]
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"domain": ""}, "example domain must be a non-empty string"),
+        ({"domain": "   "}, "example domain must be a non-empty string"),
+        ({"symbolic_prompt": 123}, "symbolic prompt must be a non-empty string"),
+        ({"symbolic_prompt": "  "}, "symbolic prompt must be a non-empty string"),
+        ({"binding_spec": None}, "binding spec must be a BindingSpec"),
+        ({"policy_rules": ()}, "policy rules must be a non-empty tuple"),
+        ({"obligations": ()}, "obligations must be a non-empty tuple"),
+        (
+            {"obligations": (1,)},
+            "obligations must contain only ToposProofObligation values",
+        ),
+        (
+            {
+                "obligations": (
+                    ToposProofObligation(name="", description="blank name"),
+                )
+            },
+            "obligation names must be non-empty",
+        ),
+        ({"proof_boundary": "wrong_boundary"}, "unexpected proof boundary"),
+        (
+            {"binding_object_count": 0},
+            "binding_object_count must be a positive integer",
+        ),
+        (
+            {"binding_object_count": 1.5},
+            "binding_object_count must be a positive integer",
+        ),
+        ({"policy_object_count": 0}, "policy_object_count must be a positive integer"),
+        (
+            {"policy_object_count": 1.5},
+            "policy_object_count must be a positive integer",
+        ),
+        ({"non_actuating": False}, "non_actuating must be True"),
+        ({"passed": False}, "all obligations must be passed"),
+    ],
+)
+def test_to_audit_record_rejects_invalid_fields(overrides, match):
+    candidate = dataclasses.replace(_valid_domain_obligation(), **overrides)
+    with pytest.raises(ValueError, match=match):
+        candidate.to_audit_record()
+
+
+def test_build_examples_rejects_non_dict_audit_record(monkeypatch):
+    monkeypatch.setattr(
+        ToposDomainObligation, "to_audit_record", lambda self: "not-a-dict"
+    )
+    with pytest.raises(ValueError, match="example manifest must be a dict"):
+        build_topos_domain_obligation_examples()
+
+
+def test_build_examples_rejects_blank_example_hash(monkeypatch):
+    monkeypatch.setattr(
+        ToposDomainObligation, "to_audit_record", lambda self: {"example_hash": ""}
+    )
+    with pytest.raises(ValueError, match="stable example_hash"):
+        build_topos_domain_obligation_examples()
+
+
+def test_build_domain_example_rejects_empty_policy_rules():
+    from scpn_phase_orchestrator.binding.topos_examples import _build_domain_example
+
+    with pytest.raises(ValueError, match="policy rules must be non-empty"):
+        _build_domain_example(
+            domain="power_grid",
+            symbolic_prompt="A 1 layer power grid symbolic control prompt",
+            compilation_name="topos_empty_policy_rules",
+            oscillators_per_layer=1,
+            dry_run_steps=1,
+            policy_rules=(),
+            obligations=(("coherence_guard", "Maintain coherence."),),
+        )
+
+
+def test_build_domain_example_raises_on_compilation_failure(monkeypatch):
+    from scpn_phase_orchestrator.binding import topos_examples
+
+    class _FailingArtifacts:
+        validation_errors = ["layer count mismatch"]
+
+    monkeypatch.setattr(
+        topos_examples,
+        "compile_symbolic_binding",
+        lambda *args, **kwargs: _FailingArtifacts(),
+    )
+
+    with pytest.raises(ValueError, match="compilation for 'power_grid' failed"):
+        topos_examples._build_domain_example(
+            domain="power_grid",
+            symbolic_prompt="A 1 layer power grid symbolic control prompt",
+            compilation_name="topos_compilation_failure",
+            oscillators_per_layer=1,
+            dry_run_steps=1,
+            policy_rules=(
+                PolicyRule(
+                    name="grid_coherence_recovery",
+                    regimes=["CRITICAL"],
+                    condition=PolicyCondition(
+                        metric="R", layer=0, op="<", threshold=0.5
+                    ),
+                    actions=[
+                        PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)
+                    ],
+                ),
+            ),
+            obligations=(("coherence_guard", "Maintain coherence."),),
+        )
+
+
+def test_build_examples_performance_budget():
+    build_topos_domain_obligation_examples()  # warm import/compile caches
+
+    start = time.perf_counter()
+    examples = build_topos_domain_obligation_examples()
+    elapsed = time.perf_counter() - start
+
+    assert len(examples) >= 3
+    # Measured mean ~29 ms on the i5-11600K workstation (non-isolated functional
+    # budget, not a published benchmark). 0.5 s ceiling guards against
+    # algorithmic regression while tolerating a loaded host.
+    assert elapsed < 0.5, f"example build regressed: {elapsed * 1000:.1f} ms"
