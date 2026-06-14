@@ -334,7 +334,7 @@ class TestLyapunovRustDispatch:
         assert spec.shape == (3,)
         assert np.all(np.isfinite(spec))
 
-    def test_spectrum_falls_back_when_backend_returns_invalid_payload(
+    def test_spectrum_fails_closed_when_backend_returns_invalid_payload(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         def _invalid_backend(*_args: object, **_kwargs: object) -> np.ndarray:
@@ -347,13 +347,10 @@ class TestLyapunovRustDispatch:
         knm = _all_to_all(3, k=0.4)
         alpha = np.zeros((3, 3), dtype=np.float64)
 
-        spec = lyapunov_mod.lyapunov_spectrum(
-            phases, omegas, knm, alpha, dt=0.01, n_steps=10, qr_interval=2
-        )
-
-        assert spec.shape == (3,)
-        assert np.all(np.isfinite(spec))
-        assert np.all(spec[:-1] >= spec[1:] - 1e-12)
+        with pytest.raises(ValueError):
+            lyapunov_mod.lyapunov_spectrum(
+                phases, omegas, knm, alpha, dt=0.01, n_steps=10, qr_interval=2
+            )
 
     def test_dispatch_falls_back_to_python_when_loader_fails(
         self, monkeypatch: pytest.MonkeyPatch

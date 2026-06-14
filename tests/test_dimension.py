@@ -416,7 +416,7 @@ class TestBackendDispatch:
             np.array([0.5 + 1.0j, 0.75 + 0.0j], dtype=np.complex128),
         ],
     )
-    def test_invalid_correlation_integral_backend_payload_falls_back(
+    def test_invalid_correlation_integral_backend_payload_fails_closed(
         self,
         monkeypatch,
         backend_output: np.ndarray,
@@ -433,24 +433,23 @@ class TestBackendDispatch:
         dim_mod._BACKEND_FN_CACHE.clear()
         monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {"ci": fake_ci})
         try:
-            C = correlation_integral(
-                np.array([[0.0], [1.0], [2.0]], dtype=np.float64),
-                np.array([0.5, 1.5], dtype=np.float64),
-                max_pairs=10,
-            )
+            with pytest.raises(ValueError):
+                correlation_integral(
+                    np.array([[0.0], [1.0], [2.0]], dtype=np.float64),
+                    np.array([0.5, 1.5], dtype=np.float64),
+                    max_pairs=10,
+                )
         finally:
             dim_mod.ACTIVE_BACKEND = previous_backend
             dim_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
             dim_mod._BACKEND_FN_CACHE.clear()
 
-        np.testing.assert_allclose(C, [0.0, 2.0 / 3.0])
-
     @pytest.mark.parametrize(
         "backend_value",
         [-0.1, np.nan, np.inf, 4.0, True, np.bool_(True)],
     )
-    def test_invalid_kaplan_yorke_backend_payload_falls_back(
+    def test_invalid_kaplan_yorke_backend_payload_fails_closed(
         self,
         monkeypatch,
         backend_value: object,
@@ -463,21 +462,18 @@ class TestBackendDispatch:
         def fake_ky(*_args: object, **_kwargs: object) -> object:
             return backend_value
 
-        dim_mod.ACTIVE_BACKEND = "python"
-        expected = kaplan_yorke_dimension(le)
         dim_mod.ACTIVE_BACKEND = "go"
         dim_mod.AVAILABLE_BACKENDS = ["go", "python"]
         dim_mod._BACKEND_FN_CACHE.clear()
         monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {"ky": fake_ky})
         try:
-            got = kaplan_yorke_dimension(le)
+            with pytest.raises(ValueError):
+                kaplan_yorke_dimension(le)
         finally:
             dim_mod.ACTIVE_BACKEND = previous_backend
             dim_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
             dim_mod._BACKEND_FN_CACHE.clear()
-
-        assert got == expected
 
     def test_dispatch_falls_through_to_next_available_backend(self, monkeypatch):
         previous_backend = dim_mod.ACTIVE_BACKEND

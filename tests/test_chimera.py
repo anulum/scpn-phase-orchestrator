@@ -214,7 +214,7 @@ def test_local_order_parameter_falls_back_when_backend_raises(
         np.array([0.5, np.bool_(True)], dtype=object),
     ],
 )
-def test_local_order_parameter_invalid_backend_payload_falls_back(
+def test_local_order_parameter_invalid_backend_payload_fails_closed(
     monkeypatch: pytest.MonkeyPatch,
     backend_output: np.ndarray,
 ) -> None:
@@ -229,9 +229,8 @@ def test_local_order_parameter_invalid_backend_payload_falls_back(
     phases = np.array([0.0, 0.0], dtype=np.float64)
     knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
 
-    local = local_order_parameter(phases, knm)
-
-    np.testing.assert_allclose(local, [1.0, 1.0])
+    with pytest.raises(ValueError):
+        local_order_parameter(phases, knm)
 
 
 def test_dispatch_falls_back_to_python_when_loader_fails(

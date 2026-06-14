@@ -486,7 +486,7 @@ class TestEmbeddingBackendFallbacks:
             np.zeros((2, 3), dtype=np.float64),
         ],
     )
-    def test_invalid_delay_embed_backend_payload_falls_back_to_python(
+    def test_invalid_delay_embed_backend_payload_fails_closed(
         self,
         monkeypatch: pytest.MonkeyPatch,
         backend_output: np.ndarray,
@@ -499,9 +499,8 @@ class TestEmbeddingBackendFallbacks:
             ),
         )
 
-        emb = delay_embed(np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64), 1, 2)
-
-        np.testing.assert_array_equal(emb, [[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
+        with pytest.raises(ValueError):
+            delay_embed(np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64), 1, 2)
 
     def test_delay_embed_backend_failure_falls_back_to_python(
         self, monkeypatch: pytest.MonkeyPatch
@@ -538,7 +537,7 @@ class TestEmbeddingBackendFallbacks:
         "backend_value",
         [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
     )
-    def test_invalid_mutual_information_backend_payload_falls_back_to_python(
+    def test_invalid_mutual_information_backend_payload_fails_closed(
         self,
         monkeypatch: pytest.MonkeyPatch,
         backend_value: Any,
@@ -549,10 +548,8 @@ class TestEmbeddingBackendFallbacks:
             lambda fn_name: (lambda *_args: backend_value) if fn_name == "mi" else None,
         )
 
-        mi = mutual_information(np.array([0.0, 1.0, 0.0, 1.0], dtype=np.float64), 1, 2)
-
-        assert np.isfinite(mi)
-        assert mi >= 0.0
+        with pytest.raises(ValueError):
+            mutual_information(np.array([0.0, 1.0, 0.0, 1.0], dtype=np.float64), 1, 2)
 
     def test_nearest_neighbor_backend_failure_falls_back_to_python(
         self, monkeypatch: pytest.MonkeyPatch
@@ -605,7 +602,7 @@ class TestEmbeddingBackendFallbacks:
             ),
         ],
     )
-    def test_invalid_nearest_neighbor_backend_payload_falls_back_to_python(
+    def test_invalid_nearest_neighbor_backend_payload_fails_closed(
         self,
         monkeypatch: pytest.MonkeyPatch,
         distances: np.ndarray,
@@ -619,10 +616,8 @@ class TestEmbeddingBackendFallbacks:
             ),
         )
 
-        dist, idx = nearest_neighbor_distances(np.array([[0.0], [1.0], [3.0]]))
-
-        np.testing.assert_allclose(dist, [1.0, 1.0, 2.0])
-        np.testing.assert_array_equal(idx, [1, 0, 1])
+        with pytest.raises(ValueError):
+            nearest_neighbor_distances(np.array([[0.0], [1.0], [3.0]]))
 
     def test_optimal_delay_rust_failure_falls_back_to_python(
         self, monkeypatch: pytest.MonkeyPatch

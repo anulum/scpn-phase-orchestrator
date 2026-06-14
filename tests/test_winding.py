@@ -229,7 +229,7 @@ class TestWindingRustDispatch:
             np.array([0.0 + 1.0j, -1.0], dtype=np.complex128),
         ],
     )
-    def test_winding_falls_back_when_backend_returns_invalid_payload(
+    def test_winding_fails_closed_when_backend_returns_invalid_payload(
         self, monkeypatch: pytest.MonkeyPatch, backend_output: np.ndarray
     ) -> None:
         def _invalid_backend(_flat: np.ndarray, _t: int, _n: int) -> np.ndarray:
@@ -237,9 +237,9 @@ class TestWindingRustDispatch:
 
         monkeypatch.setattr(winding_module, "_dispatch", lambda: _invalid_backend)
         history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
-        w = winding_numbers(history)
 
-        np.testing.assert_array_equal(w, [0, -1])
+        with pytest.raises(ValueError):
+            winding_numbers(history)
 
     def test_dispatch_falls_back_to_python_when_loader_fails(
         self, monkeypatch: pytest.MonkeyPatch

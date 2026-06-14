@@ -374,7 +374,7 @@ def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):
     "backend_value",
     [-0.1, np.nan, np.inf, True, np.bool_(True), np.log(8.0) + 1.0],
 )
-def test_phase_te_backend_invalid_scalar_falls_back_to_python(
+def test_phase_te_backend_invalid_scalar_fails_closed(
     monkeypatch, backend_value: float
 ):
     def invalid_phase_te(_src: np.ndarray, _tgt: np.ndarray, _bins: int) -> float:
@@ -390,13 +390,10 @@ def test_phase_te_backend_invalid_scalar_falls_back_to_python(
     try:
         source = np.linspace(0.0, 2 * np.pi, 64, endpoint=False)
         target = np.roll(source, 1)
-        value = phase_transfer_entropy(source, target, n_bins=8)
+        with pytest.raises(ValueError):
+            phase_transfer_entropy(source, target, n_bins=8)
     finally:
         te_mod.ACTIVE_BACKEND = previous
-
-    assert np.isfinite(value)
-    assert value >= 0.0
-    assert value <= np.log(8.0) + 1e-12
 
 
 def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
@@ -446,7 +443,7 @@ def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
         ),
     ],
 )
-def test_te_matrix_backend_invalid_payload_falls_back_to_python(
+def test_te_matrix_backend_invalid_payload_fails_closed(
     monkeypatch, backend_value: np.ndarray
 ):
     def invalid_matrix(
@@ -469,14 +466,10 @@ def test_te_matrix_backend_invalid_payload_falls_back_to_python(
                 np.linspace(0.4, 2 * np.pi + 0.4, 64, endpoint=False),
             ]
         )
-        value = transfer_entropy_matrix(data, n_bins=8)
+        with pytest.raises(ValueError):
+            transfer_entropy_matrix(data, n_bins=8)
     finally:
         te_mod.ACTIVE_BACKEND = previous
-
-    assert value.shape == (3, 3)
-    assert np.all(value >= 0.0)
-    assert np.all(value <= np.log(8.0) + 1e-12)
-    np.testing.assert_array_equal(np.diag(value), 0.0)
 
 
 def test_dispatch_falls_back_to_python_when_loader_fails(monkeypatch):

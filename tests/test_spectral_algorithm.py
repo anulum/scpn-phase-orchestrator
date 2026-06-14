@@ -512,7 +512,7 @@ class TestValidationBoundaries:
         with pytest.raises(ValueError, match="knm must be a finite square matrix"):
             graph_laplacian(knm)
 
-    def test_optional_backend_boolean_output_falls_back_to_python(self, monkeypatch):
+    def test_optional_backend_boolean_output_fails_closed(self, monkeypatch):
         knm = np.array(
             [
                 [0.0, 1.0, 0.0],
@@ -532,14 +532,8 @@ class TestValidationBoundaries:
 
         monkeypatch.setattr(s_mod, "_primitive", lambda: invalid_primitive)
 
-        eigvals, fiedler = spectral_eig(knm)
-
-        np.testing.assert_allclose(
-            eigvals,
-            np.linalg.eigvalsh(graph_laplacian(knm)),
-            atol=1e-12,
-        )
-        assert fiedler.shape == (3,)
+        with pytest.raises(ValueError):
+            spectral_eig(knm)
 
     def test_rust_fast_path_rejects_boolean_return_aliases(self, monkeypatch):
         knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)

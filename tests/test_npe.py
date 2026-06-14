@@ -358,7 +358,7 @@ class TestNPEBoundaryHardening:
             np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object),
         ],
     )
-    def test_invalid_backend_matrix_falls_back(
+    def test_invalid_backend_matrix_fails_closed(
         self,
         monkeypatch: pytest.MonkeyPatch,
         backend_output: np.ndarray,
@@ -379,17 +379,16 @@ class TestNPEBoundaryHardening:
             lambda: {"phase_distance_matrix": fake_phase_distance_matrix},
         )
         try:
-            distances = phase_distance_matrix(np.array([0.0, np.pi], dtype=np.float64))
+            with pytest.raises(ValueError):
+                phase_distance_matrix(np.array([0.0, np.pi], dtype=np.float64))
         finally:
             npe_module.ACTIVE_BACKEND = previous_backend
             npe_module.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
             npe_module._BACKEND_CACHE.clear()
 
-        np.testing.assert_allclose(distances, [[0.0, np.pi], [np.pi, 0.0]])
-
     @pytest.mark.parametrize("backend_value", [-0.1, 1.1, np.nan, np.inf, True])
-    def test_invalid_backend_score_falls_back(
+    def test_invalid_backend_score_fails_closed(
         self,
         monkeypatch: pytest.MonkeyPatch,
         backend_value: Any,
@@ -402,8 +401,6 @@ class TestNPEBoundaryHardening:
         def fake_compute_npe(*_args: object, **_kwargs: object) -> Any:
             return backend_value
 
-        npe_module.ACTIVE_BACKEND = "python"
-        expected = compute_npe(phases)
         npe_module.ACTIVE_BACKEND = "go"
         npe_module.AVAILABLE_BACKENDS = ["go", "python"]
         npe_module._BACKEND_CACHE.clear()
@@ -413,11 +410,10 @@ class TestNPEBoundaryHardening:
             lambda: {"compute_npe": fake_compute_npe},
         )
         try:
-            got = compute_npe(phases)
+            with pytest.raises(ValueError):
+                compute_npe(phases)
         finally:
             npe_module.ACTIVE_BACKEND = previous_backend
             npe_module.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
             npe_module._BACKEND_CACHE.clear()
-
-        assert got == expected

@@ -166,7 +166,7 @@ class TestSpectralGap:
 
 
 class TestSpectralPrimitiveContract:
-    def test_invalid_optional_primitive_payload_falls_back_to_python(self, monkeypatch):
+    def test_invalid_optional_primitive_payload_fails_closed(self, monkeypatch):
         knm = _chain_knm(4)
 
         def invalid_primitive(_flat: np.ndarray, n: int):
@@ -174,14 +174,8 @@ class TestSpectralPrimitiveContract:
 
         monkeypatch.setattr(spectral_module, "_primitive", lambda: invalid_primitive)
 
-        eigvals, fiedler = spectral_eig(knm)
-
-        np.testing.assert_allclose(
-            eigvals,
-            np.linalg.eigvalsh(graph_laplacian(knm)),
-            atol=1e-12,
-        )
-        assert fiedler.shape == (4,)
+        with pytest.raises(ValueError):
+            spectral_eig(knm)
 
     def test_invalid_rust_fiedler_value_is_rejected(self, monkeypatch):
         monkeypatch.setattr(spectral_module, "ACTIVE_BACKEND", "rust")

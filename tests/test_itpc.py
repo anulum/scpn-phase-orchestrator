@@ -254,7 +254,7 @@ class TestITPCBackendDispatch:
             np.array([0.5, np.bool_(True)], dtype=object),
         ],
     )
-    def test_invalid_itpc_backend_payload_falls_back(
+    def test_invalid_itpc_backend_payload_fails_closed(
         self,
         monkeypatch,
         backend_output: np.ndarray,
@@ -267,27 +267,24 @@ class TestITPCBackendDispatch:
         def fake_itpc(*_args: object, **_kwargs: object) -> np.ndarray:
             return backend_output
 
-        itpc_mod.ACTIVE_BACKEND = "python"
-        expected = compute_itpc(phases)
         itpc_mod.ACTIVE_BACKEND = "go"
         itpc_mod.AVAILABLE_BACKENDS = ["go", "python"]
         itpc_mod._BACKEND_FN_CACHE.clear()
         monkeypatch.setitem(itpc_mod._LOADERS, "go", lambda: {"itpc": fake_itpc})
         try:
-            result = compute_itpc(phases)
+            with pytest.raises(ValueError):
+                compute_itpc(phases)
         finally:
             itpc_mod.ACTIVE_BACKEND = previous_backend
             itpc_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(itpc_mod._LOADERS, "go", previous_loader)
             itpc_mod._BACKEND_FN_CACHE.clear()
 
-        np.testing.assert_allclose(result, expected)
-
     @pytest.mark.parametrize(
         "backend_value",
         [-0.1, 1.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
     )
-    def test_invalid_persistence_backend_payload_falls_back(
+    def test_invalid_persistence_backend_payload_fails_closed(
         self,
         monkeypatch,
         backend_value: Any,
@@ -301,8 +298,6 @@ class TestITPCBackendDispatch:
         def fake_persistence(*_args: object, **_kwargs: object) -> Any:
             return backend_value
 
-        itpc_mod.ACTIVE_BACKEND = "python"
-        expected = itpc_persistence(phases, pause_idx)
         itpc_mod.ACTIVE_BACKEND = "go"
         itpc_mod.AVAILABLE_BACKENDS = ["go", "python"]
         itpc_mod._BACKEND_FN_CACHE.clear()
@@ -312,11 +307,10 @@ class TestITPCBackendDispatch:
             lambda: {"persistence": fake_persistence},
         )
         try:
-            result = itpc_persistence(phases, pause_idx)
+            with pytest.raises(ValueError):
+                itpc_persistence(phases, pause_idx)
         finally:
             itpc_mod.ACTIVE_BACKEND = previous_backend
             itpc_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(itpc_mod._LOADERS, "go", previous_loader)
             itpc_mod._BACKEND_FN_CACHE.clear()
-
-        assert result == pytest.approx(expected)

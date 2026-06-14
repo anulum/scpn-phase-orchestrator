@@ -181,7 +181,7 @@ class TestPoincareSection:
             (np.array([0.0], dtype=np.float64), np.array([0.5]), True),
         ],
     )
-    def test_section_falls_back_when_backend_returns_invalid_payload(
+    def test_section_fails_closed_when_backend_returns_invalid_payload(
         self,
         monkeypatch: pytest.MonkeyPatch,
         crossings: np.ndarray,
@@ -203,10 +203,8 @@ class TestPoincareSection:
             "_dispatch",
             lambda _fn_name: _invalid_section,
         )
-        result = poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
-
-        assert result.crossings.shape == (1, 1)
-        assert result.crossing_times.shape == (1,)
+        with pytest.raises(ValueError):
+            poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
 
 
 class TestReturnTimes:
@@ -331,7 +329,7 @@ class TestPhasePoincare:
         result = phase_poincare([[0.0], [2.0 * np.pi + 0.1]], oscillator_idx=0)
         assert result.crossings.shape[1] == 1
 
-    def test_phase_falls_back_when_backend_returns_invalid_payload(
+    def test_phase_fails_closed_when_backend_returns_invalid_payload(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         def _invalid_phase(
@@ -348,9 +346,8 @@ class TestPhasePoincare:
             "_dispatch",
             lambda _fn_name: _invalid_phase,
         )
-        result = phase_poincare([[0.0], [2.0 * np.pi + 0.1]], oscillator_idx=0)
-
-        assert result.crossings.shape[1] == 1
+        with pytest.raises(ValueError):
+            phase_poincare([[0.0], [2.0 * np.pi + 0.1]], oscillator_idx=0)
 
 
 class TestPoincareResultValidation:

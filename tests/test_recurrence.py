@@ -134,7 +134,7 @@ class TestRecurrenceMatrix:
             np.array([1, 1, 0, 1], dtype=np.uint8),
         ],
     )
-    def test_backend_invalid_matrix_payload_falls_back_to_python(
+    def test_backend_invalid_matrix_payload_fails_closed(
         self, monkeypatch: pytest.MonkeyPatch, backend_output: np.ndarray
     ) -> None:
         def fake_rm(_traj_flat, _t, _d, _epsilon, _angular):
@@ -147,9 +147,8 @@ class TestRecurrenceMatrix:
             "_dispatch",
             lambda fn_name: fake_rm if fn_name == "rm" else None,
         )
-        R = recurrence_matrix(np.array([[0.0], [1.0]]), epsilon=0.5)
-
-        np.testing.assert_array_equal(R, np.array([[True, False], [False, True]]))
+        with pytest.raises(ValueError):
+            recurrence_matrix(np.array([[0.0], [1.0]]), epsilon=0.5)
 
 
 class TestRQA:
@@ -347,7 +346,7 @@ class TestCrossRecurrence:
                 metric=metric,
             )
 
-    def test_cross_backend_invalid_matrix_payload_falls_back_to_python(
+    def test_cross_backend_invalid_matrix_payload_fails_closed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         def fake_cross_rm(_a_flat, _b_flat, _t, _d, _epsilon, _angular):
@@ -358,9 +357,8 @@ class TestCrossRecurrence:
             "_dispatch",
             lambda fn_name: fake_cross_rm if fn_name == "cross_rm" else None,
         )
-        CR = cross_recurrence_matrix(np.array([0.0, 1.0]), np.array([0.0, 2.0]), 0.5)
-
-        np.testing.assert_array_equal(CR, np.array([[True, False], [False, False]]))
+        with pytest.raises(ValueError):
+            cross_recurrence_matrix(np.array([0.0, 1.0]), np.array([0.0, 2.0]), 0.5)
 
 
 class TestRecurrencePipelineWiring:

@@ -173,7 +173,7 @@ def test_entropy_accepts_numpy_integer_bin_count() -> None:
     "backend_value",
     [-0.1, np.nan, np.inf, [0.5], np.log(4) + 1.0, True, np.bool_(True), 0.5 + 0.0j],
 )
-def test_entropy_invalid_backend_payload_falls_back(
+def test_entropy_invalid_backend_payload_fails_closed(
     monkeypatch: pytest.MonkeyPatch,
     backend_value: Any,
 ) -> None:
@@ -182,9 +182,8 @@ def test_entropy_invalid_backend_payload_falls_back(
         psychedelic_mod, "_dispatch", lambda: lambda *_args: backend_value
     )
 
-    ent = entropy_from_phases(phases, n_bins=4)
-
-    assert 0.0 <= ent <= np.log(4)
+    with pytest.raises(ValueError):
+        entropy_from_phases(phases, n_bins=4)
 
 
 def test_simulate_trajectory_returns_correct_length():
