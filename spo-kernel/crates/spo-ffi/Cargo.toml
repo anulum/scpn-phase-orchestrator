@@ -8,6 +8,9 @@
 
 [package]
 name = "spo-ffi"
+# Internal workspace crate; shipped only inside the maturin/PyO3 wheel, never
+# published to crates.io. publish=false lets cargo-deny allow the path deps.
+publish = false
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
