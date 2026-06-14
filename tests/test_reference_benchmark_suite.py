@@ -17,6 +17,7 @@ from benchmarks.reference_suite import (
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
     benchmark_chimera_polyglot_parity_gate,
+    benchmark_delay_polyglot_parity_gate,
     benchmark_dimension_polyglot_parity_gate,
     benchmark_domain_formal_safety_exports,
     benchmark_embedding_polyglot_parity_gate,
@@ -2406,6 +2407,60 @@ def test_chimera_polyglot_parity_gate_reports_all_language_slots() -> None:
             assert record["parity_passed"] is False
 
 
+def test_delay_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_delay_polyglot_parity_gate(
+        n=16, delay_steps=3, n_steps=80, calls=1, seed=2026
+    )
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "delay_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["parity_pass_count"] == out["available_backend_count"]
+    assert out["reference_contracts_passed"] == 1
+    assert out["acceptance_passed"] == 1
+    assert float(out["pure_rotation_max_abs_error"]) <= 1e-9
+    assert len(str(out["reference_phases_sha256"])) == 64
+    assert len(str(out["benchmark_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+    assert [record["backend"] for record in records] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds == {
+        "backend_order": ["rust", "mojo", "julia", "go", "python"],
+        "max_reference_contract_abs_error": 1e-09,
+        "parity_tolerances": {
+            "go": 1e-09,
+            "julia": 1e-09,
+            "mojo": 1e-06,
+            "python": 0.0,
+            "rust": 1e-09,
+        },
+        "production_timing_claim": False,
+        "require_all_available_parity": True,
+        "require_all_declared_backend_records": True,
+        "require_phases_in_range": True,
+        "require_python_reference": True,
+        "require_pure_rotation_limit": True,
+    }
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["reference_contracts_passed"] is True
+            assert record["phases_sha256"] is not None
+            assert record["max_abs_error"] <= record["tolerance"]
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["parity_passed"] is False
+
+
 def test_spectral_polyglot_parity_gate_reports_all_language_slots() -> None:
     out = benchmark_spectral_polyglot_parity_gate(n=8, calls=1, seed=2026)
     records = json.loads(str(out["backend_records_json"]))
@@ -2683,6 +2738,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "bayesian_backends",
         "bayesian_posterior",
         "chimera_polyglot",
+        "delay_polyglot",
         "domain_formal_export",
         "formal_export",
         "hybrid_cocompiler",

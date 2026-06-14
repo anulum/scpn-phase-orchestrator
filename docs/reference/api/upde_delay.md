@@ -246,14 +246,34 @@ requiring continuous delay, interface with `jitcdde` via the adapters.
 | `DelayBuffer` | Standalone circular buffer for phase history |
 | `DelayedEngine` | Full integration engine with built-in delay buffer |
 
-### 4.2 Rust Acceleration
+### 4.2 Polyglot Acceleration
 
-`DelayedEngine.run()` delegates to `delayed_kuramoto_run_rust` when
-`spo-kernel` is installed. The Rust implementation pre-allocates the
-full delay ring buffer and uses Rayon for N ≥ 256.
+`DelayedEngine.run()` dispatches through a fastest-first backend chain
+resolved once at import (`rust → mojo → julia → go → python`). Each
+backend integrates the identical discrete delayed-Kuramoto recurrence over
+a ring buffer of `delay_steps + 1` phase snapshots and returns the final
+phases wrapped into $[0, 2\pi)$:
 
-Note: `DelayedEngine.step()` is Python-only (Rust delegates at the
-`run()` level for batch efficiency).
+| Backend | Mechanism | Parity tolerance vs Python |
+|---------|-----------|----------------------------|
+| `rust` | `spo-kernel` `delayed_kuramoto_run_rust` (PyO3) | $10^{-9}$ |
+| `mojo` | `mojo/delay_mojo` (stdin/stdout text protocol) | $10^{-6}$ |
+| `julia` | `julia/delay.jl` (`DelayJL.delayed_kuramoto_run`) | $10^{-9}$ |
+| `go` | `go/libdelay.so` `DelayedKuramotoRun` (cgo `c-shared`) | $10^{-9}$ |
+| `python` | `_python_run` NumPy ring-buffer reference | exact |
+
+`ACTIVE_BACKEND` names the resolved fastest backend; `AVAILABLE_BACKENDS`
+lists every backend that loaded successfully (Python is always present as
+the final floor). Each non-Python adapter validates its state arrays,
+scalars, and step counts via `validate_delay_backend_inputs` before any
+runtime loads, so malformed inputs fail closed without touching a foreign
+runtime. If a faster backend is missing the engine silently falls through
+to the next; results are bit-identical to the NumPy reference within the
+tolerances above.
+
+Note: `DelayedEngine.step()` is Python-only — the polyglot backends
+delegate at the `run()` level for batch efficiency, since the ring buffer
+must persist across the full step sequence.
 
 ### 4.3 Automatic Fallback
 
@@ -513,7 +533,33 @@ $R$ drops from 0.91 to 0.65 with $\tau = 1.0$ time unit.
 | Gaian mesh (UDP) | 0.01 | 5–20 | 0.05–0.2 |
 | Power grid comms | 0.01 | 50–500 | 0.5–5.0 |
 
-### 7.6 When to Use DelayedEngine vs UPDEEngine
+### 7.6 Polyglot Parity Gate
+
+`benchmarks/delay_benchmark.py` (`benchmark_delay_polyglot_parity_gate`)
+records every declared backend's final phases against the NumPy reference
+and asserts two contracts per backend: with zero coupling and zero forcing
+the integrator must reduce to pure rotation
+$(\theta + \omega\,\Delta t\,n_{\text{steps}}) \bmod 2\pi$, and all output
+phases must lie in $[0, 2\pi)$. The gate is registered in the aggregate
+reference suite under the key `delay_polyglot`.
+
+Representative run (`n=16`, `delay_steps=3`, `n_steps=80`, `calls=1`,
+`seed=2026`; evidence kind `local_regression_non_isolated`, no production
+timing claim — ML350 Gen8, single warmed call):
+
+| Backend | max abs error vs Python | ms/call | parity |
+|---------|-------------------------|---------|--------|
+| `rust` | 4.4e-16 | 0.93 | ✓ |
+| `mojo` | 4.4e-16 | 22.64 | ✓ |
+| `julia` | 4.4e-16 | 0.68 | ✓ |
+| `go` | 8.9e-16 | 0.54 | ✓ |
+| `python` | 0.0 (reference) | 1.13 | ✓ |
+
+Pure-rotation contract error: 8.9e-15 (≤ 1e-9 threshold). Single-call
+timings are noisy and not isolated; they exist to confirm every backend
+runs, not to rank production throughput.
+
+### 7.7 When to Use DelayedEngine vs UPDEEngine
 
 Use `DelayedEngine` when:
 - Physical delay is ≥ 1 timestep ($\tau \geq \Delta t$)
@@ -554,16 +600,30 @@ Use `UPDEEngine` when:
 
 ## Test Coverage
 
-- `tests/test_delay.py` — 18 tests: DelayBuffer push/get/clear/length,
+- `tests/test_delay.py` — 20 tests: DelayBuffer push/get/clear/length,
   DelayedEngine step() shape, run() convergence, delay effect on R,
-  zero delay equivalence, Sakaguchi + delay, external drive, Rust parity
-
-Total: **18 tests**.
+  zero delay equivalence, Sakaguchi + delay, external drive, dispatch
+  fallback parity
+- `tests/test_delay_backends.py` — 46 tests: per-backend final-phase parity
+  (Rust/Julia/Go at 1e-9, Mojo at 1e-6), cross-backend consistency, direct
+  adapter boundary contracts (dtype, finiteness, real-valued, length, range
+  validation), and loader/dispatch resolution
+- `tests/test_delay_benchmark.py` — 3 tests: polyglot parity gate slot
+  reporting, control validation, and per-backend wall-clock timings
+- `tests/test_reference_benchmark_suite.py` — `delay_polyglot` gate slot and
+  aggregate-suite key membership
 
 ---
 
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/delay.py` (138 lines)
+- Python: `src/scpn_phase_orchestrator/upde/delay.py` (dispatcher +
+  `_python_run` NumPy reference)
+- Validation: `src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_validation.py`
 - Rust: `spo-kernel/crates/spo-engine/src/delay.rs`
-- FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (delayed_kuramoto_run_rust)
+- FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (`delayed_kuramoto_run_rust`)
+- Julia: `julia/delay.jl` (`DelayJL.delayed_kuramoto_run`)
+- Go: `go/delay.go` (`DelayedKuramotoRun`, `c-shared` → `libdelay.so`)
+- Mojo: `mojo/delay.mojo` (stdin/stdout text protocol → `delay_mojo`)
+- Backend adapters: `src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_{julia,go,mojo}.py`
+- Benchmark: `benchmarks/delay_benchmark.py`

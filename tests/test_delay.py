@@ -195,8 +195,7 @@ def test_rust_path_is_used_when_flagged(monkeypatch):
         )
         return phases64 + 0.123
 
-    monkeypatch.setattr(delay_mod, "_HAS_RUST", True)
-    monkeypatch.setattr(delay_mod, "_rust_delayed_run", fake_rust_run, raising=False)
+    monkeypatch.setattr(delay_mod, "_dispatch", lambda: fake_rust_run)
     eng = delay_mod.DelayedEngine(2, dt=0.01, delay_steps=3)
 
     phases = np.array([0.4, 1.1], dtype=np.float64)
@@ -218,8 +217,7 @@ def test_rust_path_invalid_output_falls_back_to_python(monkeypatch):
     def fake_rust_run(*_args: object) -> np.ndarray:
         return np.array([0.0, np.nan], dtype=np.float64)
 
-    monkeypatch.setattr(delay_mod, "_HAS_RUST", True)
-    monkeypatch.setattr(delay_mod, "_rust_delayed_run", fake_rust_run, raising=False)
+    monkeypatch.setattr(delay_mod, "_dispatch", lambda: fake_rust_run)
     eng = delay_mod.DelayedEngine(2, dt=0.01, delay_steps=2)
 
     phases = np.array([0.4, 1.1], dtype=np.float64)
@@ -319,6 +317,37 @@ class TestDelayedEnginePipelineEndToEnd:
         assert elapsed < limit, (
             f"delayed.step(32) took {elapsed * 1e3:.2f}ms, limit {limit * 1e3:.1f}ms"
         )
+
+
+class TestAlphaDefaults:
+    """Omitting ``alpha`` is equivalent to a zero phase-lag matrix."""
+
+    def test_step_defaults_alpha_to_zero(self):
+        eng = DelayedEngine(3, dt=0.05, delay_steps=2)
+        phases = np.zeros(3)
+        omegas = np.full(3, 0.2)
+        knm = np.zeros((3, 3))
+        omitted = eng.step(phases, omegas, knm)
+        explicit = DelayedEngine(3, dt=0.05, delay_steps=2).step(
+            phases, omegas, knm, alpha=np.zeros((3, 3))
+        )
+        np.testing.assert_array_equal(omitted, explicit)
+        # Zero coupling: dθ = ω, so θ advances by dt·ω.
+        np.testing.assert_allclose(omitted, (0.05 * omegas) % (2 * np.pi))
+
+    def test_run_defaults_alpha_to_zero(self, monkeypatch):
+        monkeypatch.setattr(delay_mod, "ACTIVE_BACKEND", "python")
+        monkeypatch.setattr(delay_mod, "AVAILABLE_BACKENDS", ["python"])
+        eng = DelayedEngine(3, dt=0.05, delay_steps=2)
+        phases = np.array([0.1, 0.5, 1.2])
+        omegas = np.full(3, 0.2)
+        knm = np.full((3, 3), 0.3)
+        np.fill_diagonal(knm, 0.0)
+        omitted = eng.run(phases, omegas, knm, n_steps=8)
+        explicit = DelayedEngine(3, dt=0.05, delay_steps=2).run(
+            phases, omegas, knm, alpha=np.zeros((3, 3)), n_steps=8
+        )
+        np.testing.assert_array_equal(omitted, explicit)
 
 
 # Pipeline wiring: delay tests exercise DelayBuffer + DelayedEngine →

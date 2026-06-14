@@ -24,6 +24,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from benchmarks.chimera_benchmark import benchmark_chimera_polyglot_parity_gate
+from benchmarks.delay_benchmark import benchmark_delay_polyglot_parity_gate
 from benchmarks.dimension_benchmark import benchmark_dimension_polyglot_parity_gate
 from benchmarks.embedding_benchmark import benchmark_embedding_polyglot_parity_gate
 from benchmarks.entropy_prod_benchmark import (
@@ -7855,6 +7856,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
             "chimera_polyglot": benchmark_chimera_polyglot_parity_gate(),
+            "delay_polyglot": benchmark_delay_polyglot_parity_gate(),
             "dimension_polyglot": benchmark_dimension_polyglot_parity_gate(),
             "embedding_polyglot": benchmark_embedding_polyglot_parity_gate(),
             "entropy_production_polyglot": (

@@ -178,6 +178,11 @@ go/libpid.so
 go/libpid.h
 mojo/pid_mojo
 
+# delay compiled artefacts
+go/libdelay.so
+go/libdelay.h
+mojo/delay_mojo
+
 # psychedelic compiled artefacts
 go/libpsychedelic.so
 go/libpsychedelic.h

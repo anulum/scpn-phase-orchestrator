@@ -18,26 +18,143 @@ before integration so delayed history never aliases invalid caller state.
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Callable
 from math import isfinite
 from numbers import Integral, Real
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
-try:
-    from spo_kernel import (
-        delayed_kuramoto_run_rust as _rust_delayed_run,
+__all__ = [
+    "ACTIVE_BACKEND",
+    "AVAILABLE_BACKENDS",
+    "DelayBuffer",
+    "DelayedEngine",
+]
+FloatArray: TypeAlias = NDArray[np.float64]
+
+_BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
+_DelayBackend: TypeAlias = Callable[..., FloatArray]
+
+
+def _load_rust_fn() -> _DelayBackend:
+    from spo_kernel import delayed_kuramoto_run_rust
+
+    def _rust(
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm_flat: FloatArray,
+        alpha_flat: FloatArray,
+        n: int,
+        zeta: float,
+        psi: float,
+        dt: float,
+        delay_steps: int,
+        n_steps: int,
+    ) -> FloatArray:
+        return np.asarray(
+            delayed_kuramoto_run_rust(
+                np.ascontiguousarray(phases, dtype=np.float64),
+                np.ascontiguousarray(omegas, dtype=np.float64),
+                np.ascontiguousarray(knm_flat, dtype=np.float64),
+                np.ascontiguousarray(alpha_flat, dtype=np.float64),
+                int(n),
+                float(zeta),
+                float(psi),
+                float(dt),
+                int(delay_steps),
+                int(n_steps),
+            ),
+            dtype=np.float64,
+        )
+
+    return cast("_DelayBackend", _rust)
+
+
+def _load_mojo_fn() -> _DelayBackend:
+    # pragma: no cover — toolchain
+    from ..experimental.accelerators.upde._delay_mojo import (
+        _ensure_exe,
+        delayed_kuramoto_run_mojo,
     )
 
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+    _ensure_exe()
+    return delayed_kuramoto_run_mojo
 
-__all__ = ["DelayBuffer", "DelayedEngine"]
-FloatArray: TypeAlias = NDArray[np.float64]
+
+def _load_julia_fn() -> _DelayBackend:
+    # pragma: no cover — toolchain
+    import juliacall  # noqa: F401
+
+    from ..experimental.accelerators.upde._delay_julia import (
+        delayed_kuramoto_run_julia,
+    )
+
+    return delayed_kuramoto_run_julia
+
+
+def _load_go_fn() -> _DelayBackend:
+    # pragma: no cover — toolchain
+    from ..experimental.accelerators.upde._delay_go import (
+        _load_lib,
+        delayed_kuramoto_run_go,
+    )
+
+    _load_lib()
+    return delayed_kuramoto_run_go
+
+
+_LOADERS: dict[str, Callable[[], _DelayBackend]] = {
+    "rust": _load_rust_fn,
+    "mojo": _load_mojo_fn,
+    "julia": _load_julia_fn,
+    "go": _load_go_fn,
+}
+_BACKEND_CACHE: dict[str, _DelayBackend] = {}
+
+
+def _load_backend(name: str) -> _DelayBackend:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
+
+
+def _resolve_backends() -> tuple[str, list[str]]:
+    _BACKEND_CACHE.clear()
+    available: list[str] = []
+    for name in _BACKEND_NAMES[:-1]:
+        try:
+            _load_backend(name)
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
+        available.append(name)
+    available.append("python")
+    return available[0], available
+
+
+ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+
+
+def _dispatch() -> _DelayBackend | None:
+    ordered_backends = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS]
+    seen: set[str] = set()
+    for backend in ordered_backends:
+        if backend in seen:
+            continue
+        seen.add(backend)
+        if backend == "python":
+            return None
+        try:
+            return _load_backend(backend)
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
+    return None
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -105,6 +222,45 @@ def _contains_boolean_alias(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
+
+
+def _python_run(
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
+    n: int,
+    zeta: float,
+    psi: float,
+    dt: float,
+    delay_steps: int,
+    n_steps: int,
+) -> FloatArray:
+    """NumPy reference for the delayed Kuramoto integration.
+
+    A ring buffer of ``delay_steps + 1`` snapshots supplies the delayed source
+    phase ``θ_j(t − delay_steps·dt)``; the first ``delay_steps`` steps use the
+    current snapshot (zero-delay warmup).
+    """
+    knm = knm_flat.reshape(n, n)
+    alpha = alpha_flat.reshape(n, n)
+    max_buf = delay_steps + 1
+    history = np.zeros((max_buf, n), dtype=np.float64)
+    p = phases.copy()
+    for i in range(n_steps):
+        ring = i % max_buf
+        history[ring] = p
+        if delay_steps > 0 and i >= delay_steps:
+            delayed = history[(i - delay_steps) % max_buf]
+        else:
+            delayed = p
+        diff = delayed[np.newaxis, :] - p[:, np.newaxis] - alpha
+        coupling = np.sum(knm * np.sin(diff), axis=1)
+        dtheta = omegas + coupling
+        if zeta != 0.0:
+            dtheta = dtheta + zeta * np.sin(psi - p)
+        p = (p + dt * dtheta) % TWO_PI
+    return p
 
 
 class DelayBuffer:
@@ -223,14 +379,17 @@ class DelayedEngine:
             )
         zeta = _validate_finite_float(zeta, name="zeta")
         psi = _validate_finite_float(psi, name="psi")
-        if _HAS_RUST:
+        knm_flat = np.ascontiguousarray(knm64.ravel(), dtype=np.float64)
+        alpha_flat = np.ascontiguousarray(alpha64.ravel(), dtype=np.float64)
+        backend_fn = _dispatch()
+        if backend_fn is not None:
             try:
                 return _validate_phase_output(
-                    _rust_delayed_run(
+                    backend_fn(
                         phases64,
                         omegas64,
-                        knm64.ravel(),
-                        alpha64.ravel(),
+                        knm_flat,
+                        alpha_flat,
                         self._n,
                         zeta,
                         psi,
@@ -240,9 +399,17 @@ class DelayedEngine:
                     ),
                     n_oscillators=self._n,
                 )
-            except Exception as exc:
-                _fallback_reason = exc
-        p = phases64.copy()
-        for i in range(n_steps):
-            p = self.step(p, omegas64, knm64, zeta, psi, alpha64, step_idx=i)
-        return p
+            except (ImportError, RuntimeError, OSError, KeyError, ValueError):
+                pass
+        return _python_run(
+            phases64,
+            omegas64,
+            knm_flat,
+            alpha_flat,
+            self._n,
+            zeta,
+            psi,
+            self._dt,
+            self._delay_steps,
+            n_steps,
+        )
