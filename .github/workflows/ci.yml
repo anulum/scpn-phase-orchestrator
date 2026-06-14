@@ -157,7 +157,7 @@ jobs:
         run: |
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt
           pip install --no-deps -e .
-          pip install "juliacall>=0.9,<0.10"
+          pip install --require-hashes -r requirements/julia-lock.txt
       - name: Warm up Julia runtime (juliapkg resolves Julia + precompiles PythonCall)
         run: python -c "from juliacall import Main; print('Julia ready:', Main is not None)"
       - name: Assert Julia backend is available without coverage

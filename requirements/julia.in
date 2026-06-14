@@ -1,0 +1,4 @@
+# Optional Julia backend (juliacall). Hash-pinned into julia-lock.txt for the
+# no-coverage Julia CI lane; constrained against dev-lock.txt so shared
+# dependencies stay aligned.
+juliacall>=0.9,<0.10
