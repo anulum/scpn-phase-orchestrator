@@ -8,6 +8,9 @@ ignore = []
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Internal workspace crates depend on each other by path without a version
+# requirement; that is a normal monorepo pattern, not a supply-chain wildcard.
+allow-wildcard-paths = true
 highlight = "all"
 workspace-default-features = "allow"
 external-default-features = "allow"
