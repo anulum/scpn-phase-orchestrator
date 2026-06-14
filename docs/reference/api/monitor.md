@@ -286,32 +286,50 @@ result = monitor.evaluate(
 
 ## Partial Information Decomposition (PID)
 
-Decomposes mutual information between two oscillator groups and a
-global phase reference into **redundancy** (information both groups share)
-and **synergy** (information available only from the joint observation).
+Decomposes the information that two oscillator groups carry about the global
+synchronisation state into **redundancy** (information both groups share) and
+**synergy** (information available only from the joint observation), with a
+5-backend fallback chain (Rust → Mojo → Julia → Go → Python).
 
-**Theory:** Williams & Beer 2010 (arXiv:1004.2515). Circular mutual
-information is estimated via binned phase histograms (default 32 bins).
-Inputs, group indices, and optional Rust scalar outputs are validated as
-finite real-valued quantities; boolean aliases, complex dtypes, and object
-arrays carrying Python or NumPy complex scalar aliases are rejected before
-histogram estimation or backend acceptance.
+**Theory:** Williams & Beer 2010 (arXiv:1004.2515). Mutual information is a
+property of a *distribution*, so the input is a phase **history** `(T, N)`
+(`T` timesteps, `N` oscillators). Each timestep is reduced to three circular
+observables — the global order-parameter phase (target `Y`) and the two group
+order-parameter phases (sources `A`, `B`) — binned into `n_bins` phase bins
+(default 32). With the specific information
+`I_spec(Y=y; S) = Σ_s p(s|y)·log[p(y|s)/p(y)]`:
+
+```text
+redundancy  I_red = Σ_y p(y)·min( I_spec(Y=y; A), I_spec(Y=y; B) )   # I_min
+synergy     I_syn = MI(A,B; Y) − MI(A; Y) − MI(B; Y) + I_red
+```
+
+Each source's unique information is `MI(S; Y) − I_red`; all components are
+non-negative and `MI(A; Y) = I_red + U_A` holds by construction. A single
+snapshot (`T = 1`) carries no distributional information, so every component is
+`0`; meaningful decomposition needs `T ≥ 2`. Histories, group indices, bin
+counts, and backend scalar outputs are validated as finite real quantities;
+boolean aliases, complex dtypes, and out-of-range indices are rejected before
+estimation or backend acceptance.
 
 **Usage:**
 
 ```python
 from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
 
-# phases: one phase vector; groups are oscillator index sets into that vector
-R = redundancy(phases, group_a=[0, 1, 2], group_b=[3, 4, 5])
-S = synergy(phases, group_a=[0, 1, 2], group_b=[3, 4, 5])
+# history: (T, N) phase history; groups are oscillator index sets into N
+R = redundancy(history, group_a=[0, 1, 2], group_b=[3, 4, 5])
+S = synergy(history, group_a=[0, 1, 2], group_b=[3, 4, 5])
 ```
 
-::: scpn_phase_orchestrator.monitor.npe
-
-High synergy means the groups carry complementary information — neither
-alone predicts the target, but together they do. This detects
-higher-order functional relationships invisible to pairwise PLV.
+High synergy means the groups carry complementary information — neither alone
+predicts the target, but together they do. This detects higher-order functional
+relationships invisible to pairwise PLV. The polyglot parity gate
+`benchmark_pid_polyglot_parity_gate` (`benchmarks/pid_benchmark.py`, wired into
+`benchmarks/reference_suite.py` as `pid_polyglot`) verifies cross-backend parity
+of the redundancy/synergy estimates and the decomposition contracts (a
+co-varying source pair has positive synergy; a fully redundant configuration has
+vanishing synergy).
 
 ::: scpn_phase_orchestrator.monitor.pid
 

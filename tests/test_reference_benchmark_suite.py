@@ -46,6 +46,7 @@ from benchmarks.reference_suite import (
     benchmark_npe_polyglot_parity_gate,
     benchmark_order_parameter_polyglot_parity_gate,
     benchmark_petri_reachability,
+    benchmark_pid_polyglot_parity_gate,
     benchmark_plugin_ecosystem_catalog_quality,
     benchmark_poincare_polyglot_parity_gate,
     benchmark_quantum_target_readiness_gate,
@@ -2022,6 +2023,44 @@ def test_order_parameter_polyglot_parity_gate_reports_all_language_slots() -> No
             assert record["parity_passed"] is False
 
 
+def test_pid_polyglot_parity_gate_reports_all_language_slots() -> None:
+    out = benchmark_pid_polyglot_parity_gate(
+        n_steps=1500, n_bins=12, calls=1, seed=2026
+    )
+    records = json.loads(str(out["backend_records_json"]))
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert out["suite"] == "pid_polyglot_parity_gate"
+    assert out["backend_count"] == 5
+    assert out["python_reference_present"] == 1
+    assert out["all_available_passed"] == 1
+    assert out["parity_pass_count"] == out["available_backend_count"]
+    assert out["reference_contracts_passed"] == 1
+    assert out["acceptance_passed"] == 1
+    assert float(out["reference_covarying_synergy"]) > 1.0e-2
+    assert float(out["reference_redundant_synergy"]) <= 1.0e-9
+    assert len(str(out["benchmark_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+    assert [record["backend"] for record in records] == [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+    ]
+    assert thresholds["require_covarying_positive_synergy"] is True
+    assert thresholds["require_redundant_zero_synergy"] is True
+    for record in records:
+        if record["status"] == "available":
+            assert record["parity_passed"] is True
+            assert record["reference_contracts_passed"] is True
+            assert record["max_abs_error"] <= record["tolerance"]
+        else:
+            assert record["status"] == "unavailable"
+            assert record["unavailable_reason"]
+            assert record["parity_passed"] is False
+
+
 def test_poincare_polyglot_parity_gate_reports_all_language_slots() -> None:
     out = benchmark_poincare_polyglot_parity_gate(
         n_steps=240, n_osc=4, calls=1, seed=2026
@@ -2667,6 +2706,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "lyapunov_polyglot",
         "npe_polyglot",
         "order_parameter_polyglot",
+        "pid_polyglot",
         "poincare_polyglot",
         "recurrence_polyglot",
         "spectral_polyglot",

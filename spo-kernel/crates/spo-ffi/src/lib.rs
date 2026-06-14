@@ -2245,34 +2245,45 @@ impl PyLIFEnsemble {
     }
 }
 
-// ─── PID (Redundancy / Synergy) ─────────────────────────────────────
+// ─── PID (time-series redundancy / synergy) ─────────────────────────
 
 #[pyfunction]
-#[pyo3(signature = (phases, group_a, group_b, n_bins = 32))]
-fn pid_redundancy(
-    phases: PyReadonlyArray1<'_, f64>,
-    group_a: Vec<usize>,
-    group_b: Vec<usize>,
+#[pyo3(signature = (phase_history, t, n, group_a, group_b, n_bins = 32))]
+fn pid_decomposition_rust(
+    phase_history: PyReadonlyArray1<'_, f64>,
+    t: usize,
+    n: usize,
+    group_a: PyReadonlyArray1<'_, i64>,
+    group_b: PyReadonlyArray1<'_, i64>,
     n_bins: usize,
-) -> PyResult<f64> {
-    let p = phases
+) -> PyResult<(f64, f64)> {
+    let history = phase_history
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(spo_engine::pid::redundancy(p, &group_a, &group_b, n_bins))
-}
-
-#[pyfunction]
-#[pyo3(signature = (phases, group_a, group_b, n_bins = 32))]
-fn pid_synergy(
-    phases: PyReadonlyArray1<'_, f64>,
-    group_a: Vec<usize>,
-    group_b: Vec<usize>,
-    n_bins: usize,
-) -> PyResult<f64> {
-    let p = phases
+    let a_raw = group_a
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(spo_engine::pid::synergy(p, &group_a, &group_b, n_bins))
+    let b_raw = group_b
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let group_a_idx: Vec<usize> = a_raw
+        .iter()
+        .filter(|&&v| v >= 0)
+        .map(|&v| v as usize)
+        .collect();
+    let group_b_idx: Vec<usize> = b_raw
+        .iter()
+        .filter(|&&v| v >= 0)
+        .map(|&v| v as usize)
+        .collect();
+    Ok(spo_engine::pid::pid_decomposition(
+        history,
+        t,
+        n,
+        &group_a_idx,
+        &group_b_idx,
+        n_bins,
+    ))
 }
 
 // ─── Normalized Persistent Entropy ──────────────────────────────────
@@ -3883,8 +3894,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(transition_quality, m)?)?;
     m.add_function(wrap_pyfunction!(transition_qualities_rust, m)?)?;
     m.add_function(wrap_pyfunction!(layer_coherence, m)?)?;
-    m.add_function(wrap_pyfunction!(pid_redundancy, m)?)?;
-    m.add_function(wrap_pyfunction!(pid_synergy, m)?)?;
+    m.add_function(wrap_pyfunction!(pid_decomposition_rust, m)?)?;
     m.add_function(wrap_pyfunction!(compute_npe, m)?)?;
     m.add_function(wrap_pyfunction!(phase_distance_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_production_rate, m)?)?;

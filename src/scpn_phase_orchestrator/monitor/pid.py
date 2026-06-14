@@ -6,40 +6,174 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Partial Information Decomposition for phase groups
 
-"""Approximate phase-based partial information metrics for grouped oscillators.
+r"""Partial information decomposition (PID) of two oscillator groups about the
+global synchronisation state, with a 5-backend fallback chain per
+``feedback_module_standard_attnres.md``.
 
-The routines compute deterministic redundancy and synergy summaries over
-grouped phase observations. A Rust extension may provide acceleration; the
-Python implementation remains dependency-light and reference-compatible. Phase
-inputs must be finite one-dimensional arrays and group indices are validated
-before histogram estimation, so malformed partitions fail instead of silently
-reassigning oscillators.
+Model
+-----
+Williams & Beer 2010 (*Nonnegative Decomposition of Multivariate Information*,
+arXiv:1004.2515) decompose the information two sources carry about a target into
+redundant, unique, and synergistic parts. Estimating it needs a *distribution*,
+so the input is a phase **history** ``(T, N)`` (``T`` timesteps, ``N``
+oscillators). Each timestep is reduced to three circular observables:
+
+* target ``Y_t`` — the global order-parameter phase ``∠⟨e^{iθ}⟩`` over all
+  oscillators,
+* source ``A_t`` — the group-A order-parameter phase,
+* source ``B_t`` — the group-B order-parameter phase.
+
+The three series are binned into ``n_bins`` equal-width phase bins and the joint
+distribution is estimated over the ``T`` samples.
+
+Decomposition
+-------------
+With the specific information ``I_spec(Y=y; S) = Σ_s p(s|y)·log[p(y|s)/p(y)]``:
+
+    redundancy  I_red = Σ_y p(y)·min( I_spec(Y=y; A), I_spec(Y=y; B) )
+    synergy     I_syn = MI(A,B; Y) − MI(A; Y) − MI(B; Y) + I_red
+
+``I_red`` is the Williams & Beer ``I_min`` redundancy; the unique information of
+each source is ``MI(S; Y) − I_red`` and ``MI(A; Y) = I_red + U_A`` holds by
+construction. All terms are non-negative.
+
+A single snapshot (``T = 1``) carries no distributional information, so every
+component is ``0``; meaningful decomposition needs ``T ≥ 2``.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from numbers import Integral
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-__all__ = ["redundancy", "synergy"]
+__all__ = [
+    "ACTIVE_BACKEND",
+    "AVAILABLE_BACKENDS",
+    "redundancy",
+    "synergy",
+]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
-# Williams & Beer 2010, arXiv:1004.2515 — PID framework
-# Circular MI estimate via binned phase histograms
-
 _DEFAULT_BINS = 32
+TAU = 2.0 * np.pi
 
-try:
-    from spo_kernel import pid_redundancy as _rust_pid_redundancy
-    from spo_kernel import pid_synergy as _rust_pid_synergy
-except ImportError:
-    _rust_pid_redundancy = None
-    _rust_pid_synergy = None
+_BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
+# (redundancy, synergy) from a flattened (T, N) phase history.
+PidTuple: TypeAlias = tuple[float, float]
+PidBackend: TypeAlias = Callable[..., PidTuple]
+
+
+def _load_rust_fn() -> PidBackend:
+    from spo_kernel import pid_decomposition_rust
+
+    def _rust(
+        phase_history_flat: FloatArray,
+        t: int,
+        n: int,
+        group_a: IntArray,
+        group_b: IntArray,
+        n_bins: int,
+    ) -> PidTuple:
+        red, syn = pid_decomposition_rust(
+            np.ascontiguousarray(phase_history_flat.ravel(), dtype=np.float64),
+            int(t),
+            int(n),
+            np.ascontiguousarray(group_a, dtype=np.int64),
+            np.ascontiguousarray(group_b, dtype=np.int64),
+            int(n_bins),
+        )
+        return float(red), float(syn)
+
+    return cast("PidBackend", _rust)
+
+
+def _load_mojo_fn() -> PidBackend:
+    # pragma: no cover — toolchain
+    from ..experimental.accelerators.monitor._pid_mojo import (
+        _ensure_exe,
+        pid_decomposition_mojo,
+    )
+
+    _ensure_exe()
+    return pid_decomposition_mojo
+
+
+def _load_julia_fn() -> PidBackend:
+    # pragma: no cover — toolchain
+    import juliacall  # noqa: F401
+
+    from ..experimental.accelerators.monitor._pid_julia import (
+        pid_decomposition_julia,
+    )
+
+    return pid_decomposition_julia
+
+
+def _load_go_fn() -> PidBackend:
+    # pragma: no cover — toolchain
+    from ..experimental.accelerators.monitor._pid_go import (
+        _load_lib,
+        pid_decomposition_go,
+    )
+
+    _load_lib()
+    return pid_decomposition_go
+
+
+_LOADERS: dict[str, Callable[[], PidBackend]] = {
+    "rust": _load_rust_fn,
+    "mojo": _load_mojo_fn,
+    "julia": _load_julia_fn,
+    "go": _load_go_fn,
+}
+_BACKEND_CACHE: dict[str, PidBackend] = {}
+
+
+def _load_backend(name: str) -> PidBackend:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
+
+
+def _resolve_backends() -> tuple[str, list[str]]:
+    _BACKEND_CACHE.clear()
+    available: list[str] = []
+    for name in _BACKEND_NAMES[:-1]:
+        try:
+            _load_backend(name)
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
+        available.append(name)
+    available.append("python")
+    return available[0], available
+
+
+ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+
+
+def _dispatch() -> PidBackend | None:
+    ordered_backends = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS]
+    seen: set[str] = set()
+    for backend in ordered_backends:
+        if backend in seen:
+            continue
+        seen.add(backend)
+        if backend == "python":
+            return None
+        try:
+            return _load_backend(backend)
+        except (ImportError, RuntimeError, OSError, KeyError):
+            continue
+    return None
 
 
 def _validate_n_bins(value: object) -> int:
@@ -74,24 +208,26 @@ def _has_complex_payload(value: object) -> bool:
     return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
 
 
-def _validate_phases(value: object) -> FloatArray:
+def _validate_phase_history(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("phases must not contain boolean values")
     raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError("phases must contain real-valued samples")
     try:
-        phases = raw.astype(np.float64, copy=True)
+        history = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
-        raise ValueError("phases must be a finite 1-D phase vector") from exc
-    if phases.ndim != 1:
-        raise ValueError("phases must be a finite 1-D phase vector")
-    if not np.all(np.isfinite(phases)):
+        raise ValueError("phases must be a finite (T, N) phase history") from exc
+    if history.ndim == 1:
+        history = history.reshape(1, -1)
+    if history.ndim != 2:
+        raise ValueError("phases must be a finite (T, N) phase history")
+    if not np.all(np.isfinite(history)):
         raise ValueError("phases must contain only finite values")
-    return phases
+    return np.ascontiguousarray(history, dtype=np.float64)
 
 
-def _validate_group_indices(value: object, *, name: str, n_phases: int) -> IntArray:
+def _validate_group_indices(value: object, *, name: str, n_osc: int) -> IntArray:
     raw = np.asarray(value)
     if raw.ndim != 1:
         raise ValueError(f"{name} must be a 1-D integer index array")
@@ -107,70 +243,150 @@ def _validate_group_indices(value: object, *, name: str, n_phases: int) -> IntAr
         raise ValueError(f"{name} must contain finite integer indices")
     if not np.all(numeric == np.floor(numeric)):
         raise TypeError(f"{name} must contain integer indices")
-    indices = numeric.astype(np.intp)
-    if indices.size > 0 and (np.any(indices < 0) or np.any(indices >= n_phases)):
-        raise IndexError(f"{name} indices must be within [0, {n_phases})")
-    return indices
+    indices = numeric.astype(np.int64)
+    if indices.size > 0 and (np.any(indices < 0) or np.any(indices >= n_osc)):
+        raise IndexError(f"{name} indices must be within [0, {n_osc})")
+    return np.ascontiguousarray(indices, dtype=np.int64)
 
 
-def _validate_pid_scalar(value: object, *, name: str) -> float:
-    if _contains_boolean_alias(value):
-        raise ValueError(f"{name} must not be a boolean value")
-    raw = np.asarray(value)
-    if _has_complex_payload(value):
-        raise ValueError(f"{name} must contain a real scalar")
-    try:
-        scalar = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be numeric") from exc
-    if scalar.shape != ():
-        raise ValueError(f"{name} must be scalar")
-    result = float(scalar)
+def _validate_pid_scalar(value: float, *, name: str) -> float:
+    result = float(value)
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
     return result
 
 
-def _circular_entropy(phases: FloatArray, n_bins: int = _DEFAULT_BINS) -> float:
-    """Shannon entropy of a circular phase distribution via histogram."""
-    if len(phases) == 0:
-        return 0.0
-    bins = np.linspace(0, 2 * np.pi, n_bins + 1)
-    counts, _ = np.histogram(phases % (2 * np.pi), bins=bins)
-    total = counts.sum()
-    if total == 0:
-        return 0.0
-    probs = counts / total
-    probs = probs[probs > 0]
-    return -float(np.sum(probs * np.log(probs)))
+def _bin_series(series: FloatArray, n_bins: int) -> IntArray:
+    """Bin circular angles into ``[0, n_bins)`` equal-width phase bins."""
+    wrapped = np.mod(series, TAU)
+    idx = np.floor(wrapped / (TAU / n_bins)).astype(np.int64)
+    return np.clip(idx, 0, n_bins - 1)
 
 
-def _joint_entropy_2d(
-    phases_a: FloatArray, phases_b: FloatArray, n_bins: int = _DEFAULT_BINS
+def _group_phase_series(history: FloatArray, group: IntArray) -> FloatArray:
+    """Order-parameter phase of a group at each timestep."""
+    z = np.exp(1j * history[:, group]).mean(axis=1)
+    return cast("FloatArray", np.angle(z))
+
+
+def _mutual_information(
+    joint: FloatArray, marg_x: FloatArray, marg_y: FloatArray
 ) -> float:
-    """Joint entropy H(A, B) from paired circular observations."""
-    bins = np.linspace(0, 2 * np.pi, n_bins + 1)
-    a_wrapped = phases_a % (2 * np.pi)
-    b_wrapped = phases_b % (2 * np.pi)
-    hist, _, _ = np.histogram2d(a_wrapped, b_wrapped, bins=[bins, bins])
-    total = hist.sum()
-    if total == 0:
+    """``MI(X; Y)`` from a joint count matrix and the two marginal counts."""
+    total = float(marg_y.sum())
+    if total <= 0.0:
         return 0.0
-    probs = hist.ravel() / total
-    probs = probs[probs > 0]
-    return -float(np.sum(probs * np.log(probs)))
+    mi = 0.0
+    rows, cols = joint.shape
+    for x in range(rows):
+        if marg_x[x] <= 0.0:
+            continue
+        for y in range(cols):
+            cxy = joint[x, y]
+            if cxy <= 0.0 or marg_y[y] <= 0.0:
+                continue
+            p_xy = cxy / total
+            mi += p_xy * np.log(p_xy / ((marg_x[x] / total) * (marg_y[y] / total)))
+    return max(0.0, mi)
 
 
-def _mutual_information_paired(
-    phases_a: FloatArray, phases_b: FloatArray, n_bins: int = _DEFAULT_BINS
+def _i_min_redundancy(
+    cay: FloatArray,
+    cby: FloatArray,
+    ca: FloatArray,
+    cb: FloatArray,
+    cy: FloatArray,
 ) -> float:
-    """MI(A; B) = H(A) + H(B) - H(A, B) for paired circular samples."""
-    if len(phases_a) != len(phases_b) or len(phases_a) == 0:
+    """Williams & Beer ``I_min`` redundancy from joint/marginal counts."""
+    total = float(cy.sum())
+    if total <= 0.0:
         return 0.0
-    ha = _circular_entropy(phases_a, n_bins)
-    hb = _circular_entropy(phases_b, n_bins)
-    hab = _joint_entropy_2d(phases_a, phases_b, n_bins)
-    return max(0.0, ha + hb - hab)
+    n_bins = cy.shape[0]
+    i_red = 0.0
+    for y in range(n_bins):
+        if cy[y] <= 0.0:
+            continue
+        p_y = cy[y] / total
+        ispec_a = 0.0
+        for x in range(n_bins):
+            if cay[x, y] <= 0.0 or ca[x] <= 0.0:
+                continue
+            p_a_given_y = cay[x, y] / cy[y]
+            p_y_given_a = cay[x, y] / ca[x]
+            ispec_a += p_a_given_y * np.log(p_y_given_a / p_y)
+        ispec_b = 0.0
+        for x in range(n_bins):
+            if cby[x, y] <= 0.0 or cb[x] <= 0.0:
+                continue
+            p_b_given_y = cby[x, y] / cy[y]
+            p_y_given_b = cby[x, y] / cb[x]
+            ispec_b += p_b_given_y * np.log(p_y_given_b / p_y)
+        i_red += p_y * min(ispec_a, ispec_b)
+    return max(0.0, i_red)
+
+
+def _pid_python(
+    phase_history_flat: FloatArray,
+    t: int,
+    n: int,
+    group_a: IntArray,
+    group_b: IntArray,
+    n_bins: int,
+) -> PidTuple:
+    """NumPy reference for the time-series Williams & Beer PID."""
+    if t == 0 or group_a.size == 0 or group_b.size == 0:
+        return 0.0, 0.0
+    history = phase_history_flat.reshape(t, n)
+    y = _bin_series(np.angle(np.exp(1j * history).mean(axis=1)), n_bins)
+    a = _bin_series(_group_phase_series(history, group_a), n_bins)
+    b = _bin_series(_group_phase_series(history, group_b), n_bins)
+
+    cy = np.bincount(y, minlength=n_bins).astype(np.float64)
+    ca = np.bincount(a, minlength=n_bins).astype(np.float64)
+    cb = np.bincount(b, minlength=n_bins).astype(np.float64)
+    cay = np.zeros((n_bins, n_bins), dtype=np.float64)
+    cby = np.zeros((n_bins, n_bins), dtype=np.float64)
+    np.add.at(cay, (a, y), 1.0)
+    np.add.at(cby, (b, y), 1.0)
+    ab = a * n_bins + b
+    cab = np.bincount(ab, minlength=n_bins * n_bins).astype(np.float64)
+    caby = np.zeros((n_bins * n_bins, n_bins), dtype=np.float64)
+    np.add.at(caby, (ab, y), 1.0)
+
+    mi_a = _mutual_information(cay, ca, cy)
+    mi_b = _mutual_information(cby, cb, cy)
+    mi_ab = _mutual_information(caby, cab, cy)
+    i_red = _i_min_redundancy(cay, cby, ca, cb, cy)
+    synergy_value = max(0.0, mi_ab - mi_a - mi_b + i_red)
+    return i_red, synergy_value
+
+
+def _decompose(
+    phases: object,
+    group_a: object,
+    group_b: object,
+    n_bins: object,
+) -> PidTuple:
+    """Validate inputs and dispatch the PID primitive to the fastest backend."""
+    bin_count = _validate_n_bins(n_bins)
+    history = _validate_phase_history(phases)
+    t, n = int(history.shape[0]), int(history.shape[1])
+    if n == 0:
+        return 0.0, 0.0
+    group_a_idx = _validate_group_indices(group_a, name="group_a", n_osc=n)
+    group_b_idx = _validate_group_indices(group_b, name="group_b", n_osc=n)
+    if group_a_idx.size == 0 or group_b_idx.size == 0:
+        return 0.0, 0.0
+
+    flat = np.ascontiguousarray(history.ravel(), dtype=np.float64)
+    backend_fn = _dispatch()
+    if backend_fn is not None:
+        try:
+            red, syn = backend_fn(flat, t, n, group_a_idx, group_b_idx, bin_count)
+            return float(red), float(syn)
+        except (ImportError, RuntimeError, OSError, KeyError, ValueError):
+            pass
+    return _pid_python(flat, t, n, group_a_idx, group_b_idx, bin_count)
 
 
 def redundancy(
@@ -179,43 +395,13 @@ def redundancy(
     group_b: list[int] | IntArray,
     n_bins: int = _DEFAULT_BINS,
 ) -> float:
-    """Redundant information: shared by both groups about the global phase.
+    """Redundant information both groups share about the global phase.
 
-    I_red = min(MI(A; global), MI(B; global))
-
-    Williams & Beer 2010 minimum-MI redundancy.
+    ``I_red = Σ_y p(y)·min(I_spec(Y=y; A), I_spec(Y=y; B))`` (Williams & Beer
+    2010 ``I_min``). ``phases`` is a ``(T, N)`` phase history.
     """
-    bin_count = _validate_n_bins(n_bins)
-    phase_values = _validate_phases(phases)
-    n = len(phase_values)
-    if n == 0:
-        return 0.0
-    group_a_idx = _validate_group_indices(group_a, name="group_a", n_phases=n)
-    group_b_idx = _validate_group_indices(group_b, name="group_b", n_phases=n)
-    if len(group_a_idx) == 0 or len(group_b_idx) == 0:
-        return 0.0
-
-    if _rust_pid_redundancy is not None:
-        try:
-            return _validate_pid_scalar(
-                _rust_pid_redundancy(
-                    np.ascontiguousarray(phase_values.ravel()),
-                    group_a_idx.tolist(),
-                    group_b_idx.tolist(),
-                    bin_count,
-                ),
-                name="redundancy",
-            )
-        except Exception:
-            group_a_idx = group_a_idx.copy()
-
-    global_phase = float(np.angle(np.mean(np.exp(1j * phase_values))))
-    global_a: FloatArray = np.full(len(group_a_idx), global_phase)
-    global_b: FloatArray = np.full(len(group_b_idx), global_phase)
-
-    mi_a = _mutual_information_paired(phase_values[group_a_idx], global_a, bin_count)
-    mi_b = _mutual_information_paired(phase_values[group_b_idx], global_b, bin_count)
-    return _validate_pid_scalar(min(mi_a, mi_b), name="redundancy")
+    red, _ = _decompose(phases, group_a, group_b, n_bins)
+    return _validate_pid_scalar(red, name="redundancy")
 
 
 def synergy(
@@ -224,51 +410,11 @@ def synergy(
     group_b: list[int] | IntArray,
     n_bins: int = _DEFAULT_BINS,
 ) -> float:
-    """Synergistic information: present only in the joint (A, B).
+    """Synergistic information present only in the joint ``(A, B)``.
 
-    I_syn = MI(A+B; global) - MI(A; global) - MI(B; global) + I_red
-
-    Positive synergy means the combined group carries information
-    about the global state that neither subgroup carries alone.
+    ``I_syn = MI(A,B; Y) − MI(A; Y) − MI(B; Y) + I_red``. Positive synergy means
+    the combined group carries information about the global state that neither
+    subgroup carries alone. ``phases`` is a ``(T, N)`` phase history.
     """
-    bin_count = _validate_n_bins(n_bins)
-    phase_values = _validate_phases(phases)
-    n = len(phase_values)
-    if n == 0:
-        return 0.0
-    group_a_idx = _validate_group_indices(group_a, name="group_a", n_phases=n)
-    group_b_idx = _validate_group_indices(group_b, name="group_b", n_phases=n)
-    if len(group_a_idx) == 0 or len(group_b_idx) == 0:
-        return 0.0
-
-    if _rust_pid_synergy is not None:
-        try:
-            return _validate_pid_scalar(
-                _rust_pid_synergy(
-                    np.ascontiguousarray(phase_values.ravel()),
-                    group_a_idx.tolist(),
-                    group_b_idx.tolist(),
-                    bin_count,
-                ),
-                name="synergy",
-            )
-        except Exception:
-            group_b_idx = group_b_idx.copy()
-
-    global_phase = float(np.angle(np.mean(np.exp(1j * phase_values))))
-
-    joint_indices: IntArray = np.concatenate([group_a_idx, group_b_idx])
-    global_joint: FloatArray = np.full(len(joint_indices), global_phase)
-    global_a: FloatArray = np.full(len(group_a_idx), global_phase)
-    global_b: FloatArray = np.full(len(group_b_idx), global_phase)
-
-    mi_joint = _mutual_information_paired(
-        phase_values[joint_indices], global_joint, bin_count
-    )
-    mi_a = _mutual_information_paired(phase_values[group_a_idx], global_a, bin_count)
-    mi_b = _mutual_information_paired(phase_values[group_b_idx], global_b, bin_count)
-    i_red = min(mi_a, mi_b)
-
-    return _validate_pid_scalar(
-        max(0.0, mi_joint - mi_a - mi_b + i_red), name="synergy"
-    )
+    _, syn = _decompose(phases, group_a, group_b, n_bins)
+    return _validate_pid_scalar(syn, name="synergy")
