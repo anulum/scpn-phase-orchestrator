@@ -543,12 +543,23 @@ class TestDispatcherFallthroughForRust:
             return {
                 "de": None,
                 "mi": lambda signal, lag, n_bins: _reference_mi(signal, lag, n_bins),
-                "nn": lambda embedded, _t, _m: _reference_nn(embedded),
+                # ``nn`` backends receive the flattened embedding plus its (t, m)
+                # shape; reconstruct the matrix before delegating to the
+                # reference so the returned distances satisfy the output
+                # contract.
+                "nn": lambda flat, t, m: _reference_nn(
+                    np.asarray(flat, dtype=np.float64).reshape(int(t), int(m))
+                ),
             }
 
         monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
         monkeypatch.setitem(em_mod._LOADERS, "rust", rust_loader)
         monkeypatch.setitem(em_mod._LOADERS, "go", python_loader)
+        # Clear any cached resolved backend so the dispatcher actually exercises
+        # the monkeypatched loaders (otherwise a previously cached real backend
+        # from another test would mask the fallthrough being verified here).
+        previous_cache = dict(em_mod._BACKEND_CACHE)
+        em_mod._BACKEND_CACHE.clear()
         prev = _force("rust")
         try:
             mi = mutual_information(sig, 5, 16)
@@ -556,6 +567,8 @@ class TestDispatcherFallthroughForRust:
             dist, idx = nearest_neighbor_distances(emb)
         finally:
             _reset(prev)
+            em_mod._BACKEND_CACHE.clear()
+            em_mod._BACKEND_CACHE.update(previous_cache)
         assert np.isfinite(mi)
         np.testing.assert_array_equal(got_emb, emb)
         assert dist.size == emb.shape[0]
