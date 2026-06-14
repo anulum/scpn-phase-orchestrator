@@ -214,6 +214,80 @@ class TestEthicalCost:
         np.testing.assert_array_equal(call[1], np.array([0.0, 0.25, 0.75, 0.0]))
         assert call[2:] == (2, 0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88)
 
+    def test_python_fallback_single_phase_exact(self, monkeypatch):
+        """Force the Python reference path and verify the exact SEC/CBF maths
+        regardless of whether the Rust kernel is present on the host.
+
+        n=1 gives R=1, lambda2=0, Q=0 (no possible edges) and S_dev=0, so the
+        SEC score reduces to alpha_R and only the connectivity barrier fires.
+        """
+        monkeypatch.setattr(ethical_module, "_HAS_RUST", False)
+        cost = compute_ethical_cost(
+            np.array([0.25]),
+            np.zeros((1, 1)),
+            alpha_R=0.4,
+            beta_K=0.3,
+            gamma_Q=0.2,
+            nu_S=0.1,
+            kappa=2.0,
+            R_min=0.2,
+            connectivity_min=0.1,
+        )
+        assert cost.J_sec == pytest.approx(0.4)
+        assert cost.phi_ethics == pytest.approx(2.0 * 0.1**2)
+        assert cost.c15_sec == pytest.approx((1.0 - 0.4) + 2.0 * 0.1**2)
+        assert cost.constraints_violated == 1
+
+    def test_python_fallback_counts_independent_violations(self, monkeypatch):
+        """Python path: low coherence, no connectivity, and excess coupling each
+        contribute a separate squared CBF penalty."""
+        monkeypatch.setattr(ethical_module, "_HAS_RUST", False)
+        phases = np.array([0.0, np.pi])
+        knm = np.array([[0.0, 7.0], [7.0, 0.0]])
+        cost = compute_ethical_cost(
+            phases,
+            knm,
+            kappa=0.5,
+            R_min=0.5,
+            connectivity_min=20.0,
+            max_coupling=5.0,
+        )
+        assert cost.constraints_violated == 3
+        assert cost.phi_ethics == pytest.approx(
+            0.5 * (0.5**2 + (20.0 - 14.0) ** 2 + 2.0**2)
+        )
+        assert cost.c15_sec == pytest.approx((1.0 - cost.J_sec) + cost.phi_ethics)
+
+    @pytest.mark.parametrize(
+        ("phases", "knm", "expect_violations"),
+        [
+            # Synchronised, well-connected, bounded coupling -> no barrier fires.
+            (np.zeros(6), np.full((6, 6), 1.0) - np.eye(6), 0),
+            # Splayed, weakly coupled -> low coherence barrier fires.
+            (
+                np.linspace(0.0, 2.0 * np.pi, 6, endpoint=False),
+                (np.full((6, 6), 0.05) - np.eye(6) * 0.05),
+                None,
+            ),
+        ],
+    )
+    def test_rust_python_parity(self, monkeypatch, phases, knm, expect_violations):
+        """Rust and Python paths must agree field-for-field on the same input."""
+        if not ethical_module._HAS_RUST:
+            pytest.skip("Rust backend not built")
+
+        knm = np.ascontiguousarray(knm, dtype=np.float64)
+        rust_cost = compute_ethical_cost(phases, knm)
+        monkeypatch.setattr(ethical_module, "_HAS_RUST", False)
+        py_cost = compute_ethical_cost(phases, knm)
+
+        assert py_cost.J_sec == pytest.approx(rust_cost.J_sec, abs=1e-9)
+        assert py_cost.phi_ethics == pytest.approx(rust_cost.phi_ethics, abs=1e-9)
+        assert py_cost.c15_sec == pytest.approx(rust_cost.c15_sec, abs=1e-9)
+        assert py_cost.constraints_violated == rust_cost.constraints_violated
+        if expect_violations is not None:
+            assert py_cost.constraints_violated == expect_violations
+
 
 class TestClosureEthicalPipelineWiring:
     """Pipeline: SSGF closure → W → engine → ethical cost."""
