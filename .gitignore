@@ -236,6 +236,9 @@ mojo/market_mojo
 # Mojo FFI reference binaries (source tracked, binaries build on demand)
 mojo/_lapack_test
 
+# spatial coupling modulator compiled artefacts
+mojo/spatial_modulator_mojo
+
 # spectral (graph Laplacian eig) compiled artefacts
 go/libspectral.so
 go/libspectral.h
