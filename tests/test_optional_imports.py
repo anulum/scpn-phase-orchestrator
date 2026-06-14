@@ -9,6 +9,9 @@
 from __future__ import annotations
 
 import importlib
+import os
+import subprocess
+import sys
 
 import numpy as np
 
@@ -102,6 +105,78 @@ class TestNNModuleImportGuard:
                     pass  # some symbols (spectral, chimera) are numpy-only
 
 
+class TestJuliaSignalHandlingGuard:
+    """The package must keep the optional Julia backend probe importable on a
+    multithreaded host. juliacall 0.9.34's ``init()`` references an undefined
+    ``Base`` in its multithreaded-warning branch unless
+    ``PYTHON_JULIACALL_HANDLE_SIGNALS`` is set, so the package root sets it
+    before the first submodule import that may load juliacall."""
+
+    _MARKER = "SPO_HS_RESULT="
+
+    def _handle_signals_after_import(self, preset: dict[str, str]) -> str:
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if key != "PYTHON_JULIACALL_HANDLE_SIGNALS"
+        }
+        env.update(preset)
+        script = (
+            "import os, scpn_phase_orchestrator;"
+            f"print({self._MARKER!r} + "
+            "os.environ.get('PYTHON_JULIACALL_HANDLE_SIGNALS', '<unset>'))"
+        )
+        completed = subprocess.run(
+            [sys.executable, "-c", script],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=True,
+        )
+        for line in completed.stdout.splitlines():
+            if line.startswith(self._MARKER):
+                return line[len(self._MARKER) :]
+        raise AssertionError(
+            f"marker not found in subprocess stdout: {completed.stdout!r}"
+        )
+
+    def test_default_enables_signal_handling(self):
+        """A clean environment must come back with the upstream-recommended
+        value so the multithreaded juliacall init branch is skipped."""
+        assert self._handle_signals_after_import({}) == "yes"
+
+    def test_operator_override_is_preserved(self):
+        """An operator-provided value must not be overwritten by the package."""
+        assert (
+            self._handle_signals_after_import(
+                {"PYTHON_JULIACALL_HANDLE_SIGNALS": "no"}
+            )
+            == "no"
+        )
+
+    def test_package_import_yields_python_backend_floor(self):
+        """Importing the package must always leave a usable UPDE backend chain
+        with the Python reference present, even when optional toolchains are
+        unavailable, and the stateless integrator must advance phases."""
+        from scpn_phase_orchestrator.upde._run import AVAILABLE_BACKENDS, upde_run
+
+        assert "python" in AVAILABLE_BACKENDS
+
+        phases = np.array([0.0, 0.5, 1.0, 1.5])
+        omegas = np.ones(4)
+        knm = np.ones((4, 4)) * 0.3
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((4, 4))
+        result = upde_run(phases, omegas, knm, alpha, 0.0, 0.0, 0.01, 5)
+
+        assert result.shape == (4,)
+        assert np.all(np.isfinite(result))
+        assert not np.allclose(result, phases)
+
+
 # Pipeline wiring: optional import tests verify jax_engine and nn module availability
 # detection. TestJaxEngineImportGuard and TestNNModuleImportGuard prove import
-# fallback paths.
+# fallback paths. TestJuliaSignalHandlingGuard proves the package root keeps the
+# Julia backend probe importable on multithreaded hosts and that the Python
+# backend floor remains usable.

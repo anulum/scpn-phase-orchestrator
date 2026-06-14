@@ -23,6 +23,18 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0+unknown"
 
+import os as _os
+
+# juliacall 0.9.34's init() references an undefined ``Base`` in its
+# multithreaded-warning branch when ``PYTHON_JULIACALL_HANDLE_SIGNALS`` is unset
+# and the host process is multithreaded (for example under coverage's thread
+# tracer), raising NameError and aborting the optional Julia backend probe.
+# The upstream-recommended value skips that branch; the guard keeps any
+# operator-provided override intact. Must run before the first submodule import
+# that may load juliacall.
+if "PYTHON_JULIACALL_HANDLE_SIGNALS" not in _os.environ:
+    _os.environ["PYTHON_JULIACALL_HANDLE_SIGNALS"] = "yes"
+
 from scpn_phase_orchestrator.api import Orchestrator, OrchestratorState
 from scpn_phase_orchestrator.artifacts.qpu_data import (
     QPUDataArtifact,

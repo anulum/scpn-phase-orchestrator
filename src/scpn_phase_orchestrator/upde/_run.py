@@ -153,9 +153,23 @@ def _load_webgpu_fn() -> Callable[..., FloatArray]:
     return load_webgpu_dispatch_bridge()
 
 
+def _require_juliacall_runtime() -> None:
+    # pragma: no cover — toolchain
+    juliacall = importlib.import_module("juliacall")
+    # The engine needs ``juliacall.Main``. When juliacall cannot finish
+    # initialising the Julia runtime (for example a partial init under a
+    # coverage thread tracer) the module imports but ``Main`` is absent; treat
+    # that as an unavailable backend rather than letting the later engine call
+    # crash with ImportError after dispatch.
+    if not hasattr(juliacall, "Main"):
+        raise ImportError(
+            "juliacall.Main unavailable; Julia runtime not initialised"
+        )
+
+
 def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
-    importlib.import_module("juliacall")
+    _require_juliacall_runtime()
 
     from ..experimental.accelerators.upde._engine_julia import (
         upde_run_julia,
@@ -166,7 +180,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 def _load_julia_schedule_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
-    importlib.import_module("juliacall")
+    _require_juliacall_runtime()
 
     from ..experimental.accelerators.upde._engine_julia import (
         upde_run_omega_schedule_julia,
