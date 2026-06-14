@@ -10,9 +10,9 @@
 
 All four non-Python backends must match the Python reference on
 the same input within 1e-12 (Rust / Julia / Go) or 1e-9 (Mojo).
-The Python reference was aligned to Rust's canonical
-``b / (dist · d² + eps)`` repulse formula during migration (the
-pre-migration Python used ``dist³`` which drifted by O(1e-4)).
+All five backends use the canonical O'Keeffe-Hong-Strogatz
+inverse-distance repulsion ``b / (|dx|^2 + eps)`` (scalar
+``b / (d2 + eps)`` multiplying the separation vector).
 """
 
 from __future__ import annotations

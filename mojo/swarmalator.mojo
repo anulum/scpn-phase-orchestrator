@@ -56,8 +56,8 @@ fn swarmalator_step(
             var cos_d = cos(phases[m] - theta_i)
             var sin_d = sin(phases[m] - theta_i)
             var attract = (a + j * cos_d) / dist
-            # Rust canonical: b / (dist * d2 + eps).
-            var repulse = b / (dist * s + 1e-6)
+            # OHS canonical inverse-distance repulsion: b / |dx|^2.
+            var repulse = b / (s + 1e-6)
             var factor = attract - repulse
             for d in range(dim):
                 var delta = pos[base_m + d] - pos[base_i + d]

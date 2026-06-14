@@ -10,16 +10,21 @@
 chain per ``feedback_module_standard_attnres.md``.
 
 Swarmalators combine spatial attraction / repulsion with phase
-oscillator dynamics (O'Keeffe & Strogatz 2017). Each agent has a
-position ``x_i ∈ ℝ^d`` and a phase ``θ_i``; they co-evolve through
-attract/repulse + phase-coupling terms:
+oscillator dynamics (O'Keeffe, Hong & Strogatz, *Nat. Commun.* 8:1504,
+2017). Each agent has a position ``x_i ∈ ℝ^d`` and a phase ``θ_i``;
+they co-evolve through attract/repulse + phase-coupling terms:
 
     ẋ_i = (1/N) Σ_j (x_j − x_i) [(a + j·cos(θ_j − θ_i)) / |x_j − x_i|
-                                 − b / (|x_j − x_i|³ + ε)]
+                                 − b / |x_j − x_i|²]
     θ̇_i = ω_i + (k / N) Σ_j sin(θ_j − θ_i) / |x_j − x_i|
 
-Regularisation constants ``1e-6`` inside ``sqrt`` and the repulse
-cube guard against singularities at coincident agents.
+The repulsion ``b·(x_j − x_i) / |x_j − x_i|²`` is the canonical
+inverse-distance hard core of O'Keeffe-Hong-Strogatz (magnitude
+``b / |x_j − x_i|``), with ``a = A = 1``, ``b = B = 1``, ``j = J``,
+``k = K`` recovering the original model. A single regularisation
+constant ``ε = 1e-6`` is added to ``|x_j − x_i|²`` (and inside the
+``sqrt`` for the attraction/phase ``|x_j − x_i|``) so the kernel is
+finite at coincident agents; it vanishes in the ``ε → 0`` limit.
 """
 
 from __future__ import annotations
@@ -249,11 +254,10 @@ def _python_step(
 ) -> tuple[FloatArray, FloatArray]:
     """Python reference matching the Rust kernel exactly.
 
-    Note on ``repulse``: Rust uses ``b / (dist · d²ₛᵤₘ + eps)`` where
-    ``d²ₛᵤₘ`` is the pre-eps squared sum, not ``b / (dist³ + eps)``.
-    The two formulas agree in the ``eps → 0`` limit but drift at
-    small distances; the pre-migration Python reference used the
-    ``dist³`` variant. All non-Rust backends now match Rust.
+    Repulsion is the canonical O'Keeffe-Hong-Strogatz inverse-distance
+    core ``b·(x_j − x_i) / (|x_j − x_i|² + ε)`` (scalar ``b / (d2 + ε)``
+    multiplying the separation vector, where ``d2`` is the pre-ε squared
+    distance). All five backends use this identical form bit-for-bit.
     """
     eps = 1e-6
     phase_distance_weights = SpatialCouplingModulator(
@@ -270,7 +274,7 @@ def _python_step(
         cos_diff = np.cos(phases - phases[i])
         sin_diff = np.sin(phases - phases[i])
         attract = (a + j * cos_diff) / dist
-        repulse = b / (dist * d2 + eps)  # Rust semantics
+        repulse = b / (d2 + eps)  # OHS inverse-distance core
         vel = (
             np.sum(
                 diff * (attract - repulse)[:, np.newaxis],

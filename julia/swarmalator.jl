@@ -15,8 +15,9 @@ swarmalator.jl — single O(N² · d) swarmalator step.
 * ``pos_flat`` / ``new_pos_flat`` are row-major ``(N, d)``.
 * Matches the Rust ``PySwarmalatorStepper.step`` semantics exactly.
 
-Regularisation constants (``1e-6`` inside sqrt and distance cube)
-guard against singularities at coincident agents.
+Regularisation constant ``1e-6`` (inside sqrt for the attraction/phase
+distance and added to the squared distance in the OHS inverse-distance
+repulsion) guards against singularities at coincident agents.
 """
 
 module SwarmalatorJL
@@ -61,8 +62,8 @@ function swarmalator_step(
             cos_d = cos(phases[m] - θi)
             sin_d = sin(phases[m] - θi)
             attract = (a + j * cos_d) / dist
-            # Rust canonical: b / (dist * d²ₛᵤₘ + eps).
-            repulse = b / (dist * s + 1e-6)
+            # OHS canonical inverse-distance repulsion: b / |dx|^2.
+            repulse = b / (s + 1e-6)
             factor = attract - repulse
             for d in 1:dim
                 δ = pos_flat[base_m + d] - pos_flat[base_i + d]

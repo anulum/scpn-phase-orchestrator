@@ -180,6 +180,31 @@ class TestStep:
         expected = (phases + 0.01 * omegas) % TWO_PI
         np.testing.assert_allclose(new_ph, expected, atol=1e-12)
 
+    @_python
+    def test_two_body_sync_equilibrium_matches_ohs(self):
+        """OHS canonical inverse-distance repulsion: two phase-synced agents
+        balance at separation ``r = b / (A + J)`` (O'Keeffe-Hong-Strogatz,
+        Nat. Commun. 2017). With ``A = b = J = 1`` that is ``r = 0.5``; the
+        spurious ``|dx|**3`` core would instead balance at
+        ``sqrt(0.5) ~ 0.707``, so this pins the repulsion exponent.
+        """
+        eng = SwarmalatorEngine(2, dim=2, dt=0.01)
+        phases = np.array([0.3, 0.3], dtype=np.float64)  # synced -> cos=1
+        omegas = np.zeros(2, dtype=np.float64)
+
+        # At r = b / (A + J) = 0.5 the net radial velocity vanishes.
+        pos_eq = np.array([[0.0, 0.0], [0.5, 0.0]], dtype=np.float64)
+        new_eq, _ = eng.step(pos_eq, phases, omegas, a=1.0, b=1.0, j=1.0, k=0.0)
+        np.testing.assert_allclose(new_eq, pos_eq, atol=1e-4)
+
+        # At the old |dx|**3 equilibrium sqrt(0.5) attraction must now win,
+        # so the pair closes in. This assertion fails for the |dx|**3 core.
+        r0 = math.sqrt(0.5)
+        pos_far = np.array([[0.0, 0.0], [r0, 0.0]], dtype=np.float64)
+        new_far, _ = eng.step(pos_far, phases, omegas, a=1.0, b=1.0, j=1.0, k=0.0)
+        sep_after = float(np.linalg.norm(new_far[1] - new_far[0]))
+        assert sep_after < r0
+
     def test_selected_backend_output_must_preserve_finite_torus_state(
         self,
         monkeypatch: pytest.MonkeyPatch,

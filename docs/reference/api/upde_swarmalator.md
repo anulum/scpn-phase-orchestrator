@@ -22,7 +22,7 @@ $\theta_i \in [0, 2\pi)$. The dynamics are:
 $$
 \dot{\mathbf{x}}_i = \frac{1}{N} \sum_{j \neq i}
 \frac{(A + J\cos(\theta_j - \theta_i))\,(\mathbf{x}_j - \mathbf{x}_i)}{|\mathbf{x}_j - \mathbf{x}_i|}
-- \frac{B\,(\mathbf{x}_j - \mathbf{x}_i)}{|\mathbf{x}_j - \mathbf{x}_i|^3}
+- \frac{B\,(\mathbf{x}_j - \mathbf{x}_i)}{|\mathbf{x}_j - \mathbf{x}_i|^2}
 $$
 
 **Phase:**

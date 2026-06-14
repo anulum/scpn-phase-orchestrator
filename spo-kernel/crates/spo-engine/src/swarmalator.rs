@@ -132,7 +132,8 @@ impl SwarmalatorStepper {
                     let cd = ct[jj] * ci + st[jj] * si;
                     let sd = st[jj] * ci - ct[jj] * si;
                     let attr = (a + j * cd) * idist;
-                    let rep = b / (dist * d2 + eps);
+                    // OHS canonical inverse-distance repulsion: b / |dx|^2.
+                    let rep = b / (d2 + eps);
                     for d in 0..dim {
                         let delta = p_slice[jj * dim + d] - p_slice[i * dim + d];
                         dx_i[d] += delta * attr - delta * rep;

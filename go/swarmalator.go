@@ -47,8 +47,8 @@ func swarmalatorStep(
 			cosD := math.Cos(phases[m] - thetaI)
 			sinD := math.Sin(phases[m] - thetaI)
 			attract := (a + j*cosD) / dist
-			// Rust canonical: b / (dist * d2 + eps).
-			repulse := b / (dist*s + 1e-6)
+			// OHS canonical inverse-distance repulsion: b / |dx|^2.
+			repulse := b / (s + 1e-6)
 			factor := attract - repulse
 			for d := 0; d < dim; d++ {
 				delta := pos[baseM+d] - pos[baseI+d]
