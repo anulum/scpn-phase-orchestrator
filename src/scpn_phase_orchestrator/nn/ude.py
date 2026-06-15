@@ -48,16 +48,17 @@ class CouplingResidual(eqx.Module):
     def __call__(self, delta_theta: jax.Array) -> jax.Array:
         """Evaluate residual for a single phase difference scalar.
 
-        Args:
-            delta_theta: scalar phase difference
-
-        Returns:
-            scalar correction
+        The output is squashed to ``[-1, 1]`` with ``tanh``: a physical coupling
+        function of a phase difference is bounded (the ``sin`` backbone has
+        magnitude ≤ 1), so the learned correction must be too. Without the bound
+        the linear output head extrapolates without limit on phase differences
+        unseen during training, and forward integration outside the training
+        window diverges to NaN.
         """
         x = delta_theta[jnp.newaxis]  # (1,)
         x = jnp.tanh(self.layers[0](x))
         x = jnp.tanh(self.layers[1](x))
-        x = self.layers[2](x)
+        x = jnp.tanh(self.layers[2](x))
         result: jax.Array = x[0]
         return result
 

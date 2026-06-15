@@ -243,7 +243,10 @@ class TestV17UDEOverfitting:
 
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.training import train
-        from scpn_phase_orchestrator.nn.ude import UDEKuramotoLayer
+        from scpn_phase_orchestrator.nn.ude import (
+            UDEKuramotoLayer,
+            ude_kuramoto_forward,
+        )
 
         key = jr.PRNGKey(42)
         k1, k2, k3 = jr.split(key, 3)
@@ -273,21 +276,22 @@ class TestV17UDEOverfitting:
 
         trained, losses = train(layer, train_loss, optax.adam(1e-3), 50)
 
-        # Evaluate on test
-        _, pred_all = trained.forward_with_trajectory(phases0)
+        # Genuine extrapolation: the layer integrates only n_steps=60, so run
+        # the trained parameters forward for the full 100 steps to reach the
+        # held-out window [60:100] instead of slicing past the trajectory end.
+        _, pred_all = ude_kuramoto_forward(
+            phases0, trained.omegas, trained.K, trained.residual, 0.01, 100
+        )
         pred_test = pred_all[60:100]
         T = min(pred_test.shape[0], traj_test.shape[0])
         test_loss = float(jnp.mean(1.0 - jnp.cos(pred_test[:T] - traj_test[:T])))
         final_train_loss = losses[-1] if losses else 1.0
 
-        # FINDING: UDE extrapolation beyond training window produces NaN.
-        # The learned residual is not bounded, so forward integration
-        # diverges outside the training regime. This is a real limitation.
-        if np.isnan(test_loss):
-            pytest.xfail(
-                "UDE extrapolation NaN — residual MLP unbounded outside "
-                f"training window. train_loss={final_train_loss:.4f}"
-            )
+        # The residual MLP is tanh-bounded, so integration past the training
+        # window stays finite instead of diverging to NaN.
+        assert np.isfinite(test_loss), (
+            "UDE extrapolation diverged; the residual correction must stay bounded."
+        )
         ratio = test_loss / max(final_train_loss, 1e-8)
         assert ratio < 10.0, (
             f"Overfitting: test/train loss ratio = {ratio:.1f} "

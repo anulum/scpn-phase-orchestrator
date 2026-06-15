@@ -27,7 +27,7 @@ Last reviewed: 2026-05-01
 | NNVAL-001 | `test_nn_physics_validation.py:205` | `@xfail` | CPU-JAX float32 diverges from GPU at tight tolerance | Arcane Sapience | No | Keep xfail until deterministic cross-device tolerance envelope is defined. |
 | NNVAL-002 | `test_nn_physics_validation.py:389` | `pytest.xfail` | SAF gradient NaN at eigendegenerate spectra | Arcane Sapience | No | Keep xfail; known `eigh` backward degeneracy path. |
 | NNVAL-003 | `test_nn_physics_validation.py:477` | `pytest.xfail` | Simplicial hysteresis not detected at current N/sigma2 | Arcane Sapience | No | Keep xfail pending larger-N parameter sweep evidence. |
-| NNVAL-004 | `test_nn_physics_validation_p2.py:287` | `pytest.xfail` | UDE extrapolation NaN outside train window | Arcane Sapience | **Yes** | Must be fixed or hard-gated before v1.0 freeze. |
+| NNVAL-004 | `test_nn_physics_validation_p2.py:276` | `assert` | UDE extrapolation NaN outside train window | Arcane Sapience | No | RESOLVED 2026-06-15 — `CouplingResidual` now tanh-bounds its output so the learned correction stays in `[-1, 1]` (matching the bounded `sin` backbone) and forward integration past the training window stays finite. The test also genuinely extrapolates (100-step run with trained params) instead of slicing past the trajectory end, and asserts finite test loss with `test/train < 10`. |
 | NNVAL-005 | `test_nn_physics_validation_p3.py:114` | `pytest.xfail` | Reservoir correlation below threshold without tuned K_c | Arcane Sapience | No | Keep xfail; expected operating-point sensitivity. |
 | NNVAL-006 | `test_nn_physics_validation_p5.py:389` | `@xfail` | CPU-JAX float32 phase drift at strict tolerance | Arcane Sapience | No | Keep xfail with documented float64 recommendation for strict checks. |
 | NNVAL-007 | `test_nn_physics_validation_p6.py:345` | `assert` | K symmetry breaks during gradient training | Arcane Sapience | No | RESOLVED 2026-06-15 — `KuramotoLayer.coupling` integrates the symmetric part `(K+Kᵀ)/2`, so the loss gradient w.r.t. `K` is symmetric and trained `K` stays exactly symmetric (`max\|K−Kᵀ\|=0`). The xfail is now a hard symmetry assertion. |
@@ -47,11 +47,12 @@ Last reviewed: 2026-05-01
 
 Blocking exceptions for v1.0 closure:
 
-- NNVAL-004 (`UDE` extrapolation NaN)
 - NNVAL-016 (entropy-production contract gap)
 
 Resolved blockers (kept for history):
 
+- NNVAL-004 (`UDE` extrapolation NaN) — resolved 2026-06-15 via tanh-bounded
+  residual plus a genuine extrapolation test.
 - NNVAL-007 (training-induced `K` asymmetry) — resolved 2026-06-15 via symmetric
   coupling parametrisation.
 - NNVAL-013 (`analytical_inverse` at `K=0`) — resolved 2026-06-15 via joint
