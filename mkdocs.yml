@@ -95,6 +95,9 @@ nav:
       - Auto-Binding Proposals: guide/auto_binding.md
       - Replay-Only Autotune Learners: guide/autotune_learners.md
       - Hierarchy Adapter Boundaries: guide/hierarchy_live_adapters.md
+      - Install Profiles: guide/install_profiles.md
+      - Backend Review Gate: guide/backend_review_gate.md
+      - WASM Package: wasm-pkg/README.md
       - Testing: guide/testing.md
       - Release Hygiene: RELEASE_HYGIENE.md
       - Contributor Onboarding: guide/contributor_onboarding.md
@@ -207,6 +210,16 @@ nav:
       - "Neural Network (nn)": reference/api/nn.md
       - "nn/ Module — Full Reference": reference/nn.md
       - "nn/ Physics Validation": reference/nn_physics_validation_plan.md
+      - "nn Contracts":
+          - "BOLD": reference/nn_bold_contract.md
+          - "Chimera": reference/nn_chimera_contract.md
+          - "Kuramoto Layer": reference/nn_kuramoto_layer_contract.md
+          - "Reservoir": reference/nn_reservoir_contract.md
+          - "Simplicial Layer": reference/nn_simplicial_layer_contract.md
+          - "Spectral": reference/nn_spectral_contract.md
+          - "Stuart-Landau Layer": reference/nn_stuart_landau_layer_contract.md
+      - "nn xFail/Skip Register": reference/nn_xfail_skip_register.md
+      - "gRPC Fallback Aliases": reference/grpc_gen_fallback_aliases.md
       - "End-to-End Wiring Audit": reference/end_to_end_wiring_audit.md
       - Documentation Coverage: reference/documentation_coverage.md
       - CLI Reference: reference/cli.md
@@ -220,6 +233,8 @@ nav:
       - Capabilities & Use Cases: galleries/capabilities.md
   - Reference:
       - Public Roadmap: roadmap.md
+      - Fact-Based Overview: FACT_BASED_OVERVIEW.md
+      - Architecture & Product Boundaries: architecture_product_boundaries.md
       - Assumptions & Constants: ASSUMPTIONS.md
       - Competitive Analysis: competitive_analysis.md
       - "What SPO Does That No One Else Can": competitive_comparison.md
@@ -231,6 +246,7 @@ nav:
       - "FEP Correspondence": papers/FEP_CORRESPONDENCE.md
   - Validation:
       - "V&V Report": VALIDATION_REPORT.md
+      - "Safety Analysis": SAFETY_ANALYSIS.md
       - "Clinical Study Protocol": VALIDATION_STUDY_PROTOCOL.md
       - "Formal Kinematic Safety": formal/kinematic_safety.md
   - FAQ: faq.md

@@ -50,7 +50,8 @@ result.harmonic   # (N, N) topological flow
 result.betti_one  # number of independent unfilled cycles
 ```
 
-::: scpn_phase_orchestrator.coupling.hodge
+See the [Coupling API reference](../reference/api/coupling.md) for the full
+`hodge_decomposition` and `HodgeResult` signatures.
 
 ## Simplicial (3-Body) Coupling
 
