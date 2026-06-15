@@ -119,6 +119,18 @@ When an optional dependency is missing, the corresponding subsystem
 either skips the optimised path (Rust → Python fallback) or raises
 `ImportError` with install instructions.
 
+## Environment readiness
+
+`runtime.doctor` aggregates the per-module detection above into one report
+behind the `spo doctor` command. It probes the interpreter version against
+`requires-python`, the required runtime dependencies, the optional native
+backends (Rust/Julia/Go/Mojo), and the optional feature extras, returning a
+`DoctorReport` whose status is `pass` only when the interpreter is in range and
+every required dependency is importable. See the
+[CLI reference](../cli.md#spo-doctor) for the command and exit codes.
+
+::: scpn_phase_orchestrator.runtime.doctor
+
 ## Error handling philosophy
 
 SPO follows a fail-fast strategy at system boundaries:
