@@ -14,13 +14,72 @@ evidence. It is deliberately split into three planes:
 - reporting plane: deterministic summaries, regulator-oriented explanations, and
   transport checks.
 
-A typical production workflow starts with `spo validate`, moves to
-`spo inspect` or `spo run` on an accepted binding, then uses
-`spo replay` plus `spo report` before any dashboard or platform review.
+A typical production workflow starts with `spo doctor` to confirm the
+environment is ready, then `spo validate`, moves to `spo inspect` or `spo run`
+on an accepted binding, and finally uses `spo replay` plus `spo report` before
+any dashboard or platform review.
 
 That separation keeps intent and actuation boundaries explicit. Even when the
 same user runs each command on one terminal session, each command has an
 independent evidence contract and explicit pass/fail output.
+
+---
+
+## `spo doctor`
+
+Check that the current environment can run the orchestrator: the interpreter
+version, the required runtime dependencies, the optional native compute backends
+(Rust `spo_kernel`, Julia `juliacall`, the Go toolchain or prebuilt shared
+libraries, and the Mojo toolchain), and the optional feature extras (`nn`,
+`studio`, `queuewaves`, `plot`, `otel`, `notebook`). Run it first after any
+install, upgrade, or move to a new host.
+
+```
+spo doctor [--json-out]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--json-out` | Emit the readiness record as a JSON audit object instead of text |
+
+**Exit codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Interpreter in range and all required dependencies present |
+| 1 | Interpreter out of range or a required dependency missing |
+
+Missing *optional* backends and extras are reported as warnings and never change
+the exit code; only a missing *required* dependency or an unsupported
+interpreter fails the check. The probe imports no heavy optional packages and
+makes no network calls.
+
+**Example:**
+
+```bash
+spo doctor
+```
+
+Example output (truncated):
+
+```text
+SCPN Phase Orchestrator environment diagnostics — PASS
+  python   3.12.3  (Linux x86_64)
+
+  [ ok ] python    Python 3.12.3 satisfies >=3.10,<3.14
+  [ ok ] numpy     numpy 2.4.6
+  [ ok ] rust      spo_kernel 0.5.10 importable (PyO3 FFI ready)
+  [ ok ] go        prebuilt shared libraries: libhodge.so, libnpe.so, ...
+  [warn] streamlit not installed — install the 'studio' extra
+
+PASS: all required dependencies are present (9/13 optional components available).
+```
+
+The JSON form (`spo doctor --json-out`) returns a stable record with overall
+`status`, per-component `checks`, and `missing_required` / `missing_optional`
+lists for CI gating and provisioning automation.
 
 ---
 

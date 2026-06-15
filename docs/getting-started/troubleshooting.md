@@ -21,7 +21,14 @@ python -m pip --version
 python -m pip install -e ".[dev,notebook,plot]"
 PYTHONPATH=src python -c "import scpn_phase_orchestrator as spo; print(spo.__version__)"
 spo --help
+spo doctor
 ```
+
+`spo doctor` is the fastest single-command triage: it reports the interpreter
+version, the required dependencies, the optional native backends
+(Rust/Julia/Go/Mojo), and the optional feature extras, marking each as available
+or missing. Start here when acceleration or an optional feature is not behaving
+as expected.
 
 Expected baseline:
 

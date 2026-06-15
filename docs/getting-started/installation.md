@@ -20,6 +20,16 @@ pip install scpn-phase-orchestrator
 
 Requires Python 3.10+. Core dependencies: `numpy`, `scipy`, `pyyaml`, `click`.
 
+After installing, confirm the environment is ready:
+
+```bash
+spo doctor
+```
+
+It reports the interpreter version, required dependencies, optional native
+backends (Rust/Julia/Go/Mojo), and feature extras, and exits non-zero only when
+a required component is missing. See [CLI Reference](../reference/cli.md#spo-doctor).
+
 ## Development Install
 
 ```bash

@@ -104,6 +104,10 @@ from scpn_phase_orchestrator.runtime.audit_stream import (
     read_event_stream,
     verify_event_stream_integrity,
 )
+from scpn_phase_orchestrator.runtime.doctor import (
+    render_report,
+    run_environment_diagnostics,
+)
 from scpn_phase_orchestrator.runtime.observability import RuntimeObservability
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.scaffold.llm import (
@@ -166,6 +170,26 @@ _PHYSIONET_HEARTBEAT_CITATION = (
 @click.group()
 def main() -> None:
     """SCPN Phase Orchestrator CLI."""
+
+
+@main.command()
+@click.option("--json-out", is_flag=True, help="Output the readiness record as JSON.")
+def doctor(json_out: bool) -> None:
+    """Check environment readiness: interpreter, required deps, backends, extras.
+
+    Exits non-zero when the interpreter is outside the supported window or a
+    required runtime dependency is missing; missing optional accelerators
+    (Rust/Julia/Go/Mojo) and feature extras are reported as warnings only.
+    """
+
+    report = run_environment_diagnostics()
+    if json_out:
+        click.echo(json.dumps(report.to_audit_record(), indent=2, sort_keys=True))
+    else:
+        for line in render_report(report):
+            click.echo(line)
+    if not report.ok:
+        raise SystemExit(report.exit_code)
 
 
 @main.command()
