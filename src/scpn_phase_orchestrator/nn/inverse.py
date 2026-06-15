@@ -159,30 +159,36 @@ def analytical_inverse(
     # phases_mid[:, :, None] - phases_mid[:, None, :] → (T_mid, N, N)
     # then transpose to (N, T_mid, N) for per-oscillator solve
     diff_3d = phases_mid[:, jnp.newaxis, :] - phases_mid[:, :, jnp.newaxis]
-    B_all = jnp.sin(diff_3d).transpose(1, 0, 2)  # (N, T_mid, N)
+    sin_basis = jnp.sin(diff_3d).transpose(1, 0, 2)  # (N, T_mid, N)
     targets = dtheta_dt.T  # (N, T_mid)
 
+    # Augment each per-oscillator design with an intercept column so ω_i is
+    # estimated jointly with its coupling row rather than as a post-hoc residual.
+    # Without the intercept the lstsq absorbs the ω-driven phase drift into the
+    # sin(Δθ) basis, inflating K for weakly coupled or uncoupled data (the
+    # ω/coupling confounding). The intercept removes that bias: uncoupled data
+    # recovers K ≈ 0 while coupled recovery is unchanged.
+    n_mid = sin_basis.shape[1]
+    design = jnp.concatenate([sin_basis, jnp.ones((N, n_mid, 1))], axis=2)
+
     if alpha > 0:
-        eye_N = jnp.eye(N)
+        # Ridge-penalise the coupling block only; the intercept (ω) is unpenalised.
+        reg = alpha * jnp.diag(jnp.concatenate([jnp.ones(N), jnp.zeros(1)]))
 
-        def _solve_tikhonov(B, target):
-            BtB = B.T @ B + alpha * eye_N
-            Bty = B.T @ target
-            return jnp.linalg.solve(BtB, Bty)
+        def _solve(design_i: jax.Array, target: jax.Array) -> jax.Array:
+            return jnp.linalg.solve(design_i.T @ design_i + reg, design_i.T @ target)
 
-        K = jax.vmap(_solve_tikhonov)(B_all, targets)
+        solution = jax.vmap(_solve)(design, targets)
     else:
 
-        def _solve_lstsq(B, target):
-            K_row, _, _, _ = jnp.linalg.lstsq(B, target)
-            return K_row
+        def _solve(design_i: jax.Array, target: jax.Array) -> jax.Array:
+            row, _, _, _ = jnp.linalg.lstsq(design_i, target)
+            return row
 
-        K = jax.vmap(_solve_lstsq)(B_all, targets)
+        solution = jax.vmap(_solve)(design, targets)
 
-    # Residual → natural frequencies
-    omegas = jnp.mean(targets - jnp.einsum("itj,ij->it", B_all, K), axis=1)
-
-    K = _symmetrise_K(K)
+    K = _symmetrise_K(solution[:, :N])
+    omegas = solution[:, N]
     return K, omegas
 
 

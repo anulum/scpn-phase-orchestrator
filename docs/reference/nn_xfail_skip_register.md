@@ -36,7 +36,7 @@ Last reviewed: 2026-05-01
 | NNVAL-010 | `test_nn_physics_validation_p7.py:180` | `pytest.xfail` | FIM λ_c(4) near zero finite-size effect | Arcane Sapience | No | Keep xfail with explicit small-N caveat. |
 | NNVAL-011 | `test_nn_physics_validation_p7.py:292` | `pytest.xfail` | FIM hysteresis not visible in current λ/K range | Arcane Sapience | No | Keep xfail; requires expanded sweep window. |
 | NNVAL-012 | `test_nn_physics_validation_p9.py:320` | `@xfail` | MI ordering fragile on CPU-JAX float32 | Arcane Sapience | No | Keep xfail; precision/device sensitivity case. |
-| NNVAL-013 | `test_nn_physics_validation_p9.py:548` | `pytest.xfail` | `analytical_inverse` ill-conditioned at K=0 | Arcane Sapience | **Yes** | Add regularisation/conditioning gate before v1.0 freeze. |
+| NNVAL-013 | `test_nn_physics_validation_p9.py:539` | `assert` | `analytical_inverse` ill-conditioned at K=0 | Arcane Sapience | No | RESOLVED 2026-06-15 — `analytical_inverse` now fits ω jointly via an intercept column, so uncoupled data is no longer confounded by ω-drift and recovers `‖K‖≈0` (0.001 vs 51.6 before). Coupled recovery unchanged (corr 1.000). The xfail is now a hard `‖K‖<0.5` assertion. |
 | NNVAL-014 | `test_nn_physics_validation_p11.py:160` | `pytest.xfail` | Critical slowing metric fails to capture expected behaviour | Arcane Sapience | No | Keep xfail; test-design refinement item. |
 | NNVAL-015 | `test_nn_physics_validation_p11.py:550` | `@xfail` | CPU-JAX float32 diverges from GPU at N=512 | Arcane Sapience | No | Keep xfail until large-N cross-device tolerance policy lands. |
 | NNVAL-016 | `test_nn_physics_validation_p12.py:83` | `pytest.xfail` | Entropy-production formula mismatch/theoretical gap | Arcane Sapience | **Yes** | Resolve formula contract or downgrade claim pre-v1.0 freeze. |
@@ -48,13 +48,14 @@ Last reviewed: 2026-05-01
 Blocking exceptions for v1.0 closure:
 
 - NNVAL-004 (`UDE` extrapolation NaN)
-- NNVAL-013 (`analytical_inverse` at `K=0`)
 - NNVAL-016 (entropy-production contract gap)
 
 Resolved blockers (kept for history):
 
 - NNVAL-007 (training-induced `K` asymmetry) — resolved 2026-06-15 via symmetric
   coupling parametrisation.
+- NNVAL-013 (`analytical_inverse` at `K=0`) — resolved 2026-06-15 via joint
+  intercept (ω) estimation removing the ω/coupling confounding.
 
 All other listed exceptions are explicitly non-blocking with current evidence.
 

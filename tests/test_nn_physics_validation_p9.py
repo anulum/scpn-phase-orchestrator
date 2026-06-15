@@ -539,17 +539,14 @@ class TestV106ZeroCouplingBaseline:
         K_est, _ = analytical_inverse(observed, 0.01)
         K_norm = float(jnp.sqrt(jnp.sum(K_est**2)))
 
-        # FINDING #12: analytical_inverse returns large K for uncoupled data.
-        # Without coupling, phase differences evolve as Δω·t. The sin(Δθ)
-        # basis functions in lstsq are correlated with ω-driven drift,
-        # producing spurious large K estimates. The inverse problem is
-        # ill-conditioned when true K ≈ 0.
-        if K_norm > 1.0:
-            pytest.xfail(
-                f"K=0 data but ||K_est||={K_norm:.1f}. analytical_inverse "
-                "ill-conditioned for uncoupled data — ω-driven drift "
-                "confounds coupling estimation."
-            )
+        # analytical_inverse fits ω jointly via an intercept column, so the
+        # ω-driven phase drift of uncoupled data is no longer absorbed into the
+        # sin(Δθ) basis. K=0 data therefore recovers K ≈ 0 instead of a spurious
+        # large coupling matrix.
+        assert K_norm < 0.5, (
+            f"K=0 data but ||K_est||={K_norm:.3f}; the inverse must not absorb "
+            "ω-drift into spurious coupling."
+        )
 
 
 # ──────────────────────────────────────────────────
