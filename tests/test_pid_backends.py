@@ -192,9 +192,7 @@ class TestBackendLoaderDispatch:
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
 
         backend = pid_module._load_rust_fn()
-        red, syn = backend(
-            np.zeros(4), 2, 2, np.array([0]), np.array([1]), 8
-        )
+        red, syn = backend(np.zeros(4), 2, 2, np.array([0]), np.array([1]), 8)
         assert (red, syn) == (0.3, 0.7)
         assert calls[0] == (2, 2, 8)
 

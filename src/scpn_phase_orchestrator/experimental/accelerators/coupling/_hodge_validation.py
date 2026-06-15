@@ -79,9 +79,7 @@ def _validate_simplex_array(
     if indices.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {indices.shape}")
     if indices.size != arity * count:
-        raise ValueError(
-            f"{name} length {indices.size} does not match {arity}*{count}"
-        )
+        raise ValueError(f"{name} length {indices.size} does not match {arity}*{count}")
     if count > 0 and (np.any(indices < 0) or np.any(indices >= n)):
         raise ValueError(f"{name} indices must lie in [0, {n})")
     return np.ascontiguousarray(indices, dtype=np.int64)

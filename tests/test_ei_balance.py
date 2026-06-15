@@ -84,12 +84,8 @@ class TestComputeEIBalance:
         outgoing interaction-type blocks (equal group sizes → mean)."""
         knm = _uniform_knm(6)
         bal = compute_ei_balance(knm, [0, 1, 2], [3, 4, 5])
-        assert bal.excitatory_strength == pytest.approx(
-            0.5 * (bal.e_to_e + bal.e_to_i)
-        )
-        assert bal.inhibitory_strength == pytest.approx(
-            0.5 * (bal.i_to_e + bal.i_to_i)
-        )
+        assert bal.excitatory_strength == pytest.approx(0.5 * (bal.e_to_e + bal.e_to_i))
+        assert bal.inhibitory_strength == pytest.approx(0.5 * (bal.i_to_e + bal.i_to_i))
 
     def test_empty_groups_zero_interaction_types(self):
         knm = _uniform_knm(4)
