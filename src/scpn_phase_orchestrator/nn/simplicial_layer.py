@@ -66,6 +66,17 @@ class SimplicialKuramotoLayer(eqx.Module):
         self.dt = dt
         self.n = n
 
+    @property
+    def coupling(self) -> jax.Array:
+        """Symmetric pairwise coupling matrix used by the dynamics ``(K + Kᵀ)/2``.
+
+        Pairwise coupling is undirected, so the loss depends only on the
+        symmetric part; the gradient w.r.t. ``K`` is therefore symmetric and
+        training from a symmetric ``K`` keeps it symmetric rather than drifting
+        into a directed matrix.
+        """
+        return (self.K + self.K.T) * 0.5
+
     @eqx.filter_jit
     def __call__(self, phases: jax.Array) -> jax.Array:
         """Run simplicial Kuramoto dynamics on input phases.
@@ -79,7 +90,7 @@ class SimplicialKuramotoLayer(eqx.Module):
         final, _ = simplicial_forward(
             phases,
             self.omegas,
-            self.K,
+            self.coupling,
             self.dt,
             self.n_steps,
             sigma2=self.sigma2,
@@ -102,7 +113,7 @@ class SimplicialKuramotoLayer(eqx.Module):
         return simplicial_forward(
             phases,
             self.omegas,
-            self.K,
+            self.coupling,
             self.dt,
             self.n_steps,
             sigma2=self.sigma2,

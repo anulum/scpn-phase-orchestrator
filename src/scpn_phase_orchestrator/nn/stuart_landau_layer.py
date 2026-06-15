@@ -73,6 +73,21 @@ class StuartLandauLayer(eqx.Module):
         self.epsilon = epsilon
         self.n = n
 
+    @property
+    def coupling(self) -> jax.Array:
+        """Symmetric phase-coupling matrix used by the dynamics ``(K + Kᵀ)/2``.
+
+        Phase coupling is undirected, so the loss depends only on the symmetric
+        part; the gradient w.r.t. ``K`` is therefore symmetric and training from
+        a symmetric ``K`` keeps it symmetric instead of drifting directed.
+        """
+        return (self.K + self.K.T) * 0.5
+
+    @property
+    def coupling_r(self) -> jax.Array:
+        """Symmetric amplitude-coupling matrix ``(K_r + K_rᵀ)/2`` (see ``coupling``)."""
+        return (self.K_r + self.K_r.T) * 0.5
+
     @eqx.filter_jit
     def __call__(
         self, phases: jax.Array, amplitudes: jax.Array
@@ -91,8 +106,8 @@ class StuartLandauLayer(eqx.Module):
             amplitudes,
             self.omegas,
             self.mu,
-            self.K,
-            self.K_r,
+            self.coupling,
+            self.coupling_r,
             self.dt,
             self.n_steps,
             self.epsilon,
@@ -113,8 +128,8 @@ class StuartLandauLayer(eqx.Module):
             amplitudes,
             self.omegas,
             self.mu,
-            self.K,
-            self.K_r,
+            self.coupling,
+            self.coupling_r,
             self.dt,
             self.n_steps,
             self.epsilon,

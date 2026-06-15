@@ -182,5 +182,23 @@ class TestSigma2Activation:
         assert not jnp.allclose(out_zero, out_active, atol=1e-7)
 
 
+class TestTrainingPreservesSymmetry:
+    """Pairwise coupling is undirected, so K must remain symmetric under
+    gradient training, not only at initialisation."""
+
+    def test_K_stays_symmetric_after_training(self, key, phases):
+        optax = pytest.importorskip("optax")
+        from scpn_phase_orchestrator.nn.training import train
+
+        layer = SimplicialKuramotoLayer(N, n_steps=20, dt=DT, key=key)
+
+        def loss_fn(model):
+            return jnp.mean(model(phases) ** 2)
+
+        trained, _ = train(layer, loss_fn, optax.adam(1e-2), 20)
+        asym = float(jnp.max(jnp.abs(trained.K - trained.K.T)))
+        assert asym < 1e-5, f"K lost symmetry after training: {asym:.2e}"
+
+
 # Pipeline wiring: SimplicialKuramotoLayer uses simplicial_forward internally
 # with order_parameter. TestComparison and TestGrad exercise the full pipeline.

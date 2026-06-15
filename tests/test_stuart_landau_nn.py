@@ -302,3 +302,27 @@ class TestSLNNPipelineWiring:
             f"Amplitudes should converge toward sqrt(mu): "
             f"initial dist={dist_init:.3f}, final dist={dist_final:.3f}"
         )
+
+
+class TestTrainingPreservesSymmetry:
+    """Phase and amplitude coupling are undirected, so K and K_r must stay
+    symmetric under gradient training, not only at initialisation."""
+
+    def test_coupling_stays_symmetric_after_training(self):
+        optax = pytest.importorskip("optax")
+        from scpn_phase_orchestrator.nn.training import train
+
+        key = jax.random.PRNGKey(0)
+        layer = StuartLandauLayer(n=N, key=key)
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        amplitudes = jnp.ones((N,))
+
+        def loss_fn(model):
+            final_phases, _ = model(phases, amplitudes)
+            return jnp.mean(final_phases**2)
+
+        trained, _ = train(layer, loss_fn, optax.adam(1e-2), 20)
+        asym_k = float(jnp.max(jnp.abs(trained.K - trained.K.T)))
+        asym_kr = float(jnp.max(jnp.abs(trained.K_r - trained.K_r.T)))
+        assert asym_k < 1e-5, f"K lost symmetry after training: {asym_k:.2e}"
+        assert asym_kr < 1e-5, f"K_r lost symmetry after training: {asym_kr:.2e}"
