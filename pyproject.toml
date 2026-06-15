@@ -297,18 +297,17 @@ omit = [
     "*/adapters/neurocore_bridge.py",
     "*/adapters/plasma_control_bridge.py",
     "*/monitor/stl.py",
-    # Optional native backend shims: exercised through availability/parity gates,
-    # but their Go/Julia/Mojo subprocess branches depend on external toolchains.
-    "*/coupling/_*_go.py",
-    "*/coupling/_*_julia.py",
-    "*/coupling/_*_mojo.py",
-    "*/monitor/_*_go.py",
-    "*/monitor/_*_julia.py",
-    "*/monitor/_*_mojo.py",
-    "*/upde/_*_go.py",
-    "*/upde/_*_julia.py",
-    "*/upde/_*_mojo.py",
 ]
+# Optional native backend shims (``coupling|monitor|upde/_*_{go,julia,mojo}.py``
+# plus their ``experimental/accelerators`` implementations) are NOT omitted: the
+# public forwarder modules and every implementation's module-level import surface
+# run in the standard matrix (see tests/test_backend_module_imports.py) and are
+# measured. The Go/Julia/Mojo FFI call bodies execute only with their toolchains
+# and built artefacts, which the standard coverage matrix does not provide (the
+# Julia lane runs without coverage; Go/Mojo are not built in CI), so those native
+# lines surface honestly as uncovered instead of being hidden from the gate.
+# Worst case (every shim body uncovered) keeps the project ~84%, well above the
+# 60% floor below.
 
 [tool.coverage.report]
 fail_under = 60
