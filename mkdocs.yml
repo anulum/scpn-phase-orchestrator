@@ -223,6 +223,7 @@ nav:
       - Documentation Coverage: reference/documentation_coverage.md
       - CLI Reference: reference/cli.md
   - Gallery:
+      - Beachhead Verticals: galleries/beachhead_verticals.md
       - Domainpack Gallery: galleries/domainpack_gallery.md
       - Notebooks & Demos: galleries/notebooks_and_demos.md
       - Notebook Execution Matrix: galleries/notebook_execution_matrix.md
