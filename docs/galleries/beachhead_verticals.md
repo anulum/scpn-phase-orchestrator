@@ -89,6 +89,32 @@ sanity, boundaries/actuators, and full `main()` execution).
 
 ---
 
+## Operating posture and safety tier
+
+Each binding spec declares a `safety_tier`. The local runtime executes live
+`spo run` only for **research**-tier specs; **consumer**, **production**, and
+**clinical** tiers fail closed with a clear message and must go through the
+formal-export and certified-controller pipeline before any live or actuating
+run. The narrated `run.py` scenarios always execute (they demonstrate the
+research-mode engine), so every pack is explorable, but the higher tiers cannot
+be driven live from the CLI by design.
+
+| Pack | Safety tier | Live `spo run` | Path to live use |
+|------|-------------|----------------|------------------|
+| `queuewaves` | research | yes | runs directly |
+| `neuroscience_eeg` | research | yes | runs directly |
+| `sleep_architecture` | research | yes | runs directly |
+| `rotating_machinery` | consumer | gated | formal export → certified controller |
+| `manufacturing_spc` | consumer | gated | formal export → certified controller |
+| `chemical_reactor` | production | gated | formal export → certified controller |
+| `power_grid` | production | gated | formal export → certified controller |
+| `cardiac_rhythm` | clinical | gated | formal export → certified controller + CE/MDR |
+
+This tiering is a feature, not a limitation: it keeps non-research domains from
+being actuated without the evidence pipeline. See the formal-verification export
+in the supervisor reference for how a gated spec reaches a certifiable
+controller.
+
 ## Why these three
 
 The same engine and binding-spec workflow covers all three, so a vertical slice

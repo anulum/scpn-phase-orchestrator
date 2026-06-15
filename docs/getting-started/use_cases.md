@@ -186,3 +186,8 @@ evaluation mode and avoid actuator exports.
 
 Use this page as the final business-value filter before any advanced engine
 choice is made.
+
+For the three focus tracks — industrial predictive maintenance, critical
+infrastructure, and biosignal/clinical — with their lead domainpacks, runnable
+commands, validation status, and safety-tier posture, see
+[Beachhead Verticals](../galleries/beachhead_verticals.md).
