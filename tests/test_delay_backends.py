@@ -75,7 +75,7 @@ def _assert_parity(backend: str, seed: int, atol: float, delay: int = 2) -> None
     np.testing.assert_allclose(got, ref, atol=atol)
 
 
-def test_validation_helper_is_linked() -> None:
+def test__delay_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(delay_validation.validate_delay_backend_inputs)
 
 

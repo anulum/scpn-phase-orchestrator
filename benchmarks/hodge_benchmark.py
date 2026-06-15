@@ -271,9 +271,7 @@ def _backend_record(
         "unavailable_reason": "",
     }
     try:
-        elapsed, result = _bench_backend(
-            backend, knm, phases, edges, triangles, calls
-        )
+        elapsed, result = _bench_backend(backend, knm, phases, edges, triangles, calls)
     except (ImportError, ModuleNotFoundError, OSError, RuntimeError) as exc:
         base["unavailable_reason"] = _unavailable_reason(backend, exc)
         return base
@@ -335,9 +333,7 @@ def benchmark_hodge_polyglot_parity_gate(
     _clear_backend_cache()
     t0 = time.perf_counter()
     records = [
-        _backend_record(
-            backend, knm, phases, edges, triangles, reference, flow, calls
-        )
+        _backend_record(backend, knm, phases, edges, triangles, reference, flow, calls)
         for backend in BACKEND_ORDER
     ]
     elapsed = time.perf_counter() - t0

@@ -102,9 +102,7 @@ def _direct_bundle(
             pc_mod.ACTIVE_BACKEND = saved
         return {
             "section_crossings": np.ascontiguousarray(sec.crossings, dtype=np.float64),
-            "section_times": np.ascontiguousarray(
-                sec.crossing_times, dtype=np.float64
-            ),
+            "section_times": np.ascontiguousarray(sec.crossing_times, dtype=np.float64),
             "section_count": int(sec.crossing_times.shape[0]),
             "phase_crossings": np.ascontiguousarray(ph.crossings, dtype=np.float64),
             "phase_times": np.ascontiguousarray(ph.crossing_times, dtype=np.float64),

@@ -82,7 +82,7 @@ def _assert_parity(backend: str, seed: int, atol: float) -> None:
     assert abs(got_s - ref_s) <= atol, f"{backend} synergy {got_s} vs {ref_s}"
 
 
-def test_validation_helper_is_linked() -> None:
+def test__pid_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(pid_validation.validate_pid_backend_inputs)
 
 
