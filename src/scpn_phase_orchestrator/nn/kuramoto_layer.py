@@ -19,8 +19,12 @@ from __future__ import annotations
 
 import equinox as eqx
 import jax
+import jax.numpy as jnp
+import numpy as np
 
 from .functional import kuramoto_forward, kuramoto_forward_masked, order_parameter
+
+_MaskRows = tuple[tuple[float, ...], ...]
 
 
 class KuramotoLayer(eqx.Module):
@@ -40,7 +44,10 @@ class KuramotoLayer(eqx.Module):
     n_steps: int = eqx.field(static=True)
     dt: float = eqx.field(static=True)
     n: int = eqx.field(static=True)
-    mask: jax.Array | None = eqx.field(static=True, default=None)
+    # Fixed coupling topology: held as a hashable nested tuple so it stays a
+    # static (non-trained) config without storing a raw array in a static field
+    # (which equinox flags as a likely mistake and which jit-caches by identity).
+    mask: _MaskRows | None = eqx.field(static=True, default=None)
 
     def __init__(
         self,
@@ -56,7 +63,11 @@ class KuramotoLayer(eqx.Module):
         raw = K_scale * jax.random.normal(k1, (n, n))
         self.K = (raw + raw.T) / 2.0
         self.omegas = jax.random.normal(k2, (n,))
-        self.mask = mask
+        self.mask = (
+            None
+            if mask is None
+            else tuple(tuple(float(v) for v in row) for row in np.asarray(mask))
+        )
         self.n_steps = n_steps
         self.dt = dt
         self.n = n
@@ -88,7 +99,7 @@ class KuramotoLayer(eqx.Module):
                 phases,
                 self.omegas,
                 self.coupling,
-                self.mask,
+                jnp.asarray(self.mask),
                 self.dt,
                 self.n_steps,
             )
@@ -117,7 +128,7 @@ class KuramotoLayer(eqx.Module):
                 phases,
                 self.omegas,
                 self.coupling,
-                self.mask,
+                jnp.asarray(self.mask),
                 self.dt,
                 self.n_steps,
             )
