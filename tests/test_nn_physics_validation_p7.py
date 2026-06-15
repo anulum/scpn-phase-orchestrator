@@ -147,7 +147,10 @@ class TestV76FIMScalingLaw:
     verify it scales approximately linearly with N.
     """
 
-    @pytest.mark.xfail(reason="FIM scaling non-monotonic on CPU-JAX at small N")
+    @pytest.mark.xfail(
+        reason="FIM scaling non-monotonic on CPU-JAX at small N",
+        strict=False,  # nondeterministic finite-size/precision effect; XPASS allowed
+    )
     def test_lambda_c_scales_with_N(self):
         lambda_c_by_N = {}
 

@@ -386,7 +386,10 @@ class TestV54MeanPhaseConservation:
     If Ψ drifts, the implementation breaks the rotational symmetry.
     """
 
-    @pytest.mark.xfail(reason="CPU-JAX float32 phase drift exceeds tight tolerance")
+    @pytest.mark.xfail(
+        reason="CPU-JAX float32 phase drift exceeds tight tolerance",
+        strict=False,  # nondeterministic by platform/precision; XPASS is acceptable
+    )
     def test_mean_phase_drift(self):
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 

@@ -202,7 +202,10 @@ class TestV4OttAntonsenTransition:
     Test with N=512, 20 K values, averaged over 5 realisations.
     """
 
-    @pytest.mark.xfail(reason="CPU-JAX float32 diverges from GPU at tight tolerance")
+    @pytest.mark.xfail(
+        reason="CPU-JAX float32 diverges from GPU at tight tolerance",
+        strict=False,  # nondeterministic by platform/precision; XPASS is acceptable
+    )
     def test_transition_curve(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,

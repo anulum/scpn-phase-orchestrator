@@ -317,7 +317,10 @@ class TestV102MutualInformation:
     Strong coupling → high MI. Zero coupling → low MI.
     """
 
-    @pytest.mark.xfail(reason="MI ordering fragile on CPU-JAX float32")
+    @pytest.mark.xfail(
+        reason="MI ordering fragile on CPU-JAX float32",
+        strict=False,  # nondeterministic by platform/precision; XPASS is acceptable
+    )
     def test_mi_increases_with_coupling(self):
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 

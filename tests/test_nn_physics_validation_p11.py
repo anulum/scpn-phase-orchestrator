@@ -547,7 +547,10 @@ class TestV132GPUStress:
     is maintained at large scale.
     """
 
-    @pytest.mark.xfail(reason="CPU-JAX float32 diverges from GPU at N=512")
+    @pytest.mark.xfail(
+        reason="CPU-JAX float32 diverges from GPU at N=512",
+        strict=False,  # nondeterministic by platform/precision; XPASS is acceptable
+    )
     def test_large_n_correct(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
