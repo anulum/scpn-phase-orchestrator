@@ -46,44 +46,59 @@ class TestV133EntropyProduction:
     """
 
     def test_entropy_production_nonnegative(self):
+        from scpn_phase_orchestrator.monitor.entropy_prod import (
+            entropy_production_rate,
+        )
         from scpn_phase_orchestrator.nn.functional import kuramoto_rk4_step
 
+        # The thermodynamic dissipation rate is σ = Σ (dθ/dt)² · dt (Acebrón
+        # et al. 2005), which is non-negative by construction — not the signed
+        # coupling·velocity power, which can go negative when an oscillator
+        # overshoots. Validate the production estimator across a steady-state
+        # trajectory rather than an ad-hoc inline formula.
         N = 16
         key = jr.PRNGKey(0)
         phases = jr.uniform(key, (N,), maxval=TWO_PI)
-        omegas = jr.normal(key, (N,)) * 1.0  # nonzero → irreversible
+        omegas = jr.normal(key, (N,)) * 1.0  # nonzero → irreversible drive
         K = jnp.ones((N, N)) * (2.0 / N)
         K = K.at[jnp.diag_indices(N)].set(0.0)
         dt = 0.01
+        # entropy_production_rate scales coupling by alpha/N; alpha = N matches
+        # the integrator's bare Σ K sin(Δθ) coupling so σ reflects the dynamics.
+        alpha = float(N)
 
-        # Let system reach steady state
         for _ in range(1000):
             phases = kuramoto_rk4_step(phases, omegas, K, dt)
 
-        # Measure entropy production over 500 steps
-        sigma_total = 0.0
+        rates = []
         for _ in range(500):
-            diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
-            coupling = jnp.sum(K * jnp.sin(diff), axis=1)
-            dtheta_dt = omegas + coupling
-            # σ = Σ coupling_i · dθ_i/dt (power dissipated by coupling)
-            sigma = float(jnp.sum(coupling * dtheta_dt))
-            sigma_total += sigma
+            rate = entropy_production_rate(
+                np.array(phases), np.array(omegas), np.array(K), alpha, dt
+            )
+            rates.append(rate)
             phases = kuramoto_rk4_step(phases, omegas, K, dt)
 
-        mean_sigma = sigma_total / 500.0
+        assert all(r >= 0.0 for r in rates), (
+            f"entropy production must be non-negative; min={min(rates):.3e}"
+        )
+        assert float(np.mean(rates)) > 0.0, (
+            "an incoherently driven ensemble must dissipate (σ > 0)"
+        )
 
-        # FINDING #14: The formula σ = Σ coupling·dθ/dt is NOT the correct
-        # entropy production for Kuramoto. The proper Risken formalism gives
-        # σ = Σ (dθ/dt)² / (2T) for overdamped Langevin. Our formula can
-        # be negative because coupling force and velocity can be anti-aligned
-        # (oscillator overshoots). This is a test design error, not a physics
-        # bug. The correct entropy production requires the noise temperature T.
-        if mean_sigma < -0.1:
-            pytest.xfail(
-                f"Entropy formula incorrect: σ={mean_sigma:.4f}. "
-                "Need Risken overdamped Langevin formalism, not coupling·velocity."
-            )
+        # Zero at a frequency-locked fixed point: equal frequencies under strong
+        # coupling phase-lock, so dθ/dt → 0 and the dissipation rate vanishes.
+        locked = jr.uniform(jr.PRNGKey(3), (N,), maxval=TWO_PI)
+        omegas_lock = jnp.zeros(N)
+        K_strong = jnp.ones((N, N)) * (8.0 / N)
+        K_strong = K_strong.at[jnp.diag_indices(N)].set(0.0)
+        for _ in range(3000):
+            locked = kuramoto_rk4_step(locked, omegas_lock, K_strong, dt)
+        rate_locked = entropy_production_rate(
+            np.array(locked), np.array(omegas_lock), np.array(K_strong), alpha, dt
+        )
+        assert rate_locked < 1e-6, (
+            f"frequency-locked state must not dissipate; σ={rate_locked:.3e}"
+        )
 
 
 # ──────────────────────────────────────────────────

@@ -39,7 +39,7 @@ Last reviewed: 2026-05-01
 | NNVAL-013 | `test_nn_physics_validation_p9.py:539` | `assert` | `analytical_inverse` ill-conditioned at K=0 | Arcane Sapience | No | RESOLVED 2026-06-15 — `analytical_inverse` now fits ω jointly via an intercept column, so uncoupled data is no longer confounded by ω-drift and recovers `‖K‖≈0` (0.001 vs 51.6 before). Coupled recovery unchanged (corr 1.000). The xfail is now a hard `‖K‖<0.5` assertion. |
 | NNVAL-014 | `test_nn_physics_validation_p11.py:160` | `pytest.xfail` | Critical slowing metric fails to capture expected behaviour | Arcane Sapience | No | Keep xfail; test-design refinement item. |
 | NNVAL-015 | `test_nn_physics_validation_p11.py:550` | `@xfail` | CPU-JAX float32 diverges from GPU at N=512 | Arcane Sapience | No | Keep xfail until large-N cross-device tolerance policy lands. |
-| NNVAL-016 | `test_nn_physics_validation_p12.py:83` | `pytest.xfail` | Entropy-production formula mismatch/theoretical gap | Arcane Sapience | **Yes** | Resolve formula contract or downgrade claim pre-v1.0 freeze. |
+| NNVAL-016 | `test_nn_physics_validation_p12.py:48` | `assert` | Entropy-production formula mismatch/theoretical gap | Arcane Sapience | No | RESOLVED 2026-06-15 — the inline `Σ coupling·dθ/dt` formula was wrong (signed). The production `monitor.entropy_prod.entropy_production_rate` already uses the correct non-negative dissipation `Σ(dθ/dt)²·dt` (Acebrón 2005); the test now validates that estimator (non-negative across the trajectory, σ>0 under incoherent drive, σ≈0 when frequency-locked). |
 | NNVAL-017 | `test_nn_physics_validation.py:48` | `pytest.skip` | JAX x64 unavailable on some platforms | Arcane Sapience | No | Conditional skip accepted; environment capability gate. |
 | NNVAL-018 | `test_nn_physics_validation_p13.py:270` | `pytest.skip` | Rust FFI not available if `spo-kernel` not compiled | Arcane Sapience | No | Conditional skip accepted; build capability gate. |
 
@@ -47,12 +47,15 @@ Last reviewed: 2026-05-01
 
 Blocking exceptions for v1.0 closure:
 
-- NNVAL-016 (entropy-production contract gap)
+- None. All four previously blocking exceptions are resolved (below).
 
 Resolved blockers (kept for history):
 
 - NNVAL-004 (`UDE` extrapolation NaN) — resolved 2026-06-15 via tanh-bounded
   residual plus a genuine extrapolation test.
+- NNVAL-016 (entropy-production contract gap) — resolved 2026-06-15 by testing
+  the correct non-negative production estimator instead of a signed inline
+  formula.
 - NNVAL-007 (training-induced `K` asymmetry) — resolved 2026-06-15 via symmetric
   coupling parametrisation.
 - NNVAL-013 (`analytical_inverse` at `K=0`) — resolved 2026-06-15 via joint
