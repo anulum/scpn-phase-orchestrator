@@ -345,14 +345,13 @@ class TestV67KSymmetryUnderTraining:
         K_trained = np.array(trained.K)
         asym = np.max(np.abs(K_trained - K_trained.T))
 
-        # FINDING #7 (potential): K may become asymmetric after training.
-        # This is a real issue for physical interpretability.
-        if asym > 0.01:
-            pytest.xfail(
-                f"K asymmetry after training: max|K-K^T|={asym:.4f}. "
-                "Gradient updates break symmetry — need explicit "
-                "symmetrisation in training loop."
-            )
+        # KuramotoLayer.coupling integrates the symmetric part (K + Kᵀ)/2, so
+        # the loss gradient w.r.t. K is symmetric and training started from a
+        # symmetric K preserves K = Kᵀ (undirected coupling) exactly.
+        assert asym < 1e-5, (
+            f"K lost symmetry after training: max|K-K^T|={asym:.2e}; "
+            "the dynamics must integrate the symmetric coupling part."
+        )
 
 
 # ──────────────────────────────────────────────────

@@ -30,7 +30,7 @@ Last reviewed: 2026-05-01
 | NNVAL-004 | `test_nn_physics_validation_p2.py:287` | `pytest.xfail` | UDE extrapolation NaN outside train window | Arcane Sapience | **Yes** | Must be fixed or hard-gated before v1.0 freeze. |
 | NNVAL-005 | `test_nn_physics_validation_p3.py:114` | `pytest.xfail` | Reservoir correlation below threshold without tuned K_c | Arcane Sapience | No | Keep xfail; expected operating-point sensitivity. |
 | NNVAL-006 | `test_nn_physics_validation_p5.py:389` | `@xfail` | CPU-JAX float32 phase drift at strict tolerance | Arcane Sapience | No | Keep xfail with documented float64 recommendation for strict checks. |
-| NNVAL-007 | `test_nn_physics_validation_p6.py:351` | `pytest.xfail` | K symmetry breaks during gradient training | Arcane Sapience | **Yes** | Must be fixed via symmetry projection or constrained parametrisation pre-v1.0. |
+| NNVAL-007 | `test_nn_physics_validation_p6.py:345` | `assert` | K symmetry breaks during gradient training | Arcane Sapience | No | RESOLVED 2026-06-15 — `KuramotoLayer.coupling` integrates the symmetric part `(K+Kᵀ)/2`, so the loss gradient w.r.t. `K` is symmetric and trained `K` stays exactly symmetric (`max\|K−Kᵀ\|=0`). The xfail is now a hard symmetry assertion. |
 | NNVAL-008 | `test_nn_physics_validation_p6.py:677` | `pytest.xfail` | OIM Petersen graph residual violations | Arcane Sapience | No | Keep xfail; heuristic hardness case, not release blocker. |
 | NNVAL-009 | `test_nn_physics_validation_p7.py:150` | `@xfail` | FIM small-N scaling non-monotonic | Arcane Sapience | No | Keep xfail; finite-size regime note. |
 | NNVAL-010 | `test_nn_physics_validation_p7.py:180` | `pytest.xfail` | FIM λ_c(4) near zero finite-size effect | Arcane Sapience | No | Keep xfail with explicit small-N caveat. |
@@ -48,9 +48,13 @@ Last reviewed: 2026-05-01
 Blocking exceptions for v1.0 closure:
 
 - NNVAL-004 (`UDE` extrapolation NaN)
-- NNVAL-007 (training-induced `K` asymmetry)
 - NNVAL-013 (`analytical_inverse` at `K=0`)
 - NNVAL-016 (entropy-production contract gap)
+
+Resolved blockers (kept for history):
+
+- NNVAL-007 (training-induced `K` asymmetry) — resolved 2026-06-15 via symmetric
+  coupling parametrisation.
 
 All other listed exceptions are explicitly non-blocking with current evidence.
 

@@ -61,6 +61,18 @@ class KuramotoLayer(eqx.Module):
         self.dt = dt
         self.n = n
 
+    @property
+    def coupling(self) -> jax.Array:
+        """Symmetric coupling matrix used by the dynamics.
+
+        Kuramoto coupling is undirected, so the dynamics use the symmetric
+        part ``(K + Kᵀ)/2``. Because the loss depends only on this symmetric
+        part, the gradient with respect to ``K`` is itself symmetric, so
+        gradient training started from a symmetric ``K`` keeps ``K = Kᵀ``
+        instead of drifting into a physically meaningless directed matrix.
+        """
+        return (self.K + self.K.T) * 0.5
+
     @eqx.filter_jit
     def __call__(self, phases: jax.Array) -> jax.Array:
         """Run Kuramoto dynamics on input phases.
@@ -75,7 +87,7 @@ class KuramotoLayer(eqx.Module):
             final, _ = kuramoto_forward_masked(
                 phases,
                 self.omegas,
-                self.K,
+                self.coupling,
                 self.mask,
                 self.dt,
                 self.n_steps,
@@ -84,7 +96,7 @@ class KuramotoLayer(eqx.Module):
             final, _ = kuramoto_forward(
                 phases,
                 self.omegas,
-                self.K,
+                self.coupling,
                 self.dt,
                 self.n_steps,
             )
@@ -104,12 +116,14 @@ class KuramotoLayer(eqx.Module):
             return kuramoto_forward_masked(
                 phases,
                 self.omegas,
-                self.K,
+                self.coupling,
                 self.mask,
                 self.dt,
                 self.n_steps,
             )
-        return kuramoto_forward(phases, self.omegas, self.K, self.dt, self.n_steps)
+        return kuramoto_forward(
+            phases, self.omegas, self.coupling, self.dt, self.n_steps
+        )
 
     @eqx.filter_jit
     def sync_score(self, phases: jax.Array) -> jax.Array:
