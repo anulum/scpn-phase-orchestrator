@@ -16,6 +16,12 @@ on:
       - "mkdocs.yml"
       - "README.md"
       - "src/**/*.py"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "README.md"
+      - "src/**/*.py"
 
 permissions: {}
 
@@ -24,7 +30,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: pip install --require-hashes --no-deps -r requirements/docs-tools.txt
+      - run: mkdocs build --strict
+
   deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,4 +56,4 @@ jobs:
           cache: pip
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: pip install --require-hashes --no-deps -r requirements/docs-tools.txt
-      - run: mkdocs gh-deploy --force
+      - run: mkdocs gh-deploy --force --strict
