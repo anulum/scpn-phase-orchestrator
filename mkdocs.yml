@@ -97,7 +97,6 @@ nav:
       - Hierarchy Adapter Boundaries: guide/hierarchy_live_adapters.md
       - Install Profiles: guide/install_profiles.md
       - Backend Review Gate: guide/backend_review_gate.md
-      - WASM Package: wasm-pkg/README.md
       - Testing: guide/testing.md
       - Release Hygiene: RELEASE_HYGIENE.md
       - Contributor Onboarding: guide/contributor_onboarding.md
