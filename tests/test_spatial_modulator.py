@@ -220,7 +220,9 @@ def test_swarmalator_python_reference_uses_bit_true_inverse_distance_kernel() ->
         cos_diff = np.cos(phases - phases[i])
         sin_diff = np.sin(phases - phases[i])
         attract = (1.0 + 0.3 * cos_diff) / dist
-        repulse = 1.0 / (dist * d2 + eps)
+        # Canonical OHS inverse-distance core: b / (|x_j - x_i|^2 + eps),
+        # the scalar b/(d2+eps) multiplying the separation vector (b = 1.0).
+        repulse = 1.0 / (d2 + eps)
         expected_pos[i] = (
             pos[i] + dt * np.sum(diff * (attract - repulse)[:, None], axis=0) / n
         )
