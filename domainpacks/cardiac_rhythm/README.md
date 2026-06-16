@@ -56,6 +56,74 @@ builds imprint that modulates coupling, representing pharmacokinetics.
 250 steps: normal sinus → PVCs → sustained VT → drug intervention →
 overdrive pacing → sinus recovery.
 
+## Operator Runbook
+
+Use this pack as a non-actuating clinical simulation and review artefact only.
+The local CLI intentionally refuses an admitted audit run for the `clinical`
+safety tier unless an explicit reviewed deployment gate is present.
+
+### 1. Validate the Binding
+
+```bash
+spo validate domainpacks/cardiac_rhythm/binding_spec.yaml
+```
+
+Expected result: the binding is valid and reports the `clinical` safety tier.
+
+### 2. Run the Pack-Owned Scenario
+
+```bash
+PYTHONPATH=src python domainpacks/cardiac_rhythm/run.py
+```
+
+Expected result: the deterministic scenario executes end to end and prints a
+compact JSON summary. Treat the output as simulation evidence for review, not
+as pacing, drug, or vagal-stimulation guidance.
+
+### 3. Confirm the Local Runtime Refusal
+
+```bash
+mkdir -p /tmp/spo_cardiac_rhythm_runbook
+spo run domainpacks/cardiac_rhythm/binding_spec.yaml \
+  --steps 40 \
+  --audit /tmp/spo_cardiac_rhythm_runbook/audit.json \
+  > /tmp/spo_cardiac_rhythm_runbook/blocked-run.txt 2>&1
+```
+
+Expected result: the command is blocked by the clinical safety tier before an
+audit log is admitted. This is the correct local posture for a medical-style
+domainpack. Keep `blocked-run.txt` with deployment evidence when auditing the
+boundary.
+
+Because no audit JSON is admitted in this local path, do not run `spo replay`,
+`spo report`, or `spo explain` against this directory. Those commands require
+a reviewed, admitted audit log from a gated environment.
+
+### 4. Export the Review Policy Model
+
+```bash
+spo formal-export domainpacks/cardiac_rhythm/binding_spec.yaml \
+  --export policy \
+  --output /tmp/spo_cardiac_rhythm_runbook/policy.prism
+```
+
+Expected result: `policy.prism` is written for offline policy review. Full
+formal packages and STL monitor exports remain blocked until this binding adds
+`protocol_net` and `stl_monitors` evidence.
+
+### 5. Live-Use Readiness Boundary
+
+Do not connect this pack to ECG hardware, pacemakers, pumps, stimulators, or
+clinical workflow systems from the local runbook. A live or clinical deployment
+needs, at minimum:
+
+- reviewed safety case and clinical governance for the intended use;
+- hardware adapter provenance and fail-safe isolation evidence;
+- admitted audit-log environment with replay/report/explain verification;
+- external formal-review packet for the policy and monitor surfaces;
+- operator approval, version pinning, and rollback procedure;
+- explicit statement that SPO does not make diagnosis or treatment decisions.
+
 ## Hierarchy Sync Demo
 
 `hierarchy_sync_demo.py` demonstrates the transport-neutral edge/cloud summary

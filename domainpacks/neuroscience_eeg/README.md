@@ -55,3 +55,73 @@ imprint that modulates coupling and lag, representing long-term plasticity.
 
 300 steps: baseline awake EEG → seizure-like delta hypersynchrony →
 alpha entrainment stimulus → meditation imprint accumulation.
+
+## Operator Runbook
+
+Use this pack as a research-tier EEG simulation, replay, and policy-review
+artefact. It is not a neurostimulation protocol, seizure detector, BCI
+controller, or medical-device control path.
+
+### 1. Validate the Binding
+
+```bash
+spo validate domainpacks/neuroscience_eeg/binding_spec.yaml
+```
+
+Expected result: the binding is valid and reports the `research` safety tier.
+
+### 2. Run the Pack-Owned Scenario
+
+```bash
+PYTHONPATH=src python domainpacks/neuroscience_eeg/run.py
+```
+
+Expected result: the deterministic EEG scenario executes end to end and prints
+a compact JSON summary for review.
+
+### 3. Produce and Verify an Audit Log
+
+```bash
+mkdir -p /tmp/spo_neuroscience_eeg_runbook
+spo run domainpacks/neuroscience_eeg/binding_spec.yaml \
+  --steps 40 \
+  --audit /tmp/spo_neuroscience_eeg_runbook/audit.json
+
+spo replay /tmp/spo_neuroscience_eeg_runbook/audit.json --verify
+```
+
+Expected result: the research-tier run admits an audit log, and replay
+verification passes deterministically.
+
+### 4. Generate Review Artefacts
+
+```bash
+spo report /tmp/spo_neuroscience_eeg_runbook/audit.json \
+  > /tmp/spo_neuroscience_eeg_runbook/report.txt
+
+spo explain /tmp/spo_neuroscience_eeg_runbook/audit.json \
+  --markdown-out /tmp/spo_neuroscience_eeg_runbook/explain.md
+
+spo formal-export domainpacks/neuroscience_eeg/binding_spec.yaml \
+  --export policy \
+  --output /tmp/spo_neuroscience_eeg_runbook/policy.prism
+```
+
+Expected result: the report text, explanation, and policy model are written under
+`/tmp/spo_neuroscience_eeg_runbook/`. Full formal packages and STL monitor
+exports remain blocked until this binding adds `protocol_net` and
+`stl_monitors` evidence.
+
+### 5. Live-Use Readiness Boundary
+
+Do not connect this pack to EEG amplifiers, stimulators, BCI devices, clinical
+alarms, or patient workflows from the local runbook. A live research or
+clinical deployment needs, at minimum:
+
+- subject/data-governance approval and consent path for the intended dataset;
+- hardware adapter provenance, isolation, and latency evidence;
+- admitted audit-log environment with replay/report/explain retention;
+- externally reviewed policy and monitor evidence for the intended protocol;
+- operator approval, version pinning, and rollback procedure;
+- explicit statement that SPO does not diagnose, detect, or treat neurological
+  conditions.

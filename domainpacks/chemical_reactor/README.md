@@ -57,3 +57,57 @@ modulates coupling as active surface area decreases.
 
 250 steps: stable CSTR → Hopf bifurcation onset → coolant failure
 transient → emergency quench → feed rate recovery with fouling.
+
+## Operator Runbook
+
+Use this sequence for local review evidence. It validates the binding, runs the
+pack-owned non-actuating scenario, records the expected local-runtime refusal
+for the production-tier binding, and exports a policy model for formal review.
+
+```bash
+mkdir -p /tmp/spo-chemical-reactor
+.venv/bin/spo validate domainpacks/chemical_reactor/binding_spec.yaml
+.venv/bin/python domainpacks/chemical_reactor/run.py \
+  > /tmp/spo-chemical-reactor/scenario.txt
+set +e
+.venv/bin/spo run domainpacks/chemical_reactor/binding_spec.yaml \
+  --steps 500 \
+  --seed 42 \
+  --audit /tmp/spo-chemical-reactor/run.jsonl \
+  > /tmp/spo-chemical-reactor/blocked-run.txt 2>&1
+test $? -ne 0
+set -e
+.venv/bin/spo formal-export domainpacks/chemical_reactor/binding_spec.yaml \
+  --export policy \
+  --output /tmp/spo-chemical-reactor/policy.prism
+```
+
+Expected artefacts:
+
+- `/tmp/spo-chemical-reactor/scenario.txt`: deterministic local scenario output
+  from this pack's `run.py`.
+- `/tmp/spo-chemical-reactor/blocked-run.txt`: expected refusal showing that the
+  local runtime will not execute a production-tier binding through
+  `spo run --audit`.
+- `/tmp/spo-chemical-reactor/policy.prism`: policy export for formal review.
+
+`spo replay`, `spo report`, and `spo explain` require an audit log from an
+admitted execution path. They are intentionally not part of the current local
+production-tier command chain. Full formal-package and STL exports also remain
+blocked until this binding defines a `protocol_net` and `stl_monitors`.
+
+Do not use this runbook as a live DCS, SIS, or process-safety controller. The
+actuators above map to coolant-flow, feed-rate, agitator, and jacket-setpoint
+concepts for review only. Any reactor connection remains blocked until a senior
+operator provides all of the following evidence:
+
+- read-only historian or laboratory-data mapping for every oscillator and
+  boundary in `binding_spec.yaml`;
+- proof that the first connector path cannot write DCS setpoints, valve
+  positions, pump speeds, agitator speeds, or SIS state;
+- independent SIS, relief, interlock, and manual shutdown protection outside SPO
+  for temperature, pressure, coolant-flow, and concentration boundaries;
+- operator-approved target hashes for the reviewed binding, connector plan, and
+  audit-storage location;
+- site-specific management-of-change, HAZOP/LOPA review, commissioning window,
+  and rollback plan for any advisory workflow.
