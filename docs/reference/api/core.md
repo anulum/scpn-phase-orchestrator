@@ -81,6 +81,14 @@ bounded actions back into the dynamics; with it off, the same drivers and
 intrinsic plasticity run without control feedback, giving the baseline for
 measuring orchestration uplift on a fixed seed.
 
+`simulate()` also accepts an optional `scenario_hook` for deterministic
+non-actuating perturbation schedules. The hook receives a
+`SimulationScenarioContext` before each integration step and may adjust phases,
+natural frequencies, coupling state, `zeta`, or `psi_target`; the core validates
+finite vector shapes, scalar types, and `CouplingState` identity immediately
+after the hook returns. This is the supported path for benchmark and case-study
+scenario evidence, not a hardware or live-actuation path.
+
 ::: scpn_phase_orchestrator.runtime.simulation
 
 ## Network security helpers

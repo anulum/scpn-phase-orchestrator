@@ -31,7 +31,9 @@ boundary observation, and the supervisor + domainpack policy control loop.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Real
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -88,8 +90,14 @@ if TYPE_CHECKING:
     from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 
 FloatArray = NDArray[np.float64]
+ScenarioCallback = Callable[["SimulationScenarioContext"], None]
 
-__all__ = ["SimulationResult", "simulate", "petri_net_from_protocol"]
+__all__ = [
+    "SimulationResult",
+    "SimulationScenarioContext",
+    "simulate",
+    "petri_net_from_protocol",
+]
 
 
 def petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marking]:
@@ -165,6 +173,28 @@ class SimulationResult:
         }
 
 
+@dataclass
+class SimulationScenarioContext:
+    """Mutable, validated per-step scenario hook context.
+
+    Scenario hooks are non-actuating perturbation fixtures for benchmarks and
+    case-study replay. They may mutate phase/frequency arrays in place or assign
+    updated ``coupling``, ``zeta``, and ``psi_target`` values. The simulation
+    core validates those fields immediately after the hook returns.
+    """
+
+    spec_name: str
+    step: int
+    sample_period_s: float
+    phases: FloatArray
+    omegas: FloatArray
+    coupling: CouplingState
+    zeta: float
+    psi_target: float
+    layer_osc_ranges: dict[int, list[int]]
+    rng: np.random.Generator
+
+
 def _objective_r(
     phases: FloatArray,
     layer_indices: list[int],
@@ -178,6 +208,38 @@ def _objective_r(
     return float(compute_order_parameter(np.array(selected))[0])
 
 
+def _scenario_vector(value: object, *, name: str, n_osc: int) -> FloatArray:
+    arr = np.asarray(value, dtype=np.float64)
+    if arr.shape != (n_osc,):
+        raise ValueError(f"scenario {name} must have shape ({n_osc},)")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"scenario {name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _scenario_scalar(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"scenario {name} must be a finite real scalar")
+    scalar = float(value)
+    if not np.isfinite(scalar):
+        raise ValueError(f"scenario {name} must be a finite real scalar")
+    return scalar
+
+
+def _apply_scenario_context(
+    context: SimulationScenarioContext,
+    *,
+    n_osc: int,
+) -> tuple[FloatArray, FloatArray, CouplingState, float, float]:
+    if not isinstance(context.coupling, CouplingState):
+        raise ValueError("scenario coupling must be a CouplingState")
+    phases = _scenario_vector(context.phases, name="phases", n_osc=n_osc)
+    omegas = _scenario_vector(context.omegas, name="omegas", n_osc=n_osc)
+    zeta = _scenario_scalar(context.zeta, name="zeta")
+    psi_target = _scenario_scalar(context.psi_target, name="psi_target")
+    return phases, omegas, context.coupling, zeta, psi_target
+
+
 def simulate(
     spec: BindingSpec,
     *,
@@ -186,6 +248,7 @@ def simulate(
     policy_enabled: bool = True,
     audit_logger: AuditLogger | None = None,
     binding_spec_path: Path | None = None,
+    scenario_hook: ScenarioCallback | None = None,
 ) -> SimulationResult:
     """Advance a binding spec for ``steps`` and return the simulation outcome.
 
@@ -200,6 +263,10 @@ def simulate(
         binding_spec_path: Optional path to the spec, used only to locate an
             adjacent ``policy.yaml``. When ``None``, no domainpack policy rules
             are loaded (the supervisor policy still runs when ``policy_enabled``).
+        scenario_hook: Optional deterministic per-step perturbation hook for
+            benchmark and case-study scenarios. The hook can mutate phases,
+            frequencies, coupling, ``zeta``, or ``psi_target`` in a validated
+            :class:`SimulationScenarioContext`; it cannot perform actuation.
 
     Returns:
         A :class:`SimulationResult`.
@@ -354,6 +421,25 @@ def simulate(
                 psi_target = psi_driver.compute(step_idx)
             else:
                 psi_target = psi_driver.compute(t)
+
+        if scenario_hook is not None:
+            context = SimulationScenarioContext(
+                spec_name=spec.name,
+                step=step_idx,
+                sample_period_s=spec.sample_period_s,
+                phases=phases,
+                omegas=omegas,
+                coupling=coupling,
+                zeta=zeta,
+                psi_target=psi_target,
+                layer_osc_ranges=layer_osc_ranges,
+                rng=rng,
+            )
+            scenario_hook(context)
+            phases, omegas, coupling, zeta, psi_target = _apply_scenario_context(
+                context,
+                n_osc=n_osc,
+            )
 
         eff_knm = coupling.knm
         eff_alpha = coupling.alpha

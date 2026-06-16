@@ -22,7 +22,11 @@ from scpn_phase_orchestrator.binding import load_binding_spec
 from scpn_phase_orchestrator.runtime import cli
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
-from scpn_phase_orchestrator.runtime.simulation import SimulationResult, simulate
+from scpn_phase_orchestrator.runtime.simulation import (
+    SimulationResult,
+    SimulationScenarioContext,
+    simulate,
+)
 
 # Representative specs across the engine/feature space.
 # digital_twin_nchannel is research-tier and Kuramoto (no amplitude), covering
@@ -148,6 +152,29 @@ class TestSimulateContract:
         assert res.steps == 0
         assert res.r_good_history == ()
         assert res.r_good == 0.0
+
+    def test_scenario_hook_changes_trajectory(self) -> None:
+        def perturb(context: SimulationScenarioContext) -> None:
+            if context.step == 2:
+                context.omegas = context.omegas * 3.0
+                context.zeta = 0.2
+
+        baseline = simulate(_spec(KURAMOTO_SPEC), steps=12, seed=5)
+        perturbed = simulate(
+            _spec(KURAMOTO_SPEC),
+            steps=12,
+            seed=5,
+            scenario_hook=perturb,
+        )
+
+        assert not np.array_equal(baseline.final_phases, perturbed.final_phases)
+
+    def test_scenario_hook_rejects_invalid_scalar(self) -> None:
+        def invalid(context: SimulationScenarioContext) -> None:
+            context.zeta = True  # type: ignore[assignment]
+
+        with pytest.raises(ValueError, match="scenario zeta"):
+            simulate(_spec(KURAMOTO_SPEC), steps=3, seed=5, scenario_hook=invalid)
 
 
 class TestFeatureBranches:

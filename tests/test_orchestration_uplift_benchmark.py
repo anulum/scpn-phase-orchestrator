@@ -40,6 +40,7 @@ class TestMeasurePack:
         )
         assert record["pack"] == "sleep_architecture"
         assert record["amplitude_mode"] is True
+        assert record["scenario_profile"] == "domainpack_demo_perturbations"
         _assert_bounded(record["open_loop"])
         _assert_bounded(record["closed_loop"])
         assert record["uplift"] == pytest.approx(
@@ -59,6 +60,8 @@ class TestRunBenchmark:
     def test_covers_all_beachhead_packs(self) -> None:
         report = bench.run_benchmark(steps=15, seed=7, domainpacks_root=DOMAINPACKS)
         assert report["benchmark"] == "orchestration-uplift"
+        assert report["version"] == "1.1.0"
+        assert "scenario-driven" in report["metric"]
         packs = {r["pack"] for r in report["packs"]}
         assert packs == {pack for _vertical, pack in bench.BEACHHEAD_PACKS}
         verticals = {r["vertical"] for r in report["packs"]}
@@ -75,8 +78,10 @@ class TestCommittedSnapshot:
         path = Path("benchmarks/results/orchestration_uplift.json")
         data = json.loads(path.read_text())
         assert data["benchmark"] == "orchestration-uplift"
+        assert data["version"] == "1.1.0"
         assert len(data["packs"]) == len(bench.BEACHHEAD_PACKS)
         for record in data["packs"]:
+            assert record["scenario_profile"] == "domainpack_demo_perturbations"
             _assert_bounded(record["open_loop"])
             _assert_bounded(record["closed_loop"])
 

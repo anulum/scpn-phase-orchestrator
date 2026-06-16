@@ -1,161 +1,169 @@
 {
   "benchmark": "orchestration-uplift",
-  "metric": "separation = R_good - R_bad; uplift = closed - open",
+  "metric": "scenario-driven separation = R_good - R_bad; uplift = closed - open",
   "packs": [
     {
       "amplitude_mode": true,
       "closed_loop": {
-        "action_total": 38,
-        "r_bad": 0.297133962,
-        "r_good": 0.812038568,
+        "action_total": 48,
+        "r_bad": 0.280208722,
+        "r_good": 0.822958068,
         "regime": "nominal",
-        "separation": 0.514904606
+        "separation": 0.542749347
       },
       "open_loop": {
-        "r_bad": 0.317548408,
-        "r_good": 0.806599481,
+        "r_bad": 0.303568382,
+        "r_good": 0.815749221,
         "regime": "nominal",
-        "separation": 0.489051074
+        "separation": 0.512180839
       },
       "pack": "rotating_machinery",
-      "uplift": 0.025853532,
+      "scenario_profile": "domainpack_demo_perturbations",
+      "uplift": 0.030568508,
       "vertical": "industrial"
     },
     {
       "amplitude_mode": true,
       "closed_loop": {
         "action_total": 0,
-        "r_bad": 0.648534158,
-        "r_good": 0.790707818,
+        "r_bad": 0.786566278,
+        "r_good": 0.903029537,
         "regime": "nominal",
-        "separation": 0.14217366
+        "separation": 0.116463259
       },
       "open_loop": {
-        "r_bad": 0.648534158,
-        "r_good": 0.790707818,
+        "r_bad": 0.786566278,
+        "r_good": 0.903029537,
         "regime": "nominal",
-        "separation": 0.14217366
+        "separation": 0.116463259
       },
       "pack": "manufacturing_spc",
+      "scenario_profile": "domainpack_demo_perturbations",
       "uplift": 0.0,
       "vertical": "industrial"
     },
     {
       "amplitude_mode": true,
       "closed_loop": {
-        "action_total": 20,
-        "r_bad": 0.999993927,
-        "r_good": 0.999875171,
+        "action_total": 24,
+        "r_bad": 0.79856062,
+        "r_good": 0.46284787,
         "regime": "nominal",
-        "separation": -0.000118755
+        "separation": -0.33571275
       },
       "open_loop": {
-        "r_bad": 0.941991333,
-        "r_good": 0.448088661,
+        "r_bad": 0.981853201,
+        "r_good": 0.571586702,
         "regime": "nominal",
-        "separation": -0.493902672
+        "separation": -0.410266499
       },
       "pack": "chemical_reactor",
-      "uplift": 0.493783916,
+      "scenario_profile": "domainpack_demo_perturbations",
+      "uplift": 0.074553749,
       "vertical": "industrial"
     },
     {
       "amplitude_mode": true,
       "closed_loop": {
-        "action_total": 58,
-        "r_bad": 0.264505988,
-        "r_good": 0.120422213,
+        "action_total": 73,
+        "r_bad": 0.113714362,
+        "r_good": 0.086097675,
         "regime": "nominal",
-        "separation": -0.144083776
+        "separation": -0.027616687
       },
       "open_loop": {
-        "r_bad": 0.127573851,
-        "r_good": 0.273441747,
+        "r_bad": 0.180077126,
+        "r_good": 0.352607926,
         "regime": "nominal",
-        "separation": 0.145867896
+        "separation": 0.1725308
       },
       "pack": "power_grid",
-      "uplift": -0.289951672,
+      "scenario_profile": "domainpack_demo_perturbations",
+      "uplift": -0.200147487,
       "vertical": "infrastructure"
     },
     {
       "amplitude_mode": true,
       "closed_loop": {
-        "action_total": 20,
-        "r_bad": 0.999872447,
-        "r_good": 0.999791635,
+        "action_total": 25,
+        "r_bad": 0.999994835,
+        "r_good": 0.999971584,
         "regime": "nominal",
-        "separation": -8.0813e-05
+        "separation": -2.3251e-05
       },
       "open_loop": {
-        "r_bad": 0.999872447,
-        "r_good": 0.999791635,
+        "r_bad": 0.999994835,
+        "r_good": 0.999971584,
         "regime": "nominal",
-        "separation": -8.0813e-05
+        "separation": -2.3251e-05
       },
       "pack": "queuewaves",
+      "scenario_profile": "domainpack_demo_perturbations",
       "uplift": 0.0,
       "vertical": "infrastructure"
     },
     {
       "amplitude_mode": true,
       "closed_loop": {
-        "action_total": 58,
-        "r_bad": 0.989440613,
-        "r_good": 0.546621439,
+        "action_total": 73,
+        "r_bad": 0.978447126,
+        "r_good": 0.597732365,
         "regime": "nominal",
-        "separation": -0.442819174
+        "separation": -0.380714761
       },
       "open_loop": {
-        "r_bad": 0.98300422,
-        "r_good": 0.384315065,
+        "r_bad": 0.968007187,
+        "r_good": 0.417191201,
         "regime": "nominal",
-        "separation": -0.598689155
+        "separation": -0.550815986
       },
       "pack": "cardiac_rhythm",
-      "uplift": 0.155869981,
+      "scenario_profile": "domainpack_demo_perturbations",
+      "uplift": 0.170101225,
       "vertical": "biosignal"
     },
     {
       "amplitude_mode": true,
       "closed_loop": {
-        "action_total": 35,
-        "r_bad": 0.588616413,
-        "r_good": 0.199905537,
+        "action_total": 49,
+        "r_bad": 0.892593079,
+        "r_good": 0.171740751,
         "regime": "nominal",
-        "separation": -0.388710876
+        "separation": -0.720852327
       },
       "open_loop": {
-        "r_bad": 0.598687165,
-        "r_good": 0.153367377,
+        "r_bad": 0.895930047,
+        "r_good": 0.129105913,
         "regime": "nominal",
-        "separation": -0.445319788
+        "separation": -0.766824133
       },
       "pack": "neuroscience_eeg",
-      "uplift": 0.056608912,
+      "scenario_profile": "domainpack_demo_perturbations",
+      "uplift": 0.045971806,
       "vertical": "biosignal"
     },
     {
       "amplitude_mode": true,
       "closed_loop": {
         "action_total": 10,
-        "r_bad": 0.827000901,
-        "r_good": 0.626203054,
+        "r_bad": 0.821684375,
+        "r_good": 0.13811732,
         "regime": "nominal",
-        "separation": -0.200797847
+        "separation": -0.683567055
       },
       "open_loop": {
-        "r_bad": 0.632475903,
-        "r_good": 0.544594541,
+        "r_bad": 0.492692018,
+        "r_good": 0.22756173,
         "regime": "nominal",
-        "separation": -0.087881361
+        "separation": -0.265130288
       },
       "pack": "sleep_architecture",
-      "uplift": -0.112916486,
+      "scenario_profile": "domainpack_demo_perturbations",
+      "uplift": -0.418436767,
       "vertical": "biosignal"
     }
   ],
   "seed": 7,
-  "steps": 200,
-  "version": "1.0.0"
+  "steps": 250,
+  "version": "1.1.0"
 }
