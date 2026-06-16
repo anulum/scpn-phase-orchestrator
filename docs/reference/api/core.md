@@ -71,6 +71,18 @@ keeps the callable entry points visible to mkdocstrings.
 
 ::: scpn_phase_orchestrator.runtime.cli
 
+## Simulation core
+
+`runtime.simulation` is the single non-actuating closed/open-loop core that
+backs both ``spo run`` and the public ``evaluate_binding_spec`` facade, so a
+binding spec is advanced by exactly one implementation. ``policy_enabled`` is the
+open/closed-loop switch: with it on, the supervisor and domainpack policy feed
+bounded actions back into the dynamics; with it off, the same drivers and
+intrinsic plasticity run without control feedback, giving the baseline for
+measuring orchestration uplift on a fixed seed.
+
+::: scpn_phase_orchestrator.runtime.simulation
+
 ## Network security helpers
 
 Shared helpers for production-mode detection, environment integer parsing, and

@@ -1,0 +1,161 @@
+{
+  "benchmark": "orchestration-uplift",
+  "metric": "separation = R_good - R_bad; uplift = closed - open",
+  "packs": [
+    {
+      "amplitude_mode": true,
+      "closed_loop": {
+        "action_total": 38,
+        "r_bad": 0.297133962,
+        "r_good": 0.812038568,
+        "regime": "nominal",
+        "separation": 0.514904606
+      },
+      "open_loop": {
+        "r_bad": 0.317548408,
+        "r_good": 0.806599481,
+        "regime": "nominal",
+        "separation": 0.489051074
+      },
+      "pack": "rotating_machinery",
+      "uplift": 0.025853532,
+      "vertical": "industrial"
+    },
+    {
+      "amplitude_mode": true,
+      "closed_loop": {
+        "action_total": 0,
+        "r_bad": 0.648534158,
+        "r_good": 0.790707818,
+        "regime": "nominal",
+        "separation": 0.14217366
+      },
+      "open_loop": {
+        "r_bad": 0.648534158,
+        "r_good": 0.790707818,
+        "regime": "nominal",
+        "separation": 0.14217366
+      },
+      "pack": "manufacturing_spc",
+      "uplift": 0.0,
+      "vertical": "industrial"
+    },
+    {
+      "amplitude_mode": true,
+      "closed_loop": {
+        "action_total": 20,
+        "r_bad": 0.999993927,
+        "r_good": 0.999875171,
+        "regime": "nominal",
+        "separation": -0.000118755
+      },
+      "open_loop": {
+        "r_bad": 0.941991333,
+        "r_good": 0.448088661,
+        "regime": "nominal",
+        "separation": -0.493902672
+      },
+      "pack": "chemical_reactor",
+      "uplift": 0.493783916,
+      "vertical": "industrial"
+    },
+    {
+      "amplitude_mode": true,
+      "closed_loop": {
+        "action_total": 58,
+        "r_bad": 0.264505988,
+        "r_good": 0.120422213,
+        "regime": "nominal",
+        "separation": -0.144083776
+      },
+      "open_loop": {
+        "r_bad": 0.127573851,
+        "r_good": 0.273441747,
+        "regime": "nominal",
+        "separation": 0.145867896
+      },
+      "pack": "power_grid",
+      "uplift": -0.289951672,
+      "vertical": "infrastructure"
+    },
+    {
+      "amplitude_mode": true,
+      "closed_loop": {
+        "action_total": 20,
+        "r_bad": 0.999872447,
+        "r_good": 0.999791635,
+        "regime": "nominal",
+        "separation": -8.0813e-05
+      },
+      "open_loop": {
+        "r_bad": 0.999872447,
+        "r_good": 0.999791635,
+        "regime": "nominal",
+        "separation": -8.0813e-05
+      },
+      "pack": "queuewaves",
+      "uplift": 0.0,
+      "vertical": "infrastructure"
+    },
+    {
+      "amplitude_mode": true,
+      "closed_loop": {
+        "action_total": 58,
+        "r_bad": 0.989440613,
+        "r_good": 0.546621439,
+        "regime": "nominal",
+        "separation": -0.442819174
+      },
+      "open_loop": {
+        "r_bad": 0.98300422,
+        "r_good": 0.384315065,
+        "regime": "nominal",
+        "separation": -0.598689155
+      },
+      "pack": "cardiac_rhythm",
+      "uplift": 0.155869981,
+      "vertical": "biosignal"
+    },
+    {
+      "amplitude_mode": true,
+      "closed_loop": {
+        "action_total": 35,
+        "r_bad": 0.588616413,
+        "r_good": 0.199905537,
+        "regime": "nominal",
+        "separation": -0.388710876
+      },
+      "open_loop": {
+        "r_bad": 0.598687165,
+        "r_good": 0.153367377,
+        "regime": "nominal",
+        "separation": -0.445319788
+      },
+      "pack": "neuroscience_eeg",
+      "uplift": 0.056608912,
+      "vertical": "biosignal"
+    },
+    {
+      "amplitude_mode": true,
+      "closed_loop": {
+        "action_total": 10,
+        "r_bad": 0.827000901,
+        "r_good": 0.626203054,
+        "regime": "nominal",
+        "separation": -0.200797847
+      },
+      "open_loop": {
+        "r_bad": 0.632475903,
+        "r_good": 0.544594541,
+        "regime": "nominal",
+        "separation": -0.087881361
+      },
+      "pack": "sleep_architecture",
+      "uplift": -0.112916486,
+      "vertical": "biosignal"
+    }
+  ],
+  "seed": 7,
+  "steps": 200,
+  "version": "1.0.0"
+}

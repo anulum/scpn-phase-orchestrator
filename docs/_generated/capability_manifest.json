@@ -8,11 +8,11 @@
     "optional_extras": 16,
     "public_api_exports": 24,
     "public_documentation_pages": 187,
-    "python_package_modules": 501,
+    "python_package_modules": 502,
     "research_experimental_modules": 187,
-    "runtime_serving_modules": 48,
+    "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 557
+    "test_files": 559
   },
   "documentation": {
     "public_pages": [
@@ -814,6 +814,7 @@
       "src/scpn_phase_orchestrator/runtime/replay.py",
       "src/scpn_phase_orchestrator/runtime/server.py",
       "src/scpn_phase_orchestrator/runtime/server_grpc.py",
+      "src/scpn_phase_orchestrator/runtime/simulation.py",
       "src/scpn_phase_orchestrator/scaffold/__init__.py",
       "src/scpn_phase_orchestrator/scaffold/llm.py",
       "src/scpn_phase_orchestrator/studio/__init__.py",
@@ -1205,6 +1206,7 @@
     "src/scpn_phase_orchestrator/runtime/replay.py",
     "src/scpn_phase_orchestrator/runtime/server.py",
     "src/scpn_phase_orchestrator/runtime/server_grpc.py",
+    "src/scpn_phase_orchestrator/runtime/simulation.py",
     "src/scpn_phase_orchestrator/scaffold/__init__.py",
     "src/scpn_phase_orchestrator/scaffold/llm.py",
     "src/scpn_phase_orchestrator/ssgf/__init__.py",
@@ -1636,6 +1638,7 @@
       "tests/test_oim.py",
       "tests/test_opentelemetry_adapter.py",
       "tests/test_optional_imports.py",
+      "tests/test_orchestration_uplift_benchmark.py",
       "tests/test_order_params.py",
       "tests/test_order_params_backends.py",
       "tests/test_order_params_benchmark.py",
@@ -1789,6 +1792,7 @@
       "tests/test_simplicial_engine_workflow.py",
       "tests/test_simplicial_layer.py",
       "tests/test_simplicial_stability.py",
+      "tests/test_simulation_core.py",
       "tests/test_sindy.py",
       "tests/test_sleep_architecture_domainpack.py",
       "tests/test_sleep_staging.py",
