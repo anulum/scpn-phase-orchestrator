@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -54,6 +55,30 @@ def _cli_run_finals(
 class TestParityWithCli:
     """The simulation core must reproduce `spo run` exactly — it is the single
     fidelity contract guarding the CLI loop and the eval API from drifting."""
+
+    def test_cli_run_delegates_to_simulate(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[dict[str, Any]] = []
+        original = cli.simulate
+
+        def spy(spec: Any, **kwargs: Any) -> SimulationResult:
+            calls.append(dict(kwargs))
+            return original(spec, **kwargs)
+
+        monkeypatch.setattr(cli, "simulate", spy)
+        result = CliRunner().invoke(
+            cli.main,
+            ["run", KURAMOTO_SPEC, "--steps", "7", "--seed", "13"],
+        )
+        assert result.exit_code == 0, result.output
+        assert len(calls) == 1
+        assert calls[0]["steps"] == 7
+        assert calls[0]["seed"] == 13
+        assert calls[0]["policy_enabled"] is True
+        assert calls[0]["audit_logger"] is None
+        assert calls[0]["binding_spec_path"] == Path(KURAMOTO_SPEC)
+        assert "R_good=" in result.output
 
     @pytest.mark.parametrize(
         "spec_path", [KURAMOTO_SPEC, SL_RESEARCH_SPEC, SL_IMPRINT_SPEC]

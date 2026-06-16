@@ -15,8 +15,15 @@ interface.
 
 ## Positioning (Why this facade exists)
 
-The facade is intentionally minimal because its purpose is to make phase-control
-logic embeddable without inheriting full CLI execution complexity.
+The module has two intentionally different entry points:
+
+- `Orchestrator.run` is the narrow convenience facade for research-tier
+  Kuramoto bindings.
+- `evaluate_binding_spec` is the full non-actuating evaluation facade for the
+  shared simulation core used by `spo run`.
+
+Both paths make phase-control logic embeddable without inheriting full CLI
+process management.
 
 Use this for:
 
@@ -30,10 +37,17 @@ Avoid using it when you need hardware dispatch, policy execution, or service
 topology management. Those concerns remain on CLI/research-surface flows with
 their own guardrails.
 
-The facade is intentionally narrower than the CLI and narrower than the full
-research package. It accepts a `BindingSpec`, can load a reviewed
+`Orchestrator.run` is intentionally narrower than the CLI and narrower than the
+full research package. It accepts a `BindingSpec`, can load a reviewed
 `binding_spec.yaml`, validates the binding before execution, executes local
 Kuramoto dynamics, and returns an immutable `OrchestratorState` record.
+
+`evaluate_binding_spec` is broader but still non-actuating. It accepts a
+`BindingSpec` or binding-spec path, validates it, and calls the shared
+`runtime.simulation.simulate` core for Kuramoto or Stuart-Landau specs at any
+safety tier. This is for review, dry-run, benchmark, and open/closed-loop
+comparison evidence only; it does not write audit logs, open sockets, or bypass
+operator approval.
 
 Use it for deterministic local checks and embedded Python workflows. The
 facade contract includes no hardware actuation and no network IO. Do not use
@@ -112,11 +126,14 @@ Do not use the facade for hardware integration.
 
 Do not use the facade for networked distributed synchronisation.
 
-Do not use the facade for supervisor policy actuation.
+Do not use either facade for supervisor policy actuation.
 
-Do not use the facade for non-research safety tiers.
+Do not use `Orchestrator.run` for non-research safety tiers.
 
-Do not use the facade for amplitude-mode Stuart-Landau specs.
+Do not use `Orchestrator.run` for amplitude-mode Stuart-Landau specs.
+
+Do not confuse `evaluate_binding_spec` with admitted CLI execution; it is
+non-actuating evaluation, not an operational approval path.
 
 Do not use the facade as a replacement for the CLI when operator audit output is required.
 
@@ -154,11 +171,26 @@ Do not use the facade as a replacement for domain-specific model validation.
 
 `OrchestratorState.to_record` returns a compact JSON-serialisable dictionary.
 
-The facade supports research-tier Kuramoto binding specs.
+`Orchestrator.run` supports research-tier Kuramoto binding specs.
 
-The facade rejects non-research safety tiers.
+`Orchestrator.run` rejects non-research safety tiers.
 
-The facade rejects amplitude-mode specs.
+`Orchestrator.run` rejects amplitude-mode specs.
+
+`evaluate_binding_spec` accepts Kuramoto and Stuart-Landau binding specs.
+
+`evaluate_binding_spec` accepts research, clinical, consumer, and production
+safety tiers only as non-actuating evaluation inputs.
+
+`evaluate_binding_spec` returns a `SimulationResult` with objective order
+parameters, separation, regime, histories, and action counts.
+
+`evaluate_binding_spec(policy_enabled=False)` runs the same drivers and
+intrinsic plasticity without supervisor or policy feedback.
+
+`evaluate_binding_spec(policy_enabled=True)` runs the same shared simulation core
+used by `spo run`, while keeping audit-log admission and safety-tier execution
+gates owned by the CLI.
 
 The facade rejects invalid step counts.
 
@@ -256,9 +288,11 @@ The constructor then calls `_validate_executable_spec`.
 
 That validation step is deliberately stricter than the general binding validator.
 
-A binding may be valid for the wider package but still rejected by the facade.
+A binding may be valid for the wider package but still rejected by
+`Orchestrator.run`.
 
-This protects the facade from silently taking on CLI-only responsibilities.
+This protects the convenience facade from silently taking on CLI-only
+responsibilities.
 
 ### Executable spec gate
 
@@ -272,15 +306,15 @@ The safety tier must be `research`.
 
 Any other safety tier raises `ValueError`.
 
-The facade rejects `clinical` tier specs.
+`Orchestrator.run` rejects `clinical` tier specs.
 
-The facade rejects `consumer` tier specs.
+`Orchestrator.run` rejects `consumer` tier specs.
 
-The facade rejects `production` tier specs.
+`Orchestrator.run` rejects `production` tier specs.
 
-The facade rejects any other supported non-research tier.
+`Orchestrator.run` rejects any other supported non-research tier.
 
-The facade also rejects amplitude-mode specs.
+`Orchestrator.run` also rejects amplitude-mode specs.
 
 A binding with an `amplitude` block raises `ValueError`.
 
@@ -292,7 +326,9 @@ The oscillator count must be at least one.
 
 A zero-oscillator binding raises `ValueError`.
 
-This gate keeps `Orchestrator.run` focused on one local Kuramoto path.
+This gate keeps `Orchestrator.run` focused on one local Kuramoto path. Use
+`evaluate_binding_spec` when the task is non-actuating full-core evaluation
+across Stuart-Landau specs or higher safety tiers.
 
 ## Orchestrator.from_yaml
 
@@ -702,9 +738,9 @@ The facade does not replace those lower-level exports.
 
 The facade composes a small subset of those exports into a safe local path.
 
-## Research-tier restriction
+## Orchestrator.run Research-Tier Restriction
 
-The facade only executes `research-tier` bindings.
+`Orchestrator.run` only executes `research-tier` bindings.
 
 This is a deliberate adoption boundary.
 
@@ -716,19 +752,23 @@ Higher safety tiers may imply safety documentation outside this facade.
 
 Higher safety tiers may imply hardware, clinical, consumer, or production obligations.
 
-The facade cannot enforce those obligations.
+`Orchestrator.run` cannot enforce those obligations.
 
 Therefore it rejects them.
 
-This prevents downstream application code from mistaking a local Python run for an approved operational run.
+This prevents downstream application code from mistaking a local Python run for
+an approved operational run.
 
-If a non-research binding needs simulation, use the explicit CLI or domain-specific validation workflow selected by the operator.
+If a non-research binding needs admitted CLI execution, use the explicit CLI or
+domain-specific validation workflow selected by the operator.
 
-If a production binding needs dry-run evidence, keep audit and policy evidence alongside the run.
+If a production binding needs dry-run numerical evidence, use
+`evaluate_binding_spec` and keep policy, safety-tier, and deployment evidence
+alongside the result.
 
-## Kuramoto binding restriction
+## Orchestrator.run Kuramoto Binding Restriction
 
-The facade currently supports Kuramoto binding specs.
+`Orchestrator.run` currently supports Kuramoto binding specs.
 
 A binding with an amplitude block is rejected.
 
@@ -748,7 +788,45 @@ It does not include sheaf section data.
 
 It does not include sparse solver diagnostics.
 
-Call the specialised engines directly when those states are required.
+Call `evaluate_binding_spec` when a non-actuating `SimulationResult` is enough;
+call specialised engines directly when lower-level state access is required.
+
+## evaluate_binding_spec
+
+`evaluate_binding_spec` is the full-core, non-actuating evaluation entry point.
+
+It accepts a `BindingSpec`, string path, or `Path`.
+
+When a path is provided, an adjacent `policy.yaml` is loaded into the closed-loop
+domainpack policy path.
+
+It validates the binding before execution.
+
+It accepts Kuramoto specs.
+
+It accepts Stuart-Landau amplitude-mode specs.
+
+It accepts higher safety tiers because it is review-only evaluation, not an
+admitted runtime execution path.
+
+It calls `runtime.simulation.simulate`, the same physics loop used by `spo run`.
+
+It returns `SimulationResult`.
+
+It exposes `policy_enabled` as the open/closed-loop switch.
+
+It does not create an `AuditLogger`.
+
+It does not write audit JSONL.
+
+It does not open network connections.
+
+It does not write to hardware.
+
+It does not certify a clinical, consumer, or production deployment.
+
+Use it for benchmark and case-study measurements where the same seed must be
+run open loop and closed loop through one shared implementation.
 
 ## Minimal binding example
 
@@ -846,9 +924,18 @@ It verifies state shapes.
 
 It verifies the order parameter remains bounded.
 
-It verifies non-research bindings are rejected.
+It verifies `Orchestrator.run` rejects non-research bindings.
 
 It verifies invalid step counts are rejected.
+
+`tests/test_simulation_core.py` verifies `evaluate_binding_spec` behaviour.
+
+It verifies gated Stuart-Landau specs can be evaluated without actuation.
+
+It verifies open-loop and closed-loop evaluations share the same simulation
+core.
+
+It verifies `spo run` delegates to the same `simulate` implementation.
 
 `tests/test_public_api_manifest.py` guards package-root exports.
 
@@ -892,9 +979,10 @@ Adding new root exports requires manifest and documentation updates.
 
 Changing the short alias requires application migration notes.
 
-Changing the research-tier restriction requires safety review.
+Changing the `Orchestrator.run` research-tier restriction requires safety review.
 
-Expanding facade execution to additional models requires dedicated tests and documentation.
+Expanding `Orchestrator.run` to additional models requires dedicated tests and
+documentation.
 
 Expanding facade execution to hardware or network paths would violate the current facade contract and must not happen silently.
 
@@ -906,9 +994,12 @@ If import through `scpn_phase_orchestrator` fails, confirm runtime dependencies 
 
 If `from_yaml` fails, run `spo validate PATH` to inspect binding errors.
 
-If the facade rejects the safety tier, check that the binding is intended for local research execution.
+If `Orchestrator.run` rejects the safety tier, check that the binding is
+intended for local research execution.
 
-If the facade rejects an amplitude block, use `StuartLandauEngine` directly.
+If `Orchestrator.run` rejects an amplitude block, use `evaluate_binding_spec`
+for review-only full-core evaluation or `StuartLandauEngine` directly for
+lower-level amplitude-state work.
 
 If `run` rejects `steps`, pass a non-negative integer.
 

@@ -7071,7 +7071,7 @@ def test_run_rich_binding_records_amplitude_policy_and_imprint_audit(
     assert "epsilon" in steps[0]
 
 
-def test_replay_verify_reports_rich_stuart_landau_mismatch(runner, tmp_path):
+def test_replay_verify_accepts_rich_stuart_landau_audit(runner, tmp_path):
     spec_path = _write_rich_cli_run_spec(tmp_path)
     audit_path = tmp_path / "rich_audit.jsonl"
     run_result = runner.invoke(
@@ -7091,8 +7091,8 @@ def test_replay_verify_reports_rich_stuart_landau_mismatch(runner, tmp_path):
     result = runner.invoke(main, ["replay", str(audit_path), "--verify"])
 
     assert run_result.exit_code == 0
-    assert result.exit_code == 1
-    assert "Determinism FAILED at transition" in result.output
+    assert result.exit_code == 0
+    assert "Determinism verified" in result.output
 
 
 def test_replay_verify_accepts_plain_audit(runner, valid_spec_path, tmp_path):
