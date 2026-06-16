@@ -115,6 +115,41 @@ being actuated without the evidence pipeline. See the formal-verification export
 in the supervisor reference for how a gated spec reaches a certifiable
 controller.
 
+## From demo to deployment
+
+The operator path depends on the pack's safety tier (see the table above).
+
+**Research tier** (`queuewaves`, `neuroscience_eeg`, `sleep_architecture`) — the
+full evidence chain runs locally:
+
+```bash
+spo validate domainpacks/<pack>/binding_spec.yaml          # schema + resolved config
+spo run domainpacks/<pack>/binding_spec.yaml \
+    --steps 500 --seed 42 --audit run.jsonl                # SHA256-chained audit log
+spo report run.jsonl                                       # deterministic summary
+spo explain run.jsonl --markdown-out explain.md            # regulator-oriented narrative
+```
+
+Before any production sign-off, confirm reproducibility for *your* configuration
+with `spo replay run.jsonl --verify`; the determinism profile of a specific
+binding spec, backend chain, and host is part of commissioning, not an
+assumption.
+
+**Consumer / production / clinical tier** (`rotating_machinery`,
+`manufacturing_spc`, `chemical_reactor`, `power_grid`, `cardiac_rhythm`) — live
+`spo run` is gated. Explore the dynamics with the narrated `python
+domainpacks/<pack>/run.py`, then reach a controllable system through the
+evidence pipeline rather than the local runtime:
+
+1. Validate the binding spec and review the resolved configuration.
+2. Build the formal-verification package for the spec's safety properties
+   (supervisor formal export) and run the reviewed model checkers.
+3. Bind the checker results into a non-actuating runtime-control certificate.
+4. Deploy only behind a certified controller; for the clinical tier this is in
+   addition to CE/MDR and clinical validation.
+
+No tier actuates without an explicit operator-approval and audit trail.
+
 ## Why these three
 
 The same engine and binding-spec workflow covers all three, so a vertical slice
