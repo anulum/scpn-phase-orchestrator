@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 48,
     "rust_kernel_files": 93,
-    "test_files": 556
+    "test_files": 557
   },
   "documentation": {
     "public_pages": [
@@ -1686,6 +1686,7 @@
       "tests/test_policy_yaml_fuzzer.py",
       "tests/test_polyglot_backend_dispatch_contract.py",
       "tests/test_power_grid_causal_attribution_demo.py",
+      "tests/test_power_grid_domainpack.py",
       "tests/test_power_grid_fep_hierarchy_demo.py",
       "tests/test_power_grid_hierarchy_sync_demo.py",
       "tests/test_power_grid_morphogenetic_field_demo.py",
