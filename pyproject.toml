@@ -80,7 +80,6 @@ full = [
     "pymodbus>=3.5,<4.0",
     "jax>=0.4,<1.0",
     "diffrax>=0.5,<1.0",
-    "juliacall>=0.9,<0.10",
     "rtamt>=0.3,<1.0",
     "ripser>=0.6,<1.0",
 ]
@@ -108,7 +107,6 @@ dev = [
     "pre-commit>=3.5,<5.0",
     "twine>=6.2,<7.0",
     "pytest-benchmark>=5.0,<6.0",
-    "juliacall>=0.9,<0.10",
 ]
 
 [project.scripts]
