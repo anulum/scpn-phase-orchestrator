@@ -237,6 +237,30 @@ class TestAuditLogging:
         integrity_ok, _ = ReplayEngine.verify_integrity(entries)
         assert integrity_ok
 
+    @pytest.mark.parametrize(
+        "spec_path", [SL_RESEARCH_SPEC, SL_IMPRINT_SPEC, KURAMOTO_SPEC]
+    )
+    def test_audit_passes_replay_determinism_verify(
+        self, tmp_path: Path, spec_path: str
+    ) -> None:
+        # Regression guard: the audit must log pre-step amplitudes paired with
+        # pre-step phases, so `replay --verify` reproduces every transition.
+        # Logging post-step amplitudes previously broke amplitude-driven specs.
+        audit = tmp_path / "run.jsonl"
+        logger = AuditLogger(str(audit))
+        simulate(
+            _spec(spec_path),
+            steps=20,
+            seed=5,
+            policy_enabled=True,
+            audit_logger=logger,
+            binding_spec_path=Path(spec_path),
+        )
+        logger.close()
+        engine = CliRunner().invoke(cli.main, ["replay", str(audit), "--verify"])
+        assert engine.exit_code == 0, engine.output
+        assert "Determinism verified" in engine.output
+
 
 class TestEvaluateApi:
     def test_evaluates_gated_sl_spec(self) -> None:

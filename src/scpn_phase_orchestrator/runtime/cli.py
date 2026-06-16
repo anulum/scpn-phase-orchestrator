@@ -5556,6 +5556,9 @@ def run(
                 eff_mu = mu
                 if imprint_model is not None and imprint_state is not None:
                     eff_mu = imprint_model.modulate_mu(mu, imprint_state)
+                # Pre-step amplitudes pair with the pre-step phases in the audit
+                # record; logging post-step amplitudes broke `replay --verify`.
+                input_amplitudes = sl_state[n_osc:].copy()
                 sl_state = sl_engine.step(
                     sl_state,
                     omegas,
@@ -5725,7 +5728,7 @@ def run(
                     "channel_runtime": runtime_execution.to_audit_record(),
                 }
                 if amplitude_mode:
-                    log_kwargs["amplitudes"] = amplitudes
+                    log_kwargs["amplitudes"] = input_amplitudes
                     log_kwargs["mu"] = eff_mu
                     log_kwargs["knm_r"] = coupling.knm_r
                     # type ignore: amplitude_mode proves spec.amplitude is set here.

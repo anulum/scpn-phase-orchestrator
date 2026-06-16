@@ -288,6 +288,7 @@ def simulate(
     omegas = np.array(spec.get_omegas(), dtype=np.float64)
 
     amplitudes = np.array([], dtype=np.float64)
+    input_amplitudes = np.array([], dtype=np.float64)
     sl_state = np.array([], dtype=np.float64)
     phases_history: list[FloatArray] = []
     amps_history: list[FloatArray] = []
@@ -370,6 +371,11 @@ def simulate(
             eff_mu = mu
             if imprint_model is not None and imprint_state is not None:
                 eff_mu = imprint_model.modulate_mu(mu, imprint_state)
+            # Capture the pre-step amplitudes so the audit record pairs them with
+            # the pre-step phases. Logging post-step amplitudes alongside pre-step
+            # phases yields a mixed state that no single step produced, which is
+            # what broke `spo replay --verify` for amplitude-driven specs.
+            input_amplitudes = sl_state[n_osc:].copy()
             sl_state = sl_engine.step(
                 sl_state,
                 omegas,
@@ -537,7 +543,7 @@ def simulate(
                 "channel_runtime": runtime_execution.to_audit_record(),
             }
             if amplitude_mode:
-                log_kwargs["amplitudes"] = amplitudes
+                log_kwargs["amplitudes"] = input_amplitudes
                 log_kwargs["mu"] = eff_mu
                 log_kwargs["knm_r"] = coupling.knm_r
                 log_kwargs["epsilon"] = spec.amplitude.epsilon  # type: ignore[union-attr]
