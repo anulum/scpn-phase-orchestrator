@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Repository hygiene
+
+- Enabled strict mypy (`[tool.mypy] strict = true`) and parametrised the
+  generic annotations it surfaced across the runtime, binding, adapter,
+  reporting, and autotune modules; the package type-checks clean over 502
+  source files.
+- Adopted NumPy-convention docstrings (ruff `D`) on the public library
+  surface under `src/`, with the docstring gate scoped away from tests,
+  scripts, benchmarks, vertical packs, fuzz harnesses, examples, and
+  notebooks.
+
 ## [0.9.0] - 2026-06-15
 
 ### Added
