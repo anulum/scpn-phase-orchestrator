@@ -60,7 +60,8 @@ def check_session_start(
         imprint_state: loaded (or fresh) imprint state.
         n_osc: expected oscillator count.
 
-    Returns:
+    Returns
+    -------
         SessionCoherenceReport with pass/fail, quality scores, and diagnostics.
     """
     report = SessionCoherenceReport()

@@ -114,10 +114,12 @@ def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
         n_regions: number of regions to return (max 80). If < 80, returns
             the top-left (n_regions, n_regions) submatrix.
 
-    Returns:
+    Returns
+    -------
         Symmetric non-negative coupling matrix, shape (n_regions, n_regions).
 
-    Raises:
+    Raises
+    ------
         ImportError: If neurolib is not installed.
         ValueError: If n_regions < 2 or > 80.
     """
@@ -160,7 +162,8 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     Args:
         n_regions: number of cortical regions (must be >= 2, even recommended).
 
-    Returns:
+    Returns
+    -------
         Symmetric coupling matrix, shape (n_regions, n_regions), zero diagonal.
     """
     n_regions = _validate_n_regions(n_regions)

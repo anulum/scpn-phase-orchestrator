@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Remanentia memory bridge
 
-"""Bidirectional bridge between SPO coherence monitoring and
-Remanentia's memory system.
+"""Bidirectional bridge between SPO coherence monitoring and Remanentia memory.
 
 Direction 1 (SPO -> Remanentia):
   Agent coherence metrics feed consolidation decisions.
@@ -399,7 +398,7 @@ class RemanentiaBridge:
         return np.array(deltas, dtype=np.float64)
 
     def snapshot(self) -> CoherenceMemorySnapshot:
-        """Combined coherence + memory state."""
+        """Return the combined coherence and memory state."""
         n_ent = self.get_entity_count()
         try:
             status = self._get("/status")

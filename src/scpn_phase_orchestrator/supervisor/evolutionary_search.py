@@ -183,7 +183,6 @@ def run_offline_evolutionary_supervisor_search(
 
     Returns review-only candidates plus guards that block any live merge/hot patch.
     """
-
     config = EvolutionarySearchConfig(
         generation_count=generation_count,
         population_size=population_size,

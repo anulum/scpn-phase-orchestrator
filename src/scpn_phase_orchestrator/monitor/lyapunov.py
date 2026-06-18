@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Lyapunov stability monitor
 
-"""Lyapunov stability monitor with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Lyapunov stability monitor with a 5-backend fallback chain.
 
 Two public surfaces:
 
@@ -518,7 +517,8 @@ def lyapunov_spectrum(
         zeta: driver strength.
         psi: target driver phase.
 
-    Returns:
+    Returns
+    -------
         (N,) array of Lyapunov exponents, sorted descending.
     """
     p = _validate_vector(phases_init, name="phases_init")

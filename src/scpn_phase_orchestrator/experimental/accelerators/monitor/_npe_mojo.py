@@ -74,7 +74,6 @@ def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
 
 def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
     """Compute pairwise wrapped phase distances through the Mojo backend."""
-
     p = validate_phase_distance_backend_input(phases)
     n = int(p.size)
     if n == 0:
@@ -91,7 +90,6 @@ def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
 
 def compute_npe_mojo(phases: FloatArray, max_radius: float) -> float:
     """Compute normalised phase entropy through the Mojo backend."""
-
     p, radius = validate_npe_backend_inputs(phases, max_radius)
     n = int(p.size)
     if n < 2:

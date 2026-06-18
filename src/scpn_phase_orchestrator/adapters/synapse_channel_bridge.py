@@ -244,7 +244,6 @@ class SynapseChannelBridge:
     @property
     def n_oscillators(self) -> int:
         """Return the number of configured agent oscillators."""
-
         return self._n
 
     async def connect(self) -> None:
@@ -380,7 +379,6 @@ class SynapseChannelBridge:
 
     async def close(self) -> None:
         """Stop the bridge and close the active hub WebSocket connection."""
-
         self._running = False
         if self._ws:
             await self._ws.close()

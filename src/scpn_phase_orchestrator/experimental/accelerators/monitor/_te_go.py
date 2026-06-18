@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Go bridge for transfer entropy
 
-"""Go backend for ``monitor/transfer_entropy.py``. ``libtransfer_entropy.so``
-via ctypes."""
+"""Go backend for ``monitor/transfer_entropy.py`` (``libtransfer_entropy.so``)."""
 
 from __future__ import annotations
 
@@ -68,7 +67,6 @@ def _load_lib() -> ctypes.CDLL:
 
 def phase_te_go(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     """Compute pairwise phase transfer entropy through the Go backend."""
-
     source, target, n_bins = validate_phase_te_backend_inputs(
         source,
         target,
@@ -101,7 +99,6 @@ def te_matrix_go(
     n_bins: int,
 ) -> FloatArray:
     """Compute the phase transfer-entropy matrix through the Go backend."""
-
     phase_series, n_osc, n_time, n_bins = validate_te_matrix_backend_inputs(
         phase_series,
         n_osc,

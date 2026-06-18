@@ -39,7 +39,6 @@ def spectral_eig_mojo(
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
     """Compute coupling-spectrum eigenvalues and Fiedler vector via Mojo."""
-
     k, n = validate_spectral_backend_inputs(knm_flat, n)
     if n == 0:
         empty = np.zeros(0, dtype=np.float64)

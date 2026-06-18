@@ -58,7 +58,6 @@ def winding_numbers_go(
     n: int,
 ) -> IntArray:
     """Compute oscillator winding numbers through the Go backend."""
-
     p, t, n = validate_winding_backend_inputs(phases_flat, t, n)
     lib = _load_lib()
     out = np.zeros(n, dtype=np.int64)

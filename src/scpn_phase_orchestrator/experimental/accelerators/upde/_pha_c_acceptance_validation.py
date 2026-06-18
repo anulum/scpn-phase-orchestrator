@@ -109,7 +109,6 @@ def expected_pha_c_acceptance_record(
     backend: object = "python",
 ) -> PHACAcceptanceRecord:
     """Return the Python reference acceptance after fail-closed validation."""
-
     return build_pha_c_acceptance_record(
         phases_t0,
         positions_t0,
@@ -144,7 +143,6 @@ def validate_pha_c_acceptance_record(
     tolerance: float = 1.0e-12,
 ) -> PHACAcceptanceRecord:
     """Validate an accelerator acceptance record against the reference."""
-
     verify_pha_c_acceptance_record(got)
     verify_pha_c_acceptance_record(expected)
     got_dict = got.to_dict()

@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Thermodynamic entropy production rate
 
-"""Overdamped-Kuramoto thermodynamic dissipation rate with a 5-backend
-fallback chain per ``feedback_module_standard_attnres.md``.
+"""Overdamped-Kuramoto thermodynamic dissipation rate with a 5-backend chain.
 
     Σ = Σ_i (dθ_i/dt)² · dt
     dθ_i/dt = ω_i + (α / N) · Σ_j K_ij · sin(θ_j − θ_i)
@@ -245,7 +244,8 @@ def entropy_production_rate(
         alpha: global coupling strength.
         dt: integration timestep for the ``· dt`` factor.
 
-    Returns:
+    Returns
+    -------
         Non-negative dissipation scalar.
     """
     phases = _validate_vector(phases, name="phases")

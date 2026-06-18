@@ -241,7 +241,6 @@ def run_offline_evolutionary_topology_mutation_search(
     max_add_candidates: int = 16,
 ) -> TopologyMutationReport:
     """Generate deterministic offline topology mutation candidates."""
-
     config = TopologyMutationConfig(
         generation_count=generation_count,
         population_size=population_size,

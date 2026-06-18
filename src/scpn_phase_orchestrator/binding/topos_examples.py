@@ -409,7 +409,6 @@ def _cyber_industrial_policy_rules() -> tuple[PolicyRule, ...]:
 
 def build_topos_domain_obligation_examples() -> tuple[dict[str, object], ...]:
     """Build deterministic topos obligation examples for benchmark consumption."""
-
     examples = (
         _build_domain_example(
             domain="power_grid",

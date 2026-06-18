@@ -63,7 +63,6 @@ def _load_lib() -> ctypes.CDLL:
 
 def phase_distance_matrix_go(phases: FloatArray) -> FloatArray:
     """Compute pairwise wrapped phase distances through the Go backend."""
-
     p = validate_phase_distance_backend_input(phases)
     lib = _load_lib()
     n = p.size
@@ -84,7 +83,6 @@ def phase_distance_matrix_go(phases: FloatArray) -> FloatArray:
 
 def compute_npe_go(phases: FloatArray, max_radius: float) -> float:
     """Compute normalised phase entropy through the Go backend."""
-
     p, radius = validate_npe_backend_inputs(phases, max_radius)
     lib = _load_lib()
     out = ctypes.c_double(0.0)

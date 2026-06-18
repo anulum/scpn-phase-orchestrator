@@ -149,7 +149,6 @@ def validate_lyapunov_backend_inputs(
 
 def validate_lyapunov_backend_output(value: object, n: int) -> FloatArray:
     """Validate direct backend Lyapunov spectra before returning them."""
-
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError("Lyapunov backend output must not contain boolean values")

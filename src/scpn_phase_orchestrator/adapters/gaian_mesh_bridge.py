@@ -270,7 +270,8 @@ class GaianMeshNode:
     def compute_mesh_drive(self) -> tuple[float, float]:
         """Compute the effective external drive (zeta, psi) from the mesh.
 
-        Returns:
+        Returns
+        -------
             zeta: The magnitude of the mesh mean field.
             psi_target: The phase angle of the mesh mean field.
         """

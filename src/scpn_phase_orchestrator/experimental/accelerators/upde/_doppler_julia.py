@@ -39,7 +39,6 @@ def doppler_run_julia(
     rtol: float,
 ) -> FloatArray:
     """Run the Doppler schedule through Julia."""
-
     (
         p,
         omega,

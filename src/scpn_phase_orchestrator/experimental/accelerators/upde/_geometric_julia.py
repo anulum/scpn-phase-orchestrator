@@ -57,7 +57,6 @@ def torus_run_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     (
         p,
         o,

@@ -55,7 +55,6 @@ def splitting_run_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     p, o, k, a, n_i, zeta_f, psi_f, dt_f, n_steps_i = validate_splitting_inputs(
         phases,
         omegas,

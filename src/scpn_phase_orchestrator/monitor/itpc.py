@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Inter-Trial Phase Coherence
 
-"""Lachaux 1999 inter-trial phase coherence with a 5-backend fallback
-chain per ``feedback_module_standard_attnres.md``.
+"""Lachaux 1999 inter-trial phase coherence with a 5-backend fallback chain.
 
 Two kernels:
 
@@ -280,7 +279,8 @@ def compute_itpc(phases_trials: object) -> FloatArray:
         phases_trials: shape ``(n_trials, n_timepoints)`` — phases in
             radians. A 1-D input is treated as a single trial.
 
-    Returns:
+    Returns
+    -------
         ``(n_timepoints,)`` array of ITPC values in ``[0, 1]``.
     """
     phases = _validate_phases_trials(phases_trials)
@@ -333,7 +333,8 @@ def itpc_persistence(
         phases_trials: ``(n_trials, n_timepoints)`` phases in radians.
         pause_indices: time-point indices falling within / after a pause.
 
-    Returns:
+    Returns
+    -------
         Mean ITPC across ``pause_indices``. ``0.0`` if empty.
     """
     phases = _validate_phases_trials(phases_trials)

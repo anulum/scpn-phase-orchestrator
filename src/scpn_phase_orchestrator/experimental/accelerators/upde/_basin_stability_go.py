@@ -71,7 +71,6 @@ def steady_state_r_go(
 
     The calculation is delegated to the Go backend.
     """
-
     (
         p,
         o,

@@ -111,7 +111,6 @@ def poincare_section_mojo(
     direction_id: int,
 ) -> tuple[FloatArray, FloatArray, int]:
     """Extract Poincare section crossings through the Mojo backend."""
-
     traj, t, d, nrm, offset, direction_id = validate_poincare_section_backend_inputs(
         traj_flat,
         t,
@@ -140,7 +139,6 @@ def phase_poincare_mojo(
     section_phase: float,
 ) -> tuple[FloatArray, FloatArray, int]:
     """Compute phase-space Poincare diagnostics through the Mojo backend."""
-
     phases, t, n, oscillator_idx, section_phase = (
         validate_phase_poincare_backend_inputs(
             phases_flat,

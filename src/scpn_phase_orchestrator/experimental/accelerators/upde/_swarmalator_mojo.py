@@ -55,7 +55,6 @@ def swarmalator_step_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     p, ph, om, n_i, dim_i, a_f, b_f, j_f, k_f, dt_f = validate_swarmalator_inputs(
         pos,
         phases,

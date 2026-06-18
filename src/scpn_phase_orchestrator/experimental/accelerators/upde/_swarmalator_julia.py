@@ -58,7 +58,6 @@ def swarmalator_step_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     p, ph, om, n_i, dim_i, a_f, b_f, j_f, k_f, dt_f = validate_swarmalator_inputs(
         pos,
         phases,

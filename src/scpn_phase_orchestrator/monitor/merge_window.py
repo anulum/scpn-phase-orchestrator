@@ -67,7 +67,6 @@ class MergeWindowToleranceProfile:
 
     def to_dict(self) -> dict[str, float | str]:
         """Return a JSON-safe tolerance-profile payload."""
-
         return merge_window_tolerance_profile_to_dict(self)
 
 
@@ -75,7 +74,8 @@ class MergeWindowToleranceProfile:
 class MergeReport:
     """Audit-ready merge-window state for one sampled instant.
 
-    Attributes:
+    Attributes
+    ----------
         t: Sample timestamp in the caller's runtime units.
         phase_dispersion_rad: Maximum wrapped distance to the reference phase.
         spatial_dispersion_m: Maximum axial distance to the reference point.
@@ -99,7 +99,6 @@ class MergeReport:
 
     def to_dict(self) -> dict[str, float | int | bool]:
         """Return a JSON-safe representation for audit and benchmark records."""
-
         return merge_window_report_to_dict(self)
 
 
@@ -185,7 +184,6 @@ def resolve_merge_window_tolerance_profile(
     spatial_baseline_m: object = DEFAULT_SPATIAL_TOL_M,
 ) -> MergeWindowToleranceProfile:
     """Resolve a named PHA-C tolerance profile into numeric tolerances."""
-
     if isinstance(tolerance_profile, MergeWindowToleranceProfile):
         return tolerance_profile
     name = _validate_profile_name(tolerance_profile)
@@ -229,7 +227,6 @@ def evaluate_merge_window(
     zero. ``lock_achieved`` becomes true once the counter reaches
     ``required_consecutive_samples``.
     """
-
     phase_vector = _as_float_vector(phases, name="phases")
     position_vector = _as_float_vector(positions, name="positions")
     if position_vector.shape != phase_vector.shape:
@@ -320,12 +317,10 @@ class MergeWindowMonitor:
     @property
     def consecutive_lock_samples(self) -> int:
         """Current consecutive joint-lock count."""
-
         return self._consecutive_lock_samples
 
     def reset(self) -> None:
         """Reset the consecutive joint-lock counter."""
-
         self._consecutive_lock_samples = 0
 
     def evaluate(
@@ -338,7 +333,6 @@ class MergeWindowMonitor:
         reference_point: object = 0.0,
     ) -> MergeReport:
         """Evaluate one sample and update the consecutive joint-lock counter."""
-
         report = evaluate_merge_window(
             phases,
             positions,
@@ -363,7 +357,6 @@ class MergeWindowMonitor:
         reference_point: object = 0.0,
     ) -> MergeReport:
         """Alias for :meth:`evaluate` for monitor-pipeline call sites."""
-
         return self.evaluate(
             phases,
             positions,
@@ -375,7 +368,6 @@ class MergeWindowMonitor:
 
 def merge_window_report_to_dict(report: MergeReport) -> dict[str, float | int | bool]:
     """Convert a :class:`MergeReport` into a JSON-safe dictionary."""
-
     return {
         "t": float(report.t),
         "phase_dispersion_rad": float(report.phase_dispersion_rad),
@@ -393,7 +385,6 @@ def merge_window_tolerance_profile_to_dict(
     profile: MergeWindowToleranceProfile,
 ) -> dict[str, float | str]:
     """Convert a resolved tolerance profile into a JSON-safe dictionary."""
-
     return {
         "name": str(profile.name),
         "phase_tol_rad": float(profile.phase_tol_rad),

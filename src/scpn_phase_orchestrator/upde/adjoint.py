@@ -101,7 +101,8 @@ def gradient_knm_jax(  # pragma: no cover — requires JAX
     JIT-compiles a forward Kuramoto simulation and differentiates through it
     using ``jax.grad``. Falls back to ``gradient_knm_fd`` if JAX unavailable.
 
-    Raises:
+    Raises
+    ------
         ImportError: If JAX is not installed.
     """
     try:

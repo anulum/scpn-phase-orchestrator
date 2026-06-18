@@ -49,7 +49,6 @@ def winding_numbers_julia(
     n: int,
 ) -> IntArray:
     """Compute oscillator winding numbers through the Julia backend."""
-
     phases, t, n = validate_winding_backend_inputs(phases_flat, t, n)
     jl = _ensure()
     expected = expected_winding_backend_output(phases, t, n)

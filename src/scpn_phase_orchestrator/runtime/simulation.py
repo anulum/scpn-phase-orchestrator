@@ -102,7 +102,6 @@ __all__ = [
 
 def petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marking]:
     """Build a Petri net and initial marking from a protocol-net spec."""
-
     places = [Place(name) for name in protocol.places]
     transitions = []
     for ts in protocol.transitions:
@@ -122,7 +121,8 @@ def petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Markin
 class SimulationResult:
     """Outcome of one :func:`simulate` run.
 
-    Attributes:
+    Attributes
+    ----------
         spec_name: Binding-spec name.
         steps: Number of steps advanced.
         policy_enabled: Whether the closed-loop control feedback was active.
@@ -157,7 +157,6 @@ class SimulationResult:
 
     def to_record(self) -> dict[str, object]:
         """Return a deterministic JSON-serialisable summary (history omitted)."""
-
         return {
             "spec_name": self.spec_name,
             "steps": self.steps,
@@ -268,13 +267,14 @@ def simulate(
             frequencies, coupling, ``zeta``, or ``psi_target`` in a validated
             :class:`SimulationScenarioContext`; it cannot perform actuation.
 
-    Returns:
+    Returns
+    -------
         A :class:`SimulationResult`.
 
-    Raises:
+    Raises
+    ------
         ValueError: If the spec declares no oscillators.
     """
-
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     if n_osc == 0:
         raise ValueError("no oscillators defined in layers")

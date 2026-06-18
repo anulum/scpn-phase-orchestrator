@@ -335,8 +335,7 @@ class UPDEEngine:
         alpha: FloatArray | None = None,
         n_steps: int = 1,
     ) -> FloatArray:
-        """Run n_steps, return final phases. Dispatches to the fastest
-        available backend via the module-level ``upde_run``."""
+        """Run ``n_steps`` and return final phases via the fastest backend."""
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         if knm is None:
             raise ValueError("knm is required")

@@ -36,7 +36,8 @@ def local_order_parameter(
         phases: (N,) oscillator phases
         K: (N, N) coupling matrix (nonzero = neighbour)
 
-    Returns:
+    Returns
+    -------
         (N,) local order parameters in [0, 1]
     """
     mask = (K != 0).astype(jnp.float32)
@@ -64,7 +65,8 @@ def chimera_index(
         phases: (N,) oscillator phases
         K: (N, N) coupling matrix
 
-    Returns:
+    Returns
+    -------
         Scalar chimera index (higher = more chimera-like)
     """
     R_local = local_order_parameter(phases, K)
@@ -85,7 +87,8 @@ def detect_chimera(
         coherent_threshold: R_i above this → coherent
         incoherent_threshold: R_i below this → incoherent
 
-    Returns:
+    Returns
+    -------
         (coherent_mask, incoherent_mask): (N,) boolean arrays
     """
     R_local = local_order_parameter(phases, K)

@@ -49,7 +49,6 @@ def spatial_modulate_mojo(
     epsilon: float,
 ) -> FloatArray:
     """Compute a spatially modulated coupling matrix through the Mojo executable."""
-
     k, p, n, dim, k_base, form, exponent, length, eps = (
         validate_spatial_modulator_inputs(
             k_nm_flat,

@@ -95,7 +95,6 @@ def validate_inertial_inputs(
     float,
 ]:
     """Validate and normalise direct inertial backend inputs."""
-
     n_i = _validate_positive_int(n, name="n")
     theta_v = _validate_length(theta, name="theta", n=n_i)
     omega_v = _validate_length(omega_dot, name="omega_dot", n=n_i)
@@ -114,7 +113,6 @@ def validate_inertial_output(
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
     """Validate direct backend state output."""
-
     theta_v = _validate_length(theta, name="inertial backend theta", n=n)
     omega_v = _validate_length(omega_dot, name="inertial backend omega_dot", n=n)
     if np.any(theta_v < -1e-12) or np.any(theta_v >= TWO_PI + 1e-12):

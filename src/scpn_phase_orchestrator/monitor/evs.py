@@ -66,8 +66,7 @@ class EVSResult:
 
 
 class EVSMonitor:
-    """Combines ITPC, persistence, and frequency specificity into
-    a single entrainment verification score.
+    """Combine ITPC, persistence, and frequency specificity into one score.
 
     Three criteria must all pass for ``is_entrained=True``:
 
@@ -113,7 +112,8 @@ class EVSMonitor:
             target_freq: stimulus frequency (Hz).
             control_freq: non-stimulus control frequency (Hz).
 
-        Returns:
+        Returns
+        -------
             EVSResult with all three sub-scores and the overall verdict.
         """
         phases = _validate_phase_trials(phases_trials)

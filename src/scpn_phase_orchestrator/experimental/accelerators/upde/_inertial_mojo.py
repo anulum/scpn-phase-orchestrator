@@ -53,7 +53,6 @@ def inertial_step_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     th, od, pw, km, ine, dmp, n_i, dt_f = validate_inertial_inputs(
         theta,
         omega_dot,

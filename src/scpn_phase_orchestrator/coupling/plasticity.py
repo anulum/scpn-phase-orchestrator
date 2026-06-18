@@ -145,7 +145,8 @@ def three_factor_update(
         phase_gate: if False, no update occurs (TCBO below consciousness threshold).
         lr: learning rate.
 
-    Returns:
+    Returns
+    -------
         Updated coupling matrix (new array, does not mutate input).
     """
     knm = _validate_coupling_matrix(knm)

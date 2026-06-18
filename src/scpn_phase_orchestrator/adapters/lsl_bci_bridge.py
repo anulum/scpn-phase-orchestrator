@@ -115,7 +115,8 @@ class LSLBCIBridge:
     instantaneous phase of target neural oscillations, and provides them
     to the SCPN orchestrator for closed-loop entrainment.
 
-    Attributes:
+    Attributes
+    ----------
         stream_name: Name of the LSL stream to listen to.
         target_channel: Index of the EEG channel to use.
         sampling_rate: Sampling rate of the EEG stream (Hz).

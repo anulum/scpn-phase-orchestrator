@@ -65,7 +65,6 @@ def expected_pha_c_event_timeline(
     **kwargs: object,
 ) -> PHACTimelineRecord:
     """Return the Python reference timeline after fail-closed validation."""
-
     return build_pha_c_event_timeline(*cast(Any, args), **cast(Any, kwargs))
 
 
@@ -76,7 +75,6 @@ def validate_pha_c_event_timeline(
     tolerance: float = 1.0e-12,
 ) -> PHACTimelineRecord:
     """Validate an accelerator timeline against the Python reference contract."""
-
     verify_pha_c_event_timeline(got)
     verify_pha_c_event_timeline(expected)
     got_dict = got.to_dict()

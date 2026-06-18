@@ -75,7 +75,6 @@ def validate_modulation_index_inputs(
     n_bins: int,
 ) -> tuple[FloatArray, FloatArray, int]:
     """Validate and align direct modulation-index backend inputs."""
-
     bins = _as_int(n_bins, name="n_bins", minimum=2)
     theta = _as_finite_vector(theta_low, name="theta_low")
     amp = _as_finite_vector(amp_high, name="amp_high")
@@ -90,7 +89,6 @@ def validate_modulation_index_inputs(
 
 def validate_modulation_index_output(value: Any) -> float:
     """Validate direct backend Tort modulation-index output."""
-
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError("modulation index must be a real scalar")
     out = float(value)
@@ -109,7 +107,6 @@ def validate_pac_matrix_inputs(
     n_bins: int,
 ) -> tuple[FloatArray, FloatArray, int, int, int]:
     """Validate direct pairwise PAC-matrix backend inputs."""
-
     t_i = _as_int(t, name="t", minimum=1)
     n_i = _as_int(n, name="n", minimum=1)
     bins = _as_int(n_bins, name="n_bins", minimum=2)
@@ -126,6 +123,5 @@ def validate_pac_matrix_inputs(
 
 def validate_pac_matrix_output(value: Any, *, n: int) -> FloatArray:
     """Validate direct backend pairwise PAC-matrix output."""
-
     n_i = _as_int(n, name="n", minimum=1)
     return _as_unit_interval_vector(value, name="PAC matrix", expected=n_i * n_i)

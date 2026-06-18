@@ -558,7 +558,6 @@ def closed_loop_supervisor_loss(
     synchrony, control energy, and abrupt action changes. The returned value is
     a minimisation loss suitable for ``jax.grad`` or optax.
     """
-
     zero_action = SupervisorAction(
         delta_K_global=jnp.array(0.0),
         delta_zeta_global=jnp.array(0.0),
@@ -1345,7 +1344,8 @@ def ppo_supervisor_train_epochs(
         max_grad_norm: Optional global gradient-norm clip radius.
         kl_early_stop: Optional KL threshold for early stopping.
 
-    Returns:
+    Returns
+    -------
         (policy, opt_state, loss_history, n_updates)
     """
     policy, opt_state, loss_history, n_updates, _ = _ppo_supervisor_train_epochs_impl(

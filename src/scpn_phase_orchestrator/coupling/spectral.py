@@ -6,9 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Spectral graph analysis for coupling networks
 
-"""Symmetric eigendecomposition of the combinatorial graph
-Laplacian ``L = D − A`` exposed through a 5-backend fallback
-chain per ``feedback_module_standard_attnres.md``.
+"""Symmetric eigendecomposition of the combinatorial graph Laplacian ``L = D − A``.
+
+Exposes a 5-backend fallback chain.
 
 For asymmetric measured coupling, the undirected adjacency is the
 reciprocal magnitude average ``A = (|W| + |Wᵀ|) / 2`` with zeroed
@@ -417,8 +417,7 @@ def spectral_eig(knm: FloatArray) -> tuple[FloatArray, FloatArray]:
 
 
 def fiedler_value(knm: FloatArray) -> float:
-    """Algebraic connectivity ``λ₂(L)`` — second smallest
-    eigenvalue (Dörfler-Bullo 2014)."""
+    """Return the algebraic connectivity ``λ₂(L)`` (Dörfler-Bullo 2014)."""
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
@@ -431,8 +430,7 @@ def fiedler_value(knm: FloatArray) -> float:
 
 
 def fiedler_vector(knm: FloatArray) -> FloatArray:
-    """Eigenvector for ``λ₂`` — partitions the graph into
-    synchronisation clusters."""
+    """Return the ``λ₂`` eigenvector partitioning the graph into clusters."""
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
@@ -446,7 +444,8 @@ def critical_coupling(omegas: FloatArray, knm: FloatArray) -> float:
     """Dörfler-Bullo critical coupling ``K_c = Δω / λ₂``.
 
     Returns ``+inf`` if the graph is disconnected
-    (``λ₂ ≈ 0``)."""
+    (``λ₂ ≈ 0``).
+    """
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     omegas = _validate_omegas(omegas, expected_n=n)
@@ -478,8 +477,7 @@ def fiedler_partition(knm: FloatArray) -> tuple[list[int], list[int]]:
 
 
 def spectral_gap(knm: FloatArray) -> float:
-    """Gap between ``λ₂`` and ``λ₃`` — larger gap means cleaner
-    two-cluster structure."""
+    """Return the gap between ``λ₂`` and ``λ₃`` (two-cluster cleanliness)."""
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     if n < 3:
@@ -501,9 +499,7 @@ def sync_convergence_rate(
     omegas: FloatArray,
     gamma_max: float = 0.0,
 ) -> float:
-    """Estimated convergence rate
-    ``μ = K_eff · λ₂ · cos(γ_max) / N``
-    (Dörfler-Bullo 2014 §III.B)."""
+    """Estimate the convergence rate from ``λ₂`` (Dörfler-Bullo 2014 §III.B)."""
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     if n == 0:

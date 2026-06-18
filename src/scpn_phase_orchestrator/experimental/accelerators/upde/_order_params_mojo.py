@@ -90,7 +90,6 @@ def order_parameter_mojo(phases: FloatArray) -> tuple[float, float]:
 
     The calculation is delegated to the Mojo backend.
     """
-
     p = validate_order_parameter_inputs(phases)
     if p.size == 0:
         return (0.0, 0.0)
@@ -105,7 +104,6 @@ def plv_mojo(phases_a: FloatArray, phases_b: FloatArray) -> float:
 
     The calculation is delegated to the Mojo backend.
     """
-
     a, b = validate_plv_inputs(phases_a, phases_b)
     if a.size == 0:
         return 0.0
@@ -121,7 +119,6 @@ def layer_coherence_mojo(phases: FloatArray, indices: IntArray) -> float:
 
     The calculation is delegated to the Mojo backend.
     """
-
     p, idx = validate_layer_coherence_inputs(phases, indices)
     if idx.size == 0:
         return 0.0

@@ -53,7 +53,6 @@ def market_order_parameter_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     p, t_i, n_i = validate_market_order_inputs(phases_flat, t, n)
     jl = _ensure()
     result = jl.market_order_parameter(
@@ -74,7 +73,6 @@ def market_plv_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     p, t_i, n_i, window_i = validate_market_plv_inputs(
         phases_flat,
         t,

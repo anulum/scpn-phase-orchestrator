@@ -233,7 +233,6 @@ def build_federated_secure_aggregation_manifest(
     delta: float = 1e-6,
 ) -> FederatedSecureAggregationManifest:
     """Build a deterministic secure aggregation manifest."""
-
     config = SecureAggregationConfig(
         clipping_norm=clipping_norm,
         min_node_count=min_node_count,

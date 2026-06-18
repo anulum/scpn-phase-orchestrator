@@ -44,7 +44,6 @@ def _ensure() -> Any:
 
 def entropy_from_phases_julia(phases: FloatArray, n_bins: int) -> float:
     """Compute phase-distribution entropy through the Julia backend."""
-
     phase_values, bin_count = validate_psychedelic_backend_inputs(phases, n_bins)
     if phase_values.size == 0:
         return 0.0

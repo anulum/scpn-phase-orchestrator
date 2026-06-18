@@ -100,7 +100,8 @@ def compute_hybrid_entanglement_order_parameter(
             ``"numpy_statevector"`` and ``"numpy_density_matrix"`` require the
             corresponding payload shape and record that backend explicitly.
 
-    Returns:
+    Returns
+    -------
         HybridOrderParameterResult with a deterministic audit record hash.
     """
     phases_clean = _require_finite_float_array(phases, name="phases")

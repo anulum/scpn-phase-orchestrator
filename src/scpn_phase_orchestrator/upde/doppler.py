@@ -92,7 +92,6 @@ def scalarise_velocities(
     velocity_axis: object | None = None,
 ) -> FloatArray:
     """Convert scalar or vector velocities to one signed scalar per oscillator."""
-
     arr = _reject_non_real_array(velocities, name="velocities")
     if arr.shape == (n,):
         return arr
@@ -169,7 +168,6 @@ def doppler_term(
     velocity_axis: object | None = None,
 ) -> FloatArray:
     """Return the graph-weighted Doppler correction for each oscillator."""
-
     k_raw = _reject_non_real_array(knm, name="knm")
     if k_raw.ndim != 2 or k_raw.shape[0] != k_raw.shape[1]:
         raise ValueError("knm shape must be (n, n)")
@@ -247,7 +245,6 @@ def validate_doppler_backend_inputs(
     float,
 ]:
     """Validate the backend-neutral Doppler schedule contract."""
-
     p_raw = _reject_non_real_array(phases, name="phases")
     if p_raw.ndim != 1 or p_raw.size < 1:
         raise ValueError("phases must be a non-empty vector")
@@ -310,7 +307,6 @@ def doppler_run_python(
     rtol: float = 1.0e-3,
 ) -> FloatArray:
     """Run the Doppler-corrected UPDE schedule in the Python reference path."""
-
     (
         p,
         omega,
@@ -450,7 +446,6 @@ def doppler_run(
     backend: str = "auto",
 ) -> FloatArray:
     """Run a Doppler-corrected UPDE schedule through the selected backend."""
-
     validated = validate_doppler_backend_inputs(
         phases,
         omega_schedule,
@@ -581,7 +576,6 @@ class DopplerEngine(UPDEEngine):
     @property
     def doppler_term(self) -> FloatArray:
         """Most recently applied Doppler correction vector."""
-
         return self._doppler_term.copy()
 
     def _velocity_for_step(self, t: float) -> FloatArray:
@@ -622,7 +616,6 @@ class DopplerEngine(UPDEEngine):
         alpha: object | None = None,
     ) -> FloatArray:
         """Advance one Doppler-corrected UPDE step."""
-
         p = self.phases if phases is None else _validate_phases(phases, n=self._n)
         k = self.k_nm if knm is None else _validate_knm(knm, n=self._n)
         a = self.alpha_matrix if alpha is None else _validate_alpha(alpha, n=self._n)
@@ -650,7 +643,6 @@ class DopplerEngine(UPDEEngine):
         n_steps: int = 1,
     ) -> FloatArray:
         """Run ``n_steps`` of the Doppler-corrected UPDE dynamics."""
-
         steps = _validate_positive_step_count(n_steps, name="n_steps")
         p = self.phases if phases is None else _validate_phases(phases, n=self._n)
         k = self.k_nm if knm is None else _validate_knm(knm, n=self._n)

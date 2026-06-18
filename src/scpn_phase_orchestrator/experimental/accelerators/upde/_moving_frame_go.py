@@ -81,7 +81,6 @@ def moving_frame_run_go(
     rtol: float,
 ) -> FloatArray:
     """Run the moving-frame schedule through the Go shared library."""
-
     (
         p,
         z,

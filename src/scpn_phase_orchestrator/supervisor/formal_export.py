@@ -571,7 +571,6 @@ def audit_formal_checker_availability(
     ``executable_paths`` for deterministic readiness checks; production callers
     can omit it to use ``shutil.which`` against the current host.
     """
-
     if not isinstance(package, FormalVerificationPackage):
         raise PolicyError("checker availability audit requires a formal package")
     records: list[FormalCheckerAvailability] = []
@@ -615,7 +614,6 @@ def build_runtime_control_certificate(
     package hash. Missing, failed, stale, or unavailable evidence produces a
     blocked certificate. The returned record never permits actuation.
     """
-
     if not isinstance(package, FormalVerificationPackage):
         raise PolicyError("runtime certificate requires a formal package")
     _require_package_identifier(certificate_name, "certificate_name")
@@ -746,7 +744,6 @@ def build_formal_verification_package(
     CI or operators can materialise the package and run the recorded commands
     in a controlled environment.
     """
-
     _require_package_identifier(package_name, "package_name")
     if not artifacts:
         raise PolicyError("formal verification package requires artifacts")
@@ -1162,7 +1159,6 @@ def export_petri_net_prism(
     Guard metrics become PRISM constants, so safety properties can be checked
     over scenario-specific metric assignments without changing the net model.
     """
-
     if not net.place_names:
         raise PolicyError("cannot export Petri net without places")
     if max_tokens is not None and max_tokens < 1:
@@ -1232,7 +1228,6 @@ def export_petri_net_tla(
     variables, and each Petri transition becomes a named next-state action that
     preserves all unaffected places explicitly.
     """
-
     if not net.place_names:
         raise PolicyError("cannot export Petri net without places")
     if max_tokens is not None and max_tokens < 1:
@@ -1327,7 +1322,6 @@ def export_policy_rules_prism(
     constants. Each rule has a bounded fire counter; unlimited rules are
     represented as one-shot reachability counters for model-checking queries.
     """
-
     if not rules:
         raise PolicyError("cannot export policy rules without rules")
 
@@ -1414,7 +1408,6 @@ def export_policy_rules_tla(
     module_name: str = "SpoPolicy",
 ) -> TLAExport:
     """Serialise policy rules into a bounded TLA+ transition-system module."""
-
     if not rules:
         raise PolicyError("cannot export policy rules without rules")
 
@@ -1522,7 +1515,6 @@ def export_stl_specs_prism(
     conjunctions. The model is a single-state abstraction with signal
     constants and per-monitor satisfied/violated labels for property checks.
     """
-
     if not specs:
         raise PolicyError("cannot export STL monitors without specs")
     for spec in specs:

@@ -343,7 +343,6 @@ def calibrate_value_alignment_replay_evidence(
     never authorises live actuation. This gives production reviewers evidence
     for guard behaviour before any deployment-tier enforcement is claimed.
     """
-
     if not isinstance(policy, ValueAlignmentPolicy):
         raise ValueError("policy must be a ValueAlignmentPolicy")
     if not replay_cases:
@@ -416,7 +415,6 @@ def value_alignment_policy_from_binding_spec(
     spec: object,
 ) -> ValueAlignmentPolicy | None:
     """Build a policy from ``BindingSpec.value_alignment`` when present."""
-
     template = getattr(spec, "value_alignment", None)
     if not template:
         return None
@@ -445,7 +443,6 @@ def value_alignment_policy_from_template(
               ttl_s: 1.0
               justification: safe hold
     """
-
     constraints = tuple(
         _constraint_from_template(item, index)
         for index, item in enumerate(_template_list(template, "constraints"))

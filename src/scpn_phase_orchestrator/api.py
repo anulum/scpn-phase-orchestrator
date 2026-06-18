@@ -169,15 +169,16 @@ def evaluate_binding_spec(
             (``True``) or open-loop baseline (``False``). Running both on the
             same seed isolates the orchestration uplift.
 
-    Returns:
+    Returns
+    -------
         A ``SimulationResult`` (from ``runtime.simulation``) with the final
         per-objective order parameters, their separation, the regime, and the
         per-step coherence histories.
 
-    Raises:
+    Raises
+    ------
         ValueError: If the spec fails validation or defines no oscillators.
     """
-
     from scpn_phase_orchestrator.runtime.simulation import simulate
 
     spec_path: Path | None = None

@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Second-order inertial Kuramoto
 
-"""Second-order (swing-equation) Kuramoto with a 5-backend fallback
-chain per ``feedback_module_standard_attnres.md``.
+"""Second-order (swing-equation) Kuramoto with a 5-backend fallback chain.
 
 Model
 -----
@@ -236,8 +235,7 @@ def _python_step(
     n: int,
     dt: float,
 ) -> tuple[FloatArray, FloatArray]:
-    """Python reference using the same ``sin(θ_j − θ_i) =
-    s_j·c_i − c_j·s_i`` expansion as the Rust kernel."""
+    """Python reference using the ``sin(θ_j − θ_i)`` expansion of the Rust kernel."""
     knm = np.asarray(knm_flat).reshape(n, n)
 
     def deriv(th: FloatArray, od: FloatArray) -> tuple[FloatArray, FloatArray]:
@@ -261,8 +259,7 @@ def _python_step(
 
 
 class InertialKuramotoEngine:
-    """Second-order swing-equation Kuramoto stepper with 5-backend
-    dispatch.
+    """Second-order swing-equation Kuramoto stepper with 5-backend dispatch.
 
     The engine's geometry is ``(n, dt)``; the step itself is
     stateless: ``(θ, ω, P, K, M, D) → (θ', ω')``.
@@ -282,7 +279,6 @@ class InertialKuramotoEngine:
         damping: FloatArray,
     ) -> tuple[FloatArray, FloatArray]:
         """Advance one second-order inertial Kuramoto timestep."""
-
         theta64 = _validate_state_array(theta, name="theta", shape=(self._n,))
         omega_dot64 = _validate_state_array(
             omega_dot,
@@ -341,7 +337,6 @@ class InertialKuramotoEngine:
         FloatArray,
     ]:
         """Integrate inertial Kuramoto dynamics and return final state plus traces."""
-
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         theta_traj = np.empty((n_steps, self._n))
         omega_traj = np.empty((n_steps, self._n))
@@ -359,10 +354,8 @@ class InertialKuramotoEngine:
 
     def frequency_deviation(self, omega_dot: FloatArray) -> float:
         """Return maximum absolute frequency deviation in cycles per unit time."""
-
         return float(np.max(np.abs(omega_dot)) / TWO_PI)
 
     def coherence(self, theta: FloatArray) -> float:
         """Return the Kuramoto order parameter for the supplied phases."""
-
         return float(np.abs(np.mean(np.exp(1j * theta))))

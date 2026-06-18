@@ -43,7 +43,6 @@ def _contains_boolean_alias(value: object) -> bool:
 
 def validate_phase_vector(value: object, *, name: str) -> FloatArray:
     """Return a contiguous finite real phase vector."""
-
     raw = np.asarray(value)
     if raw.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional phase vector")
@@ -64,7 +63,6 @@ def validate_phase_vector(value: object, *, name: str) -> FloatArray:
 
 def validate_index_vector(value: object, *, name: str, n_phases: int) -> IntArray:
     """Return a contiguous non-repeating oscillator index vector."""
-
     raw = np.asarray(value)
     if raw.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional index vector")
@@ -82,7 +80,6 @@ def validate_index_vector(value: object, *, name: str, n_phases: int) -> IntArra
 
 def validate_order_parameter_inputs(phases: object) -> FloatArray:
     """Validate phases before dispatching to an optional order-parameter runtime."""
-
     return validate_phase_vector(phases, name="phases")
 
 
@@ -91,7 +88,6 @@ def validate_plv_inputs(
     phases_b: object,
 ) -> tuple[FloatArray, FloatArray]:
     """Validate equal-length PLV phase vectors."""
-
     a64 = validate_phase_vector(phases_a, name="phases_a")
     b64 = validate_phase_vector(phases_b, name="phases_b")
     if a64.size != b64.size:
@@ -106,7 +102,6 @@ def validate_layer_coherence_inputs(
     indices: object,
 ) -> tuple[FloatArray, IntArray]:
     """Validate layer-coherence phase and oscillator-index vectors."""
-
     phases64 = validate_phase_vector(phases, name="phases")
     indices64 = validate_index_vector(indices, name="indices", n_phases=phases64.size)
     return phases64, indices64
@@ -124,7 +119,6 @@ def _finite_scalar(value: object, *, name: str) -> float:
 
 def validate_unit_interval_output(value: object, *, name: str) -> float:
     """Validate a finite coherence magnitude in the physical unit interval."""
-
     scalar = _finite_scalar(value, name=name)
     if scalar < -_UNIT_INTERVAL_TOL or scalar > 1.0 + _UNIT_INTERVAL_TOL:
         raise ValueError(f"{name} must lie in [0, 1]")
@@ -133,7 +127,6 @@ def validate_unit_interval_output(value: object, *, name: str) -> float:
 
 def validate_order_parameter_output(r: object, psi: object) -> tuple[float, float]:
     """Validate and canonicalise backend ``(R, psi)`` output."""
-
     r_value = validate_unit_interval_output(r, name="R")
     psi_value = _finite_scalar(psi, name="mean phase")
     return r_value, float(psi_value % TWO_PI)

@@ -198,7 +198,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
     # -- unary RPCs -----------------------------------------------------------
 
     def GetState(self, request: Any, context: Any) -> StateResponse:
-        """gRPC unary RPC: return current simulation state."""
+        """GRPC unary RPC: return current simulation state."""
         self._authorise(context)
         with self._lock:
             response = _snap_to_response(self._sim.snapshot())
@@ -206,7 +206,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         return response
 
     def Step(self, request: Any, context: Any) -> StateResponse:
-        """gRPC unary RPC: advance simulation by n_steps and return state."""
+        """GRPC unary RPC: advance simulation by n_steps and return state."""
         self._authorise(context)
         raw_n_steps = getattr(request, "n_steps", 1)
         if raw_n_steps == 0:
@@ -224,7 +224,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         return response
 
     def Reset(self, request: Any, context: Any) -> StateResponse:
-        """gRPC unary RPC: reset simulation and return fresh state."""
+        """GRPC unary RPC: reset simulation and return fresh state."""
         self._authorise(context)
         with self._lock:
             self._sim.reset()
@@ -233,7 +233,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         return response
 
     def GetConfig(self, request: Any, context: Any) -> ConfigResponse:
-        """gRPC unary RPC: return engine configuration."""
+        """GRPC unary RPC: return engine configuration."""
         self._authorise(context)
         spec = self._sim.spec
         response = ConfigResponse(

@@ -48,7 +48,6 @@ def _ensure() -> Any:
 
 def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
     """Compute pairwise wrapped phase distances through the Julia backend."""
-
     p = validate_phase_distance_backend_input(phases)
     jl = _ensure()
     return validate_phase_distance_backend_output(
@@ -60,7 +59,6 @@ def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
 
 def compute_npe_julia(phases: FloatArray, max_radius: float) -> float:
     """Compute normalised phase entropy through the Julia backend."""
-
     p, radius = validate_npe_backend_inputs(phases, max_radius)
     jl = _ensure()
     return validate_npe_backend_output(

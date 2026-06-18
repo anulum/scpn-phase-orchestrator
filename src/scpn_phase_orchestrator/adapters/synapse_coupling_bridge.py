@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — sc-neurocore synapse → coupling bridge
 
-"""Bridge sc-neurocore spike-level synapse dynamics into SPO
-phase-level coupling matrix K_nm.
+"""Bridge sc-neurocore synapse dynamics into the SPO coupling matrix ``K_nm``.
 
 Maps three synapse types to SPO coupling parameters:
 

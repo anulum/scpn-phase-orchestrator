@@ -78,7 +78,6 @@ def modulation_index_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     t, a, bins = validate_modulation_index_inputs(theta_low, amp_high, n_bins)
     n = int(t.size)
     if n == 0:
@@ -101,7 +100,6 @@ def pac_matrix_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     p, a, t_i, n_i, bins = validate_pac_matrix_inputs(
         phases_flat,
         amplitudes_flat,

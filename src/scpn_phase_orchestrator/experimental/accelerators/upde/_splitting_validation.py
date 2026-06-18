@@ -107,7 +107,6 @@ def validate_splitting_inputs(
     n_steps: Any,
 ) -> ValidatedSplittingInputs:
     """Validate direct Strang-splitting backend inputs."""
-
     n_i = _as_positive_int(n, name="n")
     p = _as_real_vector(phases, name="phases")
     o = _as_real_vector(omegas, name="omegas")
@@ -131,7 +130,6 @@ def validate_splitting_inputs(
 
 def validate_splitting_output(value: Any, *, n: int) -> FloatArray:
     """Validate direct backend torus phases before returning them."""
-
     out = _as_real_vector(value, name="splitting backend output")
     if out.size != n:
         raise ValueError(f"splitting backend output must have length {n}")

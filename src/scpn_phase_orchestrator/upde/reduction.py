@@ -6,9 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Ott-Antonsen mean-field reduction
 
-"""Exact mean-field reduction for globally-coupled Kuramoto with
-Lorentzian ``g(ω)``, exposed as a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Exact mean-field (Ott-Antonsen) reduction for globally-coupled Kuramoto.
+
+Uses a Lorentzian ``g(ω)`` and a 5-backend fallback chain.
 
 Dynamics
 --------
@@ -76,6 +76,8 @@ if "OAState" not in globals():
 
     @dataclass
     class OAState:
+        """Ott-Antonsen mean-field state: order parameter and critical coupling."""
+
         z: complex
         R: float
         psi: float
@@ -327,8 +329,7 @@ def _python_oa_run(
 
 
 class OttAntonsenReduction:
-    """Ott-Antonsen mean-field reduction for globally-coupled
-    Kuramoto with Lorentzian ``g(ω)`` (Ott-Antonsen 2008).
+    """Ott-Antonsen mean-field reduction for globally-coupled Kuramoto.
 
     The class stores ``(ω₀, Δ, K, dt)`` and exposes ``K_c``,
     ``steady_state_R()``, ``step(z)``, ``run(z0, n_steps)`` and
@@ -363,8 +364,7 @@ class OttAntonsenReduction:
         return 2.0 * self._delta
 
     def steady_state_R(self) -> float:
-        """Analytical steady-state ``R_ss = √(1 − 2Δ/K)`` for
-        ``K > K_c``, zero otherwise."""
+        """Return the analytical steady-state ``R_ss = √(1 − 2Δ/K)`` for ``K > K_c``."""
         if _HAS_RUST_SCALAR:
             return float(_rust_steady_state_r(self._delta, self._K))
         if self.K_c >= self._K:
@@ -378,8 +378,7 @@ class OttAntonsenReduction:
         return complex(re, im)
 
     def run(self, z0: complex, n_steps: int) -> OAState:
-        """Integrate ``n_steps`` RK4 steps; return final
-        ``OAState(z, R, ψ, K_c)`` via the dispatched kernel."""
+        """Integrate ``n_steps`` RK4 steps; return the final ``OAState``."""
         z0 = _validate_finite_complex(z0, name="z0")
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         re, im, r, psi = self._run_scalar(z0.real, z0.imag, n_steps)
@@ -418,9 +417,7 @@ class OttAntonsenReduction:
         omegas: FloatArray,
         K: float,
     ) -> OAState:
-        """Fit Lorentzian to ``omegas`` (median → ω₀,
-        IQR/2 → Δ), run OA reduction ~10 time units from a
-        small seed, and return the final ``OAState``."""
+        """Fit a Lorentzian to ``omegas`` and return the relaxed ``OAState``."""
         omegas64 = _validate_frequency_sample(omegas, name="omegas")
         K = _validate_finite_real(K, name="K")
         if _HAS_RUST_SCALAR:

@@ -56,7 +56,6 @@ def correlation_integral_julia(
     epsilons: FloatArray,
 ) -> FloatArray:
     """Compute the phase-space correlation integral through the Julia backend."""
-
     traj, t_int, d_int, ii, jj, eps = validate_correlation_integral_backend_inputs(
         traj_flat,
         t,
@@ -90,7 +89,6 @@ def correlation_integral_julia(
 
 def kaplan_yorke_dimension_julia(lyapunov_exponents: FloatArray) -> float:
     """Estimate the Kaplan-Yorke dimension through the Julia backend."""
-
     le = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     jl = _ensure()
     expected = expected_kaplan_yorke_backend_output(le)

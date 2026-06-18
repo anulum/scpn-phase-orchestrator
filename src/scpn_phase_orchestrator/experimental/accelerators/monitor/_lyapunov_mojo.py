@@ -83,7 +83,6 @@ def lyapunov_spectrum_mojo(
     psi: float,
 ) -> FloatArray:
     """Estimate the Lyapunov spectrum through the Mojo backend."""
-
     (
         phases_init,
         omegas,

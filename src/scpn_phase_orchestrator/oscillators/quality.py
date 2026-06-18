@@ -71,7 +71,7 @@ class PhaseQualityScorer:
     def detect_collapse(
         self, phase_states: list[PhaseState], threshold: float = 0.1
     ) -> bool:
-        """True if quality is below threshold for the majority of states."""
+        """Return True if quality is below threshold for the majority of states."""
         if not phase_states:
             return True
         if not np.isfinite(threshold):

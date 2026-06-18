@@ -136,8 +136,11 @@ target-version = "py310"
 exclude = ["src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2.py", "src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2_grpc.py"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
-ignore = ["S101", "N802", "N803", "N806", "N815", "N816"]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH", "D"]
+# D105 (magic-method docstrings) is disabled: dunder behaviour is defined by
+# protocol, and forcing a docstring on every __repr__/__eq__/__hash__ invites
+# generic-filler text rather than documenting intent.
+ignore = ["S101", "N802", "N803", "N806", "N815", "N816", "D105"]
 
 [tool.ruff.lint.per-file-ignores]
 "experiments/seizure_detection_chbmit.py" = ["S310"]
@@ -148,10 +151,23 @@ ignore = ["S101", "N802", "N803", "N806", "N815", "N816"]
 "src/scpn_phase_orchestrator/monitor/_*_mojo.py" = ["S603"]
 "src/scpn_phase_orchestrator/scaffold/llm.py" = ["S310"]
 "src/scpn_phase_orchestrator/upde/_*_mojo.py" = ["S603"]
-"tools/kaggle_*.py" = ["S607", "PTH110", "PTH112", "PTH208"]
-"tools/*.py" = ["S603"]
-"tests/**/*.py" = ["S104", "S603"]
-"tests/*.py" = ["S104", "S603"]
+# NumPy-convention docstrings (D) are required of the public library surface
+# under src/. Non-library trees — tests, runnable scripts, vertical packs,
+# fuzz harnesses, examples, and notebooks — are exempt from the docstring gate.
+"tools/kaggle_*.py" = ["S607", "PTH110", "PTH112", "PTH208", "D"]
+"tools/*.py" = ["S603", "D"]
+"tools/**/*.py" = ["D"]
+"benchmarks/**/*.py" = ["D"]
+"experiments/**/*.py" = ["D"]
+"domainpacks/**/*.py" = ["D"]
+"fuzzers/**/*.py" = ["D"]
+"examples/**/*.py" = ["D"]
+"notebooks/**/*.py" = ["D"]
+"notebooks/**/*.ipynb" = ["D"]
+"platform/**/*.py" = ["D"]
+"bench/**/*.py" = ["D"]
+"tests/**/*.py" = ["S104", "S603", "D"]
+"tests/*.py" = ["S104", "S603", "D"]
 "tests/test_exceptions.py" = ["S301"]  # pickle round-trip is the test subject
 "tests/test_kuramoto_layer.py" = ["E402"]
 "tests/test_stuart_landau_nn.py" = ["E402"]
@@ -169,6 +185,9 @@ ignore = ["S101", "N802", "N803", "N806", "N815", "N816"]
 "tests/test_nn_chimera.py" = ["E402"]
 "tests/test_nn_functional.py" = ["E402"]
 "tests/test_nn_supervisor.py" = ["E402"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.mypy]
 strict = true

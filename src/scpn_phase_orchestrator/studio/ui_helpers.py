@@ -654,7 +654,6 @@ def build_autopoietic_lineage_studio_panel(
     manifests: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
     """Build a passive Studio panel for autopoietic lineage sandbox review."""
-
     normalised_manifests = _normalise_autopoietic_lineage_manifests(manifests)
     replay_corpus_rows = tuple(
         row
@@ -712,7 +711,6 @@ def build_intergenerational_inheritance_studio_panel(
     histories: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
     """Build a passive Studio panel for inheritance-history review."""
-
     normalised_histories = _normalise_intergenerational_inheritance_histories(histories)
     child_rows = tuple(
         child

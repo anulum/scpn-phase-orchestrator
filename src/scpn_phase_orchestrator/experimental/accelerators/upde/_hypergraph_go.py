@@ -84,7 +84,6 @@ def hypergraph_run_go(
 
     The calculation is delegated to the Go backend.
     """
-
     (
         p,
         o,

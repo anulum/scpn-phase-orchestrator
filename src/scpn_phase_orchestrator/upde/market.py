@@ -6,8 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Financial market Kuramoto regime detection
 
-"""Kuramoto-based financial market synchronisation analysis with a
-5-backend fallback chain per ``feedback_module_standard_attnres.md``.
+"""Kuramoto-based financial market synchronisation analysis.
+
+Exposes a 5-backend fallback chain.
 
 Extracts instantaneous phase from price / return time series via the
 Hilbert transform (``scipy.signal.hilbert`` — FFT-based, stays
@@ -235,8 +236,7 @@ def _validate_signal_vector(value: object, *, name: str) -> FloatArray:
 
 
 def extract_phase(series: FloatArray) -> FloatArray:
-    """Extract instantaneous phase from a time series via the
-    Hilbert transform. Shape-preserving; output in ``[0, 2π)``.
+    """Extract instantaneous phase from a time series via the Hilbert transform.
 
     Stays Python-side because the transform is FFT-based
     (``scipy.signal.hilbert``) and the compiled backends do not
@@ -262,8 +262,7 @@ def _python_market_order_parameter(
 
 
 def market_order_parameter(phases: FloatArray) -> FloatArray:
-    """Kuramoto order parameter ``R(t)`` across ``N`` assets at
-    every timestep."""
+    """Return the Kuramoto order parameter ``R(t)`` across ``N`` assets."""
     phases = _validate_phase_matrix(phases)
     T, N = phases.shape
     flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
@@ -300,7 +299,7 @@ def _python_market_plv(
 
 
 def market_plv(phases: FloatArray, window: int = 50) -> FloatArray:
-    """Rolling phase-locking-value matrix between assets.
+    """Compute the rolling phase-locking-value matrix between assets.
 
     Returns shape ``(T − window + 1, N, N)``.
     """
@@ -365,8 +364,7 @@ def sync_warning(
     threshold: float = 0.7,
     lookback: int = 10,
 ) -> BoolArray:
-    """Detect synchronisation warning signals — timesteps where
-    the smoothed ``R`` crosses the threshold from below."""
+    """Detect synchronisation warnings where smoothed ``R`` crosses up."""
     R = _validate_signal_vector(R, name="R")
     threshold = _validate_finite_float(threshold, name="threshold")
     lookback = _validate_positive_int(lookback, name="lookback")

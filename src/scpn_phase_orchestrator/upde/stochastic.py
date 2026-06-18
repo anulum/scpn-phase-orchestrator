@@ -100,13 +100,11 @@ class StochasticInjector:
     @property
     def D(self) -> float:
         """Return the configured non-negative diffusion coefficient."""
-
         return self._D
 
     @D.setter
     def D(self, value: float) -> None:
         """Update the diffusion coefficient after finite non-negative validation."""
-
         self._D = _validate_finite_non_negative(value, name="D")
 
     def inject(self, phases: FloatArray, dt: float) -> FloatArray:

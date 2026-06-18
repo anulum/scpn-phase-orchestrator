@@ -112,7 +112,8 @@ class SymbolicExtractor(PhaseExtractor):
             SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE
         ),
     ):
-        """
+        """Configure the symbolic oscillator over ``n_states`` discrete states.
+
         Args:
             n_states: total number of discrete states N
             node_id: identifier for generated PhaseState objects

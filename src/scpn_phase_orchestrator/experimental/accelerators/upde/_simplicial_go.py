@@ -75,7 +75,6 @@ def simplicial_run_go(
 
     The calculation is delegated to the Go backend.
     """
-
     phases, omegas, knm_flat, alpha_flat, n, zeta, psi, sigma2, dt, n_steps = (
         validate_simplicial_inputs(
             phases,

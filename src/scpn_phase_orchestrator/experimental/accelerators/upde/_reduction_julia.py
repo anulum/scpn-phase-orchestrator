@@ -47,7 +47,6 @@ def oa_run_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     z_re, z_im, omega_0, delta, k_coupling, dt, n_steps = validate_oa_inputs(
         z_re,
         z_im,

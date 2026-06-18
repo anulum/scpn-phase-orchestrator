@@ -35,7 +35,7 @@ def _oim_deriv(
     n_colors: int,
     coupling_strength: float,
 ) -> jax.Array:
-    """Derivative for OIM coloring dynamics.
+    """Compute the derivative for OIM colouring dynamics.
 
     Uses sin(n_colors * Δθ) coupling: oscillators connected by an edge
     repel from the SAME phase cluster and attract to DIFFERENT clusters
@@ -64,7 +64,8 @@ def oim_step(
         dt: integration timestep
         coupling_strength: overall coupling scale
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases
     """
     dphi = _oim_deriv(phases, adjacency, n_colors, coupling_strength)
@@ -89,7 +90,8 @@ def oim_forward(
         n_steps: number of integration steps
         coupling_strength: overall coupling scale
 
-    Returns:
+    Returns
+    -------
         (final_phases, trajectory) where trajectory is (n_steps, N)
     """
 
@@ -110,7 +112,8 @@ def extract_coloring(phases: jax.Array, n_colors: int) -> jax.Array:
         phases: (N,) oscillator phases in [0, 2π)
         n_colors: number of colors
 
-    Returns:
+    Returns
+    -------
         (N,) integer color labels in {0, 1, ..., n_colors-1}
     """
     # Cluster centers at 2πk/n_colors
@@ -130,7 +133,8 @@ def extract_coloring_soft(phases: jax.Array, n_colors: int) -> jax.Array:
         phases: (N,) oscillator phases in [0, 2π)
         n_colors: number of colors
 
-    Returns:
+    Returns
+    -------
         (N,) integer color labels in {0, 1, ..., n_colors-1}
     """
     centres = jnp.linspace(0, TWO_PI, n_colors, endpoint=False)
@@ -170,7 +174,8 @@ def oim_solve(
         n_refine: hold steps after annealing
         n_restarts: number of random restarts
 
-    Returns:
+    Returns
+    -------
         (best_colors, best_phases, best_energy)
     """
     N = adjacency.shape[0]
@@ -239,7 +244,8 @@ def coloring_violations(
         colors: (N,) integer color labels
         adjacency: (N, N) adjacency matrix
 
-    Returns:
+    Returns
+    -------
         Scalar: number of violated edges
     """
     same_color = (colors[jnp.newaxis, :] == colors[:, jnp.newaxis]).astype(jnp.float32)
@@ -267,7 +273,8 @@ def coloring_energy(
         adjacency: (N, N) adjacency matrix
         n_colors: number of colors
 
-    Returns:
+    Returns
+    -------
         Scalar energy (lower = better coloring)
     """
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]

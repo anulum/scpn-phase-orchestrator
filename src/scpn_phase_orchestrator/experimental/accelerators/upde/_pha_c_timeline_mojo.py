@@ -23,6 +23,5 @@ def build_pha_c_event_timeline_mojo(
     **kwargs: object,
 ) -> PHACTimelineRecord:
     """Evaluate the mojo timeline contract against the reference."""
-
     expected = expected_pha_c_event_timeline(*args, **kwargs)
     return validate_pha_c_event_timeline(expected, expected)

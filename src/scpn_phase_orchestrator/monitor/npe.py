@@ -6,9 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Normalised Persistent Entropy (NPE)
 
-"""Normalised Persistent Entropy from H₀ persistence diagram of the
-circular phase-distance matrix. 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Normalised persistent entropy of the circular phase-distance matrix.
+
+Computed from the H₀ persistence diagram with a 5-backend fallback chain.
 
 * ``phase_distance_matrix`` — pairwise circular distance in ``[0, π]``.
 * ``compute_npe`` — normalised H₀ persistent entropy via single-

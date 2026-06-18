@@ -53,7 +53,6 @@ def steady_state_r_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     (
         p,
         o,

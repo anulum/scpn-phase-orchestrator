@@ -125,7 +125,6 @@ def validate_correlation_integral_backend_inputs(
     epsilons: object,
 ) -> tuple[FloatArray, int, int, IntArray, IntArray, FloatArray]:
     """Return validated direct-backend correlation-integral arguments."""
-
     t_int = _validate_int_at_least(t, name="t", minimum=0)
     d_int = _validate_int_at_least(d, name="d", minimum=1)
     traj = _validate_float_vector(traj_flat, name="traj_flat")
@@ -148,7 +147,6 @@ def validate_kaplan_yorke_backend_input(
     lyapunov_exponents: object,
 ) -> FloatArray:
     """Return a finite real one-dimensional Lyapunov spectrum."""
-
     return _validate_float_vector(lyapunov_exponents, name="lyapunov_exponents")
 
 
@@ -161,7 +159,6 @@ def expected_correlation_integral_backend_output(
     epsilons: FloatArray,
 ) -> FloatArray:
     """Return the exact Grassberger-Procaccia result for direct backend inputs."""
-
     if idx_i.size == 0:
         return np.zeros(epsilons.size, dtype=np.float64)
     traj = np.ascontiguousarray(traj_flat.reshape(t, d), dtype=np.float64)
@@ -175,7 +172,6 @@ def expected_correlation_integral_backend_output(
 
 def expected_kaplan_yorke_backend_output(lyapunov_exponents: FloatArray) -> float:
     """Return the exact Kaplan-Yorke dimension for a Lyapunov spectrum."""
-
     spectrum = np.sort(lyapunov_exponents)[::-1]
     if spectrum.size == 0:
         return 0.0
@@ -204,7 +200,6 @@ def validate_correlation_integral_backend_output(
     atol: float = 1e-12,
 ) -> FloatArray:
     """Validate a direct-backend Grassberger-Procaccia C(epsilon) vector."""
-
     result = _validate_float_vector(values, name="correlation_integral")
     eps = _validate_epsilons(epsilons)
     if result.size != eps.size:
@@ -236,7 +231,6 @@ def validate_kaplan_yorke_backend_output(
     atol: float = 1e-12,
 ) -> float:
     """Validate a direct-backend Kaplan-Yorke dimension estimate."""
-
     spectrum = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     if isinstance(value, (bool, np.bool_)):
         raise ValueError("kaplan_yorke_dimension must not be a boolean value")

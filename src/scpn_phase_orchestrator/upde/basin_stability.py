@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Basin stability analysis
 
-"""Basin stability for Kuramoto synchronisation with a 5-backend
-fallback chain per ``feedback_module_standard_attnres.md``.
+"""Basin stability for Kuramoto synchronisation with a 5-backend fallback chain.
 
 Monte Carlo estimation of the volume of the basin of attraction for
 the synchronised state. Basin stability ``S_B`` is the probability
@@ -360,7 +359,8 @@ def steady_state_r(
 class BasinStabilityResult:
     """Basin stability estimation result.
 
-    Attributes:
+    Attributes
+    ----------
         S_B: Basin stability (fraction of ICs converging to sync).
         n_samples: Total number of initial conditions tested.
         n_converged: Number that converged to synchronised state.
@@ -470,7 +470,8 @@ def basin_stability(
         R_threshold: Threshold for classifying as "synchronised".
         seed: RNG seed (owned by Python).
 
-    Returns:
+    Returns
+    -------
         BasinStabilityResult with S_B, R_final array, and counts.
     """
     omegas = _validate_omegas(omegas)
@@ -524,7 +525,8 @@ def multi_basin_stability(
     One Monte Carlo sweep; threshold classification repeated locally
     for each entry of ``R_thresholds``.
 
-    Returns:
+    Returns
+    -------
         Dict mapping ``"R>={thresh:.2f}"`` to BasinStabilityResult.
     """
     omegas = _validate_omegas(omegas)

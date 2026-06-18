@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Delay embedding primitives + wrappers
 
-"""Delay-embedding analysis with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Delay-embedding analysis with a 5-backend fallback chain.
 
 Three compute primitives on the multi-language chain:
 

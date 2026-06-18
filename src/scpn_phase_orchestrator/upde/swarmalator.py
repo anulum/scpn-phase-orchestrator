@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Swarmalator dynamics
 
-"""Swarmalator step (position + phase) with a 5-backend fallback
-chain per ``feedback_module_standard_attnres.md``.
+"""Swarmalator step (position + phase) with a 5-backend fallback chain.
 
 Swarmalators combine spatial attraction / repulsion with phase
 oscillator dynamics (O'Keeffe, Hong & Strogatz, *Nat. Commun.* 8:1504,
@@ -404,7 +403,6 @@ class SwarmalatorEngine:
         n_steps: int = 100,
     ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
         """Integrate swarmalator positions and phases with trajectory capture."""
-
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         curr_pos = _validate_state_array(
             pos,
@@ -439,7 +437,6 @@ class SwarmalatorEngine:
 
     def order_parameter(self, phases: FloatArray) -> float:
         """Return the Kuramoto order parameter for swarmalator phases."""
-
         phases64 = _validate_state_array(
             phases,
             name="phases",

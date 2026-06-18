@@ -302,7 +302,8 @@ def sheaf_coherence(
         tolerance: Numerical threshold used for approximate nullity and
             obstruction counts.
 
-    Returns:
+    Returns
+    -------
         A ``SheafCoherenceResult`` with the block sheaf Laplacian,
         directed residual tensor, obstruction score, consistency energy,
         and audit-visible approximate dimensions.

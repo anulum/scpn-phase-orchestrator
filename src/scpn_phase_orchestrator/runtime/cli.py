@@ -146,7 +146,6 @@ def doctor(json_out: bool) -> None:
     required runtime dependency is missing; missing optional accelerators
     (Rust/Julia/Go/Mojo) and feature extras are reported as warnings only.
     """
-
     report = run_environment_diagnostics()
     if json_out:
         click.echo(json.dumps(report.to_audit_record(), indent=2, sort_keys=True))
@@ -308,7 +307,6 @@ def auto_coupling_estimation_command(
     json_out: bool,
 ) -> None:
     """Infer directed K_nm from phase time-series data."""
-
     series = _load_phase_series_table(Path(source_path))
     if orientation == "time-by-oscillator":
         series = np.ascontiguousarray(series.T, dtype=np.float64)

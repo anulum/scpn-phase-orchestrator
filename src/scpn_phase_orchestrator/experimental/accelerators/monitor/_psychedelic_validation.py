@@ -79,7 +79,6 @@ def validate_psychedelic_backend_inputs(
     n_bins: object,
 ) -> tuple[FloatArray, int]:
     """Validate entropy inputs before optional runtime loading."""
-
     return _validate_phase_vector(phases), _validate_n_bins(n_bins)
 
 
@@ -88,7 +87,6 @@ def validate_psychedelic_entropy_backend_output(
     n_bins: int,
 ) -> float:
     """Validate direct backend circular-entropy outputs."""
-
     if _contains_boolean_alias(value):
         raise ValueError("entropy backend output must not contain boolean values")
     raw = np.asarray(value)

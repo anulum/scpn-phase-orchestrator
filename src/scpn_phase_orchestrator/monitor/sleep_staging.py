@@ -67,7 +67,8 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
             characteristic of REM (low-voltage mixed-frequency),
             as opposed to wakeful desynchronisation.
 
-    Returns:
+    Returns
+    -------
         One of ``"N3"``, ``"N2"``, ``"N1"``, ``"REM"``, ``"Wake"``.
     """
     r_value = _validate_order_parameter(R)
@@ -109,7 +110,8 @@ def ultradian_phase(
         timestamps: monotonic epoch times in seconds, shape (n_epochs,).
         stage_history: sleep stage label per epoch, same length as timestamps.
 
-    Returns:
+    Returns
+    -------
         Phase in [0, 1) where 0 = cycle start (N3 onset),
         0.5 ≈ mid-cycle (REM), wrapping back toward 0.
         Returns 0.0 if no N3 epoch is found.

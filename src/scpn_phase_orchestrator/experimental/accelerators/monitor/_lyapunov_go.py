@@ -75,7 +75,6 @@ def lyapunov_spectrum_go(
     psi: float,
 ) -> FloatArray:
     """Estimate the Lyapunov spectrum through the Go backend."""
-
     (
         phases_init,
         omegas,

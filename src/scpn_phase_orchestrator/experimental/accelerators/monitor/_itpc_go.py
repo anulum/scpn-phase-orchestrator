@@ -67,7 +67,6 @@ def _load_lib() -> ctypes.CDLL:
 
 def compute_itpc_go(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
     """Compute inter-trial phase coherence through the Go backend."""
-
     p, n_trials, n_tp = validate_compute_itpc_backend_inputs(
         phases_flat,
         n_trials,
@@ -96,7 +95,6 @@ def itpc_persistence_go(
     pause_indices: IntArray,
 ) -> float:
     """Compute inter-trial phase-coherence persistence through the Go backend."""
-
     p, n_trials, n_tp, idx = validate_itpc_persistence_backend_inputs(
         phases_flat,
         n_trials,

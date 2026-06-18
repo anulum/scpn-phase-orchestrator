@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Chimera state detection
 
-"""Chimera state detection with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Chimera state detection with a 5-backend fallback chain.
 
 Kuramoto & Battogtokh 2002, Nonlinear Phenomena in Complex Systems
 5:380–385. An oscillator ``i`` is coherent when its local order
@@ -326,7 +325,8 @@ def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
         knm: ``(N, N)`` coupling matrix. ``K_ij > 0`` defines neighbours;
             diagonal self-coupling must be zero.
 
-    Returns:
+    Returns
+    -------
         :class:`ChimeraState` with coherent / incoherent index lists and
         the boundary-fraction chimera index.
     """

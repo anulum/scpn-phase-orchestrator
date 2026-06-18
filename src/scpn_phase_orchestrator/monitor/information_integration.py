@@ -42,7 +42,8 @@ _TWO_PI = 2.0 * np.pi
 class IntegratedInformationResult:
     """Audit-ready result from the integrated-information monitor.
 
-    Attributes:
+    Attributes
+    ----------
         phi: Minimum cross-partition information in nats. This is an
             approximate Phi-style proxy, not an exact IIT quantity.
         normalised_phi: ``phi`` divided by ``log(n_bins)`` and clipped
@@ -240,11 +241,13 @@ def integrated_information(
         n_bins: Number of circular bins for mutual-information
             estimation. Must be at least two.
 
-    Returns:
+    Returns
+    -------
         ``IntegratedInformationResult`` containing the minimum
         information bipartition and audit fields.
 
-    Raises:
+    Raises
+    ------
         ValueError: If the trajectory is not a finite two-dimensional
             array with at least two oscillators and two samples.
     """

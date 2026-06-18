@@ -60,7 +60,6 @@ def upde_run_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     (
         p,
         o,
@@ -129,7 +128,6 @@ def upde_run_omega_schedule_julia(
     rtol: float,
 ) -> FloatArray:
     """Run UPDE with one frequency vector per outer step in Julia."""
-
     (
         p,
         schedule,

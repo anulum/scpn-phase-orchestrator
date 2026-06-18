@@ -84,7 +84,8 @@ class SimplicialKuramotoLayer(eqx.Module):
         Args:
             phases: (n,) initial phase angles in [0, 2pi)
 
-        Returns:
+        Returns
+        -------
             (n,) phase angles after n_steps of integration
         """
         final, _ = simplicial_forward(
@@ -107,7 +108,8 @@ class SimplicialKuramotoLayer(eqx.Module):
         Args:
             phases: (n,) initial phase angles
 
-        Returns:
+        Returns
+        -------
             Tuple of (final_phases, trajectory) where trajectory is (n_steps, n)
         """
         return simplicial_forward(
@@ -126,7 +128,8 @@ class SimplicialKuramotoLayer(eqx.Module):
         Args:
             phases: (n,) initial phases
 
-        Returns:
+        Returns
+        -------
             Scalar R in [0, 1]
         """
         final = self(phases)

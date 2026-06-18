@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Phase winding number tracker
 
-"""Cumulative winding-number tracker with a 5-backend fallback
-chain per ``feedback_module_standard_attnres.md``.
+"""Cumulative winding-number tracker with a 5-backend fallback chain.
 
 ``w_i = floor(Σ_t wrap(Δθ_{i,t}) / 2π)`` where ``wrap(x) ∈ (−π, π]``.
 Counts how many full ``2π`` rotations each oscillator completes
@@ -229,7 +228,8 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     Args:
         phases_history: ``(T, N)`` phases in radians.
 
-    Returns:
+    Returns
+    -------
         ``(N,)`` int64 array of winding numbers.
     """
     phases_history = _validate_phase_history(phases_history)

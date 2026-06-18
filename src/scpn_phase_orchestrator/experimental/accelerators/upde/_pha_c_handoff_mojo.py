@@ -23,6 +23,5 @@ def build_pha_c_handoff_record_mojo(
     **kwargs: object,
 ) -> PHACHandoffRecord:
     """Evaluate the mojo handoff contract against the reference."""
-
     expected = expected_pha_c_handoff_record(*args, **kwargs)
     return validate_pha_c_handoff_record(expected, expected)

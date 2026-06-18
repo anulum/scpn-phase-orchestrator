@@ -54,7 +54,6 @@ def torus_run_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     (
         p,
         o,

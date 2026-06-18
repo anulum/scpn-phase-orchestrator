@@ -43,7 +43,6 @@ def spectral_eig_julia(
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
     """Compute coupling-spectrum eigenvalues and Fiedler vector with Julia."""
-
     k, n = validate_spectral_backend_inputs(knm_flat, n)
     if n == 0:
         empty = np.zeros(0, dtype=np.float64)

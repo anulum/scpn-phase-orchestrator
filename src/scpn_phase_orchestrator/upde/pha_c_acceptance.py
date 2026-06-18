@@ -120,7 +120,6 @@ class PHACAcceptanceRecord:
 
     def to_dict(self) -> dict[str, float | int | bool | str]:
         """Return a JSON-safe canonical representation."""
-
         return pha_c_acceptance_record_to_dict(self)
 
 
@@ -403,7 +402,6 @@ def build_pha_c_acceptance_record(
     the trajectory into a PHA-C event timeline. The output remains review-only;
     it is evidence for downstream gates and never permits actuation.
     """
-
     phases = _as_float_vector(phases_t0, name="phases_t0")
     n = int(phases.size)
     positions = _as_float_vector(positions_t0, name="positions_t0")
@@ -588,7 +586,6 @@ def pha_c_acceptance_record_to_dict(
     record: PHACAcceptanceRecord,
 ) -> dict[str, float | int | bool | str]:
     """Return the canonical JSON-safe PHA-C acceptance payload."""
-
     payload = _record_dict_without_hash(
         sample_count=record.sample_count,
         step_count=record.step_count,
@@ -647,7 +644,6 @@ def verify_pha_c_acceptance_record(
     record: PHACAcceptanceRecord,
 ) -> PHACAcceptanceRecord:
     """Replay and validate a complete PHA-C acceptance record."""
-
     if not isinstance(record, PHACAcceptanceRecord):
         raise ValueError("record must be a PHACAcceptanceRecord")
     for field in (

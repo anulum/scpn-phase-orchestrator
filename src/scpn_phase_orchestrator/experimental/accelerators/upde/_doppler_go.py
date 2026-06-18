@@ -67,7 +67,6 @@ def doppler_run_go(
     rtol: float,
 ) -> FloatArray:
     """Run the Doppler schedule through the Go shared library."""
-
     (
         p,
         omega,

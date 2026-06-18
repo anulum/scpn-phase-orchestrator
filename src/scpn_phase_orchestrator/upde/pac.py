@@ -309,8 +309,7 @@ def pac_matrix(
     amplitudes_history: FloatArray,
     n_bins: int = 18,
 ) -> FloatArray:
-    """``(N, N)`` PAC matrix. Entry ``[i, j]`` is
-    ``MI(phase_i, amplitude_j)`` over the ``T`` timesteps.
+    """Return the ``(N, N)`` PAC matrix ``[i, j] = MI(phase_i, amplitude_j)``.
 
     Args:
         phases_history: ``(T, N)`` phase time series.

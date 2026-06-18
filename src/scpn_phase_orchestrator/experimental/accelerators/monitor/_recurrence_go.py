@@ -75,7 +75,6 @@ def recurrence_matrix_go(
     angular: bool,
 ) -> ByteArray:
     """Compute the recurrence matrix through the Go backend."""
-
     p, t_int, d_int, radius, angular_flag = validate_recurrence_backend_inputs(
         traj_flat,
         t,
@@ -119,7 +118,6 @@ def cross_recurrence_matrix_go(
     angular: bool,
 ) -> ByteArray:
     """Compute the cross-recurrence matrix through the Go backend."""
-
     (
         a,
         b,

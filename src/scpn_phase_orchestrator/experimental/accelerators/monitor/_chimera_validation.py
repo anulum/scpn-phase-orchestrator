@@ -77,7 +77,6 @@ def validate_chimera_backend_inputs(
     n: object,
 ) -> tuple[FloatArray, FloatArray, int]:
     """Validate direct local-order inputs before optional runtime loading."""
-
     n_int = _validate_n(n)
     phases_vec = _validate_float_vector(phases, "phases")
     if phases_vec.size != n_int:
@@ -100,7 +99,6 @@ def validate_chimera_backend_output(
     n: object,
 ) -> FloatArray:
     """Validate direct backend local-order output before returning it."""
-
     n_int = _validate_n(n)
     values = _validate_float_vector(local_order, "local_order")
     if values.size != n_int:

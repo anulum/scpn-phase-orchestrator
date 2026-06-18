@@ -112,7 +112,6 @@ def validate_entropy_prod_backend_inputs(
     adapter use and prevents boolean aliases, non-finite scalars, and shape
     mismatches from being silently coerced before entering polyglot runtimes.
     """
-
     phases_array = _validate_vector(phases, name="phases")
     n = int(phases_array.size)
     omegas_array = _validate_vector(omegas, name="omegas")
@@ -130,7 +129,6 @@ def validate_entropy_prod_backend_inputs(
 
 def validate_entropy_prod_backend_output(value: object) -> float:
     """Validate a direct-backend entropy-production-rate scalar."""
-
     if isinstance(value, (bool, np.bool_)):
         raise ValueError("entropy_production_rate must not be a boolean value")
     raw = np.asarray(value)

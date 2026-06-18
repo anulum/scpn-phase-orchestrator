@@ -69,7 +69,7 @@ def _ude_deriv(
     K: jax.Array,
     residual_fn: CouplingResidual,
 ) -> jax.Array:
-    """Derivative for UDE-Kuramoto: sin backbone + learned residual."""
+    """Compute the derivative for UDE-Kuramoto: sin backbone + learned residual."""
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]  # (N, N)
 
     # Known backbone: K * sin(Δθ)
@@ -99,7 +99,8 @@ def ude_kuramoto_step(
         residual_fn: learned coupling correction
         dt: integration timestep
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases
     """
     dphi = _ude_deriv(phases, omegas, K, residual_fn)
@@ -124,7 +125,8 @@ def ude_kuramoto_forward(
         dt: integration timestep
         n_steps: number of steps
 
-    Returns:
+    Returns
+    -------
         Tuple of (final_phases, trajectory)
     """
 
@@ -174,6 +176,7 @@ class UDEKuramotoLayer(eqx.Module):
 
     @eqx.filter_jit
     def __call__(self, phases: jax.Array) -> jax.Array:
+        """Integrate the UDE-Kuramoto forward map and return the final phases."""
         final, _ = ude_kuramoto_forward(
             phases, self.omegas, self.K, self.residual, self.dt, self.n_steps
         )

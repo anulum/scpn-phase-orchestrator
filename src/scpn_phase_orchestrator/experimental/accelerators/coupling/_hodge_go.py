@@ -63,7 +63,6 @@ def hodge_decomposition_go(
     n_tris: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """Compute the Hodge gradient, curl, and harmonic flow matrices with Go."""
-
     k, p, n, edges, n_edges, tris, n_tris = validate_hodge_backend_inputs(
         knm_flat,
         phases,

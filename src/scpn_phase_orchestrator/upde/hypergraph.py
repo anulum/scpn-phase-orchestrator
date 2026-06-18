@@ -6,9 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Generalised k-body hypergraph coupling
 
-"""Hypergraph Kuramoto: arbitrary k-body interactions beyond
-pairwise, with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Hypergraph Kuramoto with arbitrary k-body interactions beyond pairwise.
+
+Exposes a 5-backend fallback chain.
 
 Extends the standard Kuramoto model with k-body coupling terms for
 any k ≥ 2. The standard model (k=2) and simplicial model (k=3) are
@@ -69,7 +69,8 @@ __all__ = [
 class Hyperedge:
     """A k-body interaction among oscillators.
 
-    Attributes:
+    Attributes
+    ----------
         nodes: Tuple of oscillator indices in this hyperedge.
         strength: Coupling strength σₖ for this hyperedge.
     """
@@ -80,7 +81,6 @@ class Hyperedge:
     @property
     def order(self) -> int:
         """Return the number of oscillators participating in the hyperedge."""
-
         return len(self.nodes)
 
 
@@ -349,8 +349,7 @@ def _python_run(
 
 
 class HypergraphEngine:
-    """Kuramoto engine with arbitrary k-body hypergraph coupling and
-    a 5-backend fallback chain.
+    """Kuramoto engine with arbitrary k-body hypergraph coupling.
 
     Supports mixed-order interactions: some edges can be pairwise,
     some 3-body, some 4-body, etc. Each ``Hyperedge`` specifies
@@ -372,7 +371,6 @@ class HypergraphEngine:
 
     def add_edge(self, nodes: tuple[int, ...], strength: float = 1.0) -> None:
         """Validate and append one explicit k-body hyperedge."""
-
         edge = _validate_hyperedge(
             Hyperedge(nodes=nodes, strength=strength),
             n_oscillators=self._n,
@@ -398,7 +396,6 @@ class HypergraphEngine:
     @property
     def n_edges(self) -> int:
         """Return the number of configured hyperedges."""
-
         return len(self._hyperedges)
 
     def _encode_edges(
@@ -447,8 +444,7 @@ class HypergraphEngine:
         zeta: float = 0.0,
         psi: float = 0.0,
     ) -> FloatArray:
-        """Integrate ``n_steps`` Euler steps through the fastest
-        available backend; return final phases."""
+        """Integrate ``n_steps`` Euler steps via the fastest backend; return phases."""
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -497,7 +493,7 @@ class HypergraphEngine:
         )
 
     def order_parameter(self, phases: FloatArray) -> float:
-        """Standard Kuramoto R = |<exp(iθ)>|."""
+        """Compute the standard Kuramoto R = |<exp(iθ)>|."""
         phases64 = _validate_state_array(
             phases,
             name="phases",

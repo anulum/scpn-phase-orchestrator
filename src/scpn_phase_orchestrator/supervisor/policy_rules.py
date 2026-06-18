@@ -74,9 +74,12 @@ def _compound_logic(logic: str) -> str:
 
 @dataclass(frozen=True)
 class PolicyCondition:
-    """Known metrics: R, R_good, R_bad, stability_proxy, pac_max,
-    mean_amplitude, subcritical_fraction, amplitude_spread (per-layer),
-    mean_amplitude_layer (per-layer)."""
+    """List the metric names known to the policy DSL.
+
+    Known metrics: R, R_good, R_bad, stability_proxy, pac_max, mean_amplitude,
+    subcritical_fraction, amplitude_spread (per-layer), mean_amplitude_layer
+    (per-layer).
+    """
 
     metric: str
     layer: int | None

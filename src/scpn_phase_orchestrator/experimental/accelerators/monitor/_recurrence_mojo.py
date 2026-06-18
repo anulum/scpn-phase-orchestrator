@@ -83,7 +83,6 @@ def recurrence_matrix_mojo(
     angular: bool,
 ) -> ByteArray:
     """Compute the recurrence matrix through the Mojo backend."""
-
     p, t_int, d_int, radius, angular_flag = validate_recurrence_backend_inputs(
         traj_flat,
         t,
@@ -128,7 +127,6 @@ def cross_recurrence_matrix_mojo(
     angular: bool,
 ) -> ByteArray:
     """Compute the cross-recurrence matrix through the Mojo backend."""
-
     (
         a,
         b,

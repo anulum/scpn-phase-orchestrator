@@ -241,7 +241,7 @@ class SimulationState:
         return self.snapshot()
 
     def snapshot(self) -> dict[str, Any]:
-        """Current state as JSON-serializable dict."""
+        """Return the current state as a JSON-serialisable dict."""
         layer_map = {}
         idx = 0
         for layer in self.spec.layers:

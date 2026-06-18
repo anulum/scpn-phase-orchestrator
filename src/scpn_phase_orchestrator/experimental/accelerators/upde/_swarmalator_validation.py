@@ -104,7 +104,6 @@ def validate_swarmalator_inputs(
     dt: Any,
 ) -> ValidatedSwarmalatorInputs:
     """Validate direct swarmalator backend inputs."""
-
     n_i = _as_positive_int(n, name="n")
     dim_i = _as_positive_int(dim, name="dim")
     p = _as_position_matrix(pos, n=n_i, dim=dim_i, name="pos")
@@ -136,7 +135,6 @@ def validate_swarmalator_output(
     dim: int,
 ) -> tuple[FloatArray, FloatArray]:
     """Validate direct backend positions and torus phases before returning."""
-
     p = _as_position_matrix(pos, n=n, dim=dim, name="swarmalator output positions")
     ph = _as_real_vector(phases, name="swarmalator output phases")
     if ph.size != n:

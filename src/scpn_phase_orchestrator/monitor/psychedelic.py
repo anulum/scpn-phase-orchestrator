@@ -310,7 +310,8 @@ def reduce_coupling(knm: FloatArray, reduction_factor: float) -> FloatArray:
         knm: ``(n, n)`` coupling matrix.
         reduction_factor: fraction to reduce, in ``[0, 1]``.
 
-    Returns:
+    Returns
+    -------
         Scaled copy. Zero when ``reduction_factor == 1``.
     """
     k = _validate_coupling_matrix(knm, name="knm")
@@ -385,7 +386,8 @@ def simulate_psychedelic_trajectory(
         reduction_schedule: list of reduction_factor values (0 to 1).
         n_steps_per_level: integration steps at each coupling level.
 
-    Returns:
+    Returns
+    -------
         List of dicts, one per level, with keys:
             reduction_factor, R, entropy, chimera_index, phases.
     """

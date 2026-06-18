@@ -113,7 +113,6 @@ def dry_run_policy_rules(
     bad_layers: list[int],
 ) -> PolicyDryRunReport:
     """Replay policy rules over audit steps without applying actuation."""
-
     engine = PolicyEngine(rules)
     rule_names = tuple(rule.name for rule in rules)
     fire_counts = dict.fromkeys(rule_names, 0)

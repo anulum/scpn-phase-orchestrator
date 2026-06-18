@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Fractal dimension estimates
 
-"""Fractal dimension estimation for phase-space trajectories with a
-5-backend fallback chain per ``feedback_module_standard_attnres.md``.
+"""Fractal dimension estimation with a 5-backend fallback chain.
 
 Implements:
 
@@ -320,7 +319,8 @@ def _validate_ky_dimension(
 class CorrelationDimensionResult:
     """Result of correlation dimension estimation.
 
-    Attributes:
+    Attributes
+    ----------
         D2: Estimated correlation dimension.
         epsilons: (K,) array of distance thresholds used.
         C_eps: (K,) correlation integral values C(ε).
@@ -461,7 +461,8 @@ def correlation_integral(
         max_pairs: maximum number of pairs to evaluate.
         seed: RNG seed for pair subsampling.
 
-    Returns:
+    Returns
+    -------
         ``(K,)`` array of ``C(ε)`` values.
     """
     traj = _validate_trajectory(trajectory)
@@ -640,7 +641,8 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
     Args:
         lyapunov_exponents: ``(N,)`` Lyapunov exponents.
 
-    Returns:
+    Returns
+    -------
         ``D_KY``. Returns ``0.0`` if the largest exponent is negative
         (stable fixed point, zero-dimensional attractor).
     """

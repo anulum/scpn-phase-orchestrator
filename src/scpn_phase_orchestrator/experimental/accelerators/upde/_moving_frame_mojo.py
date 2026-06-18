@@ -50,7 +50,6 @@ def moving_frame_run_mojo(
     rtol: float,
 ) -> FloatArray:
     """Run the moving-frame schedule through the Mojo executable."""
-
     (
         p,
         z,

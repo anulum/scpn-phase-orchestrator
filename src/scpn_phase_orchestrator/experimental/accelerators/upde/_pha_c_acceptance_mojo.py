@@ -25,6 +25,5 @@ def build_pha_c_acceptance_record_mojo(
     **kwargs: object,
 ) -> PHACAcceptanceRecord:
     """Evaluate the mojo acceptance contract against the reference."""
-
     expected = expected_pha_c_acceptance_record(*cast(Any, args), **cast(Any, kwargs))
     return validate_pha_c_acceptance_record(expected, expected)

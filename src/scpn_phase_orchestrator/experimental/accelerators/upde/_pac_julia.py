@@ -51,7 +51,6 @@ def modulation_index_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     theta, amp, bins = validate_modulation_index_inputs(theta_low, amp_high, n_bins)
     if theta.size == 0:
         return 0.0
@@ -76,7 +75,6 @@ def pac_matrix_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     phases, amplitudes, t_i, n_i, bins = validate_pac_matrix_inputs(
         phases_flat,
         amplitudes_flat,

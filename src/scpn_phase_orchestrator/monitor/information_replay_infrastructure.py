@@ -44,10 +44,12 @@ def build_infrastructure_integrated_information_replays(
         n_samples: Number of trajectory samples per case. Must be an int >= 32.
         n_bins: Histogram bins for ``integrated_information``. Must be an int >= 2.
 
-    Returns:
+    Returns
+    -------
         Tuple of JSON-safe infrastructure replay records.
 
-    Raises:
+    Raises
+    ------
         ValueError: If parameters are invalid or the corpus does not satisfy
             ordering and schema validation.
     """

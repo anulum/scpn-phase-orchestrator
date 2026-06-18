@@ -212,7 +212,6 @@ def validate_moving_frame_backend_inputs(
     float,
 ]:
     """Validate the backend-neutral moving-frame schedule contract."""
-
     p_raw = _reject_non_real_array(phases, name="phases")
     if p_raw.ndim != 1 or p_raw.size < 1:
         raise ValueError("phases must be a non-empty vector")
@@ -338,7 +337,6 @@ def moving_frame_run_python(
     rtol: float = 1.0e-3,
 ) -> FloatArray:
     """Run the moving-frame UPDE schedule in the Python reference path."""
-
     (
         p,
         z,
@@ -519,7 +517,6 @@ def moving_frame_run(
     backend: str = "auto",
 ) -> FloatArray:
     """Run a moving-frame UPDE schedule through the selected backend."""
-
     modulator = _validate_spatial_modulator(spatial_modulator)
     if modulator.distance_fn is not None:
         raise ValueError(
@@ -698,13 +695,11 @@ class MovingFrameUPDEEngine(DopplerEngine):
     @property
     def positions(self) -> FloatArray:
         """Current absolute axial coordinate for each oscillator."""
-
         return self._positions.copy()
 
     @property
     def distance_to_reference(self) -> FloatArray:
         """Absolute distance from each oscillator to the chamber reference."""
-
         return np.ascontiguousarray(
             np.abs(self._positions - self.reference_point), dtype=np.float64
         )
@@ -712,31 +707,26 @@ class MovingFrameUPDEEngine(DopplerEngine):
     @property
     def knm_effective(self) -> FloatArray:
         """Most recently applied distance-modulated coupling matrix."""
-
         return self._knm_effective.copy()
 
     @property
     def kinematic_residual_max_m(self) -> float:
         """Maximum residual against ``z_next = z + v*dt`` in the last run."""
-
         return float(self._kinematic_residual_max_m)
 
     @property
     def max_abs_velocity_m_per_s(self) -> float:
         """Maximum absolute axial velocity used by the last step or run."""
-
         return float(self._max_abs_velocity_m_per_s)
 
     @property
     def path_length_max_m(self) -> float:
         """Maximum per-oscillator axial path length in the last step or run."""
-
         return float(self._path_length_max_m)
 
     @property
     def state(self) -> MovingFrameState:
         """Return the current moving-frame diagnostic snapshot."""
-
         return MovingFrameState(
             phases=self.phases.copy(),
             positions=self._positions.copy(),
@@ -765,7 +755,6 @@ class MovingFrameUPDEEngine(DopplerEngine):
 
     def collision_imminent(self, threshold_m: float = 1.0e-3) -> bool:
         """Return whether any oscillator is at or crosses the reference soon."""
-
         threshold = _validate_nonnegative_float(threshold_m, name="threshold_m")
         signed_now = self._positions - self.reference_point
         signed_next = signed_now + self.velocity_current * self._dt
@@ -784,7 +773,6 @@ class MovingFrameUPDEEngine(DopplerEngine):
         alpha: object | None = None,
     ) -> FloatArray:
         """Advance one coupled phase/position step."""
-
         k_base = self.k_nm if knm is None else _validate_knm(knm, n=self._n)
         k_effective = self._modulated_knm(k_base, self._positions)
         positions_start = self._positions.copy()
@@ -816,7 +804,6 @@ class MovingFrameUPDEEngine(DopplerEngine):
         n_steps: int = 1,
     ) -> FloatArray:
         """Run ``n_steps`` of joint phase and axial-position dynamics."""
-
         steps = _validate_positive_step_count(n_steps, name="n_steps")
         p = self.phases if phases is None else _validate_phases(phases, n=self._n)
         k = self.k_nm if knm is None else _validate_knm(knm, n=self._n)

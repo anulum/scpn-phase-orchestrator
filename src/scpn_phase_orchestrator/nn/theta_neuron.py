@@ -34,7 +34,7 @@ def _theta_deriv(
     eta: jax.Array,
     K: jax.Array,
 ) -> jax.Array:
-    """Derivative for theta neuron network."""
+    """Compute the derivative for the theta neuron network."""
     # Synaptic input: I_syn_i = Σ_j K_ij (1 - cos(θ_j))
     pulse = 1.0 - jnp.cos(phases)  # (N,)
     I_syn = K @ pulse  # (N,)
@@ -55,7 +55,8 @@ def theta_neuron_step(
         K: (N, N) synaptic coupling matrix
         dt: integration timestep
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases
     """
     dphi = _theta_deriv(phases, eta, K)
@@ -99,7 +100,8 @@ def theta_neuron_forward(
         n_steps: integration steps
         method: "rk4" or "euler"
 
-    Returns:
+    Returns
+    -------
         (final, trajectory) where trajectory is (n_steps, N)
     """
     step_fn = theta_neuron_rk4_step if method == "rk4" else theta_neuron_step

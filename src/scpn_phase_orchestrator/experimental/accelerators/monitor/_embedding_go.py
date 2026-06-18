@@ -84,7 +84,6 @@ def delay_embed_go(
     dimension: int,
 ) -> FloatArray:
     """Build a delay-coordinate embedding through the Go backend."""
-
     s, delay_int, dimension_int, t_eff = validate_delay_embed_backend_inputs(
         signal,
         delay,
@@ -116,7 +115,6 @@ def mutual_information_go(
     n_bins: int,
 ) -> float:
     """Compute mutual information for embedded phase samples through the Go backend."""
-
     s, lag_int, bins_int = validate_mutual_information_backend_inputs(
         signal,
         lag,
@@ -147,7 +145,6 @@ def nearest_neighbor_distances_go(
 
     The calculation is delegated to the Go backend.
     """
-
     e, t_int, m_int = validate_nearest_neighbor_backend_inputs(embedded, t, m)
     if t_int == 0:
         return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.int64)

@@ -146,7 +146,6 @@ def validate_upde_backend_inputs(
     rtol: float,
 ) -> ValidatedInputs:
     """Normalise and validate direct UPDE backend call arguments."""
-
     p = _as_vector(phases, name="phases").copy()
     o = _as_vector(omegas, name="omegas")
     if o.size != p.size:
@@ -185,7 +184,6 @@ def validate_upde_schedule_backend_inputs(
     rtol: float,
 ) -> ValidatedScheduleInputs:
     """Normalise direct UPDE backend arguments with per-step frequencies."""
-
     p = _as_vector(phases, name="phases").copy()
     schedule = _as_real_finite_array(omega_schedule, name="omega_schedule")
     if schedule.ndim != 2:
@@ -217,7 +215,6 @@ def validate_upde_schedule_backend_inputs(
 
 def validate_upde_backend_output(value: Any, *, n: int) -> FloatArray:
     """Validate a backend phase-vector result before returning it."""
-
     out = _as_real_finite_array(value, name="result")
     if out.ndim != 1:
         raise ValueError("result must be a one-dimensional vector")

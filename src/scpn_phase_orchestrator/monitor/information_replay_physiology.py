@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Physiology replay monitor suite
 
-"""Deterministic physiology replay benchmark records for the
-engineering integration proxy.
+"""Deterministic physiology replay benchmark records (engineering proxy).
 
 These records are explicit empirical replay cases used as audit-level
 indicators, not as theoretical IIT claims.
@@ -47,10 +46,12 @@ def build_physiology_integrated_information_replays(
         n_bins: Number of phase bins used by ``integrated_information``.
             Must be an integer > 1.
 
-    Returns:
+    Returns
+    -------
         Tuple of JSON-safe replay records (one per physiology case).
 
-    Raises:
+    Raises
+    ------
         ValueError: If inputs are invalid or the benchmark ordering cannot be
             established.
     """

@@ -445,7 +445,6 @@ def build_temporal_causal_hypergraph_experiment(
     permits production claims, hot-patching, or actuation; baseline failure
     keeps all candidates blocked as research evidence only.
     """
-
     if not np.isfinite(required_baseline_margin) or required_baseline_margin < 0.0:
         raise ValueError("required_baseline_margin must be finite and non-negative")
     baseline = learn_causal_graph(trace, lag=lag, min_abs_weight=min_abs_weight)

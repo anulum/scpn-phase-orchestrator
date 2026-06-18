@@ -73,7 +73,6 @@ class WebGPUKernelPackage:
 
 def get_webgpu_backend_capabilities() -> WebGPUBackendCapabilities:
     """Return the explicit WebGPU execution contract."""
-
     return WebGPUBackendCapabilities(
         name="webgpu",
         execution_target="browser-or-edge-webgpu",
@@ -89,7 +88,6 @@ def get_webgpu_backend_capabilities() -> WebGPUBackendCapabilities:
 
 def is_webgpu_runtime_available() -> bool:
     """Detect browser WebGPU availability without importing JS on CPython."""
-
     try:
         # type ignore: Pyodide exposes the browser JS namespace only at runtime.
         import js  # type: ignore[import-not-found]
@@ -305,7 +303,6 @@ export class WebGPUUPDEBackend {
 
 def build_webgpu_upde_package(method: str = "euler") -> WebGPUKernelPackage:
     """Build the browser WebGPU kernel package for a supported method."""
-
     method = _validate_method(method)
     return WebGPUKernelPackage(
         method=method,
@@ -323,7 +320,6 @@ def load_webgpu_dispatch_bridge() -> Callable[..., FloatArray]:
     installed a callable bridge and exposed it through
     ``SPO_WEBGPU_DISPATCH_BRIDGE=module:function``.
     """
-
     spec = os.environ.get(_BRIDGE_ENV)
     if not spec:
         raise WebGPUBackendUnavailableError(
@@ -358,7 +354,6 @@ def upde_run_webgpu(*_args: object, **_kwargs: object) -> FloatArray:
     should use :func:`build_webgpu_upde_package` to export the backend package
     instead of expecting local WebGPU execution.
     """
-
     raise WebGPUBackendUnavailableError(
         "WebGPU execution requires a browser or edge runtime with navigator.gpu; "
         "use build_webgpu_upde_package() to export the browser backend"

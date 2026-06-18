@@ -50,7 +50,6 @@ def entropy_production_rate_julia(
     dt: float,
 ) -> float:
     """Compute the entropy-production-rate monitor through the Julia backend."""
-
     phases, omegas, knm, alpha, dt = validate_entropy_prod_backend_inputs(
         phases,
         omegas,

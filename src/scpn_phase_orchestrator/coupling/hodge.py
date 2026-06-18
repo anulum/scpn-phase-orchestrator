@@ -6,9 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Combinatorial Hodge decomposition of coupling flow
 
-r"""Combinatorial Hodge (Helmholtz–Hodge) decomposition of the Kuramoto
-coupling current, with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+r"""Combinatorial Hodge (Helmholtz–Hodge) decomposition of the Kuramoto current.
+
+Exposes a 5-backend fallback chain.
 
 Model
 -----
@@ -241,13 +241,13 @@ def _dispatch() -> HodgeBackend | None:
 
 @dataclass
 class HodgeResult:
-    """Combinatorial Hodge decomposition of the Kuramoto coupling
-    current into three L²-orthogonal edge-flow components.
+    """Decompose the Kuramoto coupling current into three L²-orthogonal flows.
 
     Each flow matrix is antisymmetric: ``M[i, j]`` is the flow on the
     oriented edge ``i → j`` and ``M[j, i] = −M[i, j]``.
 
-    Attributes:
+    Attributes
+    ----------
         gradient: Conservative (curl-free) component ``grad(s)``.
         curl: Rotational (divergence-free) component bounded by triangles.
         harmonic: Topological residual in ``ker(L1)``; non-zero exactly
@@ -312,8 +312,7 @@ def _validate_coupling_matrix(value: object, *, expected_n: int) -> FloatArray:
 
 
 def _build_edges(k_sym: FloatArray, n: int) -> IntArray:
-    """Return the ordered ``i < j`` edge list of non-zero symmetric
-    couplings as an ``(E, 2)`` int array."""
+    """Return the ordered ``i < j`` edge list of non-zero symmetric couplings."""
     iu, ju = np.triu_indices(n, k=1)
     if iu.size == 0:
         return np.empty((0, 2), dtype=np.int64)
@@ -360,8 +359,7 @@ def _build_triangles(
     edge_set: frozenset[tuple[int, int]],
     n: int,
 ) -> IntArray:
-    """Return all 3-cliques ``i < j < k`` of the coupling graph as an
-    ``(T, 3)`` int array."""
+    """Return all 3-cliques ``i < j < k`` of the coupling graph."""
     rows: list[tuple[int, int, int]] = []
     for i in range(n):
         for j in range(i + 1, n):
@@ -380,8 +378,7 @@ def _incidence_operators(
     triangles: IntArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
-    """Assemble the node–edge ``B1`` and edge–triangle ``B2`` boundary
-    matrices for the simplicial complex."""
+    """Assemble the node–edge ``B1`` and edge–triangle ``B2`` boundary matrices."""
     n_edges = int(edges.shape[0])
     n_tris = int(triangles.shape[0])
     b1 = np.zeros((n, n_edges), dtype=np.float64)
@@ -425,8 +422,7 @@ def _edge_flow(k_sym: FloatArray, phases: FloatArray, edges: IntArray) -> FloatA
 
 
 def _psd_pinv_apply(matrix: FloatArray, vector: FloatArray) -> FloatArray:
-    """Apply the Moore–Penrose pseudoinverse of a symmetric positive
-    semidefinite ``matrix`` to ``vector`` via eigendecomposition.
+    """Apply the Moore–Penrose pseudoinverse of an SPD matrix to a vector.
 
     Eigenvalues at or below ``_PINV_RCOND · λ_max`` are treated as the
     null space. Every backend mirrors this algorithm so the projections
@@ -454,8 +450,7 @@ def _hodge_components(
     b2: FloatArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
-    """Project an edge flow onto gradient, curl, and harmonic spaces and
-    return ``(f_grad, f_curl, f_harm, node_potential)``."""
+    """Project an edge flow onto gradient, curl, and harmonic spaces."""
     if flow.size == 0:
         empty = np.empty(0, dtype=np.float64)
         return empty, empty.copy(), empty.copy(), np.zeros(n, dtype=np.float64)
@@ -484,8 +479,7 @@ def _simplicial_complex(
     n: int,
     triangles: Sequence[Sequence[int]] | None,
 ) -> tuple[IntArray, IntArray]:
-    """Build the ``(edges, triangles)`` index arrays for the coupling
-    graph, validating an explicit triangle set when supplied."""
+    """Build the ``(edges, triangles)`` index arrays for the coupling graph."""
     edges = _build_edges(k_sym, n)
     edge_set = frozenset((int(a), int(b)) for a, b in edges)
     if triangles is None:
@@ -528,8 +522,7 @@ def _python_decomposition(
     phases: FloatArray,
     triangles: Sequence[Sequence[int]] | None = None,
 ) -> HodgeTuple:
-    """NumPy reference returning the gradient/curl/harmonic flow
-    matrices for the coupling graph derived from ``k``."""
+    """Return the gradient/curl/harmonic flow matrices (NumPy reference)."""
     n = int(phases.size)
     k_sym = 0.5 * (k + k.T)
     edges, tri = _simplicial_complex(k_sym, n, triangles)
@@ -578,8 +571,7 @@ def hodge_decomposition(
     phases: FloatArray,
     triangles: Sequence[Sequence[int]] | None = None,
 ) -> HodgeResult:
-    """Decompose the Kuramoto coupling current into orthogonal
-    gradient, curl, and harmonic edge flows.
+    """Decompose the Kuramoto coupling current into orthogonal edge flows.
 
     Args:
         knm: Square ``(N, N)`` coupling matrix; the symmetric part
@@ -589,7 +581,8 @@ def hodge_decomposition(
             must reference existing edges. When omitted, all 3-cliques
             of the coupling graph are used.
 
-    Returns:
+    Returns
+    -------
         :class:`HodgeResult` with the three flow components as
         antisymmetric ``(N, N)`` matrices, the input current, the node
         potential, and the first Betti number.

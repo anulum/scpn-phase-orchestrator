@@ -122,13 +122,11 @@ class BifurcationDiagram:
     @property
     def K_values(self) -> FloatArray:
         """Return continuation coupling strengths in diagram order."""
-
         return np.array([p.K for p in self.points])
 
     @property
     def R_values(self) -> FloatArray:
         """Return continuation order parameters in diagram order."""
-
         return np.array([p.R for p in self.points])
 
 
@@ -435,8 +433,7 @@ def find_critical_coupling(
     tol: float = 0.05,
     seed: int = 42,
 ) -> float:
-    """Binary search for the critical coupling ``K_c`` at which
-    ``R`` crosses a 0.1 threshold.
+    """Binary-search the critical coupling ``K_c`` where ``R`` crosses 0.1.
 
     More precise than :func:`trace_sync_transition` when only
     ``K_c`` is needed. Returns ``nan`` if no transition is found

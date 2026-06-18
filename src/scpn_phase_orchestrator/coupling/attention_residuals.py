@@ -330,7 +330,8 @@ def _embed_phase(theta: FloatArray, d_model: int) -> FloatArray:
     Produces ``[cos θ, sin θ, cos 2θ, sin 2θ, ..., cos (d/2)θ, sin (d/2)θ]``.
     This is the canonical positional / Fourier-feature lift used in the
     paper to give the attention mechanism a richer representation of
-    the periodic signal than a bare scalar would."""
+    the periodic signal than a bare scalar would.
+    """
     n = theta.shape[0]
     x = np.empty((n, d_model), dtype=np.float64)
     for k in range(d_model // 2):
@@ -352,8 +353,10 @@ def _python_fallback(
     temperature: float,
     lambda_: float,
 ) -> FloatArray:
-    """Reference multi-head AttnRes — mirrors the paper's forward
-    pass. Every compiled backend must reproduce this bit-for-bit."""
+    """Compute the reference multi-head AttnRes forward pass.
+
+    Every compiled backend must reproduce this output bit-for-bit.
+    """
     if lambda_ == 0.0:
         return knm_flat.astype(np.float64, copy=True)
 

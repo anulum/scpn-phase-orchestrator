@@ -87,7 +87,6 @@ def validate_compute_itpc_backend_inputs(
     n_tp: object,
 ) -> tuple[FloatArray, int, int]:
     """Validate direct ITPC inputs before optional runtime loading."""
-
     trials = _validate_int(n_trials, "n_trials", minimum=0)
     timepoints = _validate_int(n_tp, "n_tp", minimum=0)
     phases = _validate_phase_buffer(phases_flat, trials, timepoints)
@@ -100,7 +99,6 @@ def expected_compute_itpc_backend_output(
     n_tp: int,
 ) -> FloatArray:
     """Return the exact NumPy ITPC reference for validated backend payloads."""
-
     if n_tp == 0:
         return np.zeros(0, dtype=np.float64)
     if n_trials == 0:
@@ -119,7 +117,6 @@ def expected_itpc_persistence_backend_output(
     pause_indices: IntArray,
 ) -> float:
     """Return the exact NumPy persistence reference for validated payloads."""
-
     if n_trials == 0 or n_tp == 0 or pause_indices.size == 0:
         return 0.0
     itpc = expected_compute_itpc_backend_output(phases_flat, n_trials, n_tp)
@@ -137,7 +134,6 @@ def validate_compute_itpc_backend_output(
     atol: float = 1e-12,
 ) -> FloatArray:
     """Validate direct ITPC vectors returned by optional backends."""
-
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError("ITPC backend output must not contain boolean values")
@@ -173,7 +169,6 @@ def validate_itpc_persistence_backend_output(
     atol: float = 1e-12,
 ) -> float:
     """Validate direct ITPC persistence scalars returned by optional backends."""
-
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError("ITPC persistence backend output must not contain booleans")
@@ -211,7 +206,6 @@ def validate_itpc_persistence_backend_inputs(
     pause_indices: object,
 ) -> tuple[FloatArray, int, int, IntArray]:
     """Validate direct ITPC persistence inputs before optional runtime loading."""
-
     phases, trials, timepoints = validate_compute_itpc_backend_inputs(
         phases_flat,
         n_trials,

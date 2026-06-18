@@ -289,7 +289,6 @@ def validate_binding_spec_security(spec: BindingSpec) -> list[str]:
     remain declarative data; they must not carry Python code, loader tags,
     import expressions, subprocess references, or deserialisation gadgets.
     """
-
     findings: list[str] = []
     for location, value in _walk_security_values(spec, "binding"):
         if isinstance(value, str):

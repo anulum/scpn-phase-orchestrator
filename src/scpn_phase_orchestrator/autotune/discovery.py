@@ -143,7 +143,6 @@ def infer_sample_rate_from_time_column(
     fieldnames: Sequence[str],
 ) -> tuple[float, str]:
     """Infer a sampling rate from a regular finite time column."""
-
     if any(not isinstance(field, str) for field in fieldnames):
         raise ValueError("fieldnames must be strings")
     time_column = next(
@@ -185,7 +184,6 @@ def discover_time_series_structure(
     config: TimeSeriesDiscoveryConfig | None = None,
 ) -> TimeSeriesDiscoveryReport:
     """Extract sparse-derivative, graph, and cluster evidence from a table."""
-
     cfg = config or TimeSeriesDiscoveryConfig()
     sample_period_s = _finite_real_scalar(sample_period_s, "sample_period_s")
     table = _real_table(samples)

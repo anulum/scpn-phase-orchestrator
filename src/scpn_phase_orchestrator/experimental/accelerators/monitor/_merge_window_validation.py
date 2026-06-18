@@ -29,7 +29,6 @@ _BOOL_FIELDS = ("phase_locked", "spatial_locked", "lock_achieved")
 
 def expected_merge_window_report(*args: object, **kwargs: object) -> MergeReport:
     """Return the Python reference report after fail-closed input validation."""
-
     return evaluate_merge_window(*cast(Any, args), **cast(Any, kwargs))
 
 
@@ -40,7 +39,6 @@ def validate_merge_window_report(
     tolerance: float = 1.0e-12,
 ) -> MergeReport:
     """Validate an accelerator report against the Python reference contract."""
-
     got_dict = got.to_dict()
     expected_dict = expected.to_dict()
     for field in _NUMERIC_FIELDS:

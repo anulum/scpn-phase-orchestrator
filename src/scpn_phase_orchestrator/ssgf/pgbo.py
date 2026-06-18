@@ -126,7 +126,8 @@ class PGBO:
             phases: Current phase vector theta_i.
             W: Current geometric coupling matrix W_ij.
 
-        Returns:
+        Returns
+        -------
             A PGBOSnapshot containing order parameter R, Psi, SSGF costs,
             and the gauge curvature proxy.
         """

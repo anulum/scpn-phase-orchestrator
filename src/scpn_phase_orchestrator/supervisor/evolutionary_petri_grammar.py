@@ -277,7 +277,6 @@ def run_offline_evolutionary_petri_mutation_grammar(
     max_token_bound: int = 128,
 ) -> EvolutionaryPetriMutationPlan:
     """Build a deterministic review-only mutation plan from a net-like payload."""
-
     config = EvolutionaryPetriMutationConfig(
         generation_count=generation_count,
         candidates_per_generation=candidates_per_generation,

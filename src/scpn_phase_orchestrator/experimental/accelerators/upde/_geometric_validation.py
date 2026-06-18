@@ -92,7 +92,6 @@ def validate_torus_inputs(
     n_steps: int,
 ) -> ValidatedInputs:
     """Validate deterministic direct torus-run kernel inputs."""
-
     n_i = _as_int(n, name="n", minimum=1)
     p = _as_finite_vector(phases, name="phases")
     if p.size != n_i:
@@ -115,7 +114,6 @@ def validate_torus_inputs(
 
 def validate_torus_output(value: Any, *, n: int) -> FloatArray:
     """Validate backend torus phases before returning them."""
-
     out = _as_finite_vector(value, name="result")
     if out.size != n:
         raise ValueError(f"result must contain {n} values")

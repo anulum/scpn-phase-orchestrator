@@ -36,7 +36,8 @@ def reservoir_features(phases: jax.Array) -> jax.Array:
     Args:
         phases: (N,) oscillator phases
 
-    Returns:
+    Returns
+    -------
         (2*N + 1,) feature vector
     """
     R = order_parameter(phases)
@@ -65,7 +66,8 @@ def reservoir_drive(
         dt: integration timestep
         n_steps: Kuramoto steps per input sample
 
-    Returns:
+    Returns
+    -------
         (T, 2*N + 1) feature matrix for readout training
     """
 
@@ -96,7 +98,8 @@ def ridge_readout(
         targets: (T, D_out) target outputs
         alpha: L2 regularization strength
 
-    Returns:
+    Returns
+    -------
         (D_feat, D_out) readout weight matrix
     """
     FtF = features.T @ features + alpha * jnp.eye(features.shape[1])
@@ -115,7 +118,8 @@ def reservoir_predict(
         features: (T, D_feat) feature matrix
         W_out: (D_feat, D_out) readout weights
 
-    Returns:
+    Returns
+    -------
         (T, D_out) predictions
     """
     result: jax.Array = features @ W_out

@@ -122,7 +122,6 @@ def validate_attnres_backend_inputs(
     float,
 ]:
     """Validate direct AttnRes inputs before optional runtime loading."""
-
     n_int = _validate_non_negative_int(n, name="n")
     n_heads_int = _validate_positive_int(n_heads, name="n_heads")
     block_size_int = _validate_block_size(block_size)
@@ -173,7 +172,6 @@ def validate_attnres_backend_inputs(
 
 def validate_attnres_backend_output(value: object, *, n: int) -> FloatArray:
     """Validate direct AttnRes backend output before returning it."""
-
     output = _validate_float_vector(value, name="attnres output")
     expected = n * n
     if output.size != expected:

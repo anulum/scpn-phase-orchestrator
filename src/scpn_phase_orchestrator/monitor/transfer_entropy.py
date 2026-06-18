@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Phase Transfer Entropy
 
-"""Phase transfer entropy via binned histograms with a 5-backend
-fallback chain per ``feedback_module_standard_attnres.md``.
+"""Phase transfer entropy via binned histograms with a 5-backend chain.
 
 Two compute kernels:
 
@@ -369,8 +368,7 @@ def phase_transfer_entropy(
 
 
 def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> FloatArray:
-    """Pairwise TE matrix; entry ``[i, j] = TE(i → j)`` for all
-    oscillator pairs with zero diagonal."""
+    """Return the pairwise TE matrix ``[i, j] = TE(i → j)`` with zero diagonal."""
     bin_count = _validate_n_bins(n_bins)
     series = _validate_phase_series(phase_series, name="phase_series")
     n_osc, n_time = series.shape

@@ -104,7 +104,6 @@ def validate_hodge_backend_inputs(
     n_tris: object,
 ) -> tuple[FloatArray, FloatArray, int, IntArray, int, IntArray, int]:
     """Validate direct Hodge inputs before optional runtime loading."""
-
     n_int = _validate_n(n)
     k = _validate_float_vector(knm_flat, name="knm_flat")
     expected_k = n_int * n_int

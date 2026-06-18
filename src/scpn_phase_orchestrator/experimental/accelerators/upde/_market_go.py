@@ -71,7 +71,6 @@ def market_order_parameter_go(
 
     The calculation is delegated to the Go backend.
     """
-
     p, t_i, n_i = validate_market_order_inputs(phases_flat, t, n)
     lib = _load_lib()
     out = np.zeros(t_i, dtype=np.float64)
@@ -96,7 +95,6 @@ def market_plv_go(
 
     The calculation is delegated to the Go backend.
     """
-
     p, t_i, n_i, window_i = validate_market_plv_inputs(
         phases_flat,
         t,

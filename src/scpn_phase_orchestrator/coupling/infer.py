@@ -109,13 +109,11 @@ class CouplingInferenceResult:
     @property
     def edge_count(self) -> int:
         """Number of nonzero directed off-diagonal support edges."""
-
         return int(np.count_nonzero(self.support_mask))
 
     @property
     def density(self) -> float:
         """Directed graph density over off-diagonal entries."""
-
         n_oscillators = self.support_mask.shape[0]
         possible = n_oscillators * (n_oscillators - 1)
         if possible == 0:
@@ -124,12 +122,10 @@ class CouplingInferenceResult:
 
     def to_upde_knm(self) -> FloatArray:
         """Return matrix in UPDE target-by-source coupling convention."""
-
         return np.ascontiguousarray(self.knm.T, dtype=np.float64)
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe, replay-friendly inference record."""
-
         return {
             "package": self.package,
             "method": self.method,
@@ -253,7 +249,6 @@ def infer_coupling_from_timeseries(
     config: CouplingInferenceConfig | None = None,
 ) -> CouplingInferenceResult:
     """Infer a directed coupling matrix from phase time-series data."""
-
     resolved_config = _validate_config(config or CouplingInferenceConfig())
     series = _validate_phase_series(
         phase_series, min_timesteps=resolved_config.min_timesteps
@@ -309,7 +304,6 @@ def auto_coupling_estimation(
     normalisation: NormalisationMode = "max",
 ) -> CouplingInferenceResult:
     """Infer coupling with the packaged ``auto-coupling-estimation`` profile."""
-
     return infer_coupling_from_timeseries(
         phase_series,
         config=CouplingInferenceConfig(

@@ -98,7 +98,6 @@ def upde_run_go(
 
     The calculation is delegated to the Go backend.
     """
-
     (
         p,
         o,
@@ -164,7 +163,6 @@ def upde_run_omega_schedule_go(
     rtol: float,
 ) -> FloatArray:
     """Run UPDE with one frequency vector per outer step in the Go backend."""
-
     (
         p,
         schedule,

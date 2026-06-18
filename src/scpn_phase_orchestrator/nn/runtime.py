@@ -128,7 +128,8 @@ def require_accelerator(*, allow_cpu: bool = False) -> str:
             training should keep the default ``False`` so misconfigured GPU
             jobs fail before expensive work starts.
 
-    Returns:
+    Returns
+    -------
         A JAX device label such as ``"gpu:0"``, ``"tpu:0"``, or ``"cpu:0"``
         when ``allow_cpu`` is enabled.
     """

@@ -180,7 +180,6 @@ class SheafUPDEEngine:
     @property
     def last_dt(self) -> float:
         """Return the most recent timestep used by the sheaf engine."""
-
         return self._last_dt
 
     def step(
@@ -200,7 +199,8 @@ class SheafUPDEEngine:
             zeta: External forcing strength (global scalar).
             psi: Reference phase target vector, shape (D,).
 
-        Returns:
+        Returns
+        -------
             New phase matrix, shape (N, D).
         """
         phases, omegas, restriction_maps, zeta, psi = self._validate_inputs(

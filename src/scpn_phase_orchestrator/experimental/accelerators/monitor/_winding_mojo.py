@@ -75,7 +75,6 @@ def winding_numbers_mojo(
     n: int,
 ) -> IntArray:
     """Compute oscillator winding numbers through the Mojo backend."""
-
     phases, t, n = validate_winding_backend_inputs(phases_flat, t, n)
     tokens: list[str] = ["WIND", str(t), str(n)]
     tokens.extend(repr(float(x)) for x in phases.tolist())

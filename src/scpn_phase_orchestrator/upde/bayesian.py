@@ -77,12 +77,10 @@ class GaussianArrayDistribution:
     @property
     def shape(self) -> tuple[int, ...]:
         """Return the event shape sampled by this Gaussian distribution."""
-
         return tuple(np.asarray(self.mean).shape)
 
     def sample(self, rng: np.random.Generator, n_samples: int) -> FloatArray:
         """Draw finite Gaussian samples with optional support guards applied."""
-
         if not isinstance(rng, np.random.Generator):
             raise TypeError("rng must be a numpy.random.Generator")
         sample_count = _validate_positive_integer(
@@ -159,12 +157,10 @@ class BayesianUPDEResult:
     @property
     def r_plus_minus(self) -> tuple[float, float]:
         """Return the compact ``R ± sigma`` pair."""
-
         return self.r_mean, self.r_sigma
 
     def to_audit_record(self) -> dict[str, object]:
         """Return JSON-safe uncertainty diagnostics."""
-
         return {
             "kind": "bayesian_upde",
             "backend": self.backend,
@@ -205,7 +201,6 @@ class BayesianBackendStatus:
 
     def to_audit_record(self) -> dict[str, object]:
         """Return JSON-safe backend availability diagnostics."""
-
         return {
             "kind": "bayesian_backend_status",
             "backend": self.backend,
@@ -230,7 +225,6 @@ class GaussianUPDEPosteriorFit:
 
     def to_audit_record(self) -> dict[str, object]:
         """Return JSON-safe posterior-fit diagnostics."""
-
         return {
             "kind": "gaussian_upde_posterior_fit",
             "backend": self.backend,
@@ -340,7 +334,6 @@ def fit_gaussian_upde_posterior(
     The result is intentionally review-only: it produces distributions that can
     feed :func:`bayesian_upde_run`, but it does not apply control actions.
     """
-
     trajectory = _as_finite_array(phase_trajectory, name="phase_trajectory")
     if trajectory.ndim != 2:
         raise ValueError(
@@ -446,7 +439,6 @@ def audit_bayesian_backend_status(
     backends: tuple[BackendName, ...] = ("numpy", "numpyro", "blackjax"),
 ) -> tuple[BayesianBackendStatus, ...]:
     """Probe Bayesian backend names without silently accepting unsupported ones."""
-
     base_config = config or BayesianUPDEConfig(n_samples=8, seed=0, n_steps=1)
     statuses: list[BayesianBackendStatus] = []
     for backend in backends:
@@ -536,7 +528,6 @@ def bayesian_upde_run(
     config: BayesianUPDEConfig | None = None,
 ) -> BayesianUPDEResult:
     """Run UPDE over sampled ``omega`` and ``K_nm`` distributions."""
-
     resolved = config or BayesianUPDEConfig()
     if resolved.backend != "numpy":
         raise NotImplementedError(

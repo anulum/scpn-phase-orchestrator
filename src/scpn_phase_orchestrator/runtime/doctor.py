@@ -64,7 +64,8 @@ _STATUS_WARN = "warn"
 class DependencyCheck:
     """Outcome of probing a single dependency, backend, or toolchain.
 
-    Attributes:
+    Attributes
+    ----------
         name: Human-facing component name (for example ``numpy`` or ``rust``).
         category: Grouping used for rendering — ``interpreter``, ``core``,
             ``backend``, or one of the optional feature-extra names.
@@ -84,16 +85,13 @@ class DependencyCheck:
 
     @property
     def status(self) -> str:
-        """``ok`` when detected, ``missing`` when a required component is absent,
-        ``warn`` when an optional component is absent."""
-
+        """Return ``ok``/``missing``/``warn`` for the component detection state."""
         if self.available:
             return _STATUS_OK
         return _STATUS_MISSING if self.required else _STATUS_WARN
 
     def to_record(self) -> dict[str, object]:
         """Return a JSON-serialisable mapping with deterministic key order."""
-
         return {
             "name": self.name,
             "category": self.category,
@@ -109,7 +107,8 @@ class DependencyCheck:
 class DoctorReport:
     """Aggregate readiness report produced by :func:`run_environment_diagnostics`.
 
-    Attributes:
+    Attributes
+    ----------
         checks: Every :class:`DependencyCheck` in deterministic display order.
         python_version: The running interpreter version (``X.Y.Z``).
         platform: Short OS/architecture descriptor for the audit record.
@@ -122,36 +121,30 @@ class DoctorReport:
     @property
     def missing_required(self) -> tuple[DependencyCheck, ...]:
         """Required components that were not detected."""
-
         return tuple(c for c in self.checks if c.required and not c.available)
 
     @property
     def missing_optional(self) -> tuple[DependencyCheck, ...]:
         """Optional components that were not detected."""
-
         return tuple(c for c in self.checks if not c.required and not c.available)
 
     @property
     def ok(self) -> bool:
         """True when every required component is present (overall ``pass``)."""
-
         return not self.missing_required
 
     @property
     def status(self) -> str:
         """``pass`` when ready, otherwise ``fail``."""
-
         return _STATUS_READY if self.ok else _STATUS_FAIL
 
     @property
     def exit_code(self) -> int:
         """Process exit code: ``0`` when ready, ``1`` when a requirement is missing."""
-
         return 0 if self.ok else 1
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a deterministic JSON-serialisable readiness record."""
-
         return {
             "report": "environment-diagnostics",
             "version": "1.0.0",
@@ -174,7 +167,6 @@ class DoctorReport:
 
 def _distribution_version(dist_name: str) -> str | None:
     """Return the installed version of ``dist_name`` or ``None`` if absent."""
-
     try:
         return importlib_metadata.version(dist_name)
     except importlib_metadata.PackageNotFoundError:
@@ -182,13 +174,12 @@ def _distribution_version(dist_name: str) -> str | None:
 
 
 def _module_present(import_name: str) -> bool:
-    """True when ``import_name`` can be located without importing it.
+    """Return True when ``import_name`` can be located without importing it.
 
     ``find_spec`` raises :class:`ModuleNotFoundError` when a *parent* package of
     a dotted name is missing; that is treated as "not present" rather than an
     error so the probe never aborts the whole report.
     """
-
     try:
         return importlib.util.find_spec(import_name) is not None
     except (ModuleNotFoundError, ValueError):
@@ -386,7 +377,6 @@ def _find_repo_root(start: Path | None = None) -> Path | None:
         start: Optional starting file/directory; tests pass a sandbox path to
             exercise the no-checkout fallback.
     """
-
     here = (start if start is not None else Path(__file__)).resolve()
     for parent in here.parents:
         if (parent / "go").is_dir() and (parent / "pyproject.toml").is_file():
@@ -402,12 +392,12 @@ def run_environment_diagnostics(*, repo_root: Path | None = None) -> DoctorRepor
             probe. When ``None`` the root is auto-detected from this module's
             location; pass a path in tests to exercise both branches.
 
-    Returns:
+    Returns
+    -------
         A :class:`DoctorReport` whose :attr:`DoctorReport.status` is ``pass``
         only when the interpreter is in range and every required dependency is
         importable.
     """
-
     resolved_root = repo_root if repo_root is not None else _find_repo_root()
 
     checks: list[DependencyCheck] = [_check_python()]
@@ -442,7 +432,6 @@ def run_environment_diagnostics(*, repo_root: Path | None = None) -> DoctorRepor
 
 def render_report(report: DoctorReport) -> Sequence[str]:
     """Render a :class:`DoctorReport` as aligned human-readable lines."""
-
     glyphs = {_STATUS_OK: "[ ok ]", _STATUS_MISSING: "[MISS]", _STATUS_WARN: "[warn]"}
     lines: list[str] = [
         f"SCPN Phase Orchestrator environment diagnostics — {report.status.upper()}",

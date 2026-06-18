@@ -93,7 +93,6 @@ def validate_basin_stability_inputs(
     n_measure: int,
 ) -> ValidatedInputs:
     """Validate deterministic one-trial basin-stability kernel inputs."""
-
     n_i = _as_int(n, name="n", minimum=1)
     p = _as_finite_vector(phases_init, name="phases_init")
     if p.size != n_i:
@@ -116,7 +115,6 @@ def validate_basin_stability_inputs(
 
 def validate_basin_stability_output(value: Any) -> float:
     """Validate an order-parameter result from a direct backend."""
-
     out = _as_finite_real(value, name="steady-state R")
     if out < 0.0 or out > 1.0 + 1e-12:
         raise ValueError("steady-state R must lie in [0, 1]")

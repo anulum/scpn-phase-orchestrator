@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Cyber-industrial replay monitor suite
 
-"""Deterministic cyber-industrial replay benchmark records for the
-engineering integration proxy.
+"""Deterministic cyber-industrial replay benchmark records (engineering proxy).
 
 These are proxy-only monitors for empirical replay corpora and are not
 theoretical IIT claims.
@@ -46,10 +45,12 @@ def build_cyber_industrial_integrated_information_replays(
             Must be at least 32.
         n_bins: Bin count passed to ``integrated_information``. Must be an int > 1.
 
-    Returns:
+    Returns
+    -------
         Tuple of JSON-safe replay records (one per case).
 
-    Raises:
+    Raises
+    ------
         ValueError: If ``n_samples`` or ``n_bins`` are invalid.
     """
     _validate_replay_parameters(n_samples=n_samples, n_bins=n_bins)

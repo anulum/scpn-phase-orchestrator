@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Simplicial (higher-order) Kuramoto coupling
 
-"""Pairwise + all-to-all 3-body (simplicial) Kuramoto with a
-5-backend fallback chain per ``feedback_module_standard_attnres.md``.
+"""Pairwise + all-to-all 3-body (simplicial) Kuramoto with a 5-backend chain.
 
 Model
 -----
@@ -303,8 +302,7 @@ def _python_run(
 
 
 class SimplicialEngine:
-    """Pairwise + simplicial (3-body, all-to-all) Kuramoto stepper
-    with 5-backend dispatch.
+    """Pairwise + simplicial (3-body, all-to-all) Kuramoto stepper.
 
     The engine's geometry is ``(n, dt, σ₂)``; the step itself is
     stateless: ``(phases, omegas, K, α, ζ, ψ) → new_phases``.
@@ -318,13 +316,11 @@ class SimplicialEngine:
     @property
     def sigma2(self) -> float:
         """Return the configured all-to-all triadic coupling strength."""
-
         return self._sigma2
 
     @sigma2.setter
     def sigma2(self, value: float) -> None:
         """Update triadic coupling strength after finite non-negative validation."""
-
         self._sigma2 = _validate_nonnegative_float(value, name="sigma2")
 
     def step(
@@ -337,7 +333,6 @@ class SimplicialEngine:
         alpha: FloatArray,
     ) -> FloatArray:
         """Advance one pairwise-plus-simplicial Kuramoto timestep."""
-
         return self.run(phases, omegas, knm, zeta, psi, alpha, n_steps=1)
 
     def run(
@@ -351,7 +346,6 @@ class SimplicialEngine:
         n_steps: int,
     ) -> FloatArray:
         """Integrate pairwise-plus-simplicial Kuramoto dynamics."""
-
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -420,7 +414,7 @@ class SimplicialEngine:
         )
 
     def order_parameter(self, phases: FloatArray) -> float:
-        """Standard Kuramoto R = |<exp(iθ)>|."""
+        """Compute the standard Kuramoto R = |<exp(iθ)>|."""
         phases64 = _validate_state_array(
             phases,
             name="phases",

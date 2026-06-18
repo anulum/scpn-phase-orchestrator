@@ -64,7 +64,6 @@ def extract_envelope_go(amps: FloatArray, window: int) -> FloatArray:
 
     The calculation is delegated to the Go backend.
     """
-
     a, window_i = validate_extract_envelope_input(amps, window)
     if a.size == 0:
         return np.zeros(0, dtype=np.float64)
@@ -89,7 +88,6 @@ def envelope_modulation_depth_go(env: FloatArray) -> float:
 
     The calculation is delegated to the Go backend.
     """
-
     e = validate_envelope_modulation_input(env)
     if e.size == 0:
         return 0.0

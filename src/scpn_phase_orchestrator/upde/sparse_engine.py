@@ -200,7 +200,8 @@ class SparseUPDEEngine:
             psi: Reference phase target (global scalar).
             alpha_values: CSR phase lags, shape (E,).
 
-        Returns:
+        Returns
+        -------
             New phase vector [theta_1(t+dt), ..., theta_N(t+dt)], shape (N,).
         """
         zeta = _validate_finite_real(zeta, name="zeta")
@@ -287,7 +288,8 @@ class SparseUPDEEngine:
             alpha_values: CSR phase lags.
             n_steps: Number of integration steps to perform.
 
-        Returns:
+        Returns
+        -------
             Final phase vector after n_steps.
         """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
@@ -429,7 +431,7 @@ class SparseUPDEEngine:
         psi: float,
         alpha_values: FloatArray,
     ) -> FloatArray:
-        """Internal UPDE derivative calculation (Python fallback)."""
+        """Compute the internal UPDE derivative (Python fallback)."""
         n = len(theta)
         dtheta = omegas.copy()
         for i in range(n):

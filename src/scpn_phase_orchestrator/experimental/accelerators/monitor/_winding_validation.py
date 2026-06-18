@@ -60,7 +60,6 @@ def validate_winding_backend_inputs(
     n: object,
 ) -> tuple[FloatArray, int, int]:
     """Validate flat phase history before optional runtime loading."""
-
     t_int = _validate_int(t, "t", minimum=2)
     n_int = _validate_int(n, "n", minimum=1)
     raw = np.asarray(phases_flat)
@@ -94,7 +93,6 @@ def expected_winding_backend_output(
     n: int,
 ) -> IntArray:
     """Return the exact NumPy winding reference for a validated flat payload."""
-
     phases = np.asarray(phases_flat, dtype=np.float64).reshape(t, n)
     dtheta = np.diff(phases, axis=0)
     # Wrap into the half-open interval (-π, π] so an exact forward
@@ -112,7 +110,6 @@ def validate_winding_backend_output(
     expected: IntArray | None = None,
 ) -> IntArray:
     """Validate direct-backend winding output before returning it."""
-
     t_int = _validate_int(t, "t", minimum=2)
     n_int = _validate_int(n, "n", minimum=1)
     if _contains_boolean_alias(value):

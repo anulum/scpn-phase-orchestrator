@@ -48,7 +48,6 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
 
 def validate_phase_distance_backend_input(phases: object) -> FloatArray:
     """Return a finite real one-dimensional phase vector for direct backends."""
-
     raw = np.asarray(phases)
     if _contains_boolean_alias(raw):
         raise ValueError("phases must not contain boolean values")
@@ -67,7 +66,6 @@ def validate_phase_distance_backend_input(phases: object) -> FloatArray:
 
 def expected_phase_distance_backend_output(phases: FloatArray) -> FloatArray:
     """Return the exact wrapped circular phase-distance matrix."""
-
     diff = phases[:, np.newaxis] - phases[np.newaxis, :]
     matrix = np.abs(np.arctan2(np.sin(diff), np.cos(diff)))
     np.fill_diagonal(matrix, 0.0)
@@ -124,7 +122,6 @@ def _npe_from_distance_matrix(distances: FloatArray, max_radius: float) -> float
 
 def expected_npe_backend_output(phases: FloatArray, max_radius: float) -> float:
     """Return the exact NPE scalar required from a backend."""
-
     distances = expected_phase_distance_backend_output(phases)
     return _npe_from_distance_matrix(distances, max_radius)
 
@@ -137,7 +134,6 @@ def validate_phase_distance_backend_output(
     atol: float = 1.0e-10,
 ) -> FloatArray:
     """Return a validated pairwise circular-distance matrix from a backend."""
-
     raw = np.asarray(distances)
     if _contains_boolean_alias(raw):
         raise ValueError("phase distance backend output must not contain booleans")
@@ -204,7 +200,6 @@ def validate_npe_backend_inputs(
     max_radius: object,
 ) -> tuple[FloatArray, float]:
     """Return validated NPE phase vector and filtration cutoff."""
-
     return validate_phase_distance_backend_input(phases), _validate_max_radius(
         max_radius
     )
@@ -217,7 +212,6 @@ def validate_npe_backend_output(
     atol: float = 1.0e-12,
 ) -> float:
     """Return a validated normalised persistent-entropy backend scalar."""
-
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"NPE backend output must be a real scalar, got {value!r}")
     score = float(value)

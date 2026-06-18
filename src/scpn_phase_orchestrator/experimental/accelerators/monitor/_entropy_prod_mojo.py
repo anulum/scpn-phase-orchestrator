@@ -74,7 +74,6 @@ def entropy_production_rate_mojo(
     dt: float,
 ) -> float:
     """Compute the entropy-production-rate monitor through the Mojo backend."""
-
     phases, omegas, knm, alpha, dt = validate_entropy_prod_backend_inputs(
         phases,
         omegas,

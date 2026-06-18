@@ -63,7 +63,6 @@ def entropy_production_rate_go(
     dt: float,
 ) -> float:
     """Compute the entropy-production-rate monitor through the Go backend."""
-
     phases, omegas, knm, alpha, dt = validate_entropy_prod_backend_inputs(
         phases,
         omegas,

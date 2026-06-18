@@ -35,7 +35,6 @@ def _reject_json_constant(value: str) -> None:
 
 def key_id_for_secret(key_material: str) -> str:
     """Return the audit key identifier stored in signed audit metadata."""
-
     if key_material == "":
         raise ValueError("audit signing key must not be empty")
     return hashlib.sha256(key_material.encode()).hexdigest()[:16]
@@ -49,7 +48,6 @@ def audit_verification_keys() -> dict[str, str]:
     the corresponding secret. Invalid or mismatched keyrings fail closed by
     raising `ValueError`.
     """
-
     keys: dict[str, str] = {}
     current_key = os.environ.get("SPO_AUDIT_KEY")
     if current_key == "":

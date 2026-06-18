@@ -6,9 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Partial Information Decomposition for phase groups
 
-r"""Partial information decomposition (PID) of two oscillator groups about the
-global synchronisation state, with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+r"""Partial information decomposition (PID) about global synchronisation.
+
+Decomposes two oscillator groups with a 5-backend fallback chain.
 
 Model
 -----

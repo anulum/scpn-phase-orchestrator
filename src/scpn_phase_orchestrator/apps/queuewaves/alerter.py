@@ -135,7 +135,7 @@ class WebhookAlerter:
         return [a for a, _ in to_send]
 
     def send_sync(self, anomalies: list[Anomaly]) -> list[Anomaly]:
-        """Synchronous dedup-only path for testing (no HTTP)."""
+        """Run the synchronous dedup-only path for testing (no HTTP)."""
         now = time.time()
         sent: list[Anomaly] = []
         for a in anomalies:

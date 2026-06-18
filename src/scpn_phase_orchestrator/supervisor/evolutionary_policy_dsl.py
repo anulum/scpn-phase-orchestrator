@@ -242,7 +242,6 @@ class _MutationAxis:
 
 def parse_policy_dsl(policy_dsl: str) -> tuple[PolicyRule, ...]:
     """Parse immutable rule objects from a compact policy DSL string."""
-
     if not isinstance(policy_dsl, str) or not policy_dsl.strip():
         raise ValueError("policy_dsl must be a non-empty string")
 
@@ -285,7 +284,6 @@ def run_offline_evolutionary_policy_dsl_search(
     mutation_step: float = 0.05,
 ) -> PolicyMutationSearchReport:
     """Generate deterministic offline policy-DSl mutation candidates for review."""
-
     config = PolicyMutationSearchConfig(
         generation_count=generation_count,
         population_size=population_size,

@@ -51,7 +51,8 @@ def inverse_loss(
         dt: integration timestep
         l1_weight: L1 penalty on K for sparsity (0 = no penalty)
 
-    Returns:
+    Returns
+    -------
         Scalar loss
     """
     n_steps = observed.shape[0] - 1
@@ -145,7 +146,8 @@ def analytical_inverse(
         dt: integration timestep
         alpha: Tikhonov (ridge) regularisation strength. 0 = no reg.
 
-    Returns:
+    Returns
+    -------
         (K, omegas): inferred (N, N) coupling and (N,) frequencies
     """
     T, N = observed.shape
@@ -214,7 +216,8 @@ def hybrid_inverse(
         lr: learning rate for refinement
         window_size: shooting window size for refinement
 
-    Returns:
+    Returns
+    -------
         (K, omegas, losses): inferred params + refinement loss history
     """
     K, omegas = analytical_inverse(observed, dt, alpha=alpha)
@@ -285,7 +288,8 @@ def infer_coupling(
             Recommended: 10-20 steps. 0 = single-shot (original behaviour).
         grad_clip: maximum gradient norm (0 = no clipping)
 
-    Returns:
+    Returns
+    -------
         Tuple of (K, omegas, losses) where:
             K: (N, N) inferred coupling matrix
             omegas: (N,) inferred natural frequencies
@@ -356,7 +360,8 @@ def coupling_correlation(K_true: jax.Array, K_inferred: jax.Array) -> jax.Array:
         K_true: (N, N) ground truth coupling
         K_inferred: (N, N) inferred coupling
 
-    Returns:
+    Returns
+    -------
         Scalar correlation in [-1, 1]
     """
     # Flatten upper triangle (exclude diagonal)

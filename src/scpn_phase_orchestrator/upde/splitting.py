@@ -6,9 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Strang operator splitting integrator
 
-"""Strang second-order operator splitting for the Kuramoto ODE
-with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Strang second-order operator splitting for the Kuramoto ODE.
+
+Exposes a 5-backend fallback chain.
 
 Scheme
 ------
@@ -400,7 +400,6 @@ class SplittingEngine:
         n_steps: int,
     ) -> FloatArray:
         """Apply repeated Strang-split phase integration steps."""
-
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
         knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
@@ -448,7 +447,7 @@ class SplittingEngine:
         )
 
     def order_parameter(self, phases: FloatArray) -> float:
-        """Standard Kuramoto R = |<exp(iθ)>|."""
+        """Compute the standard Kuramoto R = |<exp(iθ)>|."""
         phases64 = _validate_state_array(
             phases,
             name="phases",

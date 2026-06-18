@@ -91,7 +91,8 @@ class KuramotoLayer(eqx.Module):
         Args:
             phases: (n,) initial phase angles in [0, 2pi)
 
-        Returns:
+        Returns
+        -------
             (n,) phase angles after n_steps of Kuramoto integration
         """
         if self.mask is not None:
@@ -120,7 +121,8 @@ class KuramotoLayer(eqx.Module):
         Args:
             phases: (n,) initial phase angles
 
-        Returns:
+        Returns
+        -------
             Tuple of (final_phases, trajectory) where trajectory is (n_steps, n)
         """
         if self.mask is not None:
@@ -146,7 +148,8 @@ class KuramotoLayer(eqx.Module):
         Args:
             phases: (n,) initial phases
 
-        Returns:
+        Returns
+        -------
             Scalar R in [0, 1]
         """
         final = self(phases)

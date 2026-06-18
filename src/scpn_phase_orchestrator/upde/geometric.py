@@ -6,9 +6,9 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Torus-preserving geometric integrator
 
-"""Torus-preserving symplectic Euler integrator on ``T^N = (S¹)^N``
-with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Torus-preserving symplectic Euler integrator on ``T^N = (S¹)^N``.
+
+Exposes a 5-backend fallback chain.
 
 Scheme
 ------
@@ -308,7 +308,6 @@ class TorusEngine:
         n_steps: int,
     ) -> FloatArray:
         """Integrate torus phase dynamics for the requested number of steps."""
-
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -348,7 +347,7 @@ class TorusEngine:
         )
 
     def order_parameter(self, phases: FloatArray) -> float:
-        """Standard Kuramoto R = |<exp(iθ)>|."""
+        """Compute the standard Kuramoto R = |<exp(iθ)>|."""
         phases64 = _validate_state_array(
             phases,
             name="phases",

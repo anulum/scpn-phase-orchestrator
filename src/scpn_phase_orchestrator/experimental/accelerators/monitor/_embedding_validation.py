@@ -79,7 +79,6 @@ def validate_delay_embed_backend_inputs(
     dimension: object,
 ) -> tuple[FloatArray, int, int, int]:
     """Return validated direct-backend delay-embedding arguments."""
-
     s = _validate_float_vector(signal, name="signal")
     delay_int = _validate_int_at_least(delay, name="delay", minimum=1)
     dimension_int = _validate_int_at_least(dimension, name="dimension", minimum=1)
@@ -98,7 +97,6 @@ def validate_mutual_information_backend_inputs(
     n_bins: object,
 ) -> tuple[FloatArray, int, int]:
     """Return validated direct-backend mutual-information arguments."""
-
     return (
         _validate_float_vector(signal, name="signal"),
         _validate_int_at_least(lag, name="lag", minimum=0),
@@ -112,7 +110,6 @@ def validate_nearest_neighbor_backend_inputs(
     m: object,
 ) -> tuple[FloatArray, int, int]:
     """Return validated direct-backend nearest-neighbor arguments."""
-
     t_int = _validate_int_at_least(t, name="t", minimum=0)
     m_int = _validate_int_at_least(m, name="m", minimum=1)
     e = _validate_float_vector(embedded, name="embedded")
@@ -131,7 +128,6 @@ def validate_delay_embed_backend_output(
     t_effective: int,
 ) -> FloatArray:
     """Validate a direct backend delay embedding against exact indexing."""
-
     raw = np.asarray(embedded)
     if _contains_boolean_alias(raw):
         raise ValueError("delay embedding backend output must not contain booleans")
@@ -160,7 +156,6 @@ def validate_delay_embed_backend_output(
 
 def validate_mutual_information_backend_output(value: object) -> float:
     """Validate a direct backend mutual-information scalar."""
-
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("mutual information backend output must not be boolean")
@@ -185,7 +180,6 @@ def validate_nearest_neighbor_backend_outputs(
     t: int,
 ) -> tuple[FloatArray, NDArray[np.int64]]:
     """Validate direct backend nearest-neighbour payloads."""
-
     t_int = _validate_int_at_least(t, name="t", minimum=0)
     raw_dist = np.asarray(distances)
     raw_idx = np.asarray(indices)

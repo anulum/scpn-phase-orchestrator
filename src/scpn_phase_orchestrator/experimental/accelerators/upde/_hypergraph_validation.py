@@ -149,7 +149,6 @@ def validate_hypergraph_inputs(
     int,
 ]:
     """Validate and normalise direct hypergraph backend inputs."""
-
     n_i = _validate_positive_int(n, name="n")
     p = _as_real_vector(phases, name="phases")
     o = _as_real_vector(omegas, name="omegas")
@@ -185,7 +184,6 @@ def validate_hypergraph_inputs(
 
 def validate_hypergraph_output(value: Any, *, n: int) -> FloatArray:
     """Validate direct backend phase output."""
-
     out = _as_real_vector(value, name="hypergraph backend output")
     if out.size != n:
         raise ValueError(f"hypergraph backend output must have length {n}")

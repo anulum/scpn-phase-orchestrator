@@ -130,7 +130,7 @@ class PrometheusCollector:
         self,
         values: dict[str, tuple[float, float]],
     ) -> dict[str, MetricBuffer]:
-        """Synchronous push for testing: values = {name: (timestamp, value)}."""
+        """Push values synchronously for testing: {name: (timestamp, value)}."""
         for name, (ts, val) in values.items():
             if name in self._buffers:
                 self._buffers[name].push(ts, val)

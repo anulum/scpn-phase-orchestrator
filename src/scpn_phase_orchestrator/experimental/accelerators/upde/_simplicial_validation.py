@@ -125,7 +125,6 @@ def validate_simplicial_inputs(
     n_steps: Any,
 ) -> ValidatedSimplicialInputs:
     """Validate direct pairwise-plus-simplicial backend inputs."""
-
     n_i = _as_positive_int(n, name="n")
     p = _as_real_vector(phases, name="phases")
     o = _as_real_vector(omegas, name="omegas")
@@ -150,7 +149,6 @@ def validate_simplicial_inputs(
 
 def validate_simplicial_output(value: Any, *, n: int) -> FloatArray:
     """Validate direct backend torus phases before returning them."""
-
     out = _as_real_vector(value, name="simplicial backend output")
     if out.size != n:
         raise ValueError(f"simplicial backend output must have length {n}")

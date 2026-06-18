@@ -98,7 +98,8 @@ class StuartLandauLayer(eqx.Module):
             phases: (n,) initial phase angles in [0, 2pi)
             amplitudes: (n,) initial amplitudes (r >= 0)
 
-        Returns:
+        Returns
+        -------
             Tuple of (final_phases, final_amplitudes)
         """
         fp, fr, _, _ = stuart_landau_forward(
@@ -120,7 +121,8 @@ class StuartLandauLayer(eqx.Module):
     ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
         """Run dynamics and return full trajectories.
 
-        Returns:
+        Returns
+        -------
             (final_phases, final_amplitudes, phase_trajectory, amplitude_trajectory)
         """
         return stuart_landau_forward(
@@ -143,7 +145,8 @@ class StuartLandauLayer(eqx.Module):
             phases: (n,) initial phases
             amplitudes: (n,) initial amplitudes
 
-        Returns:
+        Returns
+        -------
             Scalar R in [0, 1]
         """
         fp, _ = self(phases, amplitudes)
@@ -160,7 +163,8 @@ class StuartLandauLayer(eqx.Module):
             phases: (n,) initial phases
             amplitudes: (n,) initial amplitudes
 
-        Returns:
+        Returns
+        -------
             Scalar mean amplitude
         """
         import jax.numpy as jnp

@@ -61,8 +61,7 @@ def attnres_modulate_julia(
     temperature: float,
     lambda_: float,
 ) -> FloatArray:
-    """Julia-backed multi-head AttnRes modulation. Signature matches
-    the Rust / Go / Mojo FFIs."""
+    """Julia-backed multi-head AttnRes modulation matching the Rust/Go/Mojo FFIs."""
     (
         knm_flat,
         theta,

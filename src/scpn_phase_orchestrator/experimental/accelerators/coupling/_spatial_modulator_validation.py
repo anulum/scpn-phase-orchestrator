@@ -93,7 +93,6 @@ def validate_spatial_modulator_inputs(
     epsilon: object,
 ) -> tuple[FloatArray, FloatArray, int, int, float, int, float, float, float]:
     """Validate direct backend inputs before optional runtime loading."""
-
     n_int = _validate_positive_int(n, name="n")
     dim_int = _validate_positive_int(dim, name="dim")
     if isinstance(decay_form_code, (bool, np.bool_)) or not isinstance(
@@ -124,7 +123,6 @@ def validate_spatial_modulator_inputs(
 
 def validate_spatial_modulator_output(value: object, *, n: int) -> FloatArray:
     """Validate direct backend output cardinality and physics invariants."""
-
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("spatial modulator output must be finite real-valued")
     try:

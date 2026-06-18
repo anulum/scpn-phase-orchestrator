@@ -308,8 +308,7 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
 def compute_layer_coherence(
     phases: FloatArray, layer_mask: BoolArray | IntArray
 ) -> float:
-    """Order parameter R for the subset of oscillators selected by
-    ``layer_mask`` (boolean mask *or* integer index array)."""
+    """Return the order parameter R for the oscillators in ``layer_mask``."""
     phases = _validate_phases("phases", phases)
     if phases.size == 0:
         return 0.0

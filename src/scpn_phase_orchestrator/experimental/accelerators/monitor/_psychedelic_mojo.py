@@ -40,7 +40,6 @@ def _ensure_exe() -> Path:
 
 def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
     """Compute phase-distribution entropy through the Mojo backend."""
-
     p, bin_count = validate_psychedelic_backend_inputs(phases, n_bins)
     if p.size == 0:
         return 0.0

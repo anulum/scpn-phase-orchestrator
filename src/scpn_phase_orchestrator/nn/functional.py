@@ -120,7 +120,8 @@ def kuramoto_step(
         K: (N, N) coupling matrix
         dt: integration timestep
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases, wrapped to [0, 2pi)
     """
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
@@ -142,7 +143,8 @@ def kuramoto_rk4_step(
         K: (N, N) coupling matrix
         dt: integration timestep
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases, wrapped to [0, 2pi)
     """
 
@@ -178,7 +180,8 @@ def kuramoto_forward(
         n_steps: number of integration steps
         method: "rk4" or "euler"
 
-    Returns:
+    Returns
+    -------
         Tuple of:
             final: (N,) phases after n_steps
             trajectory: (n_steps, N) full phase trajectory
@@ -226,7 +229,8 @@ def kuramoto_step_masked(
         mask: (N, N) binary mask (1 = edge exists, 0 = no edge)
         dt: integration timestep
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases
     """
     dphi = _kuramoto_deriv_masked(phases, omegas, K, mask)
@@ -272,7 +276,8 @@ def kuramoto_forward_masked(
         n_steps: integration steps
         method: "rk4" or "euler"
 
-    Returns:
+    Returns
+    -------
         (final, trajectory) — same as kuramoto_forward
     """
     step_fn = kuramoto_rk4_step_masked if method == "rk4" else kuramoto_step_masked
@@ -295,7 +300,7 @@ def _winfree_deriv(
     omegas: jax.Array,
     K: float,
 ) -> jax.Array:
-    """Derivative for the Winfree model.
+    """Compute the derivative for the Winfree model.
 
     dθ_i/dt = ω_i + (K/N) · Q(θ_i) · Σ_j P(θ_j)
 
@@ -321,7 +326,8 @@ def winfree_step(
         K: scalar coupling strength
         dt: integration timestep
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases
     """
     return (phases + dt * _winfree_deriv(phases, omegas, K)) % TWO_PI
@@ -363,7 +369,8 @@ def winfree_forward(
         n_steps: integration steps
         method: "rk4" or "euler"
 
-    Returns:
+    Returns
+    -------
         (final, trajectory)
     """
     step_fn = winfree_rk4_step if method == "rk4" else winfree_step
@@ -382,7 +389,7 @@ def _simplicial_deriv(
     K: jax.Array,
     sigma2: float | jax.Array,
 ) -> jax.Array:
-    """Derivative for Kuramoto with pairwise + 3-body simplicial coupling.
+    """Compute the derivative for Kuramoto with pairwise + 3-body coupling.
 
     Gambuzza et al. 2021, Nature Communications 12:1255; Tang et al. 2025.
     """
@@ -418,7 +425,8 @@ def simplicial_step(
         dt: integration timestep
         sigma2: 3-body coupling strength (0 = standard Kuramoto)
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases, wrapped to [0, 2pi)
     """
     dphi = _simplicial_deriv(phases, omegas, K, sigma2)
@@ -441,7 +449,8 @@ def simplicial_rk4_step(
         dt: integration timestep
         sigma2: 3-body coupling strength (0 = standard Kuramoto)
 
-    Returns:
+    Returns
+    -------
         (N,) updated phases, wrapped to [0, 2pi)
     """
 
@@ -476,7 +485,8 @@ def simplicial_forward(
         sigma2: 3-body coupling strength (0 = standard Kuramoto)
         method: "rk4" or "euler"
 
-    Returns:
+    Returns
+    -------
         Tuple of (final, trajectory) where trajectory is (n_steps, N)
     """
     step_fn = simplicial_rk4_step if method == "rk4" else simplicial_step
@@ -498,7 +508,7 @@ def _stuart_landau_deriv(
     K_r: jax.Array,
     epsilon: float,
 ) -> tuple[jax.Array, jax.Array]:
-    """Derivative for Stuart-Landau coupled oscillators.
+    """Compute the derivative for Stuart-Landau coupled oscillators.
 
     Phase: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i)
     Amplitude: dr_i/dt = (μ_i - r_i²)r_i + ε Σ_j K^r_ij · r_j · cos(θ_j - θ_i)
@@ -535,7 +545,8 @@ def stuart_landau_step(
         dt: integration timestep
         epsilon: amplitude coupling strength
 
-    Returns:
+    Returns
+    -------
         Tuple of (new_phases, new_amplitudes)
     """
     dtheta, dr = _stuart_landau_deriv(phases, amplitudes, omegas, mu, K, K_r, epsilon)
@@ -566,7 +577,8 @@ def stuart_landau_rk4_step(
         dt: integration timestep
         epsilon: amplitude coupling strength
 
-    Returns:
+    Returns
+    -------
         Tuple of (new_phases, new_amplitudes)
     """
 
@@ -609,7 +621,8 @@ def stuart_landau_forward(
         epsilon: amplitude coupling strength
         method: "rk4" or "euler"
 
-    Returns:
+    Returns
+    -------
         (final_phases, final_amplitudes, phase_traj, amp_traj)
         where trajectories are (n_steps, N)
     """
@@ -637,7 +650,8 @@ def order_parameter(phases: jax.Array) -> jax.Array:
     Args:
         phases: (N,) or (T, N) oscillator phases
 
-    Returns:
+    Returns
+    -------
         Scalar R value (or (T,) if trajectory input)
     """
     z = jnp.exp(1j * phases)
@@ -652,7 +666,8 @@ def plv(trajectory: jax.Array) -> jax.Array:
     Args:
         trajectory: (T, N) phase trajectory
 
-    Returns:
+    Returns
+    -------
         (N, N) PLV matrix, values in [0, 1]
     """
     # (T, N, 1) - (T, 1, N) -> (T, N, N) phase differences
@@ -673,7 +688,8 @@ def coupling_laplacian(K: jax.Array) -> jax.Array:
     Args:
         K: (N, N) symmetric coupling matrix
 
-    Returns:
+    Returns
+    -------
         (N, N) Laplacian matrix
     """
     K = _validate_square_coupling("K", K)
@@ -711,7 +727,8 @@ def saf_order_parameter(
         cg_tol: Relative tolerance for the conjugate-gradient solver.
         cg_maxiter: Optional maximum conjugate-gradient iterations.
 
-    Returns:
+    Returns
+    -------
         Scalar estimated order parameter in [0, 1]
     """
     K = _validate_square_coupling("K", K)
@@ -801,7 +818,8 @@ def saf_loss(
         cg_tol: Relative tolerance for the conjugate-gradient solver.
         cg_maxiter: Optional maximum conjugate-gradient iterations.
 
-    Returns:
+    Returns
+    -------
         Scalar loss (lower = better synchronization)
     """
     budget = _require_non_negative_real(budget, "budget")

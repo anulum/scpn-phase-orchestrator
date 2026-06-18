@@ -58,7 +58,6 @@ def validate_extract_envelope_input(
     window: int,
 ) -> tuple[FloatArray, int]:
     """Validate and normalise direct RMS-envelope extraction inputs."""
-
     return (
         _as_finite_vector(amps, name="amps", allow_empty=True),
         _as_positive_window(window),
@@ -67,7 +66,6 @@ def validate_extract_envelope_input(
 
 def validate_extract_envelope_output(value: Any, *, n: int) -> FloatArray:
     """Validate a direct backend RMS-envelope vector."""
-
     out = _as_finite_vector(value, name="envelope", allow_empty=True)
     if out.size != n:
         raise ValueError(f"envelope must contain {n} values")
@@ -78,13 +76,11 @@ def validate_extract_envelope_output(value: Any, *, n: int) -> FloatArray:
 
 def validate_envelope_modulation_input(env: FloatArray) -> FloatArray:
     """Validate and normalise direct modulation-depth inputs."""
-
     return _as_finite_vector(env, name="env", allow_empty=True)
 
 
 def validate_envelope_modulation_output(value: Any) -> float:
     """Validate a direct backend modulation-depth scalar."""
-
     array = np.asarray(value)
     if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
         raise TypeError("modulation depth must be real-valued, not boolean")

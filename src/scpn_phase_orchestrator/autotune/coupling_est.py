@@ -115,7 +115,8 @@ def estimate_coupling(
         omegas: (n_oscillators,) natural frequencies.
         dt: timestep between samples.
 
-    Returns:
+    Returns
+    -------
         (n_oscillators, n_oscillators) estimated coupling matrix K_ij.
     """
     phases, omegas, dt = _validate_inputs(phases, omegas, dt)

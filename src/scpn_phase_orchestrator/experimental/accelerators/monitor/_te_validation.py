@@ -151,7 +151,6 @@ def expected_phase_te_backend_output(
     n_bins: int,
 ) -> float:
     """Return the exact NumPy transfer-entropy reference for validated payloads."""
-
     n_samples = min(int(source.size), int(target.size))
     if n_samples < 3:
         return 0.0
@@ -187,7 +186,6 @@ def expected_te_matrix_backend_output(
     n_bins: int,
 ) -> FloatArray:
     """Return the exact NumPy transfer-entropy matrix reference."""
-
     series = np.asarray(phase_series, dtype=np.float64).reshape(n_osc, n_time)
     matrix = np.zeros((n_osc, n_osc), dtype=np.float64)
     for i in range(n_osc):
@@ -209,7 +207,6 @@ def validate_te_backend_output(
     atol: float = 1e-12,
 ) -> float:
     """Validate a direct pairwise transfer-entropy backend scalar."""
-
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("transfer entropy backend output must not be boolean")
@@ -251,7 +248,6 @@ def validate_te_matrix_backend_output(
     atol: float = 1e-12,
 ) -> FloatArray:
     """Validate a direct transfer-entropy matrix backend payload."""
-
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("transfer entropy matrix backend output has boolean values")

@@ -312,7 +312,6 @@ class DelayedEngine:
     @property
     def delay_steps(self) -> int:
         """Return the configured discrete coupling delay."""
-
         return self._delay_steps
 
     def step(
@@ -326,7 +325,6 @@ class DelayedEngine:
         step_idx: int = 0,
     ) -> FloatArray:
         """Advance one delayed Kuramoto timestep from validated state arrays."""
-
         del step_idx
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -363,7 +361,6 @@ class DelayedEngine:
         n_steps: int = 100,
     ) -> FloatArray:
         """Run delayed Kuramoto integration for ``n_steps`` validated steps."""
-
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))

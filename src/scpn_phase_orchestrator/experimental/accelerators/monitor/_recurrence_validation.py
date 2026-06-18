@@ -95,7 +95,6 @@ def validate_recurrence_backend_inputs(
     angular: object,
 ) -> tuple[FloatArray, int, int, float, bool]:
     """Return validated direct-backend recurrence-matrix arguments."""
-
     t_int = _validate_int_at_least(t, name="t", minimum=0)
     d_int = _validate_int_at_least(d, name="d", minimum=1)
     return (
@@ -116,7 +115,6 @@ def validate_cross_recurrence_backend_inputs(
     angular: object,
 ) -> tuple[FloatArray, FloatArray, int, int, float, bool]:
     """Return validated direct-backend cross-recurrence arguments."""
-
     t_int = _validate_int_at_least(t, name="t", minimum=0)
     d_int = _validate_int_at_least(d, name="d", minimum=1)
     return (
@@ -149,7 +147,6 @@ def expected_recurrence_backend_output(
     angular: bool,
 ) -> NDArray[np.uint8]:
     """Return the exact binary recurrence relation required from a backend."""
-
     a = traj_a_flat.reshape(t, d)
     b = traj_b_flat.reshape(t, d)
     diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]
@@ -168,7 +165,6 @@ def validate_recurrence_backend_output(
     expected: object | None = None,
 ) -> NDArray[np.uint8]:
     """Validate direct-backend recurrence output before returning it."""
-
     t_int = _validate_int_at_least(t, name="t", minimum=0)
     try:
         array = np.asarray(value)

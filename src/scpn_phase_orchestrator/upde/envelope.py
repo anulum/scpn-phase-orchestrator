@@ -6,11 +6,11 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Amplitude envelope solver
 
-"""Sliding-window RMS envelope + modulation-depth statistic with a
-5-backend fallback chain per ``feedback_module_standard_attnres.md``.
-``AVAILABLE_BACKENDS`` keeps canonical fallback order; ``ACTIVE_BACKEND`` is
-chosen by a small hot-path probe so slow external wrappers do not displace the
-faster local path.
+"""Sliding-window RMS envelope and modulation-depth statistic.
+
+Exposes a 5-backend fallback chain. ``AVAILABLE_BACKENDS`` keeps the canonical
+fallback order; ``ACTIVE_BACKEND`` is chosen by a small hot-path probe so slow
+external wrappers do not displace the faster local path.
 
 The sliding-window RMS uses the O(T) cumulative-sum form: compute
 ``cs[i] = Σ_{k < i} x_k²``, then
@@ -208,7 +208,8 @@ def extract_envelope(
             series.
         window: RMS window length in samples.
 
-    Returns:
+    Returns
+    -------
         Same shape as input; the first ``window − 1`` entries are
         front-padded with the first valid RMS value.
     """

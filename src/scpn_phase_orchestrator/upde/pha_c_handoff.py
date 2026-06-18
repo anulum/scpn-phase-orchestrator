@@ -93,7 +93,6 @@ class PHACHandoffRecord:
 
     def to_dict(self) -> dict[str, float | int | bool | str]:
         """Return a JSON-safe canonical representation."""
-
         return pha_c_handoff_record_to_dict(self)
 
 
@@ -278,7 +277,6 @@ def build_pha_c_handoff_record(
     Kuramoto order-parameter and source-chain digests, then returns a
     non-actuating record with a canonical hash.
     """
-
     phase_vector = _as_float_vector(phases, name="phases")
     position_vector = _as_float_vector(positions, name="positions")
     if position_vector.shape != phase_vector.shape:
@@ -364,7 +362,6 @@ def pha_c_handoff_record_to_dict(
     record: PHACHandoffRecord,
 ) -> dict[str, float | int | bool | str]:
     """Convert a :class:`PHACHandoffRecord` into a JSON-safe dictionary."""
-
     return {
         "t": float(record.t),
         "oscillator_count": int(record.oscillator_count),
@@ -406,7 +403,6 @@ def verify_pha_c_handoff_record(record: PHACHandoffRecord) -> PHACHandoffRecord:
     lets benchmark gates, replay ledgers, and downstream MIF/FRC lanes reject
     tampered evidence without access to the original phase and position vectors.
     """
-
     if not isinstance(record, PHACHandoffRecord):
         raise ValueError("record must be a PHACHandoffRecord")
     _validate_sha256_hex(record.phase_state_sha256, name="phase_state_sha256")

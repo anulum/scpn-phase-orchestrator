@@ -48,7 +48,6 @@ def hodge_decomposition_julia(
     n_tris: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """Compute the Hodge gradient, curl, and harmonic flow matrices with Julia."""
-
     k, p, n, edges, n_edges, tris, n_tris = validate_hodge_backend_inputs(
         knm_flat,
         phases,

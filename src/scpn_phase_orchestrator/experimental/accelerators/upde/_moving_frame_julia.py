@@ -47,7 +47,6 @@ def moving_frame_run_julia(
     rtol: float,
 ) -> FloatArray:
     """Run the moving-frame schedule through Julia."""
-
     (
         p,
         z,

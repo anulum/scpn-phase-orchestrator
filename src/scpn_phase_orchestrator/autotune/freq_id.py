@@ -56,7 +56,8 @@ def identify_frequencies(
         n_modes: number of DMD modes to keep (default: auto from singular values).
         rank_threshold: singular value threshold for rank truncation.
 
-    Returns:
+    Returns
+    -------
         FrequencyResult with frequencies, amplitudes, and layer assignment
         (which channel maps to which frequency cluster).
     """

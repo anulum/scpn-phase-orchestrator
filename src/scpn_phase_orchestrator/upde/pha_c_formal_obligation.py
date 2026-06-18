@@ -160,7 +160,6 @@ class PHACKinematicProofObligation:
 
     def to_dict(self) -> dict[str, bool | float | int | str]:
         """Return a JSON-safe canonical representation."""
-
         return pha_c_kinematic_proof_obligation_to_dict(self)
 
 
@@ -386,7 +385,6 @@ def pha_c_kinematic_proof_obligation_to_dict(
     obligation: PHACKinematicProofObligation,
 ) -> dict[str, bool | float | int | str]:
     """Return a canonical JSON-safe proof-obligation manifest."""
-
     payload = _dict_without_record_hash(obligation)
     payload["record_sha256"] = obligation.record_sha256
     return payload
@@ -414,7 +412,6 @@ def build_pha_c_kinematic_proof_obligation(
     ``lipschitz_step_gain_units`` values when they want a predictive
     finite-horizon Gronwall certificate instead of a replay-only envelope.
     """
-
     verified_record = verify_pha_c_acceptance_record(record)
     scale_m = _validate_positive_scale(fixed_point_scale_m, name="fixed_point_scale_m")
     scale_rad = _validate_positive_scale(
@@ -694,7 +691,6 @@ def verify_pha_c_kinematic_proof_obligation(
     obligation: PHACKinematicProofObligation,
 ) -> PHACKinematicProofObligation:
     """Validate a PHA-C Lean proof-obligation manifest fail-closed."""
-
     if not isinstance(obligation, PHACKinematicProofObligation):
         raise TypeError("obligation must be a PHACKinematicProofObligation")
     exact_strings = {

@@ -57,7 +57,6 @@ def steady_state_r_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     (
         p,
         o,

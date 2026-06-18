@@ -60,7 +60,6 @@ def order_parameter_julia(phases: FloatArray) -> tuple[float, float]:
 
     The calculation is delegated to the Julia backend.
     """
-
     phases64 = validate_order_parameter_inputs(phases)
     if phases64.size == 0:
         return (0.0, 0.0)
@@ -74,7 +73,6 @@ def plv_julia(phases_a: FloatArray, phases_b: FloatArray) -> float:
 
     The calculation is delegated to the Julia backend.
     """
-
     a64, b64 = validate_plv_inputs(phases_a, phases_b)
     if a64.size == 0:
         return 0.0
@@ -87,7 +85,6 @@ def layer_coherence_julia(phases: FloatArray, indices: IntArray) -> float:
 
     The calculation is delegated to the Julia backend.
     """
-
     phases64, indices64 = validate_layer_coherence_inputs(phases, indices)
     if indices64.size == 0:
         return 0.0

@@ -63,7 +63,8 @@ def balloon_windkessel_step(
         alpha: Grubb's vessel stiffness exponent (default 0.32)
         e0: resting oxygen extraction fraction (default 0.34)
 
-    Returns:
+    Returns
+    -------
         Tuple of (new_s, new_f, new_v, new_q)
     """
     E_f = 1.0 - (1.0 - e0) ** (1.0 / jnp.maximum(f, 0.01))
@@ -95,7 +96,8 @@ def bold_signal(
         v: (N,) or (T, N) blood volume
         q: (N,) or (T, N) deoxyhemoglobin
 
-    Returns:
+    Returns
+    -------
         BOLD signal, same shape as input
     """
     return v0 * (k1 * (1.0 - q) + k2 * (1.0 - q / v) + k3 * (1.0 - v))
@@ -126,7 +128,8 @@ def bold_from_neural(
         alpha: Grubb's vessel stiffness exponent (default 0.32)
         e0: resting oxygen extraction fraction (default 0.34)
 
-    Returns:
+    Returns
+    -------
         (T_bold, N) BOLD signal, where T_bold = T * dt / dt_bold
     """
     T, n_regions = neural.shape

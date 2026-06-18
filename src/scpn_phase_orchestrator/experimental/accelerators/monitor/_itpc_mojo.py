@@ -75,7 +75,6 @@ def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
 
 def compute_itpc_mojo(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
     """Compute inter-trial phase coherence through the Mojo backend."""
-
     phases, n_trials, n_tp = validate_compute_itpc_backend_inputs(
         phases_flat,
         n_trials,
@@ -102,7 +101,6 @@ def itpc_persistence_mojo(
     pause_indices: IntArray,
 ) -> float:
     """Compute inter-trial phase-coherence persistence through the Mojo backend."""
-
     phases, n_trials, n_tp, idx = validate_itpc_persistence_backend_inputs(
         phases_flat,
         n_trials,

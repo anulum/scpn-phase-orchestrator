@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Recurrence analysis for phase dynamics
 
-"""Recurrence analysis with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Recurrence analysis with a 5-backend fallback chain.
 
 Compute surface:
 
@@ -389,7 +388,8 @@ def recurrence_matrix(
         metric: ``"euclidean"`` or ``"angular"`` (chord distance on
             ``S¹``).
 
-    Returns:
+    Returns
+    -------
         ``(T, T)`` boolean array.
     """
     traj = _validate_trajectory(trajectory, name="trajectory")
@@ -515,8 +515,7 @@ def _rqa_from_matrix(
     v_min: int,
     exclude_main_diag: bool,
 ) -> RQAResult:
-    """Shared line-analysis path — consumed by both :func:`rqa` and
-    :func:`cross_rqa` after the dispatched matrix is obtained."""
+    """Run the shared line-analysis path for :func:`rqa` and :func:`cross_rqa`."""
     l_min = _validate_line_min(l_min, name="l_min")
     v_min = _validate_line_min(v_min, name="v_min")
     t = R.shape[0]

@@ -74,7 +74,6 @@ def local_order_parameter_mojo(
     n: int,
 ) -> FloatArray:
     """Compute local phase order parameters through the Mojo backend."""
-
     phases_vec, knm_vec, n = validate_chimera_backend_inputs(phases, knm_flat, n)
     if n == 0:
         return np.zeros(0, dtype=np.float64)

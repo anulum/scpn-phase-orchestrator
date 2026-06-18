@@ -57,7 +57,6 @@ def delay_embed_julia(
     dimension: int,
 ) -> FloatArray:
     """Build a delay-coordinate embedding through the Julia backend."""
-
     s, delay_int, dimension_int, t_eff = validate_delay_embed_backend_inputs(
         signal,
         delay,
@@ -86,7 +85,6 @@ def mutual_information_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     s, lag_int, bins_int = validate_mutual_information_backend_inputs(
         signal,
         lag,
@@ -113,7 +111,6 @@ def nearest_neighbor_distances_julia(
 
     The calculation is delegated to the Julia backend.
     """
-
     e, t_int, m_int = validate_nearest_neighbor_backend_inputs(embedded, t, m)
     if t_int == 0:
         return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.int64)

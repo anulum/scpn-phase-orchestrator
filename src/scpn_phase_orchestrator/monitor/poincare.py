@@ -6,8 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Poincaré section analysis
 
-"""Poincaré-section crossings with a 5-backend fallback chain per
-``feedback_module_standard_attnres.md``.
+"""Poincaré-section crossings with a 5-backend fallback chain.
 
 Detects when a trajectory crosses a hyperplane, extracts the
 crossing points (Poincaré map), and computes return-time statistics.
@@ -17,7 +16,8 @@ oscillator's phase crosses a reference value. The module exposes
 :func:`poincare_section` for generic hyperplanes and
 :func:`phase_poincare` for the phase-specific case.
 
-References:
+References
+----------
     Poincaré 1899, "Les méthodes nouvelles de la mécanique céleste".
     Strogatz 2015, "Nonlinear Dynamics and Chaos", Ch. 8.
 """

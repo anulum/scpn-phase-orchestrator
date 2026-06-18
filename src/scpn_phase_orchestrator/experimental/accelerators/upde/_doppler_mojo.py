@@ -42,7 +42,6 @@ def doppler_run_mojo(
     rtol: float,
 ) -> FloatArray:
     """Run the Doppler schedule through the Mojo executable."""
-
     (
         p,
         omega,

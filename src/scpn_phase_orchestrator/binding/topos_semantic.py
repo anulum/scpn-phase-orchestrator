@@ -126,7 +126,6 @@ class SymbolicBindingValidationReport:
 
 def _build_report_hash(record: dict[str, Any]) -> str:
     """Build a deterministic report hash from JSON-sorted payload."""
-
     payload = dict(record)
     payload.pop("report_hash", None)
     try:
@@ -459,7 +458,6 @@ def validate_symbolic_binding_functor(
     artifacts: GeneratedBindingArtifacts,
 ) -> SymbolicBindingValidationReport:
     """Validate symbolic compiler output as a source-to-binding functor."""
-
     artifacts = _validate_binding_artefact_inputs(artifacts)
     obligations: list[SymbolicBindingObligation] = []
 

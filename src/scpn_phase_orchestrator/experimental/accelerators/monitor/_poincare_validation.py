@@ -88,7 +88,6 @@ def validate_poincare_section_backend_inputs(
     direction_id: object,
 ) -> tuple[FloatArray, int, int, FloatArray, float, int]:
     """Validate direct section-backend inputs before optional runtime loading."""
-
     t_int = _validate_int(t, "t", minimum=1)
     d_int = _validate_int(d, "d", minimum=1)
     trajectory = _validate_float_vector(traj_flat, "traj_flat")
@@ -115,7 +114,6 @@ def validate_phase_poincare_backend_inputs(
     section_phase: object,
 ) -> tuple[FloatArray, int, int, int, float]:
     """Validate direct phase-backend inputs before optional runtime loading."""
-
     t_int = _validate_int(t, "t", minimum=1)
     n_int = _validate_int(n, "n", minimum=1)
     phases = _validate_float_vector(phases_flat, "phases_flat")
@@ -140,7 +138,6 @@ def validate_poincare_backend_outputs(
     dim: int,
 ) -> tuple[FloatArray, FloatArray, int]:
     """Validate direct Poincare backend crossing payloads before return."""
-
     t_int = _validate_int(t, "t", minimum=1)
     dim_int = _validate_int(dim, "dim", minimum=1)
     count = _validate_int(n_cr, "n_cr", minimum=0)

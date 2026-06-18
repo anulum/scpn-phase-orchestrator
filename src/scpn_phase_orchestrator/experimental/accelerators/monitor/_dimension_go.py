@@ -77,7 +77,6 @@ def correlation_integral_go(
     epsilons: FloatArray,
 ) -> FloatArray:
     """Compute the phase-space correlation integral through the Go backend."""
-
     traj, t_int, d_int, ii, jj, eps = validate_correlation_integral_backend_inputs(
         traj_flat,
         t,
@@ -114,7 +113,6 @@ def correlation_integral_go(
 
 def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
     """Estimate the Kaplan-Yorke dimension through the Go backend."""
-
     le = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     lib = _load_lib()
     out = ctypes.c_double(0.0)

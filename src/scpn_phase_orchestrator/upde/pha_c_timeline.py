@@ -101,7 +101,6 @@ class PHACTimelineRecord:
 
     def to_dict(self) -> dict[str, float | int | bool | str]:
         """Return a JSON-safe canonical representation."""
-
         return pha_c_event_timeline_to_dict(self)
 
 
@@ -329,7 +328,6 @@ def build_pha_c_event_timeline(
     counter is threaded through every sample so downstream consumers can review
     acquisition, loss, and reset events without raw state arrays.
     """
-
     phase_matrix = _as_float_matrix(phases_by_step, name="phases_by_step")
     position_matrix = _as_float_matrix(positions_by_step, name="positions_by_step")
     if position_matrix.shape != phase_matrix.shape:
@@ -420,7 +418,6 @@ def pha_c_event_timeline_to_dict(
     timeline: PHACTimelineRecord,
 ) -> dict[str, float | int | bool | str]:
     """Return the canonical JSON-safe PHA-C timeline payload."""
-
     payload = _timeline_dict_without_hash(
         sample_count=timeline.sample_count,
         oscillator_count=timeline.oscillator_count,
@@ -462,7 +459,6 @@ def verify_pha_c_event_timeline(
     timeline: PHACTimelineRecord,
 ) -> PHACTimelineRecord:
     """Replay and validate a PHA-C event timeline hash and safety boundary."""
-
     if not isinstance(timeline, PHACTimelineRecord):
         raise ValueError("timeline must be a PHACTimelineRecord")
     _validate_sha256_hex(timeline.time_state_sha256, name="time_state_sha256")

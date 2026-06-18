@@ -68,8 +68,10 @@ class InformationalExtractor(PhaseExtractor):
         self._node_id = _validate_node_id(node_id)
 
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
-        """Args:
-        signal: 1-D array of event timestamps in seconds (sorted ascending).
+        """Extract phase states from event timestamps.
+
+        Args:
+            signal: 1-D array of event timestamps in seconds (sorted ascending).
         sample_rate: not used for timestamps but kept for interface consistency.
         """
         signal = _validate_signal(signal)

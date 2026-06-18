@@ -20,6 +20,5 @@ from ._merge_window_validation import (
 
 def evaluate_merge_window_go(*args: object, **kwargs: object) -> MergeReport:
     """Evaluate the go merge-window contract against the reference."""
-
     expected = expected_merge_window_report(*args, **kwargs)
     return validate_merge_window_report(expected, expected)

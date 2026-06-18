@@ -58,7 +58,6 @@ def lyapunov_spectrum_julia(
     psi: float,
 ) -> FloatArray:
     """Estimate the Lyapunov spectrum through the Julia backend."""
-
     (
         phases_init,
         omegas,

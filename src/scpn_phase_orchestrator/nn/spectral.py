@@ -27,7 +27,8 @@ def laplacian_spectrum(K: jax.Array) -> jax.Array:
     Args:
         K: (N, N) symmetric coupling matrix (non-negative weights)
 
-    Returns:
+    Returns
+    -------
         (N,) eigenvalues in ascending order. First is ~0 (connected graph).
     """
     D = jnp.diag(jnp.sum(K, axis=1))
@@ -44,7 +45,8 @@ def algebraic_connectivity(K: jax.Array) -> jax.Array:
     Args:
         K: (N, N) symmetric coupling matrix
 
-    Returns:
+    Returns
+    -------
         Scalar lambda_2
     """
     return laplacian_spectrum(K)[1]
@@ -61,7 +63,8 @@ def eigenratio(K: jax.Array) -> jax.Array:
     Args:
         K: (N, N) symmetric coupling matrix
 
-    Returns:
+    Returns
+    -------
         Scalar lambda_N / lambda_2
     """
     eigs = laplacian_spectrum(K)
@@ -84,7 +87,8 @@ def sync_threshold(
         K: (N, N) symmetric coupling matrix
         omegas: (N,) natural frequencies
 
-    Returns:
+    Returns
+    -------
         Scalar estimated critical coupling
     """
     lambda_2 = algebraic_connectivity(K)

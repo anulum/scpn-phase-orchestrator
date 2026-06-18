@@ -42,7 +42,6 @@ def build_autopoietic_lineage_replay_corpus() -> tuple[dict[str, object], ...]:
     sandbox domain-diverse replay evidence without loading partner data,
     contacting services, or enabling any live merge path.
     """
-
     return (
         {
             "replay_id": "power_grid_frequency_recovery",
@@ -95,7 +94,6 @@ def build_autopoietic_lineage_sandbox(
     summaries, and emits reviewable policy diffs. It never permits live merge,
     hot patching, or actuation.
     """
-
     if not isinstance(child_budget, int) or isinstance(child_budget, bool):
         raise ValueError("child_budget must be a positive integer")
     if child_budget <= 0:
@@ -168,7 +166,6 @@ def build_intergenerational_policy_inheritance(
     reviewed child diff, records replay-fitness components, and signs metadata
     for operator review. It does not permit direct hot patches or actuation.
     """
-
     lineage = _validated_lineage_manifest(lineage_manifest)
     child = _validated_review_child(child_candidate)
     signer = _non_empty_string(signer_id, "signer_id")
@@ -221,7 +218,6 @@ def build_intergenerational_policy_inheritance_history(
     the package is deterministic, validates disabled direct hot patching and
     actuation, and does not execute or merge inherited policies.
     """
-
     lineage = _validated_lineage_manifest(lineage_manifest)
     if (
         not isinstance(inheritance_manifests, Sequence)

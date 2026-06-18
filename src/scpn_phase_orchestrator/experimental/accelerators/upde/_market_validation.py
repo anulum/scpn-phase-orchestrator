@@ -68,7 +68,6 @@ def validate_market_order_inputs(
     n: int,
 ) -> tuple[FloatArray, int, int]:
     """Validate direct market order-parameter backend inputs."""
-
     t_i = _as_positive_int(t, name="t")
     n_i = _as_positive_int(n, name="n")
     return _validate_flat_phase_payload(phases_flat, t=t_i, n=n_i), t_i, n_i
@@ -81,7 +80,6 @@ def validate_market_plv_inputs(
     window: int,
 ) -> tuple[FloatArray, int, int, int]:
     """Validate direct market phase-locking backend inputs."""
-
     t_i = _as_positive_int(t, name="t")
     n_i = _as_positive_int(n, name="n")
     window_i = _as_positive_int(window, name="window")
@@ -97,7 +95,6 @@ def validate_market_plv_inputs(
 
 def validate_market_order_output(value: Any, *, t: int) -> FloatArray:
     """Validate direct backend ``R(t)`` output before publication."""
-
     t_i = _as_positive_int(t, name="t")
     out = _as_real_finite_vector(value, name="order parameter")
     if out.size != t_i:
@@ -117,7 +114,6 @@ def validate_market_plv_output(
     window: int,
 ) -> FloatArray:
     """Validate direct backend rolling PLV matrices before publication."""
-
     t_i = _as_positive_int(t, name="t")
     n_i = _as_positive_int(n, name="n")
     window_i = _as_positive_int(window, name="window")

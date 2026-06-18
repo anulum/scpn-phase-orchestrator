@@ -75,7 +75,6 @@ def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
 
 def phase_te_mojo(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     """Compute pairwise phase transfer entropy through the Mojo backend."""
-
     source, target, n_bins = validate_phase_te_backend_inputs(
         source,
         target,
@@ -106,7 +105,6 @@ def te_matrix_mojo(
     n_bins: int,
 ) -> FloatArray:
     """Compute the phase transfer-entropy matrix through the Mojo backend."""
-
     phase_series, n_osc, n_time, n_bins = validate_te_matrix_backend_inputs(
         phase_series,
         n_osc,

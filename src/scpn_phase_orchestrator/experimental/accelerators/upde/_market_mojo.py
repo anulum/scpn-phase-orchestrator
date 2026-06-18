@@ -90,7 +90,6 @@ def market_order_parameter_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     p, t_i, n_i = validate_market_order_inputs(phases_flat, t, n)
     tokens = ["ORDER", str(t_i), str(n_i)]
     tokens.extend(repr(float(x)) for x in p.tolist())
@@ -108,7 +107,6 @@ def market_plv_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     p, t_i, n_i, window_i = validate_market_plv_inputs(
         phases_flat,
         t,

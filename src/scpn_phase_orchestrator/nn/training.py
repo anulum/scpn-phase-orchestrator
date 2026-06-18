@@ -45,7 +45,8 @@ def sync_loss(
         phases: (N,) initial phases
         target_R: target order parameter R in [0, 1]
 
-    Returns:
+    Returns
+    -------
         Scalar loss (R - target_R)^2
     """
     # type ignore: Equinox modules expose __call__ dynamically by subclass.
@@ -68,7 +69,8 @@ def trajectory_loss(
         phases: (N,) initial phases
         observed: (T, N) observed phase trajectory
 
-    Returns:
+    Returns
+    -------
         Scalar mean circular distance
     """
     # type ignore: training accepts the trajectory-capable Equinox protocol.
@@ -89,7 +91,8 @@ def coupling_sparsity_loss(
         K: (N, N) coupling matrix
         target_density: fraction of nonzero entries desired
 
-    Returns:
+    Returns
+    -------
         Scalar penalty: |mean(|K|) - target_density * mean(|K|_initial)|
     """
     return jnp.mean(jnp.abs(K)) - target_density * jnp.mean(jnp.abs(K))
@@ -114,7 +117,8 @@ def train_step(
         opt_state: optax optimiser state
         optimizer: optax optimiser (e.g. optax.adam(1e-3))
 
-    Returns:
+    Returns
+    -------
         (updated_model, updated_opt_state, loss_value)
     """
     loss, grads = eqx.filter_value_and_grad(loss_fn)(model)
@@ -140,7 +144,8 @@ def train(
         n_epochs: number of training steps
         callback: optional fn(epoch, model, loss) called each step
 
-    Returns:
+    Returns
+    -------
         (trained_model, loss_history)
     """
     opt_state = optimizer.init(eqx.filter(model, eqx.is_array))
@@ -182,7 +187,8 @@ def generate_kuramoto_data(
         K_scale: coupling matrix scale
         key: PRNG key
 
-    Returns:
+    Returns
+    -------
         (K_true, omegas_true, phases0, trajectory)
         where trajectory is (T, N)
     """
@@ -218,7 +224,8 @@ def generate_chimera_data(
         coupling_range: number of neighbours on each side
         key: PRNG key
 
-    Returns:
+    Returns
+    -------
         (K, phases0, trajectory) where K is (N, N), trajectory is (T, N)
     """
     k1 = key

@@ -87,7 +87,6 @@ def upde_run_mojo(
 
     The calculation is delegated to the Mojo backend.
     """
-
     (
         p,
         o,
@@ -152,7 +151,6 @@ def upde_run_omega_schedule_mojo(
     rtol: float,
 ) -> FloatArray:
     """Run UPDE with one frequency vector per outer step in Mojo."""
-
     (
         p,
         schedule,

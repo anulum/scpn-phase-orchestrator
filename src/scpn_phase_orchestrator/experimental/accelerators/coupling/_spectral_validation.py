@@ -82,7 +82,6 @@ def validate_spectral_backend_inputs(
     n: object,
 ) -> tuple[FloatArray, int]:
     """Validate direct spectral inputs before optional runtime loading."""
-
     n_int = _validate_n(n)
     k = _validate_knm_flat(knm_flat)
     expected = n_int * n_int

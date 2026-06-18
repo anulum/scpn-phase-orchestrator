@@ -386,7 +386,6 @@ class EventStreamWriter:
 
     def write(self, payload: Payload, *, event_type: str | None = None) -> None:
         """Append one payload as a hashed and optionally signed audit event."""
-
         canonical_payload = _canonical_json(payload)
         payload_sha256 = hashlib.sha256(canonical_payload.encode()).hexdigest()
         self._sequence += 1
@@ -451,7 +450,6 @@ class EventStreamWriter:
 
     def close(self) -> None:
         """Flush buffered audit bytes and close the underlying stream handle."""
-
         self._fh.flush()
         self._fh.close()
 
@@ -475,7 +473,6 @@ def _read_events_from_handle(fh: BinaryIO) -> list[AuditStreamEvent]:
 
 def read_event_stream(path: str | Path) -> list[AuditStreamEvent]:
     """Read all protobuf events from an SPO audit stream."""
-
     with Path(path).open("rb") as fh:
         return _read_events_from_handle(fh)
 
@@ -506,7 +503,6 @@ def iter_event_stream(
     poll_interval_s: float = 0.2,
 ) -> Iterator[AuditStreamEvent]:
     """Yield existing and newly appended stream events in order."""
-
     poll_interval = _validate_poll_interval_s(poll_interval_s)
     path_obj = Path(path)
     if not from_start and not path_obj.exists():
@@ -532,7 +528,6 @@ def tail_event_stream(
 
     Use :func:`iter_event_stream` for unbounded live streaming.
     """
-
     if max_events is None:
         raise ValueError("max_events is required for bounded tail_event_stream")
     if (
@@ -558,7 +553,6 @@ def verify_event_stream_integrity(
     events: list[AuditStreamEvent],
 ) -> tuple[bool, int]:
     """Verify payload digests, sequence continuity, and event hash chaining."""
-
     try:
         audit_keys = audit_verification_keys()
     except ValueError:

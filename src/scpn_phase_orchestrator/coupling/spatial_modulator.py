@@ -412,7 +412,6 @@ class SpatialCouplingModulator:
 
     def distance_matrix(self, positions: object) -> FloatArray:
         """Return the validated pairwise distance matrix for ``positions``."""
-
         positions64 = _validate_positions(positions)
         if self.distance_fn is None:
             return _pairwise_euclidean(positions64)
@@ -424,7 +423,6 @@ class SpatialCouplingModulator:
 
     def modulation_matrix(self, positions: object) -> FloatArray:
         """Return ``K_base * f(distance)`` with a zero self-coupling diagonal."""
-
         positions64 = _validate_positions(positions)
         return _python_modulation_matrix(
             positions64,
@@ -442,7 +440,6 @@ class SpatialCouplingModulator:
         ``k_nm_base`` must be square, finite, real-valued, and zero diagonal.
         The output preserves that zero self-coupling diagonal.
         """
-
         positions64 = _validate_positions(positions)
         base = _validate_knm_base(k_nm_base, expected_n=positions64.shape[0])
         form = _validate_decay_form(self.decay_form)
@@ -486,7 +483,6 @@ class SpatialCouplingModulator:
         ``M = modulation_matrix(positions)``. Custom distance functions are not
         differentiable through this closed-form path and fail closed.
         """
-
         if self.distance_fn is not None:
             raise ValueError(
                 "jacobian_positions requires the default Euclidean distance"
@@ -543,7 +539,6 @@ def spatial_modulate(
     epsilon: float = 1.0e-12,
 ) -> FloatArray:
     """Functional wrapper around :class:`SpatialCouplingModulator`."""
-
     return SpatialCouplingModulator(
         K_base=K_base,
         decay_form=decay_form,

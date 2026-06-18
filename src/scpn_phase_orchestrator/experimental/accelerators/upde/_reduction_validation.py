@@ -59,7 +59,6 @@ def validate_oa_inputs(
     n_steps: int,
 ) -> ValidatedOAInputs:
     """Validate direct Ott-Antonsen RK4 kernel inputs before runtime loading."""
-
     z_re_f = _as_real_scalar(z_re, name="z_re")
     z_im_f = _as_real_scalar(z_im, name="z_im")
     if math.hypot(z_re_f, z_im_f) > 1.0 + _UNIT_DISK_TOLERANCE:
@@ -90,7 +89,6 @@ def validate_oa_output(
     psi: float,
 ) -> OAOutput:
     """Validate a backend OA state before publishing it to the public API."""
-
     z_re_f = _as_real_scalar(z_re, name="backend z_re output")
     z_im_f = _as_real_scalar(z_im, name="backend z_im output")
     radius_f = _as_real_scalar(radius, name="backend R output")

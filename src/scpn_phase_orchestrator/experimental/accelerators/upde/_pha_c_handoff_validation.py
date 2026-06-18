@@ -54,7 +54,6 @@ _DISCRETE_FIELDS = (
 
 def expected_pha_c_handoff_record(*args: object, **kwargs: object) -> PHACHandoffRecord:
     """Return the Python reference handoff after fail-closed validation."""
-
     return build_pha_c_handoff_record(*cast(Any, args), **cast(Any, kwargs))
 
 
@@ -65,7 +64,6 @@ def validate_pha_c_handoff_record(
     tolerance: float = 1.0e-12,
 ) -> PHACHandoffRecord:
     """Validate an accelerator handoff against the Python reference contract."""
-
     verify_pha_c_handoff_record(got)
     verify_pha_c_handoff_record(expected)
     got_dict = got.to_dict()

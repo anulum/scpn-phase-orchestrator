@@ -70,7 +70,6 @@ def modulation_index_go(
 
     The calculation is delegated to the Go backend.
     """
-
     t, a, bins = validate_modulation_index_inputs(theta_low, amp_high, n_bins)
     n = t.size
     if n == 0:
@@ -100,7 +99,6 @@ def pac_matrix_go(
 
     The calculation is delegated to the Go backend.
     """
-
     p, a, t_i, n_i, bins = validate_pac_matrix_inputs(
         phases_flat,
         amplitudes_flat,
