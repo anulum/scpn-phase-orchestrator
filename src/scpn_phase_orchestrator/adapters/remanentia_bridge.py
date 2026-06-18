@@ -31,7 +31,7 @@ import urllib.request
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Real
-from typing import TypeAlias
+from typing import Any, TypeAlias
 from urllib.parse import urlparse
 
 import numpy as np
@@ -167,7 +167,7 @@ def _validated_recall_scores(payload: object) -> list[float]:
     return scores
 
 
-def _validated_response_payload(payload: object, *, name: str) -> dict:
+def _validated_response_payload(payload: object, *, name: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{name} payload must be a mapping")
     return payload
@@ -235,7 +235,7 @@ class RemanentiaBridge:
             ),
         )
 
-    def _open(self, req: urllib.request.Request) -> dict:
+    def _open(self, req: urllib.request.Request) -> dict[str, Any]:
         """Execute a urllib request, enforcing http(s) scheme."""
         url = req.full_url
         if not url.startswith(("http://", "https://")):
@@ -250,11 +250,11 @@ class RemanentiaBridge:
                 name="response",
             )
 
-    def _get(self, path: str) -> dict:
+    def _get(self, path: str) -> dict[str, Any]:
         """GET request to Remanentia API."""
         return self._open(urllib.request.Request(f"{self._url}{path}"))
 
-    def _post(self, path: str, data: dict) -> dict:
+    def _post(self, path: str, data: dict[str, Any]) -> dict[str, Any]:
         """POST request to Remanentia API."""
         body = json.dumps(data).encode()
         req = urllib.request.Request(

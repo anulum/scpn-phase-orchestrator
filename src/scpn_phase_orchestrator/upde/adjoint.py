@@ -112,7 +112,7 @@ def gradient_knm_jax(  # pragma: no cover — requires JAX
             "JAX is required for autodiff gradients: pip install jax jaxlib"
         ) from None
 
-    jax.config.update("jax_enable_x64", True)
+    jax.config.update("jax_enable_x64", True)  # type: ignore[no-untyped-call]  # jax.config.update is untyped in jax
 
     @jax.jit
     def _forward(knm_j: Any) -> Any:

@@ -21,6 +21,7 @@ import logging
 import time
 from math import isfinite
 from numbers import Real
+from typing import Any
 
 from scpn_phase_orchestrator.apps.queuewaves.config import AlertSink
 from scpn_phase_orchestrator.apps.queuewaves.detector import Anomaly
@@ -50,7 +51,7 @@ def _require_cooldown_seconds(value: object) -> float:
     return cooldown
 
 
-def _format_slack(anomaly: Anomaly, suppressed: int = 0) -> dict:
+def _format_slack(anomaly: Anomaly, suppressed: int = 0) -> dict[str, Any]:
     emoji = _SEVERITY_EMOJI.get(anomaly.severity, ":question:")
     color = _SEVERITY_COLORS.get(anomaly.severity, "#808080")
     text = anomaly.message
@@ -76,7 +77,7 @@ def _format_slack(anomaly: Anomaly, suppressed: int = 0) -> dict:
     }
 
 
-def _format_generic(anomaly: Anomaly, suppressed: int = 0) -> dict:
+def _format_generic(anomaly: Anomaly, suppressed: int = 0) -> dict[str, Any]:
     return {
         "type": anomaly.type,
         "severity": anomaly.severity,

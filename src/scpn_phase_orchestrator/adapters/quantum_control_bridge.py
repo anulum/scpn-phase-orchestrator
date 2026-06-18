@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 from hashlib import sha256
 from numbers import Integral, Real
-from typing import TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -173,7 +173,7 @@ class QuantumControlBridge:
         self._n: int = int(n_oscillators)
         self._trotter_order: int = int(trotter_order)
 
-    def import_artifact(self, artifact_dict: dict) -> UPDEState:
+    def import_artifact(self, artifact_dict: dict[str, Any]) -> UPDEState:
         """Convert a scpn-quantum-control result dict into UPDEState."""
         artifact = _require_mapping(artifact_dict, name="artifact_dict")
         if "phases" not in artifact:
@@ -217,7 +217,7 @@ class QuantumControlBridge:
             regime_id=regime,
         )
 
-    def export_artifact(self, state: UPDEState) -> dict:
+    def export_artifact(self, state: UPDEState) -> dict[str, Any]:
         """Convert UPDEState back to a dict compatible with scpn-quantum-control."""
         layers, cross_layer_alignment = _validate_upde_state(state)
         fidelity = _require_fidelity(
@@ -395,7 +395,7 @@ class QuantumControlBridge:
         t_max: float = 1.0,
         dt: float = 0.1,
         trotter_per_step: int = 5,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Execute Trotterized quantum simulation of the phase network (Q-UPDE).
 
         This method maps the classical sin(delta theta) interaction to
@@ -442,7 +442,7 @@ class QuantumControlBridge:
     def quantum_to_orchestrator(
         self,
         quantum_theta: FloatArray,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Convert quantum phase array back to orchestrator-compatible dict."""
         theta = _finite_array(quantum_theta, name="quantum_theta")
         if theta.shape != (self._n,):
@@ -454,7 +454,7 @@ class QuantumControlBridge:
             quantum_to_orchestrator_phases,
         )
 
-        return cast("dict", quantum_to_orchestrator_phases(theta.copy()))
+        return cast("dict[str, Any]", quantum_to_orchestrator_phases(theta.copy()))
 
     def _validate_compiler_inputs(
         self,

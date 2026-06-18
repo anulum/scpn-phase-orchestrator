@@ -117,7 +117,7 @@ class SecureModbusAdapter:
             port=self._port,
             sslctx=self._ctx,
         )
-        if not client.connect():
+        if not client.connect():  # type: ignore[no-untyped-call]  # pymodbus client.connect is untyped
             raise ConnectionError("Modbus TLS connection failed")
         return client
 

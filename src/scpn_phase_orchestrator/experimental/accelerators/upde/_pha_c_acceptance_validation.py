@@ -15,9 +15,11 @@ from numpy.typing import ArrayLike
 from scpn_phase_orchestrator.coupling.spatial_modulator import (
     SpatialCouplingModulator,
 )
-from scpn_phase_orchestrator.upde.pha_c_acceptance import (
+from scpn_phase_orchestrator.monitor.merge_window import (
     DEFAULT_PHASE_TOL_RAD,
     DEFAULT_SPATIAL_TOL_M,
+)
+from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
     verify_pha_c_acceptance_record,

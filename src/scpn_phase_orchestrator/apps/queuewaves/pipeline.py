@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -74,11 +74,11 @@ class PipelineSnapshot:
     regime: str
     services: list[ServiceSnapshot]
     plv_matrix: list[list[float]]
-    layer_states: list[dict]
+    layer_states: list[dict[str, Any]]
     boundary_violations: list[str]
-    actions: list[dict]
+    actions: list[dict[str, Any]]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise snapshot to a JSON-compatible dict."""
         return {
             "tick": self.tick,

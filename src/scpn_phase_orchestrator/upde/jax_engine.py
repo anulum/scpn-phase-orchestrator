@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from math import isfinite
 from numbers import Integral, Real
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -85,8 +85,7 @@ def _validate_method(value: object) -> str:
     return value
 
 
-# type ignore: JAX tracer callables need dynamic signatures for jit wrapping.
-def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
+def _build_jax_step() -> tuple[Any, Any]:  # pragma: no cover
     """Build JIT-compiled Kuramoto step function."""
 
     @jit
@@ -102,8 +101,7 @@ def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     @jit
     # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _kuramoto_rk4(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
-        # type ignore: nested derivative keeps JAX tracer polymorphism.
-        def deriv(p):  # type: ignore[no-untyped-def]
+        def deriv(p: Any) -> Any:
             """Kuramoto coupling derivative at given phases."""
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
             coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
@@ -119,8 +117,7 @@ def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     return _kuramoto_step, _kuramoto_rk4
 
 
-# type ignore: JAX tracer callables need dynamic signatures for jit wrapping.
-def _build_jax_sl_step():  # type: ignore[no-untyped-def]  # pragma: no cover
+def _build_jax_sl_step() -> Any:  # pragma: no cover
     """Build JIT-compiled Stuart-Landau step function."""
 
     @jit
@@ -128,8 +125,7 @@ def _build_jax_sl_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     def _sl_rk4(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, dt):  # type: ignore[no-untyped-def]
         n = omegas.shape[0]
 
-        # type ignore: nested derivative keeps JAX tracer polymorphism.
-        def deriv(s):  # type: ignore[no-untyped-def]
+        def deriv(s: Any) -> Any:
             """Stuart-Landau coupled (phase, amplitude) derivative."""
             th, am = s[:n], s[n:]
             diff = th[jnp.newaxis, :] - th[:, jnp.newaxis]

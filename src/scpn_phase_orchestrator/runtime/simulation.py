@@ -34,7 +34,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from numbers import Real
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -490,7 +490,7 @@ def simulate(
                 r, psi_l = compute_order_parameter(phases[osc_ids])
             else:
                 r, psi_l = 0.0, 0.0
-            ls_kwargs: dict = {"R": r, "psi": psi_l}
+            ls_kwargs: dict[str, Any] = {"R": r, "psi": psi_l}
             if amplitude_mode:
                 layer_r = amplitudes[osc_ids] if osc_ids else np.array([])
                 if layer_r.size > 0:
@@ -521,7 +521,7 @@ def simulate(
             if executed_layer_states
             else 0.0
         )
-        state_kwargs: dict = {
+        state_kwargs: dict[str, Any] = {
             "layers": executed_layer_states,
             "cross_layer_alignment": cla,
             "stability_proxy": mean_r_val,
@@ -559,7 +559,7 @@ def simulate(
         boundary_violation_total += len(boundary_state.violations)
         upde_state = UPDEState(**state_kwargs)
 
-        actions: list = []
+        actions: list[Any] = []
         if policy_enabled and step_idx % control_interval == 0:
             actions = supervisor.decide(
                 upde_state, boundary_state, petri_ctx=obs_values
@@ -619,7 +619,7 @@ def simulate(
             )
 
         if audit_logger is not None:
-            log_kwargs: dict = {
+            log_kwargs: dict[str, Any] = {
                 "phases": input_phases,
                 "omegas": omegas,
                 "knm": eff_knm,

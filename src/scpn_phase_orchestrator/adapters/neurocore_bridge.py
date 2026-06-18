@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from math import isfinite
 from numbers import Integral, Real
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -210,7 +210,7 @@ class NeurocoreBridge:
             if not HAS_NEUROCORE:  # pragma: no cover
                 msg = "sc-neurocore not installed. pip install sc-neurocore"
                 raise ImportError(msg)
-            self._neurons: list = []
+            self._neurons: list[Any] = []
             for _ in range(self._n_total):
                 self._neurons.append(StochasticLIFNeuron())
         else:
@@ -326,10 +326,10 @@ class NeurocoreBridge:
         rates = self.step(state, n_substeps)
         return self.rates_to_actions(rates)
 
-    def get_neuron_states(self) -> list[dict]:
+    def get_neuron_states(self) -> list[dict[str, Any]]:
         """Return voltage/refractory state for all neurons."""
         if self._backend == "rust":
-            states: list[dict] = self._rust_ensemble.get_neuron_states()
+            states: list[dict[str, Any]] = self._rust_ensemble.get_neuron_states()
             return states
         if self._backend == "numpy":
             return [

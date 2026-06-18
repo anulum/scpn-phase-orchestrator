@@ -52,7 +52,7 @@ except ModuleNotFoundError:  # pragma: no cover
     HAS_GRPC = False  # pragma: no cover
 
 
-def _snap_to_response(snap: dict) -> StateResponse:
+def _snap_to_response(snap: dict[str, Any]) -> StateResponse:
     """Convert a SimulationState.snapshot() dict to a StateResponse."""
     layers = [
         LayerState(

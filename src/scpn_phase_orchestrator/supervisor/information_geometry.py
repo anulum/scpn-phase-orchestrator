@@ -391,7 +391,7 @@ def _load_jax_numpy() -> Any:
         import jax.numpy as jnp
     except Exception as exc:  # pragma: no cover - depends on optional runtime
         raise RuntimeError("backend='jax' requested but JAX is not available") from exc
-    jax.config.update("jax_enable_x64", True)
+    jax.config.update("jax_enable_x64", True)  # type: ignore[no-untyped-call]  # jax.config.update is untyped in jax
     return jnp
 
 

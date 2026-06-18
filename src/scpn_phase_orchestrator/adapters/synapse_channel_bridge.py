@@ -366,7 +366,7 @@ class SynapseChannelBridge:
 
         return knm
 
-    def get_agent_summary(self) -> dict[str, dict]:
+    def get_agent_summary(self) -> dict[str, dict[str, Any]]:
         """Return per-agent summary for display."""
         summary = {}
         for name, state in self._states.items():

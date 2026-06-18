@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Real
+from typing import Any
 
 from scpn_phase_orchestrator.binding.types import VALID_KNOBS, ActuatorMapping
 
@@ -48,7 +49,7 @@ class ActuationMapper:
             _validate_mapping(am)
             self._by_knob.setdefault(am.knob, []).append(am)
 
-    def map_actions(self, actions: list[ControlAction]) -> list[dict]:
+    def map_actions(self, actions: list[ControlAction]) -> list[dict[str, Any]]:
         """Convert ControlActions into actuator command dicts, clamping to limits."""
         commands = []
         for action in actions:

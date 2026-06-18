@@ -50,7 +50,7 @@ class BindingLoadError(BindingError):
     """Raised when a binding spec cannot be parsed."""
 
 
-def _require(data: dict, key: str, context: str = "") -> Any:
+def _require(data: dict[str, Any], key: str, context: str = "") -> Any:
     """Extract a required key from *data*, raising BindingLoadError if absent."""
     try:
         return data[key]
@@ -63,25 +63,25 @@ def _expected(kind: str, context: str, value: object) -> BindingLoadError:
     return BindingLoadError(f"expected {kind} in {context}, got {type(value).__name__}")
 
 
-def _require_mapping(value: object, context: str) -> dict:
+def _require_mapping(value: object, context: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise _expected("mapping", context, value)
     return value
 
 
-def _optional_mapping(value: object, context: str) -> dict:
+def _optional_mapping(value: object, context: str) -> dict[str, Any]:
     if value is None:
         return {}
     return _require_mapping(value, context)
 
 
-def _require_list(value: object, context: str) -> list:
+def _require_list(value: object, context: str) -> list[Any]:
     if not isinstance(value, list):
         raise _expected("list", context, value)
     return value
 
 
-def _optional_list(value: object, context: str) -> list:
+def _optional_list(value: object, context: str) -> list[Any]:
     if value is None:
         return []
     return _require_list(value, context)
@@ -158,11 +158,11 @@ def _require_number_pair(value: object, context: str) -> tuple[float, float]:
     return (items[0], items[1])
 
 
-def _load_drivers(data: dict) -> DriverSpec:
+def _load_drivers(data: dict[str, Any]) -> DriverSpec:
     """Load standard and named driver channel configuration maps."""
     drivers_data = _require_mapping(_require(data, "drivers", "root"), "drivers")
     standard_driver_keys = {"physical", "informational", "symbolic"}
-    driver_maps: dict[str, dict] = {}
+    driver_maps: dict[str, dict[str, Any]] = {}
     for key, value in drivers_data.items():
         driver_key = _require_str(key, "drivers key")
         if driver_key not in standard_driver_keys and not is_valid_channel_id(
@@ -186,7 +186,7 @@ def _load_drivers(data: dict) -> DriverSpec:
     )
 
 
-def _load_channels(data: dict) -> dict[str, ChannelSpec]:
+def _load_channels(data: dict[str, Any]) -> dict[str, ChannelSpec]:
     """Load optional typed N-channel declarations."""
     channels_data = _optional_mapping(data.get("channels"), "channels")
     channels: dict[str, ChannelSpec] = {}
@@ -236,7 +236,7 @@ def _load_channels(data: dict) -> dict[str, ChannelSpec]:
     return channels
 
 
-def _load_channel_groups(data: dict) -> dict[str, ChannelGroupSpec]:
+def _load_channel_groups(data: dict[str, Any]) -> dict[str, ChannelGroupSpec]:
     """Load optional N-channel group declarations."""
     groups_data = _optional_mapping(data.get("channel_groups"), "channel_groups")
     groups: dict[str, ChannelGroupSpec] = {}
@@ -262,7 +262,9 @@ def _load_channel_groups(data: dict) -> dict[str, ChannelGroupSpec]:
     return groups
 
 
-def _load_cross_channel_couplings(data: dict) -> list[CrossChannelCouplingSpec]:
+def _load_cross_channel_couplings(
+    data: dict[str, Any],
+) -> list[CrossChannelCouplingSpec]:
     """Load optional cross-channel coupling declarations."""
     couplings = []
     for i, raw_coupling in enumerate(
@@ -579,7 +581,7 @@ def _binding_spec_safe_loader(yaml_module: Any) -> type:
     of letting the last value win.
     """
 
-    class BindingSpecSafeLoader(yaml_module.SafeLoader):
+    class BindingSpecSafeLoader(yaml_module.SafeLoader):  # type: ignore[misc]  # base resolved from lazily imported yaml module to keep package import-time low
         pass
 
     def construct_mapping(loader: Any, node: Any, deep: bool = False) -> dict[Any, Any]:

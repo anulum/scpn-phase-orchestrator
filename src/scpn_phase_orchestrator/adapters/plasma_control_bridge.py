@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from math import isfinite
 from numbers import Integral, Real
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -195,7 +195,7 @@ class PlasmaControlBridge:
             return layer_omegas
         return np.repeat(layer_omegas, n_osc_per_layer)
 
-    def import_snapshot(self, tick_result: dict) -> UPDEState:
+    def import_snapshot(self, tick_result: dict[str, Any]) -> UPDEState:
         """Convert an scpn-control tick result dict to UPDEState.
 
         Expected keys: 'phases' (1-D array), optional 'regime', 'layer_sizes'.
@@ -246,7 +246,7 @@ class PlasmaControlBridge:
             regime_id=regime,
         )
 
-    def import_lyapunov_verdict(self, verdict_or_dict: object) -> dict:
+    def import_lyapunov_verdict(self, verdict_or_dict: object) -> dict[str, Any]:
         """Map a Lyapunov verdict to a boundary-compatible signal dict.
 
         Accepts dict with 'score' (float in [0,1]).
@@ -260,7 +260,7 @@ class PlasmaControlBridge:
             "stable": score > 0.3,
         }
 
-    def export_control_actions(self, actions: list) -> dict:
+    def export_control_actions(self, actions: list[Any]) -> dict[str, Any]:
         """Package a list of control action dicts for scpn-control consumption."""
         if not isinstance(actions, list):
             raise ValueError("actions must be a list of dicts")
@@ -276,14 +276,14 @@ class PlasmaControlBridge:
             "actions": exported,
         }
 
-    def check_physics_invariants(self, values: dict) -> list[dict]:
+    def check_physics_invariants(self, values: dict[str, Any]) -> list[dict[str, Any]]:
         """Check plasma physics invariants against local thresholds.
 
         Returns a list of violation dicts (empty if all invariants hold).
         """
         if not isinstance(values, dict):
             raise ValueError("physics invariant values must be a dict")
-        violations: list[dict] = []
+        violations: list[dict[str, Any]] = []
         q_min = values.get("q_min")
         if q_min is not None:
             q_min = _finite_positive_real(q_min, name="physics invariant q_min")

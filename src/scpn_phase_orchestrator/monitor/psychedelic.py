@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from numbers import Integral, Real
-from typing import TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -369,7 +369,7 @@ def simulate_psychedelic_trajectory(
     alpha: FloatArray,
     reduction_schedule: list[float],
     n_steps_per_level: int = 100,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Progressively reduce coupling, recording observables at each level.
 
     Models the entropic brain hypothesis: reduced serotonergic gating
@@ -400,7 +400,7 @@ def simulate_psychedelic_trajectory(
     alpha_values = _validate_coupling_matrix(alpha, name="alpha", expected_n=n)
     schedule = _validate_reduction_schedule(reduction_schedule)
     step_count = _validate_step_count(n_steps_per_level, name="n_steps_per_level")
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
 
     for rf in schedule:
         k_reduced = reduce_coupling(k_base, rf)

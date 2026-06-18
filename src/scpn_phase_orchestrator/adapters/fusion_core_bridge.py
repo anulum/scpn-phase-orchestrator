@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from math import isfinite
 from numbers import Integral, Real
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -118,7 +118,7 @@ class FusionCoreBridge:
             )
         self._n_layers = int(n_layers)
 
-    def observables_to_phases(self, snapshot: dict) -> FloatArray:
+    def observables_to_phases(self, snapshot: dict[str, Any]) -> FloatArray:
         """Map 6 fusion observables to [0, 2*pi) phases.
 
         Observable → Phase formula:
@@ -166,7 +166,7 @@ class FusionCoreBridge:
         self,
         phases: FloatArray,
         omegas: FloatArray,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Convert phase state back to feedback signals for the equilibrium solver."""
         phases = _finite_vector(phases, name="phases")
         omegas = _finite_vector(omegas, name="omegas")
@@ -184,7 +184,7 @@ class FusionCoreBridge:
             "n_oscillators": n,
         }
 
-    def import_q_profile(self, q_profile_or_dict: object) -> dict:
+    def import_q_profile(self, q_profile_or_dict: object) -> dict[str, Any]:
         """Parse a q-profile from dict or scpn-fusion-core object.
 
         Returns normalised dict with keys: q_min, q_max, q_axis, q_edge.
@@ -230,7 +230,7 @@ class FusionCoreBridge:
             raise ValueError("q_edge must be within q_min and q_max")
         return {"q_min": q_min, "q_max": q_max, "q_axis": q_axis, "q_edge": q_edge}
 
-    def import_equilibrium(self, kernel_result: dict) -> dict:
+    def import_equilibrium(self, kernel_result: dict[str, Any]) -> dict[str, Any]:
         """Extract equilibrium observables from a fusion kernel result dict."""
         if not isinstance(kernel_result, dict):
             raise ValueError("kernel_result must be a dict")
@@ -261,14 +261,14 @@ class FusionCoreBridge:
             ),
         }
 
-    def check_stability(self, observables: dict) -> list[dict]:
+    def check_stability(self, observables: dict[str, Any]) -> list[dict[str, Any]]:
         """Check fusion stability invariants.
 
         Returns a list of violation dicts (empty if all invariants hold).
         """
         if not isinstance(observables, dict):
             raise ValueError("stability observables must be a dict")
-        violations: list[dict] = []
+        violations: list[dict[str, Any]] = []
         q_min = observables.get("q_min")
         if q_min is None:
             q_min = observables.get("q_profile")

@@ -74,19 +74,19 @@ _REGIME_COLORS = {
 class CoherencePlot:
     """Audit log visualisation from JSONL step records."""
 
-    def __init__(self, log_data: list[dict]) -> None:
+    def __init__(self, log_data: list[dict[str, Any]]) -> None:
         self._data = log_data
         self._steps = [
             d for d in log_data if isinstance(d, dict) and "step" in d and "layers" in d
         ]
 
-    def _require_steps(self) -> list[dict]:
+    def _require_steps(self) -> list[dict[str, Any]]:
         if not self._steps:
             raise ValueError("No step records in log data")
         return self._steps
 
     @staticmethod
-    def _layers(step: dict) -> list[dict]:
+    def _layers(step: dict[str, Any]) -> list[dict[str, Any]]:
         layers = step.get("layers", [])
         if not isinstance(layers, list):
             return []
@@ -113,7 +113,7 @@ class CoherencePlot:
         return None
 
     @staticmethod
-    def _actions(step: dict) -> list[dict]:
+    def _actions(step: dict[str, Any]) -> list[dict[str, Any]]:
         actions = step.get("actions", [])
         if not isinstance(actions, list):
             return []

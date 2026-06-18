@@ -21,6 +21,7 @@ import re
 from dataclasses import dataclass, field
 from math import isfinite
 from numbers import Real
+from typing import Any
 
 from scpn_phase_orchestrator.exceptions import ValidationError
 
@@ -69,7 +70,7 @@ class OscillatorFamily:
 
     channel: str
     extractor_type: str
-    config: dict
+    config: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -85,12 +86,12 @@ class CouplingSpec:
 class DriverSpec:
     """Configuration for standard and named external driver channels."""
 
-    physical: dict
-    informational: dict
-    symbolic: dict
-    extra: dict[str, dict] | None = None
+    physical: dict[str, Any]
+    informational: dict[str, Any]
+    symbolic: dict[str, Any]
+    extra: dict[str, dict[str, Any]] | None = None
 
-    def channel_config(self, channel: str) -> dict:
+    def channel_config(self, channel: str) -> dict[str, Any]:
         """Return driver config for a standard or named channel."""
         standard = {
             "P": self.physical,
@@ -104,7 +105,7 @@ class DriverSpec:
             return standard[channel]
         return (self.extra or {}).get(channel, {})
 
-    def all_channel_configs(self) -> dict[str, dict]:
+    def all_channel_configs(self) -> dict[str, dict[str, Any]]:
         """Return standard driver configs plus named extension channels."""
         configs = {
             "P": self.physical,
@@ -244,7 +245,7 @@ class GeometrySpec:
     """Geometry constraint type and parameters for K_nm projection."""
 
     constraint_type: str
-    params: dict
+    params: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -252,8 +253,8 @@ class ProtocolTransitionSpec:
     """One transition in the Petri net protocol specification."""
 
     name: str
-    inputs: list[dict]
-    outputs: list[dict]
+    inputs: list[dict[str, Any]]
+    outputs: list[dict[str, Any]]
     guard: str | None = None
 
 
@@ -339,7 +340,7 @@ class BindingSpec:
     cross_channel_couplings: list[CrossChannelCouplingSpec] = field(
         default_factory=list
     )
-    value_alignment: dict = field(default_factory=dict)
+    value_alignment: dict[str, Any] = field(default_factory=dict)
 
     def get_omegas(self) -> list[float]:
         """Collect natural frequencies from all layers.

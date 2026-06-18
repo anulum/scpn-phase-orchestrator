@@ -210,9 +210,9 @@ def _audit_envelope_class() -> type[Message]:
     _ = _timestamp_pb2.DESCRIPTOR
     pool = descriptor_pool.DescriptorPool()
     try:
-        pool.AddSerializedFile(_timestamp_pb2.DESCRIPTOR.serialized_pb)
-        pool.AddSerializedFile(_AUDIT_ENVELOPE_FILE_PROTO_BYTES)
-        descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
+        pool.AddSerializedFile(_timestamp_pb2.DESCRIPTOR.serialized_pb)  # type: ignore[no-untyped-call]  # protobuf DescriptorPool API is untyped
+        pool.AddSerializedFile(_AUDIT_ENVELOPE_FILE_PROTO_BYTES)  # type: ignore[no-untyped-call]  # protobuf DescriptorPool API is untyped
+        descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")  # type: ignore[no-untyped-call]  # protobuf DescriptorPool API is untyped
     except Exception as exc:  # pragma: no cover - defensive fail-closed path
         raise RuntimeError(
             "failed to initialise audit envelope protobuf schema"

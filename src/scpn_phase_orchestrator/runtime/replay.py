@@ -24,6 +24,7 @@ import logging
 from math import isfinite
 from numbers import Real
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -51,8 +52,8 @@ def _reject_json_constant(value: str) -> None:
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
-def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    record: dict[str, object] = {}
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, Any]:
+    record: dict[str, Any] = {}
     for key, value in pairs:
         if key in record:
             raise ValueError(f"duplicate JSON object key is not allowed: {key!r}")
@@ -60,7 +61,7 @@ def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return record
 
 
-def _parse_audit_json(line: str) -> dict:
+def _parse_audit_json(line: str) -> dict[str, Any]:
     try:
         decoded = json.loads(
             line,
@@ -76,7 +77,7 @@ def _parse_audit_json(line: str) -> dict:
     return decoded
 
 
-def _canonical_audit_json(entry: dict) -> str:
+def _canonical_audit_json(entry: dict[str, Any]) -> str:
     try:
         return json.dumps(
             entry,
@@ -90,7 +91,7 @@ def _canonical_audit_json(entry: dict) -> str:
         ) from exc
 
 
-def _layer_records(step_data: dict) -> list[dict]:
+def _layer_records(step_data: dict[str, Any]) -> list[dict[str, Any]]:
     layers = step_data.get("layers", [])
     if not isinstance(layers, list):
         return []
@@ -105,20 +106,20 @@ def _numeric_value(value: object) -> float:
     return 0.0
 
 
-def _required_header_value(header: dict, field: str) -> object:
+def _required_header_value(header: dict[str, Any], field: str) -> object:
     if field not in header:
         raise ValueError(f"audit header missing {field}")
     return header[field]
 
 
-def _required_header_int(header: dict, field: str) -> int:
+def _required_header_int(header: dict[str, Any], field: str) -> int:
     value = _required_header_value(header, field)
     if isinstance(value, int) and not isinstance(value, bool) and value > 0:
         return value
     raise ValueError(f"audit header {field} must be a positive integer")
 
 
-def _required_header_float(header: dict, field: str) -> float:
+def _required_header_float(header: dict[str, Any], field: str) -> float:
     value = _required_header_value(header, field)
     parsed = _numeric_value(value)
     if parsed > 0.0:
@@ -126,7 +127,7 @@ def _required_header_float(header: dict, field: str) -> float:
     raise ValueError(f"audit header {field} must be a positive finite number")
 
 
-def _header_method(header: dict) -> str:
+def _header_method(header: dict[str, Any]) -> str:
     value = header.get("method", "euler")
     if isinstance(value, str) and value in _ENGINE_METHODS:
         return value
@@ -134,14 +135,14 @@ def _header_method(header: dict) -> str:
     raise ValueError(f"audit header method must be one of: {allowed}")
 
 
-def _header_amplitude_mode(header: dict) -> bool:
+def _header_amplitude_mode(header: dict[str, Any]) -> bool:
     value = header.get("amplitude_mode", False)
     if isinstance(value, bool):
         return value
     raise ValueError("audit header amplitude_mode must be a boolean")
 
 
-def _has_fields(entry: dict, fields: frozenset[str]) -> bool:
+def _has_fields(entry: dict[str, Any], fields: frozenset[str]) -> bool:
     return all(field in entry for field in fields)
 
 
@@ -151,7 +152,7 @@ class ReplayEngine:
     def __init__(self, log_path: str | Path):
         self._log_path = Path(log_path)
 
-    def load(self) -> list[dict]:
+    def load(self) -> list[dict[str, Any]]:
         """Read and parse all JSONL entries from the audit log file."""
         entries = []
         with self._log_path.open(encoding="utf-8") as fh:
@@ -161,7 +162,7 @@ class ReplayEngine:
                     entries.append(_parse_audit_json(line))
         return entries
 
-    def replay_step(self, step_data: dict) -> UPDEState:
+    def replay_step(self, step_data: dict[str, Any]) -> UPDEState:
         """Reconstruct UPDEState from a log entry."""
         layers = [
             LayerState(
@@ -177,18 +178,24 @@ class ReplayEngine:
             regime_id=step_data.get("regime", "unknown"),
         )
 
-    def load_header(self, entries: list[dict]) -> dict | None:
+    def load_header(
+        self, entries: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
         """Extract the header record (engine config) if present."""
         for entry in entries:
             if entry.get("header"):
                 return entry
         return None
 
-    def step_entries(self, entries: list[dict]) -> list[dict]:
+    def step_entries(
+        self, entries: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Filter to entries with full UPDE state (replayable)."""
         return [e for e in entries if "phases" in e]
 
-    def build_engine(self, header: dict) -> UPDEEngine | StuartLandauEngine:
+    def build_engine(
+        self, header: dict[str, Any]
+    ) -> UPDEEngine | StuartLandauEngine:
         """Construct engine from header (UPDE or Stuart-Landau)."""
         n_oscillators = _required_header_int(header, "n_oscillators")
         dt = _required_header_float(header, "dt")
@@ -206,7 +213,10 @@ class ReplayEngine:
         )
 
     def verify_determinism_chained(
-        self, engine: UPDEEngine, entries: list[dict], atol: float = 1e-6
+        self,
+        engine: UPDEEngine,
+        entries: list[dict[str, Any]],
+        atol: float = 1e-6,
     ) -> tuple[bool, int]:
         """Chained multi-step replay: output of step N must match input of step N+1.
 
@@ -244,7 +254,7 @@ class ReplayEngine:
         return True, verified
 
     @staticmethod
-    def verify_integrity(entries: list[dict]) -> tuple[bool, int]:
+    def verify_integrity(entries: list[dict[str, Any]]) -> tuple[bool, int]:
         """Verify the SHA256 hash chain of audit log entries.
 
         Returns (all_valid, n_verified).  Legacy logs without ``_hash``
@@ -287,7 +297,7 @@ class ReplayEngine:
     def verify_determinism_sl_chained(
         self,
         engine: StuartLandauEngine,
-        entries: list[dict],
+        entries: list[dict[str, Any]],
         atol: float = 1e-6,
     ) -> tuple[bool, int]:
         """Chained multi-step replay for Stuart-Landau engine.
@@ -371,7 +381,9 @@ class ReplayEngine:
 
         return True, verified
 
-    def verify_determinism(self, engine: UPDEEngine, steps: list[dict]) -> bool:
+    def verify_determinism(
+        self, engine: UPDEEngine, steps: list[dict[str, Any]]
+    ) -> bool:
         """Re-run logged steps and compare global order parameter R.
 
         Requires steps to include 'phases', 'omegas', 'knm', 'zeta', 'psi',
@@ -399,7 +411,7 @@ class ReplayEngine:
 
 
 def _verify_hmac_signature(
-    entry: dict,
+    entry: dict[str, Any],
     audit_keys: dict[str, str],
     *,
     expected_previous_hash: str,
@@ -467,7 +479,9 @@ def _verify_hmac_signature(
     return hmac.compare_digest(signature_value, expected_signature)
 
 
-def _payload_without_audit_metadata(record: dict) -> dict:
+def _payload_without_audit_metadata(
+    record: dict[str, Any],
+) -> dict[str, Any]:
     return {
         key: value
         for key, value in record.items()

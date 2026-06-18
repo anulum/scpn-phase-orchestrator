@@ -23,6 +23,7 @@ import os
 import time
 from math import isfinite
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -112,7 +113,7 @@ class AuditLogger:
                     )
                     raise AuditError(msg)
 
-    def _write_record(self, record: dict) -> None:
+    def _write_record(self, record: dict[str, Any]) -> None:
         clean = {k: v for k, v in record.items() if k != "_hash"}
         if self._audit_key is not None:
             clean = self._attach_signature_metadata(clean)
@@ -128,7 +129,7 @@ class AuditLogger:
         if self._event_stream is not None:
             self._event_stream.write(stored)
 
-    def _attach_signature_metadata(self, clean: dict) -> dict:
+    def _attach_signature_metadata(self, clean: dict[str, Any]) -> dict[str, Any]:
         self._sequence += 1
         payload = _payload_without_audit_metadata(clean)
         payload_hash = _payload_hash(payload)
@@ -217,7 +218,7 @@ class AuditLogger:
                 "binding_summary must be dict[str, object] or None, "
                 f"got {binding_summary!r}"
             )
-        record: dict = {
+        record: dict[str, Any] = {
             "header": True,
             "n_oscillators": n_oscillators,
             "dt": dt,
@@ -323,7 +324,7 @@ class AuditLogger:
             record["channel_runtime"] = channel_runtime
         self._write_record(record)
 
-    def log_event(self, event_type: str, data: dict) -> None:
+    def log_event(self, event_type: str, data: dict[str, Any]) -> None:
         """Write a named event with arbitrary data to the audit log."""
         if not isinstance(event_type, str) or not event_type.strip():
             raise AuditError(
@@ -353,7 +354,7 @@ class AuditLogger:
         self.close()
 
 
-def _payload_without_audit_metadata(record: dict) -> dict:
+def _payload_without_audit_metadata(record: dict[str, Any]) -> dict[str, Any]:
     return {
         key: value
         for key, value in record.items()
@@ -363,7 +364,7 @@ def _payload_without_audit_metadata(record: dict) -> dict:
     }
 
 
-def _payload_hash(record: dict) -> str:
+def _payload_hash(record: dict[str, Any]) -> str:
     payload = _payload_without_audit_metadata(record)
     payload_json = _dumps_audit_json(payload, compact=True)
     return hashlib.sha256(payload_json.encode()).hexdigest()
@@ -373,7 +374,7 @@ def _reject_json_constant(value: str) -> None:
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
-def _loads_audit_json(payload: str) -> dict:
+def _loads_audit_json(payload: str) -> dict[str, Any]:
     try:
         decoded = json.loads(payload, parse_constant=_reject_json_constant)
     except json.JSONDecodeError:
@@ -385,7 +386,7 @@ def _loads_audit_json(payload: str) -> dict:
     return decoded
 
 
-def _dumps_audit_json(payload: dict, *, compact: bool = False) -> str:
+def _dumps_audit_json(payload: dict[str, Any], *, compact: bool = False) -> str:
     try:
         if compact:
             return json.dumps(

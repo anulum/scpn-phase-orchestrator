@@ -36,7 +36,7 @@ import threading
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -162,7 +162,7 @@ class SimulationState:
                 ]
             )
 
-    def step(self) -> dict:
+    def step(self) -> dict[str, Any]:
         """Advance one timestep, return state snapshot."""
         eff_knm = self.coupling.knm
         eff_alpha = self.coupling.alpha
@@ -240,7 +240,7 @@ class SimulationState:
 
         return self.snapshot()
 
-    def snapshot(self) -> dict:
+    def snapshot(self) -> dict[str, Any]:
         """Current state as JSON-serializable dict."""
         layer_map = {}
         idx = 0
@@ -277,7 +277,7 @@ class SimulationState:
 
         return result
 
-    def reset(self) -> dict:
+    def reset(self) -> dict[str, Any]:
         """Reset to initial state."""
         self.phases = extract_initial_phases(self.spec, self.omegas)
         if self.amplitude_mode and self.mu is not None:
@@ -482,13 +482,13 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         return DASHBOARD_HTML
 
     @app.get("/api/state")
-    async def get_state() -> dict:
+    async def get_state() -> dict[str, Any]:
         """Handle GET /api/state — return current simulation snapshot."""
         with sim._lock:
             return sim.snapshot()
 
     @app.post("/api/step", dependencies=[Depends(_require_auth)])
-    async def post_step() -> dict:
+    async def post_step() -> dict[str, Any]:
         """Handle POST /api/step — advance simulation one tick."""
         with sim._lock:
             snap = sim.step()
@@ -501,7 +501,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         return snap
 
     @app.post("/api/reset", dependencies=[Depends(_require_auth)])
-    async def post_reset() -> dict:
+    async def post_reset() -> dict[str, Any]:
         """Handle POST /api/reset — reset simulation to initial state."""
         with sim._lock:
             snap = sim.reset()
@@ -513,7 +513,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         return snap
 
     @app.get("/api/config")
-    async def get_config() -> dict:
+    async def get_config() -> dict[str, Any]:
         """Handle GET /api/config — return engine configuration."""
         return {
             "name": spec.name,
@@ -551,7 +551,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         return PlainTextResponse(text, media_type="text/plain")
 
     @app.get("/api/health")
-    async def health() -> dict:
+    async def health() -> dict[str, Any]:
         """Deep health check — verifies engine, monitor, and regime subsystems."""
         checks: dict[str, str] = {}
         try:

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from math import isfinite
 from numbers import Real
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -72,7 +72,9 @@ def _validate_config_value(value: object, *, path: str) -> object:
     raise ValueError(f"{path} must be JSON-compatible")
 
 
-def _validate_scpn_config(config: dict, *, path: str = "scpn_config") -> JSONConfig:
+def _validate_scpn_config(
+    config: dict[str, Any], *, path: str = "scpn_config"
+) -> JSONConfig:
     validated: JSONConfig = {}
     for key, value in config.items():
         if not isinstance(key, str) or not key:
@@ -84,7 +86,7 @@ def _validate_scpn_config(config: dict, *, path: str = "scpn_config") -> JSONCon
 class SCPNControlBridge:
     """Adapter between scpn-control telemetry and phase-orchestrator types."""
 
-    def __init__(self, scpn_config: dict):
+    def __init__(self, scpn_config: dict[str, Any]):
         if not isinstance(scpn_config, dict):
             raise ValueError("scpn_config must be a dict")
         self._config = _validate_scpn_config(scpn_config)
@@ -120,7 +122,7 @@ class SCPNControlBridge:
             raise ValueError("All natural frequencies must be positive")
         return omega
 
-    def export_state(self, upde_state: UPDEState) -> dict:
+    def export_state(self, upde_state: UPDEState) -> dict[str, Any]:
         """Convert UPDEState to scpn-control compatible telemetry dict."""
         return {
             "regime": upde_state.regime_id,

@@ -542,7 +542,9 @@ def _binding_yaml(
     *,
     project_name: str,
     sample_period_s: float,
-    family_specs: Sequence[tuple[str, str, str] | tuple[str, str, str, Mapping]],
+    family_specs: Sequence[
+        tuple[str, str, str] | tuple[str, str, str, Mapping[str, Any]]
+    ],
     initial_coupling_proposal: Mapping[str, JsonValue] | None = None,
 ) -> str:
     if not project_name:
@@ -630,8 +632,8 @@ def _binding_yaml(
 
 
 def _normalise_family_spec(
-    raw_family_spec: tuple[str, str, str] | tuple[str, str, str, Mapping],
-) -> tuple[str, str, str, Mapping]:
+    raw_family_spec: tuple[str, str, str] | tuple[str, str, str, Mapping[str, Any]],
+) -> tuple[str, str, str, Mapping[str, Any]]:
     if len(raw_family_spec) == 3:
         family_name, channel, extractor_type = raw_family_spec
         return family_name, channel, extractor_type, {}
