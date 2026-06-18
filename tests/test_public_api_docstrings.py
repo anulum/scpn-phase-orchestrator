@@ -9,9 +9,11 @@
 from __future__ import annotations
 
 import ast
+import importlib
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -67,6 +69,74 @@ def test_core_public_methods_use_numpy_style_docstrings(
     for section in sections:
         assert section in doc
         assert f"{section}\n{'-' * len(section)}" in doc
+
+
+# Public API families whose every public callable must carry the applicable
+# NumPy-style contract sections, not merely a docstring. Extend this tuple one
+# family at a time as M2 (public docstring quality enforcement) closes them.
+SECTION_ENFORCED_MODULES = ("scpn_phase_orchestrator.api",)
+
+
+def _unwrap(obj: object) -> object:
+    if isinstance(obj, (classmethod, staticmethod)):
+        return obj.__func__
+    return obj
+
+
+def _public_callables(
+    module: ModuleType,
+) -> Iterator[tuple[str, Callable[..., object]]]:
+    exported = getattr(
+        module, "__all__", [n for n in vars(module) if not n.startswith("_")]
+    )
+    for name in exported:
+        obj = getattr(module, name)
+        if inspect.isfunction(obj) and obj.__module__ == module.__name__:
+            yield f"{module.__name__}.{name}", obj
+        elif inspect.isclass(obj) and obj.__module__ == module.__name__:
+            for member_name, raw in vars(obj).items():
+                if member_name.startswith("_"):
+                    continue
+                func = _unwrap(raw)
+                if inspect.isfunction(func):
+                    yield f"{module.__name__}.{name}.{member_name}", func
+
+
+def _required_sections(func: Callable[..., object]) -> list[str]:
+    sections: list[str] = []
+    parameters = [
+        param
+        for param in inspect.signature(func).parameters.values()
+        if param.name not in ("self", "cls")
+        and param.kind
+        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+    ]
+    if parameters:
+        sections.append("Parameters")
+    return_annotation = func.__annotations__.get("return")
+    if return_annotation not in (None, "None", type(None)):
+        sections.append("Returns")
+    try:
+        source = inspect.getsource(func)
+    except OSError:  # pragma: no cover - source always available in-tree
+        source = ""
+    if "raise " in source:
+        sections.append("Raises")
+    return sections
+
+
+def test_section_enforced_families_document_numpy_contracts() -> None:
+    problems: list[str] = []
+    for module_name in SECTION_ENFORCED_MODULES:
+        module = importlib.import_module(module_name)
+        for qualified_name, func in _public_callables(module):
+            doc = inspect.getdoc(func) or ""
+            for section in _required_sections(func):
+                header = f"{section}\n{'-' * len(section)}"
+                if header not in doc:
+                    problems.append(f"{qualified_name}: missing '{section}' section")
+
+    assert problems == []
 
 
 def test_rust_upde_stepper_constructor_documents_public_contract() -> None:

@@ -41,7 +41,29 @@ __all__ = ["Orchestrator", "OrchestratorState", "evaluate_binding_spec"]
 
 @dataclass(frozen=True)
 class OrchestratorState:
-    """Final state returned by :meth:`Orchestrator.run`."""
+    """Immutable final state returned by :meth:`Orchestrator.run`.
+
+    Attributes
+    ----------
+    spec_name : str
+        Name of the binding spec that produced this state.
+    steps : int
+        Number of integration steps executed.
+    phases : FloatArray
+        Final oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm`` used for the run, shape ``(N, N)``.
+    alpha : FloatArray
+        Phase-lag matrix used for the run, shape ``(N, N)``.
+    order_parameter : float
+        Final Kuramoto order parameter ``R`` in ``[0, 1]``.
+    mean_phase : float
+        Mean phase of the final state in radians.
+    sample_period_s : float
+        Integration step size in seconds.
+    """
 
     spec_name: str
     steps: int
@@ -54,7 +76,16 @@ class OrchestratorState:
     sample_period_s: float
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable summary without large matrices."""
+        """Return a JSON-serialisable summary without the large matrices.
+
+        Returns
+        -------
+        dict[str, object]
+            Scalar summary fields (``spec_name``, ``steps``,
+            ``oscillator_count``, ``order_parameter``, ``mean_phase``,
+            ``sample_period_s``); the phase, omega, and coupling arrays are
+            omitted.
+        """
         return {
             "spec_name": self.spec_name,
             "steps": self.steps,
@@ -76,7 +107,26 @@ class Orchestrator:
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> Orchestrator:
-        """Load, validate, and construct an orchestrator from a YAML spec."""
+        """Load, validate, and construct an orchestrator from a YAML spec.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Filesystem path to the binding-spec YAML file.
+
+        Returns
+        -------
+        Orchestrator
+            A validated orchestrator ready to :meth:`run`.
+
+        Raises
+        ------
+        BindingLoadError
+            If the YAML cannot be parsed into a binding spec.
+        ValueError
+            If the loaded spec fails validation or is not executable by the
+            local Python facade.
+        """
         spec = load_binding_spec(Path(path))
         return cls(spec)
 
@@ -88,6 +138,24 @@ class Orchestrator:
         ``seed``, and the returned state contains the final Kuramoto order
         parameter. Supervisor policy actions and live actuator writes are not
         executed by this facade.
+
+        Parameters
+        ----------
+        steps : int, optional
+            Number of integration steps to run (default ``100``).
+        seed : int, optional
+            Seed for the deterministic initial-phase RNG (default ``42``).
+
+        Returns
+        -------
+        OrchestratorState
+            Immutable final state with the phases, coupling matrices, and the
+            Kuramoto order parameter.
+
+        Raises
+        ------
+        ValueError
+            If ``steps`` or ``seed`` is not a non-negative integer.
         """
         steps = _nonnegative_int(steps, name="steps")
         seed = _nonnegative_int(seed, name="seed")
@@ -159,25 +227,34 @@ def evaluate_binding_spec(
     safety tier. It is review/simulation only — no hardware actuation, no network
     IO — so the safety-tier gate that blocks live ``spo run`` does not apply here.
 
-    Args:
-        spec: A validated :class:`BindingSpec`, or a path to a spec YAML. When a
-            path is given, an adjacent ``policy.yaml`` is loaded for the
-            closed-loop domainpack policy.
-        steps: Number of integration steps.
-        seed: RNG seed for the initial phases.
-        policy_enabled: Closed-loop supervisor + policy control feedback on
-            (``True``) or open-loop baseline (``False``). Running both on the
-            same seed isolates the orchestration uplift.
+    Parameters
+    ----------
+    spec : BindingSpec or str or pathlib.Path
+        A validated :class:`BindingSpec`, or a path to a spec YAML. When a
+        path is given, an adjacent ``policy.yaml`` is loaded for the
+        closed-loop domainpack policy.
+    steps : int, optional
+        Number of integration steps (default ``100``).
+    seed : int, optional
+        RNG seed for the initial phases (default ``42``).
+    policy_enabled : bool, optional
+        Closed-loop supervisor + policy control feedback on (``True``,
+        default) or open-loop baseline (``False``). Running both on the same
+        seed isolates the orchestration uplift.
 
     Returns
     -------
+    SimulationResult
         A ``SimulationResult`` (from ``runtime.simulation``) with the final
         per-objective order parameters, their separation, the regime, and the
         per-step coherence histories.
 
     Raises
     ------
-        ValueError: If the spec fails validation or defines no oscillators.
+    ValueError
+        If the spec fails validation or defines no oscillators.
+    TypeError
+        If ``spec`` is not a :class:`BindingSpec`, ``str``, or path.
     """
     from scpn_phase_orchestrator.runtime.simulation import simulate
 
