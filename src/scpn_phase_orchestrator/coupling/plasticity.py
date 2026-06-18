@@ -112,6 +112,16 @@ def compute_eligibility(phases: FloatArray) -> FloatArray:
     """Pairwise Hebbian eligibility trace: cos(theta_j - theta_i).
 
     Returns shape (n, n) with zero diagonal.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+
+    Returns
+    -------
+    FloatArray
+        The pairwise Hebbian eligibility trace ``cos(θ_j − θ_i)``.
     """
     phases = _validate_phase_vector(phases, name="phases")
     diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
@@ -148,6 +158,26 @@ def three_factor_update(
     Returns
     -------
         Updated coupling matrix (new array, does not mutate input).
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    eligibility : FloatArray
+        Pairwise Hebbian eligibility trace, shape ``(N, N)``.
+    modulator : float
+        Neuromodulator signal (the third plasticity factor).
+    phase_gate : bool
+        Whether to apply the phase-coherence gate.
+    lr : float
+        Learning rate.
+
+    Raises
+    ------
+    TypeError
+        If an argument has the wrong type.
+    ValueError
+        If the eligibility or coupling shapes mismatch.
     """
     knm = _validate_coupling_matrix(knm)
     eligibility = _validate_eligibility_matrix(eligibility)

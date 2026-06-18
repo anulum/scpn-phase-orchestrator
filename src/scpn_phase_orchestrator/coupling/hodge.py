@@ -586,6 +586,15 @@ def hodge_decomposition(
         :class:`HodgeResult` with the three flow components as
         antisymmetric ``(N, N)`` matrices, the input current, the node
         potential, and the first Betti number.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    triangles : Sequence[Sequence[int]] | None
+        Explicit 2-simplices (triangles), or ``None`` to derive them.
     """
     phases = _validate_phase_vector(phases, name="phases")
     n = int(phases.size)

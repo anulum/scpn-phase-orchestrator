@@ -144,6 +144,18 @@ class UniversalPrior:
         Pass ``rng`` for an explicit generator, or ``seed`` to create a
         seeded one. If neither is given, a fresh unseeded generator is used
         (NOT reproducible across sessions).
+
+        Parameters
+        ----------
+        rng : np.random.Generator | None
+            NumPy random generator, or ``None`` to seed from ``seed``.
+        seed : int | None
+            Seed for the deterministic RNG.
+
+        Returns
+        -------
+        CouplingPrior
+            A coupling configuration sampled from the prior.
         """
         if rng is None:
             seed = _validate_seed(seed)
@@ -153,7 +165,13 @@ class UniversalPrior:
         return CouplingPrior(K_base=K, decay_alpha=alpha, K_c_estimate=0.0)
 
     def default(self) -> CouplingPrior:
-        """Return the MAP (maximum a posteriori) estimate = the means."""
+        """Return the MAP (maximum a posteriori) estimate = the means.
+
+        Returns
+        -------
+        CouplingPrior
+            Return the MAP (maximum a posteriori) estimate = the means.
+        """
         return CouplingPrior(
             K_base=self._K_base_mean,
             decay_alpha=self._decay_alpha_mean,
@@ -165,6 +183,25 @@ class UniversalPrior:
 
         K_c = max|ω_i - ω_j| / λ₂(L) where L is built from the prior's
         decay_alpha on a chain graph of n_layers.
+
+        Parameters
+        ----------
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        n_layers : int
+            Number of SCPN hierarchy layers.
+
+        Returns
+        -------
+        CouplingPrior
+            The prior combined with the Dörfler-Bullo ``K_c`` for the given frequencies.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If ``omegas`` or the layer count is invalid.
         """
         if isinstance(n_layers, bool) or not isinstance(n_layers, Integral):
             raise TypeError(f"n_layers must be an integer, got {n_layers!r}")
@@ -189,7 +226,27 @@ class UniversalPrior:
         )
 
     def log_probability(self, K_base: float, decay_alpha: float) -> float:
-        """Log-probability under the Gaussian prior (unnormalized)."""
+        """Log-probability under the Gaussian prior (unnormalised).
+
+        Parameters
+        ----------
+        K_base : float
+            Base coupling strength before spatial modulation.
+        decay_alpha : float
+            Exponential decay rate of the coupling across layer separation.
+
+        Returns
+        -------
+        float
+            The unnormalised log-probability of the configuration under the prior.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If ``K_base`` or ``decay_alpha`` is out of range.
+        """
         if isinstance(K_base, bool) or not isinstance(K_base, Real):
             raise TypeError("K_base must be a finite real value")
         if isinstance(decay_alpha, bool) or not isinstance(decay_alpha, Real):

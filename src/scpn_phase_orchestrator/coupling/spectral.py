@@ -194,6 +194,16 @@ def graph_laplacian(knm: FloatArray) -> FloatArray:
     ``(|W| + |Wᵀ|) / 2`` with zero diagonal, so asymmetric measured
     couplings produce one symmetric edge weight before node degrees
     are computed.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+    Returns
+    -------
+    FloatArray
+        The combinatorial graph Laplacian ``L = D − A``.
     """
     knm = _validate_coupling_matrix(knm)
     w = np.abs(knm)
@@ -409,6 +419,16 @@ def spectral_eig(knm: FloatArray) -> tuple[FloatArray, FloatArray]:
     Returns ``(eigvals ascending, fiedler vector)``. Thin wrapper
     over the dispatched backend primitive; ``python`` reference
     is a direct ``np.linalg.eigh``.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+    Returns
+    -------
+    tuple[FloatArray, FloatArray]
+        The eigenvalues and eigenvectors of the symmetric Laplacian.
     """
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
@@ -417,7 +437,18 @@ def spectral_eig(knm: FloatArray) -> tuple[FloatArray, FloatArray]:
 
 
 def fiedler_value(knm: FloatArray) -> float:
-    """Return the algebraic connectivity ``λ₂(L)`` (Dörfler-Bullo 2014)."""
+    """Return the algebraic connectivity ``λ₂(L)`` (Dörfler-Bullo 2014).
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+    Returns
+    -------
+    float
+        The algebraic connectivity ``λ₂(L)``.
+    """
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
@@ -430,7 +461,18 @@ def fiedler_value(knm: FloatArray) -> float:
 
 
 def fiedler_vector(knm: FloatArray) -> FloatArray:
-    """Return the ``λ₂`` eigenvector partitioning the graph into clusters."""
+    """Return the ``λ₂`` eigenvector partitioning the graph into clusters.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+    Returns
+    -------
+    FloatArray
+        The ``λ₂`` eigenvector partitioning the graph.
+    """
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
@@ -445,6 +487,18 @@ def critical_coupling(omegas: FloatArray, knm: FloatArray) -> float:
 
     Returns ``+inf`` if the graph is disconnected
     (``λ₂ ≈ 0``).
+
+    Parameters
+    ----------
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+    Returns
+    -------
+    float
+        The Dörfler-Bullo critical coupling ``K_c``.
     """
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
@@ -469,6 +523,16 @@ def fiedler_partition(knm: FloatArray) -> tuple[list[int], list[int]]:
 
     Returns ``(group_positive, group_negative)`` — indices
     of oscillators in each partition.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+    Returns
+    -------
+    tuple[list[int], list[int]]
+        The two index lists of the ``sign(v₂)`` bisection.
     """
     v2 = fiedler_vector(knm)
     pos = [i for i, val in enumerate(v2) if val >= 0]
@@ -477,7 +541,18 @@ def fiedler_partition(knm: FloatArray) -> tuple[list[int], list[int]]:
 
 
 def spectral_gap(knm: FloatArray) -> float:
-    """Return the gap between ``λ₂`` and ``λ₃`` (two-cluster cleanliness)."""
+    """Return the gap between ``λ₂`` and ``λ₃`` (two-cluster cleanliness).
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+    Returns
+    -------
+    float
+        The gap between ``λ₂`` and ``λ₃``.
+    """
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     if n < 3:
@@ -499,7 +574,22 @@ def sync_convergence_rate(
     omegas: FloatArray,
     gamma_max: float = 0.0,
 ) -> float:
-    """Estimate the convergence rate from ``λ₂`` (Dörfler-Bullo 2014 §III.B)."""
+    """Estimate the convergence rate from ``λ₂`` (Dörfler-Bullo 2014 §III.B).
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    gamma_max : float
+        Maximum phase-lag ``γ`` across edges.
+
+    Returns
+    -------
+    float
+        The estimated synchronisation convergence rate.
+    """
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     if n == 0:

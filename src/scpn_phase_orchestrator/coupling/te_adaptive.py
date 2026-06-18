@@ -157,6 +157,29 @@ def te_adapt_coupling(
         lr: learning rate for TE-based update.
         decay: coupling decay rate per update (0 = no decay).
         n_bins: histogram bins for TE estimation.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    phase_history : FloatArray
+        Phase history, shape ``(T, N)``.
+    lr : float
+        Learning rate.
+    decay : float
+        Exponential forgetting rate of past adaptation.
+    n_bins : int
+        Number of histogram bins.
+
+    Returns
+    -------
+    FloatArray
+        The coupling matrix adapted by the transfer-entropy learning signal.
+
+    Raises
+    ------
+    RuntimeError
+        If the transfer-entropy backend fails.
     """
     knm = _validate_knm(knm)
     n = knm.shape[0]

@@ -122,6 +122,11 @@ def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
     ------
         ImportError: If neurolib is not installed.
         ValueError: If n_regions < 2 or > 80.
+
+    Parameters
+    ----------
+    n_regions : int
+        Number of brain regions (oscillators).
     """
     try:
         # type ignore: neurolib is optional and currently lacks complete type metadata;
@@ -165,6 +170,13 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     Returns
     -------
         Symmetric coupling matrix, shape (n_regions, n_regions), zero diagonal.
+
+    Parameters
+    ----------
+    n_regions : int
+        Number of brain regions (oscillators).
+    seed : int
+        Seed for the deterministic RNG.
     """
     n_regions = _validate_n_regions(n_regions)
     seed = _validate_seed(seed)

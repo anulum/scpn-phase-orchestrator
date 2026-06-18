@@ -411,7 +411,18 @@ class SpatialCouplingModulator:
             raise ValueError("distance_fn must be callable when provided")
 
     def distance_matrix(self, positions: object) -> FloatArray:
-        """Return the validated pairwise distance matrix for ``positions``."""
+        """Return the validated pairwise distance matrix for ``positions``.
+
+        Parameters
+        ----------
+        positions : object
+            Oscillator positions, shape ``(N, d)``.
+
+        Returns
+        -------
+        FloatArray
+            The validated pairwise distance matrix, shape ``(N, N)``.
+        """
         positions64 = _validate_positions(positions)
         if self.distance_fn is None:
             return _pairwise_euclidean(positions64)
@@ -422,7 +433,18 @@ class SpatialCouplingModulator:
         )
 
     def modulation_matrix(self, positions: object) -> FloatArray:
-        """Return ``K_base * f(distance)`` with a zero self-coupling diagonal."""
+        """Return ``K_base * f(distance)`` with a zero self-coupling diagonal.
+
+        Parameters
+        ----------
+        positions : object
+            Oscillator positions, shape ``(N, d)``.
+
+        Returns
+        -------
+        FloatArray
+            The distance modulation matrix with a zero diagonal.
+        """
         positions64 = _validate_positions(positions)
         return _python_modulation_matrix(
             positions64,
@@ -439,6 +461,18 @@ class SpatialCouplingModulator:
 
         ``k_nm_base`` must be square, finite, real-valued, and zero diagonal.
         The output preserves that zero self-coupling diagonal.
+
+        Parameters
+        ----------
+        k_nm_base : object
+            Base coupling matrix to modulate, shape ``(N, N)``.
+        positions : object
+            Oscillator positions, shape ``(N, d)``.
+
+        Returns
+        -------
+        FloatArray
+            The distance-modulated coupling matrix.
         """
         positions64 = _validate_positions(positions)
         base = _validate_knm_base(k_nm_base, expected_n=positions64.shape[0])
@@ -482,6 +516,21 @@ class SpatialCouplingModulator:
         ``J[i, j, a, d]`` is ``d M[i, j] / d positions[a, d]`` where
         ``M = modulation_matrix(positions)``. Custom distance functions are not
         differentiable through this closed-form path and fail closed.
+
+        Parameters
+        ----------
+        positions : object
+            Oscillator positions, shape ``(N, d)``.
+
+        Returns
+        -------
+        FloatArray
+            The derivative of the modulation matrix with respect to positions.
+
+        Raises
+        ------
+        ValueError
+            If ``positions`` has an invalid shape.
         """
         if self.distance_fn is not None:
             raise ValueError(
@@ -538,7 +587,30 @@ def spatial_modulate(
     decay_length_scale: float = 1.0,
     epsilon: float = 1.0e-12,
 ) -> FloatArray:
-    """Functional wrapper around :class:`SpatialCouplingModulator`."""
+    """Functional wrapper around :class:`SpatialCouplingModulator`.
+
+    Parameters
+    ----------
+    k_nm_base : object
+        Base coupling matrix to modulate, shape ``(N, N)``.
+    positions : object
+        Oscillator positions, shape ``(N, d)``.
+    K_base : float
+        Base coupling strength before spatial modulation.
+    decay_form : DecayForm
+        Spatial decay law (e.g. ``exponential`` or ``power``).
+    decay_exponent : float
+        Exponent of the spatial decay law.
+    decay_length_scale : float
+        Characteristic length scale of the spatial decay.
+    epsilon : float
+        Numerical floor guarding the decay denominator.
+
+    Returns
+    -------
+    FloatArray
+        The distance-modulated coupling matrix.
+    """
     return SpatialCouplingModulator(
         K_base=K_base,
         decay_form=decay_form,

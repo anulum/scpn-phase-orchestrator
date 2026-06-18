@@ -116,6 +116,20 @@ SECTION_ENFORCED_MODULES = (
     "scpn_phase_orchestrator.upde.pha_c_handoff",
     "scpn_phase_orchestrator.upde.pha_c_timeline",
     "scpn_phase_orchestrator.upde.prediction",
+    "scpn_phase_orchestrator.coupling.attention_residuals",
+    "scpn_phase_orchestrator.coupling.connectome",
+    "scpn_phase_orchestrator.coupling.ei_balance",
+    "scpn_phase_orchestrator.coupling.geometry_constraints",
+    "scpn_phase_orchestrator.coupling.hodge",
+    "scpn_phase_orchestrator.coupling.infer",
+    "scpn_phase_orchestrator.coupling.knm",
+    "scpn_phase_orchestrator.coupling.lags",
+    "scpn_phase_orchestrator.coupling.plasticity",
+    "scpn_phase_orchestrator.coupling.prior",
+    "scpn_phase_orchestrator.coupling.spatial_modulator",
+    "scpn_phase_orchestrator.coupling.spectral",
+    "scpn_phase_orchestrator.coupling.te_adaptive",
+    "scpn_phase_orchestrator.coupling.templates",
 )
 
 

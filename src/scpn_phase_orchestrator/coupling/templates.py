@@ -51,7 +51,20 @@ class KnmTemplateSet:
         self._templates: dict[str, KnmTemplate] = {}
 
     def add(self, template: KnmTemplate) -> None:
-        """Register a template, overwriting any existing one with the same name."""
+        """Register a template, overwriting any existing one with the same name.
+
+        Parameters
+        ----------
+        template : KnmTemplate
+            The ``K_nm`` template to register.
+
+        Raises
+        ------
+        TypeError
+            If ``template`` is not a ``KnmTemplate``.
+        ValueError
+            If the template is invalid.
+        """
         if not isinstance(template, KnmTemplate):
             raise TypeError(f"template must be KnmTemplate, got {template!r}")
         normalized_name = template.name.strip()
@@ -91,7 +104,23 @@ class KnmTemplateSet:
         )
 
     def get(self, name: str) -> KnmTemplate:
-        """Retrieve a template by name. Raises KeyError if not found."""
+        """Retrieve a template by name. Raises KeyError if not found.
+
+        Parameters
+        ----------
+        name : str
+            Name to look up.
+
+        Returns
+        -------
+        KnmTemplate
+            The registered template with the given name.
+
+        Raises
+        ------
+        KeyError
+            If no template with that name is registered.
+        """
         if not isinstance(name, str) or not name.strip():
             raise KeyError(f"template name must be a non-empty string, got {name!r}")
         normalized = name.strip()
@@ -109,5 +138,11 @@ class KnmTemplateSet:
             raise KeyError(msg) from None
 
     def list_names(self) -> list[str]:
-        """Return all registered template names."""
+        """Return all registered template names.
+
+        Returns
+        -------
+        list[str]
+            Return all registered template names.
+        """
         return list(self._templates.keys())

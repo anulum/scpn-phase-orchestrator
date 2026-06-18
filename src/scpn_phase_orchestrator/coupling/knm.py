@@ -219,6 +219,11 @@ class CouplingBuilder:
         When the Rust extension is available, construction dispatches to
         ``spo_kernel.PyCouplingBuilder`` and preserves the same output
         contract as the NumPy fallback.
+
+        Raises
+        ------
+        ValueError
+            If the layer count or coupling parameters are invalid.
         """
         n_layers = _validate_positive_int(n_layers, name="n_layers")
         base_strength = _validate_finite_float(
@@ -267,6 +272,18 @@ class CouplingBuilder:
         - Distant (|n-m|>=3): exponential decay with cross-hierarchy boosts
 
         Returns CouplingState with 16×16 matrix.
+
+        Parameters
+        ----------
+        k_base : float
+            Base coupling strength.
+        alpha_decay : float
+            Exponential decay rate of the coupling.
+
+        Returns
+        -------
+        CouplingState
+            The 16×16 coupling state from SCPN layer physics.
         """
         k_base = _validate_finite_float(
             k_base,
@@ -336,6 +353,23 @@ class CouplingBuilder:
         Reads the KNM_MATRIX_COMPLETE_SPECIFICATION.json format:
         each entry has from_layer, to_layer, coupling_strength.
         Negative values are preserved (inhibitory coupling).
+
+        Parameters
+        ----------
+        state : CouplingState
+            The coupling state to transform.
+        handshakes_path : str | Path
+            Path to the JSON inter-layer handshake spec.
+
+        Returns
+        -------
+        CouplingState
+            The coupling state with the documented inter-layer couplings overlaid.
+
+        Raises
+        ------
+        ValueError
+            If the handshake spec is malformed or out of range.
         """
         path = Path(handshakes_path)
         data = _loads_knm_json(path.read_text(encoding="utf-8"))
@@ -382,7 +416,26 @@ class CouplingBuilder:
         amp_strength: float,
         amp_decay: float,
     ) -> CouplingState:
-        """Build phase + amplitude coupling matrices together."""
+        """Build phase + amplitude coupling matrices together.
+
+        Parameters
+        ----------
+        n_layers : int
+            Number of SCPN hierarchy layers.
+        base_strength : float
+            Base coupling strength at zero layer separation.
+        decay_alpha : float
+            Exponential decay rate of the coupling across layer separation.
+        amp_strength : float
+            Base amplitude-coupling strength.
+        amp_decay : float
+            Exponential decay rate of the amplitude coupling.
+
+        Returns
+        -------
+        CouplingState
+            The coupling state with both phase and amplitude coupling matrices.
+        """
         amp_strength = _validate_finite_float(
             amp_strength,
             name="amp_strength",
@@ -411,7 +464,29 @@ class CouplingBuilder:
         template_name: str,
         templates: dict[str, FloatArray],
     ) -> CouplingState:
-        """Replace the active K_nm with a named template matrix."""
+        """Replace the active K_nm with a named template matrix.
+
+        Parameters
+        ----------
+        state : CouplingState
+            The coupling state to transform.
+        template_name : str
+            Name of the template to activate.
+        templates : dict[str, FloatArray]
+            Mapping of template name to coupling matrix.
+
+        Returns
+        -------
+        CouplingState
+            The coupling state with the named template installed as ``K_nm``.
+
+        Raises
+        ------
+        KeyError
+            If ``template_name`` is not in ``templates``.
+        ValueError
+            If the template matrix is invalid.
+        """
         if template_name not in templates:
             raise KeyError(f"Template {template_name!r} not found")
         template = np.asarray(templates[template_name], dtype=np.float64)

@@ -131,6 +131,20 @@ def compute_ei_balance(
     ratio > 1: excitation-dominated (hypersynchrony risk)
     ratio < 1: inhibition-dominated (desynchronization risk)
     ratio ≈ 1: balanced (optimal for metastability)
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    excitatory_indices : list[int]
+        Indices of the excitatory oscillators.
+    inhibitory_indices : list[int]
+        Indices of the inhibitory oscillators.
+
+    Returns
+    -------
+    EIBalance
+        The E/I balance summary derived from the coupling typing.
     """
     knm = _validate_knm(knm)
     n = knm.shape[0]
@@ -194,6 +208,22 @@ def adjust_ei_ratio(
 
     Returns modified knm with inhibitory rows scaled so that
     E_strength / I_strength ≈ target_ratio.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    excitatory_indices : list[int]
+        Indices of the excitatory oscillators.
+    inhibitory_indices : list[int]
+        Indices of the inhibitory oscillators.
+    target_ratio : float
+        Target excitatory/inhibitory coupling ratio.
+
+    Returns
+    -------
+    FloatArray
+        The coupling matrix with inhibitory weights scaled to the target ratio.
     """
     knm = _validate_knm(knm)
     target_ratio = _validate_target_ratio(target_ratio)

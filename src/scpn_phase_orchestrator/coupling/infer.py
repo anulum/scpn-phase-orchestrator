@@ -108,12 +108,24 @@ class CouplingInferenceResult:
 
     @property
     def edge_count(self) -> int:
-        """Number of nonzero directed off-diagonal support edges."""
+        """Number of nonzero directed off-diagonal support edges.
+
+        Returns
+        -------
+        int
+            Number of nonzero directed off-diagonal support edges.
+        """
         return int(np.count_nonzero(self.support_mask))
 
     @property
     def density(self) -> float:
-        """Directed graph density over off-diagonal entries."""
+        """Directed graph density over off-diagonal entries.
+
+        Returns
+        -------
+        float
+            Directed graph density over off-diagonal entries.
+        """
         n_oscillators = self.support_mask.shape[0]
         possible = n_oscillators * (n_oscillators - 1)
         if possible == 0:
@@ -121,11 +133,23 @@ class CouplingInferenceResult:
         return float(self.edge_count / possible)
 
     def to_upde_knm(self) -> FloatArray:
-        """Return matrix in UPDE target-by-source coupling convention."""
+        """Return matrix in UPDE target-by-source coupling convention.
+
+        Returns
+        -------
+        FloatArray
+            Return matrix in UPDE target-by-source coupling convention.
+        """
         return np.ascontiguousarray(self.knm.T, dtype=np.float64)
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe, replay-friendly inference record."""
+        """Return a JSON-safe, replay-friendly inference record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe, replay-friendly inference record.
+        """
         return {
             "package": self.package,
             "method": self.method,
@@ -248,7 +272,27 @@ def infer_coupling_from_timeseries(
     *,
     config: CouplingInferenceConfig | None = None,
 ) -> CouplingInferenceResult:
-    """Infer a directed coupling matrix from phase time-series data."""
+    """Infer a directed coupling matrix from phase time-series data.
+
+    Parameters
+    ----------
+    phase_series : object
+        Phase time series, shape ``(T, N)``.
+    config : CouplingInferenceConfig | None
+        Optional inference configuration, or ``None`` for defaults.
+
+    Returns
+    -------
+    CouplingInferenceResult
+        The inferred directed coupling result.
+
+    Raises
+    ------
+    NotImplementedError
+        If the configured inference method is not implemented.
+    RuntimeError
+        If inference fails on the supplied series.
+    """
     resolved_config = _validate_config(config or CouplingInferenceConfig())
     series = _validate_phase_series(
         phase_series, min_timesteps=resolved_config.min_timesteps
@@ -303,7 +347,26 @@ def auto_coupling_estimation(
     threshold_absolute: float | None = None,
     normalisation: NormalisationMode = "max",
 ) -> CouplingInferenceResult:
-    """Infer coupling with the packaged ``auto-coupling-estimation`` profile."""
+    """Infer coupling with the packaged ``auto-coupling-estimation`` profile.
+
+    Parameters
+    ----------
+    phase_series : object
+        Phase time series, shape ``(T, N)``.
+    n_bins : int
+        Number of histogram bins.
+    threshold_quantile : float | None
+        Quantile threshold for edge pruning, or ``None``.
+    threshold_absolute : float | None
+        Absolute threshold for edge pruning, or ``None``.
+    normalisation : NormalisationMode
+        Edge-weight normalisation mode.
+
+    Returns
+    -------
+    CouplingInferenceResult
+        The inferred coupling result from the packaged auto-estimation profile.
+    """
     return infer_coupling_from_timeseries(
         phase_series,
         config=CouplingInferenceConfig(

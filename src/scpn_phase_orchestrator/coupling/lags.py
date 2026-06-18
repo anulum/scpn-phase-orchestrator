@@ -138,6 +138,18 @@ class LagModel:
 
         alpha[i,j] = 2*pi * distances[i,j] / speed.
         Matches the Rust ``LagModel::estimate_from_distances`` algorithm.
+
+        Parameters
+        ----------
+        distances : FloatArray
+            Pairwise distance matrix, shape ``(N, N)``.
+        speed : float
+            Signal propagation speed.
+
+        Returns
+        -------
+        FloatArray
+            The antisymmetric phase-lag matrix, shape ``(N, N)``.
         """
         distances = _validate_distances(distances)
         speed = _validate_positive_real(speed, name="speed")
@@ -153,7 +165,27 @@ class LagModel:
     def estimate_lag(
         self, signal_a: FloatArray, signal_b: FloatArray, sample_rate: float
     ) -> float:
-        """Cross-correlation peak lag in seconds between two signals."""
+        """Cross-correlation peak lag in seconds between two signals.
+
+        Parameters
+        ----------
+        signal_a : FloatArray
+            First signal, shape ``(T,)``.
+        signal_b : FloatArray
+            Second signal, shape ``(T,)``.
+        sample_rate : float
+            Sampling rate in Hz.
+
+        Returns
+        -------
+        float
+            The cross-correlation peak lag in seconds.
+
+        Raises
+        ------
+        ValueError
+            If the signals differ in length or the sample rate is invalid.
+        """
         signal_a = _validate_signal(signal_a, name="signal_a")
         signal_b = _validate_signal(signal_b, name="signal_b")
         if signal_a.shape != signal_b.shape:
@@ -176,6 +208,20 @@ class LagModel:
 
         alpha[i,j] = 2*pi*carrier_freq_hz*lag[i,j], antisymmetric.
         ``carrier_freq_hz`` defaults to 1.0 for backward compatibility.
+
+        Parameters
+        ----------
+        lag_estimates : dict[tuple[int, int], float]
+            Mapping of oscillator pair to estimated lag in seconds.
+        n_layers : int
+            Number of SCPN hierarchy layers.
+        carrier_freq_hz : float
+            Carrier frequency in Hz used to convert lag to phase.
+
+        Returns
+        -------
+        FloatArray
+            The phase-offset matrix in radians, shape ``(N, N)``.
         """
         n_layers = _validate_n_layers(n_layers)
         carrier_freq_hz = _validate_positive_real(

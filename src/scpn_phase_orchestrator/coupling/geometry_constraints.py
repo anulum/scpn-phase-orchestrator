@@ -66,7 +66,18 @@ class GeometryConstraint(ABC):
 
     @abstractmethod
     def project(self, knm: FloatArray) -> FloatArray:
-        """Project *knm* onto the feasible set defined by this constraint."""
+        """Project *knm* onto the feasible set defined by this constraint.
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+        Returns
+        -------
+        FloatArray
+            The projection of *knm* onto the constraint's feasible set.
+        """
         ...
 
 
@@ -74,7 +85,18 @@ class SymmetryConstraint(GeometryConstraint):
     """Enforce K_nm symmetry: K -> (K + K^T) / 2."""
 
     def project(self, knm: FloatArray) -> FloatArray:
-        """Return the symmetric part of *knm*."""
+        """Return the symmetric part of *knm*.
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+        Returns
+        -------
+        FloatArray
+            The symmetric part of *knm*.
+        """
         knm = _validate_knm_matrix(knm)
         result: FloatArray = 0.5 * (knm + knm.T)
         return result
@@ -84,7 +106,18 @@ class NonNegativeConstraint(GeometryConstraint):
     """Clamp negative entries to zero."""
 
     def project(self, knm: FloatArray) -> FloatArray:
-        """Return *knm* with all negative entries replaced by 0."""
+        """Return *knm* with all negative entries replaced by 0.
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+        Returns
+        -------
+        FloatArray
+            *knm* with negative entries clipped to zero.
+        """
         knm = _validate_knm_matrix(knm)
         result: FloatArray = np.maximum(knm, 0.0)
         return result
@@ -94,6 +127,18 @@ def validate_knm(knm: FloatArray, *, atol: float = 1e-12) -> None:
     """Check that a coupling matrix is square, symmetric, non-negative, zero-diagonal.
 
     Raises ValueError with a specific message on the first violation found.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    atol : float
+        Absolute tolerance for the validity checks.
+
+    Raises
+    ------
+    ValueError
+        If ``knm`` is not square, symmetric, non-negative, and zero-diagonal.
     """
     knm = _validate_knm_matrix(knm)
     if not np.allclose(knm, knm.T, atol=atol):
@@ -106,7 +151,25 @@ def validate_knm(knm: FloatArray, *, atol: float = 1e-12) -> None:
 
 
 def project_knm(knm: FloatArray, constraints: list[GeometryConstraint]) -> FloatArray:
-    """Apply all geometry constraints sequentially, then zero the diagonal."""
+    """Apply all geometry constraints sequentially, then zero the diagonal.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    constraints : list[GeometryConstraint]
+        Geometry constraints applied in sequence.
+
+    Returns
+    -------
+    FloatArray
+        The coupling matrix after applying every constraint and zeroing the diagonal.
+
+    Raises
+    ------
+    ValueError
+        If a constraint produces an invalid coupling matrix.
+    """
     result = _validate_knm_matrix(knm).copy()
     for c in constraints:
         if not isinstance(c, GeometryConstraint):

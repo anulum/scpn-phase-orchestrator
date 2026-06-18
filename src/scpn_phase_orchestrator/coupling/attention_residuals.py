@@ -186,6 +186,11 @@ def default_projections(
     ``(w_q, w_k, w_v, w_o)`` — all ``float64``. Shapes:
     ``w_q, w_k, w_v`` each ``(H, d_model, d_head)``;
     ``w_o`` is ``(H · d_head, d_model)``.
+
+    Raises
+    ------
+    ValueError
+        If ``n_heads``, ``d_model``, or ``seed`` is invalid.
     """
     n_heads = _validate_positive_int("n_heads", n_heads)
     seed = _validate_seed("seed", seed)
