@@ -43,7 +43,14 @@ class ChannelLayerRuntimeEvidence:
     confidence_weight: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable layer runtime-evidence record."""
+        """Return a serialisable layer runtime-evidence record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the ChannelLayerRuntimeEvidence
+            fields.
+        """
         return {
             "layer_index": self.layer_index,
             "channel": self.channel,
@@ -66,7 +73,14 @@ class ChannelRuntimeExecution:
     evidence: tuple[ChannelLayerRuntimeEvidence, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable runtime execution record."""
+        """Return a serialisable runtime execution record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the ChannelRuntimeExecution
+            fields.
+        """
         return {
             "layers": [item.to_audit_record() for item in self.evidence],
             "delayed_layers": [
@@ -106,7 +120,18 @@ class ChannelRuntimeExecutor:
 
     @classmethod
     def from_spec(cls, spec: BindingSpec) -> ChannelRuntimeExecutor:
-        """Build a runtime executor from binding channel metadata."""
+        """Build a runtime executor from binding channel metadata.
+
+        Parameters
+        ----------
+        spec : BindingSpec
+            The binding specification supplying channel layer metadata.
+
+        Returns
+        -------
+        ChannelRuntimeExecutor
+            An executor configured with the spec's per-channel runtime policies.
+        """
         family_channels = {
             name: family.channel for name, family in spec.oscillator_families.items()
         }
@@ -121,7 +146,25 @@ class ChannelRuntimeExecutor:
         )
 
     def execute(self, raw_layers: list[LayerState]) -> ChannelRuntimeExecution:
-        """Apply delayed/uncertain channel policies to this tick's layer states."""
+        """Apply delayed/uncertain channel policies to this tick's layer states.
+
+        Parameters
+        ----------
+        raw_layers : list[LayerState]
+            Per-layer states observed for the current tick, one per binding
+            layer.
+
+        Returns
+        -------
+        ChannelRuntimeExecution
+            The policy-adjusted layer states with per-layer runtime evidence.
+
+        Raises
+        ------
+        ValueError
+            If ``raw_layers`` does not have one entry per configured binding
+            layer.
+        """
         if len(raw_layers) != len(self._layer_channels):
             msg = (
                 "raw layer count must match binding layer count: "

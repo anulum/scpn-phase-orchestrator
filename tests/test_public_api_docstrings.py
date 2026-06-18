@@ -74,7 +74,19 @@ def test_core_public_methods_use_numpy_style_docstrings(
 # Public API families whose every public callable must carry the applicable
 # NumPy-style contract sections, not merely a docstring. Extend this tuple one
 # family at a time as M2 (public docstring quality enforcement) closes them.
-SECTION_ENFORCED_MODULES = ("scpn_phase_orchestrator.api",)
+SECTION_ENFORCED_MODULES = (
+    "scpn_phase_orchestrator.api",
+    "scpn_phase_orchestrator.binding.channel_algebra",
+    "scpn_phase_orchestrator.binding.channel_runtime",
+    "scpn_phase_orchestrator.binding.digital_twin",
+    "scpn_phase_orchestrator.binding.loader",
+    "scpn_phase_orchestrator.binding.resolved",
+    "scpn_phase_orchestrator.binding.semantic",
+    "scpn_phase_orchestrator.binding.topos_examples",
+    "scpn_phase_orchestrator.binding.topos_semantic",
+    "scpn_phase_orchestrator.binding.types",
+    "scpn_phase_orchestrator.binding.validator",
+)
 
 
 def _unwrap(obj: object) -> object:

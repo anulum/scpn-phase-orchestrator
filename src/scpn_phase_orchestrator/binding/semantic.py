@@ -78,7 +78,13 @@ class RetrievalEvidence:
     ranking_features: dict[str, float] = field(default_factory=dict)
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-safe retrieval evidence record."""
+        """Return a JSON-safe retrieval evidence record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Deterministic, JSON-safe audit mapping of the RetrievalEvidence fields.
+        """
         return {
             "domainpack": self.domainpack,
             "path": self.path,
@@ -106,11 +112,24 @@ class GeneratedBindingArtifacts:
 
     @property
     def schema_valid(self) -> bool:
-        """Return True when the generated binding passed validator checks."""
+        """Return True when the generated binding passed validator checks.
+
+        Returns
+        -------
+        bool
+            ``True`` when the generated binding passed every validator check.
+        """
         return not self.validation_errors
 
     def write_domainpack(self, output_dir: str | Path) -> None:
-        """Write generated artefacts as a reviewable domainpack directory."""
+        """Write generated artefacts as a reviewable domainpack directory.
+
+        Parameters
+        ----------
+        output_dir : str or pathlib.Path
+            Destination directory; the binding spec, policy, review notebook,
+            audit record, and README are written beneath it.
+        """
         import json
 
         path = _coerce_output_dir(output_dir)
@@ -149,7 +168,22 @@ class SemanticDomainCompiler:
         name: str = "semantically_generated_domain",
         oscillators_per_layer: int = 8,
     ) -> BindingSpec:
-        """Translate a symbolic domain prompt into a BindingSpec."""
+        """Translate a symbolic domain prompt into a BindingSpec.
+
+        Parameters
+        ----------
+        prompt : str
+            Natural-language description of the target domain.
+        name : str, optional
+            Name for the generated binding spec.
+        oscillators_per_layer : int, optional
+            Number of oscillators to allocate per generated layer.
+
+        Returns
+        -------
+        BindingSpec
+            The compiled, structurally typed binding specification.
+        """
         return self.compile_artifacts(
             prompt,
             name=name,
@@ -167,7 +201,34 @@ class SemanticDomainCompiler:
         retrieval_root: str | Path | None = "domainpacks",
         docs_root: str | Path | None = "docs",
     ) -> GeneratedBindingArtifacts:
-        """Compile domain intent into binding, policy, audit, and dry-run artefacts."""
+        """Compile domain intent into binding, policy, audit, and dry-run artefacts.
+
+        Parameters
+        ----------
+        prompt : str
+            Natural-language description of the target domain.
+        name : str, optional
+            Name for the generated binding spec.
+        oscillators_per_layer : int, optional
+            Number of oscillators to allocate per generated layer.
+        dry_run_steps : int, optional
+            Number of integration steps for the embedded dry-run check.
+        retrieval_root : str or pathlib.Path or None, optional
+            Root directory searched for retrieval grounding evidence.
+        docs_root : str or pathlib.Path or None, optional
+            Root directory searched for documentation grounding evidence.
+
+        Returns
+        -------
+        GeneratedBindingArtifacts
+            The binding, policy, audit record, retrieval evidence, and dry-run
+            result bundle.
+
+        Raises
+        ------
+        ValueError
+            If the generated binding fails validation or the embedded dry run.
+        """
         (
             prompt,
             name,
@@ -390,7 +451,34 @@ def compile_symbolic_binding(
     retrieval_root: str | Path | None = "domainpacks",
     docs_root: str | Path | None = "docs",
 ) -> GeneratedBindingArtifacts:
-    """Compile domain intent into a reviewable generated domainpack."""
+    """Compile domain intent into a reviewable generated domainpack.
+
+    Parameters
+    ----------
+    prompt : str
+        Natural-language description of the target domain.
+    name : str, optional
+        Name for the generated binding spec.
+    oscillators_per_layer : int, optional
+        Number of oscillators to allocate per generated layer.
+    dry_run_steps : int, optional
+        Number of integration steps for the embedded dry-run check.
+    retrieval_root : str or pathlib.Path or None, optional
+        Root directory searched for retrieval grounding evidence.
+    docs_root : str or pathlib.Path or None, optional
+        Root directory searched for documentation grounding evidence.
+
+    Returns
+    -------
+    GeneratedBindingArtifacts
+        The generated domainpack artefact bundle.
+
+    Raises
+    ------
+    ValueError
+        If the compilation inputs are invalid or the generated binding fails
+        validation or its dry run.
+    """
     _validate_compilation_inputs(
         prompt=prompt,
         name=name,

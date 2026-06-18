@@ -41,7 +41,13 @@ class ToposProofObligation:
     passed: bool = True
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe obligation audit record."""
+        """Return a JSON-safe obligation audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the ToposProofObligation fields.
+        """
         return {
             "name": str(self.name).strip(),
             "description": str(self.description).strip(),
@@ -69,7 +75,13 @@ class ToposDomainObligation:
     passed: bool
 
     def to_audit_record(self) -> dict[str, object]:
-        """Convert this example into a deterministic JSON-safe audit record."""
+        """Convert this example into a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the ToposDomainObligation fields.
+        """
         self._validate()
         obligations = [obligation.to_audit_record() for obligation in self.obligations]
         obligation_names = [entry["name"] for entry in obligations]
@@ -408,7 +420,19 @@ def _cyber_industrial_policy_rules() -> tuple[PolicyRule, ...]:
 
 
 def build_topos_domain_obligation_examples() -> tuple[dict[str, object], ...]:
-    """Build deterministic topos obligation examples for benchmark consumption."""
+    """Build deterministic topos obligation examples for benchmark consumption.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Deterministic, JSON-safe obligation example records.
+
+    Raises
+    ------
+    ValueError
+        If an internally constructed obligation example fails its own
+        consistency checks.
+    """
     examples = (
         _build_domain_example(
             domain="power_grid",

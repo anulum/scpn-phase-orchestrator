@@ -298,7 +298,24 @@ def _load_cross_channel_couplings(
 
 
 def load_binding_spec(path: str | Path) -> BindingSpec:
-    """Load a BindingSpec from a YAML or JSON file."""
+    """Load a BindingSpec from a YAML or JSON file.
+
+    Parameters
+    ----------
+    path : str or pathlib.Path
+        Filesystem path to the binding-spec ``.yaml``/``.yml``/``.json`` file.
+
+    Returns
+    -------
+    BindingSpec
+        The parsed, structurally typed binding specification.
+
+    Raises
+    ------
+    BindingLoadError
+        If the file cannot be read, is not valid finite YAML/JSON, contains
+        duplicate mapping keys, or does not satisfy the binding-spec schema.
+    """
     path = Path(path)
     # Filename only in surfaced error messages — full filesystem paths must
     # not leak into logs or API clients.

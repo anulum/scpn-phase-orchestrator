@@ -33,7 +33,13 @@ class ChannelCouplingEdge:
     template: str | None
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable coupling-edge record."""
+        """Return a serialisable coupling-edge record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the ChannelCouplingEdge fields.
+        """
         return {
             "source": self.source,
             "target": self.target,
@@ -54,7 +60,13 @@ class ChannelRuntimePolicy:
     missing_policy: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable runtime-policy record."""
+        """Return a serialisable runtime-policy record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the ChannelRuntimePolicy fields.
+        """
         return {
             "channel": self.channel,
             "evidence_required": self.evidence_required,
@@ -86,7 +98,13 @@ class ChannelAlgebraReport:
     coupling_edges: tuple[ChannelCouplingEdge, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable channel algebra record."""
+        """Return a serialisable channel algebra record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the ChannelAlgebraReport fields.
+        """
         return {
             "channels": list(self.channels),
             "declared_channels": list(self.declared_channels),
@@ -123,6 +141,17 @@ def build_channel_algebra_report(spec: BindingSpec) -> ChannelAlgebraReport:
 
     The report is a read-only structural view. It does not validate or mutate
     the binding; callers should still run `validate_binding_spec()` for gates.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification to analyse.
+
+    Returns
+    -------
+    ChannelAlgebraReport
+        A read-only report of channels, coupling edges, and runtime policies
+        derived from the spec.
     """
     channels = tuple(sorted(spec.used_channels()))
     declared_channels = tuple(sorted(spec.channels))

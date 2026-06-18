@@ -92,7 +92,20 @@ class DriverSpec:
     extra: dict[str, dict[str, Any]] | None = None
 
     def channel_config(self, channel: str) -> dict[str, Any]:
-        """Return driver config for a standard or named channel."""
+        """Return driver config for a standard or named channel.
+
+        Parameters
+        ----------
+        channel : str
+            A standard channel (``P``/``physical``, ``I``/``informational``,
+            ``S``/``symbolic``) or a named extension channel id.
+
+        Returns
+        -------
+        dict[str, Any]
+            The driver configuration mapping for *channel*, or an empty mapping
+            when the channel has no configured driver.
+        """
         standard = {
             "P": self.physical,
             "physical": self.physical,
@@ -106,7 +119,14 @@ class DriverSpec:
         return (self.extra or {}).get(channel, {})
 
     def all_channel_configs(self) -> dict[str, dict[str, Any]]:
-        """Return standard driver configs plus named extension channels."""
+        """Return standard driver configs plus named extension channels.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            Mapping of channel id (``P``/``I``/``S`` plus any named extension
+            channels) to its driver configuration mapping.
+        """
         configs = {
             "P": self.physical,
             "I": self.informational,
@@ -306,12 +326,35 @@ VALID_EXTRACTORS = _ALGORITHM_EXTRACTORS | frozenset(EXTRACTOR_ALIASES)
 
 
 def is_valid_channel_id(channel: str) -> bool:
-    """Return True when *channel* is a valid binding channel identifier."""
+    """Return True when *channel* is a valid binding channel identifier.
+
+    Parameters
+    ----------
+    channel : str
+        Candidate channel identifier to validate.
+
+    Returns
+    -------
+    bool
+        ``True`` if *channel* matches the binding channel-id grammar.
+    """
     return bool(_CHANNEL_ID_RE.fullmatch(channel))
 
 
 def resolve_extractor_type(raw: str) -> str:
-    """Map alias to algorithm name; pass algorithm names through unchanged."""
+    """Map alias to algorithm name; pass algorithm names through unchanged.
+
+    Parameters
+    ----------
+    raw : str
+        An extractor alias or canonical algorithm name.
+
+    Returns
+    -------
+    str
+        The canonical extractor algorithm name; unknown values pass through
+        unchanged.
+    """
     return EXTRACTOR_ALIASES.get(raw, raw)
 
 
@@ -345,8 +388,19 @@ class BindingSpec:
     def get_omegas(self) -> list[float]:
         """Collect natural frequencies from all layers.
 
-        Falls back to 1.0 rad/s per oscillator if omegas is not defined.
-        Raises ValueError if omegas is defined but length mismatches.
+        Falls back to 1.0 rad/s per oscillator when a layer defines no omegas.
+
+        Returns
+        -------
+        list[float]
+            Natural frequencies in rad/s, concatenated in layer order, one per
+            oscillator.
+
+        Raises
+        ------
+        ValueError
+            If a layer defines an ``omegas`` list whose length differs from its
+            oscillator count.
         """
         result: list[float] = []
         for layer in self.layers:
@@ -364,7 +418,14 @@ class BindingSpec:
         return result
 
     def used_channels(self) -> set[str]:
-        """Return channels referenced by families, drivers, and algebra."""
+        """Return channels referenced by families, drivers, and algebra.
+
+        Returns
+        -------
+        set[str]
+            The set of channel identifiers referenced by oscillator families,
+            configured drivers, and cross-channel coupling declarations.
+        """
         used = {family.channel for family in self.oscillator_families.values()}
         used.update(self.drivers.all_channel_configs())
         used.update(self.channels)

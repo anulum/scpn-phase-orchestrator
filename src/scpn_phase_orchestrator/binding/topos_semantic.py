@@ -45,7 +45,14 @@ class SymbolicBindingObligation:
     evidence: str
 
     def to_audit_record(self) -> dict[str, str]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, str]
+            Deterministic, JSON-safe audit mapping of the SymbolicBindingObligation
+            fields.
+        """
         return {
             "name": self.name,
             "status": self.status,
@@ -62,7 +69,13 @@ class SymbolicBindingObject:
     detail: str
 
     def to_audit_record(self) -> dict[str, str]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, str]
+            Deterministic, JSON-safe audit mapping of the SymbolicBindingObject fields.
+        """
         return {
             "name": self.name,
             "kind": self.kind,
@@ -80,7 +93,14 @@ class SymbolicBindingMorphism:
     deterministic: bool = True
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Deterministic, JSON-safe audit mapping of the SymbolicBindingMorphism
+            fields.
+        """
         return {
             "source": self.source,
             "target": self.target,
@@ -106,7 +126,14 @@ class SymbolicBindingValidationReport:
     non_actuating: bool = True
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Deterministic, JSON-safe audit mapping of the
+            SymbolicBindingValidationReport fields.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -457,7 +484,18 @@ def _check_audit_boundary_preserved(
 def validate_symbolic_binding_functor(
     artifacts: GeneratedBindingArtifacts,
 ) -> SymbolicBindingValidationReport:
-    """Validate symbolic compiler output as a source-to-binding functor."""
+    """Validate symbolic compiler output as a source-to-binding functor.
+
+    Parameters
+    ----------
+    artifacts : GeneratedBindingArtifacts
+        The generated binding artefacts to check for functorial consistency.
+
+    Returns
+    -------
+    SymbolicBindingValidationReport
+        The validation report: objects, morphisms, and any obligation failures.
+    """
     artifacts = _validate_binding_artefact_inputs(artifacts)
     obligations: list[SymbolicBindingObligation] = []
 

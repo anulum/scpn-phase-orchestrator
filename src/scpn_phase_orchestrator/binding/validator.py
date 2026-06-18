@@ -58,7 +58,19 @@ _EXECUTABLE_CONFIG_MARKERS = (
 
 
 def validate_binding_spec(spec: BindingSpec) -> list[str]:
-    """Validate a BindingSpec. Returns list of error strings; empty means valid."""
+    """Validate a BindingSpec and return a list of error strings.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification to validate.
+
+    Returns
+    -------
+    list[str]
+        Human-readable validation error messages; an empty list means the
+        spec is structurally and cross-field valid.
+    """
     errors: list[str] = []
 
     if not spec.name:
@@ -288,6 +300,17 @@ def validate_binding_spec_security(spec: BindingSpec) -> list[str]:
     executable-looking payloads in free-form configuration fields. Binding specs
     remain declarative data; they must not carry Python code, loader tags,
     import expressions, subprocess references, or deserialisation gadgets.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The loaded binding specification to security-review.
+
+    Returns
+    -------
+    list[str]
+        Security-review findings; an empty list means no executable-looking
+        payloads were detected in free-form configuration fields.
     """
     findings: list[str] = []
     for location, value in _walk_security_values(spec, "binding"):

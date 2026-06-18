@@ -95,7 +95,14 @@ class DigitalTwinAdapterManifest:
             _require_non_empty(capability, "adapter sync capability")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe adapter manifest."""
+        """Return a JSON-safe adapter manifest.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinAdapterManifest
+            fields.
+        """
         return {
             "name": self.name,
             "transport": self.transport,
@@ -116,7 +123,14 @@ class DigitalTwinAdapterCompatibility:
     contract_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe adapter compatibility report."""
+        """Return a JSON-safe adapter compatibility report.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the
+            DigitalTwinAdapterCompatibility fields.
+        """
         return {
             "compatible": self.compatible,
             "reasons": list(self.reasons),
@@ -136,7 +150,14 @@ class DigitalTwinLayerContract:
     family: str | None = None
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe layer contract."""
+        """Return a JSON-safe layer contract.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinLayerContract
+            fields.
+        """
         return {
             "name": self.name,
             "index": self.index,
@@ -155,7 +176,14 @@ class DigitalTwinSyncCapability:
     payload: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe sync capability contract."""
+        """Return a JSON-safe sync capability contract.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinSyncCapability
+            fields.
+        """
         return {
             "name": self.name,
             "direction": self.direction,
@@ -180,7 +208,14 @@ class DigitalTwinBindingContract:
     contract_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe digital-twin contract."""
+        """Return a deterministic JSON-safe digital-twin contract.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinBindingContract
+            fields.
+        """
         return {
             "contract_version": self.contract_version,
             "binding": {
@@ -202,7 +237,13 @@ class DigitalTwinBindingContract:
         }
 
     def to_json(self) -> str:
-        """Serialise the contract with deterministic key ordering."""
+        """Serialise the contract with deterministic key ordering.
+
+        Returns
+        -------
+        str
+            The contract serialised as a JSON string with deterministically sorted keys.
+        """
         return json.dumps(self.to_audit_record(), sort_keys=True, separators=(",", ":"))
 
 
@@ -224,7 +265,14 @@ class DigitalTwinSyncEnvelope:
             raise ValueError("sequence must be >= 0")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe sync envelope."""
+        """Return a JSON-safe sync envelope.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinSyncEnvelope
+            fields.
+        """
         return {
             "contract_hash": self.contract_hash,
             "capability": self.capability,
@@ -234,7 +282,13 @@ class DigitalTwinSyncEnvelope:
         }
 
     def to_json(self) -> str:
-        """Serialise the envelope with deterministic key ordering."""
+        """Serialise the envelope with deterministic key ordering.
+
+        Returns
+        -------
+        str
+            The envelope serialised as a JSON string with deterministically sorted keys.
+        """
         return json.dumps(self.to_audit_record(), sort_keys=True, separators=(",", ":"))
 
 
@@ -247,7 +301,14 @@ class DigitalTwinTransportValidation:
     envelope: DigitalTwinSyncEnvelope
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe validation record."""
+        """Return a JSON-safe validation record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinTransportValidation
+            fields.
+        """
         return {
             "accepted": self.accepted,
             "reason": self.reason,
@@ -265,7 +326,14 @@ class DigitalTwinSyncJsonlReport:
     rejected: tuple[dict[str, object], ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe file-adapter report."""
+        """Return a JSON-safe file-adapter report.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinSyncJsonlReport
+            fields.
+        """
         return {
             "path": self.path,
             "written": self.written,
@@ -293,7 +361,14 @@ class DigitalTwinOperatorEvidence:
     status: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe operator evidence record."""
+        """Return a JSON-safe operator evidence record.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinOperatorEvidence
+            fields.
+        """
         return {
             "contract_hash": self.contract_hash,
             "accepted_count": self.accepted_count,
@@ -321,27 +396,63 @@ class DigitalTwinSyncMemoryAdapter:
         cls,
         contract: DigitalTwinBindingContract,
     ) -> DigitalTwinSyncMemoryAdapter:
-        """Create an empty adapter for a digital-twin binding contract."""
+        """Create an empty adapter for a digital-twin binding contract.
+
+        Parameters
+        ----------
+        contract : DigitalTwinBindingContract
+            The digital-twin binding contract the adapter serves.
+
+        Returns
+        -------
+        DigitalTwinSyncMemoryAdapter
+            An empty in-memory adapter bound to the contract.
+        """
         return cls(contract=contract, _queue=[])
 
     def submit(
         self,
         envelope: DigitalTwinSyncEnvelope,
     ) -> DigitalTwinTransportValidation:
-        """Validate and queue one envelope when accepted."""
+        """Validate and queue one envelope when accepted.
+
+        Parameters
+        ----------
+        envelope : DigitalTwinSyncEnvelope
+            The sync envelope to validate and queue.
+
+        Returns
+        -------
+        DigitalTwinTransportValidation
+            The validation result; the envelope is queued only when accepted.
+        """
         validation = validate_digital_twin_sync_envelope(self.contract, envelope)
         if validation.accepted:
             self._queue.append(envelope)
         return validation
 
     def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
-        """Return queued envelopes in submission order and clear the queue."""
+        """Return queued envelopes in submission order and clear the queue.
+
+        Returns
+        -------
+        tuple[DigitalTwinSyncEnvelope, ...]
+            The queued sync envelopes in submission order; the internal queue is left
+            empty.
+        """
         drained = tuple(self._queue)
         self._queue.clear()
         return drained
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return adapter state without exposing any network surface."""
+        """Return adapter state without exposing any network surface.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe state of the DigitalTwinSyncMemoryAdapter (queue
+            counters and status); no network surface or payload contents are exposed.
+        """
         return {
             "contract_hash": self.contract.contract_hash,
             "queued_count": len(self._queue),
@@ -359,7 +470,14 @@ class DigitalTwinSyncGrpcResponse:
     message: dict[str, object]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe gRPC adapter response."""
+        """Return a JSON-safe gRPC adapter response.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinSyncGrpcResponse
+            fields.
+        """
         return {
             "status_code": self.status_code,
             "accepted": self.accepted,
@@ -392,7 +510,26 @@ class DigitalTwinSyncGrpcAdapter:
         requires_auth: bool = True,
         supports_replay: bool = False,
     ) -> DigitalTwinSyncGrpcAdapter:
-        """Create a gRPC adapter boundary for a digital-twin contract."""
+        """Create a gRPC adapter boundary for a digital-twin contract.
+
+        Parameters
+        ----------
+        contract : DigitalTwinBindingContract
+            The digital-twin binding contract the adapter serves.
+        name : str, optional
+            Human-readable adapter name.
+        sync_capabilities : Sequence[str], optional
+            Sync capabilities the adapter advertises.
+        requires_auth : bool, optional
+            Whether the adapter boundary requires authentication.
+        supports_replay : bool, optional
+            Whether the adapter supports replay of past envelopes.
+
+        Returns
+        -------
+        DigitalTwinSyncGrpcAdapter
+            A new gRPC adapter boundary bound to the contract.
+        """
         compatibility = build_digital_twin_adapter_manifest(
             contract,
             name=name,
@@ -410,7 +547,20 @@ class DigitalTwinSyncGrpcAdapter:
         *,
         metadata: Mapping[str, str] | None = None,
     ) -> DigitalTwinSyncGrpcResponse:
-        """Validate one unary gRPC request and queue accepted envelopes."""
+        """Validate one unary gRPC request and queue accepted envelopes.
+
+        Parameters
+        ----------
+        request : Mapping[str, object]
+            The decoded unary gRPC request body.
+        metadata : Mapping[str, str] or None, optional
+            Optional request metadata (e.g. auth tokens).
+
+        Returns
+        -------
+        DigitalTwinSyncGrpcResponse
+            The response; accepted envelopes are queued for :meth:`drain`.
+        """
         if not self.compatibility.compatible:
             return _grpc_response(
                 "FAILED_PRECONDITION",
@@ -463,13 +613,27 @@ class DigitalTwinSyncGrpcAdapter:
         )
 
     def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
-        """Return accepted gRPC envelopes in arrival order and clear the queue."""
+        """Return accepted gRPC envelopes in arrival order and clear the queue.
+
+        Returns
+        -------
+        tuple[DigitalTwinSyncEnvelope, ...]
+            The queued sync envelopes in submission order; the internal queue is left
+            empty.
+        """
         drained = tuple(self._queue)
         self._queue.clear()
         return drained
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return gRPC adapter state without exposing payload contents."""
+        """Return gRPC adapter state without exposing payload contents.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe state of the DigitalTwinSyncGrpcAdapter (queue
+            counters and status); no network surface or payload contents are exposed.
+        """
         return {
             "contract_hash": self.contract.contract_hash,
             "manifest": self.compatibility.manifest.to_audit_record(),
@@ -489,7 +653,14 @@ class DigitalTwinSyncKafkaResponse:
     message: dict[str, object]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe Kafka adapter response."""
+        """Return a JSON-safe Kafka adapter response.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinSyncKafkaResponse
+            fields.
+        """
         return {
             "accepted": self.accepted,
             "reason": self.reason,
@@ -523,7 +694,28 @@ class DigitalTwinSyncKafkaAdapter:
         requires_auth: bool = True,
         supports_replay: bool = True,
     ) -> DigitalTwinSyncKafkaAdapter:
-        """Create a Kafka message-boundary adapter for a digital-twin contract."""
+        """Create a Kafka message-boundary adapter for a digital-twin contract.
+
+        Parameters
+        ----------
+        contract : DigitalTwinBindingContract
+            The digital-twin binding contract the adapter serves.
+        topic : str, optional
+            Kafka topic the adapter binds to.
+        name : str, optional
+            Human-readable adapter name.
+        sync_capabilities : Sequence[str], optional
+            Sync capabilities the adapter advertises.
+        requires_auth : bool, optional
+            Whether the adapter boundary requires authentication.
+        supports_replay : bool, optional
+            Whether the adapter supports replay of past envelopes.
+
+        Returns
+        -------
+        DigitalTwinSyncKafkaAdapter
+            A new Kafka message-boundary adapter bound to the contract.
+        """
         _require_non_empty(topic, "kafka topic")
         compatibility = build_digital_twin_adapter_manifest(
             contract,
@@ -547,7 +739,20 @@ class DigitalTwinSyncKafkaAdapter:
         *,
         headers: Mapping[str, str] | None = None,
     ) -> DigitalTwinSyncKafkaResponse:
-        """Validate one decoded Kafka message and queue accepted envelopes."""
+        """Validate one decoded Kafka message and queue accepted envelopes.
+
+        Parameters
+        ----------
+        message : Mapping[str, object]
+            The decoded Kafka message body.
+        headers : Mapping[str, str] or None, optional
+            Optional transport headers (e.g. auth tokens).
+
+        Returns
+        -------
+        DigitalTwinSyncKafkaResponse
+            The Kafka response; accepted envelopes are queued for :meth:`drain`.
+        """
         message_topic = message.get("topic", self.topic)
         if not isinstance(message_topic, str) or message_topic != self.topic:
             return _kafka_response(
@@ -617,13 +822,27 @@ class DigitalTwinSyncKafkaAdapter:
         )
 
     def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
-        """Return accepted Kafka envelopes in arrival order and clear the queue."""
+        """Return accepted Kafka envelopes in arrival order and clear the queue.
+
+        Returns
+        -------
+        tuple[DigitalTwinSyncEnvelope, ...]
+            The queued sync envelopes in submission order; the internal queue is left
+            empty.
+        """
         drained = tuple(self._queue)
         self._queue.clear()
         return drained
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return Kafka adapter state without exposing payload contents."""
+        """Return Kafka adapter state without exposing payload contents.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe state of the DigitalTwinSyncKafkaAdapter (queue
+            counters and status); no network surface or payload contents are exposed.
+        """
         return {
             "contract_hash": self.contract.contract_hash,
             "manifest": self.compatibility.manifest.to_audit_record(),
@@ -644,7 +863,14 @@ class DigitalTwinSyncHardwareResponse:
     frame: dict[str, object]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe hardware adapter response."""
+        """Return a JSON-safe hardware adapter response.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the
+            DigitalTwinSyncHardwareResponse fields.
+        """
         return {
             "accepted": self.accepted,
             "reason": self.reason,
@@ -678,7 +904,33 @@ class DigitalTwinSyncHardwareAdapter:
         requires_auth: bool = True,
         supports_replay: bool = True,
     ) -> DigitalTwinSyncHardwareAdapter:
-        """Create a no-I/O hardware boundary for a digital-twin contract."""
+        """Create a no-I/O hardware boundary for a digital-twin contract.
+
+        Parameters
+        ----------
+        contract : DigitalTwinBindingContract
+            The digital-twin binding contract the adapter serves.
+        device_ids : Sequence[str]
+            Identifiers of the hardware devices the boundary serves.
+        name : str, optional
+            Human-readable adapter name.
+        sync_capabilities : Sequence[str], optional
+            Sync capabilities the adapter advertises.
+        requires_auth : bool, optional
+            Whether the adapter boundary requires authentication.
+        supports_replay : bool, optional
+            Whether the adapter supports replay of past envelopes.
+
+        Returns
+        -------
+        DigitalTwinSyncHardwareAdapter
+            A new no-I/O hardware boundary bound to the contract.
+
+        Raises
+        ------
+        ValueError
+            If ``device_ids`` is empty.
+        """
         if not device_ids:
             raise ValueError("hardware device_ids must not be empty")
         checked_device_ids = tuple(device_ids)
@@ -706,7 +958,20 @@ class DigitalTwinSyncHardwareAdapter:
         *,
         headers: Mapping[str, str] | None = None,
     ) -> DigitalTwinSyncHardwareResponse:
-        """Validate one decoded hardware frame and queue accepted envelopes."""
+        """Validate one decoded hardware frame and queue accepted envelopes.
+
+        Parameters
+        ----------
+        frame : Mapping[str, object]
+            The decoded hardware hardware frame.
+        headers : Mapping[str, str] or None, optional
+            Optional transport headers (e.g. auth tokens).
+
+        Returns
+        -------
+        DigitalTwinSyncHardwareResponse
+            The hardware response; accepted envelopes are queued for :meth:`drain`.
+        """
         device_id = frame.get("device_id")
         if not isinstance(device_id, str) or device_id not in self.device_ids:
             return _hardware_response(
@@ -777,13 +1042,27 @@ class DigitalTwinSyncHardwareAdapter:
         )
 
     def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
-        """Return accepted hardware envelopes in arrival order and clear the queue."""
+        """Return accepted hardware envelopes in arrival order and clear the queue.
+
+        Returns
+        -------
+        tuple[DigitalTwinSyncEnvelope, ...]
+            The queued sync envelopes in submission order; the internal queue is left
+            empty.
+        """
         drained = tuple(self._queue)
         self._queue.clear()
         return drained
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return hardware adapter state without exposing payload contents."""
+        """Return hardware adapter state without exposing payload contents.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe state of the DigitalTwinSyncHardwareAdapter (queue
+            counters and status); no network surface or payload contents are exposed.
+        """
         return {
             "contract_hash": self.contract.contract_hash,
             "manifest": self.compatibility.manifest.to_audit_record(),
@@ -805,7 +1084,14 @@ class DigitalTwinSyncRestResponse:
     body: dict[str, object]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe REST adapter response."""
+        """Return a JSON-safe REST adapter response.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe audit mapping of the DigitalTwinSyncRestResponse
+            fields.
+        """
         return {
             "status_code": self.status_code,
             "accepted": self.accepted,
@@ -838,7 +1124,26 @@ class DigitalTwinSyncRestAdapter:
         requires_auth: bool = True,
         supports_replay: bool = False,
     ) -> DigitalTwinSyncRestAdapter:
-        """Create a REST adapter boundary for a digital-twin contract."""
+        """Create a REST adapter boundary for a digital-twin contract.
+
+        Parameters
+        ----------
+        contract : DigitalTwinBindingContract
+            The digital-twin binding contract the adapter serves.
+        name : str, optional
+            Human-readable adapter name.
+        sync_capabilities : Sequence[str], optional
+            Sync capabilities the adapter advertises.
+        requires_auth : bool, optional
+            Whether the adapter boundary requires authentication.
+        supports_replay : bool, optional
+            Whether the adapter supports replay of past envelopes.
+
+        Returns
+        -------
+        DigitalTwinSyncRestAdapter
+            A new REST adapter boundary bound to the contract.
+        """
         compatibility = build_digital_twin_adapter_manifest(
             contract,
             name=name,
@@ -856,7 +1161,20 @@ class DigitalTwinSyncRestAdapter:
         *,
         headers: Mapping[str, str] | None = None,
     ) -> DigitalTwinSyncRestResponse:
-        """Validate one HTTP POST body and queue accepted sync envelopes."""
+        """Validate one HTTP POST body and queue accepted sync envelopes.
+
+        Parameters
+        ----------
+        body : Mapping[str, object]
+            The decoded REST HTTP POST body.
+        headers : Mapping[str, str] or None, optional
+            Optional transport headers (e.g. auth tokens).
+
+        Returns
+        -------
+        DigitalTwinSyncRestResponse
+            The REST response; accepted envelopes are queued for :meth:`drain`.
+        """
         if not self.compatibility.compatible:
             return _rest_response(
                 503,
@@ -909,13 +1227,27 @@ class DigitalTwinSyncRestAdapter:
         )
 
     def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
-        """Return accepted REST envelopes in arrival order and clear the queue."""
+        """Return accepted REST envelopes in arrival order and clear the queue.
+
+        Returns
+        -------
+        tuple[DigitalTwinSyncEnvelope, ...]
+            The queued sync envelopes in submission order; the internal queue is left
+            empty.
+        """
         drained = tuple(self._queue)
         self._queue.clear()
         return drained
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return REST adapter state without exposing payload contents."""
+        """Return REST adapter state without exposing payload contents.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe state of the DigitalTwinSyncRestAdapter (queue
+            counters and status); no network surface or payload contents are exposed.
+        """
         return {
             "contract_hash": self.contract.contract_hash,
             "manifest": self.compatibility.manifest.to_audit_record(),
@@ -936,6 +1268,25 @@ def build_digital_twin_binding_contract(
     The contract is read-only and transport-neutral. It describes what a
     simulator, service twin, or hardware twin may exchange with SPO without
     opening network connections or applying actuation.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The validated binding specification.
+    contract_version : str, optional
+        Semantic version label for the emitted contract.
+    sync_capabilities : Sequence[str], optional
+        Capabilities the contract advertises.
+
+    Returns
+    -------
+    DigitalTwinBindingContract
+        A read-only, transport-neutral live-sync contract.
+
+    Raises
+    ------
+    ValueError
+        If the spec cannot form a valid live-sync contract.
     """
     _require_non_empty(contract_version, "contract_version")
     if not sync_capabilities:
@@ -1008,7 +1359,30 @@ def build_digital_twin_adapter_manifest(
     requires_auth: bool,
     notes: str = "",
 ) -> DigitalTwinAdapterCompatibility:
-    """Build and validate a transport-adapter manifest against a contract."""
+    """Build and validate a transport-adapter manifest against a contract.
+
+    Parameters
+    ----------
+    contract : DigitalTwinBindingContract
+        The contract the adapter must satisfy.
+    name : str
+        Adapter name.
+    transport : str
+        Transport identifier (e.g. ``rest``, ``grpc``, ``kafka``).
+    sync_capabilities : Sequence[str]
+        Capabilities the adapter implements.
+    supports_replay : bool
+        Whether the adapter supports replay.
+    requires_auth : bool
+        Whether the adapter requires authentication.
+    notes : str, optional
+        Free-form manifest notes.
+
+    Returns
+    -------
+    DigitalTwinAdapterCompatibility
+        The adapter compatibility report against the contract.
+    """
     manifest = DigitalTwinAdapterManifest(
         name=name,
         transport=transport,
@@ -1050,6 +1424,24 @@ def build_digital_twin_sync_envelope(
     This helper does not send data. It creates the deterministic envelope that
     REST, gRPC, Kafka, file, or hardware adapters can validate before handing a
     payload to the runtime.
+
+    Parameters
+    ----------
+    contract : DigitalTwinBindingContract
+        The contract the envelope conforms to.
+    capability : str
+        The sync capability the envelope exercises.
+    direction : str
+        Sync direction (e.g. ``inbound``/``outbound``).
+    sequence : int
+        Monotonic envelope sequence number.
+    payload : dict[str, object]
+        The deterministic payload to wrap.
+
+    Returns
+    -------
+    DigitalTwinSyncEnvelope
+        A validated, transport-neutral sync envelope.
     """
     return DigitalTwinSyncEnvelope(
         contract_hash=contract.contract_hash,
@@ -1064,7 +1456,20 @@ def write_digital_twin_sync_jsonl(
     path: str | Path,
     envelopes: Sequence[DigitalTwinSyncEnvelope],
 ) -> DigitalTwinSyncJsonlReport:
-    """Write sync envelopes to deterministic JSONL for offline replay."""
+    """Write sync envelopes to deterministic JSONL for offline replay.
+
+    Parameters
+    ----------
+    path : str or pathlib.Path
+        Destination JSONL file path.
+    envelopes : Sequence[DigitalTwinSyncEnvelope]
+        The envelopes to serialise, in order.
+
+    Returns
+    -------
+    DigitalTwinSyncJsonlReport
+        A report of the written file and envelope count.
+    """
     target = Path(path)
     lines = [envelope.to_json() for envelope in envelopes]
     target.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
@@ -1091,6 +1496,31 @@ def build_digital_twin_operator_evidence(
     JSONL replay paths. Rejected JSONL lines and adapter audit records are
     folded into the same deterministic summary so dashboards can display live
     and replayed health with the same fields.
+
+    Parameters
+    ----------
+    contract : DigitalTwinBindingContract
+        The binding contract under observation.
+    validations : Sequence[DigitalTwinTransportValidation]
+        Accepted transport validations from any sync path.
+    rejected : Sequence[Mapping[str, object]], optional
+        Rejected JSONL lines folded into the summary.
+    adapter_records : Sequence[Mapping[str, object]], optional
+        Adapter audit records to include.
+    residual_warning_threshold : float, optional
+        Residual fraction above which a warning status is raised.
+    residual_critical_threshold : float, optional
+        Residual fraction above which a critical status is raised.
+
+    Returns
+    -------
+    DigitalTwinOperatorEvidence
+        A deterministic operator-facing health summary.
+
+    Raises
+    ------
+    ValueError
+        If the residual warning/critical thresholds are inconsistent.
     """
     warning_threshold = _validated_residual_threshold(
         residual_warning_threshold,
@@ -1180,7 +1610,20 @@ def read_digital_twin_sync_jsonl(
     contract: DigitalTwinBindingContract,
     path: str | Path,
 ) -> DigitalTwinSyncJsonlReport:
-    """Read JSONL sync envelopes and validate them against a contract."""
+    """Read JSONL sync envelopes and validate them against a contract.
+
+    Parameters
+    ----------
+    contract : DigitalTwinBindingContract
+        The contract to validate envelopes against.
+    path : str or pathlib.Path
+        JSONL file to read.
+
+    Returns
+    -------
+    DigitalTwinSyncJsonlReport
+        A report of read, accepted, and rejected envelopes.
+    """
     source = Path(path)
     accepted: list[DigitalTwinTransportValidation] = []
     rejected: list[dict[str, object]] = []
@@ -1216,7 +1659,20 @@ def validate_digital_twin_sync_envelope(
     contract: DigitalTwinBindingContract,
     envelope: DigitalTwinSyncEnvelope,
 ) -> DigitalTwinTransportValidation:
-    """Validate a digital-twin sync envelope against a binding contract."""
+    """Validate a digital-twin sync envelope against a binding contract.
+
+    Parameters
+    ----------
+    contract : DigitalTwinBindingContract
+        The binding contract to validate against.
+    envelope : DigitalTwinSyncEnvelope
+        The sync envelope to validate.
+
+    Returns
+    -------
+    DigitalTwinTransportValidation
+        The validation result (accepted, or rejected with reasons).
+    """
     if envelope.contract_hash != contract.contract_hash:
         return _transport_validation(False, "contract_hash_mismatch", envelope)
     capability = _find_capability(contract, envelope.capability)

@@ -38,6 +38,17 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
     driver key names only. It does not copy raw driver configuration values into
     audit metadata because production driver blocks may contain endpoints or
     deployment-local identifiers.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification whose resolved runtime choices are summarised.
+
+    Returns
+    -------
+    dict[str, object]
+        Deterministic, JSON-safe mapping of structural choices, enabled
+        features, and driver key names; raw driver values are excluded.
     """
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     control_interval_steps = max(1, round(spec.control_period_s / spec.sample_period_s))
@@ -205,7 +216,18 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
 
 
 def format_resolved_binding_config(summary: dict[str, object]) -> list[str]:
-    """Render a compact, human-readable summary for CLI output."""
+    """Render a compact, human-readable summary for CLI output.
+
+    Parameters
+    ----------
+    summary : dict[str, object]
+        A mapping produced by :func:`resolved_binding_config`.
+
+    Returns
+    -------
+    list[str]
+        Formatted output lines suitable for printing to a terminal.
+    """
     channels = summary["channels"]
     assert isinstance(channels, dict)  # nosec B101
     features = summary["features"]
