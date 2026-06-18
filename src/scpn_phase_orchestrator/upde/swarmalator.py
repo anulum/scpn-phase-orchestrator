@@ -402,7 +402,32 @@ class SwarmalatorEngine:
         k: float = 1.0,
         n_steps: int = 100,
     ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
-        """Integrate swarmalator positions and phases with trajectory capture."""
+        """Integrate swarmalator positions and phases with trajectory capture.
+
+        Parameters
+        ----------
+        pos : FloatArray
+            Swarmalator positions, shape ``(N, 2)``.
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        a : float
+            Spatial attraction strength.
+        b : float
+            Spatial repulsion strength.
+        j : float
+            Phase-to-space coupling strength.
+        k : float
+            Space-to-phase coupling strength.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        tuple[FloatArray, FloatArray, FloatArray, FloatArray]
+            The final positions and phases plus their trajectory traces.
+        """
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         curr_pos = _validate_state_array(
             pos,
@@ -436,7 +461,18 @@ class SwarmalatorEngine:
         return curr_pos, curr_phases, pos_traj, phase_traj
 
     def order_parameter(self, phases: FloatArray) -> float:
-        """Return the Kuramoto order parameter for swarmalator phases."""
+        """Return the Kuramoto order parameter for swarmalator phases.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        float
+            The Kuramoto order parameter ``R``.
+        """
         phases64 = _validate_state_array(
             phases,
             name="phases",

@@ -278,7 +278,28 @@ class InertialKuramotoEngine:
         inertia: FloatArray,
         damping: FloatArray,
     ) -> tuple[FloatArray, FloatArray]:
-        """Advance one second-order inertial Kuramoto timestep."""
+        """Advance one second-order inertial Kuramoto timestep.
+
+        Parameters
+        ----------
+        theta : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omega_dot : FloatArray
+            Instantaneous frequency deviations in rad/s, shape ``(N,)``.
+        power : FloatArray
+            Per-oscillator power injection in the swing equation, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        inertia : FloatArray
+            Per-oscillator inertia coefficients, shape ``(N,)``.
+        damping : FloatArray
+            Per-oscillator damping coefficients, shape ``(N,)``.
+
+        Returns
+        -------
+        tuple[FloatArray, FloatArray]
+            The ``(θ, ω̇)`` state after one second-order step.
+        """
         theta64 = _validate_state_array(theta, name="theta", shape=(self._n,))
         omega_dot64 = _validate_state_array(
             omega_dot,
@@ -336,7 +357,30 @@ class InertialKuramotoEngine:
         FloatArray,
         FloatArray,
     ]:
-        """Integrate inertial Kuramoto dynamics and return final state plus traces."""
+        """Integrate inertial Kuramoto dynamics and return final state plus traces.
+
+        Parameters
+        ----------
+        theta : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omega_dot : FloatArray
+            Instantaneous frequency deviations in rad/s, shape ``(N,)``.
+        power : FloatArray
+            Per-oscillator power injection in the swing equation, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        inertia : FloatArray
+            Per-oscillator inertia coefficients, shape ``(N,)``.
+        damping : FloatArray
+            Per-oscillator damping coefficients, shape ``(N,)``.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        tuple[FloatArray, FloatArray, FloatArray, FloatArray]
+            The final ``(θ, ω̇)`` plus the ``θ`` and ``ω̇`` traces.
+        """
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         theta_traj = np.empty((n_steps, self._n))
         omega_traj = np.empty((n_steps, self._n))
@@ -353,9 +397,31 @@ class InertialKuramotoEngine:
         return th, od, theta_traj, omega_traj
 
     def frequency_deviation(self, omega_dot: FloatArray) -> float:
-        """Return maximum absolute frequency deviation in cycles per unit time."""
+        """Return maximum absolute frequency deviation in cycles per unit time.
+
+        Parameters
+        ----------
+        omega_dot : FloatArray
+            Instantaneous frequency deviations in rad/s, shape ``(N,)``.
+
+        Returns
+        -------
+        float
+            The maximum absolute frequency deviation in cycles per unit time.
+        """
         return float(np.max(np.abs(omega_dot)) / TWO_PI)
 
     def coherence(self, theta: FloatArray) -> float:
-        """Return the Kuramoto order parameter for the supplied phases."""
+        """Return the Kuramoto order parameter for the supplied phases.
+
+        Parameters
+        ----------
+        theta : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        float
+            The Kuramoto order parameter ``R``.
+        """
         return float(np.abs(np.mean(np.exp(1j * theta))))

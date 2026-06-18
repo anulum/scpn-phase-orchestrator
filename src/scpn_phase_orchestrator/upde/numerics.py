@@ -59,6 +59,25 @@ def check_stability(dt: float, max_omega: float, max_coupling: float) -> bool:
 
     Analogous to Courant–Friedrichs–Lewy (1928); see docs/specs/upde_numerics.md.
     dt * max_deriv < pi ensures phase change stays below half-cycle per step.
+
+    Parameters
+    ----------
+    dt : float
+        Integration step size.
+    max_omega : float
+        Largest absolute natural frequency in the system.
+    max_coupling : float
+        Largest absolute coupling magnitude in the system.
+
+    Returns
+    -------
+    bool
+        ``True`` when the timestep satisfies the CFL-like stability bound.
+
+    Raises
+    ------
+    ValueError
+        If ``dt``, ``max_omega``, or ``max_coupling`` is not finite and positive.
     """
     if (
         type(dt) in {float, int}

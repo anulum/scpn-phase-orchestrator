@@ -265,6 +265,16 @@ def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
 
     ``R = |mean(exp(i · θ))|``;
     ``ψ = arg(mean(exp(i · θ))) mod 2π``.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+
+    Returns
+    -------
+    tuple[float, float]
+        The ``(R, ψ)`` Kuramoto order parameter and mean phase.
     """
     phases = _validate_phases("phases", phases)
     if phases.size == 0:
@@ -283,6 +293,23 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
     """Phase-locking value between two equal-length phase series.
 
     PLV = ``|mean(exp(i · (φ_a − φ_b)))|`` over samples.
+
+    Parameters
+    ----------
+    phases_a : FloatArray
+        First phase series in radians, shape ``(T,)``.
+    phases_b : FloatArray
+        Second phase series in radians, shape ``(T,)``.
+
+    Returns
+    -------
+    float
+        The phase-locking value between the two series.
+
+    Raises
+    ------
+    ValueError
+        If the two phase series have different lengths.
     """
     phases_a = _validate_phases("phases_a", phases_a)
     phases_b = _validate_phases("phases_b", phases_b)
@@ -308,7 +335,20 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
 def compute_layer_coherence(
     phases: FloatArray, layer_mask: BoolArray | IntArray
 ) -> float:
-    """Return the order parameter R for the oscillators in ``layer_mask``."""
+    """Return the order parameter R for the oscillators in ``layer_mask``.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    layer_mask : BoolArray | IntArray
+        Boolean mask or integer index array selecting the layer's oscillators.
+
+    Returns
+    -------
+    float
+        The Kuramoto order parameter ``R`` for the selected oscillators.
+    """
     phases = _validate_phases("phases", phases)
     if phases.size == 0:
         return 0.0

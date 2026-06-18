@@ -80,7 +80,13 @@ class Hyperedge:
 
     @property
     def order(self) -> int:
-        """Return the number of oscillators participating in the hyperedge."""
+        """Return the number of oscillators participating in the hyperedge.
+
+        Returns
+        -------
+        int
+            Return the number of oscillators participating in the hyperedge.
+        """
         return len(self.nodes)
 
 
@@ -370,7 +376,15 @@ class HypergraphEngine:
         ]
 
     def add_edge(self, nodes: tuple[int, ...], strength: float = 1.0) -> None:
-        """Validate and append one explicit k-body hyperedge."""
+        """Validate and append one explicit k-body hyperedge.
+
+        Parameters
+        ----------
+        nodes : tuple[int, ...]
+            Indices of the oscillators participating in the hyperedge.
+        strength : float
+            Coupling strength assigned to the hyperedge(s).
+        """
         edge = _validate_hyperedge(
             Hyperedge(nodes=nodes, strength=strength),
             n_oscillators=self._n,
@@ -378,7 +392,20 @@ class HypergraphEngine:
         self._hyperedges.append(edge)
 
     def add_all_to_all(self, order: int, strength: float = 1.0) -> None:
-        """Add all C(N, order) hyperedges of given order."""
+        """Add all C(N, order) hyperedges of given order.
+
+        Parameters
+        ----------
+        order : int
+            Interaction order (number of oscillators per hyperedge).
+        strength : float
+            Coupling strength assigned to the hyperedge(s).
+
+        Raises
+        ------
+        ValueError
+            If ``order`` is outside ``2..N``.
+        """
         from itertools import combinations
 
         order = _validate_positive_int(order, name="order")
@@ -395,7 +422,13 @@ class HypergraphEngine:
 
     @property
     def n_edges(self) -> int:
-        """Return the number of configured hyperedges."""
+        """Return the number of configured hyperedges.
+
+        Returns
+        -------
+        int
+            Return the number of configured hyperedges.
+        """
         return len(self._hyperedges)
 
     def _encode_edges(
@@ -423,7 +456,28 @@ class HypergraphEngine:
         zeta: float = 0.0,
         psi: float = 0.0,
     ) -> FloatArray:
-        """One explicit-Euler step."""
+        """One explicit-Euler step.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        pairwise_knm : FloatArray | None
+            Optional pairwise coupling matrix ``(N, N)``, or ``None``.
+        alpha : FloatArray | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+
+        Returns
+        -------
+        FloatArray
+            The phases after one explicit-Euler hypergraph step.
+        """
         return self.run(
             phases,
             omegas,
@@ -444,7 +498,30 @@ class HypergraphEngine:
         zeta: float = 0.0,
         psi: float = 0.0,
     ) -> FloatArray:
-        """Integrate ``n_steps`` Euler steps via the fastest backend; return phases."""
+        """Integrate ``n_steps`` Euler steps via the fastest backend; return phases.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        n_steps : int
+            Number of integration steps to run.
+        pairwise_knm : FloatArray | None
+            Optional pairwise coupling matrix ``(N, N)``, or ``None``.
+        alpha : FloatArray | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+
+        Returns
+        -------
+        FloatArray
+            The final phases after ``n_steps`` hypergraph steps.
+        """
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -493,7 +570,18 @@ class HypergraphEngine:
         )
 
     def order_parameter(self, phases: FloatArray) -> float:
-        """Compute the standard Kuramoto R = |<exp(iθ)>|."""
+        """Compute the standard Kuramoto R = |<exp(iθ)>|.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        float
+            The Kuramoto order parameter ``R``.
+        """
         phases64 = _validate_state_array(
             phases,
             name="phases",

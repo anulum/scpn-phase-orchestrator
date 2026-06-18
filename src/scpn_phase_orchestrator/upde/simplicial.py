@@ -315,12 +315,24 @@ class SimplicialEngine:
 
     @property
     def sigma2(self) -> float:
-        """Return the configured all-to-all triadic coupling strength."""
+        """Return the configured all-to-all triadic coupling strength.
+
+        Returns
+        -------
+        float
+            Return the configured all-to-all triadic coupling strength.
+        """
         return self._sigma2
 
     @sigma2.setter
     def sigma2(self, value: float) -> None:
-        """Update triadic coupling strength after finite non-negative validation."""
+        """Update triadic coupling strength after finite non-negative validation.
+
+        Parameters
+        ----------
+        value : float
+            The new value to set.
+        """
         self._sigma2 = _validate_nonnegative_float(value, name="sigma2")
 
     def step(
@@ -332,7 +344,28 @@ class SimplicialEngine:
         psi: float,
         alpha: FloatArray,
     ) -> FloatArray:
-        """Advance one pairwise-plus-simplicial Kuramoto timestep."""
+        """Advance one pairwise-plus-simplicial Kuramoto timestep.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : FloatArray
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+
+        Returns
+        -------
+        FloatArray
+            The phases after one pairwise-plus-simplicial step.
+        """
         return self.run(phases, omegas, knm, zeta, psi, alpha, n_steps=1)
 
     def run(
@@ -345,7 +378,35 @@ class SimplicialEngine:
         alpha: FloatArray,
         n_steps: int,
     ) -> FloatArray:
-        """Integrate pairwise-plus-simplicial Kuramoto dynamics."""
+        """Integrate pairwise-plus-simplicial Kuramoto dynamics.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : FloatArray
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        FloatArray
+            The final phases after ``n_steps`` simplicial steps.
+
+        Raises
+        ------
+        ValueError
+            If ``n_steps`` is negative or the state arrays are invalid.
+        """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -414,7 +475,18 @@ class SimplicialEngine:
         )
 
     def order_parameter(self, phases: FloatArray) -> float:
-        """Compute the standard Kuramoto R = |<exp(iθ)>|."""
+        """Compute the standard Kuramoto R = |<exp(iθ)>|.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        float
+            The Kuramoto order parameter ``R``.
+        """
         phases64 = _validate_state_array(
             phases,
             name="phases",

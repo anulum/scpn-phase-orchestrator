@@ -174,7 +174,13 @@ class SparseUPDEEngine:
 
     @property
     def last_dt(self) -> float:
-        """Actual dt used on the last accepted step (relevant for rk45)."""
+        """Actual dt used on the last accepted step (relevant for rk45).
+
+        Returns
+        -------
+        float
+            Actual dt used on the last accepted step (relevant for rk45).
+        """
         return self._last_dt
 
     def step(
@@ -203,6 +209,25 @@ class SparseUPDEEngine:
         Returns
         -------
             New phase vector [theta_1(t+dt), ..., theta_N(t+dt)], shape (N,).
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        row_ptr : IntArray
+            CSR row-pointer array of the sparse coupling matrix.
+        col_indices : IntArray
+            CSR column-index array of the sparse coupling matrix.
+        knm_values : FloatArray
+            CSR non-zero coupling values.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha_values : FloatArray
+            CSR non-zero phase-lag values.
         """
         zeta = _validate_finite_real(zeta, name="zeta")
         psi = _validate_finite_real(psi, name="psi")
@@ -291,6 +316,27 @@ class SparseUPDEEngine:
         Returns
         -------
             Final phase vector after n_steps.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        row_ptr : IntArray
+            CSR row-pointer array of the sparse coupling matrix.
+        col_indices : IntArray
+            CSR column-index array of the sparse coupling matrix.
+        knm_values : FloatArray
+            CSR non-zero coupling values.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha_values : FloatArray
+            CSR non-zero phase-lag values.
+        n_steps : int
+            Number of integration steps to run.
         """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         zeta = _validate_finite_real(zeta, name="zeta")

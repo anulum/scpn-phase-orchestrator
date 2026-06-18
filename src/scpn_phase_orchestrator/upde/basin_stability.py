@@ -311,6 +311,30 @@ def steady_state_r(
     Integrates the Kuramoto ODE for ``n_transient + n_measure`` steps
     and returns the time-averaged order parameter over the latter
     window. Delegates to the fastest available backend.
+
+    Parameters
+    ----------
+    phases_init : FloatArray
+        Initial oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray | None
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    k_scale : float
+        Multiplicative scale applied to the coupling matrix.
+    dt : float
+        Integration step size.
+    n_transient : int
+        Number of transient steps discarded before measurement.
+    n_measure : int
+        Number of steps averaged to measure the order parameter.
+
+    Returns
+    -------
+    float
+        The steady-state Kuramoto order parameter ``R`` of the trial.
     """
     phases_init = _validate_nonempty_vector(phases_init, name="phases_init")
     N = int(phases_init.shape[0])
@@ -473,6 +497,27 @@ def basin_stability(
     Returns
     -------
         BasinStabilityResult with S_B, R_final array, and counts.
+
+    Parameters
+    ----------
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray | None
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    dt : float
+        Integration step size.
+    n_transient : int
+        Number of transient steps discarded before measurement.
+    n_measure : int
+        Number of steps averaged to measure the order parameter.
+    n_samples : int
+        Number of random initial-condition samples.
+    R_threshold : float
+        Order-parameter threshold above which a trial counts as synchronised.
+    seed : int
+        Seed for the deterministic RNG.
     """
     omegas = _validate_omegas(omegas)
     N = int(omegas.shape[0])
@@ -528,6 +573,27 @@ def multi_basin_stability(
     Returns
     -------
         Dict mapping ``"R>={thresh:.2f}"`` to BasinStabilityResult.
+
+    Parameters
+    ----------
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray | None
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    dt : float
+        Integration step size.
+    n_transient : int
+        Number of transient steps discarded before measurement.
+    n_measure : int
+        Number of steps averaged to measure the order parameter.
+    n_samples : int
+        Number of random initial-condition samples.
+    R_thresholds : tuple[float, ...]
+        Order-parameter thresholds to evaluate basin stability at.
+    seed : int
+        Seed for the deterministic RNG.
     """
     omegas = _validate_omegas(omegas)
     N = int(omegas.shape[0])

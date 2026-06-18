@@ -197,7 +197,13 @@ class StuartLandauEngine:
 
     @property
     def last_dt(self) -> float:
-        """Last accepted timestep (adapts with RK45)."""
+        """Last accepted timestep (adapts with RK45).
+
+        Returns
+        -------
+        float
+            Last accepted timestep (adapts with RK45).
+        """
         return self._last_dt
 
     def step(
@@ -212,7 +218,34 @@ class StuartLandauEngine:
         alpha: FloatArray,
         epsilon: float = 1.0,
     ) -> FloatArray:
-        """Advance (θ, r) by one timestep. Returns new state (2N,)."""
+        """Advance (θ, r) by one timestep. Returns new state (2N,).
+
+        Parameters
+        ----------
+        state : FloatArray
+            Stuart-Landau state ``[θ; r]``, shape ``(2N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        mu : FloatArray
+            Per-oscillator linear growth parameters ``μ``, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        knm_r : FloatArray
+            Amplitude coupling matrix, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : FloatArray
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        epsilon : float
+            Finite-difference perturbation size.
+
+        Returns
+        -------
+        FloatArray
+            The new ``[θ; r]`` state, shape ``(2N,)``.
+        """
         (
             state,
             omegas,
@@ -249,7 +282,18 @@ class StuartLandauEngine:
             return self._rk4_step(state, p)
 
     def compute_order_parameter(self, state: FloatArray) -> tuple[float, float]:
-        """Amplitude-weighted Kuramoto: Z = mean(r_i · exp(i·θ_i))."""
+        """Amplitude-weighted Kuramoto: Z = mean(r_i · exp(i·θ_i)).
+
+        Parameters
+        ----------
+        state : FloatArray
+            Stuart-Landau state ``[θ; r]``, shape ``(2N,)``.
+
+        Returns
+        -------
+        tuple[float, float]
+            The amplitude-weighted ``(R, ψ)`` order parameter and phase.
+        """
         n = self._n
         state = _validate_state_array(
             state,
@@ -261,7 +305,18 @@ class StuartLandauEngine:
         return float(np.abs(z)), float(np.angle(z) % TWO_PI)
 
     def compute_mean_amplitude(self, state: FloatArray) -> float:
-        """Mean amplitude across all oscillators."""
+        """Mean amplitude across all oscillators.
+
+        Parameters
+        ----------
+        state : FloatArray
+            Stuart-Landau state ``[θ; r]``, shape ``(2N,)``.
+
+        Returns
+        -------
+        float
+            The mean amplitude across all oscillators.
+        """
         state = _validate_state_array(
             state,
             name="state",

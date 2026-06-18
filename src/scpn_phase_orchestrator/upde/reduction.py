@@ -360,11 +360,23 @@ class OttAntonsenReduction:
 
     @property
     def K_c(self) -> float:
-        """Critical coupling ``K_c = 2Δ``."""
+        """Critical coupling ``K_c = 2Δ``.
+
+        Returns
+        -------
+        float
+            Critical coupling ``K_c = 2Δ``.
+        """
         return 2.0 * self._delta
 
     def steady_state_R(self) -> float:
-        """Return the analytical steady-state ``R_ss = √(1 − 2Δ/K)`` for ``K > K_c``."""
+        """Return the analytical steady-state ``R_ss = √(1 − 2Δ/K)`` for ``K > K_c``.
+
+        Returns
+        -------
+        float
+            Return the analytical steady-state ``R_ss = √(1 − 2Δ/K)`` for ``K > K_c``.
+        """
         if _HAS_RUST_SCALAR:
             return float(_rust_steady_state_r(self._delta, self._K))
         if self.K_c >= self._K:
@@ -372,13 +384,37 @@ class OttAntonsenReduction:
         return float((1.0 - 2.0 * self._delta / self._K) ** 0.5)
 
     def step(self, z: complex) -> complex:
-        """Single RK4 step on the OA ODE."""
+        """Single RK4 step on the OA ODE.
+
+        Parameters
+        ----------
+        z : complex
+            Complex Ott-Antonsen order parameter.
+
+        Returns
+        -------
+        complex
+            The complex order parameter after one RK4 step.
+        """
         z = _validate_finite_complex(z, name="z")
         re, im, _, _ = self._run_scalar(z.real, z.imag, n_steps=1)
         return complex(re, im)
 
     def run(self, z0: complex, n_steps: int) -> OAState:
-        """Integrate ``n_steps`` RK4 steps; return the final ``OAState``."""
+        """Integrate ``n_steps`` RK4 steps; return the final ``OAState``.
+
+        Parameters
+        ----------
+        z0 : complex
+            Initial complex Ott-Antonsen order parameter.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        OAState
+            The final ``OAState`` after ``n_steps`` RK4 steps.
+        """
         z0 = _validate_finite_complex(z0, name="z0")
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         re, im, r, psi = self._run_scalar(z0.real, z0.imag, n_steps)
@@ -417,7 +453,20 @@ class OttAntonsenReduction:
         omegas: FloatArray,
         K: float,
     ) -> OAState:
-        """Fit a Lorentzian to ``omegas`` and return the relaxed ``OAState``."""
+        """Fit a Lorentzian to ``omegas`` and return the relaxed ``OAState``.
+
+        Parameters
+        ----------
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        K : float
+            Global coupling strength.
+
+        Returns
+        -------
+        OAState
+            The relaxed ``OAState`` for the fitted Lorentzian.
+        """
         omegas64 = _validate_frequency_sample(omegas, name="omegas")
         K = _validate_finite_real(K, name="K")
         if _HAS_RUST_SCALAR:

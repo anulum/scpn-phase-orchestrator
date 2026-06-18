@@ -63,6 +63,38 @@ def upde_run(
 
     ``engine.ACTIVE_BACKEND`` is a public test and diagnostics control, so
     keep it synchronised with the underlying dispatcher before each call.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    n_steps : int
+        Number of integration steps to run.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after ``n_steps`` integration steps.
     """
     previous = _run_mod.ACTIVE_BACKEND
     _run_mod.ACTIVE_BACKEND = ACTIVE_BACKEND
@@ -98,7 +130,38 @@ def upde_run_omega_schedule(
     atol: float = 1e-6,
     rtol: float = 1e-3,
 ) -> FloatArray:
-    """Run UPDE with one resolved natural-frequency vector per outer step."""
+    """Run UPDE with one resolved natural-frequency vector per outer step.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omega_schedule : FloatArray
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after integrating the omega schedule.
+    """
     previous = _run_mod.ACTIVE_BACKEND
     _run_mod.ACTIVE_BACKEND = ACTIVE_BACKEND
     try:
@@ -244,17 +307,35 @@ class UPDEEngine:
 
     @property
     def last_dt(self) -> float:
-        """Actual dt used on the last accepted step (relevant for rk45)."""
+        """Actual dt used on the last accepted step (relevant for rk45).
+
+        Returns
+        -------
+        float
+            Actual dt used on the last accepted step (relevant for rk45).
+        """
         return self._last_dt
 
     @property
     def time(self) -> float:
-        """Current outer-step clock used when resolving ``omega(t)``."""
+        """Current outer-step clock used when resolving ``omega(t)``.
+
+        Returns
+        -------
+        float
+            Current outer-step clock used when resolving ``omega(t)``.
+        """
         return self._time
 
     @property
     def omega_current(self) -> FloatArray:
-        """Most recently resolved natural-frequency vector."""
+        """Most recently resolved natural-frequency vector.
+
+        Returns
+        -------
+        FloatArray
+            Most recently resolved natural-frequency vector.
+        """
         return self._omega_current.copy()
 
     def step(
@@ -335,7 +416,35 @@ class UPDEEngine:
         alpha: FloatArray | None = None,
         n_steps: int = 1,
     ) -> FloatArray:
-        """Run ``n_steps`` and return final phases via the fastest backend."""
+        """Run ``n_steps`` and return final phases via the fastest backend.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : object | None
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray | None
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : FloatArray | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        FloatArray
+            The final phases after ``n_steps`` steps via the fastest backend.
+
+        Raises
+        ------
+        ValueError
+            If the supplied state arrays are not finite or have mismatched shapes.
+        """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         if knm is None:
             raise ValueError("knm is required")
@@ -401,7 +510,23 @@ class UPDEEngine:
             return result
 
     def compute_order_parameter(self, phases: FloatArray) -> tuple[float, float]:
-        """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""
+        """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...).
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        tuple[float, float]
+            The ``(R, ψ)`` Kuramoto order parameter and mean phase.
+
+        Raises
+        ------
+        ValueError
+            If ``phases`` is not a finite 1-D array.
+        """
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         if phases.shape != (self._n,):

@@ -35,7 +35,18 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def cost_R(phases: FloatArray) -> float:
-    """Cost = 1 - R (minimize to maximize synchronization)."""
+    """Cost ``1 − R`` (minimise to maximise synchronisation).
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+
+    Returns
+    -------
+    float
+        The cost ``1 − R`` for the supplied phases.
+    """
     R, _ = compute_order_parameter(phases)
     return 1.0 - R
 
@@ -60,6 +71,32 @@ def gradient_knm_fd(
     the ~N² off-diagonal entries requires a full N-step simulation that is
     itself O(N²) per step. Use gradient_knm_jax() for anything beyond N≈16.
     The adjoint method via diffrax reduces this to O(n_steps) but requires JAX.
+
+    Parameters
+    ----------
+    engine : UPDEEngine
+        The UPDE engine used to integrate each trial.
+    phases_init : FloatArray
+        Initial oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    n_steps : int
+        Number of integration steps to run.
+    epsilon : float
+        Finite-difference perturbation size.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+
+    Returns
+    -------
+    FloatArray
+        The finite-difference gradient of the cost with respect to ``knm``.
     """
     n = knm.shape[0]
     grad = np.zeros((n, n), dtype=np.float64)
@@ -104,6 +141,26 @@ def gradient_knm_jax(  # pragma: no cover — requires JAX
     Raises
     ------
         ImportError: If JAX is not installed.
+
+    Parameters
+    ----------
+    phases_init : FloatArray
+        Initial oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    n_steps : int
+        Number of integration steps to run.
+    dt : float
+        Integration step size.
+
+    Returns
+    -------
+    FloatArray
+        The exact autodiff gradient of the cost with respect to ``knm``.
     """
     try:
         import jax

@@ -276,12 +276,30 @@ class DelayBuffer:
         self._buffer: deque[FloatArray] = deque(maxlen=self._max)
 
     def push(self, phases: FloatArray) -> None:
-        """Append a phase snapshot to the buffer."""
+        """Append a phase snapshot to the buffer.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        """
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         self._buffer.append(phases64.copy())
 
     def get_delayed(self, delay_steps: int) -> FloatArray | None:
-        """Return phases from `delay_steps` ago, or None if not enough history."""
+        """Return phases from `delay_steps` ago, or None if not enough history.
+
+        Parameters
+        ----------
+        delay_steps : int
+            Number of steps in the past to retrieve from the delay buffer.
+
+        Returns
+        -------
+        FloatArray | None
+            The phase snapshot from ``delay_steps`` ago, or ``None`` if history is
+            short.
+        """
         delay = _validate_positive_int(delay_steps, name="delay_steps")
         if delay > len(self._buffer):
             return None
@@ -289,7 +307,13 @@ class DelayBuffer:
 
     @property
     def length(self) -> int:
-        """Number of snapshots currently stored."""
+        """Number of snapshots currently stored.
+
+        Returns
+        -------
+        int
+            Number of snapshots currently stored.
+        """
         return len(self._buffer)
 
     def clear(self) -> None:
@@ -311,7 +335,13 @@ class DelayedEngine:
 
     @property
     def delay_steps(self) -> int:
-        """Return the configured discrete coupling delay."""
+        """Return the configured discrete coupling delay.
+
+        Returns
+        -------
+        int
+            Return the configured discrete coupling delay.
+        """
         return self._delay_steps
 
     def step(
@@ -324,7 +354,31 @@ class DelayedEngine:
         alpha: FloatArray | None = None,
         step_idx: int = 0,
     ) -> FloatArray:
-        """Advance one delayed Kuramoto timestep from validated state arrays."""
+        """Advance one delayed Kuramoto timestep from validated state arrays.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : FloatArray | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        step_idx : int
+            Zero-based index of the current step, used to address delayed coupling
+            history.
+
+        Returns
+        -------
+        FloatArray
+            The phases after one delayed Kuramoto step, in ``[0, 2π)``.
+        """
         del step_idx
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -360,7 +414,30 @@ class DelayedEngine:
         alpha: FloatArray | None = None,
         n_steps: int = 100,
     ) -> FloatArray:
-        """Run delayed Kuramoto integration for ``n_steps`` validated steps."""
+        """Run delayed Kuramoto integration for ``n_steps`` validated steps.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : FloatArray | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        FloatArray
+            The final phases after ``n_steps`` delayed Kuramoto steps.
+        """
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))

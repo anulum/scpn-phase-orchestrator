@@ -177,7 +177,28 @@ class JaxUPDEEngine:  # pragma: no cover
         psi: float,
         alpha: FloatArray,
     ) -> FloatArray:
-        """Advance phases by one Kuramoto step on GPU via JIT-compiled JAX."""
+        """Advance phases by one Kuramoto step on GPU via JIT-compiled JAX.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : FloatArray
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+
+        Returns
+        -------
+        FloatArray
+            The phases after one JIT-compiled Kuramoto step.
+        """
         phases = _validate_array(phases, name="phases", shape=(self._n,))
         omegas = _validate_array(omegas, name="omegas", shape=(self._n,))
         knm = _validate_array(knm, name="knm", shape=(self._n, self._n))

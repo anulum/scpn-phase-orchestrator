@@ -241,6 +241,16 @@ def extract_phase(series: FloatArray) -> FloatArray:
     Stays Python-side because the transform is FFT-based
     (``scipy.signal.hilbert``) and the compiled backends do not
     ship an FFT library.
+
+    Parameters
+    ----------
+    series : FloatArray
+        Real-valued time series, shape ``(T,)``.
+
+    Returns
+    -------
+    FloatArray
+        The instantaneous phase of the series in ``[0, 2π)``.
     """
     series = _validate_series(series)
     analytic = hilbert(series, axis=0)
@@ -262,7 +272,18 @@ def _python_market_order_parameter(
 
 
 def market_order_parameter(phases: FloatArray) -> FloatArray:
-    """Return the Kuramoto order parameter ``R(t)`` across ``N`` assets."""
+    """Return the Kuramoto order parameter ``R(t)`` across ``N`` assets.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+
+    Returns
+    -------
+    FloatArray
+        The Kuramoto order parameter time series ``R(t)``.
+    """
     phases = _validate_phase_matrix(phases)
     T, N = phases.shape
     flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
@@ -302,6 +323,18 @@ def market_plv(phases: FloatArray, window: int = 50) -> FloatArray:
     """Compute the rolling phase-locking-value matrix between assets.
 
     Returns shape ``(T − window + 1, N, N)``.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    window : int
+        Sliding-window length in samples.
+
+    Returns
+    -------
+    FloatArray
+        The rolling phase-locking-value matrices, shape ``(T − window + 1, N, N)``.
     """
     phases = _validate_phase_matrix(phases)
     window = _validate_positive_int(window, name="window")
@@ -330,6 +363,25 @@ def detect_regimes(
 
     Returns ``int32`` labels: 0 = desynchronised, 1 = transition,
     2 = synchronised. O(T) masking; no multi-language port needed.
+
+    Parameters
+    ----------
+    R : FloatArray
+        Order-parameter time series ``R(t)``, shape ``(T,)``.
+    sync_threshold : float
+        Order parameter above which the market is classed as synchronised.
+    desync_threshold : float
+        Order parameter below which the market is classed as desynchronised.
+
+    Returns
+    -------
+    IntArray
+        The per-timestep market regime labels.
+
+    Raises
+    ------
+    ValueError
+        If the thresholds are inconsistent or ``R`` is not 1-D.
     """
     R = _validate_signal_vector(R, name="R")
     sync_threshold = _validate_finite_float(
@@ -364,7 +416,22 @@ def sync_warning(
     threshold: float = 0.7,
     lookback: int = 10,
 ) -> BoolArray:
-    """Detect synchronisation warnings where smoothed ``R`` crosses up."""
+    """Detect synchronisation warnings where smoothed ``R`` crosses up.
+
+    Parameters
+    ----------
+    R : FloatArray
+        Order-parameter time series ``R(t)``, shape ``(T,)``.
+    threshold : float
+        Decision threshold.
+    lookback : int
+        Number of past samples smoothed over before the crossing test.
+
+    Returns
+    -------
+    BoolArray
+        A per-timestep boolean mask of synchronisation warnings.
+    """
     R = _validate_signal_vector(R, name="R")
     threshold = _validate_finite_float(threshold, name="threshold")
     lookback = _validate_positive_int(lookback, name="lookback")

@@ -179,7 +179,13 @@ class SheafUPDEEngine:
 
     @property
     def last_dt(self) -> float:
-        """Return the most recent timestep used by the sheaf engine."""
+        """Return the most recent timestep used by the sheaf engine.
+
+        Returns
+        -------
+        float
+            Return the most recent timestep used by the sheaf engine.
+        """
         return self._last_dt
 
     def step(
@@ -202,6 +208,19 @@ class SheafUPDEEngine:
         Returns
         -------
             New phase matrix, shape (N, D).
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        restriction_maps : FloatArray
+            Sheaf restriction maps, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : FloatArray
+            External drive reference phase ``Ψ`` in radians.
         """
         phases, omegas, restriction_maps, zeta, psi = self._validate_inputs(
             phases,
@@ -240,7 +259,28 @@ class SheafUPDEEngine:
         psi: FloatArray,
         n_steps: int,
     ) -> FloatArray:
-        """Run multiple steps in a batch, return final phases."""
+        """Run multiple steps in a batch, return final phases.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        restriction_maps : FloatArray
+            Sheaf restriction maps, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : FloatArray
+            External drive reference phase ``Ψ`` in radians.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        FloatArray
+            The final phases after ``n_steps`` sheaf steps.
+        """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         phases, omegas, restriction_maps, zeta, psi = self._validate_inputs(
             phases,

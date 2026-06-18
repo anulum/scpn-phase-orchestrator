@@ -121,12 +121,24 @@ class BifurcationDiagram:
 
     @property
     def K_values(self) -> FloatArray:
-        """Return continuation coupling strengths in diagram order."""
+        """Return continuation coupling strengths in diagram order.
+
+        Returns
+        -------
+        FloatArray
+            Return continuation coupling strengths in diagram order.
+        """
         return np.array([p.K for p in self.points])
 
     @property
     def R_values(self) -> FloatArray:
-        """Return continuation order parameters in diagram order."""
+        """Return continuation order parameters in diagram order.
+
+        Returns
+        -------
+        FloatArray
+            Return continuation order parameters in diagram order.
+        """
         return np.array([p.R for p in self.points])
 
 
@@ -324,6 +336,33 @@ def trace_sync_transition(
     loops in Python and each trial is dispatched through the
     5-backend chain inherited from
     :func:`basin_stability.steady_state_r`.
+
+    Parameters
+    ----------
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm_template : FloatArray | None
+        Unit coupling template scaled along the continuation, or ``None`` for
+        all-to-all.
+    alpha : FloatArray | None
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    K_range : tuple[float, float]
+        Inclusive ``(min, max)`` coupling-strength range to scan.
+    n_points : int
+        Number of coupling points sampled across the range.
+    dt : float
+        Integration step size.
+    n_transient : int
+        Number of transient steps discarded before measurement.
+    n_measure : int
+        Number of steps averaged to measure the order parameter.
+    seed : int
+        Seed for the deterministic RNG.
+
+    Returns
+    -------
+    BifurcationDiagram
+        The traced ``R(K)`` bifurcation diagram.
     """
     omegas = _validate_omegas(omegas)
     n = int(omegas.shape[0])
@@ -438,6 +477,29 @@ def find_critical_coupling(
     More precise than :func:`trace_sync_transition` when only
     ``K_c`` is needed. Returns ``nan`` if no transition is found
     in ``[0, 20]``.
+
+    Parameters
+    ----------
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm_template : FloatArray | None
+        Unit coupling template scaled along the continuation, or ``None`` for
+        all-to-all.
+    dt : float
+        Integration step size.
+    n_transient : int
+        Number of transient steps discarded before measurement.
+    n_measure : int
+        Number of steps averaged to measure the order parameter.
+    tol : float
+        Convergence tolerance for the binary search.
+    seed : int
+        Seed for the deterministic RNG.
+
+    Returns
+    -------
+    float
+        The critical coupling ``K_c`` where ``R`` first crosses 0.1.
     """
     omegas = _validate_omegas(omegas)
     n = int(omegas.shape[0])

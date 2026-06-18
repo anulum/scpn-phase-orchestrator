@@ -99,16 +99,41 @@ class StochasticInjector:
 
     @property
     def D(self) -> float:
-        """Return the configured non-negative diffusion coefficient."""
+        """Return the configured non-negative diffusion coefficient.
+
+        Returns
+        -------
+        float
+            Return the configured non-negative diffusion coefficient.
+        """
         return self._D
 
     @D.setter
     def D(self, value: float) -> None:
-        """Update the diffusion coefficient after finite non-negative validation."""
+        """Update the diffusion coefficient after finite non-negative validation.
+
+        Parameters
+        ----------
+        value : float
+            The new value to set.
+        """
         self._D = _validate_finite_non_negative(value, name="D")
 
     def inject(self, phases: FloatArray, dt: float) -> FloatArray:
-        """Add Wiener noise to phases: θ += √(2D*dt) * N(0,1)."""
+        """Add Wiener noise to phases: θ += √(2D*dt) * N(0,1).
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        FloatArray
+            The phases with added Wiener noise.
+        """
         dt = _validate_finite_positive(dt, name="dt")
         if self._D == 0.0:
             return phases
@@ -158,6 +183,30 @@ def find_optimal_noise(
     """Sweep noise levels, return D that maximizes R.
 
     Uses the engine to simulate n_steps at each D value.
+
+    Parameters
+    ----------
+    engine : UPDEEngine
+        The UPDE engine used to integrate each trial.
+    phases_init : FloatArray
+        Initial oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    D_range : FloatArray | None
+        Diffusion coefficients to sweep, or ``None`` for the default range.
+    n_steps : int
+        Number of integration steps to run.
+    seed : int
+        Seed for the deterministic RNG.
+
+    Returns
+    -------
+    NoiseProfile
+        The noise profile whose diffusion ``D`` maximises ``R``.
     """
     n_steps = _validate_positive_int(n_steps, name="n_steps")
     D_range = _validate_noise_range(D_range)

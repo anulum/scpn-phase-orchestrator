@@ -212,6 +212,18 @@ def extract_envelope(
     -------
         Same shape as input; the first ``window − 1`` entries are
         front-padded with the first valid RMS value.
+
+    Parameters
+    ----------
+    amplitudes_history : FloatArray
+        Amplitude history, shape ``(T, N)``.
+    window : int
+        Sliding-window length in samples.
+
+    Raises
+    ------
+    ValueError
+        If ``window`` is not a positive integer no larger than the history.
     """
     amplitudes = np.asarray(amplitudes_history, dtype=np.float64)
     if amplitudes.size == 0:
@@ -252,6 +264,16 @@ def envelope_modulation_depth(envelope: FloatArray) -> float:
     """Modulation depth ``(max − min) / (max + min) ∈ [0, 1]``.
 
     Returns ``0.0`` for empty or non-positive envelopes.
+
+    Parameters
+    ----------
+    envelope : FloatArray
+        An amplitude-envelope time series, shape ``(T,)``.
+
+    Returns
+    -------
+    float
+        The modulation depth ``(max − min) / (max + min)`` in ``[0, 1]``.
     """
     if envelope.size == 0:
         return 0.0

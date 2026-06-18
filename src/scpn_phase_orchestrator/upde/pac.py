@@ -274,6 +274,25 @@ def modulation_index(
     Bins amplitude by phase, computes KL divergence from uniform,
     returns the modulation index normalised to ``[0, 1]`` by
     ``log(n_bins)``.
+
+    Parameters
+    ----------
+    theta_low : FloatArray
+        Low-frequency driver phase in radians, shape ``(T,)``.
+    amp_high : FloatArray
+        High-frequency amplitude envelope, shape ``(T,)``.
+    n_bins : int
+        Number of phase bins used for the modulation-index histogram.
+
+    Returns
+    -------
+    float
+        The Tort modulation index of phase-amplitude coupling.
+
+    Raises
+    ------
+    ValueError
+        If ``n_bins`` is not a positive integer or inputs mismatch.
     """
     n_bins = _validate_n_bins(n_bins)
     theta_low = _validate_signal("theta_low", theta_low)
@@ -315,6 +334,25 @@ def pac_matrix(
         phases_history: ``(T, N)`` phase time series.
         amplitudes_history: ``(T, N)`` amplitude time series.
         n_bins: number of phase bins.
+
+    Parameters
+    ----------
+    phases_history : FloatArray
+        Phase history, shape ``(T, N)``.
+    amplitudes_history : FloatArray
+        Amplitude history, shape ``(T, N)``.
+    n_bins : int
+        Number of phase bins used for the modulation-index histogram.
+
+    Returns
+    -------
+    FloatArray
+        The ``(N, N)`` phase-amplitude coupling matrix.
+
+    Raises
+    ------
+    ValueError
+        If ``n_bins`` is not positive or the histories have mismatched shapes.
     """
     n_bins = _validate_n_bins(n_bins)
     phases_history = _validate_history("phases_history", phases_history)
@@ -362,6 +400,18 @@ def pac_gate(pac_value: float, threshold: float = 0.3) -> bool:
     """Binary gate: ``True`` when PAC exceeds ``threshold``.
 
     Pure-Python helper; no dispatcher — the comparison is trivial.
+
+    Parameters
+    ----------
+    pac_value : float
+        A phase-amplitude coupling value.
+    threshold : float
+        Decision threshold.
+
+    Returns
+    -------
+    bool
+        ``True`` when the PAC value exceeds the threshold.
     """
     pac_value = _validate_finite_real("pac_value", pac_value)
     threshold = _validate_finite_real("threshold", threshold)
