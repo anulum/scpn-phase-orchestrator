@@ -505,7 +505,7 @@ drives X" via the one-step Markov lag.
 Use PLV when you want the **strength** of coupling. Use TE when
 you want the **direction**.
 
-### 12.3 TE vs PID (``compute_redundancy``, ``compute_synergy``)
+### 12.3 TE vs PID (``redundancy``, ``synergy``)
 
 PID decomposes the joint information three sources share about a
 target into unique / redundant / synergistic parts. TE is the
@@ -514,11 +514,17 @@ answers "does ``X``'s past carry information about ``Y_{t+1}``
 beyond ``Y_t``'s own past?" without decomposing into redundant
 vs synergistic contributions.
 
-SPO's current ``monitor.pid`` implementation is algorithmically
-broken (the MI inside is computed against a constant reference,
-so it returns 0 for all inputs). TE is therefore the *working*
-information-theoretic directed-coupling measure in SPO today,
-pending the PID rewrite.
+SPO's current ``monitor.pid`` implementation uses a time-series
+Williams-Beer ``I_min`` estimator over binned global and group
+order-parameter phases. Its release gate is
+``benchmark_pid_polyglot_parity_gate`` in ``benchmarks/pid_benchmark.py``,
+also exposed in the reference suite as ``pid_polyglot``. The gate requires
+positive synergy for a deterministic co-varying source pair and vanishing
+synergy for a fully redundant source pair across every available backend.
+
+Use TE for directed pairwise influence. Use PID when the question is whether
+two oscillator groups carry overlapping or complementary information about the
+global phase state.
 
 ### 12.4 Why not permutation / ranked TE
 
