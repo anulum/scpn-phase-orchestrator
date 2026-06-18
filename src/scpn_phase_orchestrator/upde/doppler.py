@@ -167,7 +167,31 @@ def doppler_term(
     doppler_epsilon: float = 1.0e-9,
     velocity_axis: object | None = None,
 ) -> FloatArray:
-    """Return the graph-weighted Doppler correction for each oscillator."""
+    """Return the graph-weighted Doppler correction for each oscillator.
+
+    Parameters
+    ----------
+    velocities : object
+        Per-oscillator axial velocities, shape ``(N,)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    doppler_strength : float
+        Doppler coupling-correction strength.
+    doppler_epsilon : float
+        Numerical floor guarding the Doppler denominator.
+    velocity_axis : object | None
+        Optional unit axis along which velocity is projected, or ``None``.
+
+    Returns
+    -------
+    FloatArray
+        The graph-weighted Doppler correction per oscillator.
+
+    Raises
+    ------
+    ValueError
+        If the velocity or coupling inputs are non-finite or mismatched.
+    """
     k_raw = _reject_non_real_array(knm, name="knm")
     if k_raw.ndim != 2 or k_raw.shape[0] != k_raw.shape[1]:
         raise ValueError("knm shape must be (n, n)")
@@ -244,7 +268,50 @@ def validate_doppler_backend_inputs(
     float,
     float,
 ]:
-    """Validate the backend-neutral Doppler schedule contract."""
+    """Validate the backend-neutral Doppler schedule contract.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    omega_schedule : object
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    velocity_schedule : object
+        Per-step axial velocity vectors, shape ``(n_steps, N)``.
+    doppler_strength : float
+        Doppler coupling-correction strength.
+    doppler_epsilon : float
+        Numerical floor guarding the Doppler denominator.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    tuple[FloatArray, FloatArray, FloatArray, FloatArray, FloatArray, float, float,
+    float, float, float, int, str, int, float, float]
+        The validated, canonicalised Doppler schedule contract tuple.
+
+    Raises
+    ------
+    ValueError
+        If any schedule array is non-finite or has an inconsistent shape.
+    """
     p_raw = _reject_non_real_array(phases, name="phases")
     if p_raw.ndim != 1 or p_raw.size < 1:
         raise ValueError("phases must be a non-empty vector")
@@ -306,7 +373,44 @@ def doppler_run_python(
     atol: float = 1.0e-6,
     rtol: float = 1.0e-3,
 ) -> FloatArray:
-    """Run the Doppler-corrected UPDE schedule in the Python reference path."""
+    """Run the Doppler-corrected UPDE schedule in the Python reference path.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    omega_schedule : object
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    velocity_schedule : object
+        Per-step axial velocity vectors, shape ``(n_steps, N)``.
+    doppler_strength : float
+        Doppler coupling-correction strength.
+    doppler_epsilon : float
+        Numerical floor guarding the Doppler denominator.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after running the Doppler schedule on the Python path.
+    """
     (
         p,
         omega,
@@ -445,7 +549,54 @@ def doppler_run(
     *,
     backend: str = "auto",
 ) -> FloatArray:
-    """Run a Doppler-corrected UPDE schedule through the selected backend."""
+    """Run a Doppler-corrected UPDE schedule through the selected backend.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    omega_schedule : object
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    velocity_schedule : object
+        Per-step axial velocity vectors, shape ``(n_steps, N)``.
+    doppler_strength : float
+        Doppler coupling-correction strength.
+    doppler_epsilon : float
+        Numerical floor guarding the Doppler denominator.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+    backend : str
+        Name of the compute backend to run.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after running the Doppler schedule on the selected backend.
+
+    Raises
+    ------
+    ImportError
+        If the selected backend's runtime is unavailable.
+    ValueError
+        If the schedule contract is invalid; the underlying backend error propagates
+        when every backend fails.
+    """
     validated = validate_doppler_backend_inputs(
         phases,
         omega_schedule,
@@ -575,7 +726,13 @@ class DopplerEngine(UPDEEngine):
 
     @property
     def doppler_term(self) -> FloatArray:
-        """Most recently applied Doppler correction vector."""
+        """Most recently applied Doppler correction vector.
+
+        Returns
+        -------
+        FloatArray
+            Most recently applied Doppler correction vector.
+        """
         return self._doppler_term.copy()
 
     def _velocity_for_step(self, t: float) -> FloatArray:
@@ -615,7 +772,28 @@ class DopplerEngine(UPDEEngine):
         psi: float = 0.0,
         alpha: object | None = None,
     ) -> FloatArray:
-        """Advance one Doppler-corrected UPDE step."""
+        """Advance one Doppler-corrected UPDE step.
+
+        Parameters
+        ----------
+        phases : object | None
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : object | None
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : object | None
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : object | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+
+        Returns
+        -------
+        FloatArray
+            The phases after one Doppler-corrected UPDE step.
+        """
         p = self.phases if phases is None else _validate_phases(phases, n=self._n)
         k = self.k_nm if knm is None else _validate_knm(knm, n=self._n)
         a = self.alpha_matrix if alpha is None else _validate_alpha(alpha, n=self._n)
@@ -642,7 +820,30 @@ class DopplerEngine(UPDEEngine):
         alpha: object | None = None,
         n_steps: int = 1,
     ) -> FloatArray:
-        """Run ``n_steps`` of the Doppler-corrected UPDE dynamics."""
+        """Run ``n_steps`` of the Doppler-corrected UPDE dynamics.
+
+        Parameters
+        ----------
+        phases : object | None
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : object | None
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : object | None
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : object | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        FloatArray
+            The final phases after ``n_steps`` Doppler-corrected steps.
+        """
         steps = _validate_positive_step_count(n_steps, name="n_steps")
         p = self.phases if phases is None else _validate_phases(phases, n=self._n)
         k = self.k_nm if knm is None else _validate_knm(knm, n=self._n)

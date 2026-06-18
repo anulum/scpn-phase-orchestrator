@@ -159,7 +159,13 @@ class PHACKinematicProofObligation:
     record_sha256: str
 
     def to_dict(self) -> dict[str, bool | float | int | str]:
-        """Return a JSON-safe canonical representation."""
+        """Return a JSON-safe canonical representation.
+
+        Returns
+        -------
+        dict[str, bool | float | int | str]
+            Return a JSON-safe canonical representation.
+        """
         return pha_c_kinematic_proof_obligation_to_dict(self)
 
 
@@ -384,7 +390,18 @@ def _dict_without_record_hash(
 def pha_c_kinematic_proof_obligation_to_dict(
     obligation: PHACKinematicProofObligation,
 ) -> dict[str, bool | float | int | str]:
-    """Return a canonical JSON-safe proof-obligation manifest."""
+    """Return a canonical JSON-safe proof-obligation manifest.
+
+    Parameters
+    ----------
+    obligation : PHACKinematicProofObligation
+        The PHA-C kinematic proof obligation to operate on.
+
+    Returns
+    -------
+    dict[str, bool | float | int | str]
+        The canonical JSON-safe proof-obligation manifest.
+    """
     payload = _dict_without_record_hash(obligation)
     payload["record_sha256"] = obligation.record_sha256
     return payload
@@ -411,6 +428,30 @@ def build_pha_c_kinematic_proof_obligation(
     ``coupling_residual_step_bound_m``, ``phase_drift_bound_rad``, and
     ``lipschitz_step_gain_units`` values when they want a predictive
     finite-horizon Gronwall certificate instead of a replay-only envelope.
+
+    Parameters
+    ----------
+    record : PHACAcceptanceRecord
+        The PHA-C record to operate on.
+    fixed_point_scale_m : float
+        Spatial fixed-point scale in metres.
+    fixed_point_scale_rad : float
+        Phase fixed-point scale in radians.
+    fixed_point_time_scale_s : float
+        Temporal fixed-point scale in seconds.
+    relative_velocity_step_bound_m : float
+        Per-step relative-velocity bound in metres.
+    coupling_residual_step_bound_m : float
+        Per-step coupling-residual bound in metres.
+    phase_drift_bound_rad : float
+        Per-step phase-drift bound in radians.
+    lipschitz_step_gain_units : int
+        Lipschitz step-gain bound in dimensionless integer units.
+
+    Returns
+    -------
+    PHACKinematicProofObligation
+        The Lean proof-obligation projection of the acceptance record.
     """
     verified_record = verify_pha_c_acceptance_record(record)
     scale_m = _validate_positive_scale(fixed_point_scale_m, name="fixed_point_scale_m")
@@ -690,7 +731,25 @@ def build_pha_c_kinematic_proof_obligation(
 def verify_pha_c_kinematic_proof_obligation(
     obligation: PHACKinematicProofObligation,
 ) -> PHACKinematicProofObligation:
-    """Validate a PHA-C Lean proof-obligation manifest fail-closed."""
+    """Validate a PHA-C Lean proof-obligation manifest fail-closed.
+
+    Parameters
+    ----------
+    obligation : PHACKinematicProofObligation
+        The PHA-C kinematic proof obligation to operate on.
+
+    Returns
+    -------
+    PHACKinematicProofObligation
+        The same obligation after fail-closed validation.
+
+    Raises
+    ------
+    TypeError
+        If the manifest has the wrong type.
+    ValueError
+        If the manifest fails validation.
+    """
     if not isinstance(obligation, PHACKinematicProofObligation):
         raise TypeError("obligation must be a PHACKinematicProofObligation")
     exact_strings = {

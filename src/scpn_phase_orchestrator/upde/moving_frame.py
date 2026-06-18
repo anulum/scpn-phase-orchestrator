@@ -211,7 +211,63 @@ def validate_moving_frame_backend_inputs(
     float,
     float,
 ]:
-    """Validate the backend-neutral moving-frame schedule contract."""
+    """Validate the backend-neutral moving-frame schedule contract.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    positions : object
+        Absolute axial coordinates per oscillator, shape ``(N,)``.
+    omega_schedule : object
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    velocity_schedule : object
+        Per-step axial velocity vectors, shape ``(n_steps, N)``.
+    spatial_k_base : float
+        Base coupling strength before spatial modulation.
+    spatial_decay_form : object
+        Spatial decay law name (e.g. ``exponential`` or ``power``).
+    spatial_decay_exponent : float
+        Exponent of the spatial decay law.
+    spatial_decay_length_scale : float
+        Characteristic length scale of the spatial decay.
+    spatial_epsilon : float
+        Numerical floor guarding the spatial-decay denominator.
+    doppler_strength : float
+        Doppler coupling-correction strength.
+    doppler_epsilon : float
+        Numerical floor guarding the Doppler denominator.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    tuple[FloatArray, FloatArray, FloatArray, FloatArray, FloatArray, FloatArray, float,
+    int, float, float, float, float, float, float, float, float, int, str, int, float,
+    float]
+        The validated, canonicalised moving-frame schedule contract tuple.
+
+    Raises
+    ------
+    ValueError
+        If any schedule array is non-finite or has an inconsistent shape.
+    """
     p_raw = _reject_non_real_array(phases, name="phases")
     if p_raw.ndim != 1 or p_raw.size < 1:
         raise ValueError("phases must be a non-empty vector")
@@ -336,7 +392,56 @@ def moving_frame_run_python(
     atol: float = 1.0e-6,
     rtol: float = 1.0e-3,
 ) -> FloatArray:
-    """Run the moving-frame UPDE schedule in the Python reference path."""
+    """Run the moving-frame UPDE schedule in the Python reference path.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    positions : object
+        Absolute axial coordinates per oscillator, shape ``(N,)``.
+    omega_schedule : object
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    velocity_schedule : object
+        Per-step axial velocity vectors, shape ``(n_steps, N)``.
+    spatial_k_base : float
+        Base coupling strength before spatial modulation.
+    spatial_decay_form : object
+        Spatial decay law name (e.g. ``exponential`` or ``power``).
+    spatial_decay_exponent : float
+        Exponent of the spatial decay law.
+    spatial_decay_length_scale : float
+        Characteristic length scale of the spatial decay.
+    spatial_epsilon : float
+        Numerical floor guarding the spatial-decay denominator.
+    doppler_strength : float
+        Doppler coupling-correction strength.
+    doppler_epsilon : float
+        Numerical floor guarding the Doppler denominator.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after running the moving-frame schedule on the Python path.
+    """
     (
         p,
         z,
@@ -516,7 +621,59 @@ def moving_frame_run(
     *,
     backend: str = "auto",
 ) -> FloatArray:
-    """Run a moving-frame UPDE schedule through the selected backend."""
+    """Run a moving-frame UPDE schedule through the selected backend.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    positions : object
+        Absolute axial coordinates per oscillator, shape ``(N,)``.
+    omega_schedule : object
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    velocity_schedule : object
+        Per-step axial velocity vectors, shape ``(n_steps, N)``.
+    spatial_modulator : SpatialCouplingModulator
+        Configured spatial coupling modulator.
+    doppler_strength : float
+        Doppler coupling-correction strength.
+    doppler_epsilon : float
+        Numerical floor guarding the Doppler denominator.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+    backend : str
+        Name of the compute backend to run.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after running the moving-frame schedule on the selected
+        backend.
+
+    Raises
+    ------
+    ImportError
+        If the selected backend's runtime is unavailable.
+    ValueError
+        If the schedule contract is invalid; the underlying backend error propagates
+        when every backend fails.
+    """
     modulator = _validate_spatial_modulator(spatial_modulator)
     if modulator.distance_fn is not None:
         raise ValueError(
@@ -694,39 +851,81 @@ class MovingFrameUPDEEngine(DopplerEngine):
 
     @property
     def positions(self) -> FloatArray:
-        """Current absolute axial coordinate for each oscillator."""
+        """Current absolute axial coordinate for each oscillator.
+
+        Returns
+        -------
+        FloatArray
+            Current absolute axial coordinate for each oscillator.
+        """
         return self._positions.copy()
 
     @property
     def distance_to_reference(self) -> FloatArray:
-        """Absolute distance from each oscillator to the chamber reference."""
+        """Absolute distance from each oscillator to the chamber reference.
+
+        Returns
+        -------
+        FloatArray
+            Absolute distance from each oscillator to the chamber reference.
+        """
         return np.ascontiguousarray(
             np.abs(self._positions - self.reference_point), dtype=np.float64
         )
 
     @property
     def knm_effective(self) -> FloatArray:
-        """Most recently applied distance-modulated coupling matrix."""
+        """Most recently applied distance-modulated coupling matrix.
+
+        Returns
+        -------
+        FloatArray
+            Most recently applied distance-modulated coupling matrix.
+        """
         return self._knm_effective.copy()
 
     @property
     def kinematic_residual_max_m(self) -> float:
-        """Maximum residual against ``z_next = z + v*dt`` in the last run."""
+        """Maximum residual against ``z_next = z + v*dt`` in the last run.
+
+        Returns
+        -------
+        float
+            Maximum residual against ``z_next = z + v*dt`` in the last run.
+        """
         return float(self._kinematic_residual_max_m)
 
     @property
     def max_abs_velocity_m_per_s(self) -> float:
-        """Maximum absolute axial velocity used by the last step or run."""
+        """Maximum absolute axial velocity used by the last step or run.
+
+        Returns
+        -------
+        float
+            Maximum absolute axial velocity used by the last step or run.
+        """
         return float(self._max_abs_velocity_m_per_s)
 
     @property
     def path_length_max_m(self) -> float:
-        """Maximum per-oscillator axial path length in the last step or run."""
+        """Maximum per-oscillator axial path length in the last step or run.
+
+        Returns
+        -------
+        float
+            Maximum per-oscillator axial path length in the last step or run.
+        """
         return float(self._path_length_max_m)
 
     @property
     def state(self) -> MovingFrameState:
-        """Return the current moving-frame diagnostic snapshot."""
+        """Return the current moving-frame diagnostic snapshot.
+
+        Returns
+        -------
+        MovingFrameState
+            Return the current moving-frame diagnostic snapshot.
+        """
         return MovingFrameState(
             phases=self.phases.copy(),
             positions=self._positions.copy(),
@@ -754,7 +953,18 @@ class MovingFrameUPDEEngine(DopplerEngine):
         )
 
     def collision_imminent(self, threshold_m: float = 1.0e-3) -> bool:
-        """Return whether any oscillator is at or crosses the reference soon."""
+        """Return whether any oscillator is at or crosses the reference soon.
+
+        Parameters
+        ----------
+        threshold_m : float
+            Distance threshold in metres.
+
+        Returns
+        -------
+        bool
+            ``True`` when an oscillator is at or crossing the reference within one step.
+        """
         threshold = _validate_nonnegative_float(threshold_m, name="threshold_m")
         signed_now = self._positions - self.reference_point
         signed_next = signed_now + self.velocity_current * self._dt
@@ -772,7 +982,28 @@ class MovingFrameUPDEEngine(DopplerEngine):
         psi: float = 0.0,
         alpha: object | None = None,
     ) -> FloatArray:
-        """Advance one coupled phase/position step."""
+        """Advance one coupled phase/position step.
+
+        Parameters
+        ----------
+        phases : object | None
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : object | None
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : object | None
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : object | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+
+        Returns
+        -------
+        FloatArray
+            The phases after one coupled phase/position step.
+        """
         k_base = self.k_nm if knm is None else _validate_knm(knm, n=self._n)
         k_effective = self._modulated_knm(k_base, self._positions)
         positions_start = self._positions.copy()
@@ -803,7 +1034,30 @@ class MovingFrameUPDEEngine(DopplerEngine):
         alpha: object | None = None,
         n_steps: int = 1,
     ) -> FloatArray:
-        """Run ``n_steps`` of joint phase and axial-position dynamics."""
+        """Run ``n_steps`` of joint phase and axial-position dynamics.
+
+        Parameters
+        ----------
+        phases : object | None
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : object | None
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : object | None
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        alpha : object | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        n_steps : int
+            Number of integration steps to run.
+
+        Returns
+        -------
+        FloatArray
+            The final phases after ``n_steps`` joint phase/position steps.
+        """
         steps = _validate_positive_step_count(n_steps, name="n_steps")
         p = self.phases if phases is None else _validate_phases(phases, n=self._n)
         k = self.k_nm if knm is None else _validate_knm(knm, n=self._n)

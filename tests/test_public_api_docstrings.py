@@ -108,6 +108,14 @@ SECTION_ENFORCED_MODULES = (
     "scpn_phase_orchestrator.upde.stochastic",
     "scpn_phase_orchestrator.upde.stuart_landau",
     "scpn_phase_orchestrator.upde.swarmalator",
+    "scpn_phase_orchestrator.upde.bayesian",
+    "scpn_phase_orchestrator.upde.doppler",
+    "scpn_phase_orchestrator.upde.moving_frame",
+    "scpn_phase_orchestrator.upde.pha_c_acceptance",
+    "scpn_phase_orchestrator.upde.pha_c_formal_obligation",
+    "scpn_phase_orchestrator.upde.pha_c_handoff",
+    "scpn_phase_orchestrator.upde.pha_c_timeline",
+    "scpn_phase_orchestrator.upde.prediction",
 )
 
 

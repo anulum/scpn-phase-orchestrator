@@ -119,7 +119,13 @@ class PHACAcceptanceRecord:
     acceptance_sha256: str
 
     def to_dict(self) -> dict[str, float | int | bool | str]:
-        """Return a JSON-safe canonical representation."""
+        """Return a JSON-safe canonical representation.
+
+        Returns
+        -------
+        dict[str, float | int | bool | str]
+            Return a JSON-safe canonical representation.
+        """
         return pha_c_acceptance_record_to_dict(self)
 
 
@@ -401,6 +407,65 @@ def build_pha_c_acceptance_record(
     recording spatially modulated coupling and Doppler traces before converting
     the trajectory into a PHA-C event timeline. The output remains review-only;
     it is evidence for downstream gates and never permits actuation.
+
+    Parameters
+    ----------
+    phases_t0 : ArrayLike
+        Initial oscillator phases in radians, shape ``(N,)``.
+    positions_t0 : ArrayLike
+        Initial axial coordinates per oscillator, shape ``(N,)``.
+    omega_schedule : ArrayLike
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : ArrayLike
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    velocity_schedule : ArrayLike
+        Per-step axial velocity vectors, shape ``(n_steps, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    spatial_modulator : SpatialCouplingModulator | None
+        Configured spatial coupling modulator.
+    doppler_strength : object
+        Doppler coupling-correction strength.
+    doppler_epsilon : object
+        Numerical floor guarding the Doppler denominator.
+    zeta : object
+        External drive strength ``ζ``.
+    psi : object
+        External drive reference phase ``Ψ`` in radians.
+    dt : object
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : object
+        Number of inner substeps per outer step.
+    atol : object
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : object
+        Relative tolerance for the adaptive (rk45) integrator.
+    reference_phase : object
+        Reference phase for the lock criterion, in radians.
+    reference_point : object
+        Reference axial coordinate for the spatial-margin criterion.
+    phase_tol_rad : object
+        Phase lock tolerance in radians.
+    spatial_tol_m : object
+        Spatial lock tolerance in metres.
+    required_consecutive_samples : object
+        Consecutive in-tolerance samples required to declare lock.
+    tolerance_profile : object | None
+        Named tolerance profile, or ``None`` for the baseline profile.
+    backend : object
+        Name of the compute backend to run.
+
+    Returns
+    -------
+    PHACAcceptanceRecord
+        The deterministic end-to-end PHA-C acceptance record.
+
+    Raises
+    ------
+    ValueError
+        If any input is invalid or the acceptance replay fails.
     """
     phases = _as_float_vector(phases_t0, name="phases_t0")
     n = int(phases.size)
@@ -585,7 +650,18 @@ def build_pha_c_acceptance_record(
 def pha_c_acceptance_record_to_dict(
     record: PHACAcceptanceRecord,
 ) -> dict[str, float | int | bool | str]:
-    """Return the canonical JSON-safe PHA-C acceptance payload."""
+    """Return the canonical JSON-safe PHA-C acceptance payload.
+
+    Parameters
+    ----------
+    record : PHACAcceptanceRecord
+        The PHA-C record to operate on.
+
+    Returns
+    -------
+    dict[str, float | int | bool | str]
+        The canonical JSON-safe PHA-C acceptance payload.
+    """
     payload = _record_dict_without_hash(
         sample_count=record.sample_count,
         step_count=record.step_count,
@@ -643,7 +719,23 @@ def pha_c_acceptance_record_to_dict(
 def verify_pha_c_acceptance_record(
     record: PHACAcceptanceRecord,
 ) -> PHACAcceptanceRecord:
-    """Replay and validate a complete PHA-C acceptance record."""
+    """Replay and validate a complete PHA-C acceptance record.
+
+    Parameters
+    ----------
+    record : PHACAcceptanceRecord
+        The PHA-C record to operate on.
+
+    Returns
+    -------
+    PHACAcceptanceRecord
+        The same record after fail-closed replay and validation.
+
+    Raises
+    ------
+    ValueError
+        If the record fails fail-closed replay or hash validation.
+    """
     if not isinstance(record, PHACAcceptanceRecord):
         raise ValueError("record must be a PHACAcceptanceRecord")
     for field in (

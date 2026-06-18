@@ -92,7 +92,13 @@ class PHACHandoffRecord:
     record_sha256: str
 
     def to_dict(self) -> dict[str, float | int | bool | str]:
-        """Return a JSON-safe canonical representation."""
+        """Return a JSON-safe canonical representation.
+
+        Returns
+        -------
+        dict[str, float | int | bool | str]
+            Return a JSON-safe canonical representation.
+        """
         return pha_c_handoff_record_to_dict(self)
 
 
@@ -276,6 +282,39 @@ def build_pha_c_handoff_record(
     :func:`evaluate_merge_window`, mirrors its fail-closed validation, adds
     Kuramoto order-parameter and source-chain digests, then returns a
     non-actuating record with a canonical hash.
+
+    Parameters
+    ----------
+    phases : ArrayLike
+        Oscillator phases in radians, shape ``(N,)``.
+    positions : ArrayLike
+        Absolute axial coordinates per oscillator, shape ``(N,)``.
+    t : object
+        Absolute time of the sample in seconds.
+    reference_phase : object
+        Reference phase for the lock criterion, in radians.
+    reference_point : object
+        Reference axial coordinate for the spatial-margin criterion.
+    phase_tol_rad : object
+        Phase lock tolerance in radians.
+    spatial_tol_m : object
+        Spatial lock tolerance in metres.
+    required_consecutive_samples : object
+        Consecutive in-tolerance samples required to declare lock.
+    prior_consecutive_lock_samples : object
+        Consecutive lock-sample count carried in from a prior window.
+    tolerance_profile : object | None
+        Named tolerance profile, or ``None`` for the baseline profile.
+
+    Returns
+    -------
+    PHACHandoffRecord
+        The deterministic PHA-C event/state handoff record.
+
+    Raises
+    ------
+    ValueError
+        If any input is invalid.
     """
     phase_vector = _as_float_vector(phases, name="phases")
     position_vector = _as_float_vector(positions, name="positions")
@@ -361,7 +400,18 @@ def build_pha_c_handoff_record(
 def pha_c_handoff_record_to_dict(
     record: PHACHandoffRecord,
 ) -> dict[str, float | int | bool | str]:
-    """Convert a :class:`PHACHandoffRecord` into a JSON-safe dictionary."""
+    """Convert a :class:`PHACHandoffRecord` into a JSON-safe dictionary.
+
+    Parameters
+    ----------
+    record : PHACHandoffRecord
+        The PHA-C record to operate on.
+
+    Returns
+    -------
+    dict[str, float | int | bool | str]
+        The JSON-safe handoff record dictionary.
+    """
     return {
         "t": float(record.t),
         "oscillator_count": int(record.oscillator_count),
@@ -402,6 +452,21 @@ def verify_pha_c_handoff_record(record: PHACHandoffRecord) -> PHACHandoffRecord:
     fields, and recomputes the canonical payload hash from ``to_dict()``. This
     lets benchmark gates, replay ledgers, and downstream MIF/FRC lanes reject
     tampered evidence without access to the original phase and position vectors.
+
+    Parameters
+    ----------
+    record : PHACHandoffRecord
+        The PHA-C record to operate on.
+
+    Returns
+    -------
+    PHACHandoffRecord
+        The same record after replay and safety-boundary validation.
+
+    Raises
+    ------
+    ValueError
+        If the record fails replay or safety-boundary validation.
     """
     if not isinstance(record, PHACHandoffRecord):
         raise ValueError("record must be a PHACHandoffRecord")

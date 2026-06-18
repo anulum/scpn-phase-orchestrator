@@ -76,11 +76,35 @@ class GaussianArrayDistribution:
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """Return the event shape sampled by this Gaussian distribution."""
+        """Return the event shape sampled by this Gaussian distribution.
+
+        Returns
+        -------
+        tuple[int, ...]
+            Return the event shape sampled by this Gaussian distribution.
+        """
         return tuple(np.asarray(self.mean).shape)
 
     def sample(self, rng: np.random.Generator, n_samples: int) -> FloatArray:
-        """Draw finite Gaussian samples with optional support guards applied."""
+        """Draw finite Gaussian samples with optional support guards applied.
+
+        Parameters
+        ----------
+        rng : np.random.Generator
+            NumPy random generator used for sampling.
+        n_samples : int
+            Number of samples to draw.
+
+        Returns
+        -------
+        FloatArray
+            Finite Gaussian samples, shape ``(n_samples, *event_shape)``.
+
+        Raises
+        ------
+        TypeError
+            If ``rng`` is not a NumPy random generator.
+        """
         if not isinstance(rng, np.random.Generator):
             raise TypeError("rng must be a numpy.random.Generator")
         sample_count = _validate_positive_integer(
@@ -156,11 +180,23 @@ class BayesianUPDEResult:
 
     @property
     def r_plus_minus(self) -> tuple[float, float]:
-        """Return the compact ``R ± sigma`` pair."""
+        """Return the compact ``R ± sigma`` pair.
+
+        Returns
+        -------
+        tuple[float, float]
+            Return the compact ``R ± sigma`` pair.
+        """
         return self.r_mean, self.r_sigma
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe uncertainty diagnostics."""
+        """Return JSON-safe uncertainty diagnostics.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe uncertainty diagnostics.
+        """
         return {
             "kind": "bayesian_upde",
             "backend": self.backend,
@@ -200,7 +236,13 @@ class BayesianBackendStatus:
     sample_count: int
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe backend availability diagnostics."""
+        """Return JSON-safe backend availability diagnostics.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe backend availability diagnostics.
+        """
         return {
             "kind": "bayesian_backend_status",
             "backend": self.backend,
@@ -224,7 +266,13 @@ class GaussianUPDEPosteriorFit:
     backend: str = "numpy_lstsq"
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe posterior-fit diagnostics."""
+        """Return JSON-safe posterior-fit diagnostics.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe posterior-fit diagnostics.
+        """
         return {
             "kind": "gaussian_upde_posterior_fit",
             "backend": self.backend,
@@ -333,6 +381,31 @@ def fit_gaussian_upde_posterior(
 
     The result is intentionally review-only: it produces distributions that can
     feed :func:`bayesian_upde_run`, but it does not apply control actions.
+
+    Parameters
+    ----------
+    phase_trajectory : object
+        Observed phase trajectory, shape ``(T, N)``.
+    dt : float
+        Integration step size.
+    alpha : object | None
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    ridge : float
+        Ridge-regularisation strength for the prior fit.
+    coupling_std_floor : float
+        Lower bound on the fitted coupling standard deviation.
+    omega_std_floor : float
+        Lower bound on the fitted natural-frequency standard deviation.
+
+    Returns
+    -------
+    GaussianUPDEPosteriorFit
+        The fitted Gaussian ``omega`` and ``K_nm`` prior.
+
+    Raises
+    ------
+    ValueError
+        If the phase trajectory is empty or non-finite.
     """
     trajectory = _as_finite_array(phase_trajectory, name="phase_trajectory")
     if trajectory.ndim != 2:
@@ -438,7 +511,32 @@ def audit_bayesian_backend_status(
     config: BayesianUPDEConfig | None = None,
     backends: tuple[BackendName, ...] = ("numpy", "numpyro", "blackjax"),
 ) -> tuple[BayesianBackendStatus, ...]:
-    """Probe Bayesian backend names without silently accepting unsupported ones."""
+    """Probe Bayesian backend names without silently accepting unsupported ones.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    omega : object
+        Natural-frequency distribution or array.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    config : BayesianUPDEConfig | None
+        Optional configuration object, or ``None`` for defaults.
+    backends : tuple[BackendName, ...]
+        Backend names to probe, in priority order.
+
+    Returns
+    -------
+    tuple[BayesianBackendStatus, ...]
+        Per-backend availability diagnostics.
+    """
     base_config = config or BayesianUPDEConfig(n_samples=8, seed=0, n_steps=1)
     statuses: list[BayesianBackendStatus] = []
     for backend in backends:
@@ -527,7 +625,37 @@ def bayesian_upde_run(
     psi: float,
     config: BayesianUPDEConfig | None = None,
 ) -> BayesianUPDEResult:
-    """Run UPDE over sampled ``omega`` and ``K_nm`` distributions."""
+    """Run UPDE over sampled ``omega`` and ``K_nm`` distributions.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    omega : object
+        Natural-frequency distribution or array.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    config : BayesianUPDEConfig | None
+        Optional configuration object, or ``None`` for defaults.
+
+    Returns
+    -------
+    BayesianUPDEResult
+        The Bayesian UPDE result with uncertainty diagnostics.
+
+    Raises
+    ------
+    NotImplementedError
+        If the requested backend is not implemented.
+    ValueError
+        If the sampled inputs are invalid.
+    """
     resolved = config or BayesianUPDEConfig()
     if resolved.backend != "numpy":
         raise NotImplementedError(

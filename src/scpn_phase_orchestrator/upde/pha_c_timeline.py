@@ -100,7 +100,13 @@ class PHACTimelineRecord:
     timeline_sha256: str
 
     def to_dict(self) -> dict[str, float | int | bool | str]:
-        """Return a JSON-safe canonical representation."""
+        """Return a JSON-safe canonical representation.
+
+        Returns
+        -------
+        dict[str, float | int | bool | str]
+            Return a JSON-safe canonical representation.
+        """
         return pha_c_event_timeline_to_dict(self)
 
 
@@ -327,6 +333,37 @@ def build_pha_c_event_timeline(
     trajectory matrices with shape ``(time, oscillator)``. The consecutive-lock
     counter is threaded through every sample so downstream consumers can review
     acquisition, loss, and reset events without raw state arrays.
+
+    Parameters
+    ----------
+    phases_by_step : ArrayLike
+        Phase history, shape ``(n_steps, N)``.
+    positions_by_step : ArrayLike
+        Position history, shape ``(n_steps, N)``.
+    times : ArrayLike | None
+        Per-step timestamps in seconds, or ``None`` for unit spacing.
+    reference_phase : object
+        Reference phase for the lock criterion, in radians.
+    reference_point : object
+        Reference axial coordinate for the spatial-margin criterion.
+    phase_tol_rad : object
+        Phase lock tolerance in radians.
+    spatial_tol_m : object
+        Spatial lock tolerance in metres.
+    required_consecutive_samples : object
+        Consecutive in-tolerance samples required to declare lock.
+    tolerance_profile : object | None
+        Named tolerance profile, or ``None`` for the baseline profile.
+
+    Returns
+    -------
+    PHACTimelineRecord
+        The deterministic PHA-C lock/loss timeline record.
+
+    Raises
+    ------
+    ValueError
+        If any input is invalid.
     """
     phase_matrix = _as_float_matrix(phases_by_step, name="phases_by_step")
     position_matrix = _as_float_matrix(positions_by_step, name="positions_by_step")
@@ -417,7 +454,18 @@ def build_pha_c_event_timeline(
 def pha_c_event_timeline_to_dict(
     timeline: PHACTimelineRecord,
 ) -> dict[str, float | int | bool | str]:
-    """Return the canonical JSON-safe PHA-C timeline payload."""
+    """Return the canonical JSON-safe PHA-C timeline payload.
+
+    Parameters
+    ----------
+    timeline : PHACTimelineRecord
+        The PHA-C event-timeline record to operate on.
+
+    Returns
+    -------
+    dict[str, float | int | bool | str]
+        The canonical JSON-safe PHA-C timeline payload.
+    """
     payload = _timeline_dict_without_hash(
         sample_count=timeline.sample_count,
         oscillator_count=timeline.oscillator_count,
@@ -458,7 +506,23 @@ def pha_c_event_timeline_to_dict(
 def verify_pha_c_event_timeline(
     timeline: PHACTimelineRecord,
 ) -> PHACTimelineRecord:
-    """Replay and validate a PHA-C event timeline hash and safety boundary."""
+    """Replay and validate a PHA-C event timeline hash and safety boundary.
+
+    Parameters
+    ----------
+    timeline : PHACTimelineRecord
+        The PHA-C event-timeline record to operate on.
+
+    Returns
+    -------
+    PHACTimelineRecord
+        The same timeline after replay and safety-boundary validation.
+
+    Raises
+    ------
+    ValueError
+        If the timeline fails replay or safety-boundary validation.
+    """
     if not isinstance(timeline, PHACTimelineRecord):
         raise ValueError("timeline must be a PHACTimelineRecord")
     _validate_sha256_hex(timeline.time_state_sha256, name="time_state_sha256")

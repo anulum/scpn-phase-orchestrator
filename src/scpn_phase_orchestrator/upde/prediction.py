@@ -133,16 +133,43 @@ class PredictionModel:
 
     @property
     def weights(self) -> FloatArray:
-        """Copy of the current learned weight matrix W."""
+        """Copy of the current learned weight matrix W.
+
+        Returns
+        -------
+        FloatArray
+            Copy of the current learned weight matrix W.
+        """
         return self._W.copy()
 
     @property
     def error_gain(self) -> float:
-        """Scaling factor applied to prediction error before injection."""
+        """Scaling factor applied to prediction error before injection.
+
+        Returns
+        -------
+        float
+            Scaling factor applied to prediction error before injection.
+        """
         return self._error_gain
 
     def predict(self, phases: FloatArray, omegas: FloatArray, dt: float) -> FloatArray:
-        """Predict phases at next timestep."""
+        """Predict phases at next timestep.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        FloatArray
+            The predicted phases at the next timestep.
+        """
         phases = _validate_vector("phases", phases, self._n)
         omegas = _validate_vector("omegas", omegas, self._n)
         dt = _validate_positive_float("dt", dt)
@@ -157,6 +184,20 @@ class PredictionModel:
         """Compute prediction error and update weights.
 
         Call once per timestep AFTER the solver step.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        PredictionState
+            The updated prediction state after one learning step.
         """
         phases = _validate_vector("phases", phases, self._n)
         omegas = _validate_vector("omegas", omegas, self._n)
@@ -203,6 +244,20 @@ class PredictionModel:
         Returns ε_gain · ε_i, where ε_i = θ_actual - θ̂_predicted.
         Add this to the UPDE derivative to implement predictive coding:
           dθ/dt = ω + K·sin(Δθ) + gain·ε
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        FloatArray
+            The prediction-error coupling signal for UPDE injection.
         """
         phases = _validate_vector("phases", phases, self._n)
         _validate_vector("omegas", omegas, self._n)
@@ -280,7 +335,13 @@ class VariationalPredictor:
 
     @property
     def precision(self) -> FloatArray:
-        """Copy of the current per-oscillator precision vector."""
+        """Copy of the current per-oscillator precision vector.
+
+        Returns
+        -------
+        FloatArray
+            Copy of the current per-oscillator precision vector.
+        """
         return self._precision.copy()
 
     def free_energy(
@@ -296,6 +357,20 @@ class VariationalPredictor:
         First term: precision-weighted prediction error (accuracy).
         Second term: log-precision (complexity under Gaussian q).
         The sign convention follows Friston (2010): F is minimized.
+
+        Parameters
+        ----------
+        predicted : FloatArray
+            Predicted phases in radians, shape ``(N,)``.
+        observed : FloatArray
+            Observed phases in radians, shape ``(N,)``.
+        precision : FloatArray
+            Per-oscillator precision vector, shape ``(N,)``.
+
+        Returns
+        -------
+        float
+            The variational free energy ``F``.
         """
         predicted = _validate_vector("predicted", predicted, self._n)
         observed = _validate_vector("observed", observed, self._n)
@@ -317,6 +392,20 @@ class VariationalPredictor:
         2. Compute precision-weighted prediction error.
         3. Update mu (gradient descent on F).
         4. Update precision from error statistics.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        VariationalState
+            The updated variational state after one step.
         """
         phases = _validate_vector("phases", phases, self._n)
         omegas = _validate_vector("omegas", omegas, self._n)
@@ -373,6 +462,11 @@ class VariationalPredictor:
 
         This returns diag(precision) as the simplest such mapping.
         For a full N x N coupling matrix, use np.diag(result).
+
+        Returns
+        -------
+        FloatArray
+            Precision matrix interpretable as K_ij.
         """
         return np.diag(self._precision)
 
