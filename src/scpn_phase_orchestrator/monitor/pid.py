@@ -399,6 +399,22 @@ def redundancy(
 
     ``I_red = Σ_y p(y)·min(I_spec(Y=y; A), I_spec(Y=y; B))`` (Williams & Beer
     2010 ``I_min``). ``phases`` is a ``(T, N)`` phase history.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    group_a : list[int] | IntArray
+        Indices of the first oscillator group.
+    group_b : list[int] | IntArray
+        Indices of the second oscillator group.
+    n_bins : int
+        Number of histogram bins.
+
+    Returns
+    -------
+    float
+        The redundant information the groups share about the global phase.
     """
     red, _ = _decompose(phases, group_a, group_b, n_bins)
     return _validate_pid_scalar(red, name="redundancy")
@@ -415,6 +431,22 @@ def synergy(
     ``I_syn = MI(A,B; Y) − MI(A; Y) − MI(B; Y) + I_red``. Positive synergy means
     the combined group carries information about the global state that neither
     subgroup carries alone. ``phases`` is a ``(T, N)`` phase history.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    group_a : list[int] | IntArray
+        Indices of the first oscillator group.
+    group_b : list[int] | IntArray
+        Indices of the second oscillator group.
+    n_bins : int
+        Number of histogram bins.
+
+    Returns
+    -------
+    float
+        The synergistic information present only in the joint ``(A, B)``.
     """
     _, syn = _decompose(phases, group_a, group_b, n_bins)
     return _validate_pid_scalar(syn, name="synergy")

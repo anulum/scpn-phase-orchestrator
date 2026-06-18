@@ -391,6 +391,15 @@ def recurrence_matrix(
     Returns
     -------
         ``(T, T)`` boolean array.
+
+    Parameters
+    ----------
+    trajectory : FloatArray
+        Phase-space trajectory, shape ``(T, d)``.
+    epsilon : float
+        Recurrence threshold.
+    metric : str
+        Distance metric name.
     """
     traj = _validate_trajectory(trajectory, name="trajectory")
     epsilon = _validate_epsilon(epsilon)
@@ -435,6 +444,27 @@ def cross_recurrence_matrix(
 
     ``traj_a`` and ``traj_b`` must have the same length and
     dimensionality.
+
+    Parameters
+    ----------
+    traj_a : FloatArray
+        First trajectory, shape ``(T, d)``.
+    traj_b : FloatArray
+        Second trajectory, shape ``(T, d)``.
+    epsilon : float
+        Recurrence threshold.
+    metric : str
+        Distance metric name.
+
+    Returns
+    -------
+    BoolArray
+        The binary cross-recurrence matrix.
+
+    Raises
+    ------
+    ValueError
+        If the two trajectories are incompatible.
     """
     a = _validate_trajectory(traj_a, name="traj_a")
     b = _validate_trajectory(traj_b, name="traj_b")
@@ -577,6 +607,24 @@ def rqa(
     The recurrence matrix is computed via the 5-backend dispatcher;
     line-length histograms and RQA statistics are computed in
     Python for uniformity across backends.
+
+    Parameters
+    ----------
+    trajectory : FloatArray
+        Phase-space trajectory, shape ``(T, d)``.
+    epsilon : float
+        Recurrence threshold.
+    l_min : int
+        Minimum diagonal-line length counted by RQA.
+    v_min : int
+        Minimum vertical-line length counted by RQA.
+    metric : str
+        Distance metric name.
+
+    Returns
+    -------
+    RQAResult
+        The recurrence quantification analysis result.
     """
     R = recurrence_matrix(trajectory, epsilon, metric)
     return _rqa_from_matrix(R, l_min, v_min, exclude_main_diag=True)
@@ -589,6 +637,25 @@ def cross_rqa(
     l_min: int = 2,
     metric: str = "euclidean",
 ) -> RQAResult:
-    """Cross-Recurrence Quantification Analysis between two trajectories."""
+    """Cross-Recurrence Quantification Analysis between two trajectories.
+
+    Parameters
+    ----------
+    traj_a : FloatArray
+        First trajectory, shape ``(T, d)``.
+    traj_b : FloatArray
+        Second trajectory, shape ``(T, d)``.
+    epsilon : float
+        Recurrence threshold.
+    l_min : int
+        Minimum diagonal-line length counted by RQA.
+    metric : str
+        Distance metric name.
+
+    Returns
+    -------
+    RQAResult
+        The cross-recurrence quantification analysis result.
+    """
     CR = cross_recurrence_matrix(traj_a, traj_b, epsilon, metric)
     return _rqa_from_matrix(CR, l_min, l_min, exclude_main_diag=False)

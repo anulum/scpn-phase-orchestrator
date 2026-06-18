@@ -282,6 +282,11 @@ def compute_itpc(phases_trials: object) -> FloatArray:
     Returns
     -------
         ``(n_timepoints,)`` array of ITPC values in ``[0, 1]``.
+
+    Parameters
+    ----------
+    phases_trials : object
+        Per-trial phase series, shape ``(n_trials, T)``.
     """
     phases = _validate_phases_trials(phases_trials)
     if phases.ndim == 1:
@@ -336,6 +341,13 @@ def itpc_persistence(
     Returns
     -------
         Mean ITPC across ``pause_indices``. ``0.0`` if empty.
+
+    Parameters
+    ----------
+    phases_trials : object
+        Per-trial phase series, shape ``(n_trials, T)``.
+    pause_indices : object
+        Stimulus-pause sample indices.
     """
     phases = _validate_phases_trials(phases_trials)
     pause_idx = _validate_pause_indices(pause_indices)

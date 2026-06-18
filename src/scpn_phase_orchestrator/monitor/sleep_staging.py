@@ -70,6 +70,13 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
     Returns
     -------
         One of ``"N3"``, ``"N2"``, ``"N1"``, ``"REM"``, ``"Wake"``.
+
+    Parameters
+    ----------
+    R : float
+        Kuramoto order parameter.
+    functional_desync : bool
+        Whether the network is in a functional desynchronisation regime.
     """
     r_value = _validate_order_parameter(R)
     desync = _validate_functional_desync(functional_desync)
@@ -115,6 +122,13 @@ def ultradian_phase(
         Phase in [0, 1) where 0 = cycle start (N3 onset),
         0.5 ≈ mid-cycle (REM), wrapping back toward 0.
         Returns 0.0 if no N3 epoch is found.
+
+    Parameters
+    ----------
+    timestamps : FloatArray
+        Per-sample timestamps in seconds.
+    stage_history : list[str]
+        History of classified sleep-stage labels.
     """
     ts = _validate_timestamps(timestamps)
     stages = _validate_stage_history(stage_history, expected_n=int(ts.size))

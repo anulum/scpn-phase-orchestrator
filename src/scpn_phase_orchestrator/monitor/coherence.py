@@ -87,11 +87,33 @@ class CoherenceMonitor:
         self._bad = _validate_layer_indices(bad_layers, name="bad_layers")
 
     def compute_r_good(self, upde_state: UPDEState) -> float:
-        """Mean order parameter R across good (synchronise) layers."""
+        """Mean order parameter R across good (synchronise) layers.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The UPDE state to evaluate.
+
+        Returns
+        -------
+        float
+            The mean order parameter ``R`` over the maintain (good) layers.
+        """
         return float(self._mean_r(upde_state, self._good, name="good_layers"))
 
     def compute_r_bad(self, upde_state: UPDEState) -> float:
-        """Mean order parameter R across bad (desynchronise) layers."""
+        """Mean order parameter R across bad (desynchronise) layers.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The UPDE state to evaluate.
+
+        Returns
+        -------
+        float
+            The mean order parameter ``R`` over the suppress (bad) layers.
+        """
         return float(self._mean_r(upde_state, self._bad, name="bad_layers"))
 
     # PLV lock threshold: Lachaux et al. 1999; see docs/ASSUMPTIONS.md § Quality Gating
@@ -103,6 +125,18 @@ class CoherenceMonitor:
         Uses cross_layer_alignment matrix as the primary PLV source
         (matches Rust implementation). Falls back to lock_signatures
         if CLA entry is below threshold but a signature overrides it.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The UPDE state to evaluate.
+        threshold : float
+            Decision threshold.
+
+        Returns
+        -------
+        list[tuple[int, int]]
+            The layer-index pairs whose PLV exceeds the threshold.
         """
         threshold = _validate_plv_threshold(threshold)
         n = len(upde_state.layers)

@@ -66,7 +66,13 @@ class MergeWindowToleranceProfile:
         object.__setattr__(self, "baseline_spatial_tol_m", baseline_spatial)
 
     def to_dict(self) -> dict[str, float | str]:
-        """Return a JSON-safe tolerance-profile payload."""
+        """Return a JSON-safe tolerance-profile payload.
+
+        Returns
+        -------
+        dict[str, float | str]
+            Return a JSON-safe tolerance-profile payload.
+        """
         return merge_window_tolerance_profile_to_dict(self)
 
 
@@ -98,7 +104,13 @@ class MergeReport:
     consecutive_lock_samples: int
 
     def to_dict(self) -> dict[str, float | int | bool]:
-        """Return a JSON-safe representation for audit and benchmark records."""
+        """Return a JSON-safe representation for audit and benchmark records.
+
+        Returns
+        -------
+        dict[str, float | int | bool]
+            Return a JSON-safe representation for audit and benchmark records.
+        """
         return merge_window_report_to_dict(self)
 
 
@@ -183,7 +195,22 @@ def resolve_merge_window_tolerance_profile(
     phase_baseline_rad: object = DEFAULT_PHASE_TOL_RAD,
     spatial_baseline_m: object = DEFAULT_SPATIAL_TOL_M,
 ) -> MergeWindowToleranceProfile:
-    """Resolve a named PHA-C tolerance profile into numeric tolerances."""
+    """Resolve a named PHA-C tolerance profile into numeric tolerances.
+
+    Parameters
+    ----------
+    tolerance_profile : object
+        Named tolerance profile, or ``None`` for the baseline.
+    phase_baseline_rad : object
+        Baseline phase tolerance in radians.
+    spatial_baseline_m : object
+        Baseline spatial tolerance in metres.
+
+    Returns
+    -------
+    MergeWindowToleranceProfile
+        The resolved numeric tolerance profile.
+    """
     if isinstance(tolerance_profile, MergeWindowToleranceProfile):
         return tolerance_profile
     name = _validate_profile_name(tolerance_profile)
@@ -226,6 +253,39 @@ def evaluate_merge_window(
     counter increments only when both predicates pass; otherwise it resets to
     zero. ``lock_achieved`` becomes true once the counter reaches
     ``required_consecutive_samples``.
+
+    Parameters
+    ----------
+    phases : ArrayLike
+        Oscillator phases in radians, shape ``(N,)``.
+    positions : ArrayLike
+        Absolute axial coordinates per oscillator, shape ``(N,)``.
+    t : object
+        Absolute time of the sample in seconds.
+    reference_phase : object
+        Reference phase for the lock criterion, in radians.
+    reference_point : object
+        Reference axial coordinate for the spatial-margin criterion.
+    phase_tol_rad : object
+        Phase lock tolerance in radians.
+    spatial_tol_m : object
+        Spatial lock tolerance in metres.
+    required_consecutive_samples : object
+        Consecutive in-tolerance samples required to declare lock.
+    prior_consecutive_lock_samples : object
+        Consecutive lock-sample count carried in from a prior window.
+    tolerance_profile : object | None
+        Named tolerance profile, or ``None`` for the baseline.
+
+    Returns
+    -------
+    MergeReport
+        The merge-window evaluation report for the sample.
+
+    Raises
+    ------
+    ValueError
+        If any input is invalid.
     """
     phase_vector = _as_float_vector(phases, name="phases")
     position_vector = _as_float_vector(positions, name="positions")
@@ -316,7 +376,13 @@ class MergeWindowMonitor:
 
     @property
     def consecutive_lock_samples(self) -> int:
-        """Current consecutive joint-lock count."""
+        """Current consecutive joint-lock count.
+
+        Returns
+        -------
+        int
+            Current consecutive joint-lock count.
+        """
         return self._consecutive_lock_samples
 
     def reset(self) -> None:
@@ -332,7 +398,26 @@ class MergeWindowMonitor:
         reference_phase: object = 0.0,
         reference_point: object = 0.0,
     ) -> MergeReport:
-        """Evaluate one sample and update the consecutive joint-lock counter."""
+        """Evaluate one sample and update the consecutive joint-lock counter.
+
+        Parameters
+        ----------
+        phases : ArrayLike
+            Oscillator phases in radians, shape ``(N,)``.
+        positions : ArrayLike
+            Absolute axial coordinates per oscillator, shape ``(N,)``.
+        t : object
+            Absolute time of the sample in seconds.
+        reference_phase : object
+            Reference phase for the lock criterion, in radians.
+        reference_point : object
+            Reference axial coordinate for the spatial-margin criterion.
+
+        Returns
+        -------
+        MergeReport
+            The merge-window report with the updated lock counter.
+        """
         report = evaluate_merge_window(
             phases,
             positions,
@@ -367,7 +452,18 @@ class MergeWindowMonitor:
 
 
 def merge_window_report_to_dict(report: MergeReport) -> dict[str, float | int | bool]:
-    """Convert a :class:`MergeReport` into a JSON-safe dictionary."""
+    """Convert a :class:`MergeReport` into a JSON-safe dictionary.
+
+    Parameters
+    ----------
+    report : MergeReport
+        The merge-window report to serialise.
+
+    Returns
+    -------
+    dict[str, float | int | bool]
+        The JSON-safe merge-window report dictionary.
+    """
     return {
         "t": float(report.t),
         "phase_dispersion_rad": float(report.phase_dispersion_rad),
@@ -384,7 +480,18 @@ def merge_window_report_to_dict(report: MergeReport) -> dict[str, float | int | 
 def merge_window_tolerance_profile_to_dict(
     profile: MergeWindowToleranceProfile,
 ) -> dict[str, float | str]:
-    """Convert a resolved tolerance profile into a JSON-safe dictionary."""
+    """Convert a resolved tolerance profile into a JSON-safe dictionary.
+
+    Parameters
+    ----------
+    profile : MergeWindowToleranceProfile
+        The resolved tolerance profile to serialise.
+
+    Returns
+    -------
+    dict[str, float | str]
+        The JSON-safe tolerance-profile dictionary.
+    """
     return {
         "name": str(profile.name),
         "phase_tol_rad": float(profile.phase_tol_rad),

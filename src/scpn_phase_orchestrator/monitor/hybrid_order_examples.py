@@ -461,7 +461,13 @@ def _build_scenario(
 
 
 def build_hybrid_order_parameter_scenarios() -> tuple[dict[str, object], ...]:
-    """Return deterministic, JSON-safe hybrid order-parameter scenarios."""
+    """Return deterministic, JSON-safe hybrid order-parameter scenarios.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Return deterministic, JSON-safe hybrid order-parameter scenarios.
+    """
     scenarios = (
         _build_scenario(
             domain="quantum_simulation",

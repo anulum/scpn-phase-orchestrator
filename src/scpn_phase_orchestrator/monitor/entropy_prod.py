@@ -247,6 +247,24 @@ def entropy_production_rate(
     Returns
     -------
         Non-negative dissipation scalar.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : object
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    dt : object
+        Integration step size.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are non-finite or mismatched.
     """
     phases = _validate_vector(phases, name="phases")
     n = int(phases.size)

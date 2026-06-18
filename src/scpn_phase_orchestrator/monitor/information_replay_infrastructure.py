@@ -52,6 +52,13 @@ def build_infrastructure_integrated_information_replays(
     ------
         ValueError: If parameters are invalid or the corpus does not satisfy
             ordering and schema validation.
+
+    Parameters
+    ----------
+    n_samples : int
+        Number of samples.
+    n_bins : int
+        Number of histogram bins.
     """
     _validate_replay_parameters(n_samples=n_samples, n_bins=n_bins)
 

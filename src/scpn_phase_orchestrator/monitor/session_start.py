@@ -63,6 +63,17 @@ def check_session_start(
     Returns
     -------
         SessionCoherenceReport with pass/fail, quality scores, and diagnostics.
+
+    Parameters
+    ----------
+    phase_states : list[PhaseState]
+        Extracted per-oscillator phase states.
+    initial_phases : FloatArray
+        Initial oscillator phases in radians, shape ``(N,)``.
+    imprint_state : ImprintState
+        The imprint state to check for consistency.
+    n_osc : int
+        Expected number of oscillators.
     """
     report = SessionCoherenceReport()
     scorer = PhaseQualityScorer()

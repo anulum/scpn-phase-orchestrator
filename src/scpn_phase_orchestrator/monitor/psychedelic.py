@@ -313,6 +313,13 @@ def reduce_coupling(knm: FloatArray, reduction_factor: float) -> FloatArray:
     Returns
     -------
         Scaled copy. Zero when ``reduction_factor == 1``.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    reduction_factor : float
+        Fractional coupling reduction in ``[0, 1]``.
     """
     k = _validate_coupling_matrix(knm, name="knm")
     factor = _validate_unit_interval(reduction_factor, name="reduction_factor")
@@ -333,6 +340,18 @@ def entropy_from_phases(phases: FloatArray, n_bins: int = 36) -> float:
 
     Carhart-Harris et al. 2014, Front. Hum. Neurosci. **8**:20
     ("The entropic brain").
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    n_bins : int
+        Number of histogram bins.
+
+    Returns
+    -------
+    float
+        The circular Shannon entropy of the phase distribution.
     """
     bin_count = _validate_n_bins(n_bins)
     phase_values = _validate_phase_vector(phases, name="phases")
@@ -390,6 +409,28 @@ def simulate_psychedelic_trajectory(
     -------
         List of dicts, one per level, with keys:
             reduction_factor, R, entropy, chimera_index, phases.
+
+    Parameters
+    ----------
+    engine : UPDEEngine
+        The UPDE engine used to integrate the trajectory.
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    reduction_schedule : list[float]
+        Sequence of coupling-reduction levels to apply.
+    n_steps_per_level : int
+        Number of integration steps at each reduction level.
+
+    Raises
+    ------
+    ValueError
+        If the reduction schedule or state arrays are invalid.
     """
     p = _validate_phase_vector(phases, name="phases").copy()
     n = int(p.size)

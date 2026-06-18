@@ -78,7 +78,13 @@ class STLTraceResult:
     backend: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable STL audit payload."""
+        """Return a JSON-serialisable STL audit payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable STL audit payload.
+        """
         return {
             "spec": self.spec,
             "robustness": self.robustness,
@@ -97,7 +103,13 @@ class STLAutomatonState:
     first_hit_index: int | None = None
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable automaton-state payload."""
+        """Return a JSON-serialisable automaton-state payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable automaton-state payload.
+        """
         return {
             "name": self.name,
             "accepting": self.accepting,
@@ -117,7 +129,13 @@ class STLAutomatonTransition:
     robustness: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable automaton-transition payload."""
+        """Return a JSON-serialisable automaton-transition payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable automaton-transition payload.
+        """
         return {
             "source": self.source,
             "target": self.target,
@@ -141,7 +159,13 @@ class STLMonitoringAutomaton:
     backend: str = "builtin"
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable STL automaton audit payload."""
+        """Return a JSON-serialisable STL automaton audit payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable STL automaton audit payload.
+        """
         return {
             "spec": self.spec,
             "temporal_op": self.temporal_op,
@@ -168,7 +192,13 @@ class STLControllerCandidate:
     rationale: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable controller-candidate payload."""
+        """Return a JSON-serialisable controller-candidate payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable controller-candidate payload.
+        """
         return {
             "signal": self.signal,
             "action": self.action,
@@ -190,7 +220,13 @@ class STLControllerSynthesis:
     candidates: tuple[STLControllerCandidate, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable controller-synthesis payload."""
+        """Return a JSON-serialisable controller-synthesis payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable controller-synthesis payload.
+        """
         return {
             "spec": self.spec,
             "satisfied": self.satisfied,
@@ -241,7 +277,13 @@ class STLProjectedActionPlan:
     rejected_candidates: tuple[dict[str, object], ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable projected-action plan."""
+        """Return a JSON-serialisable projected-action plan.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable projected-action plan.
+        """
         return {
             "spec": self.spec,
             "actuating": self.actuating,
@@ -273,7 +315,13 @@ class STLRuntimeActuationGate:
     blocked_reasons: tuple[str, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable runtime gate record."""
+        """Return a JSON-serialisable runtime gate record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable runtime gate record.
+        """
         return {
             "spec": self.spec,
             "non_actuating": self.non_actuating,
@@ -311,7 +359,13 @@ class STLClosedLoopSynthesisPlan:
     blocked_reasons: tuple[str, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable closed-loop synthesis plan."""
+        """Return a JSON-serialisable closed-loop synthesis plan.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable closed-loop synthesis plan.
+        """
         return {
             "spec": self.spec,
             "trace_length": self.trace_length,
@@ -354,6 +408,21 @@ class STLMonitor:
 
         A positive value means the specification is satisfied; negative
         means violated.  The magnitude indicates how far from the boundary.
+
+        Parameters
+        ----------
+        trace : dict[str, list[float]]
+            Signal trace keyed by variable name, each a list of floats.
+
+        Returns
+        -------
+        float
+            The robustness value of the specification over the trace.
+
+        Raises
+        ------
+        ImportError
+            If the rtamt STL backend is not installed.
         """
         _validate_trace(trace)
         length = len(next(iter(trace.values())))
@@ -387,7 +456,18 @@ class STLMonitor:
         return float(robustness)
 
     def evaluate_result(self, trace: dict[str, list[float]]) -> STLTraceResult:
-        """Evaluate and return robustness plus audit metadata."""
+        """Evaluate and return robustness plus audit metadata.
+
+        Parameters
+        ----------
+        trace : dict[str, list[float]]
+            Signal trace keyed by variable name, each a list of floats.
+
+        Returns
+        -------
+        STLTraceResult
+            The robustness value plus audit metadata.
+        """
         robustness = self.evaluate(trace)
         backend = "builtin" if self._simple is not None else "rtamt"
         return STLTraceResult(
@@ -408,6 +488,23 @@ def synthesise_stl_monitoring_automaton(
     it records the state sequence taken by the monitor over the supplied trace
     for supported ``always (...)`` and ``eventually (...)`` conjunctions. More
     expressive STL remains delegated to ``rtamt`` for robustness evaluation.
+
+    Parameters
+    ----------
+    spec : str
+        STL specification string.
+    trace : dict[str, list[float]]
+        Signal trace keyed by variable name, each a list of floats.
+
+    Returns
+    -------
+    STLMonitoringAutomaton
+        The trace automaton for the STL safety formula.
+
+    Raises
+    ------
+    ValueError
+        If the spec is not a supported builtin STL formula.
     """
     _validate_trace(trace)
     parsed = _parse_simple_spec(spec)
@@ -457,6 +554,25 @@ def synthesise_stl_controller_candidates(
     weakest predicate margin and proposes signal-level adjustment directions for
     supported builtin ``always`` and ``eventually`` monitors. Callers must still
     map candidates through policy, projection, safety, and actuation gates.
+
+    Parameters
+    ----------
+    automaton : STLMonitoringAutomaton
+        The STL monitoring automaton.
+    trace : dict[str, list[float]]
+        Signal trace keyed by variable name, each a list of floats.
+    action_map : dict[str, str] | None
+        Mapping of automaton state to action name, or ``None``.
+
+    Returns
+    -------
+    STLControllerSynthesis
+        The non-actuating controller-candidate synthesis.
+
+    Raises
+    ------
+    ValueError
+        If the automaton or trace is invalid.
     """
     _validate_trace(trace)
     parsed = _parse_simple_spec(automaton.spec)
@@ -502,6 +618,18 @@ def project_stl_controller_candidates(
     Only candidates with an explicit policy-approved projection template are
     converted. Projection uses the standard :class:`ActionProjector`; the
     returned plan remains a review artefact with ``actuating=False``.
+
+    Parameters
+    ----------
+    synthesis : STLControllerSynthesis
+        The STL controller synthesis result.
+    templates : Sequence[STLActionProjectionTemplate]
+        STL action-projection templates.
+
+    Returns
+    -------
+    STLProjectedActionPlan
+        The bounded, non-actuating projected action plan.
     """
     template_by_action = {template.action: template for template in templates}
     approved: list[ControlAction] = []
@@ -548,6 +676,18 @@ def validate_stl_runtime_actuation_gate(
     ``execution_disabled`` and ``non_actuating`` remain true for every outcome.
     Invalid runtime knobs, missing mappings, and empty projected plans fail
     closed with explicit blocker reasons.
+
+    Parameters
+    ----------
+    projected_plan : STLProjectedActionPlan
+        The projected STL action plan to validate.
+    templates : Sequence[STLActionProjectionTemplate]
+        STL action-projection templates.
+
+    Returns
+    -------
+    STLRuntimeActuationGate
+        The runtime actuation-gate validation result.
     """
     actions = projected_plan.approved_actions
     if not actions:
@@ -656,6 +796,24 @@ def synthesise_stl_closed_loop_plan(
     The function synthesizes candidates from the current STL automaton, projects
     them through explicit policy templates, and records the future feedback
     review window. It does not mutate runtime state or permit actuation.
+
+    Parameters
+    ----------
+    automaton : STLMonitoringAutomaton
+        The STL monitoring automaton.
+    trace : dict[str, list[float]]
+        Signal trace keyed by variable name, each a list of floats.
+    templates : Sequence[STLActionProjectionTemplate]
+        STL action-projection templates.
+    horizon_steps : int
+        Closed-loop planning horizon in steps.
+    action_map : dict[str, str] | None
+        Mapping of automaton state to action name, or ``None``.
+
+    Returns
+    -------
+    STLClosedLoopSynthesisPlan
+        The offline closed-loop STL controller plan.
     """
     _validate_horizon_steps(horizon_steps)
     _validate_trace(trace)

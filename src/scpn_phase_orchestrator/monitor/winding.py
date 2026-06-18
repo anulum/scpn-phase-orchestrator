@@ -231,6 +231,11 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     Returns
     -------
         ``(N,)`` int64 array of winding numbers.
+
+    Parameters
+    ----------
+    phases_history : FloatArray
+        Phase history, shape ``(T, N)``.
     """
     phases_history = _validate_phase_history(phases_history)
     if phases_history.ndim != 2 or phases_history.shape[0] < 2:
@@ -261,5 +266,15 @@ def winding_vector(phases_history: FloatArray) -> IntArray:
 
     Alias for :func:`winding_numbers`; topologically distinct
     trajectories map to distinct integer-lattice points.
+
+    Parameters
+    ----------
+    phases_history : FloatArray
+        Phase history, shape ``(T, N)``.
+
+    Returns
+    -------
+    IntArray
+        The integer winding classification vector.
     """
     return winding_numbers(phases_history)

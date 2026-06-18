@@ -393,7 +393,27 @@ def delay_embed(
     delay: object,
     dimension: object,
 ) -> FloatArray:
-    """Time-delay embedding: ``v(t) = [x(t), x(t+τ), x(t+2τ), …]``."""
+    """Time-delay embedding: ``v(t) = [x(t), x(t+τ), x(t+2τ), …]``.
+
+    Parameters
+    ----------
+    signal : object
+        Real-valued time series, shape ``(T,)``.
+    delay : object
+        Embedding delay ``τ`` in samples.
+    dimension : object
+        Embedding dimension.
+
+    Returns
+    -------
+    FloatArray
+        The time-delay embedding, shape ``(M, dimension)``.
+
+    Raises
+    ------
+    ValueError
+        If ``delay`` or ``dimension`` is non-positive or too large for the signal.
+    """
     s = _validate_signal(signal)
     delay = _validate_int_at_least(delay, name="delay", minimum=1)
     dimension = _validate_int_at_least(dimension, name="dimension", minimum=1)
@@ -436,7 +456,22 @@ def mutual_information(
     lag: object,
     n_bins: object = 32,
 ) -> float:
-    """Fraser-Swinney 1986 average mutual information at ``lag``."""
+    """Fraser-Swinney 1986 average mutual information at ``lag``.
+
+    Parameters
+    ----------
+    signal : object
+        Real-valued time series, shape ``(T,)``.
+    lag : object
+        Lag in samples.
+    n_bins : object
+        Number of histogram bins.
+
+    Returns
+    -------
+    float
+        The average mutual information at the given lag.
+    """
     s = _validate_signal(signal)
     lag = _validate_int_at_least(lag, name="lag", minimum=0)
     n_bins = _validate_int_at_least(n_bins, name="n_bins", minimum=2)
@@ -477,7 +512,18 @@ def mutual_information(
 def nearest_neighbor_distances(
     embedded: object,
 ) -> tuple[FloatArray, IntArray]:
-    """Brute-force ``k = 1`` kNN on the rows of ``embedded``."""
+    """Brute-force ``k = 1`` kNN on the rows of ``embedded``.
+
+    Parameters
+    ----------
+    embedded : object
+        Delay-embedded trajectory, shape ``(M, dimension)``.
+
+    Returns
+    -------
+    tuple[FloatArray, IntArray]
+        The nearest-neighbour distances and their indices.
+    """
     e = _validate_embedded(embedded)
     t, m = int(e.shape[0]), int(e.shape[1])
     if t == 0:
@@ -512,7 +558,22 @@ def optimal_delay(
     max_lag: object = 100,
     n_bins: object = 32,
 ) -> int:
-    """First local minimum of :func:`mutual_information` vs ``lag``."""
+    """First local minimum of :func:`mutual_information` vs ``lag``.
+
+    Parameters
+    ----------
+    signal : object
+        Real-valued time series, shape ``(T,)``.
+    max_lag : object
+        Largest lag to search.
+    n_bins : object
+        Number of histogram bins.
+
+    Returns
+    -------
+    int
+        The first mutual-information minimum, as a lag in samples.
+    """
     s = _validate_signal(signal)
     max_lag = _validate_int_at_least(max_lag, name="max_lag", minimum=1)
     n_bins = _validate_int_at_least(n_bins, name="n_bins", minimum=2)
@@ -542,7 +603,26 @@ def optimal_dimension(
     rtol: object = 15.0,
     atol: object = 2.0,
 ) -> int:
-    """Kennel-Brown-Abarbanel 1992 FNN to select embedding dimension."""
+    """Kennel-Brown-Abarbanel 1992 FNN to select embedding dimension.
+
+    Parameters
+    ----------
+    signal : object
+        Real-valued time series, shape ``(T,)``.
+    delay : object
+        Embedding delay ``τ`` in samples.
+    max_dim : object
+        Largest embedding dimension to test.
+    rtol : object
+        Relative tolerance for the false-nearest-neighbour test.
+    atol : object
+        Absolute tolerance for the false-nearest-neighbour test.
+
+    Returns
+    -------
+    int
+        The selected embedding dimension.
+    """
     s = _validate_signal(signal)
     delay = _validate_int_at_least(delay, name="delay", minimum=1)
     max_dim = _validate_int_at_least(max_dim, name="max_dim", minimum=1)
@@ -602,7 +682,22 @@ def auto_embed(
     max_lag: object = 100,
     max_dim: object = 10,
 ) -> EmbeddingResult:
-    """``optimal_delay`` ∘ ``optimal_dimension`` ∘ ``delay_embed``."""
+    """``optimal_delay`` ∘ ``optimal_dimension`` ∘ ``delay_embed``.
+
+    Parameters
+    ----------
+    signal : object
+        Real-valued time series, shape ``(T,)``.
+    max_lag : object
+        Largest lag to search.
+    max_dim : object
+        Largest embedding dimension to test.
+
+    Returns
+    -------
+    EmbeddingResult
+        The auto-selected delay/dimension embedding result.
+    """
     tau = optimal_delay(signal, max_lag)
     m = optimal_dimension(signal, tau, max_dim)
     traj = delay_embed(signal, tau, m)

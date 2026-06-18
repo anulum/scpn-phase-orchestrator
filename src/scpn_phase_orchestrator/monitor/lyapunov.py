@@ -273,7 +273,20 @@ class LyapunovGuard:
         self._prev_V: float | None = None
 
     def evaluate(self, phases: object, knm: object) -> LyapunovState:
-        """Compute Lyapunov function, its time derivative, and basin check."""
+        """Compute Lyapunov function, its time derivative, and basin check.
+
+        Parameters
+        ----------
+        phases : object
+            Oscillator phases in radians, shape ``(N,)``.
+        knm : object
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+        Returns
+        -------
+        LyapunovState
+            The Lyapunov value, its derivative, and the basin-check result.
+        """
         phases = _validate_vector(phases, name="phases")
         n = len(phases)
         knm = _validate_matrix(knm, name="knm", expected_shape=(n, n))
@@ -520,6 +533,32 @@ def lyapunov_spectrum(
     Returns
     -------
         (N,) array of Lyapunov exponents, sorted descending.
+
+    Parameters
+    ----------
+    phases_init : object
+        Initial oscillator phases in radians, shape ``(N,)``.
+    omegas : object
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+    dt : object
+        Integration step size.
+    n_steps : object
+        Number of integration steps.
+    qr_interval : object
+        Number of steps between QR reorthonormalisations.
+    zeta : object
+        External drive strength ``ζ``.
+    psi : object
+        External drive reference phase ``Ψ`` in radians.
+
+    Raises
+    ------
+    ValueError
+        If the integration parameters are invalid.
     """
     p = _validate_vector(phases_init, name="phases_init")
     n = int(p.size)

@@ -327,7 +327,27 @@ def _te_matrix_reference(series: FloatArray, bin_count: int) -> FloatArray:
 def phase_transfer_entropy(
     source: FloatArray, target: FloatArray, n_bins: int = 16
 ) -> float:
-    """Transfer entropy ``TE(X → Y)`` on binned phase series."""
+    """Transfer entropy ``TE(X → Y)`` on binned phase series.
+
+    Parameters
+    ----------
+    source : FloatArray
+        Source phase series, shape ``(T,)``.
+    target : FloatArray
+        Target phase series, shape ``(T,)``.
+    n_bins : int
+        Number of histogram bins.
+
+    Returns
+    -------
+    float
+        The transfer entropy ``TE(X → Y)``.
+
+    Raises
+    ------
+    ValueError
+        If the source or target series are non-finite or mismatched in length.
+    """
     bin_count = _validate_n_bins(n_bins)
     source_values = _validate_phase_vector(source, name="source")
     target_values = _validate_phase_vector(target, name="target")
@@ -368,7 +388,20 @@ def phase_transfer_entropy(
 
 
 def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> FloatArray:
-    """Return the pairwise TE matrix ``[i, j] = TE(i → j)`` with zero diagonal."""
+    """Return the pairwise TE matrix ``[i, j] = TE(i → j)`` with zero diagonal.
+
+    Parameters
+    ----------
+    phase_series : FloatArray
+        Phase time series, shape ``(T, N)``.
+    n_bins : int
+        Number of histogram bins.
+
+    Returns
+    -------
+    FloatArray
+        The pairwise TE matrix with zero diagonal.
+    """
     bin_count = _validate_n_bins(n_bins)
     series = _validate_phase_series(phase_series, name="phase_series")
     n_osc, n_time = series.shape

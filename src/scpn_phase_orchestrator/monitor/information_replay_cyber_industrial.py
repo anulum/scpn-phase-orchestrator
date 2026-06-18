@@ -52,6 +52,13 @@ def build_cyber_industrial_integrated_information_replays(
     Raises
     ------
         ValueError: If ``n_samples`` or ``n_bins`` are invalid.
+
+    Parameters
+    ----------
+    n_samples : int
+        Number of samples.
+    n_bins : int
+        Number of histogram bins.
     """
     _validate_replay_parameters(n_samples=n_samples, n_bins=n_bins)
 

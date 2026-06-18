@@ -115,6 +115,17 @@ class EVSMonitor:
         Returns
         -------
             EVSResult with all three sub-scores and the overall verdict.
+
+        Parameters
+        ----------
+        phases_trials : FloatArray
+            Per-trial phase series, shape ``(n_trials, T)``.
+        pause_indices : list[int] | IntArray
+            Stimulus-pause sample indices.
+        target_freq : float
+            Target entrainment frequency in Hz.
+        control_freq : float
+            Control (off-target) frequency in Hz.
         """
         phases = _validate_phase_trials(phases_trials)
         pause_idx = _validate_pause_indices(pause_indices)

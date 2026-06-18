@@ -130,6 +130,34 @@ SECTION_ENFORCED_MODULES = (
     "scpn_phase_orchestrator.coupling.spectral",
     "scpn_phase_orchestrator.coupling.te_adaptive",
     "scpn_phase_orchestrator.coupling.templates",
+    "scpn_phase_orchestrator.monitor.boundaries",
+    "scpn_phase_orchestrator.monitor.chimera",
+    "scpn_phase_orchestrator.monitor.coherence",
+    "scpn_phase_orchestrator.monitor.dimension",
+    "scpn_phase_orchestrator.monitor.embedding",
+    "scpn_phase_orchestrator.monitor.entropy_prod",
+    "scpn_phase_orchestrator.monitor.evs",
+    "scpn_phase_orchestrator.monitor.hybrid_order_examples",
+    "scpn_phase_orchestrator.monitor.hybrid_order",
+    "scpn_phase_orchestrator.monitor.information_integration",
+    "scpn_phase_orchestrator.monitor.information_replay_cyber_industrial",
+    "scpn_phase_orchestrator.monitor.information_replay_infrastructure",
+    "scpn_phase_orchestrator.monitor.information_replay_physiology",
+    "scpn_phase_orchestrator.monitor.itpc",
+    "scpn_phase_orchestrator.monitor.lyapunov",
+    "scpn_phase_orchestrator.monitor.merge_window",
+    "scpn_phase_orchestrator.monitor.npe",
+    "scpn_phase_orchestrator.monitor.pid",
+    "scpn_phase_orchestrator.monitor.poincare",
+    "scpn_phase_orchestrator.monitor.psychedelic",
+    "scpn_phase_orchestrator.monitor.recurrence",
+    "scpn_phase_orchestrator.monitor.self_model_examples",
+    "scpn_phase_orchestrator.monitor.self_model",
+    "scpn_phase_orchestrator.monitor.session_start",
+    "scpn_phase_orchestrator.monitor.sleep_staging",
+    "scpn_phase_orchestrator.monitor.stl",
+    "scpn_phase_orchestrator.monitor.transfer_entropy",
+    "scpn_phase_orchestrator.monitor.winding",
 )
 
 
@@ -146,6 +174,10 @@ def _public_callables(
         module, "__all__", [n for n in vars(module) if not n.startswith("_")]
     )
     for name in exported:
+        if name.startswith("_"):
+            # Underscore-prefixed names are private even when re-exported in
+            # ``__all__`` (e.g. test helpers); the presence gate skips them too.
+            continue
         obj = getattr(module, name)
         if inspect.isfunction(obj) and obj.__module__ == module.__name__:
             yield f"{module.__name__}.{name}", obj

@@ -61,7 +61,13 @@ class HybridOrderParameterResult:
     record_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe audit record."""
+        """Return a JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe audit record.
+        """
         record: dict[str, object] = {
             "R": self.R,
             "Psi": self.Psi,
@@ -103,6 +109,24 @@ def compute_hybrid_entanglement_order_parameter(
     Returns
     -------
         HybridOrderParameterResult with a deterministic audit record hash.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    quantum_state : object
+        Quantum state vector or density operator.
+    qubit_count : int | None
+        Number of qubits, or ``None`` to infer.
+    bipartition : tuple[tuple[int, ...], tuple[int, ...]] | None
+        The two index groups of the entanglement bipartition, or ``None``.
+    simulator_backend : str
+        Name of the quantum simulator backend.
+
+    Raises
+    ------
+    ValueError
+        If the quantum state or bipartition is invalid.
     """
     phases_clean = _require_finite_float_array(phases, name="phases")
     r_value, psi_value = compute_order_parameter(phases_clean)

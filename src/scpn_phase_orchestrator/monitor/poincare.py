@@ -432,7 +432,29 @@ def poincare_section(
     offset: object = 0.0,
     direction: str = "positive",
 ) -> PoincareResult:
-    """Hyperplane-crossing Poincaré section."""
+    """Hyperplane-crossing Poincaré section.
+
+    Parameters
+    ----------
+    trajectory : object
+        Phase-space trajectory, shape ``(T, d)``.
+    normal : object
+        Normal vector defining the Poincaré hyperplane.
+    offset : object
+        Scalar offset of the Poincaré hyperplane.
+    direction : str
+        Crossing direction to record (e.g. ``positive``).
+
+    Returns
+    -------
+    PoincareResult
+        The Poincaré-section crossing result.
+
+    Raises
+    ------
+    ValueError
+        If the normal vector or direction is invalid.
+    """
     traj = _validate_state_history(trajectory, name="trajectory")
     t, d = int(traj.shape[0]), int(traj.shape[1])
     norm_vec = _validate_normal(normal, expected_dim=d)
@@ -496,7 +518,22 @@ def return_times(
     normal: object,
     offset: object = 0.0,
 ) -> FloatArray:
-    """Shortcut: return only the return-time sequence."""
+    """Shortcut: return only the return-time sequence.
+
+    Parameters
+    ----------
+    trajectory : object
+        Phase-space trajectory, shape ``(T, d)``.
+    normal : object
+        Normal vector defining the Poincaré hyperplane.
+    offset : object
+        Scalar offset of the Poincaré hyperplane.
+
+    Returns
+    -------
+    FloatArray
+        The sequence of return times between crossings.
+    """
     return poincare_section(
         trajectory,
         normal,
@@ -514,6 +551,20 @@ def phase_poincare(
 
     Detects when ``phases[:, oscillator_idx]`` crosses
     ``section_phase (mod 2π)``.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    oscillator_idx : object
+        Index of the oscillator whose phase defines the section.
+    section_phase : object
+        Phase value at which to record a crossing.
+
+    Returns
+    -------
+    PoincareResult
+        The Poincaré-section result for the phase oscillator.
     """
     phases = _validate_state_history(phases, name="phases")
     t, n = int(phases.shape[0]), int(phases.shape[1])

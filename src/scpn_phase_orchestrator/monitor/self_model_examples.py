@@ -252,7 +252,18 @@ class SelfModelReconfigurationProposal:
     scenario_hash: str = ""
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a deterministic JSON-safe audit record.
+
+        Raises
+        ------
+        ValueError
+            If the proposal fields are inconsistent.
+        """
         _validate_self_model_reconfiguration_proposal(self)
         error_payload = _coerce_error_payload(
             self.self_model_error,
@@ -557,7 +568,13 @@ def _build_static_proposals() -> tuple[SelfModelReconfigurationProposal, ...]:
 
 
 def build_self_model_reconfiguration_examples() -> tuple[dict[str, Any], ...]:
-    """Build deterministic review-only self-model reconfiguration evidence records."""
+    """Build deterministic review-only self-model reconfiguration evidence records.
+
+    Returns
+    -------
+    tuple[dict[str, Any], ...]
+        Build deterministic review-only self-model reconfiguration evidence records.
+    """
     records: list[dict[str, Any]] = []
     for proposal in _build_static_proposals():
         _validate_self_model_reconfiguration_proposal(proposal)

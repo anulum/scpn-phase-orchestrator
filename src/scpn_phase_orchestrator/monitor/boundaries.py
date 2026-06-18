@@ -85,7 +85,18 @@ class BoundaryObserver:
         self._step = 0
 
     def set_event_bus(self, event_bus: EventBus) -> None:
-        """Attach an event bus for posting boundary_breach events."""
+        """Attach an event bus for posting boundary_breach events.
+
+        Parameters
+        ----------
+        event_bus : EventBus
+            Event bus for posting ``boundary_breach`` events.
+
+        Raises
+        ------
+        TypeError
+            If ``event_bus`` is not an ``EventBus``.
+        """
         from scpn_phase_orchestrator.supervisor.events import EventBus as _EventBus
 
         if not isinstance(event_bus, _EventBus):
@@ -117,6 +128,13 @@ class BoundaryObserver:
         -----
         Missing variables are ignored. Unknown severities are logged and
         treated as hard violations so safety-critical callers fail closed.
+
+        Raises
+        ------
+        TypeError
+            If ``values`` is not a metric mapping.
+        ValueError
+            If a measurement is non-finite.
         """
         if not isinstance(values, dict):
             raise TypeError(f"values must be dict[str, float], got {values!r}")

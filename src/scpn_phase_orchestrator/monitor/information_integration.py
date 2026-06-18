@@ -104,7 +104,13 @@ class IntegratedInformationResult:
         object.__setattr__(self, "n_bins", n_bins)
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable audit record."""
+        """Return a JSON-serialisable audit record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable audit record.
+        """
         left, right = self.minimum_partition
         return {
             "monitor": "integrated_information",
@@ -128,7 +134,13 @@ class IntegratedInformationBenchmarkCase:
     result: IntegratedInformationResult
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable benchmark case record."""
+        """Return a JSON-serialisable benchmark case record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable benchmark case record.
+        """
         return {
             "name": self.name,
             "description": self.description,
@@ -212,7 +224,13 @@ class IntegratedInformationBenchmarkReport:
         object.__setattr__(self, "n_bins", n_bins)
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable benchmark report."""
+        """Return a JSON-serialisable benchmark report.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable benchmark report.
+        """
         return {
             "monitor": "integrated_information",
             "benchmark": "deterministic_synthetic_approximation_cases",
@@ -250,6 +268,13 @@ def integrated_information(
     ------
         ValueError: If the trajectory is not a finite two-dimensional
             array with at least two oscillators and two samples.
+
+    Parameters
+    ----------
+    phase_series : FloatArray
+        Phase time series, shape ``(T, N)``.
+    n_bins : int
+        Number of histogram bins.
     """
     phases = _validate_phase_series(phase_series)
     bins = _validate_bins(n_bins)
@@ -281,6 +306,18 @@ def benchmark_integrated_information_approximations(
     high within-module information but weak cross-module Phi, phase-lagged
     chains, noisy globally locked streams, and globally locked streams with high
     cross-partition Phi.
+
+    Parameters
+    ----------
+    n_samples : int
+        Number of samples.
+    n_bins : int
+        Number of histogram bins.
+
+    Returns
+    -------
+    IntegratedInformationBenchmarkReport
+        The Phi-proxy approximation benchmark report.
     """
     samples = _validate_sample_count(n_samples)
     bins = _validate_bins(n_bins)

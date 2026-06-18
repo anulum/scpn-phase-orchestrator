@@ -323,7 +323,18 @@ def _compute_npe_reference(phases: FloatArray, radius: float) -> float:
 
 
 def phase_distance_matrix(phases: FloatArray) -> FloatArray:
-    """Pairwise circular distance matrix ``d[i, j] ∈ [0, π]``."""
+    """Pairwise circular distance matrix ``d[i, j] ∈ [0, π]``.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+
+    Returns
+    -------
+    FloatArray
+        The pairwise circular distance matrix, shape ``(N, N)``.
+    """
     phases = _validate_phases(phases)
     n = phases.size
     expected = _phase_distance_reference(phases)
@@ -347,6 +358,18 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
     components in the H₀ barcode. Returns values in ``[0, 1]``:
     ``~0`` means one dominant cluster (synchronised); ``~1`` means
     uniform lifetime distribution (incoherent).
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    max_radius : float | None
+        Maximum radius for the persistence filtration, or ``None``.
+
+    Returns
+    -------
+    float
+        The normalised persistent entropy.
     """
     phases = _validate_phases(phases)
     n = phases.size

@@ -288,6 +288,18 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
     ``R_i = |⟨exp(i(θ_j − θ_i))⟩_{j ∈ N(i)}|`` with ``N(i) =
     {j : K_ij > 0}`` and a required zero self-coupling diagonal. Zero
     when oscillator ``i`` has no neighbours.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+
+    Returns
+    -------
+    FloatArray
+        The per-oscillator local order parameter, shape ``(N,)``.
     """
     phases, knm = _validate_chimera_inputs(phases, knm)
     n = int(phases.size)
@@ -329,6 +341,13 @@ def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
     -------
         :class:`ChimeraState` with coherent / incoherent index lists and
         the boundary-fraction chimera index.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
     """
     phases, knm = _validate_chimera_inputs(phases, knm)
     n = int(phases.size)

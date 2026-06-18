@@ -464,6 +464,17 @@ def correlation_integral(
     Returns
     -------
         ``(K,)`` array of ``C(ε)`` values.
+
+    Parameters
+    ----------
+    trajectory : object
+        Phase-space trajectory, shape ``(T, d)``.
+    epsilons : object
+        Radii at which to evaluate the correlation integral.
+    max_pairs : object
+        Maximum number of point pairs sampled, or ``None`` for all.
+    seed : object
+        Seed for the deterministic RNG.
     """
     traj = _validate_trajectory(trajectory)
     t, d = int(traj.shape[0]), int(traj.shape[1])
@@ -536,7 +547,24 @@ def correlation_dimension(
     max_pairs: object = 50000,
     seed: object = 42,
 ) -> CorrelationDimensionResult:
-    """Estimate ``D₂`` via a log-log plateau over ``C(ε)``."""
+    """Estimate ``D₂`` via a log-log plateau over ``C(ε)``.
+
+    Parameters
+    ----------
+    trajectory : object
+        Phase-space trajectory, shape ``(T, d)``.
+    n_epsilons : object
+        Number of radii sampled across the log-log range.
+    max_pairs : object
+        Maximum number of point pairs sampled, or ``None`` for all.
+    seed : object
+        Seed for the deterministic RNG.
+
+    Returns
+    -------
+    CorrelationDimensionResult
+        The estimated correlation dimension ``D₂`` result.
+    """
     traj = _validate_trajectory(trajectory)
     n_epsilons = _validate_int_at_least(
         n_epsilons,
@@ -645,6 +673,11 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
     -------
         ``D_KY``. Returns ``0.0`` if the largest exponent is negative
         (stable fixed point, zero-dimensional attractor).
+
+    Parameters
+    ----------
+    lyapunov_exponents : FloatArray
+        The ordered Lyapunov spectrum.
     """
     le = _validate_spectrum(lyapunov_exponents)
     if le.size == 0:

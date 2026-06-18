@@ -54,6 +54,13 @@ def build_physiology_integrated_information_replays(
     ------
         ValueError: If inputs are invalid or the benchmark ordering cannot be
             established.
+
+    Parameters
+    ----------
+    n_samples : int
+        Number of samples.
+    n_bins : int
+        Number of histogram bins.
     """
     _validate_replay_parameters(n_samples=n_samples, n_bins=n_bins)
 

@@ -80,7 +80,13 @@ class SelfModelErrorResult:
     record_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe audit record for the computed monitor output."""
+        """Return a JSON-safe audit record for the computed monitor output.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe audit record for the computed monitor output.
+        """
         record: dict[str, object] = {
             "domain": self.domain,
             "scenario_id": self.scenario_id,
@@ -146,6 +152,34 @@ def compute_self_model_error(
     Returns
     -------
         SelfModelErrorResult with deterministic hash and audit payload.
+
+    Parameters
+    ----------
+    observed_phases : object
+        Observed phases in radians.
+    predicted_phases : object
+        Self-model-predicted phases in radians.
+    observed_order : object | None
+        Observed order parameter, or ``None``.
+    predicted_order : object | None
+        Predicted order parameter, or ``None``.
+    channel_labels : object | None
+        Per-channel labels, or ``None``.
+    channel_weights : object | None
+        Per-channel weights, or ``None``.
+    tolerance : float
+        Per-channel discrepancy tolerance.
+    max_abs_tolerance : float
+        Maximum absolute discrepancy tolerance.
+    domain : str
+        Domain label for the self-model evaluation.
+    scenario_id : str | None
+        Scenario identifier, or ``None``.
+
+    Raises
+    ------
+    ValueError
+        If the observed or predicted inputs are invalid.
     """
     observed = _coerce_channel_matrix(observed_phases, name="observed_phases")
     predicted = _coerce_channel_matrix(predicted_phases, name="predicted_phases")
