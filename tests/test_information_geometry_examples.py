@@ -268,3 +268,91 @@ def test_record_rejects_complex_alias_distribution_and_gradient_values() -> None
     bad_gradient["control_gradient"] = [["K", np.complex128(0.1 + 0.2j)]]
     with pytest.raises(ValueError, match="control_gradient"):
         _validate_scenario_record(bad_gradient)
+
+
+_IG_MISSING = object()
+
+
+def _ig_record(field: str, value: object) -> dict:
+    record = deepcopy(build_information_geometry_control_scenarios()[0])
+    if value is _IG_MISSING:
+        del record[field]
+    else:
+        record[field] = value
+    return record
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("domain", _IG_MISSING, "missing required record field"),
+        ("domain", 123, "record domain must be a string"),
+        ("scenario_id", 123, "record scenario_id must be a string"),
+        ("objective_labels", "x", "record objective_labels must be a list"),
+        ("control_gradient", "x", "record control_gradient must be a list"),
+        ("knob_hints", "x", "record knob_hints must be a list"),
+        ("non_actuating", "x", "record non_actuating must be a boolean"),
+        ("execution_disabled", "x", "record execution_disabled must be a boolean"),
+        ("claim_boundary", 123, "record claim_boundary must be a string"),
+        ("current_distribution", 5, "record current_distribution must be a sequence"),
+        ("target_distribution", 5, "record target_distribution must be a sequence"),
+        ("max_step", "x", "record max_step must be numeric"),
+        ("objective_labels", [123], "record objective_labels must contain strings"),
+        ("knob_hints", [123], "record knob_hints must contain strings"),
+        ("control_gradient", [[1, 2, 3]], "control_gradient entries must be pairs"),
+        ("control_gradient", [[123, 0.5]], "control_gradient knobs must be strings"),
+        ("control_gradient", [["k", "x"]], "control_gradient values must be numeric"),
+        (
+            "control_gradient",
+            [["k", float("inf")]],
+            "control_gradient values must be finite",
+        ),
+        ("current_distribution", [[0.1, 0.2]], "must be a 1D array"),
+        ("current_distribution", [], "must not be empty"),
+        ("non_actuating", False, "requires non_actuating=True"),
+        ("execution_disabled", False, "requires execution_disabled=True"),
+        ("claim_boundary", "live_actuation", "requires claim_boundary="),
+        ("scenario_hash", 123, "record scenario_hash must be a string"),
+        ("scenario_hash", "0" * 64, "has invalid scenario_hash"),
+    ],
+)
+def test_ig_validate_scenario_record_rejects_corruptions(field, value, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _validate_scenario_record(_ig_record(field, value))
+
+
+def test_ig_record_rejects_empty_domain_and_non_finite_max_step() -> None:
+    with pytest.raises(ValueError, match="domain must be a non-empty string"):
+        _validate_scenario_record(_ig_record("domain", ""))
+    with pytest.raises(ValueError, match="must be finite"):
+        _validate_scenario_record(_ig_record("max_step", float("inf")))
+
+
+def test_ig_validate_distribution_pair_rejects_non_pair() -> None:
+    with pytest.raises(ValueError, match="distributions must be a DistributionPair"):
+        from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
+            _validate_distribution_pair,
+        )
+
+        _validate_distribution_pair("not-a-pair")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("gradient", "match"),
+    [
+        ((), "control_gradient must be a non-empty tuple"),
+        ((("  ", 0.5),), "control_gradient keys must be non-empty strings"),
+        ((("k", True),), "control_gradient values must be finite numbers"),
+        ((("k", float("inf")),), "control_gradient values must be finite"),
+    ],
+)
+def test_ig_validate_control_gradient_rejects_corruptions(gradient, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _validate_control_gradient(gradient)
+
+
+def test_ig_validate_scenario_rejects_non_scenario() -> None:
+    with pytest.raises(
+        ValueError, match="scenario must be an InformationGeometryScenario"
+    ):
+        _validate_information_geometry_scenario("not-a-scenario")  # type: ignore[arg-type]
