@@ -36,7 +36,13 @@ class DpNoiseServiceReadiness:
     reason: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {"ready": self.ready, "reason": self.reason}
 
 
@@ -48,7 +54,13 @@ class DpNoiseNodePrivacyBudget:
     epsilon_spent: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {"node_id": self.node_id, "epsilon_spent": self.epsilon_spent}
 
 
@@ -145,7 +157,13 @@ class DpNoiseServiceRequestManifest:
                 raise ValueError("privacy budget exceeded")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -185,7 +203,13 @@ class DpNoiseServiceResponseManifest:
     audit_record_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -269,7 +293,13 @@ class DpNoiseServiceDeploymentPreflightManifest:
             raise ValueError("response_hash must be hexadecimal") from exc
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -295,7 +325,18 @@ class DpNoiseServiceDeploymentPreflightManifest:
 def build_dp_noise_service_manifest(
     request: DpNoiseServiceRequestManifest,
 ) -> DpNoiseServiceResponseManifest:
-    """Build a deterministic, dependency-free offline DP-noise review manifest."""
+    """Build a deterministic, dependency-free offline DP-noise review manifest.
+
+    Parameters
+    ----------
+    request : DpNoiseServiceRequestManifest
+        The DP-noise service request manifest.
+
+    Returns
+    -------
+    DpNoiseServiceResponseManifest
+        The offline DP-noise review response manifest.
+    """
     request_hash = _stable_hash(request.to_audit_record())
     policy_noise_audit_vector = _generate_audit_noise(
         request.seed_hash,
@@ -364,7 +405,37 @@ def build_dp_noise_service_deployment_preflight_manifest(
     service_endpoint_label: str,
     operator_approved: bool,
 ) -> DpNoiseServiceDeploymentPreflightManifest:
-    """Build a deterministic DP-noise deployment preflight manifest."""
+    """Build a deterministic DP-noise deployment preflight manifest.
+
+    Parameters
+    ----------
+    request_manifest : DpNoiseServiceRequestManifest
+        The DP-noise service request manifest.
+    response_manifest : DpNoiseServiceResponseManifest
+        The DP-noise service response manifest.
+    mechanism_label : str
+        Label of the privacy mechanism.
+    privacy_accountant_owner : str
+        Owner of the privacy accountant.
+    seed_custody_label : str
+        Label describing seed custody.
+    budget_issuer_label : str
+        Label of the privacy-budget issuer.
+    service_endpoint_label : str
+        Label of the service endpoint.
+    operator_approved : bool
+        Whether a human operator has approved the deployment.
+
+    Returns
+    -------
+    DpNoiseServiceDeploymentPreflightManifest
+        The DP-noise deployment preflight manifest.
+
+    Raises
+    ------
+    ValueError
+        If the request and response manifests are inconsistent.
+    """
     if not isinstance(request_manifest, DpNoiseServiceRequestManifest):
         raise ValueError("request_manifest must be a DpNoiseServiceRequestManifest")
     if not isinstance(response_manifest, DpNoiseServiceResponseManifest):

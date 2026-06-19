@@ -68,7 +68,13 @@ class PolicyCondition:
     threshold: float
 
     def to_dsl(self) -> str:
-        """Return the deterministic policy DSL representation."""
+        """Return the deterministic policy DSL representation.
+
+        Returns
+        -------
+        str
+            Return the deterministic policy DSL representation.
+        """
         return f"{self.metric} {self.operator} {_format_float(self.threshold)}"
 
 
@@ -81,7 +87,13 @@ class PolicyAction:
     value: float
 
     def to_dsl(self) -> str:
-        """Return the deterministic policy DSL representation."""
+        """Return the deterministic policy DSL representation.
+
+        Returns
+        -------
+        str
+            Return the deterministic policy DSL representation.
+        """
         return f"set {self.target} {self.operator} {_format_float(self.value)}"
 
 
@@ -94,7 +106,13 @@ class PolicyRule:
     action: PolicyAction
 
     def to_dsl(self) -> str:
-        """Return the deterministic policy DSL representation."""
+        """Return the deterministic policy DSL representation.
+
+        Returns
+        -------
+        str
+            Return the deterministic policy DSL representation.
+        """
         condition_text = " and ".join(
             condition.to_dsl() for condition in self.conditions
         )
@@ -150,11 +168,23 @@ class PolicyMutationCandidate:
 
     @property
     def accepted(self) -> bool:
-        """Return whether this candidate is accepted for review."""
+        """Return whether this candidate is accepted for review.
+
+        Returns
+        -------
+        bool
+            Return whether this candidate is accepted for review.
+        """
         return not self.blocked_reasons
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "candidate_id": self.candidate_id,
             "generation": self.generation,
@@ -205,7 +235,13 @@ class PolicyMutationSearchReport:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -241,7 +277,23 @@ class _MutationAxis:
 
 
 def parse_policy_dsl(policy_dsl: str) -> tuple[PolicyRule, ...]:
-    """Parse immutable rule objects from a compact policy DSL string."""
+    """Parse immutable rule objects from a compact policy DSL string.
+
+    Parameters
+    ----------
+    policy_dsl : str
+        A compact policy-DSL source string.
+
+    Returns
+    -------
+    tuple[PolicyRule, ...]
+        The immutable policy rules parsed from the DSL.
+
+    Raises
+    ------
+    ValueError
+        If the DSL string is malformed.
+    """
     if not isinstance(policy_dsl, str) or not policy_dsl.strip():
         raise ValueError("policy_dsl must be a non-empty string")
 
@@ -283,7 +335,29 @@ def run_offline_evolutionary_policy_dsl_search(
     population_size: int = 6,
     mutation_step: float = 0.05,
 ) -> PolicyMutationSearchReport:
-    """Generate deterministic offline policy-DSl mutation candidates for review."""
+    """Generate deterministic offline policy-DSl mutation candidates for review.
+
+    Parameters
+    ----------
+    policy_dsl : str
+        A compact policy-DSL source string.
+    generation_count : int
+        Number of search generations.
+    population_size : int
+        Number of candidates per generation.
+    mutation_step : float
+        Mutation step size applied per generation.
+
+    Returns
+    -------
+    PolicyMutationSearchReport
+        The offline policy-DSL mutation search report.
+
+    Raises
+    ------
+    ValueError
+        If the DSL string or search parameters are invalid.
+    """
     config = PolicyMutationSearchConfig(
         generation_count=generation_count,
         population_size=population_size,

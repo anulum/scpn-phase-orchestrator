@@ -66,7 +66,13 @@ class SecureNodeCommitment:
     update_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe audit record for this node commitment."""
+        """Return a JSON-safe audit record for this node commitment.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe audit record for this node commitment.
+        """
         return {
             "node_id": self.node_id,
             "masked_policy_delta": list(self.masked_policy_delta),
@@ -89,7 +95,13 @@ class SecureAggregationQuorumEvidence:
     evidence_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe quorum evidence record."""
+        """Return a JSON-safe quorum evidence record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe quorum evidence record.
+        """
         return {"node_id": self.node_id, "evidence_hash": self.evidence_hash}
 
 
@@ -106,7 +118,13 @@ class SecureNodeCustodyRecord:
     share_custody_continuity_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe node-custody audit record."""
+        """Return a JSON-safe node-custody audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe node-custody audit record.
+        """
         return {
             "node_id": self.node_id,
             "key_custody_label": self.key_custody_label,
@@ -141,7 +159,13 @@ class FederatedSecureAggregationManifest:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe aggregate audit record."""
+        """Return a JSON-safe aggregate audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe aggregate audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -194,7 +218,13 @@ class FederatedSecureAggregationPreflightManifest:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe preflight audit record."""
+        """Return a JSON-safe preflight audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe preflight audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -232,7 +262,33 @@ def build_federated_secure_aggregation_manifest(
     epsilon: float = 3.0,
     delta: float = 1e-6,
 ) -> FederatedSecureAggregationManifest:
-    """Build a deterministic secure aggregation manifest."""
+    """Build a deterministic secure aggregation manifest.
+
+    Parameters
+    ----------
+    node_commitments : Sequence[Mapping[str, object]]
+        Secure-aggregation node commitment records.
+    required_policy_keys : Sequence[str] | None
+        Policy keys every node update must carry, or ``None``.
+    clipping_norm : float
+        L2 clipping norm applied to each node update.
+    min_node_count : int
+        Minimum number of participating nodes required.
+    epsilon : float
+        Differential-privacy ``ε`` budget.
+    delta : float
+        Differential-privacy ``δ`` budget.
+
+    Returns
+    -------
+    FederatedSecureAggregationManifest
+        The secure-aggregation manifest.
+
+    Raises
+    ------
+    ValueError
+        If the node commitments or privacy parameters are invalid.
+    """
     config = SecureAggregationConfig(
         clipping_norm=clipping_norm,
         min_node_count=min_node_count,
@@ -328,7 +384,39 @@ def build_federated_secure_aggregation_preflight_manifest(
     operator_id: str,
     service_owner: str,
 ) -> FederatedSecureAggregationPreflightManifest:
-    """Build a deterministic review-only deployment preflight manifest."""
+    """Build a deterministic review-only deployment preflight manifest.
+
+    Parameters
+    ----------
+    secure_aggregation_manifest : FederatedSecureAggregationManifest
+        The secure-aggregation manifest to preflight.
+    quorum_evidence : Sequence[Mapping[str, object]]
+        Per-node quorum evidence records.
+    custody_rotation_policy : str
+        Key-custody rotation policy label.
+    custody_records : Sequence[Mapping[str, object]]
+        Node custody records.
+    accepted_node_threshold : int
+        Minimum number of accepted nodes required.
+    operator_approved : bool
+        Whether a human operator has approved the deployment.
+    operator_id : str
+        Identifier of the approving operator.
+    service_owner : str
+        Owner of the aggregation service.
+
+    Returns
+    -------
+    FederatedSecureAggregationPreflightManifest
+        The secure-aggregation deployment preflight manifest.
+
+    Raises
+    ------
+    TypeError
+        If an argument has the wrong type.
+    ValueError
+        If the manifest or quorum evidence is invalid.
+    """
     if not isinstance(secure_aggregation_manifest, FederatedSecureAggregationManifest):
         raise TypeError(
             "secure_aggregation_manifest must be a FederatedSecureAggregationManifest"

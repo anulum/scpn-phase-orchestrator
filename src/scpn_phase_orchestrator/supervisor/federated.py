@@ -62,7 +62,13 @@ class FederatedNodeUpdate:
     update_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe node update evidence."""
+        """Return JSON-safe node update evidence.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe node update evidence.
+        """
         return {
             "node_id": self.node_id,
             "policy_delta": [[key, value] for key, value in self.policy_delta],
@@ -105,7 +111,13 @@ class FederatedPolicyAggregationReport:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe aggregate evidence."""
+        """Return JSON-safe aggregate evidence.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe aggregate evidence.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -145,7 +157,35 @@ def build_federated_meta_orchestrator_manifest(
     delta: float = 1e-6,
     min_node_count: int = 3,
 ) -> FederatedPolicyAggregationReport:
-    """Build a deterministic review manifest for federated policy aggregation."""
+    """Build a deterministic review manifest for federated policy aggregation.
+
+    Parameters
+    ----------
+    node_updates : Sequence[Mapping[str, object]]
+        Federated node update records.
+    required_policy_keys : Sequence[str] | None
+        Policy keys every node update must carry, or ``None``.
+    clipping_norm : float
+        L2 clipping norm applied to each node update.
+    noise_multiplier : float
+        Gaussian noise multiplier for differential privacy.
+    epsilon : float
+        Differential-privacy ``ε`` budget.
+    delta : float
+        Differential-privacy ``δ`` budget.
+    min_node_count : int
+        Minimum number of participating nodes required.
+
+    Returns
+    -------
+    FederatedPolicyAggregationReport
+        The federated policy aggregation review manifest.
+
+    Raises
+    ------
+    ValueError
+        If the node updates or privacy parameters are invalid.
+    """
     config = FederatedAggregationConfig(
         clipping_norm=clipping_norm,
         noise_multiplier=noise_multiplier,

@@ -78,16 +78,34 @@ class EvolutionaryCandidate:
 
     @property
     def accepted(self) -> bool:
-        """Whether the candidate passed all guard and replay gates."""
+        """Whether the candidate passed all guard and replay gates.
+
+        Returns
+        -------
+        bool
+            Whether the candidate passed all guard and replay gates.
+        """
         return not self.blocked_reasons
 
     @property
     def status(self) -> str:
-        """Return an export-friendly status string."""
+        """Return an export-friendly status string.
+
+        Returns
+        -------
+        str
+            Return an export-friendly status string.
+        """
         return "accepted_for_review" if self.accepted else "rejected"
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe candidate evidence for audit transport."""
+        """Return JSON-safe candidate evidence for audit transport.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe candidate evidence for audit transport.
+        """
         return {
             "candidate_id": self.candidate_id,
             "generation": self.generation,
@@ -135,7 +153,13 @@ class EvolutionarySearchReport:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe audit record for review tooling."""
+        """Return a JSON-safe audit record for review tooling.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe audit record for review tooling.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -182,6 +206,32 @@ def run_offline_evolutionary_supervisor_search(
     """Run deterministic offline evolutionary policy mutation search.
 
     Returns review-only candidates plus guards that block any live merge/hot patch.
+
+    Parameters
+    ----------
+    parent_policy : Mapping[str, object]
+        The parent policy genome.
+    audit_replays : Sequence[Mapping[str, object]]
+        Audit replay records used to score candidates.
+    stl_spec : str
+        An STL specification string used as a safety gate.
+    trace : Mapping[str, Sequence[object]]
+        Signal trace keyed by variable name, each a sequence of floats.
+    generation_count : int
+        Number of search generations.
+    population_size : int
+        Number of candidates per generation.
+    mutation_step : float
+        Mutation step size applied per generation.
+    minimum_replay_reward : float
+        Minimum replay reward a candidate must reach.
+    minimum_safety_margin : float
+        Minimum safety margin a candidate must preserve.
+
+    Returns
+    -------
+    EvolutionarySearchReport
+        The offline evolutionary search report.
     """
     config = EvolutionarySearchConfig(
         generation_count=generation_count,

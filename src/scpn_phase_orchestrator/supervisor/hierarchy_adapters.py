@@ -52,16 +52,34 @@ class HierarchyAdapterResult:
 
     @property
     def accepted_count(self) -> int:
-        """Return the number of envelopes accepted by the runtime."""
+        """Return the number of envelopes accepted by the runtime.
+
+        Returns
+        -------
+        int
+            Return the number of envelopes accepted by the runtime.
+        """
         return len(self.ledger.accepted)
 
     @property
     def rejected_count(self) -> int:
-        """Return the number of envelopes rejected by the runtime."""
+        """Return the number of envelopes rejected by the runtime.
+
+        Returns
+        -------
+        int
+            Return the number of envelopes rejected by the runtime.
+        """
         return len(self.ledger.rejected)
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe adapter audit payload."""
+        """Return a deterministic JSON-safe adapter audit payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe adapter audit payload.
+        """
         plan = self.ledger.plan
         record: dict[str, object] = {
             "boundary": self.boundary,
@@ -90,7 +108,20 @@ def replay_hierarchy_jsonl(
     *,
     runtime: HierarchyTransportRuntime | None = None,
 ) -> HierarchyAdapterResult:
-    """Replay decoded or JSONL hierarchy records through a socket-free runtime."""
+    """Replay decoded or JSONL hierarchy records through a socket-free runtime.
+
+    Parameters
+    ----------
+    lines : Iterable[str | Mapping[str, object] | HierarchySyncEnvelope]
+        Decoded or JSONL hierarchy records.
+    runtime : HierarchyTransportRuntime | None
+        The socket-free transport runtime, or ``None``.
+
+    Returns
+    -------
+    HierarchyAdapterResult
+        The adapter result for the replayed records.
+    """
     active_runtime = runtime or HierarchyTransportRuntime()
     records = tuple(
         _load_jsonl_record(line, index) for index, line in enumerate(lines, 1)
@@ -105,7 +136,22 @@ def handle_hierarchy_rest_payload(
     headers: Mapping[str, object],
     runtime: HierarchyTransportRuntime | None = None,
 ) -> HierarchyAdapterResult:
-    """Handle a decoded REST request payload without owning an HTTP server."""
+    """Handle a decoded REST request payload without owning an HTTP server.
+
+    Parameters
+    ----------
+    payload : Mapping[str, object]
+        The decoded REST request payload.
+    headers : Mapping[str, object]
+        Decoded request headers.
+    runtime : HierarchyTransportRuntime | None
+        The socket-free transport runtime, or ``None``.
+
+    Returns
+    -------
+    HierarchyAdapterResult
+        The adapter result for the REST payload.
+    """
     _require_json_content_type(headers)
     records = _records_from_payload(payload, location="REST payload")
     active_runtime = runtime or HierarchyTransportRuntime()
@@ -118,7 +164,25 @@ def handle_hierarchy_frame(
     *,
     runtime: HierarchyTransportRuntime | None = None,
 ) -> HierarchyAdapterResult:
-    """Handle a decoded WebSocket-style frame without owning a socket."""
+    """Handle a decoded WebSocket-style frame without owning a socket.
+
+    Parameters
+    ----------
+    frame : Mapping[str, object]
+        The decoded WebSocket-style frame.
+    runtime : HierarchyTransportRuntime | None
+        The socket-free transport runtime, or ``None``.
+
+    Returns
+    -------
+    HierarchyAdapterResult
+        The adapter result for the frame.
+
+    Raises
+    ------
+    ValueError
+        If the frame is malformed.
+    """
     if not isinstance(frame, Mapping):
         raise ValueError("frame must be a decoded mapping")
     _reject_unknown_keys(frame, allowed=_FRAME_KEYS, location="frame")

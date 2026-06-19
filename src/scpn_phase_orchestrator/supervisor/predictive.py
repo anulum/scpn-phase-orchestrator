@@ -77,11 +77,23 @@ class FEPPredictionAssessment:
 
     @property
     def above_target(self) -> bool:
-        """Return True when observed coherence exceeds the target."""
+        """Return True when observed coherence exceeds the target.
+
+        Returns
+        -------
+        bool
+            Return True when observed coherence exceeds the target.
+        """
         return self.observed_R > self.target_R
 
     def to_audit_record(self) -> dict[str, float]:
-        """Return a serialisable audit payload."""
+        """Return a serialisable audit payload.
+
+        Returns
+        -------
+        dict[str, float]
+            Return a serialisable audit payload.
+        """
         return {
             "free_energy": self.free_energy,
             "complexity": self.complexity,
@@ -105,7 +117,13 @@ class FEPHierarchyChildAssessment:
     actions: tuple[ControlAction, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe child hierarchy audit record."""
+        """Return a JSON-safe child hierarchy audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe child hierarchy audit record.
+        """
         return {
             "name": self.name,
             "assessment": self.assessment.to_audit_record(),
@@ -125,7 +143,13 @@ class FEPHierarchyAssessment:
     parent_phase_encoding: tuple[float, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe hierarchy assessment payload."""
+        """Return a JSON-safe hierarchy assessment payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe hierarchy assessment payload.
+        """
         return {
             "hierarchy": self.hierarchy,
             "children": [child.to_audit_record() for child in self.children],
@@ -168,7 +192,24 @@ class PredictiveSupervisor:
         knm: FloatArray,
         alpha: FloatArray,
     ) -> Prediction:
-        """Predict R trajectory using OA reduction as fast forward model."""
+        """Predict R trajectory using OA reduction as fast forward model.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        alpha : FloatArray
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+
+        Returns
+        -------
+        Prediction
+            The predicted ``R`` trajectory.
+        """
         phases, omegas, knm, alpha = _validate_predictive_inputs(
             phases,
             omegas,
@@ -221,7 +262,33 @@ class PredictiveSupervisor:
         upde_state: UPDEState,
         boundary_state: BoundaryState,
     ) -> list[ControlAction]:
-        """Predictive control: act before degradation, not after."""
+        """Predictive control: act before degradation, not after.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        alpha : FloatArray
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        upde_state : UPDEState
+            The current UPDE state.
+        boundary_state : BoundaryState
+            The current boundary-observer state.
+
+        Returns
+        -------
+        list[ControlAction]
+            The predictive control actions for the current state.
+
+        Raises
+        ------
+        ValueError
+            If the state inputs are invalid.
+        """
         if not isinstance(upde_state, UPDEState):
             raise ValueError(f"upde_state must be a UPDEState, got {upde_state!r}")
         if not isinstance(boundary_state, BoundaryState):
@@ -316,16 +383,41 @@ class FEPPredictiveSupervisor:
 
     @property
     def target_R(self) -> float:
-        """Target order parameter used by the free-energy controller."""
+        """Target order parameter used by the free-energy controller.
+
+        Returns
+        -------
+        float
+            Target order parameter used by the free-energy controller.
+        """
         return self._target_R
 
     @property
     def last_assessment(self) -> FEPPredictionAssessment | None:
-        """Most recent free-energy assessment, if ``assess`` has run."""
+        """Most recent free-energy assessment, if ``assess`` has run.
+
+        Returns
+        -------
+        FEPPredictionAssessment | None
+            Most recent free-energy assessment, if ``assess`` has run.
+        """
         return self._last_assessment
 
     def assess(self, phases: FloatArray, omegas: FloatArray) -> FEPPredictionAssessment:
-        """Update the variational predictor and return audit-ready metrics."""
+        """Update the variational predictor and return audit-ready metrics.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+
+        Returns
+        -------
+        FEPPredictionAssessment
+            The free-energy prediction assessment.
+        """
         phases_arr, omegas_arr = _validate_phase_inputs(phases, omegas, self._n)
         variational = self._predictor.update(phases_arr, omegas_arr, self._dt)
         observed_R, observed_psi = compute_order_parameter(phases_arr)
@@ -358,7 +450,29 @@ class FEPPredictiveSupervisor:
         upde_state: UPDEState,
         boundary_state: BoundaryState,
     ) -> list[ControlAction]:
-        """Return FEP-MPC control actions for the current observation."""
+        """Return FEP-MPC control actions for the current observation.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        upde_state : UPDEState
+            The current UPDE state.
+        boundary_state : BoundaryState
+            The current boundary-observer state.
+
+        Returns
+        -------
+        list[ControlAction]
+            The FEP-MPC control actions for the current observation.
+
+        Raises
+        ------
+        ValueError
+            If the state inputs are invalid.
+        """
         if not isinstance(upde_state, UPDEState):
             raise ValueError(f"upde_state must be a UPDEState, got {upde_state!r}")
         if not isinstance(boundary_state, BoundaryState):
@@ -439,6 +553,32 @@ def assess_fep_hierarchy(
     Each child receives its own ``FEPPredictiveSupervisor``. The parent encodes
     child coherence as phases via ``arccos(2R - 1)`` so the same FEP machinery
     can reason over cross-child coherence without accessing raw child signals.
+
+    Parameters
+    ----------
+    children : Mapping[str, tuple[FloatArray, FloatArray]]
+        Child supervisor summaries.
+    dt : float
+        Integration step size.
+    child_target_R : float
+        Target order parameter for each child.
+    parent_target_R : float
+        Target order parameter for the parent.
+    parent_dt : float | None
+        Parent integration step size, or ``None``.
+    free_energy_threshold : float
+        Free-energy threshold above which control acts.
+    child_drive_gain : float
+        Drive gain applied at the child level.
+    parent_drive_gain : float
+        Drive gain applied at the parent level.
+    hierarchy : str
+        Hierarchy label.
+
+    Returns
+    -------
+    FEPHierarchyAssessment
+        The hierarchical free-energy assessment.
     """
     _validate_hierarchy_inputs(
         children=children,

@@ -144,7 +144,13 @@ class FormalSafetyProperty:
             )
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe formal property record."""
+        """Return a JSON-safe formal property record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe formal property record.
+        """
         return {
             "name": self.name,
             "artifact_name": self.artifact_name,
@@ -185,7 +191,13 @@ class FormalCheckerCommand:
             raise PolicyError("formal checker command execution must stay disabled")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe external checker command record."""
+        """Return a JSON-safe external checker command record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe external checker command record.
+        """
         return {
             "property_name": self.property_name,
             "checker": self.checker,
@@ -249,7 +261,13 @@ class FormalCheckerAvailability:
             raise PolicyError("formal checker availability must not permit execution")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe non-executing checker readiness record."""
+        """Return a JSON-safe non-executing checker readiness record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe non-executing checker readiness record.
+        """
         return {
             "property_name": self.property_name,
             "checker": self.checker,
@@ -306,7 +324,13 @@ class FormalCheckerResult:
             raise PolicyError("checker result execution must stay disabled")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe external checker result record."""
+        """Return a JSON-safe external checker result record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe external checker result record.
+        """
         return {
             "property_name": self.property_name,
             "checker": self.checker,
@@ -396,7 +420,13 @@ class FormalRuntimeCertificate:
             raise PolicyError("formal runtime certificate must remain non-actuating")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe runtime certificate."""
+        """Return a deterministic JSON-safe runtime certificate.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe runtime certificate.
+        """
         return {
             "certificate_name": self.certificate_name,
             "package_name": self.package_name,
@@ -431,7 +461,13 @@ class FormalVerificationPackage:
     package_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe package manifest."""
+        """Return a JSON-safe package manifest.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe package manifest.
+        """
         return {
             "package_name": self.package_name,
             "artifact_hashes": dict(sorted(self.artifact_hashes.items())),
@@ -570,6 +606,23 @@ def audit_formal_checker_availability(
     or changes the package execution policy. Tests and CI may inject
     ``executable_paths`` for deterministic readiness checks; production callers
     can omit it to use ``shutil.which`` against the current host.
+
+    Parameters
+    ----------
+    package : FormalVerificationPackage
+        The formal verification package.
+    executable_paths : Mapping[str, str | None] | None
+        Mapping of checker name to executable path, or ``None``.
+
+    Returns
+    -------
+    tuple[FormalCheckerAvailability, ...]
+        The non-executing external-checker readiness records.
+
+    Raises
+    ------
+    PolicyError
+        If the package fails its fail-closed policy checks.
     """
     if not isinstance(package, FormalVerificationPackage):
         raise PolicyError("checker availability audit requires a formal package")
@@ -613,6 +666,29 @@ def build_runtime_control_certificate(
     matching available checker and a passed external result bound to the current
     package hash. Missing, failed, stale, or unavailable evidence produces a
     blocked certificate. The returned record never permits actuation.
+
+    Parameters
+    ----------
+    package : FormalVerificationPackage
+        The formal verification package.
+    checker_availability : Sequence[FormalCheckerAvailability]
+        External-checker readiness records.
+    checker_results : Sequence[FormalCheckerResult]
+        External-checker result records.
+    runtime_bounds : Mapping[str, object]
+        Finite runtime bounds for the certificate.
+    certificate_name : str
+        Name for the emitted certificate.
+
+    Returns
+    -------
+    FormalRuntimeCertificate
+        The fail-closed runtime control certificate.
+
+    Raises
+    ------
+    PolicyError
+        If the formal evidence fails the fail-closed policy.
     """
     if not isinstance(package, FormalVerificationPackage):
         raise PolicyError("runtime certificate requires a formal package")
@@ -743,6 +819,25 @@ def build_formal_verification_package(
     exact checker commands. It never writes files or invokes external tools;
     CI or operators can materialise the package and run the recorded commands
     in a controlled environment.
+
+    Parameters
+    ----------
+    artifacts : Mapping[str, PrismExport | TLAExport | FormalTextArtifact]
+        Mapping of artefact name to its formal export.
+    properties : Sequence[FormalSafetyProperty]
+        The formal safety properties.
+    package_name : str
+        Name for the verification package.
+
+    Returns
+    -------
+    FormalVerificationPackage
+        The formal verification package manifest.
+
+    Raises
+    ------
+    PolicyError
+        If the artefacts or properties fail policy checks.
     """
     _require_package_identifier(package_name, "package_name")
     if not artifacts:
@@ -1158,6 +1253,27 @@ def export_petri_net_prism(
 
     Guard metrics become PRISM constants, so safety properties can be checked
     over scenario-specific metric assignments without changing the net model.
+
+    Parameters
+    ----------
+    net : PetriNet
+        The Petri net to export.
+    initial_marking : Marking
+        The initial Petri net marking.
+    module_name : str
+        Name of the emitted model-checker module.
+    max_tokens : int | None
+        Maximum token bound per place, or ``None``.
+
+    Returns
+    -------
+    PrismExport
+        The bounded PRISM MDP export of the Petri net.
+
+    Raises
+    ------
+    PolicyError
+        If the net or bounds violate the export policy.
     """
     if not net.place_names:
         raise PolicyError("cannot export Petri net without places")
@@ -1227,6 +1343,27 @@ def export_petri_net_tla(
     Guard metrics become TLA+ constants. Places become bounded natural-number
     variables, and each Petri transition becomes a named next-state action that
     preserves all unaffected places explicitly.
+
+    Parameters
+    ----------
+    net : PetriNet
+        The Petri net to export.
+    initial_marking : Marking
+        The initial Petri net marking.
+    module_name : str
+        Name of the emitted model-checker module.
+    max_tokens : int | None
+        Maximum token bound per place, or ``None``.
+
+    Returns
+    -------
+    TLAExport
+        The bounded TLA+ export of the Petri net.
+
+    Raises
+    ------
+    PolicyError
+        If the net or bounds violate the export policy.
     """
     if not net.place_names:
         raise PolicyError("cannot export Petri net without places")
@@ -1321,6 +1458,23 @@ def export_policy_rules_prism(
     Metrics and current regime are model inputs represented as PRISM
     constants. Each rule has a bounded fire counter; unlimited rules are
     represented as one-shot reachability counters for model-checking queries.
+
+    Parameters
+    ----------
+    rules : list[PolicyRule]
+        The policy rules to export or validate.
+    module_name : str
+        Name of the emitted model-checker module.
+
+    Returns
+    -------
+    PrismExport
+        The bounded PRISM MDP export of the policy rules.
+
+    Raises
+    ------
+    PolicyError
+        If the rules violate the export policy.
     """
     if not rules:
         raise PolicyError("cannot export policy rules without rules")
@@ -1407,7 +1561,25 @@ def export_policy_rules_tla(
     *,
     module_name: str = "SpoPolicy",
 ) -> TLAExport:
-    """Serialise policy rules into a bounded TLA+ transition-system module."""
+    """Serialise policy rules into a bounded TLA+ transition-system module.
+
+    Parameters
+    ----------
+    rules : list[PolicyRule]
+        The policy rules to export or validate.
+    module_name : str
+        Name of the emitted model-checker module.
+
+    Returns
+    -------
+    TLAExport
+        The bounded TLA+ export of the policy rules.
+
+    Raises
+    ------
+    PolicyError
+        If the rules violate the export policy.
+    """
     if not rules:
         raise PolicyError("cannot export policy rules without rules")
 
@@ -1514,6 +1686,23 @@ def export_stl_specs_prism(
     ``always (...)`` and ``eventually (...)`` over numeric predicate
     conjunctions. The model is a single-state abstraction with signal
     constants and per-monitor satisfied/violated labels for property checks.
+
+    Parameters
+    ----------
+    specs : list[PolicySTLSpec]
+        Policy-declared STL monitor specifications.
+    module_name : str
+        Name of the emitted model-checker module.
+
+    Returns
+    -------
+    PrismExport
+        The PRISM label-surface export of the STL monitors.
+
+    Raises
+    ------
+    PolicyError
+        If the STL specs violate the export policy.
     """
     if not specs:
         raise PolicyError("cannot export STL monitors without specs")

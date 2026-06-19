@@ -65,11 +65,23 @@ class StrangeLoopDriftScenario:
     claim_boundary: str = _DRIFT_SCENARIO_BOUNDARY
 
     def scenario_hash(self) -> str:
-        """Return a deterministic scenario hash over the full action schedule."""
+        """Return a deterministic scenario hash over the full action schedule.
+
+        Returns
+        -------
+        str
+            Return a deterministic scenario hash over the full action schedule.
+        """
         return _stable_hash(_scenario_payload(self))
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe long-run scenario record."""
+        """Return a JSON-safe long-run scenario record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe long-run scenario record.
+        """
         return {
             "domain": self.domain,
             "scenario_id": self.scenario_id,
@@ -109,7 +121,13 @@ class StrangeLoopDriftScenarioResult:
     claim_boundary: str = _DRIFT_SCENARIO_BOUNDARY
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe drift scenario result."""
+        """Return a JSON-safe drift scenario result.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe drift scenario result.
+        """
         return {
             "domain": self.domain,
             "scenario_id": self.scenario_id,
@@ -142,7 +160,13 @@ class StrangeLoopAssessment:
     recommended_actions: tuple[ControlAction, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable record for supervisor audit logs."""
+        """Return a JSON-serialisable record for supervisor audit logs.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable record for supervisor audit logs.
+        """
         return {
             "control_phase": self.control_phase,
             "control_coherence": self.control_coherence,
@@ -163,7 +187,13 @@ class StrangeLoopAssessment:
 
 
 def build_strange_loop_drift_scenarios() -> tuple[StrangeLoopDriftScenario, ...]:
-    """Build deterministic long-run strange-loop drift review scenarios."""
+    """Build deterministic long-run strange-loop drift review scenarios.
+
+    Returns
+    -------
+    tuple[StrangeLoopDriftScenario, ...]
+        Build deterministic long-run strange-loop drift review scenarios.
+    """
     scenarios = (
         StrangeLoopDriftScenario(
             domain="power_grid",
@@ -227,7 +257,18 @@ def build_strange_loop_drift_scenarios() -> tuple[StrangeLoopDriftScenario, ...]
 def evaluate_strange_loop_drift_scenarios(
     scenarios: Sequence[StrangeLoopDriftScenario] | None = None,
 ) -> tuple[StrangeLoopDriftScenarioResult, ...]:
-    """Evaluate long-run drift scenarios through ``StrangeLoopSupervisor``."""
+    """Evaluate long-run drift scenarios through ``StrangeLoopSupervisor``.
+
+    Parameters
+    ----------
+    scenarios : Sequence[StrangeLoopDriftScenario] | None
+        The drift scenarios to evaluate, or ``None`` for the defaults.
+
+    Returns
+    -------
+    tuple[StrangeLoopDriftScenarioResult, ...]
+        The drift-scenario results.
+    """
     scenario_tuple = (
         build_strange_loop_drift_scenarios() if scenarios is None else tuple(scenarios)
     )
@@ -344,7 +385,18 @@ class StrangeLoopSupervisor:
         self.last_assessment: StrangeLoopAssessment | None = None
 
     def observe(self, actions: list[ControlAction]) -> StrangeLoopAssessment:
-        """Record one supervisor action bundle and assess self-control state."""
+        """Record one supervisor action bundle and assess self-control state.
+
+        Parameters
+        ----------
+        actions : list[ControlAction]
+            The control actions to apply or assess.
+
+        Returns
+        -------
+        StrangeLoopAssessment
+            The self-control assessment for the action bundle.
+        """
         vector = _actions_to_vector(actions)
         self._history.append(vector)
         assessment = self._assess()

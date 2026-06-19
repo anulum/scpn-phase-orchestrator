@@ -57,7 +57,13 @@ class CausalAttribution:
     threshold: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable attribution payload."""
+        """Return a JSON-serialisable attribution payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable attribution payload.
+        """
         return {
             "effect": self.effect,
             "confidence": self.confidence,
@@ -80,7 +86,13 @@ class CausalInfluenceEdge:
     evidence: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable causal-edge payload."""
+        """Return a JSON-serialisable causal-edge payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable causal-edge payload.
+        """
         return {
             "source": self.source,
             "target": self.target,
@@ -101,7 +113,13 @@ class CausalGraphEstimate:
     min_abs_weight: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable causal graph estimate."""
+        """Return a JSON-serialisable causal graph estimate.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable causal graph estimate.
+        """
         return {
             "nodes": list(self.nodes),
             "edges": [edge.to_audit_record() for edge in self.edges],
@@ -134,7 +152,13 @@ class CounterfactualRollout:
     actions: tuple[ControlAction, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable counterfactual audit payload."""
+        """Return a JSON-serialisable counterfactual audit payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable counterfactual audit payload.
+        """
         return {
             "baseline_R": self.baseline_R,
             "intervention_R": self.intervention_R,
@@ -156,7 +180,23 @@ class CounterfactualRollout:
         }
 
     def attribute(self, threshold: float = 1e-3) -> CausalAttribution:
-        """Summarise whether the intervention caused a measurable R change."""
+        """Summarise whether the intervention caused a measurable R change.
+
+        Parameters
+        ----------
+        threshold : float
+            Decision threshold.
+
+        Returns
+        -------
+        CausalAttribution
+            The causal attribution of the intervention.
+
+        Raises
+        ------
+        ValueError
+            If ``threshold`` is invalid.
+        """
         if not np.isfinite(threshold) or threshold < 0.0:
             raise ValueError("threshold must be finite and non-negative")
         score = 0.5 * (self.delta_R_final + self.delta_R_mean)
@@ -219,7 +259,30 @@ class CausalInterventionEngine:
         psi: float,
         actions: list[ControlAction] | tuple[ControlAction, ...],
     ) -> CounterfactualRollout:
-        """Compare no-action and intervened trajectories."""
+        """Compare no-action and intervened trajectories.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        alpha : FloatArray
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        actions : list[ControlAction] | tuple[ControlAction, ...]
+            The control actions to apply or assess.
+
+        Returns
+        -------
+        CounterfactualRollout
+            The counterfactual rollout comparing no-action and intervened trajectories.
+        """
         phases, omegas, knm, alpha, zeta, psi = self._validate_inputs(
             phases,
             omegas,
@@ -265,7 +328,31 @@ class CausalInterventionEngine:
         psi: float,
         actions: tuple[ControlAction, ...],
     ) -> InterventionParameters:
-        """Apply supported supervisor actions to UPDE parameters."""
+        """Apply supported supervisor actions to UPDE parameters.
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        alpha : FloatArray
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        zeta : float
+            External drive strength ``ζ``.
+        psi : float
+            External drive reference phase ``Ψ`` in radians.
+        actions : tuple[ControlAction, ...]
+            The control actions to apply or assess.
+
+        Returns
+        -------
+        InterventionParameters
+            The UPDE parameters after applying the actions.
+
+        Raises
+        ------
+        ValueError
+            If an action is unsupported.
+        """
         next_knm = np.array(_coerce_float_array("knm", knm), copy=True)
         next_alpha = np.array(_coerce_float_array("alpha", alpha), copy=True)
         if next_knm.shape != (self._n, self._n):
@@ -371,6 +458,22 @@ def learn_causal_graph(
     counterfactual rollouts as explicit ``do(knob:scope) -> R`` effects. The
     estimate is intentionally lightweight and audit-first; it is not a formal
     do-calculus proof.
+
+    Parameters
+    ----------
+    trace : dict[str, list[float]]
+        Signal trace keyed by variable name, each a sequence of floats.
+    rollouts : list[CounterfactualRollout] | tuple[CounterfactualRollout, ...]
+        Counterfactual rollouts used to estimate causal edges.
+    lag : int
+        Lag in samples for the causal estimate.
+    min_abs_weight : float
+        Minimum absolute edge weight retained in the graph.
+
+    Returns
+    -------
+    CausalGraphEstimate
+        The estimated signed causal graph.
     """
     trace_arrays = _validate_causal_trace(trace, lag, min_abs_weight)
     nodes = tuple(trace_arrays)
@@ -444,6 +547,29 @@ def build_temporal_causal_hypergraph_experiment(
     Granger-style residual improvement, and target persistence. It never
     permits production claims, hot-patching, or actuation; baseline failure
     keeps all candidates blocked as research evidence only.
+
+    Parameters
+    ----------
+    trace : dict[str, list[float]]
+        Signal trace keyed by variable name, each a sequence of floats.
+    candidate_hyperedges : list[dict[str, object]] | tuple[dict[str, object], ...]
+        Candidate causal hyperedges to test.
+    lag : int
+        Lag in samples for the causal estimate.
+    min_abs_weight : float
+        Minimum absolute edge weight retained in the graph.
+    required_baseline_margin : float
+        Minimum baseline margin a hyperedge must beat.
+
+    Returns
+    -------
+    dict[str, object]
+        The temporal-causal hypergraph experiment manifest.
+
+    Raises
+    ------
+    ValueError
+        If the trace or candidate hyperedges are invalid.
     """
     if not np.isfinite(required_baseline_margin) or required_baseline_margin < 0.0:
         raise ValueError("required_baseline_margin must be finite and non-negative")

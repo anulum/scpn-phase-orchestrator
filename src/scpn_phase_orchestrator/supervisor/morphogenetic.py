@@ -66,7 +66,13 @@ class MorphogeneticFieldState:
     field: FloatArray
 
     def to_audit_snapshot(self) -> dict[str, object]:
-        """Return compact, serialisable field statistics for audit logs."""
+        """Return compact, serialisable field statistics for audit logs.
+
+        Returns
+        -------
+        dict[str, object]
+            Return compact, serialisable field statistics for audit logs.
+        """
         return {
             "shape": list(self.field.shape),
             "mean": float(np.mean(self.field)),
@@ -88,7 +94,13 @@ class MorphogeneticFieldResult:
     global_coherence: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable topology-field audit payload."""
+        """Return a serialisable topology-field audit payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a serialisable topology-field audit payload.
+        """
         return {
             "global_coherence": self.global_coherence,
             "delta_norm": self.delta_norm,
@@ -117,7 +129,13 @@ class MorphogeneticFieldSnapshot:
     top_edges: tuple[tuple[int, int, float], ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe field snapshot for docs, reports, and audits."""
+        """Return a JSON-safe field snapshot for docs, reports, and audits.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe field snapshot for docs, reports, and audits.
+        """
         return {
             "shape": list(self.shape),
             "mean": self.mean,
@@ -142,7 +160,13 @@ class MorphogeneticFieldSVG:
     snapshot: MorphogeneticFieldSnapshot
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe SVG artefact record for review tooling."""
+        """Return a JSON-safe SVG artefact record for review tooling.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe SVG artefact record for review tooling.
+        """
         return {
             "format": "svg",
             "width": self.width,
@@ -165,7 +189,22 @@ class MorphogeneticTopologySupervisor:
         knm: FloatArray,
         field_state: MorphogeneticFieldState | None = None,
     ) -> MorphogeneticFieldResult:
-        """Evolve the topology field and return the next pairwise coupling."""
+        """Evolve the topology field and return the next pairwise coupling.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        field_state : MorphogeneticFieldState | None
+            The morphogenetic field state, or ``None``.
+
+        Returns
+        -------
+        MorphogeneticFieldResult
+            The next pairwise coupling field result.
+        """
         phases_arr = _validate_phases(phases)
         knm_arr = _validate_knm(knm, phases_arr.size)
         field = (
@@ -215,6 +254,25 @@ def build_morphogenetic_field_snapshot(
 
     The snapshot is dependency-free and audit-oriented: it exposes summary
     statistics, ASCII heatmap rows, and the strongest non-diagonal field edges.
+
+    Parameters
+    ----------
+    field_state : MorphogeneticFieldState | MorphogeneticFieldResult
+        The morphogenetic field state, or ``None``.
+    top_k : int
+        Number of strongest entries to retain.
+    palette : str
+        Colour palette name for the snapshot.
+
+    Returns
+    -------
+    MorphogeneticFieldSnapshot
+        The compact morphogenetic field snapshot.
+
+    Raises
+    ------
+    ValueError
+        If the field state or ``top_k`` is invalid.
     """
     if isinstance(top_k, (bool, np.bool_)) or not isinstance(top_k, int) or top_k < 0:
         raise ValueError("top_k must be non-negative")
@@ -247,6 +305,27 @@ def render_morphogenetic_field_svg(
 
     The renderer is passive: it produces a review artefact from an already
     computed field and does not mutate policy, coupling, or actuation state.
+
+    Parameters
+    ----------
+    field_state : MorphogeneticFieldState | MorphogeneticFieldResult
+        The morphogenetic field state, or ``None``.
+    top_k : int
+        Number of strongest entries to retain.
+    cell_size : int
+        SVG cell size in pixels.
+    title : str
+        Title rendered on the SVG.
+
+    Returns
+    -------
+    MorphogeneticFieldSVG
+        The dependency-free SVG heatmap artefact.
+
+    Raises
+    ------
+    ValueError
+        If the field state or rendering parameters are invalid.
     """
     if (
         isinstance(cell_size, (bool, np.bool_))

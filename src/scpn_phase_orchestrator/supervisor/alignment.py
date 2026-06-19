@@ -74,13 +74,35 @@ class ValueConstraint:
         _validate_non_negative_scalar(self.weight, "weight")
 
     def applies_to(self, action: ControlAction) -> bool:
-        """Return whether this constraint applies to ``action``."""
+        """Return whether this constraint applies to ``action``.
+
+        Parameters
+        ----------
+        action : ControlAction
+            The control action to test against the constraints.
+
+        Returns
+        -------
+        bool
+            ``True`` when the constraint applies to the action.
+        """
         knob_match = self.knob == "*" or self.knob == action.knob
         scope_match = self.scope == "*" or self.scope == action.scope
         return knob_match and scope_match
 
     def violations_for(self, action: ControlAction) -> tuple[str, ...]:
-        """Return failed bound names for ``action``."""
+        """Return failed bound names for ``action``.
+
+        Parameters
+        ----------
+        action : ControlAction
+            The control action to test against the constraints.
+
+        Returns
+        -------
+        tuple[str, ...]
+            The failed bound names for the action.
+        """
         failures: list[str] = []
         if self.min_value is not None and action.value < self.min_value:
             failures.append("min_value")
@@ -103,7 +125,13 @@ class ValueViolation:
     counterfactual: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable violation record."""
+        """Return a serialisable violation record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a serialisable violation record.
+        """
         return {
             "constraint": self.constraint,
             "knob": self.knob,
@@ -123,7 +151,13 @@ class ValueScoreCounterfactual:
     counterfactual: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable score-threshold counterfactual."""
+        """Return a serialisable score-threshold counterfactual.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a serialisable score-threshold counterfactual.
+        """
         return {
             "observed_score": self.observed_score,
             "required_score": self.required_score,
@@ -159,7 +193,13 @@ class ValueParetoViolation:
     counterfactual: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable Pareto violation record."""
+        """Return a serialisable Pareto violation record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a serialisable Pareto violation record.
+        """
         return {
             "objective": self.objective,
             "observed_delta": self.observed_delta,
@@ -202,7 +242,13 @@ class ValueAlignmentDecision:
 
     @property
     def satisfied(self) -> bool:
-        """Return whether the proposed action set passed the guard."""
+        """Return whether the proposed action set passed the guard.
+
+        Returns
+        -------
+        bool
+            Return whether the proposed action set passed the guard.
+        """
         return (
             not self.violations
             and not self.pareto_violations
@@ -211,13 +257,25 @@ class ValueAlignmentDecision:
 
     @property
     def actions_to_apply(self) -> ActionTuple:
-        """Return approved actions or the forced safe fallback path."""
+        """Return approved actions or the forced safe fallback path.
+
+        Returns
+        -------
+        ActionTuple
+            Return approved actions or the forced safe fallback path.
+        """
         if self.satisfied:
             return self.approved_actions
         return self.fallback_actions
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable guard decision."""
+        """Return a serialisable guard decision.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a serialisable guard decision.
+        """
         return {
             "satisfied": self.satisfied,
             "alignment_score": self.alignment_score,
@@ -254,7 +312,20 @@ class ValueAlignmentGuard:
         *,
         objective_deltas: ObjectiveDeltas | None = None,
     ) -> ValueAlignmentDecision:
-        """Evaluate proposed actions and return an auditable decision."""
+        """Evaluate proposed actions and return an auditable decision.
+
+        Parameters
+        ----------
+        actions : list[ControlAction] | ActionTuple
+            The control actions to apply or assess.
+        objective_deltas : ObjectiveDeltas | None
+            Per-objective deltas for the proposed actions, or ``None``.
+
+        Returns
+        -------
+        ValueAlignmentDecision
+            The auditable value-alignment decision.
+        """
         proposed = tuple(actions)
         approved: list[ControlAction] = []
         blocked: list[ControlAction] = []
@@ -342,6 +413,25 @@ def calibrate_value_alignment_replay_evidence(
     guard would approve, block, or divert to fallback on replayed cases, but it
     never authorises live actuation. This gives production reviewers evidence
     for guard behaviour before any deployment-tier enforcement is claimed.
+
+    Parameters
+    ----------
+    policy : ValueAlignmentPolicy
+        The value-alignment policy to calibrate.
+    replay_cases : Mapping[str, list[ControlAction] | ActionTuple]
+        Replay action proposals keyed by case name.
+    evidence_label : str
+        Label recorded with the calibration evidence.
+
+    Returns
+    -------
+    dict[str, object]
+        The calibration evidence for the policy.
+
+    Raises
+    ------
+    ValueError
+        If the policy or replay cases are invalid.
     """
     if not isinstance(policy, ValueAlignmentPolicy):
         raise ValueError("policy must be a ValueAlignmentPolicy")
@@ -414,7 +504,23 @@ def calibrate_value_alignment_replay_evidence(
 def value_alignment_policy_from_binding_spec(
     spec: object,
 ) -> ValueAlignmentPolicy | None:
-    """Build a policy from ``BindingSpec.value_alignment`` when present."""
+    """Build a policy from ``BindingSpec.value_alignment`` when present.
+
+    Parameters
+    ----------
+    spec : object
+        The binding spec to read value-alignment configuration from.
+
+    Returns
+    -------
+    ValueAlignmentPolicy | None
+        The value-alignment policy, or ``None`` if not present.
+
+    Raises
+    ------
+    ValueError
+        If the value-alignment configuration is malformed.
+    """
     template = getattr(spec, "value_alignment", None)
     if not template:
         return None
@@ -442,6 +548,16 @@ def value_alignment_policy_from_template(
               value: 0.0
               ttl_s: 1.0
               justification: safe hold
+
+    Parameters
+    ----------
+    template : Mapping[str, object]
+        The value-alignment template mapping.
+
+    Returns
+    -------
+    ValueAlignmentPolicy
+        The value-alignment policy built from the template.
     """
     constraints = tuple(
         _constraint_from_template(item, index)

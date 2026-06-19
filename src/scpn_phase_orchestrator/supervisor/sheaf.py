@@ -45,7 +45,13 @@ class SheafCoherenceResult:
     tolerance: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a compact serialisable payload for supervisor audit logs."""
+        """Return a compact serialisable payload for supervisor audit logs.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a compact serialisable payload for supervisor audit logs.
+        """
         return {
             "obstruction_score": self.obstruction_score,
             "consistency_energy": self.consistency_energy,
@@ -70,7 +76,13 @@ class SheafObstructionSummary:
     critical_threshold: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable obstruction summary."""
+        """Return a JSON-serialisable obstruction summary.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable obstruction summary.
+        """
         return {
             "severity": self.severity,
             "obstruction_score": self.obstruction_score,
@@ -112,7 +124,13 @@ class SheafControlProposal:
     blocked_reasons: tuple[str, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a compact serialisable payload for operator review."""
+        """Return a compact serialisable payload for operator review.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a compact serialisable payload for operator review.
+        """
         return {
             "method": "sheaf_laplacian_gradient_descent_review",
             "baseline_obstruction_score": self.baseline_obstruction_score,
@@ -151,7 +169,20 @@ class SheafCoherenceSupervisor:
         node_states: FloatArray,
         restriction_maps: FloatArray,
     ) -> SheafCoherenceResult:
-        """Return sheaf obstruction metrics for one supervisor tick."""
+        """Return sheaf obstruction metrics for one supervisor tick.
+
+        Parameters
+        ----------
+        node_states : FloatArray
+            Per-node channel states, shape ``(N, C)``.
+        restriction_maps : FloatArray
+            Directed sheaf restriction maps.
+
+        Returns
+        -------
+        SheafCoherenceResult
+            The sheaf obstruction metrics for the tick.
+        """
         return sheaf_coherence(
             node_states,
             restriction_maps,
@@ -166,7 +197,29 @@ def build_sheaf_obstruction_summary(
     critical_threshold: float = 0.25,
     top_k: int = 5,
 ) -> SheafObstructionSummary:
-    """Build a passive triage summary from a sheaf-coherence result."""
+    """Build a passive triage summary from a sheaf-coherence result.
+
+    Parameters
+    ----------
+    result : SheafCoherenceResult
+        The sheaf-coherence result to summarise.
+    warning_threshold : float
+        Obstruction value above which a warning is raised.
+    critical_threshold : float
+        Coherence threshold below which a child is critical.
+    top_k : int
+        Number of strongest entries to retain.
+
+    Returns
+    -------
+    SheafObstructionSummary
+        The passive triage summary.
+
+    Raises
+    ------
+    ValueError
+        If the result or thresholds are invalid.
+    """
     if not isinstance(result, SheafCoherenceResult):
         raise ValueError("result must be a SheafCoherenceResult")
     warn = _validate_tolerance(warning_threshold)
@@ -201,6 +254,31 @@ def propose_sheaf_obstruction_control(
     measured obstruction energy. The result is an audit artefact only:
     execution is disabled and any live actuation requires a separate operator
     approval path.
+
+    Parameters
+    ----------
+    node_states : FloatArray
+        Per-node channel states, shape ``(N, C)``.
+    restriction_maps : FloatArray
+        Directed sheaf restriction maps.
+    step_size : float
+        Gradient step size for the proposed correction.
+    max_update_norm : float
+        Maximum norm of the proposed correction.
+    tolerance : float
+        Numerical tolerance.
+    max_backtracking_steps : int
+        Maximum backtracking line-search steps.
+
+    Returns
+    -------
+    SheafControlProposal
+        The review-only sheaf correction proposal.
+
+    Raises
+    ------
+    ValueError
+        If the node states or step parameters are invalid.
     """
     states = _validate_node_states(node_states)
     if len(states.shape) != 2:
@@ -307,6 +385,20 @@ def sheaf_coherence(
         A ``SheafCoherenceResult`` with the block sheaf Laplacian,
         directed residual tensor, obstruction score, consistency energy,
         and audit-visible approximate dimensions.
+
+    Parameters
+    ----------
+    node_states : FloatArray
+        Per-node channel states, shape ``(N, C)``.
+    restriction_maps : FloatArray
+        Directed sheaf restriction maps.
+    tolerance : float
+        Numerical tolerance.
+
+    Raises
+    ------
+    ValueError
+        If the node states or restriction maps are invalid.
     """
     states = _validate_node_states(node_states)
     if len(states.shape) != 2:
@@ -343,7 +435,25 @@ def sheaf_laplacian(
     restriction_maps: FloatArray,
     tolerance: float = 1e-8,
 ) -> FloatArray:
-    """Build the block sheaf Laplacian from directed restriction maps."""
+    """Build the block sheaf Laplacian from directed restriction maps.
+
+    Parameters
+    ----------
+    restriction_maps : FloatArray
+        Directed sheaf restriction maps.
+    tolerance : float
+        Numerical tolerance.
+
+    Returns
+    -------
+    FloatArray
+        The block sheaf Laplacian.
+
+    Raises
+    ------
+    ValueError
+        If the restriction maps are invalid.
+    """
     if _contains_boolean_alias(restriction_maps):
         raise ValueError("restriction_maps must not contain boolean values")
     if _contains_complex_alias(restriction_maps):

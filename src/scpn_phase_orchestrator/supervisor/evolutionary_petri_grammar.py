@@ -185,16 +185,34 @@ class EvolutionaryPetriMutationCandidate:
 
     @property
     def accepted(self) -> bool:
-        """Return whether this candidate is accepted for review."""
+        """Return whether this candidate is accepted for review.
+
+        Returns
+        -------
+        bool
+            Return whether this candidate is accepted for review.
+        """
         return not self.blocked_reasons
 
     @property
     def status(self) -> str:
-        """Return the review status label for this candidate."""
+        """Return the review status label for this candidate.
+
+        Returns
+        -------
+        str
+            Return the review status label for this candidate.
+        """
         return "accepted" if self.accepted else "blocked"
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "candidate_id": self.candidate_id,
             "generation": self.generation,
@@ -238,7 +256,13 @@ class EvolutionaryPetriMutationPlan:
     plan_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -276,7 +300,33 @@ def run_offline_evolutionary_petri_mutation_grammar(
     max_arc_weight: int = 4,
     max_token_bound: int = 128,
 ) -> EvolutionaryPetriMutationPlan:
-    """Build a deterministic review-only mutation plan from a net-like payload."""
+    """Build a deterministic review-only mutation plan from a net-like payload.
+
+    Parameters
+    ----------
+    net_like : Mapping[str, object] | Sequence[object]
+        A net-like payload describing places, transitions, and arcs.
+    generation_count : int
+        Number of search generations.
+    candidates_per_generation : int
+        Number of candidates evaluated per generation.
+    mutation_step : float
+        Mutation step size applied per generation.
+    max_arc_weight : int
+        Maximum arc weight allowed in a mutated net.
+    max_token_bound : int
+        Maximum token count allowed per place.
+
+    Returns
+    -------
+    EvolutionaryPetriMutationPlan
+        The review-only Petri mutation plan.
+
+    Raises
+    ------
+    ValueError
+        If the net-like payload or bounds are invalid.
+    """
     config = EvolutionaryPetriMutationConfig(
         generation_count=generation_count,
         candidates_per_generation=candidates_per_generation,

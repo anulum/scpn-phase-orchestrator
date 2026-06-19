@@ -70,7 +70,13 @@ class TopologyMutationNode:
     community: str | None = None
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {"node_id": self.node_id, "community": self.community}
 
 
@@ -84,11 +90,23 @@ class TopologyMutationEdge:
 
     @property
     def pair(self) -> tuple[int, int]:
-        """Return the canonical undirected edge pair."""
+        """Return the canonical undirected edge pair.
+
+        Returns
+        -------
+        tuple[int, int]
+            Return the canonical undirected edge pair.
+        """
         return (self.source, self.target)
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "source": self.source,
             "target": self.target,
@@ -109,7 +127,13 @@ class TopologyMutationPlan:
     source_communities: tuple[str | None, str | None]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "operation": self.operation,
             "node_a": self.node_a,
@@ -142,16 +166,34 @@ class TopologyMutationCandidate:
 
     @property
     def accepted(self) -> bool:
-        """Return whether this candidate is accepted for review."""
+        """Return whether this candidate is accepted for review.
+
+        Returns
+        -------
+        bool
+            Return whether this candidate is accepted for review.
+        """
         return not self.blocked_reasons
 
     @property
     def status(self) -> str:
-        """Return the review status label for this candidate."""
+        """Return the review status label for this candidate.
+
+        Returns
+        -------
+        str
+            Return the review status label for this candidate.
+        """
         return "accepted" if self.accepted else "rejected"
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "candidate_id": self.candidate_id,
             "generation": self.generation,
@@ -197,7 +239,13 @@ class TopologyMutationReport:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -240,7 +288,39 @@ def run_offline_evolutionary_topology_mutation_search(
     edge_add_base_weight: float = 0.4,
     max_add_candidates: int = 16,
 ) -> TopologyMutationReport:
-    """Generate deterministic offline topology mutation candidates."""
+    """Generate deterministic offline topology mutation candidates.
+
+    Parameters
+    ----------
+    node_records : Sequence[Mapping[str, object]]
+        Topology node records.
+    edge_records : Sequence[Mapping[str, object]]
+        Topology edge records.
+    generation_count : int
+        Number of search generations.
+    population_size : int
+        Number of candidates per generation.
+    mutation_step : float
+        Mutation step size applied per generation.
+    min_edge_weight : float
+        Minimum retained edge weight.
+    max_edge_weight : float
+        Maximum allowed edge weight.
+    edge_add_base_weight : float
+        Base weight assigned to newly added edges.
+    max_add_candidates : int
+        Maximum number of edge-addition candidates.
+
+    Returns
+    -------
+    TopologyMutationReport
+        The offline topology mutation report.
+
+    Raises
+    ------
+    ValueError
+        If the node/edge records or bounds are invalid.
+    """
     config = TopologyMutationConfig(
         generation_count=generation_count,
         population_size=population_size,

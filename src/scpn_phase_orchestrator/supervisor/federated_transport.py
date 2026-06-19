@@ -111,7 +111,13 @@ class FederatedTransportEnvelope:
     operator_review_required: bool
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe audit evidence for this transport envelope."""
+        """Return JSON-safe audit evidence for this transport envelope.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe audit evidence for this transport envelope.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -146,7 +152,13 @@ class FederatedTransportReplayLedger:
     replay_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe replay evidence."""
+        """Return JSON-safe replay evidence.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe replay evidence.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -179,7 +191,13 @@ class FederatedTransportDeploymentPreflightManifest:
     preflight_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return JSON-safe preflight audit evidence."""
+        """Return JSON-safe preflight audit evidence.
+
+        Returns
+        -------
+        dict[str, object]
+            Return JSON-safe preflight audit evidence.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -208,7 +226,29 @@ def build_signed_transport_envelopes(
     schema_version: str = _DEFAULT_SCHEMA_VERSION,
     batch_id: str | None = None,
 ) -> tuple[FederatedTransportEnvelope, ...]:
-    """Build deterministic hash-linked envelopes from node audit records."""
+    """Build deterministic hash-linked envelopes from node audit records.
+
+    Parameters
+    ----------
+    node_update_audit_records : Sequence[Mapping[str, object]]
+        Federated node update audit records.
+    schema_name : str
+        Transport schema name.
+    schema_version : str
+        Transport schema version.
+    batch_id : str | None
+        Identifier of the transport batch, or ``None``.
+
+    Returns
+    -------
+    tuple[FederatedTransportEnvelope, ...]
+        The hash-linked signed transport envelopes.
+
+    Raises
+    ------
+    ValueError
+        If the node audit records are malformed.
+    """
     if not isinstance(node_update_audit_records, Sequence) or isinstance(
         node_update_audit_records, (str, bytes, bytearray)
     ):
@@ -309,7 +349,23 @@ def build_signed_transport_envelopes(
 def validate_federated_transport_batch(
     envelopes: Sequence[FederatedTransportEnvelope],
 ) -> tuple[FederatedTransportEnvelope, ...]:
-    """Validate deterministic hash-links and ordering for an ordered transport batch."""
+    """Validate deterministic hash-links and ordering for an ordered transport batch.
+
+    Parameters
+    ----------
+    envelopes : Sequence[FederatedTransportEnvelope]
+        The ordered transport envelopes.
+
+    Returns
+    -------
+    tuple[FederatedTransportEnvelope, ...]
+        The validated transport batch.
+
+    Raises
+    ------
+    ValueError
+        If the hash-links or ordering are invalid.
+    """
     if not isinstance(envelopes, Sequence) or isinstance(
         envelopes, (str, bytes, bytearray)
     ):
@@ -424,7 +480,18 @@ def validate_federated_transport_batch(
 def replay_federated_transport_batch(
     envelopes: Sequence[FederatedTransportEnvelope],
 ) -> FederatedTransportReplayLedger:
-    """Replay and materialise a deterministic digest for an ordered transport batch."""
+    """Replay and materialise a deterministic digest for an ordered transport batch.
+
+    Parameters
+    ----------
+    envelopes : Sequence[FederatedTransportEnvelope]
+        The ordered transport envelopes.
+
+    Returns
+    -------
+    FederatedTransportReplayLedger
+        The replay ledger for the transport batch.
+    """
     validated = validate_federated_transport_batch(envelopes)
     first = validated[0]
     replay_hash = _stable_hash(
@@ -457,7 +524,31 @@ def build_transport_deployment_preflight_manifest(
     schema_version: str = _DEFAULT_SCHEMA_VERSION,
     batch_id: str | None = None,
 ) -> FederatedTransportDeploymentPreflightManifest:
-    """Build deterministic transport preflight evidence."""
+    """Build deterministic transport preflight evidence.
+
+    Parameters
+    ----------
+    transport_declaration : Mapping[str, object]
+        The transport declaration to preflight.
+    replay_ledger : FederatedTransportReplayLedger
+        The replay ledger for the transport batch.
+    schema_name : str
+        Transport schema name.
+    schema_version : str
+        Transport schema version.
+    batch_id : str | None
+        Identifier of the transport batch, or ``None``.
+
+    Returns
+    -------
+    FederatedTransportDeploymentPreflightManifest
+        The transport deployment preflight manifest.
+
+    Raises
+    ------
+    ValueError
+        If the transport declaration or ledger is invalid.
+    """
     if schema_name not in _ALLOWED_SCHEMA_NAMES:
         raise ValueError(
             f"schema_name must be one of {_sorted_repr(_ALLOWED_SCHEMA_NAMES)}"
@@ -558,7 +649,23 @@ def build_transport_deployment_preflight_manifest(
 def validate_transport_deployment_preflight_manifest(
     manifest: FederatedTransportDeploymentPreflightManifest,
 ) -> FederatedTransportDeploymentPreflightManifest:
-    """Validate deterministic transport preflight manifest content and hashes."""
+    """Validate deterministic transport preflight manifest content and hashes.
+
+    Parameters
+    ----------
+    manifest : FederatedTransportDeploymentPreflightManifest
+        The manifest to validate.
+
+    Returns
+    -------
+    FederatedTransportDeploymentPreflightManifest
+        The validated transport preflight manifest.
+
+    Raises
+    ------
+    ValueError
+        If the manifest content or hashes are invalid.
+    """
     if not isinstance(manifest, FederatedTransportDeploymentPreflightManifest):
         raise ValueError(
             "manifest must be a FederatedTransportDeploymentPreflightManifest"

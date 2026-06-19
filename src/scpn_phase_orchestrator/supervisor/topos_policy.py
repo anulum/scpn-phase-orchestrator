@@ -48,7 +48,13 @@ class PolicyCompositionObject:
     action_labels: tuple[str, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "name": self.name,
             "regimes": list(self.regimes),
@@ -66,7 +72,13 @@ class PolicyCompositionMorphism:
     deterministic: bool = True
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "source": self.source,
             "target": self.target,
@@ -84,7 +96,13 @@ class PolicyCompositionObligation:
     evidence: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "name": self.name,
             "status": self.status,
@@ -109,7 +127,13 @@ class PolicyCompositionValidationReport:
     non_actuating: bool = True
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -227,7 +251,23 @@ def _add_obligation(
 def validate_policy_composition_category(
     rules: tuple[PolicyRule, ...] | list[PolicyRule],
 ) -> PolicyCompositionValidationReport:
-    """Validate PolicyRule collections as a categorical composition proof boundary."""
+    """Validate PolicyRule collections as a categorical composition proof boundary.
+
+    Parameters
+    ----------
+    rules : tuple[PolicyRule, ...] | list[PolicyRule]
+        The policy rules to export or validate.
+
+    Returns
+    -------
+    PolicyCompositionValidationReport
+        The categorical composition validation report.
+
+    Raises
+    ------
+    ValueError
+        If the rules violate the composition proof boundary.
+    """
     if isinstance(rules, tuple | list):
         rule_list = list(rules)
     else:

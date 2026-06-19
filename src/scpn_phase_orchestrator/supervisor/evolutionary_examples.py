@@ -37,7 +37,13 @@ __all__ = [
 
 
 def build_evolutionary_supervisor_search_examples() -> tuple[dict[str, object], ...]:
-    """Return deterministic offline-search example inputs for reference gates."""
+    """Return deterministic offline-search example inputs for reference gates.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Return deterministic offline-search example inputs for reference gates.
+    """
     records = _build_examples()
     for record in records:
         _validate_evolutionary_supervisor_search_record(record)
@@ -47,7 +53,13 @@ def build_evolutionary_supervisor_search_examples() -> tuple[dict[str, object], 
 def build_evolutionary_supervisor_search_examples_from_worker_a_api() -> tuple[
     dict[str, object], ...
 ]:
-    """Return examples enriched with core offline-search report counts."""
+    """Return examples enriched with core offline-search report counts.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Return examples enriched with core offline-search report counts.
+    """
     enriched: list[dict[str, object]] = []
     for record in build_evolutionary_supervisor_search_examples():
         report = run_offline_evolutionary_supervisor_search(

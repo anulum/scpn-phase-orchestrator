@@ -180,11 +180,23 @@ class ChildSupervisorSummary:
 
     @property
     def weighted_R(self) -> float:
-        """Return coherence weighted by summary confidence."""
+        """Return coherence weighted by summary confidence.
+
+        Returns
+        -------
+        float
+            Return coherence weighted by summary confidence.
+        """
         return float(self.R * self.confidence)
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe reduced child summary."""
+        """Return a JSON-safe reduced child summary.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe reduced child summary.
+        """
         return {
             "name": self.name,
             "channel": self.channel,
@@ -210,7 +222,13 @@ class HierarchyEscalation:
     child_regime: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe escalation record."""
+        """Return a JSON-safe escalation record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe escalation record.
+        """
         return {
             "child": self.child,
             "channel": self.channel,
@@ -235,7 +253,13 @@ class HierarchicalOrchestrationPlan:
     audit_scope: str = _AUDIT_SCOPE_REDUCED_SUMMARIES
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable plan record for hierarchy audit logs."""
+        """Return a serialisable plan record for hierarchy audit logs.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a serialisable plan record for hierarchy audit logs.
+        """
         return {
             "hierarchy": self.hierarchy,
             "audit_scope": self.audit_scope,
@@ -267,7 +291,13 @@ class HierarchySyncEnvelope:
         _validate_envelope_reduced_only(self)
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe transport envelope audit record."""
+        """Return a JSON-safe transport envelope audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe transport envelope audit record.
+        """
         record: dict[str, object] = {
             "protocol_version": self.protocol_version,
             "source_node": self.source_node,
@@ -279,7 +309,13 @@ class HierarchySyncEnvelope:
         return record
 
     def to_json(self) -> str:
-        """Serialise the envelope with deterministic key ordering."""
+        """Serialise the envelope with deterministic key ordering.
+
+        Returns
+        -------
+        str
+            Serialise the envelope with deterministic key ordering.
+        """
         return json.dumps(self.to_audit_record(), sort_keys=True, separators=(",", ":"))
 
 
@@ -292,7 +328,13 @@ class HierarchySyncLedger:
     plan: HierarchicalOrchestrationPlan
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable sync-ingestion audit payload."""
+        """Return a serialisable sync-ingestion audit payload.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a serialisable sync-ingestion audit payload.
+        """
         return {
             "accepted": [envelope.to_audit_record() for envelope in self.accepted],
             "rejected": list(self.rejected),
@@ -309,7 +351,13 @@ class HierarchyConsensusState:
     summary: ChildSupervisorSummary
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe consensus node record."""
+        """Return a JSON-safe consensus node record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe consensus node record.
+        """
         return {
             "source_node": self.source_node,
             "sequence": self.sequence,
@@ -327,7 +375,13 @@ class HierarchyConsensusRound:
     rejected: tuple[dict[str, object], ...] = ()
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe consensus-round audit record."""
+        """Return a JSON-safe consensus-round audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe consensus-round audit record.
+        """
         return {
             "round_index": self.round_index,
             "states": [state.to_audit_record() for state in self.states],
@@ -365,14 +419,31 @@ class HierarchyTransportRuntime:
 
     @property
     def previous_sequences(self) -> dict[str, int]:
-        """Return the accepted per-source sequence watermarks."""
+        """Return the accepted per-source sequence watermarks.
+
+        Returns
+        -------
+        dict[str, int]
+            Return the accepted per-source sequence watermarks.
+        """
         return dict(self._previous_sequences)
 
     def ingest(
         self,
         records: Sequence[HierarchySyncEnvelope | Mapping[str, object] | str],
     ) -> HierarchySyncLedger:
-        """Parse a transport batch, ingest it, and advance accepted watermarks."""
+        """Parse a transport batch, ingest it, and advance accepted watermarks.
+
+        Parameters
+        ----------
+        records : Sequence[HierarchySyncEnvelope | Mapping[str, object] | str]
+            The transport records to ingest.
+
+        Returns
+        -------
+        HierarchySyncLedger
+            The sync ledger with advanced watermarks.
+        """
         envelopes = tuple(load_hierarchy_sync_envelope(record) for record in records)
         ledger = ingest_hierarchy_sync_envelopes(
             envelopes,
@@ -391,11 +462,28 @@ class HierarchyTransportRuntime:
         self,
         records: Sequence[HierarchySyncEnvelope | Mapping[str, object] | str],
     ) -> HierarchySyncLedger:
-        """Alias for adapter batch ingestion."""
+        """Alias for adapter batch ingestion.
+
+        Parameters
+        ----------
+        records : Sequence[HierarchySyncEnvelope | Mapping[str, object] | str]
+            The transport records to ingest.
+
+        Returns
+        -------
+        HierarchySyncLedger
+            The sync ledger for the ingested batch.
+        """
         return self.ingest(records)
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return socket-free runtime state for audit logging."""
+        """Return socket-free runtime state for audit logging.
+
+        Returns
+        -------
+        dict[str, object]
+            Return socket-free runtime state for audit logging.
+        """
         return {
             "hierarchy": self._hierarchy,
             "protocol_version": self._protocol_version,
@@ -421,6 +509,24 @@ def build_hierarchical_orchestration_plan(
     summaries into a parent-level ``UPDEState`` so existing regime, policy, FEP,
     causal, and audit paths can reason over nested supervisors without reading
     raw child observations.
+
+    Parameters
+    ----------
+    children : Iterable[ChildSupervisorSummary]
+        Child supervisor summaries.
+    hierarchy : str
+        Hierarchy label.
+    degraded_threshold : float
+        Coherence threshold below which a child is degraded.
+    critical_threshold : float
+        Coherence threshold below which a child is critical.
+    min_confidence : float
+        Minimum child summary confidence to include.
+
+    Returns
+    -------
+    HierarchicalOrchestrationPlan
+        The parent plan and escalation set.
     """
     child_tuple = tuple(children)
     _validate_plan_inputs(
@@ -484,6 +590,24 @@ def build_hierarchy_sync_envelope(
     The envelope is transport-neutral: callers may write it to JSONL, send it
     over a message bus, or hand it to tests without this module opening sockets
     or performing live deployment work.
+
+    Parameters
+    ----------
+    summary : ChildSupervisorSummary
+        The child supervisor summary.
+    source_node : str
+        Identifier of the source node.
+    sequence : int
+        Monotonic envelope sequence number.
+    protocol_version : str
+        Hierarchy sync protocol version.
+    monotonic_time_s : float | None
+        Monotonic timestamp in seconds, or ``None``.
+
+    Returns
+    -------
+    HierarchySyncEnvelope
+        The deterministic hierarchy sync envelope.
     """
     return HierarchySyncEnvelope(
         protocol_version=protocol_version,
@@ -497,7 +621,23 @@ def build_hierarchy_sync_envelope(
 def load_hierarchy_sync_envelope(
     record: HierarchySyncEnvelope | Mapping[str, object] | str,
 ) -> HierarchySyncEnvelope:
-    """Parse a JSON string or decoded mapping into a strict sync envelope."""
+    """Parse a JSON string or decoded mapping into a strict sync envelope.
+
+    Parameters
+    ----------
+    record : HierarchySyncEnvelope | Mapping[str, object] | str
+        A sync envelope, decoded mapping, or JSON string.
+
+    Returns
+    -------
+    HierarchySyncEnvelope
+        The parsed strict sync envelope.
+
+    Raises
+    ------
+    ValueError
+        If the record cannot be parsed into a strict envelope.
+    """
     if isinstance(record, HierarchySyncEnvelope):
         _validate_envelope_reduced_only(record)
         return _canonical_hierarchy_sync_envelope(record)
@@ -552,6 +692,33 @@ def ingest_hierarchy_sync_envelopes(
     reject protocol-version mismatches. Accepted envelopes are sorted by source
     node and sequence before parent-state composition, making JSONL replay and
     cloud ingestion deterministic.
+
+    Parameters
+    ----------
+    envelopes : Sequence[HierarchySyncEnvelope]
+        The ordered transport envelopes.
+    previous_sequences : Mapping[str, int] | None
+        Accepted per-source sequence watermarks, or ``None``.
+    hierarchy : str
+        Hierarchy label.
+    degraded_threshold : float
+        Coherence threshold below which a child is degraded.
+    critical_threshold : float
+        Coherence threshold below which a child is critical.
+    min_confidence : float
+        Minimum child summary confidence to include.
+    protocol_version : str
+        Hierarchy sync protocol version.
+
+    Returns
+    -------
+    HierarchySyncLedger
+        The sync ledger built from accepted summaries.
+
+    Raises
+    ------
+    ValueError
+        If an envelope fails validation.
     """
     canonical_envelopes = tuple(
         _canonical_hierarchy_sync_envelope(envelope) for envelope in envelopes
@@ -646,6 +813,34 @@ def simulate_hierarchy_gossip_consensus(
     coherence and circular phase only; raw child observations never enter the
     consensus state. This is a deterministic simulation surface for testing
     distributed orchestration policies before any live gossip transport exists.
+
+    Parameters
+    ----------
+    envelopes : Sequence[HierarchySyncEnvelope]
+        The ordered transport envelopes.
+    neighbour_map : Mapping[str, Sequence[str]]
+        Per-node neighbour lists for gossip.
+    rounds : int
+        Number of gossip rounds.
+    self_weight : float
+        Self-weight in the gossip consensus update.
+    hierarchy : str
+        Hierarchy label.
+    previous_sequences : Mapping[str, int] | None
+        Accepted per-source sequence watermarks, or ``None``.
+    degraded_threshold : float
+        Coherence threshold below which a child is degraded.
+    critical_threshold : float
+        Coherence threshold below which a child is critical.
+    min_confidence : float
+        Minimum child summary confidence to include.
+    protocol_version : str
+        Hierarchy sync protocol version.
+
+    Returns
+    -------
+    tuple[HierarchyConsensusRound, ...]
+        The per-round gossip consensus states.
     """
     _validate_gossip_inputs(rounds=rounds, self_weight=self_weight)
     _validate_neighbour_map(neighbour_map)
