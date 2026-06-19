@@ -272,3 +272,86 @@ def test_dp_noise_service_deployment_preflight_hash_is_stable() -> None:
 
     assert preflight_a.audit_record_hash == preflight_b.audit_record_hash
     assert preflight_a.audit_record_hash != preflight_mutated.audit_record_hash
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"epsilon": float("nan")}, "epsilon must be a finite float"),
+        ({"epsilon": 2_000_000.0}, "epsilon exceeds max bound"),
+        ({"delta": float("nan")}, "delta must be a finite float"),
+        ({"delta": 2.0}, r"delta must be in \(0, 1\)"),
+        ({"sensitivity": float("inf")}, "sensitivity must be a finite float"),
+        ({"sensitivity": 0.0}, "sensitivity must be greater than 0"),
+        ({"noise_multiplier": float("nan")}, "noise_multiplier must be a finite float"),
+        ({"noise_multiplier": 0.0}, "noise_multiplier must be greater than 0"),
+        ({"node_count": 1.5}, "node_count must be an integer"),
+        ({"node_count": 0}, "node_count must be greater than 0"),
+        ({"seed_hash": "a" * 32}, "seed_hash must be 64 hex characters"),
+        ({"seed_hash": "z" * 64}, "seed_hash must be a hex string"),
+        ({"policy_keys": ["alpha", "beta"]}, "policy_keys must be a tuple"),
+        ({"policy_keys": ()}, "policy_keys must be non-empty"),
+    ],
+)
+def test_request_manifest_rejects_scalar_fields(changes, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        replace(_seed_request(), **changes)
+
+
+def _budgets(*pairs: tuple[str, float]) -> tuple[DpNoiseNodePrivacyBudget, ...]:
+    return tuple(DpNoiseNodePrivacyBudget(node_id=n, epsilon_spent=e) for n, e in pairs)
+
+
+@pytest.mark.parametrize(
+    ("node_budgets", "match"),
+    [
+        (list(_budgets(("a", 0.1), ("b", 0.1))), "node_budgets must be a tuple"),
+        (_budgets(("a", 0.1)), "node_budgets length must match node_count"),
+        (
+            (_budgets(("a", 0.1))[0], "not-a-budget"),
+            "node_budgets must only contain",
+        ),
+        (_budgets(("", 0.1), ("b", 0.1)), "node_id is required"),
+        (_budgets(("dup", 0.1), ("dup", 0.1)), "node_id values must be unique"),
+        (_budgets(("a", -0.1), ("b", 0.1)), "epsilon spent must be non-negative"),
+    ],
+)
+def test_request_manifest_rejects_node_budgets(node_budgets, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        replace(_seed_request(), node_budgets=node_budgets)
+
+
+def test_preflight_manifest_rejects_non_boolean_operator_flag() -> None:
+    request = _seed_request()
+    response = build_dp_noise_service_manifest(request)
+    labels = _preflight_labels() | {"operator_approved": "yes"}
+    with pytest.raises(ValueError, match="operator_approved must be a boolean"):
+        build_dp_noise_service_deployment_preflight_manifest(
+            request, response, **labels
+        )
+
+
+def test_preflight_rejects_non_response_manifest() -> None:
+    with pytest.raises(
+        ValueError, match="response_manifest must be a DpNoiseServiceResponseManifest"
+    ):
+        build_dp_noise_service_deployment_preflight_manifest(
+            _seed_request(), "not-a-response", **_preflight_labels()
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "reason"),
+    [
+        ({"epsilon": 9.0}, "epsilon mismatch"),
+        ({"delta": 0.5}, "delta mismatch"),
+    ],
+)
+def test_preflight_detects_request_response_inconsistency(changes, reason) -> None:
+    request = _seed_request()
+    response = replace(_seed_response(), **changes)
+    preflight = build_dp_noise_service_deployment_preflight_manifest(
+        request, response, **_preflight_labels()
+    )
+    assert preflight.deployment_readiness.ready is False
+    assert reason in preflight.deployment_readiness.reason
