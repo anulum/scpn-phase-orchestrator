@@ -24,7 +24,24 @@ def sign_policy_proposal(
     previous_audit_hash: str,
     signing_key: str,
 ) -> dict[str, object]:
-    """Return a deterministic signed policy proposal record."""
+    """Return a deterministic signed policy proposal record.
+
+    Parameters
+    ----------
+    node_id : str
+        Identifier of the proposing node.
+    payload : Mapping[str, object]
+        The policy-proposal payload to sign.
+    previous_audit_hash : str
+        Hash of the previous audit record in the chain.
+    signing_key : str
+        HMAC signing key for the record.
+
+    Returns
+    -------
+    dict[str, object]
+        The deterministic signed policy-proposal record.
+    """
     clean_node = _require_text(node_id, "node_id")
     clean_key = _require_text(signing_key, "signing_key")
     _require_hash(previous_audit_hash, "previous_audit_hash")
@@ -55,7 +72,27 @@ def build_bft_meta_orchestrator_manifest(
     *,
     quorum: int,
 ) -> dict[str, object]:
-    """Build a review-only three-node BFT consensus manifest."""
+    """Build a review-only three-node BFT consensus manifest.
+
+    Parameters
+    ----------
+    proposals : Sequence[Mapping[str, object]]
+        Signed policy proposals from the participating nodes.
+    keyring : Mapping[str, str]
+        Mapping of node id to its verification key.
+    quorum : int
+        Number of agreeing nodes required for consensus.
+
+    Returns
+    -------
+    dict[str, object]
+        The review-only BFT consensus manifest.
+
+    Raises
+    ------
+    ValueError
+        If the proposals fail signature or quorum checks.
+    """
     if quorum < 1:
         raise ValueError("quorum must be >= 1")
     if isinstance(proposals, Mapping) or not proposals:

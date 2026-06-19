@@ -53,7 +53,13 @@ class MultiverseBranchSpec:
     topology_mask: FloatArray | None = None
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe branch specification record."""
+        """Return a JSON-safe branch specification record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe branch specification record.
+        """
         return {
             "branch_id": self.branch_id,
             "actions": [
@@ -89,7 +95,13 @@ class MultiverseBranchRecord:
     final_psi: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe branch rollout record."""
+        """Return a JSON-safe branch rollout record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe branch rollout record.
+        """
         return {
             "branch_id": self.branch_id,
             "branch_hash": self.branch_hash,
@@ -121,7 +133,13 @@ class MultiverseCounterfactualManifest:
     manifest_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe multiverse rollout manifest."""
+        """Return a JSON-safe multiverse rollout manifest.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe multiverse rollout manifest.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -613,7 +631,47 @@ def simulate_multiverse_counterfactual_branches(
     method: str = "rk4",
     backend: str = "numpy",
 ) -> MultiverseCounterfactualManifest:
-    """Run deterministic branch counterfactual rollouts without actuation."""
+    """Run deterministic branch counterfactual rollouts without actuation.
+
+    Parameters
+    ----------
+    phases : NDArray[np.float64]
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : NDArray[np.float64]
+        Natural frequencies in rad/s, shape ``(N,)``.
+    baseline_k : NDArray[np.float64]
+        Baseline coupling matrix ``K_nm``, shape ``(N, N)``.
+    baseline_alpha : NDArray[np.float64]
+        Baseline phase-lag matrix, shape ``(N, N)``.
+    branch_specs : tuple[MultiverseBranchSpec, ...]
+        Specifications of the counterfactual branches.
+    branch_action_sets : tuple[Sequence[ControlAction], ...] | None
+        Per-branch control-action sequences, or ``None``.
+    topology_masks : tuple[FloatArray, ...] | None
+        Per-branch topology masks, or ``None``.
+    baseline_zeta : float
+        Baseline external drive strength ``ζ``.
+    baseline_psi : float
+        Baseline external drive reference phase ``Ψ`` in radians.
+    horizon : int
+        Rollout horizon in steps.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    backend : str
+        Name of the compute backend to use.
+
+    Returns
+    -------
+    MultiverseCounterfactualManifest
+        The multiverse counterfactual rollout manifest.
+
+    Raises
+    ------
+    ValueError
+        If the branch specs or rollout inputs are invalid.
+    """
     phases_arr = _coerce_float_array("phases", phases)
     omegas_arr = _coerce_float_array("omegas", omegas)
     baseline_k_arr = _coerce_float_array("baseline_k", baseline_k)

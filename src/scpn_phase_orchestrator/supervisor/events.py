@@ -75,17 +75,45 @@ class EventBus:
         self._history: deque[RegimeEvent] = deque(maxlen=maxlen)
 
     def subscribe(self, callback: object) -> None:
-        """Register a callback to receive future events."""
+        """Register a callback to receive future events.
+
+        Parameters
+        ----------
+        callback : object
+            A callable invoked with each posted event.
+
+        Raises
+        ------
+        ValueError
+            If ``callback`` is not callable.
+        """
         if not callable(callback):
             raise ValueError(f"callback must be callable, got {callback!r}")
         self._subscribers.append(callback)
 
     def unsubscribe(self, callback: object) -> None:
-        """Remove a previously registered callback."""
+        """Remove a previously registered callback.
+
+        Parameters
+        ----------
+        callback : object
+            A callable invoked with each posted event.
+        """
         self._subscribers = [s for s in self._subscribers if s != callback]
 
     def post(self, event: RegimeEvent) -> None:
-        """Record *event* in history and notify all subscribers."""
+        """Record *event* in history and notify all subscribers.
+
+        Parameters
+        ----------
+        event : RegimeEvent
+            The regime event to record and broadcast.
+
+        Raises
+        ------
+        ValueError
+            If ``event`` is not a ``RegimeEvent``.
+        """
         if not isinstance(event, RegimeEvent):
             raise ValueError(f"event must be a RegimeEvent, got {event!r}")
         self._history.append(event)
@@ -94,12 +122,24 @@ class EventBus:
 
     @property
     def history(self) -> list[RegimeEvent]:
-        """Chronological list of all posted events."""
+        """Chronological list of all posted events.
+
+        Returns
+        -------
+        list[RegimeEvent]
+            Chronological list of all posted events.
+        """
         return list(self._history)
 
     @property
     def count(self) -> int:
-        """Number of events in history."""
+        """Number of events in history.
+
+        Returns
+        -------
+        int
+            Number of events in history.
+        """
         return len(self._history)
 
     def clear(self) -> None:

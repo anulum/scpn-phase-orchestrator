@@ -114,16 +114,39 @@ class PetriNetAdapter:
 
     @property
     def marking(self) -> Marking:
-        """Current Petri net marking (token distribution)."""
+        """Current Petri net marking (token distribution).
+
+        Returns
+        -------
+        Marking
+            Current Petri net marking (token distribution).
+        """
         return self._marking
 
     @property
     def net(self) -> PetriNet:
-        """The underlying Petri net structure."""
+        """The underlying Petri net structure.
+
+        Returns
+        -------
+        PetriNet
+            The underlying Petri net structure.
+        """
         return self._net
 
     def step(self, ctx: dict[str, float]) -> Regime:
-        """Advance the Petri net one step and return the active regime."""
+        """Advance the Petri net one step and return the active regime.
+
+        Parameters
+        ----------
+        ctx : dict[str, float]
+            Context metric values keyed by guard-metric name.
+
+        Returns
+        -------
+        Regime
+            The active regime after advancing the net one step.
+        """
         ctx = _validate_context(ctx)
         self._step += 1
         guard_ctx = {

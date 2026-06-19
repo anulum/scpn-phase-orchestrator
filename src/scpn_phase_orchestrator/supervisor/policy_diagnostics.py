@@ -112,7 +112,24 @@ def dry_run_policy_rules(
     good_layers: list[int],
     bad_layers: list[int],
 ) -> PolicyDryRunReport:
-    """Replay policy rules over audit steps without applying actuation."""
+    """Replay policy rules over audit steps without applying actuation.
+
+    Parameters
+    ----------
+    rules : list[PolicyRule]
+        The policy rules to evaluate.
+    entries : list[dict[str, Any]]
+        Audit-log step entries to replay.
+    good_layers : list[int]
+        Indices of the maintain (good) layers.
+    bad_layers : list[int]
+        Indices of the suppress (bad) layers.
+
+    Returns
+    -------
+    PolicyDryRunReport
+        The policy dry-run report.
+    """
     engine = PolicyEngine(rules)
     rule_names = tuple(rule.name for rule in rules)
     fire_counts = dict.fromkeys(rule_names, 0)

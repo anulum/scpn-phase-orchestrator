@@ -41,6 +41,11 @@ def build_autopoietic_lineage_replay_corpus() -> tuple[dict[str, object], ...]:
     The corpus is intentionally offline and compact. It gives the lineage
     sandbox domain-diverse replay evidence without loading partner data,
     contacting services, or enabling any live merge path.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Return a deterministic multi-domain replay corpus for lineage review.
     """
     return (
         {
@@ -93,6 +98,31 @@ def build_autopoietic_lineage_sandbox(
     child candidates, evaluates each candidate only against supplied replay
     summaries, and emits reviewable policy diffs. It never permits live merge,
     hot patching, or actuation.
+
+    Parameters
+    ----------
+    parent_policy : Mapping[str, object]
+        The parent policy genome.
+    audit_replays : Sequence[Mapping[str, object]]
+        Audit replay records used to score child candidates.
+    child_budget : int
+        Maximum number of child candidates to evaluate.
+    mutation_step : float
+        Mutation step size applied to the parent genome.
+    minimum_replay_reward : float
+        Minimum replay reward a child must reach to be accepted.
+    minimum_safety_margin : float
+        Minimum safety margin a child must preserve.
+
+    Returns
+    -------
+    dict[str, object]
+        The offline child-policy lineage review manifest.
+
+    Raises
+    ------
+    ValueError
+        If the parent policy or replay inputs are invalid.
     """
     if not isinstance(child_budget, int) or isinstance(child_budget, bool):
         raise ValueError("child_budget must be a positive integer")
@@ -165,6 +195,24 @@ def build_intergenerational_policy_inheritance(
     The resulting manifest materialises the inherited policy genome from a
     reviewed child diff, records replay-fitness components, and signs metadata
     for operator review. It does not permit direct hot patches or actuation.
+
+    Parameters
+    ----------
+    lineage_manifest : Mapping[str, object]
+        The lineage review manifest.
+    child_candidate : Mapping[str, object]
+        The candidate child policy genome.
+    signer_id : str
+        Identifier of the signing authority.
+    signing_key : str
+        HMAC signing key for the record.
+    objective_weights : Mapping[str, object] | None
+        Per-objective weights, or ``None`` for defaults.
+
+    Returns
+    -------
+    dict[str, object]
+        The signed inherited child-policy review metadata.
     """
     lineage = _validated_lineage_manifest(lineage_manifest)
     child = _validated_review_child(child_candidate)
@@ -217,6 +265,23 @@ def build_intergenerational_policy_inheritance_history(
     inheritance manifests derived from it. It is evidence for operator review:
     the package is deterministic, validates disabled direct hot patching and
     actuation, and does not execute or merge inherited policies.
+
+    Parameters
+    ----------
+    lineage_manifest : Mapping[str, object]
+        The lineage review manifest.
+    inheritance_manifests : Sequence[Mapping[str, object]]
+        Signed inheritance manifests to fold into the history.
+
+    Returns
+    -------
+    dict[str, object]
+        The review history of signed inherited-policy records.
+
+    Raises
+    ------
+    ValueError
+        If an inheritance manifest is inconsistent.
     """
     lineage = _validated_lineage_manifest(lineage_manifest)
     if (

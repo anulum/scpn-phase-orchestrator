@@ -74,7 +74,22 @@ class SupervisorPolicy:
         boundary_state: BoundaryState,
         petri_ctx: dict[str, float] | None = None,
     ) -> list[ControlAction]:
-        """Evaluate regime and return control actions for the current state."""
+        """Evaluate regime and return control actions for the current state.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The current UPDE state.
+        boundary_state : BoundaryState
+            The current boundary-observer state.
+        petri_ctx : dict[str, float] | None
+            Petri context metric values, or ``None``.
+
+        Returns
+        -------
+        list[ControlAction]
+            The control actions proposed for the current state.
+        """
         proposed = self._proposed_regime(upde_state, boundary_state, petri_ctx)
         regime = self._regime_manager.transition(proposed)
 

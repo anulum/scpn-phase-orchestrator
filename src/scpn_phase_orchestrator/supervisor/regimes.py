@@ -95,11 +95,30 @@ class RegimeManager:
 
     @property
     def current_regime(self) -> Regime:
-        """The regime established after the most recent transition."""
+        """The regime established after the most recent transition.
+
+        Returns
+        -------
+        Regime
+            The regime established after the most recent transition.
+        """
         return self._current
 
     def evaluate(self, upde_state: UPDEState, boundary_state: BoundaryState) -> Regime:
-        """Propose a regime based on current R values and boundary state."""
+        """Propose a regime based on current R values and boundary state.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The current UPDE state.
+        boundary_state : BoundaryState
+            The current boundary-observer state.
+
+        Returns
+        -------
+        Regime
+            The regime proposed for the current state.
+        """
         if boundary_state.hard_violations:
             return Regime.CRITICAL
 
@@ -126,7 +145,18 @@ class RegimeManager:
         return Regime.NOMINAL
 
     def transition(self, proposed: Regime) -> Regime:
-        """Apply cooldown/hysteresis logic and commit the regime transition."""
+        """Apply cooldown/hysteresis logic and commit the regime transition.
+
+        Parameters
+        ----------
+        proposed : Regime
+            The proposed regime to transition into.
+
+        Returns
+        -------
+        Regime
+            The committed regime after cooldown/hysteresis.
+        """
         proposed = _validate_regime(proposed)
         self._step_counter += 1
 
@@ -162,7 +192,18 @@ class RegimeManager:
         return proposed
 
     def force_transition(self, regime: Regime) -> Regime:
-        """Bypass cooldown and hysteresis hold."""
+        """Bypass cooldown and hysteresis hold.
+
+        Parameters
+        ----------
+        regime : Regime
+            The current control regime.
+
+        Returns
+        -------
+        Regime
+            The regime after a forced transition.
+        """
         regime = _validate_regime(regime)
         self._step_counter += 1
         prev = self._current

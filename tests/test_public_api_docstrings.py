@@ -158,6 +158,21 @@ SECTION_ENFORCED_MODULES = (
     "scpn_phase_orchestrator.monitor.stl",
     "scpn_phase_orchestrator.monitor.transfer_entropy",
     "scpn_phase_orchestrator.monitor.winding",
+    "scpn_phase_orchestrator.supervisor.byzantine",
+    "scpn_phase_orchestrator.supervisor.events",
+    "scpn_phase_orchestrator.supervisor.information_geometry",
+    "scpn_phase_orchestrator.supervisor.information_geometry_examples",
+    "scpn_phase_orchestrator.supervisor.lineage",
+    "scpn_phase_orchestrator.supervisor.multiverse",
+    "scpn_phase_orchestrator.supervisor.multiverse_examples",
+    "scpn_phase_orchestrator.supervisor.multiverse_risk",
+    "scpn_phase_orchestrator.supervisor.petri_adapter",
+    "scpn_phase_orchestrator.supervisor.petri_net",
+    "scpn_phase_orchestrator.supervisor.policy",
+    "scpn_phase_orchestrator.supervisor.policy_diagnostics",
+    "scpn_phase_orchestrator.supervisor.policy_rules",
+    "scpn_phase_orchestrator.supervisor.regimes",
+    "scpn_phase_orchestrator.supervisor.topology",
 )
 
 

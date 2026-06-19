@@ -162,11 +162,23 @@ class Marking:
             self.tokens[place] = count
 
     def active_places(self) -> list[str]:
-        """Return names of places that hold at least one token."""
+        """Return names of places that hold at least one token.
+
+        Returns
+        -------
+        list[str]
+            Return names of places that hold at least one token.
+        """
         return [p for p, n in self.tokens.items() if n > 0]
 
     def copy(self) -> Marking:
-        """Return a shallow copy of this marking."""
+        """Return a shallow copy of this marking.
+
+        Returns
+        -------
+        Marking
+            Return a shallow copy of this marking.
+        """
         return Marking(tokens=dict(self.tokens))
 
 
@@ -210,17 +222,35 @@ class PetriNet:
 
     @property
     def place_names(self) -> frozenset[str]:
-        """All place names registered in this net."""
+        """All place names registered in this net.
+
+        Returns
+        -------
+        frozenset[str]
+            All place names registered in this net.
+        """
         return self._place_names
 
     @property
     def transitions(self) -> list[Transition]:
-        """All transitions in firing-priority order."""
+        """All transitions in firing-priority order.
+
+        Returns
+        -------
+        list[Transition]
+            All transitions in firing-priority order.
+        """
         return list(self._transitions)
 
     @property
     def guard_metrics(self) -> frozenset[str]:
-        """Whitelisted context metric names used by transition guards."""
+        """Whitelisted context metric names used by transition guards.
+
+        Returns
+        -------
+        frozenset[str]
+            Whitelisted context metric names used by transition guards.
+        """
         return self._guard_metrics
 
     def _validated_context(self, ctx: Mapping[str, float]) -> dict[str, float]:
@@ -238,7 +268,20 @@ class PetriNet:
         return validated
 
     def enabled(self, marking: Marking, ctx: Mapping[str, float]) -> list[Transition]:
-        """Return all transitions whose input arcs and guards are satisfied."""
+        """Return all transitions whose input arcs and guards are satisfied.
+
+        Parameters
+        ----------
+        marking : Marking
+            The Petri net marking (token distribution).
+        ctx : Mapping[str, float]
+            Context metric values keyed by guard-metric name.
+
+        Returns
+        -------
+        list[Transition]
+            The transitions whose input arcs and guards are satisfied.
+        """
         ctx = self._validated_context(ctx)
         result = []
         for t in self._transitions:
@@ -249,7 +292,20 @@ class PetriNet:
         return result
 
     def fire(self, marking: Marking, transition: Transition) -> Marking:
-        """Fire *transition*, consuming input tokens and producing output tokens."""
+        """Fire *transition*, consuming input tokens and producing output tokens.
+
+        Parameters
+        ----------
+        marking : Marking
+            The Petri net marking (token distribution).
+        transition : Transition
+            The transition to fire.
+
+        Returns
+        -------
+        Marking
+            The marking after firing the transition.
+        """
         new = marking.copy()
         for arc in transition.inputs:
             new[arc.place] = new[arc.place] - arc.weight
@@ -260,7 +316,20 @@ class PetriNet:
     def step(
         self, marking: Marking, ctx: Mapping[str, float]
     ) -> tuple[Marking, Transition | None]:
-        """Fire the first enabled transition, return (new_marking, fired_transition)."""
+        """Fire the first enabled transition, return (new_marking, fired_transition).
+
+        Parameters
+        ----------
+        marking : Marking
+            The Petri net marking (token distribution).
+        ctx : Mapping[str, float]
+            Context metric values keyed by guard-metric name.
+
+        Returns
+        -------
+        tuple[Marking, Transition | None]
+            The new marking and the fired transition (or ``None``).
+        """
         ctx = self._validated_context(ctx)
         for t in self._transitions:
             if t.guard is not None and not t.guard.evaluate(ctx):

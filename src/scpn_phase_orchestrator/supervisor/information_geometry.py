@@ -72,7 +72,13 @@ class InformationGeometryControlProposal:
     state: InformationGeometryState
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe audit payload for the proposal."""
+        """Return a JSON-safe audit payload for the proposal.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe audit payload for the proposal.
+        """
         return {
             "action_proposals": [
                 {
@@ -120,6 +126,33 @@ def propose_information_geometry_control(
     The default NumPy backend preserves historical audit hashes; passing
     ``backend="jax"`` uses a JAX-native vectorised metric path and converts the
     resulting proposal back to JSON-safe NumPy scalars and arrays.
+
+    Parameters
+    ----------
+    current_distribution : FloatArray | list[float] | tuple[float, ...]
+        The current probability distribution.
+    target_distribution : FloatArray | list[float] | tuple[float, ...]
+        The target probability distribution.
+    coupling_gradient : FloatArray | list[float] | tuple[float, ...] | None
+        Gradient of coherence with respect to the coupling, or ``None``.
+    max_step : float
+        Maximum control step magnitude.
+    knob : str
+        Name of the control knob to adjust.
+    scope : str
+        Scope label for the proposed control.
+    backend : str
+        Name of the compute backend to use.
+
+    Returns
+    -------
+    InformationGeometryControlProposal
+        The deterministic information-geometry control proposal.
+
+    Raises
+    ------
+    ValueError
+        If the distributions or step are invalid.
     """
     simplex = _normalise_simplex(current_distribution, "current_distribution")
     target = _normalise_simplex(target_distribution, "target_distribution")

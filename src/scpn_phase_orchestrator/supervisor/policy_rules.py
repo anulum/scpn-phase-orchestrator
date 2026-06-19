@@ -135,7 +135,13 @@ class PolicySTLResult:
     result: STLTraceResult
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe policy STL audit record."""
+        """Return a JSON-safe policy STL audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe policy STL audit record.
+        """
         payload = self.result.to_audit_record()
         payload["name"] = self.name
         payload["severity"] = self.severity
@@ -151,7 +157,13 @@ class PolicySTLAutomaton:
     automaton: STLMonitoringAutomaton
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe policy STL automaton audit record."""
+        """Return a JSON-safe policy STL automaton audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe policy STL automaton audit record.
+        """
         payload = self.automaton.to_audit_record()
         payload["name"] = self.name
         payload["severity"] = self.severity
@@ -172,7 +184,18 @@ class PolicyEngine:
         self._clock: float = 0.0
 
     def advance_clock(self, dt: float) -> None:
-        """Advance the internal clock used for cooldown tracking."""
+        """Advance the internal clock used for cooldown tracking.
+
+        Parameters
+        ----------
+        dt : float
+            Integration step size.
+
+        Raises
+        ------
+        ValueError
+            If ``dt`` is not positive.
+        """
         if isinstance(dt, bool) or not isinstance(dt, Real):
             raise ValueError(f"dt must be a finite non-negative real, got {dt!r}")
         dt = float(dt)
@@ -187,7 +210,24 @@ class PolicyEngine:
         good_layers: list[int],
         bad_layers: list[int],
     ) -> list[ControlAction]:
-        """Evaluate all rules against current state and return triggered actions."""
+        """Evaluate all rules against current state and return triggered actions.
+
+        Parameters
+        ----------
+        regime : Regime
+            The current control regime.
+        upde_state : UPDEState
+            The current UPDE state.
+        good_layers : list[int]
+            Indices of the maintain (good) layers.
+        bad_layers : list[int]
+            Indices of the suppress (bad) layers.
+
+        Returns
+        -------
+        list[ControlAction]
+            The control actions triggered by the matching rules.
+        """
         actions: list[ControlAction] = []
         for rule in self._rules:
             if regime.value.upper() not in rule.regimes:
@@ -406,7 +446,23 @@ def _parse_stl_spec(raw: Any) -> PolicySTLSpec:
 
 
 def load_policy_stl_specs(path: str | Path) -> list[PolicySTLSpec]:
-    """Load top-level ``stl_monitors`` declarations from a policy YAML file."""
+    """Load top-level ``stl_monitors`` declarations from a policy YAML file.
+
+    Parameters
+    ----------
+    path : str | Path
+        Filesystem path to the policy YAML file.
+
+    Returns
+    -------
+    list[PolicySTLSpec]
+        The STL monitor declarations from the policy YAML.
+
+    Raises
+    ------
+    ValueError
+        If the policy YAML is malformed.
+    """
     import yaml
 
     path = Path(path)
@@ -431,7 +487,20 @@ def evaluate_policy_stl_specs(
     specs: list[PolicySTLSpec] | tuple[PolicySTLSpec, ...],
     trace: dict[str, list[float]],
 ) -> list[PolicySTLResult]:
-    """Evaluate policy-declared STL monitors over a scalar trace."""
+    """Evaluate policy-declared STL monitors over a scalar trace.
+
+    Parameters
+    ----------
+    specs : list[PolicySTLSpec] | tuple[PolicySTLSpec, ...]
+        The STL monitor specifications.
+    trace : dict[str, list[float]]
+        Signal trace keyed by variable name, each a list of floats.
+
+    Returns
+    -------
+    list[PolicySTLResult]
+        The per-monitor STL evaluation results.
+    """
     return [
         PolicySTLResult(
             name=spec.name,
@@ -446,7 +515,20 @@ def synthesise_policy_stl_automata(
     specs: list[PolicySTLSpec] | tuple[PolicySTLSpec, ...],
     trace: dict[str, list[float]],
 ) -> list[PolicySTLAutomaton]:
-    """Synthesize audit automata for policy-declared builtin STL monitors."""
+    """Synthesise audit automata for policy-declared builtin STL monitors.
+
+    Parameters
+    ----------
+    specs : list[PolicySTLSpec] | tuple[PolicySTLSpec, ...]
+        The STL monitor specifications.
+    trace : dict[str, list[float]]
+        Signal trace keyed by variable name, each a list of floats.
+
+    Returns
+    -------
+    list[PolicySTLAutomaton]
+        The audit automata for the policy STL monitors.
+    """
     return [
         PolicySTLAutomaton(
             name=spec.name,
@@ -465,6 +547,21 @@ def load_policy_rules(path: str | Path) -> list[PolicyRule]:
 
     Supports both v0.1 (single condition/action) and v0.2 (compound
     conditions with logic, action chains) formats.
+
+    Parameters
+    ----------
+    path : str | Path
+        Filesystem path to the policy YAML file.
+
+    Returns
+    -------
+    list[PolicyRule]
+        The policy rules loaded from the YAML file.
+
+    Raises
+    ------
+    ValueError
+        If the policy YAML is malformed.
     """
     import yaml
 

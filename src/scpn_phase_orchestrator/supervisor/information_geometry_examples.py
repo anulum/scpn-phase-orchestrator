@@ -110,16 +110,34 @@ class DistributionPair:
 
     @property
     def current_summary(self) -> dict[str, float]:
-        """Return summary statistics for the current distribution."""
+        """Return summary statistics for the current distribution.
+
+        Returns
+        -------
+        dict[str, float]
+            Return summary statistics for the current distribution.
+        """
         return _distribution_summary(self.current_distribution)
 
     @property
     def target_summary(self) -> dict[str, float]:
-        """Return summary statistics for the target distribution."""
+        """Return summary statistics for the target distribution.
+
+        Returns
+        -------
+        dict[str, float]
+            Return summary statistics for the target distribution.
+        """
         return _distribution_summary(self.target_distribution)
 
     def to_record(self) -> dict[str, list[float]]:
-        """Return a deterministic JSON-safe record."""
+        """Return a deterministic JSON-safe record.
+
+        Returns
+        -------
+        dict[str, list[float]]
+            Return a deterministic JSON-safe record.
+        """
         return {
             "current_distribution": self.current_distribution.tolist(),
             "target_distribution": self.target_distribution.tolist(),
@@ -142,7 +160,13 @@ class InformationGeometryScenario:
     claim_boundary: str = InformationGeometryBoundary
 
     def scenario_hash(self) -> str:
-        """Return the deterministic scenario digest."""
+        """Return the deterministic scenario digest.
+
+        Returns
+        -------
+        str
+            Return the deterministic scenario digest.
+        """
         return _compute_scenario_hash(
             domain=self.domain,
             scenario_id=self.scenario_id,
@@ -157,7 +181,13 @@ class InformationGeometryScenario:
         )
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         distributions = self.distributions.to_record()
         return {
             "domain": self.domain,
@@ -489,7 +519,13 @@ def _build_static_scenarios() -> tuple[InformationGeometryScenario, ...]:
 
 
 def build_information_geometry_control_scenarios() -> tuple[dict[str, object], ...]:
-    """Build deterministic information-geometry control scenarios."""
+    """Build deterministic information-geometry control scenarios.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Build deterministic information-geometry control scenarios.
+    """
     records: list[dict[str, object]] = []
     for scenario in _build_static_scenarios():
         _validate_information_geometry_scenario(scenario)

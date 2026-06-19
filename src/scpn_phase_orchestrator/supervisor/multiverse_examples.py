@@ -95,7 +95,13 @@ class BranchCandidate:
     claim_boundary: str = CounterfactualBoundary
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "candidate_id": self.candidate_id,
             "knob_variations": [[name, value] for name, value in self.knob_variations],
@@ -122,7 +128,13 @@ class DomainScenario:
     claim_boundary: str = CounterfactualBoundary
 
     def scenario_hash(self) -> str:
-        """Return the deterministic scenario digest."""
+        """Return the deterministic scenario digest.
+
+        Returns
+        -------
+        str
+            Return the deterministic scenario digest.
+        """
         return _compute_scenario_hash(
             domain=self.domain,
             scenario_id=self.scenario_id,
@@ -133,7 +145,13 @@ class DomainScenario:
         )
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-safe audit record."""
+        """Return a deterministic JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-safe audit record.
+        """
         return {
             "domain": self.domain,
             "scenario_id": self.scenario_id,
@@ -535,7 +553,13 @@ def _build_static_scenarios() -> tuple[DomainScenario, ...]:
 
 
 def build_multiverse_domain_scenarios() -> tuple[dict[str, object], ...]:
-    """Build deterministic multiverse domain scenario records."""
+    """Build deterministic multiverse domain scenario records.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Build deterministic multiverse domain scenario records.
+    """
     scenarios = _build_static_scenarios()
     records: list[dict[str, object]] = []
 

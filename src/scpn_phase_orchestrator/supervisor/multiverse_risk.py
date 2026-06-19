@@ -52,7 +52,13 @@ class BranchRiskDecision:
     rejection_reasons: tuple[str, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe branch decision record."""
+        """Return a JSON-safe branch decision record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe branch decision record.
+        """
         return {
             "branch_id": self.branch_id,
             "branch_hash": self.branch_hash,
@@ -86,7 +92,13 @@ class MultiverseRiskReport:
     report_hash: str
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe multiverse risk gate audit record."""
+        """Return a JSON-safe multiverse risk gate audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-safe multiverse risk gate audit record.
+        """
         return {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
@@ -287,7 +299,20 @@ def evaluate_multiverse_branch_risk(
     manifest: Mapping[str, object],
     thresholds: MultiverseRiskThresholds | None = None,
 ) -> MultiverseRiskReport:
-    """Evaluate branch risk decisions for a branch manifest without actuation."""
+    """Evaluate branch risk decisions for a branch manifest without actuation.
+
+    Parameters
+    ----------
+    manifest : Mapping[str, object]
+        The branch rollout manifest to evaluate.
+    thresholds : MultiverseRiskThresholds | None
+        Risk thresholds, or ``None`` for defaults.
+
+    Returns
+    -------
+    MultiverseRiskReport
+        The multiverse risk-gate report.
+    """
     thresholds = _normalise_thresholds(thresholds)
     branches = _extract_manifest_branches(manifest)
 

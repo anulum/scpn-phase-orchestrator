@@ -81,7 +81,13 @@ class TopologyMutationResult:
     global_coherence: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable audit payload for topology mutation."""
+        """Return a serialisable audit payload for topology mutation.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a serialisable audit payload for topology mutation.
+        """
         return {
             "global_coherence": self.global_coherence,
             "pairwise_delta_norm": self.pairwise_delta_norm,
@@ -109,7 +115,22 @@ class HigherOrderTopologySupervisor:
         knm: FloatArray,
         hyperedges: tuple[Hyperedge, ...] | None = None,
     ) -> TopologyMutationResult:
-        """Return a mutated topology for the next supervisor actuation step."""
+        """Return a mutated topology for the next supervisor actuation step.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        hyperedges : tuple[Hyperedge, ...] | None
+            Existing hyperedges, or ``None``.
+
+        Returns
+        -------
+        TopologyMutationResult
+            The mutated topology for the next actuation step.
+        """
         phases_arr = _validate_phases(phases)
         knm_arr = _validate_knm(knm, phases_arr.size)
         existing = _canonical_hyperedges(tuple(hyperedges or ()))
