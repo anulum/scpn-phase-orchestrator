@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 584
+    "test_files": 585
   },
   "documentation": {
     "public_pages": [
@@ -1474,6 +1474,7 @@
       "tests/test_dimension_benchmark.py",
       "tests/test_dimension_guards.py",
       "tests/test_dimension_stability.py",
+      "tests/test_dimension_validation_guards.py",
       "tests/test_distributed_sync.py",
       "tests/test_distributed_sync_validation.py",
       "tests/test_doctor.py",
