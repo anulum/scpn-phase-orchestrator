@@ -241,3 +241,78 @@ class TestSleepStagingPipelineWiring:
         assert stage in ("N3", "N2", "N1", "REM", "Wake")
         if r > 0.65:
             assert stage == "N3"
+
+
+@pytest.mark.parametrize(
+    ("order_parameter", "desync", "expected"),
+    [
+        (0.85, False, "N3"),
+        (0.50, False, "N2"),
+        (0.35, False, "N1"),
+        (0.35, True, "REM"),
+        (0.25, True, "REM"),
+        (0.25, False, "Wake"),
+        (0.05, True, "Wake"),
+    ],
+)
+def test_numpy_fallback_classifies_each_stage(
+    monkeypatch, order_parameter, desync, expected
+):
+    """The pure-NumPy classifier resolves every stage band and REM split."""
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", False)
+    assert classify_sleep_stage(order_parameter, functional_desync=desync) == expected
+
+
+def test_numpy_fallback_ultradian_phase_from_last_n3(monkeypatch):
+    """The NumPy ultradian fallback measures elapsed fraction since the last N3."""
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", False)
+    timestamps = np.array([0.0, 60.0, 120.0, 180.0])
+    stages = ["Wake", "N3", "N2", "REM"]
+    phase = ultradian_phase(timestamps, stages)
+    # Last N3 is at t=60 s; elapsed 120 s of the 5400 s ultradian period.
+    assert phase == pytest.approx(120.0 / (90.0 * 60.0))
+
+
+def test_numpy_fallback_ultradian_phase_without_n3_is_zero(monkeypatch):
+    """With no N3 epoch the NumPy fallback returns a zero phase."""
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", False)
+    timestamps = np.array([0.0, 60.0, 120.0])
+    assert ultradian_phase(timestamps, ["Wake", "N2", "REM"]) == 0.0
+
+
+def test_timestamps_reject_non_castable_samples():
+    """Timestamps that cannot be cast to float are rejected, not silently zeroed."""
+    with pytest.raises(ValueError, match="timestamps must be a finite 1-D array"):
+        ultradian_phase(np.array(["a", "b"], dtype=object), ["Wake", "N2"])
+
+
+def test_timestamps_reject_complex_samples():
+    """Complex timestamp samples are rejected before staging."""
+    with pytest.raises(ValueError, match="timestamps must contain real-valued samples"):
+        ultradian_phase(np.array([0.0 + 1.0j, 1.0 + 0.0j]), ["Wake", "N2"])
+
+
+def test_rust_stage_code_rejects_non_real_output(monkeypatch):
+    """A non-real Rust stage code is rejected rather than coerced."""
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sleep_staging_module,
+        "_rust_classify",
+        lambda *_args: None,
+        raising=False,
+    )
+    with pytest.raises(ValueError, match="Rust sleep stage code must be an integer"):
+        classify_sleep_stage(0.85)
+
+
+def test_rust_ultradian_rejects_non_real_output(monkeypatch):
+    """A non-real Rust ultradian phase is rejected rather than coerced."""
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sleep_staging_module,
+        "_rust_ultradian",
+        lambda *_args: None,
+        raising=False,
+    )
+    with pytest.raises(ValueError, match="Rust ultradian phase must be a finite real"):
+        ultradian_phase(np.array([0.0, 60.0]), ["N3", "REM"])
