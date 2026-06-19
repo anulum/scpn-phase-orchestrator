@@ -178,9 +178,7 @@ def _scenario_hook(pack: str, base_omegas: np.ndarray) -> ScenarioHook:
             if 75 <= ctx.step < 150:
                 ids = _layer_ids(ctx, 0)
                 if ids:
-                    ctx.phases[ids] = ctx.phases[ids] * 0.95 + 0.05 * ctx.phases[
-                        ids[0]
-                    ]
+                    ctx.phases[ids] = ctx.phases[ids] * 0.95 + 0.05 * ctx.phases[ids[0]]
             if 150 <= ctx.step < 225:
                 ctx.zeta = 0.3
                 ctx.psi_target = 2.0 * np.pi * 10.0 * ctx.step * ctx.sample_period_s
@@ -265,8 +263,7 @@ def run_benchmark(*, steps: int, seed: int, domainpacks_root: Path) -> dict[str,
         "steps": steps,
         "seed": seed,
         "metric": (
-            "scenario-driven separation = R_good - R_bad; "
-            "uplift = closed - open"
+            "scenario-driven separation = R_good - R_bad; uplift = closed - open"
         ),
         "packs": records,
     }
