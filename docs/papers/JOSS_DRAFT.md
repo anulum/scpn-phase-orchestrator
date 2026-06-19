@@ -108,7 +108,8 @@ configuration.
 - **Kani formal safety harnesses.** Verify control bound correctness,
   rate-limit enforcement, and supervisor classification invariants in the
   Rust kernel.
-- **4 500+ tests** (3 945 Python + 567 Rust) across 120+ test files, 99%+ coverage.
+- **15 000+ Python tests** across 587 test files plus the Rust kernel suite,
+  at ~94% line coverage.
 
 # Measured Evidence
 
