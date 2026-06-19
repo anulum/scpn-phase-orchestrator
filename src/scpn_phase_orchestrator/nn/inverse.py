@@ -110,7 +110,7 @@ def _shooting_loss(
         The result.
     """
 
-    def window_error(start, target):
+    def window_error(start: jax.Array, target: jax.Array) -> jax.Array:
         """Phase prediction error for a single shooting window."""
         _, predicted = kuramoto_forward(start, omegas, K, dt, window_size)
         return jnp.mean(1.0 - jnp.cos(target - predicted))
@@ -203,7 +203,10 @@ def analytical_inverse(
         reg = alpha * jnp.diag(jnp.concatenate([jnp.ones(N), jnp.zeros(1)]))
 
         def _solve(design_i: jax.Array, target: jax.Array) -> jax.Array:
-            return jnp.linalg.solve(design_i.T @ design_i + reg, design_i.T @ target)
+            solution_i: jax.Array = jnp.linalg.solve(
+                design_i.T @ design_i + reg, design_i.T @ target
+            )
+            return solution_i
 
         solution = jax.vmap(_solve)(design, targets)
     else:
@@ -260,7 +263,7 @@ def hybrid_inverse(
 
     starts, targets = _build_windows(observed, window_size)
 
-    def loss_fn(k, o):
+    def loss_fn(k: jax.Array, o: jax.Array) -> jax.Array:
         """Shooting loss for refinement step."""
         return _shooting_loss(k, o, starts, targets, dt, window_size, 0.0)
 
@@ -354,12 +357,12 @@ def infer_coupling(
     if window_size > 0:
         starts, targets = _build_windows(observed, window_size)
 
-        def loss_fn(k, o):
+        def loss_fn(k: jax.Array, o: jax.Array) -> jax.Array:
             """Multiple-shooting loss with L1 penalty."""
             return _shooting_loss(k, o, starts, targets, dt, window_size, l1_weight)
     else:
 
-        def loss_fn(k, o):
+        def loss_fn(k: jax.Array, o: jax.Array) -> jax.Array:
             """Single-shot inverse loss with L1 penalty."""
             return inverse_loss(k, o, observed, dt, l1_weight)
 

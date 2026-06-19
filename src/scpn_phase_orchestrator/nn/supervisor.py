@@ -23,11 +23,12 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from math import isfinite
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeGuard
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -678,7 +679,7 @@ def closed_loop_supervisor_loss(
         step_scenario = scenario._replace(phases=phases)
         action = policy(step_scenario)
         controlled_K = apply_supervisor_action(scenario.base_K, action, scenario)
-        final, _ = kuramoto_forward(
+        final, _traj = kuramoto_forward(
             phases,
             scenario.omegas,
             controlled_K,
@@ -3266,7 +3267,9 @@ def _upde_state_from_supervisor_scenario(
             LayerState(R=good_R, psi=0.0),
             LayerState(R=bad_R, psi=0.0),
         ],
-        cross_layer_alignment=jnp.asarray([[1.0, global_R], [global_R, 1.0]]),
+        cross_layer_alignment=np.asarray(
+            [[1.0, global_R], [global_R, 1.0]], dtype=np.float64
+        ),
         stability_proxy=global_R,
         regime_id="supervisor_baseline_comparison",
     )
@@ -3353,7 +3356,7 @@ def _put_finite_metric(
         metrics[key] = float(value)
 
 
-def _is_finite_number(value: object) -> bool:
+def _is_finite_number(value: object) -> TypeGuard[float]:
     return (
         not isinstance(value, bool)
         and isinstance(value, int | float)

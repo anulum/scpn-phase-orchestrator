@@ -950,7 +950,9 @@ def _saf_order_parameter_cg(
     def matvec(x: jax.Array) -> jax.Array:
         return degree * x - K @ x + eps * x
 
-    solution, _ = cg(matvec, centred_omegas, tol=tol, maxiter=maxiter)
+    solution, _ = cg(  # type: ignore[no-untyped-call]  # jax.scipy cg is untyped
+        matvec, centred_omegas, tol=tol, maxiter=maxiter
+    )
     solution = solution - jnp.mean(solution)
     r = 1.0 - jnp.vdot(solution, solution).real / (2.0 * N)
     return jnp.clip(r, 0.0, 1.0)

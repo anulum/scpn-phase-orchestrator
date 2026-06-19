@@ -227,10 +227,6 @@ module = [
 warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
-module = ["scpn_phase_orchestrator.monitor.poincare"]
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 module = ["tests", "tests.*"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
@@ -280,9 +276,6 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["scpn_phase_orchestrator.nn.*"]
 ignore_missing_imports = true
-ignore_errors = true
-disallow_untyped_defs = false
-warn_return_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -23,6 +23,8 @@ Requires: jax>=0.4
 
 from __future__ import annotations
 
+from typing import Any
+
 import jax
 import jax.numpy as jnp
 
@@ -230,7 +232,7 @@ def oim_solve(
         noise_keys = jax.random.split(noise_base_key, n_anneal)
 
         # Annealing via scan
-        def anneal_body(phases, xs):
+        def anneal_body(phases: jax.Array, xs: Any) -> tuple[jax.Array, None]:
             k, ns, nk = xs
             dphi = _oim_deriv(phases, adjacency, coupling_n, k)
             phases = (phases + dt * dphi) % TWO_PI
@@ -245,7 +247,7 @@ def oim_solve(
         )
 
         # Refinement via scan (fixed coupling, no noise)
-        def refine_body(phases, _):
+        def refine_body(phases: jax.Array, _: Any) -> tuple[jax.Array, None]:
             dphi = _oim_deriv(phases, adjacency, coupling_n, k_max)
             return (phases + dt * dphi) % TWO_PI, None
 

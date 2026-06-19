@@ -22,6 +22,8 @@ Requires: jax>=0.4, equinox>=0.11
 
 from __future__ import annotations
 
+from typing import Any
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -35,7 +37,7 @@ class CouplingResidual(eqx.Module):
     Maps phase difference Δθ → correction to sin(Δθ).
     """
 
-    layers: list
+    layers: list[Any]
 
     def __init__(self, hidden: int = 16, *, key: jax.Array) -> None:
         k1, k2, k3 = jax.random.split(key, 3)

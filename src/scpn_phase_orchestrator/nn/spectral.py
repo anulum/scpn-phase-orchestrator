@@ -36,7 +36,8 @@ def laplacian_spectrum(K: jax.Array) -> jax.Array:
     """
     D = jnp.diag(jnp.sum(K, axis=1))
     L = D - K
-    return jnp.linalg.eigh(L)[0]
+    eigenvalues: jax.Array = jnp.linalg.eigh(L)[0]
+    return eigenvalues
 
 
 def algebraic_connectivity(K: jax.Array) -> jax.Array:
