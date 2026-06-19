@@ -331,3 +331,95 @@ class TestEIBalancePipelineWiring:
         r, _ = compute_order_parameter(phases)
         assert r > initial_r
         assert 0.0 <= r <= 1.0
+
+
+def test_validate_knm_rejects_non_coercible_matrix() -> None:
+    """A matrix whose entries cannot become float64 fails closed."""
+    knm = np.array([["a", "b"], ["c", "d"]], dtype=object)
+    with pytest.raises(ValueError, match="finite square matrix"):
+        compute_ei_balance(knm, [0], [1])
+
+
+class TestNumpyFallbackPaths:
+    """Exercise the NumPy reference path that mirrors the Rust contract."""
+
+    def test_compute_matches_block_mean_contract(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(ei_balance_module, "_HAS_RUST", False)
+        knm = _uniform_knm(4, k=2.0)
+
+        bal = compute_ei_balance(knm, [0, 1], [2, 3])
+
+        assert bal.ratio == pytest.approx(1.0)
+        assert bal.is_balanced is True
+        # within-group blocks include the zero diagonal -> mean 1.0
+        assert bal.e_to_e == pytest.approx(1.0)
+        assert bal.i_to_i == pytest.approx(1.0)
+        # cross-group blocks have no diagonal -> mean 2.0
+        assert bal.e_to_i == pytest.approx(2.0)
+        assert bal.i_to_e == pytest.approx(2.0)
+
+    def test_compute_reports_infinite_ratio_when_only_inhibition_is_silent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(ei_balance_module, "_HAS_RUST", False)
+        knm = np.zeros((4, 4), dtype=np.float64)
+        knm[0, :] = 1.0
+        knm[1, :] = 1.0
+
+        bal = compute_ei_balance(knm, [0, 1], [2, 3])
+
+        assert bal.ratio == float("inf")
+        assert bal.is_balanced is False
+
+    def test_compute_with_empty_groups_is_neutral(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(ei_balance_module, "_HAS_RUST", False)
+        knm = _uniform_knm(3, k=1.0)
+
+        bal = compute_ei_balance(knm, [], [])
+
+        assert bal.ratio == pytest.approx(1.0)
+        assert bal.excitatory_strength == pytest.approx(0.0)
+        assert bal.inhibitory_strength == pytest.approx(0.0)
+        assert bal.e_to_e == pytest.approx(0.0)
+        assert bal.i_to_i == pytest.approx(0.0)
+
+    def test_adjust_scales_inhibitory_rows_toward_target(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(ei_balance_module, "_HAS_RUST", False)
+        knm = _uniform_knm(4, k=2.0)
+
+        adjusted = adjust_ei_ratio(knm, [0, 1], [2, 3], target_ratio=2.0)
+
+        # current ratio 1.0, target 2.0 -> inhibitory rows scaled by 0.5
+        np.testing.assert_allclose(adjusted[2], knm[2] * 0.5)
+        np.testing.assert_allclose(adjusted[3], knm[3] * 0.5)
+        np.testing.assert_allclose(adjusted[0], knm[0])
+
+    def test_adjust_returns_copy_when_inhibition_is_silent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(ei_balance_module, "_HAS_RUST", False)
+        knm = np.zeros((4, 4), dtype=np.float64)
+        knm[0, :] = 1.0
+        knm[1, :] = 1.0
+
+        adjusted = adjust_ei_ratio(knm, [0, 1], [2, 3], target_ratio=1.0)
+
+        np.testing.assert_array_equal(adjusted, knm)
+        assert adjusted is not knm
+
+    def test_adjust_returns_copy_when_already_at_target(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(ei_balance_module, "_HAS_RUST", False)
+        knm = _uniform_knm(4, k=2.0)
+
+        adjusted = adjust_ei_ratio(knm, [0, 1], [2, 3], target_ratio=1.0)
+
+        np.testing.assert_array_equal(adjusted, knm)
+        assert adjusted is not knm
