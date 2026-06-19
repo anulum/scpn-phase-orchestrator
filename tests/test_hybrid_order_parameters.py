@@ -279,3 +279,126 @@ def test_hybrid_order_explicit_simulator_backend_contracts() -> None:
             bipartition=((0,), (1,)),
             simulator_backend="qpu_live",
         )
+
+
+_PHASES = np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64)
+_TWO_QUBIT_STATE = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128)
+
+
+def _compute(**kwargs):
+    from scpn_phase_orchestrator.monitor.hybrid_order import (
+        compute_hybrid_entanglement_order_parameter,
+    )
+
+    params = {
+        "phases": _PHASES,
+        "quantum_state": _TWO_QUBIT_STATE,
+        "bipartition": ((0,), (1,)),
+    }
+    params.update(kwargs)
+    return compute_hybrid_entanglement_order_parameter(**params)
+
+
+@pytest.mark.parametrize(
+    ("phases", "match"),
+    [
+        (np.array([True, False, True, False]), "must not contain boolean"),
+        (np.array(["a", "b"], dtype=object), "must be numeric"),
+        (np.array([0.0, np.inf, 1.0]), "must contain finite values"),
+    ],
+)
+def test_hybrid_rejects_invalid_phases(phases, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _compute(phases=phases)
+
+
+@pytest.mark.parametrize(
+    ("state", "match"),
+    [
+        (np.array(5.0), "must be a vector or density matrix"),
+        (np.zeros((2, 2, 2)), "must be a vector or density matrix"),
+        (np.ones((2, 3)), "density matrix must be square"),
+        (np.array([[1.0, 0.0], [0.0, np.inf]]), "must contain finite values"),
+        (np.array([[1.0, 2.0], [3.0, 4.0]]), "must be Hermitian"),
+        (np.array([[-1.0, 0.0], [0.0, -1.0]]), "trace must be positive"),
+        (np.array([np.inf, 0.0, 0.0, 0.0]), "must contain finite values"),
+        (np.array([1.0]), "at least two amplitudes"),
+        (np.zeros(4), "must have non-zero norm"),
+        (np.array([True, False, False, False]), "must not contain boolean"),
+    ],
+)
+def test_hybrid_rejects_invalid_quantum_state(state, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _compute(quantum_state=state, bipartition=None)
+
+
+@pytest.mark.parametrize(
+    ("bipartition", "match"),
+    [
+        (5, "must be two index groups"),
+        (((0,),), "must be two index groups"),
+        (((0.5,), (1,)), "indices must be integers"),
+        (((5,), (1,)), "out of range"),
+        (((0,), (5,)), "out of range"),
+        (((), (0, 1)), "must be non-empty"),
+        (((0, 0), (1,)), "unique indices"),
+        (((0,), (0,)), "must be disjoint"),
+    ],
+)
+def test_hybrid_rejects_invalid_bipartition(bipartition, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _compute(bipartition=bipartition)
+
+
+@pytest.mark.parametrize(
+    ("backend", "match"),
+    [
+        ("", "must be a supported backend name"),
+        ("bogus", "must be one of"),
+    ],
+)
+def test_hybrid_rejects_invalid_backend(backend, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _compute(simulator_backend=backend)
+
+
+@pytest.mark.parametrize(
+    ("qubit_count", "match"),
+    [
+        (0, "must be a positive integer"),
+        (3, "inconsistent with quantum_state size"),
+    ],
+)
+def test_hybrid_rejects_invalid_qubit_count(qubit_count, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _compute(qubit_count=qubit_count)
+
+
+def test_hybrid_single_qubit_requires_bipartition_qubits() -> None:
+    with pytest.raises(ValueError, match="requires at least two qubits"):
+        _compute(quantum_state=np.array([1.0, 0.0]), bipartition=None)
+
+
+def test_hybrid_default_bipartition_covers_all_qubits() -> None:
+    result = _compute(bipartition=None)
+    assert result.qubit_count == 2
+    assert result.bipartition == ((0,), (1,))
+
+
+def test_hybrid_accepts_column_vector_state() -> None:
+    column = _TWO_QUBIT_STATE.reshape(4, 1)
+    result = _compute(quantum_state=column)
+    assert result.qubit_count == 2
+
+
+def test_hybrid_normalises_unnormalised_density_matrix() -> None:
+    density = np.diag([2.0, 0.0, 0.0, 0.0]).astype(np.complex128)
+    result = _compute(quantum_state=density)
+    assert result.entanglement_entropy == pytest.approx(0.0, abs=1e-9)
+
+
+def test_hybrid_bipartition_must_cover_every_qubit() -> None:
+    three_qubit = np.zeros(8, dtype=np.complex128)
+    three_qubit[0] = 1.0
+    with pytest.raises(ValueError, match="must cover every qubit"):
+        _compute(quantum_state=three_qubit, bipartition=((0,), (1,)))
