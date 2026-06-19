@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 587
+    "test_files": 592
   },
   "documentation": {
     "public_pages": [
@@ -1501,6 +1501,7 @@
       "tests/test_entropy_prod_backends.py",
       "tests/test_entropy_prod_benchmark.py",
       "tests/test_entropy_prod_stability.py",
+      "tests/test_entropy_prod_validation_guards.py",
       "tests/test_envelope.py",
       "tests/test_envelope_algorithm.py",
       "tests/test_envelope_backends.py",
@@ -1598,6 +1599,7 @@
       "tests/test_lyapunov_benchmark.py",
       "tests/test_lyapunov_spectrum.py",
       "tests/test_lyapunov_stability.py",
+      "tests/test_lyapunov_validation_guards.py",
       "tests/test_manufacturing_spc_domainpack.py",
       "tests/test_manufacturing_spc_morphogenetic_field_demo.py",
       "tests/test_market.py",
@@ -1685,6 +1687,7 @@
       "tests/test_pid.py",
       "tests/test_pid_backends.py",
       "tests/test_pid_benchmark.py",
+      "tests/test_pid_validation_guards.py",
       "tests/test_pipeline_wiring_audit.py",
       "tests/test_plasma_control_bridge.py",
       "tests/test_plasma_control_morphogenetic_field_demo.py",
@@ -1741,6 +1744,7 @@
       "tests/test_psychedelic_algorithm.py",
       "tests/test_psychedelic_backends.py",
       "tests/test_psychedelic_guards.py",
+      "tests/test_psychedelic_validation_guards.py",
       "tests/test_public_api.py",
       "tests/test_public_api_docstrings.py",
       "tests/test_public_api_manifest.py",
@@ -1937,6 +1941,7 @@
       "tests/test_winding_backends.py",
       "tests/test_winding_benchmark.py",
       "tests/test_winding_stability.py",
+      "tests/test_winding_validation_guards.py",
       "tests/test_winfree.py",
       "tests/typing_contracts.py"
     ]
