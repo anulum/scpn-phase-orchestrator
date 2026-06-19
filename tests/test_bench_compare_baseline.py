@@ -162,9 +162,9 @@ def test_multiple_regressions_all_reported(tmp_path: Path) -> None:
         _entry(32, "rk45", "rust", 40.0),
     ]
     current = [
-        _entry(8, "euler", "rust", 150.0),  # +1400%, +140 us
+        _entry(8, "euler", "rust", 200.0),  # +1900%, +190 us (above 150 floor)
         _entry(16, "rk4", "rust", 20.0),  # 0%
-        _entry(32, "rk45", "rust", 170.0),  # +325%, +130 us
+        _entry(32, "rk45", "rust", 250.0),  # +525%, +210 us (above 150 floor)
     ]
     _write_json(tmp_path / "b.json", baseline)
     _write_json(tmp_path / "c.json", current)
@@ -172,8 +172,8 @@ def test_multiple_regressions_all_reported(tmp_path: Path) -> None:
     assert proc.returncode == 1
     assert "2 regression(s)" in proc.stdout
     # Both failing configs must be itemised by the summary loop without crashing.
-    assert "N=   8 euler   rust: +1400.0%" in proc.stdout
-    assert "N=  32  rk45   rust: +325.0%" in proc.stdout
+    assert "N=   8 euler   rust: +1900.0%" in proc.stdout
+    assert "N=  32  rk45   rust: +525.0%" in proc.stdout
     assert "Traceback" not in proc.stderr
 
 

@@ -327,11 +327,20 @@ def test_build_domain_example_raises_on_compilation_failure(monkeypatch):
 def test_build_examples_performance_budget():
     build_topos_domain_obligation_examples()  # warm import/compile caches
 
-    start = time.perf_counter()
-    examples = build_topos_domain_obligation_examples()
-    elapsed = time.perf_counter() - start
+    def _build_once() -> tuple[float, int]:
+        start = time.perf_counter()
+        examples = build_topos_domain_obligation_examples()
+        return time.perf_counter() - start, len(examples)
 
-    assert len(examples) >= 3
+    # Take the best (minimum) build time over several runs. The fastest run
+    # reflects achievable throughput and is robust to transient host load that
+    # inflates a single measurement; a real algorithmic regression degrades
+    # every run.
+    timings = [_build_once() for _ in range(5)]
+    elapsed = min(t for t, _ in timings)
+    count = timings[0][1]
+
+    assert count >= 3
     # Measured mean ~29 ms on the i5-11600K workstation (non-isolated functional
     # budget, not a published benchmark). 0.5 s ceiling guards against
     # algorithmic regression while tolerating a loaded host.

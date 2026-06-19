@@ -25,7 +25,15 @@ from pathlib import Path
 from typing import Any
 
 REGRESSION_THRESHOLD_PCT = 20.0
-REGRESSION_MIN_ABSOLUTE_US = 100.0
+# Absolute-slowdown significance floor. Small-N engine micro-benchmarks
+# (7-120 us/step on the workstation baseline) are dominated by fixed
+# per-measurement overhead on shared CI runners: observed noise deltas reach
+# ~106 us/step there while large-N cases still show the real Rust speedup.
+# The floor must sit above that noise band so a relative "+900%" on a 12 us
+# baseline is tolerated, while genuine regressions — which only matter at
+# large N (256 us/step and up) and produce hundreds-to-thousands of us of
+# absolute slowdown — still fail closed.
+REGRESSION_MIN_ABSOLUTE_US = 150.0
 BENCHMARK_KEY_FIELDS = ("n_osc", "method", "backend")
 BENCHMARK_VALUE_FIELD = "us_per_step"
 
