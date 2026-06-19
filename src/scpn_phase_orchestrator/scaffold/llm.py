@@ -74,10 +74,27 @@ class LLMScaffoldProvider(Protocol):
 
     @property
     def name(self) -> str:
-        """Stable provider name for audit records."""
+        """Stable provider name for audit records.
+
+        Returns
+        -------
+        str
+            Stable provider name for audit records.
+        """
 
     def complete(self, prompt: str) -> str:
-        """Return a JSON object string matching the scaffold proposal contract."""
+        """Return a JSON object string matching the scaffold proposal contract.
+
+        Parameters
+        ----------
+        prompt : str
+            The symbolic domain prompt.
+
+        Returns
+        -------
+        str
+            A JSON object string matching the scaffold proposal contract.
+        """
 
 
 @dataclass(frozen=True)
@@ -118,7 +135,13 @@ class LLMScaffoldProposal:
     description_sha256: str
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-safe audit record for generated domainpack review."""
+        """Return a JSON-safe audit record for generated domainpack review.
+
+        Returns
+        -------
+        dict[str, Any]
+            A JSON-safe audit record for generated domainpack review.
+        """
         return {
             "kind": "llm_scaffold",
             "provider": self.provenance["provider"],
@@ -142,11 +165,33 @@ class StaticJSONScaffoldProvider:
 
     @property
     def name(self) -> str:
-        """Stable provider name recorded in scaffold provenance."""
+        """Stable provider name recorded in scaffold provenance.
+
+        Returns
+        -------
+        str
+            Stable provider name recorded in scaffold provenance.
+        """
         return self.provider_name
 
     def complete(self, prompt: str) -> str:
-        """Return the configured JSON response after checking prompt presence."""
+        """Return the configured JSON response after checking prompt presence.
+
+        Parameters
+        ----------
+        prompt : str
+            The symbolic domain prompt.
+
+        Returns
+        -------
+        str
+            The configured JSON response after checking prompt presence.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if not prompt:
             raise ValueError("prompt must be non-empty")
         return self.response_json
@@ -164,11 +209,35 @@ class LocalHTTPScaffoldProvider:
 
     @property
     def name(self) -> str:
-        """Stable provider name recorded in scaffold provenance."""
+        """Stable provider name recorded in scaffold provenance.
+
+        Returns
+        -------
+        str
+            Stable provider name recorded in scaffold provenance.
+        """
         return self.provider_name
 
     def complete(self, prompt: str) -> str:
-        """Request one JSON-only scaffold completion from the configured endpoint."""
+        """Request one JSON-only scaffold completion from the configured endpoint.
+
+        Parameters
+        ----------
+        prompt : str
+            The symbolic domain prompt.
+
+        Returns
+        -------
+        str
+            Request one JSON-only scaffold completion from the configured endpoint.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        RuntimeError
+            If the operation fails.
+        """
         if not self.endpoint:
             raise ValueError("endpoint must be non-empty")
         if not self.model:
@@ -216,7 +285,23 @@ def configured_llm_scaffold_provider(
     *,
     config: LLMScaffoldConfig | None = None,
 ) -> LLMScaffoldProvider:
-    """Build the configured live provider or fail closed."""
+    """Build the configured live provider or fail closed.
+
+    Parameters
+    ----------
+    config : LLMScaffoldConfig | None
+        The configuration object.
+
+    Returns
+    -------
+    LLMScaffoldProvider
+        The configured live provider or fail closed.
+
+    Raises
+    ------
+    RuntimeError
+        If the operation fails.
+    """
     cfg = config or LLMScaffoldConfig()
     endpoint = os.environ.get("SPO_LLM_ENDPOINT", "").strip()
     model = os.environ.get("SPO_LLM_MODEL", "").strip()
@@ -240,7 +325,29 @@ def propose_domainpack_from_description(
     provider: LLMScaffoldProvider,
     config: LLMScaffoldConfig | None = None,
 ) -> LLMScaffoldProposal:
-    """Generate and validate a domainpack scaffold from natural language intent."""
+    """Generate and validate a domainpack scaffold from natural language intent.
+
+    Parameters
+    ----------
+    description : str
+        Domain description text, or ``None``.
+    project_name : str
+        Name of the project.
+    provider : LLMScaffoldProvider
+        Name of the hardware provider.
+    config : LLMScaffoldConfig | None
+        The configuration object.
+
+    Returns
+    -------
+    LLMScaffoldProposal
+        And validate a domainpack scaffold from natural language intent.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     cfg = config or LLMScaffoldConfig()
     if not _DOMAIN_NAME_RE.match(project_name):
         raise ValueError(

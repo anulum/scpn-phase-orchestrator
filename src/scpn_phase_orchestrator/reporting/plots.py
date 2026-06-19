@@ -205,7 +205,18 @@ class CoherencePlot:
         return n, np.array(values).reshape(n, n)
 
     def plot_r_timeline(self, output_path: str | Path) -> Path:
-        """Line chart of per-layer R over simulation steps."""
+        """Line chart of per-layer R over simulation steps.
+
+        Parameters
+        ----------
+        output_path : str | Path
+            Destination path for the artefact.
+
+        Returns
+        -------
+        Path
+            Line chart of per-layer R over simulation steps.
+        """
         x, n_layers, series = self._extract_r_series()
         plt, _ = _require_matplotlib()
 
@@ -224,7 +235,18 @@ class CoherencePlot:
         return out
 
     def plot_regime_timeline(self, output_path: str | Path) -> Path:
-        """Coloured horizontal bands per regime epoch."""
+        """Coloured horizontal bands per regime epoch.
+
+        Parameters
+        ----------
+        output_path : str | Path
+            Destination path for the artefact.
+
+        Returns
+        -------
+        Path
+            Coloured horizontal bands per regime epoch.
+        """
         epochs = self._extract_regime_epochs()
         plt, Rectangle = _require_matplotlib()
         steps = self._steps
@@ -251,7 +273,18 @@ class CoherencePlot:
         return out
 
     def plot_action_audit(self, output_path: str | Path) -> Path:
-        """Vertical markers at steps where control actions fired."""
+        """Vertical markers at steps where control actions fired.
+
+        Parameters
+        ----------
+        output_path : str | Path
+            Destination path for the artefact.
+
+        Returns
+        -------
+        Path
+            Vertical markers at steps where control actions fired.
+        """
         x_all, r_global, knob_steps = self._extract_actions()
         plt, _ = _require_matplotlib()
 
@@ -284,6 +317,16 @@ class CoherencePlot:
 
         Reads 'mean_amplitude' from step records. Falls back to zero
         if the field is absent (phase-only simulation).
+
+        Parameters
+        ----------
+        output_path : str | Path
+            Destination path for the artefact.
+
+        Returns
+        -------
+        Path
+            Mean amplitude per step with subcritical threshold line.
         """
         x, amps, sub_frac = self._extract_amplitude()
         plt, _ = _require_matplotlib()
@@ -322,6 +365,16 @@ class CoherencePlot:
 
         Reads the last 'pac_matrix' event/record from log data.
         The matrix should be stored as a flat list with shape (N, N).
+
+        Parameters
+        ----------
+        output_path : str | Path
+            Destination path for the artefact.
+
+        Returns
+        -------
+        Path
+            N x N PAC modulation index heatmap.
         """
         n, mat = self._extract_pac_matrix()
         plt, _ = _require_matplotlib()

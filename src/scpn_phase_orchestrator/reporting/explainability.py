@@ -236,7 +236,25 @@ def build_explainability_report(
     *,
     max_actions: int = 12,
 ) -> ExplainabilityReport:
-    """Build a structured explanation from parsed audit records."""
+    """Build a structured explanation from parsed audit records.
+
+    Parameters
+    ----------
+    entries : list[dict[str, Any]]
+        Audit-log entries.
+    max_actions : int
+        Maximum number of actions to include.
+
+    Returns
+    -------
+    ExplainabilityReport
+        A structured explanation from parsed audit records.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     steps = _step_records(entries)
     if not steps:
         raise ValueError("no step records in audit log")
@@ -258,7 +276,18 @@ def build_explainability_report(
 
 
 def render_markdown(report: ExplainabilityReport) -> str:
-    """Render a structured report as Markdown."""
+    """Render a structured report as Markdown.
+
+    Parameters
+    ----------
+    report : ExplainabilityReport
+        The report mapping.
+
+    Returns
+    -------
+    str
+        Render a structured report as Markdown.
+    """
     lines = [
         "# SCPN Phase Orchestrator Explainability Report",
         "",
@@ -304,7 +333,20 @@ def render_markdown(report: ExplainabilityReport) -> str:
 
 
 def write_markdown(report: ExplainabilityReport, output_path: str | Path) -> Path:
-    """Write Markdown report and return the output path."""
+    """Write Markdown report and return the output path.
+
+    Parameters
+    ----------
+    report : ExplainabilityReport
+        The report mapping.
+    output_path : str | Path
+        Destination path for the artefact.
+
+    Returns
+    -------
+    Path
+        Write Markdown report and return the output path.
+    """
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render_markdown(report), encoding="utf-8")
@@ -395,7 +437,20 @@ def _make_pdf_bytes(lines: list[str]) -> bytes:
 
 
 def write_pdf(report: ExplainabilityReport, output_path: str | Path) -> Path:
-    """Write a dependency-free text PDF report and return the output path."""
+    """Write a dependency-free text PDF report and return the output path.
+
+    Parameters
+    ----------
+    report : ExplainabilityReport
+        The report mapping.
+    output_path : str | Path
+        Destination path for the artefact.
+
+    Returns
+    -------
+    Path
+        Write a dependency-free text PDF report and return the output path.
+    """
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     lines = _wrap_pdf_lines(render_markdown(report))

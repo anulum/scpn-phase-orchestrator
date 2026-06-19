@@ -73,7 +73,13 @@ class VisualizerStreamer:
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
-        """Start the WebSocket server in a background thread."""
+        """Start the WebSocket server in a background thread.
+
+        Raises
+        ------
+        RuntimeError
+            If the operation fails.
+        """
         if not HAS_WEBSOCKETS:
             msg = "websockets required: pip install scpn-phase-orchestrator[queuewaves]"
             raise RuntimeError(msg)
@@ -103,7 +109,13 @@ class VisualizerStreamer:
         self._loop.run_forever()
 
     def broadcast(self, data: dict[str, Any]) -> None:
-        """Broadcast simulation state to all connected visualization clients."""
+        """Broadcast simulation state to all connected visualization clients.
+
+        Parameters
+        ----------
+        data : dict[str, Any]
+            Arbitrary JSON-safe payload.
+        """
         if not self._clients or not self._loop:
             return
 

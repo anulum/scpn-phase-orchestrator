@@ -158,7 +158,13 @@ class StudioKnobState:
         _finite_range(self.Psi, "Psi", low=0.0, high=10.0)
 
     def to_audit_record(self) -> dict[str, float]:
-        """Return a JSON-safe knob record."""
+        """Return a JSON-safe knob record.
+
+        Returns
+        -------
+        dict[str, float]
+            A JSON-safe knob record.
+        """
         return {
             "K": float(self.K),
             "alpha": float(self.alpha),
@@ -181,7 +187,13 @@ class StudioReplayResult:
     export_manifests: tuple[ExportManifest, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe replay audit record."""
+        """Return a JSON-safe replay audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-safe replay audit record.
+        """
         return {
             "project": self.project_state.to_audit_record(),
             "r_history": list(self.r_history),
@@ -197,7 +209,18 @@ class StudioReplayResult:
 
 
 def discover_domainpacks(domainpack_dir: Path) -> tuple[str, ...]:
-    """Return domainpack names containing a binding spec."""
+    """Return domainpack names containing a binding spec.
+
+    Parameters
+    ----------
+    domainpack_dir : Path
+        Directory containing domainpacks.
+
+    Returns
+    -------
+    tuple[str, ...]
+        Domainpack names containing a binding spec.
+    """
     if not domainpack_dir.exists():
         return ()
     return tuple(
@@ -217,7 +240,26 @@ def apply_knob_update(
     zeta: float | None = None,
     Psi: float | None = None,
 ) -> StudioKnobState:
-    """Return validated knobs after a UI edit."""
+    """Return validated knobs after a UI edit.
+
+    Parameters
+    ----------
+    knobs : StudioKnobState
+        The Studio knob state.
+    K : float | None
+        Coupling-strength knob value, or ``None``.
+    alpha : float | None
+        Phase-lag knob value, or ``None``.
+    zeta : float | None
+        Drive-strength knob value, or ``None``.
+    Psi : float | None
+        Drive reference-phase knob value, or ``None``.
+
+    Returns
+    -------
+    StudioKnobState
+        Validated knobs after a UI edit.
+    """
     return StudioKnobState(
         K=knobs.K if K is None else K,
         alpha=knobs.alpha if alpha is None else alpha,
@@ -230,7 +272,20 @@ def build_series_chart_payload(
     label: str,
     values: Sequence[float],
 ) -> list[dict[str, float | int]]:
-    """Return dense chart rows for a scalar time-series."""
+    """Return dense chart rows for a scalar time-series.
+
+    Parameters
+    ----------
+    label : str
+        Series or chart label.
+    values : Sequence[float]
+        Scalar time-series values.
+
+    Returns
+    -------
+    list[dict[str, float | int]]
+        Dense chart rows for a scalar time-series.
+    """
     _require_non_empty_text(label, "label")
     return [
         {"step": index, label: _finite_number(value, label)}
@@ -239,7 +294,18 @@ def build_series_chart_payload(
 
 
 def build_regime_chart_payload(regimes: Sequence[str]) -> list[dict[str, object]]:
-    """Return deterministic chart rows for regime timelines."""
+    """Return deterministic chart rows for regime timelines.
+
+    Parameters
+    ----------
+    regimes : Sequence[str]
+        Per-step regime labels.
+
+    Returns
+    -------
+    list[dict[str, object]]
+        Deterministic chart rows for regime timelines.
+    """
     regime_levels = {
         "critical": 0.0,
         "degraded": 1.0,
@@ -269,6 +335,16 @@ def build_integrated_information_panel(
     rendering charts, latest-value tiles, and partition review cards. The input
     must preserve the monitor's explicit claim boundary so Studio cannot display
     the Phi proxy as a theoretical IIT or consciousness claim.
+
+    Parameters
+    ----------
+    records : Sequence[Mapping[str, object]]
+        The records to summarise.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel payload for integrated-information audit records.
     """
     normalised_records = _normalise_integrated_information_records(records)
     latest = normalised_records[-1]
@@ -327,6 +403,16 @@ def build_strange_loop_studio_panel(
     It does not observe live actions, execute recommendations, or apply control
     changes. All scenario records must keep the supervisor's non-actuating
     claim boundary and disabled-execution flags intact.
+
+    Parameters
+    ----------
+    records : Sequence[Mapping[str, object]]
+        The records to summarise.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel payload for strange-loop drift scenario records.
     """
     normalised_records = _normalise_strange_loop_records(records)
     drift_scores = [
@@ -395,6 +481,18 @@ def build_information_geometry_studio_panel(
     coordinates, natural-gradient tangents, geodesic/curvature metrics, hash
     fields, and disabled-execution boundaries before exposing anything to the
     operator surface. No returned field is an executable control channel.
+
+    Parameters
+    ----------
+    records : Sequence[Mapping[str, object]]
+        The records to summarise.
+    scenarios : Sequence[Mapping[str, object]]
+        Scenario records.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel for information-geometry control evidence.
     """
     normalised_records = _normalise_information_geometry_records(records)
     normalised_scenarios, candidate_rows = _normalise_information_geometry_scenarios(
@@ -496,6 +594,20 @@ def build_sheaf_cohomology_studio_panel(
     cohomology dimensions, finite obstruction/energy metrics, residual rows,
     disabled execution gates, and monotone accepted projections before exposing
     evidence to Studio. No returned field is an executable control channel.
+
+    Parameters
+    ----------
+    records : Sequence[Mapping[str, object]]
+        The records to summarise.
+    summaries : Sequence[Mapping[str, object]]
+        Summary records.
+    control_proposals : Sequence[Mapping[str, object]]
+        Sheaf control-proposal records.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel for sheaf-cohomology review evidence.
     """
     normalised_records = _normalise_sheaf_cohomology_records(records)
     normalised_summaries, residual_rows = _normalise_sheaf_obstruction_summaries(
@@ -583,6 +695,20 @@ def build_topos_semantic_binding_studio_panel(
     flags, and example hashes before exposing a compact payload to Studio. The
     payload intentionally makes no formal Topos proof claim and emits no
     executable policy actions.
+
+    Parameters
+    ----------
+    symbolic_reports : Sequence[Mapping[str, object]]
+        Symbolic-binding reports.
+    policy_reports : Sequence[Mapping[str, object]]
+        Policy-composition reports.
+    examples : Sequence[Mapping[str, object]]
+        Example records.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel for Topos semantic-binding evidence.
     """
     normalised_symbolic = _normalise_topos_validation_reports(
         symbolic_reports,
@@ -653,7 +779,18 @@ def build_topos_semantic_binding_studio_panel(
 def build_autopoietic_lineage_studio_panel(
     manifests: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
-    """Build a passive Studio panel for autopoietic lineage sandbox review."""
+    """Build a passive Studio panel for autopoietic lineage sandbox review.
+
+    Parameters
+    ----------
+    manifests : Sequence[Mapping[str, object]]
+        The manifest records.
+
+    Returns
+    -------
+    dict[str, object]
+        A passive Studio panel for autopoietic lineage sandbox review.
+    """
     normalised_manifests = _normalise_autopoietic_lineage_manifests(manifests)
     replay_corpus_rows = tuple(
         row
@@ -710,7 +847,18 @@ def build_autopoietic_lineage_studio_panel(
 def build_intergenerational_inheritance_studio_panel(
     histories: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
-    """Build a passive Studio panel for inheritance-history review."""
+    """Build a passive Studio panel for inheritance-history review.
+
+    Parameters
+    ----------
+    histories : Sequence[Mapping[str, object]]
+        Inheritance-history records.
+
+    Returns
+    -------
+    dict[str, object]
+        A passive Studio panel for inheritance-history review.
+    """
     normalised_histories = _normalise_intergenerational_inheritance_histories(histories)
     child_rows = tuple(
         child
@@ -781,6 +929,20 @@ def build_evolutionary_supervisor_policy_search_studio_panel(
     review. It validates hashes, candidate counts, replay/STL summaries, DSL
     mutation records, and all disabled execution gates before exposing data to
     Studio. No returned field permits live merge, hot patching, or actuation.
+
+    Parameters
+    ----------
+    reports : Sequence[Mapping[str, object]]
+        The report records.
+    examples : Sequence[Mapping[str, object]]
+        Example records.
+    dsl_reports : Sequence[Mapping[str, object]]
+        Policy-DSL search reports.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel for offline evolutionary policy-search evidence.
     """
     normalised_reports = _normalise_evolutionary_search_reports(reports)
     normalised_examples, example_rows = _normalise_evolutionary_examples(examples)
@@ -860,6 +1022,16 @@ def build_morphogenetic_field_studio_panel(
     validates the dependency-free SVG artefact, preserves the snapshot
     statistics and strongest off-diagonal field edges, and keeps actuation
     disabled for operator review.
+
+    Parameters
+    ----------
+    svg_artifact : Mapping[str, object]
+        The morphogenetic field SVG artefact.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel payload for morphogenetic field SVG artefacts.
     """
     record = _normalise_morphogenetic_field_svg_artifact(svg_artifact)
     snapshot = cast("dict[str, object]", record["snapshot"])
@@ -902,6 +1074,18 @@ def build_hybrid_order_studio_panel(
     record hashes, summarises statevector/density-matrix simulator backends,
     and folds deterministic scenario fixtures into candidate review rows.
     Nothing in the payload permits live QPU execution or actuation.
+
+    Parameters
+    ----------
+    records : Sequence[Mapping[str, object]]
+        The records to summarise.
+    scenarios : Sequence[Mapping[str, object]]
+        Scenario records.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel for hybrid classical-quantum order evidence.
     """
     normalised_records = _normalise_hybrid_order_records(records)
     normalised_scenarios, candidate_rows = _normalise_hybrid_order_scenarios(scenarios)
@@ -977,6 +1161,18 @@ def build_multiverse_counterfactual_studio_panel(
     gate report. It validates both audit artefacts before rendering branch
     comparison rows, safest-branch metadata, and coherence ranges for operator
     review. The helper never emits executable actions.
+
+    Parameters
+    ----------
+    manifest : Mapping[str, object]
+        The manifest object.
+    risk_report : Mapping[str, object]
+        The multiverse risk report mapping.
+
+    Returns
+    -------
+    dict[str, object]
+        A Studio panel payload for multiverse branch review evidence.
     """
     rollout = _normalise_multiverse_manifest(manifest)
     risk = _normalise_multiverse_risk_report(risk_report)
@@ -1033,7 +1229,18 @@ def build_multiverse_counterfactual_studio_panel(
 
 
 def build_layer_table(spec: BindingSpec) -> tuple[dict[str, object], ...]:
-    """Return editable layer rows for the Studio oscillator canvas."""
+    """Return editable layer rows for the Studio oscillator canvas.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Editable layer rows for the Studio oscillator canvas.
+    """
     return tuple(
         {
             "index": int(layer.index),
@@ -1047,7 +1254,18 @@ def build_layer_table(spec: BindingSpec) -> tuple[dict[str, object], ...]:
 
 
 def build_oscillator_table(spec: BindingSpec) -> tuple[dict[str, object], ...]:
-    """Return oscillator rows suitable for Streamlit data editing."""
+    """Return oscillator rows suitable for Streamlit data editing.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Oscillator rows suitable for Streamlit data editing.
+    """
     family_channels = {
         family_name: family.channel
         for family_name, family in spec.oscillator_families.items()
@@ -1069,7 +1287,18 @@ def build_oscillator_table(spec: BindingSpec) -> tuple[dict[str, object], ...]:
 
 
 def build_canvas_graph(spec: BindingSpec) -> dict[str, object]:
-    """Return a deterministic layer/coupling graph for Studio canvas review."""
+    """Return a deterministic layer/coupling graph for Studio canvas review.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification.
+
+    Returns
+    -------
+    dict[str, object]
+        A deterministic layer/coupling graph for Studio canvas review.
+    """
     family_channels = {
         family_name: family.channel
         for family_name, family in spec.oscillator_families.items()
@@ -1140,7 +1369,20 @@ def build_canvas_edit_artifact(
     before_graph: Mapping[str, object],
     after_graph: Mapping[str, object],
 ) -> ExportManifest:
-    """Build a review artefact from edited Studio canvas graph rows."""
+    """Build a review artefact from edited Studio canvas graph rows.
+
+    Parameters
+    ----------
+    before_graph : Mapping[str, object]
+        The canvas graph before the change.
+    after_graph : Mapping[str, object]
+        The edited canvas graph after the change.
+
+    Returns
+    -------
+    ExportManifest
+        A review artefact from edited Studio canvas graph rows.
+    """
     before_nodes, before_edges = _normalise_canvas_graph(before_graph, "before_graph")
     after_nodes, after_edges = _normalise_canvas_graph(after_graph, "after_graph")
     payload = json.dumps(
@@ -1172,7 +1414,25 @@ def build_canvas_layout_manifest(
     project_name: str,
     graph: Mapping[str, object],
 ) -> ExportManifest:
-    """Build a deterministic canvas layout manifest from node positions."""
+    """Build a deterministic canvas layout manifest from node positions.
+
+    Parameters
+    ----------
+    project_name : str
+        Name of the project.
+    graph : Mapping[str, object]
+        The canvas graph mapping.
+
+    Returns
+    -------
+    ExportManifest
+        A deterministic canvas layout manifest from node positions.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     nodes, edges = _normalise_canvas_graph(graph, "canvas_layout")
     positions = []
     for node in sorted(nodes, key=lambda item: str(item.get("id", ""))):
@@ -1210,7 +1470,22 @@ def build_canvas_topology_patch(
     before_graph: Mapping[str, object],
     after_graph: Mapping[str, object],
 ) -> ExportManifest:
-    """Build a review patch for persistent Studio topology edits."""
+    """Build a review patch for persistent Studio topology edits.
+
+    Parameters
+    ----------
+    project_name : str
+        Name of the project.
+    before_graph : Mapping[str, object]
+        The canvas graph before the change.
+    after_graph : Mapping[str, object]
+        The edited canvas graph after the change.
+
+    Returns
+    -------
+    ExportManifest
+        A review patch for persistent Studio topology edits.
+    """
     before_nodes, before_edges = _normalise_canvas_graph(before_graph, "before_graph")
     after_nodes, after_edges = _normalise_canvas_graph(after_graph, "after_graph")
     _validate_canvas_edge_endpoints(after_nodes, after_edges)
@@ -1262,7 +1537,26 @@ def build_canvas_interaction_state(
     canvas_rewrite: Mapping[str, object],
     operator_signoff: bool,
 ) -> dict[str, object]:
-    """Summarise Canvas browser controls for deterministic operator feedback."""
+    """Summarise Canvas browser controls for deterministic operator feedback.
+
+    Parameters
+    ----------
+    canvas_artifact : ExportManifest
+        The canvas edit artefact manifest.
+    canvas_layout : ExportManifest
+        The canvas layout manifest.
+    canvas_patch : ExportManifest
+        The canvas topology patch manifest.
+    canvas_rewrite : Mapping[str, object]
+        The canvas binding-rewrite candidate.
+    operator_signoff : bool
+        Whether the operator has signed off.
+
+    Returns
+    -------
+    dict[str, object]
+        Canvas browser controls for deterministic operator feedback.
+    """
     record = json.loads(canvas_artifact.payload)
     changed = bool(record.get("changed"))
     rewrite_status = _require_non_empty_text(
@@ -1312,7 +1606,25 @@ def build_canvas_binding_rewrite_candidate(
     *,
     after_graph: Mapping[str, object],
 ) -> dict[str, object]:
-    """Build validated binding YAML candidate from reviewed canvas edits."""
+    """Build validated binding YAML candidate from reviewed canvas edits.
+
+    Parameters
+    ----------
+    result : StudioReplayResult
+        The Studio replay result.
+    after_graph : Mapping[str, object]
+        The edited canvas graph after the change.
+
+    Returns
+    -------
+    dict[str, object]
+        Validated binding YAML candidate from reviewed canvas edits.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not isinstance(result, StudioReplayResult):
         raise ValueError("replay result must be a StudioReplayResult")
     _, after_edges = _normalise_canvas_graph(after_graph, "after_graph")
@@ -1362,7 +1674,24 @@ def apply_canvas_binding_rewrite_candidate(
     operator_signoff: bool,
     create_backup: bool = True,
 ) -> dict[str, object]:
-    """Apply a reviewed canvas binding candidate with hash and validation gates."""
+    """Apply a reviewed canvas binding candidate with hash and validation gates.
+
+    Parameters
+    ----------
+    candidate : Mapping[str, object]
+        The binding rewrite candidate mapping.
+    binding_spec_path : str | Path
+        Path to the binding-spec file.
+    operator_signoff : bool
+        Whether the operator has signed off.
+    create_backup : bool
+        Whether to write a backup before applying.
+
+    Returns
+    -------
+    dict[str, object]
+        A reviewed canvas binding candidate with hash and validation gates.
+    """
     path = Path(binding_spec_path)
     candidate_yaml = _require_non_empty_payload(
         candidate.get("candidate_yaml"),
@@ -1415,7 +1744,18 @@ def apply_canvas_binding_rewrite_candidate(
 
 
 def build_live_connector_plan(spec: BindingSpec) -> dict[str, object]:
-    """Return non-opening connector ownership guidance for Studio."""
+    """Return non-opening connector ownership guidance for Studio.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification.
+
+    Returns
+    -------
+    dict[str, object]
+        Non-opening connector ownership guidance for Studio.
+    """
     contract = build_digital_twin_binding_contract(spec)
     connector_specs = (
         ("memory", True, False, "review offline memory connector"),
@@ -1472,7 +1812,24 @@ def build_live_connector_run_record(
     payload: Mapping[str, object],
     dry_run: bool = True,
 ) -> dict[str, object]:
-    """Return a gated live-connector execution record without opening transport."""
+    """Return a gated live-connector execution record without opening transport.
+
+    Parameters
+    ----------
+    connector_plan : Mapping[str, object]
+        The live-connector plan mapping.
+    transport : str
+        Transport identifier.
+    payload : Mapping[str, object]
+        The payload mapping or bytes.
+    dry_run : bool
+        Whether to run without opening transport.
+
+    Returns
+    -------
+    dict[str, object]
+        A gated live-connector execution record without opening transport.
+    """
     connector = _connector_by_transport(
         connector_plan,
         _require_non_empty_text(transport, "transport"),
@@ -1523,7 +1880,37 @@ def build_owned_live_connector_runtime_record(
     capability: str = "audit_replay",
     direction: str = "twin_to_spo",
 ) -> dict[str, object]:
-    """Validate an owned live connector boundary without opening transport."""
+    """Validate an owned live connector boundary without opening transport.
+
+    Parameters
+    ----------
+    result : StudioReplayResult
+        The Studio replay result.
+    transport : str
+        Transport identifier.
+    owner : str
+        Owner of the connector boundary.
+    auth_policy : Mapping[str, object]
+        The connector authentication policy.
+    payload : Mapping[str, object]
+        The payload mapping or bytes.
+    sequence : int
+        Monotonic sequence number.
+    capability : str
+        The sync capability identifier.
+    direction : str
+        Sync direction (e.g. ``inbound``/``outbound``).
+
+    Returns
+    -------
+    dict[str, object]
+        An owned live connector boundary without opening transport.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not isinstance(result, StudioReplayResult):
         raise ValueError("replay result must be a StudioReplayResult")
     checked_transport = _require_non_empty_text(transport, "transport")
@@ -1585,7 +1972,23 @@ def build_owned_live_connector_runtime_record(
 
 
 def build_hardware_target_package(result: StudioReplayResult) -> dict[str, object]:
-    """Return a review-only hardware target package for Studio."""
+    """Return a review-only hardware target package for Studio.
+
+    Parameters
+    ----------
+    result : StudioReplayResult
+        The Studio replay result.
+
+    Returns
+    -------
+    dict[str, object]
+        A review-only hardware target package for Studio.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not isinstance(result, StudioReplayResult):
         raise ValueError("replay result must be a StudioReplayResult")
     connector_plan = result.connector_plan
@@ -1624,7 +2027,25 @@ def build_verified_hardware_target_package(
     *,
     evidence: Mapping[str, object],
 ) -> dict[str, object]:
-    """Return a verified hardware package only when evidence is complete."""
+    """Return a verified hardware package only when evidence is complete.
+
+    Parameters
+    ----------
+    result : StudioReplayResult
+        The Studio replay result.
+    evidence : Mapping[str, object]
+        Verification evidence mapping.
+
+    Returns
+    -------
+    dict[str, object]
+        A verified hardware package only when evidence is complete.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not isinstance(result, StudioReplayResult):
         raise ValueError("replay result must be a StudioReplayResult")
     if not isinstance(evidence, Mapping):
@@ -1676,7 +2097,23 @@ def build_verified_hardware_target_package(
 
 
 def build_beginner_guidance(result: StudioReplayResult) -> dict[str, object]:
-    """Return domain-term guidance for first-time Studio operators."""
+    """Return domain-term guidance for first-time Studio operators.
+
+    Parameters
+    ----------
+    result : StudioReplayResult
+        The Studio replay result.
+
+    Returns
+    -------
+    dict[str, object]
+        Domain-term guidance for first-time Studio operators.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not isinstance(result, StudioReplayResult):
         raise ValueError("replay result must be a StudioReplayResult")
     project = result.project_state
@@ -1829,7 +2266,24 @@ def build_runtime_snapshot(
     hierarchy_watermarks: Mapping[str, int] | None = None,
     replay_status: str = "not_started",
 ) -> RuntimeSnapshot:
-    """Build a workflow runtime snapshot from a simulation state dict."""
+    """Build a workflow runtime snapshot from a simulation state dict.
+
+    Parameters
+    ----------
+    final_state : Mapping[str, object]
+        The final simulation state mapping.
+    knobs : StudioKnobState
+        The Studio knob state.
+    hierarchy_watermarks : Mapping[str, int] | None
+        Per-source hierarchy watermarks, or ``None``.
+    replay_status : str
+        Replay status label.
+
+    Returns
+    -------
+    RuntimeSnapshot
+        A workflow runtime snapshot from a simulation state dict.
+    """
     layers = _layer_metrics(final_state.get("layers", ()))
     return RuntimeSnapshot(
         R=_finite_number(final_state.get("R_global", 0.0), "R_global"),
@@ -1851,7 +2305,24 @@ def binding_spec_project_state(
     knobs: StudioKnobState,
     runtime: RuntimeSnapshot,
 ) -> StudioProjectState:
-    """Create a Studio project state from an existing binding spec file."""
+    """Create a Studio project state from an existing binding spec file.
+
+    Parameters
+    ----------
+    project_name : str
+        Name of the project.
+    spec_path : Path
+        Filesystem path to the binding-spec file.
+    knobs : StudioKnobState
+        The Studio knob state.
+    runtime : RuntimeSnapshot
+        The workflow runtime snapshot.
+
+    Returns
+    -------
+    StudioProjectState
+        A Studio project state from an existing binding spec file.
+    """
     yaml_text = spec_path.read_text(encoding="utf-8")
     spec = load_binding_spec(spec_path)
     validation_errors = tuple(validate_binding_spec(spec))
@@ -1905,7 +2376,24 @@ def build_export_manifests(
     audit_payload: Mapping[str, object],
     validation_errors: Sequence[str],
 ) -> tuple[ExportManifest, ...]:
-    """Build review-only export manifests for Studio."""
+    """Build review-only export manifests for Studio.
+
+    Parameters
+    ----------
+    project_name : str
+        Name of the project.
+    binding_yaml : str
+        The binding spec serialised as YAML.
+    audit_payload : Mapping[str, object]
+        The audit payload mapping.
+    validation_errors : Sequence[str]
+        Binding validation error messages.
+
+    Returns
+    -------
+    tuple[ExportManifest, ...]
+        Review-only export manifests for Studio.
+    """
     deploy_warnings = disabled_export_reasons(validation_errors)
     audit_export_payload = {
         **dict(audit_payload),
@@ -1969,7 +2457,18 @@ def build_export_manifests(
 def build_deployment_readiness(
     project_state: StudioProjectState,
 ) -> dict[str, object]:
-    """Return target-specific deployment readiness guidance for Studio."""
+    """Return target-specific deployment readiness guidance for Studio.
+
+    Parameters
+    ----------
+    project_state : StudioProjectState
+        The Studio project state.
+
+    Returns
+    -------
+    dict[str, object]
+        Target-specific deployment readiness guidance for Studio.
+    """
     blocked_reasons = _deployment_blocked_reasons(project_state.exports)
     if blocked_reasons:
         return {
@@ -2037,7 +2536,18 @@ def build_deployment_readiness(
 def build_deployment_package(
     project_state: StudioProjectState,
 ) -> dict[str, object]:
-    """Return a deterministic deployment package manifest for Studio."""
+    """Return a deterministic deployment package manifest for Studio.
+
+    Parameters
+    ----------
+    project_state : StudioProjectState
+        The Studio project state.
+
+    Returns
+    -------
+    dict[str, object]
+        A deterministic deployment package manifest for Studio.
+    """
     readiness = build_deployment_readiness(project_state)
     targets = _readiness_targets(readiness)
     blocked_reasons = _deployment_blocked_reasons(project_state.exports)
@@ -2084,7 +2594,18 @@ def build_deployment_package(
 def build_service_process_manifest(
     project_state: StudioProjectState,
 ) -> dict[str, object]:
-    """Return localhost-only service process packaging for Studio deployment."""
+    """Return localhost-only service process packaging for Studio deployment.
+
+    Parameters
+    ----------
+    project_state : StudioProjectState
+        The Studio project state.
+
+    Returns
+    -------
+    dict[str, object]
+        Localhost-only service process packaging for Studio deployment.
+    """
     blocked_reasons = _deployment_blocked_reasons(project_state.exports)
     if blocked_reasons:
         return {
@@ -2136,7 +2657,18 @@ def build_service_process_manifest(
 def build_package_materialisation_plan(
     project_state: StudioProjectState,
 ) -> dict[str, object]:
-    """Return ordered, operator-invoked package materialisation commands."""
+    """Return ordered, operator-invoked package materialisation commands.
+
+    Parameters
+    ----------
+    project_state : StudioProjectState
+        The Studio project state.
+
+    Returns
+    -------
+    dict[str, object]
+        Ordered, operator-invoked package materialisation commands.
+    """
     package = build_deployment_package(project_state)
     command_rows = build_command_table(project_state)
     commands = [
@@ -2191,7 +2723,23 @@ def build_package_materialisation_plan(
 def build_operator_checklist(
     project_state: StudioProjectState,
 ) -> tuple[dict[str, object], ...]:
-    """Return beginner-friendly ordered deployment steps for Studio."""
+    """Return beginner-friendly ordered deployment steps for Studio.
+
+    Parameters
+    ----------
+    project_state : StudioProjectState
+        The Studio project state.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Beginner-friendly ordered deployment steps for Studio.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     readiness = build_deployment_readiness(project_state)
     validation_blocked = readiness["overall_status"] == "blocked"
     steps: list[dict[str, object]] = [
@@ -2247,7 +2795,23 @@ def build_operator_checklist(
 def build_command_table(
     project_state: StudioProjectState,
 ) -> tuple[dict[str, object], ...]:
-    """Return copyable deployment-review commands for ready targets."""
+    """Return copyable deployment-review commands for ready targets.
+
+    Parameters
+    ----------
+    project_state : StudioProjectState
+        The Studio project state.
+
+    Returns
+    -------
+    tuple[dict[str, object], ...]
+        Copyable deployment-review commands for ready targets.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     readiness = build_deployment_readiness(project_state)
     rows: list[dict[str, object]] = []
     for target in _require_sequence(readiness.get("targets"), "targets"):
@@ -2278,7 +2842,22 @@ def build_error_report(
     error: Exception,
     project_name: str = "unknown",
 ) -> dict[str, object]:
-    """Return a path-safe operator report for failed Studio actions."""
+    """Return a path-safe operator report for failed Studio actions.
+
+    Parameters
+    ----------
+    operation : str
+        The operation label.
+    error : Exception
+        The exception that was raised.
+    project_name : str
+        Name of the project.
+
+    Returns
+    -------
+    dict[str, object]
+        A path-safe operator report for failed Studio actions.
+    """
     return {
         "project_name": _require_non_empty_text(project_name, "project_name"),
         "operation": _require_non_empty_text(operation, "operation"),
@@ -2292,7 +2871,20 @@ def build_oscillator_edit_artifact(
     before_rows: Sequence[Mapping[str, object]],
     after_rows: Sequence[Mapping[str, object]],
 ) -> ExportManifest:
-    """Build a review artefact from edited oscillator table rows."""
+    """Build a review artefact from edited oscillator table rows.
+
+    Parameters
+    ----------
+    before_rows : Sequence[Mapping[str, object]]
+        The table rows before the change.
+    after_rows : Sequence[Mapping[str, object]]
+        The edited table rows after the change.
+
+    Returns
+    -------
+    ExportManifest
+        A review artefact from edited oscillator table rows.
+    """
     before = _normalise_table_rows(before_rows, "before_rows")
     after = _normalise_table_rows(after_rows, "after_rows")
     payload = json.dumps(
@@ -2316,7 +2908,18 @@ def build_oscillator_edit_artifact(
 
 
 def disabled_export_reasons(validation_errors: Sequence[str]) -> tuple[str, ...]:
-    """Return reasons deploy-like exports must stay review-only."""
+    """Return reasons deploy-like exports must stay review-only.
+
+    Parameters
+    ----------
+    validation_errors : Sequence[str]
+        Binding validation error messages.
+
+    Returns
+    -------
+    tuple[str, ...]
+        Reasons deploy-like exports must stay review-only.
+    """
     errors = tuple(str(error) for error in validation_errors)
     if not errors:
         return ()
@@ -2332,7 +2935,27 @@ def run_binding_spec_replay(
     steps: int,
     knobs: StudioKnobState,
 ) -> StudioReplayResult:
-    """Run a local binding-spec replay and return Studio-ready payloads."""
+    """Run a local binding-spec replay and return Studio-ready payloads.
+
+    Parameters
+    ----------
+    spec_path : Path
+        Filesystem path to the binding-spec file.
+    steps : int
+        Number of replay steps.
+    knobs : StudioKnobState
+        The Studio knob state.
+
+    Returns
+    -------
+    StudioReplayResult
+        A local binding-spec replay and return Studio-ready payloads.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
         raise ValueError("steps must be a positive integer")
     spec = load_binding_spec(spec_path)

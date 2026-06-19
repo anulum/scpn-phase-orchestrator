@@ -142,6 +142,20 @@ class KuramotoVerilogCompiler:
         The module depends on ``cordic_sincos`` being available on the
         include path (usually via ``\`include "kuramoto_core.v"`` or an
         IP library).
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        str
+            A synthesisable Verilog module for the mesh.
         """
         knm = _require_finite_array(
             knm,

@@ -74,12 +74,34 @@ class SymbolicDriver:
         self._n = len(parsed_sequence)
 
     def compute(self, step: int) -> float:
-        """Return symbolic phase at discrete *step* (cyclic)."""
+        """Return symbolic phase at discrete *step* (cyclic).
+
+        Parameters
+        ----------
+        step : int
+            Zero-based step index.
+
+        Returns
+        -------
+        float
+            Symbolic phase at discrete *step* (cyclic).
+        """
         step = _validate_step(step)
         return float(self._sequence[step % self._n])
 
     def compute_batch(self, steps: IntArray) -> FloatArray:
-        """Vectorised symbolic phase lookup over an array of step indices."""
+        """Vectorised symbolic phase lookup over an array of step indices.
+
+        Parameters
+        ----------
+        steps : IntArray
+            Number of replay steps.
+
+        Returns
+        -------
+        FloatArray
+            Vectorised symbolic phase lookup over an array of step indices.
+        """
         steps = _validate_steps(steps)
         result: FloatArray = self._sequence[steps % self._n]
         return result

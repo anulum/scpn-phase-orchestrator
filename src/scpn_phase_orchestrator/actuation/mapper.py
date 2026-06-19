@@ -50,7 +50,18 @@ class ActuationMapper:
             self._by_knob.setdefault(am.knob, []).append(am)
 
     def map_actions(self, actions: list[ControlAction]) -> list[dict[str, Any]]:
-        """Convert ControlActions into actuator command dicts, clamping to limits."""
+        """Convert ControlActions into actuator command dicts, clamping to limits.
+
+        Parameters
+        ----------
+        actions : list[ControlAction]
+            The control actions.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            ControlActions into actuator command dicts, clamping to limits.
+        """
         commands = []
         for action in actions:
             if not _finite_real(action.value):
@@ -70,7 +81,18 @@ class ActuationMapper:
         return commands
 
     def validate_action(self, action: ControlAction) -> bool:
-        """Return True if knob is valid and value is within limits."""
+        """Return True if knob is valid and value is within limits.
+
+        Parameters
+        ----------
+        action : ControlAction
+            The control action.
+
+        Returns
+        -------
+        bool
+            True if knob is valid and value is within limits.
+        """
         if action.knob not in VALID_KNOBS:
             return False
         if not _finite_real(action.value):

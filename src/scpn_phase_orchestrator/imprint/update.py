@@ -119,7 +119,27 @@ class ImprintModel:
     def update(
         self, state: ImprintState, exposure: FloatArray, dt: float
     ) -> ImprintState:
-        """Decay existing imprint, add new exposure, clip to saturation."""
+        """Decay existing imprint, add new exposure, clip to saturation.
+
+        Parameters
+        ----------
+        state : ImprintState
+            The state mapping.
+        exposure : FloatArray
+            Driver exposure value.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        ImprintState
+            Decay existing imprint, add new exposure, clip to saturation.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         m_k, last_update = _validated_state(state)
         dt = _finite_real(dt, "dt")
         if dt <= 0.0:
@@ -136,14 +156,40 @@ class ImprintModel:
         )
 
     def modulate_coupling(self, knm: FloatArray, imprint: ImprintState) -> FloatArray:
-        """Scale Knm rows by (1 + m_k)."""
+        """Scale Knm rows by (1 + m_k).
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        imprint : ImprintState
+            The imprint state.
+
+        Returns
+        -------
+        FloatArray
+            Scale Knm rows by (1 + m_k).
+        """
         m_k, _ = _validated_state(imprint)
         knm = _finite_square_matrix(knm, "knm", size=m_k.shape[0])
         result: FloatArray = knm * (1.0 + m_k)[:, np.newaxis]
         return result
 
     def modulate_lag(self, alpha: FloatArray, imprint: ImprintState) -> FloatArray:
-        """Shift phase lags by antisymmetric imprint offset."""
+        """Shift phase lags by antisymmetric imprint offset.
+
+        Parameters
+        ----------
+        alpha : FloatArray
+            Phase-lag knob value, or ``None``.
+        imprint : ImprintState
+            The imprint state.
+
+        Returns
+        -------
+        FloatArray
+            Shift phase lags by antisymmetric imprint offset.
+        """
         m_k, _ = _validated_state(imprint)
         alpha = _finite_square_matrix(alpha, "alpha", size=m_k.shape[0])
         offset = m_k[:, np.newaxis] - m_k[np.newaxis, :]
@@ -151,7 +197,20 @@ class ImprintModel:
         return result
 
     def modulate_mu(self, mu: FloatArray, imprint: ImprintState) -> FloatArray:
-        """Scale bifurcation parameter: μ_k * (1 + m_k)."""
+        """Scale bifurcation parameter: μ_k * (1 + m_k).
+
+        Parameters
+        ----------
+        mu : FloatArray
+            Imprint vector, shape ``(N,)``.
+        imprint : ImprintState
+            The imprint state.
+
+        Returns
+        -------
+        FloatArray
+            Scale bifurcation parameter: μ_k * (1 + m_k).
+        """
         m_k, _ = _validated_state(imprint)
         mu = _finite_vector(mu, "mu", length=m_k.shape[0])
         result: FloatArray = mu * (1.0 + m_k)

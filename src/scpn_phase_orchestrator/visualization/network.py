@@ -109,6 +109,22 @@ def network_graph_json(
 
     Returns JSON with {nodes: [...], links: [...]} for D3.js consumption.
     Edges below threshold are omitted.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    layer_names : list[str] | None
+        Per-layer names.
+    R_values : list[float] | None
+        Order-parameter values.
+    threshold : float
+        Decision threshold.
+
+    Returns
+    -------
+    str
+        D3 force-directed graph JSON from coupling matrix.
     """
     knm = _validate_coupling_matrix(knm, name="knm")
     threshold = _validate_non_negative_real(threshold, name="threshold")
@@ -159,6 +175,18 @@ def coupling_heatmap_json(
     """Generate heatmap data JSON from coupling matrix.
 
     Returns JSON with {labels: [...], matrix: [[...]]} for rendering.
+
+    Parameters
+    ----------
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    layer_names : list[str] | None
+        Per-layer names.
+
+    Returns
+    -------
+    str
+        Heatmap data JSON from coupling matrix.
     """
     knm = _validate_coupling_matrix(knm, name="knm")
     n = knm.shape[0]

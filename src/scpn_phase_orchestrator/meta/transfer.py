@@ -91,7 +91,13 @@ class MetaTransferProposal:
     feature_keys: tuple[str, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable proposal record."""
+        """Return a serialisable proposal record.
+
+        Returns
+        -------
+        dict[str, object]
+            A serialisable proposal record.
+        """
         return {
             "knobs": dict(self.knobs),
             "confidence": self.confidence,
@@ -118,7 +124,13 @@ class MetaTrainingSummary:
     reward_max: float
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe training corpus summary."""
+        """Return a JSON-safe training corpus summary.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-safe training corpus summary.
+        """
         return {
             "record_count": self.record_count,
             "domain_count": self.domain_count,
@@ -152,7 +164,13 @@ class MetaPackageManifest:
             raise ValueError("meta package manifest execution must remain disabled")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe packaging-readiness manifest."""
+        """Return a JSON-safe packaging-readiness manifest.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-safe packaging-readiness manifest.
+        """
         return {
             "schema": "scpn_meta_package_manifest_v1",
             "package_name": self.package_name,
@@ -181,7 +199,18 @@ class CrossDomainMetaTransfer:
     def fit(
         cls, records: list[MetaPolicyRecord] | tuple[MetaPolicyRecord, ...]
     ) -> CrossDomainMetaTransfer:
-        """Construct a meta-transfer model from replay-derived records."""
+        """Construct a meta-transfer model from replay-derived records.
+
+        Parameters
+        ----------
+        records : list[MetaPolicyRecord] | tuple[MetaPolicyRecord, ...]
+            The records to summarise.
+
+        Returns
+        -------
+        CrossDomainMetaTransfer
+            A meta-transfer model from replay-derived records.
+        """
         return cls(tuple(records))
 
     @classmethod
@@ -191,7 +220,25 @@ class CrossDomainMetaTransfer:
         *,
         min_records: int = 1,
     ) -> CrossDomainMetaTransfer:
-        """Fit a model from one or more audit JSONL files."""
+        """Fit a model from one or more audit JSONL files.
+
+        Parameters
+        ----------
+        paths : list[str | Path] | tuple[str | Path, ...]
+            Filesystem paths.
+        min_records : int
+            Minimum number of records required.
+
+        Returns
+        -------
+        CrossDomainMetaTransfer
+            Fit a model from one or more audit JSONL files.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if min_records < 1:
             raise ValueError("min_records must be at least 1")
         records: list[MetaPolicyRecord] = []
@@ -212,7 +259,22 @@ class CrossDomainMetaTransfer:
         pattern: str = "**/*.jsonl",
         min_records: int = 1,
     ) -> CrossDomainMetaTransfer:
-        """Fit a model from a recursively discovered audit JSONL corpus."""
+        """Fit a model from a recursively discovered audit JSONL corpus.
+
+        Parameters
+        ----------
+        root : str | Path
+            Root directory to search.
+        pattern : str
+            Glob pattern for discovery.
+        min_records : int
+            Minimum number of records required.
+
+        Returns
+        -------
+        CrossDomainMetaTransfer
+            Fit a model from a recursively discovered audit JSONL corpus.
+        """
         records = records_from_audit_directory(
             root,
             pattern=pattern,
@@ -226,7 +288,25 @@ class CrossDomainMetaTransfer:
         *,
         k_neighbours: int = 3,
     ) -> MetaTransferProposal:
-        """Propose initial policy knobs for a new domain signature."""
+        """Propose initial policy knobs for a new domain signature.
+
+        Parameters
+        ----------
+        features : dict[str, float]
+            Input feature array.
+        k_neighbours : int
+            Number of nearest neighbours.
+
+        Returns
+        -------
+        MetaTransferProposal
+            Propose initial policy knobs for a new domain signature.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         _validate_float_mapping(features, "features", allow_empty=False)
         if k_neighbours < 1:
             raise ValueError("k_neighbours must be at least 1")
@@ -253,7 +333,13 @@ class CrossDomainMetaTransfer:
         )
 
     def to_json_package(self) -> str:
-        """Serialise records and training summary for reviewable reuse."""
+        """Serialise records and training summary for reviewable reuse.
+
+        Returns
+        -------
+        str
+            Serialise records and training summary for reviewable reuse.
+        """
         package = {
             "schema": "scpn_meta_transfer_package_v1",
             "training_summary": self.training_summary.to_audit_record(),
@@ -281,6 +367,20 @@ class CrossDomainMetaTransfer:
         The manifest binds the JSON package hash and public import/console
         metadata for review jobs. It does not create distributions, install
         commands, run proposal jobs, or upload artefacts.
+
+        Parameters
+        ----------
+        package_name : str
+            Name for the emitted package.
+        import_target : str
+            Import target for the generated package.
+        console_script : str
+            Console-script entry-point name.
+
+        Returns
+        -------
+        MetaPackageManifest
+            A deterministic packaging-readiness manifest.
         """
         _validate_package_identifier(package_name, "package_name")
         _validate_non_empty_text(import_target, "import_target")
@@ -296,7 +396,23 @@ class CrossDomainMetaTransfer:
 
     @classmethod
     def from_json_package(cls, payload: str) -> CrossDomainMetaTransfer:
-        """Restore a packaged meta-transfer model."""
+        """Restore a packaged meta-transfer model.
+
+        Parameters
+        ----------
+        payload : str
+            The payload mapping or bytes.
+
+        Returns
+        -------
+        CrossDomainMetaTransfer
+            Restore a packaged meta-transfer model.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         data = _loads_meta_json(payload)
         if not isinstance(data, dict):
             raise ValueError("package must be a JSON object")
@@ -320,6 +436,16 @@ def records_from_audit_jsonl(path: str | Path) -> tuple[MetaPolicyRecord, ...]:
 
     Each line may provide either explicit ``features`` and ``knobs`` mappings
     or the common SPO audit shape with ``metrics`` plus ``actions``.
+
+    Parameters
+    ----------
+    path : str | Path
+        Filesystem path to the target file.
+
+    Returns
+    -------
+    tuple[MetaPolicyRecord, ...]
+        Load meta-policy records from audit-style JSONL lines.
     """
     records: list[MetaPolicyRecord] = []
     with Path(path).open("r", encoding="utf-8") as handle:
@@ -338,7 +464,27 @@ def records_from_audit_directory(
     pattern: str = "**/*.jsonl",
     min_records: int = 1,
 ) -> tuple[MetaPolicyRecord, ...]:
-    """Load replay records from a nested audit-history directory."""
+    """Load replay records from a nested audit-history directory.
+
+    Parameters
+    ----------
+    root : str | Path
+        Root directory to search.
+    pattern : str
+        Glob pattern for discovery.
+    min_records : int
+        Minimum number of records required.
+
+    Returns
+    -------
+    tuple[MetaPolicyRecord, ...]
+        Load replay records from a nested audit-history directory.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if min_records < 1:
         raise ValueError("min_records must be at least 1")
     base = Path(root)

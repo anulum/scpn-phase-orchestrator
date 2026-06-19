@@ -245,7 +245,24 @@ class ImportedSourceSummary:
         channel_count: int,
         sample_count: int,
     ) -> ImportedSourceSummary:
-        """Create a stable source summary from raw imported bytes."""
+        """Create a stable source summary from raw imported bytes.
+
+        Parameters
+        ----------
+        source_kind : str
+            Kind of imported source data.
+        payload : bytes
+            The payload mapping or bytes.
+        channel_count : int
+            Number of channels in the source.
+        sample_count : int
+            Number of samples in the source.
+
+        Returns
+        -------
+        ImportedSourceSummary
+            A stable source summary from raw imported bytes.
+        """
         return cls(
             source_kind=source_kind,
             sha256=_stable_sha256(payload),
@@ -255,7 +272,13 @@ class ImportedSourceSummary:
         )
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-ready audit record."""
+        """Return a JSON-ready audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-ready audit record.
+        """
         return {
             "source_kind": self.source_kind,
             "sha256": self.sha256,
@@ -307,11 +330,23 @@ class BindingProposal:
 
     @property
     def yaml_sha256(self) -> str:
-        """Stable digest for the proposed binding YAML."""
+        """Stable digest for the proposed binding YAML.
+
+        Returns
+        -------
+        str
+            Stable digest for the proposed binding YAML.
+        """
         return _stable_sha256(self.yaml_text)
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-ready audit record."""
+        """Return a JSON-ready audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-ready audit record.
+        """
         return {
             "yaml_sha256": self.yaml_sha256,
             "validation_errors": list(self.validation_errors),
@@ -370,7 +405,13 @@ class RuntimeSnapshot:
         )
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-ready audit record."""
+        """Return a JSON-ready audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-ready audit record.
+        """
         return {
             "R": _finite_float(self.R, field_name="R"),
             "Psi": _finite_float(self.Psi, field_name="Psi"),
@@ -442,7 +483,26 @@ class ExportManifest:
         command: str,
         warnings: tuple[str, ...] = (),
     ) -> ExportManifest:
-        """Build a manifest for review-only artefacts."""
+        """Build a manifest for review-only artefacts.
+
+        Parameters
+        ----------
+        target_kind : str
+            Target export kind.
+        file_name : str
+            Destination file name.
+        payload : str
+            The payload mapping or bytes.
+        command : str
+            The command string.
+        warnings : tuple[str, ...]
+            Warning messages.
+
+        Returns
+        -------
+        ExportManifest
+            A manifest for review-only artefacts.
+        """
         return cls(
             target_kind=target_kind,
             file_name=file_name,
@@ -454,11 +514,23 @@ class ExportManifest:
 
     @property
     def payload_sha256(self) -> str:
-        """Stable digest for the exported payload."""
+        """Stable digest for the exported payload.
+
+        Returns
+        -------
+        str
+            Stable digest for the exported payload.
+        """
         return _stable_sha256(self.payload)
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-ready audit record."""
+        """Return a JSON-ready audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-ready audit record.
+        """
         return {
             "target_kind": self.target_kind,
             "file_name": self.file_name,
@@ -514,7 +586,13 @@ class StudioProjectState:
         )
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-ready project-state audit record."""
+        """Return a JSON-ready project-state audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-ready project-state audit record.
+        """
         return {
             "project_name": self.project_name,
             "source": self.source.to_audit_record(),

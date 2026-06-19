@@ -22,7 +22,27 @@ def build_audit_report_summary(
     hash_chain_ok: bool,
     hash_chain_verified: int,
 ) -> dict[str, object]:
-    """Build a JSON-ready report summary from audit log entries."""
+    """Build a JSON-ready report summary from audit log entries.
+
+    Parameters
+    ----------
+    entries : list[dict[str, object]]
+        Audit-log entries.
+    hash_chain_ok : bool
+        Whether the hash chain verified.
+    hash_chain_verified : int
+        Whether the hash chain verified.
+
+    Returns
+    -------
+    dict[str, object]
+        A JSON-ready report summary from audit log entries.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     records = _record_entries(entries)
     steps = [entry for entry in records if "step" in entry and "layers" in entry]
     events = [entry for entry in records if "event" in entry]

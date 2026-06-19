@@ -70,12 +70,34 @@ class InformationalDriver:
         self._cadence_hz = parsed_cadence
 
     def compute(self, t: float) -> float:
-        """Return Psi_I at time *t*, wrapped to [0, 2*pi)."""
+        """Return Psi_I at time *t*, wrapped to [0, 2*pi).
+
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+
+        Returns
+        -------
+        float
+            Psi_I at time *t*, wrapped to [0, 2*pi).
+        """
         t = _require_finite_real(t, name="t")
         return (TWO_PI * self._cadence_hz * t) % TWO_PI
 
     def compute_batch(self, t_array: FloatArray) -> FloatArray:
-        """Vectorised Psi_I over an array of time values."""
+        """Vectorised Psi_I over an array of time values.
+
+        Parameters
+        ----------
+        t_array : FloatArray
+            Time samples, shape ``(T,)``.
+
+        Returns
+        -------
+        FloatArray
+            Vectorised Psi_I over an array of time values.
+        """
         t_array = _require_finite_real_array(t_array, name="t_array")
         result: FloatArray = (TWO_PI * self._cadence_hz * t_array) % TWO_PI
         return result

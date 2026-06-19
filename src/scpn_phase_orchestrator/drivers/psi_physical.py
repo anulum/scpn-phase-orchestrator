@@ -72,12 +72,34 @@ class PhysicalDriver:
         self._amplitude = parsed_amplitude
 
     def compute(self, t: float) -> float:
-        """Return Psi_P at time *t*."""
+        """Return Psi_P at time *t*.
+
+        Parameters
+        ----------
+        t : float
+            Time in seconds.
+
+        Returns
+        -------
+        float
+            Psi_P at time *t*.
+        """
         t = _require_finite_real(t, name="t")
         return float(self._amplitude * np.sin(TWO_PI * self._frequency * t))
 
     def compute_batch(self, t_array: FloatArray) -> FloatArray:
-        """Vectorised Psi_P over an array of time values."""
+        """Vectorised Psi_P over an array of time values.
+
+        Parameters
+        ----------
+        t_array : FloatArray
+            Time samples, shape ``(T,)``.
+
+        Returns
+        -------
+        FloatArray
+            Vectorised Psi_P over an array of time values.
+        """
         t_array = _require_finite_real_array(t_array, name="t_array")
         result: FloatArray = self._amplitude * np.sin(
             TWO_PI * self._frequency * t_array

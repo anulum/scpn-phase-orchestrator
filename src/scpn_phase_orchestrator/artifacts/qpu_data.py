@@ -200,16 +200,34 @@ class QPUDataArtifact:
 
     @property
     def n_oscillators(self) -> int:
-        """Number of oscillators encoded by the artifact."""
+        """Number of oscillators encoded by the artifact.
+
+        Returns
+        -------
+        int
+            Number of oscillators encoded by the artifact.
+        """
         return int(self.K_nm.shape[0])
 
     @property
     def is_synthetic(self) -> bool:
-        """Whether the artifact is non-publication synthetic data."""
+        """Whether the artifact is non-publication synthetic data.
+
+        Returns
+        -------
+        bool
+            Whether the artifact is non-publication synthetic data.
+        """
         return self.source_mode in SYNTHETIC_SOURCE_MODES
 
     def require_publication_safe(self) -> None:
-        """Reject synthetic or insufficiently traceable artifacts."""
+        """Reject synthetic or insufficiently traceable artifacts.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if self.is_synthetic:
             raise ValueError("synthetic artifacts are not publication-safe")
         if not (self.source_timestamp or self.replay_id):
@@ -218,7 +236,13 @@ class QPUDataArtifact:
             )
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialise to the canonical JSON-compatible payload."""
+        """Serialise to the canonical JSON-compatible payload.
+
+        Returns
+        -------
+        dict[str, Any]
+            Serialise to the canonical JSON-compatible payload.
+        """
         payload = {
             "schema_version": SCHEMA_VERSION,
             "domain": self.domain,
@@ -239,7 +263,18 @@ class QPUDataArtifact:
         return payload
 
     def to_json(self, *, indent: int | None = 2) -> str:
-        """Serialise to JSON."""
+        """Serialise to JSON.
+
+        Parameters
+        ----------
+        indent : int | None
+            JSON indentation width.
+
+        Returns
+        -------
+        str
+            Serialise to JSON.
+        """
         return json.dumps(
             self.to_dict(),
             allow_nan=False,
@@ -249,7 +284,23 @@ class QPUDataArtifact:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> QPUDataArtifact:
-        """Load and validate an artifact mapping."""
+        """Load and validate an artifact mapping.
+
+        Parameters
+        ----------
+        data : Mapping[str, Any]
+            Arbitrary JSON-safe payload.
+
+        Returns
+        -------
+        QPUDataArtifact
+            Load and validate an artifact mapping.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if not isinstance(data, Mapping):
             raise ValueError("artifact payload must be a mapping")
         missing = _REQUIRED_FIELDS - data.keys()
@@ -284,7 +335,23 @@ class QPUDataArtifact:
 
     @classmethod
     def from_json(cls, payload: str) -> QPUDataArtifact:
-        """Load and validate an artifact from JSON."""
+        """Load and validate an artifact from JSON.
+
+        Parameters
+        ----------
+        payload : str
+            The payload mapping or bytes.
+
+        Returns
+        -------
+        QPUDataArtifact
+            Load and validate an artifact from JSON.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         try:
             decoded = json.loads(payload, parse_constant=_reject_json_constant)
         except json.JSONDecodeError:
@@ -335,7 +402,40 @@ def emit_qpu_data_artifact(
     replay_id: str | None = None,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Emit a validated QPU artifact payload from oscillator arrays."""
+    """Emit a validated QPU artifact payload from oscillator arrays.
+
+    Parameters
+    ----------
+    domain : str
+        Domain label.
+    source_name : str
+        Name of the source.
+    source_mode : str
+        Source ingestion mode.
+    K_nm : FloatMatrix | Sequence[Sequence[float]]
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    omega : FloatArray | Sequence[float]
+        Natural frequency.
+    normalization : str
+        Edge-weight normalisation mode.
+    extraction_method : str
+        Phase-extraction method name.
+    theta0 : FloatArray | Sequence[float] | None
+        Initial phase offset.
+    layer_assignments : Sequence[str]
+        Per-oscillator layer assignments.
+    source_timestamp : str | None
+        Source timestamp.
+    replay_id : str | None
+        Identifier of the replay.
+    metadata : Mapping[str, Any] | None
+        Associated metadata, or ``None``.
+
+    Returns
+    -------
+    dict[str, Any]
+        A validated QPU artifact payload from oscillator arrays.
+    """
     artifact = QPUDataArtifact(
         domain=domain,
         source_name=source_name,
@@ -363,7 +463,30 @@ def compile_domain_to_qpu_artifact(
     theta0: Sequence[float] | FloatArray | None = None,
     require_publication_safe: bool = True,
 ) -> dict[str, Any]:
-    """Compile a binding spec or domainpack directory into a QPU artifact."""
+    """Compile a binding spec or domainpack directory into a QPU artifact.
+
+    Parameters
+    ----------
+    domain_pack : str | Path
+        Domainpack name.
+    source_mode : str
+        Source ingestion mode.
+    source_name : str | None
+        Name of the source.
+    replay_id : str | None
+        Identifier of the replay.
+    source_timestamp : str | None
+        Source timestamp.
+    theta0 : Sequence[float] | FloatArray | None
+        Initial phase offset.
+    require_publication_safe : bool
+        Whether to require publication-safe output.
+
+    Returns
+    -------
+    dict[str, Any]
+        Compile a binding spec or domainpack directory into a QPU artifact.
+    """
     path = Path(domain_pack)
     binding_path = path / "binding_spec.yaml" if path.is_dir() else path
     spec = load_binding_spec(binding_path)
@@ -397,7 +520,25 @@ def validate_qpu_data_artifact(
     *,
     require_publication_safe: bool = True,
 ) -> QPUDataArtifact:
-    """Validate a QPU artifact and optionally enforce publication safety."""
+    """Validate a QPU artifact and optionally enforce publication safety.
+
+    Parameters
+    ----------
+    artifact : QPUDataArtifact | Mapping[str, Any]
+        The artefact mapping.
+    require_publication_safe : bool
+        Whether to require publication-safe output.
+
+    Returns
+    -------
+    QPUDataArtifact
+        A QPU artifact and optionally enforce publication safety.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not isinstance(artifact, (QPUDataArtifact, Mapping)):
         raise ValueError("artifact payload must be a mapping")
     parsed = (
@@ -411,12 +552,31 @@ def validate_qpu_data_artifact(
 
 
 def read_qpu_data_artifact(path: str | Path) -> QPUDataArtifact:
-    """Read a QPU data artifact from JSON."""
+    """Read a QPU data artifact from JSON.
+
+    Parameters
+    ----------
+    path : str | Path
+        Filesystem path to the target file.
+
+    Returns
+    -------
+    QPUDataArtifact
+        Read a QPU data artifact from JSON.
+    """
     return QPUDataArtifact.from_json(Path(path).read_text(encoding="utf-8"))
 
 
 def write_qpu_data_artifact(path: str | Path, artifact: QPUDataArtifact) -> None:
-    """Write a QPU data artifact to JSON."""
+    """Write a QPU data artifact to JSON.
+
+    Parameters
+    ----------
+    path : str | Path
+        Filesystem path to the target file.
+    artifact : QPUDataArtifact
+        The artefact mapping.
+    """
     Path(path).write_text(artifact.to_json() + "\n", encoding="utf-8")
 
 

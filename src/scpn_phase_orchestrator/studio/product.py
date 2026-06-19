@@ -240,6 +240,21 @@ def build_studio_product_manifest(
     discover passive panel contracts and required evidence without importing
     optional runtimes, executing panel builders, opening transports, or touching
     hardware.
+
+    Parameters
+    ----------
+    panel_registry : Sequence[PanelRecord]
+        The Studio panel records.
+
+    Returns
+    -------
+    dict[str, object]
+        The standalone Studio product manifest.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     panels = tuple(dict(panel) for panel in panel_registry)
     panel_ids = [panel.get("panel_id") for panel in panels]

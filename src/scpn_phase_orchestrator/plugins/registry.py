@@ -141,7 +141,18 @@ class PluginManifest:
 
     @classmethod
     def from_mapping(cls, payload: dict[str, Any]) -> PluginManifest:
-        """Construct a manifest from a JSON/YAML-style mapping."""
+        """Construct a manifest from a JSON/YAML-style mapping.
+
+        Parameters
+        ----------
+        payload : dict[str, Any]
+            The payload mapping or bytes.
+
+        Returns
+        -------
+        PluginManifest
+            A manifest from a JSON/YAML-style mapping.
+        """
         capabilities = tuple(
             PluginCapability(
                 kind=item["kind"],
@@ -162,7 +173,13 @@ class PluginManifest:
         )
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable manifest record."""
+        """Return a serialisable manifest record.
+
+        Returns
+        -------
+        dict[str, object]
+            A serialisable manifest record.
+        """
         return {
             "name": self.name,
             "version": self.version,
@@ -191,7 +208,13 @@ class PluginCompatibilityReport:
     reasons: tuple[str, ...]
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable compatibility record."""
+        """Return a serialisable compatibility record.
+
+        Returns
+        -------
+        dict[str, object]
+            A serialisable compatibility record.
+        """
         return {
             "manifest": self.manifest.to_audit_record(),
             "compatible": self.compatible,
@@ -259,7 +282,13 @@ class PluginRuntimeExecutionPolicy:
         )
 
     def to_load_policy(self) -> PluginRuntimeLoadPolicy:
-        """Return the corresponding load policy for target resolution."""
+        """Return the corresponding load policy for target resolution.
+
+        Returns
+        -------
+        PluginRuntimeLoadPolicy
+            The corresponding load policy for target resolution.
+        """
         return PluginRuntimeLoadPolicy(
             loading_permitted=self.loading_permitted,
             allowed_kinds=self.allowed_kinds,
@@ -362,7 +391,13 @@ class PluginExecutionRequest:
             _validate_sha256(target_hash, "approved target hash")
 
     def to_execution_policy(self) -> PluginRuntimeExecutionPolicy:
-        """Construct an explicit runtime execution policy from request fields."""
+        """Construct an explicit runtime execution policy from request fields.
+
+        Returns
+        -------
+        PluginRuntimeExecutionPolicy
+            An explicit runtime execution policy from request fields.
+        """
         return PluginRuntimeExecutionPolicy(
             loading_permitted=self.loading_permitted,
             execution_permitted=self.execution_permitted,
@@ -549,7 +584,13 @@ class PluginExecutionRequestRevocationList:
             _validate_sha256(revocation_hash, "revocation hash")
 
     def as_revoked_request_hashes(self) -> tuple[str, ...]:
-        """Return the revoked request hash set for validation calls."""
+        """Return the revoked request hash set for validation calls.
+
+        Returns
+        -------
+        tuple[str, ...]
+            The revoked request hash set for validation calls.
+        """
         return self.request_hashes
 
 
@@ -704,6 +745,21 @@ def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
 
     Dataclass construction performs structural validation; this function
     exists as a stable public compatibility gate for tooling.
+
+    Parameters
+    ----------
+    manifest : PluginManifest
+        The manifest object.
+
+    Returns
+    -------
+    PluginManifest
+        And return a plugin manifest.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     compatibility = compatibility_report(manifest)
     if not compatibility.compatible:
@@ -716,7 +772,27 @@ def validate_plugin_execution_request(
     *,
     revoked_request_hashes: tuple[str, ...] = (),
 ) -> PluginExecutionRequest:
-    """Validate a stored plugin execution request before runtime consumption."""
+    """Validate a stored plugin execution request before runtime consumption.
+
+    Parameters
+    ----------
+    request : PluginExecutionRequest
+        The plugin execution request.
+    revoked_request_hashes : tuple[str, ...]
+        Hashes of revoked execution requests.
+
+    Returns
+    -------
+    PluginExecutionRequest
+        A stored plugin execution request before runtime consumption.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    PermissionError
+        If the operation is not permitted by policy.
+    """
     request_hash = request.audit_record.get("request_hash")
     if not isinstance(request_hash, str):
         raise ValueError("request audit record is missing request_hash")
@@ -760,7 +836,23 @@ def validate_plugin_execution_request(
 def validate_plugin_execution_request_lifecycle_record(
     lifecycle: PluginExecutionRequestLifecycleRecord,
 ) -> PluginExecutionRequestLifecycleRecord:
-    """Validate a stored plugin execution request lifecycle record."""
+    """Validate a stored plugin execution request lifecycle record.
+
+    Parameters
+    ----------
+    lifecycle : PluginExecutionRequestLifecycleRecord
+        The lifecycle status record.
+
+    Returns
+    -------
+    PluginExecutionRequestLifecycleRecord
+        A stored plugin execution request lifecycle record.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     record = lifecycle.audit_record
     if record.get("schema") != "scpn_plugin_execution_request_lifecycle_v1":
         raise ValueError("lifecycle schema mismatch")
@@ -846,7 +938,28 @@ def build_plugin_execution_request_storage_manifest(
     created_by: str,
     revoked_request_hashes: tuple[str, ...] = (),
 ) -> PluginExecutionRequestStorageManifest:
-    """Build a deterministic storage manifest for an execution request."""
+    """Build a deterministic storage manifest for an execution request.
+
+    Parameters
+    ----------
+    request : PluginExecutionRequest
+        The plugin execution request.
+    storage_uri : str
+        Storage URI.
+    storage_backend : str
+        Storage backend identifier.
+    retention_policy : str
+        Retention policy label.
+    created_by : str
+        Identifier of the creating actor.
+    revoked_request_hashes : tuple[str, ...]
+        Hashes of revoked execution requests.
+
+    Returns
+    -------
+    PluginExecutionRequestStorageManifest
+        A deterministic storage manifest for an execution request.
+    """
     validate_plugin_execution_request(
         request,
         revoked_request_hashes=revoked_request_hashes,
@@ -914,7 +1027,24 @@ def build_plugin_execution_request_revocation(
     revocation_reference: str,
     revocation_reason: str,
 ) -> PluginExecutionRequestRevocation:
-    """Build a deterministic revocation artefact for an execution request."""
+    """Build a deterministic revocation artefact for an execution request.
+
+    Parameters
+    ----------
+    request : PluginExecutionRequest
+        The plugin execution request.
+    revoked_by : str
+        Identifier of the revoking actor.
+    revocation_reference : str
+        External revocation reference.
+    revocation_reason : str
+        Reason recorded with the revocation.
+
+    Returns
+    -------
+    PluginExecutionRequestRevocation
+        A deterministic revocation artefact for an execution request.
+    """
     validate_plugin_execution_request(request)
     _require_identifier(revoked_by, "revocation actor")
     _require_identifier(revocation_reference, "revocation reference")
@@ -964,7 +1094,25 @@ def build_plugin_execution_request_revocation_list(
     *,
     created_by: str,
 ) -> PluginExecutionRequestRevocationList:
-    """Build a deterministic deployment revocation-list artefact."""
+    """Build a deterministic deployment revocation-list artefact.
+
+    Parameters
+    ----------
+    revocations : tuple[PluginExecutionRequestRevocation, ...]
+        The revocation artefacts.
+    created_by : str
+        Identifier of the creating actor.
+
+    Returns
+    -------
+    PluginExecutionRequestRevocationList
+        A deterministic deployment revocation-list artefact.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     _require_identifier(created_by, "revocation list creator")
     if not revocations:
         raise ValueError("revocation list requires at least one revocation")
@@ -1010,7 +1158,23 @@ def build_plugin_execution_request_revocation_list(
 def validate_plugin_execution_request_revocation_list(
     revocation_list: PluginExecutionRequestRevocationList,
 ) -> PluginExecutionRequestRevocationList:
-    """Validate a stored aggregate request-revocation list."""
+    """Validate a stored aggregate request-revocation list.
+
+    Parameters
+    ----------
+    revocation_list : PluginExecutionRequestRevocationList
+        The aggregate revocation list.
+
+    Returns
+    -------
+    PluginExecutionRequestRevocationList
+        A stored aggregate request-revocation list.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     record = revocation_list.audit_record
     if record.get("schema") != "scpn_plugin_execution_request_revocation_list_v1":
         raise ValueError("revocation list schema mismatch")
@@ -1066,7 +1230,29 @@ def build_plugin_execution_request_lifecycle_record(
     storage_manifest: PluginExecutionRequestStorageManifest | None = None,
     revocation_list: PluginExecutionRequestRevocationList | None = None,
 ) -> PluginExecutionRequestLifecycleRecord:
-    """Build a deterministic operator lifecycle status record."""
+    """Build a deterministic operator lifecycle status record.
+
+    Parameters
+    ----------
+    request : PluginExecutionRequest
+        The plugin execution request.
+    created_by : str
+        Identifier of the creating actor.
+    storage_manifest : PluginExecutionRequestStorageManifest | None
+        The storage manifest.
+    revocation_list : PluginExecutionRequestRevocationList | None
+        The aggregate revocation list.
+
+    Returns
+    -------
+    PluginExecutionRequestLifecycleRecord
+        A deterministic operator lifecycle status record.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     validate_plugin_execution_request(request)
     _require_identifier(created_by, "lifecycle creator")
     request_hash = str(request.audit_record["request_hash"])
@@ -1161,7 +1347,25 @@ def build_plugin_execution_request_lifecycle_summary(
     *,
     created_by: str,
 ) -> PluginExecutionRequestLifecycleSummary:
-    """Build a deterministic batch summary for operator lifecycle review."""
+    """Build a deterministic batch summary for operator lifecycle review.
+
+    Parameters
+    ----------
+    lifecycle_records : tuple[PluginExecutionRequestLifecycleRecord, ...]
+        Lifecycle status records.
+    created_by : str
+        Identifier of the creating actor.
+
+    Returns
+    -------
+    PluginExecutionRequestLifecycleSummary
+        A deterministic batch summary for operator lifecycle review.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     _require_identifier(created_by, "lifecycle summary creator")
     if not lifecycle_records:
         raise ValueError("lifecycle summary requires at least one record")
@@ -1225,7 +1429,27 @@ def build_plugin_execution_request_lifecycle_policy_report(
     created_by: str,
     storage_adapters: tuple[PluginExecutionRequestStorageAdapterManifest, ...] = (),
 ) -> PluginExecutionRequestLifecyclePolicyReport:
-    """Build a deterministic operator policy report for lifecycle batches."""
+    """Build a deterministic operator policy report for lifecycle batches.
+
+    Parameters
+    ----------
+    summary : PluginExecutionRequestLifecycleSummary
+        The lifecycle summary.
+    created_by : str
+        Identifier of the creating actor.
+    storage_adapters : tuple[PluginExecutionRequestStorageAdapterManifest, ...]
+        Storage-adapter manifests.
+
+    Returns
+    -------
+    PluginExecutionRequestLifecyclePolicyReport
+        A deterministic operator policy report for lifecycle batches.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     validate_plugin_execution_request_lifecycle_summary(summary)
     _require_identifier(created_by, "lifecycle policy creator")
     request_hashes = set(summary.approved_request_hashes)
@@ -1322,7 +1546,25 @@ def validate_plugin_execution_request_storage_manifest(
     request: PluginExecutionRequest,
     manifest: PluginExecutionRequestStorageManifest,
 ) -> PluginExecutionRequestStorageManifest:
-    """Validate that a storage manifest still matches its request envelope."""
+    """Validate that a storage manifest still matches its request envelope.
+
+    Parameters
+    ----------
+    request : PluginExecutionRequest
+        The plugin execution request.
+    manifest : PluginExecutionRequestStorageManifest
+        The manifest object.
+
+    Returns
+    -------
+    PluginExecutionRequestStorageManifest
+        That a storage manifest still matches its request envelope.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     request_hash = str(request.audit_record.get("request_hash", ""))
     if manifest.request_hash != request_hash:
         raise ValueError("storage manifest request hash mismatch")
@@ -1354,7 +1596,20 @@ def build_plugin_execution_request_storage_bundle(
     request: PluginExecutionRequest,
     manifest: PluginExecutionRequestStorageManifest,
 ) -> dict[str, object]:
-    """Build a deterministic local persistence bundle for a request envelope."""
+    """Build a deterministic local persistence bundle for a request envelope.
+
+    Parameters
+    ----------
+    request : PluginExecutionRequest
+        The plugin execution request.
+    manifest : PluginExecutionRequestStorageManifest
+        The manifest object.
+
+    Returns
+    -------
+    dict[str, object]
+        A deterministic local persistence bundle for a request envelope.
+    """
     validate_plugin_execution_request_storage_manifest(request, manifest)
     bundle: dict[str, object] = {
         "schema": "scpn_plugin_execution_request_storage_bundle_v1",
@@ -1372,7 +1627,27 @@ def build_plugin_execution_request_storage_adapter_manifest(
     *,
     write_performed: bool = False,
 ) -> PluginExecutionRequestStorageAdapterManifest:
-    """Build a deterministic handoff manifest for local or external stores."""
+    """Build a deterministic handoff manifest for local or external stores.
+
+    Parameters
+    ----------
+    request : PluginExecutionRequest
+        The plugin execution request.
+    manifest : PluginExecutionRequestStorageManifest
+        The manifest object.
+    write_performed : bool
+        Whether a write was performed.
+
+    Returns
+    -------
+    PluginExecutionRequestStorageAdapterManifest
+        A deterministic handoff manifest for local or external stores.
+
+    Raises
+    ------
+    PermissionError
+        If the operation is not permitted by policy.
+    """
     validate_plugin_execution_request_storage_manifest(request, manifest)
     bundle = build_plugin_execution_request_storage_bundle(request, manifest)
     storage_scheme = _validate_storage_backend_uri(
@@ -1420,7 +1695,23 @@ def build_plugin_execution_request_storage_adapter_manifest(
 def validate_plugin_execution_request_storage_adapter_manifest(
     adapter: PluginExecutionRequestStorageAdapterManifest,
 ) -> PluginExecutionRequestStorageAdapterManifest:
-    """Validate a stored plugin request storage-adapter handoff manifest."""
+    """Validate a stored plugin request storage-adapter handoff manifest.
+
+    Parameters
+    ----------
+    adapter : PluginExecutionRequestStorageAdapterManifest
+        The storage-adapter manifest.
+
+    Returns
+    -------
+    PluginExecutionRequestStorageAdapterManifest
+        A stored plugin request storage-adapter handoff manifest.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     record = adapter.audit_record
     if record.get("schema") != "scpn_plugin_execution_request_storage_adapter_v1":
         raise ValueError("storage adapter schema mismatch")
@@ -1453,7 +1744,23 @@ def validate_plugin_execution_request_storage_adapter_manifest(
 def validate_plugin_execution_request_storage_bundle(
     bundle: dict[str, object],
 ) -> dict[str, object]:
-    """Validate an on-disk plugin execution request storage bundle."""
+    """Validate an on-disk plugin execution request storage bundle.
+
+    Parameters
+    ----------
+    bundle : dict[str, object]
+        The on-disk storage bundle.
+
+    Returns
+    -------
+    dict[str, object]
+        An on-disk plugin execution request storage bundle.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if bundle.get("schema") != "scpn_plugin_execution_request_storage_bundle_v1":
         raise ValueError(
             "storage bundle schema must be "
@@ -1491,7 +1798,33 @@ def write_plugin_execution_request_storage_bundle(
     *,
     overwrite: bool = False,
 ) -> dict[str, object]:
-    """Atomically persist a validated local-file execution request bundle."""
+    """Atomically persist a validated local-file execution request bundle.
+
+    Parameters
+    ----------
+    request : PluginExecutionRequest
+        The plugin execution request.
+    manifest : PluginExecutionRequestStorageManifest
+        The manifest object.
+    path : str | Path
+        Filesystem path to the target file.
+    overwrite : bool
+        Whether to overwrite an existing artefact.
+
+    Returns
+    -------
+    dict[str, object]
+        A validated local-file execution request bundle.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    FileExistsError
+        If the target already exists and overwrite is false.
+    IsADirectoryError
+        If the target path is a directory.
+    """
     if manifest.storage_backend != "local_file":
         raise ValueError("only local_file request storage bundles can be written")
     bundle = build_plugin_execution_request_storage_bundle(request, manifest)
@@ -1593,7 +1926,18 @@ def _validate_storage_backend_uri(storage_backend: str, storage_uri: str) -> str
 
 
 def compatibility_report(manifest: PluginManifest) -> PluginCompatibilityReport:
-    """Return a non-throwing compatibility report for a manifest."""
+    """Return a non-throwing compatibility report for a manifest.
+
+    Parameters
+    ----------
+    manifest : PluginManifest
+        The manifest object.
+
+    Returns
+    -------
+    PluginCompatibilityReport
+        A non-throwing compatibility report for a manifest.
+    """
     reasons: list[str] = []
     if manifest.min_spo_version is not None and _version_tuple(
         __version__
@@ -1623,7 +1967,18 @@ def compatibility_report(manifest: PluginManifest) -> PluginCompatibilityReport:
 def discover_plugin_manifests(
     entry_point_group: str = _ENTRY_POINT_GROUP,
 ) -> tuple[PluginManifest, ...]:
-    """Discover plugin manifests from Python entry points."""
+    """Discover plugin manifests from Python entry points.
+
+    Parameters
+    ----------
+    entry_point_group : str
+        Python entry-point group name.
+
+    Returns
+    -------
+    tuple[PluginManifest, ...]
+        Plugin manifests from Python entry points.
+    """
     entry_points = metadata.entry_points()
     selected = entry_points.select(group=entry_point_group)
 
@@ -1655,6 +2010,31 @@ def load_plugin_capability(
     approved the manifest. The target must be declared by the manifest, match the
     requested capability kind/name, and resolve inside the plugin package unless
     the policy explicitly relaxes that check.
+
+    Parameters
+    ----------
+    manifest : PluginManifest
+        The manifest object.
+    kind : PluginKind
+        The plugin capability kind.
+    name : str
+        The capability or resource name.
+    policy : PluginRuntimeLoadPolicy | None
+        The runtime policy, or ``None``.
+
+    Returns
+    -------
+    LoadedPluginCapability
+        A declared plugin capability under an explicit runtime policy.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    PermissionError
+        If the operation is not permitted by policy.
+    TypeError
+        If an argument has the wrong type.
     """
     validate_plugin_manifest(manifest)
     if policy is None:
@@ -1707,7 +2087,37 @@ def build_plugin_execution_plan(
     kwargs: dict[str, object] | None = None,
     policy: PluginRuntimeExecutionPolicy | None = None,
 ) -> PluginExecutionPlan:
-    """Build a deterministic runtime invocation plan without executing it."""
+    """Build a deterministic runtime invocation plan without executing it.
+
+    Parameters
+    ----------
+    manifest : PluginManifest
+        The manifest object.
+    kind : PluginKind
+        The plugin capability kind.
+    name : str
+        The capability or resource name.
+    args : tuple[object, ...]
+        Positional arguments for the capability.
+    kwargs : dict[str, object] | None
+        Keyword arguments for the capability, or ``None``.
+    policy : PluginRuntimeExecutionPolicy | None
+        The runtime policy, or ``None``.
+
+    Returns
+    -------
+    PluginExecutionPlan
+        A deterministic runtime invocation plan without executing it.
+
+    Raises
+    ------
+    PermissionError
+        If the operation is not permitted by policy.
+    TypeError
+        If an argument has the wrong type.
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if policy is None:
         policy = PluginRuntimeExecutionPolicy()
     if not policy.execution_permitted:
@@ -1779,7 +2189,29 @@ def build_plugin_execution_approval(
     approval_reference: str,
     approval_reason: str,
 ) -> PluginExecutionApproval:
-    """Build a deterministic operator approval artefact for an execution plan."""
+    """Build a deterministic operator approval artefact for an execution plan.
+
+    Parameters
+    ----------
+    plan : PluginExecutionPlan
+        The execution plan.
+    operator_identity : str
+        Identifier of the operator.
+    approval_reference : str
+        External approval reference.
+    approval_reason : str
+        Reason recorded with the approval.
+
+    Returns
+    -------
+    PluginExecutionApproval
+        A deterministic operator approval artefact for an execution plan.
+
+    Raises
+    ------
+    PermissionError
+        If the operation is not permitted by policy.
+    """
     _validate_sha256(plan.plan_hash, "plan hash")
     _validate_sha256(plan.target_hash, "target hash")
     _require_identifier(operator_identity, "operator identity")
@@ -1837,7 +2269,27 @@ def build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
 ) -> PluginExecutionRequest:
-    """Build a deterministic, non-importing request artefact for execution."""
+    """Build a deterministic, non-importing request artefact for execution.
+
+    Parameters
+    ----------
+    plan : PluginExecutionPlan
+        The execution plan.
+    approval : PluginExecutionApproval
+        The execution-plan approval artefact.
+
+    Returns
+    -------
+    PluginExecutionRequest
+        A deterministic, non-importing request artefact for execution.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    PermissionError
+        If the operation is not permitted by policy.
+    """
     if approval.schema != "scpn_plugin_execution_approval_v1":
         raise ValueError("approval schema must be scpn_plugin_execution_approval_v1")
     if not approval.approved:
@@ -1955,6 +2407,31 @@ def execute_plugin_capability(
     execution are explicitly permitted. Audit metadata records the invocation
     shape without serialising argument values, so secrets and large payloads are
     not copied into the audit record.
+
+    Parameters
+    ----------
+    manifest : PluginManifest
+        The manifest object.
+    kind : PluginKind
+        The plugin capability kind.
+    name : str
+        The capability or resource name.
+    args : tuple[object, ...]
+        Positional arguments for the capability.
+    kwargs : dict[str, object] | None
+        Keyword arguments for the capability, or ``None``.
+    policy : PluginRuntimeExecutionPolicy | None
+        The runtime policy, or ``None``.
+
+    Returns
+    -------
+    ExecutedPluginCapability
+        Invoke a declared plugin capability under an explicit execution policy.
+
+    Raises
+    ------
+    TypeError
+        If an argument has the wrong type.
     """
     if kwargs is None:
         kwargs = {}
@@ -2007,6 +2484,33 @@ def execute_plugin_execution_request(
     hash, and target hash before importing the plugin module. Argument values
     remain outside audit records; only positional count and keyword names
     participate in the plan hash.
+
+    Parameters
+    ----------
+    manifest : PluginManifest
+        The manifest object.
+    request : PluginExecutionRequest
+        The plugin execution request.
+    args : tuple[object, ...]
+        Positional arguments for the capability.
+    kwargs : dict[str, object] | None
+        Keyword arguments for the capability, or ``None``.
+    revoked_request_hashes : tuple[str, ...]
+        Hashes of revoked execution requests.
+
+    Returns
+    -------
+    ExecutedPluginCapability
+        Invoke a plugin only when the approved request matches this call shape.
+
+    Raises
+    ------
+    TypeError
+        If an argument has the wrong type.
+    ValueError
+        If the inputs are invalid or inconsistent.
+    PermissionError
+        If the operation is not permitted by policy.
     """
     if kwargs is None:
         kwargs = {}
@@ -2071,6 +2575,18 @@ def build_plugin_marketplace_catalog(
 
     The catalogue is metadata-only: it uses manifest declarations and
     compatibility reports, and it never imports plugin implementation targets.
+
+    Parameters
+    ----------
+    manifests : tuple[PluginManifest, ...]
+        The manifest records.
+    include_incompatible : bool
+        Whether to include incompatible items.
+
+    Returns
+    -------
+    dict[str, object]
+        A deterministic catalogue payload for marketplace tooling.
     """
     reports = tuple(compatibility_report(manifest) for manifest in manifests)
     selected = (
@@ -2106,6 +2622,23 @@ def build_rust_plugin_registry(
     consumers can parse capabilities, targets, channel/knob declarations, and
     compatibility flags from stable JSON before deciding whether to hand a
     target back to Python.
+
+    Parameters
+    ----------
+    manifests : tuple[PluginManifest, ...]
+        The manifest records.
+    include_incompatible : bool
+        Whether to include incompatible items.
+
+    Returns
+    -------
+    dict[str, object]
+        A flattened metadata registry for Rust-side dispatchers.
+
+    Raises
+    ------
+    TypeError
+        If an argument has the wrong type.
     """
     catalog = build_plugin_marketplace_catalog(
         manifests,
@@ -2172,6 +2705,23 @@ def build_rust_plugin_runtime_handoff(
     native/plugin loading remains disabled. Rust can consume this as a stable
     preflight contract before any future loader is allowed to resolve or call
     implementation targets.
+
+    Parameters
+    ----------
+    manifests : tuple[PluginManifest, ...]
+        The manifest records.
+    include_incompatible : bool
+        Whether to include incompatible items.
+
+    Returns
+    -------
+    dict[str, object]
+        A guarded metadata handoff for a future Rust runtime loader.
+
+    Raises
+    ------
+    TypeError
+        If an argument has the wrong type.
     """
     registry = build_rust_plugin_registry(
         manifests,

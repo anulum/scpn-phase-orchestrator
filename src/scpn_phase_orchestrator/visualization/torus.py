@@ -101,6 +101,22 @@ def torus_points_json(
       y = (R + r·cos(φ_i)) · sin(θ_i)
       z = r · sin(φ_i)
     where φ_i = 2π·i/N distributes oscillators around the minor circle.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    R_values : list[float] | None
+        Order-parameter values.
+    major_radius : float
+        Torus major radius.
+    minor_radius : float
+        Torus minor radius.
+
+    Returns
+    -------
+    str
+        Oscillator phases to 3D torus coordinates for Three.js.
     """
     phases = _validate_phase_array(phases, name="phases")
     n = len(phases)
@@ -142,6 +158,18 @@ def phase_wheel_json(phases: FloatArray, layer_names: list[str] | None = None) -
     """Phase wheel data: oscillator phases as polar coordinates.
 
     Each oscillator is a point at angle=θ_i, radius=1 on the unit circle.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    layer_names : list[str] | None
+        Per-layer names.
+
+    Returns
+    -------
+    str
+        Phase wheel data: oscillator phases as polar coordinates.
     """
     phases = _validate_phase_array(phases, name="phases")
     n = len(phases)

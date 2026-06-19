@@ -94,6 +94,23 @@ class ActionProjector:
         multiple actuator records must therefore provide identical limits and
         identical `rate_limit_per_step` values for those records; otherwise the
         binding is ambiguous and projection fails closed.
+
+        Parameters
+        ----------
+        actuators : Iterable[ActuatorMapping]
+            Actuator mapping declarations.
+
+        Returns
+        -------
+        ActionProjector
+            Projector bounds and slew limits from binding-spec actuators.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If the inputs are invalid or inconsistent.
         """
         rate_limits: dict[str, float] = {}
         value_bounds: dict[str, tuple[float, float]] = {}
@@ -122,7 +139,27 @@ class ActionProjector:
         return cls(rate_limits=rate_limits, value_bounds=value_bounds)
 
     def project(self, action: ControlAction, previous_value: float) -> ControlAction:
-        """Clamp action value to bounds and rate limit relative to *previous_value*."""
+        """Clamp action value to bounds and rate limit relative to *previous_value*.
+
+        Parameters
+        ----------
+        action : ControlAction
+            The control action.
+        previous_value : float
+            The previous knob value.
+
+        Returns
+        -------
+        ControlAction
+            Clamp action value to bounds and rate limit relative to *previous_value*.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if not isinstance(action, ControlAction):
             raise TypeError(f"action must be ControlAction, got {action!r}")
         if not isfinite(float(action.value)):
