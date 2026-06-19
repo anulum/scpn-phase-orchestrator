@@ -148,3 +148,63 @@ def test_build_examples_integrate_monitor_api(monkeypatch: pytest.MonkeyPatch) -
         for scenario in scenarios
     )
     assert all(scenario["unsafe_due_to_threshold"] for scenario in scenarios)
+
+
+_MISSING = object()
+
+
+def _corrupt_record(field: str, value: object) -> dict:
+    record = copy.deepcopy(examples.build_self_model_reconfiguration_examples()[0])
+    if value is _MISSING:
+        del record[field]
+    else:
+        record[field] = value
+    return record
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("domain", _MISSING, "missing required fields"),
+        ("scenario_hash", 123, "scenario_hash must be a string"),
+        ("domain", "not_a_domain", "invalid domain"),
+        ("scenario_id", "  ", "scenario_id must be a non-empty string"),
+        ("error_threshold", -1.0, "error_threshold must be positive"),
+        ("error_threshold", True, "must be numeric, got bool"),
+        ("error_threshold", "x", "must be a numeric value"),
+        ("proposed_reconfiguration_action", "  ", "needs non-empty proposed action"),
+        ("operator_review_required", False, "requires operator_review_required=True"),
+        ("operator_review_required", "yes", "must be boolean"),
+        ("execution_disabled", False, "requires execution_disabled=True"),
+        ("claim_boundary", "live_actuation", "has invalid claim boundary"),
+        ("blocked_live_execution_fields", [], "requires blocked fields"),
+        ("blocked_live_execution_fields", ["  "], "must be non-empty strings"),
+        ("serialisable_evidence", "not-a-dict", "serialisable_evidence must be a dict"),
+        ("predicted_phase", "not-a-vector", "must be a float-convertible vector"),
+        ("predicted_phase", [[0.1, 0.2]], "must be one-dimensional"),
+        ("predicted_phase", [], "must contain at least one value"),
+        ("predicted_phase", [float("nan"), 0.1], "must contain only finite values"),
+    ],
+)
+def test_validate_scenario_record_rejects_corruptions(field, value, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        examples._validate_scenario_record(_corrupt_record(field, value))
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("within_threshold", "maybe", "within_threshold must be boolean"),
+        ("error_norm", float("inf"), "error_norm must be finite"),
+        ("max_abs_error", float("inf"), "max_abs_error must be finite"),
+        ("mean_abs_error", float("inf"), "mean_abs_error must be finite"),
+        ("threshold", -1.0, "threshold must be finite and positive"),
+    ],
+)
+def test_validate_scenario_record_rejects_corrupt_error_payload(
+    field, value, match
+) -> None:
+    record = copy.deepcopy(examples.build_self_model_reconfiguration_examples()[0])
+    record["self_model_error"][field] = value
+    with pytest.raises(ValueError, match=match):
+        examples._validate_scenario_record(record)
