@@ -88,3 +88,58 @@ def test_worker_a_api_enrichment_runs_offline_search() -> None:
     cyber = next(record for record in records if record["domain"] == "cyber_industrial")
     assert cyber["accepted_candidate_count"] == 0
     assert cyber["rejected_candidate_count"] == cyber["candidate_count"]
+
+
+def _valid() -> dict[str, object]:
+    return copy.deepcopy(_records()[0])
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("domain", "not_a_domain", "unsupported domain"),
+        ("scenario_id", "  ", "scenario_id must be a non-empty string"),
+        ("claim_boundary", "live_actuation", "invalid claim_boundary"),
+        ("parent_policy", {}, "non-empty parent_policy"),
+        ("audit_replays", "not-a-sequence", "audit_replays must be a sequence"),
+        ("audit_replays", [], "audit_replays must be non-empty"),
+        ("trace", {}, "trace must be non-empty"),
+        ("trace", {"signal": "x"}, "trace values must be sequences"),
+        ("trace", {"signal": []}, "trace values must be non-empty"),
+        ("generation_count", 0, "generation_count must be positive"),
+        ("generation_count", "x", "generation_count must be an integer"),
+        ("population_size", 0, "population_size must be positive"),
+        ("mutation_step", 0.0, "mutation_step must be positive"),
+        ("mutation_step", "x", "mutation_step must be a finite number"),
+        (
+            "minimum_replay_reward",
+            float("inf"),
+            "minimum_replay_reward must be a finite",
+        ),
+        (
+            "operator_review_required",
+            "yes",
+            "operator_review_required must be a boolean",
+        ),
+        ("scenario_hash", "a" * 64, "invalid scenario_hash"),
+    ],
+)
+def test_validate_record_rejects_corrupt_field(field, value, match) -> None:
+    record = _valid()
+    record[field] = value
+    with pytest.raises(ValueError, match=match):
+        examples._validate_evolutionary_supervisor_search_record(record)
+
+
+def test_validate_record_rejects_non_mapping_record() -> None:
+    with pytest.raises(ValueError, match="record must be a mapping"):
+        examples._validate_evolutionary_supervisor_search_record("not-a-mapping")
+
+
+def test_validate_record_rejects_non_sequence_replay_violations() -> None:
+    record = _valid()
+    replays = copy.deepcopy(record["audit_replays"])
+    replays[0]["violations"] = "not-a-sequence"
+    record["audit_replays"] = replays
+    with pytest.raises(ValueError, match="violations must be a sequence"):
+        examples._validate_evolutionary_supervisor_search_record(record)
