@@ -220,6 +220,21 @@ SECTION_ENFORCED_MODULES = (
     "scpn_phase_orchestrator.runtime.server",
     "scpn_phase_orchestrator.runtime.server_grpc",
     "scpn_phase_orchestrator.runtime.simulation",
+    "scpn_phase_orchestrator.nn.bold",
+    "scpn_phase_orchestrator.nn.chimera",
+    "scpn_phase_orchestrator.nn.functional",
+    "scpn_phase_orchestrator.nn.inverse",
+    "scpn_phase_orchestrator.nn.kuramoto_layer",
+    "scpn_phase_orchestrator.nn.oim",
+    "scpn_phase_orchestrator.nn.reservoir",
+    "scpn_phase_orchestrator.nn.runtime",
+    "scpn_phase_orchestrator.nn.simplicial_layer",
+    "scpn_phase_orchestrator.nn.spectral",
+    "scpn_phase_orchestrator.nn.stuart_landau_layer",
+    "scpn_phase_orchestrator.nn.supervisor",
+    "scpn_phase_orchestrator.nn.theta_neuron",
+    "scpn_phase_orchestrator.nn.training",
+    "scpn_phase_orchestrator.nn.ude",
 )
 
 

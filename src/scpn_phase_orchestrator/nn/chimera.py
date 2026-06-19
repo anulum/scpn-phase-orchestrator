@@ -32,13 +32,17 @@ def local_order_parameter(
 
     Neighbours defined by nonzero entries in K. Vectorised — no Python loops.
 
-    Args:
-        phases: (N,) oscillator phases
-        K: (N, N) coupling matrix (nonzero = neighbour)
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases.
+    K : jax.Array
+        (N, N) coupling matrix (nonzero = neighbour).
 
     Returns
     -------
-        (N,) local order parameters in [0, 1]
+    jax.Array
+        (N,) local order parameters in [0, 1].
     """
     mask = (K != 0).astype(jnp.float32)
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]  # (N, N)
@@ -61,13 +65,17 @@ def chimera_index(
     domains. Zero variance = uniform state (either all sync or all desync).
     Differentiable.
 
-    Args:
-        phases: (N,) oscillator phases
-        K: (N, N) coupling matrix
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases.
+    K : jax.Array
+        (N, N) coupling matrix.
 
     Returns
     -------
-        Scalar chimera index (higher = more chimera-like)
+    jax.Array
+        Scalar chimera index (higher = more chimera-like).
     """
     R_local = local_order_parameter(phases, K)
     return jnp.var(R_local)
@@ -81,15 +89,21 @@ def detect_chimera(
 ) -> tuple[jax.Array, jax.Array]:
     """Classify oscillators as coherent or incoherent.
 
-    Args:
-        phases: (N,) oscillator phases
-        K: (N, N) coupling matrix
-        coherent_threshold: R_i above this → coherent
-        incoherent_threshold: R_i below this → incoherent
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases.
+    K : jax.Array
+        (N, N) coupling matrix.
+    coherent_threshold : float
+        R_i above this → coherent.
+    incoherent_threshold : float
+        R_i below this → incoherent.
 
     Returns
     -------
-        (coherent_mask, incoherent_mask): (N,) boolean arrays
+    tuple[jax.Array, jax.Array]
+        (coherent_mask, incoherent_mask): (N,) boolean arrays.
     """
     R_local = local_order_parameter(phases, K)
     coherent = R_local >= coherent_threshold

@@ -44,16 +44,23 @@ def inverse_loss(
     Runs the forward model from observed[0] and compares the predicted
     trajectory against the observed trajectory.
 
-    Args:
-        K: (N, N) coupling matrix to optimize
-        omegas: (N,) natural frequencies to optimize
-        observed: (T, N) observed phase trajectory
-        dt: integration timestep
-        l1_weight: L1 penalty on K for sparsity (0 = no penalty)
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) coupling matrix to optimize.
+    omegas : jax.Array
+        (N,) natural frequencies to optimize.
+    observed : jax.Array
+        (T, N) observed phase trajectory.
+    dt : float
+        integration timestep.
+    l1_weight : float
+        L1 penalty on K for sparsity (0 = no penalty).
 
     Returns
     -------
-        Scalar loss
+    jax.Array
+        Scalar loss.
     """
     n_steps = observed.shape[0] - 1
     initial = observed[0]
@@ -80,14 +87,27 @@ def _shooting_loss(
 ) -> jax.Array:
     """Multiple-shooting loss, fully JIT-compatible via vmap.
 
-    Args:
-        K: (N, N) coupling matrix
-        omegas: (N,) natural frequencies
-        starts: (W, N) initial phases for each window
-        targets: (W, window_size, N) target trajectories per window
-        dt: integration timestep
-        window_size: steps per window (fixed for JIT)
-        l1_weight: L1 penalty
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) coupling matrix.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    starts : jax.Array
+        (W, N) initial phases for each window.
+    targets : jax.Array
+        (W, window_size, N) target trajectories per window.
+    dt : float
+        integration timestep.
+    window_size : int
+        steps per window (fixed for JIT).
+    l1_weight : float
+        L1 penalty.
+
+    Returns
+    -------
+    jax.Array
+        The result.
     """
 
     def window_error(start, target):
@@ -141,14 +161,19 @@ def analytical_inverse(
     Finite-difference dθ/dt, build sin(Δθ) basis, solve via lstsq.
     O(N³) per oscillator, no ODE backprop, no gradient vanishing.
 
-    Args:
-        observed: (T, N) phase trajectory, T >= 3
-        dt: integration timestep
-        alpha: Tikhonov (ridge) regularisation strength. 0 = no reg.
+    Parameters
+    ----------
+    observed : jax.Array
+        (T, N) phase trajectory, T >= 3.
+    dt : float
+        integration timestep.
+    alpha : float
+        Tikhonov (ridge) regularisation strength. 0 = no reg.
 
     Returns
     -------
-        (K, omegas): inferred (N, N) coupling and (N,) frequencies
+    tuple[jax.Array, jax.Array]
+        (K, omegas): inferred (N, N) coupling and (N,) frequencies.
     """
     T, N = observed.shape
     # Phase-aware central finite differences: unwrap Δθ via atan2
@@ -208,17 +233,25 @@ def hybrid_inverse(
     with a few Adam epochs using multiple shooting. Handles model
     mismatch (noise, higher harmonics, amplitude effects).
 
-    Args:
-        observed: (T, N) phase trajectory
-        dt: integration timestep
-        alpha: Tikhonov regularisation for analytical step
-        n_refine: Adam refinement epochs (0 = analytical only)
-        lr: learning rate for refinement
-        window_size: shooting window size for refinement
+    Parameters
+    ----------
+    observed : jax.Array
+        (T, N) phase trajectory.
+    dt : float
+        integration timestep.
+    alpha : float
+        Tikhonov regularisation for analytical step.
+    n_refine : int
+        Adam refinement epochs (0 = analytical only).
+    lr : float
+        learning rate for refinement.
+    window_size : int
+        shooting window size for refinement.
 
     Returns
     -------
-        (K, omegas, losses): inferred params + refinement loss history
+    tuple[jax.Array, jax.Array, list[float]]
+        (K, omegas, losses): inferred params + refinement loss history.
     """
     K, omegas = analytical_inverse(observed, dt, alpha=alpha)
 
@@ -277,23 +310,31 @@ def infer_coupling(
     Uses Adam optimiser with gradient clipping and optional multiple
     shooting for gradient-stable training through ODE solvers.
 
-    Args:
-        observed: (T, N) observed phase trajectory
-        dt: integration timestep used to generate the data
-        n_epochs: optimisation epochs
-        lr: learning rate (for Adam)
-        l1_weight: L1 sparsity penalty on K
-        seed: random seed for initialisation
-        window_size: if >0, use multiple shooting with this window size.
-            Recommended: 10-20 steps. 0 = single-shot (original behaviour).
-        grad_clip: maximum gradient norm (0 = no clipping)
+    Parameters
+    ----------
+    observed : jax.Array
+        (T, N) observed phase trajectory.
+    dt : float
+        integration timestep used to generate the data.
+    n_epochs : int
+        optimisation epochs.
+    lr : float
+        learning rate (for Adam).
+    l1_weight : float
+        L1 sparsity penalty on K.
+    seed : int
+        random seed for initialisation.
+    window_size : int
+        if >0, use multiple shooting with this window size. Recommended: 10-20 steps. 0
+        = single-shot (original behaviour).
+    grad_clip : float
+        maximum gradient norm (0 = no clipping).
 
     Returns
     -------
-        Tuple of (K, omegas, losses) where:
-            K: (N, N) inferred coupling matrix
-            omegas: (N,) inferred natural frequencies
-            losses: list of loss values per epoch
+    tuple[jax.Array, jax.Array, list[float]]
+        (K, omegas, losses) where: K: (N, N) inferred coupling matrix omegas: (N,)
+        inferred natural frequencies losses: list of loss values per epoch.
     """
     N = observed.shape[1]
     key = jax.random.PRNGKey(seed)
@@ -356,13 +397,17 @@ def infer_coupling(
 def coupling_correlation(K_true: jax.Array, K_inferred: jax.Array) -> jax.Array:
     """Pearson correlation between true and inferred coupling matrices.
 
-    Args:
-        K_true: (N, N) ground truth coupling
-        K_inferred: (N, N) inferred coupling
+    Parameters
+    ----------
+    K_true : jax.Array
+        (N, N) ground truth coupling.
+    K_inferred : jax.Array
+        (N, N) inferred coupling.
 
     Returns
     -------
-        Scalar correlation in [-1, 1]
+    jax.Array
+        Scalar correlation in [-1, 1].
     """
     # Flatten upper triangle (exclude diagonal)
     N = K_true.shape[0]

@@ -49,15 +49,21 @@ def theta_neuron_step(
 ) -> jax.Array:
     """Single Euler step of the theta neuron model.
 
-    Args:
-        phases: (N,) neuron phases in [0, 2pi)
-        eta: (N,) excitability parameters (η>0: oscillatory, η<0: excitable)
-        K: (N, N) synaptic coupling matrix
-        dt: integration timestep
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) neuron phases in [0, 2pi).
+    eta : jax.Array
+        (N,) excitability parameters (η>0: oscillatory, η<0: excitable).
+    K : jax.Array
+        (N, N) synaptic coupling matrix.
+    dt : float
+        integration timestep.
 
     Returns
     -------
-        (N,) updated phases
+    jax.Array
+        (N,) updated phases.
     """
     dphi = _theta_deriv(phases, eta, K)
     return (phases + dt * dphi) % TWO_PI
@@ -69,7 +75,24 @@ def theta_neuron_rk4_step(
     K: jax.Array,
     dt: float,
 ) -> jax.Array:
-    """Single RK4 step of the theta neuron model."""
+    """Single RK4 step of the theta neuron model.
+
+    Parameters
+    ----------
+    phases : jax.Array
+        Oscillator phases in radians, shape ``(N,)``.
+    eta : jax.Array
+        Per-neuron excitability parameters, shape ``(N,)``.
+    K : jax.Array
+        Coupling matrix ``K``, shape ``(N, N)``.
+    dt : float
+        Integration step size.
+
+    Returns
+    -------
+    jax.Array
+        The phases after one theta-neuron RK4 step.
+    """
 
     def deriv(p: jax.Array) -> jax.Array:
         """Theta neuron derivative at arbitrary phase."""
@@ -92,17 +115,25 @@ def theta_neuron_forward(
 ) -> tuple[jax.Array, jax.Array]:
     """Run N steps of theta neuron dynamics.
 
-    Args:
-        phases: (N,) initial phases
-        eta: (N,) excitability parameters
-        K: (N, N) synaptic coupling
-        dt: timestep
-        n_steps: integration steps
-        method: "rk4" or "euler"
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) initial phases.
+    eta : jax.Array
+        (N,) excitability parameters.
+    K : jax.Array
+        (N, N) synaptic coupling.
+    dt : float
+        timestep.
+    n_steps : int
+        integration steps.
+    method : str
+        "rk4" or "euler".
 
     Returns
     -------
-        (final, trajectory) where trajectory is (n_steps, N)
+    tuple[jax.Array, jax.Array]
+        (final, trajectory) where trajectory is (n_steps, N).
     """
     step_fn = theta_neuron_rk4_step if method == "rk4" else theta_neuron_step
 
@@ -168,7 +199,18 @@ class ThetaNeuronLayer(eqx.Module):
         self,
         phases: jax.Array,
     ) -> tuple[jax.Array, jax.Array]:
-        """Run dynamics and return full trajectory."""
+        """Run dynamics and return full trajectory.
+
+        Parameters
+        ----------
+        phases : jax.Array
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        tuple[jax.Array, jax.Array]
+            The final phases and the full trajectory.
+        """
         return theta_neuron_forward(
             phases,
             self.eta,

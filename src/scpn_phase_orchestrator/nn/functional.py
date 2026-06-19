@@ -114,15 +114,21 @@ def kuramoto_step(
 ) -> jax.Array:
     """Single Euler step of the Kuramoto model.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2pi)
-        omegas: (N,) natural frequencies
-        K: (N, N) coupling matrix
-        dt: integration timestep
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2pi).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) coupling matrix.
+    dt : float
+        integration timestep.
 
     Returns
     -------
-        (N,) updated phases, wrapped to [0, 2pi)
+    jax.Array
+        (N,) updated phases, wrapped to [0, 2pi).
     """
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
     coupling = jnp.sum(K * jnp.sin(diff), axis=1)
@@ -137,15 +143,21 @@ def kuramoto_rk4_step(
 ) -> jax.Array:
     """Single RK4 step of the Kuramoto model.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2pi)
-        omegas: (N,) natural frequencies
-        K: (N, N) coupling matrix
-        dt: integration timestep
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2pi).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) coupling matrix.
+    dt : float
+        integration timestep.
 
     Returns
     -------
-        (N,) updated phases, wrapped to [0, 2pi)
+    jax.Array
+        (N,) updated phases, wrapped to [0, 2pi).
     """
 
     def deriv(p: jax.Array) -> jax.Array:
@@ -172,19 +184,26 @@ def kuramoto_forward(
 
     Uses jax.lax.scan for efficient compilation and autodiff.
 
-    Args:
-        phases: (N,) initial oscillator phases
-        omegas: (N,) natural frequencies
-        K: (N, N) coupling matrix
-        dt: integration timestep
-        n_steps: number of integration steps
-        method: "rk4" or "euler"
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) initial oscillator phases.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) coupling matrix.
+    dt : float
+        integration timestep.
+    n_steps : int
+        number of integration steps.
+    method : str
+        "rk4" or "euler".
 
     Returns
     -------
-        Tuple of:
-            final: (N,) phases after n_steps
-            trajectory: (n_steps, N) full phase trajectory
+    tuple[jax.Array, jax.Array]
+        : final: (N,) phases after n_steps trajectory: (n_steps, N) full phase
+        trajectory.
     """
     step_fn = kuramoto_rk4_step if method == "rk4" else kuramoto_step
 
@@ -222,16 +241,23 @@ def kuramoto_step_masked(
 ) -> jax.Array:
     """Single Euler step with masked coupling.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2pi)
-        omegas: (N,) natural frequencies
-        K: (N, N) coupling weights
-        mask: (N, N) binary mask (1 = edge exists, 0 = no edge)
-        dt: integration timestep
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2pi).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) coupling weights.
+    mask : jax.Array
+        (N, N) binary mask (1 = edge exists, 0 = no edge).
+    dt : float
+        integration timestep.
 
     Returns
     -------
-        (N,) updated phases
+    jax.Array
+        (N,) updated phases.
     """
     dphi = _kuramoto_deriv_masked(phases, omegas, K, mask)
     return (phases + dt * dphi) % TWO_PI
@@ -244,7 +270,26 @@ def kuramoto_rk4_step_masked(
     mask: jax.Array,
     dt: float,
 ) -> jax.Array:
-    """Single RK4 step with masked coupling."""
+    """Single RK4 step with masked coupling.
+
+    Parameters
+    ----------
+    phases : jax.Array
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : jax.Array
+        Natural frequencies in rad/s, shape ``(N,)``.
+    K : jax.Array
+        Coupling matrix ``K``, shape ``(N, N)``.
+    mask : jax.Array
+        Boolean coupling mask, shape ``(N, N)``.
+    dt : float
+        Integration step size.
+
+    Returns
+    -------
+    jax.Array
+        The phases after one masked RK4 step.
+    """
 
     def deriv(p: jax.Array) -> jax.Array:
         return _kuramoto_deriv_masked(p, omegas, K, mask)
@@ -267,18 +312,27 @@ def kuramoto_forward_masked(
 ) -> tuple[jax.Array, jax.Array]:
     """Run N Kuramoto steps with masked coupling.
 
-    Args:
-        phases: (N,) initial phases
-        omegas: (N,) natural frequencies
-        K: (N, N) coupling weights
-        mask: (N, N) binary mask
-        dt: timestep
-        n_steps: integration steps
-        method: "rk4" or "euler"
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) initial phases.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) coupling weights.
+    mask : jax.Array
+        (N, N) binary mask.
+    dt : float
+        timestep.
+    n_steps : int
+        integration steps.
+    method : str
+        "rk4" or "euler".
 
     Returns
     -------
-        (final, trajectory) — same as kuramoto_forward
+    tuple[jax.Array, jax.Array]
+        (final, trajectory) — same as kuramoto_forward.
     """
     step_fn = kuramoto_rk4_step_masked if method == "rk4" else kuramoto_step_masked
 
@@ -320,15 +374,21 @@ def winfree_step(
 ) -> jax.Array:
     """Single Euler step of the Winfree model.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2pi)
-        omegas: (N,) natural frequencies
-        K: scalar coupling strength
-        dt: integration timestep
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2pi).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : float
+        scalar coupling strength.
+    dt : float
+        integration timestep.
 
     Returns
     -------
-        (N,) updated phases
+    jax.Array
+        (N,) updated phases.
     """
     return (phases + dt * _winfree_deriv(phases, omegas, K)) % TWO_PI
 
@@ -339,7 +399,24 @@ def winfree_rk4_step(
     K: float,
     dt: float,
 ) -> jax.Array:
-    """Single RK4 step of the Winfree model."""
+    """Single RK4 step of the Winfree model.
+
+    Parameters
+    ----------
+    phases : jax.Array
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : jax.Array
+        Natural frequencies in rad/s, shape ``(N,)``.
+    K : float
+        Coupling matrix ``K``, shape ``(N, N)``.
+    dt : float
+        Integration step size.
+
+    Returns
+    -------
+    jax.Array
+        The phases after one Winfree RK4 step.
+    """
 
     def deriv(p: jax.Array) -> jax.Array:
         return _winfree_deriv(p, omegas, K)
@@ -361,17 +438,25 @@ def winfree_forward(
 ) -> tuple[jax.Array, jax.Array]:
     """Run N steps of Winfree dynamics.
 
-    Args:
-        phases: (N,) initial phases
-        omegas: (N,) natural frequencies
-        K: scalar coupling strength
-        dt: timestep
-        n_steps: integration steps
-        method: "rk4" or "euler"
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) initial phases.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : float
+        scalar coupling strength.
+    dt : float
+        timestep.
+    n_steps : int
+        integration steps.
+    method : str
+        "rk4" or "euler".
 
     Returns
     -------
-        (final, trajectory)
+    tuple[jax.Array, jax.Array]
+        (final, trajectory).
     """
     step_fn = winfree_rk4_step if method == "rk4" else winfree_step
 
@@ -418,16 +503,23 @@ def simplicial_step(
     Extends standard Kuramoto with higher-order 3-body interactions that
     produce explosive (first-order) synchronization transitions.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2pi)
-        omegas: (N,) natural frequencies
-        K: (N, N) pairwise coupling matrix
-        dt: integration timestep
-        sigma2: 3-body coupling strength (0 = standard Kuramoto)
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2pi).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) pairwise coupling matrix.
+    dt : float
+        integration timestep.
+    sigma2 : float | jax.Array
+        3-body coupling strength (0 = standard Kuramoto).
 
     Returns
     -------
-        (N,) updated phases, wrapped to [0, 2pi)
+    jax.Array
+        (N,) updated phases, wrapped to [0, 2pi).
     """
     dphi = _simplicial_deriv(phases, omegas, K, sigma2)
     return (phases + dt * dphi) % TWO_PI
@@ -442,16 +534,23 @@ def simplicial_rk4_step(
 ) -> jax.Array:
     """Single RK4 step of the simplicial (3-body) Kuramoto model.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2pi)
-        omegas: (N,) natural frequencies
-        K: (N, N) pairwise coupling matrix
-        dt: integration timestep
-        sigma2: 3-body coupling strength (0 = standard Kuramoto)
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2pi).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) pairwise coupling matrix.
+    dt : float
+        integration timestep.
+    sigma2 : float | jax.Array
+        3-body coupling strength (0 = standard Kuramoto).
 
     Returns
     -------
-        (N,) updated phases, wrapped to [0, 2pi)
+    jax.Array
+        (N,) updated phases, wrapped to [0, 2pi).
     """
 
     def deriv(p: jax.Array) -> jax.Array:
@@ -476,18 +575,27 @@ def simplicial_forward(
 ) -> tuple[jax.Array, jax.Array]:
     """Run N steps of simplicial Kuramoto, returning final state and trajectory.
 
-    Args:
-        phases: (N,) initial oscillator phases
-        omegas: (N,) natural frequencies
-        K: (N, N) pairwise coupling matrix
-        dt: integration timestep
-        n_steps: number of integration steps
-        sigma2: 3-body coupling strength (0 = standard Kuramoto)
-        method: "rk4" or "euler"
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) initial oscillator phases.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) pairwise coupling matrix.
+    dt : float
+        integration timestep.
+    n_steps : int
+        number of integration steps.
+    sigma2 : float | jax.Array
+        3-body coupling strength (0 = standard Kuramoto).
+    method : str
+        "rk4" or "euler".
 
     Returns
     -------
-        Tuple of (final, trajectory) where trajectory is (n_steps, N)
+    tuple[jax.Array, jax.Array]
+        (final, trajectory) where trajectory is (n_steps, N).
     """
     step_fn = simplicial_rk4_step if method == "rk4" else simplicial_step
 
@@ -535,19 +643,29 @@ def stuart_landau_step(
 ) -> tuple[jax.Array, jax.Array]:
     """Single Euler step of the Stuart-Landau oscillator model.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2pi)
-        amplitudes: (N,) oscillator amplitudes (r >= 0)
-        omegas: (N,) natural frequencies
-        mu: (N,) bifurcation parameters (supercritical if mu > 0)
-        K: (N, N) phase coupling matrix
-        K_r: (N, N) amplitude coupling matrix
-        dt: integration timestep
-        epsilon: amplitude coupling strength
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2pi).
+    amplitudes : jax.Array
+        (N,) oscillator amplitudes (r >= 0).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    mu : jax.Array
+        (N,) bifurcation parameters (supercritical if mu > 0).
+    K : jax.Array
+        (N, N) phase coupling matrix.
+    K_r : jax.Array
+        (N, N) amplitude coupling matrix.
+    dt : float
+        integration timestep.
+    epsilon : float
+        amplitude coupling strength.
 
     Returns
     -------
-        Tuple of (new_phases, new_amplitudes)
+    tuple[jax.Array, jax.Array]
+        (new_phases, new_amplitudes).
     """
     dtheta, dr = _stuart_landau_deriv(phases, amplitudes, omegas, mu, K, K_r, epsilon)
     new_phases = (phases + dt * dtheta) % TWO_PI
@@ -567,19 +685,29 @@ def stuart_landau_rk4_step(
 ) -> tuple[jax.Array, jax.Array]:
     """Single RK4 step of the Stuart-Landau oscillator model.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2pi)
-        amplitudes: (N,) oscillator amplitudes (r >= 0)
-        omegas: (N,) natural frequencies
-        mu: (N,) bifurcation parameters
-        K: (N, N) phase coupling matrix
-        K_r: (N, N) amplitude coupling matrix
-        dt: integration timestep
-        epsilon: amplitude coupling strength
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2pi).
+    amplitudes : jax.Array
+        (N,) oscillator amplitudes (r >= 0).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    mu : jax.Array
+        (N,) bifurcation parameters.
+    K : jax.Array
+        (N, N) phase coupling matrix.
+    K_r : jax.Array
+        (N, N) amplitude coupling matrix.
+    dt : float
+        integration timestep.
+    epsilon : float
+        amplitude coupling strength.
 
     Returns
     -------
-        Tuple of (new_phases, new_amplitudes)
+    tuple[jax.Array, jax.Array]
+        (new_phases, new_amplitudes).
     """
 
     def deriv(p: jax.Array, r: jax.Array) -> tuple[jax.Array, jax.Array]:
@@ -609,22 +737,34 @@ def stuart_landau_forward(
 ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
     """Run N Stuart-Landau steps, returning final state and trajectories.
 
-    Args:
-        phases: (N,) initial phases
-        amplitudes: (N,) initial amplitudes
-        omegas: (N,) natural frequencies
-        mu: (N,) bifurcation parameters
-        K: (N, N) phase coupling matrix
-        K_r: (N, N) amplitude coupling matrix
-        dt: integration timestep
-        n_steps: number of steps
-        epsilon: amplitude coupling strength
-        method: "rk4" or "euler"
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) initial phases.
+    amplitudes : jax.Array
+        (N,) initial amplitudes.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    mu : jax.Array
+        (N,) bifurcation parameters.
+    K : jax.Array
+        (N, N) phase coupling matrix.
+    K_r : jax.Array
+        (N, N) amplitude coupling matrix.
+    dt : float
+        integration timestep.
+    n_steps : int
+        number of steps.
+    epsilon : float
+        amplitude coupling strength.
+    method : str
+        "rk4" or "euler".
 
     Returns
     -------
-        (final_phases, final_amplitudes, phase_traj, amp_traj)
-        where trajectories are (n_steps, N)
+    tuple[jax.Array, jax.Array, jax.Array, jax.Array]
+        (final_phases, final_amplitudes, phase_traj, amp_traj) where trajectories are
+        (n_steps, N).
     """
     step_fn = stuart_landau_rk4_step if method == "rk4" else stuart_landau_step
 
@@ -647,12 +787,15 @@ def order_parameter(phases: jax.Array) -> jax.Array:
     Differentiable scalar measuring global synchronization.
     R=1 means perfect sync, R~0 means incoherent.
 
-    Args:
-        phases: (N,) or (T, N) oscillator phases
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) or (T, N) oscillator phases.
 
     Returns
     -------
-        Scalar R value (or (T,) if trajectory input)
+    jax.Array
+        Scalar R value (or (T,) if trajectory input).
     """
     z = jnp.exp(1j * phases)
     return jnp.abs(jnp.mean(z, axis=-1))
@@ -663,12 +806,15 @@ def plv(trajectory: jax.Array) -> jax.Array:
 
     PLV_ij = |<exp(i*(phi_i(t) - phi_j(t)))>_t|
 
-    Args:
-        trajectory: (T, N) phase trajectory
+    Parameters
+    ----------
+    trajectory : jax.Array
+        (T, N) phase trajectory.
 
     Returns
     -------
-        (N, N) PLV matrix, values in [0, 1]
+    jax.Array
+        (N, N) PLV matrix, values in [0, 1].
     """
     # (T, N, 1) - (T, 1, N) -> (T, N, N) phase differences
     diff = trajectory[:, :, jnp.newaxis] - trajectory[:, jnp.newaxis, :]
@@ -685,12 +831,15 @@ def coupling_laplacian(K: jax.Array) -> jax.Array:
 
     L = D - K, where D_ii = sum_j K_ij.
 
-    Args:
-        K: (N, N) symmetric coupling matrix
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) symmetric coupling matrix.
 
     Returns
     -------
-        (N, N) Laplacian matrix
+    jax.Array
+        (N, N) Laplacian matrix.
     """
     K = _validate_square_coupling("K", K)
     D = jnp.diag(jnp.sum(K, axis=1))
@@ -717,19 +866,33 @@ def saf_order_parameter(
     eigendecomposition, and maps large dense problems to GPU-friendly
     matrix-vector operations.
 
-    Args:
-        K: (N, N) symmetric coupling matrix (non-negative)
-        omegas: (N,) natural frequencies
-        eps: regularization for small eigenvalues
-        solver: "auto", "eigh", or "cg". "auto" uses exact eigendecomposition
-            up to exact_size_limit and conjugate gradient above it.
-        exact_size_limit: Largest N where "auto" keeps the exact eigensolver.
-        cg_tol: Relative tolerance for the conjugate-gradient solver.
-        cg_maxiter: Optional maximum conjugate-gradient iterations.
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) symmetric coupling matrix (non-negative).
+    omegas : jax.Array
+        (N,) natural frequencies.
+    eps : float
+        regularization for small eigenvalues.
+    solver : str
+        "auto", "eigh", or "cg". "auto" uses exact eigendecomposition up to
+        exact_size_limit and conjugate gradient above it.
+    exact_size_limit : int
+        Largest N where "auto" keeps the exact eigensolver.
+    cg_tol : float
+        Relative tolerance for the conjugate-gradient solver.
+    cg_maxiter : int | None
+        Optional maximum conjugate-gradient iterations.
 
     Returns
     -------
-        Scalar estimated order parameter in [0, 1]
+    jax.Array
+        Scalar estimated order parameter in [0, 1].
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     K = _validate_square_coupling("K", K)
     N = K.shape[0]
@@ -808,19 +971,29 @@ def saf_loss(
     Minimizes -r_SAF (maximize synchronization) with optional L1 budget
     constraint on total coupling strength.
 
-    Args:
-        K: (N, N) symmetric coupling matrix
-        omegas: (N,) natural frequencies
-        budget: target total coupling strength (0 = no constraint)
-        budget_weight: penalty weight for budget violation
-        solver: SAF solver passed to saf_order_parameter.
-        exact_size_limit: Largest N where "auto" keeps the exact eigensolver.
-        cg_tol: Relative tolerance for the conjugate-gradient solver.
-        cg_maxiter: Optional maximum conjugate-gradient iterations.
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) symmetric coupling matrix.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    budget : float
+        target total coupling strength (0 = no constraint).
+    budget_weight : float
+        penalty weight for budget violation.
+    solver : str
+        SAF solver passed to saf_order_parameter.
+    exact_size_limit : int
+        Largest N where "auto" keeps the exact eigensolver.
+    cg_tol : float
+        Relative tolerance for the conjugate-gradient solver.
+    cg_maxiter : int | None
+        Optional maximum conjugate-gradient iterations.
 
     Returns
     -------
-        Scalar loss (lower = better synchronization)
+    jax.Array
+        Scalar loss (lower = better synchronization).
     """
     budget = _require_non_negative_real(budget, "budget")
     budget_weight = _require_non_negative_real(budget_weight, "budget_weight")

@@ -74,6 +74,11 @@ class SimplicialKuramotoLayer(eqx.Module):
         symmetric part; the gradient w.r.t. ``K`` is therefore symmetric and
         training from a symmetric ``K`` keeps it symmetric rather than drifting
         into a directed matrix.
+
+        Returns
+        -------
+        jax.Array
+            Symmetric pairwise coupling matrix used by the dynamics ``(K + Kᵀ)/2``.
         """
         return (self.K + self.K.T) * 0.5
 
@@ -81,12 +86,15 @@ class SimplicialKuramotoLayer(eqx.Module):
     def __call__(self, phases: jax.Array) -> jax.Array:
         """Run simplicial Kuramoto dynamics on input phases.
 
-        Args:
-            phases: (n,) initial phase angles in [0, 2pi)
+        Parameters
+        ----------
+        phases : jax.Array
+            (n,) initial phase angles in [0, 2pi).
 
         Returns
         -------
-            (n,) phase angles after n_steps of integration
+        jax.Array
+            (n,) phase angles after n_steps of integration.
         """
         final, _ = simplicial_forward(
             phases,
@@ -105,12 +113,15 @@ class SimplicialKuramotoLayer(eqx.Module):
     ) -> tuple[jax.Array, jax.Array]:
         """Run dynamics and return both final state and full trajectory.
 
-        Args:
-            phases: (n,) initial phase angles
+        Parameters
+        ----------
+        phases : jax.Array
+            (n,) initial phase angles.
 
         Returns
         -------
-            Tuple of (final_phases, trajectory) where trajectory is (n_steps, n)
+        tuple[jax.Array, jax.Array]
+            (final_phases, trajectory) where trajectory is (n_steps, n).
         """
         return simplicial_forward(
             phases,
@@ -125,12 +136,15 @@ class SimplicialKuramotoLayer(eqx.Module):
     def sync_score(self, phases: jax.Array) -> jax.Array:
         """Run dynamics and return final synchronization (order parameter R).
 
-        Args:
-            phases: (n,) initial phases
+        Parameters
+        ----------
+        phases : jax.Array
+            (n,) initial phases.
 
         Returns
         -------
-            Scalar R in [0, 1]
+        jax.Array
+            Scalar R in [0, 1].
         """
         final = self(phases)
         return order_parameter(final)

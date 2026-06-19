@@ -80,12 +80,23 @@ class StuartLandauLayer(eqx.Module):
         Phase coupling is undirected, so the loss depends only on the symmetric
         part; the gradient w.r.t. ``K`` is therefore symmetric and training from
         a symmetric ``K`` keeps it symmetric instead of drifting directed.
+
+        Returns
+        -------
+        jax.Array
+            Symmetric phase-coupling matrix used by the dynamics ``(K + Kᵀ)/2``.
         """
         return (self.K + self.K.T) * 0.5
 
     @property
     def coupling_r(self) -> jax.Array:
-        """Symmetric amplitude-coupling matrix ``(K_r + K_rᵀ)/2`` (see ``coupling``)."""
+        """Symmetric amplitude-coupling matrix ``(K_r + K_rᵀ)/2`` (see ``coupling``).
+
+        Returns
+        -------
+        jax.Array
+            Symmetric amplitude-coupling matrix ``(K_r + K_rᵀ)/2`` (see ``coupling``).
+        """
         return (self.K_r + self.K_r.T) * 0.5
 
     @eqx.filter_jit
@@ -94,13 +105,17 @@ class StuartLandauLayer(eqx.Module):
     ) -> tuple[jax.Array, jax.Array]:
         """Run Stuart-Landau dynamics on input state.
 
-        Args:
-            phases: (n,) initial phase angles in [0, 2pi)
-            amplitudes: (n,) initial amplitudes (r >= 0)
+        Parameters
+        ----------
+        phases : jax.Array
+            (n,) initial phase angles in [0, 2pi).
+        amplitudes : jax.Array
+            (n,) initial amplitudes (r >= 0).
 
         Returns
         -------
-            Tuple of (final_phases, final_amplitudes)
+        tuple[jax.Array, jax.Array]
+            (final_phases, final_amplitudes).
         """
         fp, fr, _, _ = stuart_landau_forward(
             phases,
@@ -124,6 +139,13 @@ class StuartLandauLayer(eqx.Module):
         Returns
         -------
             (final_phases, final_amplitudes, phase_trajectory, amplitude_trajectory)
+
+        Parameters
+        ----------
+        phases : jax.Array
+            Oscillator phases in radians, shape ``(N,)``.
+        amplitudes : jax.Array
+            Oscillator amplitudes, shape ``(N,)``.
         """
         return stuart_landau_forward(
             phases,
@@ -141,13 +163,17 @@ class StuartLandauLayer(eqx.Module):
     def sync_score(self, phases: jax.Array, amplitudes: jax.Array) -> jax.Array:
         """Run dynamics and return final synchronization (order parameter R).
 
-        Args:
-            phases: (n,) initial phases
-            amplitudes: (n,) initial amplitudes
+        Parameters
+        ----------
+        phases : jax.Array
+            (n,) initial phases.
+        amplitudes : jax.Array
+            (n,) initial amplitudes.
 
         Returns
         -------
-            Scalar R in [0, 1]
+        jax.Array
+            Scalar R in [0, 1].
         """
         fp, _ = self(phases, amplitudes)
         return order_parameter(fp)
@@ -159,13 +185,17 @@ class StuartLandauLayer(eqx.Module):
         Useful as a differentiable activity measure: high mean amplitude
         means oscillators are active (supercritical), low means quiescent.
 
-        Args:
-            phases: (n,) initial phases
-            amplitudes: (n,) initial amplitudes
+        Parameters
+        ----------
+        phases : jax.Array
+            (n,) initial phases.
+        amplitudes : jax.Array
+            (n,) initial amplitudes.
 
         Returns
         -------
-            Scalar mean amplitude
+        jax.Array
+            Scalar mean amplitude.
         """
         import jax.numpy as jnp
 

@@ -36,12 +36,29 @@ class JaxRuntimeInfo:
 
     @property
     def has_accelerator(self) -> bool:
-        """Return ``True`` when at least one non-CPU JAX device is visible."""
+        """Return ``True`` when at least one non-CPU JAX device is visible.
+
+        Returns
+        -------
+        bool
+            Return ``True`` when at least one non-CPU JAX device is visible.
+        """
         return self.accelerator_count > 0
 
 
 def require_jax() -> ModuleType:
-    """Return the imported JAX module or raise a clear installation error."""
+    """Return the imported JAX module or raise a clear installation error.
+
+    Returns
+    -------
+    ModuleType
+        Return the imported JAX module or raise a clear installation error.
+
+    Raises
+    ------
+    RuntimeError
+        If the JAX runtime requirement is not met.
+    """
     if not HAS_JAX:
         msg = (
             "JAX is required for scpn_phase_orchestrator.nn. "
@@ -78,6 +95,11 @@ def jax_runtime_info() -> JaxRuntimeInfo:
     The function never imports JAX when it is not installed, so base package
     users can still import ``scpn_phase_orchestrator.nn`` and receive an
     actionable runtime report.
+
+    Returns
+    -------
+    JaxRuntimeInfo
+        Return an import-safe summary of the active JAX runtime.
     """
     if not HAS_JAX:
         return JaxRuntimeInfo(
@@ -108,7 +130,18 @@ def jax_runtime_info() -> JaxRuntimeInfo:
 
 
 def default_device() -> str:
-    """Return the default JAX device label used by the ``nn`` API."""
+    """Return the default JAX device label used by the ``nn`` API.
+
+    Returns
+    -------
+    str
+        Return the default JAX device label used by the ``nn`` API.
+
+    Raises
+    ------
+    RuntimeError
+        If the JAX runtime requirement is not met.
+    """
     info = jax_runtime_info()
     if info.default_device is None:
         msg = (
@@ -122,16 +155,23 @@ def default_device() -> str:
 def require_accelerator(*, allow_cpu: bool = False) -> str:
     """Return the production training device or fail fast on CPU-only runtimes.
 
-    Args:
-        allow_cpu: Permit CPU-only JAX execution. This is useful for CI,
-            documentation examples, and small smoke tests. Production ML
-            training should keep the default ``False`` so misconfigured GPU
-            jobs fail before expensive work starts.
+    Parameters
+    ----------
+    allow_cpu : bool
+        Permit CPU-only JAX execution. This is useful for CI, documentation examples,
+        and small smoke tests. Production ML training should keep the default ``False``
+        so misconfigured GPU jobs fail before expensive work starts.
 
     Returns
     -------
-        A JAX device label such as ``"gpu:0"``, ``"tpu:0"``, or ``"cpu:0"``
-        when ``allow_cpu`` is enabled.
+    str
+        A JAX device label such as ``"gpu:0"``, ``"tpu:0"``, or ``"cpu:0"`` when
+        ``allow_cpu`` is enabled.
+
+    Raises
+    ------
+    RuntimeError
+        If the JAX runtime requirement is not met.
     """
     info = jax_runtime_info()
     if not info.has_jax:

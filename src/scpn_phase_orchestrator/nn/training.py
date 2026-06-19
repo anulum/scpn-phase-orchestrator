@@ -40,14 +40,19 @@ def sync_loss(
 ) -> jax.Array:
     """Drive oscillator layer toward a target synchronisation level.
 
-    Args:
-        model: equinox layer with __call__(phases) → final_phases
-        phases: (N,) initial phases
-        target_R: target order parameter R in [0, 1]
+    Parameters
+    ----------
+    model : eqx.Module
+        equinox layer with __call__(phases) → final_phases.
+    phases : jax.Array
+        (N,) initial phases.
+    target_R : float
+        target order parameter R in [0, 1].
 
     Returns
     -------
-        Scalar loss (R - target_R)^2
+    jax.Array
+        Scalar loss (R - target_R)^2.
     """
     # type ignore: Equinox modules expose __call__ dynamically by subclass.
     final = model(phases)  # type: ignore[operator]
@@ -64,14 +69,19 @@ def trajectory_loss(
 
     Uses circular distance (via cos) to handle 2pi wrapping.
 
-    Args:
-        model: equinox layer with forward_with_trajectory(phases) → (final, traj)
-        phases: (N,) initial phases
-        observed: (T, N) observed phase trajectory
+    Parameters
+    ----------
+    model : eqx.Module
+        equinox layer with forward_with_trajectory(phases) → (final, traj).
+    phases : jax.Array
+        (N,) initial phases.
+    observed : jax.Array
+        (T, N) observed phase trajectory.
 
     Returns
     -------
-        Scalar mean circular distance
+    jax.Array
+        Scalar mean circular distance.
     """
     # type ignore: training accepts the trajectory-capable Equinox protocol.
     _, predicted = model.forward_with_trajectory(phases)  # type: ignore[attr-defined]
@@ -87,13 +97,17 @@ def coupling_sparsity_loss(
 ) -> jax.Array:
     """L1 penalty driving K toward target density.
 
-    Args:
-        K: (N, N) coupling matrix
-        target_density: fraction of nonzero entries desired
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) coupling matrix.
+    target_density : float
+        fraction of nonzero entries desired.
 
     Returns
     -------
-        Scalar penalty: |mean(|K|) - target_density * mean(|K|_initial)|
+    jax.Array
+        Scalar penalty: |mean(|K|) - target_density * mean(|K|_initial)|.
     """
     return jnp.mean(jnp.abs(K)) - target_density * jnp.mean(jnp.abs(K))
 
@@ -111,15 +125,21 @@ def train_step(
 ) -> tuple[eqx.Module, Any, jax.Array]:
     """Single optimisation step using optax.
 
-    Args:
-        model: equinox module to optimise
-        loss_fn: callable(model) → scalar loss
-        opt_state: optax optimiser state
-        optimizer: optax optimiser (e.g. optax.adam(1e-3))
+    Parameters
+    ----------
+    model : eqx.Module
+        equinox module to optimise.
+    loss_fn : Callable[[eqx.Module], jax.Array]
+        callable(model) → scalar loss.
+    opt_state : Any
+        optax optimiser state.
+    optimizer : optax.GradientTransformation
+        optax optimiser (e.g. optax.adam(1e-3)).
 
     Returns
     -------
-        (updated_model, updated_opt_state, loss_value)
+    tuple[eqx.Module, Any, jax.Array]
+        (updated_model, updated_opt_state, loss_value).
     """
     loss, grads = eqx.filter_value_and_grad(loss_fn)(model)
     updates, opt_state = optimizer.update(grads, opt_state, model)
@@ -137,16 +157,23 @@ def train(
 ) -> tuple[eqx.Module, list[float]]:
     """Full training loop.
 
-    Args:
-        model: equinox module to train
-        loss_fn: callable(model) → scalar loss
-        optimizer: optax optimiser
-        n_epochs: number of training steps
-        callback: optional fn(epoch, model, loss) called each step
+    Parameters
+    ----------
+    model : eqx.Module
+        equinox module to train.
+    loss_fn : Callable[[eqx.Module], jax.Array]
+        callable(model) → scalar loss.
+    optimizer : optax.GradientTransformation
+        optax optimiser.
+    n_epochs : int
+        number of training steps.
+    callback : Callable[[int, eqx.Module, jax.Array], None] | None
+        optional fn(epoch, model, loss) called each step.
 
     Returns
     -------
-        (trained_model, loss_history)
+    tuple[eqx.Module, list[float]]
+        (trained_model, loss_history).
     """
     opt_state = optimizer.init(eqx.filter(model, eqx.is_array))
     losses: list[float] = []
@@ -180,17 +207,23 @@ def generate_kuramoto_data(
 ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
     """Generate synthetic Kuramoto trajectory with known ground truth.
 
-    Args:
-        N: number of oscillators
-        T: number of timesteps
-        dt: integration timestep
-        K_scale: coupling matrix scale
-        key: PRNG key
+    Parameters
+    ----------
+    N : int
+        number of oscillators.
+    T : int
+        number of timesteps.
+    dt : float
+        integration timestep.
+    K_scale : float
+        coupling matrix scale.
+    key : jax.Array
+        PRNG key.
 
     Returns
     -------
-        (K_true, omegas_true, phases0, trajectory)
-        where trajectory is (T, N)
+    tuple[jax.Array, jax.Array, jax.Array, jax.Array]
+        (K_true, omegas_true, phases0, trajectory) where trajectory is (T, N).
     """
     k1, k2, k3 = jax.random.split(key, 3)
     raw = jax.random.normal(k1, (N, N)) * K_scale
@@ -216,17 +249,25 @@ def generate_chimera_data(
     Uses non-local coupling on a 1D ring (Kuramoto & Battogtokh 2002)
     that produces coexistence of synchronised and incoherent domains.
 
-    Args:
-        N: number of oscillators on the ring
-        T: number of timesteps
-        dt: timestep
-        coupling_strength: overall coupling scale
-        coupling_range: number of neighbours on each side
-        key: PRNG key
+    Parameters
+    ----------
+    N : int
+        number of oscillators on the ring.
+    T : int
+        number of timesteps.
+    dt : float
+        timestep.
+    coupling_strength : float
+        overall coupling scale.
+    coupling_range : int
+        number of neighbours on each side.
+    key : jax.Array
+        PRNG key.
 
     Returns
     -------
-        (K, phases0, trajectory) where K is (N, N), trajectory is (T, N)
+    tuple[jax.Array, jax.Array, jax.Array]
+        (K, phases0, trajectory) where K is (N, N), trajectory is (T, N).
     """
     k1 = key
     # Non-local ring coupling: each oscillator couples to ±coupling_range neighbours

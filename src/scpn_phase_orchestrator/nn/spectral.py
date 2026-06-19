@@ -24,11 +24,14 @@ import jax.numpy as jnp
 def laplacian_spectrum(K: jax.Array) -> jax.Array:
     """Sorted eigenvalues of the graph Laplacian L = D - K.
 
-    Args:
-        K: (N, N) symmetric coupling matrix (non-negative weights)
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) symmetric coupling matrix (non-negative weights).
 
     Returns
     -------
+    jax.Array
         (N,) eigenvalues in ascending order. First is ~0 (connected graph).
     """
     D = jnp.diag(jnp.sum(K, axis=1))
@@ -42,12 +45,15 @@ def algebraic_connectivity(K: jax.Array) -> jax.Array:
     Measures how well-connected the network is. Zero iff disconnected.
     Differentiable — gradient flows through eigh.
 
-    Args:
-        K: (N, N) symmetric coupling matrix
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) symmetric coupling matrix.
 
     Returns
     -------
-        Scalar lambda_2
+    jax.Array
+        Scalar lambda_2.
     """
     return laplacian_spectrum(K)[1]
 
@@ -60,12 +66,15 @@ def eigenratio(K: jax.Array) -> jax.Array:
     oscillators synchronise when all transverse eigenvalues fall
     within the MSF stability interval.
 
-    Args:
-        K: (N, N) symmetric coupling matrix
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) symmetric coupling matrix.
 
     Returns
     -------
-        Scalar lambda_N / lambda_2
+    jax.Array
+        Scalar lambda_N / lambda_2.
     """
     eigs = laplacian_spectrum(K)
     lambda_2 = eigs[1]
@@ -83,13 +92,17 @@ def sync_threshold(
 
     Below K_c, the network cannot synchronise. Above, it can.
 
-    Args:
-        K: (N, N) symmetric coupling matrix
-        omegas: (N,) natural frequencies
+    Parameters
+    ----------
+    K : jax.Array
+        (N, N) symmetric coupling matrix.
+    omegas : jax.Array
+        (N,) natural frequencies.
 
     Returns
     -------
-        Scalar estimated critical coupling
+    jax.Array
+        Scalar estimated critical coupling.
     """
     lambda_2 = algebraic_connectivity(K)
     omega_spread = jnp.max(omegas) - jnp.min(omegas)

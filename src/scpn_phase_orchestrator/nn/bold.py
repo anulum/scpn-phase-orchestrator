@@ -24,7 +24,7 @@ import jax.numpy as jnp
 # Stephan et al. 2007 default parameters
 KAPPA = 0.65  # signal decay rate (1/s)
 GAMMA = 0.41  # flow-dependent elimination rate (1/s)
-TAU = 0.98  # hemodynamic transit time (s)
+TAU = 0.98  # haemodynamic transit time (s)
 ALPHA = 0.32  # Grubb's exponent (stiffness)
 E0 = 0.4  # resting oxygen extraction fraction
 V0 = 0.02  # resting blood volume fraction
@@ -50,22 +50,35 @@ def balloon_windkessel_step(
 ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
     """Single Euler step of the Balloon-Windkessel hemodynamic model.
 
-    Args:
-        s: (N,) vasodilatory signal
-        f: (N,) blood inflow (normalized, resting=1)
-        v: (N,) blood volume (normalized, resting=1)
-        q: (N,) deoxyhemoglobin content (normalized, resting=1)
-        x: (N,) neural input (amplitude envelope)
-        dt: integration timestep (seconds)
-        kappa: signal decay rate (default 0.65)
-        gamma: flow-dependent elimination (default 0.41)
-        tau: hemodynamic transit time (default 0.98)
-        alpha: Grubb's vessel stiffness exponent (default 0.32)
-        e0: resting oxygen extraction fraction (default 0.34)
+    Parameters
+    ----------
+    s : jax.Array
+        (N,) vasodilatory signal.
+    f : jax.Array
+        (N,) blood inflow (normalised, resting=1).
+    v : jax.Array
+        (N,) blood volume (normalised, resting=1).
+    q : jax.Array
+        (N,) deoxyhaemoglobin content (normalised, resting=1).
+    x : jax.Array
+        (N,) neural input (amplitude envelope).
+    dt : float
+        integration timestep (seconds).
+    kappa : float
+        signal decay rate (default 0.65).
+    gamma : float
+        flow-dependent elimination (default 0.41).
+    tau : float
+        haemodynamic transit time (default 0.98).
+    alpha : float
+        Grubb's vessel stiffness exponent (default 0.32).
+    e0 : float
+        resting oxygen extraction fraction (default 0.34).
 
     Returns
     -------
-        Tuple of (new_s, new_f, new_v, new_q)
+    tuple[jax.Array, jax.Array, jax.Array, jax.Array]
+        (new_s, new_f, new_v, new_q).
     """
     E_f = 1.0 - (1.0 - e0) ** (1.0 / jnp.maximum(f, 0.01))
 
@@ -92,13 +105,17 @@ def bold_signal(
 ) -> jax.Array:
     """Compute BOLD signal from blood volume and deoxyhemoglobin.
 
-    Args:
-        v: (N,) or (T, N) blood volume
-        q: (N,) or (T, N) deoxyhemoglobin
+    Parameters
+    ----------
+    v : jax.Array
+        (N,) or (T, N) blood volume.
+    q : jax.Array
+        (N,) or (T, N) deoxyhaemoglobin.
 
     Returns
     -------
-        BOLD signal, same shape as input
+    jax.Array
+        BOLD signal, same shape as input.
     """
     return v0 * (k1 * (1.0 - q) + k2 * (1.0 - q / v) + k3 * (1.0 - v))
 
@@ -118,19 +135,29 @@ def bold_from_neural(
     Runs the Balloon-Windkessel model on the neural input and returns
     the BOLD signal at a lower sampling rate (TR = dt_bold).
 
-    Args:
-        neural: (T, N) neural activity time series (e.g., amplitude envelope)
-        dt: simulation timestep (seconds)
-        dt_bold: BOLD sampling period (seconds, default 0.5s = 2Hz)
-        kappa: signal decay rate (default 0.65)
-        gamma: flow-dependent elimination (default 0.41)
-        tau: hemodynamic transit time (default 0.98)
-        alpha: Grubb's vessel stiffness exponent (default 0.32)
-        e0: resting oxygen extraction fraction (default 0.34)
+    Parameters
+    ----------
+    neural : jax.Array
+        (T, N) neural activity time series (e.g., amplitude envelope).
+    dt : float
+        simulation timestep (seconds).
+    dt_bold : float
+        BOLD sampling period (seconds, default 0.5s = 2Hz).
+    kappa : float
+        signal decay rate (default 0.65).
+    gamma : float
+        flow-dependent elimination (default 0.41).
+    tau : float
+        haemodynamic transit time (default 0.98).
+    alpha : float
+        Grubb's vessel stiffness exponent (default 0.32).
+    e0 : float
+        resting oxygen extraction fraction (default 0.34).
 
     Returns
     -------
-        (T_bold, N) BOLD signal, where T_bold = T * dt / dt_bold
+    jax.Array
+        (T_bold, N) BOLD signal, where T_bold = T * dt / dt_bold.
     """
     T, n_regions = neural.shape
     subsample = max(1, int(dt_bold / dt))

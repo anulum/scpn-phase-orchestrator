@@ -104,18 +104,29 @@ _SUPERVISOR_PPO_CHECKPOINT_SCHEMA_VERSION = 1
 class DifferentiableSupervisorConfig:
     """Static configuration for ``DifferentiableSupervisorPolicy``.
 
-    Args:
-        n_oscillators: Number of oscillators in the controlled Kuramoto system.
-        hidden_width: Width of each MLP hidden layer.
-        hidden_depth: Number of hidden layers in the MLP.
-        n_layer_controls: Number of mask-scoped ``K`` controls. The default
-            maps to good and bad partitions in ``KuramotoSupervisorScenario``.
-        max_global_delta_K: Absolute bound for global coupling increments.
-        max_global_delta_zeta: Absolute bound for global damping/drive command.
-        max_layer_delta_K: Absolute bound for partition-local coupling deltas.
-        control_energy_weight: Quadratic penalty on control action magnitude.
-        bad_sync_weight: Penalty for synchronising the bad partition.
-        smoothness_weight: Quadratic penalty on action changes over rollout.
+    Parameters
+    ----------
+    n_oscillators : object
+        Number of oscillators in the controlled Kuramoto system.
+    hidden_width : object
+        Width of each MLP hidden layer.
+    hidden_depth : object
+        Number of hidden layers in the MLP.
+    n_layer_controls : object
+        Number of mask-scoped ``K`` controls. The default maps to good and bad
+        partitions in ``KuramotoSupervisorScenario``.
+    max_global_delta_K : object
+        Absolute bound for global coupling increments.
+    max_global_delta_zeta : object
+        Absolute bound for global damping/drive command.
+    max_layer_delta_K : object
+        Absolute bound for partition-local coupling deltas.
+    control_energy_weight : object
+        Quadratic penalty on control action magnitude.
+    bad_sync_weight : object
+        Penalty for synchronising the bad partition.
+    smoothness_weight : object
+        Quadratic penalty on action changes over rollout.
     """
 
     n_oscillators: int
@@ -158,7 +169,13 @@ class SupervisorReplayProposal(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable replay proposal record."""
+        """Return a JSON-serialisable replay proposal record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable replay proposal record.
+        """
         return {
             "proposal_type": "differentiable_supervisor_replay_proposal",
             "actuation_permitted": self.actuation_permitted,
@@ -179,7 +196,13 @@ class SupervisorBaselineReport(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable baseline aggregation report."""
+        """Return a JSON-serialisable baseline aggregation report.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable baseline aggregation report.
+        """
         return _json_object(
             {
                 "proposal_type": "differentiable_supervisor_baseline_report",
@@ -205,7 +228,13 @@ class SupervisorExperimentManifest(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable reproducibility manifest."""
+        """Return a JSON-serialisable reproducibility manifest.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable reproducibility manifest.
+        """
         return _json_object(
             {
                 "proposal_type": "differentiable_supervisor_experiment_manifest",
@@ -229,7 +258,13 @@ class SupervisorCorpusReplayProposals(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable corpus proposal record."""
+        """Return a JSON-serialisable corpus proposal record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable corpus proposal record.
+        """
         return {
             "proposal_type": "differentiable_supervisor_corpus_replay",
             "actuation_permitted": self.actuation_permitted,
@@ -248,7 +283,13 @@ class SupervisorReplayComparison(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable non-actuating comparison record."""
+        """Return a JSON-serialisable non-actuating comparison record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable non-actuating comparison record.
+        """
         return _json_object(
             {
                 "proposal_type": "differentiable_supervisor_replay_comparison",
@@ -272,7 +313,13 @@ class SupervisorLearnerProposalComparison(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable learner-proposal comparison record."""
+        """Return a JSON-serialisable learner-proposal comparison record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable learner-proposal comparison record.
+        """
         return _json_object(
             {
                 "proposal_type": "differentiable_supervisor_learner_comparison",
@@ -299,7 +346,13 @@ class SupervisorStaticBaselineComparison(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable static-baseline comparison record."""
+        """Return a JSON-serialisable static-baseline comparison record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable static-baseline comparison record.
+        """
         return _json_object(
             {
                 "proposal_type": "differentiable_supervisor_static_baseline",
@@ -325,7 +378,13 @@ class SupervisorRandomBaselineComparison(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable random-baseline comparison record."""
+        """Return a JSON-serialisable random-baseline comparison record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable random-baseline comparison record.
+        """
         return _json_object(
             {
                 "proposal_type": "differentiable_supervisor_random_baseline",
@@ -351,7 +410,13 @@ class SupervisorHandTunedBaselineComparison(NamedTuple):
     actuation_permitted: bool = False
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a JSON-serialisable hand-tuned-baseline comparison record."""
+        """Return a JSON-serialisable hand-tuned-baseline comparison record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a JSON-serialisable hand-tuned-baseline comparison record.
+        """
         return _json_object(
             {
                 "proposal_type": "differentiable_supervisor_hand_tuned_baseline",
@@ -522,7 +587,20 @@ class DifferentiableSupervisorPolicy(eqx.Module):
 
 
 def masked_order_parameter(phases: jax.Array, weights: jax.Array) -> jax.Array:
-    """Weighted Kuramoto order parameter for a partition of oscillators."""
+    """Weighted Kuramoto order parameter for a partition of oscillators.
+
+    Parameters
+    ----------
+    phases : jax.Array
+        Oscillator phases in radians, shape ``(N,)``.
+    weights : jax.Array
+        Per-oscillator partition weights.
+
+    Returns
+    -------
+    jax.Array
+        The weighted Kuramoto order parameter.
+    """
     safe_weights = jnp.clip(weights, min=0.0)
     total = jnp.maximum(jnp.sum(safe_weights), 1.0e-12)
     z = jnp.sum(safe_weights * jnp.exp(1j * phases)) / total
@@ -534,7 +612,22 @@ def apply_supervisor_action(
     action: SupervisorAction,
     scenario: KuramotoSupervisorScenario,
 ) -> jax.Array:
-    """Apply continuous supervisor output to a symmetric coupling matrix."""
+    """Apply continuous supervisor output to a symmetric coupling matrix.
+
+    Parameters
+    ----------
+    base_K : jax.Array
+        Base symmetric coupling matrix.
+    action : SupervisorAction
+        The supervisor control action.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+
+    Returns
+    -------
+    jax.Array
+        The modified symmetric coupling matrix.
+    """
     n = base_K.shape[0]
     offdiag = 1.0 - jnp.eye(n, dtype=base_K.dtype)
     K = base_K + action.delta_K_global * offdiag
@@ -557,6 +650,18 @@ def closed_loop_supervisor_loss(
     The reward maximises good-partition synchrony while penalising bad-partition
     synchrony, control energy, and abrupt action changes. The returned value is
     a minimisation loss suitable for ``jax.grad`` or optax.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+
+    Returns
+    -------
+    tuple[jax.Array, SupervisorLossAux]
+        The loss and its auxiliary metrics.
     """
     zero_action = SupervisorAction(
         delta_K_global=jnp.array(0.0),
@@ -615,7 +720,24 @@ def supervisor_train_step(
     opt_state: Any,
     optimizer: optax.GradientTransformation,
 ) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array]:
-    """Run one optax update for the differentiable supervisor objective."""
+    """Run one optax update for the differentiable supervisor objective.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+    opt_state : Any
+        The optax optimiser state.
+    optimizer : optax.GradientTransformation
+        The optax optimiser.
+
+    Returns
+    -------
+    tuple[DifferentiableSupervisorPolicy, Any, jax.Array]
+        The updated policy, optimiser state, and loss.
+    """
 
     def loss_fn(model: DifferentiableSupervisorPolicy) -> jax.Array:
         loss, _ = closed_loop_supervisor_loss(model, scenario)
@@ -629,7 +751,18 @@ def supervisor_train_step(
 
 
 def pack_supervisor_action(action: SupervisorAction) -> jax.Array:
-    """Pack ``SupervisorAction`` controls into a flat continuous action vector."""
+    """Pack ``SupervisorAction`` controls into a flat continuous action vector.
+
+    Parameters
+    ----------
+    action : SupervisorAction
+        The supervisor control action.
+
+    Returns
+    -------
+    jax.Array
+        The flat continuous action vector.
+    """
     return jnp.concatenate(
         [
             jnp.atleast_1d(action.delta_K_global),
@@ -645,7 +778,22 @@ def unpack_supervisor_action(
     value_estimate: jax.Array,
     config: DifferentiableSupervisorConfig,
 ) -> SupervisorAction:
-    """Unpack a flat action vector using ``config.n_layer_controls``."""
+    """Unpack a flat action vector using ``config.n_layer_controls``.
+
+    Parameters
+    ----------
+    values : jax.Array
+        Flat packed action values.
+    value_estimate : jax.Array
+        The critic value estimate.
+    config : DifferentiableSupervisorConfig
+        The supervisor configuration.
+
+    Returns
+    -------
+    SupervisorAction
+        The reconstructed ``SupervisorAction``.
+    """
     return SupervisorAction(
         delta_K_global=values[0],
         delta_zeta_global=values[1],
@@ -660,7 +808,22 @@ def sample_supervisor_action(
     *,
     key: jax.Array,
 ) -> tuple[SupervisorAction, jax.Array]:
-    """Sample a bounded squashed-Gaussian action and its log probability."""
+    """Sample a bounded squashed-Gaussian action and its log probability.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+    key : jax.Array
+        JAX PRNG key.
+
+    Returns
+    -------
+    tuple[SupervisorAction, jax.Array]
+        The sampled action and its log probability.
+    """
     mean, value = _policy_mean_and_value(policy, scenario)
     std = jnp.exp(policy.log_std)
     pre_squash = mean + std * jax.random.normal(key, mean.shape)
@@ -678,7 +841,22 @@ def supervisor_action_log_prob(
     scenario: KuramotoSupervisorScenario,
     action: SupervisorAction,
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
-    """Return squashed-Gaussian log probability, entropy proxy, and value."""
+    """Return squashed-Gaussian log probability, entropy proxy, and value.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+    action : SupervisorAction
+        The supervisor control action.
+
+    Returns
+    -------
+    tuple[jax.Array, jax.Array, jax.Array]
+        The log probability, entropy proxy, and value.
+    """
     mean, value = _policy_mean_and_value(policy, scenario)
     bounds = _action_bounds(policy.config)
     scaled = jnp.clip(pack_supervisor_action(action) / bounds, -0.999999, 0.999999)
@@ -692,7 +870,20 @@ def supervisor_action_bound_penalty(
     action: SupervisorAction,
     config: DifferentiableSupervisorConfig,
 ) -> jax.Array:
-    """Differentiable quadratic penalty for proposals outside action bounds."""
+    """Differentiable quadratic penalty for proposals outside action bounds.
+
+    Parameters
+    ----------
+    action : SupervisorAction
+        The supervisor control action.
+    config : DifferentiableSupervisorConfig
+        The supervisor configuration.
+
+    Returns
+    -------
+    jax.Array
+        The quadratic out-of-bounds penalty.
+    """
     values = pack_supervisor_action(action)
     bounds = _action_bounds(config)
     excess = jnp.maximum(jnp.abs(values) - bounds, 0.0)
@@ -716,6 +907,32 @@ def project_supervisor_action_for_audit(
     This is intentionally non-actuating. It creates the explicit audit envelope
     that callers can inspect before converting a proposal into ``ControlAction``
     objects for any live adapter path.
+
+    Parameters
+    ----------
+    action : SupervisorAction
+        The supervisor control action.
+    config : DifferentiableSupervisorConfig
+        The supervisor configuration.
+    previous_action : SupervisorAction | None
+        The previous supervisor action, or ``None``.
+    ttl_s : float
+        Action time-to-live in seconds.
+    max_ttl_s : float
+        Maximum action time-to-live in seconds.
+    rate_limit_fraction : float
+        Maximum fractional change per step.
+    include_layer_actions : bool
+        Whether to include per-layer actions.
+    regime_churn_score : float | None
+        The regime-churn score, or ``None``.
+    max_regime_churn : float | None
+        Maximum allowed regime churn, or ``None``.
+
+    Returns
+    -------
+    SupervisorActionProjection
+        The replay-safe action projection with audit metadata.
     """
     ttl_s = _positive_float(ttl_s, "ttl_s")
     max_ttl_s = _positive_float(max_ttl_s, "max_ttl_s")
@@ -812,6 +1029,34 @@ def build_supervisor_replay_proposal(
     ``ControlAction`` objects and carries ``actuation_permitted=False`` so that
     downstream replay/autotune surfaces can review it without enabling live
     actuation.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+    scenario_metadata : dict[str, Any] | None
+        Scenario metadata, or ``None``.
+    previous_action : SupervisorAction | None
+        The previous supervisor action, or ``None``.
+    ttl_s : float
+        Action time-to-live in seconds.
+    max_ttl_s : float
+        Maximum action time-to-live in seconds.
+    rate_limit_fraction : float
+        Maximum fractional change per step.
+    include_layer_actions : bool
+        Whether to include per-layer actions.
+    regime_churn_score : float | None
+        The regime-churn score, or ``None``.
+    max_regime_churn : float | None
+        Maximum allowed regime churn, or ``None``.
+
+    Returns
+    -------
+    SupervisorReplayProposal
+        The replay-only supervisor proposal.
     """
     metadata = _json_object(scenario_metadata, "scenario_metadata")
     action = policy(scenario)
@@ -865,7 +1110,39 @@ def build_supervisor_corpus_replay_proposals(
     regime_churn_scores: tuple[float, ...] | None = None,
     max_regime_churn: float | None = None,
 ) -> SupervisorCorpusReplayProposals:
-    """Build deterministic replay-only proposals for every corpus scenario."""
+    """Build deterministic replay-only proposals for every corpus scenario.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    corpus : SupervisorScenarioCorpus
+        The validated supervisor scenario corpus.
+    previous_action : SupervisorAction | None
+        The previous supervisor action, or ``None``.
+    ttl_s : float
+        Action time-to-live in seconds.
+    max_ttl_s : float
+        Maximum action time-to-live in seconds.
+    rate_limit_fraction : float
+        Maximum fractional change per step.
+    include_layer_actions : bool
+        Whether to include per-layer actions.
+    regime_churn_scores : tuple[float, ...] | None
+        Per-scenario regime-churn scores, or ``None``.
+    max_regime_churn : float | None
+        Maximum allowed regime churn, or ``None``.
+
+    Returns
+    -------
+    SupervisorCorpusReplayProposals
+        The replay-only proposals for every corpus scenario.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not corpus.scenarios:
         raise ValueError("scenario corpus requires at least one scenario")
     if len(corpus.metadata) != len(corpus.scenarios):
@@ -911,7 +1188,25 @@ def build_supervisor_baseline_report(
     *,
     report_label: str = "supervisor_baseline_report",
 ) -> SupervisorBaselineReport:
-    """Aggregate already-generated supervisor comparison records for review."""
+    """Aggregate already-generated supervisor comparison records for review.
+
+    Parameters
+    ----------
+    comparisons : Iterable[Any]
+        The supervisor comparison records.
+    report_label : str
+        Label for the baseline report.
+
+    Returns
+    -------
+    SupervisorBaselineReport
+        The aggregated baseline report.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not report_label:
         raise ValueError("report_label must not be empty")
     records = tuple(
@@ -942,7 +1237,43 @@ def build_supervisor_experiment_manifest(
     checkpoint_manifest_path: str | None = None,
     plot_manifest_path: str | None = None,
 ) -> SupervisorExperimentManifest:
-    """Build a reproducibility manifest for a supervisor baseline report."""
+    """Build a reproducibility manifest for a supervisor baseline report.
+
+    Parameters
+    ----------
+    baseline_report : SupervisorBaselineReport
+        The aggregated baseline report.
+    command : str
+        The command line recorded with the run.
+    git_sha : str
+        Git commit SHA recorded with the run.
+    dependency_lock : Mapping[str, Any]
+        Dependency lock mapping recorded with the run.
+    device_info : Mapping[str, Any]
+        Device information recorded with the run.
+    seed_list : Iterable[int]
+        Seeds for the experiment runs.
+    config_json_path : str | None
+        Filesystem path to the config json, or ``None``.
+    metrics_jsonl_path : str | None
+        Filesystem path to the metrics jsonl, or ``None``.
+    summary_table_path : str | None
+        Filesystem path to the summary table, or ``None``.
+    checkpoint_manifest_path : str | None
+        Filesystem path to the checkpoint manifest, or ``None``.
+    plot_manifest_path : str | None
+        Filesystem path to the plot manifest, or ``None``.
+
+    Returns
+    -------
+    SupervisorExperimentManifest
+        The reproducibility manifest.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not command:
         raise ValueError("command must not be empty")
     if not git_sha:
@@ -997,6 +1328,25 @@ def compare_supervisor_replay_proposal(
 
     The result is deliberately audit-only: it records both proposal surfaces and
     scalar comparison metrics, but it never authorises live actuation.
+
+    Parameters
+    ----------
+    supervisor_proposal : SupervisorReplayProposal | SupervisorCorpusReplayProposals
+        The supervisor replay proposal(s).
+    replay_policy_search : Any
+        The replay policy-search result.
+    comparison_label : str
+        Label identifying the comparison.
+
+    Returns
+    -------
+    SupervisorReplayComparison
+        The supervisor-vs-policy-search comparison.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     if not comparison_label:
         raise ValueError("comparison_label must not be empty")
@@ -1027,7 +1377,27 @@ def compare_supervisor_learner_proposals(
     *,
     comparison_label: str = "learner_proposal_generators",
 ) -> SupervisorLearnerProposalComparison:
-    """Compare supervisor replay output with replay-only autotune learner proposals."""
+    """Compare supervisor replay output with replay-only autotune learner proposals.
+
+    Parameters
+    ----------
+    supervisor_proposal : SupervisorReplayProposal | SupervisorCorpusReplayProposals
+        The supervisor replay proposal(s).
+    learner_proposals : Iterable[Any]
+        The replay-only learner proposals.
+    comparison_label : str
+        Label identifying the comparison.
+
+    Returns
+    -------
+    SupervisorLearnerProposalComparison
+        The supervisor-vs-learner comparison.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not comparison_label:
         raise ValueError("comparison_label must not be empty")
     supervisor_record = _json_object(
@@ -1060,6 +1430,25 @@ def compare_supervisor_static_baseline(
     This is a benchmark/audit primitive only. It runs both candidates on the
     same scenario and records scalar metrics without returning actuation
     objects or enabling any live adapter handoff.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+    comparison_label : str
+        Label identifying the comparison.
+
+    Returns
+    -------
+    SupervisorStaticBaselineComparison
+        The supervisor-vs-zero-action comparison.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     if not comparison_label:
         raise ValueError("comparison_label must not be empty")
@@ -1103,7 +1492,29 @@ def compare_supervisor_random_baseline(
     key: jax.Array,
     comparison_label: str = "bounded_random_action",
 ) -> SupervisorRandomBaselineComparison:
-    """Compare one deterministic supervisor proposal against bounded randomness."""
+    """Compare one deterministic supervisor proposal against bounded randomness.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+    key : jax.Array
+        JAX PRNG key.
+    comparison_label : str
+        Label identifying the comparison.
+
+    Returns
+    -------
+    SupervisorRandomBaselineComparison
+        The supervisor-vs-random comparison.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not comparison_label:
         raise ValueError("comparison_label must not be empty")
     random_action = _bounded_random_supervisor_action(policy.config, key)
@@ -1142,7 +1553,29 @@ def compare_supervisor_hand_tuned_baseline(
     boundary_state: BoundaryState | None = None,
     comparison_label: str = "hand_tuned_supervisor_policy",
 ) -> SupervisorHandTunedBaselineComparison:
-    """Compare a neural supervisor proposal against rule-based ``SupervisorPolicy``."""
+    """Compare a neural supervisor proposal against rule-based ``SupervisorPolicy``.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+    boundary_state : BoundaryState | None
+        The boundary-observer state, or ``None``.
+    comparison_label : str
+        Label identifying the comparison.
+
+    Returns
+    -------
+    SupervisorHandTunedBaselineComparison
+        The supervisor-vs-rule-based comparison.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if not comparison_label:
         raise ValueError("comparison_label must not be empty")
     active_boundary = boundary_state or BoundaryState()
@@ -1191,7 +1624,28 @@ def ppo_supervisor_loss(
     value_weight: float = 0.5,
     entropy_weight: float = 0.01,
 ) -> tuple[jax.Array, SupervisorPPOAux]:
-    """Clipped PPO objective for bounded differentiable supervisor actions."""
+    """Clipped PPO objective for bounded differentiable supervisor actions.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    batch : SupervisorPPOBatch
+        The PPO training batch.
+    clip_epsilon : float
+        PPO clipping epsilon.
+    value_clip : float | None
+        Value-function clip range, or ``None``.
+    value_weight : float
+        Weight of the value loss.
+    entropy_weight : float
+        Weight of the entropy bonus.
+
+    Returns
+    -------
+    tuple[jax.Array, SupervisorPPOAux]
+        The clipped PPO loss and its auxiliary metrics.
+    """
     if value_clip is not None:
         value_clip = _non_negative_float(value_clip, "value_clip")
 
@@ -1286,7 +1740,34 @@ def ppo_supervisor_train_step(
     entropy_weight: float = 0.01,
     max_grad_norm: float | None = None,
 ) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array]:
-    """Run one optax update using the clipped PPO supervisor objective."""
+    """Run one optax update using the clipped PPO supervisor objective.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    batch : SupervisorPPOBatch
+        The PPO training batch.
+    opt_state : Any
+        The optax optimiser state.
+    optimizer : optax.GradientTransformation
+        The optax optimiser.
+    clip_epsilon : float
+        PPO clipping epsilon.
+    value_clip : float | None
+        Value-function clip range, or ``None``.
+    value_weight : float
+        Weight of the value loss.
+    entropy_weight : float
+        Weight of the entropy bonus.
+    max_grad_norm : float | None
+        Gradient-norm clip threshold, or ``None``.
+
+    Returns
+    -------
+    tuple[DifferentiableSupervisorPolicy, Any, jax.Array]
+        The updated policy, optimiser state, and loss.
+    """
 
     def loss_fn(model: DifferentiableSupervisorPolicy) -> jax.Array:
         loss, _ = ppo_supervisor_loss(
@@ -1328,25 +1809,40 @@ def ppo_supervisor_train_epochs(
 ) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array, int]:
     """Run PPO training for multiple epochs with deterministic minibatching.
 
-    Args:
-        policy: Optimisable differentiable supervisor policy.
-        batch: Flattened PPO batch from rollout collection.
-        key: JAX PRNG key used only for shuffle ordering.
-        opt_state: Optimiser state.
-        optimizer: Optax optimiser transformation.
-        n_epochs: Number of passes over the dataset.
-        minibatch_size: Per-update minibatch size.
-        clip_epsilon: PPO clipping radius.
-        value_weight: Value-function loss coefficient.
-        entropy_weight: Entropy bonus coefficient.
-        entropy_schedule: Optional non-negative per-update entropy weights. When
-            shorter than the number of updates, the final value is held.
-        max_grad_norm: Optional global gradient-norm clip radius.
-        kl_early_stop: Optional KL threshold for early stopping.
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        Optimisable differentiable supervisor policy.
+    batch : SupervisorPPOBatch
+        Flattened PPO batch from rollout collection.
+    key : jax.Array
+        JAX PRNG key used only for shuffle ordering.
+    opt_state : Any
+        Optimiser state.
+    optimizer : optax.GradientTransformation
+        Optax optimiser transformation.
+    n_epochs : int
+        Number of passes over the dataset.
+    minibatch_size : int
+        Per-update minibatch size.
+    clip_epsilon : float
+        PPO clipping radius.
+    value_weight : float
+        Value-function loss coefficient.
+    entropy_weight : float
+        Entropy bonus coefficient.
+    entropy_schedule : tuple[float, ...] | None
+        Optional non-negative per-update entropy weights. When shorter than the number
+        of updates, the final value is held.
+    max_grad_norm : float | None
+        Optional global gradient-norm clip radius.
+    kl_early_stop : float | None
+        Optional KL threshold for early stopping.
 
     Returns
     -------
-        (policy, opt_state, loss_history, n_updates)
+    tuple[DifferentiableSupervisorPolicy, Any, jax.Array, int]
+        (policy, opt_state, loss_history, n_updates).
     """
     policy, opt_state, loss_history, n_updates, _ = _ppo_supervisor_train_epochs_impl(
         policy,
@@ -1387,7 +1883,55 @@ def ppo_supervisor_train_with_checkpoint(
     kl_early_stop: float | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> SupervisorPPOTrainResult:
-    """Run PPO epochs and optionally checkpoint a deterministic resume state."""
+    """Run PPO epochs and optionally checkpoint a deterministic resume state.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    batch : SupervisorPPOBatch
+        The PPO training batch.
+    key : jax.Array
+        JAX PRNG key.
+    opt_state : Any
+        The optax optimiser state.
+    optimizer : optax.GradientTransformation
+        The optax optimiser.
+    n_epochs : int
+        Number of training epochs.
+    checkpoint_dir : str | Path | None
+        Directory for training checkpoints, or ``None``.
+    resume : bool
+        Whether to resume from a checkpoint.
+    minibatch_size : int
+        Minibatch size.
+    clip_epsilon : float
+        PPO clipping epsilon.
+    value_clip : float | None
+        Value-function clip range, or ``None``.
+    value_weight : float
+        Weight of the value loss.
+    entropy_weight : float
+        Weight of the entropy bonus.
+    entropy_schedule : tuple[float, ...] | None
+        Per-epoch entropy-weight schedule, or ``None``.
+    max_grad_norm : float | None
+        Gradient-norm clip threshold, or ``None``.
+    kl_early_stop : float | None
+        KL early-stopping threshold, or ``None``.
+    metadata : dict[str, Any] | None
+        Associated metadata mapping, or ``None``.
+
+    Returns
+    -------
+    SupervisorPPOTrainResult
+        The PPO training result.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     prior_losses = jnp.asarray([])
     prior_updates = 0
     checkpoint_path: Path | None = None
@@ -1562,7 +2106,35 @@ def collect_supervisor_rollouts(
     gae_lambda: float = 0.95,
     trajectory_jitter: float = 0.0,
 ) -> SupervisorPPORollout:
-    """Collect deterministic, replay-only PPO rollouts from a starting scenario."""
+    """Collect deterministic, replay-only PPO rollouts from a starting scenario.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    scenario : KuramotoSupervisorScenario
+        The Kuramoto supervisor scenario.
+    key : jax.Array
+        JAX PRNG key.
+    n_episodes : int
+        Number of rollout episodes.
+    gamma : float
+        Flow-dependent elimination rate.
+    gae_lambda : float
+        Generalised-advantage-estimation lambda.
+    trajectory_jitter : float
+        Trajectory jitter magnitude.
+
+    Returns
+    -------
+    SupervisorPPORollout
+        The collected PPO rollouts.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     n_episodes = _positive_int(n_episodes, "n_episodes")
     horizon = _positive_int(scenario.horizon, "scenario.horizon")
     inner_steps = _positive_int(scenario.inner_steps, "scenario.inner_steps")
@@ -1699,6 +2271,33 @@ def collect_supervisor_corpus_rollouts(
     corpus scenarios must share ``dt``, ``inner_steps``, ``horizon``, and
     oscillator tensor shapes because ``SupervisorPPOBatch`` stores timing
     fields once for the full batch.
+
+    Parameters
+    ----------
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    corpus : SupervisorScenarioCorpus
+        The validated supervisor scenario corpus.
+    key : jax.Array
+        JAX PRNG key.
+    n_episodes_per_scenario : int
+        Number of episodes per corpus scenario.
+    gamma : float
+        Flow-dependent elimination rate.
+    gae_lambda : float
+        Generalised-advantage-estimation lambda.
+    trajectory_jitter : float
+        Trajectory jitter magnitude.
+
+    Returns
+    -------
+    SupervisorPPOCorpusRollout
+        The collected corpus PPO rollouts.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     n_episodes_per_scenario = _positive_int(
         n_episodes_per_scenario,
@@ -1756,7 +2355,25 @@ def build_supervisor_scenario_corpus(
     *,
     dtype: Any = jnp.float32,
 ) -> SupervisorScenarioCorpus:
-    """Convert replay/audit records into validated supervisor scenarios."""
+    """Convert replay/audit records into validated supervisor scenarios.
+
+    Parameters
+    ----------
+    records : Iterable[Mapping[str, Any]]
+        Replay/audit records to convert.
+    dtype : Any
+        Target array dtype.
+
+    Returns
+    -------
+    SupervisorScenarioCorpus
+        The validated supervisor scenario corpus.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     scenarios: list[KuramotoSupervisorScenario] = []
     metadata: list[dict[str, Any]] = []
     for index, record in enumerate(records):
@@ -1856,7 +2473,39 @@ def save_supervisor_ppo_checkpoint(
     metadata: dict[str, Any] | None = None,
     overwrite: bool = False,
 ) -> Path:
-    """Persist PPO supervisor trainer state for deterministic resume."""
+    """Persist PPO supervisor trainer state for deterministic resume.
+
+    Parameters
+    ----------
+    checkpoint_dir : str | Path
+        Directory for training checkpoints, or ``None``.
+    policy : DifferentiableSupervisorPolicy
+        The differentiable supervisor policy.
+    opt_state : Any
+        The optax optimiser state.
+    key : jax.Array
+        JAX PRNG key.
+    n_updates : int
+        Number of optimiser updates performed.
+    loss_history : jax.Array
+        Recorded per-step loss history.
+    metadata : dict[str, Any] | None
+        Associated metadata mapping, or ``None``.
+    overwrite : bool
+        Whether to overwrite an existing checkpoint.
+
+    Returns
+    -------
+    Path
+        The path of the written checkpoint.
+
+    Raises
+    ------
+    NotADirectoryError
+        If the checkpoint directory path is not a directory.
+    FileExistsError
+        If the checkpoint already exists and ``overwrite`` is false.
+    """
     checkpoint_path = Path(checkpoint_dir)
     if checkpoint_path.exists() and not checkpoint_path.is_dir():
         raise NotADirectoryError(f"{checkpoint_path} is not a checkpoint directory")
@@ -1909,7 +2558,27 @@ def load_supervisor_ppo_checkpoint(
     template_policy: DifferentiableSupervisorPolicy,
     template_opt_state: Any,
 ) -> SupervisorPPOCheckpoint:
-    """Load a PPO supervisor checkpoint against explicit policy/state templates."""
+    """Load a PPO supervisor checkpoint against explicit policy/state templates.
+
+    Parameters
+    ----------
+    checkpoint_dir : str | Path
+        Directory for training checkpoints, or ``None``.
+    template_policy : DifferentiableSupervisorPolicy
+        Template policy used to reconstruct the checkpoint.
+    template_opt_state : Any
+        Template optimiser state used to reconstruct the checkpoint.
+
+    Returns
+    -------
+    SupervisorPPOCheckpoint
+        The loaded PPO checkpoint.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the checkpoint cannot be found.
+    """
     checkpoint_path = Path(checkpoint_dir)
     metadata_path = checkpoint_path / "metadata.json"
     state_path = checkpoint_path / "state.eqx"
@@ -1944,7 +2613,22 @@ def control_actions_from_supervisor(
     ttl_s: float = 5.0,
     include_layer_actions: bool = True,
 ) -> list[ControlAction]:
-    """Convert a detached neural supervisor output into actuation commands."""
+    """Convert a detached neural supervisor output into actuation commands.
+
+    Parameters
+    ----------
+    action : SupervisorAction
+        The supervisor control action.
+    ttl_s : float
+        Action time-to-live in seconds.
+    include_layer_actions : bool
+        Whether to include per-layer actions.
+
+    Returns
+    -------
+    list[ControlAction]
+        The actuation control actions.
+    """
     actions = [
         ControlAction(
             knob="K",

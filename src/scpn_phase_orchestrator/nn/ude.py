@@ -92,16 +92,23 @@ def ude_kuramoto_step(
 ) -> jax.Array:
     """Single Euler step of UDE-Kuramoto.
 
-    Args:
-        phases: (N,) oscillator phases
-        omegas: (N,) natural frequencies
-        K: (N, N) coupling matrix
-        residual_fn: learned coupling correction
-        dt: integration timestep
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) coupling matrix.
+    residual_fn : CouplingResidual
+        learned coupling correction.
+    dt : float
+        integration timestep.
 
     Returns
     -------
-        (N,) updated phases
+    jax.Array
+        (N,) updated phases.
     """
     dphi = _ude_deriv(phases, omegas, K, residual_fn)
     return (phases + dt * dphi) % TWO_PI
@@ -117,17 +124,25 @@ def ude_kuramoto_forward(
 ) -> tuple[jax.Array, jax.Array]:
     """Run N steps of UDE-Kuramoto, returning final state and trajectory.
 
-    Args:
-        phases: (N,) initial phases
-        omegas: (N,) natural frequencies
-        K: (N, N) coupling matrix
-        residual_fn: learned coupling correction
-        dt: integration timestep
-        n_steps: number of steps
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) initial phases.
+    omegas : jax.Array
+        (N,) natural frequencies.
+    K : jax.Array
+        (N, N) coupling matrix.
+    residual_fn : CouplingResidual
+        learned coupling correction.
+    dt : float
+        integration timestep.
+    n_steps : int
+        number of steps.
 
     Returns
     -------
-        Tuple of (final_phases, trajectory)
+    tuple[jax.Array, jax.Array]
+        (final_phases, trajectory).
     """
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
@@ -184,12 +199,34 @@ class UDEKuramotoLayer(eqx.Module):
 
     @eqx.filter_jit
     def forward_with_trajectory(self, phases: jax.Array) -> tuple[jax.Array, jax.Array]:
-        """Run dynamics and return (final_phases, trajectory)."""
+        """Run dynamics and return (final_phases, trajectory).
+
+        Parameters
+        ----------
+        phases : jax.Array
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        tuple[jax.Array, jax.Array]
+            The final phases and the trajectory.
+        """
         return ude_kuramoto_forward(
             phases, self.omegas, self.K, self.residual, self.dt, self.n_steps
         )
 
     @eqx.filter_jit
     def sync_score(self, phases: jax.Array) -> jax.Array:
-        """Kuramoto order parameter R after running the layer forward."""
+        """Kuramoto order parameter R after running the layer forward.
+
+        Parameters
+        ----------
+        phases : jax.Array
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        jax.Array
+            The Kuramoto order parameter ``R``.
+        """
         return order_parameter(self(phases))

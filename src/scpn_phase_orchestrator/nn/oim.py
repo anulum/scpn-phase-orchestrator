@@ -57,16 +57,23 @@ def oim_step(
 ) -> jax.Array:
     """Single step of OIM coloring dynamics.
 
-    Args:
-        phases: (N,) oscillator phases
-        adjacency: (N, N) graph adjacency matrix (1 = edge, 0 = no edge)
-        n_colors: number of colors (phase clusters)
-        dt: integration timestep
-        coupling_strength: overall coupling scale
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases.
+    adjacency : jax.Array
+        (N, N) graph adjacency matrix (1 = edge, 0 = no edge).
+    n_colors : int
+        number of colors (phase clusters).
+    dt : float
+        integration timestep.
+    coupling_strength : float
+        overall coupling scale.
 
     Returns
     -------
-        (N,) updated phases
+    jax.Array
+        (N,) updated phases.
     """
     dphi = _oim_deriv(phases, adjacency, n_colors, coupling_strength)
     return (phases + dt * dphi) % TWO_PI
@@ -82,17 +89,25 @@ def oim_forward(
 ) -> tuple[jax.Array, jax.Array]:
     """Run OIM dynamics for n_steps, returning final phases and trajectory.
 
-    Args:
-        phases: (N,) initial random phases
-        adjacency: (N, N) graph adjacency matrix
-        n_colors: number of colors
-        dt: timestep
-        n_steps: number of integration steps
-        coupling_strength: overall coupling scale
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) initial random phases.
+    adjacency : jax.Array
+        (N, N) graph adjacency matrix.
+    n_colors : int
+        number of colors.
+    dt : float
+        timestep.
+    n_steps : int
+        number of integration steps.
+    coupling_strength : float
+        overall coupling scale.
 
     Returns
     -------
-        (final_phases, trajectory) where trajectory is (n_steps, N)
+    tuple[jax.Array, jax.Array]
+        (final_phases, trajectory) where trajectory is (n_steps, N).
     """
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
@@ -108,13 +123,17 @@ def extract_coloring(phases: jax.Array, n_colors: int) -> jax.Array:
 
     Maps each phase to the nearest cluster center at 2πk/n_colors.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2π)
-        n_colors: number of colors
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2π).
+    n_colors : int
+        number of colors.
 
     Returns
     -------
-        (N,) integer color labels in {0, 1, ..., n_colors-1}
+    jax.Array
+        (N,) integer colour labels in {0, 1, ..., n_colors-1}.
     """
     # Cluster centers at 2πk/n_colors
     bucket_size = TWO_PI / n_colors
@@ -129,13 +148,17 @@ def extract_coloring_soft(phases: jax.Array, n_colors: int) -> jax.Array:
     boundaries. Assigns each oscillator to the nearest of the n_colors
     equidistant cluster centres.
 
-    Args:
-        phases: (N,) oscillator phases in [0, 2π)
-        n_colors: number of colors
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases in [0, 2π).
+    n_colors : int
+        number of colors.
 
     Returns
     -------
-        (N,) integer color labels in {0, 1, ..., n_colors-1}
+    jax.Array
+        (N,) integer colour labels in {0, 1, ..., n_colors-1}.
     """
     centres = jnp.linspace(0, TWO_PI, n_colors, endpoint=False)
     # Circular distance: |angle_diff| wrapped to [-π, π]
@@ -163,20 +186,31 @@ def oim_solve(
     refinement use jax.lax.scan (no Python loops). 70x faster than the
     sequential version on GPU.
 
-    Args:
-        adjacency: (N, N) graph adjacency matrix
-        n_colors: number of colors
-        key: PRNG key
-        dt: integration timestep
-        k_min: initial coupling strength (low = exploration)
-        k_max: final coupling strength (high = exploitation)
-        n_anneal: ramp-up steps
-        n_refine: hold steps after annealing
-        n_restarts: number of random restarts
+    Parameters
+    ----------
+    adjacency : jax.Array
+        (N, N) graph adjacency matrix.
+    n_colors : int
+        number of colors.
+    key : jax.Array
+        PRNG key.
+    dt : float
+        integration timestep.
+    k_min : float
+        initial coupling strength (low = exploration).
+    k_max : float
+        final coupling strength (high = exploitation).
+    n_anneal : int
+        ramp-up steps.
+    n_refine : int
+        hold steps after annealing.
+    n_restarts : int
+        number of random restarts.
 
     Returns
     -------
-        (best_colors, best_phases, best_energy)
+    tuple[jax.Array, jax.Array, float]
+        (best_colors, best_phases, best_energy).
     """
     N = adjacency.shape[0]
     # For 2-coloring, sin(2*Δθ) equilibrium is at π/2 (between
@@ -240,13 +274,17 @@ def coloring_violations(
 ) -> jax.Array:
     """Count edges where both endpoints have the same color.
 
-    Args:
-        colors: (N,) integer color labels
-        adjacency: (N, N) adjacency matrix
+    Parameters
+    ----------
+    colors : jax.Array
+        (N,) integer colour labels.
+    adjacency : jax.Array
+        (N, N) adjacency matrix.
 
     Returns
     -------
-        Scalar: number of violated edges
+    jax.Array
+        Scalar: number of violated edges.
     """
     same_color = (colors[jnp.newaxis, :] == colors[:, jnp.newaxis]).astype(jnp.float32)
     # Count upper triangle only (each edge once)
@@ -268,14 +306,19 @@ def coloring_energy(
     (cos(n·Δθ) = -1 when Δθ = π/n, i.e., maximally separated).
     Differentiable for gradient-based optimization.
 
-    Args:
-        phases: (N,) oscillator phases
-        adjacency: (N, N) adjacency matrix
-        n_colors: number of colors
+    Parameters
+    ----------
+    phases : jax.Array
+        (N,) oscillator phases.
+    adjacency : jax.Array
+        (N, N) adjacency matrix.
+    n_colors : int
+        number of colors.
 
     Returns
     -------
-        Scalar energy (lower = better coloring)
+    jax.Array
+        Scalar energy (lower = better colouring).
     """
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
     cost_matrix = jnp.cos(n_colors * diff)
