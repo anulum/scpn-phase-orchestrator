@@ -49,7 +49,18 @@ class AnomalyDetector:
         self._t = thresholds
 
     def detect(self, snap: PipelineSnapshot) -> list[Anomaly]:
-        """Run all anomaly checks against a pipeline snapshot."""
+        """Run all anomaly checks against a pipeline snapshot.
+
+        Parameters
+        ----------
+        snap : PipelineSnapshot
+            The runtime snapshot.
+
+        Returns
+        -------
+        list[Anomaly]
+            All anomaly checks against a pipeline snapshot.
+        """
         anomalies: list[Anomaly] = []
         anomalies.extend(self._check_retry_storm(snap))
         anomalies.extend(self._check_cascade(snap))

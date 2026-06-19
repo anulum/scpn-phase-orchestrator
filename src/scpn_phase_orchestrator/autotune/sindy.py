@@ -91,7 +91,25 @@ class PhaseSINDy:
         self.feature_names: list[list[str]] = []
 
     def fit(self, phases: FloatArray, dt: float) -> list[FloatArray]:
-        """Discover equations node-by-node to handle independent coupling."""
+        """Discover equations node-by-node to handle independent coupling.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        list[FloatArray]
+            Equations node-by-node to handle independent coupling.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if _is_boolean_alias(dt) or not isinstance(dt, Real):
             raise ValueError("dt must be a finite and positive scalar")
         parsed_dt = float(dt)
@@ -215,7 +233,18 @@ class PhaseSINDy:
         return self.coefficients
 
     def get_equations(self) -> list[str]:
-        """Format fitted sparse coefficients as per-node phase equations."""
+        """Format fitted sparse coefficients as per-node phase equations.
+
+        Returns
+        -------
+        list[str]
+            Format fitted sparse coefficients as per-node phase equations.
+
+        Raises
+        ------
+        RuntimeError
+            If the operation fails.
+        """
         if not self.coefficients:
             raise RuntimeError("PhaseSINDy.get_equations() called before fit()")
         equations = []

@@ -70,9 +70,22 @@ class InformationalExtractor(PhaseExtractor):
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Extract phase states from event timestamps.
 
-        Args:
-            signal: 1-D array of event timestamps in seconds (sorted ascending).
-        sample_rate: not used for timestamps but kept for interface consistency.
+        Parameters
+        ----------
+        signal : FloatArray
+            1-D array of event timestamps in seconds (sorted ascending).
+        sample_rate : float
+            not used for timestamps but kept for interface consistency.
+
+        Returns
+        -------
+        list[PhaseState]
+            The result.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
         """
         signal = _validate_signal(signal)
         raw_intervals = np.diff(signal)
@@ -150,7 +163,18 @@ class InformationalExtractor(PhaseExtractor):
         ]
 
     def quality_score(self, phase_states: list[PhaseState]) -> float:
-        """Mean interval-regularity quality across phase states."""
+        """Mean interval-regularity quality across phase states.
+
+        Parameters
+        ----------
+        phase_states : list[PhaseState]
+            Extracted per-oscillator phase states.
+
+        Returns
+        -------
+        float
+            Mean interval-regularity quality across phase states.
+        """
         if not phase_states:
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))

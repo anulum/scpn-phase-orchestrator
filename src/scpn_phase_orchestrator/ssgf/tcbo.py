@@ -104,11 +104,35 @@ class TCBOObserver:
 
     @property
     def tau_h1(self) -> float:
-        """Consciousness gate threshold on p_h1."""
+        """Consciousness gate threshold on p_h1.
+
+        Returns
+        -------
+        float
+            Consciousness gate threshold on p_h1.
+        """
         return self._tau_h1
 
     def observe(self, phases: FloatArray) -> TCBOState:
-        """Add phase snapshot, compute TCBO if enough history."""
+        """Add phase snapshot, compute TCBO if enough history.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        TCBOState
+            Add phase snapshot, compute TCBO if enough history.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if not isinstance(phases, np.ndarray):
             raise TypeError(f"phases must be a numpy.ndarray, got {phases!r}")
         if phases.ndim != 1:

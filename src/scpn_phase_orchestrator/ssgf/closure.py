@@ -94,13 +94,36 @@ class CyberneticClosure:
 
     @property
     def carrier(self) -> GeometryCarrier:
-        """The geometry carrier whose latent vector z is updated by the closure."""
+        """The geometry carrier whose latent vector z is updated by the closure.
+
+        Returns
+        -------
+        GeometryCarrier
+            The geometry carrier whose latent vector z is updated by the closure.
+        """
         return self._carrier
 
     def step(self, phases: FloatArray) -> tuple[FloatArray, ClosureState]:
         """One closure cycle: observe → cost → gradient → new W.
 
         Returns (new_W, closure_state).
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+
+        Returns
+        -------
+        tuple[FloatArray, ClosureState]
+            One closure cycle: observe → cost → gradient → new W.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If the inputs are invalid or inconsistent.
         """
         if not isinstance(phases, np.ndarray):
             raise TypeError(f"phases must be numpy.ndarray, got {phases!r}")
@@ -141,7 +164,27 @@ class CyberneticClosure:
     def run(
         self, phases: FloatArray, n_outer_steps: int
     ) -> tuple[FloatArray, list[ClosureState]]:
-        """Run n outer steps, return final W and history."""
+        """Run n outer steps, return final W and history.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        n_outer_steps : int
+            Number of outer optimisation steps.
+
+        Returns
+        -------
+        tuple[FloatArray, list[ClosureState]]
+            N outer steps, return final W and history.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if not isinstance(phases, np.ndarray):
             raise TypeError(f"phases must be numpy.ndarray, got {phases!r}")
         if phases.ndim != 1:

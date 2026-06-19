@@ -49,10 +49,24 @@ def extract_phases(
 ) -> PhaseResult:
     """Extract instantaneous phase, amplitude, frequency via Hilbert transform.
 
-    Args:
-        signal: 1-D real-valued time series.
-        fs: sampling frequency in Hz.
-        bandpass: optional (low, high) Hz for bandpass filtering before Hilbert.
+    Parameters
+    ----------
+    signal : FloatArray
+        1-D real-valued time series.
+    fs : float
+        sampling frequency in Hz.
+    bandpass : tuple[float, float] | None
+        optional (low, high) Hz for bandpass filtering before Hilbert.
+
+    Returns
+    -------
+    PhaseResult
+        The result.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     sample_rate = _positive_real(fs, "fs")
     x = _real_signal(signal)

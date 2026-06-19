@@ -57,6 +57,22 @@ def add_langevin_noise(
     escape from local minima during stochastic optimisation.
 
     Gardiner 2009, Stochastic Methods, §4.3.
+
+    Parameters
+    ----------
+    z : FloatArray
+        Complex Ott-Antonsen order parameter.
+    temperature : float
+        Annealing temperature.
+    dt : float
+        Integration step size.
+    rng : np.random.Generator | None
+        NumPy random generator, or ``None``.
+
+    Returns
+    -------
+    FloatArray
+        Add Langevin stochastic noise to a z-space vector.
     """
     if temperature <= 0.0 or dt <= 0.0:
         return z.copy()
@@ -83,6 +99,18 @@ def boltzmann_weight(u_total: float, temperature: float) -> float:
 
     Clamps exponent to [-700, 700] to avoid over/underflow.
     Returns 1.0 at T=0 if U=0, else 0.0 for U>0 at T=0.
+
+    Parameters
+    ----------
+    u_total : float
+        Total exogenous input.
+    temperature : float
+        Annealing temperature.
+
+    Returns
+    -------
+    float
+        Boltzmann factor exp(-U/T) for a given total energy and temperature.
     """
     if _HAS_RUST:
         return float(_rust_boltzmann(u_total, temperature))
@@ -103,6 +131,16 @@ def effective_temperature(costs_history: FloatArray) -> float:
     single degree of freedom <U> ~ T/2.
 
     Returns 0.0 if the cost series is constant or too short.
+
+    Parameters
+    ----------
+    costs_history : FloatArray
+        Per-iteration cost history.
+
+    Returns
+    -------
+    float
+        Effective temperature from cost fluctuations.
     """
     if len(costs_history) < 2:
         return 0.0

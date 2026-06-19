@@ -122,14 +122,18 @@ class PGBO:
     def observe(self, phases: FloatArray, W: FloatArray) -> PGBOSnapshot:
         """Compute coherence, SSGF costs, and phase-geometry alignment.
 
-        Args:
-            phases: Current phase vector theta_i.
-            W: Current geometric coupling matrix W_ij.
+        Parameters
+        ----------
+        phases : FloatArray
+            Current phase vector theta_i.
+        W : FloatArray
+            Current geometric coupling matrix W_ij.
 
         Returns
         -------
-            A PGBOSnapshot containing order parameter R, Psi, SSGF costs,
-            and the gauge curvature proxy.
+        PGBOSnapshot
+            A PGBOSnapshot containing order parameter R, Psi, SSGF costs, and the gauge
+            curvature proxy.
         """
         phases = _validate_phases(phases)
         W = _validate_coupling_matrix(W, phases.shape[0])
@@ -178,11 +182,33 @@ class PGBO:
 
     @property
     def history(self) -> list[PGBOSnapshot]:
-        """All snapshots recorded so far."""
+        """All snapshots recorded so far.
+
+        Returns
+        -------
+        list[PGBOSnapshot]
+            All snapshots recorded so far.
+        """
         return list(self._history)
 
     def alignment_trend(self, window: int = 10) -> float:
-        """Mean alignment over last window observations."""
+        """Mean alignment over last window observations.
+
+        Parameters
+        ----------
+        window : int
+            Sliding-window length.
+
+        Returns
+        -------
+        float
+            Mean alignment over last window observations.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if not self._history:
             return 0.0
         if isinstance(window, bool) or not isinstance(window, int):

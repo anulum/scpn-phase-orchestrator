@@ -58,10 +58,26 @@ def identify_binding_spec(
     2. Coupling estimation (least squares) → K_ij
     3. K_c estimate from universal prior
 
-    Args:
-        time_series: (n_channels, n_samples) raw data.
-        fs: sampling frequency in Hz.
-        n_layers: override number of layers (default: n_channels).
+    Parameters
+    ----------
+    time_series : FloatArray
+        (n_channels, n_samples) raw data.
+    fs : float
+        sampling frequency in Hz.
+    n_layers : int | None
+        override number of layers (default: n_channels).
+
+    Returns
+    -------
+    AutoTuneResult
+        The result.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    TypeError
+        If an argument has the wrong type.
     """
     sample_rate = _positive_real(fs, "fs")
     data = np.atleast_2d(_real_time_series(time_series))

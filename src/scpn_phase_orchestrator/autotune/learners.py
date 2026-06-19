@@ -73,7 +73,13 @@ class LearnerPolicyProposal:
             raise TypeError("physics_prior must be a mapping")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return an audit-serialisable learner proposal record."""
+        """Return an audit-serialisable learner proposal record.
+
+        Returns
+        -------
+        dict[str, object]
+            An audit-serialisable learner proposal record.
+        """
         return _json_safe_record(
             {
                 "learner_kind": self.learner_kind,
@@ -123,7 +129,26 @@ def generate_ppo_like_proposal(
     reward_config: RewardConfig | None = None,
     proposal_config: PolicyProposalConfig | None = None,
 ) -> LearnerPolicyProposal:
-    """Generate a deterministic PPO-shaped proposal from replay evaluations."""
+    """Generate a deterministic PPO-shaped proposal from replay evaluations.
+
+    Parameters
+    ----------
+    seed : KnobPolicyCandidate
+        Seed for the deterministic RNG.
+    evaluator : ReplayPolicyEvaluator
+        The objective evaluator.
+    seed_value : int | None
+        Seed value for the deterministic RNG.
+    reward_config : RewardConfig | None
+        The reward configuration.
+    proposal_config : PolicyProposalConfig | None
+        The proposal configuration.
+
+    Returns
+    -------
+    LearnerPolicyProposal
+        A deterministic PPO-shaped proposal from replay evaluations.
+    """
     seed_value = _validate_seed_value(seed_value)
     clip_range = _uniform(seed_value, low=0.08, high=0.18)
     search_config = OfflinePolicySearchConfig(
@@ -159,7 +184,26 @@ def generate_sac_like_proposal(
     reward_config: RewardConfig | None = None,
     proposal_config: PolicyProposalConfig | None = None,
 ) -> LearnerPolicyProposal:
-    """Generate a deterministic SAC-shaped proposal from replay evaluations."""
+    """Generate a deterministic SAC-shaped proposal from replay evaluations.
+
+    Parameters
+    ----------
+    seed : KnobPolicyCandidate
+        Seed for the deterministic RNG.
+    evaluator : ReplayPolicyEvaluator
+        The objective evaluator.
+    seed_value : int | None
+        Seed value for the deterministic RNG.
+    reward_config : RewardConfig | None
+        The reward configuration.
+    proposal_config : PolicyProposalConfig | None
+        The proposal configuration.
+
+    Returns
+    -------
+    LearnerPolicyProposal
+        A deterministic SAC-shaped proposal from replay evaluations.
+    """
     seed_value = _validate_seed_value(seed_value)
     entropy_temperature = _uniform(seed_value, low=0.03, high=0.12)
     search_config = OfflinePolicySearchConfig(
@@ -196,7 +240,28 @@ def generate_hybrid_physics_proposal(
     reward_config: RewardConfig | None = None,
     proposal_config: PolicyProposalConfig | None = None,
 ) -> LearnerPolicyProposal:
-    """Generate a replay proposal shaped by a critical-coupling prior."""
+    """Generate a replay proposal shaped by a critical-coupling prior.
+
+    Parameters
+    ----------
+    seed : KnobPolicyCandidate
+        Seed for the deterministic RNG.
+    evaluator : ReplayPolicyEvaluator
+        The objective evaluator.
+    critical_coupling_estimate : float
+        Estimated critical coupling ``K_c``.
+    seed_value : int | None
+        Seed value for the deterministic RNG.
+    reward_config : RewardConfig | None
+        The reward configuration.
+    proposal_config : PolicyProposalConfig | None
+        The proposal configuration.
+
+    Returns
+    -------
+    LearnerPolicyProposal
+        A replay proposal shaped by a critical-coupling prior.
+    """
     seed_value = _validate_seed_value(seed_value)
     critical_coupling_estimate = _positive_real(
         critical_coupling_estimate,

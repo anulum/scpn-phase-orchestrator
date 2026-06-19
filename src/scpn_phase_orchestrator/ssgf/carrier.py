@@ -107,16 +107,46 @@ class GeometryCarrier:
 
     @property
     def z(self) -> FloatArray:
-        """Copy of the current latent geometry vector."""
+        """Copy of the current latent geometry vector.
+
+        Returns
+        -------
+        FloatArray
+            Copy of the current latent geometry vector.
+        """
         return self._z.copy()
 
     @property
     def z_dim(self) -> int:
-        """Dimension of the latent geometry vector."""
+        """Dimension of the latent geometry vector.
+
+        Returns
+        -------
+        int
+            Dimension of the latent geometry vector.
+        """
         return self._z_dim
 
     def decode(self, z: FloatArray | None = None) -> FloatArray:
-        """Map z → coupling matrix W (n × n, non-negative, zero diagonal)."""
+        """Map z → coupling matrix W (n × n, non-negative, zero diagonal).
+
+        Parameters
+        ----------
+        z : FloatArray | None
+            Complex Ott-Antonsen order parameter.
+
+        Returns
+        -------
+        FloatArray
+            Z → coupling matrix W (n × n, non-negative, zero diagonal).
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if z is None:
             z = self._z
         if not isinstance(z, np.ndarray):
@@ -149,6 +179,27 @@ class GeometryCarrier:
 
         If cost_fn is provided, uses finite differences on z.
         Otherwise records cost for external gradient computation.
+
+        Parameters
+        ----------
+        cost : float
+            The scalar cost value.
+        cost_fn : Callable[[FloatArray], float] | None
+            The cost function.
+        epsilon : float
+            Small numerical constant.
+
+        Returns
+        -------
+        SSGFState
+            One SSGF outer step: compute gradient of cost w.r.t. z, descend.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        ValueError
+            If the inputs are invalid or inconsistent.
         """
         if (
             isinstance(cost, bool)
@@ -189,7 +240,18 @@ class GeometryCarrier:
         )
 
     def reset(self, seed: int | None = None) -> None:
-        """Reinitialize the latent vector and reset the outer-step counter."""
+        """Reinitialize the latent vector and reset the outer-step counter.
+
+        Parameters
+        ----------
+        seed : int | None
+            Seed for the deterministic RNG.
+
+        Raises
+        ------
+        TypeError
+            If an argument has the wrong type.
+        """
         if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
             raise TypeError(f"seed must be int or None, got {seed!r}")
         rng = np.random.default_rng(seed)

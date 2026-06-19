@@ -59,7 +59,27 @@ _KEEPALIVE_TYPES = frozenset({"ping", "pong"})
 
 
 def create_app(cfg: QueueWavesConfig) -> object:
-    """Build a FastAPI application wired to the given config."""
+    """Build a FastAPI application wired to the given config.
+
+    Parameters
+    ----------
+    cfg : QueueWavesConfig
+        The configuration object.
+
+    Returns
+    -------
+    object
+        A FastAPI application wired to the given config.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    RuntimeError
+        If the operation fails.
+    HTTPException
+        If the request is invalid.
+    """
     from fastapi import (
         Depends,
         FastAPI,

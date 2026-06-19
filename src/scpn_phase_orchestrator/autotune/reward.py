@@ -214,7 +214,13 @@ class SafetyConstraintConfig:
             raise ValueError("require_safety_cost needs max_safety_cost evidence bound")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable safety-gate configuration."""
+        """Return a JSON-serialisable safety-gate configuration.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-serialisable safety-gate configuration.
+        """
         return {
             "max_lyapunov_exponent": self.max_lyapunov_exponent,
             "min_stl_robustness": self.min_stl_robustness,
@@ -268,7 +274,13 @@ class AutotuneRewardReport:
     config: RewardConfig
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable reward record."""
+        """Return a serialisable reward record.
+
+        Returns
+        -------
+        dict[str, object]
+            A serialisable reward record.
+        """
         return {
             "reward": self.reward,
             "components": dict(self.components),
@@ -316,7 +328,13 @@ class AutotunePolicyProposal:
     config: PolicyProposalConfig
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable policy proposal record."""
+        """Return a serialisable policy proposal record.
+
+        Returns
+        -------
+        dict[str, object]
+            A serialisable policy proposal record.
+        """
         return {
             "accepted": self.accepted,
             "selected": (
@@ -350,6 +368,20 @@ def evaluate_knob_policy(
     The reward is intentionally model-free and side-effect free. Training
     systems can use it to rank replay candidates before any future policy
     learner is allowed to propose production control actions.
+
+    Parameters
+    ----------
+    candidate : KnobPolicyCandidate
+        The candidate configuration.
+    observation : RewardObservation
+        The observation record.
+    config : RewardConfig | None
+        The configuration object.
+
+    Returns
+    -------
+    AutotuneRewardReport
+        A candidate policy from coherence and safety metrics.
     """
     active_config = config or RewardConfig()
     _validate_candidate(candidate)
@@ -417,6 +449,29 @@ def rank_replay_candidates(
     policy learners. It consumes replay or simulation observations, filters
     unsafe rollouts by default, and returns audit-ready reports sorted from
     highest to lowest reward.
+
+    Parameters
+    ----------
+    replay_candidates : Sequence[tuple[KnobPolicyCandidate, RewardObservation]]
+        Replay candidate proposals.
+    config : RewardConfig | None
+        The configuration object.
+    top_k : int | None
+        Number of top items to retain.
+    require_safe : bool
+        Whether to require publication-safe output.
+
+    Returns
+    -------
+    tuple[AutotuneRewardReport, ...]
+        Rank replay-evaluated policy candidates by reward.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    TypeError
+        If an argument has the wrong type.
     """
     if not replay_candidates:
         raise ValueError("replay candidate ranking requires at least one candidate")
@@ -459,6 +514,20 @@ def propose_replay_policy(
 
     The proposal is an audit artefact only. A caller still has to pass it
     through domain-specific policy review before any candidate is deployed.
+
+    Parameters
+    ----------
+    replay_candidates : Sequence[tuple[KnobPolicyCandidate, RewardObservation]]
+        Replay candidate proposals.
+    reward_config : RewardConfig | None
+        The reward configuration.
+    proposal_config : PolicyProposalConfig | None
+        The proposal configuration.
+
+    Returns
+    -------
+    AutotunePolicyProposal
+        A reviewable policy proposal from replay-ranked candidates.
     """
     active_config = proposal_config or PolicyProposalConfig()
     ranked = rank_replay_candidates(
@@ -524,6 +593,18 @@ def generate_offline_policy_candidates(
     channel weights, and cross-channel coupling gains. It does not inspect plant
     state and it does not apply actions; callers must evaluate the returned
     candidates through replay or simulation before ranking them.
+
+    Parameters
+    ----------
+    seed : KnobPolicyCandidate
+        Seed for the deterministic RNG.
+    config : OfflinePolicySearchConfig | None
+        The configuration object.
+
+    Returns
+    -------
+    tuple[KnobPolicyCandidate, ...]
+        Deterministic replay-search candidates around a seed policy.
     """
     active_config = config or OfflinePolicySearchConfig()
     _validate_candidate(seed)

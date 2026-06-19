@@ -114,12 +114,17 @@ class SymbolicExtractor(PhaseExtractor):
     ):
         """Configure the symbolic oscillator over ``n_states`` discrete states.
 
-        Args:
-            n_states: total number of discrete states N
-            node_id: identifier for generated PhaseState objects
-            mode: "ring" for ring-phase, "graph" for graph-walk phase
-            initial_transition_quality: quality assigned when no transition
-                evidence exists yet (first sample / insufficient history)
+        Parameters
+        ----------
+        n_states : int
+            total number of discrete states N.
+        node_id : str
+            identifier for generated PhaseState objects.
+        mode : str
+            "ring" for ring-phase, "graph" for graph-walk phase.
+        initial_transition_quality : float
+            quality assigned when no transition evidence exists yet (first sample /
+            insufficient history).
         """
         n_states = _validate_n_states(n_states)
         if mode not in ("ring", "graph"):
@@ -134,7 +139,20 @@ class SymbolicExtractor(PhaseExtractor):
     def extract(
         self, signal: FloatArray | IntArray, sample_rate: float
     ) -> list[PhaseState]:
-        """Map discrete state indices to phases on the unit circle."""
+        """Map discrete state indices to phases on the unit circle.
+
+        Parameters
+        ----------
+        signal : FloatArray | IntArray
+            Input signal, shape ``(T,)``.
+        sample_rate : float
+            Sampling rate in Hz.
+
+        Returns
+        -------
+        list[PhaseState]
+            Discrete state indices to phases on the unit circle.
+        """
         indices = _validate_signal(signal)
         sample_rate = _validate_sample_rate(sample_rate)
         if self._mode == "ring":
@@ -206,7 +224,18 @@ class SymbolicExtractor(PhaseExtractor):
         return states
 
     def quality_score(self, phase_states: list[PhaseState]) -> float:
-        """Mean transition quality across phase states."""
+        """Mean transition quality across phase states.
+
+        Parameters
+        ----------
+        phase_states : list[PhaseState]
+            Extracted per-oscillator phase states.
+
+        Returns
+        -------
+        float
+            Mean transition quality across phase states.
+        """
         if not phase_states:
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))

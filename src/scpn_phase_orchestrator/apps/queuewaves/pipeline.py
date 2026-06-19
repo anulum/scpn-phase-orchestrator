@@ -79,7 +79,13 @@ class PipelineSnapshot:
     actions: list[dict[str, Any]]
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialise snapshot to a JSON-compatible dict."""
+        """Serialise snapshot to a JSON-compatible dict.
+
+        Returns
+        -------
+        dict[str, Any]
+            Serialise snapshot to a JSON-compatible dict.
+        """
         return {
             "tick": self.tick,
             "timestamp": self.timestamp,
@@ -164,24 +170,49 @@ class PhaseComputePipeline:
 
     @property
     def tick_count(self) -> int:
-        """Number of pipeline ticks executed so far."""
+        """Number of pipeline ticks executed so far.
+
+        Returns
+        -------
+        int
+            Number of pipeline ticks executed so far.
+        """
         return self._tick_count
 
     @property
     def regime(self) -> str:
-        """Current regime label from the regime manager."""
+        """Current regime label from the regime manager.
+
+        Returns
+        -------
+        str
+            Current regime label from the regime manager.
+        """
         return self._regime_manager.current_regime.value
 
     @property
     def imprint_levels(self) -> FloatArray:
-        """Per-oscillator imprint memory levels."""
+        """Per-oscillator imprint memory levels.
+
+        Returns
+        -------
+        FloatArray
+            Per-oscillator imprint memory levels.
+        """
         return self._imprint_state.m_k
 
     def tick(self, buffers: dict[str, FloatArray]) -> PipelineSnapshot:
         """Run one full pipeline cycle.
 
-        Args:
-            buffers: mapping service_name -> 1-D signal array (ring buffer contents).
+        Parameters
+        ----------
+        buffers : dict[str, FloatArray]
+            mapping service_name -> 1-D signal array (ring buffer contents).
+
+        Returns
+        -------
+        PipelineSnapshot
+            The result.
         """
         self._tick_count += 1
 

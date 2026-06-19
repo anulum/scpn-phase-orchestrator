@@ -45,10 +45,34 @@ class PhaseExtractor(ABC):
 
     @abstractmethod
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
-        """Extract phase states from a raw signal at the given sample rate."""
+        """Extract phase states from a raw signal at the given sample rate.
+
+        Parameters
+        ----------
+        signal : FloatArray
+            Input signal, shape ``(T,)``.
+        sample_rate : float
+            Sampling rate in Hz.
+
+        Returns
+        -------
+        list[PhaseState]
+            Phase states from a raw signal at the given sample rate.
+        """
         ...
 
     @abstractmethod
     def quality_score(self, phase_states: list[PhaseState]) -> float:
-        """Aggregate quality metric (0..1) over a set of extracted phase states."""
+        """Aggregate quality metric (0..1) over a set of extracted phase states.
+
+        Parameters
+        ----------
+        phase_states : list[PhaseState]
+            Extracted per-oscillator phase states.
+
+        Returns
+        -------
+        float
+            Aggregate quality metric (0..1) over a set of extracted phase states.
+        """
         ...

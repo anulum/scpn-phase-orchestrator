@@ -92,6 +92,20 @@ def extract_initial_phases(
     random phase if extraction fails.
 
     Returns (n_osc,) array of initial phases in [0, 2*pi).
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    seed : int
+        Seed for the deterministic RNG.
+
+    Returns
+    -------
+    FloatArray
+        Initial phases from channels defined in binding_spec.
     """
     omegas = _validate_omegas(omegas, expected_count=_oscillator_count(spec))
     seed = _validate_seed(seed)

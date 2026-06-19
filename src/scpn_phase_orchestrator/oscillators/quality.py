@@ -57,7 +57,18 @@ class PhaseQualityScorer:
         )
 
     def score(self, phase_states: list[PhaseState]) -> float:
-        """Weighted average quality across all phase states."""
+        """Weighted average quality across all phase states.
+
+        Parameters
+        ----------
+        phase_states : list[PhaseState]
+            Extracted per-oscillator phase states.
+
+        Returns
+        -------
+        float
+            Weighted average quality across all phase states.
+        """
         if not phase_states:
             return 0.0
         qualities = np.array([ps.quality for ps in phase_states])
@@ -71,7 +82,25 @@ class PhaseQualityScorer:
     def detect_collapse(
         self, phase_states: list[PhaseState], threshold: float = 0.1
     ) -> bool:
-        """Return True if quality is below threshold for the majority of states."""
+        """Return True if quality is below threshold for the majority of states.
+
+        Parameters
+        ----------
+        phase_states : list[PhaseState]
+            Extracted per-oscillator phase states.
+        threshold : float
+            Decision threshold.
+
+        Returns
+        -------
+        bool
+            True if quality is below threshold for the majority of states.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if not phase_states:
             return True
         if not np.isfinite(threshold):
@@ -88,7 +117,25 @@ class PhaseQualityScorer:
     def downweight_mask(
         self, phase_states: list[PhaseState], min_quality: float = 0.3
     ) -> FloatArray:
-        """Weight array in [0,1], zeros below min_quality."""
+        """Weight array in [0,1], zeros below min_quality.
+
+        Parameters
+        ----------
+        phase_states : list[PhaseState]
+            Extracted per-oscillator phase states.
+        min_quality : float
+            Minimum extraction quality.
+
+        Returns
+        -------
+        FloatArray
+            Weight array in [0,1], zeros below min_quality.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if not phase_states:
             return np.array([], dtype=np.float64)
         if not np.isfinite(min_quality):

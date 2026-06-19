@@ -68,7 +68,27 @@ def propose_binding_from_time_series_csv(
     sample_rate_hz: float | None,
     project_name: str,
 ) -> StudioProjectState:
-    """Propose a review-only binding for a tabular time-series replay."""
+    """Propose a review-only binding for a tabular time-series replay.
+
+    Parameters
+    ----------
+    csv_text : str
+        Raw CSV text.
+    sample_rate_hz : float | None
+        Sampling rate in Hz.
+    project_name : str
+        Name of the project.
+
+    Returns
+    -------
+    StudioProjectState
+        A review-only binding for a tabular time-series replay.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     payload = csv_text.encode("utf-8")
     reader = csv.DictReader(io.StringIO(csv_text))
     if not reader.fieldnames:
@@ -165,7 +185,20 @@ def propose_binding_from_event_log(
     *,
     project_name: str,
 ) -> StudioProjectState:
-    """Propose a review-only binding for a JSON event log."""
+    """Propose a review-only binding for a JSON event log.
+
+    Parameters
+    ----------
+    json_text : str
+        Raw JSON text.
+    project_name : str
+        Name of the project.
+
+    Returns
+    -------
+    StudioProjectState
+        A review-only binding for a JSON event log.
+    """
     payload = json_text.encode("utf-8")
     events = _event_sequence(json.loads(json_text))
     source_names = sorted(
@@ -228,7 +261,25 @@ def propose_binding_from_graph(
     *,
     project_name: str,
 ) -> StudioProjectState:
-    """Propose a review-only binding for a graph JSON payload."""
+    """Propose a review-only binding for a graph JSON payload.
+
+    Parameters
+    ----------
+    json_text : str
+        Raw JSON text.
+    project_name : str
+        Name of the project.
+
+    Returns
+    -------
+    StudioProjectState
+        A review-only binding for a graph JSON payload.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     payload = json_text.encode("utf-8")
     graph = _mapping(json.loads(json_text), "graph")
     nodes = _sequence(graph.get("nodes"), "graph.nodes")

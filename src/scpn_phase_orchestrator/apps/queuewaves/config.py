@@ -341,7 +341,23 @@ class ConfigCompiler:
     """Converts user-facing QueueWavesConfig into an SPO BindingSpec."""
 
     def compile(self, cfg: QueueWavesConfig) -> BindingSpec:
-        """Translate QueueWavesConfig into an SPO BindingSpec."""
+        """Translate QueueWavesConfig into an SPO BindingSpec.
+
+        Parameters
+        ----------
+        cfg : QueueWavesConfig
+            The configuration object.
+
+        Returns
+        -------
+        BindingSpec
+            Translate QueueWavesConfig into an SPO BindingSpec.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         layers_by_name: dict[str, list[ServiceDef]] = {}
         for svc in cfg.services:
             layers_by_name.setdefault(svc.layer, []).append(svc)

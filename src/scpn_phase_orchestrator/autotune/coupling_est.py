@@ -110,14 +110,24 @@ def estimate_coupling(
     Constructs the regression matrix from pairwise sin(Δθ) and solves
     for K_ij via pseudoinverse.
 
-    Args:
-        phases: (n_oscillators, n_timesteps) phase trajectories.
-        omegas: (n_oscillators,) natural frequencies.
-        dt: timestep between samples.
+    Parameters
+    ----------
+    phases : FloatArray
+        (n_oscillators, n_timesteps) phase trajectories.
+    omegas : FloatArray
+        (n_oscillators,) natural frequencies.
+    dt : float
+        timestep between samples.
 
     Returns
     -------
+    FloatArray
         (n_oscillators, n_oscillators) estimated coupling matrix K_ij.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     phases, omegas, dt = _validate_inputs(phases, omegas, dt)
     n, T = phases.shape
@@ -168,6 +178,27 @@ def estimate_coupling_harmonics(
 
     Returns dict with keys 'sin_1', 'cos_1', 'sin_2', 'cos_2', ...
     each an (n, n) matrix of coefficients.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    dt : float
+        Integration step size.
+    n_harmonics : int
+        Number of harmonics to fit.
+
+    Returns
+    -------
+    dict[str, FloatArray]
+        Coupling with higher Fourier harmonics.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     phases, omegas, dt = _validate_inputs(phases, omegas, dt)
     n_harmonics = _validate_n_harmonics(n_harmonics)

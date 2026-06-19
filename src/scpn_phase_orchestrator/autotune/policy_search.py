@@ -109,7 +109,13 @@ class ReplayPolicySearchResult:
             raise TypeError("proposal must be AutotunePolicyProposal")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable search record."""
+        """Return a serialisable search record.
+
+        Returns
+        -------
+        dict[str, object]
+            A serialisable search record.
+        """
         return {
             "seed": _candidate_to_record(self.seed),
             "candidates": [
@@ -143,7 +149,13 @@ class AdaptiveReplayPolicySearchResult:
             raise TypeError("config must be AdaptiveReplayPolicySearchConfig")
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a serialisable adaptive-search record."""
+        """Return a serialisable adaptive-search record.
+
+        Returns
+        -------
+        dict[str, object]
+            A serialisable adaptive-search record.
+        """
         return {
             "seed": _candidate_to_record(self.seed),
             "rounds": [round_result.to_audit_record() for round_result in self.rounds],
@@ -172,6 +184,31 @@ def search_replay_policy(
     The evaluator must be a replay or simulation adapter. This helper never
     applies control actions directly; it only turns candidate observations into
     the existing reviewable proposal record.
+
+    Parameters
+    ----------
+    seed : KnobPolicyCandidate
+        Seed for the deterministic RNG.
+    evaluator : ReplayPolicyEvaluator
+        The objective evaluator.
+    search_config : OfflinePolicySearchConfig | None
+        The search configuration.
+    reward_config : RewardConfig | None
+        The reward configuration.
+    proposal_config : PolicyProposalConfig | None
+        The proposal configuration.
+
+    Returns
+    -------
+    ReplayPolicySearchResult
+        Generate, replay-evaluate, and propose an autotune policy.
+
+    Raises
+    ------
+    TypeError
+        If an argument has the wrong type.
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     _validate_candidate(seed, "seed")
     if not callable(evaluator):
@@ -234,6 +271,31 @@ def search_adaptive_replay_policy(
     current best replay candidate, then shrinks the coordinate step sizes. The
     final proposal is still built from replay observations and existing review
     gates; no candidate is applied directly.
+
+    Parameters
+    ----------
+    seed : KnobPolicyCandidate
+        Seed for the deterministic RNG.
+    evaluator : ReplayPolicyEvaluator
+        The objective evaluator.
+    adaptive_config : AdaptiveReplayPolicySearchConfig | None
+        Adaptive-tuning configuration.
+    reward_config : RewardConfig | None
+        The reward configuration.
+    proposal_config : PolicyProposalConfig | None
+        The proposal configuration.
+
+    Returns
+    -------
+    AdaptiveReplayPolicySearchResult
+        Bounded adaptive replay-only policy search.
+
+    Raises
+    ------
+    TypeError
+        If an argument has the wrong type.
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     _validate_candidate(seed, "seed")
     if not callable(evaluator):

@@ -197,6 +197,27 @@ def compute_ssgf_costs(
     C4: ||W - W^T||_F / N (symmetry deviation)
 
     U_total = w1·C1 + w2·C2 + w3·C3 + w4·C4
+
+    Parameters
+    ----------
+    W : FloatArray
+        Weight matrix.
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    weights : tuple[float, ...]
+        The weights.
+
+    Returns
+    -------
+    SSGFCosts
+        SSGF cost terms for geometry W given current phases.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    RuntimeError
+        If the operation fails.
     """
     w1, w2, w3, w4 = _validate_weights(weights)
     phases = _validate_phases(phases)

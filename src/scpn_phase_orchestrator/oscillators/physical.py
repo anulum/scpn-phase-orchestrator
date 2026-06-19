@@ -78,7 +78,20 @@ class PhysicalExtractor(PhaseExtractor):
         self._node_id = _validate_node_id(node_id)
 
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
-        """Extract instantaneous phase from a 1-D waveform via Hilbert transform."""
+        """Extract instantaneous phase from a 1-D waveform via Hilbert transform.
+
+        Parameters
+        ----------
+        signal : FloatArray
+            Input signal, shape ``(T,)``.
+        sample_rate : float
+            Sampling rate in Hz.
+
+        Returns
+        -------
+        list[PhaseState]
+            Instantaneous phase from a 1-D waveform via Hilbert transform.
+        """
         signal = _validate_signal(signal)
         sample_rate = _validate_sample_rate(sample_rate)
         from scipy.signal import hilbert  # noqa: PLC0415
@@ -113,7 +126,18 @@ class PhysicalExtractor(PhaseExtractor):
         ]
 
     def quality_score(self, phase_states: list[PhaseState]) -> float:
-        """Mean extraction quality across phase states."""
+        """Mean extraction quality across phase states.
+
+        Parameters
+        ----------
+        phase_states : list[PhaseState]
+            Extracted per-oscillator phase states.
+
+        Returns
+        -------
+        float
+            Mean extraction quality across phase states.
+        """
         if not phase_states:
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))

@@ -87,6 +87,34 @@ def compute_ethical_cost(
       g_1: R_min - R                   (non-harm: minimum coherence)
       g_2: connectivity_min - λ₂       (Wiener: maintain connectivity)
       g_3: max(K_ij) - max_coupling    (boundary: coupling limits)
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha_R : float
+        Order-parameter cost weight.
+    beta_K : float
+        Coupling-cost weight.
+    gamma_Q : float
+        Quality-cost weight.
+    nu_S : float
+        Symbolic-cost weight.
+    kappa : float
+        Coupling/curvature parameter.
+    R_min : float
+        Minimum order-parameter target.
+    connectivity_min : float
+        Minimum algebraic connectivity.
+    max_coupling : float
+        Maximum allowed coupling value.
+
+    Returns
+    -------
+    EthicalCost
+        C15_sec ethical cost term.
     """
     n = len(phases)
     if n == 0:

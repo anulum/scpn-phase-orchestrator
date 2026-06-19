@@ -49,21 +49,47 @@ class MetricBuffer:
         self._buf: deque[tuple[float, float]] = deque(maxlen=maxlen)
 
     def push(self, timestamp: float, value: float) -> None:
-        """Append a (timestamp, value) pair to the ring buffer."""
+        """Append a (timestamp, value) pair to the ring buffer.
+
+        Parameters
+        ----------
+        timestamp : float
+            The sample timestamp.
+        value : float
+            The value.
+        """
         self._buf.append((timestamp, value))
 
     @property
     def ready(self) -> bool:
-        """True when at least 4 samples are buffered (minimum for phase extraction)."""
+        """True when at least 4 samples are buffered (minimum for phase extraction).
+
+        Returns
+        -------
+        bool
+            True when at least 4 samples are buffered (minimum for phase extraction).
+        """
         return len(self._buf) >= 4
 
     @property
     def full(self) -> bool:
-        """True when the buffer has reached maximum capacity."""
+        """True when the buffer has reached maximum capacity.
+
+        Returns
+        -------
+        bool
+            True when the buffer has reached maximum capacity.
+        """
         return len(self._buf) >= self._maxlen
 
     def values_array(self) -> FloatArray:
-        """Return buffered values as a float64 array (timestamps excluded)."""
+        """Return buffered values as a float64 array (timestamps excluded).
+
+        Returns
+        -------
+        FloatArray
+            Buffered values as a float64 array (timestamps excluded).
+        """
         return np.array([v for _, v in self._buf], dtype=np.float64)
 
     def __len__(self) -> int:
@@ -91,7 +117,13 @@ class PrometheusCollector:
 
     @property
     def buffers(self) -> dict[str, MetricBuffer]:
-        """Per-service metric ring buffers keyed by service name."""
+        """Per-service metric ring buffers keyed by service name.
+
+        Returns
+        -------
+        dict[str, MetricBuffer]
+            Per-service metric ring buffers keyed by service name.
+        """
         return self._buffers
 
     async def _get_client(self) -> Any:
@@ -108,7 +140,13 @@ class PrometheusCollector:
             self._client = None
 
     async def scrape(self) -> dict[str, MetricBuffer]:
-        """Fire one PromQL instant query per service, push results into buffers."""
+        """Fire one PromQL instant query per service, push results into buffers.
+
+        Returns
+        -------
+        dict[str, MetricBuffer]
+            Fire one PromQL instant query per service, push results into buffers.
+        """
         client = await self._get_client()
         for name, promql in self._queries.items():
             try:
@@ -130,14 +168,31 @@ class PrometheusCollector:
         self,
         values: dict[str, tuple[float, float]],
     ) -> dict[str, MetricBuffer]:
-        """Push values synchronously for testing: {name: (timestamp, value)}."""
+        """Push values synchronously for testing: {name: (timestamp, value)}.
+
+        Parameters
+        ----------
+        values : dict[str, tuple[float, float]]
+            The scalar values.
+
+        Returns
+        -------
+        dict[str, MetricBuffer]
+            Push values synchronously for testing: {name: (timestamp, value)}.
+        """
         for name, (ts, val) in values.items():
             if name in self._buffers:
                 self._buffers[name].push(ts, val)
         return self._buffers
 
     def get_signal_arrays(self) -> dict[str, FloatArray]:
-        """Return value arrays for all ready buffers."""
+        """Return value arrays for all ready buffers.
+
+        Returns
+        -------
+        dict[str, FloatArray]
+            Value arrays for all ready buffers.
+        """
         return {
             name: buf.values_array() for name, buf in self._buffers.items() if buf.ready
         }

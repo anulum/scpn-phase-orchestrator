@@ -101,7 +101,18 @@ class WebhookAlerter:
         self._suppressed_count: dict[str, int] = {}
 
     async def send(self, anomalies: list[Anomaly]) -> list[Anomaly]:
-        """Post anomalies to all sinks. Returns the list of actually sent anomalies."""
+        """Post anomalies to all sinks. Returns the list of actually sent anomalies.
+
+        Parameters
+        ----------
+        anomalies : list[Anomaly]
+            Detected anomaly records.
+
+        Returns
+        -------
+        list[Anomaly]
+            Post anomalies to all sinks. Returns the list of actually sent anomalies.
+        """
         import httpx
 
         now = time.time()
@@ -135,7 +146,18 @@ class WebhookAlerter:
         return [a for a, _ in to_send]
 
     def send_sync(self, anomalies: list[Anomaly]) -> list[Anomaly]:
-        """Run the synchronous dedup-only path for testing (no HTTP)."""
+        """Run the synchronous dedup-only path for testing (no HTTP).
+
+        Parameters
+        ----------
+        anomalies : list[Anomaly]
+            Detected anomaly records.
+
+        Returns
+        -------
+        list[Anomaly]
+            The synchronous dedup-only path for testing (no HTTP).
+        """
         now = time.time()
         sent: list[Anomaly] = []
         for a in anomalies:

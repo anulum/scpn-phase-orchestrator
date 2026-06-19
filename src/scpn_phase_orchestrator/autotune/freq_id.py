@@ -50,16 +50,27 @@ def identify_frequencies(
     Uses SVD-based Dynamic Mode Decomposition: X' ≈ A X where
     A = X' V Σ⁻¹ Uᴴ, eigenvalues of A give frequencies.
 
-    Args:
-        data: (n_channels, n_samples) multichannel time series.
-        fs: sampling frequency in Hz.
-        n_modes: number of DMD modes to keep (default: auto from singular values).
-        rank_threshold: singular value threshold for rank truncation.
+    Parameters
+    ----------
+    data : FloatArray
+        (n_channels, n_samples) multichannel time series.
+    fs : float
+        sampling frequency in Hz.
+    n_modes : int | None
+        number of DMD modes to keep (default: auto from singular values).
+    rank_threshold : float
+        singular value threshold for rank truncation.
 
     Returns
     -------
-        FrequencyResult with frequencies, amplitudes, and layer assignment
-        (which channel maps to which frequency cluster).
+    FrequencyResult
+        FrequencyResult with frequencies, amplitudes, and layer assignment (which
+        channel maps to which frequency cluster).
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     sample_rate = _positive_real(fs, "fs")
     data = np.atleast_2d(_real_data(data))

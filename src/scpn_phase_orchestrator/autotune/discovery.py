@@ -91,17 +91,35 @@ class TimeSeriesDiscoveryReport:
 
     @property
     def sindy_sparsity(self) -> float:
-        """Sparse-regression support fraction reported by the SINDy evidence."""
+        """Sparse-regression support fraction reported by the SINDy evidence.
+
+        Returns
+        -------
+        float
+            Sparse-regression support fraction reported by the SINDy evidence.
+        """
         return cast(float, self.sindy["sparsity"])
 
     @property
     def correlation_graph_density(self) -> float:
-        """Density of the thresholded correlation graph evidence."""
+        """Density of the thresholded correlation graph evidence.
+
+        Returns
+        -------
+        float
+            Density of the thresholded correlation graph evidence.
+        """
         return cast(float, self.correlation_graph["density"])
 
     @property
     def cluster_coverage(self) -> float:
-        """Fraction of channels covered by the largest discovered cluster."""
+        """Fraction of channels covered by the largest discovered cluster.
+
+        Returns
+        -------
+        float
+            Fraction of channels covered by the largest discovered cluster.
+        """
         if not self.columns:
             return 0.0
         largest_cluster_size = cast(int, self.clustering["largest_cluster_size"])
@@ -109,7 +127,13 @@ class TimeSeriesDiscoveryReport:
 
     @property
     def confidence_evidence(self) -> dict[str, float]:
-        """Confidence factors derived from fitted discovery evidence blocks."""
+        """Confidence factors derived from fitted discovery evidence blocks.
+
+        Returns
+        -------
+        dict[str, float]
+            Confidence factors derived from fitted discovery evidence blocks.
+        """
         factors = {
             "sindy_sparsity": self.sindy_sparsity,
             "correlation_graph_density": self.correlation_graph_density,
@@ -124,7 +148,13 @@ class TimeSeriesDiscoveryReport:
         return factors
 
     def to_audit_record(self) -> dict[str, JsonValue]:
-        """Return the complete JSON-safe discovery evidence record."""
+        """Return the complete JSON-safe discovery evidence record.
+
+        Returns
+        -------
+        dict[str, JsonValue]
+            The complete JSON-safe discovery evidence record.
+        """
         return {
             "sample_period_s": self.sample_period_s,
             "sample_count": self.sample_count,
@@ -142,7 +172,25 @@ def infer_sample_rate_from_time_column(
     rows: Sequence[Mapping[str, str]],
     fieldnames: Sequence[str],
 ) -> tuple[float, str]:
-    """Infer a sampling rate from a regular finite time column."""
+    """Infer a sampling rate from a regular finite time column.
+
+    Parameters
+    ----------
+    rows : Sequence[Mapping[str, str]]
+        Data rows.
+    fieldnames : Sequence[str]
+        CSV field names.
+
+    Returns
+    -------
+    tuple[float, str]
+        A sampling rate from a regular finite time column.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if any(not isinstance(field, str) for field in fieldnames):
         raise ValueError("fieldnames must be strings")
     time_column = next(
@@ -183,7 +231,29 @@ def discover_time_series_structure(
     sample_period_s: float,
     config: TimeSeriesDiscoveryConfig | None = None,
 ) -> TimeSeriesDiscoveryReport:
-    """Extract sparse-derivative, graph, and cluster evidence from a table."""
+    """Extract sparse-derivative, graph, and cluster evidence from a table.
+
+    Parameters
+    ----------
+    samples : FloatArray
+        Sample array.
+    columns : Sequence[str]
+        Column names.
+    sample_period_s : float
+        Sample period in seconds.
+    config : TimeSeriesDiscoveryConfig | None
+        The configuration object.
+
+    Returns
+    -------
+    TimeSeriesDiscoveryReport
+        Sparse-derivative, graph, and cluster evidence from a table.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     cfg = config or TimeSeriesDiscoveryConfig()
     sample_period_s = _finite_real_scalar(sample_period_s, "sample_period_s")
     table = _real_table(samples)
