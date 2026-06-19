@@ -590,3 +590,158 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
     )
     with pytest.raises(ValueError, match="path_length_equation_validated"):
         verify_pha_c_acceptance_record(forged_kinematic_equation)
+
+
+def _build_with(**overrides: object) -> object:
+    phases, positions, omega, knm, velocities = _problem()
+    args: dict[str, object] = {
+        "phases_t0": phases,
+        "positions_t0": positions,
+        "omega_schedule": omega,
+        "knm": knm,
+        "velocity_schedule": velocities,
+    }
+    args.update(overrides)
+    return build_pha_c_acceptance_record(**args)
+
+
+@pytest.mark.parametrize(
+    ("zeta", "match"),
+    [
+        (True, "zeta must be a finite real scalar"),
+        ("nope", "zeta must be a finite real scalar"),
+        (float("inf"), "zeta must be finite"),
+    ],
+)
+def test_acceptance_rejects_invalid_scalar(zeta, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _build_with(zeta=zeta)
+
+
+def test_acceptance_rejects_empty_backend() -> None:
+    with pytest.raises(ValueError, match="backend must be a non-empty string"):
+        _build_with(backend="")
+
+
+def _object_array(shape: tuple[int, ...]) -> np.ndarray:
+    return np.full(shape, None, dtype=object)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("phases_t0", _object_array((5,)), "phases_t0 must be a finite real-valued"),
+        ("omega_schedule", _object_array((4, 5)), "omega_schedule must be a finite"),
+        (
+            "omega_schedule",
+            np.zeros((4, 5), dtype=np.complex128),
+            "omega_schedule must be real-valued",
+        ),
+        ("omega_schedule", np.zeros(5), "omega_schedule must be a two-dimensional"),
+        ("knm", _object_array((5, 5)), "knm must be a finite real square matrix"),
+        (
+            "knm",
+            np.zeros((5, 5), dtype=np.complex128),
+            "knm must be real-valued",
+        ),
+    ],
+)
+def test_acceptance_rejects_invalid_array_dtype(field, value, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _build_with(**{field: value})
+
+
+def test_acceptance_rejects_non_finite_omega() -> None:
+    _, _, omega, _, _ = _problem()
+    omega = omega.copy()
+    omega[0, 0] = np.nan
+    with pytest.raises(ValueError, match="omega_schedule must contain only finite"):
+        _build_with(omega_schedule=omega)
+
+
+def test_acceptance_rejects_non_finite_knm() -> None:
+    _, _, _, knm, _ = _problem()
+    knm = knm.copy()
+    knm[0, 1] = np.nan
+    with pytest.raises(ValueError, match="knm must contain only finite"):
+        _build_with(knm=knm)
+
+
+def test_acceptance_rejects_nonzero_knm_diagonal() -> None:
+    _, _, _, knm, _ = _problem()
+    knm = knm.copy()
+    np.fill_diagonal(knm, 0.5)
+    with pytest.raises(ValueError, match="knm diagonal must be zero"):
+        _build_with(knm=knm)
+
+
+def _valid_record() -> PHACAcceptanceRecord:
+    phases, positions, omega, knm, velocities = _problem()
+    return build_pha_c_acceptance_record(
+        phases, positions, omega, knm, velocities, backend="python"
+    )
+
+
+def test_verify_rejects_non_record() -> None:
+    with pytest.raises(ValueError, match="record must be a PHACAcceptanceRecord"):
+        verify_pha_c_acceptance_record("not-a-record")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"omega_schedule_sha256": "bad"}, "omega_schedule_sha256 must be a lowercase"),
+        ({"evidence_kind": "tampered"}, "evidence_kind must be"),
+        ({"execution_disabled": "yes"}, "execution_disabled must be a boolean"),
+        ({"execution_disabled": False}, "execution_disabled must be true"),
+        ({"actuating": True}, "actuating must be false"),
+        ({"moving_frame_backend_request": ""}, "moving_frame_backend_request must be"),
+        ({"sample_count": "x"}, "sample_count must be an integer"),
+        ({"sample_count": 1}, "sample_count must be at least 2"),
+        ({"lock_sample_count": 10**9}, "lock_sample_count cannot exceed"),
+        (
+            {"max_consecutive_lock_samples": 10**9},
+            "max_consecutive_lock_samples cannot exceed",
+        ),
+        ({"lock_loss_count": 10**9}, "lock_loss_count cannot exceed step_count"),
+        ({"end_time": -1.0}, "end_time must be greater than or equal"),
+        ({"end_time": 999.0}, "end_time must equal start_time"),
+        (
+            {"kinematic_summary_replay_tolerance": 99.0},
+            "kinematic_summary_replay_tolerance must match",
+        ),
+        (
+            {"tolerance_profile_multiplier": -1.0},
+            "tolerance_profile_multiplier must be positive",
+        ),
+        ({"tolerance_profile_name": ""}, "tolerance_profile_name must be a non-empty"),
+    ],
+)
+def test_verify_rejects_tampered_record(changes, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        verify_pha_c_acceptance_record(replace(_valid_record(), **changes))
+
+
+def test_verify_rejects_negative_record_scalar() -> None:
+    record = replace(_valid_record(), max_abs_doppler_term=-1.0)
+    with pytest.raises(ValueError, match="max_abs_doppler_term must be non-negative"):
+        verify_pha_c_acceptance_record(record)
+
+
+def test_acceptance_rejects_non_integer_substeps() -> None:
+    with pytest.raises(ValueError, match="n_substeps must be a positive integer"):
+        _build_with(n_substeps=1.5)
+
+
+def test_acceptance_rejects_non_modulator_object() -> None:
+    with pytest.raises(ValueError, match="spatial_modulator must be a"):
+        _build_with(spatial_modulator="not-a-modulator")
+
+
+def test_acceptance_accepts_explicit_spatial_modulator() -> None:
+    from scpn_phase_orchestrator.coupling.spatial_modulator import (
+        SpatialCouplingModulator,
+    )
+
+    record = _build_with(spatial_modulator=SpatialCouplingModulator(K_base=1.0))
+    verify_pha_c_acceptance_record(record)
