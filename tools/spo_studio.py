@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
-import streamlit as st  # type: ignore[import-not-found]
+import streamlit as st
 
 from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_event_log,
@@ -58,7 +59,7 @@ st.set_page_config(
 )
 
 st.title("SPO Studio")
-PRODUCT_MANIFEST = build_studio_product_manifest()
+PRODUCT_MANIFEST = cast("dict[str, Any]", build_studio_product_manifest())
 st.caption(
     "Standalone review shell with "
     f"{PRODUCT_MANIFEST['review_panel_count']} passive physics review panels; "
@@ -187,6 +188,8 @@ if result is None:
         st.stop()
     st.session_state["studio_result"] = result
 
+# ``st.stop()`` halts the script, so past this point a result is guaranteed.
+assert result is not None
 project = result.project_state
 _render_metrics(result)
 
@@ -254,7 +257,7 @@ with tabs[0]:
             st.json(proposal.binding.to_audit_record(), expanded=False)
 
 with tabs[1]:
-    guidance = build_beginner_guidance(result)
+    guidance = cast("dict[str, Any]", build_beginner_guidance(result))
     summary = guidance["runtime_summary"]
     st.dataframe(
         [
@@ -324,7 +327,7 @@ with tabs[3]:
     st.json(edit_record, expanded=False)
 
 with tabs[4]:
-    canvas_graph = result.canvas_graph
+    canvas_graph = cast("dict[str, Any]", result.canvas_graph)
     st.dataframe(
         [
             {
@@ -372,9 +375,12 @@ with tabs[4]:
         before_graph=canvas_graph,
         after_graph={"nodes": canvas_nodes, "edges": canvas_edges},
     )
-    canvas_rewrite = build_canvas_binding_rewrite_candidate(
-        result,
-        after_graph={"nodes": canvas_nodes, "edges": canvas_edges},
+    canvas_rewrite = cast(
+        "dict[str, Any]",
+        build_canvas_binding_rewrite_candidate(
+            result,
+            after_graph={"nodes": canvas_nodes, "edges": canvas_edges},
+        ),
     )
     apply_signoff = st.checkbox(
         "Apply reviewed binding rewrite candidate to binding_spec.yaml",
@@ -495,7 +501,7 @@ with tabs[7]:
     )
 
 with tabs[8]:
-    connector_plan = result.connector_plan
+    connector_plan = cast("dict[str, Any]", result.connector_plan)
     st.dataframe(
         list(connector_plan["connectors"]),
         hide_index=True,
@@ -587,7 +593,9 @@ with tabs[9]:
     readiness = build_deployment_readiness(project)
     package = build_deployment_package(project)
     materialisation_plan = build_package_materialisation_plan(project)
-    service_process_manifest = build_service_process_manifest(project)
+    service_process_manifest = cast(
+        "dict[str, Any]", build_service_process_manifest(project)
+    )
     hardware_package = build_hardware_target_package(result)
     st.subheader("Deployment Readiness")
     st.dataframe(

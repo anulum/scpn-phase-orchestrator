@@ -13,7 +13,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import numpy as np
-import streamlit as st  # type: ignore[import-not-found]
+import streamlit as st
 
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 from scpn_phase_orchestrator.binding.resolved import (
@@ -271,6 +271,8 @@ def main() -> None:
         for msg in errors:
             st.error(msg)
         st.stop()
+    # ``st.stop()`` halts the script, so past this point the spec is valid.
+    assert spec is not None
 
     if errors:
         st.warning("Spec parses but schema validation found issues:")

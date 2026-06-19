@@ -23,6 +23,11 @@ Usage on GPU instance:
 Results saved to: benchmarks/results/gpu_benchmark_YYYY-MM-DD.json
 """
 
+# JAX's array ``block_until_ready`` and a few device-timing helpers are
+# untyped; this script calls them purely to force materialisation in the timing
+# loop, so the no-untyped-call check is disabled for this file only.
+# mypy: disable-error-code="no-untyped-call"
+
 from __future__ import annotations
 
 import json
@@ -31,6 +36,7 @@ import time
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 # ──────────────────────────────────────────────────
 # Phase 0: Environment validation (before ANY import)
@@ -42,24 +48,24 @@ _date_str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
 RESULTS_FILE = RESULTS_DIR / f"gpu_benchmark_{_date_str}.json"
 
 
-def _load_existing() -> dict:
+def _load_existing() -> dict[str, Any]:
     if RESULTS_FILE.exists():
         with RESULTS_FILE.open() as f:
-            data: dict = json.load(f)
+            data: dict[str, Any] = json.load(f)
             return data
     return {"benchmarks": {}, "metadata": {}}
 
 
-def _save(data: dict) -> None:
+def _save(data: dict[str, Any]) -> None:
     with RESULTS_FILE.open("w") as f:
         json.dump(data, f, indent=2, default=str)
     print(f"  [SAVED] {RESULTS_FILE}")
 
 
-def validate_environment() -> dict:
+def validate_environment() -> dict[str, Any]:
     """Check GPU, JAX, imports. Returns metadata dict or exits."""
     errors = []
-    metadata: dict = {
+    metadata: dict[str, Any] = {
         "timestamp": datetime.now(tz=timezone.utc).isoformat(),
         "python": sys.version,
     }
@@ -131,7 +137,7 @@ def validate_environment() -> dict:
 # ──────────────────────────────────────────────────
 
 
-def bench_kuramoto_layer_forward(sizes: list[int] | None = None) -> dict:
+def bench_kuramoto_layer_forward(sizes: list[int] | None = None) -> dict[str, Any]:
     """Benchmark KuramotoLayer forward pass at various N."""
     import jax
     import jax.numpy as jnp
@@ -184,7 +190,7 @@ def bench_kuramoto_layer_forward(sizes: list[int] | None = None) -> dict:
     return results
 
 
-def bench_stuart_landau_layer_forward(sizes: list[int] | None = None) -> dict:
+def bench_stuart_landau_layer_forward(sizes: list[int] | None = None) -> dict[str, Any]:
     """Benchmark StuartLandauLayer forward pass."""
     import jax
     import jax.numpy as jnp
@@ -226,7 +232,7 @@ def bench_stuart_landau_layer_forward(sizes: list[int] | None = None) -> dict:
     return results
 
 
-def bench_inverse_coupling(sizes: list[int] | None = None) -> dict:
+def bench_inverse_coupling(sizes: list[int] | None = None) -> dict[str, Any]:
     """Benchmark coupling inference accuracy.
 
     Uses shorter trajectories (100 steps) for better gradient signal through
@@ -294,7 +300,7 @@ def bench_inverse_coupling(sizes: list[int] | None = None) -> dict:
     return results
 
 
-def bench_oim_coloring() -> dict:
+def bench_oim_coloring() -> dict[str, Any]:
     """Benchmark OIM graph coloring quality."""
     import jax.numpy as jnp
     import jax.random as jr
@@ -340,7 +346,7 @@ def bench_oim_coloring() -> dict:
     return results
 
 
-def bench_jax_engine_scaling() -> dict:
+def bench_jax_engine_scaling() -> dict[str, Any]:
     """Benchmark JAX engine vs NumPy at various N."""
     import time
 
@@ -410,7 +416,7 @@ def bench_jax_engine_scaling() -> dict:
     return results
 
 
-def bench_batched_kuramoto() -> dict:
+def bench_batched_kuramoto() -> dict[str, Any]:
     """Benchmark vmap-batched Kuramoto forward — where GPU wins.
 
     Runs B independent initial conditions in parallel via jax.vmap.
@@ -476,7 +482,7 @@ def bench_batched_kuramoto() -> dict:
     return results
 
 
-def bench_analytical_inverse(sizes: list[int] | None = None) -> dict:
+def bench_analytical_inverse(sizes: list[int] | None = None) -> dict[str, Any]:
     """Benchmark analytical vs gradient inverse coupling."""
     import jax
     import jax.numpy as jnp
@@ -545,7 +551,7 @@ def bench_analytical_inverse(sizes: list[int] | None = None) -> dict:
     return results
 
 
-def bench_oim_solve() -> dict:
+def bench_oim_solve() -> dict[str, Any]:
     """Benchmark OIM solver on standard graphs."""
     import jax.numpy as jnp
     import jax.random as jr
@@ -588,7 +594,7 @@ def bench_oim_solve() -> dict:
     return results
 
 
-def bench_simplicial_layer(sizes: list[int] | None = None) -> dict:
+def bench_simplicial_layer(sizes: list[int] | None = None) -> dict[str, Any]:
     """Benchmark SimplicialKuramotoLayer forward pass."""
     import jax
     import jax.numpy as jnp
@@ -643,7 +649,7 @@ def bench_simplicial_layer(sizes: list[int] | None = None) -> dict:
 # Main runner with checkpoint/resume
 # ──────────────────────────────────────────────────
 
-BENCHMARKS: list[tuple[str, Callable[[], dict]]] = [
+BENCHMARKS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("kuramoto_forward", bench_kuramoto_layer_forward),
     ("stuart_landau_forward", bench_stuart_landau_layer_forward),
     ("simplicial_forward", bench_simplicial_layer),

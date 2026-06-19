@@ -18,7 +18,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-import streamlit as st  # type: ignore[import-not-found]
+import streamlit as st
 import yaml
 
 from scpn_phase_orchestrator.binding import (
@@ -30,7 +30,10 @@ from scpn_phase_orchestrator.supervisor.policy_diagnostics import (
     PolicyDryRunReport,
     dry_run_policy_rules,
 )
-from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    PolicyRule,
+    load_policy_rules,
+)
 
 KNOWN_REGIMES = ["NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"]
 KNOWN_METRICS = [
@@ -80,7 +83,8 @@ def _read_text(path: Path) -> str:
 def _read_upload(uploaded: Any) -> str:
     if uploaded is None:
         return ""
-    return uploaded.read().decode("utf-8", errors="replace")
+    decoded: str = uploaded.read().decode("utf-8", errors="replace")
+    return decoded
 
 
 def _load_policy_yaml(policy_text: str) -> tuple[dict[str, Any] | None, list[str]]:
@@ -107,7 +111,7 @@ def _load_policy_yaml(policy_text: str) -> tuple[dict[str, Any] | None, list[str
 
 def _validate_policy_yaml(
     policy_text: str,
-) -> tuple[dict[str, Any], list[str], list[Any] | None]:
+) -> tuple[dict[str, Any], list[str], list[PolicyRule] | None]:
     """Parse and validate policy rules; return raw payload and diagnostics."""
     payload, yaml_errors = _load_policy_yaml(policy_text)
     if payload is None:
@@ -609,6 +613,12 @@ def main() -> None:
             st.warning("Audit has no parseable state entries.")
             return
 
+        if rules is None:
+            st.error("Resolve policy rule errors before running diagnostics.")
+            return
+        if spec is None:
+            st.error("Resolve binding spec errors before running diagnostics.")
+            return
         report = dry_run_policy_rules(
             rules,
             entries,

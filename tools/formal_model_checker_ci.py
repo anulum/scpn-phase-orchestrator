@@ -26,7 +26,7 @@ import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
+from typing import Any, Final, cast
 
 from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.supervisor import (
@@ -298,7 +298,7 @@ class FormalCheckerCiBundle:
         }
 
 
-def build_smoke_package():
+def build_smoke_package() -> FormalVerificationPackage:
     """Return the deterministic SPIN/Z3 smoke package."""
 
     return build_formal_verification_package(
@@ -463,7 +463,8 @@ def _run_bundle(bundle: FormalCheckerCiBundle, *, execute: bool) -> dict[str, ob
     ]
     if execute and missing:
         raise PolicyError(
-            "missing external formal checker executable(s): " + ", ".join(missing)
+            "missing external formal checker executable(s): "
+            + ", ".join(str(item) for item in missing)
         )
 
     execution_records: list[dict[str, object]] = []
@@ -534,7 +535,8 @@ def run_formal_checker_ci(*, execute: bool) -> dict[str, object]:
         "bundle_count": len(records),
         "domainpack_bundle_count": len(domain_records),
         "checker_command_count": sum(
-            len(record["package"]["checker_commands"]) for record in records
+            len(cast("dict[str, Any]", record["package"])["checker_commands"])
+            for record in records
         ),
         "records": records,
     }

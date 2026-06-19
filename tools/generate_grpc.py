@@ -54,7 +54,7 @@ def main() -> int:
         return 1
 
     try:
-        from grpc_tools import protoc  # type: ignore[import-untyped]
+        from grpc_tools import protoc
     except ImportError:
         print(
             "grpc_tools not installed. Install with: pip install grpcio-tools",

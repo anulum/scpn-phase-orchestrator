@@ -267,10 +267,16 @@ module = [
     "scpn_quantum_control.*",
     "jax",
     "jax.*",
-    "matplotlib",
-    "matplotlib.*",
     "yaml",
 ]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# matplotlib and streamlit are optional plot/dev-UI dependencies used only by
+# tools/ scripts; treat them as untyped so the scripts type-check with or
+# without the stubs installed.
+module = ["matplotlib", "matplotlib.*", "streamlit", "streamlit.*"]
+follow_imports = "skip"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -20,6 +20,7 @@ import asyncio
 import json
 import math
 import time
+from typing import Any
 
 import websockets
 
@@ -39,7 +40,7 @@ class LightweightBridge:
         self.msg_counts: dict[str, int] = dict.fromkeys(agents, 0)
         self.phases: list[float] = [0.0] * len(agents)
 
-    def process(self, msg: dict) -> None:
+    def process(self, msg: dict[str, Any]) -> None:
         sender = msg.get("sender", "")
         msg_type = msg.get("type", "")
         now = time.time()
