@@ -250,3 +250,82 @@ def test_accepts_numpy_integer_qubit_scenario_contracts() -> None:
     scenario.bipartition = ((np.int64(0),), (np.int64(1),))
 
     _validate_scenario(scenario)
+
+
+@pytest.mark.parametrize(
+    "mutator",
+    [
+        # _ensure_float64_vector and _contains_boolean_alias helpers.
+        lambda s: setattr(s, "phases", np.array(["x", "y"], dtype=object)),
+        lambda s: setattr(s, "phases", np.array([[0.1, 0.2]], dtype=np.float64)),
+        lambda s: setattr(s, "phases", np.array([], dtype=np.float64)),
+        lambda s: setattr(s, "phases", np.array([True, False], dtype=np.bool_)),
+        # _validate_state_candidate branches.
+        lambda s: setattr(s.state_candidates[0], "state_id", "  "),
+        lambda s: setattr(s.state_candidates[0], "amplitudes", [1, 0, 0, 0]),
+        lambda s: setattr(
+            s.state_candidates[0],
+            "amplitudes",
+            np.zeros((2, 2), dtype=np.complex128),
+        ),
+        lambda s: setattr(
+            s.state_candidates[0],
+            "amplitudes",
+            np.array([1, 0, 0, 0], dtype=np.int64),
+        ),
+        lambda s: setattr(
+            s.state_candidates[0],
+            "amplitudes",
+            np.zeros(8, dtype=np.complex128),
+        ),
+        lambda s: setattr(
+            s.state_candidates[0],
+            "amplitudes",
+            np.array([np.inf, 0.0, 0.0, 0.0], dtype=np.complex128),
+        ),
+        lambda s: setattr(s.state_candidates[0], "non_actuating", False),
+        lambda s: setattr(s.state_candidates[0], "execution_disabled", False),
+        lambda s: setattr(s.state_candidates[0], "claim_boundary", "bad"),
+        lambda s: setattr(s.state_candidates[0], "entanglement_entropy", float("inf")),
+        lambda s: setattr(s.state_candidates[0], "order_metric_psi", 1.5),
+        lambda s: setattr(s.state_candidates[0], "objective_labels", ()),
+        lambda s: setattr(s.state_candidates[0], "objective_labels", ("  ",)),
+        # _validate_bipartition branches.
+        lambda s: setattr(s, "bipartition", ((0,),)),
+        lambda s: setattr(s, "bipartition", ((0,), ())),
+        lambda s: setattr(s, "bipartition", ((0,), (0,))),
+        lambda s: setattr(s, "bipartition", ((0,), (5,))),
+        # _validate_scenario branches.
+        lambda s: setattr(s, "scenario_id", "  "),
+        lambda s: setattr(s, "execution_disabled", False),
+        lambda s: setattr(s, "claim_boundary", "bad"),
+        lambda s: setattr(s, "state_candidates", ()),
+        lambda s: setattr(s, "state_candidates", (s.state_candidates[0],)),
+        lambda s: setattr(s.state_candidates[1], "candidate_type", "product"),
+        lambda s: setattr(s, "objective_labels", ()),
+        lambda s: setattr(s, "objective_labels", ("  ",)),
+    ],
+)
+def test_rejects_additional_malformed_scenarios(mutator) -> None:
+    scenario = _build_valid_scenario()
+    _validate_scenario(scenario)
+    scenario.scenario_hash = _compute_scenario_hash(scenario)
+
+    mutated = deepcopy(scenario)
+    mutator(mutated)
+
+    with pytest.raises(ValueError):
+        _validate_scenario(mutated)
+
+
+def test_rejects_invalid_candidate_type_when_product_and_entangled_present() -> None:
+    # A third candidate with an unsupported type is reached by the per-candidate
+    # validator only once the scenario-level product/entangled coverage passes.
+    scenario = _build_valid_scenario()
+    invalid = deepcopy(scenario.state_candidates[0])
+    invalid.state_id = "broken_type"
+    invalid.candidate_type = "superposed"
+    scenario.state_candidates = (*scenario.state_candidates, invalid)
+
+    with pytest.raises(ValueError, match="type product or entangled"):
+        _validate_scenario(scenario)
