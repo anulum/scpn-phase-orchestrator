@@ -3155,3 +3155,129 @@ class TestPluginRuntimeExecution:
         discovered = discover_plugin_manifests()
 
         assert discovered == (manifest,)
+
+
+def _storage_bundle() -> dict[str, Any]:
+    """Build a valid on-disk plugin execution request storage bundle."""
+    draft_plan = build_plugin_execution_plan(
+        _manifest(),
+        "actuator",
+        "breaker",
+        policy=PluginRuntimeExecutionPolicy(
+            loading_permitted=True,
+            execution_permitted=True,
+        ),
+    )
+    plan = build_plugin_execution_plan(
+        _manifest(),
+        "actuator",
+        "breaker",
+        policy=PluginRuntimeExecutionPolicy(
+            loading_permitted=True,
+            execution_permitted=True,
+            require_target_hash_approval=True,
+            approved_target_hashes=(draft_plan.target_hash,),
+        ),
+    )
+    approval = build_plugin_execution_approval(
+        plan,
+        operator_identity="operator_alpha",
+        approval_reference="REQ-2026-05-20-AUDIT",
+        approval_reason="operator approved",
+    )
+    request = build_plugin_execution_request(plan, approval)
+    manifest = build_plugin_execution_request_storage_manifest(
+        request,
+        storage_uri="file:///var/lib/spo/plugin-requests/grid_pack.json",
+        storage_backend="local_file",
+        retention_policy="retain_until_revoked",
+        created_by="deployment_gate",
+    )
+    return build_plugin_execution_request_storage_bundle(request, manifest)
+
+
+def _rehashed(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Recompute bundle_hash so a tampered inner record passes the outer gate."""
+    from scpn_phase_orchestrator.plugins.registry import _record_hash
+
+    core = {k: v for k, v in bundle.items() if k != "bundle_hash"}
+    return {**core, "bundle_hash": _record_hash(core)}
+
+
+class TestStorageBundleAuditRecordGuards:
+    """Reach the inner audit-record validators past the outer bundle hash."""
+
+    def test_rejects_request_schema_mismatch(self) -> None:
+        bundle = _storage_bundle()
+        tampered = _rehashed(
+            {**bundle, "request": {**bundle["request"], "schema": "wrong"}}
+        )
+        with pytest.raises(ValueError, match="request schema mismatch"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    def test_rejects_missing_request_hash(self) -> None:
+        bundle = _storage_bundle()
+        tampered = _rehashed(
+            {**bundle, "request": {**bundle["request"], "request_hash": 123}}
+        )
+        with pytest.raises(ValueError, match="missing request_hash"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    def test_rejects_request_hash_mismatch(self) -> None:
+        bundle = _storage_bundle()
+        tampered = _rehashed(
+            {**bundle, "request": {**bundle["request"], "plan_hash": "0" * 64}}
+        )
+        with pytest.raises(ValueError, match="request hash mismatch"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    def test_rejects_manifest_schema_mismatch(self) -> None:
+        bundle = _storage_bundle()
+        tampered = _rehashed(
+            {
+                **bundle,
+                "storage_manifest": {**bundle["storage_manifest"], "schema": "wrong"},
+            }
+        )
+        with pytest.raises(ValueError, match="manifest schema mismatch"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    def test_rejects_manifest_storage_backend_not_string(self) -> None:
+        bundle = _storage_bundle()
+        tampered = _rehashed(
+            {
+                **bundle,
+                "storage_manifest": {
+                    **bundle["storage_manifest"],
+                    "storage_backend": 5,
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="storage_backend must be a string"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    def test_rejects_manifest_missing_manifest_hash(self) -> None:
+        bundle = _storage_bundle()
+        tampered = _rehashed(
+            {
+                **bundle,
+                "storage_manifest": {
+                    **bundle["storage_manifest"],
+                    "manifest_hash": 99,
+                },
+            }
+        )
+        with pytest.raises(ValueError, match="missing manifest_hash"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    def test_rejects_bundle_request_not_object(self) -> None:
+        bundle = _storage_bundle()
+        tampered = _rehashed({**bundle, "request": "not-a-dict"})
+        with pytest.raises(ValueError, match="request must be an object"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    def test_rejects_bundle_version_mismatch(self) -> None:
+        bundle = _storage_bundle()
+        tampered = _rehashed({**bundle, "version": "2.0.0"})
+        with pytest.raises(ValueError, match="version must be 1.0.0"):
+            validate_plugin_execution_request_storage_bundle(tampered)
