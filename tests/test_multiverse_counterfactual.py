@@ -479,3 +479,109 @@ class TestMultiverseCounterfactualRollouts:
                 numpy_record.final_psi,
                 abs=1e-10,
             )
+
+
+def _run(**overrides: object) -> object:
+    phases, omegas, baseline_k, baseline_alpha = _base_inputs()
+    opts: dict[str, object] = {
+        "phases": phases,
+        "omegas": omegas,
+        "baseline_k": baseline_k,
+        "baseline_alpha": baseline_alpha,
+        "branch_action_sets": ((ControlAction("zeta", "global", 0.0, 1.0, "d"),),),
+    }
+    opts.update(overrides)
+    return simulate_multiverse_counterfactual_branches(**opts)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"baseline_zeta": True}, "baseline_zeta must be finite"),
+        ({"baseline_zeta": float("inf")}, "baseline_zeta must be finite"),
+        ({"baseline_psi": float("nan")}, "baseline_psi must be finite"),
+        ({"horizon": 1.5}, "horizon must be a positive integer"),
+        ({"backend": 123}, "backend must be one of"),
+        ({"method": "midpoint"}, "method must be 'euler' or 'rk4'"),
+    ],
+)
+def test_multiverse_rejects_invalid_scalar_options(overrides, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _run(**overrides)
+
+
+def test_multiverse_rejects_non_finite_phases() -> None:
+    with pytest.raises(ValueError, match="phases must contain only finite"):
+        _run(phases=np.array([0.0, np.nan, 1.0]))
+
+
+def test_multiverse_rejects_two_dimensional_phases() -> None:
+    with pytest.raises(ValueError, match="phases and omegas must be 1-D"):
+        _run(phases=np.zeros((3, 3)))
+
+
+def test_multiverse_rejects_misaligned_topology_masks() -> None:
+    mask = np.zeros((3, 3))
+    with pytest.raises(
+        ValueError, match="topology_masks must align with branch_action_sets"
+    ):
+        _run(topology_masks=(mask, mask))
+
+
+@pytest.mark.parametrize(
+    ("scope", "match"),
+    [
+        ("oscillator_x", "scope must be 'global'"),
+        ("oscillator_99", "scope index out of range"),
+        ("layer_99", "scope index out of range"),
+        ("sideways", "unsupported scope"),
+        ("", "action scope must be a non-empty string"),
+    ],
+)
+def test_multiverse_rejects_invalid_action_scope(scope, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _run(branch_action_sets=((ControlAction("K", scope, 0.1, 1.0, "d"),),))
+
+
+def _spec(**changes: object) -> MultiverseBranchSpec:
+    base: dict[str, object] = {
+        "branch_id": "branch_a",
+        "actions": (ControlAction("zeta", "global", 0.0, 1.0, "d"),),
+        "topology_mask": None,
+    }
+    base.update(changes)
+    return MultiverseBranchSpec(**base)
+
+
+@pytest.mark.parametrize(
+    ("spec", "match"),
+    [
+        (_spec(branch_id="   "), "branch_id must be a non-empty string"),
+        (_spec(actions=("not-an-action",)), "must contain ControlAction"),
+        (_spec(topology_mask=np.zeros((2, 2))), "topology_mask.shape"),
+        (
+            _spec(topology_mask=np.array([[0.0, np.nan, 0.0]] * 3)),
+            "topology_mask must contain finite",
+        ),
+    ],
+)
+def test_multiverse_rejects_corrupt_branch_specs(spec, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _run(branch_specs=(spec,), branch_action_sets=None)
+
+
+def test_multiverse_rejects_topology_masks_misaligned_with_branch_specs() -> None:
+    mask = np.zeros((3, 3))
+    with pytest.raises(
+        ValueError, match="topology_masks must align with provided branch_specs"
+    ):
+        _run(
+            branch_specs=(_spec(),),
+            topology_masks=(mask, mask),
+            branch_action_sets=None,
+        )
+
+
+def test_multiverse_euler_method_runs() -> None:
+    manifest = _run(method="euler")
+    assert manifest.branch_count == 1
