@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 596
+    "test_files": 597
   },
   "documentation": {
     "public_pages": [
@@ -1893,6 +1893,7 @@
       "tests/test_tcbo.py",
       "tests/test_tcbo_validation.py",
       "tests/test_te_adaptive.py",
+      "tests/test_te_validation_guards.py",
       "tests/test_theta_neuron.py",
       "tests/test_tools/test_capability_manifest.py",
       "tests/test_tools_benchmark_summary.py",
