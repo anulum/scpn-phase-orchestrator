@@ -147,6 +147,11 @@ def test_regression_above_threshold_fails(tmp_path: Path) -> None:
     assert "+150.0%" in proc.stdout
     assert "+150.0 us" in proc.stdout
     assert "1 regression(s)" in proc.stdout
+    # The summary loop must complete without unpacking failures itself: a
+    # malformed tuple here would crash after printing the count line, so the
+    # per-regression summary line must be present and stderr must stay clean.
+    assert "N=  32 euler   rust: +150.0% (+150.0 us)" in proc.stdout
+    assert "Traceback" not in proc.stderr
 
 
 def test_multiple_regressions_all_reported(tmp_path: Path) -> None:
@@ -166,6 +171,10 @@ def test_multiple_regressions_all_reported(tmp_path: Path) -> None:
     proc = _run(tmp_path / "b.json", tmp_path / "c.json")
     assert proc.returncode == 1
     assert "2 regression(s)" in proc.stdout
+    # Both failing configs must be itemised by the summary loop without crashing.
+    assert "N=   8 euler   rust: +1400.0%" in proc.stdout
+    assert "N=  32  rk45   rust: +325.0%" in proc.stdout
+    assert "Traceback" not in proc.stderr
 
 
 # ---------------------------------------------------------------------

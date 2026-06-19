@@ -224,8 +224,8 @@ def main() -> int:
     if failures:
         n = len(failures)
         print(f"\n{n} regression(s) exceeded {args.threshold_pct}% threshold:")
-        for label, pct in failures:
-            print(f"  {label}: {pct:+.1f}%")
+        for label, pct, delta_us in failures:
+            print(f"  {label}: {pct:+.1f}% ({delta_us:+.1f} us)")
         return 1
 
     if comparisons == 0:
