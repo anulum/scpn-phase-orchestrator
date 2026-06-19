@@ -523,3 +523,96 @@ class TestIntegratedInformationResidualPaths:
     def test_normalise_phi_handles_non_positive_scale(self) -> None:
         assert _normalise_phi(2.5, 0) == 0.0
         assert _normalise_phi(2.5, 1) == 0.0
+
+
+def _valid_result() -> IntegratedInformationResult:
+    rng = np.random.default_rng(7)
+    phase_series = rng.uniform(0.0, 2.0 * np.pi, size=(5, 256)).astype(np.float64)
+    return integrated_information(phase_series, n_bins=8)
+
+
+@pytest.mark.parametrize(
+    ("phase_series", "match"),
+    [
+        (
+            np.array([["a", "b"], ["c", "d"]], dtype=object),
+            "phase_series must be a finite real-valued matrix",
+        ),
+        (np.zeros(4), "phase_series must have shape"),
+        (np.zeros((1, 64)), "at least two oscillators"),
+        (np.zeros((3, 1)), "at least two samples"),
+        (np.full((3, 64), np.nan), "phase_series must contain only finite"),
+    ],
+)
+def test_integrated_information_rejects_invalid_phase_series(
+    phase_series, match
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        integrated_information(phase_series)
+
+
+def test_integrated_information_rejects_boolean_and_complex_series() -> None:
+    with pytest.raises(ValueError, match="must not contain boolean"):
+        integrated_information(np.array([[True, False], [False, True]]))
+    with pytest.raises(ValueError, match="must contain real-valued phase"):
+        integrated_information(np.array([[0.0 + 1.0j, 1.0], [1.0, 0.0]]))
+
+
+@pytest.mark.parametrize("n_bins", [1, 1.5])
+def test_integrated_information_rejects_invalid_bins(n_bins) -> None:
+    base = np.linspace(0.0, 2.0 * np.pi, 64)
+    phase_series = np.vstack([np.sin(base), np.cos(base)])
+    with pytest.raises(ValueError, match="n_bins"):
+        integrated_information(phase_series, n_bins=n_bins)
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"phi": "x"}, "phi must be a finite non-negative real"),
+        ({"phi": 1000.0}, "phi must not exceed log"),
+        ({"total_integration": 1000.0}, "total_integration must not exceed log"),
+        ({"normalised_phi": 2.0}, r"normalised_phi must lie in \[0, 1\]"),
+    ],
+)
+def test_result_rejects_corrupt_scalars(changes, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        replace(_valid_result(), **changes)
+
+
+@pytest.mark.parametrize(
+    ("pairwise_mi", "match"),
+    [
+        (np.array([[True, False], [False, True]]), "must not contain boolean"),
+        (np.zeros((2, 3)), "must be a square matrix"),
+        (np.array([[0.0, np.nan, 0.0]] * 3), "must contain only finite"),
+        (
+            np.array([[0.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+            "non-negative",
+        ),
+        (np.array([[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]), "symmetric"),
+        (np.eye(3), "diagonal must be zero"),
+    ],
+)
+def test_result_rejects_corrupt_pairwise_mi(pairwise_mi, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        replace(_valid_result(), pairwise_mi=pairwise_mi)
+
+
+@pytest.mark.parametrize(
+    ("partition", "match"),
+    [
+        (((0,),), "must contain two index groups"),
+        (((), (0, 1, 2)), "groups must be non-empty"),
+        (((0,), (1,)), "must cover every oscillator"),
+        (((0, 1), (1, 2)), "must be disjoint"),
+        (("01", (1, 2)), "must contain integer indices"),
+        ((5, (1, 2)), "must contain integer indices"),
+        (((0.5,), (1, 2)), "must contain integer indices"),
+        (((-1, 0), (1, 2)), "must contain non-negative indices"),
+        (((0, 0), (1, 2)), "must not contain duplicates"),
+    ],
+)
+def test_result_rejects_corrupt_partition(partition, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        replace(_valid_result(), minimum_partition=partition)
