@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 586
+    "test_files": 587
   },
   "documentation": {
     "public_pages": [
@@ -1843,6 +1843,7 @@
       "tests/test_spo_studio_helpers.py",
       "tests/test_ssgf_carrier.py",
       "tests/test_ssgf_costs.py",
+      "tests/test_ssgf_costs_guards.py",
       "tests/test_ssgf_modules.py",
       "tests/test_stl.py",
       "tests/test_stl_automata.py",
