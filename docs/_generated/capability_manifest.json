@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 580
+    "test_files": 582
   },
   "documentation": {
     "public_pages": [
@@ -1690,7 +1690,9 @@
       "tests/test_plasma_topology_demo.py",
       "tests/test_plasticity.py",
       "tests/test_plugins_registry.py",
+      "tests/test_plugins_registry_adapter_revocation_guards.py",
       "tests/test_plugins_registry_policy_guards.py",
+      "tests/test_plugins_registry_record_guards.py",
       "tests/test_poincare.py",
       "tests/test_poincare_algorithm.py",
       "tests/test_poincare_backends.py",
