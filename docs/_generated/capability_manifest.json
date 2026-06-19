@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 583
+    "test_files": 584
   },
   "documentation": {
     "public_pages": [
@@ -1693,6 +1693,7 @@
       "tests/test_plugins_registry_adapter_revocation_guards.py",
       "tests/test_plugins_registry_lifecycle_guards.py",
       "tests/test_plugins_registry_policy_guards.py",
+      "tests/test_plugins_registry_policy_report_guards.py",
       "tests/test_plugins_registry_record_guards.py",
       "tests/test_poincare.py",
       "tests/test_poincare_algorithm.py",
