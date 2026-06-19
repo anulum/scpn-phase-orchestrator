@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 594
+    "test_files": 595
   },
   "documentation": {
     "public_pages": [
@@ -1767,6 +1767,7 @@
       "tests/test_recurrence_benchmark.py",
       "tests/test_recurrence_fallback_paths.py",
       "tests/test_recurrence_stability.py",
+      "tests/test_recurrence_validation_guards.py",
       "tests/test_redis_store.py",
       "tests/test_reduction_algorithm.py",
       "tests/test_reduction_backends.py",
