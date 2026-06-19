@@ -1,0 +1,117 @@
+{
+  "overrides": [
+    {
+      "modules": [
+        "domainpacks",
+        "domainpacks.*"
+      ],
+      "settings": {
+        "disallow_incomplete_defs": false,
+        "disallow_untyped_defs": false
+      }
+    },
+    {
+      "modules": [
+        "grpc_tools",
+        "grpc_tools.*",
+        "jax",
+        "jax.*",
+        "neurolib",
+        "neurolib.*",
+        "opentelemetry",
+        "opentelemetry.*",
+        "optax",
+        "optax.*",
+        "pylsl",
+        "pylsl.*",
+        "redis",
+        "redis.*",
+        "ripser",
+        "ripser.*",
+        "rtamt",
+        "rtamt.*",
+        "sc_neurocore",
+        "sc_neurocore.*",
+        "scipy",
+        "scipy.*",
+        "scpn_quantum_control",
+        "scpn_quantum_control.*",
+        "spo_kernel",
+        "spo_kernel.*",
+        "websockets",
+        "websockets.*",
+        "yaml"
+      ],
+      "settings": {
+        "ignore_missing_imports": true
+      }
+    },
+    {
+      "modules": [
+        "matplotlib",
+        "matplotlib.*",
+        "streamlit",
+        "streamlit.*"
+      ],
+      "settings": {
+        "follow_imports": "skip",
+        "ignore_missing_imports": true
+      }
+    },
+    {
+      "modules": [
+        "scpn_phase_orchestrator.adapters.gaian_mesh_bridge",
+        "scpn_phase_orchestrator.adapters.hardware_io",
+        "scpn_phase_orchestrator.adapters.lsl_bci_bridge",
+        "scpn_phase_orchestrator.adapters.modbus_tls",
+        "scpn_phase_orchestrator.adapters.neurocore_bridge",
+        "scpn_phase_orchestrator.adapters.opentelemetry",
+        "scpn_phase_orchestrator.adapters.quantum_control_bridge",
+        "scpn_phase_orchestrator.adapters.redis_store",
+        "scpn_phase_orchestrator.autotune.sindy",
+        "scpn_phase_orchestrator.coupling.connectome",
+        "scpn_phase_orchestrator.coupling.knm",
+        "scpn_phase_orchestrator.oscillators.physical",
+        "scpn_phase_orchestrator.runtime.observability",
+        "scpn_phase_orchestrator.upde.engine",
+        "scpn_phase_orchestrator.upde.order_params",
+        "scpn_phase_orchestrator.upde.pac",
+        "scpn_phase_orchestrator.upde.prediction",
+        "scpn_phase_orchestrator.upde.stuart_landau",
+        "scpn_phase_orchestrator.visualization.streamer"
+      ],
+      "settings": {
+        "warn_unused_ignores": false
+      }
+    },
+    {
+      "modules": [
+        "scpn_phase_orchestrator.nn.*"
+      ],
+      "settings": {
+        "ignore_missing_imports": true
+      }
+    },
+    {
+      "modules": [
+        "scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2",
+        "scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2_grpc"
+      ],
+      "settings": {
+        "ignore_errors": true
+      }
+    },
+    {
+      "modules": [
+        "tests",
+        "tests.*"
+      ],
+      "settings": {
+        "disallow_incomplete_defs": false,
+        "disallow_untyped_defs": false,
+        "ignore_errors": true
+      }
+    }
+  ],
+  "strict": true
+}
