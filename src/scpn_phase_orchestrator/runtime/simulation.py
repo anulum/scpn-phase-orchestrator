@@ -497,7 +497,7 @@ def simulate(
                 zeta,
                 psi_target,
                 eff_alpha,
-                epsilon=spec.amplitude.epsilon,  # type: ignore[union-attr]
+                epsilon=spec.amplitude.epsilon,  # type: ignore[union-attr]  # amplitude_mode guard guarantees spec.amplitude is not None
             )
             phases = sl_state[:n_osc]
             amplitudes = sl_state[n_osc:]
@@ -658,7 +658,7 @@ def simulate(
                 log_kwargs["amplitudes"] = input_amplitudes
                 log_kwargs["mu"] = eff_mu
                 log_kwargs["knm_r"] = coupling.knm_r
-                log_kwargs["epsilon"] = spec.amplitude.epsilon  # type: ignore[union-attr]
+                log_kwargs["epsilon"] = spec.amplitude.epsilon  # type: ignore[union-attr]  # amplitude_mode guard guarantees spec.amplitude is not None
             audit_logger.log_step(step_idx, upde_state, actions, **log_kwargs)
 
         r_good_history.append(
