@@ -54,9 +54,14 @@ class TestRegimeNumpyFallback:
     def test_python_fallback_classifies_regimes(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import spo_kernel
+        import sys
+        import types
 
-        monkeypatch.delattr(spo_kernel, "detect_regimes_rust", raising=False)
+        # Replace the compiled kernel with an empty stub so the inline
+        # ``from spo_kernel import detect_regimes_rust`` raises ImportError and
+        # the NumPy masking fallback runs. Deleting the attribute directly is
+        # unreliable on read-only C-extension modules across CI interpreters.
+        monkeypatch.setitem(sys.modules, "spo_kernel", types.ModuleType("spo_kernel"))
 
         regimes = detect_regimes(
             np.array([0.1, 0.5, 0.9], dtype=np.float64),
