@@ -152,7 +152,20 @@ class SNNControllerBridge:
     def upde_state_to_input_current(
         self, state: UPDEState, i_scale: float = 1.0
     ) -> FloatArray:
-        """Map R values from each layer to LIF input currents."""
+        """Map R values from each layer to LIF input currents.
+
+        Parameters
+        ----------
+        state : UPDEState
+            The current UPDE state.
+        i_scale : float
+            Scaling factor from order parameter to input current.
+
+        Returns
+        -------
+        FloatArray
+            The LIF input currents for each layer.
+        """
         i_scale = _require_positive_real(i_scale, field="i_scale")
         r_values: FloatArray = np.array(
             [
@@ -175,6 +188,25 @@ class SNNControllerBridge:
         *rates*: 1-D array of mean firing rates (Hz) per neuron group.
         *layer_assignments*: maps each rate index to a layer.
         *threshold_hz*: rates above this trigger coupling boost.
+
+        Parameters
+        ----------
+        rates : FloatArray
+            Per-layer spike rates.
+        layer_assignments : list[int]
+            Per-neuron layer assignments.
+        threshold_hz : float
+            Firing-rate threshold in Hz for emitting actions.
+
+        Returns
+        -------
+        list[ControlAction]
+            The control actions for the spike rates.
+
+        Raises
+        ------
+        ValueError
+            If the rates or assignments are invalid.
         """
         rates = _require_finite_array(rates, field="rates")
         if rates.ndim != 1:
@@ -206,6 +238,21 @@ class SNNControllerBridge:
         """Analytic LIF steady-state firing rate (Abbott 1999, Eq. 1).
 
         rate = 1 / (tau_ref - tau_rc * ln(1 - 1/J))  for J > 1
+
+        Parameters
+        ----------
+        currents : FloatArray
+            Per-neuron input currents.
+
+        Returns
+        -------
+        FloatArray
+            The analytic LIF steady-state firing rates.
+
+        Raises
+        ------
+        ValueError
+            If the input currents are invalid.
         """
         currents = _require_finite_array(currents, field="currents")
         if currents.ndim != 1:
@@ -224,6 +271,20 @@ class SNNControllerBridge:
 
         Returns a SimpleNamespace with input_node, ensemble, output_node
         attributes and a step() method.
+
+        Parameters
+        ----------
+        n_layers : int
+            Number of SCPN layers.
+        seed : int
+            Seed for the deterministic RNG.
+        synapse : float
+            Synaptic weight scale.
+
+        Returns
+        -------
+        SimpleNamespace
+            The pure-numpy LIF network.
         """
         n_layers = _require_positive_int(n_layers, field="n_layers")
         seed = _require_nonnegative_int(seed, field="seed")
@@ -258,6 +319,16 @@ class SNNControllerBridge:
         """Build a Lava LIF process for UPDE-SNN coupling.
 
         Raises ImportError if lava-nc is not installed.
+
+        Parameters
+        ----------
+        n_layers : int
+            Number of SCPN layers.
+
+        Returns
+        -------
+        object
+            The Lava LIF process.
         """
         _require_positive_int(n_layers, field="n_layers")
         # type ignore: lava-nc is an optional dependency without bundled stubs.
@@ -283,6 +354,22 @@ class SNNControllerBridge:
         The manifest is deterministic and contains simulator-parity evidence
         from the pure-numpy LIF rate path. It opens no hardware handles and
         does not permit actuation.
+
+        Parameters
+        ----------
+        state : UPDEState
+            The current UPDE state.
+        i_scale : float
+            Scaling factor from order parameter to input current.
+        threshold_hz : float
+            Firing-rate threshold in Hz for emitting actions.
+        projection_delay_ms : float
+            Projection delay in milliseconds.
+
+        Returns
+        -------
+        dict[str, object]
+            The reviewable Lava/PyNN schedule manifest.
         """
         self._validate_schedule_inputs(
             state,
@@ -370,6 +457,31 @@ class SNNControllerBridge:
         records whether external operator preconditions are present. It never
         opens a backend connection, submits a hardware job, or enables
         actuation/hardware-write permissions.
+
+        Parameters
+        ----------
+        manifest : dict[str, object]
+            The compiler manifest to audit.
+        target_backend : str
+            Name of the target backend.
+        hardware_site : str
+            Name of the deployment hardware site.
+        credentials_configured : bool
+            Whether provider credentials are configured.
+        operator_approved : bool
+            Whether a human operator approved the target.
+        external_simulator_parity_verified : bool
+            Whether external-simulator parity has been verified.
+
+        Returns
+        -------
+        dict[str, object]
+            The non-executing neuromorphic hardware readiness evidence.
+
+        Raises
+        ------
+        ValueError
+            If the manifest or target details are invalid.
         """
         manifest_record = _require_mapping(manifest, field="manifest")
         target_backend = _require_non_empty_text(

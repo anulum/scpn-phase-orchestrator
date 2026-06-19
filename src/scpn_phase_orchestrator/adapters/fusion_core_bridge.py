@@ -128,6 +128,21 @@ class FusionCoreBridge:
           sawtooth_count  → count*pi mod 2*pi
           elm_count       → count*pi mod 2*pi
           mhd_amplitude   → 2*pi*amplitude/threshold
+
+        Parameters
+        ----------
+        snapshot : dict[str, Any]
+            Fusion observable values keyed by name.
+
+        Returns
+        -------
+        FloatArray
+            The oscillator phases in ``[0, 2π)``, shape ``(N,)``.
+
+        Raises
+        ------
+        ValueError
+            If the snapshot is missing required observables.
         """
         if not isinstance(snapshot, dict):
             raise ValueError("snapshot must be a dict")
@@ -167,7 +182,25 @@ class FusionCoreBridge:
         phases: FloatArray,
         omegas: FloatArray,
     ) -> dict[str, Any]:
-        """Convert phase state back to feedback signals for the equilibrium solver."""
+        """Convert phase state back to feedback signals for the equilibrium solver.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+
+        Returns
+        -------
+        dict[str, Any]
+            The feedback signals for the equilibrium solver.
+
+        Raises
+        ------
+        ValueError
+            If the phases or omegas are invalid.
+        """
         phases = _finite_vector(phases, name="phases")
         omegas = _finite_vector(omegas, name="omegas")
         if omegas.size < min(phases.size, self._n_layers):
@@ -188,6 +221,21 @@ class FusionCoreBridge:
         """Parse a q-profile from dict or scpn-fusion-core object.
 
         Returns normalised dict with keys: q_min, q_max, q_axis, q_edge.
+
+        Parameters
+        ----------
+        q_profile_or_dict : object
+            A q-profile as an scpn-fusion-core object or a dict.
+
+        Returns
+        -------
+        dict[str, Any]
+            The parsed q-profile as a dict.
+
+        Raises
+        ------
+        ValueError
+            If the q-profile cannot be parsed.
         """
         if isinstance(q_profile_or_dict, dict):
             q_min = _finite_positive_real(
@@ -231,7 +279,23 @@ class FusionCoreBridge:
         return {"q_min": q_min, "q_max": q_max, "q_axis": q_axis, "q_edge": q_edge}
 
     def import_equilibrium(self, kernel_result: dict[str, Any]) -> dict[str, Any]:
-        """Extract equilibrium observables from a fusion kernel result dict."""
+        """Extract equilibrium observables from a fusion kernel result dict.
+
+        Parameters
+        ----------
+        kernel_result : dict[str, Any]
+            An scpn-fusion-core kernel result dict.
+
+        Returns
+        -------
+        dict[str, Any]
+            The equilibrium observables extracted from the kernel result.
+
+        Raises
+        ------
+        ValueError
+            If the kernel result is malformed.
+        """
         if not isinstance(kernel_result, dict):
             raise ValueError("kernel_result must be a dict")
         return {
@@ -265,6 +329,21 @@ class FusionCoreBridge:
         """Check fusion stability invariants.
 
         Returns a list of violation dicts (empty if all invariants hold).
+
+        Parameters
+        ----------
+        observables : dict[str, Any]
+            Fusion observable values keyed by name.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            The list of stability-invariant violations.
+
+        Raises
+        ------
+        ValueError
+            If the observables are invalid.
         """
         if not isinstance(observables, dict):
             raise ValueError("stability observables must be a dict")

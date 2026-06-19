@@ -243,11 +243,23 @@ class SynapseChannelBridge:
 
     @property
     def n_oscillators(self) -> int:
-        """Return the number of configured agent oscillators."""
+        """Return the number of configured agent oscillators.
+
+        Returns
+        -------
+        int
+            Return the number of configured agent oscillators.
+        """
         return self._n
 
     async def connect(self) -> None:
-        """Connect to SYNAPSE_CHANNEL hub and start listening."""
+        """Connect to SYNAPSE_CHANNEL hub and start listening.
+
+        Raises
+        ------
+        ImportError
+            If the SYNAPSE channel client is not installed.
+        """
         try:
             import websockets
         except ImportError:
@@ -326,6 +338,11 @@ class SynapseChannelBridge:
         P-channel: phase advances at heartbeat frequency.
         I-channel: phase advances at task event frequency.
         S-channel: message count modulo 2π.
+
+        Returns
+        -------
+        FloatArray
+            Extract current oscillator phases from agent activity.
         """
         phases = np.zeros(self._n)
         time.time()
@@ -347,6 +364,11 @@ class SynapseChannelBridge:
 
         Agents working on related tasks couple strongly.
         Agents with no task decouple.
+
+        Returns
+        -------
+        FloatArray
+            Compute coupling from shared task context.
         """
         knm = np.zeros((self._n, self._n))
         for name_i, state_i in self._states.items():
@@ -366,7 +388,13 @@ class SynapseChannelBridge:
         return knm
 
     def get_agent_summary(self) -> dict[str, dict[str, Any]]:
-        """Return per-agent summary for display."""
+        """Return per-agent summary for display.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            Return per-agent summary for display.
+        """
         summary = {}
         for name, state in self._states.items():
             summary[name] = {

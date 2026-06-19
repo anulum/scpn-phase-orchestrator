@@ -133,6 +133,21 @@ class PlasmaControlBridge:
 
         Accepts a dict with 'matrix' key (list of lists or ndarray) and optional
         'n_osc_per_layer' (int, default 2), or a raw ndarray of shape (L, L).
+
+        Parameters
+        ----------
+        knm_spec_or_dict : object
+            A layer-coupling matrix as an object or dict.
+
+        Returns
+        -------
+        CouplingState
+            The expanded ``(N, N)`` coupling state.
+
+        Raises
+        ------
+        ValueError
+            If the coupling spec is malformed.
         """
         if isinstance(knm_spec_or_dict, dict):
             layer_knm = _finite_array(knm_spec_or_dict["matrix"], name="Layer Knm")
@@ -171,6 +186,16 @@ class PlasmaControlBridge:
         """Generate natural frequencies spanning plasma timescales.
 
         Returns frequencies ordered: micro_turbulence(fast) → plasma_wall(slow).
+
+        Parameters
+        ----------
+        n_osc_per_layer : int
+            Number of oscillators per layer.
+
+        Returns
+        -------
+        FloatArray
+            The natural frequencies spanning plasma timescales.
         """
         n_osc_per_layer = _validate_positive_int(
             n_osc_per_layer,
@@ -199,6 +224,21 @@ class PlasmaControlBridge:
         """Convert an scpn-control tick result dict to UPDEState.
 
         Expected keys: 'phases' (1-D array), optional 'regime', 'layer_sizes'.
+
+        Parameters
+        ----------
+        tick_result : dict[str, Any]
+            An scpn-control tick result dict.
+
+        Returns
+        -------
+        UPDEState
+            The UPDE state for the tick result.
+
+        Raises
+        ------
+        ValueError
+            If the tick result is malformed.
         """
         if not isinstance(tick_result, dict):
             raise ValueError("tick_result must be a dict")
@@ -250,6 +290,16 @@ class PlasmaControlBridge:
         """Map a Lyapunov verdict to a boundary-compatible signal dict.
 
         Accepts dict with 'score' (float in [0,1]).
+
+        Parameters
+        ----------
+        verdict_or_dict : object
+            A Lyapunov verdict as an object or dict.
+
+        Returns
+        -------
+        dict[str, Any]
+            The boundary-compatible signal dict for the verdict.
         """
         if isinstance(verdict_or_dict, dict):
             score = _unit_interval(verdict_or_dict.get("score", 0.0), name="score")
@@ -261,7 +311,23 @@ class PlasmaControlBridge:
         }
 
     def export_control_actions(self, actions: list[Any]) -> dict[str, Any]:
-        """Package a list of control action dicts for scpn-control consumption."""
+        """Package a list of control action dicts for scpn-control consumption.
+
+        Parameters
+        ----------
+        actions : list[Any]
+            Control action dicts to package.
+
+        Returns
+        -------
+        dict[str, Any]
+            The control actions packaged for scpn-control.
+
+        Raises
+        ------
+        ValueError
+            If an action dict is invalid.
+        """
         if not isinstance(actions, list):
             raise ValueError("actions must be a list of dicts")
         exported: list[dict[str, object]] = []
@@ -280,6 +346,21 @@ class PlasmaControlBridge:
         """Check plasma physics invariants against local thresholds.
 
         Returns a list of violation dicts (empty if all invariants hold).
+
+        Parameters
+        ----------
+        values : dict[str, Any]
+            Plasma observable values keyed by name.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            The list of physics-invariant violations.
+
+        Raises
+        ------
+        ValueError
+            If the observable values are invalid.
         """
         if not isinstance(values, dict):
             raise ValueError("physics invariant values must be a dict")

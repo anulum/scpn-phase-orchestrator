@@ -92,7 +92,23 @@ class SCPNControlBridge:
         self._config = _validate_scpn_config(scpn_config)
 
     def import_knm(self, scpn_knm: FloatArray) -> CouplingState:
-        """Wrap an external Knm matrix into a CouplingState."""
+        """Wrap an external Knm matrix into a CouplingState.
+
+        Parameters
+        ----------
+        scpn_knm : FloatArray
+            An external coupling matrix, shape ``(N, N)``.
+
+        Returns
+        -------
+        CouplingState
+            The coupling state wrapping the external matrix.
+
+        Raises
+        ------
+        ValueError
+            If the coupling matrix is invalid.
+        """
         knm = _as_real_numeric_array(scpn_knm, name="Knm")
         if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
             raise ValueError(f"Knm must be square, got shape {knm.shape}")
@@ -110,7 +126,23 @@ class SCPNControlBridge:
         )
 
     def import_omega(self, scpn_omega: FloatArray) -> FloatArray:
-        """Validate and pass through natural frequencies."""
+        """Validate and pass through natural frequencies.
+
+        Parameters
+        ----------
+        scpn_omega : FloatArray
+            External natural frequencies, shape ``(N,)``.
+
+        Returns
+        -------
+        FloatArray
+            The validated natural frequencies.
+
+        Raises
+        ------
+        ValueError
+            If the natural frequencies are invalid.
+        """
         omega = _as_real_numeric_array(scpn_omega, name="omega")
         if omega.ndim != 1:
             raise ValueError(f"omega must be 1-D, got ndim={omega.ndim}")
@@ -123,7 +155,18 @@ class SCPNControlBridge:
         return omega
 
     def export_state(self, upde_state: UPDEState) -> dict[str, Any]:
-        """Convert UPDEState to scpn-control compatible telemetry dict."""
+        """Convert UPDEState to scpn-control compatible telemetry dict.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The UPDE state to export.
+
+        Returns
+        -------
+        dict[str, Any]
+            The scpn-control-compatible telemetry dict.
+        """
         return {
             "regime": upde_state.regime_id,
             "stability": upde_state.stability_proxy,

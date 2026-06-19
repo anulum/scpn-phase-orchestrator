@@ -174,7 +174,23 @@ class QuantumControlBridge:
         self._trotter_order: int = int(trotter_order)
 
     def import_artifact(self, artifact_dict: dict[str, Any]) -> UPDEState:
-        """Convert a scpn-quantum-control result dict into UPDEState."""
+        """Convert a scpn-quantum-control result dict into UPDEState.
+
+        Parameters
+        ----------
+        artifact_dict : dict[str, Any]
+            An scpn-quantum-control result dict.
+
+        Returns
+        -------
+        UPDEState
+            The UPDE state for the quantum result.
+
+        Raises
+        ------
+        ValueError
+            If the artifact dict is malformed.
+        """
         artifact = _require_mapping(artifact_dict, name="artifact_dict")
         if "phases" not in artifact:
             raise ValueError("artifact_dict must include 'phases'")
@@ -218,7 +234,18 @@ class QuantumControlBridge:
         )
 
     def export_artifact(self, state: UPDEState) -> dict[str, Any]:
-        """Convert UPDEState back to a dict compatible with scpn-quantum-control."""
+        """Convert UPDEState back to a dict compatible with scpn-quantum-control.
+
+        Parameters
+        ----------
+        state : UPDEState
+            The current UPDE state.
+
+        Returns
+        -------
+        dict[str, Any]
+            The scpn-quantum-control-compatible state dict.
+        """
         layers, cross_layer_alignment = _validate_upde_state(state)
         fidelity = _require_fidelity(
             state.stability_proxy,
@@ -232,7 +259,23 @@ class QuantumControlBridge:
         }
 
     def import_knm(self, knm_array: FloatArray) -> CouplingState:
-        """Wrap a coupling matrix from quantum calibration into CouplingState."""
+        """Wrap a coupling matrix from quantum calibration into CouplingState.
+
+        Parameters
+        ----------
+        knm_array : FloatArray
+            A coupling matrix from quantum calibration, shape ``(N, N)``.
+
+        Returns
+        -------
+        CouplingState
+            The coupling state wrapping the calibration matrix.
+
+        Raises
+        ------
+        ValueError
+            If the coupling matrix is invalid.
+        """
         knm = _finite_array(knm_array, name="Knm")
         if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
             raise ValueError(f"Knm must be square, got shape {knm.shape}")
@@ -259,6 +302,20 @@ class QuantumControlBridge:
         The manifest is dependency-free review output for Qiskit/PennyLane
         simulator handoff. It does not execute on a QPU and does not permit
         live actuation.
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        dt : float
+            Integration step size.
+
+        Returns
+        -------
+        dict[str, object]
+            The deterministic OpenQASM handoff with parity evidence.
         """
         knm_array, omega_array = self._validate_compiler_inputs(knm, omegas, dt=dt)
         frequency_terms: list[dict[str, object]] = [
@@ -322,6 +379,29 @@ class QuantumControlBridge:
         named target backend and records whether operator preconditions are in
         place. It never runs a simulator, submits a QPU job, or flips the
         manifest execution/actuation permissions.
+
+        Parameters
+        ----------
+        manifest : dict[str, object]
+            The compiler manifest to audit.
+        target_backend : str
+            Name of the target backend.
+        provider : str
+            Name of the hardware provider.
+        credentials_configured : bool
+            Whether provider credentials are configured.
+        operator_approved : bool
+            Whether a human operator approved the target.
+
+        Returns
+        -------
+        dict[str, object]
+            The non-executing QPU target-readiness evidence.
+
+        Raises
+        ------
+        ValueError
+            If the manifest or target details are invalid.
         """
         manifest_record = _require_mapping(manifest, name="manifest")
         target_backend = _require_non_empty_text(
@@ -382,6 +462,18 @@ class QuantumControlBridge:
         """Build Kuramoto XY Hamiltonian as SparsePauliOp.
 
         Requires scpn-quantum-control.
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+
+        Returns
+        -------
+        object
+            The Kuramoto XY Hamiltonian as a SparsePauliOp.
         """
         knm, omegas = self._validate_knm_omegas(knm, omegas)
         from scpn_quantum_control.bridge.knm_hamiltonian import knm_to_hamiltonian
@@ -403,6 +495,24 @@ class QuantumControlBridge:
         to Z-axis magnetic fields.
 
         Requires scpn-quantum-control.
+
+        Parameters
+        ----------
+        knm : FloatArray
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        omegas : FloatArray
+            Natural frequencies in rad/s, shape ``(N,)``.
+        t_max : float
+            Total simulation time.
+        dt : float
+            Integration step size.
+        trotter_per_step : int
+            Number of Trotter steps per outer step.
+
+        Returns
+        -------
+        dict[str, Any]
+            The Trotterised Q-UPDE simulation result.
         """
         t_max = _require_positive_real(t_max, name="t_max")
         dt = _require_positive_real(dt, name="dt")
@@ -428,7 +538,18 @@ class QuantumControlBridge:
         self,
         state: UPDEState,
     ) -> FloatArray:
-        """Convert orchestrator UPDEState to quantum phase array."""
+        """Convert orchestrator UPDEState to quantum phase array.
+
+        Parameters
+        ----------
+        state : UPDEState
+            The current UPDE state.
+
+        Returns
+        -------
+        FloatArray
+            The quantum phase array for the UPDE state.
+        """
         payload = self.export_artifact(state)
         from scpn_quantum_control import (  # noqa: PLC0415
             orchestrator_to_quantum_phases,
@@ -443,7 +564,23 @@ class QuantumControlBridge:
         self,
         quantum_theta: FloatArray,
     ) -> dict[str, Any]:
-        """Convert quantum phase array back to orchestrator-compatible dict."""
+        """Convert quantum phase array back to orchestrator-compatible dict.
+
+        Parameters
+        ----------
+        quantum_theta : FloatArray
+            Quantum phase array, shape ``(N,)``.
+
+        Returns
+        -------
+        dict[str, Any]
+            The orchestrator-compatible dict for the quantum phases.
+
+        Raises
+        ------
+        ValueError
+            If the quantum phase array is invalid.
+        """
         theta = _finite_array(quantum_theta, name="quantum_theta")
         if theta.shape != (self._n,):
             raise ValueError(

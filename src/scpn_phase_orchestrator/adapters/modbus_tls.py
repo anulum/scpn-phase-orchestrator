@@ -125,6 +125,21 @@ class SecureModbusAdapter:
         """Read a single holding register.
 
         Raises ConnectionError if the read fails or returns an error frame.
+
+        Parameters
+        ----------
+        address : int
+            Modbus register address.
+
+        Returns
+        -------
+        int
+            The holding-register value.
+
+        Raises
+        ------
+        ConnectionError
+            If the TLS Modbus connection is not active.
         """
         address = _non_negative_int(address, field="address")
         # type ignore: optional pymodbus client is stored as object after runtime guard.
@@ -139,6 +154,18 @@ class SecureModbusAdapter:
         """Write a single holding register.
 
         Raises ConnectionError if the write fails.
+
+        Parameters
+        ----------
+        address : int
+            Modbus register address.
+        value : int
+            Register value to write.
+
+        Raises
+        ------
+        ConnectionError
+            If the TLS Modbus connection is not active.
         """
         address = _non_negative_int(address, field="address")
         value = _int_value(value, field="value")
@@ -148,7 +175,13 @@ class SecureModbusAdapter:
             raise ConnectionError(f"Modbus write error at address {address}: {result}")
 
     def validate_connection(self) -> bool:
-        """Return True if the TLS-wrapped Modbus connection is active."""
+        """Return True if the TLS-wrapped Modbus connection is active.
+
+        Returns
+        -------
+        bool
+            Return True if the TLS-wrapped Modbus connection is active.
+        """
         try:
             # type ignore: optional pymodbus client is stored as object.
             return bool(self._client.connected)  # type: ignore[attr-defined]

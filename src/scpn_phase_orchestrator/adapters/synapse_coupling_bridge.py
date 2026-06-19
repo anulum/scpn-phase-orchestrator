@@ -205,6 +205,11 @@ class SynapseCouplingBridge:
 
         The bridge computes dW = weights - prev_weights and maps
         to K_nm deltas.
+
+        Parameters
+        ----------
+        weights : FloatArray
+            STDP weight matrix, shape ``(N, N)``.
         """
         self._prev_weights = self._stdp_weights.copy()
         self._stdp_weights = _validate_square_matrix(weights, "weights", self._n)
@@ -213,6 +218,11 @@ class SynapseCouplingBridge:
         """Feed gap junction conductance matrix.
 
         Symmetric: g_c(i,j) = g_c(j,i). Maps directly to K_ij.
+
+        Parameters
+        ----------
+        conductances : FloatArray
+            Gap-junction conductance matrix, shape ``(N, N)``.
         """
         g = _validate_nonnegative_square_matrix(
             conductances,
@@ -226,6 +236,11 @@ class SynapseCouplingBridge:
         """Feed astrocyte Ca²⁺ concentration per oscillator.
 
         High Ca²⁺ → strong imprint modulation (facilitates learning).
+
+        Parameters
+        ----------
+        ca_levels : FloatArray
+            Per-oscillator astrocyte Ca²⁺ concentrations.
         """
         self._ca_levels = _validate_nonnegative_vector(
             ca_levels,
@@ -234,7 +249,13 @@ class SynapseCouplingBridge:
         )
 
     def snapshot(self) -> SynapseSnapshot:
-        """Compute SPO coupling parameters from current synapse state."""
+        """Compute SPO coupling parameters from current synapse state.
+
+        Returns
+        -------
+        SynapseSnapshot
+            Compute SPO coupling parameters from current synapse state.
+        """
         # STDP → K_nm delta
         dw = self._stdp_weights - self._prev_weights
         knm_delta = dw * self._stdp_scale
@@ -257,7 +278,18 @@ class SynapseCouplingBridge:
         )
 
     def apply_to_knm(self, knm_base: FloatArray) -> FloatArray:
-        """Apply all synapse-derived modifications to a base K_nm."""
+        """Apply all synapse-derived modifications to a base K_nm.
+
+        Parameters
+        ----------
+        knm_base : FloatArray
+            Base coupling matrix to modify, shape ``(N, N)``.
+
+        Returns
+        -------
+        FloatArray
+            The base coupling matrix with synapse-derived modifications.
+        """
         validated_knm_base = _validate_square_matrix(knm_base, "knm_base", self._n)
         snap = self.snapshot()
         knm = validated_knm_base + snap.knm_delta + snap.gap_coupling
@@ -266,7 +298,18 @@ class SynapseCouplingBridge:
         return result
 
     def apply_to_imprint(self, m_k: FloatArray) -> FloatArray:
-        """Modulate imprint vector by astrocyte Ca²⁺ levels."""
+        """Modulate imprint vector by astrocyte Ca²⁺ levels.
+
+        Parameters
+        ----------
+        m_k : FloatArray
+            Imprint vector, shape ``(N,)``.
+
+        Returns
+        -------
+        FloatArray
+            The imprint vector modulated by astrocyte Ca²⁺.
+        """
         validated_m_k = _validate_vector(m_k, "m_k", self._n)
         snap = self.snapshot()
         result: FloatArray = validated_m_k * (1.0 + snap.astrocyte_modulation)

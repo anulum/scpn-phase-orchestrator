@@ -224,7 +224,25 @@ class NeurocoreBridge:
         self._step_count = 0
 
     def step(self, state: UPDEState, n_substeps: int = 10) -> FloatArray:
-        """Run neuron ensemble for n_substeps, return per-layer spike rates."""
+        """Run neuron ensemble for n_substeps, return per-layer spike rates.
+
+        Parameters
+        ----------
+        state : UPDEState
+            The current UPDE state.
+        n_substeps : int
+            Number of inner substeps to run.
+
+        Returns
+        -------
+        FloatArray
+            The per-layer spike rates after ``n_substeps``.
+
+        Raises
+        ------
+        ValueError
+            If the state or substep count is invalid.
+        """
         n_substeps = _require_positive_int(n_substeps, field="n_substeps")
         if len(state.layers) < self._n_layers:
             raise ValueError("state.layers must cover configured n_layers")
@@ -300,7 +318,18 @@ class NeurocoreBridge:
             self._step_count += 1
 
     def rates_to_actions(self, rates: FloatArray) -> list[ControlAction]:
-        """Convert per-layer spike rates to coupling boost actions."""
+        """Convert per-layer spike rates to coupling boost actions.
+
+        Parameters
+        ----------
+        rates : FloatArray
+            Per-layer spike rates.
+
+        Returns
+        -------
+        list[ControlAction]
+            The coupling-boost control actions for the spike rates.
+        """
         rates = _require_rate_vector(rates, n_layers=self._n_layers)
         actions: list[ControlAction] = []
         for layer_idx, rate in enumerate(rates):
@@ -322,12 +351,31 @@ class NeurocoreBridge:
         state: UPDEState,
         n_substeps: int = 10,
     ) -> list[ControlAction]:
-        """Step the ensemble and return control actions."""
+        """Step the ensemble and return control actions.
+
+        Parameters
+        ----------
+        state : UPDEState
+            The current UPDE state.
+        n_substeps : int
+            Number of inner substeps to run.
+
+        Returns
+        -------
+        list[ControlAction]
+            The control actions after stepping the ensemble.
+        """
         rates = self.step(state, n_substeps)
         return self.rates_to_actions(rates)
 
     def get_neuron_states(self) -> list[dict[str, Any]]:
-        """Return voltage/refractory state for all neurons."""
+        """Return voltage/refractory state for all neurons.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Return voltage/refractory state for all neurons.
+        """
         if self._backend == "rust":
             states: list[dict[str, Any]] = self._rust_ensemble.get_neuron_states()
             return states
@@ -353,5 +401,11 @@ class NeurocoreBridge:
 
     @property
     def backend(self) -> str:
-        """Active backend: 'rust', 'numpy', or 'scalar'."""
+        """Active backend: 'rust', 'numpy', or 'scalar'.
+
+        Returns
+        -------
+        str
+            Active backend: 'rust', 'numpy', or 'scalar'.
+        """
         return self._backend

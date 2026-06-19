@@ -115,7 +115,18 @@ class RedisStateStore:
             )
 
     def save_state(self, sim_state: dict[str, Any]) -> None:
-        """Serialise state dict to JSON and store in Redis."""
+        """Serialise state dict to JSON and store in Redis.
+
+        Parameters
+        ----------
+        sim_state : dict[str, Any]
+            The simulation state dict to store.
+
+        Raises
+        ------
+        ValueError
+            If the state dict is not JSON-serialisable.
+        """
         if not isinstance(sim_state, dict):
             raise ValueError("sim_state must be a JSON-serializable dict")
         try:
@@ -125,7 +136,18 @@ class RedisStateStore:
         self._client.set(self._key, payload)
 
     def load_state(self) -> dict[str, Any] | None:
-        """Load state from Redis. Returns None if key does not exist."""
+        """Load state from Redis. Returns None if key does not exist.
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Load state from Redis. Returns None if key does not exist.
+
+        Raises
+        ------
+        ValueError
+            If the stored payload is malformed.
+        """
         raw = self._client.get(self._key)
         if raw is None:
             return None
@@ -144,7 +166,13 @@ class RedisStateStore:
 
     @property
     def key(self) -> str:
-        """Redis key used for state storage."""
+        """Redis key used for state storage.
+
+        Returns
+        -------
+        str
+            Redis key used for state storage.
+        """
         return self._key
 
 

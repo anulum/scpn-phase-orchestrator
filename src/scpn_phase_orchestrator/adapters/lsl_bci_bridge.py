@@ -141,7 +141,18 @@ class LSLBCIBridge:
         self._buffer_len: int = 0
 
     def connect(self, timeout: float = 5.0) -> bool:
-        """Resolve and connect to the LSL stream."""
+        """Resolve and connect to the LSL stream.
+
+        Parameters
+        ----------
+        timeout : float
+            Connection timeout in seconds.
+
+        Returns
+        -------
+        bool
+            ``True`` when the LSL stream is resolved and connected.
+        """
         timeout = _validate_connect_timeout(timeout)
 
         if not HAS_LSL or pylsl is None:
@@ -164,7 +175,13 @@ class LSLBCIBridge:
         return True
 
     def start(self) -> None:
-        """Start the background capture thread."""
+        """Start the background capture thread.
+
+        Raises
+        ------
+        RuntimeError
+            If the capture thread cannot start.
+        """
         with self._thread_lock:
             if self._running:
                 return
@@ -218,6 +235,11 @@ class LSLBCIBridge:
 
         Uses Hilbert transform on the recent buffer window.
         Returns phase in [0, 2*pi).
+
+        Returns
+        -------
+        float
+            Extract the current phase from the buffered signal.
         """
         with self._lock:
             signal = np.array(

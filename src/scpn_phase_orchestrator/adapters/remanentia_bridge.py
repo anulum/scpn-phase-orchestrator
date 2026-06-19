@@ -264,7 +264,19 @@ class RemanentiaBridge:
         return self._open(req)
 
     def health_check(self) -> bool:
-        """Check if Remanentia is running."""
+        """Check if Remanentia is running.
+
+        Returns
+        -------
+        bool
+            Check if Remanentia is running.
+
+        Raises
+        ------
+        Exception
+            Re-raises any non-transport, non-decode error; transport and decode failures
+            are caught and ``False`` is returned.
+        """
         try:
             resp = _validated_response_payload(self._get("/health"), name="health")
             return resp.get("status") == "ok"
@@ -284,6 +296,23 @@ class RemanentiaBridge:
 
         Remanentia can use this to decide when to consolidate:
         high R = aligned agents = good time to merge their traces.
+
+        Parameters
+        ----------
+        R : float
+            Kuramoto order parameter.
+        regime : str
+            The current control regime label.
+        agent_phases : dict[str, float] | None
+            Per-agent phase values, or ``None``.
+
+        Raises
+        ------
+        ValueError
+            If ``R``, ``regime``, or ``agent_phases`` is invalid.
+        Exception
+            Re-raises any non-transport, non-decode error; transport and decode failures
+            are caught and logged.
         """
         R = _validated_unit_interval(R, name="R")
         regime = _validated_label(regime, name="regime")
@@ -313,6 +342,24 @@ class RemanentiaBridge:
         If recall returns many relevant memories -> low novelty (known ground).
         If recall returns few/none -> high novelty (unexplored territory).
         Novelty feeds SPO coupling: novel = boost K (explore together).
+
+        Parameters
+        ----------
+        query : str
+            PromQL query string.
+
+        Returns
+        -------
+        float
+            The estimated novelty score for the query.
+
+        Raises
+        ------
+        ValueError
+            If ``query`` is invalid.
+        Exception
+            Re-raises any non-transport, non-decode error; transport and decode failures
+            fall back to the last novelty score.
         """
         query = _validated_query(query)
         try:
@@ -336,7 +383,19 @@ class RemanentiaBridge:
             return self._last_novelty_score
 
     def get_entity_count(self) -> int:
-        """Get number of entities in Remanentia's knowledge graph."""
+        """Get number of entities in Remanentia's knowledge graph.
+
+        Returns
+        -------
+        int
+            Get number of entities in Remanentia's knowledge graph.
+
+        Raises
+        ------
+        Exception
+            Re-raises any non-transport, non-decode error; transport and decode failures
+            fall back to the last entity count.
+        """
         try:
             resp = self._get("/status")
             entities, memories = _validated_status_payload(resp)
@@ -357,6 +416,21 @@ class RemanentiaBridge:
         """Trigger memory consolidation in Remanentia.
 
         Best called when R is high (agents aligned, traces coherent).
+
+        Parameters
+        ----------
+        force : bool
+            Whether to force consolidation regardless of thresholds.
+
+        Returns
+        -------
+        bool
+            ``True`` when consolidation was triggered.
+
+        Raises
+        ------
+        ValueError
+            If the consolidation request is rejected.
         """
         if not isinstance(force, bool):
             raise ValueError("force must be a bool")
@@ -387,6 +461,23 @@ class RemanentiaBridge:
         Redundant agents get coupling decayed (avoid repetition).
 
         Returns (N,) array of per-agent K multipliers.
+
+        Parameters
+        ----------
+        queries : list[str]
+            Per-agent novelty queries.
+        scale : float
+            Scaling factor applied to the coupling adjustment.
+
+        Returns
+        -------
+        FloatArray
+            The per-agent coupling adjustments.
+
+        Raises
+        ------
+        ValueError
+            If the queries or scale are invalid.
         """
         if not isinstance(queries, list):
             raise ValueError("queries must be a list of non-empty strings")
@@ -398,7 +489,19 @@ class RemanentiaBridge:
         return np.array(deltas, dtype=np.float64)
 
     def snapshot(self) -> CoherenceMemorySnapshot:
-        """Return the combined coherence and memory state."""
+        """Return the combined coherence and memory state.
+
+        Returns
+        -------
+        CoherenceMemorySnapshot
+            Return the combined coherence and memory state.
+
+        Raises
+        ------
+        Exception
+            Re-raises any non-transport, non-decode error; transport and decode failures
+            fall back to cached memory counts.
+        """
         n_ent = self.get_entity_count()
         try:
             status = self._get("/status")

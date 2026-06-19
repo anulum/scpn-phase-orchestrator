@@ -215,7 +215,13 @@ class GaianMeshNode:
         self._broadcast_thread: threading.Thread | None = None
 
     def start(self) -> None:
-        """Start the mesh networking threads."""
+        """Start the mesh networking threads.
+
+        Raises
+        ------
+        RuntimeError
+            If the mesh networking threads cannot start.
+        """
         if self._running:
             return
 
@@ -263,7 +269,15 @@ class GaianMeshNode:
         self.stop()
 
     def update_local_state(self, R: float, psi: float) -> None:
-        """Update the local macro state to be broadcasted to peers."""
+        """Update the local macro state to be broadcasted to peers.
+
+        Parameters
+        ----------
+        R : float
+            Kuramoto order parameter.
+        psi : float
+            Mean phase in radians.
+        """
         self._local_R = _require_unit_interval(R, field="R")
         self._local_psi = _require_phase(psi, field="psi")
 

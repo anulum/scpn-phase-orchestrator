@@ -192,6 +192,22 @@ SECTION_ENFORCED_MODULES = (
     "scpn_phase_orchestrator.supervisor.sheaf",
     "scpn_phase_orchestrator.supervisor.strange_loop",
     "scpn_phase_orchestrator.supervisor.topos_policy",
+    "scpn_phase_orchestrator.adapters.fusion_core_bridge",
+    "scpn_phase_orchestrator.adapters.gaian_mesh_bridge",
+    "scpn_phase_orchestrator.adapters.hardware_io",
+    "scpn_phase_orchestrator.adapters.hybrid_cocompiler",
+    "scpn_phase_orchestrator.adapters.lsl_bci_bridge",
+    "scpn_phase_orchestrator.adapters.modbus_tls",
+    "scpn_phase_orchestrator.adapters.neurocore_bridge",
+    "scpn_phase_orchestrator.adapters.plasma_control_bridge",
+    "scpn_phase_orchestrator.adapters.prometheus",
+    "scpn_phase_orchestrator.adapters.quantum_control_bridge",
+    "scpn_phase_orchestrator.adapters.redis_store",
+    "scpn_phase_orchestrator.adapters.remanentia_bridge",
+    "scpn_phase_orchestrator.adapters.scpn_control_bridge",
+    "scpn_phase_orchestrator.adapters.snn_bridge",
+    "scpn_phase_orchestrator.adapters.synapse_channel_bridge",
+    "scpn_phase_orchestrator.adapters.synapse_coupling_bridge",
 )
 
 

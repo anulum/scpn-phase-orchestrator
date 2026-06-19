@@ -71,6 +71,29 @@ class PrometheusAdapter:
         """Query Prometheus range API, return values as 1-D float array.
 
         Raises ConnectionError on network failure, ValueError on bad response.
+
+        Parameters
+        ----------
+        query : str
+            PromQL query string.
+        start : float
+            Range start time as a UNIX timestamp.
+        end : float
+            Range end time as a UNIX timestamp.
+        step : float
+            Sampling step in seconds.
+
+        Returns
+        -------
+        FloatArray
+            The range query values as a 1-D float array.
+
+        Raises
+        ------
+        ConnectionError
+            If the Prometheus server is unreachable.
+        ValueError
+            If the query or response is invalid.
         """
         query_text = _require_query_text(query)
         start_f = _require_finite_float(start, "start")
@@ -103,7 +126,25 @@ class PrometheusAdapter:
         return result
 
     def fetch_instant(self, query: str) -> float:
-        """Query Prometheus instant API, return scalar value."""
+        """Query Prometheus instant API, return scalar value.
+
+        Parameters
+        ----------
+        query : str
+            PromQL query string.
+
+        Returns
+        -------
+        float
+            The instant query scalar value.
+
+        Raises
+        ------
+        ConnectionError
+            If the Prometheus server is unreachable.
+        ValueError
+            If the query or response is invalid.
+        """
         query_text = _require_query_text(query)
         params = urlencode({"query": query_text})
         url = f"{self._endpoint}/api/v1/query?{params}"

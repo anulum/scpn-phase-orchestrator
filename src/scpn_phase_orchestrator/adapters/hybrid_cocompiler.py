@@ -27,7 +27,22 @@ def build_hybrid_cocompiler_manifest(
     *,
     n_channel_semantics: Sequence[str] = ("Q_control", "S_spike", "audit"),
 ) -> dict[str, object]:
-    """Combine quantum and spiking manifests under one audit envelope."""
+    """Combine quantum and spiking manifests under one audit envelope.
+
+    Parameters
+    ----------
+    quantum_manifest : Mapping[str, object]
+        The quantum compiler manifest.
+    neuromorphic_manifest : Mapping[str, object]
+        The neuromorphic schedule manifest.
+    n_channel_semantics : Sequence[str]
+        Per-channel semantic labels.
+
+    Returns
+    -------
+    dict[str, object]
+        The combined quantum/neuromorphic hybrid manifest.
+    """
     quantum_manifest = _validate_manifest_mapping(
         quantum_manifest,
         label="quantum_manifest",
@@ -103,6 +118,27 @@ def audit_hybrid_target_readiness(
     The audit links the already review-only hybrid manifest to the independent
     quantum and neuromorphic target-readiness records. It never submits work to
     a QPU, simulator, neuromorphic backend, or actuator.
+
+    Parameters
+    ----------
+    hybrid_manifest : Mapping[str, object]
+        The combined hybrid co-compiler manifest.
+    quantum_readiness : Mapping[str, object]
+        Quantum target-readiness evidence.
+    neuromorphic_readiness : Mapping[str, object]
+        Neuromorphic target-readiness evidence.
+    hybrid_operator_approved : bool
+        Whether a human operator approved the hybrid target.
+
+    Returns
+    -------
+    dict[str, object]
+        The non-executing hybrid target-readiness evidence.
+
+    Raises
+    ------
+    ValueError
+        If the manifests or readiness evidence are invalid.
     """
     hybrid_manifest = _validate_manifest_mapping(
         hybrid_manifest,
@@ -205,7 +241,25 @@ def build_hybrid_operator_handoff_package(
     hybrid_manifest: Mapping[str, object],
     hybrid_readiness: Mapping[str, object],
 ) -> dict[str, object]:
-    """Build a deterministic non-executing package for external operators."""
+    """Build a deterministic non-executing package for external operators.
+
+    Parameters
+    ----------
+    hybrid_manifest : Mapping[str, object]
+        The combined hybrid co-compiler manifest.
+    hybrid_readiness : Mapping[str, object]
+        Hybrid target-readiness evidence.
+
+    Returns
+    -------
+    dict[str, object]
+        The deterministic non-executing operator handoff package.
+
+    Raises
+    ------
+    ValueError
+        If the manifest or readiness evidence is invalid.
+    """
     hybrid_manifest = _validate_manifest_mapping(
         hybrid_manifest,
         label="hybrid_manifest",

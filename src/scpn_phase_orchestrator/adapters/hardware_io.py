@@ -132,7 +132,18 @@ class SampleBuffer:
         self.buffer = np.zeros((self.n_channels, self.capacity))
 
     def push(self, samples: FloatArray) -> None:
-        """Push (n_channels, n_samples) into the ring buffer."""
+        """Push (n_channels, n_samples) into the ring buffer.
+
+        Parameters
+        ----------
+        samples : FloatArray
+            Sample block, shape ``(n_channels, n_samples)``.
+
+        Raises
+        ------
+        ValueError
+            If the sample block shape is invalid.
+        """
         if samples.ndim != 2:
             raise ValueError(
                 "samples must be a 2D array shaped (n_channels, n_samples)"
@@ -154,7 +165,18 @@ class SampleBuffer:
         self.count = min(self.count + n_samples, self.capacity)
 
     def get_recent(self, n: int) -> FloatArray:
-        """Get the last n samples as (n_channels, n)."""
+        """Get the last n samples as (n_channels, n).
+
+        Parameters
+        ----------
+        n : int
+            Number of most-recent samples to return.
+
+        Returns
+        -------
+        FloatArray
+            The most recent ``n`` samples, shape ``(n_channels, n)``.
+        """
         n = _positive_int(n, field="n")
         n = min(n, self.count)
         if n == 0:
@@ -199,17 +221,35 @@ class BrainFlowAdapter:  # pragma: no cover
 
     @property
     def sample_rate(self) -> int:
-        """Board sampling rate in Hz."""
+        """Board sampling rate in Hz.
+
+        Returns
+        -------
+        int
+            Board sampling rate in Hz.
+        """
         return int(self._sample_rate)
 
     @property
     def eeg_channels(self) -> list[int]:
-        """BrainFlow EEG channel indices for this board."""
+        """BrainFlow EEG channel indices for this board.
+
+        Returns
+        -------
+        list[int]
+            BrainFlow EEG channel indices for this board.
+        """
         return list(self._eeg_channels)
 
     @property
     def n_channels(self) -> int:
-        """Number of EEG channels."""
+        """Number of EEG channels.
+
+        Returns
+        -------
+        int
+            Number of EEG channels.
+        """
         return len(self._eeg_channels)
 
     def start(self) -> None:
@@ -226,13 +266,37 @@ class BrainFlowAdapter:  # pragma: no cover
             self._running = False
 
     def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> FloatArray:
-        """Get recent samples from one EEG channel."""
+        """Get recent samples from one EEG channel.
+
+        Parameters
+        ----------
+        channel_idx : int
+            Index of the channel to read.
+        n_samples : int
+            Number of samples to return.
+
+        Returns
+        -------
+        FloatArray
+            Recent samples from the channel, shape ``(n_samples,)``.
+        """
         data = self._board.get_current_board_data(n_samples)
         ch = self._eeg_channels[channel_idx]
         return np.asarray(data[ch])
 
     def get_all_eeg(self, n_samples: int = 256) -> FloatArray:
-        """Get (n_eeg_channels, n_samples) of recent EEG data."""
+        """Get (n_eeg_channels, n_samples) of recent EEG data.
+
+        Parameters
+        ----------
+        n_samples : int
+            Number of samples to return.
+
+        Returns
+        -------
+        FloatArray
+            Recent EEG data, shape ``(n_eeg_channels, n_samples)``.
+        """
         data = self._board.get_current_board_data(n_samples)
         return np.asarray(data[self._eeg_channels])
 
@@ -257,12 +321,24 @@ class SimulatedBoardAdapter:
 
     @property
     def sample_rate(self) -> int:
-        """Simulated sampling rate in Hz."""
+        """Simulated sampling rate in Hz.
+
+        Returns
+        -------
+        int
+            Simulated sampling rate in Hz.
+        """
         return self._sample_rate
 
     @property
     def n_channels(self) -> int:
-        """Number of simulated channels."""
+        """Number of simulated channels.
+
+        Returns
+        -------
+        int
+            Number of simulated channels.
+        """
         return self._n_channels
 
     def start(self) -> None:
@@ -275,7 +351,20 @@ class SimulatedBoardAdapter:
         self._running = False
 
     def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> FloatArray:
-        """Return synthetic sinusoidal samples for one channel."""
+        """Return synthetic sinusoidal samples for one channel.
+
+        Parameters
+        ----------
+        channel_idx : int
+            Index of the channel to read.
+        n_samples : int
+            Number of samples to return.
+
+        Returns
+        -------
+        FloatArray
+            Synthetic samples for the channel, shape ``(n_samples,)``.
+        """
         channel_idx = _channel_index(channel_idx, n_channels=self._n_channels)
         n_samples = _positive_int(n_samples, field="n_samples")
         sr = self._sample_rate
@@ -284,7 +373,18 @@ class SimulatedBoardAdapter:
         return np.asarray(np.sin(2.0 * np.pi * self._freqs[channel_idx] * t))
 
     def get_all_eeg(self, n_samples: int = 256) -> FloatArray:
-        """Return synthetic (n_channels, n_samples) sinusoidal data."""
+        """Return synthetic (n_channels, n_samples) sinusoidal data.
+
+        Parameters
+        ----------
+        n_samples : int
+            Number of samples to return.
+
+        Returns
+        -------
+        FloatArray
+            Synthetic EEG data, shape ``(n_channels, n_samples)``.
+        """
         n_samples = _positive_int(n_samples, field="n_samples")
         sr = self._sample_rate
         t = np.arange(n_samples) / sr + self._t
@@ -324,7 +424,20 @@ class ModbusAdapter:  # pragma: no cover
             self._connected = False
 
     def read_holding_registers(self, address: int, count: int = 1) -> FloatArray:
-        """Read holding registers, return as float64 array."""
+        """Read holding registers, return as float64 array.
+
+        Parameters
+        ----------
+        address : int
+            Modbus register address.
+        count : int
+            Number of registers to read.
+
+        Returns
+        -------
+        FloatArray
+            The register values as a float64 array.
+        """
         address = _non_negative_int(address, field="address")
         count = _positive_int(count, field="count")
         result = self._client.read_holding_registers(address, count=count)
@@ -333,7 +446,25 @@ class ModbusAdapter:  # pragma: no cover
         return np.array(result.registers, dtype=np.float64)
 
     def write_register(self, address: int, value: int) -> bool:
-        """Write a single holding register."""
+        """Write a single holding register.
+
+        Parameters
+        ----------
+        address : int
+            Modbus register address.
+        value : int
+            Register value to write.
+
+        Returns
+        -------
+        bool
+            ``True`` when the write succeeds.
+
+        Raises
+        ------
+        ValueError
+            If the value is out of range.
+        """
         address = _non_negative_int(address, field="address")
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError("value must be an integer")
