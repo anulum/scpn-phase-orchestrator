@@ -382,24 +382,19 @@ def recurrence_matrix(
 ) -> BoolArray:
     """Binary recurrence matrix ``R_ij = ‖x_i − x_j‖ ≤ ε``.
 
-    Args:
-        trajectory: ``(T, d)`` or ``(T,)`` state-space trajectory.
-        epsilon: recurrence threshold.
-        metric: ``"euclidean"`` or ``"angular"`` (chord distance on
-            ``S¹``).
-
-    Returns
-    -------
-        ``(T, T)`` boolean array.
-
     Parameters
     ----------
     trajectory : FloatArray
-        Phase-space trajectory, shape ``(T, d)``.
+        ``(T, d)`` or ``(T,)`` state-space trajectory.
     epsilon : float
-        Recurrence threshold.
+        recurrence threshold.
     metric : str
-        Distance metric name.
+        ``"euclidean"`` or ``"angular"`` (chord distance on ``S¹``).
+
+    Returns
+    -------
+    BoolArray
+        ``(T, T)`` boolean array.
     """
     traj = _validate_trajectory(trajectory, name="trajectory")
     epsilon = _validate_epsilon(epsilon)

@@ -483,41 +483,31 @@ def basin_stability(
     ``[0, 2π)^N``, integrates each to steady state via the dispatched
     trial kernel, and classifies trials by ``R_final ≥ R_threshold``.
 
-    Args:
-        omegas: (N,) natural frequencies.
-        knm: (N, N) coupling matrix.
-        alpha: (N, N) phase lags (default: zeros).
-        dt: Integration timestep.
-        n_transient: Transient steps to discard.
-        n_measure: Steps to average R over.
-        n_samples: Number of random initial conditions.
-        R_threshold: Threshold for classifying as "synchronised".
-        seed: RNG seed (owned by Python).
-
-    Returns
-    -------
-        BasinStabilityResult with S_B, R_final array, and counts.
-
     Parameters
     ----------
     omegas : FloatArray
-        Natural frequencies in rad/s, shape ``(N,)``.
+        (N,) natural frequencies.
     knm : FloatArray
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        (N, N) coupling matrix.
     alpha : FloatArray | None
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        (N, N) phase lags (default: zeros).
     dt : float
-        Integration step size.
+        Integration timestep.
     n_transient : int
-        Number of transient steps discarded before measurement.
+        Transient steps to discard.
     n_measure : int
-        Number of steps averaged to measure the order parameter.
+        Steps to average R over.
     n_samples : int
-        Number of random initial-condition samples.
+        Number of random initial conditions.
     R_threshold : float
-        Order-parameter threshold above which a trial counts as synchronised.
+        Threshold for classifying as "synchronised".
     seed : int
-        Seed for the deterministic RNG.
+        RNG seed (owned by Python).
+
+    Returns
+    -------
+    BasinStabilityResult
+        BasinStabilityResult with S_B, R_final array, and counts.
     """
     omegas = _validate_omegas(omegas)
     N = int(omegas.shape[0])

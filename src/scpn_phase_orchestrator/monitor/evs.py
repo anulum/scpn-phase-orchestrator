@@ -104,28 +104,21 @@ class EVSMonitor:
     ) -> EVSResult:
         """Run the full EVS battery.
 
-        Args:
-            phases_trials: shape (n_trials, n_timepoints), phases in
-                radians at the *target* frequency.
-            pause_indices: time-point indices within/after a stimulus
-                pause window.
-            target_freq: stimulus frequency (Hz).
-            control_freq: non-stimulus control frequency (Hz).
-
-        Returns
-        -------
-            EVSResult with all three sub-scores and the overall verdict.
-
         Parameters
         ----------
         phases_trials : FloatArray
-            Per-trial phase series, shape ``(n_trials, T)``.
+            shape (n_trials, n_timepoints), phases in radians at the *target* frequency.
         pause_indices : list[int] | IntArray
-            Stimulus-pause sample indices.
+            time-point indices within/after a stimulus pause window.
         target_freq : float
-            Target entrainment frequency in Hz.
+            stimulus frequency (Hz).
         control_freq : float
-            Control (off-target) frequency in Hz.
+            non-stimulus control frequency (Hz).
+
+        Returns
+        -------
+        EVSResult
+            EVSResult with all three sub-scores and the overall verdict.
         """
         phases = _validate_phase_trials(phases_trials)
         pause_idx = _validate_pause_indices(pause_indices)

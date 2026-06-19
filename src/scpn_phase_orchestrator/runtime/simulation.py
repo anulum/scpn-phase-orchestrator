@@ -268,46 +268,38 @@ def simulate(
 ) -> SimulationResult:
     """Advance a binding spec for ``steps`` and return the simulation outcome.
 
-    Args:
-        spec: A validated binding spec.
-        steps: Number of integration steps.
-        seed: RNG seed for the initial phases.
-        policy_enabled: Closed-loop control feedback on (``True``) or open-loop
-            baseline (``False``).
-        audit_logger: Optional logger; when given, the header, per-step records,
-            and events are written. The caller owns its lifecycle (close).
-        binding_spec_path: Optional path to the spec, used only to locate an
-            adjacent ``policy.yaml``. When ``None``, no domainpack policy rules
-            are loaded (the supervisor policy still runs when ``policy_enabled``).
-        scenario_hook: Optional deterministic per-step perturbation hook for
-            benchmark and case-study scenarios. The hook can mutate phases,
-            frequencies, coupling, ``zeta``, or ``psi_target`` in a validated
-            :class:`SimulationScenarioContext`; it cannot perform actuation.
+    Parameters
+    ----------
+    spec : BindingSpec
+        A validated binding spec.
+    steps : int
+        Number of integration steps.
+    seed : int
+        RNG seed for the initial phases.
+    policy_enabled : bool
+        Closed-loop control feedback on (``True``) or open-loop baseline (``False``).
+    audit_logger : AuditLogger | None
+        Optional logger; when given, the header, per-step records, and events are
+        written. The caller owns its lifecycle (close).
+    binding_spec_path : Path | None
+        Optional path to the spec, used only to locate an adjacent ``policy.yaml``. When
+        ``None``, no domainpack policy rules are loaded (the supervisor policy still
+        runs when ``policy_enabled``).
+    scenario_hook : ScenarioCallback | None
+        Optional deterministic per-step perturbation hook for benchmark and case-study
+        scenarios. The hook can mutate phases, frequencies, coupling, ``zeta``, or
+        ``psi_target`` in a validated :class:`SimulationScenarioContext`; it cannot
+        perform actuation.
 
     Returns
     -------
+    SimulationResult
         A :class:`SimulationResult`.
 
     Raises
     ------
-        ValueError: If the spec declares no oscillators.
-
-    Parameters
-    ----------
-    spec : BindingSpec
-        The binding specification to simulate.
-    steps : int
-        Number of simulation steps to run.
-    seed : int
-        Seed for the deterministic RNG, or ``None``.
-    policy_enabled : bool
-        Whether closed-loop policy control is enabled.
-    audit_logger : AuditLogger | None
-        Audit logger to record the run, or ``None``.
-    binding_spec_path : Path | None
-        Path to the binding spec, or ``None``.
-    scenario_hook : ScenarioCallback | None
-        Per-step scenario callback, or ``None``.
+    ValueError
+        If the spec declares no oscillators.
     """
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     if n_osc == 0:

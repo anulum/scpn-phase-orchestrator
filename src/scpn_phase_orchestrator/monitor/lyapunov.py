@@ -519,41 +519,31 @@ def lyapunov_spectrum(
     same exponents up to floating-point rounding; the dispatcher's
     choice only affects wall-clock cost.
 
-    Args:
-        phases_init: (N,) initial phases.
-        omegas: (N,) natural frequencies.
-        knm: (N, N) coupling matrix.
-        alpha: (N, N) phase-lag matrix.
-        dt: integration timestep.
-        n_steps: total integration steps.
-        qr_interval: steps between QR reorthogonalisations.
-        zeta: driver strength.
-        psi: target driver phase.
-
-    Returns
-    -------
-        (N,) array of Lyapunov exponents, sorted descending.
-
     Parameters
     ----------
     phases_init : object
-        Initial oscillator phases in radians, shape ``(N,)``.
+        (N,) initial phases.
     omegas : object
-        Natural frequencies in rad/s, shape ``(N,)``.
+        (N,) natural frequencies.
     knm : object
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        (N, N) coupling matrix.
     alpha : object
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        (N, N) phase-lag matrix.
     dt : object
-        Integration step size.
+        integration timestep.
     n_steps : object
-        Number of integration steps.
+        total integration steps.
     qr_interval : object
-        Number of steps between QR reorthonormalisations.
+        steps between QR reorthogonalisations.
     zeta : object
-        External drive strength ``ζ``.
+        driver strength.
     psi : object
-        External drive reference phase ``Ψ`` in radians.
+        target driver phase.
+
+    Returns
+    -------
+    FloatArray
+        (N,) array of Lyapunov exponents, sorted descending.
 
     Raises
     ------

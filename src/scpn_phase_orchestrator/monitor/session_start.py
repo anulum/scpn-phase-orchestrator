@@ -54,26 +54,21 @@ def check_session_start(
 ) -> SessionCoherenceReport:
     """Validate extraction quality, imprint consistency, and initial coherence.
 
-    Args:
-        phase_states: extracted states from all configured channels.
-        initial_phases: phase array that will seed the UPDE engine.
-        imprint_state: loaded (or fresh) imprint state.
-        n_osc: expected oscillator count.
-
-    Returns
-    -------
-        SessionCoherenceReport with pass/fail, quality scores, and diagnostics.
-
     Parameters
     ----------
     phase_states : list[PhaseState]
-        Extracted per-oscillator phase states.
+        extracted states from all configured channels.
     initial_phases : FloatArray
-        Initial oscillator phases in radians, shape ``(N,)``.
+        phase array that will seed the UPDE engine.
     imprint_state : ImprintState
-        The imprint state to check for consistency.
+        loaded (or fresh) imprint state.
     n_osc : int
-        Expected number of oscillators.
+        expected oscillator count.
+
+    Returns
+    -------
+    SessionCoherenceReport
+        SessionCoherenceReport with pass/fail, quality scores, and diagnostics.
     """
     report = SessionCoherenceReport()
     scorer = PhaseQualityScorer()

@@ -225,17 +225,15 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     ``w_i = floor(Σ_t wrap(Δθ_{i,t}) / 2π)`` with
     ``wrap(x) ∈ (−π, π]``.
 
-    Args:
-        phases_history: ``(T, N)`` phases in radians.
-
-    Returns
-    -------
-        ``(N,)`` int64 array of winding numbers.
-
     Parameters
     ----------
     phases_history : FloatArray
-        Phase history, shape ``(T, N)``.
+        ``(T, N)`` phases in radians.
+
+    Returns
+    -------
+    IntArray
+        ``(N,)`` int64 array of winding numbers.
     """
     phases_history = _validate_phase_history(phases_history)
     if phases_history.ndim != 2 or phases_history.shape[0] < 2:

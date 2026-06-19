@@ -332,22 +332,19 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
 def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
     """Detect chimera states in a Kuramoto network.
 
-    Args:
-        phases: ``(N,)`` oscillator phases.
-        knm: ``(N, N)`` coupling matrix. ``K_ij > 0`` defines neighbours;
-            diagonal self-coupling must be zero.
-
-    Returns
-    -------
-        :class:`ChimeraState` with coherent / incoherent index lists and
-        the boundary-fraction chimera index.
-
     Parameters
     ----------
     phases : FloatArray
-        Oscillator phases in radians, shape ``(N,)``.
+        ``(N,)`` oscillator phases.
     knm : FloatArray
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        ``(N, N)`` coupling matrix. ``K_ij > 0`` defines neighbours; diagonal
+        self-coupling must be zero.
+
+    Returns
+    -------
+    ChimeraState
+        :class:`ChimeraState` with coherent / incoherent index lists and the
+        boundary-fraction chimera index.
     """
     phases, knm = _validate_chimera_inputs(phases, knm)
     n = int(phases.size)

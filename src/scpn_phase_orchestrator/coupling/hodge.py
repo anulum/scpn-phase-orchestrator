@@ -573,28 +573,22 @@ def hodge_decomposition(
 ) -> HodgeResult:
     """Decompose the Kuramoto coupling current into orthogonal edge flows.
 
-    Args:
-        knm: Square ``(N, N)`` coupling matrix; the symmetric part
-            defines the edge support and the current magnitude.
-        phases: ``(N,)`` oscillator phases.
-        triangles: Optional explicit 2-simplices as node triples; each
-            must reference existing edges. When omitted, all 3-cliques
-            of the coupling graph are used.
-
-    Returns
-    -------
-        :class:`HodgeResult` with the three flow components as
-        antisymmetric ``(N, N)`` matrices, the input current, the node
-        potential, and the first Betti number.
-
     Parameters
     ----------
     knm : FloatArray
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        Square ``(N, N)`` coupling matrix; the symmetric part defines the edge support
+        and the current magnitude.
     phases : FloatArray
-        Oscillator phases in radians, shape ``(N,)``.
+        ``(N,)`` oscillator phases.
     triangles : Sequence[Sequence[int]] | None
-        Explicit 2-simplices (triangles), or ``None`` to derive them.
+        Optional explicit 2-simplices as node triples; each must reference existing
+        edges. When omitted, all 3-cliques of the coupling graph are used.
+
+    Returns
+    -------
+    HodgeResult
+        :class:`HodgeResult` with the three flow components as antisymmetric ``(N, N)``
+        matrices, the input current, the node potential, and the first Betti number.
     """
     phases = _validate_phase_vector(phases, name="phases")
     n = int(phases.size)

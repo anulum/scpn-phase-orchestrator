@@ -151,30 +151,23 @@ def te_adapt_coupling(
     Lizier 2012, "Local Information Transfer as a Spatiotemporal Filter
     for Complex Systems," Physical Review E 77(2):026110.
 
-    Args:
-        knm: current (n, n) coupling matrix.
-        phase_history: (n, T) recent phase trajectories.
-        lr: learning rate for TE-based update.
-        decay: coupling decay rate per update (0 = no decay).
-        n_bins: histogram bins for TE estimation.
-
     Parameters
     ----------
     knm : FloatArray
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        current (n, n) coupling matrix.
     phase_history : FloatArray
-        Phase history, shape ``(T, N)``.
+        (n, T) recent phase trajectories.
     lr : float
-        Learning rate.
+        learning rate for TE-based update.
     decay : float
-        Exponential forgetting rate of past adaptation.
+        coupling decay rate per update (0 = no decay).
     n_bins : int
-        Number of histogram bins.
+        histogram bins for TE estimation.
 
     Returns
     -------
     FloatArray
-        The coupling matrix adapted by the transfer-entropy learning signal.
+        FloatArray The coupling matrix adapted by the transfer-entropy learning signal.
 
     Raises
     ------

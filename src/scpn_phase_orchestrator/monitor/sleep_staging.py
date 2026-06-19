@@ -61,22 +61,18 @@ _STAGE_NAMES = {0: "Wake", 1: "N1", 2: "N2", 3: "N3", 4: "REM"}
 def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
     """Classify sleep stage from Kuramoto order parameter *R*.
 
-    Args:
-        R: order parameter in [0, 1].
-        functional_desync: True when EEG shows desynchronisation pattern
-            characteristic of REM (low-voltage mixed-frequency),
-            as opposed to wakeful desynchronisation.
-
-    Returns
-    -------
-        One of ``"N3"``, ``"N2"``, ``"N1"``, ``"REM"``, ``"Wake"``.
-
     Parameters
     ----------
     R : float
-        Kuramoto order parameter.
+        order parameter in [0, 1].
     functional_desync : bool
-        Whether the network is in a functional desynchronisation regime.
+        True when EEG shows desynchronisation pattern characteristic of REM (low-voltage
+        mixed-frequency), as opposed to wakeful desynchronisation.
+
+    Returns
+    -------
+    str
+        One of ``"N3"``, ``"N2"``, ``"N1"``, ``"REM"``, ``"Wake"``.
     """
     r_value = _validate_order_parameter(R)
     desync = _validate_functional_desync(functional_desync)
@@ -113,22 +109,18 @@ def ultradian_phase(
     Finds the most recent N3 epoch (cycle trough = deepest sleep) and
     returns the elapsed fraction of a 90-minute period since that point.
 
-    Args:
-        timestamps: monotonic epoch times in seconds, shape (n_epochs,).
-        stage_history: sleep stage label per epoch, same length as timestamps.
-
-    Returns
-    -------
-        Phase in [0, 1) where 0 = cycle start (N3 onset),
-        0.5 ≈ mid-cycle (REM), wrapping back toward 0.
-        Returns 0.0 if no N3 epoch is found.
-
     Parameters
     ----------
     timestamps : FloatArray
-        Per-sample timestamps in seconds.
+        monotonic epoch times in seconds, shape (n_epochs,).
     stage_history : list[str]
-        History of classified sleep-stage labels.
+        sleep stage label per epoch, same length as timestamps.
+
+    Returns
+    -------
+    float
+        Phase in [0, 1) where 0 = cycle start (N3 onset), 0.5 ≈ mid-cycle (REM),
+        wrapping back toward 0. Returns 0.0 if no N3 epoch is found.
     """
     ts = _validate_timestamps(timestamps)
     stages = _validate_stage_history(stage_history, expected_n=int(ts.size))

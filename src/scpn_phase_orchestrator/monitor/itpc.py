@@ -275,18 +275,16 @@ def compute_itpc(phases_trials: object) -> FloatArray:
 
     ``ITPC = |mean(exp(i·θ))|`` across trials (Lachaux et al. 1999).
 
-    Args:
-        phases_trials: shape ``(n_trials, n_timepoints)`` — phases in
-            radians. A 1-D input is treated as a single trial.
-
-    Returns
-    -------
-        ``(n_timepoints,)`` array of ITPC values in ``[0, 1]``.
-
     Parameters
     ----------
     phases_trials : object
-        Per-trial phase series, shape ``(n_trials, T)``.
+        shape ``(n_trials, n_timepoints)`` — phases in radians. A 1-D input is treated
+        as a single trial.
+
+    Returns
+    -------
+    FloatArray
+        ``(n_timepoints,)`` array of ITPC values in ``[0, 1]``.
     """
     phases = _validate_phases_trials(phases_trials)
     if phases.ndim == 1:
@@ -334,20 +332,17 @@ def itpc_persistence(
     genuinely phase-locked. If it drops immediately, the response was
     merely evoked.
 
-    Args:
-        phases_trials: ``(n_trials, n_timepoints)`` phases in radians.
-        pause_indices: time-point indices falling within / after a pause.
-
-    Returns
-    -------
-        Mean ITPC across ``pause_indices``. ``0.0`` if empty.
-
     Parameters
     ----------
     phases_trials : object
-        Per-trial phase series, shape ``(n_trials, T)``.
+        ``(n_trials, n_timepoints)`` phases in radians.
     pause_indices : object
-        Stimulus-pause sample indices.
+        time-point indices falling within / after a pause.
+
+    Returns
+    -------
+    float
+        Mean ITPC across ``pause_indices``. ``0.0`` if empty.
     """
     phases = _validate_phases_trials(phases_trials)
     pause_idx = _validate_pause_indices(pause_indices)

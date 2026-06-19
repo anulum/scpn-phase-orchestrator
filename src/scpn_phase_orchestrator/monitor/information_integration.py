@@ -252,29 +252,25 @@ def integrated_information(
 ) -> IntegratedInformationResult:
     """Estimate an approximate integrated-information metric.
 
-    Args:
-        phase_series: Phase trajectory array with shape
-            ``(n_oscillators, n_samples)``. Values are wrapped onto the
-            circular interval before histogramming.
-        n_bins: Number of circular bins for mutual-information
-            estimation. Must be at least two.
-
-    Returns
-    -------
-        ``IntegratedInformationResult`` containing the minimum
-        information bipartition and audit fields.
-
-    Raises
-    ------
-        ValueError: If the trajectory is not a finite two-dimensional
-            array with at least two oscillators and two samples.
-
     Parameters
     ----------
     phase_series : FloatArray
-        Phase time series, shape ``(T, N)``.
+        Phase trajectory array with shape ``(n_oscillators, n_samples)``. Values are
+        wrapped onto the circular interval before histogramming.
     n_bins : int
-        Number of histogram bins.
+        Number of circular bins for mutual-information estimation. Must be at least two.
+
+    Returns
+    -------
+    IntegratedInformationResult
+        ``IntegratedInformationResult`` containing the minimum information bipartition
+        and audit fields.
+
+    Raises
+    ------
+    ValueError
+        If the trajectory is not a finite two-dimensional array with at least two
+        oscillators and two samples.
     """
     phases = _validate_phase_series(phase_series)
     bins = _validate_bins(n_bins)

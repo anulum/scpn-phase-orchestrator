@@ -455,26 +455,21 @@ def correlation_integral(
     backend, while the Rust path keeps its in-kernel RNG for API
     stability.
 
-    Args:
-        trajectory: ``(T, d)`` embedded trajectory.
-        epsilons: ``(K,)`` distance thresholds.
-        max_pairs: maximum number of pairs to evaluate.
-        seed: RNG seed for pair subsampling.
-
-    Returns
-    -------
-        ``(K,)`` array of ``C(ε)`` values.
-
     Parameters
     ----------
     trajectory : object
-        Phase-space trajectory, shape ``(T, d)``.
+        ``(T, d)`` embedded trajectory.
     epsilons : object
-        Radii at which to evaluate the correlation integral.
+        ``(K,)`` distance thresholds.
     max_pairs : object
-        Maximum number of point pairs sampled, or ``None`` for all.
+        maximum number of pairs to evaluate.
     seed : object
-        Seed for the deterministic RNG.
+        RNG seed for pair subsampling.
+
+    Returns
+    -------
+    FloatArray
+        ``(K,)`` array of ``C(ε)`` values.
     """
     traj = _validate_trajectory(trajectory)
     t, d = int(traj.shape[0]), int(traj.shape[1])
@@ -666,18 +661,16 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
     Kaplan & Yorke 1979. The Kaplan-Yorke conjecture equates this to
     the information dimension ``D₁``.
 
-    Args:
-        lyapunov_exponents: ``(N,)`` Lyapunov exponents.
-
-    Returns
-    -------
-        ``D_KY``. Returns ``0.0`` if the largest exponent is negative
-        (stable fixed point, zero-dimensional attractor).
-
     Parameters
     ----------
     lyapunov_exponents : FloatArray
-        The ordered Lyapunov spectrum.
+        ``(N,)`` Lyapunov exponents.
+
+    Returns
+    -------
+    float
+        ``D_KY``. Returns ``0.0`` if the largest exponent is negative (stable fixed
+        point, zero-dimensional attractor).
     """
     le = _validate_spectrum(lyapunov_exponents)
     if le.size == 0:

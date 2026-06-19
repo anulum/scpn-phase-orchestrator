@@ -95,33 +95,26 @@ def compute_hybrid_entanglement_order_parameter(
 ) -> HybridOrderParameterResult:
     """Compute classical R/Psi and the entanglement-aware hybrid order metric.
 
-    Args:
-        phases: Classical phase data.
-        quantum_state: Vector of length ``2**n`` or density matrix shape
-            ``(2**n, 2**n)``.
-        qubit_count: Optional explicit qubit-count override; must match the state.
-        bipartition: Optional pair of qubit index groups for reduced entropy.
-        simulator_backend: Explicit local simulator contract. The default
-            accepts either statevector or density-matrix NumPy inputs;
-            ``"numpy_statevector"`` and ``"numpy_density_matrix"`` require the
-            corresponding payload shape and record that backend explicitly.
-
-    Returns
-    -------
-        HybridOrderParameterResult with a deterministic audit record hash.
-
     Parameters
     ----------
     phases : FloatArray
-        Oscillator phases in radians, shape ``(N,)``.
+        Classical phase data.
     quantum_state : object
-        Quantum state vector or density operator.
+        Vector of length ``2**n`` or density matrix shape ``(2**n, 2**n)``.
     qubit_count : int | None
-        Number of qubits, or ``None`` to infer.
+        Optional explicit qubit-count override; must match the state.
     bipartition : tuple[tuple[int, ...], tuple[int, ...]] | None
-        The two index groups of the entanglement bipartition, or ``None``.
+        Optional pair of qubit index groups for reduced entropy.
     simulator_backend : str
-        Name of the quantum simulator backend.
+        Explicit local simulator contract. The default accepts either statevector or
+        density-matrix NumPy inputs; ``"numpy_statevector"`` and
+        ``"numpy_density_matrix"`` require the corresponding payload shape and record
+        that backend explicitly.
+
+    Returns
+    -------
+    HybridOrderParameterResult
+        HybridOrderParameterResult with a deterministic audit record hash.
 
     Raises
     ------

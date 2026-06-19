@@ -110,23 +110,23 @@ def _coerce_connectome_matrix(
 def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
     """Load real HCP structural connectivity from neurolib.
 
-    Args:
-        n_regions: number of regions to return (max 80). If < 80, returns
-            the top-left (n_regions, n_regions) submatrix.
+    Parameters
+    ----------
+    n_regions : int
+        number of regions to return (max 80). If < 80, returns the top-left (n_regions,
+        n_regions) submatrix.
 
     Returns
     -------
+    FloatArray
         Symmetric non-negative coupling matrix, shape (n_regions, n_regions).
 
     Raises
     ------
-        ImportError: If neurolib is not installed.
-        ValueError: If n_regions < 2 or > 80.
-
-    Parameters
-    ----------
-    n_regions : int
-        Number of brain regions (oscillators).
+    ImportError
+        If neurolib is not installed.
+    ValueError
+        If n_regions < 2 or > 80.
     """
     try:
         # type ignore: neurolib is optional and currently lacks complete type metadata;
@@ -164,19 +164,15 @@ _DMN_HUB_BOOST = 0.3
 def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     """Generate a synthetic HCP-inspired coupling matrix.
 
-    Args:
-        n_regions: number of cortical regions (must be >= 2, even recommended).
-
-    Returns
-    -------
-        Symmetric coupling matrix, shape (n_regions, n_regions), zero diagonal.
-
     Parameters
     ----------
     n_regions : int
-        Number of brain regions (oscillators).
-    seed : int
-        Seed for the deterministic RNG.
+        number of cortical regions (must be >= 2, even recommended).
+
+    Returns
+    -------
+    FloatArray
+        Symmetric coupling matrix, shape (n_regions, n_regions), zero diagonal.
     """
     n_regions = _validate_n_regions(n_regions)
     seed = _validate_seed(seed)

@@ -40,25 +40,23 @@ def build_infrastructure_integrated_information_replays(
 ) -> tuple[dict[str, Any], ...]:
     """Build deterministic infrastructure replay records.
 
-    Args:
-        n_samples: Number of trajectory samples per case. Must be an int >= 32.
-        n_bins: Histogram bins for ``integrated_information``. Must be an int >= 2.
-
-    Returns
-    -------
-        Tuple of JSON-safe infrastructure replay records.
-
-    Raises
-    ------
-        ValueError: If parameters are invalid or the corpus does not satisfy
-            ordering and schema validation.
-
     Parameters
     ----------
     n_samples : int
-        Number of samples.
+        Number of trajectory samples per case. Must be an int >= 32.
     n_bins : int
-        Number of histogram bins.
+        Histogram bins for ``integrated_information``. Must be an int >= 2.
+
+    Returns
+    -------
+    tuple[dict[str, Any], ...]
+        JSON-safe infrastructure replay records.
+
+    Raises
+    ------
+    ValueError
+        If parameters are invalid or the corpus does not satisfy ordering and schema
+        validation.
     """
     _validate_replay_parameters(n_samples=n_samples, n_bins=n_bins)
 

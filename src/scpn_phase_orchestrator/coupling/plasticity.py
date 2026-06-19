@@ -148,29 +148,23 @@ def three_factor_update(
     Friston 2005, Philos. Trans. R. Soc. B
     360:815-836 (free energy & synaptic plasticity).
 
-    Args:
-        knm: current coupling matrix, shape (n, n).
-        eligibility: Hebbian trace, shape (n, n).
-        modulator: scalar neuromodulatory signal.
-        phase_gate: if False, no update occurs (TCBO below consciousness threshold).
-        lr: learning rate.
-
-    Returns
-    -------
-        Updated coupling matrix (new array, does not mutate input).
-
     Parameters
     ----------
     knm : FloatArray
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        current coupling matrix, shape (n, n).
     eligibility : FloatArray
-        Pairwise Hebbian eligibility trace, shape ``(N, N)``.
+        Hebbian trace, shape (n, n).
     modulator : float
-        Neuromodulator signal (the third plasticity factor).
+        scalar neuromodulatory signal.
     phase_gate : bool
-        Whether to apply the phase-coherence gate.
+        if False, no update occurs (TCBO below consciousness threshold).
     lr : float
-        Learning rate.
+        learning rate.
+
+    Returns
+    -------
+    FloatArray
+        Updated coupling matrix (new array, does not mutate input).
 
     Raises
     ------

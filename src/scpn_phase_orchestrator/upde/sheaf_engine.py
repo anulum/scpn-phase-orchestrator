@@ -198,29 +198,23 @@ class SheafUPDEEngine:
     ) -> FloatArray:
         """Advance phases by one timestep.
 
-        Args:
-            phases: Current phase matrix [theta_i,d], shape (N, D).
-            omegas: Natural frequency matrix [omega_i,d], shape (N, D).
-            restriction_maps: Block matrix coupling [B_ij^{dk}], shape (N, N, D, D).
-            zeta: External forcing strength (global scalar).
-            psi: Reference phase target vector, shape (D,).
-
-        Returns
-        -------
-            New phase matrix, shape (N, D).
-
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Current phase matrix [theta_i,d], shape (N, D).
         omegas : FloatArray
-            Natural frequencies in rad/s, shape ``(N,)``.
+            Natural frequency matrix [omega_i,d], shape (N, D).
         restriction_maps : FloatArray
-            Sheaf restriction maps, shape ``(N, N)``.
+            Block matrix coupling [B_ij^{dk}], shape (N, N, D, D).
         zeta : float
-            External drive strength ``ζ``.
+            External forcing strength (global scalar).
         psi : FloatArray
-            External drive reference phase ``Ψ`` in radians.
+            Reference phase target vector, shape (D,).
+
+        Returns
+        -------
+        FloatArray
+            New phase matrix, shape (N, D).
         """
         phases, omegas, restriction_maps, zeta, psi = self._validate_inputs(
             phases,

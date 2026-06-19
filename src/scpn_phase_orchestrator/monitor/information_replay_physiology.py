@@ -40,27 +40,22 @@ def build_physiology_integrated_information_replays(
 ) -> tuple[dict[str, Any], ...]:
     """Build deterministic physiology replay audit records.
 
-    Args:
-        n_samples: Number of time samples in each trajectory.
-            Must be at least 32.
-        n_bins: Number of phase bins used by ``integrated_information``.
-            Must be an integer > 1.
-
-    Returns
-    -------
-        Tuple of JSON-safe replay records (one per physiology case).
-
-    Raises
-    ------
-        ValueError: If inputs are invalid or the benchmark ordering cannot be
-            established.
-
     Parameters
     ----------
     n_samples : int
-        Number of samples.
+        Number of time samples in each trajectory. Must be at least 32.
     n_bins : int
-        Number of histogram bins.
+        Number of phase bins used by ``integrated_information``. Must be an integer > 1.
+
+    Returns
+    -------
+    tuple[dict[str, Any], ...]
+        JSON-safe replay records (one per physiology case).
+
+    Raises
+    ------
+    ValueError
+        If inputs are invalid or the benchmark ordering cannot be established.
     """
     _validate_replay_parameters(n_samples=n_samples, n_bins=n_bins)
 

@@ -237,29 +237,23 @@ def entropy_production_rate(
 
     Acebrón et al. 2005, Rev. Mod. Phys. **77**:137–185.
 
-    Args:
-        phases: ``(N,)`` instantaneous phases in radians.
-        omegas: ``(N,)`` natural frequencies.
-        knm: ``(N, N)`` coupling matrix.
-        alpha: global coupling strength.
-        dt: integration timestep for the ``· dt`` factor.
-
-    Returns
-    -------
-        Non-negative dissipation scalar.
-
     Parameters
     ----------
     phases : object
-        Oscillator phases in radians, shape ``(N,)``.
+        ``(N,)`` instantaneous phases in radians.
     omegas : object
-        Natural frequencies in rad/s, shape ``(N,)``.
+        ``(N,)`` natural frequencies.
     knm : object
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        ``(N, N)`` coupling matrix.
     alpha : object
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        global coupling strength.
     dt : object
-        Integration step size.
+        integration timestep for the ``· dt`` factor.
+
+    Returns
+    -------
+    float
+        Non-negative dissipation scalar.
 
     Raises
     ------

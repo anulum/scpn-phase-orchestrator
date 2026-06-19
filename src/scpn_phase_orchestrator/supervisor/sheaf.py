@@ -371,29 +371,22 @@ def sheaf_coherence(
 ) -> SheafCoherenceResult:
     """Measure cross-channel consistency over a directed cellular sheaf.
 
-    Args:
-        node_states: N-channel node state matrix with shape
-            ``(n_nodes, n_channels)``.
-        restriction_maps: Directed restriction maps with shape
-            ``(n_nodes, n_nodes, n_channels, n_channels)``. Entry
-            ``restriction_maps[i, j]`` maps node ``j`` into node ``i``.
-        tolerance: Numerical threshold used for approximate nullity and
-            obstruction counts.
-
-    Returns
-    -------
-        A ``SheafCoherenceResult`` with the block sheaf Laplacian,
-        directed residual tensor, obstruction score, consistency energy,
-        and audit-visible approximate dimensions.
-
     Parameters
     ----------
     node_states : FloatArray
-        Per-node channel states, shape ``(N, C)``.
+        N-channel node state matrix with shape ``(n_nodes, n_channels)``.
     restriction_maps : FloatArray
-        Directed sheaf restriction maps.
+        Directed restriction maps with shape ``(n_nodes, n_nodes, n_channels,
+        n_channels)``. Entry ``restriction_maps[i, j]`` maps node ``j`` into node ``i``.
     tolerance : float
-        Numerical tolerance.
+        Numerical threshold used for approximate nullity and obstruction counts.
+
+    Returns
+    -------
+    SheafCoherenceResult
+        A ``SheafCoherenceResult`` with the block sheaf Laplacian, directed residual
+        tensor, obstruction score, consistency energy, and audit-visible approximate
+        dimensions.
 
     Raises
     ------

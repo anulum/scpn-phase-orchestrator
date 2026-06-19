@@ -137,44 +137,33 @@ def compute_self_model_error(
 ) -> SelfModelErrorResult:
     """Compute deterministic channel-wise discrepancy metrics for a self-model pair.
 
-    Args:
-        observed_phases: Observed phase trajectories shaped ``(C, T)`` or ``(T,)``.
-        predicted_phases: Predicted phase trajectories with matching shape.
-        observed_order: Optional observed order signal, shape ``(C,)``.
-        predicted_order: Optional predicted order signal, shape ``(C,)``.
-        channel_labels: Optional channel names for audit output.
-        channel_weights: Optional positive weights for channels.
-        tolerance: Global RMSE threshold used for pass/fail decisions.
-        max_abs_tolerance: Global max-abs threshold used for pass/fail decisions.
-        domain: Logical monitor domain identifier.
-        scenario_id: Optional scenario identifier for evidence context.
-
-    Returns
-    -------
-        SelfModelErrorResult with deterministic hash and audit payload.
-
     Parameters
     ----------
     observed_phases : object
-        Observed phases in radians.
+        Observed phase trajectories shaped ``(C, T)`` or ``(T,)``.
     predicted_phases : object
-        Self-model-predicted phases in radians.
+        Predicted phase trajectories with matching shape.
     observed_order : object | None
-        Observed order parameter, or ``None``.
+        Optional observed order signal, shape ``(C,)``.
     predicted_order : object | None
-        Predicted order parameter, or ``None``.
+        Optional predicted order signal, shape ``(C,)``.
     channel_labels : object | None
-        Per-channel labels, or ``None``.
+        Optional channel names for audit output.
     channel_weights : object | None
-        Per-channel weights, or ``None``.
+        Optional positive weights for channels.
     tolerance : float
-        Per-channel discrepancy tolerance.
+        Global RMSE threshold used for pass/fail decisions.
     max_abs_tolerance : float
-        Maximum absolute discrepancy tolerance.
+        Global max-abs threshold used for pass/fail decisions.
     domain : str
-        Domain label for the self-model evaluation.
+        Logical monitor domain identifier.
     scenario_id : str | None
-        Scenario identifier, or ``None``.
+        Optional scenario identifier for evidence context.
+
+    Returns
+    -------
+    SelfModelErrorResult
+        SelfModelErrorResult with deterministic hash and audit payload.
 
     Raises
     ------

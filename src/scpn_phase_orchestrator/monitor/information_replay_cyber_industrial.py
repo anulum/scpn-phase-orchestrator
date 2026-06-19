@@ -40,25 +40,22 @@ def build_cyber_industrial_integrated_information_replays(
 ) -> tuple[dict[str, Any], ...]:
     """Build deterministic cyber-industrial replay audit records.
 
-    Args:
-        n_samples: Number of time samples in each phase trajectory.
-            Must be at least 32.
-        n_bins: Bin count passed to ``integrated_information``. Must be an int > 1.
-
-    Returns
-    -------
-        Tuple of JSON-safe replay records (one per case).
-
-    Raises
-    ------
-        ValueError: If ``n_samples`` or ``n_bins`` are invalid.
-
     Parameters
     ----------
     n_samples : int
-        Number of samples.
+        Number of time samples in each phase trajectory. Must be at least 32.
     n_bins : int
-        Number of histogram bins.
+        Bin count passed to ``integrated_information``. Must be an int > 1.
+
+    Returns
+    -------
+    tuple[dict[str, Any], ...]
+        JSON-safe replay records (one per case).
+
+    Raises
+    ------
+    ValueError
+        If ``n_samples`` or ``n_bins`` are invalid.
     """
     _validate_replay_parameters(n_samples=n_samples, n_bins=n_bins)
 

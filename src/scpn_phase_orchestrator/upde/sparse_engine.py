@@ -136,12 +136,18 @@ class SparseUPDEEngine:
     ):
         """Initialize the sparse integrator.
 
-        Args:
-            n_oscillators: Total number of oscillators N in the network.
-            dt: Integration timestep in seconds.
-            method: Numerical method ('euler', 'rk4', or 'rk45').
-            atol: Absolute tolerance for adaptive RK45.
-            rtol: Relative tolerance for adaptive RK45.
+        Parameters
+        ----------
+        n_oscillators : int
+            Total number of oscillators N in the network.
+        dt : float
+            Integration timestep in seconds.
+        method : str
+            Numerical method ('euler', 'rk4', or 'rk45').
+        atol : float
+            Absolute tolerance for adaptive RK45.
+        rtol : float
+            Relative tolerance for adaptive RK45.
         """
         n_oscillators = _validate_positive_int(
             n_oscillators,
@@ -196,38 +202,29 @@ class SparseUPDEEngine:
     ) -> FloatArray:
         """Advance phases by one sparse timestep, return new phases in [0, 2*pi).
 
-        Args:
-            phases: Current phase vector [theta_1, ..., theta_N], shape (N,).
-            omegas: Natural frequency vector [omega_1, ..., omega_N], shape (N,).
-            row_ptr: CSR row pointers, shape (N+1,).
-            col_indices: CSR column indices, shape (E,).
-            knm_values: CSR coupling strengths, shape (E,).
-            zeta: External forcing strength (global scalar).
-            psi: Reference phase target (global scalar).
-            alpha_values: CSR phase lags, shape (E,).
-
-        Returns
-        -------
-            New phase vector [theta_1(t+dt), ..., theta_N(t+dt)], shape (N,).
-
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Current phase vector [theta_1, ..., theta_N], shape (N,).
         omegas : FloatArray
-            Natural frequencies in rad/s, shape ``(N,)``.
+            Natural frequency vector [omega_1, ..., omega_N], shape (N,).
         row_ptr : IntArray
-            CSR row-pointer array of the sparse coupling matrix.
+            CSR row pointers, shape (N+1,).
         col_indices : IntArray
-            CSR column-index array of the sparse coupling matrix.
+            CSR column indices, shape (E,).
         knm_values : FloatArray
-            CSR non-zero coupling values.
+            CSR coupling strengths, shape (E,).
         zeta : float
-            External drive strength ``ζ``.
+            External forcing strength (global scalar).
         psi : float
-            External drive reference phase ``Ψ`` in radians.
+            Reference phase target (global scalar).
         alpha_values : FloatArray
-            CSR non-zero phase-lag values.
+            CSR phase lags, shape (E,).
+
+        Returns
+        -------
+        FloatArray
+            New phase vector [theta_1(t+dt), ..., theta_N(t+dt)], shape (N,).
         """
         zeta = _validate_finite_real(zeta, name="zeta")
         psi = _validate_finite_real(psi, name="psi")
@@ -302,41 +299,31 @@ class SparseUPDEEngine:
     ) -> FloatArray:
         """Run multiple steps in a batch, return final phases.
 
-        Args:
-            phases: Initial phase vector.
-            omegas: Natural frequencies.
-            row_ptr: CSR row pointers.
-            col_indices: CSR column indices.
-            knm_values: CSR coupling strengths.
-            zeta: External forcing strength.
-            psi: Reference phase target.
-            alpha_values: CSR phase lags.
-            n_steps: Number of integration steps to perform.
-
-        Returns
-        -------
-            Final phase vector after n_steps.
-
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Initial phase vector.
         omegas : FloatArray
-            Natural frequencies in rad/s, shape ``(N,)``.
+            Natural frequencies.
         row_ptr : IntArray
-            CSR row-pointer array of the sparse coupling matrix.
+            CSR row pointers.
         col_indices : IntArray
-            CSR column-index array of the sparse coupling matrix.
+            CSR column indices.
         knm_values : FloatArray
-            CSR non-zero coupling values.
+            CSR coupling strengths.
         zeta : float
-            External drive strength ``ζ``.
+            External forcing strength.
         psi : float
-            External drive reference phase ``Ψ`` in radians.
+            Reference phase target.
         alpha_values : FloatArray
-            CSR non-zero phase-lag values.
+            CSR phase lags.
         n_steps : int
-            Number of integration steps to run.
+            Number of integration steps to perform.
+
+        Returns
+        -------
+        FloatArray
+            Final phase vector after n_steps.
         """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         zeta = _validate_finite_real(zeta, name="zeta")

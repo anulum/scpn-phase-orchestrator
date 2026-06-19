@@ -203,22 +203,18 @@ def extract_envelope(
 ) -> FloatArray:
     """Sliding-window RMS envelope.
 
-    Args:
-        amplitudes_history: ``(T,)`` or ``(T, N)`` amplitude time
-            series.
-        window: RMS window length in samples.
-
-    Returns
-    -------
-        Same shape as input; the first ``window − 1`` entries are
-        front-padded with the first valid RMS value.
-
     Parameters
     ----------
     amplitudes_history : FloatArray
-        Amplitude history, shape ``(T, N)``.
+        ``(T,)`` or ``(T, N)`` amplitude time series.
     window : int
-        Sliding-window length in samples.
+        RMS window length in samples.
+
+    Returns
+    -------
+    FloatArray
+        Same shape as input; the first ``window − 1`` entries are front-padded with the
+        first valid RMS value.
 
     Raises
     ------

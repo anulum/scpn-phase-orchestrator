@@ -330,24 +330,19 @@ def pac_matrix(
 ) -> FloatArray:
     """Return the ``(N, N)`` PAC matrix ``[i, j] = MI(phase_i, amplitude_j)``.
 
-    Args:
-        phases_history: ``(T, N)`` phase time series.
-        amplitudes_history: ``(T, N)`` amplitude time series.
-        n_bins: number of phase bins.
-
     Parameters
     ----------
     phases_history : FloatArray
-        Phase history, shape ``(T, N)``.
+        ``(T, N)`` phase time series.
     amplitudes_history : FloatArray
-        Amplitude history, shape ``(T, N)``.
+        ``(T, N)`` amplitude time series.
     n_bins : int
-        Number of phase bins used for the modulation-index histogram.
+        number of phase bins.
 
     Returns
     -------
     FloatArray
-        The ``(N, N)`` phase-amplitude coupling matrix.
+        FloatArray The ``(N, N)`` phase-amplitude coupling matrix.
 
     Raises
     ------

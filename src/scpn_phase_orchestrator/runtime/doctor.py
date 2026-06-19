@@ -421,9 +421,16 @@ def _find_repo_root(start: Path | None = None) -> Path | None:
     checkout). Installed wheels ship no ``go`` directory, so this returns
     ``None`` there and the Go probe falls back to the toolchain-on-PATH signal.
 
-    Args:
-        start: Optional starting file/directory; tests pass a sandbox path to
-            exercise the no-checkout fallback.
+    Parameters
+    ----------
+    start : Path | None
+        Optional starting file/directory; tests pass a sandbox path to exercise the
+        no-checkout fallback.
+
+    Returns
+    -------
+    Path | None
+        The result.
     """
     here = (start if start is not None else Path(__file__)).resolve()
     for parent in here.parents:
@@ -435,21 +442,18 @@ def _find_repo_root(start: Path | None = None) -> Path | None:
 def run_environment_diagnostics(*, repo_root: Path | None = None) -> DoctorReport:
     """Probe the interpreter, required dependencies, and optional components.
 
-    Args:
-        repo_root: Optional explicit checkout root for the Go shared-library
-            probe. When ``None`` the root is auto-detected from this module's
-            location; pass a path in tests to exercise both branches.
-
-    Returns
-    -------
-        A :class:`DoctorReport` whose :attr:`DoctorReport.status` is ``pass``
-        only when the interpreter is in range and every required dependency is
-        importable.
-
     Parameters
     ----------
     repo_root : Path | None
-        Repository root to probe, or ``None`` for the default.
+        Optional explicit checkout root for the Go shared-library probe. When ``None``
+        the root is auto-detected from this module's location; pass a path in tests to
+        exercise both branches.
+
+    Returns
+    -------
+    DoctorReport
+        A :class:`DoctorReport` whose :attr:`DoctorReport.status` is ``pass`` only when
+        the interpreter is in range and every required dependency is importable.
     """
     resolved_root = repo_root if repo_root is not None else _find_repo_root()
 

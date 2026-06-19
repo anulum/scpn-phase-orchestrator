@@ -306,20 +306,17 @@ def _validate_entropy_value(value: object, *, n_bins: int) -> float:
 def reduce_coupling(knm: FloatArray, reduction_factor: float) -> FloatArray:
     """Scale coupling matrix by ``(1 − reduction_factor)``.
 
-    Args:
-        knm: ``(n, n)`` coupling matrix.
-        reduction_factor: fraction to reduce, in ``[0, 1]``.
-
-    Returns
-    -------
-        Scaled copy. Zero when ``reduction_factor == 1``.
-
     Parameters
     ----------
     knm : FloatArray
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        ``(n, n)`` coupling matrix.
     reduction_factor : float
-        Fractional coupling reduction in ``[0, 1]``.
+        fraction to reduce, in ``[0, 1]``.
+
+    Returns
+    -------
+    FloatArray
+        Scaled copy. Zero when ``reduction_factor == 1``.
     """
     k = _validate_coupling_matrix(knm, name="knm")
     factor = _validate_unit_interval(reduction_factor, name="reduction_factor")
@@ -396,36 +393,28 @@ def simulate_psychedelic_trajectory(
     (coupling reduction) increases neural entropy and breaks coherent
     states into chimera-like patterns.
 
-    Args:
-        engine: UPDE integrator instance.
-        phases: initial oscillator phases, shape (n,).
-        omegas: natural frequencies, shape (n,).
-        knm: baseline coupling matrix, shape (n, n).
-        alpha: phase-lag matrix, shape (n, n).
-        reduction_schedule: list of reduction_factor values (0 to 1).
-        n_steps_per_level: integration steps at each coupling level.
-
-    Returns
-    -------
-        List of dicts, one per level, with keys:
-            reduction_factor, R, entropy, chimera_index, phases.
-
     Parameters
     ----------
     engine : UPDEEngine
-        The UPDE engine used to integrate the trajectory.
+        UPDE integrator instance.
     phases : FloatArray
-        Oscillator phases in radians, shape ``(N,)``.
+        initial oscillator phases, shape (n,).
     omegas : FloatArray
-        Natural frequencies in rad/s, shape ``(N,)``.
+        natural frequencies, shape (n,).
     knm : FloatArray
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        baseline coupling matrix, shape (n, n).
     alpha : FloatArray
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        phase-lag matrix, shape (n, n).
     reduction_schedule : list[float]
-        Sequence of coupling-reduction levels to apply.
+        list of reduction_factor values (0 to 1).
     n_steps_per_level : int
-        Number of integration steps at each reduction level.
+        integration steps at each coupling level.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        List of dicts, one per level, with keys: reduction_factor, R, entropy,
+        chimera_index, phases.
 
     Raises
     ------
