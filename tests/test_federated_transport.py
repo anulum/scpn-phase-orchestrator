@@ -16,6 +16,7 @@ import pytest
 
 from scpn_phase_orchestrator.supervisor.federated_transport import (
     FederatedTransportDeploymentPreflightManifest,
+    FederatedTransportEnvelope,
     FederatedTransportReplayLedger,
     build_signed_transport_envelopes,
     build_transport_deployment_preflight_manifest,
@@ -343,3 +344,307 @@ def test_transport_preflight_manifest_stable_hash_is_sensitive_to_input() -> Non
     assert first.preflight_hash != changed.preflight_hash
     _as_json(first.to_audit_record())
     _as_json(changed.to_audit_record())
+
+
+# ---------------------------------------------------------------------
+# Node update record rejection surface (build_signed_transport_envelopes)
+# ---------------------------------------------------------------------
+
+_MISSING = object()
+
+
+def _one_record(**overrides: object) -> dict[str, object]:
+    record: dict[str, object] = {
+        "node_id": "node-a",
+        "policy_delta": {"K": 0.1},
+        "sample_count": 100,
+        "local_loss": 0.21,
+        "previous_audit_hash": "a" * 64,
+        "privacy_epsilon_spent": 0.4,
+        "clipped_l2_norm": 0.25,
+        "clip_scale": 1.0,
+        "accepted": True,
+        "rejection_reasons": [],
+        "update_hash": "a" * 64,
+    }
+    for key, value in overrides.items():
+        if value is _MISSING:
+            del record[key]
+        else:
+            record[key] = value
+    return record
+
+
+@pytest.mark.parametrize(
+    ("container", "match"),
+    [
+        ("not-a-sequence", "must be a sequence of mappings"),
+        (123, "must be a sequence of mappings"),
+        ((), "must be non-empty"),
+    ],
+)
+def test_build_envelopes_rejects_bad_container(container, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        build_signed_transport_envelopes(container)
+
+
+def test_build_envelopes_rejects_bad_schema_version() -> None:
+    with pytest.raises(ValueError, match="schema_version must be one of"):
+        build_signed_transport_envelopes(_records(), schema_version="9.9")
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"node_id": ""}, "node_id must be non-empty"),
+        ({"node_id": 5}, "node_id must be a text value"),
+        ({"sample_count": -1}, "sample_count must be >= 0"),
+        ({"sample_count": 1.5}, "sample_count must be an integer"),
+        ({"sample_count": True}, "sample_count must be an integer"),
+        ({"local_loss": "x"}, "local_loss must be a finite number"),
+        ({"local_loss": float("inf")}, "local_loss must be finite"),
+        ({"accepted": "yes"}, "accepted must be a boolean"),
+        ({"rejection_reasons": "nope"}, "rejection_reasons must be a sequence of text"),
+        (
+            {"previous_audit_hash": "short"},
+            "previous_audit_hash must be a 64-character",
+        ),
+        ({"update_hash": "short"}, "update_hash must be a 64-character"),
+        ({"node_id": _MISSING}, "missing required keys: node_id"),
+    ],
+)
+def test_build_envelopes_rejects_corrupt_update_record(overrides, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        build_signed_transport_envelopes((_one_record(**overrides),))
+
+
+@pytest.mark.parametrize(
+    ("policy_delta", "match"),
+    [
+        ({}, "policy_delta must be non-empty"),
+        (5, "policy_delta must be a mapping"),
+        ([[1, 2, 3]], "policy_delta must be mapping entries or key-value pairs"),
+        ([[5, 0.1]], "policy_delta keys must be text"),
+        ({"K": "x"}, r"policy_delta\[K\] must be a finite number"),
+    ],
+)
+def test_build_envelopes_rejects_bad_policy_delta(policy_delta, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        build_signed_transport_envelopes((_one_record(policy_delta=policy_delta),))
+
+
+def test_build_envelopes_rejects_non_mapping_record_and_non_text_key() -> None:
+    with pytest.raises(ValueError, match="must be a mapping"):
+        build_signed_transport_envelopes(("not-a-mapping",))
+    with pytest.raises(ValueError, match="keys must be text"):
+        build_signed_transport_envelopes(({1: "x"},))
+
+
+# ---------------------------------------------------------------------
+# Batch validation rejection surface (validate_federated_transport_batch)
+# ---------------------------------------------------------------------
+
+
+def _envelopes() -> tuple[FederatedTransportEnvelope, ...]:
+    return build_signed_transport_envelopes(_records())
+
+
+@pytest.mark.parametrize(
+    ("envelopes", "match"),
+    [
+        ("not-a-sequence", "must be a sequence of transport envelopes"),
+        ((), "must be non-empty"),
+    ],
+)
+def test_validate_batch_rejects_bad_container(envelopes, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        validate_federated_transport_batch(envelopes)
+
+
+def test_validate_batch_rejects_bad_first_schema() -> None:
+    envelopes = _envelopes()
+    with pytest.raises(ValueError, match="schema_name must be one of"):
+        validate_federated_transport_batch((replace(envelopes[0], schema_name="bad"),))
+    with pytest.raises(ValueError, match="schema_version must be one of"):
+        validate_federated_transport_batch(
+            (replace(envelopes[0], schema_version="9.9"),)
+        )
+
+
+def test_validate_batch_rejects_non_envelope_member() -> None:
+    envelopes = _envelopes()
+    with pytest.raises(ValueError, match="must be FederatedTransportEnvelope"):
+        validate_federated_transport_batch((envelopes[0], "not-an-envelope"))
+
+
+@pytest.mark.parametrize(
+    ("index", "overrides", "match"),
+    [
+        (1, {"schema_name": "other"}, "mixed schema_name"),
+        (1, {"schema_version": "9.9"}, "mixed schema_version"),
+        (1, {"batch_id": "other"}, "mixed batch_id"),
+        (1, {"sequence_position": 99}, "contiguous sequence_position"),
+        (0, {"node_id": ""}, "node_id must be non-empty"),
+        (0, {"node_update_audit_hash": "short"}, "invalid node_update_audit_hash"),
+        (0, {"envelope_hash": "short"}, "invalid envelope_hash"),
+        (0, {"envelope_signature": "short"}, "invalid envelope_signature"),
+        (0, {"transport_execution_permitted": True}, "transport_execution_permitted"),
+        (0, {"raw_data_export_permitted": True}, "raw_data_export_permitted"),
+        (
+            0,
+            {"operator_review_required": False},
+            "operator_review_required must be True",
+        ),
+        (0, {"node_update_audit_hash": "b" * 64}, "node update hash mismatch"),
+        (0, {"envelope_signature": "b" * 64}, "signature mismatch"),
+        (0, {"envelope_hash": "c" * 64}, "hash mismatch"),
+    ],
+)
+def test_validate_batch_rejects_corrupt_envelope(index, overrides, match) -> None:
+    envelopes = list(_envelopes())
+    envelopes[index] = replace(envelopes[index], **overrides)
+    with pytest.raises(ValueError, match=match):
+        validate_federated_transport_batch(tuple(envelopes))
+
+
+# ---------------------------------------------------------------------
+# Preflight build rejection surface
+# ---------------------------------------------------------------------
+
+
+def test_build_preflight_rejects_bad_schema_version() -> None:
+    with pytest.raises(ValueError, match="schema_version must be one of"):
+        build_transport_deployment_preflight_manifest(
+            _live_declaration(),
+            schema_version="9.9",
+            replay_ledger=_replay_ledger(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("ledger", "match"),
+    [
+        ("not-a-ledger", "replay_ledger must be a FederatedTransportReplayLedger"),
+    ],
+)
+def test_build_preflight_rejects_non_ledger(ledger, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        build_transport_deployment_preflight_manifest(
+            _live_declaration(), replay_ledger=ledger
+        )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"schema_name": "other"}, "replay_ledger.schema_name must match"),
+        ({"schema_version": "9.9"}, "replay_ledger.schema_version must match"),
+        ({"batch_id": ""}, "replay_ledger.batch_id must be non-empty"),
+        ({"replay_hash": "short"}, "replay_ledger.replay_hash must be a SHA-256"),
+    ],
+)
+def test_build_preflight_rejects_corrupt_ledger(overrides, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        build_transport_deployment_preflight_manifest(
+            _live_declaration(),
+            replay_ledger=replace(_replay_ledger(), **overrides),
+        )
+
+
+def test_build_preflight_accepts_matching_tls_and_secure_channel() -> None:
+    declaration = {**_live_declaration(), "tls": True, "secure_channel": True}
+    manifest = build_transport_deployment_preflight_manifest(
+        declaration, replay_ledger=_replay_ledger()
+    )
+    secure_channel = dict(manifest.transport_audit_record)["secure_channel"]
+    assert secure_channel is True
+
+
+def test_build_preflight_rejects_batch_id_mismatch() -> None:
+    with pytest.raises(ValueError, match="batch_id must match replay_ledger.batch_id"):
+        build_transport_deployment_preflight_manifest(
+            _live_declaration(),
+            batch_id="a" * 64,
+            replay_ledger=_replay_ledger(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"replay_supported": False}, "replay support must be true for live"),
+        ({1: "x"}, "transport declaration keys must be text"),
+        ({"surprise": "x"}, "unsupported transport declaration key"),
+        ({"tls": True, "secure_channel": False}, "tls and secure_channel values"),
+    ],
+)
+def test_build_preflight_rejects_bad_live_declaration(overrides, match) -> None:
+    declaration = {**_live_declaration(), **overrides}
+    with pytest.raises(ValueError, match=match):
+        build_transport_deployment_preflight_manifest(
+            declaration, replay_ledger=_replay_ledger()
+        )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"owner": "node-owner-a"}, "owner is not permitted for jsonl"),
+        ({"auth_policy": "mtls"}, "auth_policy is not permitted for jsonl"),
+        ({"tls": True}, "TLS is not applicable to jsonl"),
+    ],
+)
+def test_build_preflight_rejects_bad_jsonl_declaration(overrides, match) -> None:
+    declaration = {**_jsonl_declaration(), **overrides}
+    with pytest.raises(ValueError, match=match):
+        build_transport_deployment_preflight_manifest(
+            declaration, replay_ledger=_replay_ledger()
+        )
+
+
+# ---------------------------------------------------------------------
+# Preflight manifest validation rejection surface
+# ---------------------------------------------------------------------
+
+
+def _valid_manifest() -> FederatedTransportDeploymentPreflightManifest:
+    return build_transport_deployment_preflight_manifest(
+        _live_declaration(), replay_ledger=_replay_ledger()
+    )
+
+
+def test_validate_preflight_rejects_non_manifest() -> None:
+    with pytest.raises(ValueError, match="must be a FederatedTransport"):
+        validate_transport_deployment_preflight_manifest("not-a-manifest")
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"schema_name": "bad"}, "schema_name must be one of"),
+        ({"schema_version": "9.9"}, "schema_version must be one of"),
+        ({"batch_id": ""}, "batch_id must be non-empty"),
+        ({"replay_ledger_hash": "short"}, "replay_ledger_hash must be a SHA-256"),
+        ({"transport_audit_hash": "short"}, "transport_audit_hash must be a SHA-256"),
+        ({"preflight_signature": "short"}, "preflight_signature must be a SHA-256"),
+        ({"preflight_hash": "short"}, "preflight_hash must be a SHA-256"),
+        ({"transport_execution_permitted": True}, "transport_execution_permitted"),
+        ({"raw_data_export_permitted": True}, "raw_data_export_permitted"),
+        ({"operator_review_required": False}, "operator_review_required must be True"),
+        ({"non_actuating": False}, "non_actuating must be True"),
+        ({"transport": "jsonl"}, "transport mismatch"),
+        (
+            {"transport_endpoint": "https://other.local/x"},
+            "transport_endpoint mismatch",
+        ),
+        ({"preflight_signature": "a" * 64}, "preflight_signature mismatch"),
+        ({"transport_audit_hash": "a" * 64}, "transport_audit_hash mismatch"),
+        ({"preflight_id": "a" * 64}, "preflight_id mismatch"),
+        ({"preflight_hash": "a" * 64}, "preflight_hash mismatch"),
+    ],
+)
+def test_validate_preflight_rejects_corrupt_manifest(overrides, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        validate_transport_deployment_preflight_manifest(
+            replace(_valid_manifest(), **overrides)
+        )
