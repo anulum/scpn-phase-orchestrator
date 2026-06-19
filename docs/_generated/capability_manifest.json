@@ -12,7 +12,7 @@
     "research_experimental_modules": 187,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 93,
-    "test_files": 597
+    "test_files": 598
   },
   "documentation": {
     "public_pages": [
@@ -1493,6 +1493,7 @@
       "tests/test_embedding_backends.py",
       "tests/test_embedding_benchmark.py",
       "tests/test_embedding_stability.py",
+      "tests/test_embedding_validation_guards.py",
       "tests/test_end_to_end_pipeline.py",
       "tests/test_engine_locking.py",
       "tests/test_engine_parity.py",
