@@ -163,7 +163,13 @@ class SimulationState:
             )
 
     def step(self) -> dict[str, Any]:
-        """Advance one timestep, return state snapshot."""
+        """Advance one timestep, return state snapshot.
+
+        Returns
+        -------
+        dict[str, Any]
+            Advance one timestep, return state snapshot.
+        """
         eff_knm = self.coupling.knm
         eff_alpha = self.coupling.alpha
         if self.imprint_model is not None and self.imprint_state is not None:
@@ -241,7 +247,13 @@ class SimulationState:
         return self.snapshot()
 
     def snapshot(self) -> dict[str, Any]:
-        """Return the current state as a JSON-serialisable dict."""
+        """Return the current state as a JSON-serialisable dict.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return the current state as a JSON-serialisable dict.
+        """
         layer_map = {}
         idx = 0
         for layer in self.spec.layers:
@@ -278,7 +290,13 @@ class SimulationState:
         return result
 
     def reset(self) -> dict[str, Any]:
-        """Reset to initial state."""
+        """Reset to initial state.
+
+        Returns
+        -------
+        dict[str, Any]
+            Reset to initial state.
+        """
         self.phases = extract_initial_phases(self.spec, self.omegas)
         if self.amplitude_mode and self.mu is not None:
             self.sl_state = np.concatenate(
@@ -384,7 +402,27 @@ fetchState().then(render);
 
 
 def create_app(spec_path: str | Path) -> object:  # pragma: no cover
-    """Create FastAPI app for the given binding spec."""
+    """Create FastAPI app for the given binding spec.
+
+    Parameters
+    ----------
+    spec_path : str | Path
+        Filesystem path to the binding-spec file.
+
+    Returns
+    -------
+    object
+        The configured FastAPI application.
+
+    Raises
+    ------
+    RuntimeError
+        If the runtime operation fails.
+    ImportError
+        If a required optional dependency is not installed.
+    HTTPException
+        If the request is invalid.
+    """
     try:
         from collections.abc import AsyncIterator
         from contextlib import asynccontextmanager

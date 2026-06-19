@@ -145,6 +145,16 @@ def doctor(json_out: bool) -> None:
     Exits non-zero when the interpreter is outside the supported window or a
     required runtime dependency is missing; missing optional accelerators
     (Rust/Julia/Go/Mojo) and feature extras are reported as warnings only.
+
+    Parameters
+    ----------
+    json_out : bool
+        Whether to print machine-readable JSON output.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
     """
     report = run_environment_diagnostics()
     if json_out:
@@ -165,7 +175,20 @@ def doctor(json_out: bool) -> None:
     help="Run stricter security linting for production-facing binding specs.",
 )
 def validate(binding_spec: str, security_checks: bool) -> None:
-    """Validate a binding specification file."""
+    """Validate a binding specification file.
+
+    Parameters
+    ----------
+    binding_spec : str
+        Filesystem path to the binding-spec file.
+    security_checks : bool
+        Whether to run the stricter security validation pass.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
     if security_checks:
@@ -186,7 +209,20 @@ def validate(binding_spec: str, security_checks: bool) -> None:
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.option("--json-out", is_flag=True, help="Output resolved summary as JSON")
 def inspect_binding(binding_spec: str, json_out: bool) -> None:
-    """Inspect resolved runtime choices for a binding spec."""
+    """Inspect resolved runtime choices for a binding spec.
+
+    Parameters
+    ----------
+    binding_spec : str
+        Filesystem path to the binding-spec file.
+    json_out : bool
+        Whether to print machine-readable JSON output.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
     if errors:
@@ -228,7 +264,26 @@ def auto_bind(
     sample_rate_hz: float | None,
     json_out: bool,
 ) -> None:
-    """Propose a review-only binding spec from raw local source data."""
+    """Propose a review-only binding spec from raw local source data.
+
+    Parameters
+    ----------
+    source_kind : str
+        Kind of raw source data (e.g. ``csv`` or ``events``).
+    source_path : str
+        Filesystem path to the raw source data.
+    project_name : str
+        Name for the generated project.
+    sample_rate_hz : float | None
+        Sampling rate in Hz, or ``None`` to infer.
+    json_out : bool
+        Whether to print machine-readable JSON output.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     try:
         source_text = Path(source_path).read_text(encoding="utf-8")
         if source_kind == "time-series-csv":
@@ -306,7 +361,30 @@ def auto_coupling_estimation_command(
     normalisation: str,
     json_out: bool,
 ) -> None:
-    """Infer directed K_nm from phase time-series data."""
+    """Infer directed K_nm from phase time-series data.
+
+    Parameters
+    ----------
+    source_path : str
+        Filesystem path to the raw source data.
+    orientation : str
+        Time-series orientation (rows or columns).
+    n_bins : int
+        Number of histogram bins.
+    threshold_quantile : float
+        Quantile threshold for edge pruning.
+    threshold_absolute : float | None
+        Absolute threshold for edge pruning, or ``None``.
+    normalisation : str
+        Edge-weight normalisation mode.
+    json_out : bool
+        Whether to print machine-readable JSON output.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     series = _load_phase_series_table(Path(source_path))
     if orientation == "time-by-oscillator":
         series = np.ascontiguousarray(series.T, dtype=np.float64)
@@ -1700,7 +1778,22 @@ def plugins_catalog(
     rust_registry: bool,
     rust_runtime_handoff: bool,
 ) -> None:
-    """Print the discovered plugin marketplace catalogue as JSON."""
+    """Print the discovered plugin marketplace catalogue as JSON.
+
+    Parameters
+    ----------
+    include_incompatible : bool
+        Whether to include incompatible plugins in the catalogue.
+    rust_registry : bool
+        Whether to include the Rust plugin registry.
+    rust_runtime_handoff : bool
+        Whether to include the Rust runtime handoff.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if rust_registry and rust_runtime_handoff:
         raise click.ClickException(
             "--rust-registry and --rust-runtime-handoff are mutually exclusive"
@@ -1738,7 +1831,26 @@ def plugins_plan_execution(
     approved_target_hashes: tuple[str, ...],
     require_target_hash_approval: bool,
 ) -> None:
-    """Emit a non-executing plan for a discovered plugin capability."""
+    """Emit a non-executing plan for a discovered plugin capability.
+
+    Parameters
+    ----------
+    plugin_name : str
+        Name of the plugin.
+    kind : str
+        Plugin capability kind.
+    capability_name : str
+        Name of the plugin capability.
+    approved_target_hashes : tuple[str, ...]
+        Approved target hashes for the capability.
+    require_target_hash_approval : bool
+        Whether target-hash approval is required.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     manifests = discover_plugin_manifests()
     manifest = _find_discovered_plugin(manifests, plugin_name)
     compatibility = compatibility_report(manifest)
@@ -1806,7 +1918,24 @@ def plugins_approve_execution_plan(
     approval_reference: str,
     approval_reason: str,
 ) -> None:
-    """Emit a deterministic operator approval artefact for a stored execution plan."""
+    """Emit a deterministic operator approval artefact for a stored execution plan.
+
+    Parameters
+    ----------
+    plan_json : Path
+        Path to the plan JSON file.
+    operator_id : str
+        Identifier of the operator.
+    approval_reference : str
+        External approval reference.
+    approval_reason : str
+        Reason recorded with the approval.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not operator_id:
         raise click.ClickException("operator identity is required")
     if not approval_reference:
@@ -1839,7 +1968,20 @@ def plugins_approve_execution_plan(
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
 def plugins_request_execution(plan_json: Path, approval_json: Path) -> None:
-    """Emit a deterministic execution request from a stored plan and approval."""
+    """Emit a deterministic execution request from a stored plan and approval.
+
+    Parameters
+    ----------
+    plan_json : Path
+        Path to the plan JSON file.
+    approval_json : Path
+        Path to the approval JSON file.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     plan_payload = _load_json_file(plan_json, artifact="plan")
     plan, _ = _load_plan_from_payload(plan_payload)
     approval_payload = _load_json_file(approval_json, artifact="approval")
@@ -1932,7 +2074,34 @@ def plugins_persist_execution_request(
     revocation_list_path: Path | None,
     overwrite: bool,
 ) -> None:
-    """Persist a validated execution request as a local storage bundle."""
+    """Persist a validated execution request as a local storage bundle.
+
+    Parameters
+    ----------
+    request_json : Path
+        Path to the request JSON file.
+    output_path : Path
+        Destination path for the artefact.
+    storage_uri : str
+        Storage URI for the request bundle.
+    storage_backend : str
+        Storage backend identifier.
+    retention_policy : str
+        Retention policy label.
+    created_by : str
+        Identifier of the creating actor.
+    revoked_request_hashes : tuple[str, ...]
+        Hashes of revoked execution requests.
+    revocation_list_path : Path | None
+        Filesystem path to the revocation list.
+    overwrite : bool
+        Whether to overwrite an existing artefact.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     request_payload = _load_json_file(request_json, artifact="request")
     request = _load_request_from_payload(request_payload)
     direct_revocations = _normalize_approved_target_hashes(revoked_request_hashes)
@@ -2018,7 +2187,30 @@ def plugins_storage_adapter_manifest(
     revoked_request_hashes: tuple[str, ...],
     revocation_list_path: Path | None,
 ) -> None:
-    """Emit a deterministic storage-adapter handoff manifest without writing."""
+    """Emit a deterministic storage-adapter handoff manifest without writing.
+
+    Parameters
+    ----------
+    request_json : Path
+        Path to the request JSON file.
+    storage_uri : str
+        Storage URI for the request bundle.
+    storage_backend : str
+        Storage backend identifier.
+    retention_policy : str
+        Retention policy label.
+    created_by : str
+        Identifier of the creating actor.
+    revoked_request_hashes : tuple[str, ...]
+        Hashes of revoked execution requests.
+    revocation_list_path : Path | None
+        Filesystem path to the revocation list.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     request_payload = _load_json_file(request_json, artifact="request")
     request = _load_request_from_payload(request_payload)
     direct_revocations = _normalize_approved_target_hashes(revoked_request_hashes)
@@ -2081,7 +2273,24 @@ def plugins_lifecycle_status(
     revocation_list_path: Path | None,
     created_by: str,
 ) -> None:
-    """Emit an operator lifecycle status record for an execution request."""
+    """Emit an operator lifecycle status record for an execution request.
+
+    Parameters
+    ----------
+    request_json : Path
+        Path to the request JSON file.
+    storage_bundle_path : Path | None
+        Filesystem path to the storage bundle.
+    revocation_list_path : Path | None
+        Filesystem path to the revocation list.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     request_payload = _load_json_file(request_json, artifact="request")
     request = _load_request_from_payload(request_payload)
     storage_manifest: PluginExecutionRequestStorageManifest | None = None
@@ -2130,7 +2339,20 @@ def plugins_lifecycle_summary(
     lifecycle_json: tuple[Path, ...],
     created_by: str,
 ) -> None:
-    """Emit a deterministic batch summary for lifecycle-status records."""
+    """Emit a deterministic batch summary for lifecycle-status records.
+
+    Parameters
+    ----------
+    lifecycle_json : tuple[Path, ...]
+        Path to the lifecycle JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     lifecycle_records = tuple(
         _load_lifecycle_from_payload(_load_json_file(path, artifact="lifecycle"))
         for path in lifecycle_json
@@ -2168,7 +2390,22 @@ def plugins_lifecycle_policy_report(
     storage_adapter_paths: tuple[Path, ...],
     created_by: str,
 ) -> None:
-    """Emit a deterministic lifecycle policy report for operator dashboards."""
+    """Emit a deterministic lifecycle policy report for operator dashboards.
+
+    Parameters
+    ----------
+    summary_json : Path
+        Path to the summary JSON.
+    storage_adapter_paths : tuple[Path, ...]
+        Paths to the storage-adapter handoff manifests.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     summary = _load_lifecycle_summary_from_payload(
         _load_json_file(summary_json, artifact="lifecycle summary")
     )
@@ -2212,7 +2449,22 @@ def plugins_lifecycle_renewal_queue(
     policy_report_path: Path | None,
     created_by: str,
 ) -> None:
-    """Emit a deterministic renewal/follow-up queue for lifecycle operations."""
+    """Emit a deterministic renewal/follow-up queue for lifecycle operations.
+
+    Parameters
+    ----------
+    summary_json : Path
+        Path to the summary JSON.
+    policy_report_path : Path | None
+        Filesystem path to the policy report.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     summary = _load_lifecycle_summary_from_payload(
         _load_json_file(summary_json, artifact="lifecycle summary")
     )
@@ -2283,7 +2535,20 @@ def plugins_lifecycle_multistore_dashboard(
     policy_json: tuple[Path, ...],
     created_by: str,
 ) -> None:
-    """Emit a deterministic aggregate dashboard across policy reports."""
+    """Emit a deterministic aggregate dashboard across policy reports.
+
+    Parameters
+    ----------
+    policy_json : tuple[Path, ...]
+        Path to the policy JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "multi-store dashboard schema mismatch: created_by must be non-empty"
@@ -2397,7 +2662,20 @@ def plugins_lifecycle_multistore_drilldown(
     policy_json: tuple[Path, ...],
     created_by: str,
 ) -> None:
-    """Emit deterministic per-store lifecycle queues with provenance hashes."""
+    """Emit deterministic per-store lifecycle queues with provenance hashes.
+
+    Parameters
+    ----------
+    policy_json : tuple[Path, ...]
+        Path to the policy JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "multi-store drilldown schema mismatch: created_by must be non-empty"
@@ -2505,7 +2783,20 @@ def plugins_lifecycle_remediation_orchestration(
     drilldown_json: Path,
     created_by: str,
 ) -> None:
-    """Emit a deterministic, priority-ordered cross-store remediation plan."""
+    """Emit a deterministic, priority-ordered cross-store remediation plan.
+
+    Parameters
+    ----------
+    drilldown_json : Path
+        Path to the drilldown JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation orchestration schema mismatch: created_by must be non-empty"
@@ -2596,7 +2887,26 @@ def plugins_lifecycle_remediation_action_status(
     updated_by: str,
     note: str,
 ) -> None:
-    """Emit a deterministic remediation action status record."""
+    """Emit a deterministic remediation action status record.
+
+    Parameters
+    ----------
+    plan_json : Path
+        Path to the plan JSON file.
+    action_hash : str
+        Hash of the remediation action.
+    state : str
+        State label for the record.
+    updated_by : str
+        Identifier of the updating actor.
+    note : str
+        Free-form note recorded with the record.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not updated_by:
         raise click.ClickException(
             "remediation action status schema mismatch: updated_by must be non-empty"
@@ -2653,7 +2963,22 @@ def plugins_lifecycle_remediation_execution_dashboard(
     status_json: tuple[Path, ...],
     created_by: str,
 ) -> None:
-    """Emit a deterministic closed-loop dashboard for remediation execution."""
+    """Emit a deterministic closed-loop dashboard for remediation execution.
+
+    Parameters
+    ----------
+    plan_json : Path
+        Path to the plan JSON file.
+    status_json : tuple[Path, ...]
+        Path to the status JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation dashboard schema mismatch: created_by must be non-empty"
@@ -2767,7 +3092,20 @@ def plugins_lifecycle_remediation_deployment_handoff(
     execution_dashboard_json: Path,
     created_by: str,
 ) -> None:
-    """Emit deterministic deployment handoff actions for unresolved remediation."""
+    """Emit deterministic deployment handoff actions for unresolved remediation.
+
+    Parameters
+    ----------
+    execution_dashboard_json : Path
+        Path to the execution dashboard JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation deployment handoff schema mismatch: "
@@ -2870,7 +3208,24 @@ def plugins_lifecycle_remediation_scheduler_queue(
     window_duration_seconds: int,
     created_by: str,
 ) -> None:
-    """Emit a deterministic scheduler queue from remediation deployment handoff."""
+    """Emit a deterministic scheduler queue from remediation deployment handoff.
+
+    Parameters
+    ----------
+    handoff_json : Path
+        Path to the handoff JSON file.
+    window_start_epoch : int
+        Window start as a UNIX epoch.
+    window_duration_seconds : int
+        Window duration in seconds.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler queue schema mismatch: created_by must be non-empty"
@@ -2964,7 +3319,24 @@ def plugins_lifecycle_remediation_scheduler_telemetry(
     as_of_epoch: int,
     created_by: str,
 ) -> None:
-    """Emit deterministic operator telemetry for scheduler remediation queue."""
+    """Emit deterministic operator telemetry for scheduler remediation queue.
+
+    Parameters
+    ----------
+    scheduler_queue_json : Path
+        Path to the scheduler queue JSON file.
+    action_status_json : tuple[Path, ...]
+        Path to the action status JSON file.
+    as_of_epoch : int
+        Reference time as a UNIX epoch.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler telemetry schema mismatch: "
@@ -3099,7 +3471,24 @@ def plugins_lifecycle_remediation_scheduler_adapter_handoff(
     adapter_endpoint: str,
     created_by: str,
 ) -> None:
-    """Emit deterministic external scheduler adapter handoff payload."""
+    """Emit deterministic external scheduler adapter handoff payload.
+
+    Parameters
+    ----------
+    scheduler_telemetry_json : Path
+        Path to the scheduler telemetry JSON file.
+    adapter_name : str
+        Name of the external adapter.
+    adapter_endpoint : str
+        Endpoint of the external adapter.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler adapter handoff schema mismatch: "
@@ -3216,7 +3605,28 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement(
     external_reference: str,
     note: str,
 ) -> None:
-    """Emit deterministic acknowledgement artifact for adapter execution."""
+    """Emit deterministic acknowledgement artifact for adapter execution.
+
+    Parameters
+    ----------
+    adapter_handoff_json : Path
+        Path to the adapter handoff JSON file.
+    entry_hash : str
+        Hash of the handoff entry.
+    state : str
+        State label for the record.
+    acknowledged_by : str
+        Identifier of the acknowledged actor.
+    external_reference : str
+        External system reference.
+    note : str
+        Free-form note recorded with the record.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not acknowledged_by:
         raise click.ClickException(
             "remediation scheduler acknowledgement schema mismatch: "
@@ -3297,7 +3707,22 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_replay(
     acknowledgement_json: tuple[Path, ...],
     created_by: str,
 ) -> None:
-    """Emit deterministic replay manifest from scheduler acknowledgements."""
+    """Emit deterministic replay manifest from scheduler acknowledgements.
+
+    Parameters
+    ----------
+    adapter_handoff_json : Path
+        Path to the adapter handoff JSON file.
+    acknowledgement_json : tuple[Path, ...]
+        Path to the acknowledgement JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler acknowledgement replay schema mismatch: "
@@ -3422,7 +3847,22 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
     acknowledgement_replay_json: Path,
     created_by: str,
 ) -> None:
-    """Emit deterministic live execution dashboard across scheduler adapters."""
+    """Emit deterministic live execution dashboard across scheduler adapters.
+
+    Parameters
+    ----------
+    scheduler_telemetry_json : Path
+        Path to the scheduler telemetry JSON file.
+    acknowledgement_replay_json : Path
+        Path to the acknowledgement replay JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler execution dashboard schema mismatch: "
@@ -3560,7 +4000,20 @@ def plugins_lifecycle_remediation_scheduler_control_plan(
     scheduler_execution_dashboard_json: Path,
     created_by: str,
 ) -> None:
-    """Emit deterministic interactive control actions from scheduler dashboard."""
+    """Emit deterministic interactive control actions from scheduler dashboard.
+
+    Parameters
+    ----------
+    scheduler_execution_dashboard_json : Path
+        Path to the scheduler execution dashboard JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler control plan schema mismatch: "
@@ -3683,7 +4136,22 @@ def plugins_lifecycle_remediation_scheduler_runbook(
     scheduler_adapter_handoff_json: Path,
     created_by: str,
 ) -> None:
-    """Emit deterministic operator runbook grouped by control action and adapter."""
+    """Emit deterministic operator runbook grouped by control action and adapter.
+
+    Parameters
+    ----------
+    scheduler_control_plan_json : Path
+        Path to the scheduler control plan JSON file.
+    scheduler_adapter_handoff_json : Path
+        Path to the scheduler adapter handoff JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler runbook schema mismatch: "
@@ -3851,7 +4319,24 @@ def plugins_lifecycle_remediation_scheduler_automation_profile(
     profile_version: str,
     created_by: str,
 ) -> None:
-    """Emit deterministic adapter automation profile from scheduler runbook."""
+    """Emit deterministic adapter automation profile from scheduler runbook.
+
+    Parameters
+    ----------
+    scheduler_runbook_json : Path
+        Path to the scheduler runbook JSON file.
+    profile_name : str
+        Name of the automation profile.
+    profile_version : str
+        Version of the automation profile.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler automation profile schema mismatch: "
@@ -4028,7 +4513,30 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_capture(
     captured_state: str,
     note: str,
 ) -> None:
-    """Capture acknowledgement using automation profile and adapter handoff."""
+    """Capture acknowledgement using automation profile and adapter handoff.
+
+    Parameters
+    ----------
+    automation_profile_json : Path
+        Path to the automation profile JSON file.
+    adapter_handoff_json : Path
+        Path to the adapter handoff JSON file.
+    action_hash : str
+        Hash of the remediation action.
+    external_reference : str
+        External system reference.
+    acknowledged_by : str
+        Identifier of the acknowledged actor.
+    captured_state : str
+        Captured acknowledgement state.
+    note : str
+        Free-form note recorded with the record.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not external_reference:
         raise click.ClickException(
             "remediation scheduler acknowledgement capture schema mismatch: "
@@ -4182,7 +4690,26 @@ def plugins_lifecycle_remediation_scheduler_retry_profile(
     backoff_multiplier: float,
     created_by: str,
 ) -> None:
-    """Emit deterministic retry/backoff policy profile from automation profile."""
+    """Emit deterministic retry/backoff policy profile from automation profile.
+
+    Parameters
+    ----------
+    automation_profile_json : Path
+        Path to the automation profile JSON file.
+    max_attempts : int
+        Maximum number of retry attempts.
+    base_delay_seconds : int
+        Base retry delay in seconds.
+    backoff_multiplier : float
+        Exponential backoff multiplier.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler retry profile schema mismatch: "
@@ -4318,7 +4845,22 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
     acknowledgement_capture_json: tuple[Path, ...],
     created_by: str,
 ) -> None:
-    """Emit deterministic retry queue from captured acknowledgements and policy."""
+    """Emit deterministic retry queue from captured acknowledgements and policy.
+
+    Parameters
+    ----------
+    retry_profile_json : Path
+        Path to the retry profile JSON file.
+    acknowledgement_capture_json : tuple[Path, ...]
+        Path to the acknowledgement capture JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "remediation scheduler retry orchestration schema mismatch: "
@@ -4481,7 +5023,24 @@ def plugins_revoke_execution_request(
     revocation_reference: str,
     revocation_reason: str,
 ) -> None:
-    """Emit a deterministic revocation artefact for an execution request."""
+    """Emit a deterministic revocation artefact for an execution request.
+
+    Parameters
+    ----------
+    request_json : Path
+        Path to the request JSON file.
+    revoked_by : str
+        Identifier of the revoking actor.
+    revocation_reference : str
+        External revocation reference.
+    revocation_reason : str
+        Reason recorded with the revocation.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     request_payload = _load_json_file(request_json, artifact="request")
     request = _load_request_from_payload(request_payload)
 
@@ -4514,7 +5073,20 @@ def plugins_revocation_list(
     revocation_json: tuple[Path, ...],
     created_by: str,
 ) -> None:
-    """Emit a deterministic aggregate revocation list."""
+    """Emit a deterministic aggregate revocation list.
+
+    Parameters
+    ----------
+    revocation_json : tuple[Path, ...]
+        Path to the revocation JSON file.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     revocations = tuple(
         _load_revocation_from_payload(_load_json_file(path, artifact="revocation"))
         for path in revocation_json
@@ -4574,7 +5146,32 @@ def meta_transfer_manifest(
     console_script: str,
     output: str | None,
 ) -> None:
-    """Emit a review-only meta-transfer package manifest from audit history."""
+    """Emit a review-only meta-transfer package manifest from audit history.
+
+    Parameters
+    ----------
+    audit_paths : tuple[str, ...]
+        Audit-log paths to package.
+    audit_directory : str | None
+        Directory of audit logs, or ``None``.
+    pattern : str
+        Glob pattern for audit-log discovery.
+    min_records : int
+        Minimum number of records required.
+    package_name : str
+        Name for the emitted package.
+    import_target : str
+        Import target for the generated package.
+    console_script : str
+        Console-script entry-point name.
+    output : str | None
+        Destination path, or ``None`` for stdout.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if min_records < 1:
         raise click.ClickException("--min-records must be at least 1")
     if audit_directory is None and not audit_paths:
@@ -4688,7 +5285,32 @@ def formal_export(
     include_checker_readiness: bool,
     checker_paths: tuple[str, ...],
 ) -> None:
-    """Export supervisor artefacts for formal model checking."""
+    """Export supervisor artefacts for formal model checking.
+
+    Parameters
+    ----------
+    binding_spec : str
+        Filesystem path to the binding-spec file.
+    output : str | None
+        Destination path, or ``None`` for stdout.
+    module_name : str
+        Name of the emitted model-checker module.
+    max_tokens : int | None
+        Maximum token bound per place, or ``None``.
+    export_target : str
+        Formal export target (e.g. ``prism`` or ``tla``).
+    policy_path : str | None
+        Path to the policy YAML, or ``None``.
+    include_checker_readiness : bool
+        Whether to include external-checker readiness.
+    checker_paths : tuple[str, ...]
+        Paths to external model-checker executables.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     if include_checker_readiness and export_target != "package":
         click.echo(
             "ERROR: --include-checker-readiness is only valid with --export package",
@@ -5083,7 +5705,40 @@ def supervisor_baseline_experiment(
     dependency_locks: tuple[str, ...],
     json_out: bool,
 ) -> None:
-    """Materialise deterministic neural-supervisor baseline audit artifacts."""
+    """Materialise deterministic neural-supervisor baseline audit artifacts.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        The Click invocation context.
+    scenario_json : Path | None
+        Path to the scenario JSON, or ``None``.
+    config_json : Path
+        Path to the configuration JSON.
+    metrics_jsonl : Path
+        Destination path for the metrics JSONL.
+    summary_json : Path
+        Path to the summary JSON.
+    manifest_json : Path | None
+        Path to the manifest JSON, or ``None``.
+    checkpoint_manifest : Path | None
+        Path to the checkpoint manifest, or ``None``.
+    plot_manifest : Path | None
+        Path to the plot manifest, or ``None``.
+    git_sha : str
+        Git commit SHA recorded with the experiment.
+    seeds : tuple[int, ...]
+        Seeds for the deterministic experiment runs.
+    dependency_locks : tuple[str, ...]
+        Dependency lock identifiers recorded with the run.
+    json_out : bool
+        Whether to print machine-readable JSON output.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     try:
         import jax
         import jax.numpy as jnp
@@ -5242,7 +5897,24 @@ def policy_dry_run(
     policy_path: str | None,
     json_out: bool,
 ) -> None:
-    """Replay policy rules against an audit log without applying actuation."""
+    """Replay policy rules against an audit log without applying actuation.
+
+    Parameters
+    ----------
+    binding_spec : str
+        Filesystem path to the binding-spec file.
+    audit_log : str
+        Filesystem path to the audit log.
+    policy_path : str | None
+        Path to the policy YAML, or ``None``.
+    json_out : bool
+        Whether to print machine-readable JSON output.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     spec_path = Path(binding_spec)
     spec = load_binding_spec(spec_path)
     errors = validate_binding_spec(spec)
@@ -5316,7 +5988,28 @@ def run(
     audit_stream: str | None,
     seed: int,
 ) -> None:
-    """Run simulation from a binding spec."""
+    """Run simulation from a binding spec.
+
+    Parameters
+    ----------
+    binding_spec : str
+        Filesystem path to the binding-spec file.
+    steps : int
+        Number of simulation steps to run.
+    audit : str | None
+        Destination audit-log path, or ``None``.
+    audit_stream : str | None
+        Destination audit-stream path, or ``None``.
+    seed : int
+        Seed for the deterministic RNG, or ``None``.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
     if errors:
@@ -5374,7 +6067,22 @@ def run(
 @click.option("--output", default=None, type=click.Path(), help="Output file")
 @click.option("--verify", is_flag=True, help="Verify determinism via re-execution")
 def replay(log_path: str, output: str | None, verify: bool) -> None:
-    """Replay an audit log and print summary."""
+    """Replay an audit log and print summary.
+
+    Parameters
+    ----------
+    log_path : str
+        Filesystem path to the audit log.
+    output : str | None
+        Destination path, or ``None`` for stdout.
+    verify : bool
+        Whether to verify hash-chain integrity.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     replay_engine = ReplayEngine(log_path)
     entries = replay_engine.load()
     step_data = [e for e in entries if "step" in e]
@@ -5451,7 +6159,26 @@ def watch(
     max_events: int | None,
     poll_interval: float,
 ) -> None:
-    """Tail and replay the live audit event stream."""
+    """Tail and replay the live audit event stream.
+
+    Parameters
+    ----------
+    stream_path : str
+        Filesystem path to the audit event stream.
+    stream_format : str
+        Audit stream format.
+    from_start : bool
+        Whether to replay from the start of the stream.
+    max_events : int | None
+        Maximum number of events to read, or ``None``.
+    poll_interval : float
+        Poll interval in seconds.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     if max_events is not None and max_events < 1:
         click.echo("ERROR: --max-events must be >= 1", err=True)
         raise SystemExit(1)
@@ -5493,7 +6220,20 @@ def watch(
 @click.argument("log_path", type=click.Path(exists=True))
 @click.option("--json-out", is_flag=True, help="Output JSON instead of text")
 def report(log_path: str, json_out: bool) -> None:
-    """Generate coherence report from audit log."""
+    """Generate coherence report from audit log.
+
+    Parameters
+    ----------
+    log_path : str
+        Filesystem path to the audit log.
+    json_out : bool
+        Whether to print machine-readable JSON output.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     import json as _json
 
     replay_engine = ReplayEngine(log_path)
@@ -5593,7 +6333,24 @@ def explain(
     pdf_out: str | None,
     max_actions: int,
 ) -> None:
-    """Generate a human-readable explanation report from an audit log."""
+    """Generate a human-readable explanation report from an audit log.
+
+    Parameters
+    ----------
+    log_path : str
+        Filesystem path to the audit log.
+    markdown_out : str | None
+        Destination Markdown path, or ``None``.
+    pdf_out : str | None
+        Destination PDF path, or ``None``.
+    max_actions : int
+        Maximum number of actions to include.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     from scpn_phase_orchestrator.reporting.explainability import (
         build_explainability_report,
         render_markdown,
@@ -5661,7 +6418,26 @@ def digital_twin_observability_bundle(
     metric_prefix: str,
     created_by: str,
 ) -> None:
-    """Bundle digital-twin Prometheus telemetry with replay linkage evidence."""
+    """Bundle digital-twin Prometheus telemetry with replay linkage evidence.
+
+    Parameters
+    ----------
+    operator_evidence_json : Path
+        Path to the operator-evidence JSON.
+    scheduler_dashboard_json : Path | None
+        Path to the scheduler dashboard JSON, or ``None``.
+    scheduler_replay_json : Path | None
+        Path to the scheduler replay JSON, or ``None``.
+    metric_prefix : str
+        Prefix applied to emitted metric names.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "digital-twin observability bundle schema mismatch: "
@@ -5824,7 +6600,22 @@ def digital_twin_grafana_dashboard_pack(
     adapter_family: str,
     created_by: str,
 ) -> None:
-    """Emit deterministic Grafana dashboard pack from observability bundle."""
+    """Emit deterministic Grafana dashboard pack from observability bundle.
+
+    Parameters
+    ----------
+    observability_bundle_json : Path
+        Path to the observability bundle JSON file.
+    adapter_family : str
+        Adapter family label.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "digital-twin grafana dashboard pack schema mismatch: "
@@ -5940,7 +6731,24 @@ def digital_twin_live_deployment_playbook(
     environment_name: str,
     created_by: str,
 ) -> None:
-    """Emit deterministic live deployment playbook from observability artifacts."""
+    """Emit deterministic live deployment playbook from observability artifacts.
+
+    Parameters
+    ----------
+    observability_bundle_json : Path
+        Path to the observability bundle JSON file.
+    grafana_dashboard_pack_json : Path
+        Path to the Grafana dashboard-pack JSON.
+    environment_name : str
+        Target environment name.
+    created_by : str
+        Identifier of the creating actor.
+
+    Raises
+    ------
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not created_by:
         raise click.ClickException(
             "digital-twin live deployment playbook schema mismatch: "
@@ -6062,7 +6870,17 @@ main.add_command(queuewaves)
 @click.option("--host", default="127.0.0.1")
 @click.option("--port", default=8080, type=int)
 def serve(config_path: str, host: str, port: int) -> None:
-    """Start QueueWaves server."""
+    """Start QueueWaves server.
+
+    Parameters
+    ----------
+    config_path : str
+        Filesystem path to the configuration file.
+    host : str
+        Host interface to bind.
+    port : int
+        Port to bind.
+    """
     from scpn_phase_orchestrator.apps.queuewaves.server import run_server
 
     run_server(config_path, host=host, port=port)
@@ -6071,7 +6889,18 @@ def serve(config_path: str, host: str, port: int) -> None:
 @queuewaves.command()
 @click.option("--config", "config_path", required=True, type=click.Path(exists=True))
 def check(config_path: str) -> None:
-    """One-shot: scrape → analyze → exit 0 (ok) or 1 (anomalies)."""
+    """One-shot: scrape → analyse → exit 0 (ok) or 1 (anomalies).
+
+    Parameters
+    ----------
+    config_path : str
+        Filesystem path to the configuration file.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     from pathlib import Path as _Path
 
     from scpn_phase_orchestrator.apps.queuewaves.config import load_config
@@ -6125,7 +6954,26 @@ def scaffold(
     description: str | None,
     llm_response_json: str | None,
 ) -> None:
-    """Create a domainpack directory structure with template files."""
+    """Create a domainpack directory structure with template files.
+
+    Parameters
+    ----------
+    domain_name : str
+        Name of the domainpack to scaffold.
+    use_llm : bool
+        Whether to use the LLM-assisted scaffolder.
+    description : str | None
+        Domain description text, or ``None``.
+    llm_response_json : str | None
+        Path to a cached LLM response JSON, or ``None``.
+
+    Raises
+    ------
+    BadParameter
+        If a CLI argument is invalid.
+    ClickException
+        If the inputs are invalid or the operation fails.
+    """
     if not re.match(r"^[a-zA-Z0-9_-]+$", domain_name):
         raise click.BadParameter(
             f"domain_name must match [a-zA-Z0-9_-]+, got {domain_name!r}"
@@ -6245,7 +7093,21 @@ def generate(
     oscillators_per_layer: int,
     dry_run_steps: int,
 ) -> None:
-    """Generate reviewable binding artefacts from symbolic domain intent."""
+    """Generate reviewable binding artefacts from symbolic domain intent.
+
+    Parameters
+    ----------
+    intent : str
+        Symbolic domain intent text.
+    name : str
+        The span or resource name.
+    output_dir : str | None
+        Destination directory, or ``None``.
+    oscillators_per_layer : int
+        Number of oscillators per generated layer.
+    dry_run_steps : int
+        Number of integration steps for the embedded dry run.
+    """
     artefacts = compile_symbolic_binding(
         intent,
         name=name,
@@ -6281,7 +7143,26 @@ def generate(
 @click.option("--steps", default=100, help="Number of simulation steps.")
 @click.option("--port", default=8000, help="Server port.")
 def demo(domain: str, dataset: str | None, target: str, steps: int, port: int) -> None:
-    """Run a self-contained demo: simulate + print live coherence."""
+    """Run a self-contained demo: simulate + print live coherence.
+
+    Parameters
+    ----------
+    domain : str
+        Domain label.
+    dataset : str | None
+        Dataset name, or ``None``.
+    target : str
+        Target metric or channel.
+    steps : int
+        Number of simulation steps to run.
+    port : int
+        Port to bind.
+
+    Raises
+    ------
+    SystemExit
+        If the command fails; the error is reported and the process exits non-zero.
+    """
     if dataset is not None:
         _run_real_data_demo(dataset=dataset, target=target, steps=steps, port=port)
         return

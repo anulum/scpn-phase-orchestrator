@@ -385,7 +385,15 @@ class EventStreamWriter:
                 self._previous_hash = last.event_hash
 
     def write(self, payload: Payload, *, event_type: str | None = None) -> None:
-        """Append one payload as a hashed and optionally signed audit event."""
+        """Append one payload as a hashed and optionally signed audit event.
+
+        Parameters
+        ----------
+        payload : Payload
+            The event or wire payload.
+        event_type : str | None
+            Named event type, or ``None``.
+        """
         canonical_payload = _canonical_json(payload)
         payload_sha256 = hashlib.sha256(canonical_payload.encode()).hexdigest()
         self._sequence += 1
@@ -472,7 +480,18 @@ def _read_events_from_handle(fh: BinaryIO) -> list[AuditStreamEvent]:
 
 
 def read_event_stream(path: str | Path) -> list[AuditStreamEvent]:
-    """Read all protobuf events from an SPO audit stream."""
+    """Read all protobuf events from an SPO audit stream.
+
+    Parameters
+    ----------
+    path : str | Path
+        Filesystem path to the target file.
+
+    Returns
+    -------
+    list[AuditStreamEvent]
+        The decoded audit stream events.
+    """
     with Path(path).open("rb") as fh:
         return _read_events_from_handle(fh)
 
@@ -502,7 +521,27 @@ def iter_event_stream(
     from_start: bool = False,
     poll_interval_s: float = 0.2,
 ) -> Iterator[AuditStreamEvent]:
-    """Yield existing and newly appended stream events in order."""
+    """Yield existing and newly appended stream events in order.
+
+    Parameters
+    ----------
+    path : str | Path
+        Filesystem path to the target file.
+    from_start : bool
+        Whether to replay from the start of the stream.
+    poll_interval_s : float
+        Poll interval in seconds.
+
+    Returns
+    -------
+    Iterator[AuditStreamEvent]
+        An iterator over existing and newly appended stream events.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the stream file does not exist.
+    """
     poll_interval = _validate_poll_interval_s(poll_interval_s)
     path_obj = Path(path)
     if not from_start and not path_obj.exists():
@@ -527,6 +566,27 @@ def tail_event_stream(
     """Tail a stream file until ``max_events`` decoded events are available.
 
     Use :func:`iter_event_stream` for unbounded live streaming.
+
+    Parameters
+    ----------
+    path : str | Path
+        Filesystem path to the target file.
+    from_start : bool
+        Whether to replay from the start of the stream.
+    max_events : int | None
+        Maximum number of events to read, or ``None``.
+    poll_interval_s : float
+        Poll interval in seconds.
+
+    Returns
+    -------
+    list[AuditStreamEvent]
+        The decoded events, up to ``max_events``.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     if max_events is None:
         raise ValueError("max_events is required for bounded tail_event_stream")
@@ -552,7 +612,18 @@ def tail_event_stream(
 def verify_event_stream_integrity(
     events: list[AuditStreamEvent],
 ) -> tuple[bool, int]:
-    """Verify payload digests, sequence continuity, and event hash chaining."""
+    """Verify payload digests, sequence continuity, and event hash chaining.
+
+    Parameters
+    ----------
+    events : list[AuditStreamEvent]
+        The decoded audit stream events.
+
+    Returns
+    -------
+    tuple[bool, int]
+        A ``(ok, count)`` pair: integrity flag and verified event count.
+    """
     try:
         audit_keys = audit_verification_keys()
     except ValueError:

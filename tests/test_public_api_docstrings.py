@@ -208,6 +208,18 @@ SECTION_ENFORCED_MODULES = (
     "scpn_phase_orchestrator.adapters.snn_bridge",
     "scpn_phase_orchestrator.adapters.synapse_channel_bridge",
     "scpn_phase_orchestrator.adapters.synapse_coupling_bridge",
+    "scpn_phase_orchestrator.runtime.audit_logger",
+    "scpn_phase_orchestrator.runtime.audit_signing",
+    "scpn_phase_orchestrator.runtime.audit_stream",
+    "scpn_phase_orchestrator.runtime.cli",
+    "scpn_phase_orchestrator.runtime.distributed.sync",
+    "scpn_phase_orchestrator.runtime.doctor",
+    "scpn_phase_orchestrator.runtime.network_security",
+    "scpn_phase_orchestrator.runtime.observability",
+    "scpn_phase_orchestrator.runtime.replay",
+    "scpn_phase_orchestrator.runtime.server",
+    "scpn_phase_orchestrator.runtime.server_grpc",
+    "scpn_phase_orchestrator.runtime.simulation",
 )
 
 

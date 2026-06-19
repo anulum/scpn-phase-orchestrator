@@ -185,7 +185,30 @@ class AuditLogger:
         binding_config: dict[str, object] | None = None,
         binding_summary: dict[str, object] | None = None,
     ) -> None:
-        """Engine configuration record for replay reconstruction."""
+        """Engine configuration record for replay reconstruction.
+
+        Parameters
+        ----------
+        n_oscillators : int
+            Number of oscillators in the system.
+        dt : float
+            Integration step size.
+        method : str
+            Integration method (``euler``, ``rk4``, or ``rk45``).
+        seed : int | None
+            Seed for the deterministic RNG, or ``None``.
+        amplitude_mode : bool
+            Whether the engine runs in Stuart-Landau amplitude mode.
+        binding_config : dict[str, object] | None
+            Resolved binding configuration, or ``None``.
+        binding_summary : dict[str, object] | None
+            Resolved binding summary, or ``None``.
+
+        Raises
+        ------
+        AuditError
+            If the audit log cannot be written.
+        """
         if isinstance(n_oscillators, bool) or not isinstance(n_oscillators, int):
             raise AuditError(
                 f"n_oscillators must be a positive integer, got {n_oscillators!r}"
@@ -255,7 +278,44 @@ class AuditLogger:
         epsilon: float | None = None,
         channel_runtime: dict[str, object] | None = None,
     ) -> None:
-        """Write one simulation step to the audit log with optional full state."""
+        """Write one simulation step to the audit log with optional full state.
+
+        Parameters
+        ----------
+        step : int
+            Zero-based simulation step index.
+        upde_state : UPDEState
+            The UPDE state to record or export.
+        actions : list[ControlAction]
+            The control actions recorded for the step.
+        phases : FloatArray | None
+            Oscillator phases in radians, shape ``(N,)``.
+        omegas : FloatArray | None
+            Natural frequencies in rad/s, shape ``(N,)``.
+        knm : FloatArray | None
+            Coupling matrix ``K_nm``, shape ``(N, N)``.
+        alpha : FloatArray | None
+            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        zeta : float
+            External drive strength ``ζ``.
+        psi_drive : float
+            External drive reference phase in radians.
+        amplitudes : FloatArray | None
+            Oscillator amplitudes, shape ``(N,)``, or ``None``.
+        mu : FloatArray | None
+            Per-oscillator linear growth parameters, or ``None``.
+        knm_r : FloatArray | None
+            Amplitude coupling matrix, shape ``(N, N)``, or ``None``.
+        epsilon : float | None
+            Stuart-Landau amplitude coupling factor, or ``None``.
+        channel_runtime : dict[str, object] | None
+            N-channel runtime evidence, or ``None``.
+
+        Raises
+        ------
+        AuditError
+            If the audit log cannot be written.
+        """
         if isinstance(step, bool) or not isinstance(step, int):
             raise AuditError(f"step must be a non-negative integer, got {step!r}")
         if step < 0:
@@ -325,7 +385,20 @@ class AuditLogger:
         self._write_record(record)
 
     def log_event(self, event_type: str, data: dict[str, Any]) -> None:
-        """Write a named event with arbitrary data to the audit log."""
+        """Write a named event with arbitrary data to the audit log.
+
+        Parameters
+        ----------
+        event_type : str
+            Named event type, or ``None``.
+        data : dict[str, Any]
+            Arbitrary JSON-safe event payload.
+
+        Raises
+        ------
+        AuditError
+            If the audit log cannot be written.
+        """
         if not isinstance(event_type, str) or not event_type.strip():
             raise AuditError(
                 f"event_type must be a non-empty string, got {event_type!r}"

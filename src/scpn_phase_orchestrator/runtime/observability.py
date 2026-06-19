@@ -71,7 +71,18 @@ class PrometheusEvidenceSource:
     """Protocol-like base for audit-record evidence exported as metrics."""
 
     def to_audit_record(self) -> Mapping[str, object]:
-        """Return JSON-safe evidence fields for Prometheus exposition."""
+        """Return JSON-safe evidence fields for Prometheus exposition.
+
+        Returns
+        -------
+        Mapping[str, object]
+            Return JSON-safe evidence fields for Prometheus exposition.
+
+        Raises
+        ------
+        NotImplementedError
+            If the operation is not implemented.
+        """
         raise NotImplementedError
 
 
@@ -263,7 +274,24 @@ class MetricsExporter:
         *,
         step_idx: int | None = None,
     ) -> list[str]:
-        """Build individual metric lines in Prometheus text format."""
+        """Build individual metric lines in Prometheus text format.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The UPDE state to record or export.
+        regime : str
+            The current control regime label.
+        latency_ms : float
+            Step latency in milliseconds.
+        step_idx : int | None
+            Zero-based simulation step index, or ``None``.
+
+        Returns
+        -------
+        list[str]
+            The individual Prometheus metric lines.
+        """
         p = self._prefix
         regime_label = _escape_label_value(
             _validated_regime(regime, allow_control=True)
@@ -325,7 +353,24 @@ class MetricsExporter:
         *,
         step_idx: int | None = None,
     ) -> str:
-        """Return full Prometheus text exposition as a single string."""
+        """Return full Prometheus text exposition as a single string.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The UPDE state to record or export.
+        regime : str
+            The current control regime label.
+        latency_ms : float
+            Step latency in milliseconds.
+        step_idx : int | None
+            Zero-based simulation step index, or ``None``.
+
+        Returns
+        -------
+        str
+            The full Prometheus text exposition.
+        """
         return (
             "\n".join(
                 self.exposition_lines(
@@ -342,7 +387,18 @@ class MetricsExporter:
         self,
         evidence: Mapping[str, object] | PrometheusEvidenceSource,
     ) -> list[str]:
-        """Build Prometheus lines for live or replayed digital-twin evidence."""
+        """Build Prometheus lines for live or replayed digital-twin evidence.
+
+        Parameters
+        ----------
+        evidence : Mapping[str, object] | PrometheusEvidenceSource
+            Live or replayed digital-twin operator evidence.
+
+        Returns
+        -------
+        list[str]
+            The Prometheus lines for the digital-twin evidence.
+        """
         record = _evidence_record(evidence)
         p = self._prefix
         contract_hash = _escape_label_value(
@@ -486,7 +542,18 @@ class MetricsExporter:
         self,
         evidence: Mapping[str, object] | PrometheusEvidenceSource,
     ) -> str:
-        """Return Prometheus text for digital-twin operator evidence."""
+        """Return Prometheus text for digital-twin operator evidence.
+
+        Parameters
+        ----------
+        evidence : Mapping[str, object] | PrometheusEvidenceSource
+            Live or replayed digital-twin operator evidence.
+
+        Returns
+        -------
+        str
+            The Prometheus text for the digital-twin operator evidence.
+        """
         return "\n".join(self.digital_twin_operator_evidence_lines(evidence)) + "\n"
 
 
@@ -533,7 +600,13 @@ class OTelExporter:
 
     @property
     def enabled(self) -> bool:
-        """True when opentelemetry-api is installed and active."""
+        """True when opentelemetry-api is installed and active.
+
+        Returns
+        -------
+        bool
+            True when opentelemetry-api is installed and active.
+        """
         return self._enabled
 
     @contextmanager
@@ -542,7 +615,20 @@ class OTelExporter:
         name: str,
         attributes: Mapping[str, object] | None = None,
     ) -> Generator[Any, None, None]:
-        """Trace span context manager. No-op when OTel is absent."""
+        """Trace span context manager. No-op when OTel is absent.
+
+        Parameters
+        ----------
+        name : str
+            The span or resource name.
+        attributes : Mapping[str, object] | None
+            Optional span attributes, or ``None``.
+
+        Returns
+        -------
+        Generator[Any, None, None]
+            A trace-span context manager (no-op without OpenTelemetry).
+        """
         name = _validated_otel_name(name, field="span name")
         attributes = _validated_attributes(attributes)
         if not self._enabled:
@@ -555,7 +641,15 @@ class OTelExporter:
             yield span
 
     def record_step(self, upde_state: UPDEState, step_idx: int) -> None:
-        """Record metrics from a completed UPDE step."""
+        """Record metrics from a completed UPDE step.
+
+        Parameters
+        ----------
+        upde_state : UPDEState
+            The UPDE state to record or export.
+        step_idx : int
+            Zero-based simulation step index, or ``None``.
+        """
         _validated_step_idx(step_idx)
         stability_proxy = _validated_finite_metric(
             upde_state.stability_proxy,
@@ -570,7 +664,15 @@ class OTelExporter:
         self._step_counter.add(1, attrs)
 
     def record_regime_change(self, old: str, new: str) -> None:
-        """Emit a span event for regime transitions."""
+        """Emit a span event for regime transitions.
+
+        Parameters
+        ----------
+        old : str
+            The previous regime label.
+        new : str
+            The new regime label.
+        """
         old = _validated_regime(old)
         new = _validated_regime(new)
         if not self._enabled:
@@ -597,11 +699,28 @@ class RuntimeObservability:
 
     @property
     def otel_enabled(self) -> bool:
-        """True when OpenTelemetry is installed and active."""
+        """True when OpenTelemetry is installed and active.
+
+        Returns
+        -------
+        bool
+            True when OpenTelemetry is installed and active.
+        """
         return self._otel.enabled
 
     def prometheus_text(self, snapshot: RuntimeMetricSnapshot) -> str:
-        """Return default Prometheus text for a runtime metric snapshot."""
+        """Return default Prometheus text for a runtime metric snapshot.
+
+        Parameters
+        ----------
+        snapshot : RuntimeMetricSnapshot
+            The runtime metric snapshot.
+
+        Returns
+        -------
+        str
+            The default Prometheus text for the snapshot.
+        """
         return self._metrics.export(
             snapshot.upde_state,
             snapshot.regime,
@@ -613,11 +732,28 @@ class RuntimeObservability:
         self,
         evidence: Mapping[str, object] | PrometheusEvidenceSource,
     ) -> str:
-        """Return Prometheus text for live or replayed digital-twin evidence."""
+        """Return Prometheus text for live or replayed digital-twin evidence.
+
+        Parameters
+        ----------
+        evidence : Mapping[str, object] | PrometheusEvidenceSource
+            Live or replayed digital-twin operator evidence.
+
+        Returns
+        -------
+        str
+            The Prometheus text for the digital-twin evidence.
+        """
         return self._metrics.export_digital_twin_operator_evidence(evidence)
 
     def record_step(self, snapshot: RuntimeMetricSnapshot) -> None:
-        """Record a runtime step through the optional OpenTelemetry backend."""
+        """Record a runtime step through the optional OpenTelemetry backend.
+
+        Parameters
+        ----------
+        snapshot : RuntimeMetricSnapshot
+            The runtime metric snapshot.
+        """
         if snapshot.step_idx is None:
             return
         self._otel.record_step(snapshot.upde_state, snapshot.step_idx)
@@ -628,6 +764,19 @@ class RuntimeObservability:
         name: str,
         attributes: Mapping[str, object] | None = None,
     ) -> Generator[Any, None, None]:
-        """Return a validated runtime span, no-op without OpenTelemetry."""
+        """Return a validated runtime span, no-op without OpenTelemetry.
+
+        Parameters
+        ----------
+        name : str
+            The span or resource name.
+        attributes : Mapping[str, object] | None
+            Optional span attributes, or ``None``.
+
+        Returns
+        -------
+        Generator[Any, None, None]
+            A validated runtime span (no-op without OpenTelemetry).
+        """
         with self._otel.span(name, attributes) as span:
             yield span

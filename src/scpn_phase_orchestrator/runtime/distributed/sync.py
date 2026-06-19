@@ -163,7 +163,13 @@ class PhaseSyncMessage:
 
     @property
     def n_oscillators(self) -> int:
-        """Return the phase-vector width."""
+        """Return the phase-vector width.
+
+        Returns
+        -------
+        int
+            Return the phase-vector width.
+        """
         return len(self.phases)
 
     @classmethod
@@ -176,7 +182,26 @@ class PhaseSyncMessage:
         wall_time_s: float | None = None,
         protocol_version: int = 1,
     ) -> PhaseSyncMessage:
-        """Build a canonical message from a local phase vector."""
+        """Build a canonical message from a local phase vector.
+
+        Parameters
+        ----------
+        node_id : str
+            Identifier of the local node.
+        sequence : int
+            Monotonic message sequence number.
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        wall_time_s : float | None
+            Wall-clock timestamp in seconds, or ``None``.
+        protocol_version : int
+            Sync protocol version.
+
+        Returns
+        -------
+        PhaseSyncMessage
+            The canonical phase-sync message.
+        """
         timestamp = time.time() if wall_time_s is None else float(wall_time_s)
         return cls(
             node_id=node_id,
@@ -187,7 +212,13 @@ class PhaseSyncMessage:
         )
 
     def to_record(self) -> dict[str, Any]:
-        """Return a deterministic JSON-safe record."""
+        """Return a deterministic JSON-safe record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a deterministic JSON-safe record.
+        """
         return {
             "kind": _PROTOCOL_KIND,
             "protocol_version": self.protocol_version,
@@ -200,7 +231,13 @@ class PhaseSyncMessage:
         }
 
     def to_wire(self) -> bytes:
-        """Encode the message as canonical UTF-8 JSON bytes."""
+        """Encode the message as canonical UTF-8 JSON bytes.
+
+        Returns
+        -------
+        bytes
+            Encode the message as canonical UTF-8 JSON bytes.
+        """
         return json.dumps(
             self.to_record(),
             sort_keys=True,
@@ -209,7 +246,23 @@ class PhaseSyncMessage:
 
     @classmethod
     def from_wire(cls, payload: bytes | str | Mapping[str, Any]) -> PhaseSyncMessage:
-        """Decode and validate a canonical wire message."""
+        """Decode and validate a canonical wire message.
+
+        Parameters
+        ----------
+        payload : bytes | str | Mapping[str, Any]
+            The event or wire payload.
+
+        Returns
+        -------
+        PhaseSyncMessage
+            The decoded, validated phase-sync message.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         if isinstance(payload, bytes):
             decoded = _loads_phase_sync_json(payload.decode("utf-8"))
         elif isinstance(payload, str):
@@ -249,7 +302,13 @@ class GossipIngestResult:
     sequence: int | None = None
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return an audit-safe ingestion record."""
+        """Return an audit-safe ingestion record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return an audit-safe ingestion record.
+        """
         return {
             "accepted": self.accepted,
             "reason": self.reason,
@@ -270,7 +329,13 @@ class LossyGossipReplayResult:
     rounds: int
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return a compact JSON-safe replay summary."""
+        """Return a compact JSON-safe replay summary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return a compact JSON-safe replay summary.
+        """
         return {
             "kind": "lossy_phase_gossip_replay",
             "rounds": self.rounds,
@@ -293,12 +358,24 @@ class PhaseGossipNode:
 
     @property
     def peer_sequences(self) -> Mapping[str, int]:
-        """Return accepted sequence watermarks by peer."""
+        """Return accepted sequence watermarks by peer.
+
+        Returns
+        -------
+        Mapping[str, int]
+            Return accepted sequence watermarks by peer.
+        """
         return dict(self._peer_sequences)
 
     @property
     def peer_count(self) -> int:
-        """Return the number of accepted active peer states currently retained."""
+        """Return the number of accepted active peer states currently retained.
+
+        Returns
+        -------
+        int
+            Return the number of accepted active peer states currently retained.
+        """
         return len(self._peers)
 
     def observe_local(
@@ -307,7 +384,20 @@ class PhaseGossipNode:
         *,
         wall_time_s: float | None = None,
     ) -> PhaseSyncMessage:
-        """Create the next outbound phase-sync message for this node."""
+        """Create the next outbound phase-sync message for this node.
+
+        Parameters
+        ----------
+        phases : FloatArray
+            Oscillator phases in radians, shape ``(N,)``.
+        wall_time_s : float | None
+            Wall-clock timestamp in seconds, or ``None``.
+
+        Returns
+        -------
+        PhaseSyncMessage
+            The next outbound phase-sync message.
+        """
         phase_array = _phase_array(phases, self.config.n_oscillators, "phases")
         self._local_sequence += 1
         return PhaseSyncMessage.from_phases(
@@ -319,7 +409,18 @@ class PhaseGossipNode:
         )
 
     def ingest(self, payload: bytes | str | Mapping[str, Any]) -> GossipIngestResult:
-        """Validate and retain a peer phase-sync message."""
+        """Validate and retain a peer phase-sync message.
+
+        Parameters
+        ----------
+        payload : bytes | str | Mapping[str, Any]
+            The event or wire payload.
+
+        Returns
+        -------
+        GossipIngestResult
+            The ingestion result for the peer message.
+        """
         try:
             message = PhaseSyncMessage.from_wire(payload)
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
@@ -363,7 +464,25 @@ class PhaseGossipNode:
         *,
         now_s: float | None = None,
     ) -> FloatArray:
-        """Return phases nudged toward active peer circular means."""
+        """Return phases nudged toward active peer circular means.
+
+        Parameters
+        ----------
+        local_phases : FloatArray
+            Local oscillator phases, shape ``(N,)``.
+        now_s : float | None
+            Current time in seconds, or ``None``.
+
+        Returns
+        -------
+        FloatArray
+            The phases nudged toward the active peer circular means.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         local = _phase_array(
             local_phases,
             self.config.n_oscillators,
@@ -395,7 +514,13 @@ class PhaseGossipNode:
         return cast(FloatArray, np.mod(local + bounded, _TWO_PI))
 
     def to_audit_record(self) -> dict[str, Any]:
-        """Return current node sync state as a JSON-safe audit record."""
+        """Return current node sync state as a JSON-safe audit record.
+
+        Returns
+        -------
+        dict[str, Any]
+            Return current node sync state as a JSON-safe audit record.
+        """
         return {
             "kind": "phase_gossip_node",
             "node_id": self.config.node_id,
@@ -415,7 +540,29 @@ def simulate_lossy_phase_gossip(
     config: DistributedSyncConfig,
     drop_edges: set[tuple[str, str]] | None = None,
 ) -> LossyGossipReplayResult:
-    """Replay deterministic all-to-all gossip with caller-declared dropped edges."""
+    """Replay deterministic all-to-all gossip with caller-declared dropped edges.
+
+    Parameters
+    ----------
+    initial_phases : Mapping[str, FloatArray]
+        Per-node initial phase vectors.
+    rounds : int
+        Number of gossip rounds.
+    config : DistributedSyncConfig
+        The distributed-sync configuration.
+    drop_edges : set[tuple[str, str]] | None
+        Edges declared dropped for the replay, or ``None``.
+
+    Returns
+    -------
+    LossyGossipReplayResult
+        The deterministic lossy-gossip replay result.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if rounds <= 0:
         raise ValueError("rounds must be positive")
     if not initial_phases:

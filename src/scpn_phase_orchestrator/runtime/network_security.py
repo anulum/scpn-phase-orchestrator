@@ -38,7 +38,18 @@ def _validated_identifier(value: str, label: str) -> str:
 
 
 def is_production_mode(prefix: str) -> bool:
-    """Return True when a service-specific or generic env profile is production."""
+    """Return True when a service-specific or generic env profile is production.
+
+    Parameters
+    ----------
+    prefix : str
+        Service-specific environment-variable prefix.
+
+    Returns
+    -------
+    bool
+        ``True`` when the environment profile is production.
+    """
     prefix = _validated_identifier(prefix, "prefix")
     for key in (f"{prefix}_ENV", f"{prefix}_PROFILE", "SPO_ENV", "SPO_PROFILE"):
         if os.environ.get(key, "").strip().lower() == "production":
@@ -47,7 +58,25 @@ def is_production_mode(prefix: str) -> bool:
 
 
 def env_int(name: str, default: int) -> int:
-    """Read a non-negative integer from the environment."""
+    """Read a non-negative integer from the environment.
+
+    Parameters
+    ----------
+    name : str
+        The span or resource name.
+    default : int
+        Default value when the variable is unset.
+
+    Returns
+    -------
+    int
+        The non-negative integer read from the environment.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     name = _validated_identifier(name, "name")
     if not isinstance(default, int) or isinstance(default, bool) or default < 0:
         raise ValueError(f"{name} default must be a non-negative integer")
@@ -93,7 +122,25 @@ class TokenBucketRateLimiter:
         self._buckets: dict[str, tuple[float, float]] = {}
 
     def allow(self, identity: str, now: float | None = None) -> bool:
-        """Return True if *identity* has at least one available token."""
+        """Return True if *identity* has at least one available token.
+
+        Parameters
+        ----------
+        identity : str
+            Caller identity for rate limiting.
+        now : float | None
+            Current time in seconds, or ``None``.
+
+        Returns
+        -------
+        bool
+            ``True`` when the identity has an available token.
+
+        Raises
+        ------
+        ValueError
+            If the inputs are invalid or inconsistent.
+        """
         key = _validated_identifier(identity, "identity")
         if now is None:
             timestamp = time.time()

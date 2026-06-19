@@ -153,7 +153,13 @@ class ReplayEngine:
         self._log_path = Path(log_path)
 
     def load(self) -> list[dict[str, Any]]:
-        """Read and parse all JSONL entries from the audit log file."""
+        """Read and parse all JSONL entries from the audit log file.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Read and parse all JSONL entries from the audit log file.
+        """
         entries = []
         with self._log_path.open(encoding="utf-8") as fh:
             for line in fh:
@@ -163,7 +169,18 @@ class ReplayEngine:
         return entries
 
     def replay_step(self, step_data: dict[str, Any]) -> UPDEState:
-        """Reconstruct UPDEState from a log entry."""
+        """Reconstruct UPDEState from a log entry.
+
+        Parameters
+        ----------
+        step_data : dict[str, Any]
+            A single audit-log entry to reconstruct.
+
+        Returns
+        -------
+        UPDEState
+            The reconstructed UPDE state.
+        """
         layers = [
             LayerState(
                 R=_numeric_value(ld.get("R", 0.0)),
@@ -178,25 +195,52 @@ class ReplayEngine:
             regime_id=step_data.get("regime", "unknown"),
         )
 
-    def load_header(
-        self, entries: list[dict[str, Any]]
-    ) -> dict[str, Any] | None:
-        """Extract the header record (engine config) if present."""
+    def load_header(self, entries: list[dict[str, Any]]) -> dict[str, Any] | None:
+        """Extract the header record (engine config) if present.
+
+        Parameters
+        ----------
+        entries : list[dict[str, Any]]
+            Audit-log entries to operate on.
+
+        Returns
+        -------
+        dict[str, Any] | None
+            The header record, or ``None`` if absent.
+        """
         for entry in entries:
             if entry.get("header"):
                 return entry
         return None
 
-    def step_entries(
-        self, entries: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        """Filter to entries with full UPDE state (replayable)."""
+    def step_entries(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Filter to entries with full UPDE state (replayable).
+
+        Parameters
+        ----------
+        entries : list[dict[str, Any]]
+            Audit-log entries to operate on.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            The replayable entries with full UPDE state.
+        """
         return [e for e in entries if "phases" in e]
 
-    def build_engine(
-        self, header: dict[str, Any]
-    ) -> UPDEEngine | StuartLandauEngine:
-        """Construct engine from header (UPDE or Stuart-Landau)."""
+    def build_engine(self, header: dict[str, Any]) -> UPDEEngine | StuartLandauEngine:
+        """Construct engine from header (UPDE or Stuart-Landau).
+
+        Parameters
+        ----------
+        header : dict[str, Any]
+            The audit header record (engine config).
+
+        Returns
+        -------
+        UPDEEngine | StuartLandauEngine
+            The engine reconstructed from the header.
+        """
         n_oscillators = _required_header_int(header, "n_oscillators")
         dt = _required_header_float(header, "dt")
         method = _header_method(header)
@@ -221,6 +265,20 @@ class ReplayEngine:
         """Chained multi-step replay: output of step N must match input of step N+1.
 
         Returns (passed, n_verified).
+
+        Parameters
+        ----------
+        engine : UPDEEngine
+            The engine used to replay logged steps.
+        entries : list[dict[str, Any]]
+            Audit-log entries to operate on.
+        atol : float
+            Absolute comparison tolerance.
+
+        Returns
+        -------
+        tuple[bool, int]
+            A ``(passed, n_verified)`` pair.
         """
         replayable = self.step_entries(entries)
         if len(replayable) < 2:
@@ -259,6 +317,16 @@ class ReplayEngine:
 
         Returns (all_valid, n_verified).  Legacy logs without ``_hash``
         fields return (True, 0) unless ``SPO_AUDIT_KEY`` is configured.
+
+        Parameters
+        ----------
+        entries : list[dict[str, Any]]
+            Audit-log entries to operate on.
+
+        Returns
+        -------
+        tuple[bool, int]
+            A ``(all_valid, n_verified)`` pair for the hash chain.
         """
         try:
             audit_keys = audit_verification_keys()
@@ -307,6 +375,20 @@ class ReplayEngine:
         - Legacy format: 'phases' holds the full SL state (2N) with 'mu' present.
         When neither mu nor amplitudes are present, skips with a warning.
         Returns (passed, n_verified).
+
+        Parameters
+        ----------
+        engine : StuartLandauEngine
+            The engine used to replay logged steps.
+        entries : list[dict[str, Any]]
+            Audit-log entries to operate on.
+        atol : float
+            Absolute comparison tolerance.
+
+        Returns
+        -------
+        tuple[bool, int]
+            A ``(passed, n_verified)`` pair for the Stuart-Landau replay.
         """
         replayable = self.step_entries(entries)
         if len(replayable) < 2:
@@ -389,6 +471,18 @@ class ReplayEngine:
         Requires steps to include 'phases', 'omegas', 'knm', 'zeta', 'psi',
         'alpha' fields for full replay. Compares replayed global R against
         logged 'R' (or 'r_global') field.
+
+        Parameters
+        ----------
+        engine : UPDEEngine
+            The engine used to replay logged steps.
+        steps : list[dict[str, Any]]
+            Number of simulation steps to run.
+
+        Returns
+        -------
+        bool
+            ``True`` when the replayed order parameter matches the log.
         """
         for entry in steps:
             if "phases" not in entry:

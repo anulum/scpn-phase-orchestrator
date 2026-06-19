@@ -85,13 +85,25 @@ class DependencyCheck:
 
     @property
     def status(self) -> str:
-        """Return ``ok``/``missing``/``warn`` for the component detection state."""
+        """Return ``ok``/``missing``/``warn`` for the component detection state.
+
+        Returns
+        -------
+        str
+            Return ``ok``/``missing``/``warn`` for the component detection state.
+        """
         if self.available:
             return _STATUS_OK
         return _STATUS_MISSING if self.required else _STATUS_WARN
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-serialisable mapping with deterministic key order."""
+        """Return a JSON-serialisable mapping with deterministic key order.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a JSON-serialisable mapping with deterministic key order.
+        """
         return {
             "name": self.name,
             "category": self.category,
@@ -120,31 +132,67 @@ class DoctorReport:
 
     @property
     def missing_required(self) -> tuple[DependencyCheck, ...]:
-        """Required components that were not detected."""
+        """Required components that were not detected.
+
+        Returns
+        -------
+        tuple[DependencyCheck, ...]
+            Required components that were not detected.
+        """
         return tuple(c for c in self.checks if c.required and not c.available)
 
     @property
     def missing_optional(self) -> tuple[DependencyCheck, ...]:
-        """Optional components that were not detected."""
+        """Optional components that were not detected.
+
+        Returns
+        -------
+        tuple[DependencyCheck, ...]
+            Optional components that were not detected.
+        """
         return tuple(c for c in self.checks if not c.required and not c.available)
 
     @property
     def ok(self) -> bool:
-        """True when every required component is present (overall ``pass``)."""
+        """True when every required component is present (overall ``pass``).
+
+        Returns
+        -------
+        bool
+            True when every required component is present (overall ``pass``).
+        """
         return not self.missing_required
 
     @property
     def status(self) -> str:
-        """``pass`` when ready, otherwise ``fail``."""
+        """``pass`` when ready, otherwise ``fail``.
+
+        Returns
+        -------
+        str
+            ``pass`` when ready, otherwise ``fail``.
+        """
         return _STATUS_READY if self.ok else _STATUS_FAIL
 
     @property
     def exit_code(self) -> int:
-        """Process exit code: ``0`` when ready, ``1`` when a requirement is missing."""
+        """Process exit code: ``0`` when ready, ``1`` when a requirement is missing.
+
+        Returns
+        -------
+        int
+            Process exit code: ``0`` when ready, ``1`` when a requirement is missing.
+        """
         return 0 if self.ok else 1
 
     def to_audit_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-serialisable readiness record."""
+        """Return a deterministic JSON-serialisable readiness record.
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-serialisable readiness record.
+        """
         return {
             "report": "environment-diagnostics",
             "version": "1.0.0",
@@ -397,6 +445,11 @@ def run_environment_diagnostics(*, repo_root: Path | None = None) -> DoctorRepor
         A :class:`DoctorReport` whose :attr:`DoctorReport.status` is ``pass``
         only when the interpreter is in range and every required dependency is
         importable.
+
+    Parameters
+    ----------
+    repo_root : Path | None
+        Repository root to probe, or ``None`` for the default.
     """
     resolved_root = repo_root if repo_root is not None else _find_repo_root()
 

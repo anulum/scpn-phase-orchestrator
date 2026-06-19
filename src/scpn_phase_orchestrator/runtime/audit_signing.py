@@ -34,7 +34,23 @@ def _reject_json_constant(value: str) -> None:
 
 
 def key_id_for_secret(key_material: str) -> str:
-    """Return the audit key identifier stored in signed audit metadata."""
+    """Return the audit key identifier stored in signed audit metadata.
+
+    Parameters
+    ----------
+    key_material : str
+        The audit signing-key material.
+
+    Returns
+    -------
+    str
+        The audit key identifier stored in signed audit metadata.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
+    """
     if key_material == "":
         raise ValueError("audit signing key must not be empty")
     return hashlib.sha256(key_material.encode()).hexdigest()[:16]
@@ -47,6 +63,16 @@ def audit_verification_keys() -> dict[str, str]:
     supplies historical keys as a JSON object mapping `sha256(secret)[:16]` to
     the corresponding secret. Invalid or mismatched keyrings fail closed by
     raising `ValueError`.
+
+    Returns
+    -------
+    dict[str, str]
+        Load current and historical audit verification keys from the environment.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid or inconsistent.
     """
     keys: dict[str, str] = {}
     current_key = os.environ.get("SPO_AUDIT_KEY")

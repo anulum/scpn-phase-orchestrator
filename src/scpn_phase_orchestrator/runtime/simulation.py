@@ -101,7 +101,18 @@ __all__ = [
 
 
 def petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marking]:
-    """Build a Petri net and initial marking from a protocol-net spec."""
+    """Build a Petri net and initial marking from a protocol-net spec.
+
+    Parameters
+    ----------
+    protocol : ProtocolNetSpec
+        The protocol-net specification.
+
+    Returns
+    -------
+    tuple[PetriNet, Marking]
+        The Petri net and its initial marking.
+    """
     places = [Place(name) for name in protocol.places]
     transitions = []
     for ts in protocol.transitions:
@@ -156,7 +167,13 @@ class SimulationResult:
     action_total: int
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-serialisable summary (history omitted)."""
+        """Return a deterministic JSON-serialisable summary (history omitted).
+
+        Returns
+        -------
+        dict[str, object]
+            Return a deterministic JSON-serialisable summary (history omitted).
+        """
         return {
             "spec_name": self.spec_name,
             "steps": self.steps,
@@ -274,6 +291,23 @@ def simulate(
     Raises
     ------
         ValueError: If the spec declares no oscillators.
+
+    Parameters
+    ----------
+    spec : BindingSpec
+        The binding specification to simulate.
+    steps : int
+        Number of simulation steps to run.
+    seed : int
+        Seed for the deterministic RNG, or ``None``.
+    policy_enabled : bool
+        Whether closed-loop policy control is enabled.
+    audit_logger : AuditLogger | None
+        Audit logger to record the run, or ``None``.
+    binding_spec_path : Path | None
+        Path to the binding spec, or ``None``.
+    scenario_hook : ScenarioCallback | None
+        Per-step scenario callback, or ``None``.
     """
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     if n_osc == 0:
