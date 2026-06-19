@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -18,6 +19,7 @@ from scpn_phase_orchestrator.supervisor.multiverse_examples import (
     BranchCandidate,
     CounterfactualBoundary,
     DomainScenario,
+    _validate_branch_candidate,
     _validate_scenario,
     build_multiverse_domain_scenarios,
 )
@@ -253,3 +255,85 @@ def test_rejects_boolean_and_complex_branch_knob_aliases() -> None:
 
         with pytest.raises(ValueError, match="bad_knob_alias"):
             _validate_scenario(bad_scenario)
+
+
+def _valid_candidate() -> BranchCandidate:
+    return BranchCandidate(
+        candidate_id="c1",
+        knob_variations=(("K", 0.1),),
+        topology_variations=("dense",),
+        objective_labels=("reward",),
+    )
+
+
+def _valid_scenario(**changes: object) -> DomainScenario:
+    base: dict[str, object] = {
+        "domain": "cardiac",
+        "scenario_id": "s1",
+        "initial_phases": np.array([0.1, 0.2], dtype=np.float64),
+        "initial_omegas": np.array([0.0, 0.0], dtype=np.float64),
+        "branch_candidates": (_valid_candidate(),),
+        "objective_labels": ("reward",),
+    }
+    base.update(changes)
+    return DomainScenario(**base)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"candidate_id": "  "}, "branch candidate id must be a non-empty string"),
+        ({"knob_variations": ()}, "requires knob_variations"),
+        ({"knob_variations": (("  ", 0.1),)}, "invalid knob name"),
+        ({"knob_variations": (("bogus", 0.1),)}, "is not supported"),
+        ({"knob_variations": (("K", "x"),)}, "must be a real-valued numeric scalar"),
+        ({"knob_variations": (("K", float("inf")),)}, "must be finite"),
+        ({"topology_variations": ()}, "requires topology variations"),
+        ({"topology_variations": ("  ",)}, "topology variations invalid"),
+        ({"objective_labels": ()}, "requires objective labels"),
+        ({"objective_labels": ("  ",)}, "has invalid objective labels"),
+        ({"non_actuating": False}, "must have non_actuating=True"),
+        ({"execution_disabled": False}, "must have execution_disabled=True"),
+        ({"claim_boundary": "live"}, "must use claim_boundary"),
+    ],
+)
+def test_validate_branch_candidate_rejects_corruptions(changes, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _validate_branch_candidate(replace(_valid_candidate(), **changes))
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"domain": "  "}, "scenario domain must be a non-empty string"),
+        ({"scenario_id": "  "}, "must have a non-empty scenario_id"),
+        (
+            {"initial_phases": np.array([[0.1, 0.2]], dtype=np.float64)},
+            "must be a 1D array",
+        ),
+        (
+            {
+                "initial_phases": np.array([], dtype=np.float64),
+                "initial_omegas": np.array([], dtype=np.float64),
+            },
+            "at least one value",
+        ),
+        (
+            {"initial_omegas": np.array([0.0, 0.0, 0.0], dtype=np.float64)},
+            "must have same shape",
+        ),
+        ({"non_actuating": False}, "must set non_actuating=True"),
+        ({"execution_disabled": False}, "must set execution_disabled=True"),
+        ({"claim_boundary": "live"}, "must use claim_boundary"),
+        ({"branch_candidates": ()}, "requires at least one branch"),
+        ({"objective_labels": ()}, "requires objective labels"),
+        ({"objective_labels": ("  ",)}, "has invalid objective labels"),
+    ],
+)
+def test_validate_scenario_rejects_corruptions(changes, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        _validate_scenario(_valid_scenario(**changes))
+
+
+def test_validate_scenario_accepts_valid_scenario() -> None:
+    _validate_scenario(_valid_scenario())
