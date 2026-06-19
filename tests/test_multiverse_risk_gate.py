@@ -203,3 +203,99 @@ class TestMultiverseRiskGate:
 
         with pytest.raises(ValueError, match=message):
             evaluate_multiverse_branch_risk(manifest)
+
+
+def _valid_branch(**overrides: Any) -> dict[str, Any]:
+    """Return one self-consistent, approvable branch record."""
+    branch: dict[str, Any] = {
+        "branch_id": "b-ok",
+        "branch_hash": "h-ok",
+        "final_R": 0.95,
+        "mean_R": 0.90,
+        "min_R": 0.80,
+        "max_R": 0.99,
+        "action_count": 4,
+        "topology_edge_count": 10,
+    }
+    branch.update(overrides)
+    return branch
+
+
+def _manifest(branch: Mapping[str, Any]) -> dict[str, Any]:
+    return {"branches": [branch]}
+
+
+class TestMultiverseRiskGateFieldGuards:
+    """Single-field corruption of an otherwise valid branch/threshold."""
+
+    def test_rejects_non_real_metric_value(self) -> None:
+        with pytest.raises(ValueError, match=r"final_R must be a finite real"):
+            evaluate_multiverse_branch_risk(
+                _manifest(_valid_branch(final_R="not-a-number"))
+            )
+
+    def test_rejects_non_integral_action_count(self) -> None:
+        with pytest.raises(
+            ValueError, match=r"action_count must be a finite non-negative integer"
+        ):
+            evaluate_multiverse_branch_risk(_manifest(_valid_branch(action_count=4.5)))
+
+    def test_rejects_negative_action_count(self) -> None:
+        with pytest.raises(
+            ValueError, match=r"action_count must be a finite non-negative integer"
+        ):
+            evaluate_multiverse_branch_risk(_manifest(_valid_branch(action_count=-1)))
+
+    def test_rejects_negative_threshold_topology_scale(self) -> None:
+        thresholds = MultiverseRiskThresholds(max_topology_scale=-0.1)
+        with pytest.raises(
+            ValueError, match=r"max_topology_scale must be non-negative"
+        ):
+            evaluate_multiverse_branch_risk(_manifest(_valid_branch()), thresholds)
+
+    def test_rejects_manifest_without_branch_keys(self) -> None:
+        with pytest.raises(ValueError, match=r"'branches' or 'branch_records' key"):
+            evaluate_multiverse_branch_risk({"other": []})
+
+    def test_rejects_non_mapping_branch_entry(self) -> None:
+        with pytest.raises(ValueError, match=r"each branch entry must be a mapping"):
+            evaluate_multiverse_branch_risk({"branches": [123]})
+
+    def test_rejects_empty_branch_hash(self) -> None:
+        with pytest.raises(
+            ValueError, match=r"branch_hash is required and must be a non-empty string"
+        ):
+            evaluate_multiverse_branch_risk(_manifest(_valid_branch(branch_hash="")))
+
+    def test_rejects_inverted_r_interval(self) -> None:
+        with pytest.raises(ValueError, match=r"has invalid R interval"):
+            evaluate_multiverse_branch_risk(
+                _manifest(_valid_branch(min_R=0.9, max_R=0.1))
+            )
+
+    def test_rejects_negative_branch_topology_scale(self) -> None:
+        branch = _valid_branch(topology_scale=-0.5)
+        del branch["topology_edge_count"]
+        with pytest.raises(ValueError, match=r"topology_scale must be non-negative"):
+            evaluate_multiverse_branch_risk(_manifest(branch))
+
+
+class TestMultiverseRiskGateRejectionPaths:
+    """Threshold-driven rejection reasons and empty-approval selection."""
+
+    def test_flags_topology_scale_exceeds_limit(self) -> None:
+        branch = _valid_branch(topology_scale=0.9)
+        del branch["topology_edge_count"]
+        thresholds = MultiverseRiskThresholds(max_topology_scale=0.5)
+        report = evaluate_multiverse_branch_risk(_manifest(branch), thresholds)
+
+        assert report.rejected_count == 1
+        assert "topology_scale_exceeds_limit" in report.rejection_reasons
+
+    def test_all_rejected_yields_no_safest_branch(self) -> None:
+        thresholds = MultiverseRiskThresholds(min_mean_R=0.99)
+        report = evaluate_multiverse_branch_risk(_manifest(_valid_branch()), thresholds)
+
+        assert report.approved_count == 0
+        assert report.safest_branch_id is None
+        assert report.safest_branch_hash is None
