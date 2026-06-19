@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from typing import get_type_hints
 
 import numpy as np
@@ -217,6 +218,82 @@ class TestStrangeLoopLongRunDriftScenarios:
             assert isinstance(record["scenario_hash"], str)
             assert len(record["scenario_hash"]) == 64
             json.dumps(record, allow_nan=False, sort_keys=True)
+
+
+def _valid_scenario() -> StrangeLoopDriftScenario:
+    """Return the first deterministic, fully valid drift scenario."""
+    return build_strange_loop_drift_scenarios()[0]
+
+
+def _schedule_with_first_bundle(bundle: object) -> tuple[object, ...]:
+    """Replace the first bundle of a valid >=32-step schedule, keeping length."""
+    schedule = list(_valid_scenario().action_schedule)
+    schedule[0] = bundle  # type: ignore[assignment]  # deliberately corrupt one bundle
+    return tuple(schedule)
+
+
+class TestStrangeLoopDriftScenarioValidation:
+    """Corrupt one field of a valid drift scenario; the gate must fail closed."""
+
+    @pytest.mark.parametrize(
+        ("overrides", "match"),
+        [
+            ({"domain": ""}, "scenario domain must be a non-empty string"),
+            ({"domain": 7}, "scenario domain must be a non-empty string"),
+            ({"scenario_id": ""}, "scenario_id must be a non-empty string"),
+            ({"expected_trigger": "warp"}, "expected_trigger is not supported"),
+            ({"action_schedule": ()}, "action_schedule must be a non-empty tuple"),
+            ({"non_actuating": False}, "must be non_actuating"),
+            ({"execution_disabled": False}, "must disable execution"),
+            ({"claim_boundary": "live"}, "claim boundary mismatch"),
+        ],
+    )
+    def test_rejects_corrupt_scalar_field(
+        self, overrides: dict[str, object], match: str
+    ) -> None:
+        scenario = replace(_valid_scenario(), **overrides)
+        with pytest.raises(ValueError, match=match):
+            evaluate_strange_loop_drift_scenarios([scenario])
+
+    def test_rejects_too_short_schedule(self) -> None:
+        short = _valid_scenario().action_schedule[:5]
+        scenario = replace(_valid_scenario(), action_schedule=short)
+        with pytest.raises(ValueError, match="at least 32 long-run steps"):
+            evaluate_strange_loop_drift_scenarios([scenario])
+
+    @pytest.mark.parametrize(
+        ("bundle", "match"),
+        [
+            ([_action("K", 0.1)], "entries must be tuples"),
+            ((), "entries must not be empty"),
+            (("not-an-action",), "must contain ControlAction"),
+            ((_action("nope", 0.1),), "must use supported knobs"),
+            (
+                (ControlAction("K", "layer_0", 0.1, 1.0, "x"),),
+                "must use global scope",
+            ),
+            ((_action("K", float("inf")),), "scenario action values must be finite"),
+            ((_action("K", np.bool_(True)),), "scenario action values must be finite"),
+        ],
+    )
+    def test_rejects_corrupt_schedule_bundle(self, bundle: object, match: str) -> None:
+        scenario = replace(
+            _valid_scenario(),
+            action_schedule=_schedule_with_first_bundle(bundle),
+        )
+        with pytest.raises(ValueError, match=match):
+            evaluate_strange_loop_drift_scenarios([scenario])
+
+
+class TestStrangeLoopUnsupportedKnobHandling:
+    def test_observe_skips_unsupported_knob_in_action_vector(self) -> None:
+        """Unknown knobs are ignored by the action embedding, not rejected."""
+        supervisor = StrangeLoopSupervisor()
+
+        assessment = supervisor.observe([_action("unsupported", 0.9)])
+
+        assert assessment.overcontrol_score == pytest.approx(0.0)
+        assert assessment.recommended_actions == ()
 
 
 class TestStrangeLoopPipelineWiring:
