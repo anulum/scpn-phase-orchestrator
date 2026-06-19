@@ -226,3 +226,85 @@ def test_recovered_infrastructure_cases_exceed_fragmented_base() -> None:
         "traffic_platoon_recovery > traffic_spillback_fragmentation"
         in by_name["traffic_platoon_recovery"]["expected_relationship"]
     )
+
+
+def _valid_records() -> list[dict[str, object]]:
+    return [
+        dict(record)
+        for record in build_infrastructure_integrated_information_replays(n_samples=192)
+    ]
+
+
+def _by_name() -> dict[str, dict[str, object]]:
+    return {str(record["case_name"]): record for record in _valid_records()}
+
+
+def test_validate_records_rejects_single_record_corpus() -> None:
+    with pytest.raises(ValueError, match="at least two records"):
+        _validate_replay_records((_valid_records()[0],))
+
+
+def test_validate_records_rejects_missing_required_field() -> None:
+    records = _valid_records()
+    del records[0]["phi"]
+    with pytest.raises(ValueError, match="missing fields"):
+        _validate_replay_records(tuple(records))
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("domain", "physiology", "domain=infrastructure"),
+        ("claim_boundary", "theoretical_iit", "invalid claim boundary"),
+        ("non_actuating", False, "must be non-actuating"),
+        ("minimum_partition", "not-a-list", "must be a pair of index lists"),
+        ("minimum_partition", [0, [1, 2]], "entries must be lists"),
+        ("n_oscillators", 1, "n_oscillators must be an integer >= 2"),
+        ("n_oscillators", complex(2.0, 0.0), "n_oscillators must be a real integer"),
+    ],
+)
+def test_validate_records_rejects_record_field(field, value, match) -> None:
+    records = _valid_records()
+    records[0][field] = value
+    with pytest.raises(ValueError, match=match):
+        _validate_replay_records(tuple(records))
+
+
+def test_validate_records_rejects_phi_exceeding_total_integration() -> None:
+    records = _valid_records()
+    records[0]["phi"] = 10.0
+    records[0]["total_integration"] = 1.0
+    with pytest.raises(ValueError, match="phi must not exceed total_integration"):
+        _validate_replay_records(tuple(records))
+
+
+def test_validate_records_rejects_negative_partition_index() -> None:
+    records = _valid_records()
+    records[0]["minimum_partition"] = [[0], [-1]]
+    with pytest.raises(ValueError, match="non-negative indices"):
+        _validate_replay_records(tuple(records))
+
+
+def test_validate_records_rejects_incomplete_case_corpus() -> None:
+    by_name = _by_name()
+    with pytest.raises(ValueError, match="missing replay case"):
+        _validate_replay_records(
+            (
+                by_name["power_grid_islanding"],
+                by_name["power_grid_resynchronisation"],
+            )
+        )
+
+
+def test_validate_records_rejects_resynchronisation_below_islanding() -> None:
+    by_name = _by_name()
+    by_name["power_grid_resynchronisation"]["phi"] = 0.0
+    with pytest.raises(ValueError, match="re-synchronisation integration must exceed"):
+        _validate_replay_records(tuple(by_name.values()))
+
+
+def test_validate_records_rejects_platoon_recovery_below_fragmentation() -> None:
+    by_name = _by_name()
+    by_name["traffic_platoon_recovery"]["phi"] = 0.0
+    with pytest.raises(ValueError, match="platoon recovery integration must exceed"):
+        _validate_replay_records(tuple(by_name.values()))
