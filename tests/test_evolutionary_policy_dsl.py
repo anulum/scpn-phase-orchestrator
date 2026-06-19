@@ -143,3 +143,85 @@ def test_search_results_are_review_only_and_non_actuating() -> None:
     assert all(not candidate.live_merge_permitted for candidate in report.candidates)
     assert all(not candidate.hot_patch_permitted for candidate in report.candidates)
     assert all(not candidate.actuation_permitted for candidate in report.candidates)
+
+
+def test_parse_skips_comment_and_blank_lines() -> None:
+    """Comment-only and blank lines are ignored, not parsed as rules."""
+    rules = parse_policy_dsl(
+        "# leading comment\n"
+        "\n"
+        "rule guard: if R < 0.50 then set K += 0.04  # trailing comment\n"
+        "   \n"
+    )
+
+    assert len(rules) == 1
+    assert rules[0].name == "guard"
+
+
+def test_parse_rejects_duplicate_rule_name() -> None:
+    with pytest.raises(ValueError, match="Duplicate rule name: guard"):
+        parse_policy_dsl(
+            "rule guard: if R < 0.50 then set K += 0.04\n"
+            "rule guard: if R < 0.60 then set K -= 0.02"
+        )
+
+
+def test_parse_rejects_dsl_without_any_rule() -> None:
+    with pytest.raises(ValueError, match="must contain at least one rule"):
+        parse_policy_dsl("# only a comment\n   ")
+
+
+def test_parse_rejects_empty_condition_fragment() -> None:
+    with pytest.raises(ValueError, match="Malformed condition"):
+        parse_policy_dsl("rule guard: if R > 0.10 and then set K += 0.04")
+
+
+def test_parse_rejects_non_finite_action_value() -> None:
+    with pytest.raises(ValueError, match="action value must be a finite real number"):
+        parse_policy_dsl("rule guard: if R < 0.50 then set K = 1e400")
+
+
+def test_parse_rejects_non_finite_condition_threshold() -> None:
+    with pytest.raises(
+        ValueError, match="condition threshold must be a finite real number"
+    ):
+        parse_policy_dsl("rule guard: if R < 1e400 then set K += 0.04")
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"generation_count": 2.5}, "generation_count must be a positive integer"),
+        ({"population_size": True}, "population_size must be a positive integer"),
+        ({"mutation_step": 0.0}, "mutation_step must be a finite positive number"),
+        (
+            {"mutation_step": float("inf")},
+            "mutation_step must be a finite positive number",
+        ),
+    ],
+)
+def test_search_rejects_invalid_search_parameters(
+    kwargs: dict[str, object], match: str
+) -> None:
+    base: dict[str, object] = {"generation_count": 1, "population_size": 2}
+    base.update(kwargs)
+    with pytest.raises(ValueError, match=match):
+        run_offline_evolutionary_policy_dsl_search(_sample_dsl(), **base)  # type: ignore[arg-type]  # deliberately invalid kwargs
+
+
+def test_search_blocks_candidate_pushing_threshold_outside_unit_interval() -> None:
+    """A mutation driving a condition threshold past 1.0 is blocked, not actuated."""
+    report = run_offline_evolutionary_policy_dsl_search(
+        "rule guard: if R >= 0.90 then set K = 0.50",
+        generation_count=2,
+        population_size=4,
+        mutation_step=0.50,
+    )
+
+    assert report.rejected_count >= 1
+    blocked = {
+        reason
+        for candidate in report.candidates
+        for reason in candidate.blocked_reasons
+    }
+    assert "condition_threshold_outside_0_to_1" in blocked
