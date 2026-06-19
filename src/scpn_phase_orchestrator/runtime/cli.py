@@ -6056,7 +6056,8 @@ def run(
             msg += f"  mean_amplitude={result.mean_amplitude:.4f}"
         click.echo(msg)
     except ValueError as exc:
-        raise click.ClickException(str(exc)) from exc
+        click.echo(f"ERROR: {exc}", err=True)
+        raise SystemExit(1) from exc
     finally:
         if audit_logger is not None:
             audit_logger.close()
