@@ -38,6 +38,7 @@
         "scpn_quantum_control.*",
         "spo_kernel",
         "spo_kernel.*",
+        "tomli",
         "websockets",
         "websockets.*",
         "yaml"
