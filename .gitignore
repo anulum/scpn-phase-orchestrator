@@ -253,3 +253,8 @@ mojo/spatial_modulator_mojo
 go/libspectral.so
 go/libspectral.h
 mojo/spectral_mojo
+
+# twin-confidence (divergence gate) compiled artefacts
+go/libtwin_confidence.so
+go/libtwin_confidence.h
+mojo/twin_confidence_mojo
