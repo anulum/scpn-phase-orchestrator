@@ -39,7 +39,7 @@ use spo_engine::{
     sparse_upde::SparseUPDEStepper,
     spectral, splitting, ssgf_costs,
     stuart_landau::StuartLandauStepper,
-    swarmalator, te_adaptive, transfer_entropy,
+    swarmalator, te_adaptive, transfer_entropy, twin_confidence,
     upde::UPDEStepper,
     winding,
 };
@@ -2350,6 +2350,44 @@ fn winding_numbers<'py>(
     Ok(PyArray1::from_slice(py, &result))
 }
 
+// ─── Digital-twin divergence ────────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (model_phases, observed_phases, model_order, observed_order, n, w, n_bins))]
+#[allow(clippy::too_many_arguments)]
+fn twin_divergence_rust<'py>(
+    py: Python<'py>,
+    model_phases: PyReadonlyArray1<'py, f64>,
+    observed_phases: PyReadonlyArray1<'py, f64>,
+    model_order: PyReadonlyArray1<'py, f64>,
+    observed_order: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    w: usize,
+    n_bins: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let mp = model_phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let op = observed_phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let mo = model_order
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let oo = observed_order
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    if mp.len() != n || op.len() != n {
+        return Err(PyValueError::new_err("phase lengths must equal n"));
+    }
+    if mo.len() != w || oo.len() != w {
+        return Err(PyValueError::new_err("order lengths must equal w"));
+    }
+    let result =
+        twin_confidence::twin_divergence(mp, op, mo, oo, n_bins).map_err(PyValueError::new_err)?;
+    Ok(PyArray1::from_vec(py, result.to_vec()))
+}
+
 // ─── Lyapunov Spectrum ──────────────────────────────────────────────
 
 #[pyfunction]
@@ -3880,6 +3918,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyRuleEngine>()?;
     m.add_class::<PyLIFEnsemble>()?;
     m.add_function(wrap_pyfunction!(attnres_modulate_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(twin_divergence_rust, m)?)?;
     m.add_function(wrap_pyfunction!(pac_modulation_index, m)?)?;
     m.add_function(wrap_pyfunction!(pac_matrix_compute, m)?)?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;

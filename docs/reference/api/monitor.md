@@ -395,6 +395,17 @@ performance (arXiv:2407.16172).
 
 ::: scpn_phase_orchestrator.monitor.lyapunov
 
+## Digital-Twin Confidence
+
+Scores how well a running orchestrator tracks its physical or simulated twin
+from a phase-histogram Jensen–Shannon divergence and an order-parameter
+Wasserstein-1 distance, calibrated against a nominal baseline into a confidence
+in `[0, 1]` plus an operator status. See the dedicated
+[Twin Confidence](monitor_twin_confidence.md) page for the formalism, the
+polyglot backend chain, and benchmarks.
+
+::: scpn_phase_orchestrator.monitor.twin_confidence
+
 ## Entropy Production Rate
 
 Measures the thermodynamic irreversibility of the phase dynamics.

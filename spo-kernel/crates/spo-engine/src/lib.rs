@@ -84,4 +84,5 @@ pub mod spectral;
 pub mod splitting;
 pub mod te_adaptive;
 pub mod transfer_entropy;
+pub mod twin_confidence;
 pub mod winding;

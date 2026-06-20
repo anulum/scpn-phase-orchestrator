@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Online digital-twin confidence scoring (`monitor.twin_confidence`): a
+  review-only health observable that turns model–observation disagreement into a
+  calibrated confidence in `[0, 1]` plus an operator status, from a phase
+  Jensen–Shannon divergence and an order-parameter Wasserstein-1 distance. Ships
+  the fastest-first polyglot divergence kernel (Rust, Mojo, Julia, Go, NumPy)
+  with bit-exact Rust/Julia/Go parity and a documented `1e-8` Mojo
+  text-protocol budget, a calibrator with normal-quantile operating bands, a
+  composite-z confidence map, deterministic audit records, multi-angle algorithm
+  / parity / stability tests, a Python dispatcher benchmark plus a Rust criterion
+  benchmark, and an API reference page.
+
 ### Repository hygiene
 
 - Enabled strict mypy (`[tool.mypy] strict = true`) and parametrised the

@@ -177,6 +177,7 @@ nav:
       - "Monitor — ITPC": reference/api/monitor_itpc.md
       - "Monitor — Merge Window": reference/api/monitor_merge_window.md
       - "Monitor — Lyapunov": reference/api/monitor_lyapunov.md
+      - "Monitor — Twin Confidence": reference/api/monitor_twin_confidence.md
       - "Monitor — NPE": reference/api/monitor_npe.md
       - "Monitor — PID": reference/api/monitor_pid.md
       - "Monitor — Poincare": reference/api/monitor_poincare.md

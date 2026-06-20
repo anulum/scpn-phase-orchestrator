@@ -1,0 +1,58 @@
+{
+  "results": [
+    {
+      "n": 64,
+      "w": 64,
+      "n_bins": 36,
+      "calls": 25,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 0.17988127889111638,
+      "mojo_ms_per_call": 24.584165399428457,
+      "julia_ms_per_call": 0.23356660036370158,
+      "go_ms_per_call": 0.1979551580734551,
+      "python_ms_per_call": 0.1684494805522263
+    },
+    {
+      "n": 256,
+      "w": 64,
+      "n_bins": 36,
+      "calls": 25,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 0.299444159027189,
+      "mojo_ms_per_call": 22.29892364004627,
+      "julia_ms_per_call": 0.8552795182913542,
+      "go_ms_per_call": 0.8020713203586638,
+      "python_ms_per_call": 0.5639599612914026
+    },
+    {
+      "n": 1024,
+      "w": 64,
+      "n_bins": 36,
+      "calls": 25,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 0.947681600227952,
+      "mojo_ms_per_call": 25.970182679593563,
+      "julia_ms_per_call": 0.9579146397300065,
+      "go_ms_per_call": 0.9657368389889598,
+      "python_ms_per_call": 0.6879294407553971
+    }
+  ]
+}

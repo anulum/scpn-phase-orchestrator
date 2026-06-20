@@ -107,6 +107,12 @@ __all__ = [
     "synthesize_stl_monitoring_automaton",
     "synthesize_stl_controller_candidates",
     "transfer_entropy_matrix",
+    "TwinConfidenceBaseline",
+    "TwinConfidenceCalibrator",
+    "TwinConfidenceScore",
+    "TwinDivergence",
+    "phase_order_divergence",
+    "score_twin_confidence",
     "ultradian_phase",
     "winding_numbers",
     "winding_vector",
@@ -285,6 +291,12 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "transfer_entropy_matrix": (".transfer_entropy", "transfer_entropy_matrix"),
     "winding_numbers": (".winding", "winding_numbers"),
     "winding_vector": (".winding", "winding_vector"),
+    "TwinConfidenceBaseline": (".twin_confidence", "TwinConfidenceBaseline"),
+    "TwinConfidenceCalibrator": (".twin_confidence", "TwinConfidenceCalibrator"),
+    "TwinConfidenceScore": (".twin_confidence", "TwinConfidenceScore"),
+    "TwinDivergence": (".twin_confidence", "TwinDivergence"),
+    "phase_order_divergence": (".twin_confidence", "phase_order_divergence"),
+    "score_twin_confidence": (".twin_confidence", "score_twin_confidence"),
 }
 
 
