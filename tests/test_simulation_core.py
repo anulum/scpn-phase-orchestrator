@@ -64,13 +64,13 @@ class TestParityWithCli:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[dict[str, Any]] = []
-        original = cli.simulate
+        original = cli.run.simulate
 
         def spy(spec: Any, **kwargs: Any) -> SimulationResult:
             calls.append(dict(kwargs))
             return original(spec, **kwargs)
 
-        monkeypatch.setattr(cli, "simulate", spy)
+        monkeypatch.setattr(cli.run, "simulate", spy)
         result = CliRunner().invoke(
             cli.main,
             ["run", KURAMOTO_SPEC, "--steps", "7", "--seed", "13"],

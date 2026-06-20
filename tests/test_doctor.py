@@ -312,7 +312,9 @@ class TestCli:
             checks=(_check("numpy", required=True, available=False),),
             python_version="3.12.3",
         )
-        monkeypatch.setattr(cli, "run_environment_diagnostics", lambda: failing)
+        monkeypatch.setattr(
+            cli.diagnostics, "run_environment_diagnostics", lambda: failing
+        )
         result = CliRunner().invoke(cli.main, ["doctor"])
         assert result.exit_code == 1
         assert "FAIL" in result.output
@@ -324,7 +326,9 @@ class TestCli:
             checks=(_check("numpy", required=True, available=False),),
             python_version="3.12.3",
         )
-        monkeypatch.setattr(cli, "run_environment_diagnostics", lambda: failing)
+        monkeypatch.setattr(
+            cli.diagnostics, "run_environment_diagnostics", lambda: failing
+        )
         result = CliRunner().invoke(cli.main, ["doctor", "--json-out"])
         assert result.exit_code == 1
         payload = json.loads(result.output)
