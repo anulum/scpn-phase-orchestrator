@@ -49,6 +49,14 @@ from scpn_phase_orchestrator.binding import (
 )
 from scpn_phase_orchestrator.coupling.infer import auto_coupling_estimation
 from scpn_phase_orchestrator.meta import CrossDomainMetaTransfer
+from scpn_phase_orchestrator.monitor.twin_confidence import (
+    TwinConfidenceCalibrator,
+    TwinConfidenceSummary,
+    phase_order_divergence,
+    score_twin_confidence,
+    summarise_twin_confidence,
+    twin_confidence_prometheus_text,
+)
 from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginExecutionApproval,
@@ -164,6 +172,177 @@ def doctor(json_out: bool) -> None:
             click.echo(line)
     if not report.ok:
         raise SystemExit(report.exit_code)
+
+
+def _load_twin_confidence_ticks(
+    path: Path,
+) -> list[tuple[NDArray[np.float64], ...]]:
+    """Load model/observed phase + order ticks from a JSONL file.
+
+    Each non-blank line must be a JSON object with ``model_phases``,
+    ``observed_phases``, ``model_order``, and ``observed_order`` arrays.
+
+    Parameters
+    ----------
+    path : Path
+        The JSONL file to read.
+
+    Returns
+    -------
+    list[tuple[NDArray[np.float64], ...]]
+        One ``(model_phases, observed_phases, model_order, observed_order)``
+        tuple per tick.
+
+    Raises
+    ------
+    click.ClickException
+        If the file is empty, a line is malformed, or a tick is missing a field.
+    """
+    ticks: list[tuple[NDArray[np.float64], ...]] = []
+    for line_no, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not raw.strip():
+            continue
+        try:
+            record = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise click.ClickException(f"{path}:{line_no}: malformed JSON") from exc
+        if not isinstance(record, Mapping):
+            raise click.ClickException(f"{path}:{line_no}: tick must be a JSON object")
+        try:
+            tick = tuple(
+                np.asarray(record[field], dtype=np.float64)
+                for field in (
+                    "model_phases",
+                    "observed_phases",
+                    "model_order",
+                    "observed_order",
+                )
+            )
+        except KeyError as exc:
+            raise click.ClickException(
+                f"{path}:{line_no}: missing field {exc}"
+            ) from exc
+        except (TypeError, ValueError) as exc:
+            raise click.ClickException(
+                f"{path}:{line_no}: non-numeric tick field"
+            ) from exc
+        ticks.append(tick)
+    if not ticks:
+        raise click.ClickException(f"{path}: no ticks found")
+    return ticks
+
+
+def _twin_confidence_summary_lines(summary: TwinConfidenceSummary) -> list[str]:
+    return [
+        f"ticks scored:      {summary.tick_count}",
+        f"worst status:      {summary.worst_status}",
+        f"latest status:     {summary.latest_status}",
+        f"mean confidence:   {summary.mean_confidence:.4f}",
+        f"min confidence:    {summary.min_confidence:.4f}",
+        f"latest confidence: {summary.latest_confidence:.4f}",
+        (
+            f"status counts:     healthy={summary.healthy_count} "
+            f"warning={summary.warning_count} critical={summary.critical_count}"
+        ),
+    ]
+
+
+@main.command(name="twin-confidence")
+@click.option(
+    "--calibration",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="JSONL of trusted nominal ticks used to fit the baseline.",
+)
+@click.option(
+    "--observations",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="JSONL of ticks to score against the calibrated baseline.",
+)
+@click.option("--n-bins", default=36, type=int, help="Phase histogram bins.")
+@click.option("--sensitivity", default=3.0, type=float, help="Confidence decay scale.")
+@click.option("--warning-confidence", default=0.6, type=float)
+@click.option("--critical-confidence", default=0.3, type=float)
+@click.option("--band-z", default=3.0, type=float, help="Operating-band multiplier.")
+@click.option("--json-out", is_flag=True, help="Emit the summary as JSON.")
+@click.option("--prometheus", is_flag=True, help="Emit Prometheus exposition text.")
+@click.option(
+    "--fail-on-critical",
+    is_flag=True,
+    help="Exit non-zero when the worst scored status is critical.",
+)
+def twin_confidence(
+    calibration: Path,
+    observations: Path,
+    n_bins: int,
+    sensitivity: float,
+    warning_confidence: float,
+    critical_confidence: float,
+    band_z: float,
+    json_out: bool,
+    prometheus: bool,
+    fail_on_critical: bool,
+) -> None:
+    """Score digital-twin confidence over an observation stream.
+
+    Fits a nominal baseline from the calibration JSONL, scores each observation
+    tick (phase Jensen-Shannon divergence + order Wasserstein-1 against the
+    baseline), and reports the operator-facing summary as human lines, JSON, or
+    Prometheus text.
+
+    Parameters
+    ----------
+    calibration : Path
+        JSONL of trusted nominal ticks.
+    observations : Path
+        JSONL of ticks to score.
+    n_bins : int
+        Phase histogram bins.
+    sensitivity : float
+        Confidence decay scale.
+    warning_confidence, critical_confidence : float
+        Operator status thresholds.
+    band_z : float
+        Operating-band normal-quantile multiplier.
+    json_out, prometheus : bool
+        Output-format switches.
+    fail_on_critical : bool
+        Whether to exit non-zero on a critical worst status.
+
+    Raises
+    ------
+    SystemExit
+        If ``--fail-on-critical`` is set and the worst scored status is critical.
+    """
+    try:
+        calibrator = TwinConfidenceCalibrator(band_z=band_z)
+        for tick in _load_twin_confidence_ticks(calibration):
+            calibrator.observe(phase_order_divergence(*tick, n_bins=n_bins))
+        baseline = calibrator.baseline()
+        scores = [
+            score_twin_confidence(
+                phase_order_divergence(*tick, n_bins=n_bins),
+                baseline,
+                sensitivity=sensitivity,
+                warning_confidence=warning_confidence,
+                critical_confidence=critical_confidence,
+            )
+            for tick in _load_twin_confidence_ticks(observations)
+        ]
+        summary = summarise_twin_confidence(scores)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if prometheus:
+        click.echo(twin_confidence_prometheus_text(summary), nl=False)
+    elif json_out:
+        click.echo(json.dumps(summary.to_audit_record(), indent=2, sort_keys=True))
+    else:
+        for line in _twin_confidence_summary_lines(summary):
+            click.echo(line)
+    if fail_on_critical and summary.worst_status == "critical":
+        raise SystemExit(2)
 
 
 @main.command()

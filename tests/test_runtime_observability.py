@@ -269,3 +269,62 @@ def test_digital_twin_operator_metrics_reject_invalid_evidence() -> None:
     malformed["status"] = "unknown"
     with pytest.raises(ValueError, match="status"):
         exporter.export_digital_twin_operator_evidence(malformed)
+
+
+def test_metrics_exporter_export_twin_confidence() -> None:
+    from scpn_phase_orchestrator.monitor.twin_confidence import (
+        TwinConfidenceScore,
+        summarise_twin_confidence,
+    )
+
+    def _score(status: str, confidence: float) -> TwinConfidenceScore:
+        return TwinConfidenceScore(
+            confidence=confidence,
+            status=status,
+            phase_js_divergence=0.0,
+            order_wasserstein=0.0,
+            phase_js_z=0.0,
+            order_w1_z=0.0,
+            composite_z=0.0,
+            phase_js_within_band=True,
+            order_w1_within_band=True,
+            backend="python",
+            score_hash="x",
+        )
+
+    summary = summarise_twin_confidence(
+        [_score("healthy", 1.0), _score("critical", 0.0)]
+    )
+    exporter = MetricsExporter(prefix="spo")
+    text = exporter.export_twin_confidence(summary)
+    assert "spo_twin_confidence_mean " in text
+    assert "spo_twin_confidence_worst_status_level 2" in text
+
+
+def test_runtime_observability_twin_confidence_facade() -> None:
+    from scpn_phase_orchestrator.monitor.twin_confidence import (
+        TwinConfidenceScore,
+        summarise_twin_confidence,
+    )
+
+    summary = summarise_twin_confidence(
+        [
+            TwinConfidenceScore(
+                confidence=0.8,
+                status="healthy",
+                phase_js_divergence=0.0,
+                order_wasserstein=0.0,
+                phase_js_z=0.0,
+                order_w1_z=0.0,
+                composite_z=0.0,
+                phase_js_within_band=True,
+                order_w1_within_band=True,
+                backend="python",
+                score_hash="x",
+            )
+        ]
+    )
+    obs = RuntimeObservability(metric_prefix="run")
+    text = obs.twin_confidence_prometheus_text(summary)
+    assert "run_twin_confidence_mean " in text
+    assert "run_twin_confidence_tick_count 1" in text

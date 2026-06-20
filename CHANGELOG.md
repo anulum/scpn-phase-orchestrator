@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   composite-z confidence map, deterministic audit records, multi-angle algorithm
   / parity / stability tests, a Python dispatcher benchmark plus a Rust criterion
   benchmark, and an API reference page.
+- Twin-confidence operator surfaces: a `TwinConfidenceSummary` aggregate and
+  Prometheus renderer, a `RuntimeObservability.twin_confidence_prometheus_text`
+  exporter, and the `spo twin-confidence` CLI command that scores a JSONL
+  observation stream against a calibrated baseline with human / JSON / Prometheus
+  output and a `--fail-on-critical` gate.
 
 ### Repository hygiene
 

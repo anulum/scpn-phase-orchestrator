@@ -22,9 +22,12 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Integral, Real
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from scpn_phase_orchestrator.upde.metrics import UPDEState
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.monitor.twin_confidence import TwinConfidenceSummary
 
 __all__ = [
     "MetricsExporter",
@@ -556,6 +559,25 @@ class MetricsExporter:
         """
         return "\n".join(self.digital_twin_operator_evidence_lines(evidence)) + "\n"
 
+    def export_twin_confidence(self, summary: TwinConfidenceSummary) -> str:
+        """Return Prometheus text for a twin-confidence operator summary.
+
+        Parameters
+        ----------
+        summary : TwinConfidenceSummary
+            The operator-facing aggregate over scored twin-confidence ticks.
+
+        Returns
+        -------
+        str
+            Prometheus exposition text using this exporter's metric prefix.
+        """
+        from scpn_phase_orchestrator.monitor.twin_confidence import (
+            twin_confidence_prometheus_text,
+        )
+
+        return twin_confidence_prometheus_text(summary, prefix=self._prefix)
+
 
 class OTelExporter:
     """Instrument UPDE steps with OpenTelemetry spans and metrics.
@@ -745,6 +767,21 @@ class RuntimeObservability:
             The Prometheus text for the digital-twin evidence.
         """
         return self._metrics.export_digital_twin_operator_evidence(evidence)
+
+    def twin_confidence_prometheus_text(self, summary: TwinConfidenceSummary) -> str:
+        """Return Prometheus text for a twin-confidence operator summary.
+
+        Parameters
+        ----------
+        summary : TwinConfidenceSummary
+            The operator-facing aggregate over scored twin-confidence ticks.
+
+        Returns
+        -------
+        str
+            Prometheus exposition text for the twin-confidence summary.
+        """
+        return self._metrics.export_twin_confidence(summary)
 
     def record_step(self, snapshot: RuntimeMetricSnapshot) -> None:
         """Record a runtime step through the optional OpenTelemetry backend.

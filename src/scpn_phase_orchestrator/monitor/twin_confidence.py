@@ -61,9 +61,12 @@ __all__ = [
     "TwinConfidenceBaseline",
     "TwinConfidenceCalibrator",
     "TwinConfidenceScore",
+    "TwinConfidenceSummary",
     "TwinDivergence",
     "phase_order_divergence",
     "score_twin_confidence",
+    "summarise_twin_confidence",
+    "twin_confidence_prometheus_text",
 ]
 
 TWO_PI: float = 2.0 * np.pi
@@ -867,3 +870,208 @@ def _with_hash(score: TwinConfidenceScore) -> TwinConfidenceScore:
         backend=score.backend,
         score_hash=digest,
     )
+
+
+# ---------------------------------------------------------------------
+# Operator-facing aggregation and Prometheus export
+# ---------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TwinConfidenceSummary:
+    """Operator-facing aggregate over a sequence of twin-confidence scores.
+
+    Attributes
+    ----------
+    tick_count : int
+        Number of scored ticks.
+    healthy_count, warning_count, critical_count : int
+        Per-status tick counts.
+    min_confidence, mean_confidence : float
+        Minimum and arithmetic-mean confidence across the scored ticks.
+    latest_confidence : float
+        Confidence of the most recently scored tick.
+    worst_status : str
+        ``"critical"`` if any tick was critical, else ``"warning"`` if any was
+        warning, else ``"healthy"``.
+    latest_status : str
+        Status of the most recently scored tick.
+    summary_hash : str
+        Deterministic SHA-256 over the audit record (excluding the hash).
+    """
+
+    tick_count: int
+    healthy_count: int
+    warning_count: int
+    critical_count: int
+    min_confidence: float
+    mean_confidence: float
+    latest_confidence: float
+    worst_status: str
+    latest_status: str
+    summary_hash: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe audit mapping of the summary.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe mapping of every summary field including
+            the ``summary_hash``.
+        """
+        return {
+            "tick_count": self.tick_count,
+            "healthy_count": self.healthy_count,
+            "warning_count": self.warning_count,
+            "critical_count": self.critical_count,
+            "min_confidence": self.min_confidence,
+            "mean_confidence": self.mean_confidence,
+            "latest_confidence": self.latest_confidence,
+            "worst_status": self.worst_status,
+            "latest_status": self.latest_status,
+            "summary_hash": self.summary_hash,
+        }
+
+
+def summarise_twin_confidence(
+    scores: Sequence[TwinConfidenceScore],
+) -> TwinConfidenceSummary:
+    """Aggregate a sequence of twin-confidence scores into operator evidence.
+
+    Parameters
+    ----------
+    scores : Sequence[TwinConfidenceScore]
+        The per-tick scores in chronological order.
+
+    Returns
+    -------
+    TwinConfidenceSummary
+        The deterministic operator-facing aggregate.
+
+    Raises
+    ------
+    ValueError
+        If ``scores`` is empty.
+    """
+    if not scores:
+        raise ValueError("summarise_twin_confidence requires at least one score")
+    confidences = [score.confidence for score in scores]
+    healthy = sum(1 for score in scores if score.status == "healthy")
+    warning = sum(1 for score in scores if score.status == "warning")
+    critical = sum(1 for score in scores if score.status == "critical")
+    if critical:
+        worst_status = "critical"
+    elif warning:
+        worst_status = "warning"
+    else:
+        worst_status = "healthy"
+    summary = TwinConfidenceSummary(
+        tick_count=len(scores),
+        healthy_count=healthy,
+        warning_count=warning,
+        critical_count=critical,
+        min_confidence=float(min(confidences)),
+        mean_confidence=float(sum(confidences) / len(confidences)),
+        latest_confidence=scores[-1].confidence,
+        worst_status=worst_status,
+        latest_status=scores[-1].status,
+        summary_hash="",
+    )
+    return _with_summary_hash(summary)
+
+
+def _with_summary_hash(summary: TwinConfidenceSummary) -> TwinConfidenceSummary:
+    record = summary.to_audit_record()
+    record.pop("summary_hash", None)
+    serialised = json.dumps(record, sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha256(serialised.encode("utf-8")).hexdigest()
+    return TwinConfidenceSummary(
+        tick_count=summary.tick_count,
+        healthy_count=summary.healthy_count,
+        warning_count=summary.warning_count,
+        critical_count=summary.critical_count,
+        min_confidence=summary.min_confidence,
+        mean_confidence=summary.mean_confidence,
+        latest_confidence=summary.latest_confidence,
+        worst_status=summary.worst_status,
+        latest_status=summary.latest_status,
+        summary_hash=digest,
+    )
+
+
+_STATUS_LEVELS: dict[str, int] = {"healthy": 0, "warning": 1, "critical": 2}
+
+
+def twin_confidence_prometheus_text(
+    summary: TwinConfidenceSummary,
+    *,
+    prefix: str = "spo",
+) -> str:
+    """Render a twin-confidence summary as Prometheus exposition text.
+
+    Parameters
+    ----------
+    summary : TwinConfidenceSummary
+        The operator-facing aggregate to export.
+    prefix : str, optional
+        Metric-name prefix (default ``"spo"``).
+
+    Returns
+    -------
+    str
+        Prometheus exposition text with confidence gauges, per-status counters,
+        and a numeric worst-status level gauge.
+
+    Raises
+    ------
+    ValueError
+        If ``prefix`` is not a non-empty string.
+    """
+    _require_non_empty(prefix, "prefix")
+    lines = [
+        f"# HELP {prefix}_twin_confidence_mean Mean twin confidence over scored ticks",
+        f"# TYPE {prefix}_twin_confidence_mean gauge",
+        f"{prefix}_twin_confidence_mean {summary.mean_confidence}",
+        f"# HELP {prefix}_twin_confidence_min Minimum twin confidence over ticks",
+        f"# TYPE {prefix}_twin_confidence_min gauge",
+        f"{prefix}_twin_confidence_min {summary.min_confidence}",
+        f"# HELP {prefix}_twin_confidence_latest Most recent twin confidence",
+        f"# TYPE {prefix}_twin_confidence_latest gauge",
+        f"{prefix}_twin_confidence_latest {summary.latest_confidence}",
+        f"# HELP {prefix}_twin_confidence_tick_count Scored twin-confidence ticks",
+        f"# TYPE {prefix}_twin_confidence_tick_count gauge",
+        f"{prefix}_twin_confidence_tick_count {summary.tick_count}",
+        (
+            f"# HELP {prefix}_twin_confidence_status_total "
+            "Twin-confidence ticks per operator status"
+        ),
+        f"# TYPE {prefix}_twin_confidence_status_total counter",
+        (
+            f'{prefix}_twin_confidence_status_total{{status="healthy"}} '
+            f"{summary.healthy_count}"
+        ),
+        (
+            f'{prefix}_twin_confidence_status_total{{status="warning"}} '
+            f"{summary.warning_count}"
+        ),
+        (
+            f'{prefix}_twin_confidence_status_total{{status="critical"}} '
+            f"{summary.critical_count}"
+        ),
+        (
+            f"# HELP {prefix}_twin_confidence_worst_status_level "
+            "Worst operator status (0 healthy, 1 warning, 2 critical)"
+        ),
+        f"# TYPE {prefix}_twin_confidence_worst_status_level gauge",
+        (
+            f"{prefix}_twin_confidence_worst_status_level "
+            f"{_STATUS_LEVELS[summary.worst_status]}"
+        ),
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _require_non_empty(value: str, name: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")

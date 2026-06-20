@@ -12,7 +12,7 @@
     "research_experimental_modules": 191,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 95,
-    "test_files": 603
+    "test_files": 604
   },
   "documentation": {
     "public_pages": [
@@ -1944,6 +1944,7 @@
       "tests/test_transfer_entropy_stability.py",
       "tests/test_twin_confidence.py",
       "tests/test_twin_confidence_backends.py",
+      "tests/test_twin_confidence_cli.py",
       "tests/test_twin_confidence_stability.py",
       "tests/test_type_ignore_justifications.py",
       "tests/test_ude_kuramoto.py",

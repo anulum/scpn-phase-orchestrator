@@ -110,9 +110,12 @@ __all__ = [
     "TwinConfidenceBaseline",
     "TwinConfidenceCalibrator",
     "TwinConfidenceScore",
+    "TwinConfidenceSummary",
     "TwinDivergence",
     "phase_order_divergence",
     "score_twin_confidence",
+    "summarise_twin_confidence",
+    "twin_confidence_prometheus_text",
     "ultradian_phase",
     "winding_numbers",
     "winding_vector",
@@ -294,9 +297,15 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "TwinConfidenceBaseline": (".twin_confidence", "TwinConfidenceBaseline"),
     "TwinConfidenceCalibrator": (".twin_confidence", "TwinConfidenceCalibrator"),
     "TwinConfidenceScore": (".twin_confidence", "TwinConfidenceScore"),
+    "TwinConfidenceSummary": (".twin_confidence", "TwinConfidenceSummary"),
     "TwinDivergence": (".twin_confidence", "TwinDivergence"),
     "phase_order_divergence": (".twin_confidence", "phase_order_divergence"),
     "score_twin_confidence": (".twin_confidence", "score_twin_confidence"),
+    "summarise_twin_confidence": (".twin_confidence", "summarise_twin_confidence"),
+    "twin_confidence_prometheus_text": (
+        ".twin_confidence",
+        "twin_confidence_prometheus_text",
+    ),
 }
 
 

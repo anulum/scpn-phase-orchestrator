@@ -130,6 +130,33 @@ SHA-256 `score_hash` over its record.
 
 ---
 
+### 2.4 Operator surfaces
+
+`summarise_twin_confidence(scores)` aggregates a sequence of
+`TwinConfidenceScore` into a `TwinConfidenceSummary` — tick count, per-status
+counts, min/mean/latest confidence, worst and latest status, and a deterministic
+hash. `twin_confidence_prometheus_text(summary, prefix="spo")` renders it as
+Prometheus exposition text (confidence gauges, a per-status counter, and a
+numeric worst-status level). `RuntimeObservability.twin_confidence_prometheus_text`
+delegates to the same renderer with the runtime's metric prefix.
+
+The `spo twin-confidence` CLI command scores an observation stream against a
+calibrated baseline:
+
+```bash
+spo twin-confidence --calibration nominal.jsonl --observations live.jsonl
+spo twin-confidence --calibration nominal.jsonl --observations live.jsonl --json-out
+spo twin-confidence --calibration nominal.jsonl --observations live.jsonl --prometheus
+spo twin-confidence --calibration nominal.jsonl --observations live.jsonl --fail-on-critical
+```
+
+Each JSONL line is one tick: a JSON object with `model_phases`,
+`observed_phases`, `model_order`, and `observed_order` arrays. The calibration
+file fits the baseline; the observation file is scored. Options expose `--n-bins`,
+`--sensitivity`, `--warning-confidence`, `--critical-confidence`, and `--band-z`.
+`--fail-on-critical` exits non-zero when the worst scored status is critical, so
+the command can gate a deployment pipeline.
+
 ## 3. Backend fallback chain
 
 The module resolves backends in the order **Rust → Mojo → Julia → Go → Python**
@@ -219,6 +246,12 @@ Observations:
   bounds over a random sweep, metric symmetry and identity of indiscernibles,
   monotone confidence decay, calibration robustness, long-run drift-freedom on
   identical streams, and overflow-free phase wrapping up to `2π·10⁹`.
+* `tests/test_twin_confidence_cli.py` — the `spo twin-confidence` command across
+  human / JSON / Prometheus output, `--fail-on-critical`, and every JSONL loader
+  error path (malformed line, non-object tick, missing field, non-numeric field,
+  empty stream).
+* `tests/test_runtime_observability.py` — the `MetricsExporter.export_twin_confidence`
+  and `RuntimeObservability.twin_confidence_prometheus_text` facade.
 
 ```bash
 pytest tests/test_twin_confidence.py tests/test_twin_confidence_backends.py

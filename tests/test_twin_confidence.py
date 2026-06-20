@@ -24,9 +24,12 @@ from scpn_phase_orchestrator.monitor import twin_confidence as tc
 from scpn_phase_orchestrator.monitor.twin_confidence import (
     TwinConfidenceBaseline,
     TwinConfidenceCalibrator,
+    TwinConfidenceScore,
     TwinDivergence,
     phase_order_divergence,
     score_twin_confidence,
+    summarise_twin_confidence,
+    twin_confidence_prometheus_text,
 )
 
 TWO_PI = 2.0 * np.pi
@@ -472,3 +475,115 @@ def test_divergence_audit_record_round_trips() -> None:
         "backend": "rust",
     }
     assert json.loads(json.dumps(record)) == record
+
+
+# ---------------------------------------------------------------------
+# Summary aggregation
+# ---------------------------------------------------------------------
+
+
+def _score(status: str, confidence: float) -> TwinConfidenceScore:
+    return TwinConfidenceScore(
+        confidence=confidence,
+        status=status,
+        phase_js_divergence=0.0,
+        order_wasserstein=0.0,
+        phase_js_z=0.0,
+        order_w1_z=0.0,
+        composite_z=0.0,
+        phase_js_within_band=True,
+        order_w1_within_band=True,
+        backend="python",
+        score_hash="x",
+    )
+
+
+def test_summarise_requires_scores() -> None:
+    with pytest.raises(ValueError, match="at least one score"):
+        summarise_twin_confidence([])
+
+
+def test_summary_counts_and_statistics() -> None:
+    scores = [
+        _score("healthy", 1.0),
+        _score("warning", 0.5),
+        _score("healthy", 0.8),
+    ]
+    summary = summarise_twin_confidence(scores)
+    assert summary.tick_count == 3
+    assert summary.healthy_count == 2
+    assert summary.warning_count == 1
+    assert summary.critical_count == 0
+    assert summary.worst_status == "warning"
+    assert summary.latest_status == "healthy"
+    assert summary.min_confidence == pytest.approx(0.5)
+    assert summary.mean_confidence == pytest.approx((1.0 + 0.5 + 0.8) / 3.0)
+    assert summary.latest_confidence == pytest.approx(0.8)
+    assert len(summary.summary_hash) == 64
+    assert (
+        json.loads(json.dumps(summary.to_audit_record())) == summary.to_audit_record()
+    )
+
+
+@pytest.mark.parametrize(
+    ("statuses", "worst"),
+    [
+        (["healthy", "healthy"], "healthy"),
+        (["healthy", "warning"], "warning"),
+        (["warning", "critical"], "critical"),
+    ],
+)
+def test_summary_worst_status(statuses: list[str], worst: str) -> None:
+    scores = [_score(status, 0.5) for status in statuses]
+    assert summarise_twin_confidence(scores).worst_status == worst
+
+
+def test_summary_hash_is_deterministic() -> None:
+    scores = [_score("healthy", 1.0), _score("critical", 0.0)]
+    first = summarise_twin_confidence(scores)
+    second = summarise_twin_confidence(scores)
+    assert first.summary_hash == second.summary_hash
+
+
+# ---------------------------------------------------------------------
+# Prometheus rendering
+# ---------------------------------------------------------------------
+
+
+def test_prometheus_text_contains_all_series() -> None:
+    summary = summarise_twin_confidence(
+        [_score("healthy", 1.0), _score("warning", 0.5), _score("critical", 0.1)]
+    )
+    text = twin_confidence_prometheus_text(summary)
+    assert text.endswith("\n")
+    assert "spo_twin_confidence_mean " in text
+    assert "spo_twin_confidence_min " in text
+    assert "spo_twin_confidence_latest " in text
+    assert "spo_twin_confidence_tick_count 3" in text
+    assert 'spo_twin_confidence_status_total{status="healthy"} 1' in text
+    assert 'spo_twin_confidence_status_total{status="warning"} 1' in text
+    assert 'spo_twin_confidence_status_total{status="critical"} 1' in text
+    assert "spo_twin_confidence_worst_status_level 2" in text
+
+
+@pytest.mark.parametrize(
+    ("status", "level"),
+    [("healthy", 0), ("warning", 1), ("critical", 2)],
+)
+def test_prometheus_worst_status_level(status: str, level: int) -> None:
+    summary = summarise_twin_confidence([_score(status, 0.5)])
+    text = twin_confidence_prometheus_text(summary)
+    assert f"spo_twin_confidence_worst_status_level {level}" in text
+
+
+def test_prometheus_custom_prefix() -> None:
+    summary = summarise_twin_confidence([_score("healthy", 1.0)])
+    text = twin_confidence_prometheus_text(summary, prefix="twin")
+    assert "twin_twin_confidence_mean " in text
+
+
+@pytest.mark.parametrize("prefix", ["", "   "])
+def test_prometheus_rejects_empty_prefix(prefix: str) -> None:
+    summary = summarise_twin_confidence([_score("healthy", 1.0)])
+    with pytest.raises(ValueError, match="prefix"):
+        twin_confidence_prometheus_text(summary, prefix=prefix)
