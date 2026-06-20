@@ -15,6 +15,7 @@ import pytest
 
 from scpn_phase_orchestrator.coupling.spatial_modulator import (
     SpatialCouplingModulator,
+    _load_julia_fn,
     _validate_backend_output,
 )
 
@@ -259,3 +260,23 @@ class TestJacobianPositions:
         jac = modulator.jacobian_positions(np.array([[0.0], [0.0]], dtype=np.float64))
 
         np.testing.assert_array_equal(jac, np.zeros((2, 2, 2, 1)))
+
+
+def test_load_julia_fn_rejects_juliacall_without_main(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A present-but-uninitialised juliacall must be reported unavailable.
+
+    When the Julia runtime cannot inject ``juliacall.Main`` (for example under
+    coverage's thread tracer) the package still imports. The backend probe
+    must reject it here so dispatch falls through, instead of selecting Julia
+    and crashing with ImportError at call time.
+    """
+    import sys
+    import types
+
+    stub = types.ModuleType("juliacall")  # deliberately lacks ``Main``
+    monkeypatch.setitem(sys.modules, "juliacall", stub)
+
+    with pytest.raises(ImportError, match="Main unavailable"):
+        _load_julia_fn()
