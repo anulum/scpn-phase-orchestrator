@@ -102,6 +102,11 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.supervisor.hierarchy.plan",
     "scpn_phase_orchestrator.supervisor.hierarchy.sync",
     "scpn_phase_orchestrator.supervisor.hierarchy.consensus",
+    "scpn_phase_orchestrator.binding.semantic.coercion",
+    "scpn_phase_orchestrator.binding.semantic.retrieval",
+    "scpn_phase_orchestrator.binding.semantic.review",
+    "scpn_phase_orchestrator.binding.semantic.serialization",
+    "scpn_phase_orchestrator.binding.semantic.compiler",
 }
 
 
