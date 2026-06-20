@@ -107,6 +107,9 @@ __all__ = [
     "synthesize_stl_monitoring_automaton",
     "synthesize_stl_controller_candidates",
     "transfer_entropy_matrix",
+    "ConformalDecision",
+    "ConformalGateConfig",
+    "TwinConformalGate",
     "TwinConfidenceBaseline",
     "TwinConfidenceCalibrator",
     "TwinConfidenceScore",
@@ -116,6 +119,7 @@ __all__ = [
     "score_twin_confidence",
     "summarise_twin_confidence",
     "twin_confidence_prometheus_text",
+    "confidence_nonconformity",
     "ultradian_phase",
     "winding_numbers",
     "winding_vector",
@@ -305,6 +309,13 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "twin_confidence_prometheus_text": (
         ".twin_confidence",
         "twin_confidence_prometheus_text",
+    ),
+    "ConformalDecision": (".twin_conformal_gate", "ConformalDecision"),
+    "ConformalGateConfig": (".twin_conformal_gate", "ConformalGateConfig"),
+    "TwinConformalGate": (".twin_conformal_gate", "TwinConformalGate"),
+    "confidence_nonconformity": (
+        ".twin_conformal_gate",
+        "confidence_nonconformity",
     ),
 }
 

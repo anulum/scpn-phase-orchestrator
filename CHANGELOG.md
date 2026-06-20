@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Conformal twin-confidence admission gate (`monitor.twin_conformal_gate`): turns
+  the twin-confidence score into a coverage-valid admit/flag gate. From a nominal
+  calibration window it learns a distribution-free threshold on the composite
+  z-deviation (target `1 − alpha` coverage) and adapts it online by Adaptive
+  Conformal Inference (Gibbs & Candès, 2021), optionally conditioned per detected
+  regime. Review-only: a flagged tick signals the twin drifted beyond its
+  calibrated band and autonomy should narrow.
 - Chaos-engineering resilience injection (`runtime.chaos`, `spo chaos`): inject
   non-actuating faults — coupling drops, frequency drift, sensor noise, and drive
   dropout — into a controlled simulation via the `scenario_hook` boundary, then

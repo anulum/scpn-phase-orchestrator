@@ -406,6 +406,20 @@ polyglot backend chain, and benchmarks.
 
 ::: scpn_phase_orchestrator.monitor.twin_confidence
 
+### Conformal Twin-Confidence Gate
+
+Wraps the twin-confidence stream in a distribution-free admission gate. From a
+trusted nominal calibration window it learns a threshold on the composite
+z-deviation such that nominal ticks stay inside the band with probability
+`1 − target_miscoverage`, then admits a tick only when its score is inside the
+band. The threshold adapts online by Adaptive Conformal Inference (Gibbs &
+Candès, 2021) so the long-run empirical miscoverage tracks the target under
+non-stationarity, and it can be regime-conditioned (a separate band per detected
+sync / chimera / chaotic regime). Review-only: a flagged tick signals the twin
+has drifted beyond its calibrated band and autonomy should narrow.
+
+::: scpn_phase_orchestrator.monitor.twin_conformal_gate
+
 ## Entropy Production Rate
 
 Measures the thermodynamic irreversibility of the phase dynamics.

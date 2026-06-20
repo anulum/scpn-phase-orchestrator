@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 243,
+    "core_engine_modules": 244,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 26,
     "optional_extras": 18,
     "public_api_exports": 24,
     "public_documentation_pages": 189,
-    "python_package_modules": 513,
+    "python_package_modules": 514,
     "research_experimental_modules": 191,
     "runtime_serving_modules": 50,
     "rust_kernel_files": 95,
-    "test_files": 609
+    "test_files": 610
   },
   "documentation": {
     "public_pages": [
@@ -438,6 +438,7 @@
       "src/scpn_phase_orchestrator/monitor/stl.py",
       "src/scpn_phase_orchestrator/monitor/transfer_entropy.py",
       "src/scpn_phase_orchestrator/monitor/twin_confidence.py",
+      "src/scpn_phase_orchestrator/monitor/twin_conformal_gate.py",
       "src/scpn_phase_orchestrator/monitor/winding.py",
       "src/scpn_phase_orchestrator/oscillators/__init__.py",
       "src/scpn_phase_orchestrator/oscillators/base.py",
@@ -1183,6 +1184,7 @@
     "src/scpn_phase_orchestrator/monitor/stl.py",
     "src/scpn_phase_orchestrator/monitor/transfer_entropy.py",
     "src/scpn_phase_orchestrator/monitor/twin_confidence.py",
+    "src/scpn_phase_orchestrator/monitor/twin_conformal_gate.py",
     "src/scpn_phase_orchestrator/monitor/winding.py",
     "src/scpn_phase_orchestrator/nn/__init__.py",
     "src/scpn_phase_orchestrator/nn/bold.py",
@@ -1958,6 +1960,7 @@
       "tests/test_twin_confidence_backends.py",
       "tests/test_twin_confidence_cli.py",
       "tests/test_twin_confidence_stability.py",
+      "tests/test_twin_conformal_gate.py",
       "tests/test_type_ignore_justifications.py",
       "tests/test_ude_kuramoto.py",
       "tests/test_upde_bayesian.py",
