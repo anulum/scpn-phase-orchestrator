@@ -181,6 +181,30 @@ Translates ControlAction to Modbus register writes over TLS.
 
 ::: scpn_phase_orchestrator.adapters.modbus_tls
 
+### OPC-UA SCADA Bridge
+
+Read-only ingestion from OPC-UA servers for Industry 4.0 SCADA/DCS systems.
+`OpcUaTag` and `OpcUaBridgeConfig` validate the endpoint and tag mapping;
+`OpcUaPhaseBridge.extract_phases` turns decoded process-tag sample series
+(temperatures, pressures, flow rates) into physical-channel phase states via the
+Hilbert transform, with no network dependency. Live reads use the optional
+`asyncua` dependency (`opcua` extra): `collect_live` connects, reads
+`samples_per_tag` values per tag, and disconnects; `read_live` reads from an
+already-connected client. The bridge never writes to the server.
+
+```python
+from scpn_phase_orchestrator.adapters import OpcUaTag, OpcUaPhaseBridge
+
+bridge = OpcUaPhaseBridge.from_tags(
+    "opc.tcp://plc.local:4840/scada",
+    [OpcUaTag(node_id="ns=2;s=Reactor.Temp", name="reactor_temp", sample_rate_hz=10.0)],
+)
+samples = await bridge.collect_live(samples_per_tag=128)
+phases = bridge.extract_phases(samples)
+```
+
+::: scpn_phase_orchestrator.adapters.opcua_bridge
+
 ### Hardware I/O
 
 Generic hardware I/O abstraction for digital/analogue outputs.

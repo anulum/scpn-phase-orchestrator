@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   composite-z confidence map, deterministic audit records, multi-angle algorithm
   / parity / stability tests, a Python dispatcher benchmark plus a Rust criterion
   benchmark, and an API reference page.
+- OPC-UA SCADA bridge (`adapters.opcua_bridge`, `opcua` extra): read-only
+  ingestion of industrial process tags (temperatures, pressures, flow rates)
+  from an OPC-UA server, mapped to physical-channel phase states via the Hilbert
+  transform. `OpcUaTag` / `OpcUaBridgeConfig` validate the endpoint and tag
+  mapping; `extract_phases` and `collect_samples` work without a network
+  dependency, and `read_live` / `collect_live` read from a connected `asyncua`
+  client. Closes the OPC-UA adapter request (issue #27).
 - Twin-confidence operator surfaces: a `TwinConfidenceSummary` aggregate and
   Prometheus renderer, a `RuntimeObservability.twin_confidence_prometheus_text`
   exporter, and the `spo twin-confidence` CLI command that scores a JSONL

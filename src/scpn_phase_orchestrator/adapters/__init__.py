@@ -36,6 +36,12 @@ from scpn_phase_orchestrator.adapters.modbus_tls import (
     SecureModbusAdapter,
 )
 from scpn_phase_orchestrator.adapters.neurocore_bridge import NeurocoreBridge
+from scpn_phase_orchestrator.adapters.opcua_bridge import (
+    HAS_ASYNCUA,
+    OpcUaBridgeConfig,
+    OpcUaPhaseBridge,
+    OpcUaTag,
+)
 from scpn_phase_orchestrator.adapters.plasma_control_bridge import PlasmaControlBridge
 from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
@@ -61,12 +67,16 @@ __all__ = [
     "CoherenceMemorySnapshot",
     "FusionCoreBridge",
     "GaianMeshNode",
+    "HAS_ASYNCUA",
     "HAS_BRAINFLOW",
     "HAS_MODBUS",
     "HAS_PYMODBUS",
     "LSLBCIBridge",
     "ModbusAdapter",
     "NeurocoreBridge",
+    "OpcUaBridgeConfig",
+    "OpcUaPhaseBridge",
+    "OpcUaTag",
     "PlasmaControlBridge",
     "PrometheusAdapter",
     "QuantumControlBridge",
