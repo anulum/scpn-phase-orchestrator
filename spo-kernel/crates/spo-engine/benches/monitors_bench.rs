@@ -24,8 +24,8 @@
 //! * `hodge::hodge_decomposition` — gradient / curl / harmonic split of
 //!   the coupling-weighted phase field.
 //! * `entropy_prod::entropy_production_rate` — irreversibility proxy.
-//! * `pid::redundancy` and `pid::synergy` — partial-information
-//!   decomposition of two oscillator groups.
+//! * `pid::pid_decomposition` — Williams-Beer partial-information
+//!   redundancy / synergy of two oscillator groups over a phase history.
 //!
 //! Run with: ``cargo bench -p spo-engine --bench monitors_bench``.
 
@@ -35,7 +35,7 @@ use spo_engine::embedding::delay_embed;
 use spo_engine::entropy_prod::entropy_production_rate;
 use spo_engine::hodge::hodge_decomposition;
 use spo_engine::lyapunov::lyapunov_spectrum;
-use spo_engine::pid::{redundancy, synergy};
+use spo_engine::pid::pid_decomposition;
 use spo_engine::recurrence::{recurrence_matrix, rqa};
 use spo_engine::spectral::{fiedler_value, symmetric_eigen};
 use spo_engine::transfer_entropy::{phase_transfer_entropy, transfer_entropy_matrix};
@@ -199,9 +199,21 @@ fn bench_hodge_decomposition(c: &mut Criterion) {
     for &n in &[6usize, 12, 24] {
         let knm = ring_knm(n, 0.5);
         let phases: Vec<f64> = (0..n).map(|i| i as f64 * 0.21).collect();
+        let mut edges: Vec<i64> = Vec::new();
+        for i in 0..n {
+            for j in (i + 1)..n {
+                if knm[i * n + j] != 0.0 {
+                    edges.push(i as i64);
+                    edges.push(j as i64);
+                }
+            }
+        }
+        let n_edges = edges.len() / 2;
+        let tris: Vec<i64> = Vec::new();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
-                let (g, c_part, h) = hodge_decomposition(&knm, &phases, n);
+                let (g, c_part, h) =
+                    hodge_decomposition(&knm, &phases, n, &edges, n_edges, &tris, 0);
                 criterion::black_box((g, c_part, h));
             });
         });
@@ -226,22 +238,24 @@ fn bench_entropy_production(c: &mut Criterion) {
 }
 
 fn bench_pid_redundancy_synergy(c: &mut Criterion) {
-    // Phases include two halves; PID groups defined over indices.
+    // Williams-Beer PID over a (t, n) phase history; groups over indices.
     let mut group = c.benchmark_group("pid");
+    let t = 256usize;
+    let n_bins = 8usize;
     for &n in &[8usize, 16] {
-        let phases: Vec<f64> = (0..n).map(|i| i as f64 * 0.5).collect();
         let group_a: Vec<usize> = (0..n / 2).collect();
         let group_b: Vec<usize> = (n / 2..n).collect();
-        group.bench_with_input(BenchmarkId::new("redundancy", n), &n, |b, _| {
+        let history: Vec<f64> = (0..t * n)
+            .map(|k| {
+                let step = (k / n) as f64;
+                let osc = (k % n) as f64;
+                (step * 0.05 + osc * 0.3) % 6.283
+            })
+            .collect();
+        group.bench_with_input(BenchmarkId::new("decomposition", n), &n, |b, &n| {
             b.iter(|| {
-                let r = redundancy(&phases, &group_a, &group_b, 16);
-                criterion::black_box(r);
-            });
-        });
-        group.bench_with_input(BenchmarkId::new("synergy", n), &n, |b, _| {
-            b.iter(|| {
-                let s = synergy(&phases, &group_a, &group_b, 16);
-                criterion::black_box(s);
+                let (red, syn) = pid_decomposition(&history, t, n, &group_a, &group_b, n_bins);
+                criterion::black_box((red, syn));
             });
         });
     }
