@@ -71,7 +71,9 @@ class TestSTLBuiltinFallback:
         }
 
     def test_unsupported_spec_requires_rtamt_when_missing(self, monkeypatch):
-        monkeypatch.setattr(stl_module, "rtamt", None)
+        # STLMonitor reads ``rtamt`` from the ``monitor`` submodule namespace
+        # after the stl package split, so patch the optional import there.
+        monkeypatch.setattr(stl_module.monitor, "rtamt", None)
         monitor = STLMonitor("x until y")
         with pytest.raises(ImportError, match="rtamt"):
             monitor.evaluate({"x": [1.0], "y": [0.0]})

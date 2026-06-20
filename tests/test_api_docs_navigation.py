@@ -107,6 +107,12 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.binding.semantic.review",
     "scpn_phase_orchestrator.binding.semantic.serialization",
     "scpn_phase_orchestrator.binding.semantic.compiler",
+    "scpn_phase_orchestrator.monitor.stl.monitor",
+    "scpn_phase_orchestrator.monitor.stl.automaton",
+    "scpn_phase_orchestrator.monitor.stl.controller",
+    "scpn_phase_orchestrator.monitor.stl.projection",
+    "scpn_phase_orchestrator.monitor.stl.actuation_gate",
+    "scpn_phase_orchestrator.monitor.stl.closed_loop",
 }
 
 
