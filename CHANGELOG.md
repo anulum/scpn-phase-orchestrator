@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   composite-z confidence map, deterministic audit records, multi-angle algorithm
   / parity / stability tests, a Python dispatcher benchmark plus a Rust criterion
   benchmark, and an API reference page.
+- Interactive WASM Kuramoto playground (`spo-kernel/crates/spo-wasm/example`):
+  the console demo is replaced by a browser simulator with sliders for the
+  oscillator count, coupling, time step, and frequency spread, a live phase-ring
+  and mean-field canvas, and an order-parameter time series, driven by the
+  `WasmEngine` class. Page logic is factored into a pure `simulation.mjs` helper
+  module with a `node --test` suite (covering the helpers and a WASM
+  synchronisation cross-check) bridged into the Python test run.
 - OPC-UA SCADA bridge (`adapters.opcua_bridge`, `opcua` extra): read-only
   ingestion of industrial process tags (temperatures, pressures, flow rates)
   from an OPC-UA server, mapped to physical-channel phase states via the Hilbert

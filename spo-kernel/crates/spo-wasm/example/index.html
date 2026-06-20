@@ -1,56 +1,224 @@
 <!DOCTYPE html>
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Commercial license available -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 -->
+<!-- Contact: www.anulum.li | protoscience@anulum.li -->
+<!-- SCPN Phase Orchestrator — WASM Kuramoto playground -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>SPO-WASM — Kuramoto Simulation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SPO — Interactive Kuramoto Playground</title>
   <style>
-    body { font-family: monospace; background: #111; color: #0f0; padding: 1em; }
-    #output { white-space: pre; height: 80vh; overflow-y: auto; }
+    :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --grid: #21262d; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      background: var(--bg); color: var(--fg); margin: 0; padding: 1.2rem;
+    }
+    h1 { font-size: 1.1rem; font-weight: 600; margin: 0 0 0.2rem; }
+    p.lead { color: #8b949e; margin: 0 0 1rem; font-size: 0.85rem; }
+    .layout { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .panel { background: #161b22; border: 1px solid var(--grid); border-radius: 8px; padding: 1rem; }
+    canvas { display: block; background: #0d1117; border-radius: 6px; }
+    .controls { min-width: 260px; flex: 1; }
+    .control { margin-bottom: 0.9rem; }
+    .control label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem; }
+    .control input[type=range] { width: 100%; accent-color: var(--accent); }
+    .control .val { color: var(--accent); }
+    .buttons { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    button {
+      background: #21262d; color: var(--fg); border: 1px solid #30363d;
+      border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer; font-family: inherit;
+    }
+    button:hover { border-color: var(--accent); }
+    button[aria-pressed=true] { background: var(--accent); color: #0d1117; }
+    .readout { margin-top: 1rem; font-size: 0.85rem; line-height: 1.6; }
+    .readout b { color: var(--accent); }
+    .status-incoherent { color: #f85149; }
+    .status-partial { color: #d29922; }
+    .status-synchronised { color: #3fb950; }
   </style>
 </head>
 <body>
-  <h2>SCPN Phase Orchestrator — WASM Kuramoto Demo</h2>
-  <p>Open the browser console for raw output.</p>
-  <div id="output"></div>
+  <h1>SCPN Phase Orchestrator — Interactive Kuramoto Playground</h1>
+  <p class="lead">
+    Mean-field Kuramoto synchronisation in WebAssembly. Raise the coupling past
+    the critical point and watch the order parameter R climb toward 1.
+  </p>
+
+  <div class="layout">
+    <div class="panel">
+      <canvas id="ring" width="320" height="320" aria-label="Phase ring"></canvas>
+      <canvas id="chart" width="320" height="120" aria-label="Order parameter over time"></canvas>
+    </div>
+
+    <div class="panel controls">
+      <div class="control">
+        <label for="n">Oscillators (N) <span class="val" id="n-val">48</span></label>
+        <input type="range" id="n" min="2" max="512" value="48" step="1" />
+      </div>
+      <div class="control">
+        <label for="coupling">Coupling (K) <span class="val" id="coupling-val">1.50</span></label>
+        <input type="range" id="coupling" min="0" max="10" value="1.5" step="0.05" />
+      </div>
+      <div class="control">
+        <label for="dt">Time step (dt) <span class="val" id="dt-val">0.050</span></label>
+        <input type="range" id="dt" min="0.005" max="0.1" value="0.05" step="0.005" />
+      </div>
+      <div class="control">
+        <label for="spread">Frequency spread <span class="val" id="spread-val">1.00</span></label>
+        <input type="range" id="spread" min="0" max="5" value="1.0" step="0.05" />
+      </div>
+      <div class="buttons">
+        <button id="play" aria-pressed="false">Play</button>
+        <button id="step">Step</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="readout">
+        Order parameter <b id="r-val">0.000</b><br />
+        Coherence <span id="status" class="status-incoherent">incoherent</span><br />
+        Step <b id="t-val">0</b>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
-    import init, { init as spo_init, step, get_phases } from '../../../../wasm-pkg/spo_wasm.js';
-
-    const out = document.getElementById('output');
-    function log(msg) {
-      console.log(msg);
-      out.textContent += msg + '\n';
-      out.scrollTop = out.scrollHeight;
-    }
+    import init, { WasmEngine } from '../../../../wasm-pkg/spo_wasm.js';
+    import {
+      buildOmegas, coherenceLabel, meanPhase, orderParameter, phasePoint,
+      spreadPhases, validateParams,
+    } from './simulation.mjs';
 
     await init();
 
-    const N = 8;
-    const STEPS = 100;
-    const DT = 0.05;
-    const K = 2.0;
+    const ring = document.getElementById('ring');
+    const ringCtx = ring.getContext('2d');
+    const chart = document.getElementById('chart');
+    const chartCtx = chart.getContext('2d');
 
-    // Natural frequencies drawn from a narrow Gaussian-like spread
-    const omega = Array.from({ length: N }, (_, i) => 1.0 + 0.3 * (i - N / 2) / N);
-    const omegaJson = JSON.stringify(omega);
+    const ids = ['n', 'coupling', 'dt', 'spread'];
+    const inputs = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+    const playBtn = document.getElementById('play');
 
-    spo_init(N);
-    log(`Initialized ${N} oscillators`);
-    log(`omega = ${omegaJson}`);
-    log(`K = ${K}, dt = ${DT}`);
-    log('---');
+    let engine = null;
+    let omegas = new Float64Array(0);
+    let params = null;
+    let step = 0;
+    let history = [];
+    let running = false;
 
-    for (let t = 0; t < STEPS; t++) {
-      const R = step(omegaJson, K, DT);
-      if (t % 10 === 0 || t === STEPS - 1) {
-        log(`step ${String(t).padStart(3)}  R = ${R.toFixed(6)}`);
-      }
+    function readParams() {
+      return validateParams({
+        n: parseInt(inputs.n.value, 10),
+        coupling: parseFloat(inputs.coupling.value),
+        dt: parseFloat(inputs.dt.value),
+        freqSpread: parseFloat(inputs.spread.value),
+      });
     }
 
-    log('---');
-    log(`Final phases: ${get_phases()}`);
-    log('Simulation complete.');
+    function reset() {
+      params = readParams();
+      engine = new WasmEngine(params.n);
+      engine.set_phases(spreadPhases(params.n));
+      omegas = buildOmegas(params.n, params.freqSpread, 1.0);
+      step = 0;
+      history = [];
+      render(orderParameter(engine.get_phases()));
+    }
+
+    function advance() {
+      params = readParams();
+      omegas = buildOmegas(params.n, params.freqSpread, 1.0);
+      const r = engine.step(omegas, params.coupling, params.dt);
+      step += 1;
+      history.push(r);
+      if (history.length > chart.width) history.shift();
+      render(r);
+    }
+
+    function render(r) {
+      const phases = engine.get_phases();
+      const cx = ring.width / 2;
+      const cy = ring.height / 2;
+      const radius = cx - 24;
+      ringCtx.clearRect(0, 0, ring.width, ring.height);
+      ringCtx.strokeStyle = '#30363d';
+      ringCtx.beginPath();
+      ringCtx.arc(cx, cy, radius, 0, 2 * Math.PI);
+      ringCtx.stroke();
+      for (let i = 0; i < phases.length; i += 1) {
+        const p = phasePoint(phases[i], radius, cx, cy);
+        ringCtx.fillStyle = '#58a6ff';
+        ringCtx.beginPath();
+        ringCtx.arc(p.x, p.y, 3, 0, 2 * Math.PI);
+        ringCtx.fill();
+      }
+      // Mean-field vector: length R, direction psi.
+      const psi = meanPhase(phases);
+      const tip = phasePoint(psi, radius * r, cx, cy);
+      ringCtx.strokeStyle = '#3fb950';
+      ringCtx.lineWidth = 2;
+      ringCtx.beginPath();
+      ringCtx.moveTo(cx, cy);
+      ringCtx.lineTo(tip.x, tip.y);
+      ringCtx.stroke();
+      ringCtx.lineWidth = 1;
+
+      chartCtx.clearRect(0, 0, chart.width, chart.height);
+      chartCtx.strokeStyle = '#21262d';
+      chartCtx.beginPath();
+      chartCtx.moveTo(0, 2);
+      chartCtx.lineTo(chart.width, 2);
+      chartCtx.stroke();
+      chartCtx.strokeStyle = '#3fb950';
+      chartCtx.beginPath();
+      history.forEach((value, i) => {
+        const x = i;
+        const y = chart.height - value * (chart.height - 4) - 2;
+        if (i === 0) chartCtx.moveTo(x, y); else chartCtx.lineTo(x, y);
+      });
+      chartCtx.stroke();
+
+      const label = coherenceLabel(r);
+      document.getElementById('r-val').textContent = r.toFixed(3);
+      document.getElementById('t-val').textContent = String(step);
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = label;
+      statusEl.className = `status-${label}`;
+    }
+
+    function loop() {
+      if (!running) return;
+      advance();
+      requestAnimationFrame(loop);
+    }
+
+    ids.forEach((id) => {
+      inputs[id].addEventListener('input', () => {
+        const fmt = id === 'n' ? (v) => v : (v) => Number(v).toFixed(id === 'dt' ? 3 : 2);
+        document.getElementById(`${id}-val`).textContent = fmt(inputs[id].value);
+        if (id === 'n' || id === 'spread') reset();
+      });
+    });
+
+    playBtn.addEventListener('click', () => {
+      running = !running;
+      playBtn.setAttribute('aria-pressed', String(running));
+      playBtn.textContent = running ? 'Pause' : 'Play';
+      if (running) loop();
+    });
+    document.getElementById('step').addEventListener('click', advance);
+    document.getElementById('reset').addEventListener('click', () => {
+      running = false;
+      playBtn.setAttribute('aria-pressed', 'false');
+      playBtn.textContent = 'Play';
+      reset();
+    });
+
+    reset();
   </script>
 </body>
 </html>

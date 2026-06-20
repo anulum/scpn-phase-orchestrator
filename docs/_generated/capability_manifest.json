@@ -12,7 +12,7 @@
     "research_experimental_modules": 191,
     "runtime_serving_modules": 49,
     "rust_kernel_files": 95,
-    "test_files": 605
+    "test_files": 606
   },
   "documentation": {
     "public_pages": [
@@ -1969,6 +1969,7 @@
       "tests/test_upde_webgpu_backend.py",
       "tests/test_visualization.py",
       "tests/test_viz_streamer.py",
+      "tests/test_wasm_playground.py",
       "tests/test_winding.py",
       "tests/test_winding_algorithm.py",
       "tests/test_winding_backends.py",
