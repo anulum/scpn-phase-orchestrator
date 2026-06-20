@@ -2,16 +2,8 @@
   "overrides": [
     {
       "modules": [
-        "domainpacks",
-        "domainpacks.*"
-      ],
-      "settings": {
-        "disallow_incomplete_defs": false,
-        "disallow_untyped_defs": false
-      }
-    },
-    {
-      "modules": [
+        "asyncua",
+        "asyncua.*",
         "grpc_tools",
         "grpc_tools.*",
         "jax",
@@ -45,6 +37,16 @@
       ],
       "settings": {
         "ignore_missing_imports": true
+      }
+    },
+    {
+      "modules": [
+        "domainpacks",
+        "domainpacks.*"
+      ],
+      "settings": {
+        "disallow_incomplete_defs": false,
+        "disallow_untyped_defs": false
       }
     },
     {

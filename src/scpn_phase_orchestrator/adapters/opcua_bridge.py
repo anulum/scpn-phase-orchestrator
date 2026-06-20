@@ -248,6 +248,8 @@ class OpcUaPhaseBridge:
         config = OpcUaBridgeConfig(
             endpoint_url=endpoint_url,
             tags=tuple(tags),
+            # type ignore: forwarded **kwargs are validated by
+            # OpcUaBridgeConfig.__post_init__ at construction time.
             **config_kwargs,  # type: ignore[arg-type]
         )
         return cls(config=config)
