@@ -151,6 +151,21 @@ every required dependency is importable. See the
 
 ::: scpn_phase_orchestrator.runtime.doctor
 
+### Chaos-engineering resilience injection
+
+`runtime.chaos` injects realistic, non-actuating faults — coupling drops,
+frequency drift, sensor noise, and drive dropout — into a controlled simulation
+and measures how the orchestrator recovers. A `ChaosSchedule` of `ChaosFault`
+windows is applied through the simulation's `scenario_hook` boundary, so the
+heavy compute stays in the existing multi-language UPDE engine and this module is
+the orchestration and scoring layer. `run_resilience_experiment` runs the spec
+once nominally and once perturbed under the same seed, then `compute_resilience`
+derives recovery time, peak coherence drop, stability-margin erosion, and final
+deviation. The `spo chaos` command exposes this from the CLI; all runs are
+review-only.
+
+::: scpn_phase_orchestrator.runtime.chaos
+
 ## Error handling philosophy
 
 SPO follows a fail-fast strategy at system boundaries:

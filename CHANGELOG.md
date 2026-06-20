@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Chaos-engineering resilience injection (`runtime.chaos`, `spo chaos`): inject
+  non-actuating faults — coupling drops, frequency drift, sensor noise, and drive
+  dropout — into a controlled simulation via the `scenario_hook` boundary, then
+  score recovery time, peak coherence drop, stability-margin erosion, and final
+  deviation by comparing the nominal and perturbed order-parameter trajectories.
+  Review-only; the heavy compute reuses the existing multi-language UPDE engine.
 - Online digital-twin confidence scoring (`monitor.twin_confidence`): a
   review-only health observable that turns model–observation disagreement into a
   calibrated confidence in `[0, 1]` plus an operator status, from a phase

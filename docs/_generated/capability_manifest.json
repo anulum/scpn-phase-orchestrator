@@ -8,11 +8,11 @@
     "optional_extras": 17,
     "public_api_exports": 24,
     "public_documentation_pages": 189,
-    "python_package_modules": 511,
+    "python_package_modules": 512,
     "research_experimental_modules": 191,
-    "runtime_serving_modules": 49,
+    "runtime_serving_modules": 50,
     "rust_kernel_files": 95,
-    "test_files": 606
+    "test_files": 608
   },
   "documentation": {
     "public_pages": [
@@ -812,6 +812,7 @@
       "src/scpn_phase_orchestrator/runtime/audit_logger.py",
       "src/scpn_phase_orchestrator/runtime/audit_signing.py",
       "src/scpn_phase_orchestrator/runtime/audit_stream.py",
+      "src/scpn_phase_orchestrator/runtime/chaos.py",
       "src/scpn_phase_orchestrator/runtime/cli.py",
       "src/scpn_phase_orchestrator/runtime/distributed/__init__.py",
       "src/scpn_phase_orchestrator/runtime/distributed/sync.py",
@@ -1213,6 +1214,7 @@
     "src/scpn_phase_orchestrator/runtime/audit_logger.py",
     "src/scpn_phase_orchestrator/runtime/audit_signing.py",
     "src/scpn_phase_orchestrator/runtime/audit_stream.py",
+    "src/scpn_phase_orchestrator/runtime/chaos.py",
     "src/scpn_phase_orchestrator/runtime/cli.py",
     "src/scpn_phase_orchestrator/runtime/distributed/__init__.py",
     "src/scpn_phase_orchestrator/runtime/distributed/sync.py",
@@ -1448,6 +1450,8 @@
       "tests/test_cardiac_hierarchy_sync_demo.py",
       "tests/test_cardiac_rhythm_domainpack.py",
       "tests/test_causal_supervisor.py",
+      "tests/test_chaos.py",
+      "tests/test_chaos_cli.py",
       "tests/test_check_tracked_ignored.py",
       "tests/test_chemical_reactor_domainpack.py",
       "tests/test_chemical_reactor_morphogenetic_field_demo.py",

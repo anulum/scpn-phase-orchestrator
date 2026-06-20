@@ -96,6 +96,11 @@ from scpn_phase_orchestrator.runtime.audit_stream import (
     read_event_stream,
     verify_event_stream_integrity,
 )
+from scpn_phase_orchestrator.runtime.chaos import (
+    ChaosFault,
+    ChaosSchedule,
+    run_resilience_experiment,
+)
 from scpn_phase_orchestrator.runtime.doctor import (
     render_report,
     run_environment_diagnostics,
@@ -342,6 +347,127 @@ def twin_confidence(
         for line in _twin_confidence_summary_lines(summary):
             click.echo(line)
     if fail_on_critical and summary.worst_status == "critical":
+        raise SystemExit(2)
+
+
+def _parse_chaos_fault(spec: str) -> ChaosFault:
+    """Parse a ``kind:start:duration:magnitude`` fault specifier.
+
+    Parameters
+    ----------
+    spec : str
+        Colon-separated fault specifier.
+
+    Returns
+    -------
+    ChaosFault
+        The parsed fault.
+
+    Raises
+    ------
+    click.ClickException
+        If the specifier is malformed or the fault parameters are invalid.
+    """
+    parts = spec.split(":")
+    if len(parts) != 4:
+        raise click.ClickException(
+            f"fault {spec!r} must be 'kind:start:duration:magnitude'"
+        )
+    kind, start, duration, magnitude = parts
+    try:
+        return ChaosFault(
+            kind=kind,
+            start_step=int(start),
+            duration_steps=int(duration),
+            magnitude=float(magnitude),
+        )
+    except (ValueError, TypeError) as exc:
+        raise click.ClickException(f"invalid fault {spec!r}: {exc}") from exc
+
+
+@main.command(name="chaos")
+@click.argument("binding_spec", type=click.Path(exists=True))
+@click.option(
+    "--fault",
+    "faults",
+    multiple=True,
+    required=True,
+    help="Fault as 'kind:start:duration:magnitude'; repeatable.",
+)
+@click.option("--steps", default=200, type=int, help="Simulation steps.")
+@click.option("--seed", default=42, type=int, help="Shared RNG seed.")
+@click.option("--recovery-tolerance", default=0.05, type=float)
+@click.option("--json-out", is_flag=True, help="Emit the result as JSON.")
+@click.option(
+    "--fail-unrecovered",
+    is_flag=True,
+    help="Exit non-zero when the perturbed run does not recover.",
+)
+def chaos(
+    binding_spec: str,
+    faults: tuple[str, ...],
+    steps: int,
+    seed: int,
+    recovery_tolerance: float,
+    json_out: bool,
+    fail_unrecovered: bool,
+) -> None:
+    """Inject faults into a binding spec and score its resilience.
+
+    Runs the spec once nominally and once with the injected fault schedule, then
+    reports recovery time, peak coherence drop, stability-margin erosion, and the
+    final deviation. The runs are review-only and never actuate.
+
+    Parameters
+    ----------
+    binding_spec : str
+        Path to the binding spec YAML.
+    faults : tuple[str, ...]
+        Fault specifiers ``kind:start:duration:magnitude``.
+    steps : int
+        Simulation steps.
+    seed : int
+        Shared RNG seed.
+    recovery_tolerance : float
+        Recovery tolerance on ``|nominal_R - perturbed_R|``.
+    json_out : bool
+        Whether to emit JSON.
+    fail_unrecovered : bool
+        Whether to exit non-zero when the run does not recover.
+
+    Raises
+    ------
+    SystemExit
+        If ``--fail-unrecovered`` is set and the perturbed run did not recover.
+    """
+    schedule = ChaosSchedule(faults=tuple(_parse_chaos_fault(item) for item in faults))
+    try:
+        result = run_resilience_experiment(
+            load_binding_spec(Path(binding_spec)),
+            schedule,
+            steps=steps,
+            seed=seed,
+            recovery_tolerance=recovery_tolerance,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    metrics = result.metrics
+    if json_out:
+        click.echo(json.dumps(result.to_audit_record(), indent=2, sort_keys=True))
+    else:
+        click.echo(f"spec:              {result.spec_name}")
+        click.echo(f"faults:            {len(schedule.faults)}")
+        click.echo(f"recovered:         {metrics.recovered}")
+        click.echo(f"recovery steps:    {metrics.recovery_steps}")
+        click.echo(f"max coherence drop:{metrics.max_coherence_drop:.4f}")
+        click.echo(f"margin erosion:    {metrics.stability_margin_erosion:.4f}")
+        click.echo(f"final deviation:   {metrics.final_deviation:.4f}")
+        click.echo(
+            f"nominal/perturbed R: {result.nominal_final_r:.4f}"
+            f" / {result.perturbed_final_r:.4f}"
+        )
+    if fail_unrecovered and not metrics.recovered:
         raise SystemExit(2)
 
 

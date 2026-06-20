@@ -7,15 +7,15 @@
 |---|---:|
 | Package version | 0.9.0 |
 | Public API exports | 24 |
-| Python package modules | 511 |
+| Python package modules | 512 |
 | Core Engine modules | 243 |
-| Runtime/Serving modules | 49 |
+| Runtime/Serving modules | 50 |
 | Integration modules | 25 |
 | Research/Experimental modules | 191 |
 | Domainpack files | 36 |
 | Rust kernel files | 95 |
 | Optional extras | 17 |
-| Python test files | 606 |
+| Python test files | 608 |
 | Public documentation pages | 189 |
 | GitHub Actions workflows | 12 |
 
