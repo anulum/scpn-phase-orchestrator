@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `WasmEngine` class. Page logic is factored into a pure `simulation.mjs` helper
   module with a `node --test` suite (covering the helpers and a WASM
   synchronisation cross-check) bridged into the Python test run.
+- MQTT edge bridge (`adapters.mqtt_bridge`, `mqtt` extra): read-only ingestion of
+  edge/IoT sensor measurements from MQTT topics, decoding raw or JSON payloads and
+  mapping each topic's sampled waveform to a physical-channel phase state via the
+  Hilbert transform. Config, decoding, ingestion, and extraction work without a
+  broker; `collect_live` subscribes through `paho-mqtt`. Extends the real-time
+  edge-bridge track (ROS2/MQTT/OPC-UA).
 - OPC-UA SCADA bridge (`adapters.opcua_bridge`, `opcua` extra): read-only
   ingestion of industrial process tags (temperatures, pressures, flow rates)
   from an OPC-UA server, mapped to physical-channel phase states via the Hilbert

@@ -53,6 +53,8 @@
       "modules": [
         "matplotlib",
         "matplotlib.*",
+        "paho",
+        "paho.*",
         "streamlit",
         "streamlit.*"
       ],

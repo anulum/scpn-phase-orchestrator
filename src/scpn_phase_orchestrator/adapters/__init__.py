@@ -35,6 +35,12 @@ from scpn_phase_orchestrator.adapters.modbus_tls import (
     HAS_PYMODBUS,
     SecureModbusAdapter,
 )
+from scpn_phase_orchestrator.adapters.mqtt_bridge import (
+    HAS_PAHO_MQTT,
+    MqttBridgeConfig,
+    MqttPhaseBridge,
+    MqttTag,
+)
 from scpn_phase_orchestrator.adapters.neurocore_bridge import NeurocoreBridge
 from scpn_phase_orchestrator.adapters.opcua_bridge import (
     HAS_ASYNCUA,
@@ -71,8 +77,12 @@ __all__ = [
     "HAS_BRAINFLOW",
     "HAS_MODBUS",
     "HAS_PYMODBUS",
+    "HAS_PAHO_MQTT",
     "LSLBCIBridge",
     "ModbusAdapter",
+    "MqttBridgeConfig",
+    "MqttPhaseBridge",
+    "MqttTag",
     "NeurocoreBridge",
     "OpcUaBridgeConfig",
     "OpcUaPhaseBridge",

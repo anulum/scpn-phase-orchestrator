@@ -65,6 +65,7 @@ nengo = []  # pure-numpy LIF engine, no external deps
 lava = []  # external Lava runtime is operator-managed; lava-nc pins vulnerable asteval
 otel = ["opentelemetry-api>=1.20,<2.0", "opentelemetry-sdk>=1.20,<2.0"]
 opcua = ["asyncua>=1.0,<2.0"]
+mqtt = ["paho-mqtt>=2.0,<3.0"]
 plot = ["matplotlib>=3.7,<4.0"]
 julia = ["juliacall>=0.9,<0.10"]
 notebook = [
@@ -80,6 +81,7 @@ full = [
     "grpcio-tools>=1.60,<2.0",
     "pymodbus>=3.5,<4.0",
     "asyncua>=1.0,<2.0",
+    "paho-mqtt>=2.0,<3.0",
     "jax>=0.4,<1.0",
     "diffrax>=0.5,<1.0",
     "rtamt>=0.3,<1.0",
@@ -280,7 +282,7 @@ ignore_missing_imports = true
 # matplotlib and streamlit are optional plot/dev-UI dependencies used only by
 # tools/ scripts; treat them as untyped so the scripts type-check with or
 # without the stubs installed.
-module = ["matplotlib", "matplotlib.*", "streamlit", "streamlit.*"]
+module = ["matplotlib", "matplotlib.*", "streamlit", "streamlit.*", "paho", "paho.*"]
 follow_imports = "skip"
 ignore_missing_imports = true
 

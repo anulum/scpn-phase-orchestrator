@@ -205,6 +205,30 @@ phases = bridge.extract_phases(samples)
 
 ::: scpn_phase_orchestrator.adapters.opcua_bridge
 
+### MQTT Edge Bridge
+
+Read-only ingestion from MQTT brokers for edge/IoT sensor fleets. `MqttTag` and
+`MqttBridgeConfig` validate the broker endpoint and topic mapping;
+`decode_payload` parses raw or JSON payloads, `ingest_messages` folds a batch of
+received `(topic, payload)` messages into per-tag sample series, and
+`extract_phases` turns those series into physical-channel phase states via the
+Hilbert transform — all with no network dependency. `collect_live` subscribes via
+the optional `paho-mqtt` dependency (`mqtt` extra) and accumulates messages; it
+accepts an injected client for testing. The bridge never publishes to the broker.
+
+```python
+from scpn_phase_orchestrator.adapters import MqttTag, MqttPhaseBridge
+
+bridge = MqttPhaseBridge.from_tags(
+    "broker.local",
+    [MqttTag(topic="plant/reactor/temp", name="reactor_temp", sample_rate_hz=10.0)],
+)
+samples = bridge.collect_live(samples_per_tag=128)
+phases = bridge.extract_phases(samples)
+```
+
+::: scpn_phase_orchestrator.adapters.mqtt_bridge
+
 ### Hardware I/O
 
 Generic hardware I/O abstraction for digital/analogue outputs.
