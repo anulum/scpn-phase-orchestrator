@@ -68,7 +68,7 @@ def test_manifest_scans_spo_capability_surfaces() -> None:
         in manifest["product_boundaries"]["core_engine"]
     )
     assert (
-        "src/scpn_phase_orchestrator/runtime/cli.py"
+        "src/scpn_phase_orchestrator/runtime/cli/__init__.py"
         in manifest["product_boundaries"]["runtime_serving"]
     )
     assert (
