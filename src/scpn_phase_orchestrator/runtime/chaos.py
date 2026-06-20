@@ -30,6 +30,7 @@ from numbers import Integral, Real
 from typing import TYPE_CHECKING
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.runtime.simulation import simulate
@@ -51,6 +52,8 @@ __all__ = [
     "make_chaos_hook",
     "run_resilience_experiment",
 ]
+
+FloatArray = NDArray[np.float64]
 
 CHAOS_FAULT_KINDS = (
     "coupling_drop",
@@ -320,7 +323,7 @@ def make_chaos_hook(schedule: ChaosSchedule) -> ScenarioCallback:
     ScenarioCallback
         A callable suitable for ``simulate(..., scenario_hook=...)``.
     """
-    nominal_knm: dict[str, np.ndarray] = {}
+    nominal_knm: dict[str, FloatArray] = {}
 
     def hook(context: SimulationScenarioContext) -> None:
         if context.step == 0:
@@ -336,7 +339,7 @@ def make_chaos_hook(schedule: ChaosSchedule) -> ScenarioCallback:
 def _apply_fault(
     fault: ChaosFault,
     context: SimulationScenarioContext,
-    nominal_knm: np.ndarray | None,
+    nominal_knm: FloatArray | None,
 ) -> None:
     if fault.kind == "coupling_drop":
         reference = nominal_knm if nominal_knm is not None else context.coupling.knm
