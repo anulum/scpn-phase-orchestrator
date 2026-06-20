@@ -314,6 +314,16 @@ def test_collect_live_default_client_uses_connect(
     assert len(samples["temp"]) == 2
 
 
+def test_detect_paho_handles_absent_parent(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib.util
+
+    def _raise(name: str) -> None:
+        raise ModuleNotFoundError(name)
+
+    monkeypatch.setattr(importlib.util, "find_spec", _raise)
+    assert mqtt_bridge._detect_paho_mqtt() is False
+
+
 def test_connect_without_paho_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mqtt_bridge, "HAS_PAHO_MQTT", False)
     bridge = _bridge()

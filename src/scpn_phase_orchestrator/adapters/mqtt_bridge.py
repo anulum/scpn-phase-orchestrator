@@ -56,9 +56,19 @@ __all__ = [
     "MqttTag",
 ]
 
+
 # ``paho-mqtt`` is imported lazily inside ``connect`` so importing this module —
 # for example under coverage — does not pull the optional dependency.
-HAS_PAHO_MQTT = importlib.util.find_spec("paho.mqtt.client") is not None
+def _detect_paho_mqtt() -> bool:
+    # ``find_spec`` on a submodule raises ModuleNotFoundError when the parent
+    # package is absent, so guard the optional-dependency probe.
+    try:
+        return importlib.util.find_spec("paho.mqtt.client") is not None
+    except (ImportError, ValueError):
+        return False
+
+
+HAS_PAHO_MQTT = _detect_paho_mqtt()
 
 _VALID_CHANNELS = frozenset({"P", "R", "E", "S"})
 _VALID_PAYLOAD_FORMATS = frozenset({"raw", "json"})
