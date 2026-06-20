@@ -394,8 +394,13 @@ class TestPluginCompatibility:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         import scpn_phase_orchestrator.plugins.registry as registry
+        from scpn_phase_orchestrator.plugins.registry import (
+            manifest as registry_manifest,
+        )
 
-        monkeypatch.setattr(registry, "__version__", "release-candidate")
+        # ``compatibility_report`` reads ``__version__`` from the ``manifest``
+        # submodule namespace after the registry package split, so patch there.
+        monkeypatch.setattr(registry_manifest, "__version__", "release-candidate")
         manifest = PluginManifest(
             name="strict_pack",
             version="0.1.0",
@@ -780,6 +785,7 @@ class TestPluginMarketplaceCatalog:
         diagnostic: str,
     ) -> None:
         import scpn_phase_orchestrator.plugins.registry as registry
+        from scpn_phase_orchestrator.plugins.registry import rust_handoff
 
         def malformed_catalog(
             manifests: tuple[PluginManifest, ...],
@@ -794,8 +800,10 @@ class TestPluginMarketplaceCatalog:
                 "capability_counts": {},
             }
 
+        # ``build_rust_plugin_registry`` binds ``build_plugin_marketplace_catalog``
+        # in the ``rust_handoff`` submodule, so patch the catalogue builder there.
         monkeypatch.setattr(
-            registry,
+            rust_handoff,
             "build_plugin_marketplace_catalog",
             malformed_catalog,
         )
@@ -808,6 +816,7 @@ class TestPluginMarketplaceCatalog:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         import scpn_phase_orchestrator.plugins.registry as registry
+        from scpn_phase_orchestrator.plugins.registry import rust_handoff
 
         def malformed_registry(
             manifests: tuple[PluginManifest, ...],
@@ -821,8 +830,10 @@ class TestPluginMarketplaceCatalog:
                 "capabilities": (),
             }
 
+        # ``build_rust_plugin_runtime_handoff`` calls ``build_rust_plugin_registry``
+        # from the ``rust_handoff`` submodule namespace, so patch it there.
         monkeypatch.setattr(
-            registry,
+            rust_handoff,
             "build_rust_plugin_registry",
             malformed_registry,
         )

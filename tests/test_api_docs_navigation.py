@@ -77,6 +77,14 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.nn.supervisor.projection",
     "scpn_phase_orchestrator.nn.supervisor.replay",
     "scpn_phase_orchestrator.nn.supervisor.rollouts",
+    "scpn_phase_orchestrator.plugins.registry.manifest",
+    "scpn_phase_orchestrator.plugins.registry.policy",
+    "scpn_phase_orchestrator.plugins.registry.request",
+    "scpn_phase_orchestrator.plugins.registry.storage",
+    "scpn_phase_orchestrator.plugins.registry.revocation",
+    "scpn_phase_orchestrator.plugins.registry.lifecycle",
+    "scpn_phase_orchestrator.plugins.registry.runtime",
+    "scpn_phase_orchestrator.plugins.registry.rust_handoff",
 }
 
 
