@@ -277,7 +277,7 @@ def main() -> int:
         text = json.dumps(result, indent=2)
         print(text)
         if args.output:
-            args.output.write_text(text, encoding="utf-8")
+            args.output.write_text(text + "\n", encoding="utf-8")
         return 0
 
     print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}\n")
@@ -296,7 +296,7 @@ def main() -> int:
         print(line)
     if args.output:
         args.output.write_text(
-            json.dumps({"results": results}, indent=2), encoding="utf-8"
+            json.dumps({"results": results}, indent=2) + "\n", encoding="utf-8"
         )
     return 0
 
