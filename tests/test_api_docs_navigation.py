@@ -98,6 +98,10 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.supervisor.formal_export.petri_export",
     "scpn_phase_orchestrator.supervisor.formal_export.policy_export",
     "scpn_phase_orchestrator.supervisor.formal_export.stl_export",
+    "scpn_phase_orchestrator.supervisor.hierarchy.boundary",
+    "scpn_phase_orchestrator.supervisor.hierarchy.plan",
+    "scpn_phase_orchestrator.supervisor.hierarchy.sync",
+    "scpn_phase_orchestrator.supervisor.hierarchy.consensus",
 }
 
 
