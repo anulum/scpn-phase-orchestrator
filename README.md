@@ -213,9 +213,9 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 0.9.0 |
 | Public API exports | 24 |
-| Python package modules | 515 |
+| Python package modules | 519 |
 | Core Engine modules | 244 |
-| Runtime/Serving modules | 51 |
+| Runtime/Serving modules | 55 |
 | Integration modules | 26 |
 | Research/Experimental modules | 191 |
 | Domainpack files | 36 |
