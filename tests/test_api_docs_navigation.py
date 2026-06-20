@@ -93,6 +93,11 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.binding.digital_twin.adapter_kafka",
     "scpn_phase_orchestrator.binding.digital_twin.adapter_hardware",
     "scpn_phase_orchestrator.binding.digital_twin.adapter_rest",
+    "scpn_phase_orchestrator.supervisor.formal_export.verification_package",
+    "scpn_phase_orchestrator.supervisor.formal_export.runtime_certificate",
+    "scpn_phase_orchestrator.supervisor.formal_export.petri_export",
+    "scpn_phase_orchestrator.supervisor.formal_export.policy_export",
+    "scpn_phase_orchestrator.supervisor.formal_export.stl_export",
 }
 
 
