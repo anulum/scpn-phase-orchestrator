@@ -18,6 +18,9 @@ import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.studio.ui_helpers as ui
+import scpn_phase_orchestrator.studio.ui_helpers.canvas as ui_canvas
+import scpn_phase_orchestrator.studio.ui_helpers.connectors as ui_connectors
+import scpn_phase_orchestrator.studio.ui_helpers.deployment as ui_deployment
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.binding.semantic import compile_symbolic_binding
 from scpn_phase_orchestrator.binding.topos_examples import (
@@ -96,7 +99,7 @@ def test_validate_candidate_binding_yaml_maps_expected_load_errors(
     def _raise_value_error(_path: Path) -> object:
         raise ValueError("invalid yaml")
 
-    monkeypatch.setattr(ui, "load_binding_spec", _raise_value_error)
+    monkeypatch.setattr(ui_canvas, "load_binding_spec", _raise_value_error)
     errors = ui._validate_candidate_binding_yaml("name: candidate\n")
     assert errors == ["candidate binding failed to load: ValueError"]
 
@@ -107,7 +110,7 @@ def test_validate_candidate_binding_yaml_propagates_unexpected_errors(
     def _raise_runtime_error(_path: Path) -> object:
         raise RuntimeError("unexpected failure domain")
 
-    monkeypatch.setattr(ui, "load_binding_spec", _raise_runtime_error)
+    monkeypatch.setattr(ui_canvas, "load_binding_spec", _raise_runtime_error)
     with pytest.raises(RuntimeError, match="unexpected failure domain"):
         ui._validate_candidate_binding_yaml("name: candidate\n")
 
@@ -1890,7 +1893,7 @@ def test_builders_validate_malformed_readiness_tables(
     state = _minimal_result().project_state
 
     monkeypatch.setattr(
-        ui,
+        ui_deployment,
         "build_deployment_readiness",
         lambda _state: {"overall_status": "review_ready", "targets": "bad"},
     )
@@ -1898,7 +1901,7 @@ def test_builders_validate_malformed_readiness_tables(
         ui.build_deployment_package(state)
 
     monkeypatch.setattr(
-        ui,
+        ui_deployment,
         "build_deployment_readiness",
         lambda _state: {"overall_status": "review_ready", "targets": ("bad",)},
     )
@@ -1906,7 +1909,7 @@ def test_builders_validate_malformed_readiness_tables(
         ui.build_deployment_package(state)
 
     monkeypatch.setattr(
-        ui,
+        ui_deployment,
         "build_deployment_readiness",
         lambda _state: {
             "overall_status": "review_ready",
@@ -1923,7 +1926,7 @@ def test_builders_validate_malformed_readiness_tables(
         ui.build_deployment_package(state)
 
     monkeypatch.setattr(
-        ui,
+        ui_deployment,
         "build_deployment_readiness",
         lambda _state: {
             "overall_status": "review_ready",
@@ -1941,7 +1944,7 @@ def test_builders_validate_malformed_readiness_tables(
         ui.build_command_table(state)
 
     monkeypatch.setattr(
-        ui,
+        ui_deployment,
         "build_deployment_readiness",
         lambda _state: {"overall_status": "review_ready", "targets": ("bad",)},
     )
@@ -2065,7 +2068,7 @@ def test_build_command_table_skips_blocked_targets_from_readiness(
     project_state = result.project_state
 
     monkeypatch.setattr(
-        ui,
+        ui_deployment,
         "build_deployment_readiness",
         lambda _state: {
             "project_name": project_state.project_name,
@@ -2190,10 +2193,12 @@ def test_run_owned_live_adapter_routes_supported_transports_and_rejects_unknown(
             return {"adapter": self.name}
 
     with pytest.MonkeyPatch.context() as patch_ctx:
-        patch_ctx.setattr(ui, "DigitalTwinSyncRestAdapter", _RestAdapter)
-        patch_ctx.setattr(ui, "DigitalTwinSyncGrpcAdapter", _GrpcAdapter)
-        patch_ctx.setattr(ui, "DigitalTwinSyncKafkaAdapter", _KafkaAdapter)
-        patch_ctx.setattr(ui, "DigitalTwinSyncHardwareAdapter", _HardwareAdapter)
+        patch_ctx.setattr(ui_connectors, "DigitalTwinSyncRestAdapter", _RestAdapter)
+        patch_ctx.setattr(ui_connectors, "DigitalTwinSyncGrpcAdapter", _GrpcAdapter)
+        patch_ctx.setattr(ui_connectors, "DigitalTwinSyncKafkaAdapter", _KafkaAdapter)
+        patch_ctx.setattr(
+            ui_connectors, "DigitalTwinSyncHardwareAdapter", _HardwareAdapter
+        )
 
         for transport in ("rest", "grpc", "kafka", "hardware"):
             response, adapter = ui._run_owned_live_adapter(

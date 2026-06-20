@@ -52,6 +52,23 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.runtime.network_security",
     "scpn_phase_orchestrator.runtime.server",
     "scpn_phase_orchestrator.runtime.server_grpc",
+    "scpn_phase_orchestrator.studio.ui_helpers.canvas",
+    "scpn_phase_orchestrator.studio.ui_helpers.charts",
+    "scpn_phase_orchestrator.studio.ui_helpers.connectors",
+    "scpn_phase_orchestrator.studio.ui_helpers.deployment",
+    "scpn_phase_orchestrator.studio.ui_helpers.guidance",
+    "scpn_phase_orchestrator.studio.ui_helpers.hardware",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_evolutionary",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_hybrid_order",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_information_geometry",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_lineage",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_morphogenetic",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_multiverse",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_sheaf",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_strange_loop",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_topos",
+    "scpn_phase_orchestrator.studio.ui_helpers.replay",
+    "scpn_phase_orchestrator.studio.ui_helpers.tables",
 }
 
 
