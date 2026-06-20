@@ -200,6 +200,7 @@ nav:
       - Imprint: reference/api/imprint.md
       - Drivers: reference/api/drivers.md
       - Audit: reference/api/audit.md
+      - Assurance Case: reference/api/assurance.md
       - Reporting: reference/api/reporting.md
       - Artifacts: reference/api/artifacts.md
       - Distributed Sync: reference/api/distributed.md

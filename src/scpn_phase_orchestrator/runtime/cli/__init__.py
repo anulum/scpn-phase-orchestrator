@@ -18,6 +18,7 @@ is invoked for that runtime path.
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.runtime.cli import assurance as assurance
 from scpn_phase_orchestrator.runtime.cli import audit as audit
 from scpn_phase_orchestrator.runtime.cli import binding as binding
 from scpn_phase_orchestrator.runtime.cli import diagnostics as diagnostics

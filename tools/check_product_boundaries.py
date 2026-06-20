@@ -46,6 +46,7 @@ RUNTIME_PACKAGES = frozenset(
         "api",
         "apps",
         "artifacts",
+        "assurance",
         "audit",
         "grpc_gen",
         "meta",

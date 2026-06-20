@@ -36,6 +36,7 @@ core_engine = [
 runtime_serving = [
     "apps",
     "artifacts",
+    "assurance",
     "audit",
     "grpc_gen",
     "meta",
