@@ -12,7 +12,7 @@
     "research_experimental_modules": 191,
     "runtime_serving_modules": 64,
     "rust_kernel_files": 95,
-    "test_files": 610
+    "test_files": 612
   },
   "documentation": {
     "public_pages": [
@@ -1493,6 +1493,7 @@
       "tests/test_chimera_backends.py",
       "tests/test_chimera_stability.py",
       "tests/test_cli.py",
+      "tests/test_cli_app.py",
       "tests/test_cli_approval_request_loaders.py",
       "tests/test_cli_auto_coupling.py",
       "tests/test_cli_payload_helpers.py",
@@ -1500,6 +1501,7 @@
       "tests/test_cli_remediation_loaders.py",
       "tests/test_cli_run_contracts.py",
       "tests/test_cli_scheduler_loaders.py",
+      "tests/test_cli_shared.py",
       "tests/test_cli_storage_lifecycle_loaders.py",
       "tests/test_closure_ethical.py",
       "tests/test_coherence_monitor_config_validation.py",
