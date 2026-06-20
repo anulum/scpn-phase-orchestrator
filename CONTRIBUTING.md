@@ -158,3 +158,18 @@ Imperative mood, under 72 characters. Examples:
 - `Add fusion domainpack with MHD extractor`
 - `Fix coupling decay exponent off-by-one`
 - `Remove unused spectral helper`
+
+## Module Size
+
+Line count is a proxy, never the gate: single-responsibility code is fine at any
+length, and multi-responsibility code must be split at any length. A module over
+~900 lines is a review trigger and over ~1200 a strong split signal — but the
+decisive test is the AST call-graph, not the number. See
+[`docs/module_size_policy.md`](docs/module_size_policy.md).
+
+Survey the source tree with:
+
+```bash
+python tools/check_module_size.py          # warning report (exit 0)
+python tools/check_module_size.py --check   # ratchet: fail on un-allowlisted >1200
+```
