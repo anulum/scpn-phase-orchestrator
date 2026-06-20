@@ -327,7 +327,9 @@ def test_demo_real_data_heartbeat_downloads_and_auto_binds_review_only(
         def close(self):
             self.closed = True
 
-    monkeypatch.setattr(cli_module.http.client, "HTTPSConnection", _HTTPSConnection)
+    monkeypatch.setattr(
+        cli_module.scaffold.http.client, "HTTPSConnection", _HTTPSConnection
+    )
 
     result = runner.invoke(
         main,
