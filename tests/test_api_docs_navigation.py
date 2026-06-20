@@ -85,6 +85,14 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.plugins.registry.lifecycle",
     "scpn_phase_orchestrator.plugins.registry.runtime",
     "scpn_phase_orchestrator.plugins.registry.rust_handoff",
+    "scpn_phase_orchestrator.binding.digital_twin.contract",
+    "scpn_phase_orchestrator.binding.digital_twin.envelope",
+    "scpn_phase_orchestrator.binding.digital_twin.evidence",
+    "scpn_phase_orchestrator.binding.digital_twin.adapter_memory",
+    "scpn_phase_orchestrator.binding.digital_twin.adapter_grpc",
+    "scpn_phase_orchestrator.binding.digital_twin.adapter_kafka",
+    "scpn_phase_orchestrator.binding.digital_twin.adapter_hardware",
+    "scpn_phase_orchestrator.binding.digital_twin.adapter_rest",
 }
 
 
