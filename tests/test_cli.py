@@ -1319,7 +1319,9 @@ def test_plugins_catalog_outputs_discovered_marketplace_catalog(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     result = runner.invoke(main, ["plugins", "catalog"])
 
@@ -1348,7 +1350,9 @@ def test_plugins_catalog_can_include_incompatible_manifests(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (invalid,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (invalid,)
+    )
 
     default_result = runner.invoke(main, ["plugins", "catalog"])
     full_result = runner.invoke(
@@ -1384,7 +1388,9 @@ def test_plugins_catalog_can_emit_rust_registry(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     result = runner.invoke(main, ["plugins", "catalog", "--rust-registry"])
 
@@ -1413,7 +1419,9 @@ def test_plugins_catalog_can_emit_guarded_rust_runtime_handoff(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     result = runner.invoke(main, ["plugins", "catalog", "--rust-runtime-handoff"])
 
@@ -1567,7 +1575,9 @@ def test_plugins_plan_execution_outputs_non_executing_plan(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     target_hash = _lookup_target_hash(manifest, "actuator", "phase_driver")
     result = runner.invoke(
@@ -1606,7 +1616,9 @@ def test_plugins_plan_execution_requires_approved_target_hash(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     target_hash = _lookup_target_hash(manifest, "actuator", "phase_driver")
     result = runner.invoke(
@@ -1647,7 +1659,9 @@ def test_plugins_plan_execution_rejects_unapproved_target_hash(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     result = runner.invoke(
         main,
@@ -1684,7 +1698,9 @@ def test_plugins_plan_execution_fails_with_bad_target_hash_format(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     result = runner.invoke(
         main,
@@ -1720,7 +1736,9 @@ def test_plugins_plan_execution_fails_on_missing_plugin(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     result = runner.invoke(
         main,
@@ -1748,7 +1766,9 @@ def test_plugins_plan_execution_fails_on_missing_capability(
             ),
         ),
     )
-    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+    monkeypatch.setattr(
+        cli_module.plugins, "discover_plugin_manifests", lambda: (manifest,)
+    )
 
     result = runner.invoke(
         main,

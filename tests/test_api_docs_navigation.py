@@ -27,6 +27,7 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.runtime.cli.binding",
     "scpn_phase_orchestrator.runtime.cli.diagnostics",
     "scpn_phase_orchestrator.runtime.cli.monitoring",
+    "scpn_phase_orchestrator.runtime.cli.plugins",
     "scpn_phase_orchestrator.grpc_gen",
     "scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback",
     "scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback",
