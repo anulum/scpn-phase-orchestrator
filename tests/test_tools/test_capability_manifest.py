@@ -76,7 +76,7 @@ def test_manifest_scans_spo_capability_surfaces() -> None:
         in manifest["product_boundaries"]["integrations"]
     )
     assert (
-        "src/scpn_phase_orchestrator/nn/supervisor.py"
+        "src/scpn_phase_orchestrator/nn/supervisor/__init__.py"
         in manifest["product_boundaries"]["research_experimental"]
     )
 

@@ -69,6 +69,13 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.studio.ui_helpers.panel_topos",
     "scpn_phase_orchestrator.studio.ui_helpers.replay",
     "scpn_phase_orchestrator.studio.ui_helpers.tables",
+    "scpn_phase_orchestrator.nn.supervisor.checkpoint",
+    "scpn_phase_orchestrator.nn.supervisor.comparison",
+    "scpn_phase_orchestrator.nn.supervisor.policy",
+    "scpn_phase_orchestrator.nn.supervisor.ppo",
+    "scpn_phase_orchestrator.nn.supervisor.projection",
+    "scpn_phase_orchestrator.nn.supervisor.replay",
+    "scpn_phase_orchestrator.nn.supervisor.rollouts",
 }
 
 
