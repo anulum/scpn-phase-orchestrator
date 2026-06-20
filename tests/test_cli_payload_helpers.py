@@ -13,7 +13,7 @@ from pathlib import Path
 import click
 import pytest
 
-from scpn_phase_orchestrator.runtime.cli import (
+from scpn_phase_orchestrator.runtime.cli._payloads import (
     _build_plan_payload_for_hash,
     _load_json_file,
     _normalize_approved_target_hashes,

@@ -14,7 +14,7 @@ import click
 import pytest
 
 from scpn_phase_orchestrator.plugins.registry import PluginCapability, PluginManifest
-from scpn_phase_orchestrator.runtime.cli import (
+from scpn_phase_orchestrator.runtime.cli._payloads import (
     _build_plan_payload_for_hash,
     _load_plan_from_payload,
     _record_hash,

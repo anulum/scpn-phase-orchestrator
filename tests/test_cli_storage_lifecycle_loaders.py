@@ -13,7 +13,7 @@ from typing import Any
 import click
 import pytest
 
-from scpn_phase_orchestrator.runtime.cli import (
+from scpn_phase_orchestrator.runtime.cli._payloads import (
     _load_lifecycle_from_payload,
     _load_lifecycle_summary_from_payload,
     _load_storage_manifest_from_payload,
