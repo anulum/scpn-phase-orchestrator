@@ -351,3 +351,27 @@ certificate is never a false guarantee. Review-only: the filter shapes a propose
 action; it never actuates.
 
 ::: scpn_phase_orchestrator.actuation.control_barrier
+
+## Foundation-model governor
+
+`actuation.foundation_model_governor` is the harness that makes an external
+controller — a foundation-model forecaster, a learned policy, any advisory source
+SPO does not trust — deployable. `FoundationModelGovernor.govern` takes the
+proposal as an advisory scalar control and admits only a safe action by composing
+the trust stack SPO already owns: **actuator bounds** (clamp), a **rate limit**
+against the last admitted action, an optional **Control Barrier Function**
+projection (forward-invariance, with the state-left-the-safe-set case flagged when
+`h(x) < 0`), and any number of named **safety predicates** (an STL-derived check,
+an operating-envelope rule) that veto the action. Each call returns a
+`GovernorDecision` recording the admitted action, the status
+(`admitted` / `constrained` / `rejected`), the ordered envelope stages that
+touched the proposal, the violations, the barrier value, and a canonical-JSON
+SHA-256 seal — the same hashing the assurance bundle uses, so the governance
+record is tamper-evident.
+
+The governor competes on *governance, not prediction*: it never forecasts, and it
+is review-only — it returns a safe action and a decision, it never actuates a
+plant. This is the runtime embodiment of EU AI Act Art. 14 (human oversight) and
+Art. 12 (logging / traceability).
+
+::: scpn_phase_orchestrator.actuation.foundation_model_governor

@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Foundation-model actuation governor (`actuation.foundation_model_governor`):
+  `FoundationModelGovernor.govern` admits an externally-proposed (e.g.
+  foundation-model) scalar control only after running it through SPO's safety
+  envelope — actuator bounds, a rate limit, an optional Control Barrier Function
+  projection (flagging `h(x) < 0`), and named safety predicates that veto — and
+  seals each outcome into a content-addressed `GovernorDecision`
+  (`admitted` / `constrained` / `rejected`, with the applied stages and
+  violations). It competes on governance, not prediction, and is review-only: it
+  returns a safe action and an audited decision, never actuating a plant.
 - NERC PRC oscillation-monitoring compliance evidence (`assurance.prc_oscillation`):
   `screen_oscillation_modes` screens the damping ratios of detected modes against
   the oscillation-monitoring practice underlying NERC PRC-028 / the proposed

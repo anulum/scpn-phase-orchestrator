@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 282,
+    "core_engine_modules": 283,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 26,
     "optional_extras": 19,
     "public_api_exports": 24,
     "public_documentation_pages": 195,
-    "python_package_modules": 631,
+    "python_package_modules": 632,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 116,
     "rust_kernel_files": 96,
-    "test_files": 637
+    "test_files": 638
   },
   "documentation": {
     "public_pages": [
@@ -330,6 +330,7 @@
       "src/scpn_phase_orchestrator/actuation/__init__.py",
       "src/scpn_phase_orchestrator/actuation/constraints.py",
       "src/scpn_phase_orchestrator/actuation/control_barrier.py",
+      "src/scpn_phase_orchestrator/actuation/foundation_model_governor.py",
       "src/scpn_phase_orchestrator/actuation/hdl_compiler.py",
       "src/scpn_phase_orchestrator/actuation/mapper.py",
       "src/scpn_phase_orchestrator/binding/__init__.py",
@@ -977,6 +978,7 @@
     "src/scpn_phase_orchestrator/actuation/__init__.py",
     "src/scpn_phase_orchestrator/actuation/constraints.py",
     "src/scpn_phase_orchestrator/actuation/control_barrier.py",
+    "src/scpn_phase_orchestrator/actuation/foundation_model_governor.py",
     "src/scpn_phase_orchestrator/actuation/hdl_compiler.py",
     "src/scpn_phase_orchestrator/actuation/mapper.py",
     "src/scpn_phase_orchestrator/adapters/__init__.py",
@@ -1811,6 +1813,7 @@
       "tests/test_formal_export_residual.py",
       "tests/test_formal_export_validators.py",
       "tests/test_formal_model_checker_ci.py",
+      "tests/test_foundation_model_governor.py",
       "tests/test_free_energy.py",
       "tests/test_freq_id.py",
       "tests/test_fusion_core_bridge.py",
