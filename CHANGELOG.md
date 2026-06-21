@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Upgraded transitive development dependencies in the Python 3.11, Python 3.13,
+  and Windows-FFI lockfiles: `jupyter-server` 2.18.0 → 2.20.0 and `bleach` 6.3.0 →
+  6.4.0 in all four, plus `cryptography` 47.0.0 → 49.0.0 and `tornado` 6.5.6 →
+  6.5.7 in the two Windows-FFI lockfiles. The primary `dev-lock.txt` already
+  carried the patched versions. The Windows-FFI lockfiles keep their Unix-only
+  exclusions (no `uvloop`).
+
 ### Added
 
 - NERC PRC oscillation-monitoring compliance evidence (`assurance.prc_oscillation`):
