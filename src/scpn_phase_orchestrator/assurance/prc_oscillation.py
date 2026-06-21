@@ -278,8 +278,7 @@ def screen_oscillation_modes(
         raise ValueError("undamped_threshold must be below poorly_damped_threshold")
 
     findings = tuple(
-        _screen_mode(index, mode, undamped, poorly)
-        for index, mode in enumerate(modes)
+        _screen_mode(index, mode, undamped, poorly) for index, mode in enumerate(modes)
     )
     flagged_count = sum(1 for finding in findings if finding.flagged)
     worst = min((finding.damping_ratio for finding in findings), default=None)
