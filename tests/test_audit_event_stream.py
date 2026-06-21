@@ -19,9 +19,11 @@ from google.protobuf import descriptor_pool
 
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
+    SIGNATURE_ALGORITHM,
     AuditStreamEvent,
     EventStreamWriter,
     _AuditEnvelope,
+    _canonical_json,
     iter_event_stream,
     read_event_stream,
     tail_event_stream,
@@ -411,3 +413,84 @@ def test_event_stream_writer_rejects_invalid_stream_id(
             tmp_path / "audit.spoa",
             stream_id=stream_id,  # type: ignore[arg-type]
         )
+
+
+def _valid_event(**overrides: object) -> AuditStreamEvent:
+    payload = {"note": "x"}
+    payload_json = _canonical_json(payload)
+    fields: dict[str, object] = {
+        "schema_version": 1,
+        "stream_id": "spo-audit",
+        "sequence": 1,
+        "event_type": "operator_note",
+        "recorded_at_unix_ns": 1,
+        "source": "runtime",
+        "previous_hash": "0" * 64,
+        "payload_json": payload_json,
+        "payload_sha256": hashlib.sha256(payload_json.encode()).hexdigest(),
+        "event_hash": "1" * 64,
+        "signature_algorithm": "",
+        "signature_key_id": "",
+        "signature": "",
+        "audit_mode": "unsigned",
+        "payload": payload,
+    }
+    fields.update(overrides)
+    return AuditStreamEvent(**fields)  # type: ignore[arg-type]
+
+
+def test_valid_audit_stream_event_constructs() -> None:
+    assert _valid_event().schema_version == 1
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"schema_version": 1.5}, "schema_version must be an integer"),
+        ({"schema_version": 0}, "schema_version must be positive"),
+        ({"stream_id": ""}, "stream_id must be a non-empty string"),
+        ({"stream_id": "a\x01b"}, "stream_id must not contain control"),
+        ({"sequence": 1.5}, "sequence must be an integer"),
+        ({"sequence": 0}, "sequence must be positive"),
+        ({"recorded_at_unix_ns": -1}, "recorded_at_unix_ns must be a non-negative"),
+        ({"event_type": ""}, "event_type must be a non-empty string"),
+        ({"source": ""}, "source must be a non-empty string"),
+        ({"previous_hash": "bad"}, "must be a lowercase 64-char hex digest"),
+        ({"payload_json": ""}, "payload_json must be a non-empty string"),
+        ({"payload": "not-a-dict"}, "payload must be a JSON object mapping"),
+        ({"payload_json": '{"a":1}'}, "must match canonical JSON encoding"),
+        ({"audit_mode": ""}, "audit_mode must be a non-empty string"),
+        ({"signature_algorithm": 1}, "signature_algorithm must be a string"),
+        ({"signature_key_id": 1}, "signature_key_id must be a string"),
+        ({"signature": 1}, "signature must be a string"),
+        (
+            {"audit_mode": "signed", "signature_algorithm": "wrong"},
+            "expected signature_algorithm",
+        ),
+        (
+            {
+                "audit_mode": "signed",
+                "signature_algorithm": SIGNATURE_ALGORITHM,
+                "signature_key_id": "bad",
+                "signature": "f" * 64,
+            },
+            "16-char lowercase key id",
+        ),
+        (
+            {
+                "audit_mode": "signed",
+                "signature_algorithm": SIGNATURE_ALGORITHM,
+                "signature_key_id": "0" * 16,
+                "signature": "bad",
+            },
+            "64-char lowercase signature",
+        ),
+        ({"signature": "abc"}, "unsigned audit_mode must not include signature"),
+    ],
+)
+def test_audit_stream_event_rejects_invalid_fields(
+    overrides: dict[str, object],
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        _valid_event(**overrides)
