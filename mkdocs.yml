@@ -179,6 +179,8 @@ nav:
       - "Monitor — Lyapunov": reference/api/monitor_lyapunov.md
       - "Monitor — Twin Confidence": reference/api/monitor_twin_confidence.md
       - "Monitor — NPE": reference/api/monitor_npe.md
+      - "Monitor — OPT-Entropy": reference/api/monitor_opt_entropy.md
+      - "Monitor — Explosive Sync": reference/api/monitor_explosive_sync.md
       - "Monitor — PID": reference/api/monitor_pid.md
       - "Monitor — Poincare": reference/api/monitor_poincare.md
       - "Monitor — Recurrence": reference/api/monitor_recurrence.md

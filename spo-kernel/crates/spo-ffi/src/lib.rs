@@ -2309,6 +2309,38 @@ fn phase_distance_matrix<'py>(
     Ok(PyArray1::from_slice(py, &dist))
 }
 
+// ─── Ordinal-Pattern Transition Entropy (OPT-entropy) ───────────────
+
+#[pyfunction]
+#[pyo3(signature = (series, dimension = 3, delay = 1))]
+fn ordinal_pattern_sequence<'py>(
+    py: Python<'py>,
+    series: PyReadonlyArray1<'_, f64>,
+    dimension: usize,
+    delay: usize,
+) -> PyResult<Bound<'py, PyArray1<i64>>> {
+    let s = series
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let codes = spo_engine::opt_entropy::ordinal_pattern_sequence(s, dimension, delay);
+    Ok(PyArray1::from_vec(py, codes))
+}
+
+#[pyfunction]
+#[pyo3(signature = (series, dimension = 3, delay = 1))]
+fn transition_entropy(
+    series: PyReadonlyArray1<'_, f64>,
+    dimension: usize,
+    delay: usize,
+) -> PyResult<f64> {
+    let s = series
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(spo_engine::opt_entropy::transition_entropy(
+        s, dimension, delay,
+    ))
+}
+
 // ─── Entropy Production Rate ────────────────────────────────────────
 
 #[pyfunction]
@@ -3936,6 +3968,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pid_decomposition_rust, m)?)?;
     m.add_function(wrap_pyfunction!(compute_npe, m)?)?;
     m.add_function(wrap_pyfunction!(phase_distance_matrix, m)?)?;
+    m.add_function(wrap_pyfunction!(ordinal_pattern_sequence, m)?)?;
+    m.add_function(wrap_pyfunction!(transition_entropy, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_production_rate, m)?)?;
     m.add_function(wrap_pyfunction!(winding_numbers, m)?)?;
     m.add_function(wrap_pyfunction!(lyapunov_spectrum_rust, m)?)?;

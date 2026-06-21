@@ -118,6 +118,11 @@ go/libnpe.so
 go/libnpe.h
 mojo/npe_mojo
 
+# opt_entropy compiled artefacts
+go/libopt_entropy.so
+go/libopt_entropy.h
+mojo/opt_entropy_mojo
+
 # transfer_entropy compiled artefacts
 go/libtransfer_entropy.so
 go/libtransfer_entropy.h

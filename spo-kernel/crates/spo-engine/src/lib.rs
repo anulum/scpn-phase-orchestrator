@@ -70,6 +70,7 @@ pub mod itpc;
 pub mod lyapunov;
 pub mod market;
 pub mod npe;
+pub mod opt_entropy;
 pub mod phase_extract;
 pub mod pid;
 pub mod poincare;
