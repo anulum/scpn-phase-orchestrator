@@ -431,3 +431,104 @@ def test_handoff_failed_lock_exposes_negative_margins() -> None:
     assert record.phase_margin_rad < 0.0
     assert record.spatial_margin_m < 0.0
     assert record.consecutive_lock_samples == 0
+
+
+def _valid_handoff_record() -> PHACHandoffRecord:
+    return build_pha_c_handoff_record(
+        np.array([0.0, 0.003, -0.004], dtype=np.float64),
+        np.array([0.0, 0.0005, -0.0008], dtype=np.float64),
+        t=4.0,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        prior_consecutive_lock_samples=2,
+        tolerance_profile="baseline_1x",
+    )
+
+
+def test_verify_rejects_a_non_record() -> None:
+    with pytest.raises(ValueError, match="must be a PHACHandoffRecord"):
+        verify_pha_c_handoff_record("not a record")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"phase_state_sha256": "not-a-digest"}, "SHA-256 hex digest"),
+        ({"evidence_kind": "bogus"}, "evidence_kind must be"),
+        ({"execution_disabled": "yes"}, "must be a boolean"),
+        ({"execution_disabled": False}, "execution_disabled must be true"),
+        ({"actuating": True}, "actuating must be false"),
+        ({"oscillator_count": 2.5}, "must be an integer"),
+        ({"oscillator_count": 0}, "must be at least"),
+        ({"phase_locked": False}, "requires phase and spatial locks"),
+        ({"consecutive_lock_samples": 1}, "consecutive-sample threshold"),
+        (
+            {
+                "phase_locked": False,
+                "lock_achieved": False,
+                "consecutive_lock_samples": 2,
+            },
+            "must reset consecutive_lock_samples",
+        ),
+        ({"phase_dispersion_rad": -1.0}, "must be non-negative"),
+        ({"phase_margin_rad": "x"}, "finite real scalar"),
+        ({"phase_margin_rad": True}, "finite real scalar"),
+        ({"phase_margin_rad": float("inf")}, "must be finite"),
+        (
+            {
+                "phase_dispersion_rad": 0.1,
+                "phase_tol_rad": 0.01,
+                "phase_margin_rad": -0.09,
+            },
+            "phase_locked requires a non-negative phase_margin",
+        ),
+        (
+            {
+                "phase_locked": False,
+                "lock_achieved": False,
+                "consecutive_lock_samples": 0,
+            },
+            "phase-unlocked records require a negative phase_margin",
+        ),
+        (
+            {
+                "spatial_dispersion_m": 0.1,
+                "spatial_tol_m": 0.002,
+                "spatial_margin_m": -0.098,
+            },
+            "spatial_locked requires a non-negative spatial_margin",
+        ),
+        (
+            {
+                "spatial_locked": False,
+                "lock_achieved": False,
+                "consecutive_lock_samples": 0,
+            },
+            "spatial-unlocked records require a negative spatial_margin",
+        ),
+        ({"tolerance_profile_multiplier": 0.0}, "multiplier must be positive"),
+        ({"tolerance_profile_name": ""}, "must be a non-empty string"),
+    ],
+)
+def test_verify_rejects_tampered_handoff_record(changes, match) -> None:
+    record = replace(_valid_handoff_record(), **changes)
+    with pytest.raises(ValueError, match=match):
+        verify_pha_c_handoff_record(record)
+
+
+def test_build_rejects_non_integer_sample_count() -> None:
+    with pytest.raises(ValueError, match="must be an integer"):
+        build_pha_c_handoff_record(
+            np.array([0.0, 0.003, -0.004]),
+            np.array([0.0, 0.0005, -0.0008]),
+            required_consecutive_samples=2.5,  # type: ignore[arg-type]
+        )
+
+
+def test_build_rejects_non_numeric_phase_vector() -> None:
+    with pytest.raises(ValueError, match="must be numeric"):
+        build_pha_c_handoff_record(
+            np.array(["a", "b", "c"]),  # type: ignore[arg-type]
+            np.array([0.0, 0.0005, -0.0008]),
+        )
