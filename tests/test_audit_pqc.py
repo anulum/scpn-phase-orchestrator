@@ -41,18 +41,51 @@ def _pub_hex(key: Any) -> str:
     return key.public_key().public_bytes_raw().hex()
 
 
+def _mldsa_supported() -> bool:
+    """Return whether the platform cryptography backend implements ML-DSA."""
+    try:
+        from cryptography.exceptions import UnsupportedAlgorithm
+        from cryptography.hazmat.primitives.asymmetric import mldsa
+    except ImportError:
+        return False
+    try:
+        mldsa.MLDSA65PrivateKey.generate()
+    except UnsupportedAlgorithm:
+        return False
+    return True
+
+
+# ML-DSA needs an OpenSSL 3.5+ backend, which not every platform wheel bundles
+# (e.g. the Windows cryptography wheel); key-using tests skip where unsupported.
+requires_mldsa = pytest.mark.skipif(
+    not _mldsa_supported(),
+    reason="ML-DSA requires an OpenSSL 3.5+ cryptography backend",
+)
+
+
 class TestOptionalDependency:
     def test_missing_cryptography_raises_install_hint(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import sys
+        import builtins
 
-        # Simulate the 'cryptography' ML-DSA module being unavailable.
-        monkeypatch.setitem(
-            sys.modules,
-            "cryptography.hazmat.primitives.asymmetric.mldsa",
-            None,
-        )
+        real_import = builtins.__import__
+
+        def _fake_import(
+            name: str,
+            globals: Any = None,
+            locals: Any = None,
+            fromlist: tuple[str, ...] = (),
+            level: int = 0,
+        ) -> Any:
+            # Simulate the ML-DSA module being absent regardless of prior imports.
+            if name.startswith("cryptography.hazmat.primitives.asymmetric") and (
+                "mldsa" in (fromlist or ())
+            ):
+                raise ImportError("simulated missing cryptography mldsa")
+            return real_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", _fake_import)
         with pytest.raises(ImportError, match=r"scpn-phase-orchestrator\[pqc\]"):
             audit_pqc._load_mldsa()
 
@@ -65,6 +98,7 @@ class TestSeed:
     def test_generate_signing_seed_is_random(self) -> None:
         assert generate_signing_seed() != generate_signing_seed()
 
+    @requires_mldsa
     def test_key_from_seed_is_deterministic(self) -> None:
         assert _pub_hex(_key()) == _pub_hex(_key())
 
@@ -78,6 +112,7 @@ class TestSeed:
             signing_key_from_seed(_SEED, algorithm="ml-dsa-128")
 
 
+@requires_mldsa
 class TestSealAndVerify:
     def test_round_trip(self) -> None:
         key = _key()
@@ -179,6 +214,7 @@ class TestSealAndVerify:
         assert verify_audit_chain_seal(broken, _pub_hex(key)) is False
 
 
+@requires_mldsa
 class TestSealValidation:
     @pytest.mark.parametrize("tip", ["", "zz" * 32, "ab" * 16, 123])
     def test_rejects_bad_tip(self, tip: Any) -> None:
@@ -199,6 +235,7 @@ class TestSealValidation:
             public_key_id("not-bytes")
 
 
+@requires_mldsa
 class TestSerialisation:
     def test_to_from_dict_round_trip(self) -> None:
         seal = seal_audit_chain(_TIP, 7, _key())
@@ -244,6 +281,7 @@ class TestChainTipReading:
             read_audit_chain_tip(log)
 
 
+@requires_mldsa
 class TestSealAuditFile:
     def _write_chain(self, path: Path, tips: list[str]) -> None:
         path.write_text(
@@ -279,6 +317,7 @@ class TestSealAuditFile:
         assert verify_audit_log_seal(log, seal, _pub_hex(key)) is False
 
 
+@requires_mldsa
 class TestPipelineWiring:
     def test_seals_a_real_audit_logger_chain(self, tmp_path: Path) -> None:
         """Seal and verify a chain written by the real AuditLogger."""

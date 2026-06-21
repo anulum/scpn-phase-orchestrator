@@ -61,7 +61,8 @@ safety-critical control systems. The threat model covers:
 - **Post-quantum chain seal**: `runtime.audit_pqc` signs the chain tip with
   ML-DSA (FIPS 204) — an additive, publicly verifiable, post-quantum seal over
   the whole log. `verify_audit_log_seal` rejects it if the log changed after
-  sealing.
+  sealing. Needs the `pqc` extra and an OpenSSL 3.5+ backend (not bundled by
+  every platform wheel).
 - **Replay verification**: deterministic replay detects divergences
   from the audit trail, catching both tampering and non-determinism.
 

@@ -28,6 +28,9 @@ added without breaking existing seals.
 ML-DSA is provided by the optional ``cryptography`` dependency. Install the
 ``pqc`` extra (``pip install scpn-phase-orchestrator[pqc]``) to use this module;
 ``cryptography`` is imported lazily, so importing the module never requires it.
+ML-DSA additionally needs an OpenSSL 3.5+ backend, which not every platform wheel
+bundles (e.g. the Windows ``cryptography`` wheel); on an older backend the seal
+functions raise ``cryptography.exceptions.UnsupportedAlgorithm``.
 
 The seal is signed over a domain-separated message binding the algorithm, the
 record count, and the tip hash, so a signature cannot be replayed across schemes

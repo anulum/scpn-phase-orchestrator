@@ -253,9 +253,8 @@ class TestPythonReferencePath:
             ordinal_pattern_sequence(series, 3, 1),
             oe_module._ordinal_codes_reference(series, 3, 1),
         )
-        assert transition_entropy(series, 3, 1) == oe_module._transition_entropy_reference(
-            series, 3, 1
-        )
+        reference = oe_module._transition_entropy_reference(series, 3, 1)
+        assert transition_entropy(series, 3, 1) == reference
 
 
 class TestPipelineWiring:
