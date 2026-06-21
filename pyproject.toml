@@ -306,7 +306,6 @@ markers = [
 [tool.coverage.run]
 source = ["scpn_phase_orchestrator"]
 concurrency = ["thread"]
-branch = true
 omit = [
     "*/runtime/grpc_gen/*",
     # External-dependency adapters: require packages not in standard CI

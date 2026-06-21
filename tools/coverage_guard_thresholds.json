@@ -1,5 +1,5 @@
 {
-  "_comment": "2026-06-21: ratcheted up from the temporary 60% floor to the actual CI-measured line coverage (global 92.60%, gated domains 91.8-100% on CI run 27888091563 / 75f2990a). Each floor sits ~1pt below the measured rate as a no-decrease baseline; raise further toward 95 with module-owned tests on the lowest domains (imprint, monitor, ssgf). Branch coverage is tracked ([tool.coverage.run] branch=true); branch-rate gating is the next ratchet step.",
+  "_comment": "2026-06-21: ratcheted up from the temporary 60% floor to the actual CI-measured line coverage (global 92.60%, gated domains 91.8-100% on CI run 27888091563 / 75f2990a). Each floor sits ~1pt below the measured rate as a no-decrease baseline; raise further toward 95 with module-owned tests on the lowest domains (imprint, monitor, ssgf). Branch coverage was deferred: enabling [tool.coverage.run] branch=true inflates coverage-job instrumentation and flips ~8 tight wall-clock perf tests under coverage, while the guard only gates line-rate; re-add branch together with a branch-rate gate and after making those perf tests trace-robust (skip on sys.gettrace()).",
   "global_min_line_rate": 91.0,
   "domain_min_line_rate": {
     "coupling": 94.0,
