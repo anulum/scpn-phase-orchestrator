@@ -103,7 +103,13 @@ def _public_class(algorithm: str) -> Any:
 
 
 def generate_signing_seed() -> str:
-    """Return a fresh 32-byte ML-DSA signing seed as a hex string."""
+    """Return a fresh ML-DSA signing seed.
+
+    Returns
+    -------
+    str
+        A cryptographically random 32-byte seed, hex-encoded.
+    """
     return os.urandom(SEED_BYTES).hex()
 
 
@@ -120,14 +126,48 @@ def _validate_seed(seed_hex: object) -> bytes:
 
 
 def signing_key_from_seed(seed_hex: str, *, algorithm: str = DEFAULT_VARIANT) -> Any:
-    """Return a deterministic ML-DSA private key derived from a hex seed."""
+    """Return a deterministic ML-DSA private key derived from a seed.
+
+    Parameters
+    ----------
+    seed_hex : str
+        A 32-byte seed, hex-encoded (see :func:`generate_signing_seed`).
+    algorithm : str
+        The ML-DSA variant (one of :data:`MLDSA_VARIANTS`).
+
+    Returns
+    -------
+    cryptography ML-DSA private key
+        The deterministic private key for the seed and variant.
+
+    Raises
+    ------
+    ValueError
+        If the seed or algorithm is invalid.
+    """
     algorithm = _require_variant(algorithm)
     seed = _validate_seed(seed_hex)
     return _private_class(algorithm).from_seed_bytes(seed)
 
 
 def public_key_id(public_bytes: bytes) -> str:
-    """Return the short identifier (first 16 hex chars of SHA-256) of a key."""
+    """Return the short identifier of a public key.
+
+    Parameters
+    ----------
+    public_bytes : bytes
+        The raw ML-DSA public key bytes.
+
+    Returns
+    -------
+    str
+        The first 16 hex characters of the key's SHA-256 digest.
+
+    Raises
+    ------
+    ValueError
+        If ``public_bytes`` is not raw bytes.
+    """
     if not isinstance(public_bytes, (bytes, bytearray)):
         raise ValueError("public_bytes must be raw bytes")
     return hashlib.sha256(bytes(public_bytes)).hexdigest()[:16]
@@ -191,7 +231,13 @@ class AuditChainSeal:
     signature_hex: str
 
     def to_dict(self) -> dict[str, str | int]:
-        """Return a JSON-serialisable mapping of the seal."""
+        """Return a JSON-serialisable mapping of the seal.
+
+        Returns
+        -------
+        dict[str, str | int]
+            The six seal fields as plain JSON-serialisable values.
+        """
         return {
             "algorithm": self.algorithm,
             "public_key_id": self.public_key_id,
@@ -203,7 +249,23 @@ class AuditChainSeal:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> AuditChainSeal:
-        """Return a seal parsed from a mapping (e.g. loaded JSON)."""
+        """Return a seal parsed from a mapping (e.g. loaded JSON).
+
+        Parameters
+        ----------
+        data : dict[str, Any]
+            A mapping carrying the six seal fields.
+
+        Returns
+        -------
+        AuditChainSeal
+            The reconstructed seal.
+
+        Raises
+        ------
+        ValueError
+            If any required field is missing.
+        """
         required = {
             "algorithm",
             "public_key_id",
@@ -250,6 +312,11 @@ def seal_audit_chain(
     -------
     AuditChainSeal
         The post-quantum seal over the chain tip.
+
+    Raises
+    ------
+    ValueError
+        If the algorithm, tip hash, record count, or private key is invalid.
     """
     algorithm = _require_variant(algorithm)
     tip_hash = _validate_tip_hash(tip_hash)
@@ -359,7 +426,22 @@ def seal_audit_log(
     *,
     algorithm: str = DEFAULT_VARIANT,
 ) -> AuditChainSeal:
-    """Read an audit JSONL file's chain tip and return a post-quantum seal."""
+    """Read an audit JSONL file's chain tip and return a post-quantum seal.
+
+    Parameters
+    ----------
+    path : Path
+        Path to the audit JSONL stream to seal.
+    private_key : cryptography ML-DSA private key
+        The signing key (see :func:`signing_key_from_seed`).
+    algorithm : str
+        The ML-DSA variant; must match ``private_key``.
+
+    Returns
+    -------
+    AuditChainSeal
+        The post-quantum seal over the file's chain tip.
+    """
     tip_hash, record_count = read_audit_chain_tip(path)
     return seal_audit_chain(tip_hash, record_count, private_key, algorithm=algorithm)
 
@@ -371,9 +453,21 @@ def verify_audit_log_seal(
 ) -> bool:
     """Verify a seal against an audit file and a trusted public key.
 
-    Returns ``True`` only if the file's current chain tip and record count match
-    the seal *and* the signature verifies under the trusted key, so the seal is
-    rejected if the log was altered after sealing.
+    Parameters
+    ----------
+    path : Path
+        Path to the audit JSONL stream to check.
+    seal : AuditChainSeal
+        The seal previously produced for this log.
+    trusted_public_key_hex : str
+        The hex-encoded raw ML-DSA public key the verifier trusts.
+
+    Returns
+    -------
+    bool
+        ``True`` only if the file's current chain tip and record count match the
+        seal *and* the signature verifies under the trusted key, so the seal is
+        rejected if the log was altered after sealing.
     """
     tip_hash, record_count = read_audit_chain_tip(path)
     if tip_hash != seal.tip_hash or record_count != seal.record_count:

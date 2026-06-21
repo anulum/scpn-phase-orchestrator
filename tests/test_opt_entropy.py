@@ -131,6 +131,7 @@ class TestInputValidation:
             (np.array([0.0, np.bool_(True)], dtype=object), "boolean"),
             (np.array([0.0 + 1.0j, 1.0 + 0.0j]), "real-valued"),
             (np.array([0.0, 1.0j], dtype=object), "real-valued"),
+            (np.array(["a", "b", "c"], dtype=object), "one-dimensional float array"),
         ],
     )
     def test_rejects_invalid_series(self, series: np.ndarray, match: str) -> None:
@@ -240,6 +241,23 @@ class TestDispatch:
         assert fn is None
 
 
+class TestPythonReferencePath:
+    def test_both_primitives_return_reference_without_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # _dispatch returning None is the pure-Python path: the public
+        # functions return the NumPy reference directly.
+        monkeypatch.setattr(oe_module, "_dispatch", lambda _name: None)
+        series = np.array([3.0, 1.0, 2.0, 4.0, 0.0, 5.0], dtype=np.float64)
+        np.testing.assert_array_equal(
+            ordinal_pattern_sequence(series, 3, 1),
+            oe_module._ordinal_codes_reference(series, 3, 1),
+        )
+        assert transition_entropy(series, 3, 1) == oe_module._transition_entropy_reference(
+            series, 3, 1
+        )
+
+
 class TestPipelineWiring:
     def test_engine_order_parameter_series_yields_bounded_entropy(self) -> None:
         """Engine trajectory → order-parameter series → transition entropy.
@@ -287,9 +305,13 @@ class TestBackendBoundaryHardening:
     @pytest.mark.parametrize(
         "backend_codes",
         [
-            np.array([0.0, 1.5, 2.0], dtype=np.float64),  # non-integer
+            np.array([0.0, 1.5], dtype=np.float64),  # non-integer
             np.array([0, 999], dtype=np.int64),  # out of factorial range
             np.array([[0, 1], [2, 3]], dtype=np.int64),  # wrong rank
+            np.array([True, False]),  # boolean alias
+            np.array([0.0 + 1.0j, 1.0 + 0.0j]),  # complex
+            np.array([np.inf, 0.0]),  # non-finite
+            np.array([0, 0], dtype=np.int64),  # in-range integer but != reference
         ],
     )
     def test_invalid_backend_codes_fail_closed(

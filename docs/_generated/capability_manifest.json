@@ -8,11 +8,11 @@
     "optional_extras": 19,
     "public_api_exports": 24,
     "public_documentation_pages": 193,
-    "python_package_modules": 626,
+    "python_package_modules": 627,
     "research_experimental_modules": 204,
-    "runtime_serving_modules": 114,
+    "runtime_serving_modules": 115,
     "rust_kernel_files": 96,
-    "test_files": 632
+    "test_files": 633
   },
   "documentation": {
     "public_pages": [
@@ -880,6 +880,7 @@
       "src/scpn_phase_orchestrator/reporting/summary.py",
       "src/scpn_phase_orchestrator/runtime/__init__.py",
       "src/scpn_phase_orchestrator/runtime/audit_logger.py",
+      "src/scpn_phase_orchestrator/runtime/audit_pqc.py",
       "src/scpn_phase_orchestrator/runtime/audit_signing.py",
       "src/scpn_phase_orchestrator/runtime/audit_stream.py",
       "src/scpn_phase_orchestrator/runtime/chaos.py",
@@ -1386,6 +1387,7 @@
     "src/scpn_phase_orchestrator/reporting/summary.py",
     "src/scpn_phase_orchestrator/runtime/__init__.py",
     "src/scpn_phase_orchestrator/runtime/audit_logger.py",
+    "src/scpn_phase_orchestrator/runtime/audit_pqc.py",
     "src/scpn_phase_orchestrator/runtime/audit_signing.py",
     "src/scpn_phase_orchestrator/runtime/audit_stream.py",
     "src/scpn_phase_orchestrator/runtime/chaos.py",
@@ -1643,6 +1645,7 @@
       "tests/test_audit_logger.py",
       "tests/test_audit_logger_validation.py",
       "tests/test_audit_package_exports.py",
+      "tests/test_audit_pqc.py",
       "tests/test_audit_replay.py",
       "tests/test_audit_replay_engine.py",
       "tests/test_audit_signing.py",

@@ -202,7 +202,23 @@ class ExecutionTimingReport:
         return self.deadline_misses == 0
 
     def latency_percentile_s(self, percentile: float) -> float:
-        """Return the latency at ``percentile`` (0-100)."""
+        """Return the step latency at a given percentile.
+
+        Parameters
+        ----------
+        percentile : float
+            Percentile in ``[0, 100]``.
+
+        Returns
+        -------
+        float
+            The latency at ``percentile`` in seconds, or ``0.0`` if no steps ran.
+
+        Raises
+        ------
+        ValueError
+            If ``percentile`` is not a real number in ``[0, 100]``.
+        """
         if isinstance(percentile, bool) or not isinstance(percentile, Real):
             raise ValueError(
                 f"percentile must be a real in [0, 100], got {percentile!r}"
@@ -215,7 +231,15 @@ class ExecutionTimingReport:
         return float(np.percentile(self.latencies_s, value))
 
     def summary(self) -> dict[str, float | int | bool]:
-        """Return a flat scalar summary for logging or metric export."""
+        """Return a flat scalar summary for logging or metric export.
+
+        Returns
+        -------
+        dict[str, float | int | bool]
+            Step count, the period and WCET budget, mean / max / p99 latency,
+            maximum absolute jitter, deadline-miss count and verdict, the GC
+            policy, and the loop wall-time.
+        """
         return {
             "steps": self.steps,
             "period_s": self.period_s,

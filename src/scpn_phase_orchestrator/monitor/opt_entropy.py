@@ -10,16 +10,22 @@
 
 Two primitives, each with a five-backend fallback chain:
 
-* ``ordinal_pattern_sequence`` — the Bandt–Pompe ordinal-pattern code of
-  every sliding window, encoded as the Lehmer code of its stable ascending
-  argsort permutation, an integer in ``[0, D! − 1]``.
+* ``ordinal_pattern_sequence`` — the Bandt–Pompe ordinal-pattern code of every
+  sliding window, encoded as the Lehmer code of its stable ascending argsort
+  permutation, an integer in ``[0, D! − 1]``.
 * ``transition_entropy`` — the normalised Shannon entropy of the
   consecutive-pattern transition distribution, in ``[0, 1]``.
 
-The transition entropy collapses as a dynamical system regularises ahead of
-a first-order (explosive) synchronisation onset, which makes it the compute
-core of the explosive-synchronisation early-warning monitor in
-``monitor/explosive_sync.py``.
+Transition entropy collapses as a dynamical system regularises ahead of a
+first-order (explosive) synchronisation onset, which makes it the compute core
+of the explosive-synchronisation early-warning monitor in
+``monitor/explosive_sync.py``. This module is the compute primitive; the monitor
+is the detection layer built on top.
+
+The dispatcher is self-contained (it carries its own validation and NumPy
+reference, like ``monitor/npe.py``) so the core never imports the experimental
+accelerator package at import time; the optional Go/Julia/Mojo bridges are
+loaded lazily and validate their output against this reference.
 
 References
 ----------
@@ -35,27 +41,20 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-from ..experimental.accelerators.monitor._opt_entropy_validation import (
-    MAX_DIMENSION,
-    MIN_DIMENSION,
-    factorial,
-    ordinal_window_count,
-    validate_ordinal_params,
-    validate_ordinal_pattern_backend_output,
-    validate_series_backend_input,
-    validate_transition_entropy_backend_output,
-)
-
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
+ArrayPayload: TypeAlias = NDArray[np.generic]
 
 DEFAULT_DIMENSION = 3
 DEFAULT_DELAY = 1
+MIN_DIMENSION = 2
+MAX_DIMENSION = 7
 
 # Native backends (Rust / Julia / Go) agree to machine precision; the Mojo
 # text-protocol round-trip floors the scalar entropy at ~1e-10 because each
@@ -74,6 +73,136 @@ __all__ = [
     "ordinal_pattern_sequence",
     "transition_entropy",
 ]
+
+
+def _factorial(value: int) -> int:
+    result = 1
+    for factor in range(2, value + 1):
+        result *= factor
+    return result
+
+
+def _ordinal_window_count(length: int, dimension: int, delay: int) -> int:
+    count = length - (dimension - 1) * delay
+    return count if count > 0 else 0
+
+
+def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    if raw.dtype == np.bool_:
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
+
+
+def _contains_complex_alias(raw: ArrayPayload) -> bool:
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype != object:
+        return False
+    return any(isinstance(value, complex | np.complexfloating) for value in raw.flat)
+
+
+def _validate_series(series: object) -> FloatArray:
+    raw = np.asarray(series)
+    if _contains_boolean_alias(raw):
+        raise ValueError("series must not contain boolean values")
+    if _contains_complex_alias(raw):
+        raise ValueError("series must contain real-valued samples")
+    try:
+        array = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("series must be a one-dimensional float array") from exc
+    if array.ndim != 1:
+        raise ValueError(f"series shape {array.shape} must be one-dimensional")
+    if not np.all(np.isfinite(array)):
+        raise ValueError("series must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_dimension(dimension: object) -> int:
+    if isinstance(dimension, (bool, np.bool_)) or not isinstance(dimension, Integral):
+        raise ValueError(f"dimension must be an integer, got {dimension!r}")
+    value = int(dimension)
+    if value < MIN_DIMENSION or value > MAX_DIMENSION:
+        raise ValueError(
+            f"dimension must lie in [{MIN_DIMENSION}, {MAX_DIMENSION}], got {value}"
+        )
+    return value
+
+
+def _validate_delay(delay: object) -> int:
+    if isinstance(delay, (bool, np.bool_)) or not isinstance(delay, Integral):
+        raise ValueError(f"delay must be an integer, got {delay!r}")
+    value = int(delay)
+    if value < 1:
+        raise ValueError(f"delay must be a positive integer, got {value}")
+    return value
+
+
+def _validate_ordinal_params(dimension: object, delay: object) -> tuple[int, int]:
+    return _validate_dimension(dimension), _validate_delay(delay)
+
+
+def _validate_codes_output(
+    codes: object,
+    *,
+    n_windows: int,
+    dimension: int,
+    expected: IntArray,
+) -> IntArray:
+    raw = np.asarray(codes)
+    if _contains_boolean_alias(raw):
+        raise ValueError("ordinal pattern backend output must not contain booleans")
+    if _contains_complex_alias(raw):
+        raise ValueError("ordinal pattern backend output must contain real values")
+    floated = raw.astype(np.float64, copy=False)
+    if not np.all(np.isfinite(floated)):
+        raise ValueError("ordinal pattern backend output must be finite")
+    rounded = np.rint(floated)
+    if not np.array_equal(rounded, floated):
+        raise ValueError("ordinal pattern backend output must be integer-valued")
+    array = rounded.astype(np.int64, copy=False)
+    if array.ndim != 1 or array.size != n_windows:
+        raise ValueError(
+            f"ordinal pattern backend output size {array.size} does not match "
+            f"{n_windows}"
+        )
+    fact_d = _factorial(dimension)
+    if array.size and (int(array.min()) < 0 or int(array.max()) >= fact_d):
+        raise ValueError(
+            f"ordinal pattern codes must lie in [0, {fact_d - 1}] for dimension "
+            f"{dimension}"
+        )
+    if not np.array_equal(array, expected):
+        raise ValueError("ordinal pattern backend output must match exact reference")
+    return np.ascontiguousarray(array, dtype=np.int64)
+
+
+def _validate_entropy_output(
+    value: object,
+    *,
+    expected: float,
+    atol: float,
+) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(
+            f"transition entropy backend output must be a real scalar, got {value!r}"
+        )
+    score = float(value)
+    if not np.isfinite(score):
+        raise ValueError(
+            f"transition entropy backend output must be finite, got {value!r}"
+        )
+    tolerance = 1.0e-12
+    if score < -tolerance or score > 1.0 + tolerance:
+        raise ValueError(
+            f"transition entropy backend output must lie in [0, 1], got {value!r}"
+        )
+    score = min(1.0, max(0.0, score))
+    if abs(score - expected) > atol:
+        raise ValueError("transition entropy backend output must match exact reference")
+    return score
 
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
@@ -220,9 +349,9 @@ def _lehmer_code(perm: list[int], fact: list[int]) -> int:
 def _ordinal_codes_reference(
     series: FloatArray, dimension: int, delay: int
 ) -> IntArray:
-    count = ordinal_window_count(int(series.shape[0]), dimension, delay)
+    count = _ordinal_window_count(int(series.shape[0]), dimension, delay)
     codes = np.empty(count, dtype=np.int64)
-    fact = [factorial(k) for k in range(dimension)]
+    fact = [_factorial(k) for k in range(dimension)]
     for m in range(count):
         window = series[m : m + (dimension - 1) * delay + 1 : delay]
         codes[m] = _lehmer_code(_stable_argsort(window), fact)
@@ -236,7 +365,7 @@ def _transition_entropy_reference(
     n_codes = int(codes.shape[0])
     if n_codes < 2:
         return 0.0
-    fact_d = factorial(dimension)
+    fact_d = _factorial(dimension)
     keys = codes[:-1] * fact_d + codes[1:]
     total = int(keys.shape[0])
     _, counts = np.unique(keys, return_counts=True)
@@ -275,9 +404,9 @@ def ordinal_pattern_sequence(
         Pattern codes in ``[0, D! − 1]``, shape ``(T − (D − 1)·τ,)``;
         empty when the series is shorter than one window.
     """
-    series = validate_series_backend_input(series)
-    dimension, delay = validate_ordinal_params(dimension, delay)
-    count = ordinal_window_count(int(series.shape[0]), dimension, delay)
+    series = _validate_series(series)
+    dimension, delay = _validate_ordinal_params(dimension, delay)
+    count = _ordinal_window_count(int(series.shape[0]), dimension, delay)
     expected = _ordinal_codes_reference(series, dimension, delay)
     if count == 0:
         return expected
@@ -286,7 +415,7 @@ def ordinal_pattern_sequence(
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], IntArray]", backend_fn)
         try:
-            return validate_ordinal_pattern_backend_output(
+            return _validate_codes_output(
                 fn(series, dimension, delay),
                 n_windows=count,
                 dimension=dimension,
@@ -326,15 +455,15 @@ def transition_entropy(
         The normalised transition entropy; ``0.0`` when fewer than two
         transitions or a single transition type is observed.
     """
-    series = validate_series_backend_input(series)
-    dimension, delay = validate_ordinal_params(dimension, delay)
+    series = _validate_series(series)
+    dimension, delay = _validate_ordinal_params(dimension, delay)
     expected = _transition_entropy_reference(series, dimension, delay)
 
     backend_fn = _dispatch("transition_entropy")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], float]", backend_fn)
         try:
-            return validate_transition_entropy_backend_output(
+            return _validate_entropy_output(
                 fn(series, dimension, delay),
                 expected=expected,
                 atol=_DISPATCH_ENTROPY_TOLERANCE,

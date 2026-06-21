@@ -40,10 +40,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from ..experimental.accelerators.monitor._opt_entropy_validation import (
-    validate_ordinal_params,
+from .opt_entropy import (
+    DEFAULT_DELAY,
+    DEFAULT_DIMENSION,
+    _validate_ordinal_params,
+    transition_entropy,
 )
-from .opt_entropy import DEFAULT_DELAY, DEFAULT_DIMENSION, transition_entropy
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -118,7 +120,14 @@ class ExplosiveSyncWarning:
     persistence: int
 
     def summary(self) -> dict[str, float | int | bool | None]:
-        """Return a flat scalar summary for logging or metric export."""
+        """Return a flat scalar summary for logging or metric export.
+
+        Returns
+        -------
+        dict[str, float | int | bool | None]
+            Window/baseline counts, the baseline fit, the entropy-index and
+            robust-z extremes, the maximum relative drop, and the alarm verdict.
+        """
         return {
             "n_windows": int(self.entropy_index.shape[0]),
             "n_baseline_windows": self.n_baseline_windows,
@@ -233,7 +242,7 @@ def explosive_sync_warning(
         If the inputs are malformed or the window does not fit the series.
     """
     array = _validate_signals(signals)
-    dimension, delay = validate_ordinal_params(dimension, delay)
+    dimension, delay = _validate_ordinal_params(dimension, delay)
     window = _validate_positive_int(window, "window")
     step = _validate_positive_int(step, "step")
     min_baseline_windows = _validate_positive_int(
