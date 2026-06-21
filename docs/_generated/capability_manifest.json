@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 281,
+    "core_engine_modules": 282,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 26,
     "optional_extras": 19,
     "public_api_exports": 24,
-    "public_documentation_pages": 194,
-    "python_package_modules": 629,
+    "public_documentation_pages": 195,
+    "python_package_modules": 630,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 115,
     "rust_kernel_files": 96,
-    "test_files": 635
+    "test_files": 636
   },
   "documentation": {
     "public_pages": [
@@ -124,6 +124,7 @@
       "docs/reference/api/monitor_itpc.md",
       "docs/reference/api/monitor_lyapunov.md",
       "docs/reference/api/monitor_merge_window.md",
+      "docs/reference/api/monitor_modal_participation.md",
       "docs/reference/api/monitor_npe.md",
       "docs/reference/api/monitor_opt_entropy.md",
       "docs/reference/api/monitor_oscillation_modes.md",
@@ -451,6 +452,7 @@
       "src/scpn_phase_orchestrator/monitor/itpc.py",
       "src/scpn_phase_orchestrator/monitor/lyapunov.py",
       "src/scpn_phase_orchestrator/monitor/merge_window.py",
+      "src/scpn_phase_orchestrator/monitor/modal_participation.py",
       "src/scpn_phase_orchestrator/monitor/npe.py",
       "src/scpn_phase_orchestrator/monitor/opt_entropy.py",
       "src/scpn_phase_orchestrator/monitor/oscillation_modes.py",
@@ -1321,6 +1323,7 @@
     "src/scpn_phase_orchestrator/monitor/itpc.py",
     "src/scpn_phase_orchestrator/monitor/lyapunov.py",
     "src/scpn_phase_orchestrator/monitor/merge_window.py",
+    "src/scpn_phase_orchestrator/monitor/modal_participation.py",
     "src/scpn_phase_orchestrator/monitor/npe.py",
     "src/scpn_phase_orchestrator/monitor/opt_entropy.py",
     "src/scpn_phase_orchestrator/monitor/oscillation_modes.py",
@@ -1893,6 +1896,7 @@
       "tests/test_meta_transfer.py",
       "tests/test_metrics_exporter.py",
       "tests/test_minimal_domain_pipeline_workflow.py",
+      "tests/test_modal_participation.py",
       "tests/test_modbus_tls.py",
       "tests/test_monitor_coherence.py",
       "tests/test_monitor_stl_modules.py",

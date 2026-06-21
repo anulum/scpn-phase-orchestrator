@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Modal participation and damping controllability (`monitor.modal_participation`):
+  the model-based companion to the oscillation-mode estimator.
+  `phase_network_jacobian` builds the Sakaguchi–Kuramoto small-signal Jacobian at
+  an operating point, and `analyse_network_modes` eigen-decomposes any
+  continuous-time state matrix into modes carrying frequency, damping ratio, mode
+  shape, participation factors (Pérez-Arriaga, Verghese & Schweppe 1982), and
+  per-input modal controllability (Kundur 1994). It answers which oscillators
+  swing in a poorly-damped inter-area mode and which actuator damps it best;
+  conjugate pairs report one non-negative-frequency mode, and a defective state
+  matrix is rejected. Diagnostic only.
 - Inter-area oscillation mode estimator (`monitor.oscillation_modes`): the
   matrix-pencil method (Hua & Sarkar 1990) recovers the damped-sinusoid modes of
   a grid ringdown — frequency, damping ratio, amplitude, and phase per mode — and

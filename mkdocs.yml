@@ -182,6 +182,7 @@ nav:
       - "Monitor — OPT-Entropy": reference/api/monitor_opt_entropy.md
       - "Monitor — Explosive Sync": reference/api/monitor_explosive_sync.md
       - "Monitor — Oscillation Modes": reference/api/monitor_oscillation_modes.md
+      - "Monitor — Modal Participation": reference/api/monitor_modal_participation.md
       - "Monitor — PID": reference/api/monitor_pid.md
       - "Monitor — Poincare": reference/api/monitor_poincare.md
       - "Monitor — Recurrence": reference/api/monitor_recurrence.md
