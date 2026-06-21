@@ -273,3 +273,43 @@ class TestRustQualityDispatch:
         rust = scorer._rust
         assert rust is not None
         assert rust.calls == []
+
+
+class TestQualityValidation:
+    """Invalid thresholds and inputs fail closed with explicit errors."""
+
+    @pytest.mark.parametrize("bad", [float("inf"), float("nan")])
+    def test_init_rejects_non_finite_collapse_threshold(self, bad: float) -> None:
+        with pytest.raises(ValueError, match="collapse_threshold must be finite"):
+            PhaseQualityScorer(collapse_threshold=bad)
+
+    @pytest.mark.parametrize("bad", [float("inf"), float("nan")])
+    def test_init_rejects_non_finite_min_quality(self, bad: float) -> None:
+        with pytest.raises(ValueError, match="min_quality must be finite"):
+            PhaseQualityScorer(min_quality=bad)
+
+    @pytest.mark.parametrize("bad", [-0.1, 1.5])
+    def test_init_rejects_collapse_threshold_out_of_range(self, bad: float) -> None:
+        with pytest.raises(ValueError, match=r"collapse_threshold must be in \[0, 1\]"):
+            PhaseQualityScorer(collapse_threshold=bad)
+
+    @pytest.mark.parametrize("bad", [-0.1, 1.5])
+    def test_init_rejects_min_quality_out_of_range(self, bad: float) -> None:
+        with pytest.raises(ValueError, match=r"min_quality must be in \[0, 1\]"):
+            PhaseQualityScorer(min_quality=bad)
+
+    def test_detect_collapse_rejects_non_finite_threshold(self) -> None:
+        with pytest.raises(ValueError, match="threshold must be finite"):
+            PhaseQualityScorer().detect_collapse([_ps(0.5)], threshold=float("inf"))
+
+    def test_detect_collapse_rejects_out_of_range_threshold(self) -> None:
+        with pytest.raises(ValueError, match=r"threshold must be in \[0, 1\]"):
+            PhaseQualityScorer().detect_collapse([_ps(0.5)], threshold=1.5)
+
+    def test_downweight_mask_rejects_non_finite_min_quality(self) -> None:
+        with pytest.raises(ValueError, match="min_quality must be finite"):
+            PhaseQualityScorer().downweight_mask([_ps(0.5)], min_quality=float("nan"))
+
+    def test_downweight_mask_rejects_out_of_range_min_quality(self) -> None:
+        with pytest.raises(ValueError, match=r"min_quality must be in \[0, 1\]"):
+            PhaseQualityScorer().downweight_mask([_ps(0.5)], min_quality=-0.5)
