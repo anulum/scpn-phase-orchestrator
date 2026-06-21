@@ -208,3 +208,30 @@ def test_report_is_json_safe_for_valid_artifacts():
 def test_report_hash_rejects_non_finite_audit_payload_numbers():
     with pytest.raises(ValueError, match="finite JSON"):
         _build_report_hash({"report_hash": "", "object_count": float("nan")})
+
+
+def _valid_artifacts():
+    return compile_symbolic_binding(
+        "A 2 layer power and grid symbolic control prompt",
+        name="topos_coverage_base",
+        oscillators_per_layer=3,
+        dry_run_steps=2,
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("validation_errors", "x", "validation_errors must be a list"),
+        ("retrieval_evidence", "x", "retrieval_evidence must be a list"),
+        ("audit_record", "x", "audit_record must be a dict"),
+        ("binding_yaml", 1, "binding_yaml must be a string"),
+        ("policy_yaml", 1, "policy_yaml must be a string"),
+        ("notebook_json", 1, "notebook_json must be a string"),
+        ("retrieval_evidence", ["not-evidence"], "must be RetrievalEvidence"),
+    ],
+)
+def test_validate_rejects_malformed_artifact_fields(field, value, match) -> None:
+    artifacts = replace(_valid_artifacts(), **{field: value})
+    with pytest.raises(ValueError, match=match):
+        validate_symbolic_binding_functor(artifacts)
