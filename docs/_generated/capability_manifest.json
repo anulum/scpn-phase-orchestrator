@@ -7,12 +7,12 @@
     "integration_modules": 26,
     "optional_extras": 18,
     "public_api_exports": 24,
-    "public_documentation_pages": 190,
+    "public_documentation_pages": 191,
     "python_package_modules": 616,
     "research_experimental_modules": 200,
     "runtime_serving_modules": 113,
     "rust_kernel_files": 95,
-    "test_files": 624
+    "test_files": 625
   },
   "documentation": {
     "public_pages": [
@@ -80,6 +80,7 @@
       "docs/guide/testing.md",
       "docs/guide/webgpu_backend.md",
       "docs/index.md",
+      "docs/module_size_policy.md",
       "docs/papers/DUAL_R_PH1_DRAFT.md",
       "docs/papers/FEP_CORRESPONDENCE.md",
       "docs/papers/JOSS_DRAFT.md",
@@ -2149,6 +2150,7 @@
       "tests/test_te_validation_guards.py",
       "tests/test_theta_neuron.py",
       "tests/test_tools/test_capability_manifest.py",
+      "tests/test_tools/test_module_size.py",
       "tests/test_tools_benchmark_summary.py",
       "tests/test_tools_check_github_action_refs.py",
       "tests/test_tools_check_meta_distribution.py",
