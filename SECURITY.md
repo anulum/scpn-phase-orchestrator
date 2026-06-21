@@ -65,6 +65,31 @@ safety-critical control systems. The threat model covers:
 - Ruff linter flags common security anti-patterns.
 - No `eval()`, `exec()`, or `pickle.loads()` in the codebase.
 
+### Supply-chain provenance
+Released artefacts carry **SLSA build provenance**, signed keylessly through
+sigstore (Fulcio certificate + Rekor transparency log) using the workflow's
+OIDC identity — no long-lived signing secrets exist.
+
+- **PyPI** — wheels and the sdist are published with PEP 740 attestations
+  (`pypa/gh-action-pypi-publish`).
+- **GitHub release** — the sdist and the CycloneDX SBOM (`sbom.json`) are
+  attested with `actions/attest-build-provenance`.
+- **Container image** (`ghcr.io/anulum/scpn-phase-orchestrator`) — pushed with
+  BuildKit `provenance=mode=max` + SBOM attestations, attested with
+  `actions/attest-build-provenance`, and signed keylessly with cosign.
+
+Verify before trusting an artefact:
+
+```bash
+# sdist / wheel / SBOM (GitHub attestation)
+gh attestation verify <file> --repo anulum/SCPN-PHASE-ORCHESTRATOR
+
+# container image (cosign keyless signature)
+cosign verify ghcr.io/anulum/scpn-phase-orchestrator:<version> \
+  --certificate-identity-regexp 'https://github.com/anulum/SCPN-PHASE-ORCHESTRATOR/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
 ### Control System Safety
 - **Rate limits**: actuation layer enforces maximum parameter change
   per step, preventing discontinuous jumps that destabilise dynamics.

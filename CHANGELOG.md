@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ordinal-pattern transition entropy monitor (`monitor.opt_entropy`,
+  `monitor.explosive_sync`): Bandt–Pompe ordinal patterns and the normalised
+  Shannon entropy of the consecutive-pattern transition distribution, with a
+  five-language backend chain (Rust, Mojo, Julia, Go, Python) at bit-exact
+  parity. `explosive_sync_warning` slides this entropy across a multi-node
+  signal and raises an early warning when it collapses ahead of a first-order
+  (explosive) synchronisation onset, where variance / autocorrelation
+  indicators react late. Review-only: it emits a warning record, never actuates.
+- Supply-chain provenance for released artefacts, signed keylessly through
+  sigstore: PyPI wheels and sdist use PEP 740 attestations; the GitHub-release
+  sdist and CycloneDX SBOM are attested with `actions/attest-build-provenance`;
+  the container image is pushed with BuildKit provenance and SBOM attestations,
+  attested, and signed with cosign. Verification commands are in `SECURITY.md`.
 - Conformal twin-confidence admission gate (`monitor.twin_conformal_gate`): turns
   the twin-confidence score into a coverage-valid admit/flag gate. From a nominal
   calibration window it learns a distribution-free threshold on the composite
