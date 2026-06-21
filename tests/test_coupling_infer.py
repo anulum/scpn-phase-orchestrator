@@ -151,3 +151,107 @@ def test_transfer_entropy_backend_self_scores_fail_closed(monkeypatch) -> None:
 def test_inference_rejects_invalid_threshold_and_timestep_config(config) -> None:
     with pytest.raises((TypeError, ValueError), match="threshold|min_timesteps"):
         infer_coupling_from_timeseries(_directed_phase_series(), config=config)
+
+
+def test_result_density_is_zero_for_a_single_oscillator() -> None:
+    from scpn_phase_orchestrator.coupling.infer import CouplingInferenceResult
+
+    result = CouplingInferenceResult(
+        knm=np.zeros((1, 1)),
+        score_matrix=np.zeros((1, 1)),
+        support_mask=np.zeros((1, 1), dtype=bool),
+        method="transfer_entropy",
+        score_kind="transfer_entropy",
+        n_bins=8,
+        threshold=0.0,
+        normalisation="max",
+        shape=(1, 1),
+    )
+    assert result.density == 0.0
+    assert result.edge_count == 0
+
+
+def test_to_upde_knm_returns_the_transpose() -> None:
+    result = infer_coupling_from_timeseries(_directed_phase_series())
+    np.testing.assert_allclose(result.to_upde_knm(), result.knm.T)
+
+
+@pytest.mark.parametrize(
+    ("series", "match"),
+    [
+        (np.ones((3, 240), dtype=bool), "boolean"),
+        (np.empty((0, 3), dtype=bool), "boolean"),
+        (np.array([["a", "b", "c"], ["d", "e", "f"]]), "finite 2-D array"),
+        (np.ones((1, 240)), "at least 2 oscillators"),
+        (np.full((3, 240), np.inf), "finite 2-D array"),
+    ],
+)
+def test_inference_rejects_invalid_phase_series(series, match) -> None:
+    with pytest.raises((TypeError, ValueError), match=match):
+        infer_coupling_from_timeseries(series)
+
+
+@pytest.mark.parametrize(
+    ("config", "match"),
+    [
+        (CouplingInferenceConfig(method="bogus"), "method must be one of"),  # type: ignore[arg-type]
+        (CouplingInferenceConfig(n_bins=2.5), "n_bins must be an integer"),  # type: ignore[arg-type]
+        (CouplingInferenceConfig(n_bins=1), "n_bins must be greater"),
+        (CouplingInferenceConfig(threshold_quantile=1.5), "must lie in"),
+        (CouplingInferenceConfig(threshold_absolute=-1.0), "must be non-negative"),
+        (CouplingInferenceConfig(normalisation="bogus"), "must be one of"),  # type: ignore[arg-type]
+        (CouplingInferenceConfig(min_timesteps=2), "min_timesteps must be at least 4"),
+    ],
+)
+def test_inference_rejects_invalid_config(config, match) -> None:
+    with pytest.raises((TypeError, ValueError), match=match):
+        infer_coupling_from_timeseries(_directed_phase_series(), config=config)
+
+
+def test_absolute_threshold_and_no_normalisation_paths() -> None:
+    result = infer_coupling_from_timeseries(
+        _directed_phase_series(),
+        config=CouplingInferenceConfig(threshold_absolute=0.001, normalisation="none"),
+    )
+    assert result.threshold == pytest.approx(0.001)
+    assert result.normalisation == "none"
+
+
+def test_all_zero_scores_yield_zero_threshold_and_empty_coupling(monkeypatch) -> None:
+    from scpn_phase_orchestrator.coupling import infer as infer_mod
+
+    monkeypatch.setattr(
+        infer_mod,
+        "transfer_entropy_matrix",
+        lambda series, n_bins: np.zeros((series.shape[0], series.shape[0])),
+    )
+    result = infer_coupling_from_timeseries(
+        _directed_phase_series(),
+        config=CouplingInferenceConfig(threshold_quantile=None),
+    )
+    assert result.threshold == 0.0
+    assert not np.any(result.knm)
+
+
+def test_backend_unexpected_shape_is_rejected(monkeypatch) -> None:
+    from scpn_phase_orchestrator.coupling import infer as infer_mod
+
+    monkeypatch.setattr(
+        infer_mod,
+        "transfer_entropy_matrix",
+        lambda series, n_bins: np.zeros((series.shape[0] + 1, series.shape[0])),
+    )
+    with pytest.raises(RuntimeError, match="unexpected matrix shape"):
+        infer_coupling_from_timeseries(_directed_phase_series())
+
+
+def test_backend_non_finite_scores_are_rejected(monkeypatch) -> None:
+    from scpn_phase_orchestrator.coupling import infer as infer_mod
+
+    monkeypatch.setattr(
+        infer_mod,
+        "transfer_entropy_matrix",
+        lambda series, n_bins: np.full((series.shape[0], series.shape[0]), np.inf),
+    )
+    with pytest.raises(RuntimeError, match="non-finite"):
+        infer_coupling_from_timeseries(_directed_phase_series())
