@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Inter-area oscillation mode estimator (`monitor.oscillation_modes`): the
+  matrix-pencil method (Hua & Sarkar 1990) recovers the damped-sinusoid modes of
+  a grid ringdown — frequency, damping ratio, amplitude, and phase per mode — and
+  flags modes whose damping ratio falls below a screening threshold
+  (`DEFAULT_DAMPING_THRESHOLD = 0.03`, NERC PRC-028). Conjugate pairs merge into
+  one positive-frequency mode; unstable modes report a negative damping ratio.
+  Diagnostic only.
 - Verified neural Control Barrier Function safety filter
   (`actuation.control_barrier`): a barrier `h(x) ≥ 0` defines a safe set and the
   filter admits the supervisor action closest to its proposal that still

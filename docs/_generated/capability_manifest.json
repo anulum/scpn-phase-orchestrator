@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 280,
+    "core_engine_modules": 281,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 26,
     "optional_extras": 19,
     "public_api_exports": 24,
-    "public_documentation_pages": 193,
-    "python_package_modules": 628,
+    "public_documentation_pages": 194,
+    "python_package_modules": 629,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 115,
     "rust_kernel_files": 96,
-    "test_files": 634
+    "test_files": 635
   },
   "documentation": {
     "public_pages": [
@@ -126,6 +126,7 @@
       "docs/reference/api/monitor_merge_window.md",
       "docs/reference/api/monitor_npe.md",
       "docs/reference/api/monitor_opt_entropy.md",
+      "docs/reference/api/monitor_oscillation_modes.md",
       "docs/reference/api/monitor_pid.md",
       "docs/reference/api/monitor_poincare.md",
       "docs/reference/api/monitor_recurrence.md",
@@ -452,6 +453,7 @@
       "src/scpn_phase_orchestrator/monitor/merge_window.py",
       "src/scpn_phase_orchestrator/monitor/npe.py",
       "src/scpn_phase_orchestrator/monitor/opt_entropy.py",
+      "src/scpn_phase_orchestrator/monitor/oscillation_modes.py",
       "src/scpn_phase_orchestrator/monitor/pid.py",
       "src/scpn_phase_orchestrator/monitor/poincare.py",
       "src/scpn_phase_orchestrator/monitor/psychedelic.py",
@@ -1321,6 +1323,7 @@
     "src/scpn_phase_orchestrator/monitor/merge_window.py",
     "src/scpn_phase_orchestrator/monitor/npe.py",
     "src/scpn_phase_orchestrator/monitor/opt_entropy.py",
+    "src/scpn_phase_orchestrator/monitor/oscillation_modes.py",
     "src/scpn_phase_orchestrator/monitor/pid.py",
     "src/scpn_phase_orchestrator/monitor/poincare.py",
     "src/scpn_phase_orchestrator/monitor/psychedelic.py",
@@ -1950,6 +1953,7 @@
       "tests/test_order_params_backends.py",
       "tests/test_order_params_benchmark.py",
       "tests/test_order_params_stability.py",
+      "tests/test_oscillation_modes.py",
       "tests/test_oscillator_base.py",
       "tests/test_oscillator_informational.py",
       "tests/test_oscillator_physical.py",
