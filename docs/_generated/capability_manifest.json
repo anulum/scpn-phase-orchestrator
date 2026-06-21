@@ -8,11 +8,11 @@
     "optional_extras": 19,
     "public_api_exports": 24,
     "public_documentation_pages": 195,
-    "python_package_modules": 630,
+    "python_package_modules": 631,
     "research_experimental_modules": 204,
-    "runtime_serving_modules": 115,
+    "runtime_serving_modules": 116,
     "rust_kernel_files": 96,
-    "test_files": 636
+    "test_files": 637
   },
   "documentation": {
     "public_pages": [
@@ -859,6 +859,7 @@
       "src/scpn_phase_orchestrator/assurance/_hashing.py",
       "src/scpn_phase_orchestrator/assurance/case.py",
       "src/scpn_phase_orchestrator/assurance/evidence.py",
+      "src/scpn_phase_orchestrator/assurance/prc_oscillation.py",
       "src/scpn_phase_orchestrator/assurance/standards.py",
       "src/scpn_phase_orchestrator/audit/__init__.py",
       "src/scpn_phase_orchestrator/grpc_gen/__init__.py",
@@ -1015,6 +1016,7 @@
     "src/scpn_phase_orchestrator/assurance/_hashing.py",
     "src/scpn_phase_orchestrator/assurance/case.py",
     "src/scpn_phase_orchestrator/assurance/evidence.py",
+    "src/scpn_phase_orchestrator/assurance/prc_oscillation.py",
     "src/scpn_phase_orchestrator/assurance/standards.py",
     "src/scpn_phase_orchestrator/audit/__init__.py",
     "src/scpn_phase_orchestrator/autotune/__init__.py",
@@ -2016,6 +2018,7 @@
       "tests/test_power_grid_hierarchy_sync_demo.py",
       "tests/test_power_grid_morphogenetic_field_demo.py",
       "tests/test_power_grid_sheaf_obstruction_demo.py",
+      "tests/test_prc_oscillation.py",
       "tests/test_prediction.py",
       "tests/test_prediction_model_contracts.py",
       "tests/test_predictive_supervisor.py",

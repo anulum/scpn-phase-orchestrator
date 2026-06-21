@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- NERC PRC oscillation-monitoring compliance evidence (`assurance.prc_oscillation`):
+  `screen_oscillation_modes` screens the damping ratios of detected modes against
+  the oscillation-monitoring practice underlying NERC PRC-028 / the proposed
+  PRC-030 (undamped and poorly-damped modes are flagged) and seals the result into
+  a content-addressed, review-only `PRCOscillationEvidence` record. The capture
+  timestamp is caller-supplied so the record is deterministic; it is a technical
+  evidence-mapping aid, not a legal conformity assessment, and never actuates.
 - Modal participation and damping controllability (`monitor.modal_participation`):
   the model-based companion to the oscillation-mode estimator.
   `phase_network_jacobian` builds the Sakaguchi–Kuramoto small-signal Jacobian at

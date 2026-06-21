@@ -48,3 +48,18 @@ evidence that addresses it, records the conformance status and rationale, and
 seals the result into a deterministic, fail-closed bundle.
 
 ::: scpn_phase_orchestrator.assurance.case
+
+## Oscillation-monitoring evidence (NERC PRC-028 / PRC-030)
+
+`scpn_phase_orchestrator.assurance.prc_oscillation` is the audit-package end of
+the dVOC grid pack. `screen_oscillation_modes` takes the modes recovered by the
+[matrix-pencil estimator](monitor_oscillation_modes.md), screens each damping
+ratio against the oscillation-monitoring practice underlying NERC PRC-028 and the
+proposed PRC-030 — undamped (non-positive damping) and poorly-damped (below a few
+percent) modes are flagged — and seals the screening into a content-addressed,
+review-only `PRCOscillationEvidence` record. The capture timestamp is supplied by
+the caller (the measurement time of the event), so the record is deterministic and
+reproducible. Like the assurance-case bundle, it is a technical evidence-mapping
+aid, not a legal conformity assessment, and it never actuates.
+
+::: scpn_phase_orchestrator.assurance.prc_oscillation
