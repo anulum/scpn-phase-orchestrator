@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Deterministic (bounded-jitter, hard-deadline) execution mode
+  (`runtime.deterministic`): `run_deterministic_loop` drives any per-step
+  callable against a fixed period on the monotonic clock, times each step
+  against a worst-case execution-time budget (recording or, under
+  `miss_policy='abort'`, raising on a deadline miss), and freezes and disables
+  the cyclic garbage collector for the hot path so GC pauses leave the jitter
+  budget. Returns an `ExecutionTimingReport` with per-step latencies and jitters
+  plus mean / max / p99 latency, max absolute jitter, and deadline-miss counts.
+  Timing-only and non-actuating.
 - Ordinal-pattern transition entropy monitor (`monitor.opt_entropy`,
   `monitor.explosive_sync`): Bandt–Pompe ordinal patterns and the normalised
   Shannon entropy of the consecutive-pattern transition distribution, with a

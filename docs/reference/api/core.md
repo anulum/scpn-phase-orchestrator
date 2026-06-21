@@ -166,6 +166,24 @@ review-only.
 
 ::: scpn_phase_orchestrator.runtime.chaos
 
+### Deterministic (bounded-jitter) execution mode
+
+`runtime.deterministic` runs an arbitrary per-step callable against a fixed
+period with the timing guarantees a plain loop cannot give: every step is
+scheduled at `t0 + i·period` on the monotonic clock (sleep, with an optional
+final spin, then measured jitter), each step is timed against a worst-case
+execution-time budget so an overrun is a recorded — or, under
+`miss_policy='abort'`, fatal — *deadline miss*, and the cyclic garbage collector
+is frozen and disabled for the hot path so GC pauses leave the jitter budget.
+`run_deterministic_loop` returns an `ExecutionTimingReport` with per-step
+latencies and jitters plus aggregate statistics (mean / max / p99 latency, max
+absolute jitter, deadline-miss count). The loop is timing-only and
+non-actuating: it never inspects or mutates the step's state, so it drives the
+simulation step, a controller tick, or any periodic task without coupling to a
+specific engine.
+
+::: scpn_phase_orchestrator.runtime.deterministic
+
 ## Error handling philosophy
 
 SPO follows a fail-fast strategy at system boundaries:
