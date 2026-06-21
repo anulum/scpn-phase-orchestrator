@@ -44,7 +44,7 @@ built on Kuramoto/UPDE phase dynamics. New here? Start with
 [![Downloads](https://img.shields.io/pypi/dm/scpn-phase-orchestrator.svg)](https://pypi.org/project/scpn-phase-orchestrator/)
 [![Total Downloads](https://static.pepy.tech/badge/scpn-phase-orchestrator)](https://pepy.tech/project/scpn-phase-orchestrator)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://anulum.github.io/scpn-phase-orchestrator/)
-[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](https://github.com/anulum/scpn-phase-orchestrator)
+[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/anulum/scpn-phase-orchestrator)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![Rust FFI](https://img.shields.io/badge/Rust-spo--kernel-orange)](https://github.com/anulum/scpn-phase-orchestrator/tree/main/spo-kernel)
@@ -335,7 +335,7 @@ For CI and smoke tests on CPU-only hosts, use
 | Delay Engine | Time-delayed coupling with circular buffer |
 | Ott-Antonsen | Exact mean-field reduction (O(1) prediction) |
 
-### Closed-Loop Control (unique — no other oscillator library has this)
+### Closed-Loop Control
 
 | Module | What it does |
 |--------|-------------|
@@ -346,7 +346,7 @@ For CI and smoke tests on CPU-only hosts, use
 | TE Adaptive | Transfer entropy-based causal coupling updates |
 | Audit Trail | SHA256-chained JSONL for deterministic replay |
 
-### Analysis Toolkit (15 monitors)
+### Analysis Toolkit
 
 Order parameter, PLV, PAC (cross-frequency coupling), chimera detection,
 EVS (entrainment verification), PID (redundancy/synergy), Lyapunov
@@ -421,7 +421,7 @@ print(state.order_parameter)
 ## Reference Benchmarks
 
 SPO keeps reference benchmarks as reproducible evidence, not as marketing
-claims. The checked-in snapshot is dated `2026-06-05` and was generated with:
+claims. The checked-in snapshot is dated `2026-06-14` and was generated with:
 
 ```bash
 PYTHONPATH=.:src python benchmarks/reference_suite.py
@@ -679,9 +679,6 @@ and is built from source via `maturin develop`.
 | `musical_acoustics` | Acoustics | Consonance = R, groove = alpha |
 | `brain_connectome` | Neuroscience | HCP-inspired coupling |
 | `agent_coordination` | Multi-agent coordination | Heartbeat, task, and topic synchronisation |
-| `digital_twin_nchannel` | Digital twins | Six-channel plant/twin residual profile |
-| `edge_consensus_nchannel` | Edge orchestration | Six-channel gossip consensus |
-| `power_safety_nchannel` | Power systems | Six-channel grid safety profile |
 | `identity_coherence` | Consciousness | SSGF identity model (6 layers, 30 oscillators) |
 
 ### Adding a Domain
