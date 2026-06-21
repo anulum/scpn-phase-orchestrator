@@ -184,6 +184,23 @@ specific engine.
 
 ::: scpn_phase_orchestrator.runtime.deterministic
 
+### Post-quantum audit-chain seal
+
+`runtime.audit_pqc` adds an additive, post-quantum seal over the audit hash
+chain. The audit logger already chains each record with SHA-256 and signs it
+with HMAC; HMAC is symmetric and not post-quantum. `seal_audit_log` signs the
+chain tip (the `_hash` of the last record — the SHA-256 commitment to the whole
+log) with **ML-DSA** (FIPS 204, available natively in `cryptography`), producing
+an `AuditChainSeal` that anyone holding the trusted public key can verify, long
+after the run and against a future quantum adversary. `verify_audit_log_seal`
+re-reads the chain tip and record count and rejects the seal if either changed,
+so any post-hoc edit is detected. ML-DSA-65 is the default; ML-DSA-44/87 are
+selectable, and the seal records its algorithm so SLH-DSA (FIPS 205) can be
+added later without breaking existing seals. The seal is additive — it does not
+touch the HMAC flow — so it carries no regression risk.
+
+::: scpn_phase_orchestrator.runtime.audit_pqc
+
 ## Error handling philosophy
 
 SPO follows a fail-fast strategy at system boundaries:

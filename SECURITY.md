@@ -56,6 +56,12 @@ safety-critical control systems. The threat model covers:
 ### Audit Integrity
 - **SHA256 hash chain**: each audit record includes the hash of the
   previous record. Tampering with any record breaks the chain.
+- **HMAC record signing**: each record is HMAC-signed when `SPO_AUDIT_KEY`
+  is configured (symmetric; verifier needs the shared key).
+- **Post-quantum chain seal**: `runtime.audit_pqc` signs the chain tip with
+  ML-DSA (FIPS 204) — an additive, publicly verifiable, post-quantum seal over
+  the whole log. `verify_audit_log_seal` rejects it if the log changed after
+  sealing.
 - **Replay verification**: deterministic replay detects divergences
   from the audit trail, catching both tampering and non-determinism.
 

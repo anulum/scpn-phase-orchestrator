@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Post-quantum seal over the audit hash chain (`runtime.audit_pqc`):
+  `seal_audit_log` signs the chain tip (the SHA-256 commitment to the whole log)
+  with ML-DSA (FIPS 204, via `cryptography`), and `verify_audit_log_seal`
+  rejects the seal if the log's tip or record count changed after sealing. This
+  is an additive, publicly verifiable, post-quantum complement to the existing
+  symmetric HMAC record signing — it does not change the HMAC flow. ML-DSA-65 is
+  the default (ML-DSA-44/87 selectable); the seal records its algorithm so
+  SLH-DSA (FIPS 205) can be added later without breaking existing seals.
 - Deterministic (bounded-jitter, hard-deadline) execution mode
   (`runtime.deterministic`): `run_deterministic_loop` drives any per-step
   callable against a fixed period on the monotonic clock, times each step
