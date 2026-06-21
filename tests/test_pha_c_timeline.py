@@ -438,3 +438,155 @@ def test_timeline_min_signed_margins_are_hash_replayed() -> None:
     )
     with pytest.raises(ValueError, match="min_spatial_margin_m"):
         verify_pha_c_event_timeline(forged_spatial)
+
+
+def _valid_timeline() -> PHACTimelineRecord:
+    phases, positions, times = _trajectory()
+    return build_pha_c_event_timeline(
+        phases,
+        positions,
+        times=times,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+    )
+
+
+def test_verify_rejects_a_non_timeline() -> None:
+    with pytest.raises(ValueError, match="must be a PHACTimelineRecord"):
+        verify_pha_c_event_timeline("not a timeline")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"time_state_sha256": "nope"}, "SHA-256 hex digest"),
+        ({"evidence_kind": "bogus"}, "evidence_kind must be"),
+        ({"execution_disabled": "yes"}, "must be a boolean"),
+        ({"execution_disabled": False}, "execution_disabled must be true"),
+        ({"actuating": True}, "actuating must be false"),
+        ({"sample_count": 2.5}, "must be an integer"),
+        ({"sample_count": 0}, "must be at least"),
+        ({"lock_loss_count": 5}, "cannot exceed the transition count"),
+        (
+            {"max_consecutive_lock_samples": 0, "final_lock_achieved": True},
+            "final_lock_achieved requires the consecutive threshold",
+        ),
+        ({"start_time": True}, "finite real scalar"),
+        ({"start_time": "x"}, "finite real scalar"),
+        ({"start_time": float("inf")}, "must be finite"),
+        ({"duration_s": -1.0}, "must be non-negative"),
+        ({"end_time": -1.0}, "end_time must be greater than or equal"),
+        ({"duration_s": 10.0}, "duration_s must equal"),
+        ({"first_lock_index": 999}, "first_lock_index must refer to an observed"),
+        (
+            {
+                "first_lock_observed": True,
+                "first_lock_index": 2,
+                "first_lock_time": 999.0,
+            },
+            "first_lock_time must be inside",
+        ),
+        (
+            {"first_lock_observed": False, "first_lock_index": 3},
+            "first_lock_index must be -1 when no lock",
+        ),
+        (
+            {
+                "first_lock_observed": False,
+                "first_lock_index": -1,
+                "first_lock_time": 5.0,
+            },
+            "first_lock_time must be 0.0 when no lock",
+        ),
+        ({"min_phase_order_parameter": 1.5}, "must be inside"),
+        ({"tolerance_profile_multiplier": 0.0}, "multiplier must be positive"),
+        ({"tolerance_profile_name": ""}, "must be a non-empty string"),
+    ],
+)
+def test_verify_rejects_tampered_timeline(changes, match) -> None:
+    record = replace(_valid_timeline(), **changes)
+    with pytest.raises(ValueError, match=match):
+        verify_pha_c_event_timeline(record)
+
+
+def test_build_uses_default_integer_times_when_none() -> None:
+    phases, positions, _ = _trajectory()
+    timeline = build_pha_c_event_timeline(
+        phases,
+        positions,
+        times=None,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+    )
+    assert timeline.sample_count == phases.shape[0]
+
+
+@pytest.mark.parametrize(
+    ("times", "match"),
+    [
+        (np.array([0, 1, 2, 3, 4], dtype=object), "finite real-valued vector"),
+        (np.array([False, True, False, True, False]), "boolean or complex"),
+        (np.zeros((5, 1)), "one-dimensional"),
+        (np.array(["a", "b", "c", "d", "e"]), "times must be numeric"),
+    ],
+)
+def test_build_rejects_invalid_times(times, match) -> None:
+    phases, positions, _ = _trajectory()
+    with pytest.raises(ValueError, match=match):
+        build_pha_c_event_timeline(
+            phases,
+            positions,
+            times=times,
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+            required_consecutive_samples=3,
+            tolerance_profile="baseline_1x",
+        )
+
+
+def test_build_rejects_an_empty_phase_matrix() -> None:
+    with pytest.raises(ValueError, match="at least one time sample"):
+        build_pha_c_event_timeline(
+            np.zeros((0, 3)),
+            np.zeros((0, 3)),
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+            required_consecutive_samples=3,
+            tolerance_profile="baseline_1x",
+        )
+
+
+def test_build_rejects_a_non_numeric_phase_matrix() -> None:
+    with pytest.raises(ValueError, match="must be numeric"):
+        build_pha_c_event_timeline(
+            np.array([["a", "b", "c"]] * 5),
+            np.zeros((5, 3)),
+            phase_tol_rad=0.01,
+            spatial_tol_m=0.002,
+            required_consecutive_samples=3,
+            tolerance_profile="baseline_1x",
+        )
+
+
+def test_verify_accepts_a_never_locked_timeline() -> None:
+    samples = 5
+    phases = np.tile(np.array([-1.0, 0.0, 1.0]), (samples, 1))
+    positions = np.tile(np.array([-0.5, 0.0, 0.5]), (samples, 1))
+    times = np.arange(samples, dtype=np.float64)
+    timeline = build_pha_c_event_timeline(
+        phases,
+        positions,
+        times=times,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+    )
+    assert not timeline.first_lock_observed
+    assert timeline.first_lock_index == -1
+    assert timeline.first_lock_time == 0.0
+    assert verify_pha_c_event_timeline(timeline) is timeline
