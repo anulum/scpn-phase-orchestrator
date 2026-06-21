@@ -17,6 +17,9 @@ caught directly rather than only through a command-invocation test.
 
 from __future__ import annotations
 
+import click
+import pytest
+
 import scpn_phase_orchestrator.runtime.cli.plugins.execution as execution
 import scpn_phase_orchestrator.runtime.cli.plugins.lifecycle as lifecycle
 import scpn_phase_orchestrator.runtime.cli.plugins.remediation as remediation
@@ -84,3 +87,17 @@ def test_plugins_group_registers_all_subcommands() -> None:
 
 def test_execution_request_builder_is_exposed_on_group_module() -> None:
     assert callable(_build_plugin_execution_request)
+
+
+def test_execution_request_builder_fails_closed_without_registry_builder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scpn_phase_orchestrator.runtime.cli.plugins import _group
+
+    monkeypatch.setattr(
+        _group.plugin_registry, "build_plugin_execution_request", None, raising=False
+    )
+    with pytest.raises(
+        click.ClickException, match="registry request builder not available"
+    ):
+        _group._build_plugin_execution_request(object(), object())

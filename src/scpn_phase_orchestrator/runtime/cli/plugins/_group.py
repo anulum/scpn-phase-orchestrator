@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import click
 
-from scpn_phase_orchestrator import plugins as plugin_api
 from scpn_phase_orchestrator.plugins import (
     PluginExecutionApproval,
     PluginExecutionPlan,
@@ -33,37 +32,32 @@ def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
 ) -> object:
-    builder_candidates = (
-        "build_plugin_execution_request",
-        "build_plugin_execution_request_from_approval",
-        "build_plugin_execution_request_from_plan_and_approval",
-    )
-    for name in builder_candidates:
-        for module in (plugin_registry, plugin_api):
-            candidate = getattr(module, name, None)
-            if not callable(candidate):
-                continue
-            try:
-                return candidate(plan, approval)
-            except TypeError:
-                pass
-            try:
-                return candidate(plan=plan, approval=approval)
-            except TypeError:
-                pass
-            try:
-                return candidate(plan=plan, approved_execution=approval)
-            except TypeError:
-                pass
-            try:
-                return candidate(plan=plan, approval_record=approval)
-            except TypeError:
-                pass
+    """Build the registry execution-request artefact for ``plan`` under ``approval``.
 
-    raise click.ClickException(
-        "registry request builder not available: expected "
-        "build_plugin_execution_request"
-    )
+    Parameters
+    ----------
+    plan : PluginExecutionPlan
+        The execution plan to package.
+    approval : PluginExecutionApproval
+        The approval artefact authorising the plan.
+
+    Returns
+    -------
+    object
+        The deterministic, non-importing execution-request artefact.
+
+    Raises
+    ------
+    click.ClickException
+        If the registry does not expose ``build_plugin_execution_request``.
+    """
+    builder = getattr(plugin_registry, "build_plugin_execution_request", None)
+    if not callable(builder):
+        raise click.ClickException(
+            "registry request builder not available: expected "
+            "build_plugin_execution_request"
+        )
+    return builder(plan, approval)
 
 
 @main.group("plugins")
