@@ -329,3 +329,25 @@ The compiler generates a structural Verilog module that implements:
 3. **Euler Integration:** Single-clock cycle updates for the entire manifold.
 
 ::: scpn_phase_orchestrator.actuation.hdl_compiler
+
+## Verified neural Control Barrier Function safety filter
+
+`actuation.control_barrier` is a stronger safety layer than the bounds clamp: a
+**Control Barrier Function** ``h(x)`` defines a safe set ``S = {x : h(x) ≥ 0}``,
+and the filter admits the supervisor action closest to its proposal that still
+satisfies the discrete-time CBF condition ``h(x_{k+1}) ≥ (1 − γ)·h(x_k)`` under
+the one-step plant model ``x_{k+1} ≈ x_k + f + g·u``. With the first-order form
+``∇h(x)·(f + g·u) ≥ −γ·h(x)`` this is an analytic projection of the nominal
+control onto a state-dependent half-space, then a clip to the actuator bounds —
+a constraint *derived from the barrier*, not a fixed box.
+
+`NeuralBarrier` is a pure-NumPy ReLU network (no training-framework dependency)
+exposing `value`, `gradient` (reverse-mode), and `interval_bounds` (sound IBP).
+`ControlBarrierFilter.verify_forward_invariance` returns a sound
+`BarrierCertificate`: it partitions the state box, bounds ``h`` per cell by IBP,
+and requires that on every boundary-shell cell an actuator-admissible control
+restores the CBF condition. Because IBP over-approximates ``h``, a passing
+certificate is never a false guarantee. Review-only: the filter shapes a proposed
+action; it never actuates.
+
+::: scpn_phase_orchestrator.actuation.control_barrier

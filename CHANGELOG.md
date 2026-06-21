@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Verified neural Control Barrier Function safety filter
+  (`actuation.control_barrier`): a barrier `h(x) ≥ 0` defines a safe set and the
+  filter admits the supervisor action closest to its proposal that still
+  satisfies the discrete-time CBF condition — an analytic projection onto a
+  state-dependent half-space plus an actuator-bounds clip, strictly stronger than
+  a fixed clamp. `NeuralBarrier` is a pure-NumPy ReLU network (value, reverse-mode
+  gradient, sound interval-bound-propagation bounds); `verify_forward_invariance`
+  returns a sound `BarrierCertificate` (IBP over a state-box partition, never a
+  false guarantee). Review-only: it shapes a proposed action, never actuates.
 - Post-quantum seal over the audit hash chain (`runtime.audit_pqc`):
   `seal_audit_log` signs the chain tip (the SHA-256 commitment to the whole log)
   with ML-DSA (FIPS 204, via `cryptography`), and `verify_audit_log_seal`

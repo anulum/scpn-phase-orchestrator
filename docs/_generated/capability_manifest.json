@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 279,
+    "core_engine_modules": 280,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 26,
     "optional_extras": 19,
     "public_api_exports": 24,
     "public_documentation_pages": 193,
-    "python_package_modules": 627,
+    "python_package_modules": 628,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 115,
     "rust_kernel_files": 96,
-    "test_files": 633
+    "test_files": 634
   },
   "documentation": {
     "public_pages": [
@@ -327,6 +327,7 @@
     "core_engine": [
       "src/scpn_phase_orchestrator/actuation/__init__.py",
       "src/scpn_phase_orchestrator/actuation/constraints.py",
+      "src/scpn_phase_orchestrator/actuation/control_barrier.py",
       "src/scpn_phase_orchestrator/actuation/hdl_compiler.py",
       "src/scpn_phase_orchestrator/actuation/mapper.py",
       "src/scpn_phase_orchestrator/binding/__init__.py",
@@ -970,6 +971,7 @@
     "src/scpn_phase_orchestrator/_compat.py",
     "src/scpn_phase_orchestrator/actuation/__init__.py",
     "src/scpn_phase_orchestrator/actuation/constraints.py",
+    "src/scpn_phase_orchestrator/actuation/control_barrier.py",
     "src/scpn_phase_orchestrator/actuation/hdl_compiler.py",
     "src/scpn_phase_orchestrator/actuation/mapper.py",
     "src/scpn_phase_orchestrator/adapters/__init__.py",
@@ -1718,6 +1720,7 @@
       "tests/test_compat_deep.py",
       "tests/test_connectome.py",
       "tests/test_connectome_python_fallback.py",
+      "tests/test_control_barrier.py",
       "tests/test_convergence_topology.py",
       "tests/test_coupling_est.py",
       "tests/test_coupling_harmonic_estimation.py",
