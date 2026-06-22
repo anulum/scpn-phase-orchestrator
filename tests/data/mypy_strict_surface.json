@@ -14,6 +14,8 @@
         "opentelemetry.*",
         "optax",
         "optax.*",
+        "osqp",
+        "osqp.*",
         "pylsl",
         "pylsl.*",
         "redis",
