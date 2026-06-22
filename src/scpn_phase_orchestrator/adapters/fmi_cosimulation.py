@@ -22,6 +22,11 @@ a third-party FMI tool additionally needs the C-ABI binary shim, which is an
 optional, documented build step (the ``fmi`` extra) outside this module — the
 review-only model and its evidence are produced here.
 
+The reverse, import direction is :func:`cosimulate`: a co-simulation master that
+drives the controller slave against a plant supplied as a step callable, closing
+the loop. An external plant FMU plugs in by wrapping its FMI runtime (for example
+``fmpy``) as that callable, so no FMI runtime dependency is imposed here either.
+
 References
 ----------
 * Modelica Association 2024, *Functional Mock-up Interface Specification 3.0*.
@@ -32,6 +37,7 @@ from __future__ import annotations
 import hashlib
 import json
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeAlias
@@ -43,10 +49,12 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.actuation.koopman_mpc import KoopmanMPCController
 
 FloatArray: TypeAlias = NDArray[np.float64]
+PlantStep: TypeAlias = Callable[[FloatArray, FloatArray, float], FloatArray]
 
 __all__ = [
     "CoSimulationSlave",
     "FMIVariable",
+    "cosimulate",
     "generate_model_description",
     "write_fmu",
 ]
@@ -332,3 +340,85 @@ def write_fmu(slave: CoSimulationSlave, path: str | Path) -> Path:
         archive.writestr("modelDescription.xml", generate_model_description(slave))
         archive.writestr("resources/model.json", json.dumps(resources, indent=2))
     return destination
+
+
+def cosimulate(
+    controller: CoSimulationSlave,
+    plant_step: PlantStep,
+    *,
+    initial_state: FloatArray,
+    steps: int,
+    dt: float,
+    reference: FloatArray | None = None,
+) -> FloatArray:
+    """Run a co-simulation master coupling the controller slave with a plant.
+
+    This is the import/master direction: SPO drives a plant model in
+    co-simulation. Each step writes the plant state to the controller's state
+    inputs, advances the controller by one MPC step, reads its control output and
+    applies it to the plant, then advances the plant. The plant is any step
+    callable ``(state, control, dt) -> next_state``; an external plant FMU plugs
+    in by wrapping its FMI runtime (for example ``fmpy``) as such a callable, so
+    no FMI runtime dependency is imposed here.
+
+    Parameters
+    ----------
+    controller : CoSimulationSlave
+        The FMI controller slave to drive.
+    plant_step : Callable[[numpy.ndarray, numpy.ndarray, float], numpy.ndarray]
+        Advances the plant by ``dt`` under the applied control.
+    initial_state : numpy.ndarray
+        The plant's initial state ``x_0`` of shape ``(n,)``.
+    steps : int
+        Number of co-simulation steps.
+    dt : float
+        The communication step size.
+    reference : numpy.ndarray | None
+        The controller set point of shape ``(n,)``; defaults to the origin.
+
+    Returns
+    -------
+    numpy.ndarray
+        The closed-loop plant-state trajectory of shape ``(steps + 1, n)``.
+
+    Raises
+    ------
+    ValueError
+        If the initial state length, step count, or ``dt`` are inconsistent.
+    """
+    state_dim = controller.state_dim
+    state = np.ascontiguousarray(np.asarray(initial_state, dtype=np.float64).ravel())
+    if state.shape[0] != state_dim:
+        raise ValueError("initial_state length must match the controller state")
+    if steps < 1:
+        raise ValueError("steps must be at least 1")
+    if dt < 0.0:
+        raise ValueError("dt must be non-negative")
+
+    set_point = (
+        np.zeros(state_dim, dtype=np.float64)
+        if reference is None
+        else np.asarray(reference, dtype=np.float64).ravel()
+    )
+    controller.enter_initialization_mode()
+    controller.set_float64(
+        list(range(state_dim, 2 * state_dim)), [float(v) for v in set_point]
+    )
+    controller.exit_initialization_mode()
+
+    state_references = list(range(state_dim))
+    control_references = [_OUTPUT_VREF_BASE + j for j in range(controller.input_dim)]
+    trajectory = [state.copy()]
+    time = 0.0
+    for _ in range(steps):
+        controller.set_float64(state_references, [float(v) for v in state])
+        controller.do_step(time, dt)
+        control = np.asarray(
+            controller.get_float64(control_references), dtype=np.float64
+        )
+        state = np.ascontiguousarray(
+            np.asarray(plant_step(state, control, dt), dtype=np.float64).ravel()
+        )
+        trajectory.append(state.copy())
+        time += dt
+    return np.asarray(trajectory, dtype=np.float64)

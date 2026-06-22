@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.actuation.koopman_mpc import (
 from scpn_phase_orchestrator.adapters.fmi_cosimulation import (
     CoSimulationSlave,
     FMIVariable,
+    cosimulate,
     generate_model_description,
     write_fmu,
 )
@@ -189,3 +190,71 @@ def test_write_fmu_packages_the_model(tmp_path: Path) -> None:
     lift_dim = len(resources["state_matrix"])
     assert all(len(row) == lift_dim for row in resources["state_matrix"])
     assert len(resources["output_matrix"]) == 2
+
+
+# --------------------------------------------------------------------------- #
+# Co-simulation master (import direction)                                     #
+# --------------------------------------------------------------------------- #
+def test_cosimulate_damps_the_plant_in_closed_loop() -> None:
+    state_matrix, input_matrix = underdamped_oscillator(
+        frequency_hz=0.5, damping_ratio=0.02, dt=0.02
+    )
+    config = KoopmanMPCConfig(
+        horizon=15, input_lower=-50.0, input_upper=50.0, terminal_weight=10.0
+    )
+    rng = np.random.default_rng(0)
+    states = rng.normal(0.0, 1.0, size=(400, 2))
+    inputs = rng.normal(0.0, 1.0, size=(400, 1))
+    next_states = states @ state_matrix.T + inputs @ input_matrix.T
+    predictor = fit_koopman_predictor(
+        states,
+        next_states,
+        inputs,
+        dictionary=KoopmanDictionary(kind="identity", state_dim=2),
+    )
+    slave = CoSimulationSlave(KoopmanMPCController(predictor, config))
+
+    def plant(state: np.ndarray, control: np.ndarray, _dt: float) -> np.ndarray:
+        return state_matrix @ state + input_matrix @ control
+
+    closed = cosimulate(
+        slave,
+        plant,
+        initial_state=np.array([1.0, 0.0]),
+        steps=200,
+        dt=0.02,
+    )
+    assert closed.shape == (201, 2)
+
+    open_loop = np.array([1.0, 0.0])
+    for _ in range(200):
+        open_loop = state_matrix @ open_loop
+    assert np.linalg.norm(closed[-1]) < np.linalg.norm(open_loop)
+
+
+def test_cosimulate_rejects_a_mismatched_initial_state() -> None:
+    slave = _slave()
+    with pytest.raises(ValueError, match="initial_state length"):
+        cosimulate(
+            slave,
+            lambda x, _u, _dt: x,
+            initial_state=np.zeros(3),
+            steps=5,
+            dt=0.02,
+        )
+
+
+def test_cosimulate_rejects_a_nonpositive_step_count() -> None:
+    slave = _slave()
+    with pytest.raises(ValueError, match="steps must be at least 1"):
+        cosimulate(
+            slave, lambda x, _u, _dt: x, initial_state=np.zeros(2), steps=0, dt=0.02
+        )
+
+
+def test_cosimulate_rejects_a_negative_dt() -> None:
+    slave = _slave()
+    with pytest.raises(ValueError, match="dt must be non-negative"):
+        cosimulate(
+            slave, lambda x, _u, _dt: x, initial_state=np.zeros(2), steps=5, dt=-0.1
+        )

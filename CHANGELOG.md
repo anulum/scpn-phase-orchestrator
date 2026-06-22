@@ -32,7 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `modelDescription.xml` generator and the `.fmu` packager are pure NumPy and
   emit a conformant FMI 3.0 model interface; loading inside a third-party FMI
   tool additionally needs the C-ABI binary shim from a separate toolchain. The
-  slave reproduces the wrapped controller's control exactly.
+  slave reproduces the wrapped controller's control exactly. The reverse import
+  direction is `cosimulate`, a co-simulation master that drives the controller
+  slave against a plant supplied as a step callable, closing the loop (an
+  external plant FMU plugs in by wrapping its FMI runtime such as `fmpy` as that
+  callable); on a coupled linear oscillator the master damps the plant.
 - Learned phase-autoencoder Koopman observables (`monitor.phase_koopman`): a
   trained phase autoencoder (frozen to the pure-NumPy `oscillators.phase_reduction`
   evaluator) is used as the Koopman observable map, so the EDMD fit and the

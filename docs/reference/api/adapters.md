@@ -306,7 +306,10 @@ the SPO controller as a block: set the measured state and set point, call
 generator and the `.fmu` packager are pure NumPy and produce a conformant FMI 3.0
 model interface; loading the package inside a third-party FMI tool additionally
 needs the C-ABI binary shim, which is an optional, separately-installed build
-step (e.g. the `unifmu` toolchain) outside this module.
+step (e.g. the `unifmu` toolchain) outside this module. The reverse import
+direction is `cosimulate`, a co-simulation master that drives the controller
+slave against a plant supplied as a step callable — an external plant FMU plugs
+in by wrapping its FMI runtime (e.g. `fmpy`) as that callable.
 
 ::: scpn_phase_orchestrator.adapters.fmi_cosimulation
 
