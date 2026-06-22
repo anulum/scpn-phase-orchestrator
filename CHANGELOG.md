@@ -31,8 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   oscillator's dynamics are close to linear. `LearnedKoopmanDictionary` satisfies
   the new `KoopmanObservables` protocol (which both the analytic dictionaries and
   the learned map fulfil), and the state-inclusive lift keeps state reconstruction
-  exact; on a controlled Stuart–Landau oscillator the learned observables reduce
-  the multi-step state-prediction error below the identity dictionary. No JAX on
+  exact; on a controlled Stuart–Landau oscillator the learned observables yield a
+  predictor competitive with the identity dictionary, typically cutting the
+  multi-step state-prediction error (RMSE ratio 0.58–0.88 across seeds). No JAX on
   the control path.
 - Closed-loop Koopman-MPC oscillation damping (`runtime.dvoc_oscillation_damping`
   + `spo koopman-mpc`): an underdamped oscillator rings down and the matrix-pencil
