@@ -41,7 +41,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeAlias
-from xml.etree import ElementTree
+
+# ElementTree is used only to BUILD the modelDescription document from trusted
+# local model metadata, never to parse untrusted input, so the B405 parsing
+# attack surface does not apply here.
+from xml.etree import ElementTree  # nosec B405
 
 import numpy as np
 from numpy.typing import NDArray
