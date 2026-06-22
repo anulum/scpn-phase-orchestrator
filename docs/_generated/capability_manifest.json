@@ -8,11 +8,11 @@
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 197,
-    "python_package_modules": 647,
+    "python_package_modules": 648,
     "research_experimental_modules": 209,
-    "runtime_serving_modules": 119,
+    "runtime_serving_modules": 120,
     "rust_kernel_files": 97,
-    "test_files": 649
+    "test_files": 650
   },
   "documentation": {
     "public_pages": [
@@ -899,6 +899,7 @@
       "src/scpn_phase_orchestrator/plugins/registry/storage.py",
       "src/scpn_phase_orchestrator/reporting/__init__.py",
       "src/scpn_phase_orchestrator/reporting/explainability.py",
+      "src/scpn_phase_orchestrator/reporting/operator_copilot.py",
       "src/scpn_phase_orchestrator/reporting/plots.py",
       "src/scpn_phase_orchestrator/reporting/summary.py",
       "src/scpn_phase_orchestrator/runtime/__init__.py",
@@ -1426,6 +1427,7 @@
     "src/scpn_phase_orchestrator/plugins/registry/storage.py",
     "src/scpn_phase_orchestrator/reporting/__init__.py",
     "src/scpn_phase_orchestrator/reporting/explainability.py",
+    "src/scpn_phase_orchestrator/reporting/operator_copilot.py",
     "src/scpn_phase_orchestrator/reporting/plots.py",
     "src/scpn_phase_orchestrator/reporting/summary.py",
     "src/scpn_phase_orchestrator/runtime/__init__.py",
@@ -1992,6 +1994,7 @@
       "tests/test_oim.py",
       "tests/test_opcua_bridge.py",
       "tests/test_opentelemetry_adapter.py",
+      "tests/test_operator_copilot.py",
       "tests/test_opt_entropy.py",
       "tests/test_opt_entropy_backends.py",
       "tests/test_opt_entropy_benchmark.py",

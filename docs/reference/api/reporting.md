@@ -140,3 +140,18 @@ Human-readable report helpers that translate audit and supervisor records into
 plain diagnostic summaries for notebooks, demos, and operator-facing reports.
 
 ::: scpn_phase_orchestrator.reporting.explainability
+
+## Operator copilot
+
+`reporting.operator_copilot` turns an `ExplainabilityReport` into a grounded
+question-answering surface for a control-room operator. It renders the audit
+evidence — regime distribution, transitions, every control action with its
+recorded reason and evidence, the metric summary — into the prompt and instructs
+the language model to answer *only* from that evidence and to decline when it is
+silent, so the model explains and locates what the audit records rather than
+inventing control history or recommending actuation. The model is any provider
+with a `complete(prompt) -> str` method (a local HTTP model, or a deterministic
+stub for tests), so no network backend is required and the prompt is fully
+testable.
+
+::: scpn_phase_orchestrator.reporting.operator_copilot
