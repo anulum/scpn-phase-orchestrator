@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — `spo quickstart power` research-tier demo policy
+
+rules:
+  - name: suppress_frequency_oscillation
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: alpha
+      scope: layer_3
+      value: 0.4
+      ttl_s: 5.0
+
+  - name: restore_synchronism
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.4
+    action:
+      knob: K
+      scope: global
+      value: 0.2
+      ttl_s: 10.0
+
+  - name: curtail_renewable
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.8
+    action:
+      knob: Psi
+      scope: global
+      value: 3.14
+      ttl_s: 8.0
+
+  - name: subcritical_recovery
+    regime: [DEGRADED, CRITICAL]
+    condition:
+      metric: subcritical_fraction
+      op: ">"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 1.5
+      ttl_s: 5.0

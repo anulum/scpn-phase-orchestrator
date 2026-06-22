@@ -48,6 +48,36 @@ That target creates `.venv`, installs the development extras, validates
 `domainpacks/minimal_domain/binding_spec.yaml`, runs a short audited
 simulation, and prints a coherence report.
 
+## 1a. One command — `spo quickstart power`
+
+The single fastest way to see a real result. It runs the whole supported
+workflow — validate, run, replay (audit-chain verification), and report — on a
+bundled, research-tier power-grid binding, so nothing else needs to be on disk:
+
+```bash
+spo quickstart power
+spo quickstart power --steps 500 --output power_report.md   # save the report
+```
+
+Output walks the four checkpoints and ends with a Markdown explainability
+report:
+
+```
+=== SPO quickstart: power ===
+binding power_grid_quickstart v0.1.0 (safety_tier=research) — 12 oscillators, 5 layers
+[1/4] validate: OK
+[2/4] run: 250 steps  R_good=…  R_bad=…  separation=…  regime=…
+[3/4] replay: audit hash chain verified (… records)
+[4/4] report: regimes …
+```
+
+The bundled binding is **research-tier** so the local runtime may execute it.
+The production `domainpacks/power_grid` binding is `safety_tier: production` and
+is deliberately not executable by the local runtime — it requires the
+formal-export and certified-controller pipeline. Once the one-command run makes
+sense, the sections below break the same steps out so you can run them on your
+own bindings.
+
 ## 2. Your First Simulation
 
 8 Kuramoto oscillators with uniform coupling, integrated for 500 RK4 steps:

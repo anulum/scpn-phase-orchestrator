@@ -27,6 +27,7 @@ from scpn_phase_orchestrator.runtime.cli import meta as meta
 from scpn_phase_orchestrator.runtime.cli import monitoring as monitoring
 from scpn_phase_orchestrator.runtime.cli import plugins as plugins
 from scpn_phase_orchestrator.runtime.cli import queuewaves as queuewaves
+from scpn_phase_orchestrator.runtime.cli import quickstart as quickstart
 from scpn_phase_orchestrator.runtime.cli import run as run
 from scpn_phase_orchestrator.runtime.cli import scaffold as scaffold
 from scpn_phase_orchestrator.runtime.cli import verification as verification

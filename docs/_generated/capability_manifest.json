@@ -325,7 +325,8 @@
     "shipped_package_data": [
       "py.typed",
       "apps/queuewaves/static/*",
-      "audit/*.proto"
+      "audit/*.proto",
+      "runtime/cli/_quickstart_assets/*/*.yaml"
     ]
   },
   "product_boundaries": {

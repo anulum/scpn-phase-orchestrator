@@ -139,7 +139,7 @@ exclude-dependencies = ["scpn-fusion-core", "spo-kernel"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-scpn_phase_orchestrator = ["py.typed", "apps/queuewaves/static/*", "audit/*.proto"]
+scpn_phase_orchestrator = ["py.typed", "apps/queuewaves/static/*", "audit/*.proto", "runtime/cli/_quickstart_assets/*/*.yaml"]
 
 [tool.ruff]
 line-length = 88

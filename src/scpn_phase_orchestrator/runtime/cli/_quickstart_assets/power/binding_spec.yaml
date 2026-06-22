@@ -1,0 +1,155 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — `spo quickstart power` research-tier demo binding
+#
+# This is the RESEARCH-tier power-grid binding bundled with `spo quickstart
+# power` so the end-to-end golden path (validate → run → replay → report) runs
+# locally on any install. The PRODUCTION `domainpacks/power_grid` binding is
+# safety_tier: production and is deliberately NOT executable by the local
+# runtime — it requires the formal-export and certified-controller pipeline.
+# The grid model below is the same five-layer Sakaguchi–Kuramoto swing structure
+# (Dörfler, Chertkov & Bullo 2013) at research tier for demonstration.
+
+name: power_grid_quickstart
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.002
+control_period_s: 0.02
+
+layers:
+  - name: generator_rotor
+    index: 0
+    oscillator_ids: [gen_coal, gen_gas, gen_hydro]
+  - name: area_frequency
+    index: 1
+    oscillator_ids: [area_east, area_west]
+  - name: tie_line
+    index: 2
+    oscillator_ids: [tie_ew, tie_ns]
+  - name: load_demand
+    index: 3
+    oscillator_ids: [load_industrial, load_residential, load_commercial]
+  - name: renewable_intermittency
+    index: 4
+    oscillator_ids: [solar_farm, wind_farm]
+
+oscillator_families:
+  rotor_angle:
+    channel: P
+    extractor_type: physical
+    config: {}
+  frequency_deviation:
+    channel: I
+    extractor_type: event
+    config: {}
+  grid_topology:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
+
+coupling:
+  base_strength: 0.50
+  decay_alpha: 0.25
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.04
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.02
+
+objectives:
+  good_layers: [0, 1]
+  bad_layers: [3, 4]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  - name: frequency_deviation
+    variable: frequency_dev
+    lower: -0.5
+    upper: 0.5
+    severity: hard
+  - name: voltage_magnitude
+    variable: voltage_pu
+    lower: 0.95
+    upper: 1.05
+    severity: hard
+  - name: rotor_angle
+    variable: rotor_angle_deg
+    lower: null
+    upper: 90.0
+    severity: hard
+
+actuators:
+  - name: governor_droop
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: agc_bias
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: load_shedding
+    knob: alpha
+    scope: layer_3
+    limits: [0.0, 1.57]
+  - name: renewable_curtailment
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-governor-droop-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.2
+      weight: 2.0
+    - name: limit-agc-bias-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.8
+      weight: 1.5
+    - name: limit-load-shed-step
+      knob: alpha
+      scope: layer_3
+      min_value: 0.0
+      max_value: 0.5
+      weight: 2.5
+    - name: limit-curtailment-phase-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: grid value guard safe hold
+
+imprint_model:
+  decay_rate: 0.001
+  saturation: 2.0
+  modulates: ["K"]
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.25
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+policy: policy.yaml

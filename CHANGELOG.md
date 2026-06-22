@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- One-command golden-path demo (`spo quickstart power`): validates, runs,
+  replays (audit hash-chain verification) and reports an end-to-end orchestration
+  on a bundled research-tier power-grid binding, composing the existing
+  validate/run/replay/report APIs. The bundled binding is research-tier so the
+  local runtime may execute it; the production `power_grid` domainpack still
+  requires the formal-export pipeline. The fastest path from install to a real
+  result.
 - Review-only Koopman model-predictive controller (`actuation.koopman_mpc`):
   builds the condensed convex quadratic programme of a fitted Koopman predictor
   (Korda & Mezić 2018, eq. 24) over a finite horizon with output tracking, input
