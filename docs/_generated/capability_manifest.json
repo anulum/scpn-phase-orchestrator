@@ -4,15 +4,15 @@
     "core_engine_modules": 289,
     "domainpacks": 36,
     "github_workflows": 12,
-    "integration_modules": 26,
+    "integration_modules": 27,
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 197,
-    "python_package_modules": 646,
+    "python_package_modules": 647,
     "research_experimental_modules": 209,
     "runtime_serving_modules": 119,
     "rust_kernel_files": 97,
-    "test_files": 648
+    "test_files": 649
   },
   "documentation": {
     "public_pages": [
@@ -624,6 +624,7 @@
     "integrations": [
       "src/scpn_phase_orchestrator/adapters/__init__.py",
       "src/scpn_phase_orchestrator/adapters/_schema.py",
+      "src/scpn_phase_orchestrator/adapters/fmi_cosimulation.py",
       "src/scpn_phase_orchestrator/adapters/fusion_core_bridge.py",
       "src/scpn_phase_orchestrator/adapters/gaian_mesh_bridge.py",
       "src/scpn_phase_orchestrator/adapters/hardware_io.py",
@@ -1004,6 +1005,7 @@
     "src/scpn_phase_orchestrator/actuation/mapper.py",
     "src/scpn_phase_orchestrator/adapters/__init__.py",
     "src/scpn_phase_orchestrator/adapters/_schema.py",
+    "src/scpn_phase_orchestrator/adapters/fmi_cosimulation.py",
     "src/scpn_phase_orchestrator/adapters/fusion_core_bridge.py",
     "src/scpn_phase_orchestrator/adapters/gaian_mesh_bridge.py",
     "src/scpn_phase_orchestrator/adapters/hardware_io.py",
@@ -1842,6 +1844,7 @@
       "tests/test_federated_transport.py",
       "tests/test_fep_predictive_supervisor.py",
       "tests/test_ffi_parity.py",
+      "tests/test_fmi_cosimulation.py",
       "tests/test_formal_export.py",
       "tests/test_formal_export_modules.py",
       "tests/test_formal_export_residual.py",

@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- FMI 3.0 co-simulation export of the Koopman MPC
+  (`adapters.fmi_cosimulation`): wraps the controller as an FMI 3.0
+  co-simulation slave so a simulation master (Dymola, OpenModelica, FMPy) can
+  drive the SPO controller as a block — set the measured state and set point,
+  call `do_step`, read back the proposed control. The slave, the
+  `modelDescription.xml` generator and the `.fmu` packager are pure NumPy and
+  emit a conformant FMI 3.0 model interface; loading inside a third-party FMI
+  tool additionally needs the C-ABI binary shim from a separate toolchain. The
+  slave reproduces the wrapped controller's control exactly.
 - Learned phase-autoencoder Koopman observables (`monitor.phase_koopman`): a
   trained phase autoencoder (frozen to the pure-NumPy `oscillators.phase_reduction`
   evaluator) is used as the Koopman observable map, so the EDMD fit and the

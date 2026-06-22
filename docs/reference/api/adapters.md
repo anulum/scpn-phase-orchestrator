@@ -297,6 +297,19 @@ type, or payload fields can affect phase-channel state.
 
 ::: scpn_phase_orchestrator.adapters.synapse_coupling_bridge
 
+## FMI 3.0 Co-Simulation Export
+
+`adapters.fmi_cosimulation` wraps the Koopman MPC controller as an FMI 3.0
+co-simulation slave so a simulation master (Dymola, OpenModelica, FMPy) can drive
+the SPO controller as a block: set the measured state and set point, call
+`do_step`, read back the proposed control. The slave, the `modelDescription.xml`
+generator and the `.fmu` packager are pure NumPy and produce a conformant FMI 3.0
+model interface; loading the package inside a third-party FMI tool additionally
+needs the C-ABI binary shim, which is an optional, separately-installed build
+step (e.g. the `unifmu` toolchain) outside this module.
+
+::: scpn_phase_orchestrator.adapters.fmi_cosimulation
+
 ## Adapter selection guidance
 
 Choose adapter layers by failure tolerance and change management profile:
