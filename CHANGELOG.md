@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Review-only Koopman model-predictive controller (`actuation.koopman_mpc`):
+  builds the condensed convex quadratic programme of a fitted Koopman predictor
+  (Korda & Mezić 2018, eq. 24) over a finite horizon with output tracking, input
+  effort, actuator bounds and optional move limits, and returns a content-hashed
+  `KoopmanMPCDecision` whose first input is handed to the safety envelope. The
+  quadratic programme is solved by a deterministic operator-splitting (ADMM) QP
+  floor with adaptive step sizing (the OSQP algorithm of Stellato et al. 2020),
+  with an optional `osqp` backend (the `mpc` extra) held to the floor by a
+  parity gate. It composes with the foundation-model governor and the control
+  barrier filter.
 - Koopman EDMD-with-control linear predictor (`monitor.koopman_edmd`): fits a
   data-driven linear model `z_{k+1}=Az_k+Bu_k`, `x̂=Cz_k` of a nonlinear
   controlled system (Korda & Mezić 2018) from snapshot triples through
