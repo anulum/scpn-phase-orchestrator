@@ -44,7 +44,7 @@ built on Kuramoto/UPDE phase dynamics. New here? Start with
 [![Downloads](https://img.shields.io/pypi/dm/scpn-phase-orchestrator.svg)](https://pypi.org/project/scpn-phase-orchestrator/)
 [![Total Downloads](https://static.pepy.tech/badge/scpn-phase-orchestrator)](https://pepy.tech/project/scpn-phase-orchestrator)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://anulum.github.io/scpn-phase-orchestrator/)
-[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://github.com/anulum/scpn-phase-orchestrator)
+[![Coverage](https://img.shields.io/badge/coverage-per--module%20gate-blue)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![Rust FFI](https://img.shields.io/badge/Rust-spo--kernel-orange)](https://github.com/anulum/scpn-phase-orchestrator/tree/main/spo-kernel)
