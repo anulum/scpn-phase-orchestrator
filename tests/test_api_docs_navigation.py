@@ -41,6 +41,7 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.runtime.cli.assurance",
     "scpn_phase_orchestrator.runtime.cli.audit",
     "scpn_phase_orchestrator.runtime.cli.digital_twin",
+    "scpn_phase_orchestrator.runtime.cli.koopman_mpc",
     "scpn_phase_orchestrator.runtime.cli.queuewaves",
     "scpn_phase_orchestrator.runtime.cli.quickstart",
     "scpn_phase_orchestrator.runtime.cli.scaffold",

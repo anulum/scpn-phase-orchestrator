@@ -101,3 +101,17 @@ controller proposes; the envelope gates; nothing actuates without that review.
 ## 7. API reference
 
 ::: scpn_phase_orchestrator.actuation.koopman_mpc
+
+## 8. Closed-loop oscillation-damping pipeline
+
+`runtime.dvoc_oscillation_damping` closes the dVOC loop end to end: an
+underdamped oscillator rings down and the matrix-pencil estimator plus the NERC
+PRC screener flag its poorly-damped mode; an EDMD-with-control Koopman predictor
+is fitted and driven in closed loop by the Koopman MPC; the controlled ringdown
+is re-screened and the weakest mode is now better damped. The result carries both
+hash-sealed `PRCOscillationEvidence` records, so the damping improvement is
+auditable. The `spo koopman-mpc` command runs this pipeline on a default grid
+oscillator. The pipeline is review-only and offline — it performs no live
+actuation.
+
+::: scpn_phase_orchestrator.runtime.dvoc_oscillation_damping

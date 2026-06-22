@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Closed-loop Koopman-MPC oscillation damping (`runtime.dvoc_oscillation_damping`
+  + `spo koopman-mpc`): an underdamped oscillator rings down and the matrix-pencil
+  estimator plus the NERC PRC screener flag its poorly-damped mode; an
+  EDMD-with-control Koopman predictor is fitted and driven in closed loop by the
+  Koopman MPC; the controlled ringdown is re-screened and the weakest mode is
+  better damped. The result carries both hash-sealed PRC evidence records, so the
+  damping improvement is auditable end to end. This closes the dVOC
+  monitor→model→control→assurance chain; it is review-only and offline.
 - Model-free phase reduction. `nn.phase_autoencoder` learns the asymptotic
   phase, isochrons and phase-sensitivity function of a limit-cycle oscillator
   from state time series (Yawata, Fukami, Taira & Nakao 2024): a JAX/equinox
