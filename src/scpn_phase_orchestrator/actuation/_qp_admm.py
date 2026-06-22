@@ -254,9 +254,7 @@ def solve_qp_admm(
             numerator = primal_residual / max(primal_scale, _DEFAULT_EPS)
             denominator = dual_residual / max(dual_scale, _DEFAULT_EPS)
             ratio = numerator / max(denominator, _DEFAULT_EPS)
-            rho_new = float(
-                np.clip(rho_base * np.sqrt(ratio), _RHO_MIN, _RHO_MAX)
-            )
+            rho_new = float(np.clip(rho_base * np.sqrt(ratio), _RHO_MIN, _RHO_MAX))
             if (
                 rho_new > _RHO_ADAPT_TRIGGER * rho_base
                 or rho_new < rho_base / _RHO_ADAPT_TRIGGER
