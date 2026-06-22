@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Learned phase-autoencoder Koopman observables (`monitor.phase_koopman`): a
+  trained phase autoencoder (frozen to the pure-NumPy `oscillators.phase_reduction`
+  evaluator) is used as the Koopman observable map, so the EDMD fit and the
+  condensed Koopman MPC operate in the learned coordinate where a nonlinear
+  oscillator's dynamics are close to linear. `LearnedKoopmanDictionary` satisfies
+  the new `KoopmanObservables` protocol (which both the analytic dictionaries and
+  the learned map fulfil), and the state-inclusive lift keeps state reconstruction
+  exact; on a controlled Stuart–Landau oscillator the learned observables reduce
+  the multi-step state-prediction error below the identity dictionary. No JAX on
+  the control path.
 - Closed-loop Koopman-MPC oscillation damping (`runtime.dvoc_oscillation_damping`
   + `spo koopman-mpc`): an underdamped oscillator rings down and the matrix-pencil
   estimator plus the NERC PRC screener flag its poorly-damped mode; an

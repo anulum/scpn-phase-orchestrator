@@ -81,6 +81,15 @@ def _validate_state(value: object, *, name: str, dim: int) -> FloatArray:
     return np.ascontiguousarray(array, dtype=np.float64)
 
 
+def _validate_states(value: object, *, name: str, dim: int) -> FloatArray:
+    array = np.asarray(value, dtype=np.float64)
+    if array.ndim != 2 or array.shape[1] != dim:
+        raise ValueError(f"{name} must be a (K, {dim}) array")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
 @dataclass(frozen=True)
 class PhaseReducer:
     """A dependency-light evaluator of a trained phase autoencoder.
@@ -174,6 +183,41 @@ class PhaseReducer:
         vector = _validate_state(state, name="state", dim=self.weights.state_dim)
         raw = self._encode_raw(vector)
         return float(np.arctan2(raw[1], raw[0]))
+
+    def encode_observables(self, states: FloatArray) -> FloatArray:
+        """Lift a batch of states to the unnormalised encoder latent ``(K, 3)``.
+
+        These are the model-free Koopman observables: the learned coordinate in
+        which the phase autoencoder's dynamics are (approximately) linear, so a
+        :class:`~scpn_phase_orchestrator.monitor.koopman_edmd.KoopmanPredictor`
+        fitted in them captures nonlinear oscillator dynamics that the analytic
+        dictionaries miss.
+
+        Parameters
+        ----------
+        states : numpy.ndarray
+            A batch of states of shape ``(K, state_dim)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            The unnormalised latent batch of shape ``(K, 3)``.
+
+        Raises
+        ------
+        ValueError
+            If ``states`` is not a finite ``(K, state_dim)`` array.
+        """
+        matrix = _validate_states(states, name="states", dim=self.weights.state_dim)
+        activation = matrix
+        weights = self.weights.encoder_weights
+        biases = self.weights.encoder_biases
+        last = len(weights) - 1
+        for index, (weight, bias) in enumerate(zip(weights, biases, strict=True)):
+            activation = activation @ weight.T + bias
+            if index != last:
+                activation = np.maximum(activation, 0.0)
+        return np.ascontiguousarray(activation, dtype=np.float64)
 
     def reconstruct(self, phase: float) -> FloatArray:
         """Reconstruct the on-cycle state at a phase via the decoder.

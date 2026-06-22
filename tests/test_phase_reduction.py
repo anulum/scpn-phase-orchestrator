@@ -124,3 +124,25 @@ def test_asymptotic_phase_rejects_non_finite_state() -> None:
     reducer = _identity_reducer()
     with pytest.raises(ValueError, match="only finite values"):
         reducer.asymptotic_phase(np.array([np.inf, 0.0]))
+
+
+def test_encode_observables_batches_the_encoder() -> None:
+    reducer = _random_reducer(3)
+    states = np.array([[0.4, -0.2], [1.1, 0.7], [-0.6, 0.3]])
+    batch = reducer.encode_observables(states)
+    assert batch.shape == (3, 3)
+    # The batch lift matches the per-state raw encoding row by row.
+    for row, state in zip(batch, states, strict=True):
+        np.testing.assert_allclose(row, reducer._encode_raw(state), atol=1.0e-12)
+
+
+def test_encode_observables_rejects_a_wrong_shape() -> None:
+    reducer = _identity_reducer()
+    with pytest.raises(ValueError, match=r"\(K, 2\) array"):
+        reducer.encode_observables(np.zeros((4, 3)))
+
+
+def test_encode_observables_rejects_non_finite_states() -> None:
+    reducer = _identity_reducer()
+    with pytest.raises(ValueError, match="only finite values"):
+        reducer.encode_observables(np.array([[np.inf, 0.0]]))

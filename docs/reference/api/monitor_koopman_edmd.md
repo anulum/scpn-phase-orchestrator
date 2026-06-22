@@ -126,3 +126,18 @@ controller's convex programme is built from.
 ## 7. API reference
 
 ::: scpn_phase_orchestrator.monitor.koopman_edmd
+
+## 8. Learned phase-autoencoder observables
+
+The analytic dictionaries above are fixed feature maps. `monitor.phase_koopman`
+instead uses a trained phase autoencoder (`nn.phase_autoencoder`, frozen to the
+pure-NumPy `oscillators.phase_reduction` evaluator) as the observable map: the
+learned latent is the coordinate in which a nonlinear oscillator's dynamics are
+close to linear, so a predictor fitted in it captures dynamics the analytic
+dictionaries miss. `LearnedKoopmanDictionary` satisfies the same
+`KoopmanObservables` protocol the fit and predictor consume, and the lift is
+state-inclusive (`ψ(x) = [x, g(x)]`) so the output map reconstructs the state
+exactly while the learned block sharpens the linear evolution. There is no JAX on
+the control path.
+
+::: scpn_phase_orchestrator.monitor.phase_koopman

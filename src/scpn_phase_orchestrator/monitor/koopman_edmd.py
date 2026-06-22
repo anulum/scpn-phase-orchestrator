@@ -51,7 +51,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from numbers import Integral, Real
-from typing import TypeAlias, cast
+from typing import Protocol, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -62,10 +62,49 @@ __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
     "KoopmanDictionary",
+    "KoopmanObservables",
     "KoopmanPredictor",
     "fit_koopman_predictor",
     "lift_states",
 ]
+
+
+class KoopmanObservables(Protocol):
+    """The observable-map interface consumed by the EDMD fit and predictor.
+
+    A Koopman observable map declares its original state dimension ``n`` and
+    lifts a batch of states ``(K, n)`` to observables ``(K, N)``. Both the
+    analytic :class:`KoopmanDictionary` and the learned
+    ``monitor.phase_koopman.LearnedKoopmanDictionary`` satisfy it, so the EDMD
+    fit and the rolled-out predictor are agnostic to how the lift is produced.
+    """
+
+    @property
+    def state_dim(self) -> int:
+        """The original state dimension ``n``.
+
+        Returns
+        -------
+        int
+            The original state dimension ``n``.
+        """
+        ...
+
+    def lift(self, states: FloatArray) -> FloatArray:
+        """Lift a batch of states ``(K, n)`` to observables ``(K, N)``.
+
+        Parameters
+        ----------
+        states : numpy.ndarray
+            The state batch of shape ``(K, n)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            The lifted batch of shape ``(K, N)``.
+        """
+        ...
+
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
@@ -504,7 +543,7 @@ class KoopmanPredictor:
     state_matrix: FloatArray
     input_matrix: FloatArray
     output_matrix: FloatArray
-    dictionary: KoopmanDictionary
+    dictionary: KoopmanObservables
     fit_residual: float
 
     @property
@@ -596,7 +635,7 @@ def fit_koopman_predictor(
     next_states: FloatArray,
     inputs: FloatArray,
     *,
-    dictionary: KoopmanDictionary,
+    dictionary: KoopmanObservables,
     regularisation: float = 1.0e-8,
 ) -> KoopmanPredictor:
     """Fit an EDMD-with-control linear predictor from snapshot triples.

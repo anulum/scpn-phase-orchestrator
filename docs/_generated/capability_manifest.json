@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 288,
+    "core_engine_modules": 289,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 26,
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 197,
-    "python_package_modules": 645,
+    "python_package_modules": 646,
     "research_experimental_modules": 209,
     "runtime_serving_modules": 119,
     "rust_kernel_files": 97,
-    "test_files": 647
+    "test_files": 648
   },
   "documentation": {
     "public_pages": [
@@ -465,6 +465,7 @@
       "src/scpn_phase_orchestrator/monitor/npe.py",
       "src/scpn_phase_orchestrator/monitor/opt_entropy.py",
       "src/scpn_phase_orchestrator/monitor/oscillation_modes.py",
+      "src/scpn_phase_orchestrator/monitor/phase_koopman.py",
       "src/scpn_phase_orchestrator/monitor/pid.py",
       "src/scpn_phase_orchestrator/monitor/poincare.py",
       "src/scpn_phase_orchestrator/monitor/psychedelic.py",
@@ -1356,6 +1357,7 @@
     "src/scpn_phase_orchestrator/monitor/npe.py",
     "src/scpn_phase_orchestrator/monitor/opt_entropy.py",
     "src/scpn_phase_orchestrator/monitor/oscillation_modes.py",
+    "src/scpn_phase_orchestrator/monitor/phase_koopman.py",
     "src/scpn_phase_orchestrator/monitor/pid.py",
     "src/scpn_phase_orchestrator/monitor/poincare.py",
     "src/scpn_phase_orchestrator/monitor/psychedelic.py",
@@ -2020,6 +2022,7 @@
       "tests/test_phase_autoencoder.py",
       "tests/test_phase_contract.py",
       "tests/test_phase_extract.py",
+      "tests/test_phase_koopman.py",
       "tests/test_phase_quality.py",
       "tests/test_phase_reduction.py",
       "tests/test_physical_extractor.py",
