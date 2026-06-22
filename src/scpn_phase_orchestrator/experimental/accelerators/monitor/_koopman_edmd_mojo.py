@@ -53,8 +53,7 @@ def _run(payload: str, *, expected_count: int) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo koopman_edmd returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo koopman_edmd returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
     lines = proc.stdout.splitlines()
     if len(lines) != expected_count:
