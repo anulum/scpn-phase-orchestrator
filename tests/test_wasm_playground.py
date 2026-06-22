@@ -70,12 +70,20 @@ def test_node_simulation_suite_passes() -> None:
     node = shutil.which("node")
     assert node is not None  # guarded by the skipif above
     result = subprocess.run(  # noqa: S603 - fixed args, resolved executable, no shell
-        [node, "--test", str(SIMULATION_TEST)],
+        # Pin the TAP reporter: the default ``node --test`` reporter is
+        # version- and environment-dependent (newer runtimes emit the ``spec``
+        # reporter, ``✔ name (1.2ms)``, with no ``# fail 0`` summary line), so
+        # without this the suite passes while the assertion below cannot find
+        # its summary marker. TAP keeps both the exit code and the summary
+        # deterministic across Node versions.
+        [node, "--test", "--test-reporter=tap", str(SIMULATION_TEST)],
         capture_output=True,
         text=True,
         cwd=str(EXAMPLE_DIR),
         check=False,
     )
     combined = result.stdout + result.stderr
+    # ``node --test`` exits non-zero iff any subtest fails — the authoritative
+    # signal — and the pinned TAP output then reliably carries ``# fail 0``.
     assert result.returncode == 0, combined
     assert "# fail 0" in combined, combined
