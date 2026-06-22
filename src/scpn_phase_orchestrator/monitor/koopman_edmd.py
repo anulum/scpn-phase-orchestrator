@@ -130,9 +130,11 @@ def _load_julia_fns() -> dict[str, object]:
 
 def _load_go_fns() -> dict[str, object]:
     from ..experimental.accelerators.monitor._koopman_edmd_go import (
+        _load_lib,
         koopman_edmd_solve_go,
     )
 
+    _load_lib()
     return {"edmd_solve": koopman_edmd_solve_go}
 
 

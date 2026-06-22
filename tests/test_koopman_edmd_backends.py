@@ -111,3 +111,19 @@ def test_benchmark_polyglot_parity_gate_passes() -> None:
     assert result["parity_ok"] is True
     present = [r for r in result["backend_records"] if r.get("available")]
     assert {r["backend"] for r in present} >= {"python"}
+
+
+_MODULE_LINKAGE_PATHS = (
+    "scpn_phase_orchestrator.monitor.koopman_edmd",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._koopman_edmd_validation",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._koopman_edmd_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._koopman_edmd_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._koopman_edmd_mojo",
+)
+
+
+def test_module_linkage_paths_cover_the_koopman_chain() -> None:
+    import importlib
+
+    for import_path in _MODULE_LINKAGE_PATHS:
+        assert importlib.import_module(import_path).__name__ == import_path

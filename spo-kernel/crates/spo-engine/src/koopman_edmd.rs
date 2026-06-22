@@ -22,6 +22,9 @@
 //! all right-hand-side columns at once, matching the NumPy reference to machine
 //! precision.
 
+/// Row-major flat `(A, B, C)` matrices returned by the solve.
+pub type EdmdMatrices = (Vec<f64>, Vec<f64>, Vec<f64>);
+
 /// Solve the EDMD-with-control least-squares problem.
 ///
 /// All matrices are row-major flat slices. Returns `(a, b, c)` as row-major flat
@@ -37,9 +40,17 @@ pub fn koopman_edmd_solve(
     m: usize,
     n_state: usize,
     regularisation: f64,
-) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>), String> {
+) -> Result<EdmdMatrices, String> {
     validate_inputs(
-        x_lift, inputs, y_lift, states, k, n_lift, m, n_state, regularisation,
+        x_lift,
+        inputs,
+        y_lift,
+        states,
+        k,
+        n_lift,
+        m,
+        n_state,
+        regularisation,
     )?;
 
     let p = n_lift + m;
@@ -151,12 +162,7 @@ fn validate_inputs(
 
 /// Solve `mat · X = rhs` for `X` (dim×n_rhs) by Gaussian elimination with
 /// partial pivoting; `mat` is row-major (dim×dim), `rhs` row-major (dim×n_rhs).
-fn solve_multi(
-    dim: usize,
-    mat: &[f64],
-    rhs: &[f64],
-    n_rhs: usize,
-) -> Result<Vec<f64>, String> {
+fn solve_multi(dim: usize, mat: &[f64], rhs: &[f64], n_rhs: usize) -> Result<Vec<f64>, String> {
     // Work on the augmented matrix [mat | rhs] of width dim + n_rhs.
     let width = dim + n_rhs;
     let mut aug = vec![0.0_f64; dim * width];

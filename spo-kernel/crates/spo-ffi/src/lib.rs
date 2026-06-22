@@ -2638,7 +2638,15 @@ fn koopman_edmd_solve_rust<'py>(
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let (a, b, c) = spo_engine::koopman_edmd::koopman_edmd_solve(
-        xl, u, yl, st, k, n_lift, m, n_state, regularisation,
+        xl,
+        u,
+        yl,
+        st,
+        k,
+        n_lift,
+        m,
+        n_state,
+        regularisation,
     )
     .map_err(PyValueError::new_err)?;
     Ok((

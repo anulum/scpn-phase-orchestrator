@@ -37,7 +37,9 @@ class BackendDimensions:
 
     __slots__ = ("input_dim", "lift_dim", "samples", "state_dim")
 
-    def __init__(self, samples: int, lift_dim: int, input_dim: int, state_dim: int) -> None:
+    def __init__(
+        self, samples: int, lift_dim: int, input_dim: int, state_dim: int
+    ) -> None:
         self.samples = samples
         self.lift_dim = lift_dim
         self.input_dim = input_dim

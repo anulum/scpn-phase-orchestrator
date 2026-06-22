@@ -116,7 +116,10 @@ def _brunton_rollout(initial: np.ndarray, controls: np.ndarray) -> np.ndarray:
     trajectory = [state.copy()]
     for control in controls:
         state = np.array(
-            [lam * state[0], mu * state[1] + coupling * state[0] ** 2 + gain * control[0]]
+            [
+                lam * state[0],
+                mu * state[1] + coupling * state[0] ** 2 + gain * control[0],
+            ]
         )
         trajectory.append(state.copy())
     return np.array(trajectory)
@@ -173,7 +176,9 @@ def test_rbf_lift_reduces_nonlinear_prediction_error() -> None:
         states,
         next_states,
         inputs,
-        dictionary=KoopmanDictionary(kind="rbf", state_dim=2, centres=centres, width=0.6),
+        dictionary=KoopmanDictionary(
+            kind="rbf", state_dim=2, centres=centres, width=0.6
+        ),
     )
     identity = fit_koopman_predictor(
         states,
