@@ -18,5 +18,7 @@ authors = [{name = "Miroslav Sotek", email = "protoscience@anulum.li"}]
 requires-python = ">=3.10"
 license = {text = "AGPL-3.0-or-later"}
 
+# abi3-py310 builds a single stable-ABI wheel that loads on CPython 3.10+, so the
+# release matrix ships one wheel per platform instead of one per Python version.
 [tool.maturin]
-features = ["pyo3/extension-module"]
+features = ["pyo3/extension-module", "pyo3/abi3-py310"]

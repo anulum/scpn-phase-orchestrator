@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   carried the patched versions. The Windows-FFI lockfiles keep their Unix-only
   exclusions (no `uvloop`).
 
+### Changed
+
+- The Rust `spo_kernel` extension is now built as an abi3 stable-ABI wheel
+  (`pyo3/abi3-py310`): a single `cp310-abi3` wheel per platform loads on CPython
+  3.10+ instead of one wheel per Python version, so the release matrix and
+  download surface shrink. The build is unchanged for `cargo test`
+  (`--no-default-features`); verified that the abi3 wheel imports and the Rust
+  Koopman backend runs on a newer interpreter than its 3.10 floor.
+
 ### Added
 
 - FMI 3.0 co-simulation export of the Koopman MPC
