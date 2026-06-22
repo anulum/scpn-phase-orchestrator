@@ -244,6 +244,7 @@ nav:
       - Public Roadmap: roadmap.md
       - Fact-Based Overview: FACT_BASED_OVERVIEW.md
       - Architecture & Product Boundaries: architecture_product_boundaries.md
+      - Architecture Decisions: architecture_decisions.md
       - Assumptions & Constants: ASSUMPTIONS.md
       - Competitive Analysis: competitive_analysis.md
       - "What SPO Does That No One Else Can": competitive_comparison.md

@@ -45,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Architecture-decisions document (`docs/architecture_decisions.md`): records the
+  major architectural decisions and their rationale — the four enforced product
+  tiers, review-only actuation, the fastest-first parity-gated polyglot chain,
+  optional heavy dependencies with deterministic fallbacks, the cited
+  Koopman→MPC→assurance dVOC chain, evidence-as-product, the two safety tiers, the
+  machine-checked public API, the two build backends with the abi3 wheel, and the
+  environment-aware coverage gate — so a new contributor understands why the code
+  is shaped this way, not just what it does.
 - Hard security scan for `spo validate` (`binding.security_scan` +
   `spo validate --security --hard`): in addition to the spec-level security pass,
   `--hard` statically scans the domainpack's Python scenarios and YAML
