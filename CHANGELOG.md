@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Documented `experiments/`, `fuzzers/` and `bench/` as an explicit experimental
+  tier: each now carries a README stating that it is not part of the supported
+  `scpn_phase_orchestrator` API, is outside the test (`testpaths = ["tests"]`) and
+  coverage (`source = ["scpn_phase_orchestrator"]`) scope, is held to relaxed
+  linting, and carries no stability or correctness guarantee. This makes the
+  already-implicit boundary explicit so the exploratory scripts, fuzzing
+  harnesses, and benchmark instruments are not mistaken for supported surface.
 - The Rust `spo_kernel` extension is now built as an abi3 stable-ABI wheel
   (`pyo3/abi3-py310`): a single `cp310-abi3` wheel per platform loads on CPython
   3.10+ instead of one wheel per Python version, so the release matrix and
