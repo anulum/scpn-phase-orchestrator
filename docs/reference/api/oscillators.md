@@ -258,6 +258,17 @@ simulation setup and reproducible experiment seeds.
 
 ---
 
+## Phase reduction
+
+Model-free phase reduction: a dependency-light evaluator of a trained phase
+autoencoder (see `nn.phase_autoencoder`) that recovers the asymptotic phase
+`Θ(x)` and the phase-sensitivity function `Z(θ)` — the phase response curve —
+from frozen NumPy weights, with no JAX on the control path.
+
+::: scpn_phase_orchestrator.oscillators.phase_reduction
+
+---
+
 ## Cross-channel composition
 
 A domain can use multiple channels simultaneously. The binding spec

@@ -53,6 +53,10 @@ __all__ = [
     "StuartLandauLayer",
     "UDEKuramotoLayer",
     "CouplingResidual",
+    "PhaseAutoencoder",
+    "extract_phase_reduction_weights",
+    "phase_autoencoder_loss",
+    "train_phase_autoencoder",
     "kuramoto_step",
     "kuramoto_rk4_step",
     "kuramoto_forward",
@@ -286,6 +290,12 @@ _SUPERVISOR = {
     "load_supervisor_ppo_checkpoint",
     "control_actions_from_supervisor",
 }
+_PHASE_AUTOENCODER = {
+    "PhaseAutoencoder",
+    "extract_phase_reduction_weights",
+    "phase_autoencoder_loss",
+    "train_phase_autoencoder",
+}
 
 
 def __getattr__(name: str) -> object:  # noqa: ANN204
@@ -354,5 +364,9 @@ def _resolve(name: str) -> object:
         from . import supervisor
 
         return getattr(supervisor, name)
+    if name in _PHASE_AUTOENCODER:
+        from . import phase_autoencoder
+
+        return getattr(phase_autoencoder, name)
     msg = f"module 'scpn_phase_orchestrator.nn' has no attribute {name!r}"
     raise AttributeError(msg)

@@ -19,6 +19,10 @@ from __future__ import annotations
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+from scpn_phase_orchestrator.oscillators.phase_reduction import (
+    PhaseReducer,
+    PhaseReductionWeights,
+)
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
@@ -27,6 +31,8 @@ __all__ = [
     "InformationalExtractor",
     "PhaseExtractor",
     "PhaseQualityScorer",
+    "PhaseReducer",
+    "PhaseReductionWeights",
     "PhaseState",
     "PhysicalExtractor",
     "SymbolicExtractor",

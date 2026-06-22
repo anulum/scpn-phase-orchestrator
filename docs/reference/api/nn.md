@@ -410,6 +410,23 @@ model, losses = train(
 
 ---
 
+## Phase autoencoder
+
+`nn.phase_autoencoder` learns the asymptotic phase, isochrons and
+phase-sensitivity function of a limit-cycle oscillator from state time series
+alone (Yawata, Fukami, Taira & Nakao 2024, *Chaos* 34, 063111). The encoder maps
+the state to a three-component latent whose first two components lie on the unit
+circle so that `θ = atan2(Y₂, Y₁)` is the asymptotic phase; the latent evolves by
+an exactly-linear normal-form flow with learnable frequency `ω` and decay `λ`,
+trained against a four-term reconstruction/phase/deviation/centring loss. The
+trained weights are extracted to the pure-NumPy `oscillators.phase_reduction`
+evaluator so the phase and the phase response curve are available on the control
+path without JAX.
+
+::: scpn_phase_orchestrator.nn.phase_autoencoder
+
+---
+
 ## Differentiable Supervisor
 
 `nn.supervisor` provides the differentiable neural policy surface for

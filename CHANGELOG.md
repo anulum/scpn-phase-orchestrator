@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Model-free phase reduction. `nn.phase_autoencoder` learns the asymptotic
+  phase, isochrons and phase-sensitivity function of a limit-cycle oscillator
+  from state time series (Yawata, Fukami, Taira & Nakao 2024): a JAX/equinox
+  encoder maps the state to a unit-circle latent that evolves by an
+  exactly-linear normal-form flow with learnable frequency and decay, trained
+  against a four-term loss. The trained weights are extracted to the new
+  pure-NumPy `oscillators.phase_reduction` evaluator, which reproduces the
+  asymptotic phase and the phase response curve `Z(θ)` with no JAX on the
+  control path; the analytic `Z(θ)` matches a finite-difference gradient to
+  ~1e-10 and on Stuart–Landau data training recovers the true frequency.
 - One-command golden-path demo (`spo quickstart power`): validates, runs,
   replays (audit hash-chain verification) and reports an end-to-end orchestration
   on a bundled research-tier power-grid binding, composing the existing
