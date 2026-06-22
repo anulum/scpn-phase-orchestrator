@@ -341,6 +341,14 @@ omit = [
 # 60% floor below.
 
 [tool.coverage.report]
+# This is a LOCAL soft floor for a quick `pytest --cov` run, not the project
+# gate. A single CI lane cannot reach the real coverage because the optional
+# backends (Rust, JAX, Mojo, Julia, Go) and extras are absent, so the CI test
+# and ffi lanes run with `--cov-fail-under=0` and the AUTHORITATIVE gate is the
+# `coverage-guard` job: it combines the test and ffi coverage and enforces the
+# per-module thresholds in `tools/coverage_guard_thresholds.json` via
+# `tools/coverage_guard.py`. New code targets 100%; raise that file's thresholds,
+# not this floor.
 fail_under = 60
 
 [tool.bandit]
