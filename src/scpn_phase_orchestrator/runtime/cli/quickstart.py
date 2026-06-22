@@ -39,7 +39,7 @@ from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.runtime.simulation import simulate
 
 _ASSET_ROOT = Path(__file__).resolve().parent / "_quickstart_assets"
-_DOMAINS = ("power",)
+_DOMAINS = ("power", "eeg")
 
 
 @main.command("quickstart")
@@ -58,7 +58,7 @@ def quickstart(domain: str, steps: int, seed: int, output: str | None) -> None:
     Parameters
     ----------
     domain : str
-        The bundled demo domain (currently ``"power"``).
+        The bundled demo domain — ``"power"`` or ``"eeg"``.
     steps : int
         Number of simulation steps.
     seed : int

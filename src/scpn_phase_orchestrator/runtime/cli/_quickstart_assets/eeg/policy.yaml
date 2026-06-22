@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — `spo quickstart eeg` research-tier demo policy
+
+rules:
+  - name: suppress_hypersynchrony
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.8
+    action:
+      knob: alpha
+      scope: layer_0
+      value: 0.5
+      ttl_s: 5.0
+
+  - name: boost_alpha
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.15
+      ttl_s: 10.0
+
+  - name: reduce_beta_arousal
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: zeta
+      scope: global
+      value: 0.3
+      ttl_s: 8.0
+
+  - name: pac_gating_alert
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: pac_max
+      op: ">"
+      threshold: 0.5
+    action:
+      knob: zeta
+      scope: global
+      value: 0.8
+      ttl_s: 10.0
+
+  - name: subcritical_recovery
+    regime: [DEGRADED, CRITICAL]
+    condition:
+      metric: subcritical_fraction
+      op: ">"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 1.5
+      ttl_s: 5.0

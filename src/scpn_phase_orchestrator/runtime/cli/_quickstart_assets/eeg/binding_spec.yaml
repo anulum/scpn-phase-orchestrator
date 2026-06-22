@@ -1,0 +1,180 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — `spo quickstart eeg` research-tier demo binding
+# Bundled copy of the research-tier neuroscience_eeg domainpack so the golden
+# path runs on any install. See domainpacks/neuroscience_eeg for the source.
+
+name: neuroscience_eeg
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.004
+control_period_s: 0.04
+
+layers:
+  # Buzsáki (2006): f_center → ω = 2π·f rad/s
+  - name: delta
+    index: 0
+    oscillator_ids: [delta_frontal, delta_central, delta_occipital]
+    omegas: [12.57, 12.57, 12.57]  # 2π × 2 Hz
+    family: eeg_band
+  - name: theta
+    index: 1
+    oscillator_ids: [theta_frontal, theta_parietal]
+    omegas: [37.70, 37.70]  # 2π × 6 Hz
+    family: eeg_band
+  - name: alpha
+    index: 2
+    oscillator_ids: [alpha_occipital, alpha_parietal, alpha_temporal]
+    omegas: [62.83, 62.83, 62.83]  # 2π × 10 Hz
+    family: eeg_band
+  - name: beta
+    index: 3
+    oscillator_ids: [beta_motor, beta_prefrontal]
+    omegas: [125.66, 125.66]  # 2π × 20 Hz
+    family: eeg_band
+  - name: gamma
+    index: 4
+    oscillator_ids: [gamma_sensory, gamma_binding]
+    omegas: [251.33, 251.33]  # 2π × 40 Hz
+    family: eeg_band
+  - name: network
+    index: 5
+    oscillator_ids: [infraslow_dmn, infraslow_salience]
+    omegas: [0.628, 0.628]  # 2π × 0.1 Hz
+    family: eeg_band
+
+# Omega: 2*pi*f_center in rad/s.  Buzsaki (2006) "Rhythms of the Brain"
+# delta 2 Hz, theta 6, alpha 10, beta 20, gamma 40, network 0.1
+oscillator_families:
+  eeg_band:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  connectivity:
+    channel: I
+    extractor_type: event
+    config: {}
+  # Vigilance state machine: wake/drowsy/N1/N2/N3/REM
+  # Iber et al. (2007) AASM scoring manual
+  brain_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 6
+
+coupling:
+  # Moderate coupling; EEG inter-band connectivity decays with frequency
+  # separation.  base_strength ~ mean PLV across cortical regions.
+  base_strength: 0.35
+  decay_alpha: 0.35
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.01
+
+objectives:
+  # Alpha coherence = relaxation/flow; gamma = consciousness binding
+  # (Fries 2005 "gamma-band synchronization").
+  # Delta hypersync during wakefulness = pathological; beta excess = anxiety.
+  good_layers: [2, 4, 5]
+  bad_layers: [0, 3]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  # Lehnertz (2009): broadband synchronisation > 0.9 precedes seizure onset
+  - name: seizure_detection
+    variable: broadband_sync
+    lower: null
+    upper: 0.9
+    severity: hard
+  - name: arousal_floor
+    variable: alpha_power_ratio
+    lower: 0.2
+    upper: null
+    severity: soft
+  - name: gamma_ceiling
+    variable: gamma_amplitude
+    lower: null
+    upper: 0.95
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: lag_delta
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: entrainment
+    knob: zeta
+    scope: global
+    limits: [0.0, 1.5]
+  - name: target_phase
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-eeg-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.9
+      weight: 2.0
+    - name: limit-delta-lag-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 0.45
+      weight: 2.5
+    - name: limit-entrainment-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.55
+      weight: 3.0
+    - name: limit-target-phase-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: neuroscience EEG value guard stimulus hold
+
+# Meditation training history — Lutz et al. (2004)
+imprint_model:
+  decay_rate: 0.02
+  saturation: 1.5
+  modulates: ["K", "alpha"]
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.5
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+geometry_prior:
+  constraint_type: symmetric_non_negative
+  params: {}
+
+policy: policy.yaml

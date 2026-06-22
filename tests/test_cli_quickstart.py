@@ -30,8 +30,9 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-def test_quickstart_power_runs_the_golden_path(runner: CliRunner) -> None:
-    result = runner.invoke(main, ["quickstart", "power", "--steps", "30"])
+@pytest.mark.parametrize("domain", ["power", "eeg"])
+def test_quickstart_runs_the_golden_path(runner: CliRunner, domain: str) -> None:
+    result = runner.invoke(main, ["quickstart", domain, "--steps", "30"])
     assert result.exit_code == 0, result.output
     assert "[1/4] validate: OK" in result.output
     assert "[2/4] run: 30 steps" in result.output
@@ -41,9 +42,10 @@ def test_quickstart_power_runs_the_golden_path(runner: CliRunner) -> None:
     assert "safety_tier=research" in result.output
 
 
-def test_quickstart_bundles_a_research_tier_asset() -> None:
-    binding = quickstart_mod._ASSET_ROOT / "power" / "binding_spec.yaml"
-    policy = quickstart_mod._ASSET_ROOT / "power" / "policy.yaml"
+@pytest.mark.parametrize("domain", ["power", "eeg"])
+def test_quickstart_bundles_a_research_tier_asset(domain: str) -> None:
+    binding = quickstart_mod._ASSET_ROOT / domain / "binding_spec.yaml"
+    policy = quickstart_mod._ASSET_ROOT / domain / "policy.yaml"
     assert binding.exists()
     assert policy.exists()
     assert "safety_tier: research" in binding.read_text(encoding="utf-8")

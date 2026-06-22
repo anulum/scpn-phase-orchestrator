@@ -56,6 +56,7 @@ bundled, research-tier power-grid binding, so nothing else needs to be on disk:
 
 ```bash
 spo quickstart power
+spo quickstart eeg                                          # neuroscience demo
 spo quickstart power --steps 500 --output power_report.md   # save the report
 ```
 

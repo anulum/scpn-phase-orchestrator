@@ -8,11 +8,11 @@
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 197,
-    "python_package_modules": 640,
+    "python_package_modules": 641,
     "research_experimental_modules": 208,
-    "runtime_serving_modules": 116,
+    "runtime_serving_modules": 117,
     "rust_kernel_files": 97,
-    "test_files": 643
+    "test_files": 644
   },
   "documentation": {
     "public_pages": [
@@ -931,6 +931,7 @@
       "src/scpn_phase_orchestrator/runtime/cli/plugins/scheduler_control.py",
       "src/scpn_phase_orchestrator/runtime/cli/plugins/storage.py",
       "src/scpn_phase_orchestrator/runtime/cli/queuewaves.py",
+      "src/scpn_phase_orchestrator/runtime/cli/quickstart.py",
       "src/scpn_phase_orchestrator/runtime/cli/run.py",
       "src/scpn_phase_orchestrator/runtime/cli/scaffold.py",
       "src/scpn_phase_orchestrator/runtime/cli/verification.py",
@@ -1451,6 +1452,7 @@
     "src/scpn_phase_orchestrator/runtime/cli/plugins/scheduler_control.py",
     "src/scpn_phase_orchestrator/runtime/cli/plugins/storage.py",
     "src/scpn_phase_orchestrator/runtime/cli/queuewaves.py",
+    "src/scpn_phase_orchestrator/runtime/cli/quickstart.py",
     "src/scpn_phase_orchestrator/runtime/cli/run.py",
     "src/scpn_phase_orchestrator/runtime/cli/scaffold.py",
     "src/scpn_phase_orchestrator/runtime/cli/verification.py",
@@ -1739,6 +1741,7 @@
       "tests/test_cli_payloads_modules.py",
       "tests/test_cli_plan_loader.py",
       "tests/test_cli_plugins_modules.py",
+      "tests/test_cli_quickstart.py",
       "tests/test_cli_remediation_loaders.py",
       "tests/test_cli_run_contracts.py",
       "tests/test_cli_scheduler_loaders.py",
