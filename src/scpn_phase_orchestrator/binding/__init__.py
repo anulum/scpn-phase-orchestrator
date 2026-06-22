@@ -60,6 +60,10 @@ from scpn_phase_orchestrator.binding.resolved import (
     format_resolved_binding_config,
     resolved_binding_config,
 )
+from scpn_phase_orchestrator.binding.security_scan import (
+    UnsafePatternFinding,
+    scan_unsafe_patterns,
+)
 from scpn_phase_orchestrator.binding.semantic import (
     GeneratedBindingArtifacts,
     RetrievalEvidence,
@@ -131,6 +135,8 @@ __all__ = [
     "load_binding_spec",
     "read_digital_twin_sync_jsonl",
     "resolved_binding_config",
+    "scan_unsafe_patterns",
+    "UnsafePatternFinding",
     "validate_binding_spec",
     "validate_binding_spec_security",
     "validate_digital_twin_sync_envelope",

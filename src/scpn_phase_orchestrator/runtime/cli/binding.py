@@ -34,6 +34,7 @@ from scpn_phase_orchestrator.binding import (
     format_resolved_binding_config,
     load_binding_spec,
     resolved_binding_config,
+    scan_unsafe_patterns,
     validate_binding_spec,
     validate_binding_spec_security,
 )
@@ -49,7 +50,13 @@ from scpn_phase_orchestrator.runtime.cli._app import FloatArray, main
     is_flag=True,
     help="Run stricter security linting for production-facing binding specs.",
 )
-def validate(binding_spec: str, security_checks: bool) -> None:
+@click.option(
+    "--hard",
+    "hard_scan",
+    is_flag=True,
+    help="Also statically scan the domainpack's files for eval/pickle/unsafe-YAML.",
+)
+def validate(binding_spec: str, security_checks: bool, hard_scan: bool) -> None:
     """Validate a binding specification file.
 
     Parameters
@@ -57,7 +64,10 @@ def validate(binding_spec: str, security_checks: bool) -> None:
     binding_spec : str
         Filesystem path to the binding-spec file.
     security_checks : bool
-        Whether to run the stricter security validation pass.
+        Whether to run the stricter security validation pass over the spec.
+    hard_scan : bool
+        Whether to additionally scan the domainpack's files for dangerous code
+        and configuration patterns; implies ``--security``.
 
     Raises
     ------
@@ -66,15 +76,25 @@ def validate(binding_spec: str, security_checks: bool) -> None:
     """
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
-    if security_checks:
+    run_security = security_checks or hard_scan
+    if run_security:
         errors.extend(validate_binding_spec_security(spec))
+    if hard_scan:
+        root = Path(binding_spec).resolve().parent
+        for finding in scan_unsafe_patterns(root):
+            errors.append(
+                f"hard scan: {finding.path}:{finding.line} "
+                f"[{finding.category}] {finding.snippet}"
+            )
     if errors:
         for e in errors:
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
     click.echo("Valid")
-    if security_checks:
+    if run_security:
         click.echo("Security checks passed")
+    if hard_scan:
+        click.echo("Hard scan: no dangerous patterns found")
     summary = resolved_binding_config(spec)
     for line in format_resolved_binding_config(summary):
         click.echo(line)

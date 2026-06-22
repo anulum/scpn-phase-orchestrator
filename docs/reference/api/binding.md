@@ -393,6 +393,21 @@ These protections are tested in `tests/test_binding_loader_security.py`
 with adversarial inputs including malicious YAML, oversized files,
 and path traversal attempts.
 
+### Hard scan (`spo validate --security --hard`)
+
+`spo validate --security` rejects executable-looking payloads in the binding
+spec itself. The harder `--security --hard` pass additionally scans the *files*
+that ship beside the binding — the domainpack's Python scenarios and YAML
+configuration — for the patterns that let an untrusted domainpack run arbitrary
+code when it is loaded or executed: dynamic evaluation (`eval` / `exec`),
+insecure deserialisation (`pickle.load`), unsafe YAML deep loads (`yaml.load`
+without a safe loader, or `!!python/` construction tags), and shell command
+execution. The scan is review-only — it reports each match with its file, line
+and category and never edits, executes, or imports the scanned files, so it is
+safe to run on a domainpack of unknown provenance before deciding to trust it.
+
+::: scpn_phase_orchestrator.binding.security_scan
+
 ## Domainpacks
 
 A **domainpack** is a directory containing a binding spec plus optional

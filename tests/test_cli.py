@@ -115,6 +115,20 @@ def test_validate_security_valid(runner, valid_spec_path):
     assert "Security checks passed" in result.output
 
 
+def test_validate_hard_passes_a_clean_domainpack(runner, valid_spec_path):
+    result = runner.invoke(main, ["validate", "--hard", valid_spec_path])
+    assert result.exit_code == 0
+    assert "Security checks passed" in result.output
+    assert "Hard scan: no dangerous patterns found" in result.output
+
+
+def test_validate_hard_flags_a_dangerous_file(runner, valid_spec_path, tmp_path):
+    (tmp_path / "run.py").write_text("x = eval(payload)\n", encoding="utf-8")
+    result = runner.invoke(main, ["validate", "--hard", valid_spec_path])
+    assert result.exit_code == 1
+    assert "hard scan: run.py:1 [dynamic-eval]" in result.output
+
+
 def test_validate_invalid(runner, invalid_spec_path):
     result = runner.invoke(main, ["validate", invalid_spec_path])
     assert result.exit_code != 0

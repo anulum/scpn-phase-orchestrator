@@ -33,6 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Hard security scan for `spo validate` (`binding.security_scan` +
+  `spo validate --security --hard`): in addition to the spec-level security pass,
+  `--hard` statically scans the domainpack's Python scenarios and YAML
+  configuration for the patterns that let an untrusted domainpack run arbitrary
+  code — dynamic evaluation (`eval` / `exec`), insecure deserialisation
+  (`pickle.load`), unsafe YAML deep loads (`yaml.load` without a safe loader or
+  `!!python/` tags), and shell command execution — and reports each match with
+  its file, line and category. The scan is review-only: it never edits, executes
+  or imports the scanned files, so it is safe to run on a domainpack of unknown
+  provenance.
 - Grounded LLM operator copilot (`reporting.operator_copilot`): turns an
   `ExplainabilityReport` into a question-answering surface for a control-room
   operator. It renders the audit evidence — regime distribution, transitions,
