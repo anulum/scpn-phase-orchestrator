@@ -172,6 +172,7 @@ nav:
       - "Monitor — Dimension": reference/api/monitor_dimension.md
       - "Monitor — Embedding": reference/api/monitor_embedding.md
       - "Monitor — Entropy Production": reference/api/monitor_entropy_prod.md
+      - "Monitor — Koopman EDMD": reference/api/monitor_koopman_edmd.md
       - "Monitor — Sleep Staging": reference/api/monitor_sleep_staging.md
       - "Monitor — EVS (Entrainment)": reference/api/monitor_evs.md
       - "Monitor — ITPC": reference/api/monitor_itpc.md

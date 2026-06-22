@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Koopman EDMD-with-control linear predictor (`monitor.koopman_edmd`): fits a
+  data-driven linear model `z_{k+1}=Az_k+Bu_k`, `x̂=Cz_k` of a nonlinear
+  controlled system (Korda & Mezić 2018) from snapshot triples through
+  Tikhonov-regularised least squares, with identity / polynomial / RBF /
+  phase-Fourier observable dictionaries and a frozen `KoopmanPredictor` carrying
+  `(A, B, C)`. The least-squares solve runs on the five-language backend chain
+  (Rust, Mojo, Julia, Go, Python) at machine-precision cross-backend parity. It
+  is the model layer feeding the convex Koopman-MPC controller.
 - Foundation-model actuation governor (`actuation.foundation_model_governor`):
   `FoundationModelGovernor.govern` admits an externally-proposed (e.g.
   foundation-model) scalar control only after running it through SPO's safety

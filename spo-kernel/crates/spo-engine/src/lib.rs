@@ -67,6 +67,7 @@ pub mod hodge;
 pub mod hypergraph;
 pub mod inertial;
 pub mod itpc;
+pub mod koopman_edmd;
 pub mod lyapunov;
 pub mod market;
 pub mod npe;

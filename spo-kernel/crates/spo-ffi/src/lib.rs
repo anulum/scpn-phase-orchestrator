@@ -2607,6 +2607,47 @@ fn transfer_entropy_matrix_rust<'py>(
     Ok(PyArray1::from_vec(py, result))
 }
 
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn koopman_edmd_solve_rust<'py>(
+    py: Python<'py>,
+    x_lift: PyReadonlyArray1<'py, f64>,
+    inputs: PyReadonlyArray1<'py, f64>,
+    y_lift: PyReadonlyArray1<'py, f64>,
+    states: PyReadonlyArray1<'py, f64>,
+    k: usize,
+    n_lift: usize,
+    m: usize,
+    n_state: usize,
+    regularisation: f64,
+) -> PyResult<(
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+)> {
+    let xl = x_lift
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let u = inputs
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let yl = y_lift
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let st = states
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (a, b, c) = spo_engine::koopman_edmd::koopman_edmd_solve(
+        xl, u, yl, st, k, n_lift, m, n_state, regularisation,
+    )
+    .map_err(PyValueError::new_err)?;
+    Ok((
+        PyArray1::from_vec(py, a),
+        PyArray1::from_vec(py, b),
+        PyArray1::from_vec(py, c),
+    ))
+}
+
 // ─── Recurrence Analysis ────────────────────────────────────────────
 
 #[pyfunction]
@@ -4036,6 +4077,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(carrier_decode_rust, m)?)?;
     m.add_function(wrap_pyfunction!(load_hcp_connectome_rust, m)?)?;
     m.add_function(wrap_pyfunction!(identify_frequencies_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(koopman_edmd_solve_rust, m)?)?;
     Ok(())
 }
 

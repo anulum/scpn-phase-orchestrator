@@ -102,6 +102,11 @@ go/libattnres.h
 mojo/attnres_mojo
 mojo/libattnres_mojo.so
 
+# koopman_edmd compiled artefacts
+go/libkoopman_edmd.so
+go/libkoopman_edmd.h
+mojo/koopman_edmd_mojo
+
 # order_params compiled artefacts
 go/liborder_params.so
 go/liborder_params.h
