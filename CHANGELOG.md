@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The domainpack gallery now opens with a **⭐ try these first** guide and badges
+  the three recommended starting packs (`power_grid` and `neuroscience_eeg`, each
+  one `spo quickstart` command, plus the minimal-spec `minimal_domain`) so a new
+  user has an obvious entry point into the 36-pack catalogue, which is searchable
+  from the docs search box.
 - Documented `experiments/`, `fuzzers/` and `bench/` as an explicit experimental
   tier: each now carries a README stating that it is not part of the supported
   `scpn_phase_orchestrator` API, is outside the test (`testpaths = ["tests"]`) and

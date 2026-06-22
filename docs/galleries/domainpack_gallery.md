@@ -4,12 +4,29 @@ Each domainpack ships a `binding_spec.yaml` that maps a real-world problem onto
 SCPN Kuramoto oscillators. The notebooks below demonstrate baseline vs orchestrated
 simulations.
 
+This page is searchable — use the search box (top of the docs) to filter by
+domain, feature, or pack name. Packs marked **⭐ try first** below are the
+recommended starting points.
+
+## ⭐ Try these first
+
+New to SPO? Start with one of these three. Each is a research-tier spec that runs
+end to end, and the first two run in a single command:
+
+| Pack | Why start here | One command |
+|------|----------------|-------------|
+| **power_grid** ⭐ | The grid-forming (dVOC) flagship — detect, flag, and damp a poorly-damped oscillation mode with auditable before/after evidence. | `spo quickstart power` |
+| **neuroscience_eeg** ⭐ | The neuroscience flagship — six EEG bands, coherence control across the spectrum. | `spo quickstart eeg` |
+| **minimal_domain** ⭐ | The simplest possible binding spec — four oscillators — to learn the schema before scaling up. | `spo run domainpacks/minimal_domain/binding_spec.yaml` |
+
+The full catalogue follows, organised by domain.
+
 ## Notebooks
 
 | # | Domainpack | Oscillators | Key Feature | Notebook |
 |---|-----------|-------------|-------------|----------|
 | 01 | **queuewaves** | 6 (micro/meso/macro) | Retry-storm recovery, supervisor 9x speedup | `01_queuewaves_retry_storm.ipynb` |
-| 02 | **minimal_domain** | 4 (lower/upper) | Simplest possible spec, coherence convergence | `02_minimal_domain.ipynb` |
+| 02 | **minimal_domain** ⭐ | 4 (lower/upper) | Simplest possible spec, coherence convergence | `02_minimal_domain.ipynb` |
 | 03 | **geometry_walk** | 8 (local/global) | Symbolic channel, graph-walk phases, zeta drive | `03_geometry_walk.ipynb` |
 | 04 | **bio_stub** | 16 (4 scales) | Multi-scale biology, imprint memory | `04_bio_stub.ipynb` |
 | 05 | **manufacturing_spc** | 9 (sensor/machine/line) | Bad-layer suppression, policy rules | `05_manufacturing_spc.ipynb` |
@@ -24,7 +41,7 @@ simulations.
 | 14 | **chimera** | varies | Chimera state identification and visualization | `14_chimera_detection.ipynb` |
 | 15 | **spectral** | varies | Spectral Alignment Function (SAF) optimization | `15_spectral_analysis.ipynb` |
 | 16 | **sleep_architecture** | 8 (4 layers) | EEG sleep stage classification from R | `16_sleep_staging.ipynb` |
-| 17 | **power_grid** | 12 (5 layers) | Inertial Kuramoto, generator trip transients | `17_power_grid_stability.ipynb` |
+| 17 | **power_grid** ⭐ | 12 (5 layers) | Inertial Kuramoto, generator trip transients | `17_power_grid_stability.ipynb` |
 | 18 | **financial_markets** | 8 (4 layers) | Hilbert phase, order parameter regime detection | `18_market_regime_detection.ipynb` |
 | 19 | **swarm_robotics** | 8 (3 layers) | Swarmalator spatial + phase coupling | `19_swarmalator_dynamics.ipynb` |
 
@@ -51,14 +68,14 @@ simulations.
 | `laser_array` | Photonics | 3 | 8 | P/I |
 | `manufacturing_spc` | Manufacturing | 3 | 9 | P/I/S |
 | `metaphysics_demo` | P/I/S showcase | 3 | 7 | P/I/S |
-| `minimal_domain` | Synthetic baseline | 2 | 4 | P |
+| `minimal_domain` ⭐ | Synthetic baseline | 2 | 4 | P |
 | `musical_acoustics` | Consonance and groove via sync | 3 | 9 | P/I/S |
 | `network_security` | Cybersecurity | 3 | 8 | I |
-| `neuroscience_eeg` | Neuroscience | 6 | 14 | P/I |
+| `neuroscience_eeg` ⭐ | Neuroscience | 6 | 14 | P/I |
 | `plasma_control` | Tokamak plasma | 8 | 16 | P/I |
 | `pll_clock` | Telecommunications | 3 | 8 | P/I |
 | `power_safety_nchannel` | Power systems | 3 | 6 | P/I/S/Reserve/Weather/Risk |
-| `power_grid` | Power systems | 5 | 12 | P/I |
+| `power_grid` ⭐ | Power systems | 5 | 12 | P/I |
 | `quantum_simulation` | Quantum computing | 3 | 8 | P/I |
 | `queuewaves` | Cloud/queues | 3 | 6 | P/I |
 | `robotic_cpg` | Quadruped CPG locomotion | 4 | 8 | P/I/S |
