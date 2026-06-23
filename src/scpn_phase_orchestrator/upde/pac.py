@@ -49,6 +49,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust PAC backend callables."""
     from spo_kernel import pac_matrix_compute, pac_modulation_index
 
     return {
@@ -58,6 +59,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+    """Load the Mojo PAC backend callables."""
     from ..experimental.accelerators.upde._pac_mojo import (
         _ensure_exe,
         modulation_index_mojo,
@@ -72,6 +74,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
 
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+    """Load the Julia PAC backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._pac_julia import (
@@ -86,6 +89,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+    """Load the Go PAC backend callables."""
     from ..experimental.accelerators.upde._pac_go import (
         _load_lib,
         modulation_index_go,
@@ -109,6 +113,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _validate_n_bins(n_bins: object) -> int:
+    """Return ``n_bins`` as an integer at least 2, else raise ``ValueError``."""
     if isinstance(n_bins, bool) or not isinstance(n_bins, Integral):
         raise ValueError("n_bins must be an integer >= 2")
     bins = int(n_bins)
@@ -118,6 +123,7 @@ def _validate_n_bins(n_bins: object) -> int:
 
 
 def _validate_signal(name: str, value: FloatArray) -> FloatArray:
+    """Return the signal as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -136,6 +142,7 @@ def _validate_history(
     name: str,
     value: FloatArray,
 ) -> FloatArray:
+    """Return the phase/amplitude history as a validated array, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -151,6 +158,7 @@ def _validate_history(
 
 
 def _validate_finite_real(name: str, value: object) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number")
     parsed = float(value)
@@ -160,6 +168,7 @@ def _validate_finite_real(name: str, value: object) -> float:
 
 
 def _validate_mi_value(name: str, value: object) -> float:
+    """Return the backend modulation index matching the reference, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number")
     parsed = float(value)
@@ -169,6 +178,7 @@ def _validate_mi_value(name: str, value: object) -> float:
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -182,6 +192,7 @@ def _modulation_index_python(
     amp_high: FloatArray,
     n_bins: int,
 ) -> float:
+    """Return the reference Tort modulation index (NumPy floor)."""
     n = min(theta_low.size, amp_high.size)
     if n == 0:
         return 0.0
@@ -214,6 +225,7 @@ def _modulation_index_python(
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -227,6 +239,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 
 
 def _modulation_index_probe_seconds(name: str) -> float:
+    """Return the per-backend probe timings for the modulation index."""
     theta = np.linspace(0.0, 2.0 * np.pi, 1000, dtype=np.float64)
     amp = np.abs(np.sin(theta)) + 0.1
     start = perf_counter()
@@ -248,6 +261,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:

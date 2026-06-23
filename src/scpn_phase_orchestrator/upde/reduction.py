@@ -100,6 +100,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., tuple[float, float, float, float]]:
+    """Load the Rust Ott-Antonsen backend callable."""
     from spo_kernel import oa_run_rust
 
     def _rust(
@@ -111,6 +112,7 @@ def _load_rust_fn() -> Callable[..., tuple[float, float, float, float]]:
         dt: float,
         n_steps: int,
     ) -> tuple[float, float, float, float]:
+        """Call the Rust Ott-Antonsen reduction step kernel."""
         re, im, r, psi = oa_run_rust(
             float(z_re),
             float(z_im),
@@ -127,6 +129,7 @@ def _load_rust_fn() -> Callable[..., tuple[float, float, float, float]]:
 
 def _load_mojo_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
+    """Load the Mojo Ott-Antonsen backend callable."""
     from ..experimental.accelerators.upde._reduction_mojo import (
         _ensure_exe,
         oa_run_mojo,
@@ -138,6 +141,7 @@ def _load_mojo_fn() -> Callable[..., tuple[float, float, float, float]]:
 
 def _load_julia_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
+    """Load the Julia Ott-Antonsen backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._reduction_julia import (
@@ -149,6 +153,7 @@ def _load_julia_fn() -> Callable[..., tuple[float, float, float, float]]:
 
 def _load_go_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
+    """Load the Go Ott-Antonsen backend callable."""
     from ..experimental.accelerators.upde._reduction_go import (
         _load_lib,
         oa_run_go,
@@ -168,6 +173,7 @@ _BACKEND_CACHE: dict[str, Callable[..., tuple[float, float, float, float]]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., tuple[float, float, float, float]]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -177,6 +183,7 @@ def _load_backend(name: str) -> Callable[..., tuple[float, float, float, float]]
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -192,6 +199,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., tuple[float, float, float, float]] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -209,6 +217,7 @@ def _dispatch() -> Callable[..., tuple[float, float, float, float]] | None:
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     coerced = float(value)
@@ -218,12 +227,14 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     return int(value)
 
 
 def _validate_finite_complex(value: object, *, name: str) -> complex:
+    """Return ``value`` as a finite complex number, else raise."""
     if isinstance(value, bool) or not isinstance(value, Complex):
         raise ValueError(f"{name} must be a finite complex scalar, got {value!r}")
     coerced = complex(value)
@@ -235,6 +246,7 @@ def _validate_finite_complex(value: object, *, name: str) -> complex:
 
 
 def _validate_frequency_sample(value: object, *, name: str) -> FloatArray:
+    """Return the validated frequency-distribution sample, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -251,6 +263,7 @@ def _validate_frequency_sample(value: object, *, name: str) -> FloatArray:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         arr = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -259,6 +272,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     coerced = _validate_finite_real(value, name=name)
     if coerced < 0.0 or coerced > 1.0 + 1e-12:
         raise ValueError(f"{name} must lie in [0, 1], got {value!r}")
@@ -272,6 +286,7 @@ def _oa_deriv(
     delta: float,
     half_k: float,
 ) -> tuple[float, float]:
+    """Return the Ott-Antonsen order-parameter derivative."""
     abs_sq = re * re + im * im
     lin_re = -delta * re + omega_0 * im
     lin_im = -delta * im - omega_0 * re
@@ -426,6 +441,7 @@ class OttAntonsenReduction:
         z_im: float,
         n_steps: int,
     ) -> tuple[float, float, float, float]:
+        """Run the scalar Ott-Antonsen reduction and return the trajectory."""
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         backend_fn = _dispatch()
         if backend_fn is not None:

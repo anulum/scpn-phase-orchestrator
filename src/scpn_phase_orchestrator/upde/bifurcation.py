@@ -69,6 +69,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         arr = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -143,12 +144,14 @@ class BifurcationDiagram:
 
 
 def _validate_integral(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     return int(value)
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     coerced = float(value)
@@ -158,6 +161,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     coerced = _validate_finite_float(value, name=name)
     if coerced <= 0.0:
         raise ValueError(f"{name} must be positive, got {value!r}")
@@ -165,6 +169,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     coerced = _validate_finite_float(value, name=name)
     if coerced < 0.0 or coerced > 1.0:
         raise ValueError(f"{name} must be in [0, 1], got {value!r}")
@@ -172,6 +177,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_omegas(value: object) -> FloatArray:
+    """Return the natural frequencies as a validated finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("omegas must not contain boolean values")
     try:
@@ -194,6 +200,7 @@ def _validate_matrix(
     n: int,
     require_zero_diagonal: bool = False,
 ) -> FloatArray:
+    """Return the value as a validated finite matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -212,12 +219,14 @@ def _validate_matrix(
 
 
 def _default_coupling(n: int) -> FloatArray:
+    """Return the default all-to-all coupling matrix for the size."""
     knm_template = np.ones((n, n), dtype=np.float64) / n
     np.fill_diagonal(knm_template, 0.0)
     return knm_template
 
 
 def _validate_k_range(value: object) -> tuple[float, float]:
+    """Return the validated coupling-strength sweep range, else raise."""
     if not isinstance(value, tuple) or len(value) != 2:
         raise ValueError("K_range must contain exactly two finite values")
     start, stop = value
@@ -237,6 +246,7 @@ def _validate_rust_trace_result(
     n_points: int,
     K_range: tuple[float, float],
 ) -> tuple[FloatArray, FloatArray]:
+    """Return the Rust continuation trace matching the reference, else raise."""
     try:
         k_arr = np.asarray(K_values, dtype=np.float64)
         r_arr = np.asarray(R_values, dtype=np.float64)
@@ -263,6 +273,7 @@ def _validate_rust_trace_result(
 
 
 def _validate_optional_critical_coupling(value: object) -> float | None:
+    """Return the optional validated critical-coupling value, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError("Rust bifurcation trace returned invalid K_critical")
     critical = float(value)
@@ -274,6 +285,7 @@ def _validate_optional_critical_coupling(value: object) -> float | None:
 
 
 def _validate_find_critical_coupling_result(value: object) -> float:
+    """Return the validated critical-coupling search result, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError("Rust critical-coupling search returned invalid K_c")
     critical = float(value)

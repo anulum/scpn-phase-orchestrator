@@ -49,6 +49,7 @@ _BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
 
 
 def _reject_non_real_array(values: object, *, name: str) -> FloatArray:
+    """Raise if the array contains non-real boolean or complex values."""
     arr = np.asarray(values)
     if arr.dtype == np.bool_ or np.issubdtype(arr.dtype, np.bool_):
         raise ValueError(f"{name} must be real-valued, not boolean")
@@ -65,6 +66,7 @@ def _reject_non_real_array(values: object, *, name: str) -> FloatArray:
 
 
 def _finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool):
         raise ValueError(f"{name} must be a finite real scalar")
     if not isinstance(value, (int, float, np.integer, np.floating)):
@@ -76,6 +78,7 @@ def _finite_float(value: object, *, name: str) -> float:
 
 
 def _normalise_axis(axis: object, *, dimension: int) -> FloatArray:
+    """Return the motion axis as a validated unit vector, else raise."""
     axis_arr = _reject_non_real_array(axis, name="velocity_axis")
     if axis_arr.shape != (dimension,):
         raise ValueError("velocity_axis shape must match velocity vector dimension")
@@ -104,6 +107,7 @@ def scalarise_velocities(
 
 
 def _validate_knm(knm: object, *, n: int) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     k = _reject_non_real_array(knm, name="knm")
     if k.shape != (n, n):
         raise ValueError("knm shape must be (n, n)")
@@ -113,6 +117,7 @@ def _validate_knm(knm: object, *, n: int) -> FloatArray:
 
 
 def _validate_alpha(alpha: object, *, n: int) -> FloatArray:
+    """Return the phase-lag matrix as a validated finite array, else raise."""
     if np.isscalar(alpha):
         scalar = _finite_float(alpha, name="alpha")
         a = np.full((n, n), scalar, dtype=np.float64)
@@ -125,6 +130,7 @@ def _validate_alpha(alpha: object, *, n: int) -> FloatArray:
 
 
 def _validate_schedule(schedule: object, *, n: int, name: str) -> FloatArray:
+    """Return the validated motion schedule, else raise."""
     out = _reject_non_real_array(schedule, name=name)
     if out.ndim != 2:
         raise ValueError(f"{name} must be a two-dimensional matrix")
@@ -136,6 +142,7 @@ def _validate_schedule(schedule: object, *, n: int, name: str) -> FloatArray:
 
 
 def _validate_phases(phases: object, *, n: int) -> FloatArray:
+    """Return the phases as a validated 1-D finite array, else raise."""
     p = _reject_non_real_array(phases, name="phases")
     if p.shape != (n,):
         raise ValueError("phases shape must be (n,)")
@@ -143,6 +150,7 @@ def _validate_phases(phases: object, *, n: int) -> FloatArray:
 
 
 def _validate_positive_step_count(value: object, *, name: str) -> int:
+    """Return the step count as a positive integer, else raise."""
     if isinstance(value, bool):
         raise ValueError(f"{name} must be a positive integer")
     if not isinstance(value, (int, np.integer)):
@@ -154,6 +162,7 @@ def _validate_positive_step_count(value: object, *, name: str) -> int:
 
 
 def _validate_method(method: str) -> str:
+    """Return the supported integration-method name, else raise."""
     if method not in {"euler", "rk4", "rk45"}:
         raise ValueError("method must be 'euler', 'rk4', or 'rk45'")
     return method
@@ -222,6 +231,7 @@ def _effective_omega_schedule(
     doppler_strength: float,
     doppler_epsilon: float,
 ) -> tuple[FloatArray, FloatArray]:
+    """Return the Doppler-shifted natural-frequency schedule."""
     terms = np.vstack(
         [
             doppler_term(
@@ -466,6 +476,7 @@ def doppler_run_python(
 
 
 def _rust_backend() -> BackendFn:
+    """Load the Rust Doppler backend callable."""
     from spo_kernel import PyUPDEStepper
 
     if not hasattr(PyUPDEStepper, "run_doppler_schedule"):
@@ -487,6 +498,7 @@ def _rust_backend() -> BackendFn:
         atol: float,
         rtol: float,
     ) -> FloatArray:
+        """Call the Rust Doppler schedule kernel."""
         stepper = PyUPDEStepper(
             int(phases.size), dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
         )
@@ -510,6 +522,7 @@ def _rust_backend() -> BackendFn:
 
 
 def _backend_map() -> dict[str, BackendFn]:
+    """Return the mapping of backend names to their loaders."""
     backends: dict[str, BackendFn] = {"python": doppler_run_python}
     with suppress(ImportError):
         go_mod = importlib.import_module(
@@ -736,11 +749,13 @@ class DopplerEngine(UPDEEngine):
         return self._doppler_term.copy()
 
     def _velocity_for_step(self, t: float) -> FloatArray:
+        """Return the source velocity active at a given step."""
         source = self._velocity_source
         raw = source(t) if callable(source) else source
         return scalarise_velocities(raw, n=self._n, velocity_axis=self._velocity_axis)
 
     def _omega_at(self, source: object, t: float) -> FloatArray:
+        """Return the Doppler-shifted natural frequencies at a step."""
         raw = source(t) if callable(source) else source
         omega = _reject_non_real_array(raw, name="omegas")
         if omega.shape != (self._n,):
@@ -748,6 +763,7 @@ class DopplerEngine(UPDEEngine):
         return omega
 
     def _omega_schedule(self, source: object, n_steps: int) -> FloatArray:
+        """Return the per-step natural-frequency schedule."""
         return np.vstack(
             [
                 self._omega_at(source, self._time + step * self._dt)
@@ -756,6 +772,7 @@ class DopplerEngine(UPDEEngine):
         )
 
     def _velocity_schedule(self, n_steps: int) -> FloatArray:
+        """Return the per-step source-velocity schedule."""
         return np.vstack(
             [
                 self._velocity_for_step(self._time + step * self._dt)

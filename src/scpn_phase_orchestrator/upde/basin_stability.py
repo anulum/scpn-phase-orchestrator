@@ -60,6 +60,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _load_rust_fn() -> Callable[..., float]:
+    """Load the Rust basin-stability backend callable."""
     from spo_kernel import steady_state_r_rust
 
     def _rust(
@@ -73,6 +74,7 @@ def _load_rust_fn() -> Callable[..., float]:
         n_transient: int,
         n_measure: int,
     ) -> float:
+        """Call the Rust basin-stability Monte-Carlo kernel."""
         return float(
             steady_state_r_rust(
                 np.ascontiguousarray(phases_init, dtype=np.float64),
@@ -92,6 +94,7 @@ def _load_rust_fn() -> Callable[..., float]:
 
 def _load_mojo_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
+    """Load the Mojo basin-stability backend callable."""
     from ..experimental.accelerators.upde._basin_stability_mojo import (
         _ensure_exe,
         steady_state_r_mojo,
@@ -103,6 +106,7 @@ def _load_mojo_fn() -> Callable[..., float]:
 
 def _load_julia_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
+    """Load the Julia basin-stability backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._basin_stability_julia import (
@@ -114,6 +118,7 @@ def _load_julia_fn() -> Callable[..., float]:
 
 def _load_go_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
+    """Load the Go basin-stability backend callable."""
     from ..experimental.accelerators.upde._basin_stability_go import (
         _load_lib,
         steady_state_r_go,
@@ -133,6 +138,7 @@ _BACKEND_CACHE: dict[str, Callable[..., float]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., float]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -142,6 +148,7 @@ def _load_backend(name: str) -> Callable[..., float]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -158,6 +165,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., float] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -175,6 +183,7 @@ def _dispatch() -> Callable[..., float] | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         arr = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -183,12 +192,14 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_integral(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     return int(value)
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     coerced = float(value)
@@ -198,6 +209,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     coerced = _validate_finite_float(value, name=name)
     if coerced <= 0.0:
         raise ValueError(f"{name} must be positive, got {value!r}")
@@ -205,6 +217,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     coerced = _validate_finite_float(value, name=name)
     if coerced < 0.0 or coerced > 1.0:
         raise ValueError(f"{name} must be in [0, 1], got {value!r}")
@@ -212,6 +225,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_vector(value: object, *, name: str, shape: tuple[int, ...]) -> FloatArray:
+    """Return the value as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -226,10 +240,12 @@ def _validate_vector(value: object, *, name: str, shape: tuple[int, ...]) -> Flo
 
 
 def _validate_omegas(value: object) -> FloatArray:
+    """Return the natural frequencies as a validated finite array, else raise."""
     return _validate_nonempty_vector(value, name="omegas")
 
 
 def _validate_nonempty_vector(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated non-empty finite vector, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -246,6 +262,7 @@ def _validate_nonempty_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_thresholds(values: tuple[float, ...]) -> tuple[float, ...]:
+    """Return the validated synchronisation thresholds, else raise."""
     if len(values) == 0:
         raise ValueError("R_thresholds must contain at least one threshold")
     return tuple(
@@ -430,6 +447,7 @@ def _monte_carlo_R_finals(
     n_samples: int,
     seed: int,
 ) -> FloatArray:
+    """Return the reference Monte-Carlo final order parameters (NumPy floor)."""
     rng = np.random.default_rng(seed)
     R_finals = np.zeros(n_samples)
     if n_measure == 0:
