@@ -17,6 +17,7 @@ returning phases for binding initialisation, UPDE runs, or quality gating.
 from __future__ import annotations
 
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
+from scpn_phase_orchestrator.oscillators.factory import build_extractor
 from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
 from scpn_phase_orchestrator.oscillators.phase_reduction import (
@@ -26,6 +27,8 @@ from scpn_phase_orchestrator.oscillators.phase_reduction import (
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
+from scpn_phase_orchestrator.oscillators.wavelet import WaveletExtractor
+from scpn_phase_orchestrator.oscillators.zero_crossing import ZeroCrossingExtractor
 
 __all__ = [
     "InformationalExtractor",
@@ -36,5 +39,8 @@ __all__ = [
     "PhaseState",
     "PhysicalExtractor",
     "SymbolicExtractor",
+    "WaveletExtractor",
+    "ZeroCrossingExtractor",
+    "build_extractor",
     "extract_initial_phases",
 ]

@@ -23,9 +23,14 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.binding.types import BindingSpec, OscillatorFamily
+from scpn_phase_orchestrator.binding.types import (
+    BindingSpec,
+    OscillatorFamily,
+    resolve_extractor_type,
+)
+from scpn_phase_orchestrator.oscillators.base import PhaseExtractor
+from scpn_phase_orchestrator.oscillators.factory import build_extractor
 from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
-from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 
 __all__ = ["extract_initial_phases"]
@@ -115,7 +120,10 @@ def extract_initial_phases(
     t = np.linspace(0, 1.0, 256)
 
     families = spec.oscillator_families
-    physical_extractor = PhysicalExtractor(node_id="init_physical")
+    physical_extractors: dict[str, PhaseExtractor] = {
+        name: build_extractor(name, node_id="init_physical")
+        for name in ("hilbert", "wavelet", "zero_crossing")
+    }
     informational_extractor = InformationalExtractor(node_id="init_informational")
     symbolic_n_states = _get_n_states(families)
     symbolic_extractor = SymbolicExtractor(
@@ -134,7 +142,11 @@ def extract_initial_phases(
 
             if channel == "P" or extractor_type in _PHYSICAL_EXTRACTORS:
                 signal = np.sin(omega * TWO_PI * t) + rng.normal(0, 0.1, len(t))
-                states = physical_extractor.extract(signal, sample_rate=256.0)
+                algorithm = resolve_extractor_type(extractor_type)
+                extractor = physical_extractors.get(
+                    algorithm, physical_extractors["hilbert"]
+                )
+                states = extractor.extract(signal, sample_rate=256.0)
                 phases[osc_idx] = states[-1].theta if states else rng.uniform(0, TWO_PI)
 
             elif channel == "I" or extractor_type in _INFORMATIONAL_EXTRACTORS:
