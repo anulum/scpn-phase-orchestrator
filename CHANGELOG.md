@@ -45,6 +45,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Candidate safety certificate for autotune candidates
+  (`autotune.candidate_safety_certificate`): `certify_candidate_safety` binds a
+  candidate to a control-barrier function over the states it visited in replay
+  (worst `h(x)` margin and the count of safe-set violations), to the
+  Lyapunov/STL/safety-cost bounds of a `SafetyConstraintConfig` (a required
+  constraint with missing evidence fails closed), and to an optional
+  forward-invariance `BarrierCertificate`. When the verification covers the
+  replay the evidence is reported as formally proven, otherwise as a measured
+  replay margin — kept as distinct modalities, not grades. The certificate is
+  content-addressed (canonical-JSON SHA-256) and actuates nothing. The second
+  slice of the auditable RL supervisor candidate track.
 - Per-knob attribution for autotune candidates (`autotune.knob_attribution`):
   `attribute_knob_policy` credits each knob that differs between a candidate and a
   baseline with its Shapley contribution to the total reward and to every reward

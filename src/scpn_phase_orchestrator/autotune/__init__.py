@@ -53,6 +53,10 @@ from scpn_phase_orchestrator.autotune.policy_search import (
     search_adaptive_replay_policy,
     search_replay_policy,
 )
+from scpn_phase_orchestrator.autotune.candidate_safety_certificate import (
+    CandidateSafetyCertificate,
+    certify_candidate_safety,
+)
 from scpn_phase_orchestrator.autotune.knob_attribution import (
     KnobAttribution,
     KnobAttributionConfig,
@@ -81,6 +85,7 @@ __all__ = [
     "AdaptiveReplayPolicySearchResult",
     "AutotunePolicyProposal",
     "AutotuneRewardReport",
+    "CandidateSafetyCertificate",
     "FrequencyResult",
     "KnobAttribution",
     "KnobAttributionConfig",
@@ -99,6 +104,7 @@ __all__ = [
     "TimeSeriesDiscoveryConfig",
     "TimeSeriesDiscoveryReport",
     "attribute_knob_policy",
+    "certify_candidate_safety",
     "discover_time_series_structure",
     "evaluate_knob_policy",
     "estimate_coupling",

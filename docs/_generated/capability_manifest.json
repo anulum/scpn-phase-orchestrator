@@ -7,12 +7,12 @@
     "integration_modules": 27,
     "optional_extras": 20,
     "public_api_exports": 24,
-    "public_documentation_pages": 199,
-    "python_package_modules": 650,
-    "research_experimental_modules": 210,
+    "public_documentation_pages": 200,
+    "python_package_modules": 651,
+    "research_experimental_modules": 211,
     "runtime_serving_modules": 120,
     "rust_kernel_files": 97,
-    "test_files": 652
+    "test_files": 653
   },
   "documentation": {
     "public_pages": [
@@ -96,6 +96,7 @@
       "docs/reference/api/assurance.md",
       "docs/reference/api/audit.md",
       "docs/reference/api/autotune.md",
+      "docs/reference/api/autotune_candidate_safety_certificate.md",
       "docs/reference/api/autotune_coupling_est.md",
       "docs/reference/api/autotune_freq_id.md",
       "docs/reference/api/autotune_knob_attribution.md",
@@ -656,6 +657,7 @@
     "research_experimental": [
       "src/scpn_phase_orchestrator/autotune/__init__.py",
       "src/scpn_phase_orchestrator/autotune/binding_proposal.py",
+      "src/scpn_phase_orchestrator/autotune/candidate_safety_certificate.py",
       "src/scpn_phase_orchestrator/autotune/coupling_est.py",
       "src/scpn_phase_orchestrator/autotune/discovery.py",
       "src/scpn_phase_orchestrator/autotune/freq_id.py",
@@ -1051,6 +1053,7 @@
     "src/scpn_phase_orchestrator/audit/__init__.py",
     "src/scpn_phase_orchestrator/autotune/__init__.py",
     "src/scpn_phase_orchestrator/autotune/binding_proposal.py",
+    "src/scpn_phase_orchestrator/autotune/candidate_safety_certificate.py",
     "src/scpn_phase_orchestrator/autotune/coupling_est.py",
     "src/scpn_phase_orchestrator/autotune/discovery.py",
     "src/scpn_phase_orchestrator/autotune/freq_id.py",
@@ -1738,6 +1741,7 @@
       "tests/test_boundary_observer_deep.py",
       "tests/test_boundary_observer_validation.py",
       "tests/test_byzantine_meta_orchestrator.py",
+      "tests/test_candidate_safety_certificate.py",
       "tests/test_cardiac_causal_attribution_demo.py",
       "tests/test_cardiac_fep_hierarchy_demo.py",
       "tests/test_cardiac_hierarchy_sync_demo.py",
