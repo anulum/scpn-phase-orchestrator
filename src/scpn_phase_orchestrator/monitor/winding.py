@@ -39,16 +39,19 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., IntArray]:
+    """Load the Rust winding-number backend callable."""
     from spo_kernel import winding_numbers as _rust_wind
 
     def _rust(phases_flat: FloatArray, t: int, n: int) -> IntArray:
         # Rust FFI takes the flat array and infers T from length.
+        """Call the Rust winding-number kernel with contiguous float arrays."""
         return cast("IntArray", np.asarray(_rust_wind(phases_flat, int(n))))
 
     return cast("Callable[..., IntArray]", _rust)
 
 
 def _load_mojo_fn() -> Callable[..., IntArray]:
+    """Load the Mojo winding-number backend callable."""
     from ..experimental.accelerators.monitor._winding_mojo import (
         _ensure_exe,
         winding_numbers_mojo,
@@ -59,6 +62,7 @@ def _load_mojo_fn() -> Callable[..., IntArray]:
 
 
 def _load_julia_fn() -> Callable[..., IntArray]:
+    """Load the Julia winding-number backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._winding_julia import (
@@ -69,6 +73,7 @@ def _load_julia_fn() -> Callable[..., IntArray]:
 
 
 def _load_go_fn() -> Callable[..., IntArray]:
+    """Load the Go winding-number backend callable."""
     from ..experimental.accelerators.monitor._winding_go import (
         _load_lib,
         winding_numbers_go,
@@ -88,6 +93,7 @@ _BACKEND_CACHE: dict[str, Callable[..., IntArray]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., IntArray]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -97,6 +103,7 @@ def _load_backend(name: str) -> Callable[..., IntArray]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -113,6 +120,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., IntArray] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -130,6 +138,7 @@ def _dispatch() -> Callable[..., IntArray] | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -138,6 +147,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -146,6 +156,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         array = np.asarray(value)
     except (TypeError, ValueError):
@@ -154,6 +165,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_phase_history(phases_history: object) -> FloatArray:
+    """Return the phase history as a validated 2-D finite array, else raise."""
     raw = np.asarray(phases_history)
     if _contains_boolean_alias(phases_history):
         raise ValueError("phases_history must not contain boolean values")
@@ -171,6 +183,7 @@ def _validate_phase_history(phases_history: object) -> FloatArray:
 
 
 def _winding_reference(phases_history: FloatArray) -> IntArray:
+    """Return the reference cumulative winding numbers (NumPy floor)."""
     dtheta = np.diff(phases_history, axis=0)
     # Wrap each increment into the half-open interval (-π, π] so an exact
     # forward half-turn (+π) counts forward rather than aliasing to -π.
@@ -186,6 +199,7 @@ def _validate_backend_winding(
     t: int,
     expected: IntArray | None = None,
 ) -> IntArray:
+    """Return backend winding numbers matching the reference, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("backend winding output must not contain boolean values")
     if _has_complex_payload(value):

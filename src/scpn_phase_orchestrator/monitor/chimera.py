@@ -54,9 +54,11 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., FloatArray]:
+    """Load the Rust chimera-detection backend callable."""
     from spo_kernel import detect_chimera_rust
 
     def _rust(phases: FloatArray, knm_flat: FloatArray, n: int) -> FloatArray:
+        """Call the Rust chimera-detection kernel with contiguous float arrays."""
         _coh, _incoh, _ci, local = detect_chimera_rust(
             np.ascontiguousarray(phases, dtype=np.float64),
             np.ascontiguousarray(knm_flat, dtype=np.float64),
@@ -68,6 +70,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
 
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:
+    """Load the Mojo chimera-detection backend callable."""
     from ..experimental.accelerators.monitor._chimera_mojo import (
         _ensure_exe,
         local_order_parameter_mojo,
@@ -78,6 +81,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 
 
 def _load_julia_fn() -> Callable[..., FloatArray]:
+    """Load the Julia chimera-detection backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._chimera_julia import (
@@ -88,6 +92,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 
 def _load_go_fn() -> Callable[..., FloatArray]:
+    """Load the Go chimera-detection backend callable."""
     from ..experimental.accelerators.monitor._chimera_go import (
         _load_lib,
         local_order_parameter_go,
@@ -107,6 +112,7 @@ _BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., FloatArray]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -116,6 +122,7 @@ def _load_backend(name: str) -> Callable[..., FloatArray]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -132,6 +139,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -179,6 +187,7 @@ class ChimeraState:
 
 
 def _validate_index_list(indices: object, *, name: str) -> list[int]:
+    """Return a validated list of in-range integer indices, else raise."""
     if isinstance(indices, (str, bytes)) or not isinstance(indices, Iterable):
         raise ValueError(f"{name} must be a sequence of non-negative integer indices")
     values = list(indices)
@@ -196,6 +205,7 @@ def _validate_index_list(indices: object, *, name: str) -> list[int]:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -204,6 +214,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -212,6 +223,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -223,6 +235,7 @@ def _validate_chimera_inputs(
     phases: object,
     knm: object,
 ) -> tuple[FloatArray, FloatArray]:
+    """Return the validated phase array and group indices for detection."""
     raw_phases = np.asarray(phases)
     if _contains_boolean_alias(raw_phases):
         raise ValueError("phases must not contain boolean values")
@@ -260,6 +273,7 @@ def _validate_chimera_inputs(
 
 
 def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
+    """Return backend local order parameters matching the reference, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("local order parameter output must not contain boolean values")

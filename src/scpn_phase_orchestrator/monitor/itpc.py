@@ -39,6 +39,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust ITPC backend callables."""
     from spo_kernel import (
         compute_itpc_rust,
         itpc_persistence_rust,
@@ -51,6 +52,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo ITPC backend callables."""
     from ..experimental.accelerators.monitor._itpc_mojo import (
         _ensure_exe,
         compute_itpc_mojo,
@@ -62,6 +64,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia ITPC backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._itpc_julia import (
@@ -73,6 +76,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go ITPC backend callables."""
     from ..experimental.accelerators.monitor._itpc_go import (
         _load_lib,
         compute_itpc_go,
@@ -93,6 +97,7 @@ _BACKEND_FN_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_FN_CACHE.get(name)
     if cached is not None:
         return cached
@@ -102,6 +107,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -117,6 +123,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object | None:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -142,6 +149,7 @@ def _dispatch(fn_name: str) -> object | None:
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -150,6 +158,7 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 
 def _contains_complex_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains any complex-number alias."""
     if np.iscomplexobj(raw):
         return True
     if raw.dtype != object:
@@ -158,6 +167,7 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
 
 
 def _validate_phases_trials(phases_trials: object) -> FloatArray:
+    """Return the per-trial phase array as a validated 2-D finite array, else raise."""
     raw = np.asarray(phases_trials)
     if _contains_boolean_alias(raw):
         raise ValueError("phases_trials must not contain boolean values")
@@ -175,6 +185,7 @@ def _validate_phases_trials(phases_trials: object) -> FloatArray:
 
 
 def _validate_pause_indices(pause_indices: object) -> IntArray:
+    """Return the validated pause/window indices, else raise ``ValueError``."""
     raw = np.asarray(pause_indices, dtype=object)
     if raw.ndim != 1:
         raise ValueError("pause_indices must be a one-dimensional integer array")
@@ -189,6 +200,7 @@ def _validate_pause_indices(pause_indices: object) -> IntArray:
 
 
 def _compute_itpc_reference(phases: FloatArray) -> FloatArray:
+    """Return the reference inter-trial phase coherence series (NumPy floor)."""
     if phases.ndim == 1:
         return np.array([1.0], dtype=np.float64)
     if phases.shape[0] == 0:
@@ -206,6 +218,7 @@ def _validate_itpc_values(
     expected: FloatArray | None = None,
     atol: float = 1e-12,
 ) -> FloatArray:
+    """Return backend ITPC values matching the reference in [0, 1], else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("ITPC output must not contain boolean values")
@@ -240,6 +253,7 @@ def _validate_persistence_value(
     expected: float | None = None,
     atol: float = 1e-12,
 ) -> float:
+    """Return the ITPC persistence value as a float in [0, 1], else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("ITPC persistence output must not contain boolean values")

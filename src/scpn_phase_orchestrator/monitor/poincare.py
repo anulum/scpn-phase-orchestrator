@@ -49,6 +49,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust Poincare-section backend callables."""
     from spo_kernel import phase_poincare_rust, poincare_section_rust
 
     def _rust_section(
@@ -59,6 +60,7 @@ def _load_rust_fns() -> dict[str, object]:
         offset: float,
         direction_id: int,
     ) -> tuple[FloatArray, FloatArray, int]:
+        """Call the Rust Poincare section-crossing detection kernel."""
         dir_str = {0: "positive", 1: "negative", 2: "both"}[int(direction_id)]
         cr, times, n_cr = poincare_section_rust(
             np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64),
@@ -83,6 +85,7 @@ def _load_rust_fns() -> dict[str, object]:
         oscillator_idx: int,
         section_phase: float,
     ) -> tuple[FloatArray, FloatArray, int]:
+        """Call the Rust Poincare phase-at-crossing interpolation kernel."""
         cr, times, n_cr = phase_poincare_rust(
             np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
             int(t),
@@ -102,6 +105,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo Poincare-section backend callables."""
     from ..experimental.accelerators.monitor._poincare_mojo import (
         _ensure_exe,
         phase_poincare_mojo,
@@ -113,6 +117,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia Poincare-section backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._poincare_julia import (
@@ -124,6 +129,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go Poincare-section backend callables."""
     from ..experimental.accelerators.monitor._poincare_go import (
         _load_lib,
         phase_poincare_go,
@@ -144,6 +150,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -153,6 +160,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -169,6 +177,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object | None:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -188,6 +197,7 @@ def _dispatch(fn_name: str) -> object | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -196,6 +206,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -204,6 +215,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         array = np.asarray(value)
     except (TypeError, ValueError):
@@ -212,6 +224,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_state_history(value: object, *, name: str) -> FloatArray:
+    """Return the state history as a validated 2-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -231,6 +244,7 @@ def _validate_state_history(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_normal(normal: object, *, expected_dim: int) -> FloatArray:
+    """Return the section normal vector as a validated finite array, else raise."""
     raw = np.asarray(normal)
     if _contains_boolean_alias(normal):
         raise ValueError("normal must not contain boolean values")
@@ -250,6 +264,7 @@ def _validate_normal(normal: object, *, expected_dim: int) -> FloatArray:
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     result = float(value)
@@ -259,6 +274,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 
 def _validate_oscillator_idx(value: object, *, n: int) -> int:
+    """Return the oscillator index as a valid in-range integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"oscillator_idx must be an integer in [0, {n})")
     idx = int(value)
@@ -318,6 +334,7 @@ class PoincareResult:
 
 
 def _validate_crossings(value: object) -> FloatArray:
+    """Return validated section-crossing indices from a backend, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("crossings must not contain boolean values")
     if _has_complex_payload(value):
@@ -334,6 +351,7 @@ def _validate_crossings(value: object) -> FloatArray:
 
 
 def _validate_crossing_times(value: object, *, expected_count: int) -> FloatArray:
+    """Return validated interpolated crossing times, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("crossing_times must not contain boolean values")
     if _has_complex_payload(value):
@@ -363,6 +381,7 @@ def _validate_return_times(
     *,
     crossing_times: FloatArray,
 ) -> FloatArray:
+    """Return validated inter-crossing return times, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("return_times must not contain boolean values")
     if _has_complex_payload(value):
@@ -394,6 +413,7 @@ def _assemble_result(
     n_cr: int,
     dim: int,
 ) -> PoincareResult:
+    """Assemble the validated Poincare-section crossing result."""
     if isinstance(n_cr, bool) or not isinstance(n_cr, Integral):
         raise ValueError("n_cr must be an integer")
     n_cr = int(n_cr)
