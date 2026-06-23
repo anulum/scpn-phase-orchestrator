@@ -72,6 +72,7 @@ def build_infrastructure_integrated_information_replays(
 
 
 def _validate_replay_parameters(*, n_samples: int, n_bins: int) -> None:
+    """Validate the replay parameters: ``n_samples >= 32`` and ``n_bins >= 2``."""
     if (
         isinstance(n_samples, (bool, np.bool_))
         or not isinstance(n_samples, Integral)
@@ -87,6 +88,7 @@ def _validate_replay_parameters(*, n_samples: int, n_bins: int) -> None:
 
 
 def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
+    """Validate the replay record corpus fields, domain, boundary, and ordering."""
     if len(records) < 2:
         raise ValueError("replay corpus must contain at least two records")
 
@@ -170,6 +172,7 @@ def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
 
 
 def _validate_record_metrics(record: dict[str, Any]) -> None:
+    """Validate a record's phi, normalised-phi, and total-integration metrics."""
     phi = _validate_non_negative_real(record["phi"], name="phi")
     normalised_phi = _validate_unit_interval(
         record["normalised_phi"],
@@ -187,6 +190,7 @@ def _validate_record_metrics(record: dict[str, Any]) -> None:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative real float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         if _has_complex_payload(value):
             raise ValueError(f"{name} must be real-valued")
@@ -198,6 +202,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether a string names a complex-number type alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -206,6 +211,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether a value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -214,6 +220,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_integer_field(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least ``minimum``, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         if _has_complex_payload(value):
             raise ValueError(f"{name} must be a real integer >= {minimum}")
@@ -225,6 +232,7 @@ def _validate_integer_field(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     scalar = _validate_non_negative_real(value, name=name)
     if scalar > 1.0:
         raise ValueError(f"{name} must lie in [0, 1]")
@@ -232,6 +240,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_minimum_partition(value: object, *, n_oscillators: int) -> None:
+    """Validate the minimum-information partition covers each oscillator once."""
     if not isinstance(value, list) or len(value) != 2:
         raise ValueError("minimum_partition must be a pair of index lists")
     left = _validate_partition_side(value[0])
@@ -245,6 +254,7 @@ def _validate_minimum_partition(value: object, *, n_oscillators: int) -> None:
 
 
 def _validate_partition_side(value: object) -> tuple[int, ...]:
+    """Validate one partition side's unique, in-range oscillator indices."""
     if not isinstance(value, list):
         raise ValueError("minimum_partition entries must be lists")
     indices: list[int] = []
@@ -274,6 +284,7 @@ def _build_record(
     n_bins: int,
     expected_relationship: str,
 ) -> dict[str, Any]:
+    """Build a JSON-safe replay record from a phase series via integrated info."""
     result = integrated_information(phase_series, n_bins=n_bins)
     left, right = result.minimum_partition
 
@@ -295,10 +306,12 @@ def _build_record(
 
 
 def _time_axis(n_samples: int) -> NDArray[np.float64]:
+    """Return a normalised time vector over ``n_samples`` spanning [0, 1)."""
     return np.arange(n_samples, dtype=np.float64)
 
 
 def _power_grid_islanding_series(n_samples: int) -> FloatArray:
+    """Build a power-grid islanding (loss-of-coupling) phase series."""
     t = _time_axis(n_samples) / n_samples
     group_a = np.array([0.08, 0.11, 0.14], dtype=np.float64)[:, None]
     group_b = np.array([0.31, 0.34, 0.37], dtype=np.float64)[:, None]
@@ -308,6 +321,7 @@ def _power_grid_islanding_series(n_samples: int) -> FloatArray:
 
 
 def _power_grid_resynchronisation_series(n_samples: int) -> FloatArray:
+    """Build a power-grid resynchronisation phase series."""
     islanding = _power_grid_islanding_series(n_samples)
     t = _time_axis(n_samples) / n_samples
     restored = (
@@ -326,6 +340,7 @@ def _power_grid_resynchronisation_series(n_samples: int) -> FloatArray:
 
 
 def _traffic_spillback_fragmentation_series(n_samples: int) -> FloatArray:
+    """Build a fragmented traffic-spillback phase series."""
     t = _time_axis(n_samples) / n_samples
     front_platoon = np.array([0.09, 0.13], dtype=np.float64)[:, None]
     rear_platoon = np.array([0.24, 0.28, 0.35, 0.39], dtype=np.float64)[:, None]
@@ -340,6 +355,7 @@ def _traffic_spillback_fragmentation_series(n_samples: int) -> FloatArray:
 
 
 def _traffic_platoon_recovery_series(n_samples: int) -> FloatArray:
+    """Build a recovering traffic-platoon phase series."""
     spillback = _traffic_spillback_fragmentation_series(n_samples)
     t = _time_axis(n_samples) / n_samples
     recovered = (
@@ -359,6 +375,7 @@ def _traffic_platoon_recovery_series(n_samples: int) -> FloatArray:
 
 
 def _build_islanding_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
+    """Build the power-grid islanding replay record."""
     return _build_record(
         case_name="power_grid_islanding",
         description=(
@@ -375,6 +392,7 @@ def _build_islanding_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
 
 
 def _build_resynchronisation_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
+    """Build the power-grid resynchronisation replay record."""
     return _build_record(
         case_name="power_grid_resynchronisation",
         description=(
@@ -391,6 +409,7 @@ def _build_resynchronisation_case(*, n_samples: int, n_bins: int) -> dict[str, A
 
 
 def _build_traffic_spillback_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
+    """Build the traffic-spillback replay record."""
     return _build_record(
         case_name="traffic_spillback_fragmentation",
         description=(
@@ -407,6 +426,7 @@ def _build_traffic_spillback_case(*, n_samples: int, n_bins: int) -> dict[str, A
 
 
 def _build_traffic_recovery_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
+    """Build the traffic-platoon recovery replay record."""
     return _build_record(
         case_name="traffic_platoon_recovery",
         description=(

@@ -72,6 +72,7 @@ def build_cyber_industrial_integrated_information_replays(
 
 
 def _validate_replay_parameters(*, n_samples: int, n_bins: int) -> None:
+    """Validate the replay parameters: ``n_samples >= 32`` and ``n_bins >= 2``."""
     if (
         isinstance(n_samples, (bool, np.bool_))
         or not isinstance(n_samples, Integral)
@@ -89,6 +90,7 @@ def _validate_replay_parameters(*, n_samples: int, n_bins: int) -> None:
 def _validate_replay_records(
     records: tuple[dict[str, Any], ...],
 ) -> None:
+    """Validate the replay record corpus fields, domain, boundary, and ordering."""
     if len(records) < 2:
         raise ValueError("replay corpus must contain at least two records")
 
@@ -173,6 +175,7 @@ def _validate_replay_records(
 
 
 def _validate_record_metrics(record: dict[str, Any]) -> None:
+    """Validate a record's phi, normalised-phi, and total-integration metrics."""
     phi = _validate_non_negative_real(record["phi"], name="phi")
     normalised_phi = _validate_unit_interval(
         record["normalised_phi"],
@@ -190,6 +193,7 @@ def _validate_record_metrics(record: dict[str, Any]) -> None:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative real float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         if _has_complex_payload(value):
             raise ValueError(f"{name} must be real-valued")
@@ -201,6 +205,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether a string names a complex-number type alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -209,6 +214,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether a value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -217,6 +223,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_integer_field(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least ``minimum``, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         if _has_complex_payload(value):
             raise ValueError(f"{name} must be a real integer >= {minimum}")
@@ -228,6 +235,7 @@ def _validate_integer_field(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     scalar = _validate_non_negative_real(value, name=name)
     if scalar > 1.0:
         raise ValueError(f"{name} must lie in [0, 1]")
@@ -235,6 +243,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_minimum_partition(value: object, *, n_oscillators: int) -> None:
+    """Validate the minimum-information partition covers each oscillator once."""
     if not isinstance(value, list) or len(value) != 2:
         raise ValueError("minimum_partition must be a pair of index lists")
     left = _validate_partition_side(value[0])
@@ -248,6 +257,7 @@ def _validate_minimum_partition(value: object, *, n_oscillators: int) -> None:
 
 
 def _validate_partition_side(value: object) -> tuple[int, ...]:
+    """Validate one partition side's unique, in-range oscillator indices."""
     if not isinstance(value, list):
         raise ValueError("minimum_partition entries must be lists")
     indices: list[int] = []
@@ -277,6 +287,7 @@ def _build_record(
     n_bins: int,
     expected_relationship: str,
 ) -> dict[str, Any]:
+    """Build a JSON-safe replay record from a phase series via integrated info."""
     result = integrated_information(phase_series, n_bins=n_bins)
     left, right = result.minimum_partition
     left_list = list(left)
@@ -300,15 +311,18 @@ def _build_record(
 
 
 def _time_axis(n_samples: int) -> NDArray[np.float64]:
+    """Return a normalised time vector over ``n_samples`` spanning [0, 1)."""
     return np.arange(n_samples, dtype=np.float64)
 
 
 def _lateral_movement_disruption_series(n_samples: int) -> FloatArray:
+    """Build a cyber lateral-movement disruption phase series."""
     rng = np.random.default_rng(4201)
     return rng.uniform(0.0, _TWO_PI, size=(6, n_samples)).astype(np.float64)
 
 
 def _lateral_movement_recontainment_series(n_samples: int) -> FloatArray:
+    """Build a cyber lateral-movement recontainment phase series."""
     disruption = _lateral_movement_disruption_series(n_samples)
     t = _time_axis(n_samples)
     locked = ((0.17 * t[None, :] / n_samples) * _TWO_PI) + np.array(
@@ -320,11 +334,13 @@ def _lateral_movement_recontainment_series(n_samples: int) -> FloatArray:
 
 
 def _spc_fragmentation_series(n_samples: int) -> FloatArray:
+    """Build a fragmented statistical-process-control phase series."""
     rng = np.random.default_rng(4217)
     return rng.uniform(0.0, _TWO_PI, size=(6, n_samples)).astype(np.float64)
 
 
 def _spc_recovery_series(n_samples: int) -> FloatArray:
+    """Build a recovering statistical-process-control phase series."""
     fragmentation = _spc_fragmentation_series(n_samples)
     t = _time_axis(n_samples)
     recovery_phase = (0.14 * t / n_samples) * _TWO_PI
@@ -342,6 +358,7 @@ def _spc_recovery_series(n_samples: int) -> FloatArray:
 
 
 def _build_cyber_disruption_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
+    """Build the cyber lateral-movement disruption replay record."""
     return _build_record(
         case_name="cyber_disruption",
         description=(
@@ -357,6 +374,7 @@ def _build_cyber_disruption_case(*, n_samples: int, n_bins: int) -> dict[str, An
 
 
 def _build_cyber_recontainment_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
+    """Build the cyber lateral-movement recontainment replay record."""
     return _build_record(
         case_name="cyber_recontainment",
         description=(
@@ -372,6 +390,7 @@ def _build_cyber_recontainment_case(*, n_samples: int, n_bins: int) -> dict[str,
 
 
 def _build_spc_fragmentation_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
+    """Build the SPC fragmentation replay record."""
     return _build_record(
         case_name="spc_fragmentation",
         description=(
@@ -387,6 +406,7 @@ def _build_spc_fragmentation_case(*, n_samples: int, n_bins: int) -> dict[str, A
 
 
 def _build_spc_recovery_case(*, n_samples: int, n_bins: int) -> dict[str, Any]:
+    """Build the SPC recovery replay record."""
     return _build_record(
         case_name="spc_recovery",
         description=(

@@ -72,6 +72,7 @@ def build_physiology_integrated_information_replays(
 
 
 def _validate_replay_parameters(*, n_samples: int, n_bins: int) -> None:
+    """Validate the replay parameters: ``n_samples >= 32`` and ``n_bins >= 2``."""
     if (
         isinstance(n_samples, (bool, np.bool_))
         or not isinstance(n_samples, Integral)
@@ -87,6 +88,7 @@ def _validate_replay_parameters(*, n_samples: int, n_bins: int) -> None:
 
 
 def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
+    """Validate the replay record corpus fields, domain, boundary, and ordering."""
     if len(records) < 2:
         raise ValueError("replay corpus must contain at least two records")
 
@@ -169,6 +171,7 @@ def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
 
 
 def _validate_record_metrics(record: dict[str, Any]) -> None:
+    """Validate a record's phi, normalised-phi, and total-integration metrics."""
     phi = _validate_non_negative_real(record["phi"], name="phi")
     normalised_phi = _validate_unit_interval(
         record["normalised_phi"], name="normalised_phi"
@@ -185,6 +188,7 @@ def _validate_record_metrics(record: dict[str, Any]) -> None:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative real float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         if _has_complex_payload(value):
             raise ValueError(f"{name} must be real-valued")
@@ -196,6 +200,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether a string names a complex-number type alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -204,6 +209,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether a value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -212,6 +218,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_integer_field(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least ``minimum``, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         if _has_complex_payload(value):
             raise ValueError(f"{name} must be a real integer >= {minimum}")
@@ -223,6 +230,7 @@ def _validate_integer_field(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     scalar = _validate_non_negative_real(value, name=name)
     if scalar > 1.0:
         raise ValueError(f"{name} must lie in [0, 1]")
@@ -230,6 +238,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_minimum_partition(value: object, *, n_oscillators: int) -> None:
+    """Validate the minimum-information partition covers each oscillator once."""
     if not isinstance(value, list) or len(value) != 2:
         raise ValueError("minimum_partition must be a list pair")
     left = _validate_partition_side(value[0])
@@ -243,6 +252,7 @@ def _validate_minimum_partition(value: object, *, n_oscillators: int) -> None:
 
 
 def _validate_partition_side(value: object) -> tuple[int, ...]:
+    """Validate one partition side's unique, in-range oscillator indices."""
     if not isinstance(value, list):
         raise ValueError("minimum_partition must be list-of-lists")
     indices: list[int] = []
@@ -272,6 +282,7 @@ def _build_record(
     n_bins: int,
     expected_relationship: str,
 ) -> dict[str, Any]:
+    """Build a JSON-safe replay record from a phase series via integrated info."""
     result = integrated_information(phase_series, n_bins=n_bins)
     left, right = result.minimum_partition
 
@@ -293,10 +304,12 @@ def _build_record(
 
 
 def _time_norm(n_samples: int) -> NDArray[np.float64]:
+    """Return a normalised time vector over ``n_samples`` spanning [0, 1)."""
     return np.arange(n_samples, dtype=np.float64) / float(max(n_samples, 1))
 
 
 def _cardiac_respiratory_lock_series(n_samples: int) -> FloatArray:
+    """Build a phase-locked cardiac/respiratory replay phase series."""
     t = _time_norm(n_samples)
     respiratory = _TWO_PI * (2.0 + 0.3 * t)
     cardiac = _TWO_PI * (3.7 + 0.18 * t) + 0.05 * np.sin(6.0 * _TWO_PI * t)
@@ -312,11 +325,13 @@ def _cardiac_respiratory_lock_series(n_samples: int) -> FloatArray:
 
 
 def _cardiac_respiratory_recovery_series(n_samples: int) -> FloatArray:
+    """Build a decoupled (random) cardiac/respiratory recovery phase series."""
     rng = np.random.default_rng(2026)
     return rng.uniform(0.0, _TWO_PI, size=(4, n_samples)).astype(np.float64)
 
 
 def _eeg_spindle_fragments_series(n_samples: int) -> FloatArray:
+    """Build a fragmented, weakly-coupled EEG-like phase series."""
     t = _time_norm(n_samples)
     rng = np.random.default_rng(3030)
     freqs = np.array([0.63, 0.79, 1.01, 1.27], dtype=np.float64)
@@ -330,6 +345,7 @@ def _eeg_spindle_fragments_series(n_samples: int) -> FloatArray:
 
 
 def _eeg_sleep_spindle_series(n_samples: int) -> FloatArray:
+    """Build an EEG phase series with coherent spindle windows over a base."""
     t = _time_norm(n_samples)
     fragmented = _eeg_spindle_fragments_series(n_samples)
     spindle_core = _TWO_PI * 9.8 * t[None, :]
@@ -352,6 +368,7 @@ def _build_cardiac_respiratory_lock_case(
     n_samples: int,
     n_bins: int,
 ) -> dict[str, Any]:
+    """Build the cardiac/respiratory phase-lock replay record."""
     return _build_record(
         case_name="cardiac_respiratory_lock",
         description=(
@@ -372,6 +389,7 @@ def _build_cardiac_respiratory_recovery_case(
     n_samples: int,
     n_bins: int,
 ) -> dict[str, Any]:
+    """Build the cardiac/respiratory recovery replay record."""
     return _build_record(
         case_name="cardiac_respiratory_recovery",
         description=(
@@ -392,6 +410,7 @@ def _build_eeg_sleep_spindle_case(
     n_samples: int,
     n_bins: int,
 ) -> dict[str, Any]:
+    """Build the EEG sleep-spindle replay record."""
     return _build_record(
         case_name="eeg_sleep_spindle",
         description=(
@@ -411,6 +430,7 @@ def _build_eeg_sleep_baseline_case(
     n_samples: int,
     n_bins: int,
 ) -> dict[str, Any]:
+    """Build the EEG sleep-baseline replay record."""
     return _build_record(
         case_name="eeg_sleep_baseline",
         description=(
