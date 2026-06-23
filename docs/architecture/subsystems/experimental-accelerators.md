@@ -1,0 +1,46 @@
+# Subsystem: `experimental/accelerators` — polyglot acceleration backends
+
+Despite the name, this is **not aspirational research**: it is the load-bearing
+polyglot acceleration layer that the production `coupling`, `monitor`, and `upde`
+subsystems dispatch to. 168 files, ~18.3k LOC, organised solely as
+`experimental/accelerators/{coupling, monitor, upde}/`.
+
+## Structure
+
+Each accelerated kernel has, per theme, a set of backend modules
+`<theme>_{go, julia, mojo[, rust, webgpu], validation}.py`. Go is loaded by
+`ctypes`, Julia by `juliacall`, Mojo and WebGPU by their bridges; a Python
+`_validation` module guards types, shapes, and finiteness for each theme.
+
+- `coupling/` (17 files): Hodge, spectral, attention residuals, spatial modulator.
+- `monitor/` (70 files): Koopman-EDMD, Lyapunov, transfer entropy, ITPC,
+  recurrence, chimera, Poincaré, winding, dimension, embedding, twin-confidence,
+  entropy production, NPE, optimal entropy, PID, merge-window, …
+- `upde/` (79 files): the engine (incl. WebGPU), order parameters, basin
+  stability, delay, Doppler, envelope, geometric, hypergraph, inertial, market,
+  moving-frame, PAC, reduction, simplicial, splitting, swarmalator, PHA-C
+  acceptance/handoff/timeline.
+
+## Inputs / outputs
+
+Backends take flat `float64` arrays (phases, omegas, flattened coupling) plus
+scalar parameters and return `float64` arrays / tuples / scalars; the producer
+modules in `coupling`/`monitor`/`upde` wrap them for type-checking and audit.
+
+## Wiring
+
+The per-language forwarder modules in the production subsystems
+(`upde/_engine_mojo.py`, `monitor/_lyapunov_julia.py`, …) re-export from here.
+Selection is the per-lane fastest-first chain (see [backends.md](../backends.md)).
+Nothing here is re-exported in the public API — access is always indirect through
+a production subsystem's dispatcher.
+
+## Scope boundaries
+
+- The naming is misleading; treat this as the acceleration layer, not a research
+  sandbox.
+- The polyglot backends are environment-gated — Go/Julia/Mojo require their
+  toolchains; absence falls through to Python.
+- `monitor/psychedelic` is a heuristic with no cited reference; the PHA-C
+  acceptance lane is a deterministic evidence-binding chain (distinct from the
+  conformal twin-confidence gate, which lives in `monitor/twin_conformal_gate.py`).
