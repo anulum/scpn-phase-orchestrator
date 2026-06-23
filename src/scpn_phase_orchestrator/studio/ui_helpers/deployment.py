@@ -519,6 +519,7 @@ def disabled_export_reasons(validation_errors: Sequence[str]) -> tuple[str, ...]
 def _readiness_targets(
     readiness: Mapping[str, object],
 ) -> tuple[dict[str, object], ...]:
+    """Validate the readiness targets, each carrying a target name and status."""
     raw_targets = readiness.get("targets", ())
     if isinstance(raw_targets, str | bytes) or not isinstance(raw_targets, Sequence):
         raise ValueError("readiness targets must be a sequence")
@@ -537,6 +538,7 @@ def _readiness_targets(
 
 
 def _unique_artifacts(targets: Sequence[Mapping[str, object]]) -> list[str]:
+    """Return the de-duplicated required artifacts across all readiness targets."""
     artifacts: list[str] = []
     for target in targets:
         required = target.get("required_artifacts", ())
@@ -550,6 +552,7 @@ def _unique_artifacts(targets: Sequence[Mapping[str, object]]) -> list[str]:
 
 
 def _studio_service_processes() -> list[dict[str, object]]:
+    """Return the review-only studio service definitions (no network, no actuation)."""
     validate_binding_command = (
         "python -m scpn_phase_orchestrator.runtime.cli validate binding_spec.yaml"
     )
@@ -591,6 +594,7 @@ def _studio_service_processes() -> list[dict[str, object]]:
 
 
 def _render_service_compose_yaml(services: Sequence[Mapping[str, object]]) -> str:
+    """Render the studio services as a read-only docker-compose YAML document."""
     lines = ["services:"]
     for service in services:
         name = _require_non_empty_text(service.get("name"), "service.name")
@@ -639,6 +643,7 @@ def _render_service_compose_yaml(services: Sequence[Mapping[str, object]]) -> st
 
 
 def _materialisation_command_writes_artifact(command: object) -> bool:
+    """Return whether the command builds or writes a materialised artefact."""
     command_text = _require_non_empty_text(command, "command")
     return any(
         marker in command_text

@@ -31,24 +31,28 @@ JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 def _required_mapping(value: object, *, field_name: str) -> Mapping[object, object]:
+    """Return ``value`` if it is a mapping, else raise ``ValueError``."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{field_name} must be a mapping")
     return value
 
 
 def _required_string(value: object, *, field_name: str) -> str:
+    """Return ``value`` if it is a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value:
         raise ValueError(f"{field_name} must be a non-empty string")
     return value
 
 
 def _string_tuple(value: object, *, field_name: str) -> tuple[str, ...]:
+    """Return ``value`` as a tuple of non-empty strings, else raise ``ValueError``."""
     if not isinstance(value, list | tuple):
         raise ValueError(f"{field_name} must be a sequence of strings")
     return tuple(_required_string(item, field_name=field_name) for item in value)
 
 
 def _non_negative_int(value: object, *, field_name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{field_name} must be a non-negative int")
     if value < 0:
@@ -57,12 +61,14 @@ def _non_negative_int(value: object, *, field_name: str) -> int:
 
 
 def _stable_sha256(payload: bytes | str) -> str:
+    """Return the lowercase hexadecimal SHA-256 digest of bytes or text."""
     if isinstance(payload, str):
         payload = payload.encode("utf-8")
     return sha256(payload).hexdigest()
 
 
 def _sha256_digest(value: object, *, field_name: str) -> str:
+    """Return ``value`` if it is a 64-character hexadecimal SHA-256 digest."""
     digest = _required_string(value, field_name=field_name)
     if len(digest) != 64 or any(
         character not in "0123456789abcdefABCDEF" for character in digest
@@ -74,6 +80,7 @@ def _sha256_digest(value: object, *, field_name: str) -> str:
 
 
 def _json_safe_value(value: object, *, field_name: str) -> JsonValue:
+    """Return ``value`` if JSON-safe (scalar, finite float, mapping, or list)."""
     if value is None or isinstance(value, str | bool | int):
         return value
     if isinstance(value, float):
@@ -94,6 +101,7 @@ def _json_safe_mapping(
     *,
     field_name: str,
 ) -> dict[str, JsonValue]:
+    """Return a mapping with string keys and JSON-safe values, else raise."""
     mapping = _required_mapping(value, field_name=field_name)
     safe: dict[str, JsonValue] = {}
     for key, item in mapping.items():
@@ -104,6 +112,7 @@ def _json_safe_mapping(
 
 
 def _freeze_json_value(value: JsonValue) -> object:
+    """Return a deeply immutable view (dicts to MappingProxy, lists to tuples)."""
     if isinstance(value, dict):
         return MappingProxyType(
             {key: _freeze_json_value(item) for key, item in value.items()}
@@ -118,6 +127,7 @@ def _frozen_json_mapping(
     *,
     field_name: str,
 ) -> Mapping[str, object]:
+    """Return a deeply frozen, JSON-safe read-only mapping."""
     safe = _json_safe_mapping(value, field_name=field_name)
     return MappingProxyType(
         {key: _freeze_json_value(item) for key, item in safe.items()}
@@ -125,6 +135,7 @@ def _frozen_json_mapping(
 
 
 def _finite_float(value: object, *, field_name: str) -> int | float:
+    """Return ``value`` as a finite int or float, rejecting bools, else raise."""
     if isinstance(value, bool):
         raise ValueError(f"{field_name} contains a bool where a float is required")
     if not isinstance(value, int | float):
@@ -139,6 +150,7 @@ def _finite_float_mapping(
     *,
     field_name: str,
 ) -> dict[str, int | float]:
+    """Return a mapping with string keys and finite-float values, else raise."""
     mapping = _required_mapping(value, field_name=field_name)
     safe: dict[str, int | float] = {}
     for key, item in mapping.items():
@@ -153,10 +165,12 @@ def _frozen_finite_float_mapping(
     *,
     field_name: str,
 ) -> Mapping[str, int | float]:
+    """Return a read-only mapping of string keys to finite-float values."""
     return MappingProxyType(_finite_float_mapping(value, field_name=field_name))
 
 
 def _layer_metric_name(value: object) -> str:
+    """Return ``value`` if it is a non-empty layer-metric name, else raise."""
     if not isinstance(value, str) or not value:
         raise ValueError("layer_metrics names must be non-empty strings")
     return value
@@ -165,6 +179,7 @@ def _layer_metric_name(value: object) -> str:
 def _layer_metrics(
     value: object,
 ) -> tuple[tuple[str, int | float], ...]:
+    """Return validated ``(layer_name, finite_value)`` metric pairs from a sequence."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError("layer_metrics must be a sequence of 2-item entries")
 
@@ -189,6 +204,7 @@ def _layer_metrics(
 def _hierarchy_watermarks(
     value: object,
 ) -> dict[str, int]:
+    """Return a mapping of node names to non-negative integer watermarks."""
     mapping = _required_mapping(value, field_name="hierarchy_watermarks")
     watermarks: dict[str, int] = {}
     for node, watermark in mapping.items():
@@ -205,6 +221,7 @@ def _hierarchy_watermarks(
 def _frozen_hierarchy_watermarks(
     value: object,
 ) -> Mapping[str, int]:
+    """Return a read-only mapping of node names to non-negative watermarks."""
     return MappingProxyType(_hierarchy_watermarks(value))
 
 
@@ -542,6 +559,7 @@ class ExportManifest:
 
 
 def _export_tuple(value: object) -> tuple[ExportManifest, ...]:
+    """Return ``value`` as a tuple of ``ExportManifest`` entries, else raise."""
     if not isinstance(value, list | tuple):
         raise ValueError("exports must be a sequence of ExportManifest entries")
     exports = tuple(value)
