@@ -34,12 +34,14 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -49,6 +51,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
     return int(value)
@@ -60,6 +63,7 @@ def _validate_finite_matrix(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the value as a validated finite matrix, else raise."""
     try:
         array = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -72,6 +76,7 @@ def _validate_finite_matrix(
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     coerced = float(value)
@@ -86,6 +91,7 @@ def _reshape_rust_result(
     name: str,
     shape: tuple[int, int],
 ) -> FloatArray:
+    """Reshape the flat Rust result into the sheaf state shape."""
     array = np.asarray(value, dtype=np.float64)
     expected_size = shape[0] * shape[1]
     if array.size != expected_size:
@@ -312,6 +318,7 @@ class SheafUPDEEngine:
         zeta: float,
         psi: FloatArray,
     ) -> tuple[FloatArray, FloatArray, FloatArray, float, FloatArray]:
+        """Validate and normalise the sheaf-engine integration inputs."""
         n, d = self._n, self._d
         zeta = _validate_finite_real(zeta, name="zeta")
         return (
@@ -334,6 +341,7 @@ class SheafUPDEEngine:
         zeta: float,
         psi: FloatArray,
     ) -> FloatArray:
+        """Return the cellular-sheaf phase derivative for the state."""
         n, d = self._n, self._d
         dtheta = omegas.copy()
         for i in range(n):
@@ -378,6 +386,7 @@ class SheafUPDEEngine:
         psi: FloatArray,
         dt: float,
     ) -> list[FloatArray]:
+        """Return one RK45 stage derivative for the sheaf state."""
         args = (omegas, restriction_maps, zeta, psi)
         stages = [self._derivative(phases, *args)]
         for i in range(1, 7):
@@ -393,6 +402,7 @@ class SheafUPDEEngine:
         zeta: float,
         psi: FloatArray,
     ) -> FloatArray:
+        """Advance the sheaf state one adaptive RK45 step."""
         dt = self._last_dt
         max_reject = 3
         for _ in range(max_reject + 1):
@@ -426,6 +436,7 @@ class SheafUPDEEngine:
         zeta: float,
         psi: FloatArray,
     ) -> FloatArray:
+        """Advance the sheaf state one explicit-Euler step."""
         dtheta = self._derivative(phases, omegas, restriction_maps, zeta, psi)
         result: FloatArray = (phases + self._dt * dtheta) % TWO_PI
         return result

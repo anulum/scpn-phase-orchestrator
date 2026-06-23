@@ -94,6 +94,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., FloatArray]:
+    """Load the Rust hypergraph backend callable."""
     from spo_kernel import hypergraph_run_rust
 
     def _rust(
@@ -110,6 +111,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         dt: float,
         n_steps: int,
     ) -> FloatArray:
+        """Call the Rust hypergraph Kuramoto step kernel."""
         return np.asarray(
             hypergraph_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
@@ -133,6 +135,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Mojo hypergraph backend callable."""
     from ..experimental.accelerators.upde._hypergraph_mojo import (
         _ensure_exe,
         hypergraph_run_mojo,
@@ -144,6 +147,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 
 def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Julia hypergraph backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._hypergraph_julia import (
@@ -155,6 +159,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Go hypergraph backend callable."""
     from ..experimental.accelerators.upde._hypergraph_go import (
         _load_lib,
         hypergraph_run_go,
@@ -174,6 +179,7 @@ _BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., FloatArray]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -183,6 +189,7 @@ def _load_backend(name: str) -> Callable[..., FloatArray]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -199,6 +206,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -216,12 +224,14 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -231,6 +241,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     coerced = float(value)
@@ -245,6 +256,7 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the state as a validated finite array, else raise."""
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -262,12 +274,14 @@ def _validate_optional_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the optional state as a validated array, or ``None``."""
     if value is None:
         return np.empty(0, dtype=np.float64)
     return _validate_state_array(value, name=name, shape=shape).ravel()
 
 
 def _validate_hyperedge(edge: Hyperedge, *, n_oscillators: int) -> Hyperedge:
+    """Return a validated hyperedge of distinct oscillator indices, else raise."""
     nodes = tuple(edge.nodes)
     if len(nodes) < 2:
         raise ValueError("hyperedge nodes must contain at least two oscillators")
@@ -434,6 +448,7 @@ class HypergraphEngine:
     def _encode_edges(
         self,
     ) -> tuple[IntArray, IntArray, FloatArray]:
+        """Encode the hyperedges into the flat backend representation."""
         edge_nodes_list: list[int] = []
         edge_offsets_list: list[int] = []
         edge_strengths_list: list[float] = []

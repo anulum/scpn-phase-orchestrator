@@ -46,6 +46,7 @@ _BACKEND_NAMES = ("rust", "webgpu", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., FloatArray]:
+    """Load the Rust UPDE step backend callable."""
     from spo_kernel import PyUPDEStepper  # noqa: F401
 
     def _rust_run(
@@ -62,6 +63,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         atol: float,
         rtol: float,
     ) -> FloatArray:
+        """Call the Rust UPDE batched-step kernel."""
         n = int(phases.size)
         stepper = PyUPDEStepper(
             n, dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
@@ -83,6 +85,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
 
 
 def _load_rust_schedule_fn() -> Callable[..., FloatArray]:
+    """Load the Rust UPDE schedule backend callable."""
     from spo_kernel import PyUPDEStepper
 
     def _rust_run_schedule(
@@ -98,6 +101,7 @@ def _load_rust_schedule_fn() -> Callable[..., FloatArray]:
         atol: float,
         rtol: float,
     ) -> FloatArray:
+        """Call the Rust UPDE schedule kernel."""
         n = int(phases.size)
         stepper = PyUPDEStepper(
             n, dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
@@ -125,6 +129,7 @@ def _load_rust_schedule_fn() -> Callable[..., FloatArray]:
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Mojo UPDE step backend callable."""
     from ..experimental.accelerators.upde._engine_mojo import (
         _ensure_exe,
         upde_run_mojo,
@@ -136,6 +141,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 
 def _load_mojo_schedule_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Mojo UPDE schedule backend callable."""
     from ..experimental.accelerators.upde._engine_mojo import (
         _ensure_exe,
         upde_run_omega_schedule_mojo,
@@ -146,6 +152,7 @@ def _load_mojo_schedule_fn() -> Callable[..., FloatArray]:
 
 
 def _load_webgpu_fn() -> Callable[..., FloatArray]:
+    """Load the WebGPU UPDE step backend callable."""
     from ..experimental.accelerators.upde._engine_webgpu import (
         load_webgpu_dispatch_bridge,
     )
@@ -155,6 +162,7 @@ def _load_webgpu_fn() -> Callable[..., FloatArray]:
 
 def _require_juliacall_runtime() -> None:
     # pragma: no cover — toolchain
+    """Import and return the juliacall runtime, else raise."""
     juliacall = importlib.import_module("juliacall")
     # The engine needs ``juliacall.Main``. When juliacall cannot finish
     # initialising the Julia runtime (for example a partial init under a
@@ -167,6 +175,7 @@ def _require_juliacall_runtime() -> None:
 
 def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Julia UPDE step backend callable."""
     _require_juliacall_runtime()
 
     from ..experimental.accelerators.upde._engine_julia import (
@@ -178,6 +187,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 def _load_julia_schedule_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Julia UPDE schedule backend callable."""
     _require_juliacall_runtime()
 
     from ..experimental.accelerators.upde._engine_julia import (
@@ -189,6 +199,7 @@ def _load_julia_schedule_fn() -> Callable[..., FloatArray]:
 
 def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Go UPDE step backend callable."""
     from ..experimental.accelerators.upde._engine_go import (
         _load_lib,
         upde_run_go,
@@ -200,6 +211,7 @@ def _load_go_fn() -> Callable[..., FloatArray]:
 
 def _load_go_schedule_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Go UPDE schedule backend callable."""
     from ..experimental.accelerators.upde._engine_go import (
         _load_lib,
         upde_run_omega_schedule_go,
@@ -227,6 +239,7 @@ _SCHEDULE_BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., FloatArray]:
+    """Load and cache the named step backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -236,6 +249,7 @@ def _load_backend(name: str) -> Callable[..., FloatArray]:
 
 
 def _load_schedule_backend(name: str) -> Callable[..., FloatArray]:
+    """Load and cache the named schedule backend callable."""
     cached = _SCHEDULE_BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -245,6 +259,7 @@ def _load_schedule_backend(name: str) -> Callable[..., FloatArray]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -261,6 +276,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
+    """Return the fastest available step backend, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -277,6 +293,7 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 
 def _dispatch_schedule() -> Callable[..., FloatArray] | None:
+    """Return the fastest available schedule backend, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -293,11 +310,13 @@ def _dispatch_schedule() -> Callable[..., FloatArray] | None:
 
 
 def _validate_zero_self_coupling(knm: FloatArray) -> None:
+    """Assert the coupling matrix has a zero diagonal, else raise."""
     if not np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=1e-15):
         raise ValueError("knm self-coupling diagonal must be zero")
 
 
 def _validate_omega_schedule(schedule: FloatArray, *, n: int) -> None:
+    """Return the validated natural-frequency schedule, else raise."""
     if schedule.dtype == np.bool_ or np.iscomplexobj(schedule):
         raise ValueError("omega_schedule must be real-valued")
     if schedule.ndim != 2:

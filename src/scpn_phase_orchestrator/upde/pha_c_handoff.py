@@ -103,6 +103,7 @@ class PHACHandoffRecord:
 
 
 def _validate_real_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite real scalar")
     try:
@@ -115,6 +116,7 @@ def _validate_real_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_tolerance(value: object, *, name: str) -> float:
+    """Return the tolerance as a non-negative finite float, else raise."""
     parsed = _validate_real_scalar(value, name=name)
     if parsed < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -122,6 +124,7 @@ def _validate_tolerance(value: object, *, name: str) -> float:
 
 
 def _validate_sample_count(value: object, *, name: str, minimum: int) -> int:
+    """Return the sample count as a positive integer, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -131,6 +134,7 @@ def _validate_sample_count(value: object, *, name: str, minimum: int) -> int:
 
 
 def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
+    """Return the value as a contiguous finite float vector, else raise."""
     array = np.asarray(values)
     if array.dtype == np.dtype("O"):
         raise ValueError(f"{name} must be a finite real-valued vector")
@@ -152,6 +156,7 @@ def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
 
 
 def _sha256_json(payload: Mapping[str, object]) -> str:
+    """Return the canonical-JSON SHA-256 hash of a payload."""
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -160,6 +165,7 @@ _SHA256_HEX_DIGITS = frozenset("0123456789abcdef")
 
 
 def _validate_sha256_hex(value: object, *, name: str) -> str:
+    """Return ``value`` if it is a SHA-256 hex digest, else raise."""
     if (
         not isinstance(value, str)
         or len(value) != 64
@@ -170,12 +176,14 @@ def _validate_sha256_hex(value: object, *, name: str) -> str:
 
 
 def _validate_record_bool(value: object, *, name: str) -> bool:
+    """Return a named record boolean field, else raise."""
     if not isinstance(value, bool):
         raise ValueError(f"{name} must be a boolean")
     return value
 
 
 def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
+    """Return a named record integer field, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -185,6 +193,7 @@ def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
+    """Return a named non-negative record scalar, else raise."""
     parsed = _validate_real_scalar(value, name=name)
     if parsed < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -192,6 +201,7 @@ def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
 
 
 def _vector_sha256(values: FloatArray) -> str:
+    """Return the SHA-256 hash of a float vector."""
     payload = {
         "dtype": "float64",
         "shape": list(values.shape),
@@ -203,14 +213,17 @@ def _vector_sha256(values: FloatArray) -> str:
 
 
 def _merge_report_sha256(report: MergeReport) -> str:
+    """Return the merged SHA-256 hash for the handoff report."""
     return _sha256_json(report.to_dict())
 
 
 def _phase_order_parameter(phases: FloatArray) -> float:
+    """Return the Kuramoto order parameter for the phases."""
     return float(np.abs(np.mean(np.exp(1j * np.remainder(phases, _TWO_PI)))))
 
 
 def _distance_to_reference_max(positions: FloatArray, reference_point: float) -> float:
+    """Return the maximum distance to the reference trajectory."""
     return float(np.max(np.abs(positions - reference_point)))
 
 
@@ -232,6 +245,7 @@ def _record_dict_without_hash(
     merge_report_sha256: str,
     source_chain_sha256: str,
 ) -> dict[str, float | int | bool | str]:
+    """Return the record mapping without its hash field."""
     return {
         "t": float(report.t),
         "oscillator_count": int(oscillator_count),

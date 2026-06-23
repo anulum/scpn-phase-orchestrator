@@ -130,6 +130,7 @@ class PHACAcceptanceRecord:
 
 
 def _validate_real_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite real scalar")
     try:
@@ -142,6 +143,7 @@ def _validate_real_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_positive_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite scalar, else raise."""
     parsed = _validate_real_scalar(value, name=name)
     if parsed <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -149,6 +151,7 @@ def _validate_positive_scalar(value: object, *, name: str) -> float:
 
 
 def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
+    """Return the value as a contiguous finite float vector, else raise."""
     array = np.asarray(values)
     if array.dtype == np.dtype("O"):
         raise ValueError(f"{name} must be a finite real-valued vector")
@@ -171,6 +174,7 @@ def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
 
 
 def _as_schedule(values: ArrayLike, *, name: str, n: int) -> FloatArray:
+    """Return the value as a validated parameter schedule, else raise."""
     array = np.asarray(values)
     if array.dtype == np.dtype("O"):
         raise ValueError(f"{name} must be a finite real-valued matrix")
@@ -193,6 +197,7 @@ def _as_schedule(values: ArrayLike, *, name: str, n: int) -> FloatArray:
 
 
 def _as_knm(values: ArrayLike, *, n: int) -> FloatArray:
+    """Return the value as a validated finite coupling matrix, else raise."""
     array = np.asarray(values)
     if array.dtype == np.dtype("O"):
         raise ValueError("knm must be a finite real square matrix")
@@ -215,12 +220,14 @@ def _as_knm(values: ArrayLike, *, n: int) -> FloatArray:
 
 
 def _validate_backend_request(value: object) -> str:
+    """Return the validated backend request, else raise."""
     if not isinstance(value, str) or not value:
         raise ValueError("backend must be a non-empty string")
     return value
 
 
 def _sha256_json(payload: object) -> str:
+    """Return the canonical-JSON SHA-256 hash of a payload."""
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -229,6 +236,7 @@ _SHA256_HEX_DIGITS = frozenset("0123456789abcdef")
 
 
 def _validate_sha256_hex(value: object, *, name: str) -> str:
+    """Return ``value`` if it is a SHA-256 hex digest, else raise."""
     if (
         not isinstance(value, str)
         or len(value) != 64
@@ -239,12 +247,14 @@ def _validate_sha256_hex(value: object, *, name: str) -> str:
 
 
 def _validate_record_bool(value: object, *, name: str) -> bool:
+    """Return a named record boolean field, else raise."""
     if not isinstance(value, bool):
         raise ValueError(f"{name} must be a boolean")
     return value
 
 
 def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
+    """Return a named record integer field, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -254,6 +264,7 @@ def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
+    """Return a named non-negative record scalar, else raise."""
     parsed = _validate_real_scalar(value, name=name)
     if parsed < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -261,6 +272,7 @@ def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
 
 
 def _array_sha256(values: FloatArray) -> str:
+    """Return the SHA-256 hash of an array."""
     contiguous = np.ascontiguousarray(values, dtype=np.float64)
     payload = {
         "dtype": "float64",
@@ -319,6 +331,7 @@ def _record_dict_without_hash(
     doppler_trace_sha256: str,
     timeline_sha256: str,
 ) -> dict[str, float | int | bool | str]:
+    """Return the record mapping without its hash field."""
     return {
         "sample_count": int(sample_count),
         "step_count": int(step_count),

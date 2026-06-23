@@ -111,6 +111,7 @@ class PHACTimelineRecord:
 
 
 def _validate_real_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite real scalar")
     try:
@@ -123,6 +124,7 @@ def _validate_real_scalar(value: object, *, name: str) -> float:
 
 
 def _as_float_matrix(values: ArrayLike, *, name: str) -> FloatArray:
+    """Return the value as a validated 2-D finite float matrix, else raise."""
     array = np.asarray(values)
     if array.dtype == np.dtype("O"):
         raise ValueError(f"{name} must be a finite real-valued matrix")
@@ -145,6 +147,7 @@ def _as_float_matrix(values: ArrayLike, *, name: str) -> FloatArray:
 
 
 def _as_time_vector(times: ArrayLike | None, *, sample_count: int) -> FloatArray:
+    """Return the value as a strictly increasing finite time vector, else raise."""
     if times is None:
         return np.arange(sample_count, dtype=np.float64)
     array = np.asarray(times)
@@ -171,6 +174,7 @@ def _as_time_vector(times: ArrayLike | None, *, sample_count: int) -> FloatArray
 
 
 def _sha256_json(payload: object) -> str:
+    """Return the canonical-JSON SHA-256 hash of a payload."""
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -179,6 +183,7 @@ _SHA256_HEX_DIGITS = frozenset("0123456789abcdef")
 
 
 def _validate_sha256_hex(value: object, *, name: str) -> str:
+    """Return ``value`` if it is a SHA-256 hex digest, else raise."""
     if (
         not isinstance(value, str)
         or len(value) != 64
@@ -189,12 +194,14 @@ def _validate_sha256_hex(value: object, *, name: str) -> str:
 
 
 def _validate_record_bool(value: object, *, name: str) -> bool:
+    """Return a named record boolean field, else raise."""
     if not isinstance(value, bool):
         raise ValueError(f"{name} must be a boolean")
     return value
 
 
 def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
+    """Return a named record integer field, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -204,6 +211,7 @@ def _validate_record_int(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
+    """Return a named non-negative record scalar, else raise."""
     parsed = _validate_real_scalar(value, name=name)
     if parsed < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -211,6 +219,7 @@ def _validate_nonnegative_record_scalar(value: object, *, name: str) -> float:
 
 
 def _vector_sha256(values: FloatArray) -> str:
+    """Return the SHA-256 hash of a float vector."""
     payload = {
         "dtype": "float64",
         "shape": list(values.shape),
@@ -222,6 +231,7 @@ def _vector_sha256(values: FloatArray) -> str:
 
 
 def _transition_table(records: list[PHACHandoffRecord]) -> list[dict[str, bool | int]]:
+    """Return the event-transition table over the timeline."""
     transitions: list[dict[str, bool | int]] = []
     for index in range(1, len(records)):
         previous = records[index - 1]
@@ -276,6 +286,7 @@ def _timeline_dict_without_hash(
     sample_records_sha256: str,
     transition_table_sha256: str,
 ) -> dict[str, float | int | bool | str]:
+    """Return the timeline mapping without its hash field."""
     return {
         "sample_count": int(sample_count),
         "oscillator_count": int(oscillator_count),

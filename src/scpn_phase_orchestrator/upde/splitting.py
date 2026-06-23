@@ -64,6 +64,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., FloatArray]:
+    """Load the Rust Strang-splitting backend callable."""
     from spo_kernel import splitting_run_rust
 
     def _rust(
@@ -80,6 +81,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         # The Rust FFI reads N from ``phases.len()`` and ignores the
         # positional ``_n`` argument (hence the leading underscore in
         # its signature). We still pass ``n`` for future-proofing.
+        """Call the Rust Strang-splitting step kernel."""
         return np.asarray(
             splitting_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
@@ -100,6 +102,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Mojo Strang-splitting backend callable."""
     from ..experimental.accelerators.upde._splitting_mojo import (
         _ensure_exe,
         splitting_run_mojo,
@@ -111,6 +114,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 
 def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Julia Strang-splitting backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._splitting_julia import (
@@ -122,6 +126,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Go Strang-splitting backend callable."""
     from ..experimental.accelerators.upde._splitting_go import (
         _load_lib,
         splitting_run_go,
@@ -141,6 +146,7 @@ _BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., FloatArray]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -150,6 +156,7 @@ def _load_backend(name: str) -> Callable[..., FloatArray]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -163,6 +170,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 
 
 def _splitting_probe_seconds(name: str) -> float:
+    """Return the per-backend probe timings for the splitting step."""
     n = 64
     phases = np.linspace(0.0, TWO_PI, n, endpoint=False, dtype=np.float64)
     omegas = np.ones(n, dtype=np.float64)
@@ -193,6 +201,7 @@ def _splitting_probe_seconds(name: str) -> float:
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -210,12 +219,14 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_nonzero_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-zero finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-zero real, got {value!r}")
     coerced = float(value)
@@ -225,6 +236,7 @@ def _validate_nonzero_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     coerced = float(value)
@@ -239,6 +251,7 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the state as a validated finite array, else raise."""
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -251,6 +264,7 @@ def _validate_state_array(
 
 
 def _validate_backend_output(value: object, *, n: int) -> FloatArray:
+    """Return the backend output matching the reference, else raise."""
     try:
         output = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -272,6 +286,7 @@ def _coupling_deriv(
     psi: float,
     alpha_zero: bool,
 ) -> FloatArray:
+    """Return the coupling half-step derivative for the phase state."""
     s = np.sin(theta)
     c = np.cos(theta)
     if alpha_zero:
@@ -298,6 +313,7 @@ def _rk4_coupling(
     dt: float,
     alpha_zero: bool,
 ) -> FloatArray:
+    """Advance the coupling half-step one RK4 step."""
     k1 = _coupling_deriv(p, knm, alpha, zeta, psi, alpha_zero)
     k2 = _coupling_deriv(
         (p + 0.5 * dt * k1) % TWO_PI,

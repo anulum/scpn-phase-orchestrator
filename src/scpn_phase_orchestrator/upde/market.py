@@ -57,9 +57,11 @@ _MarketFn = Callable[..., FloatArray]
 
 
 def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
+    """Load the Rust market backend callable."""
     from spo_kernel import market_order_parameter_rust, market_plv_rust
 
     def _rust_op(phases_flat: FloatArray, t: int, n: int) -> FloatArray:
+        """Call the Rust market order-parameter kernel."""
         return np.asarray(
             market_order_parameter_rust(
                 np.ascontiguousarray(phases_flat, dtype=np.float64),
@@ -75,6 +77,7 @@ def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
         n: int,
         window: int,
     ) -> FloatArray:
+        """Call the Rust market phase-locking-value kernel."""
         return np.asarray(
             market_plv_rust(
                 np.ascontiguousarray(phases_flat, dtype=np.float64),
@@ -90,6 +93,7 @@ def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
 
 def _load_mojo_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
+    """Load the Mojo market backend callable."""
     from ..experimental.accelerators.upde._market_mojo import (
         _ensure_exe,
         market_order_parameter_mojo,
@@ -102,6 +106,7 @@ def _load_mojo_fn() -> tuple[_MarketFn, _MarketFn]:
 
 def _load_julia_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
+    """Load the Julia market backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._market_julia import (
@@ -114,6 +119,7 @@ def _load_julia_fn() -> tuple[_MarketFn, _MarketFn]:
 
 def _load_go_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
+    """Load the Go market backend callable."""
     from ..experimental.accelerators.upde._market_go import (
         _load_lib,
         market_order_parameter_go,
@@ -134,6 +140,7 @@ _BACKEND_CACHE: dict[str, tuple[_MarketFn, _MarketFn]] = {}
 
 
 def _load_backend(name: str) -> tuple[_MarketFn, _MarketFn]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -143,6 +150,7 @@ def _load_backend(name: str) -> tuple[_MarketFn, _MarketFn]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -158,6 +166,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> tuple[_MarketFn, _MarketFn] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     if ACTIVE_BACKEND == "python":
         return None
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
@@ -176,12 +185,14 @@ def _dispatch() -> tuple[_MarketFn, _MarketFn] | None:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     return int(value)
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     coerced = float(value)
@@ -191,6 +202,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_series(value: object) -> FloatArray:
+    """Return the price/return series as a validated finite array, else raise."""
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -208,6 +220,7 @@ def _validate_series(value: object) -> FloatArray:
 
 
 def _validate_phase_matrix(value: object) -> FloatArray:
+    """Return the phase matrix as a validated 2-D finite array, else raise."""
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -222,6 +235,7 @@ def _validate_phase_matrix(value: object) -> FloatArray:
 
 
 def _validate_signal_vector(value: object, *, name: str) -> FloatArray:
+    """Return the signal as a validated 1-D finite array, else raise."""
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -263,6 +277,7 @@ def _python_market_order_parameter(
     t: int,
     n: int,
 ) -> FloatArray:
+    """Return the reference market order parameter (NumPy floor)."""
     if t == 0 or n == 0:
         return np.empty(0, dtype=np.float64)
     phases = phases_flat.reshape(t, n)
@@ -300,6 +315,7 @@ def _python_market_plv(
     n: int,
     window: int,
 ) -> FloatArray:
+    """Return the reference market phase-locking value (NumPy floor)."""
     if t < window or n == 0 or window == 0:
         return np.empty(0, dtype=np.float64)
     phases = phases_flat.reshape(t, n)

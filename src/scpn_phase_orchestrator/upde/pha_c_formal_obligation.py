@@ -173,6 +173,7 @@ _SHA256_HEX_DIGITS = frozenset("0123456789abcdef")
 
 
 def _sha256_json(payload: object) -> str:
+    """Return the canonical-JSON SHA-256 hash of a payload."""
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -184,6 +185,7 @@ def _gronwall_budget_trace(
     drive_bound_units: int,
     horizon_steps: int,
 ) -> tuple[int, ...]:
+    """Return the Gronwall error-budget trace for the obligation."""
     budget = initial_tolerance_units
     trace = [budget]
     for _ in range(horizon_steps):
@@ -197,6 +199,7 @@ def _gronwall_budget_trace_sha256(
     trace_units: tuple[int, ...],
     horizon_steps: int,
 ) -> str:
+    """Return the SHA-256 hash of the Gronwall budget trace."""
     return _sha256_json(
         {
             "budget_trace_units": list(trace_units),
@@ -207,6 +210,7 @@ def _gronwall_budget_trace_sha256(
 
 
 def _validate_positive_scale(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive scale, else raise."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite positive scalar")
     try:
@@ -219,6 +223,7 @@ def _validate_positive_scale(value: object, *, name: str) -> float:
 
 
 def _validate_nonnegative_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative scalar, else raise."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite non-negative scalar")
     try:
@@ -231,6 +236,7 @@ def _validate_nonnegative_scalar(value: object, *, name: str) -> float:
 
 
 def _nonnegative_units(value: object, *, scale: float, name: str) -> int:
+    """Return ``value`` as a non-negative integer unit count, else raise."""
     parsed = _validate_nonnegative_scalar(value, name=name)
     return int(
         (Decimal(str(parsed)) / Decimal(str(scale))).to_integral_value(
@@ -240,6 +246,7 @@ def _nonnegative_units(value: object, *, scale: float, name: str) -> int:
 
 
 def _ceil_div_units(numerator: int, denominator: int, *, name: str) -> int:
+    """Return the ceiling division of two unit counts."""
     if denominator <= 0:
         raise ValueError(f"{name} denominator must be positive")
     return (numerator + denominator - 1) // denominator
@@ -251,6 +258,7 @@ def _ceil_positive_ratio_units(
     *,
     name: str,
 ) -> int:
+    """Return the ceiling of a positive unit ratio."""
     if denominator <= 0.0:
         raise ValueError(f"{name} denominator must be positive")
     return int(
@@ -261,6 +269,7 @@ def _ceil_positive_ratio_units(
 
 
 def _validate_int(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -270,12 +279,14 @@ def _validate_int(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_bool(value: object, *, name: str) -> bool:
+    """Return ``value`` if it is a real boolean, else raise ``ValueError``."""
     if not isinstance(value, bool):
         raise ValueError(f"{name} must be a boolean")
     return value
 
 
 def _validate_sha256_hex(value: object, *, name: str) -> str:
+    """Return ``value`` if it is a SHA-256 hex digest, else raise."""
     if (
         not isinstance(value, str)
         or len(value) != 64
@@ -288,6 +299,7 @@ def _validate_sha256_hex(value: object, *, name: str) -> str:
 def _dict_without_record_hash(
     obligation: PHACKinematicProofObligation,
 ) -> dict[str, bool | float | int | str]:
+    """Return the record mapping without its hash field."""
     return {
         "schema_version": obligation.schema_version,
         "evidence_kind": obligation.evidence_kind,

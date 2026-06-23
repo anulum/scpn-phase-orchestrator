@@ -63,6 +63,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., FloatArray]:
+    """Load the Rust simplicial backend callable."""
     from spo_kernel import simplicial_run_rust
 
     def _rust(
@@ -77,6 +78,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         dt: float,
         n_steps: int,
     ) -> FloatArray:
+        """Call the Rust simplicial (3-body) Kuramoto step kernel."""
         return np.asarray(
             simplicial_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
@@ -98,6 +100,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Mojo simplicial backend callable."""
     from ..experimental.accelerators.upde._simplicial_mojo import (
         _ensure_exe,
         simplicial_run_mojo,
@@ -109,6 +112,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 
 def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Julia simplicial backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._simplicial_julia import (
@@ -120,6 +124,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
+    """Load the Go simplicial backend callable."""
     from ..experimental.accelerators.upde._simplicial_go import (
         _load_lib,
         simplicial_run_go,
@@ -139,6 +144,7 @@ _BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., FloatArray]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -148,6 +154,7 @@ def _load_backend(name: str) -> Callable[..., FloatArray]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -163,6 +170,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -180,18 +188,21 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -201,6 +212,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_nonnegative_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be non-negative finite real, got {value!r}")
     coerced = float(value)
@@ -210,6 +222,7 @@ def _validate_nonnegative_float(value: object, *, name: str) -> float:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     coerced = float(value)
@@ -224,6 +237,7 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the state as a validated finite array, else raise."""
     arr = value if isinstance(value, np.ndarray) else np.asarray(value)
     if arr.dtype == np.bool_ or not (
         np.issubdtype(arr.dtype, np.integer) or np.issubdtype(arr.dtype, np.floating)
@@ -246,6 +260,7 @@ def _validate_backend_result(
     name: str,
     n: int,
 ) -> FloatArray:
+    """Return the backend result matching the reference, else raise."""
     return _validate_state_array(value, name=name, shape=(n,))
 
 
