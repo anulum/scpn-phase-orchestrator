@@ -29,6 +29,7 @@ PACKAGE = "scpn_phase_orchestrator.nn.supervisor"
 SUBMODULES = (
     "scpn_phase_orchestrator.nn.supervisor._shared",
     "scpn_phase_orchestrator.nn.supervisor._types",
+    "scpn_phase_orchestrator.nn.supervisor.candidate_bridge",
     "scpn_phase_orchestrator.nn.supervisor.checkpoint",
     "scpn_phase_orchestrator.nn.supervisor.comparison",
     "scpn_phase_orchestrator.nn.supervisor.policy",
@@ -89,6 +90,8 @@ PUBLIC_SYMBOL_MODULE = {
     "save_supervisor_ppo_checkpoint": "checkpoint",
     "supervisor_action_bound_penalty": "policy",
     "supervisor_action_log_prob": "policy",
+    "supervisor_action_to_candidate": "candidate_bridge",
+    "supervisor_policy_to_candidate": "candidate_bridge",
     "supervisor_train_step": "policy",
     "unpack_supervisor_action": "policy",
 }
