@@ -32,6 +32,7 @@ AllowedDomains = ("quantum_simulation", "power_grid", "cardiac_rhythm")
 
 
 def _ensure_float64_vector(values: object, *, label: str) -> FloatArray:
+    """Return ``values`` as a non-empty 1-D finite float64 vector, else raise."""
     raw = np.asarray(values)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{label} must not contain boolean values")
@@ -50,6 +51,7 @@ def _ensure_float64_vector(values: object, *, label: str) -> FloatArray:
 
 
 def _contains_boolean_alias(values: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     arr = np.asarray(values)
     if arr.dtype == np.bool_:
         return True
@@ -59,6 +61,7 @@ def _contains_boolean_alias(values: object) -> bool:
 
 
 def _ensure_finite_real(value: object, *, label: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{label} must be a finite real value")
     scalar = float(value)
@@ -68,6 +71,7 @@ def _ensure_finite_real(value: object, *, label: str) -> float:
 
 
 def _summary(values: FloatArray) -> dict[str, float]:
+    """Return count/min/max/mean/std summary statistics for a real array."""
     return {
         "count": int(values.size),
         "min": float(np.min(values)),
@@ -78,6 +82,7 @@ def _summary(values: FloatArray) -> dict[str, float]:
 
 
 def _summary_from_complex(values: ComplexArray) -> dict[str, float]:
+    """Return count/min/max/mean/std of a complex array's magnitudes."""
     magnitudes = np.abs(values)
     return {
         "count": int(values.size),
@@ -127,6 +132,7 @@ def _validate_state_candidate(
     scenario_id: str,
     qubit_count: int,
 ) -> None:
+    """Validate a state candidate's amplitudes, metrics, and review gates."""
     if not isinstance(candidate.state_id, str) or not candidate.state_id.strip():
         raise ValueError(f"candidate in {scenario_id} requires non-empty state_id")
     if candidate.candidate_type not in {"product", "entangled"}:
@@ -202,6 +208,7 @@ def _validate_bipartition(
     qubit_count: int,
     scenario_id: str,
 ) -> None:
+    """Validate a qubit bipartition covers every qubit exactly once."""
     if (
         not isinstance(bipartition, tuple)
         or len(bipartition) != 2
@@ -223,6 +230,7 @@ def _validate_bipartition(
 
 
 def _validate_scenario(scenario: HybridOrderScenario) -> None:
+    """Validate a hybrid order-parameter scenario (phases, candidates, hash)."""
     if not isinstance(scenario.domain, str) or scenario.domain not in AllowedDomains:
         raise ValueError("invalid scenario domain")
     if not isinstance(scenario.scenario_id, str) or not scenario.scenario_id.strip():
@@ -295,6 +303,7 @@ def _validate_scenario(scenario: HybridOrderScenario) -> None:
 
 
 def _compute_scenario_hash(scenario: HybridOrderScenario) -> str:
+    """Return the canonical-JSON SHA-256 hash of a scenario."""
     payload = {
         "domain": scenario.domain,
         "scenario_id": scenario.scenario_id,
@@ -331,6 +340,7 @@ def _compute_scenario_hash(scenario: HybridOrderScenario) -> str:
 
 
 def _to_record(scenario: HybridOrderScenario) -> dict[str, object]:
+    """Convert a scenario into a JSON-safe review-evidence record."""
     return {
         "domain": scenario.domain,
         "scenario_id": scenario.scenario_id,
@@ -370,24 +380,28 @@ def _to_record(scenario: HybridOrderScenario) -> dict[str, object]:
 
 
 def _compute_order_metrics(phases: FloatArray) -> tuple[float, float]:
+    """Return the Kuramoto order parameters (R, psi) for the phases."""
     order_r = float(np.abs(np.mean(np.exp(1j * phases))))
     order_psi = float(0.5 + 0.5 * math.cos(float(np.mean(phases))))
     return (order_r, order_psi)
 
 
 def _normalize_probability(amplitudes: ComplexArray) -> NDArray[np.float64]:
+    """Return a normalised probability distribution, else raise ``ValueError``."""
     probabilities = np.abs(amplitudes) ** 2
     total = float(np.sum(probabilities))
     return probabilities / total
 
 
 def _compute_entanglement_entropy(amplitudes: ComplexArray) -> float:
+    """Return the bipartite von Neumann entanglement entropy of a state."""
     probs = _normalize_probability(amplitudes)
     nz = probs > 0
     return -float(np.sum(probs[nz] * np.log2(probs[nz])))
 
 
 def _product_state_vector(qubit_count: int) -> ComplexArray:
+    """Build a separable product state vector from per-qubit phases."""
     size = 2**qubit_count
     vec = np.zeros(size, dtype=np.complex128)
     vec[0] = 1.0 + 0.0j
@@ -395,6 +409,7 @@ def _product_state_vector(qubit_count: int) -> ComplexArray:
 
 
 def _entangled_state_vector(qubit_count: int) -> ComplexArray:
+    """Build a deterministic entangled state vector for the scenario."""
     size = 2**qubit_count
     vec = np.zeros(size, dtype=np.complex128)
     vec[0] = 1.0 / math.sqrt(2.0)
@@ -410,6 +425,7 @@ def _build_scenario(
     phase_offset: float,
     objective_labels: tuple[str, ...],
 ) -> HybridOrderScenario:
+    """Build a deterministic hybrid order-parameter audit scenario."""
     phases = np.linspace(
         0.0, 2.0 * math.pi, qubit_count, endpoint=False, dtype=np.float64
     )

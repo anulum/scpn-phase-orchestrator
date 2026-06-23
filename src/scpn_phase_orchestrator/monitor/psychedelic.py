@@ -56,9 +56,11 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., float]:
+    """Load the Rust psychedelic phase-dispersion backend callable."""
     from spo_kernel import entropy_from_phases_rust
 
     def _rust(phases: FloatArray, n_bins: int) -> object:
+        """Call the Rust phase-dispersion kernel with contiguous float arrays."""
         return entropy_from_phases_rust(
             np.ascontiguousarray(phases.ravel(), dtype=np.float64),
             int(n_bins),
@@ -68,6 +70,7 @@ def _load_rust_fn() -> Callable[..., float]:
 
 
 def _load_mojo_fn() -> Callable[..., float]:
+    """Load the Mojo psychedelic phase-dispersion backend callable."""
     from ..experimental.accelerators.monitor._psychedelic_mojo import (
         _ensure_exe,
         entropy_from_phases_mojo,
@@ -78,6 +81,7 @@ def _load_mojo_fn() -> Callable[..., float]:
 
 
 def _load_julia_fn() -> Callable[..., float]:
+    """Load the Julia psychedelic phase-dispersion backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._psychedelic_julia import (
@@ -88,6 +92,7 @@ def _load_julia_fn() -> Callable[..., float]:
 
 
 def _load_go_fn() -> Callable[..., float]:
+    """Load the Go psychedelic phase-dispersion backend callable."""
     from ..experimental.accelerators.monitor._psychedelic_go import (
         _load_lib,
         entropy_from_phases_go,
@@ -107,6 +112,7 @@ _BACKEND_FN_CACHE: dict[str, Callable[..., float]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., float]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_FN_CACHE.get(name)
     if cached is not None:
         return cached
@@ -116,6 +122,7 @@ def _load_backend(name: str) -> Callable[..., float]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -131,6 +138,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., float] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -149,6 +157,7 @@ def _dispatch() -> Callable[..., float] | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -157,6 +166,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -165,6 +175,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -173,6 +184,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    """Return the phase vector as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -192,6 +204,7 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 def _validate_coupling_matrix(
     value: object, *, name: str, expected_n: int | None = None
 ) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -215,6 +228,7 @@ def _validate_coupling_matrix(
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a finite real value in [0, 1]")
     scalar = float(value)
@@ -224,6 +238,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_n_bins(value: object) -> int:
+    """Return ``n_bins`` as an integer at least 2, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if value < 2:
@@ -232,6 +247,7 @@ def _validate_n_bins(value: object) -> int:
 
 
 def _validate_step_count(value: object, *, name: str) -> int:
+    """Return the step count as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be a non-negative integer")
     if value < 0:
@@ -240,6 +256,7 @@ def _validate_step_count(value: object, *, name: str) -> int:
 
 
 def _validate_reduction_schedule(values: object) -> list[float]:
+    """Return the validated coupling-reduction schedule, else raise."""
     if isinstance(values, (bool, np.bool_)):
         raise TypeError("reduction_schedule must be a 1-D sequence of values in [0, 1]")
     try:
@@ -261,6 +278,7 @@ def _validate_reduction_schedule(values: object) -> list[float]:
 def _validate_reduced_coupling(
     value: object, *, expected_shape: tuple[int, int]
 ) -> FloatArray:
+    """Return the backend reduced-coupling matrix matching the reference."""
     if _contains_boolean_alias(value):
         raise ValueError("reduced coupling matrix must not contain boolean values")
     raw = np.asarray(value)
@@ -283,6 +301,7 @@ def _validate_reduced_coupling(
 
 
 def _validate_entropy_value(value: object, *, n_bins: int) -> float:
+    """Return the backend phase-dispersion entropy in [0, 1], else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("entropy output must not be a boolean value")
     raw = np.asarray(value)

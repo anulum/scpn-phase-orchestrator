@@ -46,6 +46,7 @@ def _compute_self_model_error(
     observed_phase: FloatArray,
     error_threshold: float,
 ) -> SelfModelErrorResult:
+    """Compute the self-model phase-prediction error via the core helper."""
     predicted = _coerce_vector(predicted_phase, label="predicted_phase")
     observed = _coerce_vector(observed_phase, label="observed_phase")
     return compute_self_model_error(
@@ -60,6 +61,7 @@ def _compute_self_model_error(
 
 
 def _coerce_scalar(value: object, *, label: str) -> float:
+    """Return ``value`` as a numeric float, rejecting booleans, else raise."""
     if isinstance(value, bool):
         raise ValueError(f"{label} must be numeric, got bool")
     if isinstance(value, (np.floating, np.integer)):
@@ -70,6 +72,7 @@ def _coerce_scalar(value: object, *, label: str) -> float:
 
 
 def _coerce_vector(values: object, *, label: str) -> FloatArray:
+    """Return ``values`` as a non-empty 1-D finite float64 vector, else raise."""
     try:
         arr = np.asarray(values, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -84,12 +87,14 @@ def _coerce_vector(values: object, *, label: str) -> FloatArray:
 
 
 def _coerce_bool(value: object, *, label: str) -> bool:
+    """Return ``value`` if it is a real boolean, else raise ``ValueError``."""
     if not isinstance(value, bool):
         raise ValueError(f"{label} must be boolean")
     return bool(value)
 
 
 def _circular_error(predicted: FloatArray, observed: FloatArray) -> FloatArray:
+    """Return the wrapped circular phase error between observed and predicted."""
     delta = observed - predicted
     return np.asarray(np.arctan2(np.sin(delta), np.cos(delta)), dtype=np.float64)
 
@@ -101,6 +106,7 @@ def _coerce_error_payload(
     observed_phase: FloatArray,
     error_threshold: float,
 ) -> dict[str, Any]:
+    """Build a JSON-safe error payload from a self-model error result."""
     diff = np.abs(_circular_error(predicted_phase, observed_phase))
     fallback_norm = float(np.linalg.norm(diff) / math.sqrt(diff.size))
     fallback_max = float(np.max(diff))
@@ -109,6 +115,7 @@ def _coerce_error_payload(
     def _from_obj(
         obj: object, names: tuple[str, ...], default: float | None = None
     ) -> float:
+        """Return the first present named scalar field from a dict or object."""
         for name in names:
             if isinstance(obj, dict) and name in obj:
                 return _coerce_scalar(obj[name], label=name)
@@ -121,6 +128,7 @@ def _coerce_error_payload(
     def _from_obj_bool(
         obj: object, names: tuple[str, ...], default: bool | None = None
     ) -> bool:
+        """Return the first present named boolean field from a dict or object."""
         for name in names:
             if isinstance(obj, dict) and name in obj:
                 if not isinstance(obj[name], bool):
@@ -197,6 +205,7 @@ def _coerce_error_payload(
 
 
 def _error_summary(errors: FloatArray) -> dict[str, float]:
+    """Return a JSON-safe summary of the self-model error metrics."""
     return {
         "count": int(errors.size),
         "mean": float(np.mean(errors)),
@@ -210,6 +219,7 @@ def _compute_scenario_hash(
     proposal: SelfModelReconfigurationProposal,
     error_payload: dict[str, Any],
 ) -> str:
+    """Return the canonical-JSON SHA-256 hash of a scenario record."""
     canonical: dict[str, Any] = {
         "domain": proposal.domain,
         "scenario_id": proposal.scenario_id,
@@ -303,6 +313,7 @@ class SelfModelReconfigurationProposal:
 def _validate_self_model_reconfiguration_proposal(
     scenario: SelfModelReconfigurationProposal,
 ) -> None:
+    """Validate a reconfiguration proposal's fields and review gates."""
     if scenario.domain not in SupportedDomains:
         raise ValueError(f"invalid domain '{scenario.domain}'")
     if not scenario.scenario_id or not scenario.scenario_id.strip():
@@ -379,6 +390,7 @@ def _validate_self_model_reconfiguration_proposal(
 
 
 def _validate_scenario_record(record: dict[str, Any]) -> None:
+    """Validate a self-model reconfiguration scenario record."""
     required_fields = {
         "domain",
         "scenario_id",
@@ -458,6 +470,7 @@ def _validate_scenario_record(record: dict[str, Any]) -> None:
 
 
 def _build_static_proposals() -> tuple[SelfModelReconfigurationProposal, ...]:
+    """Build the deterministic static self-model reconfiguration proposals."""
     scenario_specs: tuple[
         tuple[
             str,
@@ -585,6 +598,7 @@ def build_self_model_reconfiguration_examples() -> tuple[dict[str, Any], ...]:
 
 
 def _contains_arrays(value: object) -> bool:
+    """Return whether the value contains any nested array payload."""
     if isinstance(value, dict):
         return any(_contains_arrays(v) for v in value.values())
     if isinstance(value, (tuple, list)):
