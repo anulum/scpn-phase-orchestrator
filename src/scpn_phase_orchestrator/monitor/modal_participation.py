@@ -327,6 +327,7 @@ def _phase_anchor(vector: ComplexArray) -> ComplexArray:
 
 
 def _validate_square_matrix(value: object, name: str) -> FloatArray:
+    """Return the value as a validated finite square matrix, else raise."""
     array = _validate_real_array(value, name)
     if array.ndim != 2 or array.shape[0] != array.shape[1]:
         raise ValueError(f"{name} must be a square 2-D matrix, got shape {array.shape}")
@@ -336,6 +337,7 @@ def _validate_square_matrix(value: object, name: str) -> FloatArray:
 
 
 def _validate_input_matrix(value: object | None, rows: int) -> FloatArray | None:
+    """Return the control-input matrix as a validated finite array, else raise."""
     if value is None:
         return None
     array = _validate_real_array(value, "input_matrix")
@@ -352,6 +354,7 @@ def _validate_input_matrix(value: object | None, rows: int) -> FloatArray | None
 
 
 def _validate_vector(value: object, name: str, length: int) -> FloatArray:
+    """Return the value as a validated 1-D finite array, else raise."""
     array = _validate_real_array(value, name)
     if array.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {array.shape}")
@@ -361,6 +364,7 @@ def _validate_vector(value: object, name: str, length: int) -> FloatArray:
 
 
 def _validate_phase_lag(value: object | None, n: int) -> FloatArray:
+    """Return the phase lag as a validated finite value, else raise."""
     if value is None:
         return np.zeros((n, n), dtype=np.float64)
     array = _validate_real_array(value, "phase_lag")
@@ -370,6 +374,7 @@ def _validate_phase_lag(value: object | None, n: int) -> FloatArray:
 
 
 def _validate_real_array(value: object, name: str) -> FloatArray:
+    """Return the value as a validated finite real array, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -385,6 +390,7 @@ def _validate_real_array(value: object, name: str) -> FloatArray:
 
 
 def _real_scalar(value: object, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     scalar = float(value)

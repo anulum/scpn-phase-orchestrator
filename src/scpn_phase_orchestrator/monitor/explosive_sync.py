@@ -147,6 +147,7 @@ class ExplosiveSyncWarning:
 
 
 def _validate_signals(signals: object) -> FloatArray:
+    """Return the signals as a validated 2-D finite array, else raise."""
     raw = np.asarray(signals)
     if raw.dtype == np.bool_:
         raise ValueError("signals must not contain boolean values")
@@ -166,6 +167,7 @@ def _validate_signals(signals: object) -> FloatArray:
 
 
 def _validate_positive_int(value: object, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     result = int(value)
@@ -175,6 +177,7 @@ def _validate_positive_int(value: object, name: str) -> int:
 
 
 def _validate_unit_fraction(value: object, name: str) -> float:
+    """Return ``value`` as a fraction in [0, 1], else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a real number in (0, 1), got {value!r}")
     result = float(value)
@@ -184,6 +187,7 @@ def _validate_unit_fraction(value: object, name: str) -> float:
 
 
 def _validate_non_negative_real(value: object, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative real, got {value!r}")
     result = float(value)

@@ -30,6 +30,7 @@ FloatArray = NDArray[np.float64]
 
 
 def _validate_layer_indices(values: list[int], *, name: str) -> list[int]:
+    """Return the validated layer indices, else raise ``ValueError``."""
     indices: list[int] = []
     for value in values:
         if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
@@ -41,6 +42,7 @@ def _validate_layer_indices(values: list[int], *, name: str) -> list[int]:
 
 
 def _validate_plv_threshold(value: object) -> float:
+    """Return the PLV threshold as a validated value in [0, 1], else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"threshold must be finite real in [0, 1], got {value!r}")
     threshold = float(value)
@@ -50,6 +52,7 @@ def _validate_plv_threshold(value: object) -> float:
 
 
 def _validate_cross_layer_alignment(value: object, *, n_layers: int) -> FloatArray:
+    """Return the validated cross-layer alignment input, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError("cross_layer_alignment must not contain boolean values")
@@ -71,6 +74,7 @@ def _validate_cross_layer_alignment(value: object, *, n_layers: int) -> FloatArr
 
 
 def _validate_order_parameter(value: object, *, layer_index: int) -> float:
+    """Return the order parameter as validated values in [0, 1], else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"layer {layer_index} R must be finite real in [0, 1]")
     r_value = float(value)
@@ -158,6 +162,7 @@ class CoherenceMonitor:
         return locked
 
     def _mean_r(self, upde_state: UPDEState, indices: list[int], *, name: str) -> float:
+        """Return the mean order parameter (R) over the values."""
         n_layers = len(upde_state.layers)
         invalid = [index for index in indices if index >= n_layers]
         if invalid:

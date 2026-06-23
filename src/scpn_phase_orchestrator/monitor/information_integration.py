@@ -375,6 +375,7 @@ def benchmark_integrated_information_approximations(
 
 
 def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
+    """Return the phase series as a validated 2-D finite array, else raise."""
     if _contains_boolean_alias(phase_series):
         msg = "phase_series must not contain boolean values"
         raise ValueError(msg)
@@ -404,6 +405,7 @@ def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
 
 
 def _validate_bins(n_bins: int) -> int:
+    """Return ``bins`` as an integer at least 2, else raise ``ValueError``."""
     if isinstance(n_bins, (bool, np.bool_)) or not isinstance(n_bins, Integral):
         msg = "n_bins must be an integer"
         raise ValueError(msg)
@@ -415,6 +417,7 @@ def _validate_bins(n_bins: int) -> int:
 
 
 def _validate_sample_count(n_samples: int) -> int:
+    """Return the sample count as a positive integer, else raise."""
     if isinstance(n_samples, (bool, np.bool_)) or not isinstance(n_samples, Integral):
         msg = "n_samples must be an integer"
         raise ValueError(msg)
@@ -426,6 +429,7 @@ def _validate_sample_count(n_samples: int) -> int:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -434,6 +438,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -442,6 +447,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -450,6 +456,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_non_negative_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite scalar, else raise."""
     if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
     if _has_complex_payload(value):
@@ -463,6 +470,7 @@ def _validate_non_negative_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_finite_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
     if _has_complex_payload(value):
@@ -476,6 +484,7 @@ def _validate_finite_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_unit_interval_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a scalar in [0, 1], else raise."""
     scalar = _validate_non_negative_scalar(value, name=name)
     if scalar > 1.0:
         raise ValueError(f"{name} must lie in [0, 1]")
@@ -483,6 +492,7 @@ def _validate_unit_interval_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_pairwise_mi(value: object) -> FloatArray:
+    """Return the validated pairwise mutual-information matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("pairwise_mi must not contain boolean values")
     raw = np.asarray(value)
@@ -510,6 +520,7 @@ def _validate_pairwise_mi(value: object) -> FloatArray:
 
 
 def _validate_partition(value: object, *, n_oscillators: int) -> Partition:
+    """Validate a bipartition of the oscillators, else raise."""
     if not isinstance(value, tuple) or len(value) != 2:
         raise ValueError("minimum_partition must contain two index groups")
     left_raw = value[0]
@@ -527,6 +538,7 @@ def _validate_partition(value: object, *, n_oscillators: int) -> Partition:
 
 
 def _validate_partition_side(value: object, *, name: str) -> tuple[int, ...]:
+    """Validate one partition side's unique in-range indices, else raise."""
     if isinstance(value, (str, bytes)):
         raise ValueError(f"{name} groups must contain integer indices")
     try:
@@ -552,6 +564,7 @@ def _validate_benchmark_cases(
     *,
     n_bins: int,
 ) -> tuple[IntegratedInformationBenchmarkCase, ...]:
+    """Validate the integrated-information benchmark cases, else raise."""
     if not isinstance(value, tuple):
         raise ValueError("cases must contain benchmark cases")
     expected_names = (
@@ -581,6 +594,7 @@ def _validate_benchmark_cases(
 
 
 def _require_close_margin(value: float, expected: float, *, name: str) -> None:
+    """Assert two values differ by at least the required margin, else raise."""
     if not np.isclose(value, expected, rtol=1e-12, atol=1e-12):
         raise ValueError(f"{name} must match the benchmark case results")
 
@@ -588,6 +602,7 @@ def _require_close_margin(value: float, expected: float, *, name: str) -> None:
 def _expected_benchmark_ordering_passed(
     by_name: dict[str, IntegratedInformationResult],
 ) -> bool:
+    """Return whether the benchmark phi ordering holds as expected."""
     return (
         by_name["locked"].phi > by_name["independent"].phi
         and by_name["modular"].total_integration
@@ -601,6 +616,7 @@ def _expected_benchmark_ordering_passed(
 
 
 def _pairwise_mi_matrix(phases: FloatArray, n_bins: int) -> FloatArray:
+    """Return the pairwise mutual-information matrix for the phase series."""
     n_oscillators = phases.shape[0]
     matrix = np.zeros((n_oscillators, n_oscillators), dtype=np.float64)
     for i in range(n_oscillators):
@@ -616,6 +632,7 @@ def _mutual_information(
     phases_b: FloatArray,
     n_bins: int,
 ) -> float:
+    """Return the binned mutual information between two phase channels."""
     wrapped_a = phases_a % _TWO_PI
     wrapped_b = phases_b % _TWO_PI
     edges = np.linspace(0.0, _TWO_PI, n_bins + 1, dtype=np.float64)
@@ -636,6 +653,7 @@ def _mutual_information(
 
 
 def _mean_off_diagonal(matrix: FloatArray) -> float:
+    """Return the mean of a matrix's off-diagonal entries."""
     n = matrix.shape[0]
     upper = matrix[np.triu_indices(n, k=1)]
     if upper.size == 0:
@@ -644,6 +662,7 @@ def _mean_off_diagonal(matrix: FloatArray) -> float:
 
 
 def _minimum_bipartition(matrix: FloatArray) -> tuple[Partition, float]:
+    """Return the minimum-information bipartition of the channels."""
     best_partition: Partition | None = None
     best_score = float("inf")
     for left, right in _unique_bipartitions(matrix.shape[0]):
@@ -659,6 +678,7 @@ def _minimum_bipartition(matrix: FloatArray) -> tuple[Partition, float]:
 
 
 def _unique_bipartitions(n_items: int) -> tuple[Partition, ...]:
+    """Yield the unique bipartitions of the channel indices."""
     items = tuple(range(n_items))
     partitions: list[Partition] = []
     for size in range(1, (n_items // 2) + 1):
@@ -675,6 +695,7 @@ def _cross_partition_mean(
     left: tuple[int, ...],
     right: tuple[int, ...],
 ) -> float:
+    """Return the mean cross-partition mutual information for a bipartition."""
     cross = matrix[np.ix_(left, right)]
     if cross.size == 0:
         return 0.0
@@ -682,6 +703,7 @@ def _cross_partition_mean(
 
 
 def _normalise_phi(phi: float, n_bins: int) -> float:
+    """Return the integrated information phi normalised to [0, 1]."""
     if n_bins <= 1:
         return 0.0
     scale = float(np.log(n_bins))
@@ -691,6 +713,7 @@ def _normalise_phi(phi: float, n_bins: int) -> float:
 
 
 def _independent_benchmark_series(n_samples: int) -> FloatArray:
+    """Build the independent-channel benchmark phase series."""
     rng = np.random.default_rng(137)
     series: FloatArray = rng.uniform(0.0, _TWO_PI, size=(4, n_samples)).astype(
         np.float64
@@ -699,6 +722,7 @@ def _independent_benchmark_series(n_samples: int) -> FloatArray:
 
 
 def _modular_benchmark_series(n_samples: int) -> FloatArray:
+    """Build the modular benchmark phase series."""
     base_a = np.linspace(0.0, 5.0 * _TWO_PI, n_samples, dtype=np.float64) % _TWO_PI
     base_b = np.linspace(0.0, 6.0 * _TWO_PI, n_samples, dtype=np.float64) % _TWO_PI
     series: FloatArray = np.vstack(
@@ -713,6 +737,7 @@ def _modular_benchmark_series(n_samples: int) -> FloatArray:
 
 
 def _phase_lag_chain_benchmark_series(n_samples: int) -> FloatArray:
+    """Build the phase-lag-chain benchmark phase series."""
     base = np.linspace(0.0, 6.0 * _TWO_PI, n_samples, dtype=np.float64) % _TWO_PI
     series: FloatArray = np.vstack(
         [
@@ -726,6 +751,7 @@ def _phase_lag_chain_benchmark_series(n_samples: int) -> FloatArray:
 
 
 def _noisy_locked_benchmark_series(n_samples: int) -> FloatArray:
+    """Build the noisy phase-locked benchmark series."""
     rng = np.random.default_rng(211)
     base = np.linspace(0.0, 6.0 * _TWO_PI, n_samples, dtype=np.float64)
     series: FloatArray = np.vstack(
@@ -740,6 +766,7 @@ def _noisy_locked_benchmark_series(n_samples: int) -> FloatArray:
 
 
 def _locked_benchmark_series(n_samples: int) -> FloatArray:
+    """Build the phase-locked benchmark series."""
     base = np.linspace(0.0, 6.0 * _TWO_PI, n_samples, dtype=np.float64) % _TWO_PI
     series: FloatArray = np.vstack(
         [

@@ -115,6 +115,7 @@ class MergeReport:
 
 
 def _validate_real_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite real scalar")
     try:
@@ -127,6 +128,7 @@ def _validate_real_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_tolerance(value: object, *, name: str) -> float:
+    """Return the tolerance as a non-negative finite float, else raise."""
     parsed = _validate_real_scalar(value, name=name)
     if parsed < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -134,6 +136,7 @@ def _validate_tolerance(value: object, *, name: str) -> float:
 
 
 def _validate_positive_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite scalar, else raise."""
     parsed = _validate_real_scalar(value, name=name)
     if parsed <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -141,6 +144,7 @@ def _validate_positive_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_profile_name(value: object) -> str:
+    """Return the supported merge-window profile name, else raise."""
     if not isinstance(value, str):
         raise ValueError("tolerance_profile must be a named profile string")
     name = value.strip().lower()
@@ -151,6 +155,7 @@ def _validate_profile_name(value: object) -> str:
 
 
 def _validate_sample_count(value: object, *, name: str, minimum: int) -> int:
+    """Return the sample count as a positive integer, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -160,6 +165,7 @@ def _validate_sample_count(value: object, *, name: str, minimum: int) -> int:
 
 
 def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
+    """Return ``value`` as a contiguous finite float vector, else raise."""
     array = np.asarray(values)
     if array.dtype == np.dtype("O"):
         raise ValueError(f"{name} must be a finite real-valued vector")
@@ -181,11 +187,13 @@ def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
 
 
 def _phase_dispersion_rad(phases: FloatArray, reference_phase: float) -> float:
+    """Return the circular phase dispersion in radians."""
     wrapped = np.remainder(phases - reference_phase + np.pi, TWO_PI) - np.pi
     return float(np.max(np.abs(wrapped)))
 
 
 def _spatial_dispersion_m(positions: FloatArray, reference_point: float) -> float:
+    """Return the spatial dispersion in metres."""
     return float(np.max(np.abs(positions - reference_point)))
 
 
