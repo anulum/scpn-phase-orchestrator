@@ -275,6 +275,7 @@ def _required_keys(
     required_policy_keys: Sequence[str] | None,
     node_updates: Sequence[Mapping[str, object]],
 ) -> tuple[str, ...]:
+    """Assert a mapping contains the required keys, else raise."""
     if required_policy_keys is not None:
         if not isinstance(required_policy_keys, Sequence) or isinstance(
             required_policy_keys, (str, bytes, bytearray)
@@ -301,6 +302,7 @@ def _validate_node_update(
     required_policy_keys: tuple[str, ...],
     config: FederatedAggregationConfig,
 ) -> FederatedNodeUpdate:
+    """Return a validated federated node update, else raise."""
     if not isinstance(raw, Mapping):
         raise ValueError("each node update must be a mapping")
     if any(key in raw for key in ("raw_time_series", "time_series", "samples")):
@@ -363,6 +365,7 @@ def _weighted_average(
     updates: Sequence[FederatedNodeUpdate],
     keys: tuple[str, ...],
 ) -> tuple[tuple[tuple[str, float], ...], int]:
+    """Return the weighted average of the node gradients."""
     total = sum(update.sample_count for update in updates)
     if total <= 0:
         raise ValueError("accepted sample count must be positive")
@@ -376,12 +379,14 @@ def _weighted_average(
 
 
 def _text(value: object, label: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{label} must be a non-empty string")
     return value.strip()
 
 
 def _finite_float(value: object, label: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{label} must be finite")
     number = float(value)
@@ -391,6 +396,7 @@ def _finite_float(value: object, label: str) -> float:
 
 
 def _non_negative_float(value: object, label: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     number = _finite_float(value, label)
     if number < 0.0:
         raise ValueError(f"{label} must be non-negative")
@@ -398,6 +404,7 @@ def _non_negative_float(value: object, label: str) -> float:
 
 
 def _positive_float(value: object, label: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     number = _finite_float(value, label)
     if number <= 0.0:
         raise ValueError(f"{label} must be positive")
@@ -405,6 +412,7 @@ def _positive_float(value: object, label: str) -> float:
 
 
 def _positive_int(value: object, label: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{label} must be a positive integer")
     number = int(value)
@@ -414,6 +422,7 @@ def _positive_int(value: object, label: str) -> int:
 
 
 def _hash(value: object, label: str) -> str:
+    """Return the SHA-256 hash of the payload."""
     if not isinstance(value, str) or len(value) != 64:
         raise ValueError(f"{label} must be a 64-character SHA-256 hex string")
     try:
@@ -424,6 +433,7 @@ def _hash(value: object, label: str) -> str:
 
 
 def _stable_hash(payload: object) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     clean = json.loads(json.dumps(payload, sort_keys=True, allow_nan=False))
     if isinstance(clean, dict):
         clean.pop("report_hash", None)

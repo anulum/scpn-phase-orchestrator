@@ -192,6 +192,7 @@ def _as_finite_real(
 
 
 def _normalised_logic(raw_logic: str) -> str:
+    """Return the normalised compound-logic operator for a policy."""
     if not isinstance(raw_logic, str):
         raise ValueError("compound condition logic must be a string")
     logic = raw_logic.strip().upper()
@@ -220,6 +221,7 @@ def _validate_policy_condition(condition: PolicyCondition) -> None:
 
 
 def _is_non_empty_str_list(value: Any) -> tuple[bool, tuple[str, ...], str | None]:
+    """Return whether the value is a non-empty list of strings."""
     if not isinstance(value, list) and not isinstance(value, tuple):
         return False, (), "must be a list or tuple"
     if not value:
@@ -239,6 +241,7 @@ def _add_obligation(
     passed: bool,
     evidence: str,
 ) -> None:
+    """Append a proof obligation to the obligation list."""
     obligations.append(
         PolicyCompositionObligation(
             name=name,

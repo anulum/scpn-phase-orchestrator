@@ -94,6 +94,7 @@ def build_evolutionary_supervisor_search_examples_from_worker_a_api() -> tuple[
 
 
 def _build_examples() -> tuple[dict[str, object], ...]:
+    """Build the deterministic evolutionary supervisor search examples."""
     examples: tuple[dict[str, object], ...] = (
         {
             "domain": "power_grid",
@@ -221,6 +222,7 @@ def _build_examples() -> tuple[dict[str, object], ...]:
 def _validate_evolutionary_supervisor_search_record(
     record: Mapping[str, object],
 ) -> None:
+    """Validate an evolutionary supervisor search record, else raise."""
     mapping = _as_mapping(record, label="record")
     for field in (
         "domain",
@@ -279,6 +281,7 @@ def _validate_evolutionary_supervisor_search_record(
 
 
 def _validate_parent_policy(parent_policy: Mapping[str, object]) -> None:
+    """Validate the parent policy, else raise."""
     if not parent_policy:
         raise ValueError("record requires non-empty parent_policy")
     for key, value in parent_policy.items():
@@ -287,6 +290,7 @@ def _validate_parent_policy(parent_policy: Mapping[str, object]) -> None:
 
 
 def _validate_audit_replays(value: object) -> None:
+    """Validate the audit replay records, else raise."""
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         raise ValueError("audit_replays must be a sequence")
     if not value:
@@ -306,6 +310,7 @@ def _validate_audit_replays(value: object) -> None:
 
 
 def _validate_trace(trace: Mapping[str, object]) -> None:
+    """Validate the search trace, else raise."""
     if not trace:
         raise ValueError("trace must be non-empty")
     for signal, values in trace.items():
@@ -321,6 +326,7 @@ def _validate_trace(trace: Mapping[str, object]) -> None:
 
 
 def _scenario_hash(record: Mapping[str, object]) -> str:
+    """Return the canonical-JSON SHA-256 hash of a scenario."""
     audit_replays = record["audit_replays"]
     if not isinstance(audit_replays, Sequence) or isinstance(
         audit_replays, (str, bytes, bytearray)
@@ -343,6 +349,7 @@ def _scenario_hash(record: Mapping[str, object]) -> str:
 
 
 def _validate_hash(value: object, *, label: str) -> None:
+    """Assert a hash matches its payload, else raise."""
     text = _as_non_empty_str(value, label=label)
     if len(text) != 64 or any(
         character not in "0123456789abcdef" for character in text
@@ -351,6 +358,7 @@ def _validate_hash(value: object, *, label: str) -> None:
 
 
 def _as_mapping(value: object, *, label: str) -> dict[str, object]:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{label} must be a mapping")
     return dict(value)
@@ -361,23 +369,27 @@ def _as_mapping_sequence(
     *,
     label: str,
 ) -> tuple[Mapping[str, object], ...]:
+    """Return ``value`` as a sequence of mappings, else raise."""
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         raise ValueError(f"{label} must be a sequence of mappings")
     return tuple(_as_mapping(item, label=f"{label} item") for item in value)
 
 
 def _as_trace(value: object) -> dict[str, Sequence[object]]:
+    """Return ``value`` as a validated trace, else raise."""
     mapping = _as_mapping(value, label="trace")
     return {key: cast(Sequence[object], item) for key, item in mapping.items()}
 
 
 def _as_non_empty_str(value: object, *, label: str) -> str:
+    """Return ``value`` as a non-empty string, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{label} must be a non-empty string")
     return value
 
 
 def _as_float(value: object, *, label: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{label} must be a finite number")
     number = float(value)
@@ -387,17 +399,20 @@ def _as_float(value: object, *, label: str) -> float:
 
 
 def _as_int(value: object, *, label: str) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{label} must be an integer")
     return int(value)
 
 
 def _as_bool(value: object, *, label: str) -> bool:
+    """Return ``value`` as a real boolean, else raise ``ValueError``."""
     if not isinstance(value, bool):
         raise ValueError(f"{label} must be a boolean")
     return value
 
 
 def _hash_payload(payload: Mapping[str, object]) -> str:
+    """Return the canonical SHA-256 hash of a payload."""
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()

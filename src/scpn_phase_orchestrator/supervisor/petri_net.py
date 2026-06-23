@@ -37,24 +37,28 @@ _OPS = {
 
 
 def _validate_name(value: object, *, kind: str) -> str:
+    """Return the validated place/transition name, else raise."""
     if not isinstance(value, str) or not value:
         raise PolicyError(f"{kind} names must not be empty, got {value!r}")
     return value
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise PolicyError(f"{name} must be a positive integer, got {value!r}")
     return int(value)
 
 
 def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise PolicyError(f"{name} must be a non-negative integer, got {value!r}")
     return int(value)
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise PolicyError(f"{name} must be finite, got {value!r}")
     out = float(value)
@@ -213,6 +217,7 @@ class PetriNet:
         self._validate()
 
     def _validate(self) -> None:
+        """Validate and normalise the Petri-net definition, else raise."""
         for t in self._transitions:
             for arc in t.inputs + t.outputs:
                 if arc.place not in self._place_names:
@@ -254,6 +259,7 @@ class PetriNet:
         return self._guard_metrics
 
     def _validated_context(self, ctx: Mapping[str, float]) -> dict[str, float]:
+        """Return the validated transition-firing context, else raise."""
         if not isinstance(ctx, Mapping):
             raise PolicyError(f"ctx must be a mapping, got {ctx!r}")
         validated: dict[str, float] = {}

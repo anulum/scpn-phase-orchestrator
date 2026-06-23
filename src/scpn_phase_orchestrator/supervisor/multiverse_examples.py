@@ -29,6 +29,7 @@ SupportedCounterfactualKnobs: Final[frozenset[str]] = frozenset(
 def _ensure_float64_vector(
     values: Iterable[float], *, label: str
 ) -> NDArray[np.float64]:
+    """Return ``value`` as a non-empty 1-D finite float64 vector, else raise."""
     if isinstance(values, (bool, np.bool_)) or _contains_boolean_alias(values):
         raise ValueError(f"{label} must contain numeric values")
     if _contains_complex_alias(values):
@@ -46,6 +47,7 @@ def _ensure_float64_vector(
 
 
 def _summary(values: NDArray[np.float64]) -> dict[str, float]:
+    """Return count/min/max/mean/std summary statistics for a real array."""
     return {
         "count": int(values.size),
         "min": float(np.min(values)),
@@ -56,6 +58,7 @@ def _summary(values: NDArray[np.float64]) -> dict[str, float]:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -64,6 +67,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -72,6 +76,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _ensure_real_scalar(value: object, *, label: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise."""
     if isinstance(value, (bool, np.bool_, complex, np.complexfloating)):
         raise ValueError(f"{label} must be a real-valued numeric scalar")
     if not isinstance(value, (int, float, np.integer, np.floating)):
@@ -179,6 +184,7 @@ def _compute_scenario_hash(
     branch_candidates: tuple[BranchCandidate, ...],
     objective_labels: tuple[str, ...],
 ) -> str:
+    """Return the canonical-JSON SHA-256 hash of a scenario."""
     canonical = {
         "domain": domain,
         "scenario_id": scenario_id,
@@ -209,6 +215,7 @@ def _compute_scenario_hash(
 
 
 def _validate_branch_candidate(candidate: BranchCandidate) -> None:
+    """Validate a multiverse branch candidate, else raise."""
     if (
         not isinstance(candidate.candidate_id, str)
         or not candidate.candidate_id.strip()
@@ -273,6 +280,7 @@ def _validate_branch_candidate(candidate: BranchCandidate) -> None:
 
 
 def _validate_scenario(scenario: DomainScenario) -> None:
+    """Validate a multiverse counterfactual scenario, else raise."""
     if not isinstance(scenario.domain, str) or not scenario.domain.strip():
         raise ValueError("scenario domain must be a non-empty string")
     if not isinstance(scenario.scenario_id, str) or not scenario.scenario_id.strip():
@@ -323,6 +331,7 @@ def _validate_scenario(scenario: DomainScenario) -> None:
 
 
 def _build_static_scenarios() -> tuple[DomainScenario, ...]:
+    """Build the deterministic static multiverse scenarios."""
     return (
         DomainScenario(
             domain="power_grid",
@@ -573,6 +582,7 @@ def build_multiverse_domain_scenarios() -> tuple[dict[str, object], ...]:
 
 
 def _verify_record_hash(scenario: DomainScenario, record: dict[str, object]) -> None:
+    """Assert a record's hash matches its payload, else raise."""
     expected = scenario.scenario_hash()
     if record["scenario_hash"] != expected:
         raise ValueError(

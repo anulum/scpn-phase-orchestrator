@@ -549,6 +549,7 @@ def _generate_audit_noise(
     sensitivity: float,
     noise_multiplier: float,
 ) -> tuple[tuple[str, float], ...]:
+    """Return deterministic audit noise for a label."""
     vector: list[tuple[str, float]] = []
     scale = sensitivity * noise_multiplier
     for index, key in enumerate(policy_keys):
@@ -562,6 +563,7 @@ def _generate_audit_noise(
 
 
 def _validated_label(value: object, field_name: str, reasons: list[str]) -> str:
+    """Return the validated noise label, else raise."""
     if not isinstance(value, str):
         raise ValueError(f"{field_name} must be a non-empty string")
     text = value.strip()
@@ -571,6 +573,7 @@ def _validated_label(value: object, field_name: str, reasons: list[str]) -> str:
 
 
 def _stable_hash(payload: Mapping[str, object]) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     serialised = json.dumps(
         payload,
         sort_keys=True,
@@ -581,11 +584,13 @@ def _stable_hash(payload: Mapping[str, object]) -> str:
 
 
 def _uniform_from_digest(digest: bytes) -> float:
+    """Return a uniform deviate derived from a digest."""
     value = int.from_bytes(digest, byteorder="big", signed=False)
     return (value + 1.0) / (2.0**64 + 1.0)
 
 
 def _text(values: Sequence[object], field_name: str) -> tuple[str, ...]:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     converted: list[str] = []
     for value in values:
         if not isinstance(value, str) or not value.strip():

@@ -34,6 +34,7 @@ _SUPPORTED_DOMAINS: Final[tuple[str, ...]] = (
 
 
 def _ensure_float64_vector(values: Iterable[float], *, label: str) -> FloatArray:
+    """Return ``value`` as a non-empty 1-D finite float64 vector, else raise."""
     if isinstance(values, (bool, np.bool_)) or _contains_boolean_alias(values):
         raise ValueError(f"{label} must contain numeric values")
     if _contains_complex_alias(values):
@@ -55,6 +56,7 @@ def _ensure_float64_vector(values: Iterable[float], *, label: str) -> FloatArray
 
 
 def _distribution_summary(values: FloatArray) -> dict[str, float]:
+    """Return summary statistics for a probability distribution."""
     return {
         "count": int(values.size),
         "sum": float(np.sum(values)),
@@ -66,6 +68,7 @@ def _distribution_summary(values: FloatArray) -> dict[str, float]:
 
 
 def _ensure_positive_finite_scalar(value: object, *, label: str) -> float:
+    """Return ``value`` as a strictly positive finite scalar, else raise."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{label} must not be a boolean")
     if not isinstance(value, (int, float, np.floating)):
@@ -78,6 +81,7 @@ def _ensure_positive_finite_scalar(value: object, *, label: str) -> float:
 
 
 def _validate_domain(domain: str) -> str:
+    """Return the validated review domain, else raise."""
     if not isinstance(domain, str) or not domain.strip():
         raise ValueError("domain must be a non-empty string")
     if domain not in _SUPPORTED_DOMAINS:
@@ -86,6 +90,7 @@ def _validate_domain(domain: str) -> str:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -94,6 +99,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -222,6 +228,7 @@ def _compute_scenario_hash(
     execution_disabled: bool,
     claim_boundary: str,
 ) -> str:
+    """Return the canonical-JSON SHA-256 hash of a scenario."""
     canonical = {
         "domain": domain,
         "scenario_id": scenario_id,
@@ -250,6 +257,7 @@ def _compute_scenario_hash(
 
 
 def _validate_distribution_pair(distributions: DistributionPair) -> None:
+    """Validate a pair of probability distributions, else raise."""
     if not isinstance(distributions, DistributionPair):
         raise ValueError("distributions must be a DistributionPair")
 
@@ -266,6 +274,7 @@ def _validate_distribution_pair(distributions: DistributionPair) -> None:
 
 
 def _validate_control_gradient(control_gradient: tuple[tuple[str, float], ...]) -> None:
+    """Validate the control gradient, else raise."""
     if not isinstance(control_gradient, tuple) or len(control_gradient) == 0:
         raise ValueError("control_gradient must be a non-empty tuple")
     for knob_name, knob_value in control_gradient:
@@ -282,6 +291,7 @@ def _validate_control_gradient(control_gradient: tuple[tuple[str, float], ...]) 
 def _validate_information_geometry_scenario(
     scenario: InformationGeometryScenario,
 ) -> None:
+    """Validate an information-geometry scenario, else raise."""
     if not isinstance(scenario, InformationGeometryScenario):
         raise ValueError("scenario must be an InformationGeometryScenario")
 
@@ -332,6 +342,7 @@ def _validate_information_geometry_scenario(
 
 
 def _validate_scenario_record(record: dict[str, object]) -> None:
+    """Validate an information-geometry scenario record, else raise."""
     for key in (
         "domain",
         "scenario_id",
@@ -430,6 +441,7 @@ def _validate_scenario_record(record: dict[str, object]) -> None:
 
 
 def _build_static_scenarios() -> tuple[InformationGeometryScenario, ...]:
+    """Build the deterministic static information-geometry scenarios."""
     return (
         InformationGeometryScenario(
             domain="power_grid",
