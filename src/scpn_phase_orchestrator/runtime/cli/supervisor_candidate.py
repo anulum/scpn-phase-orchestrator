@@ -24,6 +24,7 @@ from pathlib import Path
 
 import click
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.autotune import (
     AutotuneRewardReport,
@@ -44,7 +45,7 @@ def _require_number(value: object) -> float:
     return float(value)
 
 
-def _scalar_or_array(value: object) -> float | np.ndarray:
+def _scalar_or_array(value: object) -> float | NDArray[np.float64]:
     """Coerce a JSON number or list into a float or a float array."""
     if isinstance(value, list):
         return np.array(value, dtype=float)
@@ -74,19 +75,19 @@ def _candidate(payload: Mapping[str, object]) -> KnobPolicyCandidate:
 def _optional_float(payload: Mapping[str, object], key: str) -> float | None:
     """Return a float field or ``None`` when it is absent or null."""
     value = payload.get(key)
-    return None if value is None else float(value)  # type: ignore[arg-type]
+    return None if value is None else _require_number(value)
 
 
 def _observation(payload: Mapping[str, object]) -> RewardObservation:
     """Build a reward observation from a scenario observation mapping."""
     return RewardObservation(
-        coherence=float(payload["coherence"]),  # type: ignore[arg-type]
+        coherence=_require_number(payload["coherence"]),
         previous_coherence=_optional_float(payload, "previous_coherence"),
         unsafe=bool(payload.get("unsafe", False)),
         regime_changed=bool(payload.get("regime_changed", False)),
         lyapunov_exponent=_optional_float(payload, "lyapunov_exponent"),
         stl_robustness=_optional_float(payload, "stl_robustness"),
-        safety_cost=float(payload.get("safety_cost", 0.0)),  # type: ignore[arg-type]
+        safety_cost=_require_number(payload.get("safety_cost", 0.0)),
     )
 
 
@@ -106,7 +107,7 @@ def _provenance(payload: Mapping[str, object]) -> NumericProvenance:
     """Build the numeric provenance from a scenario mapping."""
     return NumericProvenance(
         active_backend=str(payload["active_backend"]),
-        parity_tolerance=float(payload["parity_tolerance"]),  # type: ignore[arg-type]
+        parity_tolerance=_require_number(payload["parity_tolerance"]),
     )
 
 
