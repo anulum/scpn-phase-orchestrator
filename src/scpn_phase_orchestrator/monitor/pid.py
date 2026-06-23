@@ -70,6 +70,7 @@ PidBackend: TypeAlias = Callable[..., PidTuple]
 
 
 def _load_rust_fn() -> PidBackend:
+    """Load the Rust PID backend callable."""
     from spo_kernel import pid_decomposition_rust
 
     def _rust(
@@ -80,6 +81,7 @@ def _load_rust_fn() -> PidBackend:
         group_b: IntArray,
         n_bins: int,
     ) -> PidTuple:
+        """Call the Rust PID kernel with contiguous float arrays."""
         red, syn = pid_decomposition_rust(
             np.ascontiguousarray(phase_history_flat.ravel(), dtype=np.float64),
             int(t),
@@ -95,6 +97,7 @@ def _load_rust_fn() -> PidBackend:
 
 def _load_mojo_fn() -> PidBackend:
     # pragma: no cover — toolchain
+    """Load the Mojo PID backend callable."""
     from ..experimental.accelerators.monitor._pid_mojo import (
         _ensure_exe,
         pid_decomposition_mojo,
@@ -106,6 +109,7 @@ def _load_mojo_fn() -> PidBackend:
 
 def _load_julia_fn() -> PidBackend:
     # pragma: no cover — toolchain
+    """Load the Julia PID backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._pid_julia import (
@@ -117,6 +121,7 @@ def _load_julia_fn() -> PidBackend:
 
 def _load_go_fn() -> PidBackend:
     # pragma: no cover — toolchain
+    """Load the Go PID backend callable."""
     from ..experimental.accelerators.monitor._pid_go import (
         _load_lib,
         pid_decomposition_go,
@@ -136,6 +141,7 @@ _BACKEND_CACHE: dict[str, PidBackend] = {}
 
 
 def _load_backend(name: str) -> PidBackend:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -145,6 +151,7 @@ def _load_backend(name: str) -> PidBackend:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -161,6 +168,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> PidBackend | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS]
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -177,6 +185,7 @@ def _dispatch() -> PidBackend | None:
 
 
 def _validate_n_bins(value: object) -> int:
+    """Return ``n_bins`` as an integer at least 2, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if value < 2:
@@ -185,6 +194,7 @@ def _validate_n_bins(value: object) -> int:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -193,6 +203,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -201,6 +212,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -209,6 +221,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_phase_history(value: object) -> FloatArray:
+    """Return the phase history as a validated 2-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("phases must not contain boolean values")
     raw = np.asarray(value)
@@ -228,6 +241,7 @@ def _validate_phase_history(value: object) -> FloatArray:
 
 
 def _validate_group_indices(value: object, *, name: str, n_osc: int) -> IntArray:
+    """Return the validated source-group indices, else raise ``ValueError``."""
     raw = np.asarray(value)
     if raw.ndim != 1:
         raise ValueError(f"{name} must be a 1-D integer index array")
@@ -250,6 +264,7 @@ def _validate_group_indices(value: object, *, name: str, n_osc: int) -> IntArray
 
 
 def _validate_pid_scalar(value: float, *, name: str) -> float:
+    """Return a backend PID component as a validated non-negative float, else raise."""
     result = float(value)
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")

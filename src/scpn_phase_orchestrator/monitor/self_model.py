@@ -332,6 +332,7 @@ def compute_self_model_error(
 
 
 def _require_finite_non_negative_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite non-negative float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real value")
     float_value = float(value)
@@ -343,6 +344,7 @@ def _require_finite_non_negative_float(value: object, *, name: str) -> float:
 
 
 def _coerce_channel_matrix(values: object, *, name: str) -> FloatArray:
+    """Return the channel matrix as a validated 2-D finite array, else raise."""
     raw = np.asarray(values)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must be numeric, got boolean values")
@@ -367,6 +369,7 @@ def _coerce_channel_matrix(values: object, *, name: str) -> FloatArray:
 
 
 def _wrapped_phase_errors(predicted: FloatArray, observed: FloatArray) -> FloatArray:
+    """Return the wrapped circular phase errors between channels."""
     return np.asarray(
         np.arctan2(np.sin(predicted - observed), np.cos(predicted - observed)),
         dtype=np.float64,
@@ -374,6 +377,7 @@ def _wrapped_phase_errors(predicted: FloatArray, observed: FloatArray) -> FloatA
 
 
 def _coerce_order_vector(values: object, *, name: str) -> FloatArray:
+    """Return the order vector as a validated finite array, else raise."""
     raw = np.asarray(values)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must be numeric, got boolean values")
@@ -399,6 +403,7 @@ def _coerce_channel_labels(
     *,
     channel_count: int,
 ) -> tuple[str, ...]:
+    """Return validated non-empty channel labels, else raise."""
     if channel_labels is None:
         return tuple(f"channel_{idx}" for idx in range(channel_count))
 
@@ -421,6 +426,7 @@ def _coerce_channel_weights(
     *,
     channel_count: int,
 ) -> NDArray[np.float64] | None:
+    """Return validated finite channel weights, else raise."""
     if channel_weights is None:
         return None
 
@@ -449,6 +455,7 @@ def _coerce_channel_weights(
 
 
 def _normalise_positive_weights(weights: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Return positive weights normalised to sum to one, else raise."""
     total = float(np.sum(weights))
     if not np.isfinite(total) or total <= 0.0:
         raise ValueError("channel_weights sum must be finite and positive")
@@ -456,6 +463,7 @@ def _normalise_positive_weights(weights: NDArray[np.float64]) -> NDArray[np.floa
 
 
 def _deterministic_record_hash(record: dict[str, object]) -> str:
+    """Return the canonical-JSON SHA-256 hash of a record."""
     payload = json.dumps(
         record,
         sort_keys=True,

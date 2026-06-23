@@ -149,6 +149,7 @@ def ultradian_phase(
 
 
 def _validate_order_parameter(value: object) -> float:
+    """Return the order-parameter series as a validated array in [0, 1], else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError("R must be a finite real value in [0, 1]")
     r_value = float(value)
@@ -158,12 +159,14 @@ def _validate_order_parameter(value: object) -> float:
 
 
 def _validate_functional_desync(value: object) -> bool:
+    """Return the functional-desynchronisation series as a validated array."""
     if not isinstance(value, bool):
         raise TypeError("functional_desync must be a bool")
     return value
 
 
 def _validate_timestamps(value: object) -> FloatArray:
+    """Return strictly increasing finite timestamps, else raise ``ValueError``."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError("timestamps must not contain boolean values")
@@ -183,6 +186,7 @@ def _validate_timestamps(value: object) -> FloatArray:
 
 
 def _validate_stage_history(stage_history: list[str], *, expected_n: int) -> list[str]:
+    """Return the validated sleep-stage history, else raise ``ValueError``."""
     if len(stage_history) != expected_n:
         raise ValueError(
             "stage_history must have the same length as timestamps, "
@@ -195,6 +199,7 @@ def _validate_stage_history(stage_history: list[str], *, expected_n: int) -> lis
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value)
     if np.iscomplexobj(raw):
         return True
@@ -204,6 +209,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _validate_stage_code(value: object) -> str:
+    """Return ``value`` as a supported sleep-stage code, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError("Rust sleep stage code must be an integer stage code")
     numeric = float(value)
@@ -216,6 +222,7 @@ def _validate_stage_code(value: object) -> str:
 
 
 def _validate_ultradian_phase(value: object) -> float:
+    """Return the validated ultradian-cycle phase, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError("Rust ultradian phase must be a finite real value in [0, 1)")
     phase = float(value)

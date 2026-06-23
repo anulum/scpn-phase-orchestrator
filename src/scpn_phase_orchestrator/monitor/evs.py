@@ -189,6 +189,7 @@ class EVSMonitor:
 
 
 def _validate_unit_threshold(value: object, *, name: str) -> float:
+    """Return ``value`` as a threshold in [0, 1], else raise ``ValueError``."""
     threshold = _validate_real(value, name=name)
     if threshold < 0.0 or threshold > 1.0:
         raise ValueError(f"{name} must be in [0, 1]")
@@ -196,6 +197,7 @@ def _validate_unit_threshold(value: object, *, name: str) -> float:
 
 
 def _validate_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     scalar = _validate_real(value, name=name)
     if scalar <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -203,6 +205,7 @@ def _validate_positive_real(value: object, *, name: str) -> float:
 
 
 def _validate_specificity_ratio(value: object) -> float:
+    """Return the specificity ratio as a validated value in [0, 1], else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError("specificity_ratio must be a real value")
     scalar = float(value)
@@ -212,6 +215,7 @@ def _validate_specificity_ratio(value: object) -> float:
 
 
 def _validate_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a finite real value")
     scalar = float(value)
@@ -221,6 +225,7 @@ def _validate_real(value: object, *, name: str) -> float:
 
 
 def _validate_phase_trials(value: object) -> FloatArray:
+    """Return the per-trial phase array as a validated 2-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("phases_trials must not contain boolean values")
@@ -245,6 +250,7 @@ def _validate_phase_trials(value: object) -> FloatArray:
 
 
 def _validate_pause_indices(value: list[int] | IntArray) -> IntArray:
+    """Return the validated pause/window indices, else raise ``ValueError``."""
     if _contains_boolean_alias(value):
         raise TypeError("pause_indices must contain integer indices, not booleans")
     raw = np.asarray(value)
@@ -259,6 +265,7 @@ def _validate_pause_indices(value: list[int] | IntArray) -> IntArray:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     if isinstance(value, (bool, np.bool_)):
         return True
     if isinstance(value, (list, tuple)):
@@ -272,6 +279,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value)
     if np.iscomplexobj(raw):
         return True

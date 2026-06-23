@@ -188,6 +188,7 @@ def compute_hybrid_entanglement_order_parameter(
 
 
 def _require_finite_float_array(values: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float array, else raise."""
     raw = np.asarray(values)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
@@ -201,6 +202,7 @@ def _require_finite_float_array(values: object, *, name: str) -> FloatArray:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     array = np.asarray(value)
     if array.dtype == np.bool_:
         return True
@@ -212,6 +214,7 @@ def _contains_boolean_alias(value: object) -> bool:
 def _validate_quantum_state(
     quantum_state: object,
 ) -> tuple[int, NDArray[np.complex128], str]:
+    """Validate a quantum state vector of finite, normalisable amplitudes."""
     raw_state = np.asarray(quantum_state)
     if _contains_boolean_alias(raw_state):
         raise ValueError("quantum_state must not contain boolean values")
@@ -255,6 +258,7 @@ def _validate_quantum_state(
 
 
 def _validate_simulator_backend(simulator_backend: object) -> str:
+    """Return the supported quantum-simulator backend name, else raise."""
     if not isinstance(simulator_backend, str) or not simulator_backend.strip():
         raise ValueError("simulator_backend must be a supported backend name")
     backend = simulator_backend.strip()
@@ -269,6 +273,7 @@ def _validate_simulator_backend(simulator_backend: object) -> str:
 def _normalise_statevector(
     vector: NDArray[np.generic],
 ) -> tuple[int, ComplexArray]:
+    """Return the state vector normalised to unit norm, else raise."""
     if _contains_boolean_alias(vector):
         raise ValueError("quantum_state must not contain boolean values")
     vector_complex = np.asarray(vector, dtype=np.complex128)
@@ -298,6 +303,7 @@ def _validate_bipartition(
     bipartition: tuple[tuple[int, ...], tuple[int, ...]] | None,
     n_qubits: int,
 ) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Validate a qubit bipartition covers every qubit exactly once."""
     if bipartition is None:
         if n_qubits < 2:
             raise ValueError("bipartition requires at least two qubits")
@@ -351,6 +357,7 @@ def _reduced_density_matrix(
     subsystem_a: tuple[int, ...],
     n_qubits: int,
 ) -> NDArray[np.complex128]:
+    """Return the reduced density matrix over a qubit subsystem."""
     subsystem_b = tuple(i for i in range(n_qubits) if i not in subsystem_a)
     if len(subsystem_a) < 1 or len(subsystem_b) < 1:
         raise ValueError("bipartition must split into two non-empty groups")
@@ -369,6 +376,7 @@ def _reduced_density_matrix(
 def _von_neumann_entropy(
     reduced_density_matrix: NDArray[np.complex128],
 ) -> tuple[float, float]:
+    """Return the von Neumann entropy of a density matrix."""
     eigenvalues = np.linalg.eigvalsh(reduced_density_matrix)
     eigvals = np.real(eigenvalues)
     eigvals = np.clip(eigvals, 0.0, 1.0)
@@ -389,6 +397,7 @@ def _von_neumann_entropy(
 
 
 def _deterministic_record_hash(record: dict[str, object]) -> str:
+    """Return the canonical-JSON SHA-256 hash of a record."""
     payload = json.dumps(
         record,
         sort_keys=True,
@@ -399,6 +408,7 @@ def _deterministic_record_hash(record: dict[str, object]) -> str:
 
 
 def _qubit_count_from_dimension(dim: int) -> int:
+    """Return the qubit count for a power-of-two state dimension, else raise."""
     if dim < 2:
         raise ValueError("quantum_state must contain at least two amplitudes")
     qubits = int(np.log2(dim))
