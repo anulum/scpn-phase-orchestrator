@@ -410,6 +410,7 @@ def _scaffold_prompt(
     project_name: str,
     config: LLMScaffoldConfig,
 ) -> str:
+    """Build the strict LLM prompt for domainpack scaffolding."""
     return "\n".join(
         [
             "Create one SCPN domainpack scaffold proposal as strict JSON.",
@@ -435,6 +436,7 @@ def _scaffold_prompt(
 
 
 def _parse_strict_json_object(raw_response: str) -> JsonMap:
+    """Parse a strict JSON object from LLM completion text, else raise."""
     try:
         payload = json.loads(raw_response)
     except json.JSONDecodeError as exc:
@@ -450,6 +452,7 @@ def _normalise_payload(
     project_name: str,
     config: LLMScaffoldConfig,
 ) -> dict[str, Any]:
+    """Validate and normalise the LLM domainpack payload, else raise."""
     raw_name = payload.get("name", project_name)
     if not isinstance(raw_name, str) or not _DOMAIN_NAME_RE.match(raw_name):
         raise ValueError("proposal name must match [a-zA-Z0-9_-]+")
@@ -495,6 +498,7 @@ def _normalise_oscillators(
     *,
     max_oscillators: int,
 ) -> tuple[dict[str, Any], ...]:
+    """Return the validated oscillator definitions from the payload."""
     values = _sequence(raw_oscillators, "oscillators")
     if not values:
         raise ValueError("proposal must include at least one oscillator")
@@ -536,6 +540,7 @@ def _normalise_oscillators(
 
 
 def _normalise_coupling(raw_coupling: object) -> dict[str, float]:
+    """Return the validated coupling definition from the payload."""
     if raw_coupling is None:
         return {"base_strength": 0.45, "decay_alpha": 0.3}
     coupling = _mapping(raw_coupling, "coupling")
@@ -553,6 +558,7 @@ def _normalise_coupling(raw_coupling: object) -> dict[str, float]:
 
 
 def _normalise_boundaries(raw_boundaries: object) -> tuple[dict[str, Any], ...]:
+    """Return the validated boundary definitions from the payload."""
     values = _sequence(raw_boundaries, "boundaries")
     normalised = []
     for index, raw in enumerate(values):
@@ -588,6 +594,7 @@ def _normalise_boundaries(raw_boundaries: object) -> tuple[dict[str, Any], ...]:
 
 
 def _normalise_actuators(raw_actuators: object) -> tuple[dict[str, Any], ...]:
+    """Return the validated actuator definitions from the payload."""
     values = _sequence(raw_actuators, "actuators")
     normalised = []
     for index, raw in enumerate(values):
@@ -610,6 +617,7 @@ def _normalise_actuators(raw_actuators: object) -> tuple[dict[str, Any], ...]:
 
 
 def _binding_yaml(payload: Mapping[str, Any]) -> str:
+    """Render the normalised payload as a binding-spec YAML document."""
     layer_lines = []
     family_lines = []
     good_layers = []
@@ -690,6 +698,7 @@ def _binding_yaml(payload: Mapping[str, Any]) -> str:
 
 
 def _mapping_list_yaml(items: Sequence[Mapping[str, Any]], *, indent: int) -> list[str]:
+    """Render a list of mappings as indented YAML lines."""
     if not items:
         return []
     prefix = " " * indent
@@ -708,6 +717,7 @@ def _mapping_list_yaml(items: Sequence[Mapping[str, Any]], *, indent: int) -> li
 
 
 def _yaml_value(value: object) -> str:
+    """Render a value as a YAML token, dispatching by type."""
     if isinstance(value, tuple | list):
         return "[" + ", ".join(_yaml_value(item) for item in value) + "]"
     if value is None:
@@ -722,10 +732,12 @@ def _yaml_value(value: object) -> str:
 
 
 def _yaml_scalar(value: str) -> str:
+    """Return a value rendered as a JSON-quoted, YAML-safe scalar."""
     return json.dumps(value)
 
 
 def _validation_errors(yaml_text: str) -> tuple[str, ...]:
+    """Return the binding-spec validation errors for the rendered YAML."""
     with tempfile.TemporaryDirectory(prefix="spo_llm_scaffold_") as tmpdir:
         path = Path(tmpdir) / "binding_spec.yaml"
         path.write_text(yaml_text, encoding="utf-8")
@@ -737,6 +749,7 @@ def _validation_errors(yaml_text: str) -> tuple[str, ...]:
 
 
 def _extract_completion_text(payload: object) -> str:
+    """Return the completion text from an LLM response, else raise."""
     if isinstance(payload, str):
         return payload
     if not isinstance(payload, Mapping):
@@ -758,12 +771,14 @@ def _extract_completion_text(payload: object) -> str:
 
 
 def _mapping(value: object, label: str) -> JsonMap:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{label} must be a mapping")
     return value
 
 
 def _sequence(value: object, label: str) -> tuple[Any, ...]:
+    """Return ``value`` as a non-string sequence, else raise ``ValueError``."""
     if value is None:
         return ()
     if not isinstance(value, Sequence) or isinstance(value, str | bytes | bytearray):
@@ -772,6 +787,7 @@ def _sequence(value: object, label: str) -> tuple[Any, ...]:
 
 
 def _identifier(value: object, label: str) -> str:
+    """Return ``value`` if it matches the domain-name pattern, else raise."""
     text = _string(value, label)
     if not _DOMAIN_NAME_RE.match(text):
         raise ValueError(f"{label} must match [a-zA-Z0-9_-]+")
@@ -779,12 +795,14 @@ def _identifier(value: object, label: str) -> str:
 
 
 def _string(value: object, label: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{label} must be a non-empty string")
     return value.strip()
 
 
 def _number_pair(value: object, label: str) -> tuple[float, float]:
+    """Return ``value`` as a pair of exactly two finite numbers, else raise."""
     values = _sequence(value, label)
     if len(values) != 2:
         raise ValueError(f"{label} must contain exactly two numbers")
@@ -795,6 +813,7 @@ def _number_pair(value: object, label: str) -> tuple[float, float]:
 
 
 def _optional_positive_number(value: object, label: str, *, default: float) -> float:
+    """Return ``default`` for a null value, else a validated positive number."""
     if value is None:
         return default
     number = _finite_number(value, label)
@@ -806,6 +825,7 @@ def _optional_positive_number(value: object, label: str, *, default: float) -> f
 def _optional_non_negative_number(
     value: object, label: str, *, default: float
 ) -> float:
+    """Return ``default`` for a null value, else a non-negative number."""
     if value is None:
         return default
     number = _finite_number(value, label)
@@ -815,23 +835,27 @@ def _optional_non_negative_number(
 
 
 def _optional_finite_number(value: object, label: str, *, default: float) -> float:
+    """Return ``default`` for a null value, else a validated finite number."""
     if value is None:
         return default
     return _finite_number(value, label)
 
 
 def _optional_nullable_finite_number(value: object, label: str) -> float | None:
+    """Return ``None`` for a null value, else a validated finite number."""
     if value is None:
         return None
     return _finite_number(value, label)
 
 
 def _finite_positive(value: float, label: str) -> None:
+    """Return ``value`` as a strictly positive finite number, else raise."""
     if not math.isfinite(value) or value <= 0.0:
         raise ValueError(f"{label} must be positive and finite")
 
 
 def _finite_number(value: object, label: str) -> float:
+    """Return ``value`` as a finite number, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{label} must be a finite number")
     number = float(value)
@@ -841,4 +865,5 @@ def _finite_number(value: object, label: str) -> float:
 
 
 def _sha256_text(value: str) -> str:
+    """Return the SHA-256 hex digest of the text."""
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
