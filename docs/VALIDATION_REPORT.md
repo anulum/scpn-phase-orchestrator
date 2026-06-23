@@ -20,7 +20,11 @@ run on every commit. No aspirational language — only measured reality.
 
 ## 1. Test Suite Summary
 
-| Metric | Measured value | Gate |
+The counts below are a **2026-05-13 snapshot** and grow as tests are added; treat
+them as point-in-time figures, not a live total. The continuously-enforced gates
+(coverage-guard, the governance suite) are the authoritative current state.
+
+| Metric | Measured value (2026-05-13) | Gate |
 |--------|---------------|------|
 | Total Python tests | 3,130+ (core) + 194 (nn/ physics validation) | — |
 | Total Rust tests | 211 | — |

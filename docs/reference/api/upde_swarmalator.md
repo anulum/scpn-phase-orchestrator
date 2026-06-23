@@ -554,15 +554,16 @@ Euler integration is conditionally stable. For $dt = 0.01$:
 
 ## Test Coverage
 
-- `tests/test_swarmalator.py` — 12 tests: step shapes, phase range,
+- `tests/test_swarmalator.py` — covers step shapes, phase range,
   J=0 decoupling, run trajectory shapes, 3D, order parameter bounds,
   behaviour (J>0 clustering, K>0 phase sync), pipeline wiring
-- `tests/test_prop_swarmalator_inertial.py` — 7 property tests (Hypothesis):
+- `tests/test_prop_swarmalator_inertial.py` — property tests (Hypothesis):
   output finite, shapes correct, J=0 phase-position independence
-- `tests/test_degenerate_edges.py` — 4 swarmalator edge tests: N=2,
+- `tests/test_degenerate_edges.py` — swarmalator edge cases: N=2,
   dimensions 1/2/3, J=0 decoupling
 
-Total: **23+ tests** across multiple files.
+These span direct, property-based, and degenerate-edge tests across the files
+above.
 
 ---
 

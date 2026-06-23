@@ -552,15 +552,15 @@ $O(N^2)$ coupling computation in `UPDEEngine.step()`.
 
 ## Test Coverage
 
-- `tests/test_order_params.py` — 20 tests: R bounds [0,1], ψ range [0,2π),
+- `tests/test_order_params.py` — covers R bounds [0,1], ψ range [0,2π),
   synchronised R=1, uniform R≈0, two-cluster cancellation, empty array,
   single oscillator, PLV locked=1, PLV random≈0, PLV length mismatch,
   layer coherence with masks
-- `tests/test_property_invariants.py` — 11 property tests (Hypothesis):
+- `tests/test_property_invariants.py` — property tests (Hypothesis):
   R always in [0,1] for random phases, ψ always in [0,2π),
   PLV symmetric, PLV always in [0,1]
 
-Total: **31 tests** covering all three functions.
+Together these cover all three functions across direct and property-based tests.
 
 ---
 

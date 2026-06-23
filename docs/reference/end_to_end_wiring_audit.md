@@ -1,14 +1,22 @@
 # End-to-End Wiring Audit
 
-**Date:** 2026-03-29
+**Date:** 2026-03-29 — **point-in-time snapshot.**
 **Method:** Manual import + functional verification of every module, one by one
-**Result:** 152/153 modules import, all pipelines functional, 0 broken wires
+**Result (as of 2026-03-29):** every module then in the package imported (one
+expected optional-dependency skip), all pipelines functional, 0 broken wires.
+
+> This is a dated snapshot. The package has grown substantially since; the module
+> counts below are the figures recorded on 2026-03-29, not the current total. The
+> *live*, continuously-enforced wiring guarantees are the governance gates
+> (`tools/check_module_linkage.py`, the capability manifest, and the product-
+> boundary check), which run on every commit. Re-run this manual audit to refresh
+> the snapshot.
 
 ---
 
-## 1. Module Tree Import (152/153)
+## 1. Module Tree Import (2026-03-29 snapshot)
 
-Every Python module in the package was walked via `pkgutil.walk_packages`
+Every Python module then in the package was walked via `pkgutil.walk_packages`
 and imported. One expected failure:
 
 | Module | Status | Reason |
