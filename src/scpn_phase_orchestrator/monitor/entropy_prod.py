@@ -37,6 +37,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., float]:
+    """Load the Rust entropy-production-rate backend callable."""
     from spo_kernel import entropy_production_rate as _rust_ep
 
     def _rust(
@@ -46,6 +47,7 @@ def _load_rust_fn() -> Callable[..., float]:
         alpha: float,
         dt: float,
     ) -> float:
+        """Call the Rust entropy-production kernel with contiguous float arrays."""
         return float(
             _rust_ep(
                 np.ascontiguousarray(phases.ravel(), dtype=np.float64),
@@ -60,6 +62,7 @@ def _load_rust_fn() -> Callable[..., float]:
 
 
 def _load_mojo_fn() -> Callable[..., float]:
+    """Load the Mojo entropy-production-rate backend callable."""
     from ..experimental.accelerators.monitor._entropy_prod_mojo import (
         _ensure_exe,
         entropy_production_rate_mojo,
@@ -70,6 +73,7 @@ def _load_mojo_fn() -> Callable[..., float]:
 
 
 def _load_julia_fn() -> Callable[..., float]:
+    """Load the Julia entropy-production-rate backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._entropy_prod_julia import (
@@ -80,6 +84,7 @@ def _load_julia_fn() -> Callable[..., float]:
 
 
 def _load_go_fn() -> Callable[..., float]:
+    """Load the Go entropy-production-rate backend callable."""
     from ..experimental.accelerators.monitor._entropy_prod_go import (
         _load_lib,
         entropy_production_rate_go,
@@ -99,6 +104,7 @@ _BACKEND_CACHE: dict[str, Callable[..., float]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., float]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -108,6 +114,7 @@ def _load_backend(name: str) -> Callable[..., float]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first..."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -124,6 +131,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., float] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -141,6 +149,7 @@ def _dispatch() -> Callable[..., float] | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -149,6 +158,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -157,6 +167,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         array = np.asarray(value)
     except (TypeError, ValueError):
@@ -165,6 +176,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, rejecting bool/complex, else raise."""
     if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
     if _has_complex_payload(value):
@@ -178,6 +190,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a 1-D contiguous finite float array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -200,6 +213,7 @@ def _validate_matrix(
     name: str,
     expected_shape: tuple[int, int],
 ) -> FloatArray:
+    """Return ``value`` as a finite float matrix of ``expected_shape``, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -217,6 +231,7 @@ def _validate_matrix(
 
 
 def _validate_entropy_rate(value: object, *, name: str = "entropy rate") -> float:
+    """Return ``value`` as a non-negative entropy rate (tiny negatives clamped)."""
     rate = _validate_finite_float(value, name=name)
     if rate < -1e-12:
         raise ValueError(f"{name} must be non-negative, got {value!r}")

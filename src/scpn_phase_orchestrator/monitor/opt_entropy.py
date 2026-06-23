@@ -76,6 +76,7 @@ __all__ = [
 
 
 def _factorial(value: int) -> int:
+    """Return ``value`` factorial computed iteratively."""
     result = 1
     for factor in range(2, value + 1):
         result *= factor
@@ -83,11 +84,13 @@ def _factorial(value: int) -> int:
 
 
 def _ordinal_window_count(length: int, dimension: int, delay: int) -> int:
+    """Return the embedding-window count for the length, dimension, and delay."""
     count = length - (dimension - 1) * delay
     return count if count > 0 else 0
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -96,6 +99,7 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 
 def _contains_complex_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains any complex-number alias."""
     if np.iscomplexobj(raw):
         return True
     if raw.dtype != object:
@@ -104,6 +108,7 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
 
 
 def _validate_series(series: object) -> FloatArray:
+    """Return ``series`` as a 1-D contiguous finite float array, else raise."""
     raw = np.asarray(series)
     if _contains_boolean_alias(raw):
         raise ValueError("series must not contain boolean values")
@@ -121,6 +126,7 @@ def _validate_series(series: object) -> FloatArray:
 
 
 def _validate_dimension(dimension: object) -> int:
+    """Return ``dimension`` as an integer within the supported range, else raise."""
     if isinstance(dimension, (bool, np.bool_)) or not isinstance(dimension, Integral):
         raise ValueError(f"dimension must be an integer, got {dimension!r}")
     value = int(dimension)
@@ -132,6 +138,7 @@ def _validate_dimension(dimension: object) -> int:
 
 
 def _validate_delay(delay: object) -> int:
+    """Return ``delay`` as a positive integer, else raise ``ValueError``."""
     if isinstance(delay, (bool, np.bool_)) or not isinstance(delay, Integral):
         raise ValueError(f"delay must be an integer, got {delay!r}")
     value = int(delay)
@@ -141,6 +148,7 @@ def _validate_delay(delay: object) -> int:
 
 
 def _validate_ordinal_params(dimension: object, delay: object) -> tuple[int, int]:
+    """Return the validated ``(dimension, delay)`` ordinal parameters."""
     return _validate_dimension(dimension), _validate_delay(delay)
 
 
@@ -151,6 +159,7 @@ def _validate_codes_output(
     dimension: int,
     expected: IntArray,
 ) -> IntArray:
+    """Validate a backend's ordinal codes against the exact reference."""
     raw = np.asarray(codes)
     if _contains_boolean_alias(raw):
         raise ValueError("ordinal pattern backend output must not contain booleans")
@@ -185,6 +194,7 @@ def _validate_entropy_output(
     expected: float,
     atol: float,
 ) -> float:
+    """Validate a backend's transition entropy against the exact reference."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(
             f"transition entropy backend output must be a real scalar, got {value!r}"
@@ -209,6 +219,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust ordinal-pattern backend callables."""
     from spo_kernel import ordinal_pattern_sequence as rust_codes
     from spo_kernel import transition_entropy as rust_entropy
 
@@ -219,6 +230,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo ordinal-pattern backend callables."""
     from ..experimental.accelerators.monitor._opt_entropy_mojo import (
         _ensure_exe,
         ordinal_pattern_sequence_mojo,
@@ -233,6 +245,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia ordinal-pattern backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._opt_entropy_julia import (
@@ -247,6 +260,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go ordinal-pattern backend callables."""
     from ..experimental.accelerators.monitor._opt_entropy_go import (
         _load_lib,
         ordinal_pattern_sequence_go,
@@ -270,6 +284,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -279,6 +294,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -295,6 +311,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -315,6 +332,7 @@ def _dispatch(fn_name: str) -> object:
 
 
 def _stable_argsort(window: NDArray[np.float64]) -> list[int]:
+    """Return the stable ascending rank permutation of a window (ties by index)."""
     dimension = int(window.shape[0])
     used = [False] * dimension
     perm = [0] * dimension
@@ -335,6 +353,7 @@ def _stable_argsort(window: NDArray[np.float64]) -> list[int]:
 
 
 def _lehmer_code(perm: list[int], fact: list[int]) -> int:
+    """Return the Lehmer code (factorial-base index) of a permutation."""
     dimension = len(perm)
     code = 0
     for i in range(dimension):
@@ -349,6 +368,7 @@ def _lehmer_code(perm: list[int], fact: list[int]) -> int:
 def _ordinal_codes_reference(
     series: FloatArray, dimension: int, delay: int
 ) -> IntArray:
+    """Return the reference ordinal-pattern codes for the series (NumPy floor)."""
     count = _ordinal_window_count(int(series.shape[0]), dimension, delay)
     codes = np.empty(count, dtype=np.int64)
     fact = [_factorial(k) for k in range(dimension)]
@@ -361,6 +381,7 @@ def _ordinal_codes_reference(
 def _transition_entropy_reference(
     series: FloatArray, dimension: int, delay: int
 ) -> float:
+    """Return the reference normalised ordinal-transition entropy in [0, 1]."""
     codes = _ordinal_codes_reference(series, dimension, delay)
     n_codes = int(codes.shape[0])
     if n_codes < 2:
