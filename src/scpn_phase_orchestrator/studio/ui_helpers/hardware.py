@@ -149,6 +149,7 @@ def build_verified_hardware_target_package(
 def _normalise_hardware_evidence(
     evidence: Mapping[str, object],
 ) -> tuple[dict[str, object], list[str]]:
+    """Validate hardware-loop evidence, returning the record and invalid fields."""
     invalid: list[str] = []
     normalised: dict[str, object] = {}
     for field in (

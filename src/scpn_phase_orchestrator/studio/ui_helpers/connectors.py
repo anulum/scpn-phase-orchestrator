@@ -273,6 +273,12 @@ def _owned_runtime_blocked_reasons(
     owner: str,
     auth_policy: Mapping[str, object],
 ) -> list[str]:
+    """Return the reasons that block an owned-runtime live connector.
+
+    Checks that the transport is a live one, the connector manifest is compatible,
+    an owner is assigned, and the auth policy supplies a scheme and credential
+    label; an empty list means the connector is unblocked.
+    """
     blocked: list[str] = []
     connector = _connector_by_transport(connector_plan, transport)
     if transport not in {"rest", "grpc", "kafka", "hardware"}:
@@ -303,6 +309,7 @@ def _owned_runtime_base_record(
     capability: str,
     direction: str,
 ) -> dict[str, object]:
+    """Build the base owned-live-connector runtime record (no network, no actuation)."""
     return {
         "record_kind": "studio_owned_live_connector_runtime",
         "project_name": result.project_state.project_name,
@@ -320,6 +327,7 @@ def _owned_runtime_base_record(
 
 
 def _result_binding_spec_path(result: StudioReplayResult) -> Path:
+    """Return the binding-spec source path from a replay result's provenance."""
     source_path = result.project_state.binding.provenance.get("source_path")
     if not isinstance(source_path, str) or not source_path.strip():
         raise ValueError("project binding provenance must include source_path")
@@ -332,6 +340,12 @@ def _run_owned_live_adapter(
     transport: str,
     envelope_record: dict[str, object],
 ) -> tuple[dict[str, object], dict[str, object]]:
+    """Run the owned in-process live adapter for one transport and return records.
+
+    Dispatches to the REST/gRPC/Kafka/hardware digital-twin sync adapter for the
+    contract and returns its response and adapter audit records; raises for a
+    transport that is not a live runtime.
+    """
     headers = {"authorization": "Bearer studio-owned-runtime"}
     if transport == "rest":
         rest = DigitalTwinSyncRestAdapter.for_contract(contract, name="studio-rest")
@@ -367,6 +381,7 @@ def _run_owned_live_adapter(
 
 
 def _stable_json_payload(value: object, field_name: str) -> str:
+    """Return a canonical (sorted, compact) JSON string of a validated mapping."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{field_name} must be a mapping")
     return json.dumps(
@@ -380,6 +395,7 @@ def _normalise_json_mapping(
     value: Mapping[object, object],
     field_name: str,
 ) -> dict[str, object]:
+    """Return a mapping with validated non-empty string keys and JSON-safe values."""
     safe: dict[str, object] = {}
     for key, item in value.items():
         if not isinstance(key, str) or not key.strip():
@@ -389,6 +405,7 @@ def _normalise_json_mapping(
 
 
 def _normalise_json_value(value: object, field_name: str) -> object:
+    """Return ``value`` if JSON-safe (scalar, finite float, mapping, or sequence)."""
     if value is None or isinstance(value, str | int | bool):
         return value
     if isinstance(value, float):

@@ -284,6 +284,7 @@ def build_studio_product_manifest(
 
 
 def _require_disabled_panel_gates(panel: PanelRecord) -> None:
+    """Assert a panel's actuation/merge/patch gates are disabled, else raise."""
     for field, expected in (
         ("actuation_permitted", False),
         ("live_merge_permitted", False),
@@ -296,6 +297,7 @@ def _require_disabled_panel_gates(panel: PanelRecord) -> None:
 
 
 def _manifest_sha256(manifest: dict[str, object]) -> str:
+    """Return the canonical-JSON SHA-256 digest of a manifest (excluding its hash)."""
     payload = {
         key: value for key, value in manifest.items() if key != "manifest_sha256"
     }

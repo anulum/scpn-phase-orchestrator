@@ -153,6 +153,7 @@ def build_integrated_information_panel(
 def _normalise_integrated_information_records(
     records: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate a non-empty sequence of integrated-information (IIT) records."""
     if isinstance(records, str | bytes) or not isinstance(records, Sequence):
         raise ValueError("integrated-information records must be a sequence")
     if not records:
@@ -216,6 +217,7 @@ def _bounded_information_scalar(
     name: str,
     n_bins: int,
 ) -> float:
+    """Return a non-negative scalar not exceeding ``log(n_bins)``, else raise."""
     scalar = _non_negative_float(value, name)
     if scalar > float(np.log(n_bins)) + 1e-12:
         raise ValueError(f"{name} must not exceed log(n_bins)")
@@ -225,6 +227,7 @@ def _bounded_information_scalar(
 def _normalise_integrated_information_partition(
     value: object,
 ) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Validate the minimum-information partition's two groups of unique indices."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError("minimum_partition must contain two index groups")
     if len(value) != 2:
@@ -255,6 +258,7 @@ def _integrated_information_pairwise_shape(
     value: object,
     n_bins: int,
 ) -> tuple[int, int] | None:
+    """Return the square pairwise-MI matrix shape (at least 2x2), or ``None``."""
     if value is None:
         return None
     matrix = np.asarray(value)
