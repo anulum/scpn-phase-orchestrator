@@ -64,6 +64,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust delay-embedding backend callables."""
     from spo_kernel import (
         delay_embed_rust,
         optimal_delay_rust,
@@ -71,6 +72,7 @@ def _load_rust_fns() -> dict[str, object]:
     )
 
     def _de(signal: FloatArray, delay: int, dimension: int) -> FloatArray:
+        """Call the Rust delay-embedding kernel with a contiguous signal."""
         flat = np.ascontiguousarray(signal, dtype=np.float64)
         return np.asarray(
             delay_embed_rust(flat, int(delay), int(dimension)),
@@ -87,6 +89,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo delay-embedding backend callables."""
     from ..experimental.accelerators.monitor._embedding_mojo import (
         _ensure_exe,
         delay_embed_mojo,
@@ -103,6 +106,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia delay-embedding backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._embedding_julia import (
@@ -119,6 +123,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go delay-embedding backend callables."""
     from ..experimental.accelerators.monitor._embedding_go import (
         _load_lib,
         delay_embed_go,
@@ -144,6 +149,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -153,6 +159,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -222,6 +229,7 @@ class EmbeddingResult:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -230,6 +238,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value)
     if np.iscomplexobj(raw):
         return True
@@ -239,6 +248,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
+    """Return the signal as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(signal):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(signal)
@@ -256,6 +266,7 @@ def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
 
 
 def _validate_embedded(embedded: object) -> FloatArray:
+    """Return the embedded matrix as a validated 2-D finite array, else raise."""
     if _contains_boolean_alias(embedded):
         raise ValueError("embedded must not contain boolean values")
     raw = np.asarray(embedded)
@@ -275,6 +286,7 @@ def _validate_embedded(embedded: object) -> FloatArray:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     result = int(value)
@@ -284,6 +296,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
     result = float(value)
@@ -300,6 +313,7 @@ def _validate_delay_embedding_output(
     t_effective: int,
     dimension: int,
 ) -> FloatArray:
+    """Return the backend delay-embedding output matching the reference."""
     if _contains_boolean_alias(value):
         raise ValueError("delay embedding output must not contain boolean values")
     raw = np.asarray(value)
@@ -329,6 +343,7 @@ def _validate_delay_embedding_output(
 
 
 def _validate_non_negative_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite scalar, else raise."""
     if isinstance(value, (bool, np.bool_)) or _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
     raw = np.asarray(value)
@@ -352,6 +367,7 @@ def _validate_nn_output(
     *,
     n_points: int,
 ) -> tuple[FloatArray, IntArray]:
+    """Return the validated nearest-neighbour backend output, else raise."""
     if _contains_boolean_alias(distances):
         raise ValueError("nearest-neighbor distances must not contain boolean values")
     if _contains_boolean_alias(indices):

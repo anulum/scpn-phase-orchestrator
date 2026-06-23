@@ -49,12 +49,14 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> LyapunovBackendFn:
+    """Load the Rust Lyapunov backend callable."""
     from spo_kernel import lyapunov_spectrum_rust
 
     return cast("LyapunovBackendFn", lyapunov_spectrum_rust)
 
 
 def _load_mojo_fn() -> LyapunovBackendFn:
+    """Load the Mojo Lyapunov backend callable."""
     from ..experimental.accelerators.monitor._lyapunov_mojo import (
         _ensure_exe,
         lyapunov_spectrum_mojo,
@@ -65,6 +67,7 @@ def _load_mojo_fn() -> LyapunovBackendFn:
 
 
 def _load_julia_fn() -> LyapunovBackendFn:
+    """Load the Julia Lyapunov backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._lyapunov_julia import (
@@ -75,6 +78,7 @@ def _load_julia_fn() -> LyapunovBackendFn:
 
 
 def _load_go_fn() -> LyapunovBackendFn:
+    """Load the Go Lyapunov backend callable."""
     from ..experimental.accelerators.monitor._lyapunov_go import (
         _load_lib,
         lyapunov_spectrum_go,
@@ -94,6 +98,7 @@ _BACKEND_CACHE: dict[str, LyapunovBackendFn] = {}
 
 
 def _load_backend(name: str) -> LyapunovBackendFn:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -103,6 +108,7 @@ def _load_backend(name: str) -> LyapunovBackendFn:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -119,6 +125,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> LyapunovBackendFn | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -136,6 +143,7 @@ def _dispatch() -> LyapunovBackendFn | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -144,6 +152,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     result = float(value)
@@ -153,6 +162,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 
 def _validate_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     result = _validate_finite_real(value, name=name)
     if result <= 0.0:
         raise ValueError(f"{name} must be positive, got {result}")
@@ -160,6 +170,7 @@ def _validate_positive_real(value: object, *, name: str) -> float:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     result = _validate_finite_real(value, name=name)
     if result < 0.0:
         raise ValueError(f"{name} must be non-negative, got {result}")
@@ -167,6 +178,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     result = int(value)
@@ -176,6 +188,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -196,6 +209,7 @@ def _validate_matrix(
     name: str,
     expected_shape: tuple[int, int],
 ) -> FloatArray:
+    """Return the value as a validated finite matrix, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -211,6 +225,7 @@ def _validate_matrix(
 
 
 def _validate_zero_diagonal(matrix: FloatArray, *, name: str) -> None:
+    """Return the matrix if its diagonal is all zero, else raise."""
     diagonal = np.diag(matrix)
     if np.any(np.abs(diagonal) > 1e-12):
         raise ValueError(
@@ -384,6 +399,7 @@ def _rk4_step(
     """One classical RK4 step on the joint (phases, Q) state."""
 
     def rhs(p: FloatArray, q: FloatArray) -> tuple[FloatArray, FloatArray]:
+        """Evaluate the variational ODE right-hand side at a state."""
         return (
             _kuramoto_rhs(p, omegas, knm, alpha, zeta, psi),
             _kuramoto_jacobian(p, knm, alpha, zeta, psi) @ q,
@@ -481,6 +497,7 @@ def _lyapunov_spectrum_python(
 
 
 def _validate_spectrum_output(value: object, *, n: int) -> FloatArray:
+    """Return the backend Lyapunov spectrum matching the reference."""
     try:
         spectrum = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

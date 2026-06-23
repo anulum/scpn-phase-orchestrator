@@ -52,6 +52,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust recurrence-analysis backend callables."""
     from spo_kernel import (
         cross_recurrence_matrix_rust,
         recurrence_matrix_rust,
@@ -64,6 +65,7 @@ def _load_rust_fns() -> dict[str, object]:
         epsilon: float,
         angular: bool,
     ) -> ByteArray:
+        """Call the Rust recurrence-matrix kernel."""
         return np.asarray(
             recurrence_matrix_rust(traj_flat, t, d, epsilon, angular),
             dtype=np.uint8,
@@ -77,6 +79,7 @@ def _load_rust_fns() -> dict[str, object]:
         epsilon: float,
         angular: bool,
     ) -> ByteArray:
+        """Call the Rust cross-recurrence-matrix kernel."""
         return np.asarray(
             cross_recurrence_matrix_rust(
                 a_flat,
@@ -93,6 +96,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo recurrence-analysis backend callables."""
     from ..experimental.accelerators.monitor._recurrence_mojo import (
         _ensure_exe,
         cross_recurrence_matrix_mojo,
@@ -107,6 +111,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia recurrence-analysis backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._recurrence_julia import (
@@ -121,6 +126,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go recurrence-analysis backend callables."""
     from ..experimental.accelerators.monitor._recurrence_go import (
         _load_lib,
         cross_recurrence_matrix_go,
@@ -144,6 +150,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -153,6 +160,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -169,6 +177,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object | None:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -192,6 +201,7 @@ def _dispatch(fn_name: str) -> object | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -200,6 +210,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_trajectory(value: object, *, name: str) -> FloatArray:
+    """Return the trajectory as a validated 2-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -219,6 +230,7 @@ def _validate_trajectory(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_epsilon(epsilon: object) -> float:
+    """Return the recurrence threshold as a non-negative finite float, else raise."""
     if isinstance(epsilon, bool) or not isinstance(epsilon, Real):
         raise ValueError(f"epsilon must be a finite non-negative real, got {epsilon!r}")
     result = float(epsilon)
@@ -228,12 +240,14 @@ def _validate_epsilon(epsilon: object) -> float:
 
 
 def _validate_metric(metric: object) -> bool:
+    """Return the supported distance-metric name, else raise ``ValueError``."""
     if metric not in {"euclidean", "angular"}:
         raise ValueError("metric must be 'euclidean' or 'angular'")
     return metric == "angular"
 
 
 def _validate_line_min(value: object, *, name: str) -> int:
+    """Return the minimum line length as an integer at least 2, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= 1, got {value!r}")
     result = int(value)
@@ -243,6 +257,7 @@ def _validate_line_min(value: object, *, name: str) -> int:
 
 
 def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real in [0, 1], got {value!r}")
     result = float(value)
@@ -252,6 +267,7 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validate_non_negative_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
     result = float(value)
@@ -261,6 +277,7 @@ def _validate_non_negative_float(value: object, *, name: str) -> float:
 
 
 def _validate_non_negative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
     result = int(value)
@@ -276,6 +293,7 @@ def _expected_recurrence_matrix(
     epsilon: float,
     angular: bool,
 ) -> BoolArray:
+    """Return the reference recurrence matrix for the trajectory."""
     diff = traj_a[:, np.newaxis, :] - traj_b[np.newaxis, :, :]
     if angular:
         dist = np.sqrt(np.sum(4.0 * np.sin(diff / 2.0) ** 2, axis=2))
@@ -292,6 +310,7 @@ def _backend_recurrence_matrix(
     name: str,
     expected: BoolArray,
 ) -> BoolArray:
+    """Return the backend recurrence matrix matching the reference."""
     try:
         array = np.asarray(value)
     except (TypeError, ValueError) as exc:

@@ -48,6 +48,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust fractal-dimension backend callables."""
     from spo_kernel import (
         correlation_integral_rust,
         kaplan_yorke_dimension_rust,
@@ -60,6 +61,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo fractal-dimension backend callables."""
     from ..experimental.accelerators.monitor._dimension_mojo import (
         _ensure_exe,
         correlation_integral_mojo,
@@ -71,6 +73,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia fractal-dimension backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._dimension_julia import (
@@ -85,6 +88,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go fractal-dimension backend callables."""
     from ..experimental.accelerators.monitor._dimension_go import (
         _load_lib,
         correlation_integral_go,
@@ -105,6 +109,7 @@ _BACKEND_FN_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_FN_CACHE.get(name)
     if cached is not None:
         return cached
@@ -114,6 +119,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -129,6 +135,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object | None:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -150,6 +157,7 @@ def _dispatch(fn_name: str) -> object | None:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -158,6 +166,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -166,6 +175,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -174,6 +184,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_trajectory(trajectory: object) -> FloatArray:
+    """Return the trajectory as a validated 2-D finite array, else raise."""
     raw = np.asarray(trajectory)
     if _contains_boolean_alias(trajectory):
         raise ValueError("trajectory must not contain boolean values")
@@ -193,6 +204,7 @@ def _validate_trajectory(trajectory: object) -> FloatArray:
 
 
 def _validate_epsilons(epsilons: object) -> FloatArray:
+    """Return the epsilon radii as a validated positive finite array, else raise."""
     raw = np.asarray(epsilons)
     if _contains_boolean_alias(epsilons):
         raise ValueError("epsilons must not contain boolean values")
@@ -210,6 +222,7 @@ def _validate_epsilons(epsilons: object) -> FloatArray:
 
 
 def _validate_dimension_result_epsilons(epsilons: object) -> FloatArray:
+    """Return the backend result epsilons matching the request, else raise."""
     eps = _validate_epsilons(epsilons)
     if np.any(eps <= 0.0):
         raise ValueError("epsilons must be positive for log-log scaling")
@@ -219,6 +232,7 @@ def _validate_dimension_result_epsilons(epsilons: object) -> FloatArray:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     result = int(value)
@@ -228,6 +242,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
+    """Return the Lyapunov spectrum as a validated finite vector, else raise."""
     raw = np.asarray(lyapunov_exponents)
     if _contains_boolean_alias(lyapunov_exponents):
         raise ValueError("lyapunov_exponents must not contain boolean values")
@@ -247,6 +262,7 @@ def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
 
 
 def _validate_non_negative_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
     result = float(value)
@@ -256,6 +272,7 @@ def _validate_non_negative_float(value: object, *, name: str) -> float:
 
 
 def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
+    """Return backend correlation-integral values matching the reference."""
     if _contains_boolean_alias(value):
         raise ValueError("correlation integral output must not contain boolean values")
     raw = np.asarray(value)
@@ -285,6 +302,7 @@ def _validate_ci_exact_reference(
     expected: FloatArray,
     atol: float,
 ) -> FloatArray:
+    """Return the exact correlation-integral reference over the radii."""
     result = _validate_ci_values(value, expected_size=int(expected.size))
     if not np.allclose(result, expected, rtol=0.0, atol=atol):
         raise ValueError(
@@ -300,6 +318,7 @@ def _validate_ky_dimension(
     expected: float | None = None,
     atol: float = 1e-12,
 ) -> float:
+    """Return the backend Kaplan-Yorke dimension matching the reference."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError("kaplan_yorke_dimension must not be a boolean value")
     if _has_complex_payload(value):
@@ -402,6 +421,7 @@ def _correlation_integral_exact_reference(
     idx_j: IntArray,
     epsilons: FloatArray,
 ) -> FloatArray:
+    """Return the exact correlation-integral reference (NumPy floor)."""
     if idx_i.size == 0:
         return np.zeros(epsilons.size, dtype=np.float64)
     diffs = trajectory[idx_i] - trajectory[idx_j]
@@ -413,6 +433,7 @@ def _correlation_integral_exact_reference(
 
 
 def _kaplan_yorke_exact_reference(lyapunov_exponents: FloatArray) -> float:
+    """Return the exact Kaplan-Yorke dimension from a Lyapunov spectrum."""
     if lyapunov_exponents.size == 0:
         return 0.0
     le_sorted = np.sort(lyapunov_exponents)[::-1]
