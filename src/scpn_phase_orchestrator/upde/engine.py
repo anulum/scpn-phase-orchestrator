@@ -183,18 +183,21 @@ def upde_run_omega_schedule(
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -204,6 +207,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     coerced = float(value)
@@ -213,6 +217,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 
 def _validate_real_array(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated finite real array, else raise."""
     array = value if isinstance(value, np.ndarray) else np.asarray(value)
     if array.dtype == np.bool_ or not (
         np.issubdtype(array.dtype, np.integer)
@@ -567,6 +572,7 @@ class UPDEEngine:
             raise ValueError("knm self-coupling diagonal must be zero")
 
     def _validate_rust_output(self, result: object) -> FloatArray:
+        """Return the Rust backend output matching the reference shape, else raise."""
         output = np.asarray(result)
         if output.shape != (self._n,):
             raise ValueError(
@@ -589,6 +595,7 @@ class UPDEEngine:
         return np.asarray(output, dtype=np.float64)
 
     def _resolve_omega_source_arg(self, omegas: object | None) -> object:
+        """Resolve the natural-frequency argument from the call or the engine source."""
         if omegas is not None:
             return omegas
         if self._omega_source is None:
@@ -596,6 +603,7 @@ class UPDEEngine:
         return self._omega_source
 
     def _resolve_omega(self, source: object, t: float) -> FloatArray:
+        """Resolve the natural frequencies for the engine configuration."""
         value = source(t) if callable(source) else source
         array = _validate_real_array(value, name="omegas")
         if array.shape != (self._n,):
@@ -605,6 +613,7 @@ class UPDEEngine:
         return np.ascontiguousarray(array, dtype=np.float64)
 
     def _omega_for_step(self, omegas: object | None) -> FloatArray:
+        """Return the natural frequencies active at a given integration step."""
         source = self._resolve_omega_source_arg(omegas)
         return self._resolve_omega(source, self._time)
 
@@ -613,6 +622,7 @@ class UPDEEngine:
         source: Callable[[float], object],
         n_steps: int,
     ) -> FloatArray:
+        """Build the per-step natural-frequency schedule."""
         rows = [
             self._resolve_omega(source, self._time + step * self._dt)
             for step in range(n_steps)
@@ -630,6 +640,7 @@ class UPDEEngine:
     ) -> FloatArray:
         # Sakaguchi-Kuramoto coupling: K_ij sin(θ_j - θ_i - α_ij)
         # α_ij is the Sakaguchi phase-lag (Sakaguchi & Kuramoto 1986)
+        """Return the UPDE phase-velocity derivative for the current state."""
         np.subtract(theta[np.newaxis, :], theta[:, np.newaxis], out=self._phase_diff)
         self._phase_diff -= alpha
         np.sin(self._phase_diff, out=self._sin_diff)
@@ -652,6 +663,7 @@ class UPDEEngine:
         psi: float,
         alpha: FloatArray,
     ) -> FloatArray:
+        """Advance the phase state one explicit-Euler step."""
         dtheta = self._derivative(phases, omegas, knm, zeta, psi, alpha)
         # Mod 2π keeps phases on S¹ (circle topology)
         result: FloatArray = (phases + self._dt * dtheta) % TWO_PI
@@ -667,6 +679,7 @@ class UPDEEngine:
         alpha: FloatArray,
     ) -> FloatArray:
         # Classic RK4: 4th-order Runge-Kutta (1/6, 1/3, 1/3, 1/6 weights)
+        """Advance the phase state one classical RK4 step."""
         dt = self._dt
         k1 = self._derivative(phases, omegas, knm, zeta, psi, alpha).copy()
         k2 = self._derivative(

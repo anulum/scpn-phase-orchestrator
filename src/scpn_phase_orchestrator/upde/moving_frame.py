@@ -83,6 +83,7 @@ class MovingFrameState:
 
 
 def _validate_positions_vector(value: object, *, n: int) -> FloatArray:
+    """Return the positions as a validated 1-D finite array, else raise."""
     arr = _reject_non_real_array(value, name="positions")
     if arr.shape != (n,):
         raise ValueError("positions shape must be (n,)")
@@ -90,12 +91,14 @@ def _validate_positions_vector(value: object, *, n: int) -> FloatArray:
 
 
 def _validate_spatial_modulator(value: object) -> SpatialCouplingModulator:
+    """Return the validated spatial-modulator configuration, else raise."""
     if not isinstance(value, SpatialCouplingModulator):
         raise ValueError("spatial_modulator must be a SpatialCouplingModulator")
     return value
 
 
 def _validate_decay_code(value: object) -> int:
+    """Return the supported spatial-decay code, else raise."""
     if isinstance(value, str):
         if value not in _DECAY_TO_CODE:
             valid = ", ".join(sorted(_DECAY_TO_CODE))
@@ -112,6 +115,7 @@ def _validate_decay_code(value: object) -> int:
 
 
 def _validate_nonnegative_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     out = _finite_float(value, name=name)
     if out < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -119,6 +123,7 @@ def _validate_nonnegative_float(value: object, *, name: str) -> float:
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     out = _finite_float(value, name=name)
     if out <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -134,6 +139,7 @@ def _spatial_weight(
     decay_length_scale: float,
     epsilon: float,
 ) -> FloatArray:
+    """Return the distance-based spatial coupling weight for a decay code."""
     if decay_code == 0:
         return k_base / (1.0 + distance)
     if decay_code == 1:
@@ -153,6 +159,7 @@ def _axial_spatial_modulate(
     decay_length_scale: float,
     epsilon: float,
 ) -> FloatArray:
+    """Return the coupling modulated along the axial spatial profile."""
     distances = np.abs(positions[:, None] - positions[None, :])
     weights = _spatial_weight(
         distances,
@@ -328,6 +335,7 @@ def _expected_positions_from_schedule(
     velocities: FloatArray,
     dt: float,
 ) -> FloatArray:
+    """Return the expected oscillator positions from the motion schedule."""
     return np.ascontiguousarray(
         positions + dt * np.sum(velocities, axis=0),
         dtype=np.float64,
@@ -338,6 +346,7 @@ def _kinematic_residual_max(
     observed_positions: FloatArray,
     expected_positions: FloatArray,
 ) -> float:
+    """Return the maximum kinematic residual against expected positions."""
     return float(np.max(np.abs(observed_positions - expected_positions)))
 
 
@@ -347,6 +356,7 @@ def _validate_backend_output(
     n: int,
     expected_positions: FloatArray | None = None,
 ) -> FloatArray:
+    """Return the backend output matching the reference, else raise."""
     out = _reject_non_real_array(value, name="moving_frame_backend_output")
     if out.shape != (2 * n,):
         raise ValueError("moving-frame backend output shape must be (2*n,)")
@@ -524,6 +534,7 @@ def moving_frame_run_python(
 
 
 def _rust_backend() -> BackendFn:
+    """Load the Rust moving-frame backend callable."""
     from spo_kernel import PyUPDEStepper
 
     if not hasattr(PyUPDEStepper, "run_moving_frame_schedule"):
@@ -551,6 +562,7 @@ def _rust_backend() -> BackendFn:
         atol: float,
         rtol: float,
     ) -> FloatArray:
+        """Call the Rust moving-frame schedule kernel."""
         stepper = PyUPDEStepper(
             int(phases.size), dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
         )
@@ -580,6 +592,7 @@ def _rust_backend() -> BackendFn:
 
 
 def _backend_map() -> dict[str, BackendFn]:
+    """Return the mapping of backend names to their loaders."""
     backends: dict[str, BackendFn] = {"python": moving_frame_run_python}
     with suppress(ImportError):
         go_mod = importlib.import_module(
@@ -939,6 +952,7 @@ class MovingFrameUPDEEngine(DopplerEngine):
         )
 
     def _modulated_knm(self, k_nm: FloatArray, positions: FloatArray) -> FloatArray:
+        """Return the spatially-modulated coupling matrix for a frame."""
         modulator = self.spatial_modulator
         if modulator.distance_fn is not None:
             return modulator.modulate(k_nm, positions.reshape(-1, 1))

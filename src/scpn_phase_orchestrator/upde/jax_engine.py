@@ -44,12 +44,14 @@ if TYPE_CHECKING:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real, got {value!r}")
     value = float(value)
@@ -59,6 +61,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     value = float(value)
@@ -68,6 +71,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_array(value: object, *, name: str, shape: tuple[int, ...]) -> FloatArray:
+    """Return the value as a validated finite array, else raise."""
     try:
         array = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -80,6 +84,7 @@ def _validate_array(value: object, *, name: str, shape: tuple[int, ...]) -> Floa
 
 
 def _validate_method(value: object) -> str:
+    """Return the supported integration-method name, else raise."""
     if not isinstance(value, str) or value not in ("euler", "rk4"):
         raise ValueError(f"unsupported method {value!r}")
     return value
@@ -91,6 +96,7 @@ def _build_jax_step() -> tuple[Any, Any]:  # pragma: no cover
     @jit
     # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _kuramoto_step(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
+        """Advance the Kuramoto phases one explicit-Euler step (JAX)."""
         diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
         coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
         dphi = omegas + coupling
@@ -101,6 +107,8 @@ def _build_jax_step() -> tuple[Any, Any]:  # pragma: no cover
     @jit
     # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _kuramoto_rk4(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
+        """Advance the Kuramoto phases one RK4 step (JAX)."""
+
         def deriv(p: Any) -> Any:
             """Kuramoto coupling derivative at given phases."""
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
@@ -123,6 +131,7 @@ def _build_jax_sl_step() -> Any:  # pragma: no cover
     @jit
     # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _sl_rk4(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, dt):  # type: ignore[no-untyped-def]
+        """Advance the Stuart-Landau state one RK4 step (JAX)."""
         n = omegas.shape[0]
 
         def deriv(s: Any) -> Any:

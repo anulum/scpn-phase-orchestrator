@@ -47,6 +47,8 @@ __all__ = [
 
 @runtime_checkable
 class _ArrayDistribution(Protocol):
+    """Protocol for sampleable array-valued input distributions."""
+
     shape: tuple[int, ...]
 
     def sample(self, rng: np.random.Generator, n_samples: int) -> FloatArray:
@@ -305,6 +307,7 @@ class GaussianUPDEPosteriorFit:
 
 
 def _as_finite_array(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -319,6 +322,7 @@ def _as_finite_array(value: object, *, name: str) -> FloatArray:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -327,11 +331,13 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_square(array: FloatArray, *, name: str) -> None:
+    """Return the value as a validated finite square matrix, else raise."""
     if array.ndim != 2 or array.shape[0] != array.shape[1]:
         raise ValueError(f"{name} must be a square matrix, got shape {array.shape}")
 
 
 def _validate_positive_finite(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real")
     coerced = float(value)
@@ -346,6 +352,7 @@ def _validate_positive_integer(
     name: str,
     minimum: int,
 ) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-boolean integer >= {minimum}")
     coerced = int(value)
@@ -355,6 +362,7 @@ def _validate_positive_integer(
 
 
 def _validate_open_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in (0, 1), else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must lie in (0, 1)")
     coerced = float(value)
@@ -575,6 +583,7 @@ def audit_bayesian_backend_status(
 
 
 def _validate_non_negative_finite(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be non-negative finite real")
     coerced = float(value)
@@ -591,6 +600,7 @@ def _sample_array(
     rng: np.random.Generator,
     name: str,
 ) -> FloatArray:
+    """Return a sampled input array from the distribution."""
     if isinstance(value, _ArrayDistribution):
         if value.shape != expected_shape:
             raise ValueError(

@@ -34,6 +34,7 @@ IntArray: TypeAlias = NDArray[np.int64]
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number, got {value!r}")
     coerced = float(value)
@@ -43,6 +44,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 
 def _validate_integer_ndarray(value: object, *, name: str) -> IntArray:
+    """Return the value as a validated integer ndarray, else raise."""
     if not isinstance(value, np.ndarray):
         raise ValueError(f"{name} must be a NumPy ndarray, got {type(value).__name__}")
     if value.dtype == np.bool_ or not np.issubdtype(value.dtype, np.integer):
@@ -53,6 +55,7 @@ def _validate_integer_ndarray(value: object, *, name: str) -> IntArray:
 
 
 def _validate_real_ndarray(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated finite real ndarray, else raise."""
     if not isinstance(value, np.ndarray):
         raise ValueError(f"{name} must be a NumPy ndarray, got {type(value).__name__}")
     if value.dtype == np.bool_ or not (
@@ -66,18 +69,21 @@ def _validate_real_ndarray(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real, got {value!r}")
     coerced = float(value)
@@ -363,6 +369,7 @@ class SparseUPDEEngine:
             return p
 
     def _validate_rust_output(self, result: object) -> FloatArray:
+        """Return the Rust backend output matching the reference shape, else raise."""
         out = np.asarray(result)
         if out.shape != (self._n,):
             shape_expected = (self._n,)
@@ -395,6 +402,7 @@ class SparseUPDEEngine:
         zeta: float,
         psi: float,
     ) -> None:
+        """Validate and normalise the sparse-engine integration inputs."""
         phases = _validate_real_ndarray(phases, name="phases")
         omegas = _validate_real_ndarray(omegas, name="omegas")
         row_ptr = _validate_integer_ndarray(row_ptr, name="row_ptr")
@@ -516,6 +524,7 @@ class SparseUPDEEngine:
         alpha_values: FloatArray,
         dt: float,
     ) -> list[FloatArray]:
+        """Return one RK45 stage derivative for the sparse phase state."""
         args = (omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)
         stages = [self._derivative(phases, *args)]
         for i in range(1, 7):
@@ -534,6 +543,7 @@ class SparseUPDEEngine:
         psi: float,
         alpha_values: FloatArray,
     ) -> FloatArray:
+        """Advance the sparse phase state one adaptive RK45 step."""
         dt = self._last_dt
         max_reject = 3
         for _ in range(max_reject + 1):
