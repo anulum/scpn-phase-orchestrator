@@ -493,6 +493,7 @@ def _restriction_residuals(
     maps: FloatArray,
     tolerance: float,
 ) -> tuple[FloatArray, int]:
+    """Return the restriction-map residuals over the edges."""
     n_nodes, n_channels = states.shape
     residuals = np.zeros((n_nodes, n_nodes, n_channels), dtype=np.float64)
     edge_count = 0
@@ -509,6 +510,7 @@ def _restriction_residuals(
 
 
 def _validate_node_states(node_states: FloatArray) -> FloatArray:
+    """Return the validated per-node states, else raise."""
     if _contains_boolean_alias(node_states):
         raise ValueError("node_states must not contain boolean values")
     if _contains_complex_alias(node_states):
@@ -530,6 +532,7 @@ def _validate_restriction_maps(
     restriction_maps: FloatArray,
     state_shape: tuple[int, int],
 ) -> FloatArray:
+    """Return the validated restriction maps, else raise."""
     if _contains_boolean_alias(restriction_maps):
         raise ValueError("restriction_maps must not contain boolean values")
     if _contains_complex_alias(restriction_maps):
@@ -548,6 +551,7 @@ def _validate_restriction_maps(
 
 
 def _validate_tolerance(tolerance: float) -> float:
+    """Return the tolerance as a non-negative finite float, else raise."""
     if isinstance(tolerance, (bool, np.bool_)) or not isinstance(tolerance, Real):
         raise ValueError("tolerance must be a finite real number")
     value = float(tolerance)
@@ -557,6 +561,7 @@ def _validate_tolerance(tolerance: float) -> float:
 
 
 def _validate_positive_step(value: float, name: str) -> float:
+    """Return the step size as a strictly positive float, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real number")
     result = float(value)
@@ -566,6 +571,7 @@ def _validate_positive_step(value: float, name: str) -> float:
 
 
 def _validate_update_norm(max_update_norm: float) -> float:
+    """Return the update norm as a validated value, else raise."""
     if isinstance(max_update_norm, (bool, np.bool_)) or not isinstance(
         max_update_norm, Real
     ):
@@ -577,6 +583,7 @@ def _validate_update_norm(max_update_norm: float) -> float:
 
 
 def _validate_backtracking_steps(max_backtracking_steps: int) -> int:
+    """Return the backtracking step count as a positive integer, else raise."""
     if (
         isinstance(max_backtracking_steps, (bool, np.bool_))
         or not isinstance(max_backtracking_steps, Integral)
@@ -587,6 +594,7 @@ def _validate_backtracking_steps(max_backtracking_steps: int) -> int:
 
 
 def _validate_top_k(top_k: int) -> int:
+    """Return the top-k count as a non-negative integer, else raise."""
     if (
         isinstance(top_k, (bool, np.bool_))
         or not isinstance(top_k, Integral)
@@ -597,6 +605,7 @@ def _validate_top_k(top_k: int) -> int:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -605,6 +614,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -613,6 +623,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _kernel_dimension(laplacian: FloatArray, tolerance: float) -> int:
+    """Return the kernel dimension of the sheaf Laplacian."""
     if laplacian.size == 0:
         return 0
     eigenvalues = np.linalg.eigvalsh(laplacian)
@@ -620,10 +631,12 @@ def _kernel_dimension(laplacian: FloatArray, tolerance: float) -> int:
 
 
 def _has_edge(restriction: FloatArray, tolerance: float) -> bool:
+    """Return whether an edge exists between two nodes."""
     return bool(np.linalg.norm(restriction) > tolerance)
 
 
 def _block_slice(node_index: int, n_channels: int) -> slice:
+    """Return the block slice for a node in the stacked vector."""
     start = node_index * n_channels
     return slice(start, start + n_channels)
 
@@ -633,6 +646,7 @@ def _obstruction_severity(
     warning_threshold: float,
     critical_threshold: float,
 ) -> str:
+    """Return the obstruction-severity label for a score."""
     if score >= critical_threshold:
         return "critical"
     if score >= warning_threshold:
@@ -644,6 +658,7 @@ def _top_residual_edges(
     residuals: FloatArray,
     top_k: int,
 ) -> tuple[tuple[int, int, float, tuple[float, ...]], ...]:
+    """Return the edges with the largest restriction residuals."""
     edges: list[tuple[int, int, float, tuple[float, ...]]] = []
     for target, source in np.argwhere(np.linalg.norm(residuals, axis=2) > 0.0):
         vector = residuals[int(target), int(source)]
@@ -671,6 +686,7 @@ def _sheaf_control_proposal(
     accepted: bool,
     blocked_reasons: tuple[str, ...],
 ) -> SheafControlProposal:
+    """Return the review-only sheaf control proposal."""
     return SheafControlProposal(
         baseline_obstruction_score=baseline.obstruction_score,
         projected_obstruction_score=projected.obstruction_score,

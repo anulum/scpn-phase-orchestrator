@@ -27,6 +27,8 @@ __all__ = [
 
 
 class _ReplaySummary(TypedDict):
+    """Reduced summary of a policy's replay evaluation."""
+
     replay_count: int
     mean_reward: float
     min_reward: float
@@ -332,6 +334,7 @@ def build_intergenerational_policy_inheritance_history(
 
 
 def _validated_policy(policy: Mapping[str, object]) -> dict[str, float]:
+    """Return the validated policy, else raise."""
     if not isinstance(policy, Mapping) or not policy:
         raise ValueError("parent_policy must be a non-empty mapping")
     validated: dict[str, float] = {}
@@ -350,6 +353,7 @@ def _validated_policy(policy: Mapping[str, object]) -> dict[str, float]:
 def _validated_replays(
     audit_replays: Sequence[Mapping[str, object]],
 ) -> list[dict[str, object]]:
+    """Return the validated replay records, else raise."""
     if not isinstance(audit_replays, Sequence) or isinstance(audit_replays, str):
         raise ValueError("audit_replays must be a sequence of mappings")
     if not audit_replays:
@@ -383,6 +387,7 @@ def _validated_replays(
 
 
 def _replay_summary(replays: Sequence[Mapping[str, object]]) -> _ReplaySummary:
+    """Return the reduced replay summary."""
     rewards = [_finite_number(replay["reward"], "reward") for replay in replays]
     margins = [
         _finite_number(replay.get("safety_margin", 0.0), "safety_margin")
@@ -407,6 +412,7 @@ def _replay_summary(replays: Sequence[Mapping[str, object]]) -> _ReplaySummary:
 def _replay_corpus_rows(
     replays: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Return the replay corpus as table rows."""
     rows: list[dict[str, object]] = []
     for index, replay in enumerate(replays):
         violations = replay.get("violations", [])
@@ -446,6 +452,7 @@ def _child_candidate(
     minimum_replay_reward: float,
     minimum_safety_margin: float,
 ) -> dict[str, object]:
+    """Return the validated child candidate, else raise."""
     knob = sorted(parent)[index % len(parent)]
     direction = 1.0 if index % 2 == 0 else -1.0
     mutation = mutation_step * float(index + 1) * direction
@@ -489,6 +496,7 @@ def _blocked_reasons(
     minimum_replay_reward: float,
     minimum_safety_margin: float,
 ) -> list[str]:
+    """Return the reasons blocking a lineage child."""
     reasons: list[str] = []
     if replay_summary["mean_reward"] < minimum_replay_reward:
         reasons.append("replay_reward_below_minimum")
@@ -500,6 +508,7 @@ def _blocked_reasons(
 
 
 def _policy_diff_items(child: Mapping[str, object]) -> list[Mapping[str, object]]:
+    """Return the policy-diff items between parent and child."""
     raw = child.get("policy_diff")
     if not isinstance(raw, list):
         raise ValueError("policy_diff must be a list")
@@ -509,6 +518,7 @@ def _policy_diff_items(child: Mapping[str, object]) -> list[Mapping[str, object]
 
 
 def _finite_number(value: object, field: str) -> float:
+    """Return ``value`` as a finite number, else raise ``ValueError``."""
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise ValueError(f"{field} must be numeric")
     numeric = float(value)
@@ -518,6 +528,7 @@ def _finite_number(value: object, field: str) -> float:
 
 
 def _finite_non_negative(value: object, field: str) -> float:
+    """Return ``value`` as a finite non-negative number, else raise."""
     numeric = _finite_number(value, field)
     if numeric < 0.0:
         raise ValueError(f"{field} must be non-negative")
@@ -525,11 +536,13 @@ def _finite_non_negative(value: object, field: str) -> float:
 
 
 def _stable_hash(payload: Any) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _validated_lineage_manifest(manifest: Mapping[str, object]) -> dict[str, object]:
+    """Return the validated lineage manifest, else raise."""
     if not isinstance(manifest, Mapping):
         raise ValueError("lineage_manifest must be a mapping")
     data = dict(manifest)
@@ -553,12 +566,14 @@ def _validated_lineage_manifest(manifest: Mapping[str, object]) -> dict[str, obj
 
 
 def _require_mapping(value: object, field: str) -> Mapping[str, object]:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{field} must be a mapping")
     return value
 
 
 def _validated_review_child(candidate: Mapping[str, object]) -> dict[str, object]:
+    """Return the validated review child record, else raise."""
     if not isinstance(candidate, Mapping):
         raise ValueError("child_candidate must be a mapping")
     child = dict(candidate)
@@ -590,6 +605,7 @@ def _validated_review_child(candidate: Mapping[str, object]) -> dict[str, object
 
 
 def _parent_genome_from_lineage(manifest: Mapping[str, object]) -> dict[str, float]:
+    """Return the parent genome from a lineage manifest."""
     if "parent_policy_genome" in manifest:
         return _validated_policy(
             _require_mapping(manifest["parent_policy_genome"], "parent_policy_genome")
@@ -617,6 +633,7 @@ def _parent_genome_from_lineage(manifest: Mapping[str, object]) -> dict[str, flo
 def _validated_objective_weights(
     objective_weights: Mapping[str, object] | None,
 ) -> dict[str, float]:
+    """Return the validated multi-objective weights, else raise."""
     if objective_weights is None:
         return {"reward": 0.5, "safety": 0.4, "simplicity": 0.1}
     if not isinstance(objective_weights, Mapping):
@@ -639,6 +656,7 @@ def _validated_inheritance_manifest(
     manifest: Mapping[str, object],
     lineage: Mapping[str, object],
 ) -> dict[str, object]:
+    """Return the validated inheritance manifest, else raise."""
     if not isinstance(manifest, Mapping):
         raise ValueError("inheritance_manifest must be a mapping")
     data = dict(manifest)
@@ -699,6 +717,7 @@ def _inheritance_history_child_row(
     index: int,
     manifest: Mapping[str, object],
 ) -> dict[str, object]:
+    """Return the child row for an inheritance history."""
     fitness = _require_mapping(
         manifest["multi_objective_replay_fitness"],
         "multi_objective_replay_fitness",
@@ -739,6 +758,7 @@ def _multi_objective_fitness(
     child: Mapping[str, object],
     weights: Mapping[str, float],
 ) -> dict[str, object]:
+    """Return the multi-objective fitness for a candidate."""
     reward = _finite_number(child.get("replay_reward"), "child.replay_reward")
     safety = _finite_number(child.get("safety_margin"), "child.safety_margin")
     diff_count = len(_policy_diff_items(child))
@@ -758,6 +778,7 @@ def _multi_objective_fitness(
 
 
 def _signature(payload: Mapping[str, object], *, signer: str, key: str) -> str:
+    """Return the canonical signature of a record."""
     body = json.dumps(
         {"payload": payload, "signer_id": signer},
         sort_keys=True,
@@ -767,6 +788,7 @@ def _signature(payload: Mapping[str, object], *, signer: str, key: str) -> str:
 
 
 def _non_empty_string(value: object, field: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value:
         raise ValueError(f"{field} must be a non-empty string")
     return value

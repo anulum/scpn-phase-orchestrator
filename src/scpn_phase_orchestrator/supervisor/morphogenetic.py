@@ -398,6 +398,7 @@ def render_morphogenetic_field_svg(
 
 
 def _validate_phases(phases: FloatArray) -> FloatArray:
+    """Return the phases as a validated finite array, else raise."""
     if _contains_boolean_alias(phases):
         raise ValueError("phases must not contain boolean values")
     if _contains_complex_alias(phases):
@@ -413,6 +414,7 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
 
 
 def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(knm):
         raise ValueError("knm must not contain boolean values")
     if _contains_complex_alias(knm):
@@ -429,6 +431,7 @@ def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
 
 
 def _validate_field(field: FloatArray, n: int) -> FloatArray:
+    """Return the morphogenetic field as a validated array, else raise."""
     if _contains_boolean_alias(field):
         raise ValueError("field must not contain boolean values")
     if _contains_complex_alias(field):
@@ -445,6 +448,7 @@ def _validate_field(field: FloatArray, n: int) -> FloatArray:
 
 
 def _validate_square_field(field: FloatArray) -> FloatArray:
+    """Return the field as a validated square matrix, else raise."""
     if _contains_boolean_alias(field):
         raise ValueError("field must not contain boolean values")
     if _contains_complex_alias(field):
@@ -461,6 +465,7 @@ def _validate_square_field(field: FloatArray) -> FloatArray:
 
 
 def _initial_field(knm: FloatArray, max_coupling: float) -> FloatArray:
+    """Return the initial morphogenetic field for the phases."""
     if max_coupling <= 0.0:
         return np.zeros_like(knm)
     field = np.clip(knm / max_coupling, 0.0, 1.0)
@@ -469,6 +474,7 @@ def _initial_field(knm: FloatArray, max_coupling: float) -> FloatArray:
 
 
 def _pairwise_phase_alignment(phases: FloatArray) -> FloatArray:
+    """Return the pairwise phase-alignment matrix."""
     diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
     alignment = 0.5 * (np.cos(diffs) + 1.0)
     np.fill_diagonal(alignment, 0.0)
@@ -477,6 +483,7 @@ def _pairwise_phase_alignment(phases: FloatArray) -> FloatArray:
 
 
 def _incident_diffusion(field: FloatArray) -> FloatArray:
+    """Return the incident diffusion update for the field."""
     n = field.shape[0]
     if n == 1:
         return np.zeros_like(field)
@@ -498,6 +505,7 @@ def _edge_deltas(
     *,
     positive: bool,
 ) -> tuple[tuple[int, int, float], ...]:
+    """Return the per-edge field deltas."""
     mask = delta > 1e-12 if positive else delta < -1e-12
     edges = []
     for src, dst in np.argwhere(mask):
@@ -508,10 +516,12 @@ def _edge_deltas(
 
 
 def _order_parameter(phases: FloatArray) -> float:
+    """Return the Kuramoto order parameter for the phases."""
     return float(np.abs(np.mean(np.exp(1j * phases))))
 
 
 def _field_heatmap_rows(field: FloatArray, palette: str) -> tuple[str, ...]:
+    """Return the field rendered as heatmap rows."""
     if len(palette) == 1:
         return tuple(palette * field.shape[1] for _ in range(field.shape[0]))
     scale = len(palette) - 1
@@ -525,6 +535,7 @@ def _top_field_edges(
     field: FloatArray,
     top_k: int,
 ) -> tuple[tuple[int, int, float], ...]:
+    """Return the strongest off-diagonal field edges."""
     edges: list[tuple[int, int, float]] = []
     for src, dst in np.argwhere(field > 0.0):
         if src == dst:
@@ -535,6 +546,7 @@ def _top_field_edges(
 
 
 def _require_unit_interval(value: float, name: str) -> None:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     if (
         isinstance(value, (bool, np.bool_))
         or not isinstance(value, Real)
@@ -546,6 +558,7 @@ def _require_unit_interval(value: float, name: str) -> None:
 
 
 def _require_non_negative(value: float, name: str) -> None:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if (
         isinstance(value, (bool, np.bool_))
         or not isinstance(value, Real)
@@ -556,11 +569,13 @@ def _require_non_negative(value: float, name: str) -> None:
 
 
 def _require_non_empty(value: str, name: str) -> None:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value:
         raise ValueError(f"{name} must be a non-empty string")
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         arr = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -569,6 +584,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         arr = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -577,5 +593,6 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _require_zero_diagonal(array: FloatArray, name: str) -> None:
+    """Return the matrix if its diagonal is all zero, else raise."""
     if not np.allclose(np.diag(array), 0.0, rtol=0.0, atol=0.0):
         raise ValueError(f"{name} diagonal must be zero")

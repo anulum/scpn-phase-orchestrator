@@ -409,6 +409,7 @@ class StrangeLoopSupervisor:
         self.last_assessment = None
 
     def _assess(self) -> StrangeLoopAssessment:
+        """Return the drift/oscillation/over-control assessment for a step."""
         matrix = np.vstack(self._history)
         latest = matrix[-1]
         magnitude = float(np.linalg.norm(latest))
@@ -438,6 +439,7 @@ class StrangeLoopSupervisor:
         oscillation_score: float,
         overcontrol_score: float,
     ) -> list[ControlAction]:
+        """Return the control recommendations for the assessed drift."""
         reasons = []
         if drift_score > self._drift_threshold:
             reasons.append("policy drift")
@@ -467,6 +469,7 @@ class StrangeLoopSupervisor:
 
 
 def _actions_to_vector(actions: list[ControlAction]) -> FloatArray:
+    """Return the actions flattened into a numeric vector."""
     vector = np.zeros(4, dtype=np.float64)
     for action in actions:
         if action.knob not in _KNOB_INDEX:
@@ -482,6 +485,7 @@ def _actions_to_vector(actions: list[ControlAction]) -> FloatArray:
 
 
 def _review_action(knob: str, value: float, step: int) -> ControlAction:
+    """Return the review-only record for a recommended action."""
     return ControlAction(
         knob=knob,
         scope="global",
@@ -492,6 +496,7 @@ def _review_action(knob: str, value: float, step: int) -> ControlAction:
 
 
 def _validate_drift_scenario(scenario: StrangeLoopDriftScenario) -> None:
+    """Validate a strange-loop drift scenario, else raise."""
     if not isinstance(scenario.domain, str) or not scenario.domain.strip():
         raise ValueError("scenario domain must be a non-empty string")
     if not isinstance(scenario.scenario_id, str) or not scenario.scenario_id.strip():
@@ -536,6 +541,7 @@ def _passes_expected_trigger(
     max_overcontrol_score: float,
     triggered_recommendation_count: int,
 ) -> bool:
+    """Return whether the scenario hits its expected trigger."""
     if expected_trigger == "stable":
         return (
             triggered_recommendation_count == 0
@@ -562,6 +568,7 @@ def _passes_expected_trigger(
 
 
 def _action_to_record(action: ControlAction) -> dict[str, object]:
+    """Return the JSON-safe record for an action."""
     return {
         "knob": action.knob,
         "scope": action.scope,
@@ -572,6 +579,7 @@ def _action_to_record(action: ControlAction) -> dict[str, object]:
 
 
 def _scenario_payload(scenario: StrangeLoopDriftScenario) -> dict[str, object]:
+    """Return the canonical payload for a scenario."""
     return {
         "domain": scenario.domain,
         "scenario_id": scenario.scenario_id,
@@ -588,11 +596,13 @@ def _scenario_payload(scenario: StrangeLoopDriftScenario) -> dict[str, object]:
 
 
 def _stable_hash(payload: object) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return sha256(blob.encode("utf-8")).hexdigest()
 
 
 def _require_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if (
         isinstance(value, (bool, np.bool_))
         or not isinstance(value, Real)
@@ -604,6 +614,7 @@ def _require_positive_real(value: object, *, name: str) -> float:
 
 
 def _control_coherence(matrix: FloatArray) -> float:
+    """Return the control-coherence score for the trajectory."""
     norms = np.linalg.norm(matrix, axis=1)
     active = norms > 0.0
     if not np.any(active):
@@ -614,12 +625,14 @@ def _control_coherence(matrix: FloatArray) -> float:
 
 
 def _drift_score(matrix: FloatArray) -> float:
+    """Return the policy-drift score for the trajectory."""
     if matrix.shape[0] < 2:
         return 0.0
     return float(np.mean(np.linalg.norm(np.diff(matrix, axis=0), axis=1)))
 
 
 def _oscillation_score(matrix: FloatArray) -> float:
+    """Return the control-loop oscillation score for the trajectory."""
     if matrix.shape[0] < 3:
         return 0.0
     deltas = np.diff(matrix, axis=0)

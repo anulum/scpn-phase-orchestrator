@@ -252,6 +252,7 @@ def propose_information_geometry_control(
 
 
 def _normalise_backend_name(backend: object) -> str:
+    """Return the supported information-geometry backend name, else raise."""
     if not isinstance(backend, str):
         raise ValueError("backend must be one of: jax, numpy")
     normalised = backend.strip().lower()
@@ -263,6 +264,7 @@ def _normalise_backend_name(backend: object) -> str:
 def _normalise_simplex(
     values: FloatArray | list[float] | tuple[float, ...], name: str
 ) -> FloatArray:
+    """Return the distribution normalised to the probability simplex, else raise."""
     array = _as_float_array(values, name)
     if array.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional array")
@@ -282,6 +284,7 @@ def _validate_gradient(
     expected_shape: tuple[int, ...],
     name: str,
 ) -> FloatArray:
+    """Return the validated control gradient, else raise."""
     array = _as_float_array(values, name)
     if array.shape != expected_shape:
         raise ValueError(f"{name} must match distribution shape")
@@ -295,6 +298,7 @@ def _validate_gradient(
 def _as_float_array(
     values: FloatArray | list[float] | tuple[float, ...], name: str
 ) -> FloatArray:
+    """Return ``value`` as a validated finite float array, else raise."""
     if isinstance(values, (bool, np.bool_)) or _contains_boolean_alias(values):
         raise ValueError(f"{name} must contain numeric values")
     if _contains_complex_alias(values):
@@ -310,6 +314,7 @@ def _as_float_array(
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -318,6 +323,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -326,6 +332,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _as_finite_real(value: object, name: str, *, allow_non_positive: bool) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real")
     number = float(value)
@@ -337,22 +344,26 @@ def _as_finite_real(value: object, name: str, *, allow_non_positive: bool) -> fl
 
 
 def _as_non_empty_str(value: object, name: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
     return value
 
 
 def _fisher_rao_distance(simplex: FloatArray, target: FloatArray) -> float:
+    """Return the Fisher-Rao distance between two distributions."""
     overlap = float(np.sum(np.sqrt(simplex) * np.sqrt(target)))
     overlap = max(0.0, min(1.0, overlap))
     return 2.0 * float(acos(overlap))
 
 
 def _wasserstein_distance(simplex: FloatArray, target: FloatArray) -> float:
+    """Return the Wasserstein distance between two distributions."""
     return float(np.sum(np.abs(np.cumsum(simplex) - np.cumsum(target))))
 
 
 def _fisher_information_metric(simplex: FloatArray) -> FloatArray:
+    """Return the Fisher-information metric at a distribution."""
     metric = 1.0 / np.maximum(simplex, _EPS)
     return np.diag(metric.astype(np.float64, copy=False))
 
@@ -364,6 +375,7 @@ def _natural_gradient_direction(
 ) -> FloatArray:
     # Fisher metric inverse for the diagonal proxy is diag(simplex), hence natural
     # gradient is element-wise product with simplex coordinates.
+    """Return the natural-gradient direction for the control gradient."""
     direction = gradient * simplex
     norm = float(np.linalg.norm(direction))
     if norm <= max_step or norm == 0.0:
@@ -373,6 +385,7 @@ def _natural_gradient_direction(
 
 
 def _curvature_proxy(metric_tensor: FloatArray) -> float:
+    """Return the curvature proxy at a distribution."""
     metric_diag = np.diag(metric_tensor)
     variance = float(np.var(metric_diag))
     magnitude = float(np.mean(metric_diag))
@@ -385,6 +398,7 @@ def _compute_information_geometry_jax(
     gradient: FloatArray,
     max_step: float,
 ) -> tuple[float, float, FloatArray, FloatArray, float]:
+    """Compute the information-geometry metrics via JAX."""
     jnp = _load_jax_numpy()
     simplex_j = jnp.asarray(simplex, dtype=jnp.float64)
     target_j = jnp.asarray(target, dtype=jnp.float64)
@@ -419,6 +433,7 @@ def _compute_information_geometry_jax(
 
 
 def _load_jax_numpy() -> Any:
+    """Import and return the jax.numpy module, else raise."""
     try:
         import jax
         import jax.numpy as jnp
@@ -429,6 +444,7 @@ def _load_jax_numpy() -> Any:
 
 
 def _compute_hash(record: dict[str, object]) -> str:
+    """Return the canonical SHA-256 hash of the computation."""
     payload = dict(record)
     payload.pop("proposal_hash", None)
     serialised = json.dumps(payload, sort_keys=True, separators=(",", ":"))
