@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.runtime.audit_signing import (
     key_id_for_secret,
 )
 from scpn_phase_orchestrator.runtime.audit_stream import EventStreamWriter
+from scpn_phase_orchestrator.runtime.network_security import is_production_mode
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["AuditLogger"]
@@ -71,6 +72,13 @@ class AuditLogger:
         if self._audit_key is not None and self._audit_key == "":
             msg = "SPO_AUDIT_KEY must not be empty"
             raise AuditError(msg)
+        if self._audit_key is None and is_production_mode("SPO_AUDIT"):
+            raise AuditError(
+                "SPO_AUDIT_KEY is required in production mode "
+                "(SPO_AUDIT_ENV/SPO_AUDIT_PROFILE or SPO_ENV/SPO_PROFILE = "
+                "'production'): refusing to write an unsigned, unverifiable audit "
+                "trail. Set SPO_AUDIT_KEY to enable HMAC signing."
+            )
         if self._audit_key is not None and self._sequence > 0:
             self._ensure_existing_stream_is_signed()
         self._fh = self._path.open("a", encoding="utf-8", buffering=1)
