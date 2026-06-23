@@ -105,6 +105,7 @@ def check_stability(dt: float, max_omega: float, max_coupling: float) -> bool:
 
 
 def _validate_positive_finite(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real")
     coerced = float(value)
@@ -114,6 +115,7 @@ def _validate_positive_finite(value: object, *, name: str) -> float:
 
 
 def _validate_non_negative_finite(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real")
     coerced = float(value)
@@ -123,6 +125,7 @@ def _validate_non_negative_finite(value: object, *, name: str) -> float:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be a positive integer")
     return int(value)

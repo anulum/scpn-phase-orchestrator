@@ -48,6 +48,7 @@ class NoiseProfile:
 
 
 def _validate_finite_non_negative(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
     value = float(value)
@@ -57,6 +58,7 @@ def _validate_finite_non_negative(value: object, *, name: str) -> float:
 
 
 def _validate_finite_positive(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real, got {value!r}")
     value = float(value)
@@ -66,6 +68,7 @@ def _validate_finite_positive(value: object, *, name: str) -> float:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     if value < 1:
@@ -74,6 +77,7 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 
 def _validate_noise_range(value: FloatArray | None) -> FloatArray | None:
+    """Return the validated ``(min, max)`` noise-level range, else raise."""
     if value is None:
         return None
     d_range = np.asarray(value, dtype=np.float64)

@@ -66,6 +66,7 @@ def _compute_derivative(
     zeta: float,
     psi: float,
 ) -> FloatArray:
+    """Return the UPDE phase-velocity derivative for a phase state."""
     diff = theta[np.newaxis, :] - theta[:, np.newaxis] - alpha
     coupling = np.asarray(np.sum(knm * np.sin(diff), axis=1), dtype=np.float64)
     driving = zeta * np.sin(psi - theta) if zeta != 0.0 else 0.0
@@ -179,6 +180,7 @@ def _rk4_substep(
     psi: float,
     dt: float,
 ) -> FloatArray:
+    """Return one classical RK4 increment of the UPDE phase state."""
     k1 = _compute_derivative(phases, omegas, knm, alpha, zeta, psi)
     k2 = _compute_derivative(phases + 0.5 * dt * k1, omegas, knm, alpha, zeta, psi)
     k3 = _compute_derivative(phases + 0.5 * dt * k2, omegas, knm, alpha, zeta, psi)

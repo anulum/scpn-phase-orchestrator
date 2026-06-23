@@ -49,12 +49,14 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_positive_int(name: str, value: int) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or int(value) < 1:
         raise ValueError(f"{name} must be an integer >= 1")
     return int(value)
 
 
 def _validate_nonnegative_float(name: str, value: float) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real")
     out = float(value)
@@ -64,6 +66,7 @@ def _validate_nonnegative_float(name: str, value: float) -> float:
 
 
 def _validate_positive_float(name: str, value: float) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real")
     out = float(value)
@@ -73,6 +76,7 @@ def _validate_positive_float(name: str, value: float) -> float:
 
 
 def _validate_vector(name: str, value: FloatArray, n_oscillators: int) -> FloatArray:
+    """Return the value as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -87,6 +91,7 @@ def _validate_vector(name: str, value: FloatArray, n_oscillators: int) -> FloatA
 def _validate_positive_vector(
     name: str, value: FloatArray, n_oscillators: int
 ) -> FloatArray:
+    """Return the value as a validated 1-D strictly positive array, else raise."""
     array = _validate_vector(name, value, n_oscillators)
     if not np.all(array > 0.0):
         raise ValueError(f"{name} must contain only positive values")

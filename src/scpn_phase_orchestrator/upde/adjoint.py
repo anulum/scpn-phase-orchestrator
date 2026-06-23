@@ -180,6 +180,7 @@ def gradient_knm_jax(  # pragma: no cover — requires JAX
         al = jnp.array(alpha, dtype=jnp.float64)
 
         def _body(_: int, th: Any) -> Any:
+            """Advance the phases one explicit-Euler Kuramoto step (loop body)."""
             diff = th[jnp.newaxis, :] - th[:, jnp.newaxis] - al
             coupling = jnp.sum(knm_j * jnp.sin(diff), axis=1)
             dtheta = om + coupling
