@@ -64,6 +64,7 @@ _MAX_ACTIONS_PER_RULE = 32
 
 
 def _compound_logic(logic: str) -> str:
+    """Return the compound logic operator joining conditions."""
     if not isinstance(logic, str):
         _policy_error("rule.logic must be a string")
     normalised = logic.upper()
@@ -264,6 +265,7 @@ class PolicyEngine:
         good_layers: list[int],
         bad_layers: list[int],
     ) -> bool:
+        """Return whether a condition holds for the metrics."""
         if isinstance(cond, CompoundCondition):
             results = [
                 self._eval_single(c, state, good_layers, bad_layers)
@@ -281,6 +283,7 @@ class PolicyEngine:
         good_layers: list[int],
         bad_layers: list[int],
     ) -> bool:
+        """Return whether a single predicate holds for the metrics."""
         val = _extract_metric(cond, state, good_layers, bad_layers)
         if val is None:
             return False
@@ -301,6 +304,7 @@ def _extract_metric(
     good_layers: list[int],
     bad_layers: list[int],
 ) -> float | None:
+    """Return a named metric value from the state, else raise."""
     if cond.metric == "stability_proxy":
         return state.stability_proxy
     if cond.metric == "R" and cond.layer is not None:
@@ -343,16 +347,19 @@ def _extract_metric(
 
 
 def _policy_error(message: str) -> NoReturn:
+    """Return a policy-rule validation error for a message."""
     raise ValueError(f"invalid policy rules: {message}")
 
 
 def _require_mapping(raw: Any, context: str) -> dict[str, Any]:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if not isinstance(raw, dict):
         _policy_error(f"{context} must be a mapping")
     return raw
 
 
 def _require_field(raw: dict[str, Any], key: str, context: str) -> Any:
+    """Return a named required field from a mapping, else raise."""
     try:
         return raw[key]
     except KeyError:
@@ -360,6 +367,7 @@ def _require_field(raw: dict[str, Any], key: str, context: str) -> Any:
 
 
 def _require_text(raw: dict[str, Any], key: str, context: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     value = _require_field(raw, key, context)
     if not isinstance(value, str) or not value:
         _policy_error(f"{context}.{key} must be a non-empty string")
@@ -367,6 +375,7 @@ def _require_text(raw: dict[str, Any], key: str, context: str) -> str:
 
 
 def _finite_float(value: Any, context: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     try:
         result = float(value)
     except (TypeError, ValueError):
@@ -377,6 +386,7 @@ def _finite_float(value: Any, context: str) -> float:
 
 
 def _non_negative_float(value: Any, context: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     result = _finite_float(value, context)
     if result < 0.0:
         _policy_error(f"{context} must be non-negative")
@@ -384,6 +394,7 @@ def _non_negative_float(value: Any, context: str) -> float:
 
 
 def _non_negative_int(value: Any, context: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool):
         _policy_error(f"{context} must be a non-negative integer")
     try:
@@ -396,12 +407,14 @@ def _non_negative_int(value: Any, context: str) -> int:
 
 
 def _require_sequence(value: Any, context: str) -> list[Any]:
+    """Return ``value`` as a non-string sequence, else raise."""
     if not isinstance(value, list):
         _policy_error(f"{context} must be a list")
     return value
 
 
 def _parse_condition(raw: Any) -> PolicyCondition:
+    """Parse a policy condition from a mapping, else raise."""
     data = _require_mapping(raw, "condition")
     op = _require_text(data, "op", "condition")
     if op not in _OPS:
@@ -422,6 +435,7 @@ def _parse_condition(raw: Any) -> PolicyCondition:
 
 
 def _parse_action(raw: Any) -> PolicyAction:
+    """Parse a policy action from a mapping, else raise."""
     data = _require_mapping(raw, "action")
     return PolicyAction(
         knob=_require_text(data, "knob", "action"),
@@ -434,6 +448,7 @@ def _parse_action(raw: Any) -> PolicyAction:
 
 
 def _parse_stl_spec(raw: Any) -> PolicySTLSpec:
+    """Parse an STL specification from a mapping, else raise."""
     data = _require_mapping(raw, "stl_monitor")
     severity = data.get("severity", "soft")
     if not isinstance(severity, str) or severity not in {"soft", "hard"}:

@@ -33,18 +33,21 @@ MutationType = Literal["add_arc", "guard_weight", "token_bound"]
 
 
 def _validate_non_negative_int(value: object, *, field: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{field} must be a non-negative integer")
     return int(value)
 
 
 def _validate_positive_int(value: object, *, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
         raise ValueError(f"{field} must be a positive integer")
     return int(value)
 
 
 def _validate_finite_real(value: object, *, field: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field} must be finite")
     value_f = float(value)
@@ -54,16 +57,19 @@ def _validate_finite_real(value: object, *, field: str) -> float:
 
 
 def _validate_name(value: object, *, field: str) -> str:
+    """Return the validated place/transition name, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be non-empty string")
     return value
 
 
 def _validate_guard_metric(value: object) -> str:
+    """Return the validated guard metric, else raise."""
     return _validate_name(value, field="guard metric")
 
 
 def _build_stable_hash(payload: Mapping[str, Any] | object) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     clean: object
     if isinstance(payload, Mapping):
         clean = dict(payload)
@@ -84,6 +90,7 @@ class _PetriNetPlace:
     token_bound: int
 
     def to_record(self) -> dict[str, object]:
+        """Return the JSON-safe record for this Petri element."""
         return {
             "name": self.name,
             "token_bound": self.token_bound,
@@ -98,6 +105,7 @@ class _PetriNetTransition:
     guard_weights: tuple[tuple[str, float], ...]
 
     def to_record(self) -> dict[str, object]:
+        """Return the JSON-safe record for this Petri element."""
         return {
             "name": self.name,
             "guard_weights": [
@@ -116,6 +124,7 @@ class _PetriNetArc:
     weight: int
 
     def to_record(self) -> dict[str, object]:
+        """Return the JSON-safe record for this Petri element."""
         return {
             "place": self.place,
             "transition": self.transition,
@@ -133,6 +142,7 @@ class _PetriNetSpec:
     arcs: tuple[_PetriNetArc, ...]
 
     def to_record(self) -> dict[str, object]:
+        """Return the JSON-safe record for this Petri element."""
         return {
             "places": [place.to_record() for place in self.places],
             "transitions": [transition.to_record() for transition in self.transitions],
@@ -432,6 +442,7 @@ def run_offline_evolutionary_petri_mutation_grammar(
 
 
 def _mutation_type_at_index(*, generation: int, local_index: int) -> MutationType:
+    """Return the mutation type for a candidate index."""
     index = generation % 3 * 2 + local_index % 3
     if index % 3 == 0:
         return "add_arc"
@@ -441,6 +452,7 @@ def _mutation_type_at_index(*, generation: int, local_index: int) -> MutationTyp
 
 
 def _candidate_score(candidate: EvolutionaryPetriMutationCandidate) -> float:
+    """Return the score for a mutated candidate."""
     if not candidate.accepted:
         return float("-inf")
     return -abs(candidate.mutation_delta)
@@ -449,6 +461,7 @@ def _candidate_score(candidate: EvolutionaryPetriMutationCandidate) -> float:
 def _normalise_net_like(
     net_like: Mapping[str, object] | Sequence[object],
 ) -> _PetriNetSpec:
+    """Return the normalised Petri-net-like input, else raise."""
     if not isinstance(net_like, (Mapping, Sequence)) or isinstance(
         net_like, (str, bytes, bytearray)
     ):
@@ -463,6 +476,7 @@ def _normalise_net_like(
 
 
 def _parse_net_mapping(mapping: Mapping[str, object]) -> _PetriNetSpec:
+    """Parse a Petri net from a mapping, else raise."""
     places_raw = mapping.get("places", ())
     transitions_raw = mapping.get("transitions", ())
     arcs_raw = mapping.get("arcs", ())
@@ -484,6 +498,7 @@ def _parse_net_mapping(mapping: Mapping[str, object]) -> _PetriNetSpec:
 
 
 def _parse_net_sequence(records: Sequence[object]) -> _PetriNetSpec:
+    """Parse a Petri net from a sequence, else raise."""
     if not records:
         raise ValueError("net-like sequence must not be empty")
 
@@ -521,6 +536,7 @@ def _parse_net_sequence(records: Sequence[object]) -> _PetriNetSpec:
 
 
 def _parse_simple_record(record: Mapping[str, object]) -> _PetriNetSpec:
+    """Parse a simple Petri record, else raise."""
     kind = record.get("kind")
     if kind == "place":
         place = _parse_place_record(record)
@@ -550,6 +566,7 @@ def _parse_simple_record(record: Mapping[str, object]) -> _PetriNetSpec:
 
 
 def _parse_places(raw: object) -> list[_PetriNetPlace]:
+    """Parse the Petri places, else raise."""
     if isinstance(raw, (str, bytes, bytearray)):
         raise ValueError("places must be a sequence")
     if not isinstance(raw, Sequence):
@@ -561,6 +578,7 @@ def _parse_places(raw: object) -> list[_PetriNetPlace]:
 
 
 def _parse_place_record(record: object) -> _PetriNetPlace:
+    """Parse a single Petri place record, else raise."""
     if isinstance(record, str):
         name = _validate_name(record, field="place name")
         return _PetriNetPlace(name=name, token_bound=1)
@@ -575,6 +593,7 @@ def _parse_place_record(record: object) -> _PetriNetPlace:
 
 
 def _parse_transitions(raw: object) -> list[_PetriNetTransition]:
+    """Parse the Petri transitions, else raise."""
     if isinstance(raw, (str, bytes, bytearray)):
         raise ValueError("transitions must be a sequence")
     if not isinstance(raw, Sequence):
@@ -586,6 +605,7 @@ def _parse_transitions(raw: object) -> list[_PetriNetTransition]:
 
 
 def _parse_transition_record(record: object) -> _PetriNetTransition:
+    """Parse a single Petri transition record, else raise."""
     if isinstance(record, str):
         name = _validate_name(record, field="transition name")
         return _PetriNetTransition(name=name, guard_weights=())
@@ -635,6 +655,7 @@ def _parse_arcs(
     place_names: set[str],
     transition_names: set[str],
 ) -> list[_PetriNetArc]:
+    """Parse the Petri arcs, else raise."""
     if isinstance(raw, (str, bytes, bytearray)):
         raise ValueError("arcs must be a sequence")
     if not isinstance(raw, Sequence):
@@ -652,6 +673,7 @@ def _parse_arcs(
 
 
 def _parse_arc_record(item: object) -> _PetriNetArc:
+    """Parse a single Petri arc record, else raise."""
     if isinstance(item, Mapping):
         place = _validate_name(item.get("place"), field="arc.place")
         transition = _validate_name(item.get("transition"), field="arc.transition")
@@ -687,6 +709,7 @@ def _parse_arc_record(item: object) -> _PetriNetArc:
 
 
 def _validate_arc_direction(value: object) -> Literal["input", "output"]:
+    """Return the validated arc direction, else raise."""
     if value not in {"input", "output"}:
         raise ValueError("arc.direction must be 'input' or 'output'")
     if value == "input":
@@ -700,6 +723,7 @@ def _validate_arc_references(
     place_names: set[str],
     transition_names: set[str],
 ) -> None:
+    """Assert an arc references existing places and transitions, else raise."""
     for arc in arcs:
         if arc.place not in place_names:
             raise ValueError(f"arc references unknown place {arc.place!r}")
@@ -708,6 +732,7 @@ def _validate_arc_references(
 
 
 def _mutation_delta(index: int, *, step: float, max_delta: int) -> float:
+    """Return the deterministic mutation delta for a step."""
     unit = step if step <= 1.0 else 1.0
     offset = (index % max_delta) + 1
     return unit * float(offset / max_delta)
@@ -719,6 +744,7 @@ def _build_add_arc_candidate(
     generation: int,
     local_index: int,
 ) -> EvolutionaryPetriMutationCandidate:
+    """Build a candidate that adds a Petri arc."""
     if not spec.transitions or not spec.places:
         return EvolutionaryPetriMutationCandidate(
             candidate_id="",
@@ -827,6 +853,7 @@ def _first_free_arc_tuple(
     config: EvolutionaryPetriMutationConfig,
     prefer_direction: Literal["input", "output"],
 ) -> tuple[str, str, Literal["input", "output"]] | None:
+    """Return the first unused place-transition arc tuple."""
     transitions = [transition.name for transition in spec.transitions]
     places = [place.name for place in spec.places]
     if prefer_direction == "input":
@@ -856,6 +883,7 @@ def _build_guard_weight_candidate(
     local_index: int,
     candidate_index: int,
 ) -> EvolutionaryPetriMutationCandidate:
+    """Build a candidate that mutates a guard weight."""
     if not spec.transitions:
         return EvolutionaryPetriMutationCandidate(
             candidate_id="",
@@ -936,6 +964,7 @@ def _build_token_bound_candidate(
     local_index: int,
     candidate_index: int,
 ) -> EvolutionaryPetriMutationCandidate:
+    """Build a candidate that mutates a token bound."""
     if not spec.places:
         return EvolutionaryPetriMutationCandidate(
             candidate_id="",

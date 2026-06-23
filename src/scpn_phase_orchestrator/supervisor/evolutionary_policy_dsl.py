@@ -268,6 +268,8 @@ class PolicyMutationSearchReport:
 
 @dataclass(frozen=True)
 class _MutationAxis:
+    """A named axis along which a policy rule can be mutated."""
+
     rule_index: int
     rule_name: str
     component: str
@@ -456,6 +458,7 @@ def run_offline_evolutionary_policy_dsl_search(
 
 
 def _parse_conditions(condition_text: str) -> tuple[PolicyCondition, ...]:
+    """Parse the policy conditions from a DSL mapping, else raise."""
     fragments = [
         fragment.strip()
         for fragment in re.split(r"\band\b", condition_text, flags=re.IGNORECASE)
@@ -490,6 +493,7 @@ def _parse_conditions(condition_text: str) -> tuple[PolicyCondition, ...]:
 
 
 def _parse_action(action_text: str) -> PolicyAction:
+    """Parse a policy action from a DSL mapping, else raise."""
     match = _ACTION_RE.match(action_text)
     if not match:
         raise ValueError(f"Malformed action: {action_text}")
@@ -505,6 +509,7 @@ def _parse_action(action_text: str) -> PolicyAction:
 
 
 def _build_mutation_axes(rules: tuple[PolicyRule, ...]) -> list[_MutationAxis]:
+    """Return the mutation axes for the policy rules."""
     axes: list[_MutationAxis] = []
     for rule_index, rule in enumerate(rules):
         for condition_index, condition in enumerate(rule.conditions):
@@ -538,6 +543,7 @@ def _mutate_rule(
     delta: float,
     blocked_reasons: list[str],
 ) -> PolicyRule:
+    """Return the rule mutated along an axis by a delta."""
     if axis.component == "condition":
         conditions = list(rule.conditions)
         updated_condition = replace(
@@ -579,6 +585,7 @@ def _deterministic_delta(
     generation_count: int,
     mutation_step: float,
 ) -> float:
+    """Return the deterministic mutation delta for a step."""
     direction = 1.0 if (generation + local_index) % 2 == 0 else -1.0
     position_scale = 1.0 + (axis_index / max(1, axis_count))
     generation_scale = 1.0 + (generation / max(1, generation_count))
@@ -586,18 +593,21 @@ def _deterministic_delta(
 
 
 def _build_candidate_hash(candidate: PolicyMutationCandidate) -> str:
+    """Return the canonical hash of a candidate."""
     payload = candidate.to_audit_record()
     payload["candidate_hash"] = ""
     return _stable_hash(payload)
 
 
 def _build_report_hash(report: PolicyMutationSearchReport) -> str:
+    """Return the canonical hash of a report."""
     payload = report.to_audit_record()
     payload["report_hash"] = ""
     return _stable_hash(payload)
 
 
 def _coerce_finite_real(value: Any, label: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{label} must be a finite real number")
     converted = float(value)
@@ -607,6 +617,7 @@ def _coerce_finite_real(value: Any, label: str) -> float:
 
 
 def _require_positive_int(value: Any, label: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{label} must be a positive integer")
     if value <= 0:
@@ -615,15 +626,18 @@ def _require_positive_int(value: Any, label: str) -> int:
 
 
 def _require_finite_positive(value: float, label: str) -> None:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if not math.isfinite(value) or value <= 0.0:
         raise ValueError(f"{label} must be a finite positive number")
 
 
 def _format_float(value: float) -> str:
+    """Return a stable string rendering of a float."""
     return f"{value:.12g}"
 
 
 def _stable_hash(payload: Mapping[str, object]) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     normalized = _coerce_json_safe(payload)
     return hashlib.sha256(
         json.dumps(
@@ -633,6 +647,7 @@ def _stable_hash(payload: Mapping[str, object]) -> str:
 
 
 def _coerce_json_safe(value: Any) -> Any:
+    """Return ``value`` as a JSON-safe value, else raise."""
     if isinstance(value, Mapping):
         return {key: _coerce_json_safe(value[key]) for key in sorted(value)}
     if isinstance(value, tuple):

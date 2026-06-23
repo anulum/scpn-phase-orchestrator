@@ -46,6 +46,8 @@ class EvolutionarySearchConfig:
 
 
 class _ReplaySummary(TypedDict):
+    """Reduced summary of a candidate's replay evaluation."""
+
     replay_count: int
     mean_reward: float
     min_reward: float
@@ -252,6 +254,7 @@ def run_offline_evolutionary_supervisor_search(
     def _candidate_genome(
         mutated: Mapping[str, float],
     ) -> tuple[tuple[str, float], ...]:
+        """Return the mutated candidate genome from the parent."""
         return tuple((key, float(mutated[key])) for key in sorted(mutated))
 
     candidates: list[EvolutionaryCandidate] = []
@@ -361,6 +364,7 @@ def run_offline_evolutionary_supervisor_search(
 def _validate_and_evaluate_stl(
     *, stl_spec: str, trace: Mapping[str, Sequence[object]]
 ) -> tuple[STLMonitor, dict[str, float | bool], dict[str, list[float]]]:
+    """Validate and evaluate the STL specification over the replays."""
     validated_spec = _non_empty_string(stl_spec, "stl_spec")
     validated_trace = _validate_trace(trace)
 
@@ -383,6 +387,7 @@ def _validate_and_evaluate_stl(
 
 
 def _validate_parent_policy(policy: Mapping[str, object]) -> dict[str, float]:
+    """Validate the parent policy, else raise."""
     if not isinstance(policy, Mapping):
         raise ValueError("parent_policy must be a mapping")
     if not policy:
@@ -399,6 +404,7 @@ def _validate_parent_policy(policy: Mapping[str, object]) -> dict[str, float]:
 def _validate_replays(
     audit_replays: Sequence[Mapping[str, object]],
 ) -> list[dict[str, object]]:
+    """Validate the replay records, else raise."""
     if not isinstance(audit_replays, Sequence) or isinstance(
         audit_replays, (str, bytes, bytearray)
     ):
@@ -448,6 +454,7 @@ def _validate_replays(
 
 
 def _summarise_replays(replays: Sequence[Mapping[str, object]]) -> _ReplaySummary:
+    """Return the reduced summary of the replay records."""
     rewards: list[float] = [
         _require_finite_real(replay["reward"], "reward") for replay in replays
     ]
@@ -479,6 +486,7 @@ def _candidate_blocked_reasons(
     minimum_replay_reward: float,
     minimum_safety_margin: float,
 ) -> list[str]:
+    """Return the reasons blocking a candidate."""
     reasons: list[str] = []
     if replay_summary["mean_reward"] < float(minimum_replay_reward):
         reasons.append("replay_reward_below_minimum")
@@ -499,6 +507,7 @@ def _deterministic_mutation_magnitude(
     generation: int,
     local_index: int,
 ) -> float:
+    """Return the deterministic mutation magnitude for a step."""
     step = config.mutation_step
     index = generation * config.population_size + local_index
     # Keep the bounded mutation step in (0, mutation_step].
@@ -507,6 +516,7 @@ def _deterministic_mutation_magnitude(
 
 
 def _validate_trace(trace: Mapping[str, Sequence[object]]) -> dict[str, list[float]]:
+    """Validate the search trace, else raise."""
     if not isinstance(trace, Mapping):
         raise ValueError("trace must be a mapping of signal names to sequences")
     if not trace:
@@ -537,12 +547,14 @@ def _validate_trace(trace: Mapping[str, Sequence[object]]) -> dict[str, list[flo
 
 
 def _non_empty_string(value: object, field: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string")
     return value
 
 
 def _require_finite_real(value: object, field: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field} must be finite")
     number = float(value)
@@ -552,6 +564,7 @@ def _require_finite_real(value: object, field: str) -> float:
 
 
 def _require_finite_positive(value: object, field: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     number = _require_finite_real(value, field)
     if number <= 0.0:
         raise ValueError(f"{field} must be positive")
@@ -559,6 +572,7 @@ def _require_finite_positive(value: object, field: str) -> float:
 
 
 def _require_positive_int(value: object, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a positive integer")
     number = int(value)
@@ -568,6 +582,7 @@ def _require_positive_int(value: object, field: str) -> int:
 
 
 def _build_stable_hash(payload: Mapping[str, Any] | object) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     clean_payload: object
     if isinstance(payload, dict):
         clean_payload = dict(payload)

@@ -484,6 +484,8 @@ def run_offline_evolutionary_topology_mutation_search(
 
 @dataclass(frozen=True)
 class _MutationAxis:
+    """A named axis along which a topology can be mutated."""
+
     operation: Literal["edge_add", "edge_remove", "edge_reweight", "community_bridge"]
     nodes: tuple[int, int]
     source_weight: float
@@ -493,6 +495,7 @@ class _MutationAxis:
 def _validate_nodes(
     node_records: Sequence[Mapping[str, object]],
 ) -> tuple[TopologyMutationNode, ...]:
+    """Return the validated topology nodes, else raise."""
     if not isinstance(node_records, Sequence) or isinstance(
         node_records, (str, bytes, bytearray)
     ):
@@ -524,6 +527,7 @@ def _validate_edges(
     edge_records: Sequence[Mapping[str, object]],
     known_nodes: tuple[TopologyMutationNode, ...],
 ) -> tuple[TopologyMutationEdge, ...]:
+    """Return the validated topology edges, else raise."""
     if not isinstance(edge_records, Sequence) or isinstance(
         edge_records, (str, bytes, bytearray)
     ):
@@ -586,6 +590,7 @@ def _build_mutation_axes(
     nodes: tuple[TopologyMutationNode, ...],
     edges: tuple[TopologyMutationEdge, ...],
 ) -> tuple[_MutationAxis, ...]:
+    """Return the mutation axes for the topology."""
     axes: list[_MutationAxis] = []
     add_axes: list[_MutationAxis] = []
     edge_map = {edge.pair: edge.weight for edge in edges}
@@ -647,6 +652,7 @@ def _build_community_bridge_axes(
     nodes: tuple[TopologyMutationNode, ...],
     existing_edges: dict[tuple[int, int], float],
 ) -> tuple[_MutationAxis, ...]:
+    """Return the community-bridge mutation axes."""
     if len(nodes) < 2:
         return ()
 
@@ -695,6 +701,7 @@ def _deterministic_delta(
     local_index: int,
     mutation_step: float,
 ) -> float:
+    """Return the deterministic mutation delta for a step."""
     direction = 1.0 if (generation + local_index) % 2 == 0 else -1.0
     period = 17
     position = ((axis_index - 1) % period) / period
@@ -704,6 +711,7 @@ def _deterministic_delta(
 def _sort_edges(
     edges: Sequence[TopologyMutationEdge] | tuple[TopologyMutationEdge, ...],
 ) -> tuple[TopologyMutationEdge, ...]:
+    """Return the edges in canonical sorted order."""
     return tuple(sorted(edges, key=lambda edge: edge.pair))
 
 
@@ -711,6 +719,7 @@ def _node_communities(
     pair: tuple[int, int],
     nodes: tuple[TopologyMutationNode, ...],
 ) -> tuple[str | None, str | None]:
+    """Return the community assignment of the nodes."""
     mapping = {node.node_id: node.community for node in nodes}
     return (mapping[pair[0]], mapping[pair[1]])
 
@@ -719,6 +728,7 @@ def _build_topology_hash(
     nodes: tuple[TopologyMutationNode, ...],
     edges: tuple[TopologyMutationEdge, ...],
 ) -> str:
+    """Return the canonical hash of a topology."""
     return _build_stable_hash(
         {
             "schema": _SCHEMA_NAME,
@@ -729,6 +739,7 @@ def _build_topology_hash(
 
 
 def _build_stable_hash(payload: Mapping[str, object]) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     normalised = _coerce_json_safe(payload)
     encoded = json.dumps(
         normalised,
@@ -740,6 +751,7 @@ def _build_stable_hash(payload: Mapping[str, object]) -> str:
 
 
 def _coerce_json_safe(value: Any) -> Any:
+    """Return ``value`` as a JSON-safe value, else raise."""
     if isinstance(value, Mapping):
         return {str(key): _coerce_json_safe(value[key]) for key in sorted(value)}
     if isinstance(value, tuple):
@@ -750,6 +762,7 @@ def _coerce_json_safe(value: Any) -> Any:
 
 
 def _require_positive_int(value: object, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a positive integer")
     number = int(value)
@@ -759,6 +772,7 @@ def _require_positive_int(value: object, field: str) -> int:
 
 
 def _require_positive_float(value: object, field: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     number = _require_finite_real(value, field)
     if number <= 0.0:
         raise ValueError(f"{field} must be a positive finite number")
@@ -766,6 +780,7 @@ def _require_positive_float(value: object, field: str) -> float:
 
 
 def _require_non_negative_float(value: object, field: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     number = _require_finite_real(value, field)
     if number < 0.0:
         raise ValueError(f"{field} must be finite and non-negative")
@@ -773,6 +788,7 @@ def _require_non_negative_float(value: object, field: str) -> float:
 
 
 def _require_finite_real(value: object, field: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field} must be a finite real number")
     number = float(value)
@@ -782,6 +798,7 @@ def _require_finite_real(value: object, field: str) -> float:
 
 
 def _require_finite_int(value: object, field: str) -> int:
+    """Return ``value`` as a validated finite integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be an integer")
     return int(value)
