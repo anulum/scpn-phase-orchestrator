@@ -74,6 +74,7 @@ def build_morphogenetic_field_studio_panel(
 def _normalise_morphogenetic_field_svg_artifact(
     artifact: Mapping[str, object],
 ) -> dict[str, object]:
+    """Validate an SVG morphogenetic-field artefact (format, size, svg, snapshot)."""
     if not isinstance(artifact, Mapping):
         raise ValueError("morphogenetic SVG artifact must be a mapping")
     if artifact.get("format") != "svg":
@@ -97,6 +98,7 @@ def _normalise_morphogenetic_field_svg_artifact(
 def _normalise_morphogenetic_field_snapshot(
     snapshot: Mapping[str, object],
 ) -> dict[str, object]:
+    """Validate a field snapshot: square shape, ordered mean/min/max, edges, rows."""
     shape = _normalise_matrix_shape(snapshot.get("shape"))
     mean = _unit_interval_number(snapshot.get("mean"), "mean")
     minimum = _unit_interval_number(snapshot.get("minimum"), "minimum")
@@ -124,6 +126,7 @@ def _normalise_morphogenetic_field_snapshot(
 
 
 def _normalise_matrix_shape(value: object) -> tuple[int, int]:
+    """Return ``value`` as a square ``(rows, columns)`` integer shape, else raise."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError("shape must be a two-item integer sequence")
     if len(value) != 2:
@@ -141,6 +144,7 @@ def _normalise_heatmap_rows(
     expected_rows: int,
     expected_columns: int,
 ) -> tuple[str, ...]:
+    """Return the heatmap rows if their count and width match the shape, else raise."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError("heatmap_rows must be a sequence of strings")
     if len(value) != expected_rows:
@@ -161,6 +165,7 @@ def _normalise_morphogenetic_top_edges(
     *,
     shape: tuple[int, int],
 ) -> tuple[dict[str, object], ...]:
+    """Return validated off-diagonal field edges sorted by descending weight."""
     if value is None:
         return ()
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
@@ -183,6 +188,7 @@ def _normalise_morphogenetic_top_edges(
 
 
 def _require_review_svg(value: object) -> str:
+    """Return ``value`` as a complete, script-free ``<svg>`` document, else raise."""
     svg = _require_non_empty_text(value, "svg").strip()
     if not svg.startswith("<svg ") or not svg.endswith("</svg>"):
         raise ValueError("svg must be a complete SVG document")

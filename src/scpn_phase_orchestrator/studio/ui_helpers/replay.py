@@ -96,6 +96,12 @@ def run_binding_spec_replay(
 
 
 def _apply_replay_knobs(sim: SimulationState, knobs: StudioKnobState) -> None:
+    """Apply the Studio knobs to a simulation's coupling and natural frequencies.
+
+    Scales the coupling matrix (and its reverse partner) by ``K``, adds the
+    ``alpha`` phase lag off-diagonal, and shifts the natural frequencies by
+    ``zeta * Psi``, replacing ``sim.coupling`` with the studio-replay variant.
+    """
     scaled_knm = np.asarray(sim.coupling.knm, dtype=np.float64) * knobs.K
     alpha = np.asarray(sim.coupling.alpha, dtype=np.float64).copy()
     if knobs.alpha:

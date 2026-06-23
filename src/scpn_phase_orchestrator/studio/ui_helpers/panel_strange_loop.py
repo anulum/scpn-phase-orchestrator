@@ -109,6 +109,13 @@ def build_strange_loop_studio_panel(
 def _normalise_strange_loop_records(
     records: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate and normalise strange-loop scenario records for the panel.
+
+    Each record must carry the non-actuating claim boundary and disabled-execution
+    flags and a supported expected trigger; scores, counts, hashes, and knob names
+    are coerced to their checked types. Raises ``ValueError`` on any malformed,
+    empty, or boundary-violating record.
+    """
     if isinstance(records, str | bytes) or not isinstance(records, Sequence):
         raise ValueError("strange-loop records must be a sequence")
     if not records:
