@@ -48,6 +48,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust phase-transfer-entropy backend callables."""
     from spo_kernel import (
         phase_transfer_entropy_rust,
         transfer_entropy_matrix_rust,
@@ -60,6 +61,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo phase-transfer-entropy backend callables."""
     from ..experimental.accelerators.monitor._te_mojo import (
         _ensure_exe,
         phase_te_mojo,
@@ -71,6 +73,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia phase-transfer-entropy backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._te_julia import (
@@ -82,6 +85,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go phase-transfer-entropy backend callables."""
     from ..experimental.accelerators.monitor._te_go import (
         _load_lib,
         phase_te_go,
@@ -102,6 +106,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -111,6 +116,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -127,6 +133,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -147,6 +154,7 @@ def _dispatch(fn_name: str) -> object:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the array contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -155,6 +163,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    """Return the value as a 1-D contiguous finite phase vector, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -172,6 +181,7 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_phase_series(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated 2-D finite phase series, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -196,6 +206,7 @@ def _validate_phase_series(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_n_bins(value: object) -> int:
+    """Return ``n_bins`` as an integer at least 2, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     if value < 2:
@@ -209,6 +220,7 @@ def _validate_te_scalar(
     name: str = "transfer entropy",
     max_entropy: float | None = None,
 ) -> float:
+    """Return a backend transfer-entropy scalar matching the reference, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not be a boolean value")
     if isinstance(value, bool) or not isinstance(value, Real):
@@ -232,6 +244,7 @@ def _validate_te_matrix(
     expected: FloatArray | None = None,
     atol: float = 1e-12,
 ) -> FloatArray:
+    """Return a backend transfer-entropy matrix matching the reference, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("transfer entropy matrix must not contain boolean values")
     try:
@@ -283,6 +296,7 @@ def _phase_te_reference(
     target_values: FloatArray,
     bin_count: int,
 ) -> float:
+    """Return the reference pairwise phase transfer entropy (NumPy floor)."""
     n_samples = min(len(source_values), len(target_values))
     if n_samples < 3:
         return 0.0
@@ -315,6 +329,7 @@ def _phase_te_reference(
 
 
 def _te_matrix_reference(series: FloatArray, bin_count: int) -> FloatArray:
+    """Return the reference transfer-entropy matrix over all channel pairs."""
     n_osc, _n_time = series.shape
     te: FloatArray = np.zeros((n_osc, n_osc), dtype=np.float64)
     for i in range(n_osc):

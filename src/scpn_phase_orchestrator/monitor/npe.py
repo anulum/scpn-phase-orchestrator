@@ -43,6 +43,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust NPE backend callables."""
     from spo_kernel import compute_npe as rust_npe
     from spo_kernel import phase_distance_matrix as rust_pdm
 
@@ -50,6 +51,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo NPE backend callables."""
     from ..experimental.accelerators.monitor._npe_mojo import (
         _ensure_exe,
         compute_npe_mojo,
@@ -64,6 +66,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia NPE backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._npe_julia import (
@@ -78,6 +81,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go NPE backend callables."""
     from ..experimental.accelerators.monitor._npe_go import (
         _load_lib,
         compute_npe_go,
@@ -101,6 +105,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -110,6 +115,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -126,6 +132,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -146,6 +153,7 @@ def _dispatch(fn_name: str) -> object:
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -154,6 +162,7 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 
 def _contains_complex_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains any complex-number alias."""
     if np.iscomplexobj(raw):
         return True
     if raw.dtype != object:
@@ -162,6 +171,7 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
 
 
 def _validate_phases(phases: object) -> FloatArray:
+    """Return ``phases`` as a 1-D contiguous finite float array, else raise."""
     raw = np.asarray(phases)
     if _contains_boolean_alias(raw):
         raise ValueError("phases must not contain boolean values")
@@ -185,6 +195,7 @@ def _validate_distance_matrix(
     expected: FloatArray | None = None,
     atol: float = 1.0e-10,
 ) -> FloatArray:
+    """Return a validated square circular phase-distance matrix, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("phase distance matrix must not contain boolean values")
@@ -226,6 +237,7 @@ def _validate_distance_matrix(
 
 
 def _validate_max_radius(max_radius: float | None) -> float:
+    """Return ``max_radius`` as a finite value in [0, pi], else raise."""
     if max_radius is None:
         return float(np.pi)
     if isinstance(max_radius, (bool, np.bool_)) or not isinstance(max_radius, Real):
@@ -248,6 +260,7 @@ def _validate_npe_value(
     expected: float | None = None,
     atol: float = 1.0e-9,
 ) -> float:
+    """Return ``value`` as a normalised persistent entropy in [0, 1], else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"NPE must be a finite real scalar in [0, 1], got {value!r}")
     score = float(value)
@@ -263,6 +276,7 @@ def _validate_npe_value(
 
 
 def _phase_distance_reference(phases: FloatArray) -> FloatArray:
+    """Return the reference pairwise circular phase-distance matrix (NumPy floor)."""
     diff = phases[:, np.newaxis] - phases[np.newaxis, :]
     matrix = np.abs(np.arctan2(np.sin(diff), np.cos(diff)))
     np.fill_diagonal(matrix, 0.0)
@@ -270,6 +284,7 @@ def _phase_distance_reference(phases: FloatArray) -> FloatArray:
 
 
 def _npe_from_distance_matrix(dist: FloatArray, radius: float) -> float:
+    """Return the single-linkage H0 persistent entropy of a distance matrix."""
     n = int(dist.shape[0])
     if n < 2:
         return 0.0
@@ -282,6 +297,7 @@ def _npe_from_distance_matrix(dist: FloatArray, radius: float) -> float:
     rank = [0] * n
 
     def find(x: int) -> int:
+        """Return the union-find root of ``node`` with path compression."""
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
@@ -319,6 +335,7 @@ def _npe_from_distance_matrix(dist: FloatArray, radius: float) -> float:
 
 
 def _compute_npe_reference(phases: FloatArray, radius: float) -> float:
+    """Return the reference normalised persistent entropy of the phases."""
     return _npe_from_distance_matrix(_phase_distance_reference(phases), radius)
 
 
