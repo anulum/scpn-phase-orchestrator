@@ -180,6 +180,7 @@ def validate_stl_runtime_actuation_gate(
 
 
 def _normalise_runtime_command(command: dict[str, object]) -> dict[str, object]:
+    """Return a validated runtime actuation command for review, else raise."""
     return {
         "actuator": command["actuator"],
         "knob": command["knob"],
@@ -190,5 +191,6 @@ def _normalise_runtime_command(command: dict[str, object]) -> dict[str, object]:
 
 
 def _runtime_actuator_name(knob: str, scope: str) -> str:
+    """Return the validated runtime actuator name, else raise."""
     surface = re.sub(r"[^A-Za-z0-9_]+", "_", f"{knob}_{scope}").strip("_")
     return f"stl_runtime_{surface or 'action'}"

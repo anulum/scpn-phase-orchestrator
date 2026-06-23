@@ -275,12 +275,14 @@ _BackendFn = Callable[
 
 
 def _load_rust() -> _BackendFn:
+    """Load the Rust twin-confidence backend callable."""
     from spo_kernel import twin_divergence_rust
 
     return cast("_BackendFn", twin_divergence_rust)
 
 
 def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    """Load the Mojo twin-confidence backend callable."""
     from ..experimental.accelerators.monitor._twin_confidence_mojo import (
         _ensure_exe,
         twin_divergence_mojo,
@@ -291,6 +293,7 @@ def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 
 def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    """Load the Julia twin-confidence backend callable."""
     import juliacall  # noqa: F401
 
     if not hasattr(juliacall, "Main"):  # partial install guard
@@ -303,6 +306,7 @@ def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 
 def _load_go() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    """Load the Go twin-confidence backend callable."""
     from ..experimental.accelerators.monitor._twin_confidence_go import (
         _load_lib,
         twin_divergence_go,
@@ -322,6 +326,7 @@ _BACKEND_CACHE: dict[str, _BackendFn] = {}
 
 
 def _load_backend(name: str) -> _BackendFn:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -331,6 +336,7 @@ def _load_backend(name: str) -> _BackendFn:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -347,6 +353,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch_backend() -> tuple[str, _BackendFn | None]:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS]
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -411,6 +418,7 @@ def _jensen_shannon(p: FloatArray, q: FloatArray) -> float:
 
 
 def _kl(p: FloatArray, m: FloatArray) -> float:
+    """Return the Kullback-Leibler divergence between two distributions."""
     mask = p > 0.0
     return float(np.sum(p[mask] * np.log(p[mask] / m[mask])))
 
@@ -476,6 +484,7 @@ def _python_kernel(
 
 
 def _as_real_vector(name: str, value: object) -> FloatArray:
+    """Return the value as a validated 1-D finite real vector, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_complex_alias(value):
@@ -492,6 +501,7 @@ def _as_real_vector(name: str, value: object) -> FloatArray:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):  # pragma: no cover - numpy always coerces
@@ -500,6 +510,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):  # pragma: no cover - numpy always coerces
@@ -508,6 +519,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _validate_positive_int(name: str, value: object) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     value_int = int(value)
@@ -517,6 +529,7 @@ def _validate_positive_int(name: str, value: object) -> int:
 
 
 def _validate_finite_real(name: str, value: object, *, minimum: float) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number, got {value!r}")
     number = float(value)
@@ -528,6 +541,7 @@ def _validate_finite_real(name: str, value: object, *, minimum: float) -> float:
 
 
 def _validate_order_window(name: str, value: object) -> FloatArray:
+    """Return the validated order-parameter window, else raise."""
     parsed = _as_real_vector(name, value)
     if np.any(parsed < 0.0) or np.any(parsed > 1.0):
         raise ValueError(f"{name} order-parameter values must lie in [0, 1]")
@@ -535,6 +549,7 @@ def _validate_order_window(name: str, value: object) -> FloatArray:
 
 
 def _validate_kernel_output(value: object, *, backend: str) -> tuple[float, float]:
+    """Return the backend kernel output matching the reference, else raise."""
     parsed = np.asarray(value, dtype=np.float64).ravel()
     if parsed.shape != (2,):
         raise ValueError(f"backend {backend!r} output shape {parsed.shape} is not (2,)")
@@ -739,6 +754,7 @@ class TwinConfidenceCalibrator:
 
 
 def _one_sided_z(value: float, mean: float, std: float) -> float:
+    """Return the one-sided z-score of a value against a window."""
     return max(0.0, (value - mean) / max(std, _EPS))
 
 
@@ -748,6 +764,7 @@ def _confidence_status(
     warning_confidence: float,
     critical_confidence: float,
 ) -> str:
+    """Return the confidence status label for a divergence score."""
     if confidence < critical_confidence:
         return "critical"
     if confidence < warning_confidence:
@@ -846,6 +863,7 @@ def score_twin_confidence(
 
 
 def _validate_unit_interval(name: str, value: object) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     number = _validate_finite_real(name, value, minimum=0.0)
     if number > 1.0:
         raise ValueError(f"{name} must be <= 1, got {number}")
@@ -853,6 +871,7 @@ def _validate_unit_interval(name: str, value: object) -> float:
 
 
 def _with_hash(score: TwinConfidenceScore) -> TwinConfidenceScore:
+    """Return the record augmented with its canonical-JSON SHA-256 hash."""
     record = score.to_audit_record()
     record.pop("score_hash", None)
     serialised = json.dumps(record, sort_keys=True, separators=(",", ":"))
@@ -982,6 +1001,7 @@ def summarise_twin_confidence(
 
 
 def _with_summary_hash(summary: TwinConfidenceSummary) -> TwinConfidenceSummary:
+    """Return the summary augmented with its canonical SHA-256 hash."""
     record = summary.to_audit_record()
     record.pop("summary_hash", None)
     serialised = json.dumps(record, sort_keys=True, separators=(",", ":"))
@@ -1073,5 +1093,6 @@ def twin_confidence_prometheus_text(
 
 
 def _require_non_empty(value: str, name: str) -> None:
+    """Return ``value`` if it is a non-empty string, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")

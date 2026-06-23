@@ -296,6 +296,7 @@ def _prune_and_sort(
 
 
 def _validate_signal(signal: object) -> FloatArray:
+    """Return the signal as a validated finite array, else raise."""
     raw = np.asarray(signal)
     if raw.dtype == np.bool_:
         raise ValueError("signal must not contain boolean values")
@@ -315,6 +316,7 @@ def _validate_signal(signal: object) -> FloatArray:
 
 
 def _validated_pencil(pencil_factor: object, n: int) -> int:
+    """Return the validated matrix-pencil parameters, else raise."""
     factor = _real_scalar(pencil_factor, "pencil_factor")
     if not 0.0 < factor < 1.0:
         raise ValueError("pencil_factor must lie in (0, 1)")
@@ -322,6 +324,7 @@ def _validated_pencil(pencil_factor: object, n: int) -> int:
 
 
 def _validated_order(order: object) -> int | None:
+    """Return the validated model order, else raise ``ValueError``."""
     if order is None:
         return None
     if isinstance(order, (bool, np.bool_)) or not isinstance(order, Integral):
@@ -333,6 +336,7 @@ def _validated_order(order: object) -> int | None:
 
 
 def _positive_real(value: object, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     scalar = _real_scalar(value, name)
     if scalar <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -340,6 +344,7 @@ def _positive_real(value: object, name: str) -> float:
 
 
 def _non_negative_real(value: object, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     scalar = _real_scalar(value, name)
     if scalar < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -347,6 +352,7 @@ def _non_negative_real(value: object, name: str) -> float:
 
 
 def _real_scalar(value: object, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     scalar = float(value)

@@ -154,6 +154,7 @@ def _controller_focus_index(
     predicates: list[tuple[str, str, float]],
     trace: dict[str, list[float]],
 ) -> int:
+    """Return the oscillator index the controller candidate focuses on."""
     pointwise = _pointwise_robustness(predicates, trace)
     if automaton.temporal_op == "always":
         return int(np.argmin(pointwise))
@@ -169,6 +170,7 @@ def _candidate_for_predicate(
     time_index: int,
     action_map: dict[str, str],
 ) -> STLControllerCandidate | None:
+    """Build a controller candidate that satisfies an STL predicate."""
     signal, op, threshold = predicate
     robustness = float(_predicate_robustness(signal, op, threshold, trace)[time_index])
     if robustness >= 0.0:
@@ -190,6 +192,7 @@ def _candidate_for_predicate(
 
 
 def _controller_direction(op: str) -> str:
+    """Return the control direction (sign) for a predicate."""
     if op in {">=", ">"}:
         return "increase"
     if op in {"<=", "<"}:

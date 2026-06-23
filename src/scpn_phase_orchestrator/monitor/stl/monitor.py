@@ -162,6 +162,7 @@ class STLMonitor:
 
 
 def _parse_simple_spec(spec: str) -> tuple[str, list[tuple[str, str, float]]] | None:
+    """Parse a simple STL specification string into an evaluable form."""
     match = _SIMPLE_SPEC_RE.match(spec.strip())
     if match is None:
         return None
@@ -180,6 +181,7 @@ def _evaluate_simple(
     parsed: tuple[str, list[tuple[str, str, float]]],
     trace: dict[str, list[float]],
 ) -> float:
+    """Evaluate a parsed simple STL specification over a trace."""
     temporal_op, predicates = parsed
     pointwise = _pointwise_robustness(predicates, trace)
     if temporal_op == "always":
@@ -190,6 +192,7 @@ def _evaluate_simple(
 
 
 def _validate_trace(trace: dict[str, list[float]]) -> None:
+    """Return the validated signal trace, else raise ``ValueError``."""
     if not trace:
         raise ValueError("trace must contain at least one signal")
 
@@ -205,6 +208,7 @@ def _validate_trace(trace: dict[str, list[float]]) -> None:
 
 
 def _trace_signal_array(signal: str, trace: dict[str, list[float]]) -> FloatArray:
+    """Return the named signal as a finite float array from the trace."""
     if signal not in trace:
         raise ValueError(f"trace missing signal {signal!r}")
 
@@ -227,6 +231,7 @@ def _trace_signal_array(signal: str, trace: dict[str, list[float]]) -> FloatArra
 
 
 def _contains_boolean_alias(raw: NDArray[np.generic]) -> bool:
+    """Return whether the value contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype == object:
@@ -235,6 +240,7 @@ def _contains_boolean_alias(raw: NDArray[np.generic]) -> bool:
 
 
 def _contains_complex_alias(raw: NDArray[np.generic]) -> bool:
+    """Return whether the value contains any complex-number alias."""
     if np.iscomplexobj(raw):
         return True
     if raw.dtype == object:
@@ -246,6 +252,7 @@ def _pointwise_robustness(
     predicates: list[tuple[str, str, float]],
     trace: dict[str, list[float]],
 ) -> FloatArray:
+    """Return the pointwise STL robustness signal over the trace."""
     per_predicate = [
         _predicate_robustness(signal, op, threshold, trace)
         for signal, op, threshold in predicates
@@ -263,6 +270,7 @@ def _predicate_robustness(
     threshold: float,
     trace: dict[str, list[float]],
 ) -> FloatArray:
+    """Return the robustness signal of an STL predicate over the trace."""
     values = _trace_signal_array(signal, trace)
     if op in {">=", ">"}:
         return values - threshold
@@ -274,11 +282,13 @@ def _predicate_robustness(
 
 
 def _format_threshold(threshold: float) -> str:
+    """Return a stable string rendering of a predicate threshold."""
     if threshold.is_integer():
         return str(int(threshold))
     return f"{threshold:g}"
 
 
 def _require_non_empty(value: str, name: str) -> None:
+    """Return ``value`` if it is a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")

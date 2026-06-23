@@ -67,6 +67,7 @@ _DEFAULT_REGIME = "default"
 
 
 def _finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number")
     number = float(value)
@@ -196,6 +197,8 @@ class ConformalDecision:
 
 @dataclass
 class _RegimeState:
+    """Immutable per-regime conformal-gate state (window and threshold)."""
+
     calibration: FloatArray
     alpha_t: float
     admitted: int = 0
@@ -366,6 +369,7 @@ class TwinConformalGate:
         }
 
     def _resolve_regime(self, regime: str | None) -> str:
+        """Return the regime label for a state under the conformal gate."""
         if self.config.regime_conditioned and regime is not None:
             if not isinstance(regime, str) or not regime.strip():
                 raise ValueError("regime must be a non-empty string")
@@ -382,6 +386,7 @@ class TwinConformalGate:
 
 
 def _conformal_threshold(sorted_scores: FloatArray, alpha_t: float) -> float:
+    """Return the conformal admit/flag threshold for the regime."""
     n = int(sorted_scores.size)
     level = 1.0 - alpha_t
     rank = ceil(level * (n + 1))
@@ -393,6 +398,7 @@ def _conformal_threshold(sorted_scores: FloatArray, alpha_t: float) -> float:
 
 
 def _with_decision_hash(decision: ConformalDecision) -> ConformalDecision:
+    """Return the decision record augmented with its SHA-256 hash."""
     record = decision.to_audit_record()
     record.pop("decision_hash", None)
     serialised = json.dumps(record, sort_keys=True, separators=(",", ":"))

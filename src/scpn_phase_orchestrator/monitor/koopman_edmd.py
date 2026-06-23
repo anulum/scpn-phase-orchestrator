@@ -115,6 +115,7 @@ _DICTIONARY_KINDS = ("identity", "polynomial", "rbf", "phase")
 # Backend chain                                                               #
 # --------------------------------------------------------------------------- #
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust EDMD backend callables."""
     from spo_kernel import koopman_edmd_solve_rust
 
     def _solve(
@@ -124,6 +125,7 @@ def _load_rust_fns() -> dict[str, object]:
         states: FloatArray,
         regularisation: float,
     ) -> tuple[FloatArray, FloatArray, FloatArray]:
+        """Call the Rust EDMD least-squares solve kernel."""
         samples, n_lift = x_lift.shape
         n_input = inputs.shape[1]
         n_state = states.shape[1]
@@ -148,6 +150,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:
+    """Load the Mojo EDMD backend callables."""
     from ..experimental.accelerators.monitor._koopman_edmd_mojo import (
         _ensure_exe,
         koopman_edmd_solve_mojo,
@@ -158,6 +161,7 @@ def _load_mojo_fns() -> dict[str, object]:
 
 
 def _load_julia_fns() -> dict[str, object]:
+    """Load the Julia EDMD backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.monitor._koopman_edmd_julia import (
@@ -168,6 +172,7 @@ def _load_julia_fns() -> dict[str, object]:
 
 
 def _load_go_fns() -> dict[str, object]:
+    """Load the Go EDMD backend callables."""
     from ..experimental.accelerators.monitor._koopman_edmd_go import (
         _load_lib,
         koopman_edmd_solve_go,
@@ -187,6 +192,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -196,6 +202,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -238,6 +245,7 @@ def _dispatch(fn_name: str) -> object | None:
 # Validation                                                                  #
 # --------------------------------------------------------------------------- #
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -246,6 +254,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_matrix(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated finite matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -265,6 +274,7 @@ def _validate_matrix(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -282,6 +292,7 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     parsed = int(value)
@@ -291,6 +302,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a real number")
     parsed = float(value)
@@ -366,6 +378,7 @@ class KoopmanDictionary:
         object.__setattr__(self, "output_dim", self._compute_output_dim())
 
     def _compute_output_dim(self) -> int:
+        """Return the lifted-feature output dimension for the configuration."""
         constant = 1 if self.include_constant else 0
         if self.kind == "identity":
             return constant + self.state_dim
@@ -378,6 +391,7 @@ class KoopmanDictionary:
         return constant + self.state_dim + 2 * self.state_dim + 2
 
     def _polynomial_feature_count(self) -> int:
+        """Return the polynomial feature count for the degree and inputs."""
         from math import comb
 
         # Number of monomials of total degree 1..degree in state_dim variables.
@@ -420,6 +434,7 @@ class KoopmanDictionary:
         return np.ascontiguousarray(features, dtype=np.float64)
 
     def _lift_polynomial(self, states: FloatArray) -> FloatArray:
+        """Return the polynomial feature lift of the state."""
         from itertools import combinations_with_replacement
 
         columns: list[FloatArray] = []
@@ -433,6 +448,7 @@ class KoopmanDictionary:
         return np.column_stack(columns)
 
     def _lift_rbf(self, states: FloatArray) -> FloatArray:
+        """Return the radial-basis-function feature lift of the state."""
         centres = cast("FloatArray", self.centres)
         # squared distances (K, n_centres) without forming the full 3-tensor
         sq = (
@@ -444,6 +460,7 @@ class KoopmanDictionary:
         return np.hstack((states, rbf))
 
     def _lift_phase(self, states: FloatArray) -> FloatArray:
+        """Return the phase (sin/cos) feature lift of the state."""
         cos = np.cos(states)
         sin = np.sin(states)
         order = np.mean(np.exp(1j * states), axis=1)
@@ -508,6 +525,7 @@ def _edmd_solve(
     states: FloatArray,
     regularisation: float,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """Return the reference EDMD Koopman operator via least squares."""
     backend = _dispatch("edmd_solve")
     if backend is None:
         return _edmd_solve_reference(x_lift, inputs, y_lift, states, regularisation)

@@ -175,6 +175,7 @@ synthesize_stl_monitoring_automaton = synthesise_stl_monitoring_automaton
 
 
 def _validate_horizon_steps(horizon_steps: int) -> None:
+    """Return the horizon length as a positive integer, else raise."""
     if (
         isinstance(horizon_steps, bool)
         or not isinstance(horizon_steps, int)
@@ -184,6 +185,7 @@ def _validate_horizon_steps(horizon_steps: int) -> None:
 
 
 def _format_predicate_guard(predicates: list[tuple[str, str, float]]) -> str:
+    """Return a stable string rendering of a predicate guard."""
     return " and ".join(
         f"{signal} {op} {_format_threshold(threshold)}"
         for signal, op, threshold in predicates
@@ -198,6 +200,7 @@ def _synthesise_always_automaton(
     guard: str,
     robustness: float,
 ) -> STLMonitoringAutomaton:
+    """Build the monitoring automaton for an 'always' STL operator."""
     transitions: list[STLAutomatonTransition] = []
     state = "holding"
     first_violation_index: int | None = None
@@ -248,6 +251,7 @@ def _synthesise_eventually_automaton(
     guard: str,
     robustness: float,
 ) -> STLMonitoringAutomaton:
+    """Build the monitoring automaton for an 'eventually' STL operator."""
     transitions: list[STLAutomatonTransition] = []
     state = "pending"
     first_satisfaction_index: int | None = None

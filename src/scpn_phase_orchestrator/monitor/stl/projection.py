@@ -136,6 +136,7 @@ def _candidate_to_control_action(
     candidate: STLControllerCandidate,
     template: STLActionProjectionTemplate,
 ) -> ControlAction:
+    """Convert a controller candidate into a projected control action."""
     magnitude = abs(candidate.robustness) * template.step
     if candidate.direction == "increase":
         value = template.base_value + magnitude
@@ -153,6 +154,7 @@ def _candidate_to_control_action(
 
 
 def _control_action_record(action: ControlAction) -> dict[str, object]:
+    """Return the JSON-safe record for a projected control action."""
     return {
         "knob": action.knob,
         "scope": action.scope,
