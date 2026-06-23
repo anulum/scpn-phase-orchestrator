@@ -32,6 +32,7 @@ _REGIME_LOOKUP = {r.value.upper(): r for r in Regime}
 
 
 def _validate_context(ctx: object) -> dict[str, float]:
+    """Return the validated decision context, else raise."""
     if not isinstance(ctx, Mapping):
         raise PolicyError(
             f"ctx must be a mapping of metric names to floats, got {ctx!r}"
@@ -168,6 +169,7 @@ class PetriNetAdapter:
         return self._active_regime()
 
     def _active_regime(self) -> Regime:
+        """Return the active regime for a Petri-net marking."""
         best = Regime.NOMINAL
         for place in self._marking.active_places():
             regime = self._place_to_regime.get(place, Regime.NOMINAL)

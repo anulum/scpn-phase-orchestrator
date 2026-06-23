@@ -61,6 +61,7 @@ class PolicyDryRunReport:
 
 
 def _regime_from_entry(entry: dict[str, Any]) -> Regime:
+    """Return the regime recorded in an audit-log entry."""
     raw = str(entry.get("regime", "nominal")).lower()
     for regime in Regime:
         if regime.value == raw or regime.name.lower() == raw:
@@ -69,6 +70,7 @@ def _regime_from_entry(entry: dict[str, Any]) -> Regime:
 
 
 def _state_from_entry(entry: dict[str, Any]) -> UPDEState:
+    """Return the state recorded in an audit-log entry."""
     raw_layers = entry.get("layers", [])
     layers = []
     for raw_layer in raw_layers:
@@ -95,6 +97,7 @@ def _state_from_entry(entry: dict[str, Any]) -> UPDEState:
 
 
 def _rule_name_from_justification(justification: str) -> str:
+    """Return the rule name parsed from a justification string."""
     prefix = "policy rule: "
     if justification.startswith(prefix):
         return justification[len(prefix) :]
@@ -102,6 +105,7 @@ def _rule_name_from_justification(justification: str) -> str:
 
 
 def _step_entries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return the per-step entries from the audit log."""
     return [entry for entry in entries if "step" in entry and "layers" in entry]
 
 

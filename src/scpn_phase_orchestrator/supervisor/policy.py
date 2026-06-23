@@ -111,6 +111,7 @@ class SupervisorPolicy:
     def _actions_for_regime(
         self, regime: Regime, upde_state: UPDEState
     ) -> list[ControlAction]:
+        """Return the control-action proposals for a regime and state."""
         if regime == Regime.NOMINAL:
             return []
 
@@ -165,6 +166,7 @@ class SupervisorPolicy:
         boundary_state: BoundaryState,
         petri_ctx: dict[str, float] | None,
     ) -> Regime:
+        """Return the regime proposed for the current state."""
         if self._petri_adapter is not None and petri_ctx is not None:
             try:
                 return self._petri_adapter.step(petri_ctx)
@@ -175,6 +177,7 @@ class SupervisorPolicy:
         return self._regime_manager.evaluate(upde_state, boundary_state)
 
     def _worst_layer(self, upde_state: UPDEState) -> int | None:
+        """Return the index of the least-synchronised layer."""
         if not upde_state.layers:
             return None
         return min(range(len(upde_state.layers)), key=lambda i: upde_state.layers[i].R)

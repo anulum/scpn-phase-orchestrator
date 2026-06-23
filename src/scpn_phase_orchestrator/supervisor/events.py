@@ -36,12 +36,14 @@ VALID_EVENT_KINDS = frozenset(
 
 
 def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1, got {value!r}")
     return int(value)

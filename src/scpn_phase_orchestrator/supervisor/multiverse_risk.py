@@ -278,6 +278,7 @@ def _select_safest_branch(
     def _safety_key(
         decision: BranchRiskDecision,
     ) -> tuple[float, float, int, float, str]:
+        """Return the sort key ranking a branch by safety."""
         topo_pressure = (
             float(decision.topology_edge_count)
             if decision.topology_edge_count is not None

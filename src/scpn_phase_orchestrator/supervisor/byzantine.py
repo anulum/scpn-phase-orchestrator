@@ -164,6 +164,7 @@ def _verify_proposal(
     proposal: Mapping[str, object],
     keyring: Mapping[str, str],
 ) -> dict[str, object]:
+    """Verify a policy proposal's signature and payload, else raise."""
     if not isinstance(proposal, Mapping):
         raise ValueError("proposal must be a mapping")
     node_id = _require_text(proposal.get("node_id"), "node_id")
@@ -220,6 +221,7 @@ def _accepted_quorum_group(
     verified: Sequence[Mapping[str, object]],
     quorum: int,
 ) -> list[Mapping[str, object]] | None:
+    """Return the accepted quorum group for the proposals, if any."""
     by_hash: dict[str, list[Mapping[str, object]]] = {}
     for record in verified:
         by_hash.setdefault(str(record["payload_hash"]), []).append(record)
@@ -234,6 +236,7 @@ def _accepted_quorum_group(
 
 
 def _audit_chain_hash(records: Sequence[Mapping[str, object]]) -> str:
+    """Return the running audit-chain hash for the consensus records."""
     if not records:
         return ""
     payload = [
@@ -250,6 +253,7 @@ def _audit_chain_hash(records: Sequence[Mapping[str, object]]) -> str:
 
 
 def _hash_payload(payload: Mapping[str, object]) -> str:
+    """Return the canonical SHA-256 hash of a payload."""
     return sha256(
         json.dumps(
             _json_round_trip(payload), sort_keys=True, separators=(",", ":")
@@ -260,6 +264,7 @@ def _hash_payload(payload: Mapping[str, object]) -> str:
 def _signature_payload(
     node_id: str, payload_hash: str, previous_audit_hash: str
 ) -> str:
+    """Return the canonical signing payload for a proposal."""
     return json.dumps(
         {
             "node_id": node_id,
@@ -272,6 +277,7 @@ def _signature_payload(
 
 
 def _json_round_trip(payload: Mapping[str, object]) -> dict[str, object]:
+    """Return the value after a canonical JSON round-trip, else raise."""
     loaded = json.loads(json.dumps(payload, sort_keys=True, allow_nan=False))
     if not isinstance(loaded, dict):
         raise ValueError("payload must encode as a JSON object")
@@ -279,12 +285,14 @@ def _json_round_trip(payload: Mapping[str, object]) -> dict[str, object]:
 
 
 def _require_text(value: object, label: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{label} must be a non-empty string")
     return value.strip()
 
 
 def _require_hash(value: object, label: str) -> str:
+    """Return ``value`` as a SHA-256 hex digest, else raise."""
     if not isinstance(value, str) or len(value) != 64:
         raise ValueError(f"{label} must be a 64-character SHA-256 hex string")
     try:
@@ -295,6 +303,7 @@ def _require_hash(value: object, label: str) -> str:
 
 
 def _dedupe(values: Sequence[str]) -> list[str]:
+    """Return the items de-duplicated, preserving order."""
     result: list[str] = []
     for value in values:
         if value and value not in result:

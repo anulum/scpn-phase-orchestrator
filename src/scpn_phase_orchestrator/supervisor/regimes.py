@@ -33,6 +33,7 @@ _R_DEGRADED = 0.6  # Acebrón et al. 2005 §2.3 — partial sync threshold
 
 
 def _validate_nonnegative_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
     out = float(value)
@@ -42,12 +43,14 @@ def _validate_nonnegative_float(value: object, *, name: str) -> float:
 
 
 def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
     return int(value)
 
 
 def _validate_regime(value: object, *, name: str = "regime") -> Regime:
+    """Return the validated regime label, else raise ``ValueError``."""
     if not isinstance(value, Regime):
         raise ValueError(f"{name} must be a Regime value, got {value!r}")
     return value
@@ -217,6 +220,7 @@ class RegimeManager:
         return regime
 
     def _emit_transition(self, prev: Regime, new: Regime) -> None:
+        """Emit a regime-transition event through the optional sink."""
         if self._event_bus is None:
             return
         self._event_bus.post(
@@ -229,6 +233,7 @@ class RegimeManager:
 
     @staticmethod
     def _regime_rank(regime: Regime) -> int:
+        """Return the ordinal rank of a regime for hysteresis comparison."""
         return {
             Regime.NOMINAL: 0,
             Regime.DEGRADED: 1,
@@ -237,6 +242,7 @@ class RegimeManager:
         }[regime]
 
     def _mean_r(self, upde_state: UPDEState) -> float:
+        """Return the mean order parameter (R) over the window."""
         if not upde_state.layers:
             return 0.0
         return sum(s.R for s in upde_state.layers) / len(upde_state.layers)
