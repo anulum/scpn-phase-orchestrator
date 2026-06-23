@@ -67,6 +67,7 @@ class ExplainabilityReport:
 
 
 def _step_records(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return the per-step records from the audit log."""
     return [
         entry
         for entry in entries
@@ -75,6 +76,7 @@ def _step_records(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _layers(step: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the per-layer records from a step entry."""
     layers = step.get("layers", [])
     if not isinstance(layers, list):
         return []
@@ -82,6 +84,7 @@ def _layers(step: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _layer_rs(step: dict[str, Any]) -> list[float]:
+    """Return the per-layer order parameters from a step entry."""
     values: list[float] = []
     for layer in _layers(step):
         values.append(_numeric_value(layer.get("R", 0.0)))
@@ -89,6 +92,7 @@ def _layer_rs(step: dict[str, Any]) -> list[float]:
 
 
 def _numeric_value(value: object) -> float:
+    """Return a named numeric field from a mapping, else raise."""
     if isinstance(value, Real) and not isinstance(value, bool):
         parsed = float(value)
         if isfinite(parsed):
@@ -97,6 +101,7 @@ def _numeric_value(value: object) -> float:
 
 
 def _integer_value(value: object) -> int:
+    """Return a named integer field from a mapping, else raise."""
     if isinstance(value, Real) and not isinstance(value, bool):
         parsed = float(value)
         if isfinite(parsed):
@@ -105,10 +110,12 @@ def _integer_value(value: object) -> int:
 
 
 def _mean(values: list[float]) -> float:
+    """Return the arithmetic mean of the values, or zero if empty."""
     return sum(values) / len(values) if values else 0.0
 
 
 def _regime_counts(steps: list[dict[str, Any]]) -> dict[str, int]:
+    """Return the count of steps per regime."""
     counts: dict[str, int] = {}
     for step in steps:
         regime = str(step.get("regime", "unknown"))
@@ -117,6 +124,7 @@ def _regime_counts(steps: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def _regime_transitions(steps: list[dict[str, Any]]) -> tuple[str, ...]:
+    """Return the regime transitions across the step sequence."""
     if not steps:
         return ()
     transitions: list[str] = []
@@ -132,6 +140,7 @@ def _regime_transitions(steps: list[dict[str, Any]]) -> tuple[str, ...]:
 
 
 def _event_lines(entries: list[dict[str, Any]], limit: int = 12) -> tuple[str, ...]:
+    """Return the human-readable event lines for the report."""
     lines: list[str] = []
     for entry in entries:
         if not isinstance(entry, dict):
@@ -155,6 +164,7 @@ def _event_lines(entries: list[dict[str, Any]], limit: int = 12) -> tuple[str, .
 
 
 def _metric_summary(steps: list[dict[str, Any]]) -> tuple[str, ...]:
+    """Return a textual summary of the metric series."""
     if not steps:
         return ()
     n_layers = max(len(_layers(step)) for step in steps)
@@ -181,6 +191,7 @@ def _action_explanations(
     steps: list[dict[str, Any]],
     max_actions: int,
 ) -> tuple[ActionExplanation, ...]:
+    """Return human-readable explanations of the proposed actions."""
     if max_actions <= 0:
         return ()
     explanations: list[ActionExplanation] = []
@@ -354,10 +365,12 @@ def write_markdown(report: ExplainabilityReport, output_path: str | Path) -> Pat
 
 
 def _pdf_escape(text: str) -> str:
+    """Return the text escaped for a PDF content stream."""
     return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
 def _wrap_pdf_lines(markdown: str, width: int = 92) -> list[str]:
+    """Return the text wrapped to PDF page-width lines."""
     lines: list[str] = []
     for raw in markdown.splitlines():
         text = raw.strip()
@@ -372,6 +385,7 @@ def _wrap_pdf_lines(markdown: str, width: int = 92) -> list[str]:
 
 
 def _make_pdf_bytes(lines: list[str]) -> bytes:
+    """Return the explanation rendered as a minimal PDF byte string."""
     objects: list[bytes] = []
     page_ids: list[int] = []
     lines_per_page = 52

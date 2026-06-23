@@ -81,12 +81,14 @@ class CoherencePlot:
         ]
 
     def _require_steps(self) -> list[dict[str, Any]]:
+        """Return the per-step records from the audit log, else raise."""
         if not self._steps:
             raise ValueError("No step records in log data")
         return self._steps
 
     @staticmethod
     def _layers(step: dict[str, Any]) -> list[dict[str, Any]]:
+        """Return the per-layer records from a step entry."""
         layers = step.get("layers", [])
         if not isinstance(layers, list):
             return []
@@ -94,6 +96,7 @@ class CoherencePlot:
 
     @staticmethod
     def _numeric_value(value: object) -> float:
+        """Return a named numeric field from a mapping, else raise."""
         if isinstance(value, Real) and not isinstance(value, bool):
             parsed = float(value)
             if isfinite(parsed):
@@ -102,10 +105,12 @@ class CoherencePlot:
 
     @classmethod
     def _step_value(cls, value: object) -> int:
+        """Return a named numeric field from a step entry, else raise."""
         return int(cls._numeric_value(value))
 
     @staticmethod
     def _dimension_value(value: object) -> int | None:
+        """Return a named dimension field from a mapping, else raise."""
         if isinstance(value, Real) and not isinstance(value, bool):
             parsed = float(value)
             if isfinite(parsed) and parsed.is_integer() and parsed > 0.0:
@@ -114,6 +119,7 @@ class CoherencePlot:
 
     @staticmethod
     def _actions(step: dict[str, Any]) -> list[dict[str, Any]]:
+        """Return the action records from a step entry."""
         actions = step.get("actions", [])
         if not isinstance(actions, list):
             return []
@@ -124,6 +130,7 @@ class CoherencePlot:
         ]
 
     def _extract_r_series(self) -> tuple[list[int], int, list[list[float]]]:
+        """Return the global order-parameter series across steps."""
         steps = self._require_steps()
         x = [self._step_value(s.get("step", 0)) for s in steps]
         n_layers = max(len(self._layers(s)) for s in steps)
@@ -140,6 +147,7 @@ class CoherencePlot:
         return x, n_layers, series
 
     def _extract_regime_epochs(self) -> list[tuple[str, int, int]]:
+        """Return the regime epochs (label and span) across steps."""
         steps = self._require_steps()
         epochs: list[tuple[str, int, int]] = []
         prev = str(steps[0].get("regime", "NOMINAL"))
@@ -155,6 +163,7 @@ class CoherencePlot:
         return epochs
 
     def _extract_actions(self) -> tuple[list[int], list[float], dict[str, list[int]]]:
+        """Return the proposed actions across steps for plotting."""
         steps = self._require_steps()
         x = [self._step_value(s.get("step", 0)) for s in steps]
         r_global = []
@@ -170,6 +179,7 @@ class CoherencePlot:
         return x, r_global, knob_steps
 
     def _extract_amplitude(self) -> tuple[list[int], list[float], list[float]]:
+        """Return the amplitude series across steps."""
         steps = self._require_steps()
         x = [self._step_value(s.get("step", 0)) for s in steps]
         amps = [self._numeric_value(s.get("mean_amplitude", 0.0)) for s in steps]
@@ -179,6 +189,7 @@ class CoherencePlot:
         return x, amps, sub_frac
 
     def _extract_pac_matrix(self) -> tuple[int, FloatArray]:
+        """Return the phase-amplitude-coupling matrix from the records."""
         pac_record = None
         for d in reversed(self._data):
             if isinstance(d, dict) and "pac_matrix" in d:

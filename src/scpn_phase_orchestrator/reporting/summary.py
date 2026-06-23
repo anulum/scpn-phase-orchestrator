@@ -98,10 +98,12 @@ def build_audit_report_summary(
 
 
 def _record_entries(entries: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Return the audit record entries from a report payload, else raise."""
     return [entry for entry in entries if isinstance(entry, dict)]
 
 
 def _load_header(entries: list[dict[str, object]]) -> dict[str, object] | None:
+    """Return the audit report header fields."""
     for entry in entries:
         if entry.get("header") is True:
             return entry
@@ -109,6 +111,7 @@ def _load_header(entries: list[dict[str, object]]) -> dict[str, object] | None:
 
 
 def _layers(step: dict[str, object]) -> list[dict[str, object]]:
+    """Return the per-layer records from a step entry."""
     layers = step.get("layers", [])
     if not isinstance(layers, list):
         return []
@@ -116,10 +119,12 @@ def _layers(step: dict[str, object]) -> list[dict[str, object]]:
 
 
 def _layer_r(layer: dict[str, object]) -> float:
+    """Return the order parameter (R) for a layer record."""
     return _numeric_value(layer, "R")
 
 
 def _actions(step: dict[str, object]) -> list[dict[str, object]]:
+    """Return the action records from a step entry."""
     actions = step.get("actions", [])
     if not isinstance(actions, list):
         return []
@@ -129,6 +134,7 @@ def _actions(step: dict[str, object]) -> list[dict[str, object]]:
 def _integrated_information_summary(
     entries: list[dict[str, object]],
 ) -> dict[str, object] | None:
+    """Return a summary of integrated-information metrics from the records."""
     records = [
         entry
         for entry in entries
@@ -173,6 +179,7 @@ def _integrated_information_summary(
 
 
 def _numeric_value(record: dict[str, object], key: str) -> float:
+    """Return a named numeric field from a mapping, else raise."""
     value = record.get(key, 0.0)
     if isinstance(value, Real) and not isinstance(value, bool):
         parsed = float(value)
@@ -182,4 +189,5 @@ def _numeric_value(record: dict[str, object], key: str) -> float:
 
 
 def _is_finite_real(value: object) -> bool:
+    """Return whether ``value`` is a finite real number."""
     return isinstance(value, Real) and not isinstance(value, bool) and isfinite(value)
