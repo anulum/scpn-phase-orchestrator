@@ -45,6 +45,7 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.runtime.cli.queuewaves",
     "scpn_phase_orchestrator.runtime.cli.quickstart",
     "scpn_phase_orchestrator.runtime.cli.scaffold",
+    "scpn_phase_orchestrator.runtime.cli.supervisor_candidate",
     "scpn_phase_orchestrator.grpc_gen",
     "scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback",
     "scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback",

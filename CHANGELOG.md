@@ -45,6 +45,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `spo supervisor-candidate` CLI command: reads a JSON scenario (candidate,
+  baseline, incumbent, observations, constraints, safety tier, numeric
+  provenance), scores the candidate with the model-free reward over the
+  representative observation, assembles the sealed
+  `studio.supervisor_candidate.v1` bundle, prints a summary (reward delta, safe
+  and improved flags, evidence kind, the top-attributed knob), and optionally
+  writes the full record as JSON. It actuates nothing.
 - Auditable supervisor-candidate bundle (`autotune.supervisor_candidate`):
   `build_supervisor_candidate_bundle` glues a candidate's reward report, its
   per-knob attribution, its safety certificate, and a lightweight comparison

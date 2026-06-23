@@ -8,11 +8,11 @@
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 201,
-    "python_package_modules": 652,
+    "python_package_modules": 653,
     "research_experimental_modules": 212,
-    "runtime_serving_modules": 120,
+    "runtime_serving_modules": 121,
     "rust_kernel_files": 97,
-    "test_files": 654
+    "test_files": 655
   },
   "documentation": {
     "public_pages": [
@@ -948,6 +948,7 @@
       "src/scpn_phase_orchestrator/runtime/cli/quickstart.py",
       "src/scpn_phase_orchestrator/runtime/cli/run.py",
       "src/scpn_phase_orchestrator/runtime/cli/scaffold.py",
+      "src/scpn_phase_orchestrator/runtime/cli/supervisor_candidate.py",
       "src/scpn_phase_orchestrator/runtime/cli/verification.py",
       "src/scpn_phase_orchestrator/runtime/deterministic.py",
       "src/scpn_phase_orchestrator/runtime/distributed/__init__.py",
@@ -1480,6 +1481,7 @@
     "src/scpn_phase_orchestrator/runtime/cli/quickstart.py",
     "src/scpn_phase_orchestrator/runtime/cli/run.py",
     "src/scpn_phase_orchestrator/runtime/cli/scaffold.py",
+    "src/scpn_phase_orchestrator/runtime/cli/supervisor_candidate.py",
     "src/scpn_phase_orchestrator/runtime/cli/verification.py",
     "src/scpn_phase_orchestrator/runtime/deterministic.py",
     "src/scpn_phase_orchestrator/runtime/distributed/__init__.py",
@@ -1774,6 +1776,7 @@
       "tests/test_cli_scheduler_loaders.py",
       "tests/test_cli_shared.py",
       "tests/test_cli_storage_lifecycle_loaders.py",
+      "tests/test_cli_supervisor_candidate.py",
       "tests/test_closure_ethical.py",
       "tests/test_coherence_monitor_config_validation.py",
       "tests/test_compat.py",

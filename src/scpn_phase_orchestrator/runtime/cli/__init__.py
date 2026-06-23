@@ -31,6 +31,9 @@ from scpn_phase_orchestrator.runtime.cli import queuewaves as queuewaves
 from scpn_phase_orchestrator.runtime.cli import quickstart as quickstart
 from scpn_phase_orchestrator.runtime.cli import run as run
 from scpn_phase_orchestrator.runtime.cli import scaffold as scaffold
+from scpn_phase_orchestrator.runtime.cli import (
+    supervisor_candidate as supervisor_candidate,
+)
 from scpn_phase_orchestrator.runtime.cli import verification as verification
 from scpn_phase_orchestrator.runtime.cli._app import main
 from scpn_phase_orchestrator.runtime.cli.meta import (
