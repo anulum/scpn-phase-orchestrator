@@ -135,6 +135,13 @@ def build_sheaf_cohomology_studio_panel(
 def _normalise_sheaf_cohomology_records(
     records: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate sheaf-cohomology records for the panel.
+
+    Each record must use the supported method and carry a square Laplacian shape
+    and a node-square residual shape whose product matches the Laplacian, plus
+    non-negative obstruction/consistency scores, kernel/obstruction dimensions,
+    and tolerance.
+    """
     if isinstance(records, Mapping) or not isinstance(records, Sequence) or not records:
         raise ValueError("sheaf-cohomology records must be a non-empty sequence")
     normalised: list[dict[str, object]] = []
@@ -198,6 +205,12 @@ def _normalise_sheaf_cohomology_records(
 def _normalise_sheaf_obstruction_summaries(
     summaries: Sequence[Mapping[str, object]],
 ) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
+    """Validate sheaf-obstruction summaries and return summaries and residual rows.
+
+    Each summary must carry a supported severity, ``warning <= critical``
+    thresholds, and top residual edges; returns the normalised summaries and the
+    flattened per-edge residual rows.
+    """
     if (
         isinstance(summaries, Mapping)
         or not isinstance(summaries, Sequence)
@@ -248,6 +261,7 @@ def _normalise_sheaf_obstruction_summaries(
 def _normalise_sheaf_control_proposals(
     proposals: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate sheaf-control proposals (supported method) as review-only records."""
     if (
         isinstance(proposals, Mapping)
         or not isinstance(proposals, Sequence)
@@ -351,6 +365,7 @@ def _normalise_sheaf_residual_rows(
     value: object,
     label: str,
 ) -> tuple[dict[str, object], ...]:
+    """Validate top residual-edge rows (target, source, norm, non-empty residual)."""
     if isinstance(value, Mapping) or not isinstance(value, Sequence):
         raise ValueError(f"{label} top_residual_edges must be a sequence")
     rows: list[dict[str, object]] = []
@@ -388,6 +403,7 @@ def _normalise_sheaf_cohomology_dimensions(
     value: object,
     label: str,
 ) -> dict[str, int]:
+    """Validate the baseline/projected kernel and obstruction dimensions mapping."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{label} cohomology_dimensions must be a mapping")
     return {
@@ -407,6 +423,7 @@ def _normalise_sheaf_shape(
     *,
     expected_rank: int,
 ) -> tuple[int, ...]:
+    """Return ``value`` as a positive-integer shape tuple of ``expected_rank``."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError(f"{label} must be a sequence")
     shape = tuple(
@@ -419,6 +436,7 @@ def _normalise_sheaf_shape(
 
 
 def _strict_bool(value: object, name: str) -> bool:
+    """Return ``value`` if it is a real boolean, else raise ``ValueError``."""
     if not isinstance(value, bool):
         raise ValueError(f"{name} must be boolean")
     return value

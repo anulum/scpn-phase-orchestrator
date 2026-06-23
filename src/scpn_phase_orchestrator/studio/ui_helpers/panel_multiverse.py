@@ -116,6 +116,12 @@ def build_multiverse_counterfactual_studio_panel(
 def _normalise_multiverse_manifest(
     manifest: Mapping[str, object],
 ) -> dict[str, object]:
+    """Validate a multiverse counterfactual-rollout manifest for the panel.
+
+    The manifest must use the rollout schema, keep the review-safe claim boundary
+    and non-actuating/execution-disabled flags, name a supported backend, and have
+    a branch count matching the length of its normalised branch records.
+    """
     if not isinstance(manifest, Mapping):
         raise ValueError("multiverse manifest must be a mapping")
     if manifest.get("schema_name") != "multiverse_counterfactual_rollout":
@@ -162,6 +168,11 @@ def _normalise_multiverse_manifest(
 def _normalise_multiverse_branch_records(
     records: object,
 ) -> tuple[dict[str, object], ...]:
+    """Validate rollout branch records.
+
+    Each must have a unique id, matching action labels, and an ordered
+    ``min_R <= mean_R <= max_R`` interval that contains ``final_R``.
+    """
     if isinstance(records, str | bytes) or not isinstance(records, Sequence):
         raise ValueError("branch_records must be a sequence")
     if not records:
@@ -224,6 +235,12 @@ def _normalise_multiverse_branch_records(
 def _normalise_multiverse_risk_report(
     risk_report: Mapping[str, object],
 ) -> dict[str, object]:
+    """Validate a multiverse branch-risk-gate report for the panel.
+
+    The report must use the risk-gate schema, keep the review-safe claim boundary
+    and non-actuating flags, and have a branch count and approved/rejected counts
+    that agree with the per-branch decisions.
+    """
     if not isinstance(risk_report, Mapping):
         raise ValueError("multiverse risk report must be a mapping")
     if risk_report.get("schema_name") != "multiverse_branch_risk_gate":
@@ -294,6 +311,11 @@ def _normalise_multiverse_risk_report(
 def _normalise_multiverse_risk_decisions(
     decisions: object,
 ) -> tuple[dict[str, object], ...]:
+    """Validate per-branch risk decisions.
+
+    Each must have a unique id, an ordered R interval, and an explicit approved
+    flag with optional rejection reasons.
+    """
     if isinstance(decisions, str | bytes) or not isinstance(decisions, Sequence):
         raise ValueError("branch_decisions must be a sequence")
     if not decisions:
@@ -352,6 +374,11 @@ def _join_multiverse_branch_rows(
     rollout: Mapping[str, object],
     risk: Mapping[str, object],
 ) -> tuple[dict[str, object], ...]:
+    """Join rollout branches with their risk decisions into combined table rows.
+
+    Every rollout branch must have a risk decision with a matching hash and
+    metrics; raises ``ValueError`` on any mismatch or missing decision.
+    """
     branch_records = cast("tuple[dict[str, object], ...]", rollout["branch_records"])
     decisions = cast("tuple[dict[str, object], ...]", risk["branch_decisions"])
     decision_by_id = {cast("str", item["branch_id"]): item for item in decisions}
@@ -388,12 +415,14 @@ def _join_multiverse_branch_rows(
 
 
 def _optional_text(value: object, name: str) -> str | None:
+    """Return ``None`` for a null value, else the validated non-empty text."""
     if value is None:
         return None
     return _require_non_empty_text(value, name)
 
 
 def _optional_non_negative_float(value: object, name: str) -> float | None:
+    """Return ``None`` for a null value, else the validated non-negative float."""
     if value is None:
         return None
     return _non_negative_float(value, name)
