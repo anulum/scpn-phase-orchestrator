@@ -517,6 +517,7 @@ def _resolve_required_policy_keys(
     required_policy_keys: Sequence[str] | None,
     node_commitments: Sequence[Mapping[str, object]],
 ) -> tuple[str, ...]:
+    """Return the required policy keys for aggregation."""
     if required_policy_keys is not None:
         if not isinstance(required_policy_keys, Sequence) or isinstance(
             required_policy_keys, (str, bytes, bytearray)
@@ -550,6 +551,7 @@ def _validate_node_commitment(
     config: SecureAggregationConfig,
     seen_node_ids: set[str],
 ) -> SecureNodeCommitment:
+    """Validate a node's masked commitment, else raise."""
     if not isinstance(raw, Mapping):
         raise ValueError("each node commitment must be a mapping")
 
@@ -656,6 +658,7 @@ def _weighted_masked_average(
     accepted_nodes: tuple[SecureNodeCommitment, ...],
     required_policy_keys: tuple[str, ...],
 ) -> tuple[tuple[tuple[str, float], ...], int]:
+    """Return the weighted average of masked node updates."""
     total_sample_count = sum(node.sample_count for node in accepted_nodes)
     if total_sample_count <= 0:
         raise ValueError("total_sample_count must be positive for aggregation")
@@ -678,6 +681,7 @@ def _resolve_preflight_quorum_evidence(
     accepted_nodes: tuple[str, ...],
     accepted_node_threshold: int,
 ) -> tuple[SecureAggregationQuorumEvidence, ...]:
+    """Resolve the preflight quorum evidence."""
     if not isinstance(quorum_evidence, Sequence) or isinstance(
         quorum_evidence, (str, bytes, bytearray)
     ):
@@ -707,6 +711,7 @@ def _validate_preflight_quorum_evidence(
     seen_nodes: set[str],
     accepted_nodes: set[str],
 ) -> SecureAggregationQuorumEvidence:
+    """Validate the preflight quorum evidence, else raise."""
     if not isinstance(raw, Mapping):
         raise ValueError("each quorum evidence entry must be a mapping")
 
@@ -729,6 +734,7 @@ def _resolve_node_custody_records(
     accepted_nodes: tuple[str, ...],
     custody_rotation_policy: str,
 ) -> tuple[SecureNodeCustodyRecord, ...]:
+    """Resolve the per-node custody records."""
     if not isinstance(custody_records, Sequence) or isinstance(
         custody_records, (str, bytes, bytearray)
     ):
@@ -756,6 +762,7 @@ def _validate_node_custody_record(
     accepted_nodes: set[str],
     custody_rotation_policy: str,
 ) -> SecureNodeCustodyRecord:
+    """Validate a node custody record, else raise."""
     if not isinstance(raw, Mapping):
         raise ValueError("each custody record must be a mapping")
 
@@ -822,6 +829,7 @@ def _validate_node_custody_record(
 
 
 def _sha256_hex(value: object, field: str) -> str:
+    """Return the SHA-256 hex digest of the inputs."""
     text = _non_empty_text(value, field)
     digest = _normalise_hex(text)
     if not _is_sha256_hex(digest):
@@ -832,26 +840,31 @@ def _sha256_hex(value: object, field: str) -> str:
 
 
 def _normalise_hex(value: str) -> str:
+    """Return the normalised lowercase hex string, else raise."""
     return value.lower()
 
 
 def _is_sha256_hex(value: str) -> bool:
+    """Return whether ``value`` is a SHA-256 hex digest."""
     return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
 
 
 def _non_empty_text(value: object, field: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string")
     return value.strip()
 
 
 def _positive_int(value: object, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if not isinstance(value, Integral) or isinstance(value, bool) or value <= 0:
         raise ValueError(f"{field} must be a positive int")
     return int(value)
 
 
 def _positive_float(value: object, field: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     number = _to_float(value, field)
     if not math.isfinite(number) or number <= 0:
         raise ValueError(f"{field} must be a finite positive float")
@@ -859,6 +872,7 @@ def _positive_float(value: object, field: str) -> float:
 
 
 def _finite_float(value: object, field: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     number = _to_float(value, field)
     if not math.isfinite(number):
         raise ValueError(f"{field} must be a finite float")
@@ -866,11 +880,13 @@ def _finite_float(value: object, field: str) -> float:
 
 
 def _to_float(value: object, field: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if not isinstance(value, Real) or isinstance(value, bool):
         raise ValueError(f"{field} must be a real number")
     return float(value)
 
 
 def _stable_hash(value: object) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     payload = json.dumps(value, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()

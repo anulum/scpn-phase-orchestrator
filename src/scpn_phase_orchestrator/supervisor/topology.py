@@ -173,6 +173,7 @@ class HigherOrderTopologySupervisor:
 
 
 def _validate_phases(phases: FloatArray) -> FloatArray:
+    """Return the phases as a validated finite array, else raise."""
     if _contains_boolean_alias(phases):
         raise ValueError("phases must not contain boolean values")
     if _contains_complex_alias(phases):
@@ -188,6 +189,7 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
 
 
 def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(knm):
         raise ValueError("knm must not contain boolean values")
     if _contains_complex_alias(knm):
@@ -205,6 +207,7 @@ def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
 
 
 def _validate_hyperedges(hyperedges: tuple[Hyperedge, ...], n: int) -> None:
+    """Return the validated hyperedges, else raise."""
     for edge in hyperedges:
         if len(edge.nodes) < 3:
             raise ValueError("higher-order hyperedges must contain at least 3 nodes")
@@ -220,6 +223,7 @@ def _validate_hyperedges(hyperedges: tuple[Hyperedge, ...], n: int) -> None:
 
 
 def _canonical_hyperedges(hyperedges: tuple[Hyperedge, ...]) -> tuple[Hyperedge, ...]:
+    """Return the hyperedges in canonical order."""
     canonical: list[Hyperedge] = []
     for edge in hyperedges:
         if not isinstance(edge, Hyperedge):
@@ -233,20 +237,24 @@ def _canonical_hyperedges(hyperedges: tuple[Hyperedge, ...]) -> tuple[Hyperedge,
 
 
 def _order_parameter(phases: FloatArray) -> float:
+    """Return the Kuramoto order parameter for the phases."""
     return float(np.abs(np.mean(np.exp(1j * phases))))
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, bool | np.bool_) for item in raw.ravel())
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, complex | np.complexfloating) for item in raw.ravel())
 
 
 def _pairwise_phase_alignment(phases: FloatArray) -> FloatArray:
+    """Return the pairwise phase-alignment matrix."""
     diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
     alignment = 0.5 * (np.cos(diffs) + 1.0)
     np.fill_diagonal(alignment, 0.0)
@@ -259,6 +267,7 @@ def _mutate_pairwise(
     local_alignment: FloatArray,
     policy: TopologyMutationPolicy,
 ) -> FloatArray:
+    """Return the pairwise coupling after a mutation."""
     step = policy.mutation_rate * policy.max_pairwise_delta
     strengthen = local_alignment >= policy.pairwise_threshold
     weaken = local_alignment < policy.prune_threshold
@@ -276,6 +285,7 @@ def _prune_simplices(
     phases: FloatArray,
     policy: TopologyMutationPolicy,
 ) -> tuple[tuple[Hyperedge, ...], tuple[Hyperedge, ...]]:
+    """Return the simplices after pruning weakly-supported ones."""
     kept: list[Hyperedge] = []
     pruned: list[Hyperedge] = []
     for edge in hyperedges:
@@ -294,6 +304,7 @@ def _candidate_simplices(
     policy: TopologyMutationPolicy,
     global_coherence: float,
 ) -> tuple[Hyperedge, ...]:
+    """Return the candidate simplices for promotion."""
     if phases.size < 3 or global_coherence >= policy.coherence_floor:
         return ()
     existing_nodes = {edge.nodes for edge in existing}
@@ -315,6 +326,7 @@ def _candidate_simplices(
 
 
 def _simplex_coherence(phases: FloatArray, nodes: tuple[int, ...]) -> float:
+    """Return the phase coherence of a simplex."""
     local_phases = phases[np.asarray(nodes, dtype=np.int64)]
     return _order_parameter(local_phases)
 
@@ -322,6 +334,7 @@ def _simplex_coherence(phases: FloatArray, nodes: tuple[int, ...]) -> float:
 def _has_pairwise_support(
     knm: FloatArray, nodes: tuple[int, ...], floor: float
 ) -> bool:
+    """Return whether a simplex has pairwise support."""
     if floor <= 0.0:
         return True
     return all(
@@ -331,6 +344,7 @@ def _has_pairwise_support(
 
 
 def _require_unit_interval(value: float, name: str) -> None:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and in [0, 1]")
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
@@ -338,6 +352,7 @@ def _require_unit_interval(value: float, name: str) -> None:
 
 
 def _require_non_negative(value: float, name: str) -> None:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and non-negative")
     if not np.isfinite(value) or value < 0.0:
@@ -345,6 +360,7 @@ def _require_non_negative(value: float, name: str) -> None:
 
 
 def _require_positive(value: float, name: str) -> None:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and positive")
     if not np.isfinite(value) or value <= 0.0:
@@ -352,5 +368,6 @@ def _require_positive(value: float, name: str) -> None:
 
 
 def _require_non_negative_int(value: object, name: str) -> None:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be a non-negative integer")

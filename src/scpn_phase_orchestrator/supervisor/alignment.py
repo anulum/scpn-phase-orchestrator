@@ -365,6 +365,7 @@ class ValueAlignmentGuard:
     def _violations_for_action(
         self, action: ControlAction
     ) -> tuple[ValueViolation, ...]:
+        """Return the constraint violations for an action."""
         violations: list[ValueViolation] = []
         for constraint in self.policy.constraints:
             if not constraint.applies_to(action):
@@ -384,6 +385,7 @@ class ValueAlignmentGuard:
         return tuple(violations)
 
     def _score_action(self, action: ControlAction) -> float:
+        """Return the alignment score for an action."""
         applicable = [
             constraint
             for constraint in self.policy.constraints
@@ -585,6 +587,7 @@ def _score_counterfactuals(
     minimum_score: float,
     violations: list[ValueViolation],
 ) -> tuple[ValueScoreCounterfactual, ...]:
+    """Return the alignment scores for counterfactual actions."""
     if violations or alignment_score >= minimum_score:
         return ()
     return (
@@ -599,6 +602,7 @@ def _score_counterfactuals(
 
 
 def _constraint_from_template(item: object, index: int) -> ValueConstraint:
+    """Build a constraint from a template, else raise."""
     data = _template_mapping(item, f"constraints[{index}]")
     return ValueConstraint(
         name=_template_string(data.get("name"), f"constraints[{index}].name"),
@@ -612,6 +616,7 @@ def _constraint_from_template(item: object, index: int) -> ValueConstraint:
 
 
 def _action_from_template(item: object, index: int) -> ControlAction:
+    """Build an action from a template, else raise."""
     data = _template_mapping(item, f"fallback_actions[{index}]")
     return ControlAction(
         knob=_template_string(data.get("knob"), f"fallback_actions[{index}].knob"),
@@ -626,6 +631,7 @@ def _action_from_template(item: object, index: int) -> ControlAction:
 
 
 def _pareto_objective_from_template(item: object, index: int) -> ValueParetoObjective:
+    """Build a Pareto objective from a template, else raise."""
     data = _template_mapping(item, f"pareto_objectives[{index}]")
     return ValueParetoObjective(
         name=_template_string(data.get("name"), f"pareto_objectives[{index}].name"),
@@ -635,6 +641,7 @@ def _pareto_objective_from_template(item: object, index: int) -> ValueParetoObje
 
 
 def _template_list(template: Mapping[str, object], key: str) -> list[object]:
+    """Return a named template list field, else raise."""
     value = template.get(key, [])
     if not isinstance(value, list):
         raise ValueError(f"value_alignment.{key} must be a list")
@@ -642,18 +649,21 @@ def _template_list(template: Mapping[str, object], key: str) -> list[object]:
 
 
 def _template_mapping(value: object, context: str) -> Mapping[str, object]:
+    """Return a named template mapping field, else raise."""
     if not isinstance(value, Mapping):
         raise ValueError(f"value_alignment.{context} must be a mapping")
     return value
 
 
 def _template_string(value: object, context: str) -> str:
+    """Return a named template string field, else raise."""
     if not isinstance(value, str) or not value:
         raise ValueError(f"value_alignment.{context} must be a non-empty string")
     return value
 
 
 def _template_float(value: object) -> float:
+    """Return a named template float field, else raise."""
     if not _is_real_numeric_scalar(value):
         raise ValueError("value_alignment numeric fields must be numbers")
     number = float(value)
@@ -663,6 +673,7 @@ def _template_float(value: object) -> float:
 
 
 def _optional_template_float(value: object) -> float | None:
+    """Return an optional named template float field, or the default."""
     if value is None:
         return None
     return _template_float(value)
@@ -672,6 +683,7 @@ def _validated_replay_actions(
     actions: list[ControlAction] | ActionTuple,
     case_id: str,
 ) -> ActionTuple:
+    """Return the validated replay actions, else raise."""
     if not isinstance(actions, list | tuple):
         raise ValueError(f"value-alignment replay case {case_id!r} must be a sequence")
     proposed = tuple(actions)
@@ -685,6 +697,7 @@ def _validated_replay_actions(
 
 
 def _constraint_margin(action: ControlAction, constraint: ValueConstraint) -> float:
+    """Return the satisfaction margin of a constraint."""
     margins: list[float] = []
     if constraint.min_value is not None:
         margins.append(
@@ -705,6 +718,7 @@ def _constraint_margin(action: ControlAction, constraint: ValueConstraint) -> fl
 
 
 def _one_sided_margin(value: float, bound: float, *, lower: bool) -> float:
+    """Return the one-sided margin against a bound."""
     scale = max(abs(bound), 1.0)
     if lower:
         return float(np.clip((value - bound) / scale, 0.0, 1.0))
@@ -715,6 +729,7 @@ def _pareto_violations(
     objectives: tuple[ValueParetoObjective, ...],
     objective_deltas: ObjectiveDeltas | None,
 ) -> tuple[ValueParetoViolation, ...]:
+    """Return the Pareto-objective violations for an action."""
     if not objectives:
         return ()
     violations: list[ValueParetoViolation] = []
@@ -775,6 +790,7 @@ def _pareto_violations(
 
 
 def _finite_objective_delta(value: object, objective: str) -> float:
+    """Return the finite objective delta, else raise."""
     if not _is_real_numeric_scalar(value):
         raise ValueError(f"Pareto objective {objective!r} delta must be numeric")
     delta = float(value)
@@ -784,6 +800,7 @@ def _finite_objective_delta(value: object, objective: str) -> float:
 
 
 def _action_record(action: ControlAction) -> dict[str, object]:
+    """Return the JSON-safe record for an action."""
     return {
         "knob": action.knob,
         "scope": action.scope,
@@ -794,6 +811,7 @@ def _action_record(action: ControlAction) -> dict[str, object]:
 
 
 def _validate_bound(value: float | None, name: str) -> None:
+    """Return the validated constraint bound, else raise."""
     if value is None:
         return
     if not _is_real_numeric_scalar(value) or not np.isfinite(float(value)):
@@ -801,6 +819,7 @@ def _validate_bound(value: float | None, name: str) -> None:
 
 
 def _validate_non_negative_scalar(value: object, name: str) -> None:
+    """Return ``value`` as a non-negative scalar, else raise."""
     if not _is_real_numeric_scalar(value):
         raise ValueError(f"{name} must be finite and non-negative")
     number = float(value)
@@ -809,6 +828,7 @@ def _validate_non_negative_scalar(value: object, name: str) -> None:
 
 
 def _validate_unit_interval_scalar(value: object, name: str) -> None:
+    """Return ``value`` as a scalar in [0, 1], else raise."""
     if not _is_real_numeric_scalar(value):
         raise ValueError(f"{name} must be finite and in [0, 1]")
     number = float(value)
@@ -817,6 +837,7 @@ def _validate_unit_interval_scalar(value: object, name: str) -> None:
 
 
 def _is_real_numeric_scalar(value: object) -> TypeGuard[RealNumericScalar]:
+    """Return whether ``value`` is a real numeric scalar."""
     return isinstance(value, int | float | np.integer | np.floating) and not isinstance(
         value, bool | np.bool_
     )

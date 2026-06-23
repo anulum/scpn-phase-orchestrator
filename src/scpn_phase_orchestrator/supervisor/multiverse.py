@@ -157,6 +157,7 @@ class MultiverseCounterfactualManifest:
 
 
 def _coerce_float_array(name: str, value: object) -> FloatArray:
+    """Return ``value`` as a validated finite float array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must be a real ndarray")
@@ -170,6 +171,7 @@ def _coerce_float_array(name: str, value: object) -> FloatArray:
 
 
 def _require_finite_real(value: object, field: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field} must be finite")
     finite = float(value)
@@ -179,6 +181,7 @@ def _require_finite_real(value: object, field: str) -> float:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -187,6 +190,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -195,6 +199,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _require_positive_real(value: object, field: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     value_f = _require_finite_real(value, field)
     if value_f <= 0.0:
         raise ValueError(f"{field} must be positive")
@@ -202,6 +207,7 @@ def _require_positive_real(value: object, field: str) -> float:
 
 
 def _require_positive_int(value: object, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a positive integer")
     if int(value) < 1 or int(value) != value:
@@ -210,6 +216,7 @@ def _require_positive_int(value: object, field: str) -> int:
 
 
 def _require_non_negative_int(value: object, field: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a non-negative integer")
     if int(value) < 0 or int(value) != value:
@@ -218,6 +225,7 @@ def _require_non_negative_int(value: object, field: str) -> int:
 
 
 def _normalise_backend(backend: str) -> str:
+    """Return the supported multiverse backend name, else raise."""
     if not isinstance(backend, str):
         raise ValueError("backend must be one of: jax, numpy")
     backend_name = backend.strip().lower()
@@ -227,6 +235,7 @@ def _normalise_backend(backend: str) -> str:
 
 
 def _load_jax_numpy() -> Any:
+    """Import and return the jax.numpy module, else raise."""
     try:
         import jax
 
@@ -238,6 +247,7 @@ def _load_jax_numpy() -> Any:
 
 
 def _require_shape(name: str, array: FloatArray, shape: tuple[int, ...]) -> None:
+    """Assert an array has the expected shape, else raise."""
     if array.shape != shape:
         raise ValueError(f"{name}.shape={array.shape}, expected {shape}")
     if not np.all(np.isfinite(array)):
@@ -245,6 +255,7 @@ def _require_shape(name: str, array: FloatArray, shape: tuple[int, ...]) -> None
 
 
 def _require_zero_diagonal(name: str, array: FloatArray) -> None:
+    """Return the matrix if its diagonal is all zero, else raise."""
     if array.ndim != 2 or array.shape[0] != array.shape[1]:
         raise ValueError(f"{name} must be a square matrix")
     if not np.allclose(np.diag(array), 0.0, rtol=0.0, atol=0.0):
@@ -252,6 +263,7 @@ def _require_zero_diagonal(name: str, array: FloatArray) -> None:
 
 
 def _stable_hash(payload: object) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return sha256(blob.encode("utf-8")).hexdigest()
 
@@ -262,6 +274,7 @@ def _normalise_branch_specs(
     topology_masks: tuple[FloatArray, ...] | None,
     n_osc: int,
 ) -> tuple[MultiverseBranchSpec, ...]:
+    """Return the validated branch specifications, else raise."""
     if branch_specs:
         normalised = tuple(
             MultiverseBranchSpec(
@@ -342,6 +355,7 @@ def _normalise_branch_specs(
 def _apply_matrix_delta(
     matrix: FloatArray, scope: str, value: float, branch_id: str
 ) -> None:
+    """Return the coupling matrix with a branch delta applied."""
     if scope == "global":
         matrix += value
         return
@@ -366,6 +380,7 @@ def _apply_matrix_delta(
 
 
 def _validate_action(branch_id: str, action: ControlAction) -> tuple[str, str, float]:
+    """Validate a branch action, else raise."""
     if not isinstance(action.knob, str) or action.knob not in _SUPPORTED_KNOBS:
         raise ValueError(f"branch[{branch_id}] unsupported knob {action.knob!r}")
     if not isinstance(action.scope, str) or not action.scope.strip():
@@ -377,6 +392,7 @@ def _validate_action(branch_id: str, action: ControlAction) -> tuple[str, str, f
 
 
 def _off_diagonal_metrics(matrix: FloatArray) -> tuple[int, float]:
+    """Return the off-diagonal coupling metrics."""
     off_diag = np.ones_like(matrix, dtype=bool)
     np.fill_diagonal(off_diag, False)
     return int(np.count_nonzero(matrix[off_diag] != 0.0)), float(
@@ -393,6 +409,7 @@ def _apply_branch_actions(
     actions: tuple[ControlAction, ...],
     topology_mask: FloatArray | None,
 ) -> tuple[FloatArray, FloatArray, float, float, tuple[str, ...], int, float]:
+    """Return the coupling after applying a branch's actions."""
     knm = np.array(baseline_k, copy=True, dtype=np.float64)
     alpha = np.array(baseline_alpha, copy=True, dtype=np.float64)
     zeta = float(baseline_zeta)
@@ -437,6 +454,7 @@ def _branch_hash(
     topology_edge_count: int,
     topology_scale: float,
 ) -> str:
+    """Return the canonical hash of a branch."""
     payload: dict[str, Any] = spec.to_audit_record()
     payload["action_count"] = int(action_count)
     payload["topology_edge_count"] = int(topology_edge_count)
@@ -452,6 +470,7 @@ def _derivative(
     zeta: FloatArray,
     psi: FloatArray,
 ) -> FloatArray:
+    """Return the Kuramoto phase derivative for the state."""
     phase_diff = theta[:, None, :] - theta[:, :, None]
     coupling = np.sum(knm * np.sin(phase_diff - alpha), axis=2)
     coupling += omegas[None, :]
@@ -472,6 +491,7 @@ def _euler_step(
     psi: FloatArray,
     dt: float,
 ) -> FloatArray:
+    """Advance the phase state one explicit-Euler step."""
     dtheta = _derivative(theta, omegas, knm, alpha, zeta, psi)
     result: FloatArray = np.asarray((theta + dt * dtheta) % TWO_PI, dtype=np.float64)
     return result
@@ -486,6 +506,7 @@ def _rk4_step(
     psi: FloatArray,
     dt: float,
 ) -> FloatArray:
+    """Advance the phase state one classical RK4 step."""
     k1 = _derivative(theta, omegas, knm, alpha, zeta, psi)
     k2 = _derivative(theta + 0.5 * dt * k1, omegas, knm, alpha, zeta, psi)
     k3 = _derivative(theta + 0.5 * dt * k2, omegas, knm, alpha, zeta, psi)
@@ -498,6 +519,7 @@ def _rk4_step(
 
 
 def _order_parameters(theta: FloatArray) -> tuple[FloatArray, FloatArray]:
+    """Return the Kuramoto order parameters for the phases."""
     z = np.exp(1j * theta)
     mean = np.mean(z, axis=1)
     R: FloatArray = np.asarray(np.abs(mean), dtype=np.float64)
@@ -517,6 +539,7 @@ def _rollout_numpy(
     dt: float,
     method: str,
 ) -> tuple[FloatArray, FloatArray]:
+    """Run the branch rollout via the NumPy backend."""
     branch_count, n_osc, _ = knm.shape
     theta = np.broadcast_to(phases[None, :], (branch_count, n_osc)).copy()
     R_traj = np.empty((horizon + 1, branch_count), dtype=np.float64)
@@ -560,6 +583,7 @@ def _rollout_jax(
     dt: float,
     method: str,
 ) -> tuple[FloatArray, FloatArray]:
+    """Run the branch rollout via the JAX backend."""
     jnp = _load_jax_numpy()
     branch_count, n_osc, _ = knm.shape
     theta = jnp.broadcast_to(
@@ -575,15 +599,18 @@ def _rollout_jax(
     two_pi = jnp.asarray(TWO_PI, dtype=jnp.float64)
 
     def derivative(theta_j: Any) -> Any:
+        """Return the Kuramoto phase derivative for the state."""
         phase_diff = theta_j[:, None, :] - theta_j[:, :, None]
         coupling = jnp.sum(knm_j * jnp.sin(phase_diff - alpha_j), axis=2)
         coupling = coupling + omegas_j[None, :]
         return coupling + zeta_j[:, None] * jnp.sin(psi_j[:, None] - theta_j)
 
     def euler_step(theta_j: Any) -> Any:
+        """Advance the phase state one explicit-Euler step."""
         return jnp.mod(theta_j + dt_j * derivative(theta_j), two_pi)
 
     def rk4_step(theta_j: Any) -> Any:
+        """Advance the phase state one classical RK4 step."""
         k1 = derivative(theta_j)
         k2 = derivative(jnp.mod(theta_j + 0.5 * dt_j * k1, two_pi))
         k3 = derivative(jnp.mod(theta_j + 0.5 * dt_j * k2, two_pi))
@@ -594,6 +621,7 @@ def _rollout_jax(
         )
 
     def order_parameters(theta_j: Any) -> tuple[Any, Any]:
+        """Return the Kuramoto order parameters for the phases."""
         z = jnp.exp(1j * theta_j)
         mean = jnp.mean(z, axis=1)
         return jnp.abs(mean), jnp.mod(jnp.angle(mean), two_pi)

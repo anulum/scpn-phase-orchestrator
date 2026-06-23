@@ -398,6 +398,7 @@ class CausalInterventionEngine:
         zeta: float,
         psi: float,
     ) -> tuple[list[float], list[float]]:
+        """Run the causal-intervention rollout."""
         engine = UPDEEngine(self._n, self._dt, method=self._method)
         theta = np.array(phases, dtype=np.float64, copy=True)
         r0, psi0 = compute_order_parameter(theta)
@@ -419,6 +420,7 @@ class CausalInterventionEngine:
         zeta: float,
         psi: float,
     ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray, float, float]:
+        """Validate and normalise the causal-intervention inputs, else raise."""
         n = self._n
         checks = (
             ("phases", phases, (n,)),
@@ -639,6 +641,7 @@ def build_temporal_causal_hypergraph_experiment(
 
 
 def _apply_matrix_delta(matrix: FloatArray, scope: str, value: float) -> None:
+    """Return the coupling matrix with an intervention delta applied."""
     if not isinstance(scope, str):
         raise ValueError(f"unsupported causal intervention scope {scope!r}")
     if scope == "global":
@@ -660,6 +663,7 @@ def _apply_matrix_delta(matrix: FloatArray, scope: str, value: float) -> None:
 
 
 def _signed_phase_delta(a: float, b: float) -> float:
+    """Return the signed wrapped phase delta."""
     return float((a - b + np.pi) % TWO_PI - np.pi)
 
 
@@ -668,6 +672,7 @@ def _validate_causal_trace(
     lag: int,
     min_abs_weight: float,
 ) -> dict[str, FloatArray]:
+    """Validate the causal trace, else raise."""
     if isinstance(lag, bool) or int(lag) != lag or lag < 1:
         raise ValueError("lag must be a positive integer")
     if not np.isfinite(min_abs_weight) or min_abs_weight < 0.0:
@@ -694,6 +699,7 @@ def _validate_causal_trace(
 def _validated_temporal_hyperedges(
     candidate_hyperedges: list[dict[str, object]] | tuple[dict[str, object], ...],
 ) -> list[dict[str, object]]:
+    """Return the validated temporal hyperedges, else raise."""
     if not isinstance(candidate_hyperedges, list | tuple) or not candidate_hyperedges:
         raise ValueError("candidate_hyperedges must be a non-empty sequence")
     records: list[dict[str, object]] = []
@@ -735,6 +741,7 @@ def _validated_temporal_hyperedges(
 
 
 def _baseline_score(graph: CausalGraphEstimate) -> float:
+    """Return the baseline causal score."""
     if not graph.edges:
         return 0.0
     return float(max(abs(edge.weight) * edge.confidence for edge in graph.edges))
@@ -747,6 +754,7 @@ def _causal_baseline_family(
     min_abs_weight: float,
     graph: CausalGraphEstimate,
 ) -> list[dict[str, float | int | str]]:
+    """Return the family of baseline causal scores."""
     arrays = _validate_causal_trace(trace, lag, min_abs_weight)
     lagged_linear_score = _baseline_score(graph)
     records: list[dict[str, float | int | str]] = [
@@ -795,6 +803,7 @@ def _pairwise_correlation_baseline(
     description: str,
     use_delta: bool,
 ) -> dict[str, float | int | str]:
+    """Return the pairwise-correlation baseline score."""
     max_score = 0.0
     edge_count = 0
     for source, source_values in arrays.items():
@@ -825,6 +834,7 @@ def _granger_residual_improvement_baseline(
     lag: int,
     min_abs_weight: float,
 ) -> dict[str, float | int | str]:
+    """Return the Granger residual-improvement baseline score."""
     max_score = 0.0
     edge_count = 0
     for source, source_values in arrays.items():
@@ -863,6 +873,7 @@ def _target_persistence_baseline(
     lag: int,
     min_abs_weight: float,
 ) -> dict[str, float | int | str]:
+    """Return the target-persistence baseline score."""
     max_score = 0.0
     edge_count = 0
     for values in arrays.values():
@@ -879,6 +890,7 @@ def _target_persistence_baseline(
 
 
 def _linear_residual_sse(design: FloatArray, target: FloatArray) -> float:
+    """Return the linear-regression residual sum of squares."""
     if design.shape[0] != target.shape[0]:
         raise ValueError("linear baseline design and target length mismatch")
     augmented = np.column_stack((np.ones(design.shape[0], dtype=np.float64), design))
@@ -888,6 +900,7 @@ def _linear_residual_sse(design: FloatArray, target: FloatArray) -> float:
 
 
 def _stable_json_hash(payload: object) -> str:
+    """Return the canonical-JSON SHA-256 hash of the value."""
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -898,6 +911,7 @@ def _require_positive_int(
     type_message: str,
     range_message: str,
 ) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(type_message)
     coerced = int(value)
@@ -907,6 +921,7 @@ def _require_positive_int(
 
 
 def _require_positive_real(value: object, *, message: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(message)
     coerced = float(value)
@@ -916,6 +931,7 @@ def _require_positive_real(value: object, *, message: str) -> float:
 
 
 def _require_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite")
     coerced = float(value)
@@ -925,6 +941,7 @@ def _require_finite_real(value: object, *, name: str) -> float:
 
 
 def _coerce_float_array(name: str, value: object) -> FloatArray:
+    """Return ``value`` as a validated finite float array, else raise."""
     raw = np.asarray(value, dtype=object)
     if any(isinstance(item, bool | np.bool_) for item in raw.ravel()):
         raise ValueError(f"{name} must not contain boolean values")
@@ -940,6 +957,7 @@ def _lagged_linear_effect(
     source: FloatArray,
     target_delta: FloatArray,
 ) -> tuple[float, float]:
+    """Return the lagged linear effect between two series."""
     source_centered = source - float(np.mean(source))
     target_centered = target_delta - float(np.mean(target_delta))
     source_var = float(np.dot(source_centered, source_centered))
@@ -953,6 +971,7 @@ def _lagged_linear_effect(
 
 
 def _correlation(a: FloatArray, b: FloatArray) -> float:
+    """Return the Pearson correlation between two series."""
     a_centered = a - float(np.mean(a))
     b_centered = b - float(np.mean(b))
     a_var = float(np.dot(a_centered, a_centered))

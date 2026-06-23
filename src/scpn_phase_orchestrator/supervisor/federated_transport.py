@@ -65,6 +65,8 @@ _ALLOWED_TRANSPORT_DECLARATION_KEYS = {
 
 
 class _NormalisedUpdateRecord(TypedDict):
+    """Normalised, validated federated update record."""
+
     node_id: str
     sample_count: int
     local_loss: float
@@ -80,6 +82,8 @@ class _NormalisedUpdateRecord(TypedDict):
 
 
 class _NormalisedTransportDeclaration(TypedDict):
+    """Normalised, validated federated transport declaration."""
+
     transport: str
     endpoint: str
     owner: str
@@ -761,6 +765,7 @@ def validate_transport_deployment_preflight_manifest(
 def _normalise_transport_input(
     transport_declaration: Mapping[str, object] | object,
 ) -> Mapping[str, object]:
+    """Return the normalised transport input, else raise."""
     if not isinstance(transport_declaration, Mapping):
         raise ValueError("transport declaration must be a mapping")
     return transport_declaration
@@ -769,6 +774,7 @@ def _normalise_transport_input(
 def _normalise_transport_declaration(
     raw: Mapping[str, object],
 ) -> _NormalisedTransportDeclaration:
+    """Return the normalised transport declaration, else raise."""
     for key in raw:
         if not isinstance(key, str):
             raise ValueError("transport declaration keys must be text")
@@ -850,6 +856,7 @@ def _build_transport_preflight_signature(
     operator_review_required: bool,
     non_actuating: bool,
 ) -> str:
+    """Return the transport preflight signature."""
     return _stable_hash(
         {
             "schema_name": schema_name,
@@ -868,6 +875,7 @@ def _build_transport_preflight_signature(
 
 
 def _normalise_update_record(raw: object) -> _NormalisedUpdateRecord:
+    """Return the normalised update record, else raise."""
     if not isinstance(raw, Mapping):
         raise ValueError("each node update audit record must be a mapping")
 
@@ -950,6 +958,7 @@ def _normalise_update_record(raw: object) -> _NormalisedUpdateRecord:
 
 
 def _normalise_policy_delta(raw: object) -> tuple[tuple[str, float], ...]:
+    """Return the normalised policy delta, else raise."""
     if isinstance(raw, Mapping):
         items: ItemsView[object, object] | list[tuple[object, object]] = raw.items()
     elif isinstance(raw, Sequence) and not isinstance(raw, (str, bytes, bytearray)):
@@ -989,6 +998,7 @@ def _build_envelope_signature(
     | tuple[tuple[str, object], tuple[str, object]]
     | Sequence[tuple[str, object]],
 ) -> str:
+    """Return the envelope signature."""
     return _stable_hash(
         {
             "schema_name": schema_name,
@@ -1008,12 +1018,14 @@ def _build_envelope_signature(
 
 
 def _string_tuple(raw: object, name: str) -> tuple[str, ...]:
+    """Return ``value`` as a tuple of non-empty strings, else raise."""
     if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, bytearray)):
         raise ValueError(f"{name} must be a sequence of text")
     return tuple(_text(value, f"{name} item") for value in raw)
 
 
 def _text(value: object, name: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str):
         raise ValueError(f"{name} must be a text value")
     if not value:
@@ -1022,26 +1034,31 @@ def _text(value: object, name: str) -> str:
 
 
 def _sha256_text(value: object, name: str) -> str:
+    """Return the SHA-256 hex digest of the text."""
     return _text(value, name) if _is_sha256(value) else _raise_sha256(name)
 
 
 def _raise_sha256(name: str) -> str:
+    """Raise a validation error for an invalid SHA-256 digest."""
     raise ValueError(f"{name} must be a 64-character hex SHA-256 digest")
 
 
 def _bool(value: object, name: str) -> bool:
+    """Return ``value`` as a real boolean, else raise ``ValueError``."""
     if not isinstance(value, bool):
         raise ValueError(f"{name} must be a boolean")
     return value
 
 
 def _int(value: object, name: str) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if not isinstance(value, Integral) or isinstance(value, bool):
         raise ValueError(f"{name} must be an integer")
     return int(value)
 
 
 def _finite_float(value: object, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if not isinstance(value, Real) or isinstance(value, bool):
         raise ValueError(f"{name} must be a finite number")
     value_float = float(value)
@@ -1051,6 +1068,7 @@ def _finite_float(value: object, name: str) -> float:
 
 
 def _is_sha256(value: object) -> bool:
+    """Return whether ``value`` is a SHA-256 hex digest."""
     return (
         isinstance(value, str)
         and len(value) == 64
@@ -1061,6 +1079,7 @@ def _is_sha256(value: object) -> bool:
 def _group_last_sequence(
     envelopes: Sequence[FederatedTransportEnvelope],
 ) -> dict[str, int]:
+    """Return the last sequence number per group."""
     node_last: dict[str, int] = {}
     for envelope in envelopes:
         node_last[envelope.node_id] = envelope.node_sequence
@@ -1068,14 +1087,17 @@ def _group_last_sequence(
 
 
 def _sorted_repr(items: set[str] | frozenset[str]) -> str:
+    """Return a stable sorted representation of the value."""
     return ", ".join(sorted(items))
 
 
 def _stable_hash(payload: object) -> str:
+    """Return a stable SHA-256 hash of the inputs."""
     return hashlib.sha256(_stable_json(payload).encode("utf-8")).hexdigest()
 
 
 def _stable_json(payload: object) -> str:
+    """Return the canonical JSON string of the value."""
     return json.dumps(
         _to_json_ready(payload),
         sort_keys=True,
@@ -1085,6 +1107,7 @@ def _stable_json(payload: object) -> str:
 
 
 def _to_json_ready(value: object) -> object:
+    """Return ``value`` as a JSON-ready object."""
     if isinstance(value, Mapping):
         return {
             str(key): _to_json_ready(item)

@@ -529,6 +529,7 @@ class FEPPredictiveSupervisor:
         assessment: FEPPredictionAssessment,
         upde_state: UPDEState,
     ) -> bool:
+        """Return whether the predictive supervisor should act."""
         if assessment.free_energy >= self._free_energy_threshold:
             return True
         if assessment.mean_abs_error >= self._error_threshold:
@@ -649,6 +650,7 @@ def assess_fep_hierarchy(
 
 
 def _coerce_real_array(name: str, value: object) -> FloatArray:
+    """Return ``value`` as a validated finite real array, else raise."""
     raw = np.asarray(value, dtype=object)
     if any(isinstance(item, bool | np.bool_) for item in raw.ravel()):
         raise ValueError(f"{name} must not contain boolean values")
@@ -665,6 +667,7 @@ def _validate_phase_inputs(
     omegas: object,
     n_oscillators: int,
 ) -> tuple[FloatArray, FloatArray]:
+    """Validate the phase inputs, else raise."""
     phase_arr = _coerce_real_array("phases", phases)
     omega_arr = _coerce_real_array("omegas", omegas)
     if phase_arr.shape != (n_oscillators,):
@@ -685,6 +688,7 @@ def _validate_predictive_inputs(
     alpha: object,
     n_oscillators: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
+    """Validate and normalise the predictive inputs, else raise."""
     phase_arr, omega_arr = _validate_phase_inputs(phases, omegas, n_oscillators)
     knm_arr = _coerce_real_array("knm", knm)
     alpha_arr = _coerce_real_array("alpha", alpha)
@@ -701,12 +705,14 @@ def _validate_predictive_inputs(
 
 
 def _require_positive_int(value: object, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be a positive integer")
     return int(value)
 
 
 def _require_positive_real(value: object, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and positive")
     float_value = float(value)
@@ -716,6 +722,7 @@ def _require_positive_real(value: object, name: str) -> float:
 
 
 def _require_non_negative_real(value: object, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and non-negative")
     float_value = float(value)
@@ -725,6 +732,7 @@ def _require_non_negative_real(value: object, name: str) -> float:
 
 
 def _require_unit_interval(value: float, name: str) -> None:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and in [0, 1]")
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
@@ -732,6 +740,7 @@ def _require_unit_interval(value: float, name: str) -> None:
 
 
 def _require_non_negative(value: float, name: str) -> None:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and non-negative")
     if not np.isfinite(value) or value < 0.0:
@@ -749,6 +758,7 @@ def _validate_hierarchy_inputs(
     child_drive_gain: float,
     parent_drive_gain: float,
 ) -> None:
+    """Validate the hierarchy inputs, else raise."""
     if not isinstance(children, Mapping):
         raise ValueError("children must be a mapping of child observations")
     if not children:
@@ -768,6 +778,7 @@ def _validate_child_observation(
     phases: object,
     omegas: object,
 ) -> tuple[FloatArray, FloatArray]:
+    """Validate a child observation, else raise."""
     if not isinstance(name, str) or not name:
         raise ValueError("child names must be non-empty strings")
     phase_arr = _coerce_real_array(f"child {name!r} phases", phases)
@@ -784,10 +795,12 @@ def _validate_child_observation(
 
 
 def _coherence_to_parent_phases(child_rs: FloatArray) -> FloatArray:
+    """Return the parent phases implied by child coherence."""
     return np.arccos(np.clip(2.0 * child_rs - 1.0, -1.0, 1.0))
 
 
 def _state_from_r(r_value: float) -> UPDEState:
+    """Return the regime state from an order parameter."""
     return UPDEState(
         layers=[LayerState(R=float(r_value), psi=0.0)],
         cross_layer_alignment=np.eye(1),
@@ -797,6 +810,7 @@ def _state_from_r(r_value: float) -> UPDEState:
 
 
 def _action_record(action: ControlAction) -> dict[str, object]:
+    """Return the JSON-safe record for an action."""
     return {
         "knob": action.knob,
         "scope": action.scope,
