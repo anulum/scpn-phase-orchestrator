@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 def _validate_host(host: str) -> str:
+    """Return the host as a validated non-empty string, else raise."""
     if not isinstance(host, str) or not host:
         raise ValueError("host must be a non-empty string")
     if any(ord(char) < 32 for char in host):
@@ -49,6 +50,7 @@ def _validate_host(host: str) -> str:
 
 
 def _validate_port(port: int) -> int:
+    """Return the port as a validated TCP port integer, else raise."""
     if not isinstance(port, int) or isinstance(port, bool):
         raise ValueError("port must be an integer in [1, 65535]")
     if port < 1 or port > 65535:
@@ -94,6 +96,7 @@ class VisualizerStreamer:
             self._loop.call_soon_threadsafe(self._loop.stop)
 
     async def _handler(self, websocket: Any) -> None:
+        """Handle one WebSocket client connection for manifold broadcasts."""
         self._clients.add(websocket)
         try:
             await websocket.wait_closed()
@@ -101,6 +104,7 @@ class VisualizerStreamer:
             self._clients.discard(websocket)
 
     def _run_server(self) -> None:
+        """Run the WebSocket broadcast server until cancelled."""
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
@@ -144,7 +148,10 @@ class VisualizerStreamer:
                 add_done_callback(self._make_send_cleanup_callback(client))
 
     def _make_send_cleanup_callback(self, client: Any) -> Callable[[Any], None]:
+        """Return a callback that cleans up a completed send task."""
+
         def _cleanup_send_result(send_result: Any) -> None:
+            """Discard a completed send task and surface any error."""
             try:
                 cancelled = bool(send_result.cancelled())
             except (AttributeError, RuntimeError, TypeError):
@@ -164,6 +171,7 @@ class VisualizerStreamer:
         return _cleanup_send_result
 
     def _json_safe(self, data: Any) -> Any:
+        """Return ``value`` as a JSON-safe payload, else raise."""
         if isinstance(data, dict):
             return {k: self._json_safe(v) for k, v in data.items()}
         if isinstance(data, list):

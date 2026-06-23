@@ -31,6 +31,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_phase_array(value: object, *, name: str) -> FloatArray:
+    """Return the phases as a validated finite array, else raise."""
     array = np.asarray(value)
     dtype = array.dtype
     if (
@@ -53,6 +54,7 @@ def _validate_metric_values(
     name: str,
     expected_length: int,
 ) -> FloatArray:
+    """Return the per-node metric values as a validated finite array, else raise."""
     values = _validate_phase_array(value, name=name)
     if len(values) != expected_length:
         raise ValueError(
@@ -67,6 +69,7 @@ def _validate_layer_names(
     *,
     expected_length: int,
 ) -> list[str]:
+    """Return the validated non-empty layer names, else raise."""
     if not isinstance(value, list):
         raise ValueError("layer_names must be a list of non-empty strings")
     if len(value) != expected_length:
@@ -80,6 +83,7 @@ def _validate_layer_names(
 
 
 def _validate_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and positive")
     parsed = float(value)
