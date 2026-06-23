@@ -7,6 +7,11 @@ It transforms hierarchical oscillator systems into phase-locked control
 logic via Kuramoto/UPDE dynamics with a Rust-accelerated kernel and
 optional JAX differentiable backend.
 
+> The detailed, per-subsystem architecture map (inputs/outputs, processing
+> models, backend wiring, interface contracts, cross-repo wire formats, and
+> honest scope boundaries) lives under [`docs/architecture/`](docs/architecture/).
+> This file is the high-level summary.
+
 ## Pipeline
 
 ```
@@ -17,7 +22,7 @@ Domain YAML ──► Binding Loader ──► Validator
               Oscillator Extractors (P / I / S)
                      │
                      ▼
-         ┌── UPDE Engine (12 variants) ───────────┐
+         ┌── UPDE Engine (14–15 variants) ────────┐
          │   Kuramoto, Stuart-Landau, Inertial,   │
          │   Market, Swarmalator, Stochastic,     │
          │   Geometric, Delay, Simplicial,        │
@@ -33,7 +38,7 @@ Domain YAML ──► Binding Loader ──► Validator
         │             │             │
         └─────────────┼─────────────┘
                       ▼
-              Monitor Array (15 observers)
+              Monitor Array (30 observers + STL)
               ├── Boundary Observer
               ├── Coherence / Order Parameter
               ├── Chimera Detection
@@ -88,10 +93,10 @@ differentiable. GPU acceleration via `jax[cuda12]`.
 | `binding/` | YAML/JSON spec loading, validation | `BindingSpec`, `OscillatorFamily` |
 | `oscillators/` | Signal→phase extraction (P/I/S channels) | `PhaseExtractor`, `PhaseState` |
 | `coupling/` | K_nm matrix construction, adaptation, analysis | `CouplingBuilder`, `KnmMatrix` |
-| `upde/` | Phase ODE integration (10 engine variants) | `UPDEEngine`, `SparseUPDEEngine`, `StuartLandauEngine` |
+| `upde/` | Phase ODE integration (14–15 engine variants) | `UPDEEngine`, `SparseUPDEEngine`, `StuartLandauEngine` |
 | `imprint/` | History-dependent coupling modulation | `ImprintState`, `ImprintUpdate` |
 | `drivers/` | External forcing (P/I/S channels) | `PhysicalDriver`, `SymbolicDriver` |
-| `monitor/` | 15 dynamical observers | `BoundaryObserver`, `ChimeraDetector` |
+| `monitor/` | 30 dynamical observers + STL runtime monitor | `BoundaryObserver`, `ChimeraDetector` |
 | `supervisor/` | Regime FSM + policy engine + AI | `RegimeManager`, `ActiveInferenceAgent`, `SupervisorPolicy` |
 | `actuation/` | Control output mapping with constraints | `ActuationMapper`, `ConstraintProjection` |
 | `audit/` | Deterministic audit trail + replay | `AuditLogger`, `ReplayEngine` |
@@ -147,7 +152,7 @@ Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.
 | ITPC | `itpc.py` | Inter-trial phase coherence |
 | Transfer Entropy | `transfer_entropy.py` | Directed causal information flow |
 | Sleep Staging | `sleep_staging.py` | AASM sleep stage classification |
-| NPE | `npe.py` | Normalized prediction error |
+| NPE | `npe.py` | Normalised persistent entropy (topological, H₀) |
 | Psychedelic Sim | `psychedelic.py` | Entropy surge simulation |
 | STL Runtime | `stl.py` | Signal Temporal Logic safety monitor |
 | Session Start | `session_start.py` | Startup coherence gate |
@@ -173,7 +178,7 @@ Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.
 | `autotune/` | Auto-calibration pipeline | `FrequencyID`, `CouplingEstimation` |
 | `visualization/` | D3 network graph, Three.js torus | `NetworkGraph`, `TorusViz` |
 | `reporting/` | Matplotlib coherence plots | `CoherencePlot` |
-| `adapters/` | 12 bridge adapters (OTel, SCPN ecosystem) | `OTelExporter`, `FusionCoreBridge` |
+| `adapters/` | ecosystem, hardware, and protocol bridges (OTel, SCPN siblings, Modbus/OPC-UA/MQTT, BrainFlow) — opt-in, not wired into the core loop | `OTelExporter`, `FusionCoreBridge` |
 | `apps/queuewaves/` | Cascade failure detector (FastAPI) | `QueueWavesConfig`, `PhaseComputePipeline` |
 | `grpc_gen/` | Protocol buffer stubs | gRPC streaming service |
 
@@ -181,11 +186,12 @@ Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.
 
 | Module | Purpose |
 |--------|---------|
-| `cli.py` | `spo` command entry point |
-| `server.py` | FastAPI REST endpoints |
-| `server_grpc.py` | Async gRPC streaming service |
-| `exceptions.py` | `SPOError` hierarchy (8 subclasses) |
-| `_compat.py` | Rust/Python compatibility, version constants |
+| `runtime/cli/` | `spo` command entry point (package, ~15 command modules + a plugins group) |
+| `runtime/server.py` | FastAPI REST endpoints |
+| `runtime/server_grpc.py` | Async gRPC streaming service |
+| `api.py` | Public library API (`Orchestrator`, `evaluate_binding_spec`) |
+| `exceptions.py` | `SPOError` hierarchy |
+| `_compat.py` | Rust/Python compatibility (`HAS_RUST`, `TWO_PI`) |
 
 ## Rust Kernel (`spo-kernel/`)
 
@@ -194,8 +200,12 @@ Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.
 | `spo-types` | Shared config and state types | 4 |
 | `spo-engine` | UPDE integration, coupling, monitors, SSGF, autotune | 53 |
 | `spo-oscillators` | Phase extraction (P/I/S channels) | 5 |
-| `spo-supervisor` | Regime manager, policy, coherence, projector | 6 |
+| `spo-supervisor` | Regime manager, policy, coherence, projector (built; not yet bound from Python) | 6 |
 | `spo-ffi` | PyO3 bindings exposing Rust engine to Python | 1 (cdylib) |
+| `spo-wasm` | Standalone browser/edge Kuramoto stepper (`wasm-bindgen`) | 1 |
+
+A non-Rust `spo-fpga/` directory holds a Verilog Kuramoto core
+(`kuramoto_core.v`, Zynq-7020 target; unsynthesised).
 
 The `spo-engine` crate contains 53 modules spanning UPDE integration
 (12 engine variants + order params + envelope + splitting + reduction),
