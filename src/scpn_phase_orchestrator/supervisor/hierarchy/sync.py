@@ -409,6 +409,7 @@ def ingest_hierarchy_sync_envelopes(
 def _load_mapping_record(
     record: Mapping[str, object] | str,
 ) -> Mapping[str, object]:
+    """Return a validated mapping record from a payload, else raise."""
     if isinstance(record, str):
         try:
             decoded = json.loads(
@@ -431,10 +432,12 @@ def _load_mapping_record(
 
 
 def _reject_json_constant(token: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant is not allowed: {token}")
 
 
 def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Return a JSON object with unique keys, else raise."""
     record: dict[str, object] = {}
     for key, value in pairs:
         if key in record:
@@ -444,6 +447,7 @@ def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def _load_child_summary(record: Mapping[str, object]) -> ChildSupervisorSummary:
+    """Return a validated child summary from a payload, else raise."""
     _reject_unknown_keys(
         record,
         allowed=_HIERARCHY_SYNC_SUMMARY_KEYS,
@@ -470,6 +474,7 @@ def _require_text_field(
     *,
     default: str | None = None,
 ) -> str:
+    """Return a named non-empty text field, else raise."""
     value = record.get(key, default)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{key} must be a non-empty string")
@@ -480,6 +485,7 @@ def _reject_raw_hierarchy_keys(
     record: Mapping[str, object],
     location: str,
 ) -> None:
+    """Raise if the mapping carries forbidden raw hierarchy keys."""
     forbidden = {
         key
         for key in record
@@ -496,6 +502,7 @@ def _reject_unknown_keys(
     allowed: frozenset[str],
     location: str,
 ) -> None:
+    """Raise if the mapping carries keys outside the allowed set."""
     unknown: list[str] = []
     for key in record:
         if not isinstance(key, str):

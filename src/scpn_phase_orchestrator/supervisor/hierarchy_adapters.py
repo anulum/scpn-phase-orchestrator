@@ -214,6 +214,7 @@ def _adapter_result(
     *,
     frame_kind: str | None = None,
 ) -> HierarchyAdapterResult:
+    """Build the decoded adapter result record."""
     return HierarchyAdapterResult(
         boundary=boundary,
         ledger=ledger,
@@ -226,6 +227,7 @@ def _load_jsonl_record(
     line: str | Mapping[str, object] | HierarchySyncEnvelope,
     index: int,
 ) -> Mapping[str, object] | HierarchySyncEnvelope:
+    """Return a validated record from a JSONL line, else raise."""
     if isinstance(line, HierarchySyncEnvelope):
         return line
     if isinstance(line, Mapping):
@@ -251,10 +253,12 @@ def _load_jsonl_record(
 
 
 def _reject_json_constant(token: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant is not allowed: {token}")
 
 
 def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Return a JSON object with unique keys, else raise."""
     record: dict[str, object] = {}
     for key, value in pairs:
         if key in record:
@@ -264,6 +268,7 @@ def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def _require_json_content_type(headers: Mapping[str, object]) -> None:
+    """Assert the request carries a JSON content type, else raise."""
     if not isinstance(headers, Mapping):
         raise ValueError("headers must be a decoded mapping")
     content_type = None
@@ -283,6 +288,7 @@ def _records_from_payload(
     *,
     location: str,
 ) -> tuple[Mapping[str, object] | HierarchySyncEnvelope, ...]:
+    """Return the validated records from a request payload."""
     if not isinstance(payload, Mapping):
         raise ValueError(f"{location} must be a decoded mapping")
     _reject_unknown_keys(payload, allowed=_REST_PAYLOAD_KEYS, location=location)
@@ -300,6 +306,7 @@ def _records_from_payload(
 def _records_from_frame_payload(
     payload: object,
 ) -> tuple[Mapping[str, object] | HierarchySyncEnvelope, ...]:
+    """Return the validated records from a WebSocket frame payload."""
     if isinstance(payload, Mapping) and "envelopes" in payload:
         _reject_unknown_keys(
             payload,
@@ -314,6 +321,7 @@ def _require_record(
     value: object,
     location: str,
 ) -> Mapping[str, object] | HierarchySyncEnvelope:
+    """Return ``value`` as a validated record mapping, else raise."""
     if isinstance(value, HierarchySyncEnvelope):
         return value
     if not isinstance(value, Mapping):
@@ -325,6 +333,7 @@ def _require_record_sequence(
     value: object,
     location: str,
 ) -> tuple[Mapping[str, object] | HierarchySyncEnvelope, ...]:
+    """Return ``value`` as a validated sequence of records, else raise."""
     if isinstance(value, str) or not isinstance(value, Sequence):
         raise ValueError(f"{location} must be a sequence of decoded envelope mappings")
     records = tuple(
@@ -337,6 +346,7 @@ def _require_record_sequence(
 
 
 def _frame_kind(frame: Mapping[str, object]) -> str:
+    """Return the kind label of a WebSocket frame."""
     if "kind" in frame and "type" in frame:
         raise ValueError("frame must not contain both kind and type")
     value = frame.get("kind", frame.get("type"))
@@ -351,6 +361,7 @@ def _reject_unknown_keys(
     allowed: frozenset[str],
     location: str,
 ) -> None:
+    """Raise if the mapping carries keys outside the allowed set."""
     unknown = set(record).difference(allowed)
     if unknown:
         keys = ", ".join(sorted(str(key) for key in unknown))

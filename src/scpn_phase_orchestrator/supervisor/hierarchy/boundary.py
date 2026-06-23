@@ -260,6 +260,7 @@ def _child_escalations(
     critical_threshold: float,
     min_confidence: float,
 ) -> tuple[HierarchyEscalation, ...]:
+    """Return the escalations propagated from child summaries."""
     records: list[HierarchyEscalation] = []
     regime = child.regime.lower()
     if child.confidence < min_confidence:
@@ -278,10 +279,12 @@ def _child_escalations(
 
 
 def _dummy_summary() -> ChildSupervisorSummary:
+    """Return a neutral placeholder child summary."""
     return ChildSupervisorSummary("validation", "validation", 1.0, 0.0)
 
 
 def _validate_envelope_reduced_only(envelope: HierarchySyncEnvelope) -> None:
+    """Assert a sync envelope carries only reduced data, else raise."""
     if not isinstance(envelope, HierarchySyncEnvelope):
         raise ValueError("envelope must be a HierarchySyncEnvelope")
     _reject_raw_instance_attributes(envelope, "envelope")
@@ -303,6 +306,7 @@ def _validate_envelope_reduced_only(envelope: HierarchySyncEnvelope) -> None:
 def _canonical_hierarchy_sync_envelope(
     envelope: HierarchySyncEnvelope,
 ) -> HierarchySyncEnvelope:
+    """Return the canonical form of a hierarchy sync envelope."""
     _validate_envelope_reduced_only(envelope)
     return HierarchySyncEnvelope(
         protocol_version=envelope.protocol_version,
@@ -314,6 +318,7 @@ def _canonical_hierarchy_sync_envelope(
 
 
 def _canonical_child_summary(summary: ChildSupervisorSummary) -> ChildSupervisorSummary:
+    """Return the canonical form of a reduced child summary."""
     _validate_child_summary_reduced_only(summary)
     return ChildSupervisorSummary(
         name=summary.name,
@@ -327,10 +332,12 @@ def _canonical_child_summary(summary: ChildSupervisorSummary) -> ChildSupervisor
 
 
 def _validate_reduced_summary_metadata(summary: ChildSupervisorSummary) -> None:
+    """Validate a reduced child summary's metadata, else raise."""
     _validate_child_summary_reduced_only(summary)
 
 
 def _validate_child_summary_reduced_only(summary: ChildSupervisorSummary) -> None:
+    """Assert a child summary carries only reduced data, else raise."""
     if not isinstance(summary, ChildSupervisorSummary):
         raise ValueError("summary must be a ChildSupervisorSummary")
     _reject_raw_instance_attributes(summary, "summary")
@@ -347,6 +354,7 @@ def _validate_child_summary_reduced_only(summary: ChildSupervisorSummary) -> Non
 
 
 def _require_integer(value: object, name: str) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if not isinstance(value, int) or isinstance(value, bool):
         raise ValueError(f"{name} must be an integer")
     if abs(value) > _MAX_JSON_SAFE_INTEGER:
@@ -358,6 +366,7 @@ def _require_integer(value: object, name: str) -> int:
 
 
 def _require_float(value: object, name: str) -> float:
+    """Return ``value`` as a validated finite float, else raise."""
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise ValueError(f"{name} must be a finite number")
     _require_finite_number(value, name)
@@ -365,10 +374,12 @@ def _require_float(value: object, name: str) -> float:
 
 
 def _validate_metadata_value(value: object, path: str) -> None:
+    """Validate a single metadata value, else raise."""
     _normalise_metadata_value(value, path)
 
 
 def _normalise_metadata_value(value: object, path: str) -> object:
+    """Return a normalised JSON-safe metadata value."""
     if isinstance(value, Mapping):
         normalised: dict[str, object] = {}
         for key, nested in value.items():
@@ -402,6 +413,7 @@ def _normalise_metadata_value(value: object, path: str) -> object:
 
 
 def _metadata_to_audit_record(value: object) -> object:
+    """Return the metadata as a JSON-safe audit record."""
     if isinstance(value, Mapping):
         return {key: _metadata_to_audit_record(nested) for key, nested in value.items()}
     if isinstance(value, tuple | list):
@@ -410,6 +422,7 @@ def _metadata_to_audit_record(value: object) -> object:
 
 
 def _reject_raw_instance_attributes(instance: object, location: str) -> None:
+    """Raise if the mapping carries forbidden raw instance attributes."""
     try:
         names = vars(instance)
     except TypeError:
@@ -421,6 +434,7 @@ def _reject_raw_instance_attributes(instance: object, location: str) -> None:
 
 
 def _is_forbidden_hierarchy_key(key: str) -> bool:
+    """Return whether a key is a forbidden raw hierarchy key."""
     lowered = key.lower().replace("-", "_")
     if lowered in _FORBIDDEN_RAW_HIERARCHY_KEYS:
         return True
@@ -440,6 +454,7 @@ def _is_forbidden_hierarchy_key(key: str) -> bool:
 def _normalise_previous_sequences(
     previous_sequences: Mapping[str, int] | None,
 ) -> dict[str, int]:
+    """Return the normalised previous-sequence numbers."""
     if previous_sequences is not None and not isinstance(previous_sequences, Mapping):
         raise ValueError("previous_sequences must be a mapping")
     normalised: dict[str, int] = {}
@@ -454,6 +469,7 @@ def _normalise_previous_sequences(
 def _duplicate_sequence_conflict_sources(
     envelopes: Sequence[HierarchySyncEnvelope],
 ) -> set[str]:
+    """Return the sources conflicting on a duplicate sequence."""
     grouped: dict[tuple[str, int], list[HierarchySyncEnvelope]] = {}
     for envelope in envelopes:
         grouped.setdefault((envelope.source_node, envelope.sequence), []).append(
@@ -480,6 +496,7 @@ def _rejection(
     envelope: HierarchySyncEnvelope,
     reason: str,
 ) -> dict[str, object]:
+    """Build a rejection record for an invalid envelope."""
     return {
         "source_node": envelope.source_node,
         "sequence": envelope.sequence,
@@ -489,6 +506,7 @@ def _rejection(
 
 
 def _rejection_sort_key(record: Mapping[str, object]) -> tuple[str, int, str]:
+    """Return the sort key ordering rejection records."""
     return (
         str(record["source_node"]),
         _require_integer(record["sequence"], "sequence"),
@@ -501,6 +519,7 @@ def _escalation(
     severity: str,
     reason: str,
 ) -> HierarchyEscalation:
+    """Build an escalation record from a child summary."""
     return HierarchyEscalation(
         child=child.name,
         channel=child.channel,
@@ -516,6 +535,7 @@ def _weighted_order_parameter(
     weights: FloatArray,
     phases: FloatArray,
 ) -> tuple[float, float]:
+    """Return the child-weighted order parameter."""
     if float(np.sum(weights)) == 0.0:
         return 0.0, 0.0
     vector = np.mean(weights * np.exp(1j * phases))
@@ -523,6 +543,7 @@ def _weighted_order_parameter(
 
 
 def _cross_child_alignment(phases: FloatArray) -> FloatArray:
+    """Return the cross-child phase alignment."""
     delta = phases[:, None] - phases[None, :]
     return np.asarray((1.0 + np.cos(delta)) / 2.0, dtype=np.float64)
 
@@ -533,6 +554,7 @@ def _parent_regime(
     degraded_threshold: float,
     critical_threshold: float,
 ) -> str:
+    """Return the parent regime from the child summaries."""
     if parent_r < critical_threshold:
         return _REGIME_CRITICAL
     if parent_r < degraded_threshold:
@@ -548,6 +570,7 @@ def _validate_plan_inputs(
     critical_threshold: float,
     min_confidence: float,
 ) -> None:
+    """Validate the hierarchy-plan inputs, else raise."""
     if not children:
         raise ValueError("children must contain at least one child summary")
     for child in children:
@@ -561,11 +584,13 @@ def _validate_plan_inputs(
 
 
 def _require_non_empty(value: str, name: str) -> None:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
 
 
 def _require_finite_number(value: float, name: str) -> None:
+    """Return ``value`` as a finite number, else raise ``ValueError``."""
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise ValueError(f"{name} must be a finite number")
     try:
@@ -577,10 +602,12 @@ def _require_finite_number(value: float, name: str) -> None:
 
 
 def _require_finite(value: float, name: str) -> None:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     _require_finite_number(value, name)
 
 
 def _require_unit_interval(value: float, name: str) -> None:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     _require_finite_number(value, name)
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
         raise ValueError(f"{name} must be finite and in [0, 1]")

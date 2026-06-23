@@ -180,6 +180,7 @@ def _advance_consensus_round(
     degraded_threshold: float,
     critical_threshold: float,
 ) -> dict[str, HierarchyConsensusState]:
+    """Advance the gossip consensus one round."""
     next_states: dict[str, HierarchyConsensusState] = {}
     for node, state in states.items():
         neighbours = tuple(
@@ -205,6 +206,7 @@ def _consensus_state(
     degraded_threshold: float,
     critical_threshold: float,
 ) -> HierarchyConsensusState:
+    """Return the consensus state over the sync envelopes."""
     if not neighbours:
         return state
     summaries = (state.summary, *(neighbour.summary for neighbour in neighbours))
@@ -258,6 +260,7 @@ def _consensus_state(
 
 
 def _validate_gossip_inputs(*, rounds: int, self_weight: float) -> None:
+    """Validate the gossip-round inputs, else raise."""
     rounds = _require_integer(rounds, "rounds")
     if rounds < 1:
         raise ValueError("rounds must be >= 1")
@@ -265,6 +268,7 @@ def _validate_gossip_inputs(*, rounds: int, self_weight: float) -> None:
 
 
 def _validate_neighbour_map(neighbour_map: Mapping[str, Sequence[str]]) -> None:
+    """Return the validated neighbour map, else raise."""
     if not isinstance(neighbour_map, Mapping):
         raise ValueError("neighbour_map must be a mapping")
     for node, neighbours in neighbour_map.items():
