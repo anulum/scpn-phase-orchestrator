@@ -1,35 +1,76 @@
-# SCPN Phase Orchestrator: Deep Architectural Capabilities & Use-Case Scenarios
+# SCPN Phase Orchestrator: Capabilities & Use-Case Scenarios
 
-## 1. Core Architecture: The Universal Phase Dynamics Engine
-`scpn-phase-orchestrator` functions as the **central topology manager and mathematical solver** for the entire ecosystem. It operates on a singular, profound mathematical axiom: the dynamics of synchronization are universal. Whether stabilizing tearing modes in a 100-million-degree plasma or aligning EEG gamma waves in a human brain, the orchestrator solves the system using the Universal Phase Dynamics Equation (UPDE):
+For the detailed, per-subsystem architecture (inputs/outputs, processing models,
+backend wiring, interface contracts, and honest scope boundaries) see
+[`docs/architecture/`](docs/architecture/). This document summarises capabilities
+and representative use cases.
+
+## 1. Core: the Universal Phase Dynamics Engine
+
+SPO is a topology manager and phase-dynamics solver for hierarchical oscillator
+systems. The same engine serves different domains — from tearing modes in a
+plasma to gamma-band coupling in EEG — by swapping a domainpack rather than code.
+The base dynamics are the Universal Phase Dynamics Equation (a Kuramoto/Sakaguchi
+family with extensions):
+
 $$ \frac{d\theta_i}{dt} = \omega_i + \frac{K}{N} \sum_{j=1}^{N} A_{ij} \sin(\theta_j - \theta_i) + \zeta $$
 
-### Technical Specifications:
-*   **`spo-kernel` (Rust PyO3 Backend):** The heavy lifting of the numerical integration (`euler`, `rk4`, `rk45`) is completely offloaded to a locally compiled, memory-safe Rust kernel, ensuring zero-overhead parallel computation.
-*   **Benchmark Performance:**
-    *   **High-Frequency Control ($N=16$):** Integrates small systems (N=16) in **15.9 microseconds** per step (Python/NumPy) or **1.7 microseconds** (Rust Batch).
-    *   **Massive Swarms ($N=1,024$):** Calculates dense interactions (N=1024) in **14.2 milliseconds** (Python) or **12.9 milliseconds** (Rust Batch).
-    *   **City-Scale Networks ($N=10,000$):** Successfully allocates and integrates $100,000,000$ edge connections in **~850 milliseconds**.
+### Numerics and acceleration
 
-## 2. The "Domainpack" Abstraction
-The genius of the orchestrator lies in its separation of *topology* from *physics*. It utilizes dynamic `binding_spec.yaml` configurations to shape the $K_{nm}$ coupling matrix on the fly.
-*   **Plasma Physics (`plasma_control`):** Configures an 8-layer hierarchy with exponential distance decay, mapping frequencies from micro-turbulence ($500 \text{ kHz}$) down to wall equilibrium ($1 \text{ Hz}$).
-*   **Biological Networks (`bio_stub`):** Reconfigures the exact same memory space into 4 macro-physiological layers (Cellular $\rightarrow$ Systemic), applying different Sakaguchi phase-lags and biological clock frequencies.
-*   **Adapter Bridges:** Specialized python modules (`scpn_control_bridge.py`, `plasma_control_bridge.py`, `quantum_control_bridge.py`) continuously translate the orchestrator's raw phase states ($R$, $\Psi$) into domain-specific telemetry (e.g., $H_\infty$ vectors for coils, or Qiskit circuits).
+- Integration methods: `euler`, `rk4`, and adaptive `rk45` (Dormand–Prince).
+- A Rust kernel (`spo-kernel`, PyO3) provides accelerated paths, with a pure-Python
+  reference floor. Backend selection is per-kernel and fastest-first
+  (Rust → WebGPU → Mojo → Julia → Go → Python); the kernel is optional and is not
+  importable in every environment, in which case the Python floor runs. See
+  [`docs/architecture/backends.md`](docs/architecture/backends.md).
+- Benchmarks live under `bench/` and `benchmarks/` (Python) and
+  `spo-kernel/crates/spo-engine/benches/` (Rust Criterion). Measured figures are
+  environment-specific and are not quoted here — run the harness on the target
+  hardware and active backend before relying on a number.
 
-## 3. Advanced Use-Case Scenarios
-*   **Disruption Prediction via Topological Collapse:** By monitoring the cross-layer alignment matrix and the global Order Parameter ($R$), the orchestrator can predict systemic phase-transitions (e.g., a tokamak plasma disruption or an epileptic seizure) milliseconds before macroscopic failure occurs.
-*   **Decentralized Swarm Synchronization:** Providing the mathematical backbone for calculating how thousands of independent autonomous agents (drones, robots) can reach collective consensus without a centralized command server, using only local Kuramoto coupling.
-*   **Ising-Model Social Physics:** Implementing macro-scale sociological simulations. The $K_{nm}$ matrix is used to model social media echo chambers, predicting how "information avalanches" and societal polarization emerge from individual stochastic interactions (aligning with the Noospheric modeling of Layer 11).
+## 2. The domainpack abstraction
 
-## 4. High-Performance Computing (HPC) & Supercomputer Projections
-The `spo-kernel` is written in Rust specifically to enable bare-metal multi-threading and SIMD vectorization. While it scales efficiently on a standard laptop, it is engineered for cluster deployment.
+SPO separates *topology* (hierarchy and coupling structure, declared per domain)
+from *physics* (the integrator and observers). A `binding_spec.yaml` shapes the
+$K_{nm}$ coupling matrix and the per-layer frequencies. 36 domainpacks ship under
+`domainpacks/`. Examples:
 
-### Projected Scaling Scenarios:
-*   **Massive Agent-Based Modeling ($N = 10^6$ nodes):**
-    *   *Scenario:* Real-time modeling of national-level traffic grids or epidemiological transmission vectors, where every node represents a human agent interacting via the Kuramoto equation.
-    *   *Hardware:* Standard CPU cluster (e.g., 128-core AMD EPYC servers) utilizing `rayon` for data-parallel iterator execution in Rust.
-    *   *Metrics:* Because the $K_{nm}$ matrix requires $O(N^2)$ memory, a dense 1 million node matrix requires ~8 TB of RAM, requiring distributed memory architecture (MPI) or sparse-matrix representations. With sparsity (e.g., agents only interacting with local neighbors), integration speeds will remain sub-second.
-*   **The "Digital Earth" Synchronization:**
-    *   *Scenario:* Running the SCPN Layer 12 (Gaian) climate/oceanic phase models.
-    *   *Metrics:* Offloading the sparse UPDE integrations to GPU clusters (via JAX/Cupy bridges inside the orchestrator) allows for sub-millisecond integrations of global oceanic currents, providing a massive speedup over traditional fluid-dynamics Monte Carlo models.
+- **`plasma_control`** — an 8-layer hierarchy with exponential distance decay,
+  mapping micro-turbulence down to wall-equilibrium timescales.
+- **`bio_stub`** — 4 macro-physiological layers (cellular → systemic) with
+  Sakaguchi phase-lags and biological-clock frequencies.
+
+**Ecosystem bridges** (`adapters/`) translate raw phase state ($R$, $\Psi$) into
+domain-specific telemetry — for example a coupling-matrix handshake for
+`scpn-control`, or an OpenQASM compiler manifest for `scpn-quantum-control`.
+These bridges are opt-in and emit wire formats; they do not hard-depend on the
+sibling repositories (only `quantum_control_bridge` lazily imports its sibling,
+and only when a quantum method is called).
+
+## 3. Representative use cases
+
+- **Transition / disruption early warning.** Tracking the cross-layer alignment
+  matrix, the global order parameter $R$, the conformal twin-confidence gate, and
+  the ordinal-pattern transition-entropy monitor can flag systemic phase
+  transitions (e.g. a tokamak disruption or a seizure-onset analogue) ahead of a
+  macroscopic change. SPO's posture is review-only: it emits audited proposals,
+  not actuation.
+- **Decentralised swarm synchronisation.** A phase-consensus substrate for how
+  many independent agents (drones, robots) reach collective agreement from local
+  Kuramoto coupling, without a central command server.
+- **Oscillator Ising / combinatorial optimisation.** The differentiable `nn/oim`
+  oscillator Ising machine maps graph colouring, max-cut, and QUBO to phase
+  clustering (a research track, see `docs/architecture/subsystems/nn.md`).
+
+Illustrative-only domainpacks (e.g. `financial_markets`, social-dynamics) are
+modelling exercises; phase *control* has no actuator in those domains, so they
+are not positioned as control use cases.
+
+## 4. Scaling
+
+The Rust kernel uses data-parallel iterators (`rayon`) and is intended to scale
+from a laptop to a CPU cluster. The dense $K_{nm}$ matrix is $O(N^2)$ in memory,
+so large-$N$ deployments depend on sparse coupling (`SparseUPDEEngine`) or
+mean-field reduction (Ott–Antonsen). Concrete cluster-scale throughput has not
+been measured at the time of writing; any large-$N$ figure should be established
+on the target hardware rather than projected.
