@@ -57,6 +57,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust order-parameter backend callables."""
     from spo_kernel import (
         compute_layer_coherence_rust,
         order_parameter,
@@ -71,6 +72,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+    """Load the Mojo order-parameter backend callables."""
     from ..experimental.accelerators.upde._order_params_mojo import (
         _ensure_exe,
         layer_coherence_mojo,
@@ -87,6 +89,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
 
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+    """Load the Julia order-parameter backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._order_params_julia import (
@@ -103,6 +106,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
+    """Load the Go order-parameter backend callables."""
     from ..experimental.accelerators.upde._order_params_go import (
         _load_lib,
         layer_coherence_go,
@@ -128,6 +132,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -137,6 +142,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         values = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -161,6 +167,7 @@ def _mean_phase(value: float) -> float:
 
 
 def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
+    """Return the phases as a validated finite array, else raise."""
     raw = np.asarray(phases)
     if _contains_boolean_alias(phases):
         raise ValueError(f"{name} must not contain boolean values")
@@ -174,6 +181,7 @@ def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
 
 
 def _layer_indices(layer_mask: BoolArray | IntArray, n_phases: int) -> IntArray:
+    """Return the validated per-layer oscillator index groups, else raise."""
     mask = np.asarray(layer_mask)
     if mask.dtype == bool:
         flattened = mask.ravel()
@@ -196,12 +204,14 @@ def _layer_indices(layer_mask: BoolArray | IntArray, n_phases: int) -> IntArray:
 
 
 def _python_order_parameter(phases: FloatArray) -> tuple[float, float]:
+    """Return the reference Kuramoto order parameters (NumPy floor)."""
     with np.errstate(invalid="ignore"):
         z = np.mean(np.exp(1j * phases))
     return _unit_interval(float(np.abs(z))), _mean_phase(float(np.angle(z)))
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -216,6 +226,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 
 
 def _order_parameter_probe_seconds(name: str) -> float:
+    """Return the per-backend probe timings for the order parameter."""
     phases = np.linspace(0.0, TWO_PI, 256, dtype=np.float64)
     start = perf_counter()
     try:
@@ -237,6 +248,7 @@ _HAS_RUST = ACTIVE_BACKEND == "rust"
 
 
 def _dispatch(fn_name: str) -> object:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:

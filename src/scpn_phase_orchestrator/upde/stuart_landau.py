@@ -55,12 +55,14 @@ _ValidatedStep = tuple[
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -70,6 +72,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     coerced = float(value)
@@ -79,6 +82,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_nonnegative_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     coerced = _validate_finite_float(value, name=name)
     if coerced < 0.0:
         raise ValueError(f"{name} must be non-negative, got {value!r}")
@@ -86,6 +90,7 @@ def _validate_nonnegative_float(value: object, *, name: str) -> float:
 
 
 def _validate_phase_drive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a validated finite phase-drive float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"zeta and psi must be finite; {name} got {value!r}")
     coerced = float(value)
@@ -101,6 +106,7 @@ def _validate_state_array(
     shape: tuple[int, ...],
     finite_message: str,
 ) -> FloatArray:
+    """Return the state as a validated finite array, else raise."""
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -337,6 +343,7 @@ class StuartLandauEngine:
         alpha: FloatArray,
         epsilon: float = 1.0,
     ) -> _ValidatedStep:
+        """Validate and normalise the Stuart-Landau integration inputs."""
         n = self._n
         state = _validate_state_array(
             state,
@@ -384,6 +391,7 @@ class StuartLandauEngine:
         return state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon
 
     def _derivative(self, state: FloatArray, p: _Params) -> FloatArray:
+        """Return the Stuart-Landau amplitude-phase derivative for the state."""
         omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon = p
         n = self._n
         theta = state[:n]
@@ -424,16 +432,19 @@ class StuartLandauEngine:
         return self._scratch_deriv
 
     def _post_step(self, state: FloatArray) -> FloatArray:
+        """Apply post-step normalisation to the Stuart-Landau state."""
         n = self._n
         state[:n] %= TWO_PI  # Phase on S¹
         np.maximum(state[n:], 0.0, out=state[n:])  # r >= 0 (physical amplitude)
         return state
 
     def _euler_step(self, state: FloatArray, p: _Params) -> FloatArray:
+        """Advance the Stuart-Landau state one explicit-Euler step."""
         deriv = self._derivative(state, p)
         return self._post_step(state + self._dt * deriv)
 
     def _rk4_step(self, state: FloatArray, p: _Params) -> FloatArray:
+        """Advance the Stuart-Landau state one classical RK4 step."""
         dt = self._dt
         k1 = self._derivative(state, p).copy()
         k2 = self._derivative(state + 0.5 * dt * k1, p).copy()
@@ -443,6 +454,7 @@ class StuartLandauEngine:
         return self._post_step(state + (dt / 6.0) * weighted)
 
     def _rk45_step(self, state: FloatArray, p: _Params) -> FloatArray:
+        """Advance the Stuart-Landau state one adaptive RK45 step."""
         dt = self._last_dt
         A = self._DP_A
         ks = self._ks

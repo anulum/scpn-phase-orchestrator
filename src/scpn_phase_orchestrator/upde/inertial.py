@@ -55,6 +55,7 @@ _Loader = Callable[..., tuple[FloatArray, FloatArray]]
 
 
 def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
+    """Load the Rust second-order Kuramoto backend callable."""
     from spo_kernel import inertial_step_rust
 
     def _rust(
@@ -67,6 +68,7 @@ def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
         n: int,
         dt: float,
     ) -> tuple[FloatArray, FloatArray]:
+        """Call the Rust second-order Kuramoto step kernel."""
         new_th, new_od = inertial_step_rust(
             np.ascontiguousarray(theta, dtype=np.float64),
             np.ascontiguousarray(omega_dot, dtype=np.float64),
@@ -87,6 +89,7 @@ def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
+    """Load the Mojo second-order Kuramoto backend callable."""
     from ..experimental.accelerators.upde._inertial_mojo import (
         _ensure_exe,
         inertial_step_mojo,
@@ -98,6 +101,7 @@ def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
+    """Load the Julia second-order Kuramoto backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._inertial_julia import (
@@ -109,6 +113,7 @@ def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 def _load_go_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
+    """Load the Go second-order Kuramoto backend callable."""
     from ..experimental.accelerators.upde._inertial_go import (
         _load_lib,
         inertial_step_go,
@@ -128,6 +133,7 @@ _BACKEND_CACHE: dict[str, _Loader] = {}
 
 
 def _load_backend(name: str) -> _Loader:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -137,6 +143,7 @@ def _load_backend(name: str) -> _Loader:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -153,6 +160,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> _Loader | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -170,12 +178,14 @@ def _dispatch() -> _Loader | None:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -190,6 +200,7 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the state as a validated finite array, else raise."""
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -207,6 +218,7 @@ def _validate_positive_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the state as a validated strictly positive array, else raise."""
     arr = _validate_state_array(value, name=name, shape=shape)
     if not np.all(arr > 0.0):
         raise ValueError(f"{name} must contain only positive finite values")
@@ -219,6 +231,7 @@ def _validate_nonnegative_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the state as a validated non-negative array, else raise."""
     arr = _validate_state_array(value, name=name, shape=shape)
     if not np.all(arr >= 0.0):
         raise ValueError(f"{name} must contain only non-negative finite values")
@@ -239,6 +252,7 @@ def _python_step(
     knm = np.asarray(knm_flat).reshape(n, n)
 
     def deriv(th: FloatArray, od: FloatArray) -> tuple[FloatArray, FloatArray]:
+        """Return the second-order (swing-equation) Kuramoto derivative."""
         s = np.sin(th)
         c = np.cos(th)
         # sin(θ_j − θ_i) = s_j · c_i − c_j · s_i  (row-i, col-j)

@@ -41,6 +41,7 @@ _DelayBackend: TypeAlias = Callable[..., FloatArray]
 
 
 def _load_rust_fn() -> _DelayBackend:
+    """Load the Rust delayed-Kuramoto backend callable."""
     from spo_kernel import delayed_kuramoto_run_rust
 
     def _rust(
@@ -55,6 +56,7 @@ def _load_rust_fn() -> _DelayBackend:
         delay_steps: int,
         n_steps: int,
     ) -> FloatArray:
+        """Call the Rust time-delayed Kuramoto step kernel."""
         return np.asarray(
             delayed_kuramoto_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
@@ -76,6 +78,7 @@ def _load_rust_fn() -> _DelayBackend:
 
 def _load_mojo_fn() -> _DelayBackend:
     # pragma: no cover — toolchain
+    """Load the Mojo delayed-Kuramoto backend callable."""
     from ..experimental.accelerators.upde._delay_mojo import (
         _ensure_exe,
         delayed_kuramoto_run_mojo,
@@ -87,6 +90,7 @@ def _load_mojo_fn() -> _DelayBackend:
 
 def _load_julia_fn() -> _DelayBackend:
     # pragma: no cover — toolchain
+    """Load the Julia delayed-Kuramoto backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._delay_julia import (
@@ -98,6 +102,7 @@ def _load_julia_fn() -> _DelayBackend:
 
 def _load_go_fn() -> _DelayBackend:
     # pragma: no cover — toolchain
+    """Load the Go delayed-Kuramoto backend callable."""
     from ..experimental.accelerators.upde._delay_go import (
         _load_lib,
         delayed_kuramoto_run_go,
@@ -117,6 +122,7 @@ _BACKEND_CACHE: dict[str, _DelayBackend] = {}
 
 
 def _load_backend(name: str) -> _DelayBackend:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -126,6 +132,7 @@ def _load_backend(name: str) -> _DelayBackend:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -142,6 +149,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> _DelayBackend | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS]
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -158,12 +166,14 @@ def _dispatch() -> _DelayBackend | None:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real, got {value!r}")
     value = float(value)
@@ -173,6 +183,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     value = float(value)
@@ -187,6 +198,7 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the state as a validated finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -201,6 +213,7 @@ def _validate_state_array(
 
 
 def _validate_phase_output(value: object, *, n_oscillators: int) -> FloatArray:
+    """Return the backend phase output matching the reference, else raise."""
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -217,6 +230,7 @@ def _validate_phase_output(value: object, *, n_oscillators: int) -> FloatArray:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         arr = np.asarray(value, dtype=object)
     except (TypeError, ValueError):

@@ -45,12 +45,14 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _load_rust_fns() -> dict[str, object]:
+    """Load the Rust envelope backend callables."""
     from spo_kernel import (
         envelope_modulation_depth_rust,
         extract_envelope_rust,
     )
 
     def _rust_extract(amps: FloatArray, window: int) -> FloatArray:
+        """Call the Rust sliding-window RMS envelope kernel."""
         return np.asarray(
             extract_envelope_rust(
                 np.ascontiguousarray(amps.ravel(), dtype=np.float64),
@@ -60,6 +62,7 @@ def _load_rust_fns() -> dict[str, object]:
         )
 
     def _rust_mod(env: FloatArray) -> float:
+        """Call the Rust modulation-depth kernel."""
         return float(
             envelope_modulation_depth_rust(
                 np.ascontiguousarray(env.ravel(), dtype=np.float64),
@@ -70,6 +73,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+    """Load the Mojo envelope backend callables."""
     from ..experimental.accelerators.upde._envelope_mojo import (
         _ensure_exe,
         envelope_modulation_depth_mojo,
@@ -84,6 +88,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+    """Load the Julia envelope backend callables."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._envelope_julia import (
@@ -98,6 +103,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
+    """Load the Go envelope backend callables."""
     from ..experimental.accelerators.upde._envelope_go import (
         _load_lib,
         envelope_modulation_depth_go,
@@ -121,6 +127,7 @@ _BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
 def _load_backend(name: str) -> dict[str, object]:
+    """Load and cache the named backend callables."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -130,6 +137,7 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _extract_1d_python(amps: FloatArray, window: int) -> FloatArray:
+    """Return the reference 1-D RMS envelope (NumPy floor)."""
     t = amps.size
     sq = amps.astype(np.float64) ** 2
     # Window exceeds series — fall back to a single constant RMS
@@ -145,6 +153,7 @@ def _extract_1d_python(amps: FloatArray, window: int) -> FloatArray:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -159,6 +168,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 
 
 def _extract_probe_seconds(name: str) -> float:
+    """Return the per-backend probe timings for envelope extraction."""
     amps = np.linspace(0.01, 1.0, 256, dtype=np.float64)
     start = perf_counter()
     try:
@@ -179,6 +189,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch(fn_name: str) -> object | None:
+    """Return the fastest available backend callables, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:

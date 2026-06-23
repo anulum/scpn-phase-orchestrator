@@ -53,6 +53,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
+    """Load the Rust swarmalator backend callable."""
     from spo_kernel import PySwarmalatorStepper
 
     def _rust(
@@ -67,6 +68,7 @@ def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
         k: float,
         dt: float,
     ) -> tuple[FloatArray, FloatArray]:
+        """Call the Rust swarmalator step kernel with contiguous arrays."""
         stepper = PySwarmalatorStepper(int(n), int(dim), float(dt))
         new_pos, new_phases = stepper.step(
             np.ascontiguousarray(pos.ravel(), dtype=np.float64),
@@ -87,6 +89,7 @@ def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
+    """Load the Mojo swarmalator backend callable."""
     from ..experimental.accelerators.upde._swarmalator_mojo import (
         _ensure_exe,
         swarmalator_step_mojo,
@@ -98,6 +101,7 @@ def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
+    """Load the Julia swarmalator backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.upde._swarmalator_julia import (
@@ -109,6 +113,7 @@ def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 def _load_go_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
+    """Load the Go swarmalator backend callable."""
     from ..experimental.accelerators.upde._swarmalator_go import (
         _load_lib,
         swarmalator_step_go,
@@ -131,6 +136,7 @@ _BACKEND_CACHE: dict[str, Callable[..., tuple[FloatArray, FloatArray]]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., tuple[FloatArray, FloatArray]]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -140,6 +146,7 @@ def _load_backend(name: str) -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -155,6 +162,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., tuple[FloatArray, FloatArray]] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
     for backend in ordered_backends:
@@ -172,12 +180,14 @@ def _dispatch() -> Callable[..., tuple[FloatArray, FloatArray]] | None:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -187,6 +197,7 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     coerced = float(value)
@@ -201,6 +212,7 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return the state as a validated finite array, else raise."""
     raw = np.asarray(value)
     if np.issubdtype(raw.dtype, np.bool_):
         raise ValueError(f"{name} must be real-valued, not boolean")
@@ -224,6 +236,7 @@ def _validate_backend_output(
     n: int,
     dim: int,
 ) -> tuple[FloatArray, FloatArray]:
+    """Return the backend output matching the reference, else raise."""
     out_pos = _validate_state_array(
         pos,
         name="backend output positions",
