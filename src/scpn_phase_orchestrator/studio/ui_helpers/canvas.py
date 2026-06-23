@@ -539,6 +539,7 @@ def _canvas_next_action(
     operator_signoff: bool,
     apply_enabled: bool,
 ) -> str:
+    """Return the recommended next operator action for the canvas review state."""
     if apply_enabled:
         return "apply reviewed binding rewrite or download artefacts"
     if rewrite_status != "review_ready":
@@ -551,6 +552,7 @@ def _canvas_next_action(
 
 
 def _string_list(value: object, name: str) -> list[str]:
+    """Return ``value`` as a list of non-empty strings, else raise ``ValueError``."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a sequence of strings")
     items: list[str] = []
@@ -564,6 +566,7 @@ def _blocked_binding_rewrite_candidate(
     before_digest: str,
     validation_errors: Sequence[str],
 ) -> dict[str, object]:
+    """Build a blocked canvas binding-rewrite candidate record (unchanged YAML)."""
     yaml_text = result.project_state.binding.yaml_text
     return {
         "candidate_kind": "canvas_binding_rewrite_candidate",
@@ -590,6 +593,12 @@ def _binding_apply_blocked_reasons(
     *,
     operator_signoff: bool,
 ) -> list[str]:
+    """Return the reasons that block applying a canvas binding rewrite.
+
+    Checks the candidate kind and review-ready status, operator sign-off, that the
+    target path exists, that the candidate YAML matches its digest and validates,
+    and that the on-disk source still matches the recorded before-digest.
+    """
     blocked: list[str] = []
     if candidate.get("candidate_kind") != "canvas_binding_rewrite_candidate":
         blocked.append("candidate_kind must be canvas_binding_rewrite_candidate")
@@ -625,6 +634,7 @@ def _binding_apply_record(
     backup_path: str,
     blocked_reasons: Sequence[str],
 ) -> dict[str, object]:
+    """Build the canvas binding-rewrite apply audit record."""
     return {
         "apply_kind": "canvas_binding_rewrite_apply",
         "candidate_kind": candidate.get("candidate_kind", ""),
@@ -643,6 +653,7 @@ def _binding_apply_record(
 
 
 def _next_binding_backup_path(path: Path, before_digest: str) -> Path:
+    """Return the next free ``.studio-backup-<digest>.bak`` path for the binding."""
     stem = f"{path.name}.studio-backup-{before_digest[:12]}.bak"
     backup = path.with_name(stem)
     if not backup.exists():
@@ -655,6 +666,7 @@ def _next_binding_backup_path(path: Path, before_digest: str) -> Path:
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
+    """Atomically write ``text`` to ``path`` via a same-directory temp file."""
     tmp_path = ""
     try:
         with tempfile.NamedTemporaryFile(
@@ -679,6 +691,7 @@ def _rewrite_binding_cross_channel_couplings(
     yaml_text: str,
     edges: Sequence[Mapping[str, object]],
 ) -> str:
+    """Rewrite the binding YAML's ``cross_channel_couplings`` from canvas edges."""
     import yaml
 
     raw = yaml.safe_load(yaml_text)
@@ -694,6 +707,7 @@ def _rewrite_binding_cross_channel_couplings(
 def _canvas_edge_to_cross_channel_coupling(
     edge: Mapping[str, object],
 ) -> dict[str, object]:
+    """Convert a canvas edge to a cross-channel coupling (distinct source/target)."""
     source = _canvas_edge_channel(edge, "source")
     target = _canvas_edge_channel(edge, "target")
     if source == target:
@@ -716,6 +730,7 @@ def _canvas_edge_to_cross_channel_coupling(
 
 
 def _canvas_edge_channel(edge: Mapping[str, object], endpoint: str) -> str:
+    """Resolve the channel name for an edge endpoint, else raise ``ValueError``."""
     explicit = edge.get(f"{endpoint}_channel")
     if isinstance(explicit, str) and explicit.strip():
         return explicit.strip()
@@ -726,6 +741,7 @@ def _canvas_edge_channel(edge: Mapping[str, object], endpoint: str) -> str:
 
 
 def _validate_candidate_binding_yaml(candidate_yaml: str) -> list[str]:
+    """Return validation errors for candidate binding YAML, loaded in a temp dir."""
     with tempfile.TemporaryDirectory() as tmpdir:
         spec_path = Path(tmpdir) / "binding_spec.yaml"
         spec_path.write_text(candidate_yaml, encoding="utf-8")
@@ -737,12 +753,14 @@ def _validate_candidate_binding_yaml(candidate_yaml: str) -> list[str]:
 
 
 def _require_sha256_digest(value: object, field_name: str) -> str:
+    """Return ``value`` if it is a SHA-256 digest, else raise ``ValueError``."""
     if not _is_sha256_digest(value):
         raise ValueError(f"{field_name} must be a SHA-256 digest")
     return str(value)
 
 
 def _require_non_empty_payload(value: object, name: str) -> str:
+    """Return ``value`` if it is a non-empty string payload, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
     return value
@@ -752,6 +770,7 @@ def _normalise_table_rows(
     rows: Sequence[Mapping[str, object]],
     field_name: str,
 ) -> list[dict[str, object]]:
+    """Return table rows as mappings with string keys and JSON-safe finite values."""
     if isinstance(rows, str | bytes) or not isinstance(rows, Sequence):
         raise ValueError(f"{field_name} must be a sequence of mappings")
     normalised: list[dict[str, object]] = []
@@ -776,6 +795,7 @@ def _normalise_canvas_graph(
     graph: Mapping[str, object],
     field_name: str,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """Return the validated canvas graph's node and edge row lists."""
     if not isinstance(graph, Mapping):
         raise ValueError(f"{field_name} must be a mapping")
     nodes = graph.get("nodes", ())
@@ -794,6 +814,7 @@ def _validate_canvas_edge_endpoints(
     nodes: Sequence[Mapping[str, object]],
     edges: Sequence[Mapping[str, object]],
 ) -> None:
+    """Assert every canvas edge's source and target reference a known node id."""
     node_ids = {
         _require_non_empty_text(node.get("id"), "canvas node id") for node in nodes
     }
@@ -811,6 +832,7 @@ def _canvas_item_changes(
     *,
     fields: Sequence[str],
 ) -> dict[str, list[dict[str, object]]]:
+    """Return the added, removed, and modified items between two canvas snapshots."""
     before = _canvas_item_index(before_items, fields=fields)
     after = _canvas_item_index(after_items, fields=fields)
     before_ids = set(before)
@@ -832,6 +854,7 @@ def _canvas_item_index(
     *,
     fields: Sequence[str],
 ) -> dict[str, dict[str, object]]:
+    """Index canvas items by their id, keeping only the selected fields."""
     indexed: dict[str, dict[str, object]] = {}
     for item in items:
         item_id = _require_non_empty_text(item.get("id"), "canvas item id")
