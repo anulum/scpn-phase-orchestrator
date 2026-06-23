@@ -133,6 +133,12 @@ def _normalise_topos_validation_reports(
     schema_name: str,
     label: str,
 ) -> tuple[dict[str, object], ...]:
+    """Validate a non-empty sequence of topos validation reports for the panel.
+
+    Each report must use the named schema, keep the review-safe proof boundary
+    and non-actuating flag, and have object and morphism counts matching the
+    lengths of its normalised objects and morphisms.
+    """
     if schema_name not in _TOPOS_REPORT_SCHEMAS:
         raise ValueError("Topos report schema is not supported")
     if isinstance(reports, Mapping) or not isinstance(reports, Sequence) or not reports:
@@ -206,6 +212,7 @@ def _normalise_topos_obligations(
     value: object,
     name: str,
 ) -> tuple[dict[str, object], ...]:
+    """Return validated proof-obligation records (passed/failed, name, evidence)."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a sequence")
     if not value:
@@ -234,6 +241,7 @@ def _normalise_topos_named_records(
     value: object,
     name: str,
 ) -> tuple[dict[str, object], ...]:
+    """Return validated named records with optional kind/detail/regimes/labels."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a sequence")
     records: list[dict[str, object]] = []
@@ -269,6 +277,7 @@ def _normalise_topos_morphisms(
     value: object,
     name: str,
 ) -> tuple[dict[str, object], ...]:
+    """Return validated deterministic morphism records (source, target, label)."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a sequence")
     morphisms: list[dict[str, object]] = []
@@ -301,6 +310,12 @@ def _normalise_topos_morphisms(
 def _normalise_topos_domain_examples(
     examples: Sequence[Mapping[str, object]],
 ) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
+    """Validate topos domain examples and return their summaries and table rows.
+
+    Each example must keep the review-safe proof boundary and non-actuating flag,
+    be passed, and carry obligation names and a hash; returns the normalised
+    summaries and the flattened per-example rows.
+    """
     if isinstance(examples, Mapping) or not isinstance(examples, Sequence):
         raise ValueError("Topos examples must be a sequence")
     normalised: list[dict[str, object]] = []

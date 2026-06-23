@@ -121,6 +121,13 @@ def build_hybrid_order_studio_panel(
 def _normalise_hybrid_order_records(
     records: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate and normalise hybrid quantum-classical order records for the panel.
+
+    Each record must keep the review-safe claim boundary and non-actuating flags,
+    name a supported backend, and carry finite R/Psi, bounded entropy and
+    participation metrics, a qubit-covering bipartition, and a payload-matching
+    hash. Raises ``ValueError`` on any malformed or boundary-violating record.
+    """
     if isinstance(records, Mapping) or not isinstance(records, Sequence) or not records:
         raise ValueError("hybrid-order records must be a non-empty sequence")
     normalised: list[dict[str, object]] = []
@@ -189,6 +196,12 @@ def _normalise_hybrid_order_records(
 def _normalise_hybrid_order_scenarios(
     scenarios: Sequence[Mapping[str, object]],
 ) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
+    """Validate hybrid-order scenarios and flatten their state candidates.
+
+    Returns the per-scenario summary rows and the flattened candidate rows; every
+    scenario and candidate must keep the review-safe claim boundary and
+    non-actuating flags and carry a supported state type and bounded metrics.
+    """
     if isinstance(scenarios, Mapping) or not isinstance(scenarios, Sequence):
         raise ValueError("hybrid-order scenarios must be a sequence")
     normalised_scenarios: list[dict[str, object]] = []
@@ -285,6 +298,7 @@ def _normalise_hybrid_order_scenarios(
 
 
 def _validated_hybrid_record_hash(record: Mapping[str, object], label: str) -> str:
+    """Return the record's SHA-256 hash after checking it matches its payload."""
     record_hash = _require_sha256_hex(record.get("record_hash"), f"{label} record_hash")
     payload = dict(record)
     payload.pop("record_hash", None)
@@ -307,6 +321,7 @@ def _normalise_hybrid_bipartition(
     qubit_count: int,
     label: str,
 ) -> list[list[int]]:
+    """Return a two-group qubit bipartition covering each qubit exactly once."""
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
         raise ValueError(f"{label} must be a two-group bipartition")
     if len(value) != 2:
@@ -332,12 +347,14 @@ def _normalise_hybrid_bipartition(
 
 
 def _hybrid_non_bool_int(value: object, name: str) -> int:
+    """Return ``value`` as an integer, rejecting booleans, else raise."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{name} must be an integer")
     return int(value)
 
 
 def _hybrid_positive_int(value: object, name: str) -> int:
+    """Return ``value`` as a strictly positive integer, else raise."""
     result = _hybrid_non_bool_int(value, name)
     if result < 1:
         raise ValueError(f"{name} must be positive")
@@ -345,18 +362,21 @@ def _hybrid_positive_int(value: object, name: str) -> int:
 
 
 def _hybrid_non_negative(value: float, name: str) -> float:
+    """Return ``value`` if it is non-negative, else raise ``ValueError``."""
     if value < 0.0:
         raise ValueError(f"{name} must be non-negative")
     return value
 
 
 def _hybrid_positive_float(value: float, name: str) -> float:
+    """Return ``value`` if it is strictly positive, else raise ``ValueError``."""
     if value <= 0.0:
         raise ValueError(f"{name} must be positive")
     return value
 
 
 def _hybrid_unit_interval(value: float, name: str) -> float:
+    """Return ``value`` if it lies in [0, 1], else raise ``ValueError``."""
     if not 0.0 <= value <= 1.0:
         raise ValueError(f"{name} must lie in [0, 1]")
     return value

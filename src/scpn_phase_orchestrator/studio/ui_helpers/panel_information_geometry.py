@@ -152,6 +152,12 @@ def build_information_geometry_studio_panel(
 def _normalise_information_geometry_records(
     records: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate and normalise a non-empty sequence of information-geometry records.
+
+    Each record must keep the review-safe claim boundary and the non-actuating and
+    execution-disabled flags, name a supported backend, and carry a valid state
+    (simplex point and Fisher-information matrix). Raises ``ValueError`` otherwise.
+    """
     if isinstance(records, Mapping) or not isinstance(records, Sequence) or not records:
         raise ValueError("information-geometry records must be a non-empty sequence")
     normalised: list[dict[str, object]] = []
@@ -259,6 +265,11 @@ def _normalise_information_geometry_records(
 def _normalise_information_geometry_scenarios(
     scenarios: Sequence[Mapping[str, object]],
 ) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
+    """Validate information-geometry scenarios and return summaries and table rows.
+
+    Each scenario must keep the review-safe claim boundary and non-actuating flags;
+    returns the per-scenario summaries and the flattened candidate rows.
+    """
     if isinstance(scenarios, Mapping) or not isinstance(scenarios, Sequence):
         raise ValueError("information-geometry scenarios must be a sequence")
     normalised_scenarios: list[dict[str, object]] = []
@@ -339,6 +350,7 @@ def _normalise_information_geometry_scenarios(
 
 
 def _normalise_simplex_sequence(value: object, name: str) -> tuple[float, ...]:
+    """Return ``value`` as a non-negative float tuple normalised to unit mass."""
     values = _normalise_float_sequence(value, name)
     if any(item < 0.0 for item in values):
         raise ValueError(f"{name} must be non-negative")
@@ -357,6 +369,11 @@ def _normalise_square_float_matrix(
     expected_size: int,
     positive_diagonal: bool,
 ) -> tuple[tuple[float, ...], ...]:
+    """Return ``value`` as a symmetric square matrix of ``expected_size``, else raise.
+
+    Optionally requires a strictly positive diagonal; the matrix must be square,
+    of the expected size, and symmetric to a tight tolerance.
+    """
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a square matrix")
     if len(value) != expected_size:
@@ -379,6 +396,7 @@ def _single_information_geometry_action(
     record: Mapping[str, object],
     label: str,
 ) -> dict[str, object]:
+    """Return the single validated review action (knob, scope, value, ttl, reason)."""
     actions = record.get("action_proposals")
     if isinstance(actions, str | bytes) or not isinstance(actions, Sequence):
         raise ValueError(f"{label} action_proposals must be a sequence")
