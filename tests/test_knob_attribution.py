@@ -17,7 +17,6 @@ knobs, inactive knobs, and the input-validation paths.
 from __future__ import annotations
 
 import itertools
-import math
 from collections.abc import Callable, Mapping
 
 import numpy as np
@@ -38,7 +37,9 @@ _OBSERVATION = RewardObservation(coherence=0.0)
 _CONFIG = RewardConfig()
 
 
-def _report(candidate: KnobPolicyCandidate, components: dict[str, float]) -> AutotuneRewardReport:
+def _report(
+    candidate: KnobPolicyCandidate, components: dict[str, float]
+) -> AutotuneRewardReport:
     return AutotuneRewardReport(
         reward=float(sum(components.values())),
         components=components,
@@ -48,7 +49,9 @@ def _report(candidate: KnobPolicyCandidate, components: dict[str, float]) -> Aut
     )
 
 
-def _linear_interaction_evaluator() -> Callable[[KnobPolicyCandidate], AutotuneRewardReport]:
+def _linear_interaction_evaluator() -> Callable[
+    [KnobPolicyCandidate], AutotuneRewardReport
+]:
     """Reward = linear knob terms plus one alpha*zeta interaction component."""
 
     def evaluate(candidate: KnobPolicyCandidate) -> AutotuneRewardReport:
@@ -176,7 +179,9 @@ def test_marginal_is_leave_one_out() -> None:
     value = _coalition_value_factory(candidate, baseline, evaluate)
     full = value(frozenset({"alpha", "zeta", "channel_weights[0]"}))
     for item in report.attributions:
-        without = value(frozenset({"alpha", "zeta", "channel_weights[0]"}) - {item.knob})
+        without = value(
+            frozenset({"alpha", "zeta", "channel_weights[0]"}) - {item.knob}
+        )
         assert item.marginal_total == pytest.approx(full - without, abs=1e-9)
 
 
@@ -198,7 +203,9 @@ def test_inactive_knobs_are_omitted() -> None:
 
 def test_no_active_knobs_returns_empty_report() -> None:
     candidate = KnobPolicyCandidate(alpha=1.0, zeta=2.0)
-    report = attribute_knob_policy(candidate, candidate, _linear_interaction_evaluator())
+    report = attribute_knob_policy(
+        candidate, candidate, _linear_interaction_evaluator()
+    )
     assert report.attributions == ()
     assert report.method == "exact"
     assert report.attributed_total == pytest.approx(0.0, abs=1e-12)

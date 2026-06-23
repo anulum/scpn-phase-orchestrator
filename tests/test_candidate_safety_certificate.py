@@ -40,7 +40,9 @@ def _barrier() -> NeuralBarrier:
     return NeuralBarrier(weights=(np.array([[1.0]]),), biases=(np.array([0.0]),))
 
 
-def _certificate(boundary_shell: float = 0.0, *, verified: bool = True) -> BarrierCertificate:
+def _certificate(
+    boundary_shell: float = 0.0, *, verified: bool = True
+) -> BarrierCertificate:
     return BarrierCertificate(
         verified=verified,
         cells_checked=100,
@@ -109,7 +111,9 @@ def test_no_barrier_leaves_margin_unset() -> None:
 def test_lyapunov_constraint_pass_and_fail() -> None:
     constraints = SafetyConstraintConfig(max_lyapunov_exponent=0.0)
     safe = certify_candidate_safety(
-        _CANDIDATE, [_obs(lyapunov_exponent=-0.2), _obs(lyapunov_exponent=-0.1)], constraints
+        _CANDIDATE,
+        [_obs(lyapunov_exponent=-0.2), _obs(lyapunov_exponent=-0.1)],
+        constraints,
     )
     assert safe.lyapunov_margin == pytest.approx(0.1)
     assert safe.constraint_verdicts["lyapunov"] is True
