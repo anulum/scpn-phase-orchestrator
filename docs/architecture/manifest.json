@@ -1,5 +1,13 @@
 {
-  "$comment": "Machine-readable architecture manifest for STUDIO ingestion. PROPOSAL v0 — final schema is owned by SCPN-STUDIO/CEO. Status vocabulary: wired | library-only | stub | feasibility-only. Generated from a verified architecture map of the codebase.",
+  "$comment": "Two-block STUDIO ingestion manifest (CEO/architect lock 2026-06-23): schema_a_core = scpn-studio-platform federation CapabilityManifest (pending SCPN-STUDIO ratification), architecture_map = this repo's verified superset extension the Hub ignores for federation. Public status vocabulary: wired | library-only | stub | feasibility-only; SOTA/ClaimStatus grades live only in the private audit.",
+  "schema_a_core": {
+    "status": "pending-scpn-studio-ratification",
+    "note": "Federation CapabilityManifest (scpn-studio-platform schema A) to be produced by tools/capability_manifest.py once SPO adopts the sibling generator (cf. FUSION/CONTROL/MIF); verb-to-schema-A mapping is under review with the SCPN-STUDIO agent.",
+    "project": "scpn-phase-orchestrator",
+    "transport_profile": null,
+    "verbs": []
+  },
+  "architecture_map": {
   "id": "scpn-phase-orchestrator",
   "schema_version": "0",
   "generated": "2026-06-23",
@@ -166,4 +174,5 @@
     "Formal export covers PRISM and TLA+ only (no SMT-LIB exporter despite docstring).",
     "studio/ has no live JSON feed yet."
   ]
+  }
 }
