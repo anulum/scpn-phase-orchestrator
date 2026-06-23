@@ -45,6 +45,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Neural-supervisor-to-candidate bridge (`nn.supervisor.candidate_bridge`):
+  `supervisor_policy_to_candidate` runs a differentiable supervisor policy
+  deterministically and maps its recommendation onto a `KnobPolicyCandidate`, so
+  a learned policy feeds the same review-only evidence pipeline as an offline
+  replay search. The mapping is by control meaning — the supervisor's global
+  coupling delta moves `K`, its damping delta moves `zeta`, and its per-layer
+  coupling deltas become `channel_weights` — applied relative to a base candidate
+  whose `alpha`, `Psi`, and `cross_channel_gains` are carried through unchanged.
+  The bridge actuates nothing. Closes the auditable RL supervisor candidate track.
 - `spo supervisor-candidate` CLI command: reads a JSON scenario (candidate,
   baseline, incumbent, observations, constraints, safety tier, numeric
   provenance), scores the candidate with the model-free reward over the

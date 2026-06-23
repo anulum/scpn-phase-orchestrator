@@ -43,6 +43,10 @@ from ._types import (
     SupervisorScenarioCorpus,
     SupervisorStaticBaselineComparison,
 )
+from .candidate_bridge import (
+    supervisor_action_to_candidate,
+    supervisor_policy_to_candidate,
+)
 from .checkpoint import (
     load_supervisor_ppo_checkpoint,
     save_supervisor_ppo_checkpoint,
@@ -118,6 +122,8 @@ __all__ = [
     "unpack_supervisor_action",
     "sample_supervisor_action",
     "supervisor_action_bound_penalty",
+    "supervisor_action_to_candidate",
+    "supervisor_policy_to_candidate",
     "supervisor_action_log_prob",
     "project_supervisor_action_for_audit",
     "build_supervisor_baseline_report",
