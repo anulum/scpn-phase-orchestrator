@@ -45,6 +45,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Auditable supervisor-candidate bundle (`autotune.supervisor_candidate`):
+  `build_supervisor_candidate_bundle` glues a candidate's reward report, its
+  per-knob attribution, its safety certificate, and a lightweight comparison
+  against the incumbent into one sealed, review-only `studio.supervisor_candidate.v1`
+  record, stamped with the numeric provenance (active backend and parity
+  tolerance) and the safety tier and content-addressed by a canonical-JSON
+  SHA-256 seal. A `safe_and_improved` flag gives a reviewer a single gate. The
+  bundle is evidence, not an action — it proposes and actuates nothing. The third
+  slice of the auditable RL supervisor candidate track.
 - Candidate safety certificate for autotune candidates
   (`autotune.candidate_safety_certificate`): `certify_candidate_safety` binds a
   candidate to a control-barrier function over the states it visited in replay

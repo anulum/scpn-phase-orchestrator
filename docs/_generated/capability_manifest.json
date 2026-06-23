@@ -7,12 +7,12 @@
     "integration_modules": 27,
     "optional_extras": 20,
     "public_api_exports": 24,
-    "public_documentation_pages": 200,
-    "python_package_modules": 651,
-    "research_experimental_modules": 211,
+    "public_documentation_pages": 201,
+    "python_package_modules": 652,
+    "research_experimental_modules": 212,
     "runtime_serving_modules": 120,
     "rust_kernel_files": 97,
-    "test_files": 653
+    "test_files": 654
   },
   "documentation": {
     "public_pages": [
@@ -104,6 +104,7 @@
       "docs/reference/api/autotune_policy_search.md",
       "docs/reference/api/autotune_reward.md",
       "docs/reference/api/autotune_sindy.md",
+      "docs/reference/api/autotune_supervisor_candidate.md",
       "docs/reference/api/binding.md",
       "docs/reference/api/core.md",
       "docs/reference/api/coupling.md",
@@ -668,6 +669,7 @@
       "src/scpn_phase_orchestrator/autotune/policy_search.py",
       "src/scpn_phase_orchestrator/autotune/reward.py",
       "src/scpn_phase_orchestrator/autotune/sindy.py",
+      "src/scpn_phase_orchestrator/autotune/supervisor_candidate.py",
       "src/scpn_phase_orchestrator/experimental/__init__.py",
       "src/scpn_phase_orchestrator/experimental/accelerators/__init__.py",
       "src/scpn_phase_orchestrator/experimental/accelerators/coupling/__init__.py",
@@ -1064,6 +1066,7 @@
     "src/scpn_phase_orchestrator/autotune/policy_search.py",
     "src/scpn_phase_orchestrator/autotune/reward.py",
     "src/scpn_phase_orchestrator/autotune/sindy.py",
+    "src/scpn_phase_orchestrator/autotune/supervisor_candidate.py",
     "src/scpn_phase_orchestrator/binding/__init__.py",
     "src/scpn_phase_orchestrator/binding/channel_algebra.py",
     "src/scpn_phase_orchestrator/binding/channel_runtime.py",
@@ -2238,6 +2241,7 @@
       "tests/test_studio_ui_modules.py",
       "tests/test_studio_workflow.py",
       "tests/test_supervisor_alignment.py",
+      "tests/test_supervisor_candidate.py",
       "tests/test_supervisor_hierarchy.py",
       "tests/test_supervisor_hierarchy_adapters.py",
       "tests/test_supervisor_hierarchy_modules.py",

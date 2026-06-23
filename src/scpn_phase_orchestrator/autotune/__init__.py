@@ -78,6 +78,12 @@ from scpn_phase_orchestrator.autotune.reward import (
     rank_replay_candidates,
 )
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
+from scpn_phase_orchestrator.autotune.supervisor_candidate import (
+    NumericProvenance,
+    SupervisorCandidateBundle,
+    SupervisorCandidateComparison,
+    build_supervisor_candidate_bundle,
+)
 
 __all__ = [
     "AutoTuneResult",
@@ -92,10 +98,13 @@ __all__ = [
     "KnobAttributionReport",
     "KnobPolicyCandidate",
     "LearnerPolicyProposal",
+    "NumericProvenance",
     "OfflinePolicySearchConfig",
     "PolicyProposalConfig",
     "PhaseResult",
     "PhaseSINDy",
+    "SupervisorCandidateBundle",
+    "SupervisorCandidateComparison",
     "RewardConfig",
     "RewardObservation",
     "ReplayPolicyEvaluator",
@@ -104,6 +113,7 @@ __all__ = [
     "TimeSeriesDiscoveryConfig",
     "TimeSeriesDiscoveryReport",
     "attribute_knob_policy",
+    "build_supervisor_candidate_bundle",
     "certify_candidate_safety",
     "discover_time_series_structure",
     "evaluate_knob_policy",
