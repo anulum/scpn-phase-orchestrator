@@ -29,6 +29,7 @@ _STL_PREDICATE_RE = re.compile(
 
 
 def _stl_mapping(specs: list[PolicySTLSpec]) -> dict[str, str]:
+    """Return the mapping of STL specs to export identifiers."""
     used: set[str] = set()
     return {
         spec.name: _unique_identifier(spec.name, prefix="stl", used=used)
@@ -37,6 +38,7 @@ def _stl_mapping(specs: list[PolicySTLSpec]) -> dict[str, str]:
 
 
 def _stl_predicates(spec: PolicySTLSpec) -> tuple[str, list[tuple[str, str, float]]]:
+    """Return the validated STL predicates for a spec."""
     match = _SIMPLE_STL_RE.match(spec.spec.strip())
     if match is None:
         raise PolicyError(f"STL monitor {spec.name!r} uses unsupported export syntax")
@@ -56,6 +58,7 @@ def _stl_predicates(spec: PolicySTLSpec) -> tuple[str, list[tuple[str, str, floa
 def _stl_signal_mapping(
     specs: list[PolicySTLSpec],
 ) -> tuple[dict[str, str], dict[str, tuple[str, list[tuple[str, str, float]]]]]:
+    """Return the mapping of STL signals to export identifiers."""
     parsed: dict[str, tuple[str, list[tuple[str, str, float]]]] = {}
     signals: set[str] = set()
     for spec in specs:
@@ -74,6 +77,7 @@ def _stl_expr(
     predicates: list[tuple[str, str, float]],
     signal_names: dict[str, str],
 ) -> str:
+    """Return the PRISM expression for an STL formula."""
     parts = [
         f"{signal_names[signal]} {op} {threshold:.17g}"
         for signal, op, threshold in predicates

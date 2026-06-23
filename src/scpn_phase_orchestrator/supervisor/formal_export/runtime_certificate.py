@@ -272,12 +272,14 @@ class FormalRuntimeCertificate:
 
 
 def _require_sha256(value: object, field_name: str) -> str:
+    """Return ``value`` as a SHA-256 hex digest, else raise."""
     if not isinstance(value, str) or _SHA256_RE.fullmatch(value) is None:
         raise PolicyError(f"{field_name} must be a lowercase SHA-256 digest")
     return value
 
 
 def _validate_identifier_tuple(values: tuple[str, ...], field_name: str) -> None:
+    """Return the validated tuple of identifiers, else raise."""
     if not isinstance(values, tuple):
         raise PolicyError(f"{field_name} must be a tuple")
     seen: set[str] = set()
@@ -289,6 +291,7 @@ def _validate_identifier_tuple(values: tuple[str, ...], field_name: str) -> None
 
 
 def _validate_runtime_bounds(bounds: Mapping[str, object]) -> dict[str, float]:
+    """Return the validated runtime bounds, else raise."""
     if not isinstance(bounds, Mapping) or not bounds:
         raise PolicyError("runtime bounds must be a non-empty mapping")
     parsed: dict[str, float] = {}

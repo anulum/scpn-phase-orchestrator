@@ -42,6 +42,7 @@ class TLAExport:
 
 
 def _identifier(raw: str, *, prefix: str) -> str:
+    """Return a sanitised PRISM-safe identifier for a name."""
     cleaned = _IDENT_RE.sub("_", raw).strip("_")
     if not cleaned:
         cleaned = prefix
@@ -51,6 +52,7 @@ def _identifier(raw: str, *, prefix: str) -> str:
 
 
 def _tla_module_identifier(raw: str) -> str:
+    """Return a sanitised TLA+ module identifier for a name."""
     identifier = _identifier(raw, prefix="SpoModule")
     if not identifier[0].isalpha():
         identifier = f"Spo{identifier}"
@@ -63,6 +65,7 @@ def _unique_identifier(
     prefix: str,
     used: set[str],
 ) -> str:
+    """Return a unique identifier, disambiguating collisions."""
     base = _identifier(raw, prefix=prefix)
     candidate = base
     suffix = 2

@@ -23,6 +23,7 @@ from ._shared import (
 
 
 def _place_mapping(net: PetriNet) -> dict[str, str]:
+    """Return the mapping of Petri places to export identifiers."""
     used: set[str] = set()
     return {
         name: _unique_identifier(name, prefix="p", used=used)
@@ -31,6 +32,7 @@ def _place_mapping(net: PetriNet) -> dict[str, str]:
 
 
 def _transition_mapping(net: PetriNet) -> dict[str, str]:
+    """Return the mapping of Petri transitions to export identifiers."""
     used: set[str] = set()
     return {
         transition.name: _unique_identifier(transition.name, prefix="t", used=used)
@@ -39,6 +41,7 @@ def _transition_mapping(net: PetriNet) -> dict[str, str]:
 
 
 def _metric_mapping(net: PetriNet) -> dict[str, str]:
+    """Return the mapping of metrics to export identifiers."""
     used: set[str] = set()
     metrics = sorted(
         {
@@ -53,6 +56,7 @@ def _metric_mapping(net: PetriNet) -> dict[str, str]:
 
 
 def _guard_expr(transition: Transition, metric_names: dict[str, str]) -> str:
+    """Return the PRISM guard expression for a transition."""
     if transition.guard is None:
         return "true"
     guard = transition.guard
@@ -60,10 +64,12 @@ def _guard_expr(transition: Transition, metric_names: dict[str, str]) -> str:
 
 
 def _tla_guard_expr(transition: Transition, metric_names: dict[str, str]) -> str:
+    """Return the TLA+ guard expression for a transition."""
     return _guard_expr(transition, metric_names).replace("==", "=")
 
 
 def _input_expr(transition: Transition, place_names: dict[str, str]) -> str:
+    """Return the PRISM input-arc expression for a transition."""
     if not transition.inputs:
         return "true"
     return " & ".join(
@@ -72,6 +78,7 @@ def _input_expr(transition: Transition, place_names: dict[str, str]) -> str:
 
 
 def _tla_input_expr(transition: Transition, place_names: dict[str, str]) -> str:
+    """Return the TLA+ input-arc expression for a transition."""
     if not transition.inputs:
         return "TRUE"
     return " /\\ ".join(
@@ -80,6 +87,7 @@ def _tla_input_expr(transition: Transition, place_names: dict[str, str]) -> str:
 
 
 def _update_expr(transition: Transition, place_names: dict[str, str]) -> str:
+    """Return the PRISM marking-update expression for a transition."""
     deltas = dict.fromkeys(place_names, 0)
     for arc in transition.inputs:
         deltas[arc.place] -= arc.weight
@@ -101,6 +109,7 @@ def _tla_next_value_lines(
     transition: Transition,
     place_names: dict[str, str],
 ) -> list[str]:
+    """Return the TLA+ next-value lines for the marking update."""
     deltas = dict.fromkeys(place_names, 0)
     for arc in transition.inputs:
         deltas[arc.place] -= arc.weight
@@ -125,6 +134,7 @@ def _token_upper_bound(
     *,
     minimum: int,
 ) -> int:
+    """Return the token upper bound for a place."""
     observed = [minimum, *initial_marking.tokens.values()]
     for transition in net.transitions:
         observed.extend(arc.weight for arc in transition.inputs)

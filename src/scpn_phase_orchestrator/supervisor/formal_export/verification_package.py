@@ -177,6 +177,7 @@ class FormalVerificationPackage:
 
 
 def _require_package_identifier(value: object, field_name: str) -> str:
+    """Return the validated verification-package identifier, else raise."""
     if not isinstance(value, str) or not _PACKAGE_NAME_RE.fullmatch(value):
         raise PolicyError(
             f"{field_name} must start with a letter and contain only letters, "
@@ -186,6 +187,7 @@ def _require_package_identifier(value: object, field_name: str) -> str:
 
 
 def _artifact_text(export: PrismExport | TLAExport | FormalTextArtifact) -> str:
+    """Return the text content of a verification artifact."""
     if isinstance(export, PrismExport):
         return export.model
     if isinstance(export, FormalTextArtifact):
@@ -194,6 +196,7 @@ def _artifact_text(export: PrismExport | TLAExport | FormalTextArtifact) -> str:
 
 
 def _artifact_type(export: PrismExport | TLAExport | FormalTextArtifact) -> str:
+    """Return the type label of a verification artifact."""
     if isinstance(export, PrismExport):
         return "prism"
     if isinstance(export, FormalTextArtifact):
@@ -202,6 +205,7 @@ def _artifact_type(export: PrismExport | TLAExport | FormalTextArtifact) -> str:
 
 
 def _checker_command(property_: FormalSafetyProperty) -> FormalCheckerCommand:
+    """Return the checker command for a verification artifact."""
     command: tuple[str, ...]
     if property_.checker == "prism":
         command = (
@@ -247,6 +251,7 @@ def _checker_matches_artifact(
     property_: FormalSafetyProperty,
     artifact_type: str,
 ) -> bool:
+    """Return whether a checker matches an artifact type."""
     if property_.checker == "prism":
         return artifact_type == "prism"
     if property_.checker == "tlc":

@@ -29,6 +29,7 @@ from ._shared import (
 
 
 def _policy_metric_key(condition: PolicyCondition) -> str:
+    """Return the sanitised metric key for a policy condition."""
     if condition.layer is None:
         return condition.metric
     return f"{condition.metric}.{condition.layer}"
@@ -37,12 +38,14 @@ def _policy_metric_key(condition: PolicyCondition) -> str:
 def _policy_conditions(
     condition: PolicyCondition | CompoundCondition,
 ) -> list[PolicyCondition]:
+    """Return the validated policy conditions for a rule."""
     if isinstance(condition, CompoundCondition):
         return list(condition.conditions)
     return [condition]
 
 
 def _compound_logic(condition: CompoundCondition) -> str:
+    """Return the compound logic operator joining policy conditions."""
     if not isinstance(condition.logic, str):
         raise PolicyError("compound policy condition logic must be AND or OR")
     logic = condition.logic.upper()
@@ -52,6 +55,7 @@ def _compound_logic(condition: CompoundCondition) -> str:
 
 
 def _policy_metric_mapping(rules: list[PolicyRule]) -> dict[str, str]:
+    """Return the mapping of policy metrics to export identifiers."""
     used: set[str] = set()
     metrics = sorted(
         {
@@ -66,6 +70,7 @@ def _policy_metric_mapping(rules: list[PolicyRule]) -> dict[str, str]:
 
 
 def _rule_mapping(rules: list[PolicyRule]) -> dict[str, str]:
+    """Return the mapping of policy rules to export identifiers."""
     used: set[str] = set()
     return {
         rule.name: _unique_identifier(rule.name, prefix="rule", used=used)
@@ -74,11 +79,13 @@ def _rule_mapping(rules: list[PolicyRule]) -> dict[str, str]:
 
 
 def _action_key(rule: PolicyRule, action_index: int) -> str:
+    """Return the sanitised export key for a policy action."""
     action = rule.actions[action_index]
     return f"{rule.name}.{action.knob}.{action.scope}.{action_index}"
 
 
 def _action_mapping(rules: list[PolicyRule]) -> dict[str, str]:
+    """Return the mapping of policy actions to export identifiers."""
     used: set[str] = set()
     return {
         _action_key(rule, i): _unique_identifier(
@@ -92,6 +99,7 @@ def _action_mapping(rules: list[PolicyRule]) -> dict[str, str]:
 
 
 def _regime_mapping(rules: list[PolicyRule]) -> dict[str, int]:
+    """Return the mapping of regimes to export identifiers."""
     regimes = sorted({regime.upper() for rule in rules for regime in rule.regimes})
     return {regime: idx for idx, regime in enumerate(regimes)}
 
@@ -100,6 +108,7 @@ def _policy_condition_expr(
     condition: PolicyCondition,
     metric_names: dict[str, str],
 ) -> str:
+    """Return the PRISM expression for a policy condition."""
     metric = metric_names[_policy_metric_key(condition)]
     return f"{metric} {condition.op} {condition.threshold:.17g}"
 
@@ -108,6 +117,7 @@ def _tla_policy_condition_expr(
     condition: PolicyCondition,
     metric_names: dict[str, str],
 ) -> str:
+    """Return the TLA+ expression for a policy condition."""
     return _policy_condition_expr(condition, metric_names).replace("==", "=")
 
 
@@ -115,6 +125,7 @@ def _policy_guard_expr(
     condition: PolicyCondition | CompoundCondition,
     metric_names: dict[str, str],
 ) -> str:
+    """Return the PRISM guard expression for a policy rule."""
     if isinstance(condition, CompoundCondition):
         if not condition.conditions:
             raise PolicyError("compound policy condition must not be empty")
@@ -130,6 +141,7 @@ def _tla_policy_guard_expr(
     condition: PolicyCondition | CompoundCondition,
     metric_names: dict[str, str],
 ) -> str:
+    """Return the TLA+ guard expression for a policy rule."""
     if isinstance(condition, CompoundCondition):
         if not condition.conditions:
             raise PolicyError("compound policy condition must not be empty")
@@ -143,6 +155,7 @@ def _tla_policy_guard_expr(
 
 
 def _regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
+    """Return the PRISM guard expression for a regime."""
     regimes = [regime.upper() for regime in rule.regimes]
     if not regimes:
         raise PolicyError(f"policy rule {rule.name!r} has no regimes")
@@ -151,6 +164,7 @@ def _regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
 
 
 def _tla_regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
+    """Return the TLA+ guard expression for a regime."""
     regimes = [regime.upper() for regime in rule.regimes]
     if not regimes:
         raise PolicyError(f"policy rule {rule.name!r} has no regimes")
@@ -162,6 +176,7 @@ def _tla_unchanged_counter_lines(
     changed: str,
     rule_names: dict[str, str],
 ) -> list[str]:
+    """Return the TLA+ UNCHANGED lines for unaffected counters."""
     return [
         f"  /\\ {rule_id}_fires' = {rule_id}_fires"
         for rule_id in rule_names.values()
@@ -170,6 +185,7 @@ def _tla_unchanged_counter_lines(
 
 
 def _policy_fire_bound(rule: PolicyRule) -> int:
+    """Return the firing bound for a policy rule."""
     return max(1, rule.max_fires)
 
 
