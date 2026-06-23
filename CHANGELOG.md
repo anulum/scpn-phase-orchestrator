@@ -45,6 +45,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Per-knob attribution for autotune candidates (`autotune.knob_attribution`):
+  `attribute_knob_policy` credits each knob that differs between a candidate and a
+  baseline with its Shapley contribution to the total reward and to every reward
+  component, plus its leave-one-out marginal — answering *why this knob* rather
+  than only *how good overall*. Shapley values are exact over all coalitions for a
+  small number of active knobs and deterministically Monte-Carlo sampled with a
+  reported standard error above a threshold; the value function is caller-supplied
+  (a fixed-observation reward, a replay evaluator, or any scorer), and the module
+  actuates nothing. The first slice of the auditable RL supervisor candidate
+  track.
 - Architecture-decisions document (`docs/architecture_decisions.md`): records the
   major architectural decisions and their rationale — the four enforced product
   tiers, review-only actuation, the fastest-first parity-gated polyglot chain,

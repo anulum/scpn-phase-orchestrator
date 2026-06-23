@@ -213,16 +213,16 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 0.9.0 |
 | Public API exports | 24 |
-| Python package modules | 649 |
+| Python package modules | 650 |
 | Core Engine modules | 290 |
 | Runtime/Serving modules | 120 |
 | Integration modules | 27 |
-| Research/Experimental modules | 209 |
+| Research/Experimental modules | 210 |
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 20 |
-| Python test files | 651 |
-| Public documentation pages | 198 |
+| Python test files | 652 |
+| Public documentation pages | 199 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

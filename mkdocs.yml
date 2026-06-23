@@ -200,6 +200,7 @@ nav:
           - "Phase Extraction (Hilbert)": reference/api/autotune_phase_extract.md
           - "Frequency Identification (DMD)": reference/api/autotune_freq_id.md
           - "Reward Evaluation": reference/api/autotune_reward.md
+          - "Per-Knob Attribution": reference/api/autotune_knob_attribution.md
           - "Replay Policy Search": reference/api/autotune_policy_search.md
       - Actuation: reference/api/actuation.md
       - "Actuation — Koopman MPC": reference/api/actuation_koopman_mpc.md

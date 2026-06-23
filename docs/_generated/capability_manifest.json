@@ -7,12 +7,12 @@
     "integration_modules": 27,
     "optional_extras": 20,
     "public_api_exports": 24,
-    "public_documentation_pages": 198,
-    "python_package_modules": 649,
-    "research_experimental_modules": 209,
+    "public_documentation_pages": 199,
+    "python_package_modules": 650,
+    "research_experimental_modules": 210,
     "runtime_serving_modules": 120,
     "rust_kernel_files": 97,
-    "test_files": 651
+    "test_files": 652
   },
   "documentation": {
     "public_pages": [
@@ -98,6 +98,7 @@
       "docs/reference/api/autotune.md",
       "docs/reference/api/autotune_coupling_est.md",
       "docs/reference/api/autotune_freq_id.md",
+      "docs/reference/api/autotune_knob_attribution.md",
       "docs/reference/api/autotune_phase_extract.md",
       "docs/reference/api/autotune_policy_search.md",
       "docs/reference/api/autotune_reward.md",
@@ -658,6 +659,7 @@
       "src/scpn_phase_orchestrator/autotune/coupling_est.py",
       "src/scpn_phase_orchestrator/autotune/discovery.py",
       "src/scpn_phase_orchestrator/autotune/freq_id.py",
+      "src/scpn_phase_orchestrator/autotune/knob_attribution.py",
       "src/scpn_phase_orchestrator/autotune/learners.py",
       "src/scpn_phase_orchestrator/autotune/phase_extract.py",
       "src/scpn_phase_orchestrator/autotune/pipeline.py",
@@ -1052,6 +1054,7 @@
     "src/scpn_phase_orchestrator/autotune/coupling_est.py",
     "src/scpn_phase_orchestrator/autotune/discovery.py",
     "src/scpn_phase_orchestrator/autotune/freq_id.py",
+    "src/scpn_phase_orchestrator/autotune/knob_attribution.py",
     "src/scpn_phase_orchestrator/autotune/learners.py",
     "src/scpn_phase_orchestrator/autotune/phase_extract.py",
     "src/scpn_phase_orchestrator/autotune/pipeline.py",
@@ -1919,6 +1922,7 @@
       "tests/test_itpc_validation_guards.py",
       "tests/test_jax_engine.py",
       "tests/test_knm.py",
+      "tests/test_knob_attribution.py",
       "tests/test_koopman_edmd.py",
       "tests/test_koopman_edmd_backends.py",
       "tests/test_koopman_edmd_validation.py",

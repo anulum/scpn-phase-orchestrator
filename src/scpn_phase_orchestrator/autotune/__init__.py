@@ -53,6 +53,12 @@ from scpn_phase_orchestrator.autotune.policy_search import (
     search_adaptive_replay_policy,
     search_replay_policy,
 )
+from scpn_phase_orchestrator.autotune.knob_attribution import (
+    KnobAttribution,
+    KnobAttributionConfig,
+    KnobAttributionReport,
+    attribute_knob_policy,
+)
 from scpn_phase_orchestrator.autotune.reward import (
     AutotunePolicyProposal,
     AutotuneRewardReport,
@@ -76,6 +82,9 @@ __all__ = [
     "AutotunePolicyProposal",
     "AutotuneRewardReport",
     "FrequencyResult",
+    "KnobAttribution",
+    "KnobAttributionConfig",
+    "KnobAttributionReport",
     "KnobPolicyCandidate",
     "LearnerPolicyProposal",
     "OfflinePolicySearchConfig",
@@ -89,6 +98,7 @@ __all__ = [
     "SafetyConstraintConfig",
     "TimeSeriesDiscoveryConfig",
     "TimeSeriesDiscoveryReport",
+    "attribute_knob_policy",
     "discover_time_series_structure",
     "evaluate_knob_policy",
     "estimate_coupling",
