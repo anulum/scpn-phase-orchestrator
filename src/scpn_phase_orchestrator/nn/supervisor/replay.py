@@ -348,6 +348,7 @@ def build_supervisor_experiment_manifest(
 
 
 def _comparison_record_from_object(value: Any, field: str) -> dict[str, Any]:
+    """Return a validated comparison record from an object."""
     record = _audit_record_from_object(value, field)
     if record.get("actuation_permitted") is not False:
         raise ValueError(f"{field} must be non-actuating")
@@ -367,6 +368,7 @@ def _comparison_record_from_object(value: Any, field: str) -> dict[str, Any]:
 def _baseline_report_summary(
     records: tuple[dict[str, Any], ...],
 ) -> dict[str, Any]:
+    """Return a summary of the baseline replay report."""
     delta_rewards = []
     baseline_count = 0
     replay_count = 0

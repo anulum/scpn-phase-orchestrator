@@ -144,6 +144,7 @@ def closed_loop_supervisor_loss(
         carry: tuple[jax.Array, SupervisorAction],
         _: None,
     ) -> tuple[tuple[jax.Array, SupervisorAction], tuple[jax.Array, jax.Array]]:
+        """Apply the policy network body to the input features."""
         phases, previous_action = carry
         step_scenario = scenario._replace(phases=phases)
         action = policy(step_scenario)
@@ -210,6 +211,7 @@ def supervisor_train_step(
     """
 
     def loss_fn(model: DifferentiableSupervisorPolicy) -> jax.Array:
+        """Return the policy loss for a batch under the current parameters."""
         loss, _ = closed_loop_supervisor_loss(model, scenario)
         return loss
 
@@ -415,6 +417,7 @@ def control_actions_from_supervisor(
 
 
 def _action_distance(left: SupervisorAction, right: SupervisorAction) -> jax.Array:
+    """Return the distance between two supervisor actions."""
     return (
         (left.delta_K_global - right.delta_K_global) ** 2
         + (left.delta_zeta_global - right.delta_zeta_global) ** 2

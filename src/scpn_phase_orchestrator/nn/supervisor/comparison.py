@@ -356,6 +356,7 @@ def compare_supervisor_hand_tuned_baseline(
 
 
 def _learner_proposal_record_from_object(value: Any, field: str) -> dict[str, Any]:
+    """Return a validated learner-proposal record from an object."""
     record = _audit_record_from_object(value, field)
     if record.get("actuation_permitted") is not False:
         raise ValueError(f"{field} must be non-actuating")
@@ -370,6 +371,7 @@ def _learner_proposal_record_from_object(value: Any, field: str) -> dict[str, An
 def _learner_proposal_comparison_metrics(
     records: tuple[dict[str, Any], ...],
 ) -> dict[str, float]:
+    """Return comparison metrics between learner and baseline proposals."""
     accepted_count = 0.0
     selected_rewards = []
     for record in records:
@@ -400,6 +402,7 @@ def _supervisor_replay_comparison_metrics(
     supervisor_record: Mapping[str, Any],
     replay_record: Mapping[str, Any],
 ) -> dict[str, float]:
+    """Return replay comparison metrics for the supervisor."""
     metrics: dict[str, float] = {}
     supervisor_type = supervisor_record.get("proposal_type")
     if supervisor_type == "differentiable_supervisor_replay_proposal":
@@ -474,6 +477,7 @@ def _supervisor_replay_comparison_metrics(
 
 
 def _replay_round_candidate_count(round_record: object) -> int:
+    """Return the candidate count for a replay round."""
     if not isinstance(round_record, dict):
         raise ValueError("adaptive replay round must be a JSON object")
     candidates = round_record.get("candidates")
@@ -488,6 +492,7 @@ def _rollout_static_supervisor_action(
     scenario: KuramotoSupervisorScenario,
     config: DifferentiableSupervisorConfig,
 ) -> dict[str, Any]:
+    """Return the static (deterministic) supervisor action for a rollout."""
     started = time.perf_counter()
     controlled_K = apply_supervisor_action(scenario.base_K, action, scenario)
     final_phases, _ = kuramoto_forward(
@@ -529,6 +534,7 @@ def _bounded_random_supervisor_action(
     config: DifferentiableSupervisorConfig,
     key: jax.Array,
 ) -> SupervisorAction:
+    """Return a bounded random supervisor action for a rollout."""
     values = jax.random.uniform(
         key,
         shape=(2 + config.n_layer_controls,),
@@ -543,6 +549,7 @@ def _bounded_random_supervisor_action(
 
 
 def _jax_key_record(key: jax.Array) -> list[int]:
+    """Return the audit record for a JAX PRNG key."""
     key_array = jnp.asarray(key)
     if key_array.ndim != 1:
         raise ValueError("key must be a one-dimensional JAX PRNG key")
@@ -552,6 +559,7 @@ def _jax_key_record(key: jax.Array) -> list[int]:
 def _upde_state_from_supervisor_scenario(
     scenario: KuramotoSupervisorScenario,
 ) -> UPDEState:
+    """Build the UPDE simulation state from a supervisor scenario."""
     good_R = float(masked_order_parameter(scenario.phases, scenario.good_mask))
     bad_R = float(masked_order_parameter(scenario.phases, scenario.bad_mask))
     global_R = float(order_parameter(scenario.phases))
@@ -572,6 +580,7 @@ def _supervisor_action_from_control_actions(
     actions: Iterable[ControlAction],
     config: DifferentiableSupervisorConfig,
 ) -> SupervisorAction:
+    """Return the supervisor action reconstructed from control actions."""
     delta_K_global = 0.0
     delta_zeta_global = 0.0
     delta_K_layers = [0.0] * config.n_layer_controls
@@ -594,6 +603,7 @@ def _supervisor_action_from_control_actions(
 
 
 def _layer_scope_index(scope: str) -> int:
+    """Return the layer index for a control-action scope."""
     try:
         return int(scope.removeprefix("layer_"))
     except ValueError as exc:
@@ -601,6 +611,7 @@ def _layer_scope_index(scope: str) -> int:
 
 
 def _control_action_record(action: ControlAction) -> dict[str, Any]:
+    """Return the JSON-safe record for a control action."""
     return {
         "knob": action.knob,
         "scope": action.scope,
@@ -613,6 +624,7 @@ def _control_action_record(action: ControlAction) -> dict[str, Any]:
 def _supervisor_scenario_summary(
     scenario: KuramotoSupervisorScenario,
 ) -> dict[str, Any]:
+    """Return a summary of a supervisor scenario."""
     return {
         "n_oscillators": int(scenario.phases.shape[0]),
         "dt": float(scenario.dt),
@@ -625,6 +637,7 @@ def _prefixed_float_metrics(
     prefix: str,
     metrics: Mapping[str, Any],
 ) -> dict[str, float]:
+    """Return the float metrics with a key prefix applied."""
     prefixed: dict[str, float] = {}
     for key, value in metrics.items():
         if not _is_finite_number(value):
@@ -634,6 +647,7 @@ def _prefixed_float_metrics(
 
 
 def _mapping_value(value: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    """Return a named value from a mapping, else raise."""
     child = value.get(key)
     if not isinstance(child, dict):
         raise ValueError(f"{key} must be a JSON object")
@@ -645,5 +659,6 @@ def _put_finite_metric(
     key: str,
     value: object,
 ) -> None:
+    """Store a finite metric into the target mapping, else raise."""
     if _is_finite_number(value):
         metrics[key] = float(value)

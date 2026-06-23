@@ -179,6 +179,7 @@ def load_supervisor_ppo_checkpoint(
 
 
 def _load_checkpoint_metadata(path: Path) -> dict[str, Any]:
+    """Return the validated checkpoint metadata, else raise."""
     if not path.exists():
         raise FileNotFoundError(f"missing checkpoint metadata: {path}")
     try:
@@ -196,6 +197,7 @@ def _load_checkpoint_metadata(path: Path) -> dict[str, Any]:
 
 
 def _metadata_shape(metadata: dict[str, Any], field: str) -> tuple[int, ...]:
+    """Return the array shape recorded in checkpoint metadata."""
     raw = metadata.get(field)
     if not isinstance(raw, list):
         raise ValueError(f"{field} must be a shape list")
@@ -208,6 +210,7 @@ def _metadata_shape(metadata: dict[str, Any], field: str) -> tuple[int, ...]:
 
 
 def _metadata_dtype(metadata: dict[str, Any], field: str) -> jnp.dtype:
+    """Return the array dtype recorded in checkpoint metadata."""
     raw = metadata.get(field)
     if not isinstance(raw, str):
         raise ValueError(f"{field} must be a dtype string")

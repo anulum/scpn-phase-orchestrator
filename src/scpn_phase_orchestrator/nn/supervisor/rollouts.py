@@ -344,6 +344,7 @@ def build_supervisor_scenario_corpus(
 def _validate_supervisor_corpus_rollout_compatibility(
     scenarios: tuple[KuramotoSupervisorScenario, ...],
 ) -> None:
+    """Assert the replay corpus and rollout config are compatible, else raise."""
     reference = scenarios[0]
     reference_shapes = (
         reference.phases.shape,
@@ -378,6 +379,7 @@ def _validate_supervisor_corpus_rollout_compatibility(
 def _concatenate_supervisor_ppo_batches(
     batches: tuple[SupervisorPPOBatch, ...],
 ) -> SupervisorPPOBatch:
+    """Concatenate per-rollout PPO batches into one batch."""
     reference = batches[0]
     for index, batch in enumerate(batches[1:], start=1):
         if (
@@ -415,6 +417,7 @@ def _supervisor_scenario_from_record(
     index: int,
     dtype: Any,
 ) -> tuple[KuramotoSupervisorScenario, dict[str, Any]]:
+    """Return a validated supervisor scenario from a record."""
     phases = _record_vector(record, "phases", index=index, dtype=dtype)
     omegas = _record_vector(record, "omegas", index=index, dtype=dtype)
     good_mask = _record_vector(record, "good_mask", index=index, dtype=dtype)
@@ -462,6 +465,7 @@ def _record_vector(
     index: int,
     dtype: Any,
 ) -> jax.Array:
+    """Return a named vector field from a record, else raise."""
     value = _record_array(record, field, index=index, dtype=dtype)
     if value.ndim != 1 or value.shape[0] <= 0:
         raise ValueError(f"record {index} {field} must be a non-empty vector")
@@ -477,6 +481,7 @@ def _record_matrix(
     index: int,
     dtype: Any,
 ) -> jax.Array:
+    """Return a named matrix field from a record, else raise."""
     value = _record_array(record, field, index=index, dtype=dtype)
     if value.ndim != 2:
         raise ValueError(f"record {index} {field} must be a matrix")
@@ -490,6 +495,7 @@ def _record_array(
     index: int,
     dtype: Any,
 ) -> jax.Array:
+    """Return a named array field from a record, else raise."""
     if field not in record:
         raise ValueError(f"record {index} missing required field {field}")
     value = jnp.asarray(record[field], dtype=dtype)
@@ -504,6 +510,7 @@ def _record_positive_float(
     *,
     index: int,
 ) -> float:
+    """Return a named positive-float field from a record, else raise."""
     if field not in record:
         raise ValueError(f"record {index} missing required field {field}")
     try:
@@ -518,6 +525,7 @@ def _record_positive_int(
     *,
     index: int,
 ) -> int:
+    """Return a named positive-int field from a record, else raise."""
     if field not in record:
         raise ValueError(f"record {index} missing required field {field}")
     try:

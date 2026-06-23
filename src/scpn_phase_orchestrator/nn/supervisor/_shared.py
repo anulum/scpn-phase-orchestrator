@@ -51,6 +51,7 @@ def masked_order_parameter(phases: jax.Array, weights: jax.Array) -> jax.Array:
 
 
 def _supervisor_features(scenario: KuramotoSupervisorScenario) -> jax.Array:
+    """Return the feature vector fed to the supervisor policy for a scenario."""
     R_global = order_parameter(scenario.phases)
     R_good = masked_order_parameter(scenario.phases, scenario.good_mask)
     R_bad = masked_order_parameter(scenario.phases, scenario.bad_mask)
@@ -68,11 +69,13 @@ def _policy_mean_and_value(
     policy: DifferentiableSupervisorPolicy,
     scenario: KuramotoSupervisorScenario,
 ) -> tuple[jax.Array, jax.Array]:
+    """Return the policy's deterministic mean action and value estimate."""
     raw = policy.network(_supervisor_features(scenario))
     return raw[:-1], raw[-1]
 
 
 def _action_bounds(config: DifferentiableSupervisorConfig) -> jax.Array:
+    """Return the per-component lower and upper bounds for supervisor actions."""
     return jnp.concatenate(
         [
             jnp.array([config.max_global_delta_K, config.max_global_delta_zeta]),
@@ -87,6 +90,7 @@ def _supervisor_projection_control_records(
     projected_values: jax.Array,
     bounds: jax.Array,
 ) -> list[dict[str, object]]:
+    """Return the projected control-action records for a supervisor action."""
     controls: list[dict[str, object]] = []
     names = [("K", "global"), ("zeta", "global")]
     names.extend(("K", f"layer_{idx}") for idx in range(projected_values.shape[0] - 2))
@@ -109,6 +113,7 @@ def _supervisor_projection_control_records(
 
 
 def _supervisor_action_to_record(action: SupervisorAction) -> dict[str, object]:
+    """Return the JSON-safe audit record for a supervisor action."""
     return {
         "delta_K_global": float(action.delta_K_global),
         "delta_zeta_global": float(action.delta_zeta_global),
@@ -122,6 +127,7 @@ def _squashed_gaussian_log_prob(
     log_std: jax.Array,
     pre_squash: jax.Array,
 ) -> jax.Array:
+    """Return the log-probability of a tanh-squashed Gaussian action."""
     std = jnp.exp(log_std)
     normalised = (pre_squash - mean) / std
     gaussian = -0.5 * (normalised**2 + 2.0 * log_std + jnp.log(2.0 * jnp.pi))
@@ -130,6 +136,7 @@ def _squashed_gaussian_log_prob(
 
 
 def _control_energy(action: SupervisorAction) -> jax.Array:
+    """Return the control energy (squared magnitude) of an action."""
     return (
         action.delta_K_global**2
         + action.delta_zeta_global**2
@@ -138,6 +145,7 @@ def _control_energy(action: SupervisorAction) -> jax.Array:
 
 
 def _positive_int(value: object, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{field} must be a positive integer")
     if value <= 0:
@@ -146,6 +154,7 @@ def _positive_int(value: object, field: str) -> int:
 
 
 def _non_negative_int(value: object, field: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{field} must be a non-negative integer")
     if value < 0:
@@ -154,6 +163,7 @@ def _non_negative_int(value: object, field: str) -> int:
 
 
 def _bounded_unit_scalar(value: object, field: str) -> float:
+    """Return ``value`` as a scalar in [0, 1], else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{field} must be in [0, 1]")
     value_float = float(value)
@@ -163,6 +173,7 @@ def _bounded_unit_scalar(value: object, field: str) -> float:
 
 
 def _positive_float(value: object, field: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{field} must be a finite positive scalar")
     value_float = float(value)
@@ -172,6 +183,7 @@ def _positive_float(value: object, field: str) -> float:
 
 
 def _non_negative_float(value: object, field: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{field} must be a finite non-negative scalar")
     value_float = float(value)
@@ -181,6 +193,7 @@ def _non_negative_float(value: object, field: str) -> float:
 
 
 def _audit_record_from_object(value: Any, field: str) -> dict[str, Any]:
+    """Return a validated audit record from an object or mapping."""
     to_audit_record = getattr(value, "to_audit_record", None)
     if not callable(to_audit_record):
         raise TypeError(f"{field} must provide to_audit_record()")
@@ -188,6 +201,7 @@ def _audit_record_from_object(value: Any, field: str) -> dict[str, Any]:
 
 
 def _is_finite_number(value: object) -> TypeGuard[float]:
+    """Return whether ``value`` is a finite number."""
     return (
         not isinstance(value, bool)
         and isinstance(value, int | float)
@@ -196,10 +210,12 @@ def _is_finite_number(value: object) -> TypeGuard[float]:
 
 
 def _json_safe_object(value: object, field: str) -> dict[str, Any]:
+    """Return ``value`` as a JSON-safe object, else raise."""
     return _json_object(_json_safe_value(value), field)
 
 
 def _json_safe_value(value: object) -> object:
+    """Return ``value`` as a JSON-safe value, else raise."""
     if isinstance(value, Mapping):
         return {str(key): _json_safe_value(child) for key, child in value.items()}
     if isinstance(value, list | tuple):
@@ -216,6 +232,7 @@ def _json_safe_value(value: object) -> object:
 
 
 def _json_object(value: object, field: str) -> dict[str, Any]:
+    """Return ``value`` as a JSON object mapping, else raise."""
     if value is None:
         return {}
     if not isinstance(value, dict):

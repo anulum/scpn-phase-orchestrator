@@ -462,6 +462,8 @@ class SupervisorPPOTrainResult(NamedTuple):
 
 
 class _SupervisorPPOCheckpointPayload(NamedTuple):
+    """Typed payload for a serialised supervisor PPO checkpoint."""
+
     policy: DifferentiableSupervisorPolicy
     opt_state: Any
     key: jax.Array

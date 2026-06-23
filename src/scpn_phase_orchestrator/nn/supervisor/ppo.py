@@ -86,6 +86,7 @@ def ppo_supervisor_loss(
         ret: jax.Array,
         old_value: jax.Array,
     ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
+        """Return the per-item PPO surrogate loss."""
         scenario = KuramotoSupervisorScenario(
             phases=phases,
             omegas=omegas,
@@ -195,6 +196,7 @@ def ppo_supervisor_train_step(
     """
 
     def loss_fn(model: DifferentiableSupervisorPolicy) -> jax.Array:
+        """Return the PPO loss for a batch under the current parameters."""
         loss, _ = ppo_supervisor_loss(
             model,
             batch,
@@ -443,6 +445,7 @@ def _ppo_supervisor_train_epochs_impl(
     kl_early_stop: float | None = None,
     initial_update_index: int = 0,
 ) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array, int, jax.Array]:
+    """Run the PPO supervisor training epochs over the batches."""
     n_epochs = _positive_int(n_epochs, "n_epochs")
     batch_size = int(batch.phases.shape[0])
     minibatch_size = _positive_int(minibatch_size, "minibatch_size")
@@ -525,6 +528,7 @@ def _validate_supervisor_ppo_batch_size(
     batch: SupervisorPPOBatch,
     batch_size: int,
 ) -> None:
+    """Return the PPO batch size as a positive integer, else raise."""
     fields = (
         "phases",
         "omegas",
@@ -549,6 +553,7 @@ def _validate_supervisor_ppo_batch_size(
 def _take_batch_rows(
     batch: SupervisorPPOBatch, indices: jax.Array
 ) -> SupervisorPPOBatch:
+    """Return the selected rows of a PPO batch."""
     return SupervisorPPOBatch(
         phases=batch.phases[indices],
         omegas=batch.omegas[indices],
@@ -567,6 +572,7 @@ def _take_batch_rows(
 
 
 def _global_l2_norm(values: Any) -> jax.Array:
+    """Return the global L2 norm across a set of gradient arrays."""
     leaves = jax.tree.leaves(values)
     if not leaves:
         return jnp.array(0.0)
@@ -581,6 +587,7 @@ def _clip_updates_by_global_norm(
     updates: Any,
     max_grad_norm: float,
 ) -> Any:
+    """Clip parameter updates by their global L2 norm."""
     norm = _global_l2_norm(updates)
     clip_scale = jnp.minimum(1.0, max_grad_norm / (norm + 1.0e-12))
     return jax.tree.map(lambda x: x * clip_scale, updates)
@@ -590,6 +597,7 @@ def _non_negative_float_sequence(
     values: tuple[float, ...] | None,
     field: str,
 ) -> tuple[float, ...] | None:
+    """Return the value as a validated non-negative float sequence, else raise."""
     if values is None:
         return None
     if not values:
@@ -605,6 +613,7 @@ def _scheduled_scalar(
     schedule: tuple[float, ...] | None,
     update_index: int,
 ) -> float:
+    """Return the scheduled scalar value at a training step."""
     if schedule is None:
         return default
     return schedule[min(update_index, len(schedule) - 1)]
