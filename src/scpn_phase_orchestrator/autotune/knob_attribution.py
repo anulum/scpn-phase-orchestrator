@@ -224,8 +224,10 @@ def _flatten_field(name: str, value: object) -> list[tuple[str, float]]:
 def _flatten_candidate(candidate: KnobPolicyCandidate) -> list[tuple[str, float]]:
     """Flatten a candidate into an ordered list of ``(name, value)`` knobs."""
     knobs: list[tuple[str, float]] = []
+    knobs.extend(_flatten_field("K", candidate.K))
     knobs.extend(_flatten_field("alpha", candidate.alpha))
     knobs.extend(_flatten_field("zeta", candidate.zeta))
+    knobs.extend(_flatten_field("Psi", candidate.Psi))
     for index, weight in enumerate(candidate.channel_weights):
         knobs.append((f"channel_weights[{index}]", float(weight)))
     for index, gain in enumerate(candidate.cross_channel_gains):
@@ -252,8 +254,10 @@ def _rebuild_candidate(
     values: Mapping[str, float],
 ) -> KnobPolicyCandidate:
     """Rebuild a candidate of the template's shape from per-knob values."""
+    coupling = _rebuild_field("K", template.K, values)
     alpha = _rebuild_field("alpha", template.alpha, values)
     zeta = _rebuild_field("zeta", template.zeta, values)
+    psi = _rebuild_field("Psi", template.Psi, values)
     channel_weights = tuple(
         values[f"channel_weights[{index}]"]
         for index in range(len(template.channel_weights))
@@ -263,8 +267,10 @@ def _rebuild_candidate(
         for index in range(len(template.cross_channel_gains))
     )
     return KnobPolicyCandidate(
+        K=coupling,
         alpha=alpha,
         zeta=zeta,
+        Psi=psi,
         channel_weights=channel_weights,
         cross_channel_gains=cross_channel_gains,
     )

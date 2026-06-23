@@ -62,8 +62,10 @@ def _float_tuple(payload: Mapping[str, object], key: str) -> tuple[float, ...]:
 def _candidate(payload: Mapping[str, object]) -> KnobPolicyCandidate:
     """Build a candidate from a scenario knob mapping."""
     return KnobPolicyCandidate(
+        K=_scalar_or_array(payload.get("K", 0.0)),
         alpha=_scalar_or_array(payload.get("alpha", 0.0)),
         zeta=_scalar_or_array(payload.get("zeta", 0.0)),
+        Psi=_scalar_or_array(payload.get("Psi", 0.0)),
         channel_weights=_float_tuple(payload, "channel_weights"),
         cross_channel_gains=_float_tuple(payload, "cross_channel_gains"),
     )

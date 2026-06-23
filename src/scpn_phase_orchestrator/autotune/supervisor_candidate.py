@@ -231,8 +231,10 @@ class SupervisorCandidateBundle:
 def _candidate_record(candidate: KnobPolicyCandidate) -> dict[str, object]:
     """Serialise a candidate's knobs to a JSON-ready record."""
     return {
+        "K": np.asarray(candidate.K, dtype=float).ravel().tolist(),
         "alpha": np.asarray(candidate.alpha, dtype=float).ravel().tolist(),
         "zeta": np.asarray(candidate.zeta, dtype=float).ravel().tolist(),
+        "Psi": np.asarray(candidate.Psi, dtype=float).ravel().tolist(),
         "channel_weights": [float(value) for value in candidate.channel_weights],
         "cross_channel_gains": [
             float(value) for value in candidate.cross_channel_gains

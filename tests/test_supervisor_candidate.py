@@ -162,6 +162,15 @@ def test_bundle_record_is_schema_tagged_and_sealed() -> None:
         "comparison",
         "evidence_kind",
     }
+    # All six knob fields are serialised, including the uppercase-led K and Psi.
+    assert set(record["candidate"]) == {  # type: ignore[arg-type]
+        "K",
+        "alpha",
+        "zeta",
+        "Psi",
+        "channel_weights",
+        "cross_channel_gains",
+    }
 
 
 def test_bundle_digest_is_deterministic() -> None:

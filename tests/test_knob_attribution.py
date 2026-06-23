@@ -211,6 +211,20 @@ def test_no_active_knobs_returns_empty_report() -> None:
     assert report.attributed_total == pytest.approx(0.0, abs=1e-12)
 
 
+def test_attributes_uppercase_coupling_and_psi_knobs() -> None:
+    # K and Psi are uppercase-led fields; they must be flattened and rebuilt too.
+    def evaluate(candidate: KnobPolicyCandidate) -> AutotuneRewardReport:
+        value = 3.0 * float(candidate.K) + 5.0 * float(candidate.Psi)
+        return _report(candidate, {"main": value})
+
+    candidate = KnobPolicyCandidate(K=1.0, Psi=1.0)
+    baseline = KnobPolicyCandidate(K=0.0, Psi=0.0)
+    report = attribute_knob_policy(candidate, baseline, evaluate)
+    by_knob = {item.knob: item.shapley_total for item in report.attributions}
+    assert by_knob["K"] == pytest.approx(3.0, abs=1e-9)
+    assert by_knob["Psi"] == pytest.approx(5.0, abs=1e-9)
+
+
 def test_array_valued_knobs_are_flattened_and_rebuilt() -> None:
     def evaluate(candidate: KnobPolicyCandidate) -> AutotuneRewardReport:
         alpha = np.asarray(candidate.alpha, dtype=float).ravel()
