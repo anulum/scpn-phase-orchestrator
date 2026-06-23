@@ -178,6 +178,7 @@ def build_intergenerational_inheritance_studio_panel(
 def _normalise_autopoietic_lineage_manifests(
     manifests: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate schema-tagged autopoietic lineage manifests for the panel."""
     rows = _autopoietic_lineage_mapping_sequence(manifests, "lineage manifests")
     normalised: list[dict[str, object]] = []
     seen_lineages: set[str] = set()
@@ -273,6 +274,7 @@ def _normalise_autopoietic_lineage_manifests(
 def _normalise_intergenerational_inheritance_histories(
     histories: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate schema-tagged intergenerational inheritance histories."""
     rows = _autopoietic_lineage_mapping_sequence(histories, "inheritance histories")
     normalised: list[dict[str, object]] = []
     seen_histories: set[str] = set()
@@ -367,6 +369,7 @@ def _normalise_intergenerational_child_rows(
     value: object,
     history_name: str,
 ) -> tuple[dict[str, object], ...]:
+    """Validate the child rows recorded for one inheritance history."""
     rows = _autopoietic_lineage_mapping_sequence(value, f"{history_name} child_rows")
     if not rows:
         raise ValueError(f"{history_name} must contain child_rows")
@@ -438,6 +441,7 @@ def _intergenerational_history_hash_check(
     name: str,
     history_sha256: str,
 ) -> None:
+    """Assert the history's recorded hash matches its expected SHA-256 digest."""
     body = dict(history)
     body.pop("history_sha256", None)
     canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
@@ -450,6 +454,7 @@ def _normalise_autopoietic_lineage_children(
     value: object,
     manifest_name: str,
 ) -> tuple[dict[str, object], ...]:
+    """Validate the child candidates recorded in one lineage manifest."""
     children = _autopoietic_lineage_mapping_sequence(
         value, f"{manifest_name} child_candidates"
     )
@@ -505,6 +510,7 @@ def _normalise_autopoietic_policy_diff(
     value: object,
     child_name: str,
 ) -> tuple[dict[str, object], ...]:
+    """Validate the policy-diff rows recorded for one lineage child."""
     diff_rows = _autopoietic_lineage_mapping_sequence(
         value, f"{child_name} policy_diff"
     )
@@ -532,6 +538,7 @@ def _normalise_autopoietic_replay_corpus(
     value: object,
     manifest_name: str,
 ) -> tuple[dict[str, object], ...]:
+    """Validate the replay-corpus rows recorded in one lineage manifest."""
     rows = _autopoietic_lineage_mapping_sequence(
         value, f"{manifest_name} replay_corpus"
     )
@@ -569,6 +576,7 @@ def _autopoietic_lineage_mapping_sequence(
     value: object,
     name: str,
 ) -> tuple[Mapping[str, object], ...]:
+    """Return ``value`` as a tuple of mappings, else raise ``ValueError``."""
     if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a sequence")
     rows: list[Mapping[str, object]] = []
@@ -580,12 +588,14 @@ def _autopoietic_lineage_mapping_sequence(
 
 
 def _autopoietic_lineage_text(value: object, name: str) -> str:
+    """Return ``value`` if it is a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
     return value
 
 
 def _autopoietic_lineage_text_tuple(value: object, name: str) -> tuple[str, ...]:
+    """Return an empty tuple for a null value, else a tuple of non-empty strings."""
     if value is None:
         return ()
     if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
@@ -594,6 +604,7 @@ def _autopoietic_lineage_text_tuple(value: object, name: str) -> tuple[str, ...]
 
 
 def _autopoietic_lineage_sha(value: object, name: str) -> str:
+    """Return ``value`` if it is a lowercase 64-char SHA-256 digest, else raise."""
     text = _autopoietic_lineage_text(value, name)
     if (
         len(text) != 64
@@ -610,11 +621,13 @@ def _autopoietic_lineage_bool(
     expected: bool,
     name: str,
 ) -> None:
+    """Assert ``mapping[key]`` is exactly ``expected``, else raise ``ValueError``."""
     if mapping.get(key) is not expected:
         raise ValueError(f"{name} {key} must be {expected}")
 
 
 def _autopoietic_lineage_float(value: object, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number")
     result = float(value)
@@ -624,6 +637,7 @@ def _autopoietic_lineage_float(value: object, name: str) -> float:
 
 
 def _autopoietic_lineage_int(value: object, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{name} must be a non-negative integer")
     return value

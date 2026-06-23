@@ -141,6 +141,13 @@ def build_evolutionary_supervisor_policy_search_studio_panel(
 def _normalise_evolutionary_search_reports(
     reports: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate evolutionary offline-search reports for the panel.
+
+    Each report must use the search schema, keep the review-safe claim boundary
+    and the non-actuating review gates, and have candidate/accepted/rejected counts
+    that agree with its normalised candidates, plus a replay summary and STL
+    monitoring.
+    """
     if isinstance(reports, Mapping) or not isinstance(reports, Sequence) or not reports:
         raise ValueError("evolutionary search reports must be a non-empty sequence")
     normalised: list[dict[str, object]] = []
@@ -243,6 +250,7 @@ def _normalise_evolutionary_search_reports(
 def _normalise_evolutionary_candidates(
     value: object, name: str
 ) -> tuple[dict[str, object], ...]:
+    """Return a non-empty tuple of unique validated evolutionary candidates."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a sequence")
     candidates: list[dict[str, object]] = []
@@ -257,6 +265,7 @@ def _normalise_evolutionary_candidates(
 def _normalise_optional_evolutionary_candidate(
     value: object, name: str
 ) -> dict[str, object] | None:
+    """Return ``None`` for a null value, else a single validated candidate."""
     if value is None:
         return None
     return _normalise_evolutionary_candidate(value, name, set())
@@ -265,6 +274,7 @@ def _normalise_optional_evolutionary_candidate(
 def _normalise_evolutionary_candidate(
     value: object, name: str, seen_ids: set[str]
 ) -> dict[str, object]:
+    """Validate one evolutionary candidate, rejecting duplicate candidate ids."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{name} entries must be mappings")
     candidate_id = _require_non_empty_text(value.get("candidate_id"), "candidate_id")
@@ -336,6 +346,7 @@ def _normalise_evolutionary_candidate(
 def _normalise_evolutionary_replay_summary(
     value: object, name: str
 ) -> dict[str, object]:
+    """Validate the replay summary (counts, rewards, and safety margins)."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{name} must be a mapping")
     return {
@@ -359,6 +370,7 @@ def _normalise_evolutionary_replay_summary(
 def _normalise_evolutionary_stl_monitoring(
     value: object, name: str
 ) -> dict[str, object]:
+    """Validate the STL monitoring mapping as JSON-safe scalars and sequences."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{name} must be a mapping")
     result: dict[str, object] = {}
@@ -382,6 +394,7 @@ def _normalise_evolutionary_stl_monitoring(
 def _normalise_evolutionary_json_sequence(
     values: Sequence[object], name: str
 ) -> tuple[object, ...]:
+    """Return the sequence with each item validated as a JSON-safe scalar."""
     normalised: list[object] = []
     for item in values:
         if isinstance(item, bool):
@@ -398,6 +411,11 @@ def _normalise_evolutionary_json_sequence(
 def _normalise_evolutionary_examples(
     examples: Sequence[Mapping[str, object]],
 ) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
+    """Validate evolutionary examples and return their summaries and table rows.
+
+    Each example must keep the review-safe claim boundary and the non-actuating
+    review gates; returns the normalised summaries and the flattened rows.
+    """
     if isinstance(examples, Mapping) or not isinstance(examples, Sequence):
         raise ValueError("evolutionary examples must be a sequence")
     normalised: list[dict[str, object]] = []
@@ -475,6 +493,7 @@ def _normalise_evolutionary_examples(
 def _normalise_evolutionary_dsl_reports(
     reports: Sequence[Mapping[str, object]],
 ) -> tuple[dict[str, object], ...]:
+    """Validate evolutionary policy-DSL reports as review-only records."""
     if isinstance(reports, Mapping) or not isinstance(reports, Sequence):
         raise ValueError("evolutionary DSL reports must be a sequence")
     normalised: list[dict[str, object]] = []
@@ -542,6 +561,7 @@ def _normalise_evolutionary_dsl_reports(
 def _normalise_evolutionary_dsl_candidates(
     value: object, name: str
 ) -> tuple[dict[str, object], ...]:
+    """Return a tuple of validated evolutionary policy-DSL candidate records."""
     if isinstance(value, str | bytes) or not isinstance(value, Sequence):
         raise ValueError(f"{name} must be a sequence")
     candidates: list[dict[str, object]] = []
@@ -602,6 +622,7 @@ def _normalise_evolutionary_dsl_candidates(
 def _require_evolutionary_review_gates(
     record: Mapping[str, object], label: str, *, require_actuation: bool
 ) -> None:
+    """Assert the record's non-actuating review gates, raising on any violation."""
     fields = [
         ("non_actuating", True),
         ("execution_disabled", True),
