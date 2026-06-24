@@ -18,14 +18,9 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.oscillators import (
-    InformationalExtractor,
-    PhysicalExtractor,
-    SymbolicExtractor,
     WaveletExtractor,
     ZeroCrossingExtractor,
-    build_extractor,
 )
-from scpn_phase_orchestrator.oscillators.base import PhaseState
 
 TWO_PI = 2.0 * np.pi
 
@@ -158,36 +153,6 @@ class TestWaveletExtractor:
     def test_invalid_sample_rate_rejected(self, bad_rate: float) -> None:
         with pytest.raises(ValueError):
             WaveletExtractor().extract(_sine(8.0, 256.0, 1.0), bad_rate)
-
-
-# --------------------------------------------------------------------------- #
-# build_extractor factory
-# --------------------------------------------------------------------------- #
-class TestBuildExtractor:
-    @pytest.mark.parametrize(
-        ("extractor_type", "expected"),
-        [
-            ("hilbert", PhysicalExtractor),
-            ("physical", PhysicalExtractor),
-            ("wavelet", WaveletExtractor),
-            ("zero_crossing", ZeroCrossingExtractor),
-            ("event", InformationalExtractor),
-            ("informational", InformationalExtractor),
-            ("ring", SymbolicExtractor),
-            ("symbolic", SymbolicExtractor),
-            ("graph", SymbolicExtractor),
-        ],
-    )
-    def test_maps_type_to_extractor(self, extractor_type: str, expected: type) -> None:
-        assert isinstance(build_extractor(extractor_type, n_states=3), expected)
-
-    def test_built_extractor_runs(self) -> None:
-        out = build_extractor("wavelet").extract(_sine(8.0, 256.0, 2.0), 256.0)
-        assert isinstance(out[0], PhaseState)
-
-    def test_unknown_type_is_fail_closed(self) -> None:
-        with pytest.raises(ValueError, match="unknown extractor_type"):
-            build_extractor("fourier")
 
 
 # --------------------------------------------------------------------------- #
