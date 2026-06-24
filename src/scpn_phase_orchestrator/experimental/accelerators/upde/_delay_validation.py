@@ -22,6 +22,7 @@ __all__ = ["validate_delay_backend_inputs"]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -30,6 +31,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _count(value: object, *, name: str, minimum: int) -> int:
+    """Return the validated element count, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
     result = int(value)
@@ -39,6 +41,7 @@ def _count(value: object, *, name: str, minimum: int) -> int:
 
 
 def _finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real")
     result = float(value)
@@ -48,6 +51,7 @@ def _finite_float(value: object, *, name: str) -> float:
 
 
 def _positive_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     result = _finite_float(value, name=name)
     if result <= 0.0:
         raise ValueError(f"{name} must be a finite positive real")
@@ -55,6 +59,7 @@ def _positive_float(value: object, *, name: str) -> float:
 
 
 def _float_vector(value: object, *, name: str, size: int) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)

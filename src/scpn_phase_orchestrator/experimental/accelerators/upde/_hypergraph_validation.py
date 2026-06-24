@@ -24,6 +24,7 @@ __all__ = ["TWO_PI", "validate_hypergraph_inputs", "validate_hypergraph_output"]
 
 
 def _as_real_vector(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real vector, else raise."""
     arr = np.asarray(value)
     if arr.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional float64 vector")
@@ -38,6 +39,7 @@ def _as_real_vector(value: Any, *, name: str) -> FloatArray:
 
 
 def _as_index_vector(value: Any, *, name: str) -> IntArray:
+    """Return ``value`` as a validated integer index vector, else raise."""
     arr = np.asarray(value)
     if arr.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional int64 vector")
@@ -47,18 +49,21 @@ def _as_index_vector(value: Any, *, name: str) -> IntArray:
 
 
 def _validate_positive_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer")
     return int(value)
 
 
 def _validate_non_negative_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer")
     return int(value)
 
 
 def _validate_real_scalar(value: Any, *, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real")
     out = float(value)
@@ -68,6 +73,7 @@ def _validate_real_scalar(value: Any, *, name: str) -> float:
 
 
 def _validate_positive_real(value: Any, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     out = _validate_real_scalar(value, name=name)
     if out <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -75,6 +81,7 @@ def _validate_positive_real(value: Any, *, name: str) -> float:
 
 
 def _validate_square_flat(value: Any, *, name: str, n: int) -> FloatArray:
+    """Return ``value`` as a validated flattened square matrix, else raise."""
     arr = _as_real_vector(value, name=name)
     if arr.size not in (0, n * n):
         raise ValueError(f"{name} must be empty or have exactly n*n entries")
@@ -92,6 +99,7 @@ def _validate_edge_encoding(
     *,
     n: int,
 ) -> tuple[IntArray, IntArray, FloatArray]:
+    """Return the validated flat hyperedge encoding, else raise."""
     nodes = _as_index_vector(edge_nodes, name="edge_nodes")
     offsets = _as_index_vector(edge_offsets, name="edge_offsets")
     strengths = _as_real_vector(edge_strengths, name="edge_strengths")

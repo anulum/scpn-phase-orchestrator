@@ -25,6 +25,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -33,6 +34,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_non_negative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-negative integer")
     resolved = int(value)
@@ -42,6 +44,7 @@ def _validate_non_negative_int(value: object, *, name: str) -> int:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer")
     resolved = int(value)
@@ -51,6 +54,7 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 
 def _validate_block_size(value: object) -> int:
+    """Return the validated attention block size, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError("block_size must be -1 or a positive integer")
     resolved = int(value)
@@ -60,6 +64,7 @@ def _validate_block_size(value: object) -> int:
 
 
 def _validate_temperature(value: object) -> float:
+    """Return the validated attention temperature, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError("temperature must be a finite positive real value")
     resolved = float(value)
@@ -69,6 +74,7 @@ def _validate_temperature(value: object) -> float:
 
 
 def _validate_lambda(value: object) -> float:
+    """Return the validated residual lambda, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError("lambda_ must be a finite non-negative real value")
     resolved = float(value)
@@ -78,6 +84,7 @@ def _validate_lambda(value: object) -> float:
 
 
 def _validate_float_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)

@@ -36,6 +36,7 @@ ValidatedSimplicialInputs: TypeAlias = tuple[
 
 
 def _as_real_vector(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real vector, else raise."""
     array = np.asarray(value)
     if array.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional vector")
@@ -52,6 +53,7 @@ def _as_real_vector(value: Any, *, name: str) -> FloatArray:
 
 
 def _as_square_flat(value: Any, *, name: str, n: int) -> FloatArray:
+    """Return ``value`` as a validated flattened square matrix, else raise."""
     array = _as_real_vector(value, name=name)
     expected = n * n
     if array.size != expected:
@@ -60,6 +62,7 @@ def _as_square_flat(value: Any, *, name: str, n: int) -> FloatArray:
 
 
 def _as_positive_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-boolean integer")
     out = int(value)
@@ -69,6 +72,7 @@ def _as_positive_int(value: Any, *, name: str) -> int:
 
 
 def _as_non_negative_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-boolean integer")
     out = int(value)
@@ -78,6 +82,7 @@ def _as_non_negative_int(value: Any, *, name: str) -> int:
 
 
 def _as_finite_real(value: Any, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real")
     out = float(value)
@@ -87,6 +92,7 @@ def _as_finite_real(value: Any, *, name: str) -> float:
 
 
 def _as_positive_real(value: Any, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     out = _as_finite_real(value, name=name)
     if out <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -94,6 +100,7 @@ def _as_positive_real(value: Any, *, name: str) -> float:
 
 
 def _as_non_negative_real(value: Any, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     out = _as_finite_real(value, name=name)
     if out < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -106,6 +113,7 @@ def _validate_lengths(
     *,
     n: int,
 ) -> None:
+    """Assert the input arrays have consistent lengths, else raise."""
     if phases.size != n:
         raise ValueError("phases length must match n")
     if omegas.size != n:
