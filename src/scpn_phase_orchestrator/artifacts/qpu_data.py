@@ -59,11 +59,13 @@ _REQUIRED_FIELDS = frozenset(
 
 
 def _array_sha256(array: FloatArray) -> str:
+    """Return the SHA-256 hash of an array."""
     contiguous = np.ascontiguousarray(array, dtype=np.float64)
     return hashlib.sha256(contiguous.tobytes()).hexdigest()
 
 
 def _json_sha256(payload: Mapping[str, Any]) -> str:
+    """Return the canonical-JSON SHA-256 hash of a payload."""
     try:
         encoded = json.dumps(
             payload,
@@ -79,10 +81,12 @@ def _json_sha256(payload: Mapping[str, Any]) -> str:
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _finite_float_array(name: str, value: Any, *, ndim: int) -> FloatArray:
+    """Return ``value`` as a validated finite float array, else raise."""
     array = np.asarray(value, dtype=np.float64)
     if array.ndim != ndim:
         raise ValueError(f"{name} must be {ndim}-D, got shape {array.shape}")
@@ -98,6 +102,7 @@ def _hashes_with_verified_values(
     omega: FloatArray,
     theta0: FloatArray | None,
 ) -> dict[str, str]:
+    """Return the hashes augmented with their verified values."""
     result = dict(hashes)
     expected = {
         "K_nm_sha256": _array_sha256(K_nm),
@@ -113,6 +118,7 @@ def _hashes_with_verified_values(
 
 
 def _coerce_mapping(value: object, *, field: str) -> dict[str, Any]:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if value is None:
         return {}
     if not isinstance(value, Mapping):
@@ -364,6 +370,7 @@ class QPUDataArtifact:
 
 
 def _layer_assignments(spec: BindingSpec) -> list[str]:
+    """Return the validated per-qubit layer assignments, else raise."""
     assignments: list[str] = []
     for layer in spec.layers:
         assignments.extend([layer.name] * len(layer.oscillator_ids))
@@ -371,6 +378,7 @@ def _layer_assignments(spec: BindingSpec) -> list[str]:
 
 
 def _domain_metadata(spec: BindingSpec, domainpack_path: Path) -> dict[str, Any]:
+    """Return the domain metadata for the QPU data."""
     return {
         "source_project": "scpn-phase-orchestrator",
         "binding_spec": domainpack_path.name,

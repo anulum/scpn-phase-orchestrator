@@ -195,6 +195,7 @@ class Orchestrator:
 
     @staticmethod
     def _validate_executable_spec(spec: BindingSpec) -> None:
+        """Validate the executable spec inputs, else raise."""
         errors = validate_binding_spec(spec)
         if errors:
             joined = "; ".join(str(error) for error in errors)
@@ -282,6 +283,7 @@ def evaluate_binding_spec(
 
 
 def _nonnegative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-negative integer")
     coerced = int(value)
@@ -291,6 +293,7 @@ def _nonnegative_int(value: object, *, name: str) -> int:
 
 
 def _oscillator_count(spec: BindingSpec) -> int:
+    """Return the oscillator count for the configuration."""
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     if n_osc < 1:
         raise ValueError("binding spec must define at least one oscillator")
@@ -298,6 +301,7 @@ def _oscillator_count(spec: BindingSpec) -> int:
 
 
 def _initial_zeta(spec: BindingSpec) -> float:
+    """Return the initial zeta value for the configuration."""
     return max(
         (
             float(config.get("zeta", 0.0))

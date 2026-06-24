@@ -58,6 +58,7 @@ _NUMPY_ONLY = ("python",)
 
 
 def _require_sdk() -> None:
+    """Raise a clear error if the optional studio SDK is not installed."""
     if not _HAS_STUDIO_SDK:
         raise RuntimeError(
             "the SCPN STUDIO platform SDK is required to build the federation "
