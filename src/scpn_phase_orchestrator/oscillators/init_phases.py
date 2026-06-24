@@ -44,6 +44,7 @@ _SYMBOLIC_EXTRACTORS = frozenset({"ring", "graph"})
 
 
 def _validate_n_states(value: object) -> int:
+    """Return the state count as a validated positive integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("n_states must be an integer >= 2")
     n_states = int(value)
@@ -53,10 +54,12 @@ def _validate_n_states(value: object) -> int:
 
 
 def _oscillator_count(spec: BindingSpec) -> int:
+    """Return the oscillator count for the binding configuration."""
     return sum(len(layer.oscillator_ids) for layer in spec.layers)
 
 
 def _validate_omegas(value: object, *, expected_count: int) -> FloatArray:
+    """Return the natural frequencies as a validated finite array, else raise."""
     omegas = np.asarray(value)
     dtype = omegas.dtype
     if (
@@ -77,6 +80,7 @@ def _validate_omegas(value: object, *, expected_count: int) -> FloatArray:
 
 
 def _validate_seed(value: object) -> int:
+    """Return the validated random seed, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("seed must be a non-negative integer")
     seed = int(value)

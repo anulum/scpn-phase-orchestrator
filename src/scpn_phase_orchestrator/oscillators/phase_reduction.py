@@ -73,6 +73,7 @@ class PhaseReductionWeights:
 
 
 def _validate_state(value: object, *, name: str, dim: int) -> FloatArray:
+    """Return the validated input state, else raise."""
     array = np.asarray(value, dtype=np.float64).ravel()
     if array.shape[0] != dim:
         raise ValueError(f"{name} must have {dim} entries, got {array.shape[0]}")
@@ -82,6 +83,7 @@ def _validate_state(value: object, *, name: str, dim: int) -> FloatArray:
 
 
 def _validate_states(value: object, *, name: str, dim: int) -> FloatArray:
+    """Return the validated batch of states, else raise."""
     array = np.asarray(value, dtype=np.float64)
     if array.ndim != 2 or array.shape[1] != dim:
         raise ValueError(f"{name} must be a (K, {dim}) array")
@@ -125,6 +127,7 @@ class PhaseReducer:
         return self.weights.decay
 
     def _encode_raw(self, state: FloatArray) -> FloatArray:
+        """Return the raw latent encoding of a state."""
         activation = state
         weights = self.weights.encoder_weights
         biases = self.weights.encoder_biases
@@ -136,6 +139,7 @@ class PhaseReducer:
         return activation
 
     def _decode(self, latent: FloatArray) -> FloatArray:
+        """Return the reconstructed state from a latent encoding."""
         activation = latent
         weights = self.weights.decoder_weights
         biases = self.weights.decoder_biases

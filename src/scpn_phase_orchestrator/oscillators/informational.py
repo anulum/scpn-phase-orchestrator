@@ -35,12 +35,14 @@ except ImportError:
 
 
 def _validate_node_id(value: object) -> str:
+    """Return the validated node id, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("node_id must be a non-empty string")
     return value
 
 
 def _validate_signal(value: object) -> FloatArray:
+    """Return the signal as a validated finite array, else raise."""
     signal = np.asarray(value)
     dtype = signal.dtype
     if (

@@ -38,12 +38,14 @@ except ImportError:
 
 
 def _validate_node_id(value: object) -> str:
+    """Return the validated node id, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("node_id must be a non-empty string")
     return value
 
 
 def _validate_signal(value: object) -> FloatArray:
+    """Return the signal as a validated finite array, else raise."""
     signal = np.asarray(value)
     dtype = signal.dtype
     if (
@@ -63,6 +65,7 @@ def _validate_signal(value: object) -> FloatArray:
 
 
 def _validate_sample_rate(value: object) -> float:
+    """Return the sample rate as a validated positive value, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError("sample_rate must be finite and positive")
     sample_rate = float(value)
@@ -148,6 +151,7 @@ class PhysicalExtractor(PhaseExtractor):
         analytic: ComplexArray,
         sample_rate: float,
     ) -> tuple[float, float, float, float]:
+        """Return the reference phase extraction from a waveform (NumPy floor)."""
         inst_phase = np.angle(analytic) % TWO_PI
         inst_amp = np.abs(analytic)
         unwrapped = np.unwrap(np.angle(analytic))
@@ -161,6 +165,7 @@ class PhysicalExtractor(PhaseExtractor):
 
     @staticmethod
     def _envelope_quality(signal: FloatArray, analytic: ComplexArray) -> float:
+        """Return the envelope-based extraction quality score."""
         envelope = np.abs(analytic)
         mean_env = np.mean(envelope)
         if mean_env < 1e-15:

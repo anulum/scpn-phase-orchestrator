@@ -49,6 +49,7 @@ except (ImportError, ModuleNotFoundError):
 
 
 def _validate_n_states(value: object) -> int:
+    """Return the state count as a validated positive integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("n_states must be an integer >= 2")
     n_states = int(value)
@@ -58,12 +59,14 @@ def _validate_n_states(value: object) -> int:
 
 
 def _validate_node_id(value: object) -> str:
+    """Return the validated node id, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("node_id must be a non-empty string")
     return value
 
 
 def _validate_signal(value: object) -> IntArray:
+    """Return the signal as a validated finite array, else raise."""
     signal = np.asarray(value)
     dtype = signal.dtype
     if (
@@ -78,6 +81,7 @@ def _validate_signal(value: object) -> IntArray:
 
 
 def _validate_sample_rate(value: object) -> float:
+    """Return the sample rate as a validated positive value, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError("sample_rate must be finite and positive")
     sample_rate = float(value)
@@ -87,6 +91,7 @@ def _validate_sample_rate(value: object) -> float:
 
 
 def _validate_initial_transition_quality(value: object) -> float:
+    """Return the validated initial transition-quality value, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError("initial_transition_quality must be a finite float in [0, 1]")
     quality = float(value)

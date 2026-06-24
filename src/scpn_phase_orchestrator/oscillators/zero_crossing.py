@@ -38,12 +38,14 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_node_id(value: object) -> str:
+    """Return the validated node id, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("node_id must be a non-empty string")
     return value
 
 
 def _validate_signal(value: object) -> FloatArray:
+    """Return the signal as a validated finite array, else raise."""
     signal = np.asarray(value)
     dtype = signal.dtype
     if (
@@ -63,6 +65,7 @@ def _validate_signal(value: object) -> FloatArray:
 
 
 def _validate_sample_rate(value: object) -> float:
+    """Return the sample rate as a validated positive value, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError("sample_rate must be finite and positive")
     sample_rate = float(value)
@@ -219,6 +222,7 @@ class ZeroCrossingExtractor(PhaseExtractor):
 
     @staticmethod
     def _interval_quality(half_periods: FloatArray) -> float:
+        """Return the inter-crossing interval quality score."""
         mean_half = float(np.mean(half_periods))
         if mean_half < 1e-15:
             return 0.0

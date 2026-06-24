@@ -45,12 +45,14 @@ _N_SCALES = 48
 
 
 def _validate_node_id(value: object) -> str:
+    """Return the validated node id, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("node_id must be a non-empty string")
     return value
 
 
 def _validate_signal(value: object) -> FloatArray:
+    """Return the signal as a validated finite array, else raise."""
     signal = np.asarray(value)
     dtype = signal.dtype
     if (
@@ -70,6 +72,7 @@ def _validate_signal(value: object) -> FloatArray:
 
 
 def _validate_sample_rate(value: object) -> float:
+    """Return the sample rate as a validated positive value, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError("sample_rate must be finite and positive")
     sample_rate = float(value)
@@ -143,6 +146,7 @@ class WaveletExtractor(PhaseExtractor):
     def _state(
         self, theta: float, omega: float, amplitude: float, quality: float
     ) -> PhaseState:
+        """Return the validated phase-extraction state."""
         return PhaseState(
             theta=float(theta % TWO_PI),
             omega=float(omega),
@@ -163,6 +167,7 @@ class WaveletExtractor(PhaseExtractor):
 
     @staticmethod
     def _morlet(scale: float) -> ComplexArray:
+        """Return the complex Morlet wavelet at a given scale."""
         half = int(ceil(4.0 * scale))
         t = np.arange(-half, half + 1, dtype=np.float64) / scale
         envelope = np.exp(-0.5 * t * t)
@@ -171,6 +176,7 @@ class WaveletExtractor(PhaseExtractor):
         return np.asarray(psi, dtype=np.complex128)
 
     def _cwt_row(self, centred: FloatArray, scale: float) -> ComplexArray:
+        """Return one continuous-wavelet-transform row for a scale."""
         psi = self._morlet(scale)
         row = np.convolve(centred, np.conjugate(psi), mode="same")
         return np.asarray(row, dtype=np.complex128)
