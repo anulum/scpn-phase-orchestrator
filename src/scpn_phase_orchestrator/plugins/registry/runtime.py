@@ -425,6 +425,7 @@ def _select_capability(
     kind: PluginKind,
     name: str,
 ) -> PluginCapability:
+    """Return the capability matching the request, else raise."""
     matches = tuple(
         capability
         for capability in manifest.capabilities
@@ -438,6 +439,7 @@ def _select_capability(
 
 
 def _parse_target(target: str) -> tuple[str, str]:
+    """Parse a plugin execution target string, else raise."""
     if ":" not in target:
         raise ValueError("capability target must use 'module:attribute' syntax")
     module_name, attribute_path = target.split(":", maxsplit=1)
@@ -447,6 +449,7 @@ def _parse_target(target: str) -> tuple[str, str]:
 
 
 def _target_within_package(module_name: str, package: str) -> bool:
+    """Return whether a target lies within the allowed package."""
     return module_name == package or module_name.startswith(f"{package}.")
 
 
@@ -455,6 +458,7 @@ def _resolve_attribute_path(
     attribute_path: str,
     target: str,
 ) -> object:
+    """Resolve a dotted attribute path to its object, else raise."""
     current = module
     for attribute in attribute_path.split("."):
         _require_identifier(attribute, "capability target attribute")
@@ -475,6 +479,7 @@ def _runtime_load_audit_record(
     module_name: str,
     callable_target: bool,
 ) -> dict[str, object]:
+    """Build the audit record for a runtime plugin load."""
     record = {
         "schema": "scpn_plugin_runtime_load_v1",
         "spo_version": __version__,
@@ -508,6 +513,7 @@ def _runtime_execute_audit_record(
     result: object,
     plan_hash: str | None = None,
 ) -> dict[str, object]:
+    """Build the audit record for a runtime plugin execution."""
     record = {
         "schema": "scpn_plugin_runtime_execute_v1",
         "load_hash": loaded.audit_record["load_hash"],
@@ -545,6 +551,7 @@ def _runtime_execution_plan_audit_record(
     argument_count: int,
     keyword_names: tuple[str, ...],
 ) -> dict[str, object]:
+    """Build the audit record for a runtime execution plan."""
     record = {
         "schema": "scpn_plugin_runtime_execution_plan_v1",
         "schema_version": "1.0.0",
@@ -580,6 +587,7 @@ def _assert_execution_target_hash_approved(
     capability: PluginCapability,
     policy: PluginRuntimeExecutionPolicy,
 ) -> None:
+    """Assert the execution target hash is approved, else raise."""
     if not policy.require_target_hash_approval:
         return
     expected_hash = _preimport_target_hash(
@@ -599,6 +607,7 @@ def _preimport_target_hash(
     capability: PluginCapability,
     policy: PluginRuntimeExecutionPolicy,
 ) -> str:
+    """Return the target hash computed before import."""
     module_name, _attribute_path = _parse_target(capability.target)
     load_policy = policy.to_load_policy()
     record = _runtime_load_audit_record(
@@ -615,6 +624,7 @@ def _execution_target_hash_approved(
     target_hash: str,
     policy: PluginRuntimeExecutionPolicy,
 ) -> bool:
+    """Return whether the execution target hash is approved."""
     if not policy.require_target_hash_approval:
         return False
     return target_hash in policy.approved_target_hashes

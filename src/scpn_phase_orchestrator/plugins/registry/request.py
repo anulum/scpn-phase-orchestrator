@@ -410,6 +410,7 @@ def _runtime_execution_request_audit_record(
     allowed_kinds: tuple[str, ...],
     require_package_target: bool,
 ) -> dict[str, object]:
+    """Build the audit record for a runtime execution request."""
     record = {
         "schema": "scpn_plugin_runtime_execution_request_v1",
         "version": "1.0.0",

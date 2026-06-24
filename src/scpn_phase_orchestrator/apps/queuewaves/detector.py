@@ -39,6 +39,7 @@ class Anomaly:
 
 
 def _storm_msg(r_bad: float, threshold: float, label: str) -> str:
+    """Return the alert message for a detected storm."""
     return f"R_bad={r_bad:.3f} > {threshold} — {label}"
 
 
@@ -68,6 +69,7 @@ class AnomalyDetector:
         return anomalies
 
     def _check_retry_storm(self, snap: PipelineSnapshot) -> list[Anomaly]:
+        """Return whether a retry storm is detected."""
         r_bad = snap.r_bad
         if r_bad > self._t.r_bad_critical:
             return [
@@ -100,6 +102,7 @@ class AnomalyDetector:
         return []
 
     def _check_cascade(self, snap: PipelineSnapshot) -> list[Anomaly]:
+        """Return whether a cascade failure is detected."""
         anomalies: list[Anomaly] = []
         plv = snap.plv_matrix
         n = len(plv)
@@ -122,6 +125,7 @@ class AnomalyDetector:
         return anomalies
 
     def _check_chronic(self, snap: PipelineSnapshot) -> list[Anomaly]:
+        """Return whether a chronic condition is detected."""
         anomalies: list[Anomaly] = []
         for svc in snap.services:
             if svc.imprint > self._t.imprint_chronic:

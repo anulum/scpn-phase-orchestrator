@@ -72,6 +72,7 @@ def require_jax() -> ModuleType:
 
 
 def _device_kind(device: object) -> str:
+    """Return the compute-device kind (CPU or GPU)."""
     platform = getattr(device, "platform", None)
     if isinstance(platform, str) and platform:
         return platform.lower()
@@ -82,6 +83,7 @@ def _device_kind(device: object) -> str:
 
 
 def _device_label(device: object) -> str:
+    """Return the human-readable device label."""
     kind = _device_kind(device)
     identifier = getattr(device, "id", None)
     if isinstance(identifier, int):

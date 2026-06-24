@@ -161,6 +161,7 @@ def kuramoto_rk4_step(
     """
 
     def deriv(p: jax.Array) -> jax.Array:
+        """Evaluate the ODE right-hand side at a state."""
         diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
         return omegas + jnp.sum(K * jnp.sin(diff), axis=1)
 
@@ -208,6 +209,7 @@ def kuramoto_forward(
     step_fn = kuramoto_rk4_step if method == "rk4" else kuramoto_step
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        """Return the loop body for the iteration."""
         p = step_fn(carry, omegas, K, dt)
         return p, p
 
@@ -292,6 +294,7 @@ def kuramoto_rk4_step_masked(
     """
 
     def deriv(p: jax.Array) -> jax.Array:
+        """Evaluate the ODE right-hand side at a state."""
         return _kuramoto_deriv_masked(p, omegas, K, mask)
 
     k1 = deriv(phases)
@@ -337,6 +340,7 @@ def kuramoto_forward_masked(
     step_fn = kuramoto_rk4_step_masked if method == "rk4" else kuramoto_step_masked
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        """Return the loop body for the iteration."""
         p = step_fn(carry, omegas, K, mask, dt)
         return p, p
 
@@ -419,6 +423,7 @@ def winfree_rk4_step(
     """
 
     def deriv(p: jax.Array) -> jax.Array:
+        """Evaluate the ODE right-hand side at a state."""
         return _winfree_deriv(p, omegas, K)
 
     k1 = deriv(phases)
@@ -461,6 +466,7 @@ def winfree_forward(
     step_fn = winfree_rk4_step if method == "rk4" else winfree_step
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        """Return the loop body for the iteration."""
         p = step_fn(carry, omegas, K, dt)
         return p, p
 
@@ -554,6 +560,7 @@ def simplicial_rk4_step(
     """
 
     def deriv(p: jax.Array) -> jax.Array:
+        """Evaluate the ODE right-hand side at a state."""
         return _simplicial_deriv(p, omegas, K, sigma2)
 
     k1 = deriv(phases)
@@ -600,6 +607,7 @@ def simplicial_forward(
     step_fn = simplicial_rk4_step if method == "rk4" else simplicial_step
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        """Return the loop body for the iteration."""
         p = step_fn(carry, omegas, K, dt, sigma2)
         return p, p
 
@@ -711,6 +719,7 @@ def stuart_landau_rk4_step(
     """
 
     def deriv(p: jax.Array, r: jax.Array) -> tuple[jax.Array, jax.Array]:
+        """Evaluate the ODE right-hand side at a state."""
         return _stuart_landau_deriv(p, r, omegas, mu, K, K_r, epsilon)
 
     k1p, k1r = deriv(phases, amplitudes)
@@ -771,6 +780,7 @@ def stuart_landau_forward(
     def body(
         carry: tuple[jax.Array, jax.Array], _: None
     ) -> tuple[tuple[jax.Array, jax.Array], tuple[jax.Array, jax.Array]]:
+        """Return the loop body for the iteration."""
         p, r = carry
         new_p, new_r = step_fn(p, r, omegas, mu, K, K_r, dt, epsilon)
         return (new_p, new_r), (new_p, new_r)
@@ -948,6 +958,7 @@ def _saf_order_parameter_cg(
     degree = jnp.sum(K, axis=1)
 
     def matvec(x: jax.Array) -> jax.Array:
+        """Return the matrix-vector product."""
         return degree * x - K @ x + eps * x
 
     solution, _ = cg(  # type: ignore[no-untyped-call]  # jax.scipy cg is untyped

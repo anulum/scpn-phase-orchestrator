@@ -99,14 +99,17 @@ class RegulatoryClause:
 
 
 def _eu(clause_id: str, title: str) -> RegulatoryClause:
+    """Return the EU AI Act clause reference for a topic."""
     return RegulatoryClause(EU_AI_ACT, clause_id, title, _EU_PROVENANCE)
 
 
 def _iso(clause_id: str, title: str) -> RegulatoryClause:
+    """Return the ISO/IEC 42001 clause reference for a topic."""
     return RegulatoryClause(ISO_IEC_42001, clause_id, title, _ISO_PROVENANCE)
 
 
 def _ul(clause_id: str, title: str) -> RegulatoryClause:
+    """Return the ANSI/UL 4600 clause reference for a topic."""
     return RegulatoryClause(UL_4600, clause_id, title, _UL_PROVENANCE)
 
 

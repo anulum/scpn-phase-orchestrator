@@ -55,12 +55,14 @@ _VALID_SECURITY_MODES = frozenset({"development", "production"})
 
 
 def _require_non_empty(value: str, field_name: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value:
         raise ValueError(f"{field_name} must be a non-empty string")
     return value
 
 
 def _require_finite_non_negative(value: float, field_name: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     try:
         parsed = float(value)
     except (TypeError, ValueError) as exc:
@@ -76,6 +78,7 @@ def _require_int_range(
     minimum: int,
     maximum: int | None = None,
 ) -> int:
+    """Return ``value`` as an integer within the allowed range, else raise."""
     if isinstance(value, bool):
         raise ValueError(f"{field_name} must be an integer")
     try:
@@ -90,6 +93,7 @@ def _require_int_range(
 
 
 def _require_http_url(value: str, field_name: str) -> str:
+    """Return ``value`` as a validated HTTP URL, else raise."""
     parsed_value = _require_non_empty(value, field_name)
     parsed = urlparse(value)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:

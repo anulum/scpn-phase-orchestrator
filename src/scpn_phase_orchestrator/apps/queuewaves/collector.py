@@ -127,6 +127,7 @@ class PrometheusCollector:
         return self._buffers
 
     async def _get_client(self) -> Any:
+        """Return the cached HTTP client, creating it if needed."""
         if self._client is None:
             import httpx
 

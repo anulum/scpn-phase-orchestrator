@@ -31,6 +31,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _finite_real(value: float, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number")
     scalar = float(value)
@@ -46,6 +47,7 @@ def _finite_vector(
     length: int | None = None,
     non_negative: bool = False,
 ) -> FloatArray:
+    """Return ``value`` as a validated finite vector, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -65,6 +67,7 @@ def _finite_vector(
 
 
 def _finite_square_matrix(value: FloatArray, name: str, *, size: int) -> FloatArray:
+    """Return ``value`` as a validated finite square matrix, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -80,6 +83,7 @@ def _finite_square_matrix(value: FloatArray, name: str, *, size: int) -> FloatAr
 
 
 def _validated_state(state: ImprintState) -> tuple[FloatArray, float]:
+    """Return the validated imprint state, else raise."""
     if not isinstance(state, ImprintState):
         raise ValueError("imprint state must be an ImprintState")
     m_k = _finite_vector(state.m_k, "m_k", non_negative=True)

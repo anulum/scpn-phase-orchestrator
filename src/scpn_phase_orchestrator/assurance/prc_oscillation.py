@@ -196,6 +196,7 @@ class PRCOscillationEvidence:
         )
 
     def _canonical_payload(self) -> dict[str, object]:
+        """Return the canonical payload for the assurance record."""
         return {
             "event_id": self.event_id,
             "captured_at": self.captured_at,
@@ -302,6 +303,7 @@ def screen_oscillation_modes(
 def _screen_mode(
     index: int, mode: object, undamped: float, poorly: float
 ) -> PRCModeFinding:
+    """Return the screening mode for the assessment."""
     if not isinstance(mode, OscillationMode):
         raise ValueError(f"modes[{index}] must be an OscillationMode, got {mode!r}")
     classification, flagged = _classify(mode.damping_ratio, undamped, poorly)
@@ -316,6 +318,7 @@ def _screen_mode(
 
 
 def _classify(damping: float, undamped: float, poorly: float) -> tuple[str, bool]:
+    """Return the classification for the oscillation assessment."""
     if damping <= undamped:
         return UNDAMPED, True
     if damping < poorly:
@@ -324,12 +327,14 @@ def _classify(damping: float, undamped: float, poorly: float) -> tuple[str, bool
 
 
 def _non_empty_str(value: object, name: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
     return value
 
 
 def _positive_real(value: object, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     scalar = _real_scalar(value, name)
     if scalar <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -337,6 +342,7 @@ def _positive_real(value: object, name: str) -> float:
 
 
 def _real_scalar(value: object, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     scalar = float(value)

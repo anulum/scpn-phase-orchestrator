@@ -162,6 +162,7 @@ class TCBOObserver:
         return self._observe_plv()  # pragma: no cover
 
     def _observe_ripser(self) -> TCBOState:
+        """Return the Ripser persistence observation, if available."""
         cloud = self._delay_embed()
         result = _ripser(cloud, maxdim=1)
         h1 = result["dgms"][1]

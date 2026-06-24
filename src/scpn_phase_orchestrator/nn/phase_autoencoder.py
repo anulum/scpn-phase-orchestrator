@@ -225,6 +225,7 @@ class PhaseAutoencoder(eqx.Module):
 def _layer_arrays(
     layers: list[eqx.nn.Linear],
 ) -> tuple[tuple[FloatArray, ...], tuple[FloatArray, ...]]:
+    """Return the per-layer weight and bias arrays."""
     weights = tuple(np.asarray(layer.weight, dtype=np.float64) for layer in layers)
     biases = tuple(
         np.zeros(int(layer.out_features), dtype=np.float64)
@@ -373,6 +374,7 @@ def train_phase_autoencoder(
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
 
     def _loss(candidate: PhaseAutoencoder) -> jax.Array:
+        """Return the reconstruction loss for a batch."""
         return phase_autoencoder_loss(candidate, windows, dt=dt, **overrides)
 
     step = _make_train_step(optimizer, _loss)
@@ -386,10 +388,13 @@ def _make_train_step(
     optimizer: optax.GradientTransformation,
     loss_fn: Callable[[PhaseAutoencoder], jax.Array],
 ) -> Callable[[PhaseAutoencoder, object], tuple[PhaseAutoencoder, object, jax.Array]]:
+    """Build the JIT-compiled training-step function."""
+
     @eqx.filter_jit
     def step(
         model: PhaseAutoencoder, opt_state: object
     ) -> tuple[PhaseAutoencoder, object, jax.Array]:
+        """Run one training step and return the updated state."""
         loss, grads = eqx.filter_value_and_grad(loss_fn)(model)
         updates, opt_state = optimizer.update(grads, opt_state, model)
         model = eqx.apply_updates(model, updates)

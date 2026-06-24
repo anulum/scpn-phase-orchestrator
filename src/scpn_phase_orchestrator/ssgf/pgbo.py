@@ -34,6 +34,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_cost_weights(cost_weights: tuple[float, ...]) -> tuple[float, ...]:
+    """Return the validated cost weights, else raise."""
     if not isinstance(cost_weights, tuple) or len(cost_weights) < 1:
         raise ValueError("cost_weights must contain at least one weight")
     weights: list[float] = []
@@ -50,6 +51,7 @@ def _validate_cost_weights(cost_weights: tuple[float, ...]) -> tuple[float, ...]
 
 
 def _validate_phases(phases: FloatArray) -> FloatArray:
+    """Return the phases as a validated finite array, else raise."""
     raw = np.asarray(phases)
     if raw.dtype == np.bool_ or any(
         isinstance(item, bool | np.bool_) for item in raw.ravel()
@@ -69,6 +71,7 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
 
 
 def _validate_coupling_matrix(W: FloatArray, n_oscillators: int) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     raw = np.asarray(W)
     if raw.dtype == np.bool_ or any(
         isinstance(item, bool | np.bool_) for item in raw.ravel()

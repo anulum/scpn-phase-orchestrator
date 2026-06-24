@@ -113,6 +113,7 @@ def oim_forward(
     """
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        """Return the loop body for the iteration."""
         p = oim_step(carry, adjacency, n_colors, dt, coupling_strength)
         return p, p
 
@@ -233,6 +234,7 @@ def oim_solve(
 
         # Annealing via scan
         def anneal_body(phases: jax.Array, xs: Any) -> tuple[jax.Array, None]:
+            """Return the annealing-phase loop body."""
             k, ns, nk = xs
             dphi = _oim_deriv(phases, adjacency, coupling_n, k)
             phases = (phases + dt * dphi) % TWO_PI
@@ -248,6 +250,7 @@ def oim_solve(
 
         # Refinement via scan (fixed coupling, no noise)
         def refine_body(phases: jax.Array, _: Any) -> tuple[jax.Array, None]:
+            """Return the refinement-phase loop body."""
             dphi = _oim_deriv(phases, adjacency, coupling_n, k_max)
             return (phases + dt * dphi) % TWO_PI, None
 

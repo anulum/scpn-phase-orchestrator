@@ -534,6 +534,7 @@ def write_plugin_execution_request_storage_bundle(
 def _request_revocation_hash(
     revoked_request_hashes: tuple[str, ...],
 ) -> str:
+    """Return the canonical hash of a revocation request."""
     normalised_revocations = tuple(
         sorted(revoked_hash.lower() for revoked_hash in revoked_request_hashes)
     )
@@ -543,6 +544,7 @@ def _request_revocation_hash(
 
 
 def _validate_request_audit_record(record: dict[str, object]) -> None:
+    """Validate a request audit record, else raise."""
     if record.get("schema") != "scpn_plugin_runtime_execution_request_v1":
         raise ValueError("storage bundle request schema mismatch")
     request_hash = record.get("request_hash")
@@ -556,6 +558,7 @@ def _validate_request_audit_record(record: dict[str, object]) -> None:
 
 
 def _validate_storage_manifest_audit_record(record: dict[str, object]) -> None:
+    """Validate a storage manifest audit record, else raise."""
     if record.get("schema") != "scpn_plugin_execution_request_storage_manifest_v1":
         raise ValueError("storage bundle manifest schema mismatch")
     storage_backend = record.get("storage_backend")
@@ -583,6 +586,7 @@ def _validate_storage_manifest_audit_record(record: dict[str, object]) -> None:
 
 
 def _validate_storage_backend_uri(storage_backend: str, storage_uri: str) -> str:
+    """Return the validated storage-backend URI, else raise."""
     if storage_backend not in _STORAGE_BACKEND_SCHEMES:
         allowed = ", ".join(sorted(_STORAGE_BACKEND_SCHEMES))
         raise ValueError(

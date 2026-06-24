@@ -54,6 +54,7 @@ _UL = "ANSI/UL 4600"
 
 
 def _k(standard: str, clause_id: str) -> str:
+    """Return the canonical key for an assurance clause."""
     return f"{standard}::{clause_id}"
 
 
@@ -336,6 +337,7 @@ class AssuranceCaseBundle:
                 raise ValueError("bundle_hash does not match the canonical bundle seed")
 
     def _seed(self) -> dict[str, object]:
+        """Return the deterministic seed for the assurance case."""
         return {
             "schema": self.schema,
             "version": self.version,
@@ -395,6 +397,7 @@ def _conformance_for_clause(
     clause: RegulatoryClause,
     category_evidence: Mapping[str, list[str]],
 ) -> ClauseConformance:
+    """Return the conformance status for a clause."""
     addressed_ids: list[str] = []
     rationales: list[str] = []
     best_status = NOT_ADDRESSED

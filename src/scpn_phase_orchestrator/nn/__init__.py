@@ -308,6 +308,7 @@ def __getattr__(name: str) -> object:  # noqa: ANN204
 
 
 def _resolve(name: str) -> object:
+    """Return the lazily-imported nn package attribute for ``name``, else raise."""
     if name in _FUNCTIONAL:
         from . import functional
 

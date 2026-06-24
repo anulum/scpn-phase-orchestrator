@@ -49,6 +49,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     if isinstance(value, np.ndarray):
         if value.dtype == np.bool_:
             return True
@@ -62,6 +63,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -78,6 +80,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _validate_weights(weights: tuple[float, ...]) -> tuple[float, float, float, float]:
+    """Return the validated cost weights, else raise."""
     if not isinstance(weights, tuple) or len(weights) != 4:
         raise ValueError("weights must be a tuple of four finite non-negative reals")
     parsed: list[float] = []
@@ -92,6 +95,7 @@ def _validate_weights(weights: tuple[float, ...]) -> tuple[float, float, float, 
 
 
 def _validate_phases(phases: object) -> FloatArray:
+    """Return the phases as a validated finite array, else raise."""
     if _contains_boolean_alias(phases):
         raise ValueError("phases must not contain boolean values")
     raw = np.asarray(phases)
@@ -111,6 +115,7 @@ def _validate_phases(phases: object) -> FloatArray:
 
 
 def _validate_weight_matrix(W: object) -> FloatArray:
+    """Return the validated weight matrix, else raise."""
     if _contains_boolean_alias(W):
         raise ValueError("W must not contain boolean values")
     raw = np.asarray(W)
@@ -128,6 +133,7 @@ def _validate_weight_matrix(W: object) -> FloatArray:
 
 
 def _validate_cost_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a validated cost scalar, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-boolean real")
     scalar = float(value)
@@ -141,6 +147,7 @@ def _validate_rust_costs(
     *,
     weights: tuple[float, float, float, float],
 ) -> SSGFCosts:
+    """Return the Rust backend costs matching the reference, else raise."""
     if not isinstance(value, tuple) or len(value) != 5:
         raise ValueError("Rust SSGF costs output must contain five cost terms")
     c1 = _validate_cost_scalar(value[0], name="synchronisation deficit")

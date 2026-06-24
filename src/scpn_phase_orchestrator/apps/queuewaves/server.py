@@ -118,6 +118,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
         request: Request,
         x_api_key: str | None = Header(None),
     ) -> None:
+        """Assert network access is permitted, else raise."""
         if api_key is None:
             identity = request.client.host if request.client is not None else "local"
         elif x_api_key != api_key:
@@ -128,6 +129,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
             raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
     async def _broadcast(msg: dict[str, Any]) -> None:  # pragma: no cover
+        """Broadcast a message to all connected websocket clients."""
         payload = json.dumps(msg)
         dead: list[WebSocket] = []
         for ws in ws_clients:
@@ -139,6 +141,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
             ws_clients.discard(ws)
 
     async def _pipeline_loop() -> None:  # pragma: no cover
+        """Run the detection pipeline loop until cancelled."""
         nonlocal active_anomalies
         while True:
             try:
@@ -187,6 +190,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
     async def _lifespan(  # pragma: no cover
         _app: FastAPI,
     ) -> AsyncIterator[None]:
+        """Manage the server application lifespan (startup and shutdown)."""
         task = asyncio.create_task(_pipeline_loop())
         yield
         task.cancel()
@@ -345,10 +349,12 @@ def create_app(cfg: QueueWavesConfig) -> object:
 
 
 def _reject_json_constant(token: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant is not allowed: {token}")
 
 
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Return a JSON object with unique keys, else raise."""
     obj: dict[str, Any] = {}
     for key, value in pairs:
         if key in obj:
@@ -358,10 +364,12 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _websocket_message_exceeds_limit(msg: str) -> bool:
+    """Return whether a websocket message exceeds the size limit."""
     return len(msg.encode("utf-8")) > _MAX_WEBSOCKET_MESSAGE_BYTES
 
 
 def _is_keepalive_message(msg: str) -> bool:
+    """Return whether a websocket message is a keepalive."""
     if msg in {"", "ping", "pong"}:
         return True
     try:

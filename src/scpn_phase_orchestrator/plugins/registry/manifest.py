@@ -294,12 +294,14 @@ def build_plugin_marketplace_catalog(
 
 
 def _validate_version(value: str, label: str) -> None:
+    """Return the validated plugin version, else raise."""
     parts = value.split(".")
     if len(parts) != 3 or any(not part.isdigit() for part in parts):
         raise ValueError(f"{label} must use MAJOR.MINOR.PATCH")
 
 
 def _version_tuple(value: str) -> tuple[int, int, int]:
+    """Return the version string parsed into a comparable tuple."""
     core = value.split("+", maxsplit=1)[0]
     parts = core.split(".")
     if len(parts) < 3 or any(not part.isdigit() for part in parts[:3]):
@@ -310,6 +312,7 @@ def _version_tuple(value: str) -> tuple[int, int, int]:
 def _capability_counts(
     reports: tuple[PluginCompatibilityReport, ...],
 ) -> dict[str, int]:
+    """Return the per-kind capability counts."""
     counts = dict.fromkeys(sorted(_VALID_KINDS), 0)
     for report in reports:
         for capability in report.manifest.capabilities:

@@ -27,17 +27,20 @@ _VALID_KINDS = {"domainpack", "extractor", "monitor", "actuator", "bridge"}
 
 
 def _require_identifier(value: str, label: str) -> None:
+    """Return ``value`` as a validated identifier, else raise."""
     _require_non_empty(value, label)
     if any(char.isspace() for char in value):
         raise ValueError(f"{label} must not contain whitespace")
 
 
 def _require_non_empty(value: str, label: str) -> None:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value:
         raise ValueError(f"{label} must be a non-empty string")
 
 
 def _validate_sha256(value: str, label: str) -> None:
+    """Return ``value`` as a validated SHA-256 digest, else raise."""
     if not isinstance(value, str) or len(value) != 64:
         raise ValueError(f"{label} must be a 64-character SHA-256 hex digest")
     try:
@@ -47,5 +50,6 @@ def _validate_sha256(value: str, label: str) -> None:
 
 
 def _record_hash(record: dict[str, object]) -> str:
+    """Return the canonical hash of a record."""
     encoded = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()

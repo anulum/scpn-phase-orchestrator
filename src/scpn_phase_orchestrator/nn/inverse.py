@@ -203,6 +203,7 @@ def analytical_inverse(
         reg = alpha * jnp.diag(jnp.concatenate([jnp.ones(N), jnp.zeros(1)]))
 
         def _solve(design_i: jax.Array, target: jax.Array) -> jax.Array:
+            """Solve the inverse problem and return the result."""
             solution_i: jax.Array = jnp.linalg.solve(
                 design_i.T @ design_i + reg, design_i.T @ target
             )
@@ -212,6 +213,7 @@ def analytical_inverse(
     else:
 
         def _solve(design_i: jax.Array, target: jax.Array) -> jax.Array:
+            """Solve the inverse problem and return the result."""
             row, _, _, _ = jnp.linalg.lstsq(design_i, target)
             return row
 

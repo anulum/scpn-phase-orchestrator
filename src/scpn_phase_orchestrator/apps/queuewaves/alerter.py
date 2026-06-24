@@ -43,6 +43,7 @@ _SEVERITY_EMOJI = {"critical": ":rotating_light:", "warning": ":warning:"}
 
 
 def _require_cooldown_seconds(value: object) -> float:
+    """Return the cooldown seconds as a validated non-negative value, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError("cooldown_seconds must be a finite non-negative real")
     cooldown = float(value)
@@ -52,6 +53,7 @@ def _require_cooldown_seconds(value: object) -> float:
 
 
 def _format_slack(anomaly: Anomaly, suppressed: int = 0) -> dict[str, Any]:
+    """Format an alert as a Slack message payload."""
     emoji = _SEVERITY_EMOJI.get(anomaly.severity, ":question:")
     color = _SEVERITY_COLORS.get(anomaly.severity, "#808080")
     text = anomaly.message
@@ -78,6 +80,7 @@ def _format_slack(anomaly: Anomaly, suppressed: int = 0) -> dict[str, Any]:
 
 
 def _format_generic(anomaly: Anomaly, suppressed: int = 0) -> dict[str, Any]:
+    """Format an alert as a generic webhook payload."""
     return {
         "type": anomaly.type,
         "severity": anomaly.severity,
