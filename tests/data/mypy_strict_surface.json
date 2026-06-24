@@ -110,6 +110,16 @@
     },
     {
       "modules": [
+        "scpn_studio_platform",
+        "scpn_studio_platform.*"
+      ],
+      "settings": {
+        "follow_imports": "skip",
+        "ignore_missing_imports": true
+      }
+    },
+    {
+      "modules": [
         "tests",
         "tests.*"
       ],
