@@ -25,6 +25,7 @@ from ._shared import _PLUGIN_KIND_OPTIONS, _require_sha256
 def _load_lifecycle_from_payload(
     lifecycle_payload: dict[str, object],
 ) -> PluginExecutionRequestLifecycleRecord:
+    """Load a validated lifecycle record from a payload, else raise."""
     if lifecycle_payload.get("schema") != "scpn_plugin_execution_request_lifecycle_v1":
         raise click.ClickException(
             "lifecycle schema mismatch: expected "
@@ -75,6 +76,7 @@ def _load_lifecycle_from_payload(
         raise click.ClickException("lifecycle schema mismatch: revoked must be boolean")
 
     def optional_hash(value: object, field_name: str) -> str | None:
+        """Return ``None`` or a validated SHA-256 digest from a payload field."""
         if value is None:
             return None
         return _require_sha256(value, field_name)
@@ -115,6 +117,7 @@ def _load_lifecycle_from_payload(
 def _load_lifecycle_summary_from_payload(
     summary_payload: dict[str, object],
 ) -> PluginExecutionRequestLifecycleSummary:
+    """Load a validated lifecycle summary from a payload, else raise."""
     if (
         summary_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_summary_v1"
@@ -153,6 +156,7 @@ def _load_lifecycle_summary_from_payload(
         raise click.ClickException("lifecycle summary status_counts is malformed")
 
     def hash_list(value: object, field_name: str) -> tuple[str, ...]:
+        """Return a validated list of SHA-256 digests from a payload field."""
         if not isinstance(value, list) or not all(
             isinstance(item, str) for item in value
         ):
@@ -191,6 +195,7 @@ def _load_lifecycle_summary_from_payload(
 def _load_lifecycle_policy_report_payload(
     policy_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated lifecycle policy report from a payload, else raise."""
     if (
         policy_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_policy_v1"
@@ -226,6 +231,7 @@ def _load_lifecycle_policy_report_payload(
 def _load_lifecycle_multistore_drilldown_payload(
     drilldown_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated lifecycle multistore drilldown from a payload, else raise."""
     if (
         drilldown_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_multistore_drilldown_v1"

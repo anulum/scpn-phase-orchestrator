@@ -25,6 +25,7 @@ from ._shared import _PLUGIN_KIND_OPTIONS, _require_sha256
 def _load_storage_manifest_from_payload(
     manifest_payload: dict[str, object],
 ) -> PluginExecutionRequestStorageManifest:
+    """Load a validated storage manifest from a payload, else raise."""
     if (
         manifest_payload.get("schema")
         != "scpn_plugin_execution_request_storage_manifest_v1"
@@ -114,6 +115,7 @@ def _load_storage_manifest_from_payload(
 def _load_storage_adapter_from_payload(
     adapter_payload: dict[str, object],
 ) -> PluginExecutionRequestStorageAdapterManifest:
+    """Load a validated storage adapter from a payload, else raise."""
     if (
         adapter_payload.get("schema")
         != "scpn_plugin_execution_request_storage_adapter_v1"

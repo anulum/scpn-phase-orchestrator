@@ -36,6 +36,7 @@ def _find_discovered_plugin(
     manifests: tuple[PluginManifest, ...],
     plugin_name: str,
 ) -> PluginManifest:
+    """Return the discovered plugin matching the name, else raise."""
     matches = tuple(manifest for manifest in manifests if manifest.name == plugin_name)
     if not matches:
         raise click.ClickException(f"plugin {plugin_name!r} is not discovered")
@@ -52,6 +53,7 @@ def _find_capability(
     kind: str,
     capability_name: str,
 ) -> PluginCapability:
+    """Return the capability matching the name, else raise."""
     matches = tuple(
         capability
         for capability in manifest.capabilities
@@ -72,6 +74,7 @@ def _find_capability(
 def _normalize_approved_target_hashes(
     approved_target_hashes: tuple[str, ...],
 ) -> tuple[str, ...]:
+    """Return the normalised approved target hashes."""
     normalized: list[str] = []
     for approved_hash in approved_target_hashes:
         if re.fullmatch(r"[0-9a-fA-F]{64}", approved_hash) is None:
@@ -83,6 +86,7 @@ def _normalize_approved_target_hashes(
 
 
 def _require_sha256(value: object, field_name: str) -> str:
+    """Return ``value`` as a validated SHA-256 digest, else raise."""
     if not isinstance(value, str):
         raise click.ClickException(
             f"{field_name} must be a 64-character SHA-256 digest"
@@ -95,6 +99,7 @@ def _require_sha256(value: object, field_name: str) -> str:
 
 
 def _load_json_file(path: Path, *, artifact: str = "plan") -> dict[str, object]:
+    """Load and parse a JSON file, else raise."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -111,11 +116,13 @@ def _load_json_file(path: Path, *, artifact: str = "plan") -> dict[str, object]:
 
 
 def _record_hash(record: Mapping[str, object]) -> str:
+    """Return the canonical hash of a record."""
     canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _build_plan_payload_for_hash(plan_payload: dict[str, object]) -> dict[str, object]:
+    """Build the plan payload for a target hash."""
     if "plan_hash" not in plan_payload:
         raise click.ClickException("plan payload is missing required field plan_hash")
     if "target_hash" not in plan_payload:

@@ -33,6 +33,7 @@ from ._shared import (
 def _load_plan_from_payload(
     plan_payload: dict[str, object],
 ) -> tuple[PluginExecutionPlan, dict[str, object]]:
+    """Load a validated plan from a payload, else raise."""
     if plan_payload.get("schema") != "scpn_plugin_runtime_execution_plan_v1":
         raise click.ClickException(
             "plan schema mismatch: expected scpn_plugin_runtime_execution_plan_v1"
@@ -117,6 +118,7 @@ def _load_plan_from_payload(
 def _load_approval_from_payload(
     approval_payload: dict[str, object],
 ) -> PluginExecutionApproval:
+    """Load a validated approval from a payload, else raise."""
     if approval_payload.get("schema") != "scpn_plugin_execution_approval_v1":
         raise click.ClickException(
             "approval schema mismatch: expected scpn_plugin_execution_approval_v1"
@@ -188,6 +190,7 @@ def _load_approval_from_payload(
 def _load_request_from_payload(
     request_payload: dict[str, object],
 ) -> PluginExecutionRequest:
+    """Load a validated request from a payload, else raise."""
     if request_payload.get("schema") != "scpn_plugin_runtime_execution_request_v1":
         raise click.ClickException(
             "request schema mismatch: expected scpn_plugin_runtime_execution_request_v1"

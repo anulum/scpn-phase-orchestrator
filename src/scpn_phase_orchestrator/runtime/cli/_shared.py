@@ -20,30 +20,35 @@ from __future__ import annotations
 
 
 def _string_list(value: object) -> list[str]:
+    """Return ``value`` as a list of strings, else raise ``ValueError``."""
     if isinstance(value, list):
         return [str(item) for item in value]
     return []
 
 
 def _float_list(value: object) -> list[float]:
+    """Return ``value`` as a list of floats, else raise ``ValueError``."""
     if isinstance(value, list):
         return [float(item) for item in value if isinstance(item, int | float)]
     return []
 
 
 def _float_value(value: object) -> float:
+    """Return ``value`` as a float, else raise ``ValueError``."""
     if isinstance(value, int | float):
         return float(value)
     return 0.0
 
 
 def _int_value(value: object) -> int:
+    """Return ``value`` as an integer, else raise ``ValueError``."""
     if isinstance(value, int):
         return value
     return 0
 
 
 def _count_dict(value: object) -> dict[str, int]:
+    """Return ``value`` as a mapping of names to integer counts, else raise."""
     if not isinstance(value, dict):
         return {}
     counts: dict[str, int] = {}

@@ -26,6 +26,7 @@ from ._shared import _PLUGIN_KIND_OPTIONS, _require_sha256
 def _load_revocation_from_payload(
     revocation_payload: dict[str, object],
 ) -> PluginExecutionRequestRevocation:
+    """Load a validated revocation from a payload, else raise."""
     if (
         revocation_payload.get("schema")
         != "scpn_plugin_execution_request_revocation_v1"
@@ -105,6 +106,7 @@ def _load_revocation_from_payload(
 def _load_revocation_list_from_payload(
     revocation_list_payload: dict[str, object],
 ) -> PluginExecutionRequestRevocationList:
+    """Load a validated revocation list from a payload, else raise."""
     if (
         revocation_list_payload.get("schema")
         != "scpn_plugin_execution_request_revocation_list_v1"

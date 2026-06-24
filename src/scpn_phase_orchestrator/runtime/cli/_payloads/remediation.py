@@ -18,6 +18,7 @@ from ._shared import _require_sha256
 def _load_lifecycle_remediation_plan_payload(
     plan_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated remediation plan from a payload, else raise."""
     if (
         plan_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_remediation_plan_v1"
@@ -73,6 +74,7 @@ def _load_lifecycle_remediation_plan_payload(
 def _load_lifecycle_remediation_action_status_payload(
     status_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated remediation action-status from a payload, else raise."""
     if (
         status_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_remediation_action_status_v1"
@@ -95,6 +97,7 @@ def _load_lifecycle_remediation_action_status_payload(
 def _load_lifecycle_remediation_execution_dashboard_payload(
     dashboard_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated remediation execution dashboard from a payload, else raise."""
     if (
         dashboard_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_remediation_execution_dashboard_v1"
@@ -156,6 +159,7 @@ def _load_lifecycle_remediation_execution_dashboard_payload(
 def _load_lifecycle_remediation_deployment_handoff_payload(
     handoff_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated remediation deployment handoff from a payload, else raise."""
     if (
         handoff_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_remediation_deployment_handoff_v1"

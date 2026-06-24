@@ -18,6 +18,7 @@ from ._shared import _require_sha256
 def _load_lifecycle_remediation_scheduler_queue_payload(
     queue_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated scheduler queue from a payload, else raise."""
     if (
         queue_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1"
@@ -89,6 +90,7 @@ def _load_lifecycle_remediation_scheduler_queue_payload(
 def _load_lifecycle_remediation_scheduler_telemetry_payload(
     telemetry_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated scheduler telemetry from a payload, else raise."""
     if (
         telemetry_payload.get("schema")
         != "scpn_plugin_execution_request_lifecycle_remediation_scheduler_telemetry_v1"
@@ -124,6 +126,7 @@ def _load_lifecycle_remediation_scheduler_telemetry_payload(
 def _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
     handoff_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated scheduler adapter handoff from a payload, else raise."""
     if handoff_payload.get("schema") != (
         "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
     ):
@@ -168,6 +171,7 @@ def _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
 def _load_lifecycle_remediation_scheduler_acknowledgement_payload(
     acknowledgement_payload: dict[str, object],
 ) -> dict[str, object]:
+    """Load a validated scheduler acknowledgement from a payload, else raise."""
     if acknowledgement_payload.get("schema") != (
         "scpn_plugin_execution_request_lifecycle_remediation_scheduler_acknowledgement_v1"
     ):
