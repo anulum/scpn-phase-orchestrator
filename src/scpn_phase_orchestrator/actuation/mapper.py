@@ -107,6 +107,7 @@ class ActuationMapper:
 
 
 def _validate_mapping(mapping: ActuatorMapping) -> None:
+    """Return the validated actuator mapping, else raise."""
     if mapping.knob not in VALID_KNOBS:
         raise ValueError("actuator mapping knob must be a valid control knob")
     if not isinstance(mapping.scope, str) or not mapping.scope.strip():
@@ -119,4 +120,5 @@ def _validate_mapping(mapping: ActuatorMapping) -> None:
 
 
 def _finite_real(value: object) -> bool:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     return isinstance(value, Real) and not isinstance(value, bool) and isfinite(value)

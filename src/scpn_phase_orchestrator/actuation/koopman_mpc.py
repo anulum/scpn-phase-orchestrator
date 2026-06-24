@@ -70,6 +70,7 @@ _HASH_DECIMALS = 9
 # Validation                                                                  #
 # --------------------------------------------------------------------------- #
 def _int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     parsed = int(value)
@@ -79,6 +80,7 @@ def _int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a real number")
     parsed = float(value)
@@ -88,6 +90,7 @@ def _positive_real(value: object, *, name: str) -> float:
 
 
 def _non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a real number")
     parsed = float(value)
@@ -97,6 +100,7 @@ def _non_negative_real(value: object, *, name: str) -> float:
 
 
 def _diagonal_weight(value: object, *, name: str, dim: int) -> FloatArray:
+    """Return the diagonal weight matrix from a weight vector."""
     array = np.asarray(value, dtype=np.float64)
     if array.ndim == 0:
         weight = float(array)
@@ -112,6 +116,7 @@ def _diagonal_weight(value: object, *, name: str, dim: int) -> FloatArray:
 
 
 def _bound_vector(value: object, *, name: str, dim: int) -> FloatArray:
+    """Return the validated bound vector, else raise."""
     array = np.asarray(value, dtype=np.float64)
     if array.ndim == 0:
         flat = np.full(dim, float(array), dtype=np.float64)
@@ -210,6 +215,7 @@ class KoopmanMPCDecision:
         )
 
     def _canonical_payload(self) -> dict[str, object]:
+        """Return the canonical payload for the MPC solution."""
         return {
             "proposed_input": _rounded(self.proposed_input),
             "input_plan": _rounded(self.input_plan),
@@ -394,9 +400,11 @@ def _build_constraints(
 
 
 def _rounded(array: FloatArray) -> list[float]:
+    """Return the value rounded to the canonical precision."""
     return [round(float(value), _HASH_DECIMALS) for value in np.ravel(array)]
 
 
 def _canonical_hash(record: dict[str, object]) -> str:
+    """Return the canonical-JSON SHA-256 hash of the payload."""
     payload = json.dumps(record, separators=(",", ":"), sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()

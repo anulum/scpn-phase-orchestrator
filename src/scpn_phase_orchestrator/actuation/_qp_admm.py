@@ -86,6 +86,7 @@ class QPSolution:
 
 
 def _validate_matrix(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated finite matrix, else raise."""
     raw = np.asarray(value, dtype=np.float64)
     if raw.ndim != 2:
         raise ValueError(f"{name} must be a 2-D array")
@@ -95,6 +96,7 @@ def _validate_matrix(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated finite vector, else raise."""
     raw = np.asarray(value, dtype=np.float64).ravel()
     if not np.all(np.isfinite(raw) | np.isinf(raw)):
         raise ValueError(f"{name} must not contain NaN values")
@@ -102,6 +104,7 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a real number")
     parsed = float(value)
@@ -192,11 +195,13 @@ def solve_qp_admm(
     identity_n = sigma * np.eye(n_vars)
 
     def _build_rho(base: float) -> FloatArray:
+        """Return the ADMM penalty parameter (rho) for the problem."""
         vector = np.full(n_cons, base, dtype=np.float64)
         vector[equality] *= _EQUALITY_RHO_SCALE
         return vector
 
     def _factor(rho_vector: FloatArray) -> tuple[FloatArray, NDArray[np.intp]]:
+        """Return the cached KKT-matrix factorisation for the solver."""
         kkt = np.zeros((n_vars + n_cons, n_vars + n_cons), dtype=np.float64)
         kkt[:n_vars, :n_vars] = hessian + identity_n
         kkt[:n_vars, n_vars:] = constraint.T

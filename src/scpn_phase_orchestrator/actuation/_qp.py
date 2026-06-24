@@ -32,6 +32,7 @@ _QP_BACKENDS = ("admm", "osqp")
 
 
 def _osqp_available() -> bool:
+    """Return whether the OSQP solver is importable."""
     try:
         import osqp  # noqa: F401
     except ImportError:
@@ -57,6 +58,7 @@ def _solve_qp_osqp(
     eps_rel: float,
     max_iter: int,
 ) -> QPSolution:
+    """Solve the convex QP via OSQP, else raise."""
     import osqp
     import scipy.sparse as sparse
 

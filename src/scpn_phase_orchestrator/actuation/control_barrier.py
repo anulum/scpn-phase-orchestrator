@@ -64,6 +64,7 @@ __all__ = [
 
 
 def _as_float_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a contiguous finite float vector, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -81,6 +82,7 @@ def _as_float_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _as_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     scalar = float(value)
@@ -246,6 +248,7 @@ class NeuralBarrier:
         return float(lo[0]), float(hi[0])
 
     def _validate_state(self, state: object) -> FloatArray:
+        """Return the validated system state, else raise."""
         vector = _as_float_vector(state, name="state")
         if vector.shape[0] != self.input_dim:
             raise ValueError(

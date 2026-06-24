@@ -59,6 +59,7 @@ def _hex_q16_16(value: float) -> str:
 
 
 def _require_integer(value: object, *, name: str) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer")
     return int(value)
@@ -70,6 +71,7 @@ def _require_finite_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    """Return ``value`` as a validated finite array, else raise."""
     try:
         array = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -82,6 +84,7 @@ def _require_finite_array(
 
 
 def _require_positive_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a positive finite real")
     coerced = float(value)

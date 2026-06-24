@@ -121,6 +121,7 @@ class GovernorDecision:
         )
 
     def _canonical_payload(self) -> dict[str, object]:
+        """Return the canonical payload for a governed decision."""
         return {
             "proposed_action": self.proposed_action,
             "admitted_action": self.admitted_action,
@@ -246,6 +247,7 @@ class FoundationModelGovernor:
         return self._decide(proposed, action, previous, stages, violations, barrier)
 
     def _rate_limit(self, action: float, previous: float) -> float:
+        """Apply the per-channel rate limit to a proposed control."""
         delta = action - previous
         if abs(delta) > self.max_rate:
             return previous + math.copysign(self.max_rate, delta)
@@ -254,6 +256,7 @@ class FoundationModelGovernor:
     def _apply_barrier(
         self, action: float, state: FloatArray, drift: FloatArray, stages: list[str]
     ) -> tuple[float, float] | None:
+        """Apply the control-barrier safety filter to a proposed control."""
         if self.barrier_filter is None:
             return None
         value = self.barrier_filter.barrier.value(state)
@@ -263,6 +266,7 @@ class FoundationModelGovernor:
         return safe_action, value
 
     def _predicate_violations(self, action: float, state: FloatArray) -> list[str]:
+        """Return the safety-predicate violations for a state and control."""
         violations: list[str] = []
         for label, predicate in self.safety_predicates:
             ok, reason = predicate(action, state)
@@ -279,6 +283,7 @@ class FoundationModelGovernor:
         violations: list[str],
         barrier_value: float | None,
     ) -> GovernorDecision:
+        """Return the governed admit/modify/reject decision for a proposal."""
         if violations:
             fallback = previous if self.hold_on_reject else 0.0
             admitted = min(max(fallback, self.control_lo), self.control_hi)
@@ -303,6 +308,7 @@ def _canonical_hash(record: dict[str, object]) -> str:
 
 
 def _real_scalar(value: object, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     scalar = float(value)
@@ -312,6 +318,7 @@ def _real_scalar(value: object, name: str) -> float:
 
 
 def _finite_vector(value: Sequence[float] | FloatArray, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite vector, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
