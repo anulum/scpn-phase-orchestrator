@@ -20,6 +20,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -28,6 +29,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -45,6 +47,7 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_matrix(value: object, *, name: str, n: int) -> FloatArray:
+    """Return ``value`` as a validated finite matrix, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -63,6 +66,7 @@ def _validate_matrix(value: object, *, name: str, n: int) -> FloatArray:
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     scalar = float(value)
@@ -72,6 +76,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 
 def _validate_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     scalar = _validate_finite_real(value, name=name)
     if scalar <= 0.0:
         raise ValueError(f"{name} must be positive, got {scalar}")
@@ -79,6 +84,7 @@ def _validate_positive_real(value: object, *, name: str) -> float:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     scalar = _validate_finite_real(value, name=name)
     if scalar < 0.0:
         raise ValueError(f"{name} must be non-negative, got {scalar}")
@@ -86,6 +92,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     scalar = int(value)
@@ -95,6 +102,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_zero_diagonal(knm: FloatArray) -> None:
+    """Return the matrix if its diagonal is all zero, else raise."""
     if np.any(np.abs(np.diag(knm)) > 1e-12):
         raise ValueError(
             "knm diagonal must be zero; Kuramoto self-coupling is not a "

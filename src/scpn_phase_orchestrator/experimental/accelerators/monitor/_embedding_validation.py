@@ -31,6 +31,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -39,6 +40,7 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 
 def _contains_complex_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains any complex-number alias."""
     if np.iscomplexobj(raw):
         return True
     if raw.dtype != object:
@@ -47,6 +49,7 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     result = int(value)
@@ -56,6 +59,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_float_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")

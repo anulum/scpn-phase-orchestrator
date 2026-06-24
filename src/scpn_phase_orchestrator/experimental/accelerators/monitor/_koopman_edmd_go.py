@@ -31,6 +31,7 @@ _LIB: ctypes.CDLL | None = None
 
 
 def _load_lib() -> ctypes.CDLL:
+    """Load the compiled Go backend shared library, else raise."""
     global _LIB
     if _LIB is not None:
         return _LIB
@@ -62,6 +63,7 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def _as_double_ptr(array: FloatArray) -> ctypes._Pointer[ctypes.c_double]:
+    """Return a C double-pointer view of the array for the FFI call."""
     return array.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
 
 

@@ -30,6 +30,7 @@ _PLV_MATRIX_TOLERANCE = 1e-9
 
 
 def _as_positive_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     out = int(value)
@@ -39,6 +40,7 @@ def _as_positive_int(value: Any, *, name: str) -> int:
 
 
 def _as_real_finite_vector(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real vector, else raise."""
     array = np.asarray(value)
     if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
         raise TypeError(f"{name} must be real-valued, not boolean")
@@ -55,6 +57,7 @@ def _as_real_finite_vector(value: Any, *, name: str) -> FloatArray:
 
 
 def _validate_flat_phase_payload(value: Any, *, t: int, n: int) -> FloatArray:
+    """Return ``value`` as a validated flattened phase payload, else raise."""
     phases = _as_real_finite_vector(value, name="phases_flat")
     expected = t * n
     if phases.size != expected:

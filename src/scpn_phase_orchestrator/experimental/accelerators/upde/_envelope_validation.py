@@ -27,6 +27,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _as_finite_vector(value: Any, *, name: str, allow_empty: bool) -> FloatArray:
+    """Return ``value`` as a validated finite vector, else raise."""
     array = np.asarray(value)
     if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
         raise TypeError(f"{name} must be real-valued, not boolean")
@@ -45,6 +46,7 @@ def _as_finite_vector(value: Any, *, name: str, allow_empty: bool) -> FloatArray
 
 
 def _as_positive_window(value: Any) -> int:
+    """Return ``value`` as a validated positive window length, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("window must be an integer")
     out = int(value)

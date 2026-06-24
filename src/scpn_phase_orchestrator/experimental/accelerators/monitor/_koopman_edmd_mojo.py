@@ -30,6 +30,7 @@ _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "koopman_edmd_mojo"
 
 
 def _ensure_exe() -> Path:
+    """Build the Mojo backend executable if it is missing, else raise."""
     if not _EXE_PATH.exists():
         raise ImportError(
             f"{_EXE_PATH} not built. Run: mojo build mojo/koopman_edmd.mojo "
@@ -39,10 +40,12 @@ def _ensure_exe() -> Path:
 
 
 def _serialise(matrix: FloatArray) -> str:
+    """Serialise the inputs into the backend wire format."""
     return " ".join(repr(float(value)) for value in matrix.ravel().tolist())
 
 
 def _run(payload: str, *, expected_count: int) -> list[float]:
+    """Call the backend kernel with the prepared inputs and return its result."""
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],

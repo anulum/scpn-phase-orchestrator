@@ -33,6 +33,7 @@ _LIB: ctypes.CDLL | None = None
 
 
 def _load_lib() -> ctypes.CDLL:
+    """Load the compiled Go backend shared library, else raise."""
     global _LIB
     if _LIB is not None:
         return _LIB

@@ -28,10 +28,12 @@ _ZERO_RADIUS_TOLERANCE = 1e-12
 
 
 def _is_bool_alias(value: Any) -> bool:
+    """Return whether the value is a boolean alias."""
     return isinstance(value, (bool, np.bool_))
 
 
 def _as_real_scalar(value: Any, *, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if _is_bool_alias(value) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a real scalar")
     out = float(value)
@@ -41,6 +43,7 @@ def _as_real_scalar(value: Any, *, name: str) -> float:
 
 
 def _as_positive_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if _is_bool_alias(value) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     out = int(value)

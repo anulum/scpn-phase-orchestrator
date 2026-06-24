@@ -26,6 +26,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -34,6 +35,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -42,6 +44,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         array = np.asarray(value)
     except (TypeError, ValueError):
@@ -50,6 +53,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_finite_float(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if _has_complex_payload(value):
         raise ValueError(f"{name} must be a finite real-valued scalar")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
@@ -61,6 +65,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -83,6 +88,7 @@ def _validate_matrix(
     name: str,
     expected_shape: tuple[int, int],
 ) -> FloatArray:
+    """Return ``value`` as a validated finite matrix, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")

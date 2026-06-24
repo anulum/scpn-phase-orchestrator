@@ -25,6 +25,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -33,6 +34,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -41,6 +43,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -49,6 +52,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_phase_vector(value: object) -> FloatArray:
+    """Return the phases as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("phases must not contain boolean values")
     raw = np.asarray(value)
@@ -66,6 +70,7 @@ def _validate_phase_vector(value: object) -> FloatArray:
 
 
 def _validate_n_bins(value: object) -> int:
+    """Return ``n_bins`` as an integer at least 2, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
     n_bins = int(value)

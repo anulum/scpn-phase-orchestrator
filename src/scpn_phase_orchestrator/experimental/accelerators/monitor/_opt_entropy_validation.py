@@ -61,6 +61,7 @@ def factorial(value: int) -> int:
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -69,6 +70,7 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 
 def _contains_complex_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains any complex-number alias."""
     if np.iscomplexobj(raw):
         return True
     if raw.dtype != object:
@@ -95,6 +97,7 @@ def validate_series_backend_input(series: object) -> FloatArray:
 
 
 def _validate_dimension(dimension: object) -> int:
+    """Return the validated dimension parameter, else raise."""
     if isinstance(dimension, (bool, np.bool_)) or not isinstance(dimension, Integral):
         raise ValueError(f"dimension must be an integer, got {dimension!r}")
     value = int(dimension)
@@ -106,6 +109,7 @@ def _validate_dimension(dimension: object) -> int:
 
 
 def _validate_delay(delay: object) -> int:
+    """Return the validated delay parameter, else raise."""
     if isinstance(delay, (bool, np.bool_)) or not isinstance(delay, Integral):
         raise ValueError(f"delay must be an integer, got {delay!r}")
     value = int(delay)

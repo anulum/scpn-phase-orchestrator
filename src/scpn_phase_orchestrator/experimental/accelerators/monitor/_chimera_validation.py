@@ -20,6 +20,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(raw: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(raw, dtype=object)
     except (TypeError, ValueError):
@@ -28,6 +29,7 @@ def _contains_boolean_alias(raw: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -36,6 +38,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -44,6 +47,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_n(value: object) -> int:
+    """Return the validated oscillator count, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("n must be a non-negative integer")
     result = int(value)
@@ -53,6 +57,7 @@ def _validate_n(value: object) -> int:
 
 
 def _validate_float_vector(value: object, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")

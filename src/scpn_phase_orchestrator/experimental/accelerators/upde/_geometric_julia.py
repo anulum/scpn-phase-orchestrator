@@ -30,6 +30,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _ensure() -> Any:
+    """Build or load the backend artifact if it is missing, else raise."""
     global _JULIA_MODULE
     if _JULIA_MODULE is not None:
         return _JULIA_MODULE

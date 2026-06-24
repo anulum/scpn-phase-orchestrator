@@ -22,6 +22,7 @@ TWO_PI = 2.0 * np.pi
 
 
 def _contains_boolean_alias(raw: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(raw, dtype=object)
     except (TypeError, ValueError):
@@ -30,6 +31,7 @@ def _contains_boolean_alias(raw: object) -> bool:
 
 
 def _contains_complex_alias(raw: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(raw, dtype=object)
     except (TypeError, ValueError):
@@ -38,6 +40,7 @@ def _contains_complex_alias(raw: object) -> bool:
 
 
 def _has_complex_payload(raw: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         array = np.asarray(raw)
     except (TypeError, ValueError):
@@ -46,6 +49,7 @@ def _has_complex_payload(raw: object) -> bool:
 
 
 def _validate_int(value: object, name: str, *, minimum: int) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
     result = int(value)

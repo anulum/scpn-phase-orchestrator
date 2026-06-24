@@ -34,6 +34,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         values = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -108,6 +109,7 @@ def validate_layer_coherence_inputs(
 
 
 def _finite_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite scalar, else raise ``ValueError``."""
     try:
         scalar = float(cast("SupportsFloat | str | bytes | bytearray", value))
     except (TypeError, ValueError) as exc:

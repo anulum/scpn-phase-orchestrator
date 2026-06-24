@@ -32,6 +32,7 @@ IntArray: TypeAlias = NDArray[np.int64]
 
 
 def _load_lib() -> ctypes.CDLL:
+    """Load the compiled Go backend shared library, else raise."""
     global _LIB
     if _LIB is not None:
         return _LIB

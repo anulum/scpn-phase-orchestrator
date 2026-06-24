@@ -21,6 +21,7 @@ IntArray: TypeAlias = NDArray[np.int64]
 
 
 def _contains_boolean_alias(raw: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(raw, dtype=object)
     except (TypeError, ValueError):
@@ -29,6 +30,7 @@ def _contains_boolean_alias(raw: object) -> bool:
 
 
 def _contains_complex_alias(raw: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(raw)
     except (TypeError, ValueError):
@@ -41,6 +43,7 @@ def _contains_complex_alias(raw: object) -> bool:
 
 
 def _validate_int(value: object, name: str, *, minimum: int) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
     result = int(value)
@@ -54,6 +57,7 @@ def _validate_phase_buffer(
     n_trials: int,
     n_tp: int,
 ) -> FloatArray:
+    """Return ``value`` as a validated phase buffer, else raise."""
     raw = np.asarray(phases_flat)
     if _contains_boolean_alias(phases_flat):
         raise ValueError("phases_flat must not contain boolean values")

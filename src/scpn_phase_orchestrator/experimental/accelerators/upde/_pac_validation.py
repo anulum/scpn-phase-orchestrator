@@ -29,6 +29,7 @@ _UNIT_INTERVAL_TOLERANCE = 1e-12
 
 
 def _as_int(value: Any, *, name: str, minimum: int) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     out = int(value)
@@ -38,6 +39,7 @@ def _as_int(value: Any, *, name: str, minimum: int) -> int:
 
 
 def _as_finite_vector(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite vector, else raise."""
     array = np.asarray(value)
     if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
         raise TypeError(f"{name} must be real-valued, not boolean")
@@ -54,6 +56,7 @@ def _as_finite_vector(value: Any, *, name: str) -> FloatArray:
 
 
 def _as_unit_interval_vector(value: Any, *, name: str, expected: int) -> FloatArray:
+    """Return ``value`` as a validated vector in [0, 1], else raise."""
     out = _as_finite_vector(value, name=name)
     if out.size != expected:
         raise ValueError(f"{name} must contain {expected} values")
@@ -65,6 +68,7 @@ def _as_unit_interval_vector(value: Any, *, name: str, expected: int) -> FloatAr
 
 
 def _validate_non_negative_amplitude(values: FloatArray, *, name: str) -> None:
+    """Return ``value`` as a validated non-negative amplitude, else raise."""
     if np.any(values < 0.0):
         raise ValueError(f"{name} must contain non-negative amplitudes")
 

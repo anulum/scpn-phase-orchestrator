@@ -37,6 +37,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _ensure_exe() -> Path:
+    """Build the Mojo backend executable if it is missing, else raise."""
     if not _EXE_PATH.exists():
         raise ImportError(
             f"{_EXE_PATH} not built. Run: mojo build mojo/attnres.mojo "

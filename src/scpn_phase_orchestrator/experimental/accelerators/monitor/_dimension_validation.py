@@ -33,6 +33,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -41,6 +42,7 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -49,6 +51,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _has_complex_payload(value: object) -> bool:
+    """Return whether the value carries a complex-number payload."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError):
@@ -57,6 +60,7 @@ def _has_complex_payload(value: object) -> bool:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     result = int(value)
@@ -66,6 +70,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_float_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
@@ -84,6 +89,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_index_vector(value: object, *, name: str, upper_bound: int) -> IntArray:
+    """Return ``value`` as a validated integer index vector, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
@@ -110,6 +116,7 @@ def _validate_index_vector(value: object, *, name: str, upper_bound: int) -> Int
 
 
 def _validate_epsilons(epsilons: object) -> FloatArray:
+    """Return the validated epsilon radii, else raise."""
     eps = _validate_float_vector(epsilons, name="epsilons")
     if np.any(eps < 0.0):
         raise ValueError("epsilons must contain only finite non-negative values")

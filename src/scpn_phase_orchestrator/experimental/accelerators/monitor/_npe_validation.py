@@ -31,6 +31,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -39,6 +40,7 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 
 def _contains_complex_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains any complex-number alias."""
     if np.iscomplexobj(raw):
         return True
     if raw.dtype != object:
@@ -73,6 +75,7 @@ def expected_phase_distance_backend_output(phases: FloatArray) -> FloatArray:
 
 
 def _npe_from_distance_matrix(distances: FloatArray, max_radius: float) -> float:
+    """Return the single-linkage H0 persistent entropy of a distance matrix."""
     n = int(distances.shape[0])
     if n < 2:
         return 0.0
@@ -84,6 +87,7 @@ def _npe_from_distance_matrix(distances: FloatArray, max_radius: float) -> float
     rank = [0] * n
 
     def find(x: int) -> int:
+        """Return the union-find root of ``node`` with path compression."""
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
@@ -181,6 +185,7 @@ def validate_phase_distance_backend_output(
 
 
 def _validate_max_radius(max_radius: object) -> float:
+    """Return ``max_radius`` as a validated value in [0, pi], else raise."""
     if isinstance(max_radius, (bool, np.bool_)) or not isinstance(max_radius, Real):
         raise ValueError(
             f"max_radius must be a finite non-negative real, got {max_radius!r}"

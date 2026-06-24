@@ -32,6 +32,7 @@ TWO_PI = 2.0 * np.pi
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -40,6 +41,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    """Return the phases as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -62,6 +64,7 @@ def _validate_phase_series_flat(
     n_osc: int,
     n_time: int,
 ) -> FloatArray:
+    """Return ``value`` as a validated flattened phase series, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError("phase_series must not contain boolean values")
@@ -82,6 +85,7 @@ def _validate_phase_series_flat(
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     scalar = int(value)
@@ -131,6 +135,7 @@ def _conditional_entropy(
     condition: NDArray[np.int64],
     n_cond_bins: int,
 ) -> float:
+    """Return the binned conditional entropy for the PID computation."""
     n = len(target)
     entropy = 0.0
     for c in range(n_cond_bins):

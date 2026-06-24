@@ -23,6 +23,7 @@ __all__ = ["validate_hodge_backend_inputs"]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -31,6 +32,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_n(value: object) -> int:
+    """Return the validated oscillator count, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError("n must be a non-negative integer")
     n_int = int(value)
@@ -40,6 +42,7 @@ def _validate_n(value: object) -> int:
 
 
 def _validate_float_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -86,6 +89,7 @@ def _validate_simplex_array(
 
 
 def _validate_count(value: object, *, name: str) -> int:
+    """Return the validated element count, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-negative integer")
     count = int(value)

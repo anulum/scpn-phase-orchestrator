@@ -35,6 +35,7 @@ _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "poincare_mojo"
 
 
 def _ensure_exe() -> Path:
+    """Build the Mojo backend executable if it is missing, else raise."""
     if not _EXE_PATH.exists():
         raise ImportError(
             f"{_EXE_PATH} not built. Run: mojo build mojo/poincare.mojo "
@@ -44,6 +45,7 @@ def _ensure_exe() -> Path:
 
 
 def _run(payload: str) -> list[str]:
+    """Call the backend kernel with the prepared inputs and return its result."""
     exe = _ensure_exe()
     proc = subprocess.run(  # nosec B603
         [str(exe)],
@@ -60,6 +62,7 @@ def _run(payload: str) -> list[str]:
 
 
 def _parse(lines: list[str], dim: int, t: int) -> tuple[FloatArray, FloatArray, int]:
+    """Parse the backend kernel's serialised output into arrays."""
     if not lines:
         raise ValueError("Mojo Poincare output missing crossing count header")
     try:

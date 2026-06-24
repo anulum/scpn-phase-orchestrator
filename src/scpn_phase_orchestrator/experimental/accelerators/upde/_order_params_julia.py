@@ -43,6 +43,7 @@ _JULIA_MODULE: Any | None = None
 
 
 def _ensure_julia_loaded() -> Any:
+    """Load the Julia backend runtime if not already loaded, else raise."""
     global _JULIA_MODULE
     if _JULIA_MODULE is not None:
         return _JULIA_MODULE

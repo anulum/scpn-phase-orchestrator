@@ -35,6 +35,7 @@ _PARITY_TOL: float = 1e-9
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):  # pragma: no cover - numpy always coerces
@@ -43,6 +44,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
@@ -60,6 +62,7 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_order_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated order-parameter vector, else raise."""
     array = _validate_vector(value, name=name)
     if np.any(array < 0.0) or np.any(array > 1.0):
         raise ValueError(f"{name} order-parameter values must lie in [0, 1]")
@@ -67,6 +70,7 @@ def _validate_order_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     number = int(value)

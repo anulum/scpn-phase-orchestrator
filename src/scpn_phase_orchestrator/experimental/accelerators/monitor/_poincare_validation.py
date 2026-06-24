@@ -27,6 +27,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(raw: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(raw, dtype=object)
     except (TypeError, ValueError):
@@ -35,6 +36,7 @@ def _contains_boolean_alias(raw: object) -> bool:
 
 
 def _contains_complex_alias(raw: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(raw, dtype=object)
     except (TypeError, ValueError):
@@ -43,6 +45,7 @@ def _contains_complex_alias(raw: object) -> bool:
 
 
 def _validate_int(value: object, name: str, *, minimum: int) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
     result = int(value)
@@ -52,6 +55,7 @@ def _validate_int(value: object, name: str, *, minimum: int) -> int:
 
 
 def _validate_finite_real(value: object, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real value")
     result = float(value)
@@ -61,6 +65,7 @@ def _validate_finite_real(value: object, name: str) -> float:
 
 
 def _validate_float_vector(value: object, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")

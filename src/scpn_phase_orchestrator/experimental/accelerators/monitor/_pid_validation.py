@@ -26,6 +26,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -34,6 +35,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _validate_count(value: object, *, name: str, minimum: int) -> int:
+    """Return the validated element count, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
     result = int(value)
@@ -43,6 +45,7 @@ def _validate_count(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_float_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -62,6 +65,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_group(value: object, *, name: str, n: int) -> IntArray:
+    """Return the validated source-group indices, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)

@@ -27,6 +27,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _configure_symbol(lib: ctypes.CDLL) -> None:
+    """Configure the loaded backend symbol's argument and return types."""
     if not hasattr(lib, "UPDERunDopplerSchedule"):
         raise ImportError("Go UPDERunDopplerSchedule symbol is not available")
     lib.UPDERunDopplerSchedule.restype = ctypes.c_int

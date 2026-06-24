@@ -29,6 +29,7 @@ __all__ = [
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains any boolean alias."""
     if raw.dtype == np.bool_:
         return True
     if raw.dtype != object:
@@ -37,6 +38,7 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     result = int(value)
@@ -46,6 +48,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_epsilon(epsilon: object) -> float:
+    """Return the validated epsilon radius, else raise."""
     if isinstance(epsilon, (bool, np.bool_)) or not isinstance(epsilon, Real):
         raise ValueError(f"epsilon must be a finite non-negative real, got {epsilon!r}")
     result = float(epsilon)
@@ -55,6 +58,7 @@ def _validate_epsilon(epsilon: object) -> float:
 
 
 def _validate_angular(angular: object) -> bool:
+    """Return ``value`` as a validated angular (phase) value, else raise."""
     if not isinstance(angular, (bool, np.bool_)):
         raise ValueError(f"angular must be a boolean flag, got {angular!r}")
     return bool(angular)
@@ -67,6 +71,7 @@ def _validate_flat_trajectory(
     t: int,
     d: int,
 ) -> FloatArray:
+    """Return ``value`` as a validated flattened trajectory, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")

@@ -29,6 +29,7 @@ _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "basin_stability_mojo
 
 
 def _ensure_exe() -> Path:
+    """Build the Mojo backend executable if it is missing, else raise."""
     if not _EXE_PATH.exists():
         raise ImportError(
             f"{_EXE_PATH} not built. Run: mojo build "

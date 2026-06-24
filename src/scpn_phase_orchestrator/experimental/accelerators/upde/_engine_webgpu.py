@@ -98,6 +98,7 @@ def is_webgpu_runtime_available() -> bool:
 
 
 def _validate_method(method: str) -> str:
+    """Return the validated integration-method name, else raise."""
     if method not in _SUPPORTED_METHODS:
         supported = ", ".join(_SUPPORTED_METHODS)
         msg = f"WebGPU UPDE backend currently supports {supported}; got {method!r}"
@@ -106,6 +107,7 @@ def _validate_method(method: str) -> str:
 
 
 def _webgpu_wgsl() -> str:
+    """Return the WGSL compute-shader source for the WebGPU backend."""
     return f"""struct Params {{
     n: u32,
     dt: f32,
@@ -151,6 +153,7 @@ fn upde_euler(@builtin(global_invocation_id) global_id: vec3<u32>) {{
 
 
 def _webgpu_javascript() -> str:
+    """Return the JavaScript driver source for the WebGPU backend."""
     return """const TWO_PI = Math.PI * 2.0;
 const WORKGROUP_SIZE = 64;
 

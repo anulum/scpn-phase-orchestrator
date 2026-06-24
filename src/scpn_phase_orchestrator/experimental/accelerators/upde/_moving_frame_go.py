@@ -29,6 +29,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _configure_symbol(lib: ctypes.CDLL) -> None:
+    """Configure the loaded backend symbol's argument and return types."""
     if not hasattr(lib, "UPDERunMovingFrameSchedule"):
         raise ImportError("Go UPDERunMovingFrameSchedule symbol is not available")
     lib.UPDERunMovingFrameSchedule.restype = ctypes.c_int
