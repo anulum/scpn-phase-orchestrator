@@ -177,16 +177,19 @@ class RedisStateStore:
 
 
 def _optional_path(value: str | Path | None, field: str) -> str | None:
+    """Return the optional filesystem path, or ``None``."""
     if value is None:
         return None
     return require_non_empty_str(str(value), field=field)
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _require_finite_json_numbers(value: object) -> None:
+    """Assert all JSON numbers in the value are finite, else raise."""
     if isinstance(value, dict):
         for item in value.values():
             _require_finite_json_numbers(item)

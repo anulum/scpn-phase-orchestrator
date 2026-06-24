@@ -41,6 +41,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _positive_int(value: object, *, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
         if field == "count":
             raise ValueError("count must be > 0")
@@ -49,6 +50,7 @@ def _positive_int(value: object, *, field: str) -> int:
 
 
 def _non_negative_int(value: object, *, field: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         if field == "address":
             raise ValueError("address must be >= 0")
@@ -57,6 +59,7 @@ def _non_negative_int(value: object, *, field: str) -> int:
 
 
 def _channel_index(value: object, *, n_channels: int) -> int:
+    """Return the validated hardware channel index, else raise."""
     idx = _non_negative_int(value, field="channel_idx")
     if idx >= n_channels:
         raise ValueError("channel_idx must be within configured channel range")
@@ -64,6 +67,7 @@ def _channel_index(value: object, *, n_channels: int) -> int:
 
 
 def _has_non_real_numeric_alias(values: object) -> bool:
+    """Return whether the value contains a non-real numeric alias."""
     array = np.asarray(values)
     if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.complexfloating):
         return True
@@ -80,6 +84,7 @@ def _validated_frequencies(
     *,
     n_channels: int,
 ) -> FloatArray:
+    """Return the validated sampling frequencies, else raise."""
     if frequencies is None:
         return np.linspace(1.0, 40.0, n_channels, dtype=np.float64)
     if _has_non_real_numeric_alias(frequencies):

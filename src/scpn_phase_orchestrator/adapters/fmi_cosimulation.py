@@ -91,6 +91,7 @@ class FMIVariable:
 
 
 def _model_variables(state_dim: int, input_dim: int) -> tuple[FMIVariable, ...]:
+    """Return the FMI model-variable definitions for the controller."""
     variables: list[FMIVariable] = []
     for index in range(state_dim):
         variables.append(FMIVariable(f"x_{index}", index, "input", 0.0))
@@ -222,6 +223,7 @@ class CoSimulationSlave:
         """End the co-simulation; the slave holds no external resources."""
 
     def _solve(self) -> None:
+        """Advance the co-simulation slave one communication step."""
         decision = self._controller.solve(
             self._state,
             reference=self._reference,
@@ -230,6 +232,7 @@ class CoSimulationSlave:
         self._control = np.asarray(decision.proposed_input, dtype=np.float64)
 
     def _lookup(self, reference: int) -> FMIVariable:
+        """Return the value reference for a named FMI variable, else raise."""
         variable = self._by_reference.get(reference)
         if variable is None:
             raise ValueError(f"unknown value reference {reference}")
@@ -237,6 +240,7 @@ class CoSimulationSlave:
 
 
 def _instantiation_token(model_name: str, variables: tuple[FMIVariable, ...]) -> str:
+    """Return the FMI instantiation token for the slave."""
     payload = json.dumps(
         {
             "model": model_name,

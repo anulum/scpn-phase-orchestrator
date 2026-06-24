@@ -62,6 +62,7 @@ __all__ = [
 def _detect_paho_mqtt() -> bool:
     # ``find_spec`` on a submodule raises ModuleNotFoundError when the parent
     # package is absent, so guard the optional-dependency probe.
+    """Import and return the paho-mqtt client, else raise."""
     try:
         return importlib.util.find_spec("paho.mqtt.client") is not None
     except (ImportError, ValueError):
@@ -75,6 +76,7 @@ _VALID_PAYLOAD_FORMATS = frozenset({"raw", "json"})
 
 
 def _finite_real(value: object, *, field_name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field_name} must be a finite real number")
     number = float(value)
@@ -84,6 +86,7 @@ def _finite_real(value: object, *, field_name: str) -> float:
 
 
 def _positive_real(value: object, *, field_name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     number = _finite_real(value, field_name=field_name)
     if number <= 0.0:
         raise ValueError(f"{field_name} must be > 0")
@@ -91,6 +94,7 @@ def _positive_real(value: object, *, field_name: str) -> float:
 
 
 def _positive_int(value: object, *, field_name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise ValueError(f"{field_name} must be a positive integer")
     return int(value)
@@ -435,6 +439,7 @@ class MqttPhaseBridge:
         samples: dict[str, list[float]] = {tag.name: [] for tag in self.config.tags}
 
         def on_message(_client: Any, _userdata: Any, message: Any) -> None:
+            """Handle an incoming MQTT message (paho client callback)."""
             tag = self._by_topic.get(message.topic)
             if tag is None:
                 return

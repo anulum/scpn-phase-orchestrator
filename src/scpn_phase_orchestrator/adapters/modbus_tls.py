@@ -39,12 +39,14 @@ except ImportError:
 
 
 def _non_negative_int(value: object, *, field: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{field} must be a non-negative integer")
     return int(value)
 
 
 def _int_value(value: object, *, field: str) -> int:
+    """Return a named integer field from a mapping, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be an integer")
     return int(value)
@@ -88,6 +90,7 @@ class SecureModbusAdapter:
     def _build_tls_context(self) -> ssl.SSLContext:
         # Filename only in the raised message — full paths to key material
         # must never surface in error strings that may reach logs or clients.
+        """Build the mutual-TLS SSL context for the Modbus connection."""
         if not self._cert.exists():
             raise ConnectionError(f"TLS certificate not found: {self._cert.name}")
         if not self._key.exists():
@@ -108,6 +111,7 @@ class SecureModbusAdapter:
             raise ConnectionError("TLS context creation failed") from None
 
     def _connect(self) -> object:
+        """Open the mutual-TLS Modbus TCP connection."""
         if ModbusTlsClient is None:
             raise ConnectionError(
                 "pymodbus is required for Modbus TLS. Install: pip install pymodbus"

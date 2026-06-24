@@ -66,6 +66,7 @@ _VALID_SECURITY_MODES = frozenset({"None", "Sign", "SignAndEncrypt"})
 
 
 def _finite_real(value: object, *, field_name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field_name} must be a finite real number")
     number = float(value)
@@ -75,6 +76,7 @@ def _finite_real(value: object, *, field_name: str) -> float:
 
 
 def _positive_real(value: object, *, field_name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     number = _finite_real(value, field_name=field_name)
     if number <= 0.0:
         raise ValueError(f"{field_name} must be > 0")
@@ -82,6 +84,7 @@ def _positive_real(value: object, *, field_name: str) -> float:
 
 
 def _positive_int(value: object, *, field_name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise ValueError(f"{field_name} must be a positive integer")
     return int(value)

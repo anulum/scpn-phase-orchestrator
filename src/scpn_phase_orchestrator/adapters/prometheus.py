@@ -33,10 +33,12 @@ FloatLike: TypeAlias = str | bytes | bytearray | memoryview | int | float
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _reject_duplicate_json_key(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Raise if the JSON object has duplicate keys."""
     result: dict[str, Any] = {}
     for key, value in pairs:
         if key in result:
@@ -166,6 +168,7 @@ class PrometheusAdapter:
 
 
 def _require_query_text(query: str) -> str:
+    """Return the validated non-empty PromQL query text, else raise."""
     if not isinstance(query, str):
         raise ValueError("Prometheus query must be a non-empty string")
     query_text = query.strip()
@@ -175,6 +178,7 @@ def _require_query_text(query: str) -> str:
 
 
 def _require_finite_float(value: object, field_name: str) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool):
         raise ValueError(f"Prometheus {field_name} must be finite")
     if not isinstance(value, (str, bytes, bytearray, memoryview, int, float)):
@@ -189,6 +193,7 @@ def _require_finite_float(value: object, field_name: str) -> float:
 
 
 def _load_response_body(raw: bytes) -> Mapping[str, Any]:
+    """Return the parsed JSON body from a Prometheus response, else raise."""
     try:
         body = json.loads(
             raw,
@@ -207,6 +212,7 @@ def _load_response_body(raw: bytes) -> Mapping[str, Any]:
 
 
 def _response_results(body: Mapping[str, Any]) -> Sequence[Any]:
+    """Return the result list from a Prometheus response, else raise."""
     data = body.get("data")
     if not isinstance(data, Mapping):
         raise ValueError("Prometheus response data must be an object")
@@ -217,6 +223,7 @@ def _response_results(body: Mapping[str, Any]) -> Sequence[Any]:
 
 
 def _require_sample_pair(sample: object, *, field_name: str) -> Sequence[Any]:
+    """Return a validated [timestamp, value] sample pair, else raise."""
     if (
         not isinstance(sample, Sequence)
         or isinstance(sample, (bytes, str))
@@ -227,6 +234,7 @@ def _require_sample_pair(sample: object, *, field_name: str) -> Sequence[Any]:
 
 
 def _require_sample_timestamp(value: object) -> float:
+    """Return the validated sample timestamp, else raise."""
     timestamp = _require_finite_float(value, "sample timestamp")
     if timestamp < 0.0:
         raise ValueError("Prometheus sample timestamp must be non-negative")
@@ -234,6 +242,7 @@ def _require_sample_timestamp(value: object) -> float:
 
 
 def _range_values(series: object) -> list[float]:
+    """Return the (timestamp, value) series from a range query result."""
     if not isinstance(series, Mapping):
         raise ValueError("Prometheus result series must be an object")
     samples = series.get("values")
@@ -249,6 +258,7 @@ def _range_values(series: object) -> list[float]:
 
 
 def _instant_value(series: object) -> float:
+    """Return the single (timestamp, value) from an instant query result."""
     if not isinstance(series, Mapping):
         raise ValueError("Prometheus result series must be an object")
     pair = _require_sample_pair(series.get("value"), field_name="instant result value")
