@@ -216,6 +216,37 @@ Cumulative transition distances normalised to [0, 2π).
 
 ---
 
+## Wavelet-ridge extractor (physical channel)
+
+`WaveletExtractor` is a band-adaptive alternative to the Hilbert extractor: it
+computes a complex Morlet continuous wavelet transform across a log-spaced
+frequency bank, selects the dominant energy ridge over a cone-of-influence-safe
+interior region, and reads the analytic phase along that ridge. The terminal
+phase is extrapolated from a COI-safe interior sample at the ridge frequency, so
+the corrupted signal edge is avoided. The Morlet wavelet is
+`ψ(t) = π^(−1/4)·exp(i·ω₀·t/s)·exp(−(t/s)²/2)/√s` with `ω₀ = 6`; a pure-NumPy
+path is used because SciPy 1.15 removed `cwt`/`morlet2`. Prefer it over Hilbert
+when a dominant oscillation sits in broadband noise or slow drift.
+
+::: scpn_phase_orchestrator.oscillators.wavelet
+
+---
+
+## Zero-crossing extractor (physical channel)
+
+`ZeroCrossingExtractor` recovers phase from interpolated zero crossings: each
+crossing is a half-cycle (`π` of phase advance), absolute phase is anchored to
+the crossing direction (a rising crossing ≡ 0, a falling crossing ≡ `π`, the
+sine convention), and a Schmitt-trigger deadband (a fraction of the RMS)
+suppresses spurious noise-induced crossings. Angular frequency comes from the
+mean half-period and quality from the regularity of the half-period intervals.
+Prefer it for sharply non-sinusoidal periodic signals where a single analytic
+phase is ill-defined.
+
+::: scpn_phase_orchestrator.oscillators.zero_crossing
+
+---
+
 ## Quality Scoring
 
 ### PhaseQualityScorer
@@ -266,6 +297,19 @@ autoencoder (see `nn.phase_autoencoder`) that recovers the asymptotic phase
 from frozen NumPy weights, with no JAX on the control path.
 
 ::: scpn_phase_orchestrator.oscillators.phase_reduction
+
+---
+
+## Extractor factory
+
+`build_extractor` maps a binding `extractor_type` — a channel alias
+(`physical`/`informational`/`symbolic`) or a canonical algorithm name
+(`hilbert`/`wavelet`/`zero_crossing`/`event`/`ring`/`graph`) — to the concrete
+`PhaseExtractor` that implements it. Aliases resolve through
+`resolve_extractor_type`; an unknown type raises `ValueError` (fail-closed)
+rather than silently degrading to a default algorithm.
+
+::: scpn_phase_orchestrator.oscillators.factory
 
 ---
 
