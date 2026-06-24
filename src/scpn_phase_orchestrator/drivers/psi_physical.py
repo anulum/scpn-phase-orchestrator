@@ -31,6 +31,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _require_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite")
     parsed = float(value)
@@ -40,6 +41,7 @@ def _require_finite_real(value: object, *, name: str) -> float:
 
 
 def _require_finite_real_array(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real array, else raise."""
     array = np.asarray(value)
     dtype = array.dtype
     if (

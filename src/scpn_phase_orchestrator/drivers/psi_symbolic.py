@@ -30,6 +30,7 @@ IntArray: TypeAlias = NDArray[np.int64]
 
 
 def _contains_bool(value: object) -> bool:
+    """Return whether the value is a boolean alias."""
     if isinstance(value, bool):
         return True
     if isinstance(value, (str, bytes)):
@@ -40,12 +41,14 @@ def _contains_bool(value: object) -> bool:
 
 
 def _validate_step(value: object) -> int:
+    """Return the validated step index, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("step must be an integer")
     return int(value)
 
 
 def _validate_steps(value: object) -> IntArray:
+    """Return the step count as a validated positive integer, else raise."""
     steps = np.asarray(value)
     dtype = steps.dtype
     if (
