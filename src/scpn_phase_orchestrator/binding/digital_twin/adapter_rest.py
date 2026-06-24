@@ -216,6 +216,7 @@ def _rest_response(
     reason: str,
     body: dict[str, object],
 ) -> DigitalTwinSyncRestResponse:
+    """Build the REST response for a digital-twin sync."""
     return DigitalTwinSyncRestResponse(
         status_code=status_code,
         accepted=accepted,

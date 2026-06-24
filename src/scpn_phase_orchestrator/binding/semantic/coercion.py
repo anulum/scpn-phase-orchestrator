@@ -46,6 +46,7 @@ def _validate_compilation_inputs(
     retrieval_root: str | Path | None,
     docs_root: str | Path | None,
 ) -> tuple[str, str, int, int, Path | None, Path | None]:
+    """Validate the compilation inputs, else raise."""
     prompt_value = _as_prompt(prompt)
     name_value = _as_name(name)
     oscillators = _as_positive_int(
@@ -79,12 +80,14 @@ def _validate_compilation_inputs(
 
 
 def _as_str(value: object, field_name: str) -> str:
+    """Return ``value`` as a string, else raise ``ValueError``."""
     if not isinstance(value, str):
         raise TypeError(f"{field_name} must be a string")
     return value
 
 
 def _as_prompt(value: object) -> str:
+    """Return ``value`` as a validated prompt string, else raise."""
     prompt = _as_str(value, "prompt").replace("\r\n", "\n").replace("\r", "\n")
     if len(prompt) > _MAX_PROMPT_CHARS:
         raise ValueError(f"prompt must be <= {_MAX_PROMPT_CHARS} characters")
@@ -100,6 +103,7 @@ def _as_prompt(value: object) -> str:
 
 
 def _as_name(value: object) -> str:
+    """Return ``value`` as a validated name, else raise."""
     value = _as_str(value, "name")
     if not _NAME_PATTERN.fullmatch(value):
         raise ValueError("name must match [A-Za-z][A-Za-z0-9_-]{0,63}")
@@ -107,6 +111,7 @@ def _as_name(value: object) -> str:
 
 
 def _as_positive_int(value: object, field_name: str, *, max_value: int) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"{field_name} must be an integer")
     if value < 1:
@@ -122,6 +127,7 @@ def _as_path(
     *,
     allow_none: bool = False,
 ) -> Path | None:
+    """Return ``value`` as a validated filesystem path, else raise."""
     if value is None:
         if not allow_none:
             raise TypeError(f"{field_name} must be a string, pathlib.Path, or None")
@@ -140,6 +146,7 @@ def _as_path(
 
 
 def _coerce_output_dir(output_dir: str | Path) -> Path:
+    """Return the validated output directory, else raise."""
     if not isinstance(output_dir, (str, Path)):
         raise TypeError("output_dir must be a string or pathlib.Path")
     path = Path(output_dir)

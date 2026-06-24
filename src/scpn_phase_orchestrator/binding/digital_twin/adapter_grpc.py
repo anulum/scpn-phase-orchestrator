@@ -216,6 +216,7 @@ def _grpc_response(
     reason: str,
     message: dict[str, object],
 ) -> DigitalTwinSyncGrpcResponse:
+    """Build the gRPC response for a digital-twin sync."""
     return DigitalTwinSyncGrpcResponse(
         status_code=status_code,
         accepted=accepted,

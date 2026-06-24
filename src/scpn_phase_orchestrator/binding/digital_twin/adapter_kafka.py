@@ -243,6 +243,7 @@ def _kafka_response(
     retryable: bool,
     message: dict[str, object],
 ) -> DigitalTwinSyncKafkaResponse:
+    """Build the Kafka response for a digital-twin sync."""
     return DigitalTwinSyncKafkaResponse(
         accepted=accepted,
         reason=reason,

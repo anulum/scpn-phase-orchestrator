@@ -28,6 +28,7 @@ def _review_notebook_for(
     retrieval_records: list[dict[str, Any]],
     notebook_execution: dict[str, Any],
 ) -> str:
+    """Return the review record for a notebook."""
     notebook = {
         "cells": [
             {
@@ -133,6 +134,7 @@ def _review_notebook_execution_evidence(
     policy_yaml: str,
     expected_name: str,
 ) -> dict[str, Any]:
+    """Return the execution evidence from a reviewed notebook."""
     import tempfile
 
     from scpn_phase_orchestrator.binding.loader import load_binding_spec
@@ -204,6 +206,7 @@ def _review_notebook_execution_evidence(
 
 
 def _review_gate_record() -> dict[str, Any]:
+    """Build the review-gate record."""
     return {
         "status": "required",
         "non_actuating": True,
@@ -219,6 +222,7 @@ def _review_gate_record() -> dict[str, Any]:
 
 
 def _validate_generated_audit_schema(audit_record: Mapping[str, Any]) -> None:
+    """Validate the generated audit schema, else raise."""
     required = {
         "compiler": str,
         "schema_valid": bool,
@@ -246,6 +250,7 @@ def _validate_generated_audit_schema(audit_record: Mapping[str, Any]) -> None:
 
 
 def _dry_run_order_parameter(spec: BindingSpec, steps: int) -> float:
+    """Return the dry-run order parameter for the review."""
     import numpy as np
 
     from scpn_phase_orchestrator.coupling.knm import CouplingBuilder

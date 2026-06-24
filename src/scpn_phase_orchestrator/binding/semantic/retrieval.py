@@ -56,6 +56,7 @@ def _retrieve_local_evidence(
     docs_root: str | Path | None,
     limit_per_source: int = 3,
 ) -> list[RetrievalEvidence]:
+    """Retrieve evidence from the local store."""
     domainpack_evidence = _retrieve_domainpack_evidence(
         prompt,
         domainpack_root,
@@ -72,6 +73,7 @@ def _retrieve_local_evidence(
 def _rank_retrieval_evidence(
     evidence: list[RetrievalEvidence],
 ) -> list[RetrievalEvidence]:
+    """Rank the retrieved evidence by relevance."""
     ranked = sorted(
         evidence,
         key=lambda item: (
@@ -93,6 +95,7 @@ def _retrieve_domainpack_evidence(
     *,
     limit: int = 3,
 ) -> list[RetrievalEvidence]:
+    """Retrieve evidence from the domainpack."""
     if root is None:
         return []
     base = Path(root)
@@ -154,6 +157,7 @@ def _retrieve_docs_evidence(
     *,
     limit: int = 3,
 ) -> list[RetrievalEvidence]:
+    """Retrieve evidence from the documentation."""
     if root is None:
         return []
     base = Path(root)
@@ -200,6 +204,7 @@ def _retrieve_docs_evidence(
 
 
 def _safe_read(path: Path, *, max_chars: int) -> str:
+    """Read a file safely, returning empty on failure."""
     try:
         return path.read_text(encoding="utf-8")[:max_chars]
     except UnicodeDecodeError:
@@ -207,6 +212,7 @@ def _safe_read(path: Path, *, max_chars: int) -> str:
 
 
 def _terms(text: str) -> set[str]:
+    """Return the search terms extracted from a query."""
     stopwords = {
         "and",
         "for",
@@ -228,5 +234,6 @@ def _terms(text: str) -> set[str]:
 
 
 def _evidence_summary(domainpack: str, matched_terms: list[str]) -> str:
+    """Return a summary of the retrieved evidence."""
     terms = ", ".join(matched_terms[:5])
     return f"{domainpack} matched local terms: {terms}"

@@ -225,6 +225,7 @@ class ChannelRuntimeExecutor:
 
 
 def _confidence_weights(spec: BindingSpec) -> dict[str, float]:
+    """Return the per-channel confidence weights."""
     weights: dict[str, float] = {}
     for channel, config in spec.drivers.all_channel_configs().items():
         raw = config.get("confidence_weight", config.get("confidence", 1.0))

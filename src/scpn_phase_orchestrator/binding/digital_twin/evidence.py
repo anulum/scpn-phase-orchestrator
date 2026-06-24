@@ -185,6 +185,7 @@ def build_digital_twin_operator_evidence(
 
 
 def _extract_twin_residual(payload: Mapping[str, object]) -> float | None:
+    """Return the digital-twin residual from the evidence."""
     for key in (
         "TwinResidual",
         "twin_residual",
@@ -212,6 +213,7 @@ def _operator_status(
     warning_threshold: float,
     critical_threshold: float,
 ) -> str:
+    """Return the operator status for the twin evidence."""
     if max_abs_residual is not None and max_abs_residual > critical_threshold:
         return "critical"
     if rejected_count or unhealthy_adapter_count:
@@ -222,6 +224,7 @@ def _operator_status(
 
 
 def _validated_residual_threshold(value: object, field: str) -> float:
+    """Return the validated residual threshold, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field} must be a finite non-negative real value")
     result = float(value)

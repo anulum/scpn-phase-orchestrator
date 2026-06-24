@@ -176,6 +176,7 @@ def _add_obligation(
     passed: bool,
     evidence: str,
 ) -> None:
+    """Append a proof obligation to the obligation list."""
     obligations.append(
         SymbolicBindingObligation(
             name=name,
@@ -188,6 +189,7 @@ def _add_obligation(
 def _validate_binding_artefact_inputs(
     artifacts: Any,
 ) -> GeneratedBindingArtifacts:
+    """Validate the binding-artefact inputs, else raise."""
     if not isinstance(artifacts, GeneratedBindingArtifacts):
         raise ValueError("artifacts must be a GeneratedBindingArtifacts object")
 
@@ -224,6 +226,7 @@ def _collect_layer_objects_and_morphisms(
     tuple[SymbolicBindingMorphism, ...],
     bool,
 ]:
+    """Collect the topos layer objects and morphisms."""
     spec = artifacts.binding_spec
     objects: list[SymbolicBindingObject] = []
     morphisms: list[SymbolicBindingMorphism] = []
@@ -337,6 +340,7 @@ def _collect_evidence_objects_and_morphisms(
     artifacts: GeneratedBindingArtifacts,
     obligations: list[SymbolicBindingObligation],
 ) -> tuple[tuple[SymbolicBindingObject, ...], tuple[SymbolicBindingMorphism, ...]]:
+    """Collect the topos evidence objects and morphisms."""
     objects: list[SymbolicBindingObject] = []
     morphisms: list[SymbolicBindingMorphism] = []
 
@@ -408,6 +412,7 @@ def _check_audit_boundary_preserved(
     *,
     schema_valid: bool,
 ) -> None:
+    """Assert the audit boundary is preserved, else raise."""
     audit = artifacts.audit_record
 
     audit_schema_valid = audit.get("schema_valid")

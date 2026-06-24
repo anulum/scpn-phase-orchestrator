@@ -14,6 +14,7 @@ from collections.abc import Mapping
 
 
 def _has_authorization(headers: Mapping[str, str] | None) -> bool:
+    """Return whether the request carries valid authorization."""
     if headers is None:
         return False
     normalised = {key.lower(): value for key, value in headers.items()}
@@ -22,5 +23,6 @@ def _has_authorization(headers: Mapping[str, str] | None) -> bool:
 
 
 def _require_non_empty(value: str, name: str) -> None:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")

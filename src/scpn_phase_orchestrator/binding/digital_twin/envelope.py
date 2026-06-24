@@ -272,6 +272,7 @@ def _find_capability(
     contract: DigitalTwinBindingContract,
     name: str,
 ) -> DigitalTwinSyncCapability | None:
+    """Return the capability matching the name, else raise."""
     for capability in contract.sync_capabilities:
         if capability.name == name:
             return capability
@@ -279,6 +280,7 @@ def _find_capability(
 
 
 def _envelope_from_record(record: object) -> DigitalTwinSyncEnvelope | None:
+    """Build a digital-twin envelope from a record."""
     if not isinstance(record, dict):
         return None
     contract_hash = record.get("contract_hash")
@@ -309,6 +311,7 @@ def _envelope_from_record(record: object) -> DigitalTwinSyncEnvelope | None:
 
 
 def _jsonl_rejection(line_number: int, reason: str) -> dict[str, object]:
+    """Build a JSONL rejection record."""
     return {
         "line_number": line_number,
         "reason": reason,
@@ -316,6 +319,7 @@ def _jsonl_rejection(line_number: int, reason: str) -> dict[str, object]:
 
 
 def _direction_allowed(*, declared: str, observed: str) -> bool:
+    """Return whether a sync direction is allowed."""
     return declared == "bidirectional" or declared == observed
 
 
@@ -324,6 +328,7 @@ def _transport_validation(
     reason: str,
     envelope: DigitalTwinSyncEnvelope,
 ) -> DigitalTwinTransportValidation:
+    """Validate the transport configuration, else raise."""
     return DigitalTwinTransportValidation(
         accepted=accepted,
         reason=reason,

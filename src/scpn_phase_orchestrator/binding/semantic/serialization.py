@@ -22,6 +22,7 @@ def _confidence(
     domain_family: str,
     retrieval_score: float,
 ) -> float:
+    """Return the validated confidence value, else raise."""
     score = 0.35 + min(0.25, 0.05 * len(matched_keywords))
     if has_layer_count:
         score += 0.15
@@ -33,6 +34,7 @@ def _confidence(
 
 
 def _policy_yaml_for(spec: BindingSpec) -> str:
+    """Return the YAML serialisation of a policy."""
     import yaml
 
     policy = {
@@ -59,6 +61,7 @@ def _policy_yaml_for(spec: BindingSpec) -> str:
 
 
 def _binding_spec_to_yaml(spec: BindingSpec) -> str:
+    """Return the YAML serialisation of a binding spec."""
     import yaml
 
     data = {

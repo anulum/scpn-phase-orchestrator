@@ -277,6 +277,7 @@ def build_channel_algebra_report(spec: BindingSpec) -> ChannelAlgebraReport:
 
 
 def _runtime_evidence_channels(spec: BindingSpec) -> tuple[str, ...]:
+    """Return the runtime evidence channels."""
     family_channels = {family.channel for family in spec.oscillator_families.values()}
     configured_driver_channels = {
         channel
@@ -290,6 +291,7 @@ def _mentions_policy_marker(
     values: tuple[str | None, ...],
     markers: tuple[str, ...],
 ) -> bool:
+    """Return whether the text mentions a policy marker."""
     text = " ".join(value.lower() for value in values if value)
     return any(marker in text for marker in markers)
 
@@ -301,6 +303,7 @@ def _runtime_policies(
     delayed_channels: tuple[str, ...],
     uncertain_channels: tuple[str, ...],
 ) -> dict[str, ChannelRuntimePolicy]:
+    """Return the runtime policies for the channels."""
     required = set(required_channels)
     delayed = set(delayed_channels)
     uncertain = set(uncertain_channels)
@@ -333,6 +336,7 @@ def _channel_membership(
     channels: tuple[str, ...],
     channel_groups: dict[str, tuple[str, ...]],
 ) -> dict[str, tuple[str, ...]]:
+    """Return the channel membership mapping."""
     memberships: dict[str, list[str]] = {channel: [] for channel in channels}
     for group_name, group_channels in channel_groups.items():
         for channel in group_channels:

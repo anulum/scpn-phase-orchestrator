@@ -333,6 +333,7 @@ def validate_binding_spec_security(spec: BindingSpec) -> list[str]:
 
 
 def _walk_security_values(value: object, location: str) -> list[tuple[str, object]]:
+    """Recursively walk the spec values for the security scan."""
     if is_dataclass(value) and not isinstance(value, type):
         items: list[tuple[str, object]] = []
         for field in fields(value):

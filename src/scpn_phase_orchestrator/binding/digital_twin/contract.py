@@ -370,6 +370,7 @@ def build_digital_twin_adapter_manifest(
 
 
 def _capability_from_name(name: str) -> DigitalTwinSyncCapability:
+    """Return the capability for a name, else raise."""
     _require_non_empty(name, "sync capability")
     payloads = {
         "state_snapshot": ("twin_to_spo", "state_vector"),
@@ -382,5 +383,6 @@ def _capability_from_name(name: str) -> DigitalTwinSyncCapability:
 
 
 def _record_hash(record: dict[str, object]) -> str:
+    """Return the canonical hash of a record."""
     encoded = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()

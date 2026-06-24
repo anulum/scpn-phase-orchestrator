@@ -66,6 +66,7 @@ class UnsafePatternFinding:
 
 
 def _scan_python_line(line: str) -> str | None:
+    """Scan one Python source line for security markers."""
     for pattern, category in _PYTHON_PATTERNS:
         if pattern.search(line):
             return category

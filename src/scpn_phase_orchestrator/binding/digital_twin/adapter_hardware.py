@@ -253,6 +253,7 @@ def _hardware_response(
     reason: str,
     frame: dict[str, object],
 ) -> DigitalTwinSyncHardwareResponse:
+    """Build the hardware-adapter response for a digital-twin sync."""
     return DigitalTwinSyncHardwareResponse(
         accepted=accepted,
         reason=reason,

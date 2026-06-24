@@ -60,46 +60,54 @@ def _require(data: dict[str, Any], key: str, context: str = "") -> Any:
 
 
 def _expected(kind: str, context: str, value: object) -> BindingLoadError:
+    """Return a descriptive expected-type message for an error."""
     return BindingLoadError(f"expected {kind} in {context}, got {type(value).__name__}")
 
 
 def _require_mapping(value: object, context: str) -> dict[str, Any]:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if not isinstance(value, dict):
         raise _expected("mapping", context, value)
     return value
 
 
 def _optional_mapping(value: object, context: str) -> dict[str, Any]:
+    """Return ``value`` as a mapping or ``None``, else raise."""
     if value is None:
         return {}
     return _require_mapping(value, context)
 
 
 def _require_list(value: object, context: str) -> list[Any]:
+    """Return ``value`` as a list, else raise ``ValueError``."""
     if not isinstance(value, list):
         raise _expected("list", context, value)
     return value
 
 
 def _optional_list(value: object, context: str) -> list[Any]:
+    """Return ``value`` as a list or ``None``, else raise."""
     if value is None:
         return []
     return _require_list(value, context)
 
 
 def _require_str(value: object, context: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str):
         raise _expected("string", context, value)
     return value
 
 
 def _require_int(value: object, context: str) -> int:
+    """Return ``value`` as an integer, else raise ``ValueError``."""
     if not isinstance(value, int) or isinstance(value, bool):
         raise _expected("integer", context, value)
     return value
 
 
 def _require_number(value: object, context: str) -> float:
+    """Return ``value`` as a finite number, else raise ``ValueError``."""
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise _expected("number", context, value)
     parsed = float(value)
@@ -109,35 +117,41 @@ def _require_number(value: object, context: str) -> float:
 
 
 def _require_bool(value: object, context: str) -> bool:
+    """Return ``value`` as a boolean, else raise ``ValueError``."""
     if not isinstance(value, bool):
         raise _expected("boolean", context, value)
     return value
 
 
 def _optional_bool(value: object, context: str, default: bool) -> bool:
+    """Return ``value`` as a boolean or ``None``, else raise."""
     if value is None:
         return default
     return _require_bool(value, context)
 
 
 def _optional_number(value: object, context: str) -> float | None:
+    """Return ``value`` as a finite number or ``None``, else raise."""
     if value is None:
         return None
     return _require_number(value, context)
 
 
 def _optional_str(value: object, context: str) -> str | None:
+    """Return ``value`` as a string or ``None``, else raise."""
     if value is None:
         return None
     return _require_str(value, context)
 
 
 def _optional_str_list(value: object, context: str) -> list[str]:
+    """Return ``value`` as a list of strings or ``None``, else raise."""
     items = _optional_list(value, context)
     return [_require_str(item, f"{context}[]") for item in items]
 
 
 def _optional_number_list(value: object, context: str) -> list[float] | None:
+    """Return ``value`` as a list of numbers or ``None``, else raise."""
     if value is None:
         return None
     items = _require_list(value, context)
@@ -145,11 +159,13 @@ def _optional_number_list(value: object, context: str) -> list[float] | None:
 
 
 def _require_number_list(value: object, context: str) -> list[float]:
+    """Return ``value`` as a list of finite numbers, else raise."""
     items = _require_list(value, context)
     return [_require_number(item, f"{context}[]") for item in items]
 
 
 def _require_number_pair(value: object, context: str) -> tuple[float, float]:
+    """Return ``value`` as a pair of finite numbers, else raise."""
     items = _require_number_list(value, context)
     if len(items) != 2:
         raise BindingLoadError(
@@ -599,9 +615,12 @@ def _binding_spec_safe_loader(yaml_module: Any) -> type:
     """
 
     class BindingSpecSafeLoader(yaml_module.SafeLoader):  # type: ignore[misc]  # base resolved from lazily imported yaml module to keep package import-time low
+        """YAML safe-loader that rejects duplicate keys for binding specs."""
+
         pass
 
     def construct_mapping(loader: Any, node: Any, deep: bool = False) -> dict[Any, Any]:
+        """Construct a mapping from a YAML node, rejecting duplicate keys."""
         loader.flatten_mapping(node)
         pairs = loader.construct_pairs(node, deep=deep)
         mapping: dict[Any, Any] = {}

@@ -99,6 +99,7 @@ class ToposDomainObligation:
         return record
 
     def _example_hash(self, record: dict[str, object]) -> str:
+        """Return the canonical hash of a topos example."""
         payload = dict(record)
         payload.pop("example_hash", None)
         payload["policy_rules"] = [
@@ -124,6 +125,7 @@ class ToposDomainObligation:
         return hashlib.sha256(payload_bytes).hexdigest()
 
     def _validate(self) -> None:
+        """Validate the topos example, else raise."""
         if not isinstance(self.domain, str) or not self.domain.strip():
             raise ValueError("example domain must be a non-empty string")
         if not isinstance(self.symbolic_prompt, str):
@@ -162,6 +164,7 @@ class ToposDomainObligation:
 
 
 def _binding_signature(binding: BindingSpec) -> dict[str, object]:
+    """Return the canonical signature of a binding."""
     return {
         "name": binding.name,
         "safety_tier": binding.safety_tier,
@@ -176,6 +179,7 @@ def _binding_signature(binding: BindingSpec) -> dict[str, object]:
 
 
 def _policy_rule_to_dict(rule: PolicyRule) -> dict[str, object]:
+    """Return a policy rule as a JSON-safe dict."""
     condition = rule.condition
     if isinstance(condition, CompoundCondition):
         condition_data: dict[str, object] = {
@@ -206,6 +210,7 @@ def _policy_rule_to_dict(rule: PolicyRule) -> dict[str, object]:
 
 
 def _policy_condition_to_dict(condition: PolicyCondition) -> dict[str, object]:
+    """Return a policy condition as a JSON-safe dict."""
     return {
         "metric": condition.metric,
         "layer": condition.layer,
@@ -215,6 +220,7 @@ def _policy_condition_to_dict(condition: PolicyCondition) -> dict[str, object]:
 
 
 def _count_binding_objects(binding: BindingSpec) -> int:
+    """Return the count of binding objects."""
     return (
         len(binding.layers)
         + sum(len(layer.oscillator_ids) for layer in binding.layers)
@@ -228,6 +234,7 @@ def _count_binding_objects(binding: BindingSpec) -> int:
 
 
 def _count_policy_objects(rules: tuple[PolicyRule, ...]) -> int:
+    """Return the count of policy objects."""
     total = 0
     for rule in rules:
         condition = rule.condition
@@ -249,6 +256,7 @@ def _build_domain_example(
     policy_rules: tuple[PolicyRule, ...],
     obligations: tuple[tuple[str, str], ...],
 ) -> ToposDomainObligation:
+    """Build a deterministic topos domain example."""
     artifacts = compile_symbolic_binding(
         symbolic_prompt,
         name=compilation_name,
@@ -286,6 +294,7 @@ def _build_domain_example(
 
 
 def _power_grid_policy_rules() -> tuple[PolicyRule, ...]:
+    """Return the power-grid policy rules."""
     return (
         PolicyRule(
             name="grid_coherence_recovery",
@@ -329,6 +338,7 @@ def _power_grid_policy_rules() -> tuple[PolicyRule, ...]:
 
 
 def _cardiac_policy_rules() -> tuple[PolicyRule, ...]:
+    """Return the cardiac-rhythm policy rules."""
     return (
         PolicyRule(
             name="cardiac_arrhythmia_suppression",
@@ -376,6 +386,7 @@ def _cardiac_policy_rules() -> tuple[PolicyRule, ...]:
 
 
 def _cyber_industrial_policy_rules() -> tuple[PolicyRule, ...]:
+    """Return the cyber-industrial policy rules."""
     return (
         PolicyRule(
             name="industrial_boundary_repair",

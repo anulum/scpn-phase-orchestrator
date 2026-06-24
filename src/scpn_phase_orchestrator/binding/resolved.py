@@ -26,6 +26,7 @@ __all__ = ["format_resolved_binding_config", "resolved_binding_config"]
 
 
 def _string_list(value: object) -> list[str]:
+    """Return ``value`` as a list of strings, else raise ``ValueError``."""
     if isinstance(value, list):
         return [str(item) for item in value]
     return []
