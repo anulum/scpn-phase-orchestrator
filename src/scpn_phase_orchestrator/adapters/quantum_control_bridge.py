@@ -35,6 +35,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _require_positive_integer(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= 1")
     parsed = int(value)
@@ -44,12 +45,14 @@ def _require_positive_integer(value: object, *, name: str) -> int:
 
 
 def _require_mapping(value: object, *, name: str) -> dict[str, object]:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if not isinstance(value, dict):
         raise ValueError(f"{name} must be a mapping")
     return cast("dict[str, object]", value)
 
 
 def _require_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and positive")
     parsed = float(value)
@@ -59,6 +62,7 @@ def _require_positive_real(value: object, *, name: str) -> float:
 
 
 def _require_fidelity(value: object, *, name: str) -> float:
+    """Return ``value`` as a validated fidelity in [0, 1], else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and in the range [0.0, 1.0]")
     parsed = float(value)
@@ -68,6 +72,7 @@ def _require_fidelity(value: object, *, name: str) -> float:
 
 
 def _require_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite")
     parsed = float(value)
@@ -77,6 +82,7 @@ def _require_finite_real(value: object, *, name: str) -> float:
 
 
 def _require_non_empty_text(value: object, *, name: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
     if any(ord(char) < 32 for char in value):
@@ -85,6 +91,7 @@ def _require_non_empty_text(value: object, *, name: str) -> str:
 
 
 def _finite_array(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite array, else raise."""
     try:
         array = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -99,6 +106,7 @@ def _validate_layer_assignments(
     *,
     n_phases: int,
 ) -> list[list[int]]:
+    """Return the validated qubit-to-layer assignments, else raise."""
     if not isinstance(layer_assignments, list):
         raise ValueError("layer_assignments must be a list of index groups")
 
@@ -127,6 +135,7 @@ def _validate_layer_assignments(
 
 
 def _validate_upde_state(state: object) -> tuple[list[LayerState], FloatArray]:
+    """Return the validated UPDE state for the handoff, else raise."""
     if not isinstance(state, UPDEState):
         raise ValueError("state must be a UPDEState")
 
@@ -600,6 +609,7 @@ class QuantumControlBridge:
         *,
         dt: float,
     ) -> tuple[FloatArray, FloatArray]:
+        """Validate and normalise the quantum-compiler inputs, else raise."""
         knm_array, omega_array = self._validate_knm_omegas(knm, omegas)
         _require_positive_real(dt, name="dt")
         return knm_array, omega_array
@@ -609,6 +619,7 @@ class QuantumControlBridge:
         knm: FloatArray,
         omegas: FloatArray,
     ) -> tuple[FloatArray, FloatArray]:
+        """Return the validated coupling matrix and natural frequencies, else raise."""
         knm_array = _finite_array(knm, name="knm")
         omega_array = _finite_array(omegas, name="omegas")
         if knm_array.shape != (self._n, self._n):
@@ -628,6 +639,7 @@ class QuantumControlBridge:
         *,
         dt: float,
     ) -> list[dict[str, object]]:
+        """Return the Hamiltonian coupling terms from the coupling matrix."""
         terms: list[dict[str, object]] = []
         for source in range(self._n):
             for target in range(source + 1, self._n):
@@ -657,6 +669,7 @@ class QuantumControlBridge:
         frequency_terms: list[dict[str, object]],
         coupling_terms: list[dict[str, object]],
     ) -> str:
+        """Render the quantum circuit as an OpenQASM program."""
         lines = [
             "OPENQASM 3.0;",
             'include "stdgates.inc";',
@@ -682,6 +695,7 @@ class QuantumControlBridge:
         knm: FloatArray,
         coupling_terms: list[dict[str, object]],
     ) -> dict[str, object]:
+        """Return the parity check between the compiled circuit and reference."""
         frequency_error = 0.0
         for term in frequency_terms:
             qubit = _int_field(term, "qubit")
@@ -707,12 +721,14 @@ class QuantumControlBridge:
 
 
 def _qasm_float(value: object) -> str:
+    """Return a value rendered as an OpenQASM float literal."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError("QASM angle must be numeric")
     return f"{float(value):.12f}"
 
 
 def _int_field(mapping: dict[str, object], key: str) -> int:
+    """Return a named integer field from a mapping, else raise."""
     value = mapping[key]
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{key} must be an integer")
@@ -720,6 +736,7 @@ def _int_field(mapping: dict[str, object], key: str) -> int:
 
 
 def _float_field(mapping: dict[str, object], key: str) -> float:
+    """Return a named float field from a mapping, else raise."""
     value = mapping[key]
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{key} must be numeric")

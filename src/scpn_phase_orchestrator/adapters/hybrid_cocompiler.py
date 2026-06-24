@@ -336,6 +336,7 @@ def _validate_manifest_mapping(
     *,
     label: str,
 ) -> Mapping[str, object]:
+    """Return the validated manifest mapping, else raise."""
     if not isinstance(manifest, Mapping):
         raise ValueError(f"{label} must be a mapping")
     return manifest
@@ -348,6 +349,7 @@ def _validate_manifest_kind(
     label: str,
     key: str = "manifest_kind",
 ) -> None:
+    """Return the validated manifest kind, else raise."""
     if manifest.get(key) != expected:
         raise ValueError(f"{label} must be {expected}")
 
@@ -358,12 +360,14 @@ def _validate_permission_fields(
     label: str,
     fields: Sequence[str],
 ) -> None:
+    """Validate the manifest permission fields, else raise."""
     for field in fields:
         if not isinstance(manifest.get(field), bool):
             raise ValueError(f"{label} {field} must be a bool")
 
 
 def _normalise_semantics(n_channel_semantics: Sequence[str]) -> list[str]:
+    """Return the normalised co-compilation semantics."""
     if (
         isinstance(n_channel_semantics, str)
         or not isinstance(n_channel_semantics, Sequence)
@@ -382,6 +386,7 @@ def _blocked_reasons(
     quantum_manifest: Mapping[str, object],
     neuromorphic_manifest: Mapping[str, object],
 ) -> list[str]:
+    """Return the reasons blocking the hybrid co-compilation."""
     reasons: list[str] = []
     if quantum_manifest.get("status") != "co_simulation_parity_passed":
         reasons.append("quantum compiler parity must pass")
@@ -406,6 +411,7 @@ def _target_backends(
     quantum_manifest: Mapping[str, object],
     neuromorphic_manifest: Mapping[str, object],
 ) -> list[str]:
+    """Return the validated target backends."""
     return [
         *_string_list(
             quantum_manifest.get("target_backends"),
@@ -422,6 +428,7 @@ def _component_hashes(
     quantum_manifest: Mapping[str, object],
     neuromorphic_manifest: Mapping[str, object],
 ) -> dict[str, str]:
+    """Return the per-component content hashes."""
     return {
         "quantum_qasm_sha256": _hash_text(quantum_manifest, "qasm_sha256"),
         "quantum_manifest_sha256": _hash_text(quantum_manifest, "manifest_sha256"),
@@ -433,6 +440,7 @@ def _component_hashes(
 
 
 def _hash_text(manifest: Mapping[str, object], key: str) -> str:
+    """Return the SHA-256 hash of the text."""
     value = manifest.get(key)
     if (
         not isinstance(value, str)
@@ -444,6 +452,7 @@ def _hash_text(manifest: Mapping[str, object], key: str) -> str:
 
 
 def _validate_component_hash_mapping(value: object) -> dict[str, str]:
+    """Return the validated component-hash mapping, else raise."""
     if not isinstance(value, Mapping):
         raise ValueError("component_hashes must be a mapping")
     return {
@@ -463,6 +472,7 @@ def _hybrid_readiness_blocked_reasons(
     *,
     hybrid_operator_approved: bool,
 ) -> list[str]:
+    """Return the reasons blocking hybrid-target readiness."""
     reasons: list[str] = []
     if hybrid_manifest.get("status") != "co_simulation_parity_passed":
         reasons.append("hybrid_co_simulation_parity_not_passed")
@@ -499,6 +509,7 @@ def _hybrid_readiness_blocked_reasons(
 
 
 def _string_list(value: object, label: str) -> list[str]:
+    """Return ``value`` as a list of non-empty strings, else raise."""
     if isinstance(value, str) or not isinstance(value, Sequence):
         raise ValueError(f"{label} must be a sequence")
     result: list[str] = []
@@ -512,6 +523,7 @@ def _string_list(value: object, label: str) -> list[str]:
 def _target_backends_from_hybrid_manifest(
     hybrid_manifest: Mapping[str, object],
 ) -> list[str]:
+    """Return the target backends declared in a hybrid manifest."""
     return _string_list(
         hybrid_manifest.get("target_backends"),
         "hybrid target_backends",
@@ -519,6 +531,7 @@ def _target_backends_from_hybrid_manifest(
 
 
 def _term_count(value: object) -> int:
+    """Return the Hamiltonian term count from the manifest."""
     if isinstance(value, Mapping):
         term_count = value.get("term_count")
         if isinstance(term_count, int):
@@ -527,6 +540,7 @@ def _term_count(value: object) -> int:
 
 
 def _sample_count(value: object) -> int:
+    """Return the sample count from the manifest."""
     if isinstance(value, Mapping):
         sample_count = value.get("sample_count")
         if isinstance(sample_count, int):

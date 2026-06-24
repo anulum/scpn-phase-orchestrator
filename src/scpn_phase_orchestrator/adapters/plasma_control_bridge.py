@@ -40,12 +40,14 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     return int(value)
 
 
 def _finite_array(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite array, else raise."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
@@ -62,6 +64,7 @@ def _finite_array(value: object, *, name: str) -> FloatArray:
 
 
 def _finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if not isinstance(value, Real) or isinstance(value, bool):
         raise ValueError(f"{name} must be a finite real value")
     result = float(value)
@@ -71,6 +74,7 @@ def _finite_real(value: object, *, name: str) -> float:
 
 
 def _finite_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     result = _finite_real(value, name=name)
     if result <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -78,6 +82,7 @@ def _finite_positive_real(value: object, *, name: str) -> float:
 
 
 def _finite_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     result = _finite_real(value, name=name)
     if result < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -85,6 +90,7 @@ def _finite_non_negative_real(value: object, *, name: str) -> float:
 
 
 def _unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     result = _finite_real(value, name=name)
     if result < 0.0 or result > 1.0:
         raise ValueError(f"{name} must be in [0, 1]")
@@ -92,12 +98,14 @@ def _unit_interval(value: object, *, name: str) -> float:
 
 
 def _label(value: object, *, name: str) -> str:
+    """Return ``value`` as a validated non-empty label, else raise."""
     if not isinstance(value, str) or not value or any(ord(ch) < 32 for ch in value):
         raise ValueError(f"{name} must be a non-empty string")
     return value
 
 
 def _validate_layer_sizes(value: object, *, n_phases: int, n_layers: int) -> list[int]:
+    """Return the validated per-layer sizes, else raise."""
     if not isinstance(value, list) or len(value) != n_layers:
         raise ValueError("layer_sizes must contain one size per configured layer")
     sizes = [_validate_positive_or_zero_int(size, name="layer_sizes") for size in value]
@@ -107,6 +115,7 @@ def _validate_layer_sizes(value: object, *, n_phases: int, n_layers: int) -> lis
 
 
 def _validate_positive_or_zero_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must contain non-negative integers")
     return int(value)

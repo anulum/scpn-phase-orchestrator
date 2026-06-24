@@ -40,6 +40,7 @@ TAU_REF = 0.002  # s, refractory period
 
 
 def _require_positive_int(value: object, *, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a positive integer")
     result = int(value)
@@ -49,6 +50,7 @@ def _require_positive_int(value: object, *, field: str) -> int:
 
 
 def _require_nonnegative_int(value: object, *, field: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a non-negative integer")
     result = int(value)
@@ -58,6 +60,7 @@ def _require_nonnegative_int(value: object, *, field: str) -> int:
 
 
 def _require_positive_real(value: object, *, field: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if (
         not isinstance(value, Real)
         or isinstance(value, bool)
@@ -71,6 +74,7 @@ def _require_positive_real(value: object, *, field: str) -> float:
 
 
 def _has_non_real_numeric_alias(value: object) -> bool:
+    """Return whether the value contains a non-real numeric alias."""
     if isinstance(value, bool | np.bool_):
         return True
     if isinstance(value, complex | np.complexfloating):
@@ -87,6 +91,7 @@ def _has_non_real_numeric_alias(value: object) -> bool:
 
 
 def _require_finite_array(values: object, *, field: str) -> FloatArray:
+    """Return ``value`` as a validated finite array, else raise."""
     if _has_non_real_numeric_alias(values):
         raise ValueError(f"{field} must contain real-valued numeric data")
     array: FloatArray = np.asarray(values, dtype=np.float64)
@@ -96,6 +101,7 @@ def _require_finite_array(values: object, *, field: str) -> FloatArray:
 
 
 def _require_order_parameter(value: object, *, field: str) -> float:
+    """Return ``value`` as a validated order parameter in [0, 1], else raise."""
     if (
         not isinstance(value, Real)
         or isinstance(value, bool)
@@ -109,6 +115,7 @@ def _require_order_parameter(value: object, *, field: str) -> float:
 
 
 def _validated_layer_assignments(layer_assignments: list[int]) -> list[int]:
+    """Return the validated neuron-to-layer assignments, else raise."""
     if not isinstance(layer_assignments, list):
         raise ValueError("layer_assignments must be a list of non-negative integers")
     validated: list[int] = []
@@ -120,12 +127,14 @@ def _validated_layer_assignments(layer_assignments: list[int]) -> list[int]:
 
 
 def _require_mapping(value: object, *, field: str) -> dict[str, object]:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if not isinstance(value, dict):
         raise ValueError(f"{field} must be a mapping")
     return cast("dict[str, object]", value)
 
 
 def _require_non_empty_text(value: object, *, field: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string")
     if any(ord(char) < 32 for char in value):
@@ -555,6 +564,7 @@ class SNNControllerBridge:
         threshold_hz: float,
         projection_delay_ms: float,
     ) -> None:
+        """Validate and normalise the LIF schedule inputs, else raise."""
         n_layers = len(state.layers)
         if self.n_neurons < 1:
             raise ValueError("n_neurons must be >= 1")
@@ -591,6 +601,7 @@ class SNNControllerBridge:
         input_current: float,
         estimated_rate_hz: float,
     ) -> dict[str, object]:
+        """Return the per-population review record."""
         return {
             "name": f"layer_{layer_index}",
             "layer_index": layer_index,
@@ -620,6 +631,7 @@ class SNNControllerBridge:
         *,
         delay_ms: float,
     ) -> list[dict[str, object]]:
+        """Return the inter-population projection records."""
         projections: list[dict[str, object]] = []
         n_layers = alignment.shape[0]
         for source in range(n_layers):

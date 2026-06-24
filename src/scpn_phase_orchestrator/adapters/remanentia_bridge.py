@@ -76,6 +76,7 @@ class CoherenceMemorySnapshot:
 
 
 def _validated_remanentia_url(remanentia_url: object) -> str:
+    """Return the validated Remanentia service URL, else raise."""
     if not isinstance(remanentia_url, str) or not remanentia_url.strip():
         raise ValueError("remanentia_url must be a non-empty http(s) URL")
     url = remanentia_url.strip().rstrip("/")
@@ -86,6 +87,7 @@ def _validated_remanentia_url(remanentia_url: object) -> str:
 
 
 def _validated_timeout(timeout: object) -> float:
+    """Return the validated request timeout, else raise."""
     if (
         not isinstance(timeout, Real)
         or isinstance(timeout, bool)
@@ -99,6 +101,7 @@ def _validated_timeout(timeout: object) -> float:
 
 
 def _validated_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if (
         not isinstance(value, Real)
         or isinstance(value, bool)
@@ -112,6 +115,7 @@ def _validated_positive_real(value: object, *, name: str) -> float:
 
 
 def _validated_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     if not isinstance(value, Real) or isinstance(value, bool):
         raise ValueError(f"{name} must be a finite float in [0, 1]")
     result = float(value)
@@ -121,6 +125,7 @@ def _validated_unit_interval(value: object, *, name: str) -> float:
 
 
 def _validated_label(value: object, *, name: str) -> str:
+    """Return ``value`` as a validated non-empty label, else raise."""
     if not isinstance(value, str) or not value:
         raise ValueError(f"{name} must be a non-empty string")
     if any(ord(char) < 32 for char in value):
@@ -129,12 +134,14 @@ def _validated_label(value: object, *, name: str) -> str:
 
 
 def _validated_query(query: object) -> str:
+    """Return the validated recall query, else raise."""
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must be a non-empty string")
     return query
 
 
 def _validated_status_payload(payload: object) -> tuple[int, int]:
+    """Return the validated status payload, else raise."""
     if not isinstance(payload, dict):
         raise ValueError("status payload must be a mapping")
     entities = payload.get("entities")
@@ -147,6 +154,7 @@ def _validated_status_payload(payload: object) -> tuple[int, int]:
 
 
 def _validated_recall_scores(payload: object) -> list[float]:
+    """Return the validated recall scores, else raise."""
     if not isinstance(payload, dict):
         raise ValueError("recall payload must be a mapping")
     results = payload.get("results")
@@ -167,12 +175,14 @@ def _validated_recall_scores(payload: object) -> list[float]:
 
 
 def _validated_response_payload(payload: object, *, name: str) -> dict[str, Any]:
+    """Return the validated response payload, else raise."""
     if not isinstance(payload, dict):
         raise ValueError(f"{name} payload must be a mapping")
     return payload
 
 
 def _validated_agent_phases(agent_phases: object) -> dict[str, float] | None:
+    """Return the validated per-agent phases, else raise."""
     if agent_phases is None:
         return None
     if not isinstance(agent_phases, dict):
@@ -223,6 +233,7 @@ class RemanentiaBridge:
 
     @staticmethod
     def _is_transport_or_decode_error(exc: BaseException) -> bool:
+        """Return whether an exception is a transport or decode error."""
         return isinstance(
             exc,
             (
