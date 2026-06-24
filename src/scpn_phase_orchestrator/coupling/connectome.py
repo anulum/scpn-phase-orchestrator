@@ -51,6 +51,7 @@ _MAX_SEED = 2**64 - 1
 
 
 def _validate_n_regions(value: object, *, max_regions: int | None = None) -> int:
+    """Return the region count as a positive integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("n_regions must be an integer")
     n_regions = int(value)
@@ -64,6 +65,7 @@ def _validate_n_regions(value: object, *, max_regions: int | None = None) -> int
 
 
 def _validate_seed(value: object) -> int:
+    """Return the validated random seed, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("seed must be an integer in the u64 range")
     seed = int(value)
@@ -75,6 +77,7 @@ def _validate_seed(value: object) -> int:
 def _validate_connectome_matrix(
     value: object, *, n_regions: int, source: str
 ) -> FloatArray:
+    """Return the connectome as a validated finite matrix, else raise."""
     matrix = _coerce_connectome_matrix(value, n_regions=n_regions, source=source)
     if not np.allclose(np.diag(matrix), 0.0, atol=1e-15, rtol=0.0):
         raise ValueError(f"{source} connectome output diagonal must be zero")
@@ -84,6 +87,7 @@ def _validate_connectome_matrix(
 def _coerce_connectome_matrix(
     value: object, *, n_regions: int, source: str
 ) -> FloatArray:
+    """Return the value coerced to a connectome matrix, else raise."""
     raw = np.asarray(value, dtype=object)
     if any(isinstance(item, bool | np.bool_) for item in raw.ravel()):
         raise ValueError(f"{source} connectome output must not contain boolean values")
@@ -184,6 +188,7 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
 def _load_hcp_connectome_cached(
     n_regions: int, seed: int, has_rust: bool, backend: object | None
 ) -> FloatArray:
+    """Load and cache the optional neurolib HCP connectome."""
     del backend  # cache key preserves monkeypatched FFI-loader identity
 
     if has_rust:

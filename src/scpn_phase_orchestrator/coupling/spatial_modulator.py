@@ -51,6 +51,7 @@ _DECAY_TO_CODE: dict[str, int] = {
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     if isinstance(value, np.ndarray):
         if value.dtype == np.bool_:
             return True
@@ -64,6 +65,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value)
     if np.iscomplexobj(raw):
         return True
@@ -77,6 +79,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _validate_scalar(value: object, *, name: str, positive: bool = False) -> float:
+    """Return ``value`` as a validated finite scalar, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real scalar")
     resolved = float(value)
@@ -88,6 +91,7 @@ def _validate_scalar(value: object, *, name: str, positive: bool = False) -> flo
 
 
 def _validate_non_negative_scalar(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite scalar, else raise."""
     resolved = _validate_scalar(value, name=name)
     if resolved < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -95,6 +99,7 @@ def _validate_non_negative_scalar(value: object, *, name: str) -> float:
 
 
 def _validate_decay_form(value: object) -> DecayForm:
+    """Return the supported spatial-decay form, else raise."""
     if not isinstance(value, str) or value not in _DECAY_TO_CODE:
         valid = ", ".join(sorted(_DECAY_TO_CODE))
         raise ValueError(f"decay_form must be one of: {valid}")
@@ -102,6 +107,7 @@ def _validate_decay_form(value: object) -> DecayForm:
 
 
 def _validate_positions(value: object) -> FloatArray:
+    """Return the oscillator positions as a validated finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("positions must not contain boolean values")
     raw = np.asarray(value)
@@ -123,6 +129,7 @@ def _validate_positions(value: object) -> FloatArray:
 
 
 def _validate_knm_base(value: object, *, expected_n: int | None = None) -> FloatArray:
+    """Return the base coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("k_nm_base must not contain boolean values")
     raw = np.asarray(value)
@@ -147,6 +154,7 @@ def _validate_knm_base(value: object, *, expected_n: int | None = None) -> Float
 
 
 def _validate_distance_matrix(value: object, *, n: int) -> FloatArray:
+    """Return the distance matrix as a validated finite array, else raise."""
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("distance matrix must be finite real-valued")
     try:
@@ -169,6 +177,7 @@ def _validate_distance_matrix(value: object, *, n: int) -> FloatArray:
 
 
 def _pairwise_euclidean(positions: FloatArray) -> FloatArray:
+    """Return the pairwise Euclidean distance matrix for the positions."""
     diff = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]
     distances = np.sqrt(np.sum(diff * diff, axis=2))
     np.fill_diagonal(distances, 0.0)
@@ -183,6 +192,7 @@ def _decay_weights(
     decay_length_scale: float,
     epsilon: float,
 ) -> FloatArray:
+    """Return the distance-decay weight matrix."""
     if decay_form == "inverse_plus_one":
         weights = 1.0 / (1.0 + distances)
     elif decay_form == "exponential":
@@ -208,6 +218,7 @@ def _python_modulation_matrix(
     epsilon: float,
     distance_fn: DistanceFn | None = None,
 ) -> FloatArray:
+    """Return the reference spatial modulation matrix (NumPy floor)."""
     n = positions.shape[0]
     if distance_fn is None:
         distances = _pairwise_euclidean(positions)
@@ -236,6 +247,7 @@ def _python_spatial_modulate(
     decay_length_scale: float,
     epsilon: float,
 ) -> FloatArray:
+    """Return the reference spatially-modulated coupling (NumPy floor)."""
     form_by_code = {code: name for name, code in _DECAY_TO_CODE.items()}
     decay_form = cast("DecayForm", form_by_code[int(decay_form_code)])
     base = k_nm_flat.reshape(n, n)
@@ -254,6 +266,7 @@ def _python_spatial_modulate(
 
 
 def _load_rust_fn() -> Callable[..., FloatArray]:
+    """Load the Rust spatial-modulator backend callable."""
     from spo_kernel import spatial_modulate_rust
 
     def _rust(
@@ -267,6 +280,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         decay_length_scale: float,
         epsilon: float,
     ) -> FloatArray:
+        """Call the Rust spatial-modulation kernel."""
         values = spatial_modulate_rust(
             k_nm_flat.tolist(),
             positions_flat.tolist(),
@@ -284,6 +298,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
 
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:
+    """Load the Mojo spatial-modulator backend callable."""
     from ..experimental.accelerators.coupling._spatial_modulator_mojo import (
         _ensure_exe,
         spatial_modulate_mojo,
@@ -294,6 +309,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 
 
 def _load_julia_fn() -> Callable[..., FloatArray]:
+    """Load the Julia spatial-modulator backend callable."""
     import importlib
 
     juliacall = importlib.import_module("juliacall")
@@ -313,6 +329,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 
 def _load_go_fn() -> Callable[..., FloatArray]:
+    """Load the Go spatial-modulator backend callable."""
     from ..experimental.accelerators.coupling._spatial_modulator_go import (
         _load_lib,
         spatial_modulate_go,
@@ -332,6 +349,7 @@ _BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
 
 
 def _load_backend(name: str) -> Callable[..., FloatArray]:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -341,6 +359,7 @@ def _load_backend(name: str) -> Callable[..., FloatArray]:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
@@ -356,6 +375,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: list[str] = []
     for backend in ordered:
@@ -372,6 +392,7 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 
 def _validate_backend_output(value: object, *, n: int) -> FloatArray:
+    """Return the backend output matching the reference, else raise."""
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("spatial backend output must be finite real-valued")
     try:

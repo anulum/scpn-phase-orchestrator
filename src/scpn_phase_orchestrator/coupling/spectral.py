@@ -75,6 +75,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     if isinstance(value, np.ndarray):
         if value.dtype == np.bool_:
             return True
@@ -88,6 +89,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value)
     if np.iscomplexobj(raw):
         return True
@@ -101,6 +103,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _validate_coupling_matrix(knm: object) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(knm):
         raise ValueError("knm must not contain boolean values")
     raw = np.asarray(knm)
@@ -120,6 +123,7 @@ def _validate_coupling_matrix(knm: object) -> FloatArray:
 
 
 def _validate_omegas(omegas: object, *, expected_n: int) -> FloatArray:
+    """Return the natural frequencies as a validated finite array, else raise."""
     values = _validate_omega_vector(omegas)
     if values.shape != (expected_n,):
         raise ValueError(f"omegas shape {values.shape} does not match ({expected_n},)")
@@ -127,6 +131,7 @@ def _validate_omegas(omegas: object, *, expected_n: int) -> FloatArray:
 
 
 def _validate_omega_vector(omegas: object) -> FloatArray:
+    """Return the omega vector as a validated finite array, else raise."""
     if _contains_boolean_alias(omegas):
         raise ValueError("omegas must not contain boolean values")
     raw = np.asarray(omegas)
@@ -148,6 +153,7 @@ def _validate_omega_vector(omegas: object) -> FloatArray:
 
 
 def _validate_gamma_max(value: object) -> float:
+    """Return the validated maximum damping (gamma), else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError("gamma_max must be a finite real value")
     gamma = float(value)
@@ -161,6 +167,7 @@ def _validate_gamma_max(value: object) -> float:
 def _validate_non_negative_scalar(
     value: object, *, name: str, allow_infinite: bool = False
 ) -> float:
+    """Return ``value`` as a non-negative finite scalar, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative scalar")
     resolved = float(value)
@@ -172,6 +179,7 @@ def _validate_non_negative_scalar(
 
 
 def _validate_rust_fiedler_vector(value: object, *, n: int) -> FloatArray:
+    """Return the Rust Fiedler vector matching the reference, else raise."""
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("Fiedler vector must be real-valued and non-boolean")
     try:
@@ -218,6 +226,7 @@ def _python_spectral_eig(
     knm_flat: FloatArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
+    """Return the reference Laplacian eigendecomposition (NumPy floor)."""
     W = knm_flat.reshape(n, n)
     L = graph_laplacian(W)
     eigvals, eigvecs = np.linalg.eigh(L)
@@ -230,6 +239,7 @@ def _validate_spectral_output(
     *,
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
+    """Return the backend spectral output matching the reference, else raise."""
     if not isinstance(value, tuple) or len(value) != 2:
         raise ValueError("spectral primitive output must be (eigvals, fiedler)")
     eigvals_raw = value[0]
@@ -268,6 +278,7 @@ def _validate_spectral_output(
 def _spectral_eig_checked(
     knm_flat: FloatArray, n: int
 ) -> tuple[FloatArray, FloatArray]:
+    """Return the validated Laplacian eigendecomposition."""
     primitive = _primitive()
     try:
         return _validate_spectral_output(primitive(knm_flat, n), n=n)
@@ -278,6 +289,7 @@ def _spectral_eig_checked(
 
 
 def _load_rust_bundle() -> dict[str, Any]:
+    """Load the Rust spectral backend bundle."""
     from spo_kernel import (
         critical_coupling_rust,
         fiedler_value_rust,
@@ -299,6 +311,7 @@ def _load_mojo_primitive() -> Callable[
     [FloatArray, int], tuple[FloatArray, FloatArray]
 ]:
     # pragma: no cover — toolchain
+    """Load the Mojo spectral primitive backend."""
     from ..experimental.accelerators.coupling._spectral_mojo import (
         _ensure_exe,
         spectral_eig_mojo,
@@ -312,6 +325,7 @@ def _load_julia_primitive() -> Callable[
     [FloatArray, int], tuple[FloatArray, FloatArray]
 ]:
     # pragma: no cover — toolchain
+    """Load the Julia spectral primitive backend."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.coupling._spectral_julia import (
@@ -323,6 +337,7 @@ def _load_julia_primitive() -> Callable[
 
 def _load_go_primitive() -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
+    """Load the Go spectral primitive backend."""
     from ..experimental.accelerators.coupling._spectral_go import (
         _load_lib,
         spectral_eig_go,
@@ -350,6 +365,7 @@ _PRIM_CACHE: (
 def _load_primitive_backend(
     name: str,
 ) -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
+    """Load and cache the named spectral primitive backend."""
     global _PRIM_CACHE
     if _PRIM_CACHE is None:
         _PRIM_CACHE = {}
@@ -364,6 +380,7 @@ def _load_primitive_backend(
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     global _RUST_CACHE, _PRIM_CACHE
     _RUST_CACHE = None
     if _PRIM_CACHE is not None:
@@ -388,6 +405,7 @@ _RUST_CACHE: dict[str, Any] | None = None
 
 
 def _rust_bundle() -> dict[str, Any]:
+    """Call the Rust spectral bundle kernel."""
     global _RUST_CACHE
     if _RUST_CACHE is None:
         _RUST_CACHE = _load_rust_bundle()
@@ -395,6 +413,7 @@ def _rust_bundle() -> dict[str, Any]:
 
 
 def _primitive() -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
+    """Call the named spectral primitive backend kernel."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:

@@ -29,16 +29,19 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, bool | np.bool_) for item in raw.ravel())
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, complex | np.complexfloating) for item in raw.ravel())
 
 
 def _validate_distances(value: object) -> FloatArray:
+    """Return the distances as a validated finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("distances must not contain boolean values")
     if _contains_complex_alias(value):
@@ -63,6 +66,7 @@ def _validate_distances(value: object) -> FloatArray:
 
 
 def _validate_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool | np.bool_) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real")
     resolved = float(value)
@@ -72,6 +76,7 @@ def _validate_positive_real(value: object, *, name: str) -> float:
 
 
 def _validate_n_layers(value: object) -> int:
+    """Return the layer count as a positive integer, else raise."""
     if isinstance(value, bool | np.bool_) or not isinstance(value, Integral):
         raise ValueError("n_layers must be a positive integer")
     resolved = int(value)
@@ -81,6 +86,7 @@ def _validate_n_layers(value: object) -> int:
 
 
 def _validate_signal(value: object, *, name: str) -> FloatArray:
+    """Return the signal as a validated finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_complex_alias(value):
@@ -105,6 +111,7 @@ def _validate_signal(value: object, *, name: str) -> FloatArray:
 def _validate_lag_entry(
     indices: tuple[int, int], lag: object, *, n_layers: int
 ) -> tuple[int, int, float]:
+    """Return the validated phase-lag entry, else raise."""
     if not isinstance(indices, tuple) or len(indices) != 2:
         raise ValueError("lag index must be a pair of layer indices")
     i, j = indices

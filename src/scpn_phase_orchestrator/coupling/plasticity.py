@@ -30,11 +30,13 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    """Return the phases as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -54,6 +56,7 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_square_matrix(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -73,6 +76,7 @@ def _validate_square_matrix(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_coupling_matrix(value: object) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     knm = _validate_square_matrix(value, name="knm")
     if np.any(knm < -1e-12):
         raise ValueError("knm must be non-negative")
@@ -83,6 +87,7 @@ def _validate_coupling_matrix(value: object) -> FloatArray:
 
 
 def _validate_eligibility_matrix(value: object) -> FloatArray:
+    """Return the eligibility trace as a validated finite matrix, else raise."""
     eligibility = _validate_square_matrix(value, name="eligibility")
     if not np.allclose(np.diag(eligibility), 0.0, atol=1e-12):
         raise ValueError("eligibility diagonal must be zero")
@@ -93,6 +98,7 @@ def _validate_eligibility_matrix(value: object) -> FloatArray:
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a finite real value")
     scalar = float(value)
@@ -102,6 +108,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 
 def _validate_learning_rate(value: object) -> float:
+    """Return the learning rate as a validated non-negative float, else raise."""
     lr = _validate_finite_real(value, name="lr")
     if lr < 0.0:
         raise ValueError("lr must be non-negative")

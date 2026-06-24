@@ -78,6 +78,7 @@ heads for higher-order Fourier components."""
 
 
 def _validate_positive_int(name: str, value: object) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         msg = f"{name} must be a positive integer, got {value!r}"
         raise ValueError(msg)
@@ -89,6 +90,7 @@ def _validate_positive_int(name: str, value: object) -> int:
 
 
 def _validate_even_model_width(d_model: object) -> int:
+    """Return the model width as a validated even positive integer, else raise."""
     d_model_int = _validate_positive_int("d_model", d_model)
     if d_model_int < 2 or d_model_int % 2 != 0:
         msg = (
@@ -100,6 +102,7 @@ def _validate_even_model_width(d_model: object) -> int:
 
 
 def _validate_finite_real(name: str, value: object) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         msg = f"{name} must be a finite real number, got {value!r}"
         raise ValueError(msg)
@@ -111,6 +114,7 @@ def _validate_finite_real(name: str, value: object) -> float:
 
 
 def _validate_seed(name: str, value: object) -> int:
+    """Return the validated random seed, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         msg = f"{name} must be a non-negative integer, got {value!r}"
         raise ValueError(msg)
@@ -122,16 +126,19 @@ def _validate_seed(name: str, value: object) -> int:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
 def _as_real_array(name: str, value: object) -> FloatArray:
+    """Return ``value`` as a validated finite real array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_complex_alias(value):
@@ -146,6 +153,7 @@ def _as_real_array(name: str, value: object) -> FloatArray:
 
 
 def _validate_coupling_contract(knm: FloatArray, *, name: str = "knm") -> None:
+    """Validate the coupling contract inputs, else raise."""
     if not np.allclose(knm, knm.T, rtol=1e-12, atol=1e-12):
         raise ValueError(f"{name} must be symmetric")
     if not np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=1e-12):
@@ -153,6 +161,7 @@ def _validate_coupling_contract(knm: FloatArray, *, name: str = "knm") -> None:
 
 
 def _validate_backend_output(value: object, *, n: int) -> FloatArray:
+    """Return the backend output matching the reference, else raise."""
     parsed = _as_real_array("backend output", value)
     if parsed.shape == (n * n,):
         parsed = parsed.reshape(n, n)
@@ -237,6 +246,7 @@ _BackendFn = Callable[
 
 
 def _load_rust() -> _BackendFn:
+    """Load the Rust AttnRes backend callable."""
     from typing import cast
 
     from spo_kernel import attnres_modulate_rust
@@ -245,6 +255,7 @@ def _load_rust() -> _BackendFn:
 
 
 def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    """Load the Mojo AttnRes backend callable."""
     from ..experimental.accelerators.coupling._attnres_mojo import (
         _ensure_exe,
         attnres_modulate_mojo,
@@ -255,6 +266,7 @@ def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 
 def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    """Load the Julia AttnRes backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.coupling._attnres_julia import (
@@ -265,6 +277,7 @@ def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 
 def _load_go() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    """Load the Go AttnRes backend callable."""
     from ..experimental.accelerators.coupling._attnres_go import (
         _load_lib,
         attnres_modulate_go,
@@ -284,6 +297,7 @@ _BACKEND_CACHE: dict[str, _BackendFn] = {}
 
 
 def _load_backend(name: str) -> _BackendFn:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -293,6 +307,7 @@ def _load_backend(name: str) -> _BackendFn:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -309,6 +324,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch_backend() -> _BackendFn | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:

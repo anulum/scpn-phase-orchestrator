@@ -42,11 +42,13 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, bool) for item in raw.ravel())
 
 
 def _as_finite_real_array(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -64,6 +66,7 @@ def _as_finite_real_array(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_knm(value: object) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     knm = _as_finite_real_array(value, name="knm")
     if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
         raise ValueError("knm must be a finite square coupling matrix")
@@ -75,6 +78,7 @@ def _validate_knm(value: object) -> FloatArray:
 
 
 def _validate_phase_history(value: object, *, n: int) -> FloatArray:
+    """Return the phase history as a validated 2-D finite array, else raise."""
     history = _as_finite_real_array(value, name="phase_history")
     if history.ndim != 2:
         raise ValueError("phase_history must be a finite 2-D phase matrix")
@@ -84,6 +88,7 @@ def _validate_phase_history(value: object, *, n: int) -> FloatArray:
 
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real")
     parsed = float(value)
@@ -93,6 +98,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
 
 
 def _validate_decay(value: object) -> float:
+    """Return the validated adaptation decay factor, else raise."""
     parsed = _validate_non_negative_real(value, name="decay")
     if parsed > 1.0:
         raise ValueError("decay must be in [0, 1]")
@@ -100,6 +106,7 @@ def _validate_decay(value: object) -> float:
 
 
 def _validate_n_bins(value: object) -> int:
+    """Return ``n_bins`` as an integer at least 2, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("n_bins must be an integer >= 2")
     parsed = int(value)
@@ -109,6 +116,7 @@ def _validate_n_bins(value: object) -> int:
 
 
 def _validate_transfer_entropy_scores(value: object, *, n: int) -> FloatArray:
+    """Return the validated transfer-entropy score matrix, else raise."""
     scores = _as_finite_real_array(value, name="transfer_entropy")
     if scores.shape != (n, n):
         raise RuntimeError("transfer-entropy backend returned wrong shape")
@@ -122,6 +130,7 @@ def _validate_transfer_entropy_scores(value: object, *, n: int) -> FloatArray:
 
 
 def _validate_adapted_coupling(value: object, *, n: int) -> FloatArray:
+    """Return the validated adapted coupling matrix, else raise."""
     result = _as_finite_real_array(value, name="adapted coupling")
     if result.shape != (n, n):
         raise RuntimeError("TE adaptive backend returned wrong shape")
