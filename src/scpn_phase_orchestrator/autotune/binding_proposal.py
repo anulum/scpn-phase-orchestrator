@@ -57,8 +57,11 @@ FloatArray = NDArray[np.float64]
 
 
 class _EventLogSourceSummary(ImportedSourceSummary):
+    """Reduced summary of an event-log data source."""
+
     @property
     def event_count(self) -> int:
+        """Return the number of events in the source."""
         return self.sample_count
 
 
@@ -335,6 +338,7 @@ def _numeric_signal_table(
     rows: Sequence[Mapping[str, str]],
     columns: Sequence[str],
 ) -> FloatArray:
+    """Return the numeric signal table from the source data."""
     values: list[list[float]] = []
     for row_index, row in enumerate(rows):
         row_values: list[float] = []
@@ -360,6 +364,7 @@ def _resolve_sample_rate_hz(
     rows: Sequence[Mapping[str, str]],
     fieldnames: Sequence[str],
 ) -> tuple[float, str]:
+    """Resolve the sample rate (Hz) from the source metadata."""
     if sample_rate_hz is None:
         return infer_sample_rate_from_time_column(rows, fieldnames)
     if sample_rate_hz <= 0.0 or not isfinite(sample_rate_hz):
@@ -368,6 +373,7 @@ def _resolve_sample_rate_hz(
 
 
 def _event_sequence(value: object) -> tuple[Mapping[str, Any], ...]:
+    """Return the validated event sequence from the source."""
     events = _sequence(value, "event log")
     if not events:
         raise ValueError("event log must contain at least one event")
@@ -379,18 +385,21 @@ def _event_sequence(value: object) -> tuple[Mapping[str, Any], ...]:
 
 
 def _mapping(value: object, label: str) -> Mapping[str, Any]:
+    """Return ``value`` as a mapping, else raise ``ValueError``."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{label} must be a mapping")
     return value
 
 
 def _sequence(value: object, label: str) -> tuple[Any, ...]:
+    """Return ``value`` as a non-string sequence, else raise."""
     if not isinstance(value, Sequence) or isinstance(value, str | bytes | bytearray):
         raise ValueError(f"{label} must be a sequence")
     return tuple(value)
 
 
 def _node_id(node: object) -> str:
+    """Return the validated node id, else raise."""
     node_map = _mapping(node, "graph.nodes[]")
     raw_id = node_map.get("id")
     if not isinstance(raw_id, str) or not raw_id:
@@ -399,11 +408,13 @@ def _node_id(node: object) -> str:
 
 
 def _inferred_channels(count: int, *, prefer_event: bool) -> tuple[str, ...]:
+    """Return the channels inferred from the source data."""
     order = ("I", "P", "S") if prefer_event else _CHANNEL_ORDER
     return tuple(order[index % len(order)] for index in range(count))
 
 
 def _families_for_channels(channels: Sequence[str]) -> tuple[tuple[str, str, str], ...]:
+    """Return the oscillator families for the channels."""
     families = []
     for index, channel in enumerate(channels):
         extractor = {"P": "physical", "I": "event", "S": "ring"}.get(
@@ -421,6 +432,7 @@ def _families_for_time_series(
     sample_rate_hz: float,
     sample_period_s: float,
 ) -> tuple[tuple[str, str, str, dict[str, JsonValue]], ...]:
+    """Return the oscillator families for the time series."""
     families = []
     for index, (source_column, channel) in enumerate(
         zip(channels, inferred_channels, strict=True)
@@ -449,6 +461,7 @@ def _families_for_time_series(
 def _extractor_parameter_proposals(
     family_specs: Sequence[tuple[str, str, str, Mapping[str, JsonValue]]],
 ) -> list[JsonValue]:
+    """Return the proposed phase-extractor parameters."""
     return [
         {
             "family": family_name,
@@ -466,6 +479,7 @@ def _initial_coupling_proposal(
     discovery: Mapping[str, JsonValue],
     inferred_channels: Sequence[str],
 ) -> dict[str, JsonValue]:
+    """Return the initial coupling proposal from the data."""
     columns = [str(column) for column in _sequence(discovery.get("columns"), "columns")]
     size = len(columns)
     raw = np.zeros((size, size), dtype=np.float64)
@@ -532,6 +546,7 @@ def _edge_sequence(
     *,
     key: str = "edges",
 ) -> tuple[Mapping[str, JsonValue], ...]:
+    """Return the validated coupling-edge sequence."""
     payload = discovery.get(section)
     if not isinstance(payload, Mapping):
         return ()
@@ -548,6 +563,7 @@ def _accumulate_directed_edges(
     edges: Sequence[Mapping[str, JsonValue]],
     weight_field: str,
 ) -> None:
+    """Accumulate directed coupling edges from the data."""
     for edge in edges:
         source = edge.get("source")
         target = edge.get("target")
@@ -570,6 +586,7 @@ def _accumulate_correlation_edges(
     column_index: Mapping[str, int],
     edges: Sequence[Mapping[str, JsonValue]],
 ) -> None:
+    """Accumulate correlation-based coupling edges."""
     for edge in edges:
         source = edge.get("source")
         target = edge.get("target")
@@ -598,6 +615,7 @@ def _binding_yaml(
     ],
     initial_coupling_proposal: Mapping[str, JsonValue] | None = None,
 ) -> str:
+    """Render the binding proposal as a binding-spec YAML document."""
     if not project_name:
         raise ValueError("project_name must be non-empty")
     layers: list[JsonValue] = []
@@ -685,6 +703,7 @@ def _binding_yaml(
 def _normalise_family_spec(
     raw_family_spec: tuple[str, str, str] | tuple[str, str, str, Mapping[str, Any]],
 ) -> tuple[str, str, str, Mapping[str, Any]]:
+    """Return the normalised oscillator-family spec."""
     if len(raw_family_spec) == 3:
         family_name, channel, extractor_type = raw_family_spec
         return family_name, channel, extractor_type, {}
@@ -695,6 +714,7 @@ def _normalise_family_spec(
 def _coupling_templates(
     initial_coupling_proposal: Mapping[str, JsonValue] | None,
 ) -> dict[str, JsonValue]:
+    """Return the coupling templates for the proposal."""
     if not initial_coupling_proposal:
         return {}
     return {
@@ -712,6 +732,7 @@ def _coupling_templates(
 def _cross_channel_couplings(
     initial_coupling_proposal: Mapping[str, JsonValue] | None,
 ) -> list[dict[str, JsonValue]]:
+    """Return the proposed cross-channel couplings."""
     if not initial_coupling_proposal:
         return []
     channel_strengths: dict[tuple[str, str], float] = {}
@@ -753,6 +774,7 @@ def _cross_channel_couplings(
 
 
 def _validation_errors(yaml_text: str) -> tuple[str, ...]:
+    """Return the validation errors for the rendered binding YAML."""
     with tempfile.TemporaryDirectory(prefix="spo_binding_proposal_") as tmpdir:
         path = Path(tmpdir) / "binding_spec.yaml"
         path.write_text(yaml_text, encoding="utf-8")
@@ -769,6 +791,7 @@ def _project_state(
     source: ImportedSourceSummary,
     binding: BindingProposal,
 ) -> StudioProjectState:
+    """Return the project state for the binding proposal."""
     return StudioProjectState(
         project_name=project_name,
         source=source,
@@ -787,4 +810,5 @@ def _project_state(
 
 
 def _bounded_confidence(value: float) -> float:
+    """Return ``value`` as a confidence bounded to [0, 1]."""
     return max(0.0, min(1.0, float(value)))

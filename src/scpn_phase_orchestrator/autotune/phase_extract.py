@@ -119,6 +119,7 @@ def _bandpass_filter(x: FloatArray, fs: float, low: float, high: float) -> Float
 
 
 def _real_signal(signal: object) -> FloatArray:
+    """Return ``value`` as a validated real signal, else raise."""
     raw = np.asarray(signal)
     if raw.dtype == np.bool_ or _contains_alias(raw, (bool, np.bool_)):
         raise ValueError("signal must not contain boolean values")
@@ -135,6 +136,7 @@ def _validated_bandpass(
     bandpass: tuple[float, float],
     fs: float,
 ) -> tuple[float, float]:
+    """Return the validated bandpass-filter parameters, else raise."""
     if not isinstance(bandpass, tuple) or len(bandpass) != 2:
         raise ValueError("bandpass must be a (low, high) frequency tuple")
     low = _non_negative_real(bandpass[0], "bandpass low")
@@ -148,6 +150,7 @@ def _validated_bandpass(
 
 
 def _positive_real(value: object, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     parsed = _real_scalar(value, name)
     if parsed <= 0.0:
         raise ValueError(f"{name} must be finite and positive")
@@ -155,6 +158,7 @@ def _positive_real(value: object, name: str) -> float:
 
 
 def _non_negative_real(value: object, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     parsed = _real_scalar(value, name)
     if parsed < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
@@ -162,6 +166,7 @@ def _non_negative_real(value: object, name: str) -> float:
 
 
 def _real_scalar(value: object, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real value")
     parsed = float(value)
@@ -171,6 +176,7 @@ def _real_scalar(value: object, name: str) -> float:
 
 
 def _contains_alias(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
+    """Return whether the value contains a boolean or complex alias."""
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

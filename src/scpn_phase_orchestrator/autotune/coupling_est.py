@@ -31,11 +31,13 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.ravel())
 
@@ -45,6 +47,7 @@ def _validate_inputs(
     omegas: object,
     dt: object,
 ) -> tuple[FloatArray, FloatArray, float]:
+    """Validate and normalise the estimation inputs, else raise."""
     if isinstance(dt, (bool, np.bool_)) or not isinstance(dt, Real):
         raise ValueError("dt must be a finite positive real")
     dt_value = float(dt)
@@ -91,6 +94,7 @@ def _validate_inputs(
 
 
 def _validate_n_harmonics(value: object) -> int:
+    """Return the harmonic count as a validated positive integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("n_harmonics must be a positive integer")
     resolved = int(value)

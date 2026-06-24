@@ -312,6 +312,7 @@ def discover_time_series_structure(
 
 
 def _finite_real_scalar(value: object, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real value")
     parsed = float(value)
@@ -321,6 +322,7 @@ def _finite_real_scalar(value: object, name: str) -> float:
 
 
 def _finite_time_sample(value: object, name: str) -> float:
+    """Return ``value`` as a validated finite time sample, else raise."""
     if isinstance(value, (bool, np.bool_, complex, np.complexfloating)):
         raise ValueError(f"{name} must be a finite real value")
     if isinstance(value, str):
@@ -338,16 +340,19 @@ def _finite_time_sample(value: object, name: str) -> float:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
 def _real_table(samples: object) -> FloatArray:
+    """Return ``value`` as a validated real data table, else raise."""
     if _contains_boolean_alias(samples):
         raise ValueError("samples must not contain boolean values")
     if _contains_complex_alias(samples):
@@ -362,6 +367,7 @@ def _real_table(samples: object) -> FloatArray:
 
 
 def _normalised_column_name(column: str) -> str:
+    """Return the normalised column name."""
     if not isinstance(column, str):
         raise ValueError("signal column names must be strings")
     name = column.strip()
@@ -376,6 +382,7 @@ def _correlation_graph(
     *,
     threshold: float,
 ) -> dict[str, JsonValue]:
+    """Return the correlation graph over the columns."""
     edge_values: list[JsonValue] = []
     possible_edges = len(columns) * (len(columns) - 1) // 2
     for left in range(len(columns)):
@@ -402,6 +409,7 @@ def _correlation_graph(
 
 
 def _pearson(left: FloatArray, right: FloatArray) -> float:
+    """Return the Pearson correlation between two series."""
     left_centered = left - float(np.mean(left))
     right_centered = right - float(np.mean(right))
     denominator = float(np.linalg.norm(left_centered) * np.linalg.norm(right_centered))
@@ -415,6 +423,7 @@ def _correlation_clusters(
     *,
     edges: JsonValue,
 ) -> dict[str, JsonValue]:
+    """Return the correlation clusters of the columns."""
     adjacency: dict[str, set[str]] = {column: set() for column in columns}
     if isinstance(edges, list):
         for edge in edges:
@@ -461,6 +470,7 @@ def _sparse_derivative_library(
     sample_period_s: float,
     threshold: float,
 ) -> dict[str, JsonValue]:
+    """Return the sparse derivative feature library."""
     features = _standardise(table)
     library = np.column_stack([np.ones(features.shape[0]), features])
     derivatives = np.gradient(features, sample_period_s, axis=0)
@@ -504,6 +514,7 @@ def _phase_sindy_library(
     sample_period_s: float,
     threshold: float,
 ) -> dict[str, JsonValue]:
+    """Return the phase-SINDy feature library."""
     if table.shape[1] < 2:
         return _skipped_phase_sindy("requires_at_least_two_phase_columns", threshold)
     if table.shape[0] < 3:
@@ -560,6 +571,7 @@ def _phase_sindy_library(
 
 
 def _skipped_phase_sindy(reason: str, threshold: float) -> dict[str, JsonValue]:
+    """Build the skipped phase-SINDy record."""
     return {
         "status": reason,
         "library": _PHASE_SINDY_LIBRARY,
@@ -576,6 +588,7 @@ def _skipped_phase_sindy(reason: str, threshold: float) -> dict[str, JsonValue]:
 
 
 def _is_phase_like_table(table: FloatArray, columns: tuple[str, ...]) -> bool:
+    """Return whether the table holds phase-like data."""
     if any(
         marker in column.strip().lower()
         for column in columns
@@ -592,6 +605,7 @@ def _phase_sindy_edges(
     coefficients: Sequence[FloatArray],
     threshold: float,
 ) -> list[JsonValue]:
+    """Return the coupling edges from the phase-SINDy fit."""
     edges: list[JsonValue] = []
     for target_index, coefficient in enumerate(coefficients):
         term_index = 1
@@ -625,6 +639,7 @@ def _phase_sindy_predictions(
     *,
     coefficients: Sequence[FloatArray],
 ) -> FloatArray:
+    """Return the phase-SINDy model predictions."""
     source = table[:-1, :]
     predictions = np.zeros_like(source, dtype=np.float64)
     for target_index, coefficient in enumerate(coefficients):
@@ -646,6 +661,7 @@ def _regression_quality(
     predictions: FloatArray,
     active_terms: int,
 ) -> dict[str, float]:
+    """Return the regression quality score."""
     residual = np.asarray(observations, dtype=np.float64) - np.asarray(
         predictions,
         dtype=np.float64,
@@ -668,6 +684,7 @@ def _sindy_model_selection(
     sindy: Mapping[str, JsonValue],
     phase_sindy: Mapping[str, JsonValue],
 ) -> dict[str, JsonValue]:
+    """Return the selected SINDy model."""
     candidates: list[JsonValue] = [
         _selection_candidate(_SINDY_LIBRARY, "fitted", sindy),
         _selection_candidate(
@@ -705,6 +722,7 @@ def _lagged_learned_graph(
     *,
     threshold: float,
 ) -> dict[str, JsonValue]:
+    """Return the lagged learned coupling graph."""
     if table.shape[1] < 2:
         return _skipped_learned_graph("requires_at_least_two_columns", threshold)
     if table.shape[0] < 3:
@@ -750,6 +768,7 @@ def _lagged_learned_graph(
 
 
 def _skipped_learned_graph(reason: str, threshold: float) -> dict[str, JsonValue]:
+    """Build the skipped learned-graph record."""
     return {
         "status": reason,
         "method": "lagged_sparse_linear_prediction",
@@ -771,6 +790,7 @@ def _lagged_graph_edges(
     coefficients: FloatArray,
     threshold: float,
 ) -> list[JsonValue]:
+    """Return the edges of the lagged graph."""
     edges: list[JsonValue] = []
     for target_index, target_column in enumerate(columns):
         for source_index, source_column in enumerate(columns):
@@ -803,6 +823,7 @@ def _selection_candidate(
     status: str,
     payload: Mapping[str, JsonValue],
 ) -> dict[str, JsonValue]:
+    """Return a model-selection candidate."""
     return {
         "library": library,
         "status": status,
@@ -815,6 +836,7 @@ def _selection_candidate(
 
 
 def _standardise(table: FloatArray) -> FloatArray:
+    """Return the standardised (zero-mean, unit-variance) data."""
     centre = np.mean(table, axis=0)
     scale = np.std(table, axis=0)
     scale = np.where(scale > 0.0, scale, 1.0)
@@ -828,6 +850,7 @@ def _equation_for_target(
     active: BoolArray,
     term_names: Sequence[str],
 ) -> str:
+    """Return the discovered equation for a target variable."""
     terms: list[str] = []
     for coefficient, is_active, term_name in zip(
         coefficients,

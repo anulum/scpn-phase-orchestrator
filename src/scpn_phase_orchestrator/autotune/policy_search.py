@@ -386,6 +386,7 @@ def search_adaptive_replay_policy(
 
 
 def _candidate_to_record(candidate: KnobPolicyCandidate) -> dict[str, object]:
+    """Return a candidate as a JSON-safe record."""
     _validate_candidate(candidate, "candidate")
     return {
         "K": _serialise_knob(candidate.K),
@@ -398,6 +399,7 @@ def _candidate_to_record(candidate: KnobPolicyCandidate) -> dict[str, object]:
 
 
 def _serialise_knob(value: float | FloatArray) -> object:
+    """Return a knob value serialised to a JSON-safe form."""
     array = _real_array(value, "candidate knob")
     if array.ndim == 0:
         return float(array)
@@ -408,6 +410,7 @@ def _evaluate_candidate(
     evaluator: ReplayPolicyEvaluator,
     candidate: KnobPolicyCandidate,
 ) -> RewardObservation:
+    """Evaluate a candidate and return its score."""
     observation = evaluator(candidate)
     if not isinstance(observation, RewardObservation):
         raise TypeError("evaluator must return RewardObservation")
@@ -419,6 +422,7 @@ def _optional_config(
     expected_type: type[object],
     label: str,
 ) -> object | None:
+    """Return ``None`` or a validated config, else raise."""
     if value is None:
         return None
     return _require_config_type(value, expected_type, label)
@@ -429,12 +433,14 @@ def _require_config_type(
     expected_type: type[object],
     label: str,
 ) -> object:
+    """Return the config validated as the expected type, else raise."""
     if not isinstance(value, expected_type):
         raise TypeError(f"{label} must be {expected_type.__name__}")
     return value
 
 
 def _validate_candidate(candidate: object, label: str) -> None:
+    """Validate a knob-policy candidate, else raise."""
     if not isinstance(candidate, KnobPolicyCandidate):
         raise TypeError(f"{label} must be KnobPolicyCandidate")
     for knob_name, value in [
@@ -457,6 +463,7 @@ def _validate_candidate(candidate: object, label: str) -> None:
 
 
 def _require_positive_integer(value: object, label: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise TypeError(f"{label} must be a positive integer")
     parsed = int(value)
@@ -466,6 +473,7 @@ def _require_positive_integer(value: object, label: str) -> int:
 
 
 def _require_non_negative_real(value: object, label: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     return _require_bounded_real(
         value,
         label,
@@ -483,6 +491,7 @@ def _require_bounded_real(
     upper: float | None,
     lower_inclusive: bool,
 ) -> float:
+    """Return ``value`` as a real within the bounds, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{label} must be finite")
     parsed = float(value)
@@ -500,6 +509,7 @@ def _require_bounded_real(
 
 
 def _real_array(value: object, label: str) -> FloatArray:
+    """Return ``value`` as a validated real array, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_ or _object_array_contains(raw, (bool, np.bool_)):
         raise ValueError(f"{label} must not contain boolean values")
@@ -518,6 +528,7 @@ def _real_array(value: object, label: str) -> FloatArray:
 
 
 def _object_array_contains(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
+    """Return whether an object array contains a value."""
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())
@@ -527,6 +538,7 @@ def _decay_search_config(
     search_config: OfflinePolicySearchConfig,
     adaptive_config: AdaptiveReplayPolicySearchConfig,
 ) -> OfflinePolicySearchConfig:
+    """Return the search config with decay applied."""
     return OfflinePolicySearchConfig(
         K_step=_decay_step(search_config.K_step, adaptive_config),
         alpha_step=_decay_step(search_config.alpha_step, adaptive_config),
@@ -549,6 +561,7 @@ def _decay_step(
     step: float,
     adaptive_config: AdaptiveReplayPolicySearchConfig,
 ) -> float:
+    """Return the decayed step size for an iteration."""
     decayed = step * adaptive_config.step_decay
     if 0.0 < decayed < adaptive_config.min_step:
         return 0.0
@@ -556,6 +569,7 @@ def _decay_step(
 
 
 def _search_config_to_record(config: OfflinePolicySearchConfig) -> dict[str, object]:
+    """Return the search config as a JSON-safe record."""
     return {
         "K_step": config.K_step,
         "alpha_step": config.alpha_step,

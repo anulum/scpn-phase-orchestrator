@@ -92,6 +92,7 @@ class LearnerPolicyProposal:
 
 
 def _json_safe_record(value: object) -> dict[str, object]:
+    """Return a record as a JSON-safe mapping, else raise."""
     safe = _json_safe_value(value)
     if not isinstance(safe, dict):
         raise TypeError("audit record must be a mapping")
@@ -99,6 +100,7 @@ def _json_safe_record(value: object) -> dict[str, object]:
 
 
 def _json_safe_value(value: object) -> object:
+    """Return ``value`` as a JSON-safe value, else raise."""
     if isinstance(value, Mapping):
         record: dict[str, object] = {}
         for key, nested_value in value.items():
@@ -308,6 +310,7 @@ def _safe_replay_search(
     reward_config: RewardConfig | None,
     proposal_config: PolicyProposalConfig | None,
 ) -> ReplayPolicySearchResult:
+    """Run the replay search, returning a failure record on error."""
     try:
         return search_replay_policy(
             seed,
@@ -340,6 +343,7 @@ def _rejected_policy_proposal(
     proposal_config: PolicyProposalConfig | None,
     reason: str,
 ) -> AutotunePolicyProposal:
+    """Build a rejected-policy-proposal record."""
     active_config = proposal_config or PolicyProposalConfig()
     alternatives: tuple[AutotuneRewardReport, ...] = ()
     try:
@@ -361,12 +365,14 @@ def _rejected_policy_proposal(
 
 
 def _uniform(seed_value: int | None, *, low: float, high: float) -> float:
+    """Return a uniform random deviate for the seed."""
     if seed_value is None:
         return float((low + high) * 0.5)
     return float(np.random.default_rng(seed_value).uniform(low, high))
 
 
 def _validate_seed_value(seed_value: int | None) -> int | None:
+    """Return the validated random seed, else raise."""
     if seed_value is None:
         return None
     if isinstance(seed_value, (bool, np.bool_)) or not isinstance(
@@ -381,6 +387,7 @@ def _validate_seed_value(seed_value: int | None) -> int | None:
 
 
 def _positive_real(value: object, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(
         value,
         (Real, np.floating),
@@ -393,6 +400,7 @@ def _positive_real(value: object, name: str) -> float:
 
 
 def _mean_seed_k(seed: KnobPolicyCandidate) -> float:
+    """Return the mean coupling-strength seed."""
     raw = np.asarray(seed.K)
     if raw.dtype == np.bool_ or _object_array_contains(raw, (bool, np.bool_)):
         raise ValueError("seed.K must not contain boolean values")
@@ -411,6 +419,7 @@ def _mean_seed_k(seed: KnobPolicyCandidate) -> float:
 
 
 def _object_array_contains(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
+    """Return whether an object array contains a value."""
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

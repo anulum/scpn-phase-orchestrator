@@ -41,15 +41,18 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _is_boolean_alias(value: object) -> bool:
+    """Return whether the value is a boolean alias."""
     return isinstance(value, (bool, np.bool_))
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(_is_boolean_alias(item) for item in raw.ravel())
 
 
 def _coerce_lstsq_coefficients(values: object, expected_size: int) -> FloatArray:
+    """Return the least-squares coefficients as a finite array."""
     try:
         coefficients = np.asarray(values, dtype=np.float64).ravel()
     except (TypeError, ValueError) as exc:

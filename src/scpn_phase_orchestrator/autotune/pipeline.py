@@ -134,6 +134,7 @@ def identify_binding_spec(
 
 
 def _real_time_series(time_series: object) -> FloatArray:
+    """Return ``value`` as a validated real time series, else raise."""
     raw = np.asarray(time_series)
     if raw.dtype == np.bool_ or _contains_alias(raw, (bool, np.bool_)):
         raise ValueError("time_series must not contain boolean values")
@@ -147,6 +148,7 @@ def _real_time_series(time_series: object) -> FloatArray:
 
 
 def _positive_real(value: object, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real value")
     parsed = float(value)
@@ -156,6 +158,7 @@ def _positive_real(value: object, name: str) -> float:
 
 
 def _contains_alias(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
+    """Return whether the value contains a boolean or complex alias."""
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

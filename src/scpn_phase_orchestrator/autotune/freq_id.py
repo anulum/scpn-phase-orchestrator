@@ -132,6 +132,7 @@ def identify_frequencies(
 
 
 def _real_data(data: object) -> FloatArray:
+    """Return ``value`` as validated real data, else raise."""
     raw = np.asarray(data)
     if raw.dtype == np.bool_ or _contains_alias(raw, (bool, np.bool_)):
         raise ValueError("data must not contain boolean values")
@@ -145,6 +146,7 @@ def _real_data(data: object) -> FloatArray:
 
 
 def _validated_n_modes(n_modes: int | None) -> int | None:
+    """Return the mode count as a validated positive integer, else raise."""
     if n_modes is None:
         return None
     if isinstance(n_modes, (bool, np.bool_)) or not isinstance(n_modes, Integral):
@@ -156,6 +158,7 @@ def _validated_n_modes(n_modes: int | None) -> int | None:
 
 
 def _positive_real(value: object, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     parsed = _real_scalar(value, name)
     if parsed <= 0.0:
         raise ValueError(f"{name} must be finite and positive")
@@ -163,6 +166,7 @@ def _positive_real(value: object, name: str) -> float:
 
 
 def _non_negative_real(value: object, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     parsed = _real_scalar(value, name)
     if parsed < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
@@ -170,6 +174,7 @@ def _non_negative_real(value: object, name: str) -> float:
 
 
 def _real_scalar(value: object, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real value")
     parsed = float(value)
@@ -179,6 +184,7 @@ def _real_scalar(value: object, name: str) -> float:
 
 
 def _contains_alias(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
+    """Return whether the value contains a boolean or complex alias."""
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())

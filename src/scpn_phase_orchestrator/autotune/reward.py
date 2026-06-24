@@ -659,6 +659,7 @@ def generate_offline_policy_candidates(
 
 
 def _actuation_energy(candidate: KnobPolicyCandidate) -> float:
+    """Return the actuation energy of a candidate's knobs."""
     parts = [
         _mean_square(candidate.K),
         _mean_square(candidate.alpha),
@@ -677,6 +678,7 @@ def _actuation_energy(candidate: KnobPolicyCandidate) -> float:
 
 
 def _mean_square(value: float | FloatArray) -> float:
+    """Return the mean square of the values."""
     array = _real_knob_array(value, "candidate knobs")
     if not np.all(np.isfinite(array)):
         raise ValueError("candidate knobs must be finite")
@@ -686,6 +688,7 @@ def _mean_square(value: float | FloatArray) -> float:
 
 
 def _validate_candidate(candidate: KnobPolicyCandidate) -> None:
+    """Validate a knob-policy candidate, else raise."""
     for label, value in [
         ("K", candidate.K),
         ("alpha", candidate.alpha),
@@ -705,6 +708,7 @@ def _mutate_knob(
     delta: float,
     max_abs_knob: float | None,
 ) -> KnobPolicyCandidate:
+    """Return the candidate with a scalar knob mutated."""
     values = {
         "K": seed.K,
         "alpha": seed.alpha,
@@ -727,6 +731,7 @@ def _offset_knob(
     delta: float,
     max_abs_knob: float | None,
 ) -> float | FloatArray:
+    """Return the candidate with a knob offset applied."""
     array = _real_knob_array(value, "candidate knobs") + delta
     if max_abs_knob is not None:
         array = np.clip(array, -max_abs_knob, max_abs_knob)
@@ -741,6 +746,7 @@ def _mutate_channel_weight(
     delta: float,
     max_abs_knob: float | None,
 ) -> KnobPolicyCandidate:
+    """Return the candidate with a channel weight mutated."""
     weights = list(seed.channel_weights)
     value = max(0.0, weights[index] + delta)
     if max_abs_knob is not None:
@@ -762,6 +768,7 @@ def _mutate_cross_channel_gain(
     delta: float,
     max_abs_knob: float | None,
 ) -> KnobPolicyCandidate:
+    """Return the candidate with a cross-channel gain mutated."""
     gains = list(seed.cross_channel_gains)
     value = max(0.0, gains[index] + delta)
     if max_abs_knob is not None:
@@ -780,6 +787,7 @@ def _mutate_cross_channel_gain(
 def _deduplicate_candidates(
     candidates: Sequence[KnobPolicyCandidate],
 ) -> tuple[KnobPolicyCandidate, ...]:
+    """Return the candidates de-duplicated."""
     deduplicated: list[KnobPolicyCandidate] = []
     seen: set[tuple[object, ...]] = set()
     for candidate in candidates:
@@ -798,6 +806,7 @@ def _deduplicate_candidates(
 
 
 def _require_probability(value: float, label: str) -> None:
+    """Return ``value`` as a probability in [0, 1], else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{label} must be finite and within [0, 1]")
     parsed = float(value)
@@ -806,6 +815,7 @@ def _require_probability(value: float, label: str) -> None:
 
 
 def _require_non_negative_finite(value: float, label: str) -> float:
+    """Return ``value`` as a non-negative finite float, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{label} must be finite and non-negative")
     parsed = float(value)
@@ -815,6 +825,7 @@ def _require_non_negative_finite(value: float, label: str) -> float:
 
 
 def _optional_finite_real(value: float | None, label: str) -> float | None:
+    """Return ``None`` or a validated finite real, else raise."""
     if value is None:
         return None
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
@@ -826,6 +837,7 @@ def _optional_finite_real(value: float | None, label: str) -> float | None:
 
 
 def _optional_non_negative_finite(value: float | None, label: str) -> float | None:
+    """Return ``None`` or a validated non-negative finite float."""
     if value is None:
         return None
     return _require_non_negative_finite(value, label)
@@ -835,6 +847,7 @@ def _safety_constraint_reasons(
     observation: RewardObservation,
     constraints: SafetyConstraintConfig,
 ) -> tuple[str, ...]:
+    """Return the safety-constraint violation reasons for a candidate."""
     reasons: list[str] = []
     if constraints.max_lyapunov_exponent is not None:
         if observation.lyapunov_exponent is None:
@@ -866,6 +879,7 @@ def _safety_constraint_reasons(
 
 
 def _serialise_array(value: float | FloatArray) -> float | list[object]:
+    """Return an array serialised to a JSON-safe list."""
     array = _real_knob_array(value, "candidate knobs")
     if array.ndim == 0:
         return float(array)
@@ -873,6 +887,7 @@ def _serialise_array(value: float | FloatArray) -> float | list[object]:
 
 
 def _real_knob_array(value: object, label: str) -> FloatArray:
+    """Return the knob values as a validated real array, else raise."""
     raw = np.asarray(value)
     if raw.dtype == np.bool_ or _contains_alias(raw, (bool, np.bool_)):
         raise ValueError(f"{label} must not contain boolean values")
@@ -888,17 +903,20 @@ def _real_knob_array(value: object, label: str) -> FloatArray:
 
 
 def _contains_alias(raw: NDArray[np.generic], aliases: tuple[type, ...]) -> bool:
+    """Return whether the value contains a boolean or complex alias."""
     if raw.dtype != object:
         return False
     return any(isinstance(item, aliases) for item in raw.ravel())
 
 
 def _require_bool(value: object, label: str) -> None:
+    """Return ``value`` as a boolean, else raise ``ValueError``."""
     if not isinstance(value, bool):
         raise TypeError(f"{label} must be a boolean")
 
 
 def _validate_component_order(component_order: tuple[str, ...]) -> None:
+    """Return the validated component order, else raise."""
     if not isinstance(component_order, tuple) or not component_order:
         raise ValueError("component_order must be a non-empty tuple")
     seen: set[str] = set()
