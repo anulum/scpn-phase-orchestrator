@@ -8,11 +8,11 @@
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 217,
-    "python_package_modules": 657,
+    "python_package_modules": 658,
     "research_experimental_modules": 213,
-    "runtime_serving_modules": 121,
+    "runtime_serving_modules": 122,
     "rust_kernel_files": 97,
-    "test_files": 659
+    "test_files": 660
   },
   "documentation": {
     "public_pages": [
@@ -989,6 +989,7 @@
       "src/scpn_phase_orchestrator/scaffold/__init__.py",
       "src/scpn_phase_orchestrator/scaffold/llm.py",
       "src/scpn_phase_orchestrator/studio/__init__.py",
+      "src/scpn_phase_orchestrator/studio/federation_manifest.py",
       "src/scpn_phase_orchestrator/studio/product.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers/__init__.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers/_shared.py",
@@ -1534,6 +1535,7 @@
     "src/scpn_phase_orchestrator/ssgf/pgbo.py",
     "src/scpn_phase_orchestrator/ssgf/tcbo.py",
     "src/scpn_phase_orchestrator/studio/__init__.py",
+    "src/scpn_phase_orchestrator/studio/federation_manifest.py",
     "src/scpn_phase_orchestrator/studio/product.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers/__init__.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers/_shared.py",
@@ -2264,6 +2266,7 @@
       "tests/test_stuart_landau_parity.py",
       "tests/test_stuart_landau_replay.py",
       "tests/test_stuart_landau_validation.py",
+      "tests/test_studio_federation_manifest.py",
       "tests/test_studio_product.py",
       "tests/test_studio_public_facade.py",
       "tests/test_studio_ui_helpers.py",

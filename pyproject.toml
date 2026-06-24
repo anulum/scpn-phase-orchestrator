@@ -297,6 +297,14 @@ follow_imports = "skip"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+# scpn-studio-platform is an optional SDK (the ``studio`` extra) consumed only by
+# studio/federation_manifest.py behind a guarded import; it is not in the pinned
+# CI dev-lock, so treat it as untyped to type-check with or without it installed.
+module = ["scpn_studio_platform", "scpn_studio_platform.*"]
+follow_imports = "skip"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = ["scpn_phase_orchestrator.nn.*"]
 ignore_missing_imports = true
 
