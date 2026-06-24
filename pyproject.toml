@@ -59,7 +59,7 @@ queuewaves = [
     "httpx>=0.27,<1.0",
     "websockets>=12.0,<17.0",
 ]
-studio = ["streamlit>=1.36,<2.0"]
+studio = ["streamlit>=1.36,<2.0", "scpn-studio-platform>=0.3,<0.4"]
 nn = ["jax>=0.4,<1.0", "equinox>=0.11,<1.0", "optax>=0.2,<1.0"]
 mpc = ["osqp>=1.0,<2.0"]
 nengo = []  # pure-numpy LIF engine, no external deps

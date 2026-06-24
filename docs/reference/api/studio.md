@@ -186,3 +186,17 @@ reconciled against its source artifacts.
 ::: scpn_phase_orchestrator.studio.product
 
 ::: scpn_phase_orchestrator.studio.ui_helpers
+
+---
+
+## STUDIO federation manifest
+
+`federation_manifest` builds the schema-A `CapabilityManifest` the SCPN STUDIO
+Hub ingests (`scpn-studio-platform`): the verbs SPO exposes and their honesty
+attributes (safety tier, side effect, timing, fidelity, proof, produces,
+backends). It is distinct from `tools/capability_manifest.py`, which generates
+the repository's static public inventory. Honesty is built in by construction —
+no verb is `live-hardware`, none claims a discharged formal `proof`, and the
+safety tier is `research`. Requires the `studio` optional extra.
+
+::: scpn_phase_orchestrator.studio.federation_manifest
