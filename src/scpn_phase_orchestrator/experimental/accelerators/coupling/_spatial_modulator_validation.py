@@ -22,6 +22,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     if isinstance(value, np.ndarray):
         if value.dtype == np.bool_:
             return True
@@ -35,6 +36,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value)
     if np.iscomplexobj(raw):
         return True
@@ -48,6 +50,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer")
     parsed = int(value)
@@ -57,6 +60,7 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 
 def _validate_scalar(value: object, *, name: str, positive: bool = False) -> float:
+    """Return ``value`` as a validated finite scalar, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real scalar")
     parsed = float(value)
@@ -68,6 +72,7 @@ def _validate_scalar(value: object, *, name: str, positive: bool = False) -> flo
 
 
 def _validate_flat(value: object, *, name: str, expected: int) -> FloatArray:
+    """Return ``value`` as a validated flattened array, else raise."""
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be finite real-valued")
     try:

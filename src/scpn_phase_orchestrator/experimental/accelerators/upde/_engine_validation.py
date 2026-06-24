@@ -56,6 +56,7 @@ _METHODS = frozenset({"euler", "rk4", "rk45"})
 
 
 def _as_real_finite_array(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real array, else raise."""
     array = np.asarray(value)
     if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
         raise TypeError(f"{name} must be real-valued, not boolean")
@@ -70,6 +71,7 @@ def _as_real_finite_array(value: Any, *, name: str) -> FloatArray:
 
 
 def _as_vector(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated 1-D finite array, else raise."""
     array = _as_real_finite_array(value, name=name)
     if array.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional vector")
@@ -79,6 +81,7 @@ def _as_vector(value: Any, *, name: str) -> FloatArray:
 
 
 def _as_square_flat(value: Any, *, name: str, n: int) -> FloatArray:
+    """Return ``value`` as a validated flattened square matrix, else raise."""
     array = _as_real_finite_array(value, name=name)
     if array.ndim == 2:
         if array.shape != (n, n):
@@ -94,6 +97,7 @@ def _as_square_flat(value: Any, *, name: str, n: int) -> FloatArray:
 
 
 def _as_finite_real(value: Any, *, name: str, positive: bool = False) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a real scalar")
     out = float(value)
@@ -105,6 +109,7 @@ def _as_finite_real(value: Any, *, name: str, positive: bool = False) -> float:
 
 
 def _as_non_negative_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     out = int(value)
@@ -114,6 +119,7 @@ def _as_non_negative_int(value: Any, *, name: str) -> int:
 
 
 def _as_positive_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     out = int(value)
@@ -123,6 +129,7 @@ def _as_positive_int(value: Any, *, name: str) -> int:
 
 
 def _as_method(value: Any) -> str:
+    """Return the validated integration-method name, else raise."""
     if not isinstance(value, str):
         raise TypeError("method must be a string")
     if value not in _METHODS:

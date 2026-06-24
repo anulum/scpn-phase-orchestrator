@@ -22,6 +22,7 @@ __all__ = ["validate_spectral_backend_inputs"]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     if isinstance(value, np.ndarray):
         if value.dtype == np.bool_:
             return True
@@ -35,6 +36,7 @@ def _contains_boolean_alias(value: object) -> bool:
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value)
     if np.iscomplexobj(raw):
         return True
@@ -48,6 +50,7 @@ def _contains_complex_alias(value: object) -> bool:
 
 
 def _validate_n(value: object) -> int:
+    """Return the validated oscillator count, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError("n must be a non-negative integer")
     n_int = int(value)
@@ -57,6 +60,7 @@ def _validate_n(value: object) -> int:
 
 
 def _validate_knm_flat(value: object) -> FloatArray:
+    """Return ``value`` as a validated flattened coupling matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("knm_flat must not contain boolean values")
     raw = np.asarray(value)

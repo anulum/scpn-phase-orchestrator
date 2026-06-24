@@ -36,6 +36,7 @@ ValidatedSwarmalatorInputs: TypeAlias = tuple[
 
 
 def _as_real_array(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real array, else raise."""
     array = np.asarray(value)
     if np.issubdtype(array.dtype, np.bool_):
         raise ValueError(f"{name} must be real-valued, not boolean")
@@ -50,6 +51,7 @@ def _as_real_array(value: Any, *, name: str) -> FloatArray:
 
 
 def _as_real_vector(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real vector, else raise."""
     out = _as_real_array(value, name=name)
     if out.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional vector")
@@ -57,6 +59,7 @@ def _as_real_vector(value: Any, *, name: str) -> FloatArray:
 
 
 def _as_position_matrix(value: Any, *, n: int, dim: int, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite position matrix, else raise."""
     out = _as_real_array(value, name=name)
     expected = n * dim
     if out.shape == (n, dim):
@@ -67,6 +70,7 @@ def _as_position_matrix(value: Any, *, n: int, dim: int, name: str) -> FloatArra
 
 
 def _as_positive_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-boolean integer")
     out = int(value)
@@ -76,6 +80,7 @@ def _as_positive_int(value: Any, *, name: str) -> int:
 
 
 def _as_finite_real(value: Any, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real")
     out = float(value)
@@ -85,6 +90,7 @@ def _as_finite_real(value: Any, *, name: str) -> float:
 
 
 def _as_positive_real(value: Any, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     out = _as_finite_real(value, name=name)
     if out <= 0.0:
         raise ValueError(f"{name} must be positive")

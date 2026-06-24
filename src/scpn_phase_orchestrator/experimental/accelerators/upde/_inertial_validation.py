@@ -23,6 +23,7 @@ __all__ = ["validate_inertial_inputs", "validate_inertial_output"]
 
 
 def _as_real_vector(value: Any, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real vector, else raise."""
     arr = np.asarray(value)
     if arr.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional float64 vector")
@@ -37,12 +38,14 @@ def _as_real_vector(value: Any, *, name: str) -> FloatArray:
 
 
 def _validate_positive_int(value: Any, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer")
     return int(value)
 
 
 def _validate_positive_real(value: Any, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real")
     out = float(value)
@@ -52,6 +55,7 @@ def _validate_positive_real(value: Any, *, name: str) -> float:
 
 
 def _validate_length(value: Any, *, name: str, n: int) -> FloatArray:
+    """Assert the array length matches the expected size, else raise."""
     arr = _as_real_vector(value, name=name)
     if arr.size != n:
         raise ValueError(f"{name} must have length n")
@@ -59,6 +63,7 @@ def _validate_length(value: Any, *, name: str, n: int) -> FloatArray:
 
 
 def _validate_positive_vector(value: Any, *, name: str, n: int) -> FloatArray:
+    """Return ``value`` as a validated strictly positive vector, else raise."""
     arr = _validate_length(value, name=name, n=n)
     if np.any(arr <= 0.0):
         raise ValueError(f"{name} must contain only positive finite values")
@@ -66,6 +71,7 @@ def _validate_positive_vector(value: Any, *, name: str, n: int) -> FloatArray:
 
 
 def _validate_coupling(value: Any, *, n: int) -> FloatArray:
+    """Return the coupling as a validated finite matrix, else raise."""
     arr = _as_real_vector(value, name="knm_flat")
     if arr.size != n * n:
         raise ValueError("knm_flat must have exactly n*n entries")
