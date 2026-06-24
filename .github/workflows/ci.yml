@@ -127,6 +127,48 @@ jobs:
           --ignore-glob=tests/test_nn_physics_validation*.py
           -m slow
 
+  nn-coverage:
+    # The slow nn/physics-validation test files are --ignore'd in both the main
+    # ``test`` job (``-m "not slow"``) and the ``slow-tests`` job (``-m slow``)
+    # because they are slow-running but not slow-MARKED, so they fall through both
+    # filters. They fully exercise the nn modules (e.g. test_inverse.py drives
+    # nn/inverse.py to 100%), but their coverage was never collected, leaving the
+    # nn subsystem artificially low in the merged report. This lane runs exactly
+    # those files WITH coverage so the merged coverage reflects reality.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HYPOTHESIS_PROFILE: ci
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - name: Run the slow nn/physics tests with coverage
+        run: >
+          pytest
+          tests/test_inverse.py
+          tests/test_oim.py
+          tests/test_bold.py
+          tests/test_reservoir.py
+          tests/test_ude_kuramoto.py
+          tests/test_kuramoto_layer.py
+          tests/test_stuart_landau_nn.py
+          tests/test_nn_physics_validation*.py
+          --tb=short -p no:cacheprovider
+          -k "not performance"
+          --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+      - name: Rename coverage data (nn)
+        run: mv .coverage .coverage.nn
+      - name: Upload coverage data (nn)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-data-nn
+          path: .coverage.nn
+          include-hidden-files: true
+
   julia-backend:
     # The Julia backend cannot be exercised under the main coverage matrix:
     # coverage's thread tracer stops juliacall/PythonCall from injecting
@@ -169,7 +211,7 @@ jobs:
         run: pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
 
   coverage-guard:
-    needs: [test, ffi-test]
+    needs: [test, ffi-test, nn-coverage]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -186,9 +228,13 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: coverage-data-ffi
+      - name: Download nn coverage
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: coverage-data-nn
       - name: Combine coverage and generate XML
         run: |
-          coverage combine .coverage.test .coverage.ffi
+          coverage combine .coverage.test .coverage.ffi .coverage.nn
           coverage xml -o coverage-python.xml
           coverage report
       - name: Upload merged coverage XML
