@@ -64,6 +64,7 @@ def _require_finite_real(
     field: str,
     positive: bool,
 ) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if (
         not isinstance(value, Real)
         or isinstance(value, bool)
@@ -79,6 +80,7 @@ def _require_finite_real(
 
 
 def _require_unit_interval(value: object, *, field: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     result = _require_finite_real(value, field=field, positive=False)
     if result > 1.0:
         raise ValueError(f"{field} must be in [0, 1]")
@@ -86,6 +88,7 @@ def _require_unit_interval(value: object, *, field: str) -> float:
 
 
 def _require_phase(value: object, *, field: str) -> float:
+    """Return ``value`` as a validated phase in radians, else raise."""
     if (
         not isinstance(value, Real)
         or isinstance(value, bool)
@@ -97,6 +100,7 @@ def _require_phase(value: object, *, field: str) -> float:
 
 
 def _valid_peer_state(peer: PeerState, *, now: float, timeout_s: float) -> bool:
+    """Return whether a peer state payload is valid."""
     if not isinstance(peer.node_id, str) or not peer.node_id:
         return False
     if not isinstance(peer.R, Real) or isinstance(peer.R, bool):
@@ -120,6 +124,7 @@ def _decode_peer_state_payload(
     local_node_id: str,
     timestamp: float,
 ) -> PeerState | None:
+    """Return the decoded peer state from a payload, else raise."""
     if not isinstance(payload, dict):
         return None
 
@@ -140,6 +145,7 @@ def _decode_peer_state_payload(
 def _validated_peer_addresses(
     peer_addresses: list[tuple[str, int]] | None,
 ) -> list[tuple[str, int]]:
+    """Return the validated peer addresses, else raise."""
     if peer_addresses is None:
         return []
     if not isinstance(peer_addresses, list):

@@ -62,6 +62,7 @@ _REFRACTORY_PERIOD = 0
 
 
 def _require_positive_int(value: object, *, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a positive integer")
     result = int(value)
@@ -76,6 +77,7 @@ def _require_finite_real(
     field: str,
     positive: bool,
 ) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if (
         not isinstance(value, Real)
         or isinstance(value, bool)
@@ -91,6 +93,7 @@ def _require_finite_real(
 
 
 def _require_seed(value: int | None) -> int | None:
+    """Return the validated random seed, else raise."""
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, Integral):
@@ -102,6 +105,7 @@ def _require_seed(value: int | None) -> int | None:
 
 
 def _require_unit_interval(value: object, *, field: str) -> float:
+    """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     result = _require_finite_real(value, field=field, positive=False)
     if result > 1.0:
         raise ValueError(f"{field} must be in [0, 1]")
@@ -109,6 +113,7 @@ def _require_unit_interval(value: object, *, field: str) -> float:
 
 
 def _has_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     if isinstance(value, bool | np.bool_):
         return True
     if isinstance(value, np.ndarray):
@@ -122,6 +127,7 @@ def _has_boolean_alias(value: object) -> bool:
 
 
 def _require_rate_vector(value: object, *, n_layers: int) -> FloatArray:
+    """Return the validated firing-rate vector, else raise."""
     if _has_boolean_alias(value):
         raise ValueError("rates must be real-valued, finite, and non-negative")
     try:

@@ -38,6 +38,7 @@ __all__ = ["LSLBCIBridge", "HAS_LSL"]
 
 
 def _validate_stream_name(stream_name: str) -> str:
+    """Return the validated LSL stream name, else raise."""
     if not isinstance(stream_name, str) or not stream_name:
         raise ValueError("stream_name must be a non-empty string")
     if any(ord(char) < 32 for char in stream_name):
@@ -46,6 +47,7 @@ def _validate_stream_name(stream_name: str) -> str:
 
 
 def _validate_target_channel(target_channel: int) -> int:
+    """Return the validated target channel, else raise."""
     if isinstance(target_channel, bool) or not isinstance(target_channel, Integral):
         raise ValueError("target_channel must be a non-negative integer")
     channel = int(target_channel)
@@ -55,6 +57,7 @@ def _validate_target_channel(target_channel: int) -> int:
 
 
 def _validate_buffer_size_s(buffer_size_s: float) -> float:
+    """Return the buffer size (s) as a validated positive value, else raise."""
     if (
         isinstance(buffer_size_s, bool)
         or not isinstance(buffer_size_s, Real)
@@ -66,6 +69,7 @@ def _validate_buffer_size_s(buffer_size_s: float) -> float:
 
 
 def _validate_connect_timeout(connect_timeout: float) -> float:
+    """Return the connection timeout as a validated positive value, else raise."""
     if (
         isinstance(connect_timeout, bool)
         or not isinstance(connect_timeout, Real)
@@ -77,6 +81,7 @@ def _validate_connect_timeout(connect_timeout: float) -> float:
 
 
 def _validate_nominal_srate(nominal_srate: Any) -> float:
+    """Return the nominal sampling rate as a validated positive value, else raise."""
     if (
         isinstance(nominal_srate, bool)
         or not isinstance(nominal_srate, Real)
@@ -88,6 +93,7 @@ def _validate_nominal_srate(nominal_srate: Any) -> float:
 
 
 def _is_valid_sample(sample: Any) -> bool:
+    """Return whether an LSL sample is valid."""
     if isinstance(sample, bool):
         return False
     try:
@@ -98,6 +104,7 @@ def _is_valid_sample(sample: Any) -> bool:
 
 
 def _is_valid_timestamp(timestamp: Any) -> bool:
+    """Return whether an LSL timestamp is valid."""
     if isinstance(timestamp, bool):
         return False
     try:

@@ -42,6 +42,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_n_oscillators(n_oscillators: int) -> int:
+    """Return the oscillator count as a positive integer, else raise."""
     if (
         isinstance(n_oscillators, bool)
         or not isinstance(n_oscillators, int)
@@ -52,6 +53,7 @@ def _validate_n_oscillators(n_oscillators: int) -> int:
 
 
 def _validate_positive_scale(name: str, value: float) -> float:
+    """Return ``value`` as a strictly positive scale, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real number")
     result = float(value)
@@ -61,6 +63,7 @@ def _validate_positive_scale(name: str, value: float) -> float:
 
 
 def _validate_nonnegative_real(name: str, value: float) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real number")
     result = float(value)
@@ -70,6 +73,7 @@ def _validate_nonnegative_real(name: str, value: float) -> float:
 
 
 def _finite_array(value: FloatArray, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite array, else raise."""
     try:
         array = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -81,6 +85,7 @@ def _finite_array(value: FloatArray, name: str) -> FloatArray:
 
 
 def _validate_square_matrix(value: FloatArray, name: str, n: int) -> FloatArray:
+    """Return the value as a validated finite square matrix, else raise."""
     array = _finite_array(value, name)
     if array.shape != (n, n):
         raise ValueError(f"{name} must have shape ({n}, {n})")
@@ -92,6 +97,7 @@ def _validate_nonnegative_square_matrix(
     name: str,
     n: int,
 ) -> FloatArray:
+    """Return a validated non-negative finite square matrix, else raise."""
     array = _validate_square_matrix(value, name, n)
     if np.any(array < 0.0):
         raise ValueError(f"{name} must contain only non-negative values")
@@ -99,6 +105,7 @@ def _validate_nonnegative_square_matrix(
 
 
 def _validate_vector(value: FloatArray, name: str, n: int) -> FloatArray:
+    """Return the value as a validated 1-D finite array, else raise."""
     array = _finite_array(value, name)
     if array.shape != (n,):
         raise ValueError(f"{name} must have shape ({n},)")
@@ -106,6 +113,7 @@ def _validate_vector(value: FloatArray, name: str, n: int) -> FloatArray:
 
 
 def _validate_nonnegative_vector(value: FloatArray, name: str, n: int) -> FloatArray:
+    """Return a validated non-negative finite vector, else raise."""
     array = _validate_vector(value, name, n)
     if np.any(array < 0.0):
         raise ValueError(f"{name} must contain only non-negative values")

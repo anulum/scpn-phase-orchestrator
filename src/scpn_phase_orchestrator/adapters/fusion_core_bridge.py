@@ -45,6 +45,7 @@ _OBS_NAMES = [
 
 
 def _finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if not isinstance(value, Real) or isinstance(value, bool):
         raise ValueError(f"{name} must be a finite real value")
     result = float(value)
@@ -54,6 +55,7 @@ def _finite_real(value: object, *, name: str) -> float:
 
 
 def _finite_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     result = _finite_real(value, name=name)
     if result <= 0.0:
         raise ValueError(f"{name} must be positive")
@@ -61,6 +63,7 @@ def _finite_positive_real(value: object, *, name: str) -> float:
 
 
 def _finite_non_negative_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     result = _finite_real(value, name=name)
     if result < 0.0:
         raise ValueError(f"{name} must be non-negative")
@@ -68,12 +71,14 @@ def _finite_non_negative_real(value: object, *, name: str) -> float:
 
 
 def _non_negative_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be a non-negative integer")
     return int(value)
 
 
 def _finite_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite vector, else raise."""
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
@@ -94,6 +99,7 @@ def _finite_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_q_bounds(q_min: float, q_max: float) -> None:
+    """Return the validated safety-factor (q) bounds, else raise."""
     if q_max <= q_min:
         raise ValueError("q_max must be greater than q_min")
 

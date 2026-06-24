@@ -33,6 +33,7 @@ JSONConfig: TypeAlias = dict[str, object]
 
 
 def _has_non_real_numeric_alias(value: object) -> bool:
+    """Return whether the value contains a non-real numeric alias."""
     if isinstance(value, bool | np.bool_):
         return True
     if isinstance(value, complex | np.complexfloating):
@@ -49,12 +50,14 @@ def _has_non_real_numeric_alias(value: object) -> bool:
 
 
 def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated real numeric array, else raise."""
     if _has_non_real_numeric_alias(value):
         raise ValueError(f"{name} must be real-valued numeric data")
     return np.asarray(value, dtype=np.float64)
 
 
 def _validate_config_value(value: object, *, path: str) -> object:
+    """Return a validated SCPN-control config value, else raise."""
     if value is None or isinstance(value, str | bool):
         return value
     if isinstance(value, Real):
@@ -75,6 +78,7 @@ def _validate_config_value(value: object, *, path: str) -> object:
 def _validate_scpn_config(
     config: dict[str, Any], *, path: str = "scpn_config"
 ) -> JSONConfig:
+    """Validate and normalise the SCPN-control configuration, else raise."""
     validated: JSONConfig = {}
     for key, value in config.items():
         if not isinstance(key, str) or not key:

@@ -53,10 +53,12 @@ SynapseMessage: TypeAlias = dict[str, object]
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _reject_duplicate_json_key(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Raise if the JSON object has duplicate keys."""
     result: dict[str, Any] = {}
     for key, value in pairs:
         if key in result:
@@ -66,6 +68,7 @@ def _reject_duplicate_json_key(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _loads_hub_json(payload: str) -> Any:
+    """Load and validate a SYNAPSE hub JSON payload, else raise."""
     try:
         return json.loads(
             payload,
@@ -299,6 +302,7 @@ class SynapseChannelBridge:
             return  # connection error — caller should retry
 
     def _process_message(self, msg: object) -> None:
+        """Process an incoming SYNAPSE hub message."""
         message = _normalise_hub_message(msg)
         if message is None:
             return
