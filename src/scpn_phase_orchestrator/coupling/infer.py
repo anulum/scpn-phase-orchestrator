@@ -51,6 +51,7 @@ __all__ = [
 
 
 def _validate_optional_finite_real(value: object | None, *, name: str) -> float | None:
+    """Return ``None`` or a validated finite real, else raise."""
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, Real):
@@ -62,6 +63,7 @@ def _validate_optional_finite_real(value: object | None, *, name: str) -> float 
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, bool) for item in raw.ravel())
 
@@ -174,6 +176,7 @@ class CouplingInferenceResult:
 
 
 def _validate_phase_series(value: object, *, min_timesteps: int) -> FloatArray:
+    """Return the phase series as a validated 2-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("phase_series must not contain boolean values")
     raw = np.asarray(value)
@@ -208,6 +211,7 @@ def _validate_phase_series(value: object, *, min_timesteps: int) -> FloatArray:
 
 
 def _validate_config(config: CouplingInferenceConfig) -> CouplingInferenceConfig:
+    """Validate and normalise the inference config, else raise."""
     if config.method not in {"transfer_entropy", "granger", "notears"}:
         raise ValueError("method must be one of: transfer_entropy, granger, notears")
     if isinstance(config.n_bins, bool) or not isinstance(config.n_bins, int):
@@ -241,6 +245,7 @@ def _validate_config(config: CouplingInferenceConfig) -> CouplingInferenceConfig
 def _threshold_scores(
     scores: FloatArray, config: CouplingInferenceConfig
 ) -> tuple[float, BoolArray]:
+    """Return the coupling scores thresholded into a sparse matrix."""
     off_diagonal = ~np.eye(scores.shape[0], dtype=bool)
     positive_scores = scores[(scores > 0.0) & off_diagonal]
     if config.threshold_absolute is not None:
@@ -258,6 +263,7 @@ def _threshold_scores(
 def _normalise_knm(
     scores: FloatArray, support: BoolArray, normalisation: NormalisationMode
 ) -> FloatArray:
+    """Return the inferred coupling normalised to the expected scale."""
     masked = np.where(support, scores, 0.0).astype(np.float64, copy=False)
     if normalisation == "none":
         return np.ascontiguousarray(masked, dtype=np.float64)

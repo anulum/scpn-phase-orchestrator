@@ -124,6 +124,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> HodgeBackend:
+    """Load the Rust Hodge-decomposition backend callable."""
     from spo_kernel import hodge_decomposition_rust
 
     def _rust(
@@ -135,6 +136,7 @@ def _load_rust_fn() -> HodgeBackend:
         tris_flat: IntArray,
         n_tris: int,
     ) -> HodgeTuple:
+        """Call the Rust Hodge-decomposition kernel."""
         g, c, h = hodge_decomposition_rust(
             np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64),
             np.ascontiguousarray(phases.ravel(), dtype=np.float64),
@@ -155,6 +157,7 @@ def _load_rust_fn() -> HodgeBackend:
 
 def _load_mojo_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
+    """Load the Mojo Hodge-decomposition backend callable."""
     from ..experimental.accelerators.coupling._hodge_mojo import (
         _ensure_exe,
         hodge_decomposition_mojo,
@@ -166,6 +169,7 @@ def _load_mojo_fn() -> HodgeBackend:
 
 def _load_julia_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
+    """Load the Julia Hodge-decomposition backend callable."""
     import juliacall  # noqa: F401
 
     from ..experimental.accelerators.coupling._hodge_julia import (
@@ -177,6 +181,7 @@ def _load_julia_fn() -> HodgeBackend:
 
 def _load_go_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
+    """Load the Go Hodge-decomposition backend callable."""
     from ..experimental.accelerators.coupling._hodge_go import (
         _load_lib,
         hodge_decomposition_go,
@@ -199,6 +204,7 @@ _BACKEND_CACHE: dict[str, HodgeBackend] = {}
 
 
 def _load_backend(name: str) -> HodgeBackend:
+    """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
         return cached
@@ -208,6 +214,7 @@ def _load_backend(name: str) -> HodgeBackend:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
+    """Resolve the active and available backends, fastest-first."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -224,6 +231,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch() -> HodgeBackend | None:
+    """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -269,11 +277,13 @@ class HodgeResult:
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, bool) for item in raw.ravel())
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    """Return the phases as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -291,6 +301,7 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_coupling_matrix(value: object, *, expected_n: int) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("knm must not contain boolean values")
     raw = np.asarray(value)
@@ -535,6 +546,7 @@ def _normalise_backend_output(
     *,
     expected_n: int,
 ) -> HodgeTuple:
+    """Return the normalised backend Hodge decomposition output."""
     gradient, curl, harmonic = (
         np.asarray(output[0], dtype=np.float64),
         np.asarray(output[1], dtype=np.float64),
@@ -560,6 +572,7 @@ def _backend_matches_reference(
     backend_output: HodgeTuple,
     reference: HodgeTuple,
 ) -> bool:
+    """Return whether the backend output matches the reference."""
     return all(
         np.allclose(actual, expected, rtol=_BACKEND_RTOL, atol=_BACKEND_ATOL)
         for actual, expected in zip(backend_output, reference, strict=True)

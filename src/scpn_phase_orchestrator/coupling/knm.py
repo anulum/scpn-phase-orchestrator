@@ -91,6 +91,7 @@ SCPN_CALIBRATION_ANCHORS: dict[tuple[int, int], float] = {
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
@@ -103,6 +104,7 @@ def _validate_finite_float(
     lower_bound: float | None = None,
     inclusive: bool = True,
 ) -> float:
+    """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     coerced = float(value)
@@ -117,6 +119,7 @@ def _validate_finite_float(
 
 
 def _validate_layer_index(value: object, *, name: str, n_layers: int) -> int:
+    """Return the validated layer index, else raise."""
     index = _validate_positive_int(value, name=name)
     if index > n_layers:
         raise ValueError(f"{name} must be in [1, {n_layers}], got {value!r}")
@@ -124,10 +127,12 @@ def _validate_layer_index(value: object, *, name: str, n_layers: int) -> int:
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Return a JSON object with unique keys, else raise."""
     record: dict[str, Any] = {}
     for key, value in pairs:
         if key in record:
@@ -137,6 +142,7 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _loads_knm_json(payload: str) -> Any:
+    """Load and validate a coupling matrix from JSON, else raise."""
     try:
         return json.loads(
             payload,
@@ -155,6 +161,7 @@ def _validate_coupling_output(
     *,
     n_layers: int,
 ) -> tuple[FloatArray, FloatArray]:
+    """Return the validated coupling-matrix output, else raise."""
     try:
         knm_array = np.asarray(knm, dtype=np.float64).reshape(n_layers, n_layers)
         alpha_array = np.asarray(alpha, dtype=np.float64).reshape(n_layers, n_layers)

@@ -34,16 +34,19 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
 
 
 def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.ravel())
 
 
 def _validate_knm_matrix(value: object, *, name: str = "Knm") -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_complex_alias(value):

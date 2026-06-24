@@ -41,11 +41,13 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, bool) for item in raw.ravel())
 
 
 def _validate_knm(value: object) -> FloatArray:
+    """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("knm must not contain boolean values")
     try:
@@ -60,6 +62,7 @@ def _validate_knm(value: object) -> FloatArray:
 
 
 def _validate_target_ratio(value: object) -> float:
+    """Return the validated target excitation/inhibition ratio, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError("target_ratio must be a finite positive real")
     target_ratio = float(value)
@@ -91,6 +94,7 @@ class EIBalance:
 
 
 def _validate_indices(indices: list[int], n: int, name: str) -> list[int]:
+    """Return the validated excitatory/inhibitory indices, else raise."""
     valid: list[int] = []
     for idx in indices:
         if not isinstance(idx, int) or isinstance(idx, bool):

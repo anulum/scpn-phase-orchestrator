@@ -31,6 +31,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _matrix_copy(matrix: FloatArray) -> FloatArray:
+    """Return a contiguous float64 copy of a matrix."""
     return np.array(matrix, dtype=np.float64, copy=True)
 
 

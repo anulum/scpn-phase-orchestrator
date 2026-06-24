@@ -46,11 +46,13 @@ _MAX_SEED = 2**64 - 1
 
 
 def _contains_boolean_alias(value: object) -> bool:
+    """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, bool) for item in raw.ravel())
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} prior hyperparameter must be a finite real")
 
@@ -61,6 +63,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 
 def _validate_positive_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a strictly positive finite real, else raise."""
     resolved = _validate_finite_real(value, name=name)
     if resolved <= 0.0:
         raise ValueError(f"{name} prior hyperparameter must be positive")
@@ -68,6 +71,7 @@ def _validate_positive_real(value: object, *, name: str) -> float:
 
 
 def _validate_seed(value: object | None) -> int | None:
+    """Return the validated random seed, else raise."""
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, Integral):
@@ -79,6 +83,7 @@ def _validate_seed(value: object | None) -> int | None:
 
 
 def _validate_frequency_vector(value: object) -> FloatArray:
+    """Return the natural-frequency vector as a validated finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("omegas must not contain boolean values")
     raw = np.asarray(value)
