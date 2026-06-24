@@ -87,6 +87,7 @@ class AuditLogger:
         )
 
     def _load_previous_state(self) -> tuple[str, int]:
+        """Load the previous audit-chain state from disk, else raise."""
         if not self._path.exists() or self._path.stat().st_size == 0:
             return _ZERO_HASH, 0
         previous = _ZERO_HASH
@@ -108,6 +109,7 @@ class AuditLogger:
         return previous, sequence
 
     def _ensure_existing_stream_is_signed(self) -> None:
+        """Assert an existing audit stream is signed, else raise."""
         with self._path.open(encoding="utf-8") as fh:
             for line_number, line in enumerate(fh, start=1):
                 stripped = line.strip()
@@ -122,6 +124,7 @@ class AuditLogger:
                     raise AuditError(msg)
 
     def _write_record(self, record: dict[str, Any]) -> None:
+        """Append an audit record to the JSONL log."""
         clean = {k: v for k, v in record.items() if k != "_hash"}
         if self._audit_key is not None:
             clean = self._attach_signature_metadata(clean)
@@ -138,6 +141,7 @@ class AuditLogger:
             self._event_stream.write(stored)
 
     def _attach_signature_metadata(self, clean: dict[str, Any]) -> dict[str, Any]:
+        """Attach signature metadata to an audit record."""
         self._sequence += 1
         payload = _payload_without_audit_metadata(clean)
         payload_hash = _payload_hash(payload)
@@ -436,6 +440,7 @@ class AuditLogger:
 
 
 def _payload_without_audit_metadata(record: dict[str, Any]) -> dict[str, Any]:
+    """Return the payload with audit metadata stripped."""
     return {
         key: value
         for key, value in record.items()
@@ -446,16 +451,19 @@ def _payload_without_audit_metadata(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def _payload_hash(record: dict[str, Any]) -> str:
+    """Return the canonical hash of a payload."""
     payload = _payload_without_audit_metadata(record)
     payload_json = _dumps_audit_json(payload, compact=True)
     return hashlib.sha256(payload_json.encode()).hexdigest()
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _loads_audit_json(payload: str) -> dict[str, Any]:
+    """Load and validate an audit JSON payload, else raise."""
     try:
         decoded = json.loads(payload, parse_constant=_reject_json_constant)
     except json.JSONDecodeError:
@@ -468,6 +476,7 @@ def _loads_audit_json(payload: str) -> dict[str, Any]:
 
 
 def _dumps_audit_json(payload: dict[str, Any], *, compact: bool = False) -> str:
+    """Return the canonical JSON serialisation of an audit payload."""
     try:
         if compact:
             return json.dumps(

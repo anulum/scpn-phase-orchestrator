@@ -30,6 +30,7 @@ __all__ = [
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 

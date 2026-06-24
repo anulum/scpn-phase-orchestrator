@@ -109,10 +109,12 @@ class _NoOpSpan:
 
 
 def _escape_label_value(value: str) -> str:
+    """Return a Prometheus-escaped label value."""
     return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
 
 
 def _validated_latency_ms(latency_ms: object) -> float:
+    """Return the validated latency in milliseconds, else raise."""
     if (
         not isinstance(latency_ms, Real)
         or isinstance(latency_ms, bool)
@@ -124,6 +126,7 @@ def _validated_latency_ms(latency_ms: object) -> float:
 
 
 def _validated_regime(regime: object, *, allow_control: bool = False) -> str:
+    """Return the validated regime label, else raise."""
     if not isinstance(regime, str) or not regime:
         raise ValueError("regime must be a non-empty string")
     allowed_controls = {"\n", "\r", "\t"} if allow_control else set()
@@ -136,6 +139,7 @@ def _validated_regime(regime: object, *, allow_control: bool = False) -> str:
 
 
 def _validated_finite_metric(value: object, *, field: str) -> float:
+    """Return ``value`` as a validated finite metric, else raise."""
     if not isinstance(value, Real) or isinstance(value, bool):
         raise ValueError(f"{field} must be finite")
     result = float(value)
@@ -145,6 +149,7 @@ def _validated_finite_metric(value: object, *, field: str) -> float:
 
 
 def _validated_step_idx(step_idx: object) -> int:
+    """Return the validated step index, else raise."""
     if isinstance(step_idx, bool) or not isinstance(step_idx, Integral):
         raise ValueError("step_idx must be a non-negative integer")
     result = int(step_idx)
@@ -154,6 +159,7 @@ def _validated_step_idx(step_idx: object) -> int:
 
 
 def _validated_non_negative_count(value: object, *, field: str) -> int:
+    """Return ``value`` as a validated non-negative count, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{field} must be a non-negative integer")
     result = int(value)
@@ -163,18 +169,21 @@ def _validated_non_negative_count(value: object, *, field: str) -> int:
 
 
 def _validated_optional_sequence(value: object, *, field: str) -> int | None:
+    """Return the validated optional sequence number, or ``None``."""
     if value is None:
         return None
     return _validated_non_negative_count(value, field=field)
 
 
 def _validated_contract_hash(value: object) -> str:
+    """Return the validated contract hash, else raise."""
     if not isinstance(value, str) or not _CONTRACT_HASH_RE.fullmatch(value):
         raise ValueError("contract_hash must be a 64-character lowercase SHA-256 hex")
     return value
 
 
 def _validated_operator_status(value: object) -> str:
+    """Return the validated operator status, else raise."""
     if not isinstance(value, str) or value not in _OPERATOR_STATUS_VALUES:
         raise ValueError(
             "status must be one of healthy, warning, degraded, or critical"
@@ -183,6 +192,7 @@ def _validated_operator_status(value: object) -> str:
 
 
 def _validated_label_mapping(value: object, *, field: str) -> dict[str, int]:
+    """Return the validated metric label mapping, else raise."""
     if not isinstance(value, Mapping):
         raise ValueError(f"{field} must be a mapping")
     validated: dict[str, int] = {}
@@ -199,6 +209,7 @@ def _validated_label_mapping(value: object, *, field: str) -> dict[str, int]:
 
 
 def _validated_reason_counts(value: object, *, field: str) -> dict[str, int]:
+    """Return the validated per-reason counts, else raise."""
     if not isinstance(value, Iterable) or isinstance(value, str | bytes | Mapping):
         raise ValueError(f"{field} must be a sequence of non-empty strings")
     counts: dict[str, int] = {}
@@ -212,6 +223,7 @@ def _validated_reason_counts(value: object, *, field: str) -> dict[str, int]:
 
 
 def _validated_optional_residual(value: object, *, field: str) -> float | None:
+    """Return the validated optional residual, or ``None``."""
     if value is None:
         return None
     result = _validated_finite_metric(value, field=field)
@@ -223,6 +235,7 @@ def _validated_optional_residual(value: object, *, field: str) -> float | None:
 def _evidence_record(
     evidence: Mapping[str, object] | PrometheusEvidenceSource,
 ) -> Mapping[str, object]:
+    """Build the observability evidence record."""
     if isinstance(evidence, Mapping):
         return evidence
     if not hasattr(evidence, "to_audit_record"):
@@ -234,6 +247,7 @@ def _evidence_record(
 
 
 def _validated_otel_name(value: object, *, field: str) -> str:
+    """Return the validated OpenTelemetry metric name, else raise."""
     if not isinstance(value, str) or not _SPAN_NAME_RE.fullmatch(value):
         raise ValueError(f"{field} must be a valid OpenTelemetry name")
     return value
@@ -242,6 +256,7 @@ def _validated_otel_name(value: object, *, field: str) -> str:
 def _validated_attributes(
     attributes: Mapping[str, object] | None,
 ) -> dict[str, object] | None:
+    """Return the validated OpenTelemetry attributes, else raise."""
     if attributes is None:
         return None
     if not isinstance(attributes, Mapping):

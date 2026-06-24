@@ -80,6 +80,7 @@ def _load_mldsa() -> Any:
 
 
 def _require_variant(algorithm: str) -> str:
+    """Return the validated post-quantum signature variant, else raise."""
     if algorithm not in MLDSA_VARIANTS:
         raise ValueError(
             f"algorithm must be one of {MLDSA_VARIANTS}, got {algorithm!r}"
@@ -88,6 +89,7 @@ def _require_variant(algorithm: str) -> str:
 
 
 def _private_class(algorithm: str) -> Any:
+    """Return the post-quantum private-key class for the variant."""
     mldsa = _load_mldsa()
     return {
         "ml-dsa-44": mldsa.MLDSA44PrivateKey,
@@ -97,6 +99,7 @@ def _private_class(algorithm: str) -> Any:
 
 
 def _public_class(algorithm: str) -> Any:
+    """Return the post-quantum public-key class for the variant."""
     mldsa = _load_mldsa()
     return {
         "ml-dsa-44": mldsa.MLDSA44PublicKey,
@@ -117,6 +120,7 @@ def generate_signing_seed() -> str:
 
 
 def _validate_seed(seed_hex: object) -> bytes:
+    """Return the validated key seed, else raise."""
     if not isinstance(seed_hex, str):
         raise ValueError("seed must be a hex string")
     try:
@@ -187,6 +191,7 @@ def _signing_message(algorithm: str, record_count: int, tip_hash: str) -> bytes:
 
 
 def _validate_tip_hash(tip_hash: object) -> str:
+    """Return the validated audit-chain tip hash, else raise."""
     if not isinstance(tip_hash, str) or not tip_hash:
         raise ValueError("tip_hash must be a non-empty hex string")
     try:
@@ -199,6 +204,7 @@ def _validate_tip_hash(tip_hash: object) -> str:
 
 
 def _validate_record_count(record_count: object) -> int:
+    """Return the validated audit record count, else raise."""
     if isinstance(record_count, bool) or not isinstance(record_count, int):
         raise ValueError("record_count must be a non-negative integer")
     if record_count < 0:

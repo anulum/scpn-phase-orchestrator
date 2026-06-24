@@ -155,6 +155,7 @@ class AuditStreamEvent:
 
 
 def _build_audit_envelope_file_proto() -> descriptor_pb2.FileDescriptorProto:
+    """Build the protobuf file descriptor for the audit envelope."""
     file_proto = descriptor_pb2.FileDescriptorProto()
     file_proto.name = "audit.proto"
     file_proto.package = "spo.audit"
@@ -169,6 +170,7 @@ def _build_audit_envelope_file_proto() -> descriptor_pb2.FileDescriptorProto:
         field_type: int,
         type_name: str | None = None,
     ) -> None:
+        """Add a field descriptor to the protobuf message being built."""
         field = message.field.add()
         field_any = cast("Any", field)
         field_any.name = name
@@ -207,6 +209,7 @@ _AUDIT_ENVELOPE_FILE_PROTO_BYTES = _AUDIT_ENVELOPE_FILE_PROTO.SerializeToString(
 
 
 def _audit_envelope_class() -> type[Message]:
+    """Return the dynamically-built audit envelope protobuf class."""
     _ = _timestamp_pb2.DESCRIPTOR
     pool = descriptor_pool.DescriptorPool()
     try:
@@ -224,6 +227,7 @@ _AuditEnvelope = _audit_envelope_class()
 
 
 def _canonical_json(payload: Payload) -> str:
+    """Return the canonical JSON encoding of a payload."""
     try:
         return json.dumps(
             payload,
@@ -236,10 +240,12 @@ def _canonical_json(payload: Payload) -> str:
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _encode_varint(value: int) -> bytes:
+    """Encode an integer as a protobuf varint."""
     if value < 0:
         raise ValueError("varint cannot encode negative values")
     chunks = bytearray()
@@ -251,6 +257,7 @@ def _encode_varint(value: int) -> bytes:
 
 
 def _read_varint(fh: BinaryIO) -> int | None:
+    """Read a protobuf varint from the byte stream."""
     shift = 0
     result = 0
     while True:
@@ -279,6 +286,7 @@ def _event_hash(
     payload_sha256: str,
     schema_version: int,
 ) -> str:
+    """Return the SHA-256 hash of an audit event."""
     material = _canonical_json(
         {
             "event_type": event_type,
@@ -308,6 +316,7 @@ def _signature_material(
     schema_version: int,
     key_id: str,
 ) -> str:
+    """Return the canonical bytes signed for an audit event."""
     return _canonical_json(
         {
             "audit_mode": audit_mode,
@@ -326,6 +335,7 @@ def _signature_material(
 
 
 def _event_type_for_payload(payload: Payload) -> str:
+    """Return the audit event type for a payload."""
     if payload.get("header") is True:
         return "header"
     if "event" in payload:
@@ -336,6 +346,7 @@ def _event_type_for_payload(payload: Payload) -> str:
 
 
 def _message_to_event(message: Message) -> AuditStreamEvent:
+    """Convert a protobuf message into an audit event."""
     envelope = cast("Any", message)
     payload_json = str(envelope.payload_json)
     payload = json.loads(payload_json, parse_constant=_reject_json_constant)
@@ -463,6 +474,7 @@ class EventStreamWriter:
 
 
 def _read_events_from_handle(fh: BinaryIO) -> list[AuditStreamEvent]:
+    """Read audit events from an open file handle."""
     magic = fh.read(len(STREAM_MAGIC))
     if magic != STREAM_MAGIC:
         raise ValueError("not an SPO audit event stream")
@@ -497,6 +509,7 @@ def read_event_stream(path: str | Path) -> list[AuditStreamEvent]:
 
 
 def _validate_poll_interval_s(value: object) -> float:
+    """Return the poll interval (s) as a validated positive value, else raise."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError("poll_interval_s must be a finite non-negative real")
     parsed = float(value)
@@ -506,6 +519,7 @@ def _validate_poll_interval_s(value: object) -> float:
 
 
 def _validate_stream_id(value: object) -> str:
+    """Return the validated audit stream id, else raise."""
     if not isinstance(value, str) or not value:
         raise ValueError("stream_id must be a non-empty string")
     if len(value) > 128:
@@ -673,6 +687,7 @@ def _verify_event_signature(
     expected_hash: str,
     expected_previous_hash: str,
 ) -> bool:
+    """Return whether an audit event's signature is valid."""
     if event.audit_mode != "hmac-signed":
         return False
     if event.signature_algorithm != SIGNATURE_ALGORITHM:

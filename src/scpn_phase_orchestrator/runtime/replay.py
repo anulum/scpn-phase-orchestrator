@@ -49,10 +49,12 @@ _SL_REPLAY_FIELDS = frozenset(("phases", "omegas", "knm", "alpha"))
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, Any]:
+    """Return a JSON object with unique keys, else raise."""
     record: dict[str, Any] = {}
     for key, value in pairs:
         if key in record:
@@ -62,6 +64,7 @@ def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, Any]:
 
 
 def _parse_audit_json(line: str) -> dict[str, Any]:
+    """Parse an audit JSON record, else raise."""
     try:
         decoded = json.loads(
             line,
@@ -78,6 +81,7 @@ def _parse_audit_json(line: str) -> dict[str, Any]:
 
 
 def _canonical_audit_json(entry: dict[str, Any]) -> str:
+    """Return the canonical JSON encoding of an audit record."""
     try:
         return json.dumps(
             entry,
@@ -92,6 +96,7 @@ def _canonical_audit_json(entry: dict[str, Any]) -> str:
 
 
 def _layer_records(step_data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the per-layer records from a step entry."""
     layers = step_data.get("layers", [])
     if not isinstance(layers, list):
         return []
@@ -99,6 +104,7 @@ def _layer_records(step_data: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _numeric_value(value: object) -> float:
+    """Return a named numeric field from a mapping, else raise."""
     if isinstance(value, Real) and not isinstance(value, bool):
         parsed = float(value)
         if isfinite(parsed):
@@ -107,12 +113,14 @@ def _numeric_value(value: object) -> float:
 
 
 def _required_header_value(header: dict[str, Any], field: str) -> object:
+    """Return a required header field, else raise."""
     if field not in header:
         raise ValueError(f"audit header missing {field}")
     return header[field]
 
 
 def _required_header_int(header: dict[str, Any], field: str) -> int:
+    """Return a required integer header field, else raise."""
     value = _required_header_value(header, field)
     if isinstance(value, int) and not isinstance(value, bool) and value > 0:
         return value
@@ -120,6 +128,7 @@ def _required_header_int(header: dict[str, Any], field: str) -> int:
 
 
 def _required_header_float(header: dict[str, Any], field: str) -> float:
+    """Return a required float header field, else raise."""
     value = _required_header_value(header, field)
     parsed = _numeric_value(value)
     if parsed > 0.0:
@@ -128,6 +137,7 @@ def _required_header_float(header: dict[str, Any], field: str) -> float:
 
 
 def _header_method(header: dict[str, Any]) -> str:
+    """Return the integration method from the audit header."""
     value = header.get("method", "euler")
     if isinstance(value, str) and value in _ENGINE_METHODS:
         return value
@@ -136,6 +146,7 @@ def _header_method(header: dict[str, Any]) -> str:
 
 
 def _header_amplitude_mode(header: dict[str, Any]) -> bool:
+    """Return the amplitude mode from the audit header."""
     value = header.get("amplitude_mode", False)
     if isinstance(value, bool):
         return value
@@ -143,6 +154,7 @@ def _header_amplitude_mode(header: dict[str, Any]) -> bool:
 
 
 def _has_fields(entry: dict[str, Any], fields: frozenset[str]) -> bool:
+    """Return whether a mapping has all the required fields."""
     return all(field in entry for field in fields)
 
 
@@ -511,6 +523,7 @@ def _verify_hmac_signature(
     expected_previous_hash: str,
     expected_sequence: int,
 ) -> bool:
+    """Return whether an audit record's HMAC signature is valid."""
     signature = entry.get("_signature")
     if not isinstance(signature, dict):
         return False
@@ -576,6 +589,7 @@ def _verify_hmac_signature(
 def _payload_without_audit_metadata(
     record: dict[str, Any],
 ) -> dict[str, Any]:
+    """Return the payload with audit metadata stripped."""
     return {
         key: value
         for key, value in record.items()
