@@ -38,10 +38,12 @@ _PACKAGE_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Return a JSON object with unique keys, else raise."""
     record: dict[str, Any] = {}
     for key, value in pairs:
         if key in record:
@@ -51,6 +53,7 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _loads_meta_json(payload: str) -> Any:
+    """Load and validate a meta-transfer payload from JSON, else raise."""
     try:
         return json.loads(
             payload,
@@ -504,6 +507,7 @@ def records_from_audit_directory(
 
 
 def _record_from_payload(payload: dict[str, Any], line_number: int) -> MetaPolicyRecord:
+    """Return a validated transfer record from a payload, else raise."""
     domain = str(payload.get("domain") or payload.get("domainpack") or "unknown")
     feature_payload = payload.get("features", payload.get("metrics", {}))
     knob_payload = payload.get("knobs")
@@ -523,6 +527,7 @@ def _record_from_payload(payload: dict[str, Any], line_number: int) -> MetaPolic
 
 
 def _knobs_from_actions(actions: object) -> dict[str, float]:
+    """Return the knob settings implied by a record's actions."""
     if not isinstance(actions, list):
         return {}
     by_knob: dict[str, list[float]] = {}
@@ -540,6 +545,7 @@ def _knobs_from_actions(actions: object) -> dict[str, float]:
 
 
 def _feature_keys(records: tuple[MetaPolicyRecord, ...]) -> tuple[str, ...]:
+    """Return the ordered feature keys for the domain summaries."""
     keys = sorted({key for record in records for key in record.features})
     if not keys:
         raise ValueError("records must contain at least one feature")
@@ -550,6 +556,7 @@ def _training_summary(
     records: tuple[MetaPolicyRecord, ...],
     feature_keys: tuple[str, ...],
 ) -> MetaTrainingSummary:
+    """Return the reduced training summary for a domain."""
     rewards = np.array([record.reward for record in records], dtype=np.float64)
     knob_keys = sorted({knob for record in records for knob in record.knobs})
     domains = tuple(sorted({record.domain for record in records}))
@@ -569,6 +576,7 @@ def _feature_vector(
     features: dict[str, float],
     keys: tuple[str, ...],
 ) -> FloatArray:
+    """Return the feature vector for a domain summary."""
     result: FloatArray = np.array(
         [features.get(key, 0.0) for key in keys],
         dtype=np.float64,
@@ -577,6 +585,7 @@ def _feature_vector(
 
 
 def _cosine_similarity(left: FloatArray, right: FloatArray) -> float:
+    """Return the cosine similarity between two feature vectors."""
     left_norm = float(np.linalg.norm(left))
     right_norm = float(np.linalg.norm(right))
     if left_norm == 0.0 or right_norm == 0.0:
@@ -590,6 +599,7 @@ def _proposal_weights(
     records: tuple[MetaPolicyRecord, ...],
     order: IntArray,
 ) -> FloatArray:
+    """Return the source-domain weights for a target proposal."""
     rewards = np.array(
         [max(0.0, records[int(index)].reward) for index in order],
         dtype=np.float64,
@@ -607,6 +617,7 @@ def _weighted_knobs(
     order: IntArray,
     weights: FloatArray,
 ) -> dict[str, float]:
+    """Return the similarity-weighted blend of source knobs."""
     knobs = sorted({knob for index in order for knob in records[int(index)].knobs})
     proposal: dict[str, float] = {}
     for knob in knobs:
@@ -625,6 +636,7 @@ def _weighted_knobs(
 
 
 def _finite_float_dict(values: dict[str, Any], name: str) -> dict[str, float]:
+    """Return a mapping with finite float values, else raise."""
     result: dict[str, float] = {}
     for key, value in values.items():
         if not isinstance(key, str):
@@ -641,12 +653,14 @@ def _validate_float_mapping(
     *,
     allow_empty: bool,
 ) -> None:
+    """Return the validated float mapping, else raise."""
     if not allow_empty and not values:
         raise ValueError(f"{name} must be non-empty")
     _finite_float_dict(values, name)
 
 
 def _validate_package_identifier(value: str, name: str) -> None:
+    """Return the validated package identifier, else raise."""
     if not isinstance(value, str) or not _PACKAGE_NAME_RE.fullmatch(value):
         raise ValueError(
             f"{name} must start with a letter and contain only letters, digits, "
@@ -655,6 +669,7 @@ def _validate_package_identifier(value: str, name: str) -> None:
 
 
 def _validate_non_empty_text(value: str, name: str) -> None:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
     if any(ord(char) < 32 for char in value):
