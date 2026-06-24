@@ -34,6 +34,7 @@ from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 
 
 def _audit_log_evidence(log_path: str) -> EvidenceItem:
+    """Return the audit-log evidence for the assurance bundle."""
     engine = ReplayEngine(log_path)
     entries = engine.load()
     integrity_ok, verified = engine.verify_integrity(entries)
@@ -50,6 +51,7 @@ def _audit_log_evidence(log_path: str) -> EvidenceItem:
 
 
 def _evidence_from_file(path: str) -> list[EvidenceItem]:
+    """Load assurance evidence from a file, else raise."""
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     rows = payload if isinstance(payload, list) else [payload]
     items: list[EvidenceItem] = []

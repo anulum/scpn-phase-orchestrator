@@ -56,6 +56,7 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
 def _parse_checker_path_overrides(
     checker_paths: tuple[str, ...],
 ) -> dict[str, str | None]:
+    """Parse the formal-checker path overrides from CLI arguments."""
     overrides: dict[str, str | None] = {}
     for item in checker_paths:
         if "=" not in item:
@@ -311,6 +312,7 @@ def formal_export(
 
 
 def _policy_report_dict(report: PolicyDryRunReport) -> dict[str, object]:
+    """Return the policy report as a JSON-safe dict."""
     return {
         "steps": report.steps,
         "rules": list(report.rules),
@@ -332,6 +334,7 @@ def _policy_report_dict(report: PolicyDryRunReport) -> dict[str, object]:
 
 
 def _parse_dependency_locks(values: tuple[str, ...]) -> dict[str, str]:
+    """Parse the dependency lock entries from CLI arguments."""
     locks: dict[str, str] = {}
     for raw_value in values:
         label, separator, digest = raw_value.partition(":")
@@ -346,6 +349,7 @@ def _parse_dependency_locks(values: tuple[str, ...]) -> dict[str, str]:
 
 
 def _write_json_file(path: Path, payload: object) -> None:
+    """Write a JSON-safe payload to a file."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
@@ -354,6 +358,7 @@ def _write_json_file(path: Path, payload: object) -> None:
 
 
 def _supervisor_default_scenario_config() -> dict[str, object]:
+    """Return the default supervisor scenario configuration."""
     return {
         "n_oscillators": 4,
         "phases": [0.0, 0.1, 2.7, 3.1],
@@ -368,6 +373,7 @@ def _supervisor_default_scenario_config() -> dict[str, object]:
 
 
 def _supervisor_float_list(record: dict[str, object], field: str) -> list[float]:
+    """Return ``value`` as a list of floats for the scenario, else raise."""
     value = record.get(field)
     if not isinstance(value, list) or not value:
         raise click.ClickException(f"scenario {field} must be a non-empty list")
@@ -380,6 +386,7 @@ def _supervisor_float_list(record: dict[str, object], field: str) -> list[float]
 
 
 def _supervisor_positive_float(record: dict[str, object], field: str) -> float:
+    """Return ``value`` as a strictly positive float, else raise."""
     value = record.get(field)
     if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
         raise click.ClickException(f"scenario {field} must be a positive number")
@@ -387,6 +394,7 @@ def _supervisor_positive_float(record: dict[str, object], field: str) -> float:
 
 
 def _supervisor_positive_int(record: dict[str, object], field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     value = record.get(field)
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise click.ClickException(f"scenario {field} must be a positive integer")
@@ -396,6 +404,7 @@ def _supervisor_positive_int(record: dict[str, object], field: str) -> int:
 def _supervisor_scenario_config_from_record(
     record: dict[str, object],
 ) -> dict[str, object]:
+    """Return a validated supervisor scenario config from a record."""
     phases = _supervisor_float_list(record, "phases")
     n_oscillators = len(phases)
     normalized: dict[str, object] = {
@@ -422,6 +431,7 @@ def _supervisor_scenario_config_from_record(
 
 
 def _load_supervisor_scenario_config(path: Path | None) -> dict[str, object]:
+    """Load a validated supervisor scenario config from a file, else raise."""
     if path is None:
         return _supervisor_default_scenario_config()
     try:

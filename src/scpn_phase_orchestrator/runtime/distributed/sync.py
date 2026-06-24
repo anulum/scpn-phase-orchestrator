@@ -44,10 +44,12 @@ _PROTOCOL_KIND = "spo.phase_sync"
 
 
 def _reject_json_constant(value: str) -> None:
+    """Raise if the JSON value is a forbidden constant."""
     raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
 
 
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Return a JSON object with unique keys, else raise."""
     record: dict[str, Any] = {}
     for key, value in pairs:
         if key in record:
@@ -57,6 +59,7 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _loads_phase_sync_json(payload: str) -> Any:
+    """Load and validate a phase-sync JSON payload, else raise."""
     try:
         return json.loads(
             payload,
@@ -617,12 +620,14 @@ def _weighted_circular_mean(
     local_weight: float,
     peer_weight: float,
 ) -> FloatArray:
+    """Return the weighted circular mean of the phases."""
     z = local_weight * np.exp(1j * local)
     z += peer_weight * np.sum(np.exp(1j * peers), axis=0)
     return cast(FloatArray, np.mod(np.angle(z), _TWO_PI))
 
 
 def _mean_pairwise_phase_error(states: Mapping[str, FloatArray]) -> float:
+    """Return the mean pairwise phase error across nodes."""
     node_ids = sorted(states)
     if len(node_ids) < 2:
         return 0.0
@@ -641,6 +646,7 @@ def _message_digest(
     wall_time_s: float,
     phases: tuple[float, ...],
 ) -> str:
+    """Return the canonical digest of a sync message."""
     record = {
         "kind": _PROTOCOL_KIND,
         "node_id": node_id,
@@ -654,6 +660,7 @@ def _message_digest(
 
 
 def _phase_array(value: Any, expected: int, label: str) -> FloatArray:
+    """Return ``value`` as a validated phase array, else raise."""
     array = np.asarray(value, dtype=float)
     if array.shape != (expected,):
         raise ValueError(f"{label} must have shape ({expected},)")
@@ -663,6 +670,7 @@ def _phase_array(value: Any, expected: int, label: str) -> FloatArray:
 
 
 def _phase_tuple(value: Any, label: str) -> tuple[float, ...]:
+    """Return ``value`` as a validated tuple of phases, else raise."""
     array = np.asarray(value, dtype=float)
     if array.ndim != 1 or array.size == 0:
         raise ValueError(f"{label} must be a non-empty one-dimensional sequence")
@@ -672,11 +680,13 @@ def _phase_tuple(value: Any, label: str) -> tuple[float, ...]:
 
 
 def _positive_weight(value: float, label: str) -> None:
+    """Return ``value`` as a strictly positive weight, else raise."""
     if not math.isfinite(value) or value <= 0.0:
         raise ValueError(f"{label} must be positive and finite")
 
 
 def _node_id(value: str) -> str:
+    """Return the validated node id, else raise."""
     text = _string(value, "node_id")
     if not text.replace("_", "-").replace("-", "").isalnum():
         raise ValueError("node_id must contain only letters, numbers, '-' or '_'")
@@ -684,12 +694,14 @@ def _node_id(value: str) -> str:
 
 
 def _string(value: Any, label: str) -> str:
+    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{label} must be a non-empty string")
     return value.strip()
 
 
 def _number(value: Any, label: str) -> float:
+    """Return ``value`` as a finite number, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{label} must be a finite number")
     number = float(value)
@@ -699,6 +711,7 @@ def _number(value: Any, label: str) -> float:
 
 
 def _int(value: Any, label: str) -> int:
+    """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{label} must be an integer")
     return int(value)

@@ -97,6 +97,7 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
 
 
 def _watch_line(event: AuditStreamEvent) -> str:
+    """Process one line of the watched audit stream."""
     payload = event.payload
     if event.event_type == "step":
         step = _int_value(payload.get("step"))

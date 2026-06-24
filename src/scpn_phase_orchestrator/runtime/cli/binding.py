@@ -211,6 +211,7 @@ def auto_bind(
 
 
 def _load_phase_series_table(source_path: Path) -> FloatArray:
+    """Load a validated phase-series table from a file, else raise."""
     try:
         if source_path.suffix.lower() == ".npy":
             values = np.load(source_path, allow_pickle=False)

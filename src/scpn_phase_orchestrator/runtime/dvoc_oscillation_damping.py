@@ -133,6 +133,7 @@ class OscillationDampingResult:
 def _open_loop_ringdown(
     state_matrix: FloatArray, initial_state: FloatArray, horizon: int
 ) -> FloatArray:
+    """Return the open-loop ringdown response of the plant."""
     state = initial_state
     signal = [float(state[0])]
     for _ in range(horizon):
@@ -149,6 +150,7 @@ def _fit_plant_koopman(
     samples: int,
     seed: int,
 ) -> KoopmanPredictor:
+    """Fit the Koopman plant model from the ringdown data."""
     rng = np.random.default_rng(seed)
     state_dim = state_matrix.shape[0]
     input_dim = input_matrix.shape[1]
@@ -166,6 +168,7 @@ def _closed_loop_ringdown(
     initial_state: FloatArray,
     horizon: int,
 ) -> FloatArray:
+    """Return the closed-loop ringdown response under control."""
     state = initial_state
     input_dim = input_matrix.shape[1]
     previous_input = np.zeros(input_dim, dtype=np.float64)
@@ -183,6 +186,7 @@ def _closed_loop_ringdown(
 
 
 def _weakest_damping(signal: FloatArray, fs: float) -> float:
+    """Return the weakest (least-damped) mode of the response."""
     modes = estimate_oscillation_modes(signal, fs)
     if not modes:
         # A signal with no detectable oscillatory mode is fully damped.
@@ -292,6 +296,7 @@ def damp_oscillation(
 
 
 def _default_damping_config(horizon: int) -> KoopmanMPCConfig:
+    """Return the default oscillation-damping configuration."""
     return KoopmanMPCConfig(
         horizon=min(horizon, 20),
         output_weight=1.0,

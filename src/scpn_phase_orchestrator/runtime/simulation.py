@@ -216,6 +216,7 @@ def _objective_r(
     layer_indices: list[int],
     layer_osc_ranges: dict[int, list[int]],
 ) -> float:
+    """Return the order-parameter objective for the scenario."""
     selected = [
         phases[i] for idx in layer_indices for i in layer_osc_ranges.get(idx, [])
     ]
@@ -225,6 +226,7 @@ def _objective_r(
 
 
 def _scenario_vector(value: object, *, name: str, n_osc: int) -> FloatArray:
+    """Return a named vector field from a scenario, else raise."""
     arr = np.asarray(value, dtype=np.float64)
     if arr.shape != (n_osc,):
         raise ValueError(f"scenario {name} must have shape ({n_osc},)")
@@ -234,6 +236,7 @@ def _scenario_vector(value: object, *, name: str, n_osc: int) -> FloatArray:
 
 
 def _scenario_scalar(value: object, *, name: str) -> float:
+    """Return a named scalar field from a scenario, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"scenario {name} must be a finite real scalar")
     scalar = float(value)
@@ -247,6 +250,7 @@ def _apply_scenario_context(
     *,
     n_osc: int,
 ) -> tuple[FloatArray, FloatArray, CouplingState, float, float]:
+    """Apply the scenario context to the simulation state."""
     if not isinstance(context.coupling, CouplingState):
         raise ValueError("scenario coupling must be a CouplingState")
     phases = _scenario_vector(context.phases, name="phases", n_osc=n_osc)

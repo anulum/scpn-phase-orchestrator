@@ -235,6 +235,7 @@ def _module_present(import_name: str) -> bool:
 
 
 def _check_python() -> DependencyCheck:
+    """Return the Python environment health-check result."""
     info = sys.version_info
     current = (info.major, info.minor)
     low, high = REQUIRED_PYTHON
@@ -265,6 +266,7 @@ def _check_module(
     required: bool,
     install_hint: str,
 ) -> DependencyCheck:
+    """Return the health-check result for a Python module."""
     present = _module_present(import_name)
     version = _distribution_version(dist_name) if present else None
     if present:
@@ -288,6 +290,7 @@ def _check_modules(
     required: bool,
     install_hint: str,
 ) -> list[DependencyCheck]:
+    """Return the health-check results for the required modules."""
     return [
         _check_module(
             name=name,
@@ -330,6 +333,7 @@ _OPTIONAL_EXTRAS: dict[str, tuple[tuple[str, str, str], ...]] = {
 
 
 def _go_shared_libraries(repo_root: Path | None) -> list[str]:
+    """Return the discovered Go shared-library paths."""
     if repo_root is None:
         return []
     go_dir = repo_root / "go"
@@ -339,6 +343,7 @@ def _go_shared_libraries(repo_root: Path | None) -> list[str]:
 
 
 def _check_rust() -> DependencyCheck:
+    """Return the Rust backend health-check result."""
     present = _module_present("spo_kernel")
     version = _distribution_version("spo-kernel") if present else None
     if present:
@@ -360,6 +365,7 @@ def _check_rust() -> DependencyCheck:
 
 
 def _check_julia() -> DependencyCheck:
+    """Return the Julia backend health-check result."""
     present = _module_present("juliacall")
     version = _distribution_version("juliacall") if present else None
     detail = (
@@ -378,6 +384,7 @@ def _check_julia() -> DependencyCheck:
 
 
 def _check_go(repo_root: Path | None) -> DependencyCheck:
+    """Return the Go backend health-check result."""
     toolchain = shutil.which("go")
     libraries = _go_shared_libraries(repo_root)
     available = toolchain is not None or bool(libraries)
@@ -398,6 +405,7 @@ def _check_go(repo_root: Path | None) -> DependencyCheck:
 
 
 def _check_mojo() -> DependencyCheck:
+    """Return the Mojo backend health-check result."""
     toolchain = shutil.which("mojo")
     available = toolchain is not None
     detail = (

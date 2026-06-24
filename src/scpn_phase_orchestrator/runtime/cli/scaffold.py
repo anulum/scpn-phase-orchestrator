@@ -333,6 +333,7 @@ def demo(domain: str, dataset: str | None, target: str, steps: int, port: int) -
 
 
 def _run_real_data_demo(*, dataset: str, target: str, steps: int, port: int) -> None:
+    """Run the real-data scaffolding demo."""
     if steps < 1:
         raise click.BadParameter("steps must be positive")
     if target != "coherence":
@@ -376,6 +377,7 @@ def _run_real_data_demo(*, dataset: str, target: str, steps: int, port: int) -> 
 
 
 def _load_demo_dataset(dataset: str) -> tuple[str, str]:
+    """Load the demo dataset, else raise."""
     if dataset == "heartbeat.csv":
         raw = _download_text(_PHYSIONET_HEARTBEAT_URL, max_bytes=512_000)
         return _normalise_heartbeat_csv(raw, max_rows=256), _PHYSIONET_HEARTBEAT_URL
@@ -390,6 +392,7 @@ def _load_demo_dataset(dataset: str) -> tuple[str, str]:
 
 
 def _download_text(url: str, *, max_bytes: int) -> str:
+    """Download text content from a URL, else raise."""
     parsed = urlparse(url)
     if parsed.scheme != "https" or not parsed.hostname:
         raise click.ClickException("dataset URL must be an absolute HTTPS URL")
@@ -421,6 +424,7 @@ def _download_text(url: str, *, max_bytes: int) -> str:
 
 
 def _normalise_heartbeat_csv(raw: str, *, max_rows: int) -> str:
+    """Return the normalised heartbeat-CSV rows."""
     reader = csv.DictReader(io.StringIO(raw))
     required = {"rr_ms", "hr_bpm"}
     if reader.fieldnames is None or not required.issubset(set(reader.fieldnames)):
@@ -452,6 +456,7 @@ def _normalise_heartbeat_csv(raw: str, *, max_rows: int) -> str:
 
 
 def _finite_csv_float(value: object, field: str) -> float:
+    """Return a CSV field as a finite float, else raise."""
     if not isinstance(value, str):
         raise click.ClickException(f"heartbeat dataset has non-numeric {field}")
     try:
@@ -466,6 +471,7 @@ def _finite_csv_float(value: object, field: str) -> float:
 
 
 def _contained_domainpack_spec(domainpack_root: Path, domain: str) -> Path:
+    """Return the validated contained domainpack spec, else raise."""
     if not isinstance(domain, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", domain):
         raise click.BadParameter("domain must match [A-Za-z0-9_-]+")
     root = domainpack_root.resolve()

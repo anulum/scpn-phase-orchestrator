@@ -73,6 +73,7 @@ def _snap_to_response(snap: dict[str, Any]) -> StateResponse:
 
 
 def _normalise_metadata(raw_metadata: Any) -> dict[str, str]:
+    """Return the normalised gRPC request metadata."""
     metadata: dict[str, str] = {}
     if raw_metadata is None:
         return metadata
@@ -90,12 +91,14 @@ def _normalise_metadata(raw_metadata: Any) -> dict[str, str]:
 
 
 def _validate_positive_int(value: Any, field: str) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ValueError(f"{field} must be a positive integer")
     return value
 
 
 def _validate_non_negative_real(value: Any, field: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{field} must be a non-negative real")
     value_f = float(value)
@@ -105,6 +108,7 @@ def _validate_non_negative_real(value: Any, field: str) -> float:
 
 
 def _resolve_stream_max_steps(request: Any) -> int:
+    """Resolve the maximum step count for a streaming RPC."""
     raw_max_steps = getattr(request, "max_steps", None)
     if raw_max_steps is None:
         return 100
@@ -131,6 +135,7 @@ def _log_state_rpc(
     level: int = logging.INFO,
     n_steps: int | None = None,
 ) -> None:
+    """Log a state RPC call to the audit stream."""
     extra = {
         "rpc": rpc,
         "step": response.step,
@@ -178,11 +183,13 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         self._limiter = FixedWindowRateLimiter(rate_limit) if rate_limit > 0 else None
 
     def _abort(self, context: Any, code: Any, detail: str) -> None:
+        """Abort a gRPC call with the given status and message."""
         if context is not None and hasattr(context, "abort"):
             context.abort(code, detail)
         raise PermissionError(detail)
 
     def _authorise(self, context: Any) -> None:
+        """Authorise a gRPC request, raising on failure."""
         metadata = {}
         if context is not None and hasattr(context, "invocation_metadata"):
             metadata = _normalise_metadata(context.invocation_metadata())

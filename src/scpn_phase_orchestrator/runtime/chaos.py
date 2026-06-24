@@ -64,6 +64,7 @@ CHAOS_FAULT_KINDS = (
 
 
 def _positive_int(value: object, *, name: str, minimum: int = 1) -> int:
+    """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
     number = int(value)
@@ -73,6 +74,7 @@ def _positive_int(value: object, *, name: str, minimum: int = 1) -> int:
 
 
 def _finite_real(value: object, *, name: str, minimum: float | None = None) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number")
     number = float(value)
@@ -326,6 +328,7 @@ def make_chaos_hook(schedule: ChaosSchedule) -> ScenarioCallback:
     nominal_knm: dict[str, FloatArray] = {}
 
     def hook(context: SimulationScenarioContext) -> None:
+        """Apply the chaos fault hook to the simulation step."""
         if context.step == 0:
             nominal_knm["knm"] = np.array(context.coupling.knm, dtype=np.float64)
         for fault in schedule.faults:
@@ -341,6 +344,7 @@ def _apply_fault(
     context: SimulationScenarioContext,
     nominal_knm: FloatArray | None,
 ) -> None:
+    """Apply the configured fault to the state."""
     if fault.kind == "coupling_drop":
         reference = nominal_knm if nominal_knm is not None else context.coupling.knm
         context.coupling = CouplingState(
@@ -432,6 +436,7 @@ def compute_resilience(
 
 
 def _with_metrics_hash(metrics: ResilienceMetrics) -> ResilienceMetrics:
+    """Return the metrics augmented with their canonical hash."""
     record = metrics.to_audit_record()
     record.pop("metrics_hash", None)
     serialised = json.dumps(record, sort_keys=True, separators=(",", ":"))
@@ -518,6 +523,7 @@ def run_resilience_experiment(
 
 
 def _with_result_hash(result: ChaosExperimentResult) -> ChaosExperimentResult:
+    """Return the result augmented with its canonical hash."""
     record = result.to_audit_record()
     record.pop("result_hash", None)
     serialised = json.dumps(record, sort_keys=True, separators=(",", ":"))
