@@ -154,6 +154,7 @@ def supervisor_candidate(scenario: str, output: str | None) -> None:
     representative = observations[0]
 
     def evaluate(policy: KnobPolicyCandidate) -> AutotuneRewardReport:
+        """Return the reward report for a candidate (attribution callback)."""
         return evaluate_knob_policy(policy, representative)
 
     bundle = build_supervisor_candidate_bundle(

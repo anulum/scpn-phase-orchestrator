@@ -256,6 +256,7 @@ class ExecutionTimingReport:
 
 
 def _validate_steps(steps: object) -> int:
+    """Return the step count as a validated positive integer, else raise."""
     if isinstance(steps, bool) or not isinstance(steps, int):
         raise ValueError(f"steps must be a non-negative integer, got {steps!r}")
     if steps < 0:

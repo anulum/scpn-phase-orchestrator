@@ -471,6 +471,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         request: FastAPIRequest,
         call_next: Callable[[FastAPIRequest], Awaitable[Response]],
     ) -> Response:
+        """Log an HTTP request to the audit stream."""
         start = time.perf_counter()
         status_code = 500
         try:
@@ -505,6 +506,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         request: FastAPIRequest,
         x_api_key: str | None = Header(None),
     ) -> None:
+        """Authorise an HTTP request, raising on failure."""
         if _api_key is None:
             identity = request.client.host if request.client is not None else "local"
         elif x_api_key != _api_key:

@@ -32,6 +32,7 @@ __all__ = [
 
 
 def _validated_identifier(value: str, label: str) -> str:
+    """Return the validated network identifier, else raise."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{label} must be a non-empty string")
     return value

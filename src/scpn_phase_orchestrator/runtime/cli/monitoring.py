@@ -104,6 +104,7 @@ def _load_twin_confidence_ticks(
 
 
 def _twin_confidence_summary_lines(summary: TwinConfidenceSummary) -> list[str]:
+    """Return the human-readable twin-confidence summary lines."""
     return [
         f"ticks scored:      {summary.tick_count}",
         f"worst status:      {summary.worst_status}",
