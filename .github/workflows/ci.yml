@@ -134,9 +134,23 @@ jobs:
     # filters. They fully exercise the nn modules (e.g. test_inverse.py drives
     # nn/inverse.py to 100%), but their coverage was never collected, leaving the
     # nn subsystem artificially low in the merged report. This lane runs exactly
-    # those files WITH coverage so the merged coverage reflects reality.
+    # those files WITH coverage so the merged coverage reflects reality. The set is
+    # split into shards because the whole set under coverage exceeds a single job's
+    # wall-clock budget; each shard's coverage data is merged in ``coverage-guard``.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: a
+            files: tests/test_inverse.py tests/test_oim.py tests/test_bold.py
+          - shard: b
+            files: tests/test_reservoir.py tests/test_ude_kuramoto.py tests/test_kuramoto_layer.py tests/test_stuart_landau_nn.py
+          - shard: c
+            files: tests/test_nn_physics_validation.py tests/test_nn_physics_validation_p2.py tests/test_nn_physics_validation_p3.py tests/test_nn_physics_validation_p4.py tests/test_nn_physics_validation_p5.py tests/test_nn_physics_validation_p6.py
+          - shard: d
+            files: tests/test_nn_physics_validation_p7.py tests/test_nn_physics_validation_p8.py tests/test_nn_physics_validation_p9.py tests/test_nn_physics_validation_p10.py tests/test_nn_physics_validation_p11.py tests/test_nn_physics_validation_p12.py tests/test_nn_physics_validation_p13.py
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       HYPOTHESIS_PROFILE: ci
     steps:
@@ -146,27 +160,19 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
-      - name: Run the slow nn/physics tests with coverage
+      - name: Run nn/physics tests (shard ${{ matrix.shard }}) with coverage
         run: >
-          pytest
-          tests/test_inverse.py
-          tests/test_oim.py
-          tests/test_bold.py
-          tests/test_reservoir.py
-          tests/test_ude_kuramoto.py
-          tests/test_kuramoto_layer.py
-          tests/test_stuart_landau_nn.py
-          tests/test_nn_physics_validation*.py
+          pytest ${{ matrix.files }}
           --tb=short -p no:cacheprovider
           -k "not performance"
           --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
-      - name: Rename coverage data (nn)
-        run: mv .coverage .coverage.nn
-      - name: Upload coverage data (nn)
+      - name: Rename coverage data (nn shard)
+        run: mv .coverage .coverage.nn-${{ matrix.shard }}
+      - name: Upload coverage data (nn shard)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: coverage-data-nn
-          path: .coverage.nn
+          name: coverage-data-nn-${{ matrix.shard }}
+          path: .coverage.nn-${{ matrix.shard }}
           include-hidden-files: true
 
   julia-backend:
@@ -228,13 +234,14 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: coverage-data-ffi
-      - name: Download nn coverage
+      - name: Download nn coverage (all shards)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: coverage-data-nn
+          pattern: coverage-data-nn-*
+          merge-multiple: true
       - name: Combine coverage and generate XML
         run: |
-          coverage combine .coverage.test .coverage.ffi .coverage.nn
+          coverage combine .coverage.test .coverage.ffi .coverage.nn-a .coverage.nn-b .coverage.nn-c .coverage.nn-d
           coverage xml -o coverage-python.xml
           coverage report
       - name: Upload merged coverage XML
