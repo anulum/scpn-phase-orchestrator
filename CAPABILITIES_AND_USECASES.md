@@ -1,17 +1,19 @@
-# SCPN Phase Orchestrator: Capabilities & Use-Case Scenarios
+# SCPN Phase Orchestrator: Capability Boundaries and Use Cases
 
 For the detailed, per-subsystem architecture (inputs/outputs, processing models,
 backend wiring, interface contracts, and honest scope boundaries) see
 [`docs/architecture/`](docs/architecture/). This document summarises capabilities
-and representative use cases.
+and representative use cases. It is not a performance forecast: latency,
+throughput, scale, and deployment suitability must be measured on the target
+hardware and active backend before being used as claims.
 
-## 1. Core: the Universal Phase Dynamics Engine
+## 1. Core phase-dynamics engine
 
 SPO is a topology manager and phase-dynamics solver for hierarchical oscillator
-systems. The same engine serves different domains — from tearing modes in a
-plasma to gamma-band coupling in EEG — by swapping a domainpack rather than code.
-The base dynamics are the Universal Phase Dynamics Equation (a Kuramoto/Sakaguchi
-family with extensions):
+systems. The same simulation core can evaluate different reviewed domainpacks
+when the declared oscillator families, coupling assumptions, and sampling
+contracts match the source data. The base dynamics are the Universal Phase
+Dynamics Equation (a Kuramoto/Sakaguchi family with extensions):
 
 $$ \frac{d\theta_i}{dt} = \omega_i + \frac{K}{N} \sum_{j=1}^{N} A_{ij} \sin(\theta_j - \theta_i) + \zeta $$
 
@@ -47,7 +49,7 @@ These bridges are opt-in and emit wire formats; they do not hard-depend on the
 sibling repositories (only `quantum_control_bridge` lazily imports its sibling,
 and only when a quantum method is called).
 
-## 3. Representative use cases
+## 3. Representative use cases and boundaries
 
 - **Transition / disruption early warning.** Tracking the cross-layer alignment
   matrix, the global order parameter $R$, the conformal twin-confidence gate, and
@@ -66,11 +68,17 @@ Illustrative-only domainpacks (e.g. `financial_markets`, social-dynamics) are
 modelling exercises; phase *control* has no actuator in those domains, so they
 are not positioned as control use cases.
 
+SPO does not claim global real-time forecasting, hardware actuation authority,
+clinical decision support, or production safety certification from these use
+cases alone. Promotion from a review-only proposal to an operational workflow
+requires domain validation, replay evidence, signed audit records, and an
+external safety process appropriate to the deployment.
+
 ## 4. Scaling
 
-The Rust kernel uses data-parallel iterators (`rayon`) and is intended to scale
-from a laptop to a CPU cluster. The dense $K_{nm}$ matrix is $O(N^2)$ in memory,
-so large-$N$ deployments depend on sparse coupling (`SparseUPDEEngine`) or
+The Rust kernel uses data-parallel iterators (`rayon`), and selected kernels have
+polyglot accelerator paths. The dense $K_{nm}$ matrix is $O(N^2)$ in memory, so
+large-$N$ deployments depend on sparse coupling (`SparseUPDEEngine`) or
 mean-field reduction (Ott–Antonsen). Concrete cluster-scale throughput has not
 been measured at the time of writing; any large-$N$ figure should be established
 on the target hardware rather than projected.
