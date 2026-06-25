@@ -6,15 +6,16 @@ ORCID: 0009-0009-3560-0851
 Contact: www.anulum.li | protoscience@anulum.li
 -->
 
-# Software Verification & Validation Report
+# Historical Software Verification & Validation Snapshot
 
-**Version:** 0.5.11
-**Date:** 2026-05-13
+**Snapshot package version:** 0.5.11
+**Snapshot date:** 2026-05-13
 **Author:** Miroslav Šotek / Arcane Sapience
 
-This document reports measured validation results for the SCPN Phase
-Orchestrator software. Every claim is grounded in automated tests that
-run on every commit. No aspirational language — only measured reality.
+This historical document reports measured validation results for the SCPN Phase
+Orchestrator software on 2026-05-13. Current release metadata is maintained in
+`README.md`, `CHANGELOG.md`, `pyproject.toml`, and the generated capability
+manifest.
 
 ---
 

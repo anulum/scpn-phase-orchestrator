@@ -44,8 +44,9 @@ experiments, JAX-gated). Not used by the server, gRPC, or
 
 ## Scope boundaries
 
-Four validation `xfail`s gate a 1.0 claim (recorded in
-`docs/internal/NN_VALIDATION_XFAIL_SKIP_REGISTER.md`): UDE NaN extrapolation,
-loss of `K` symmetry during training, ill-conditioned analytical inverse at
-`K=0`, and an entropy-production formula mismatch. Further non-blocking CPU/GPU
-float32 divergence `xfail`s exist.
+The four former 1.0-blocking validation gaps are resolved in the public xfail
+register: UDE extrapolation stays finite, training preserves symmetric `K`, the
+analytical inverse handles uncoupled `K=0` data, and the entropy-production test
+uses the production dissipation estimator. Remaining `xfail`s are tracked as
+non-blocking precision, finite-size, heuristic-hardness, or test-design
+limitations.

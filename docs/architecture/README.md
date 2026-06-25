@@ -156,15 +156,17 @@ declared, so consumers do not over-rely on a capability:
   back to pure Python (or another available backend) when `spo_kernel` is not
   importable; capability is per-process, computed at import. See `backends.md`.
 - **The differentiable `nn/` track is parallel, not in the default loop.** It is
-  reachable only through the CLI verification command and carries several
-  validation `xfail`s that gate a 1.0 claim.
+  reachable only through the CLI verification command. The former 1.0-blocking
+  validation gaps are resolved; remaining `xfail`s are non-blocking precision,
+  finite-size, heuristic-hardness, or test-design limitations.
 - **`ssgf/` closure and `autotune/` are opt-in**, not part of the default step
   loop.
 - **`experimental/` is a misnomer**: it holds the load-bearing polyglot
   accelerator backends (Mojo/Julia/Go/Rust/WebGPU), fully wired through
   `coupling/`, `monitor/`, and `upde/` — not aspirational research.
-- **Two declared phase-extractor types — `wavelet` and `zero_crossing` — have no
-  implementation** and silently fall back to the Hilbert extractor.
+- **The declared `wavelet` and `zero_crossing` phase extractors are implemented**
+  alongside Hilbert extraction; runtime per-family dispatch beyond synthetic
+  seeding remains an expansion item.
 - **The audit trail is real (SHA-256 chain + optional HMAC)**, but integrity
   verification and deterministic replay are **opt-in CLI tools**, not enforced
   inside the live step loop. Signing is environment-gated, not structural.

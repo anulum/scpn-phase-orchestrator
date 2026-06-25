@@ -29,7 +29,7 @@
       "inputs": ["domainpack YAML/JSON", "raw signal + sample_rate"],
       "outputs": ["BindingSpec", "list[PhaseState]", "driver Psi(t)"],
       "backends": ["python", "rust(optional)"],
-      "note": "extractor types 'wavelet' and 'zero_crossing' are declared but unimplemented (fall back to Hilbert)."
+      "note": "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; runtime per-family dispatch beyond initial seeding remains an expansion item."
     },
     {
       "name": "coupling",
@@ -85,7 +85,7 @@
       "inputs": ["jax.Array phases/omegas/K", "observed trajectory"],
       "outputs": ["differentiable trajectory", "inferred (K,omega)", "PPO SupervisorAction"],
       "backends": ["jax"],
-      "note": "parallel differentiable track; CLI-verification only; 4 blocking validation xfails."
+      "note": "parallel differentiable track; CLI-verification only; former 1.0-blocking validation gaps are resolved, with remaining non-blocking precision/finite-size xfails tracked in the public register."
     },
     {
       "name": "runtime+actuation+assurance+audit",
@@ -165,10 +165,10 @@
   ],
   "boundaries": [
     "Rust kernel builds but is not active in every environment; dispatch falls back to Python.",
-    "nn/ differentiable track is parallel, CLI-verification only, with 4 blocking validation xfails.",
+    "nn/ differentiable track is parallel and CLI-verification only; former 1.0-blocking validation gaps are resolved, with remaining non-blocking xfails tracked.",
     "ssgf/ and autotune/ are opt-in, not in the default loop.",
     "experimental/ is the load-bearing accelerator layer, not research.",
-    "wavelet and zero_crossing extractor types are declared but unimplemented (fall back to Hilbert).",
+    "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; runtime per-family dispatch beyond initial seeding remains open.",
     "Audit chain is real but integrity-verify/replay are opt-in CLI; signing is env-gated.",
     "twin_conformal_gate (CPTC) is implemented but not wired into the live actuation gate.",
     "Formal export covers PRISM and TLA+ only (no SMT-LIB exporter despite docstring).",
