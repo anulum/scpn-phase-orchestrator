@@ -17,8 +17,9 @@ a plain ``for`` loop cannot give:
   last ``busy_wait_margin_s`` with a spin) and records the actual start offset
   so jitter is measured, not assumed.
 * **WCET budget** — each step is timed against a worst-case execution-time
-  budget; an overrun is a *deadline miss*. ``miss_policy='observe'`` records it
-  and continues; ``miss_policy='abort'`` raises :class:`DeadlineExceededError`.
+  budget; an overrun is a *deadline miss*. The default ``miss_policy='abort'``
+  raises :class:`DeadlineExceededError`; callers must explicitly request
+  ``miss_policy='observe'`` to record and continue.
 * **No-GC hot path** — the cyclic garbage collector is frozen and disabled for
   the duration of the loop, removing GC pauses from the jitter budget, and
   restored to its prior state afterwards.
@@ -92,8 +93,9 @@ class DeadlineBudget:
         whose measured latency exceeds this is a deadline miss. Defaults to the
         full ``period_s`` (a step may use the whole period).
     miss_policy : str
-        ``'observe'`` records deadline misses and continues; ``'abort'`` raises
-        :class:`DeadlineExceededError` on the first miss.
+        ``'abort'`` raises :class:`DeadlineExceededError` on the first miss.
+        ``'observe'`` records deadline misses and continues, and must be
+        selected explicitly for diagnostic runs.
     freeze_gc : bool
         Freeze (``gc.freeze``) and disable the cyclic garbage collector for the
         loop, restoring the prior state afterwards. Removes GC pauses from the
@@ -106,7 +108,7 @@ class DeadlineBudget:
 
     period_s: float
     wcet_s: float | None = None
-    miss_policy: str = "observe"
+    miss_policy: str = "abort"
     freeze_gc: bool = True
     busy_wait_margin_s: float = 0.0
 

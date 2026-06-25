@@ -58,8 +58,8 @@ build bundles, and run replay.
 - **`actuation_permitted=False` is documentary** — it is a frozen-dataclass
   assertion never consulted by the actuation flow. Runtime gating remains in
   the safety-tier checks and `ActionProjector` clamp/rate-limit path.
-- The hard-deadline loop defaults to `miss_policy="observe"` (records and
-  continues); `"abort"` must be requested explicitly.
+- The hard-deadline loop defaults to `miss_policy="abort"`; diagnostic
+  record-and-continue runs must request `"observe"` explicitly.
 - The Koopman MPC is implemented but **not wired into the default `simulate()`
   loop**; `meta`-transfer extracts policy examples but is not consumed by
   actuation.

@@ -27,7 +27,7 @@ class TestDeadlineBudget:
     def test_defaults_effective_wcet_to_period(self) -> None:
         budget = DeadlineBudget(period_s=0.01)
         assert budget.effective_wcet_s == 0.01
-        assert budget.miss_policy == "observe"
+        assert budget.miss_policy == "abort"
         assert budget.freeze_gc is True
 
     def test_explicit_wcet(self) -> None:
@@ -118,6 +118,19 @@ class TestLoopExecution:
 
 
 class TestDeadlineMiss:
+    def test_overrun_aborts_by_default(self) -> None:
+        def slow(_index: int) -> None:
+            time.sleep(0.02)
+
+        with pytest.raises(DeadlineExceededError) as exc:
+            run_deterministic_loop(
+                slow,
+                steps=3,
+                budget=DeadlineBudget(period_s=0.05, wcet_s=0.005),
+            )
+        assert exc.value.step_index == 0
+        assert exc.value.wcet_s == 0.005
+
     def test_overrun_recorded_under_observe(self) -> None:
         def slow(index: int) -> None:
             if index == 1:
@@ -207,7 +220,9 @@ class TestGarbageCollectorControl:
 class TestTimingReport:
     def _report(self) -> ExecutionTimingReport:
         return run_deterministic_loop(
-            lambda _i: None, steps=10, budget=DeadlineBudget(period_s=0.001)
+            lambda _i: None,
+            steps=10,
+            budget=DeadlineBudget(period_s=0.001, miss_policy="observe"),
         )
 
     def test_aggregate_properties(self) -> None:
@@ -264,7 +279,13 @@ class TestPipelineWiring:
             state["phases"] = engine.step(state["phases"], omegas, knm, 0.0, 0.0, alpha)
 
         report = run_deterministic_loop(
-            step, steps=20, budget=DeadlineBudget(period_s=0.005, wcet_s=0.004)
+            step,
+            steps=20,
+            budget=DeadlineBudget(
+                period_s=0.005,
+                wcet_s=0.004,
+                miss_policy="observe",
+            ),
         )
         assert report.steps == 20
         assert state["phases"].shape == (n,)

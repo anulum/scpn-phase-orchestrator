@@ -172,9 +172,11 @@ review-only.
 period with the timing guarantees a plain loop cannot give: every step is
 scheduled at `t0 + i·period` on the monotonic clock (sleep, with an optional
 final spin, then measured jitter), each step is timed against a worst-case
-execution-time budget so an overrun is a recorded — or, under
-`miss_policy='abort'`, fatal — *deadline miss*, and the cyclic garbage collector
-is frozen and disabled for the hot path so GC pauses leave the jitter budget.
+execution-time budget so an overrun is a fatal *deadline miss* by default
+(`miss_policy='abort'`). Callers must explicitly choose `miss_policy='observe'`
+for diagnostic runs that record misses and continue. The cyclic garbage
+collector is frozen and disabled for the hot path so GC pauses leave the jitter
+budget.
 `run_deterministic_loop` returns an `ExecutionTimingReport` with per-step
 latencies and jitters plus aggregate statistics (mean / max / p99 latency, max
 absolute jitter, deadline-miss count). The loop is timing-only and
