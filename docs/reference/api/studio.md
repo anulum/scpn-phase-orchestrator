@@ -26,6 +26,14 @@ deterministic `manifest_sha256` over the canonical manifest payload while keepin
 `actuation_permitted` false. It does not execute panel builders, import optional
 runtimes, open transports, or touch hardware.
 
+`build_studio_control_feed(snapshot, studio_version=...)` emits the live
+`studio.control-feed.v1` envelope used by the runtime server at
+`/api/studio-feed`. The envelope mirrors the sibling `scpn-control` feed shape
+(`feed_schema`, `studio`, `studio_version`, `content_digest`, `verbs`, `claims`)
+and adds a SPO-specific `runtime` payload with
+`runtime.schema=spo.studio-runtime-snapshot.v1`. It is read-only Studio
+ingestion data, not a command channel.
+
 `build_integrated_information_panel(records)` renders passive
 `integrated_information` monitor audit records into an operator payload with
 latest Phi proxy values, normalised-Phi and total-integration ranges,
@@ -184,6 +192,8 @@ reconciled against its source artifacts.
 ::: scpn_phase_orchestrator.studio.workflow
 
 ::: scpn_phase_orchestrator.studio.product
+
+::: scpn_phase_orchestrator.studio.live_feed
 
 ::: scpn_phase_orchestrator.studio.ui_helpers
 

@@ -18,6 +18,17 @@ connector records.
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.studio.live_feed import (
+    FEED_SCHEMA,
+    RUNTIME_SCHEMA,
+    STUDIO_ID,
+    StudioFeedClaim,
+    StudioFeedVerb,
+    build_studio_control_feed,
+    claim_summaries,
+    render_studio_control_feed_json,
+    runtime_summary,
+)
 from scpn_phase_orchestrator.studio.product import (
     STUDIO_REVIEW_PANEL_REGISTRY,
     build_studio_product_manifest,
@@ -80,8 +91,13 @@ from scpn_phase_orchestrator.studio.workflow import (
 __all__ = [
     "BindingProposal",
     "ExportManifest",
+    "FEED_SCHEMA",
     "ImportedSourceSummary",
+    "RUNTIME_SCHEMA",
     "RuntimeSnapshot",
+    "STUDIO_ID",
+    "StudioFeedClaim",
+    "StudioFeedVerb",
     "StudioKnobState",
     "StudioProjectState",
     "StudioReplayResult",
@@ -123,11 +139,15 @@ __all__ = [
     "build_runtime_snapshot",
     "build_series_chart_payload",
     "build_service_process_manifest",
+    "build_studio_control_feed",
     "build_sheaf_cohomology_studio_panel",
     "build_strange_loop_studio_panel",
     "build_topos_semantic_binding_studio_panel",
     "build_verified_hardware_target_package",
+    "claim_summaries",
     "disabled_export_reasons",
     "discover_domainpacks",
+    "render_studio_control_feed_json",
     "run_binding_spec_replay",
+    "runtime_summary",
 ]

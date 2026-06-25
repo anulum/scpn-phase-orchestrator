@@ -20,6 +20,7 @@ Usage:
 Endpoints:
     GET  /             HTML dashboard
     GET  /api/state    Current UPDE state (JSON)
+    GET  /api/studio-feed  Live STUDIO feed envelope (JSON)
     POST /api/step     Advance one step (auth required if SPO_API_KEY set)
     POST /api/reset    Reset simulation (auth required if SPO_API_KEY set)
     GET  /api/config   Binding spec summary
@@ -41,6 +42,7 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator import __version__
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
@@ -58,6 +60,7 @@ from scpn_phase_orchestrator.runtime.observability import (
     RuntimeMetricSnapshot,
     RuntimeObservability,
 )
+from scpn_phase_orchestrator.studio.live_feed import build_studio_control_feed
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -288,6 +291,19 @@ class SimulationState:
             result["mean_amplitude"] = round(float(np.mean(amps)), 4)
 
         return result
+
+    def studio_feed(self) -> dict[str, object]:
+        """Return the live STUDIO feed for the current simulation snapshot.
+
+        Returns
+        -------
+        dict[str, object]
+            ``studio.control-feed.v1`` envelope plus SPO runtime snapshot.
+        """
+        return build_studio_control_feed(
+            self.snapshot(),
+            studio_version=__version__,
+        )
 
     def reset(self) -> dict[str, Any]:
         """Reset to initial state.
@@ -526,6 +542,12 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         """Handle GET /api/state — return current simulation snapshot."""
         with sim._lock:
             return sim.snapshot()
+
+    @app.get("/api/studio-feed")
+    async def get_studio_feed() -> dict[str, object]:
+        """Handle GET /api/studio-feed — return live STUDIO feed envelope."""
+        with sim._lock:
+            return sim.studio_feed()
 
     @app.post("/api/step", dependencies=[Depends(_require_auth)])
     async def post_step() -> dict[str, Any]:

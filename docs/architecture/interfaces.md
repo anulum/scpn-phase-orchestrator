@@ -40,7 +40,7 @@ summary out.
 
 ## 3. REST (FastAPI)
 
-`runtime/server.py`. Eight routes; dataclass models (not Pydantic); no OpenAPI
+`runtime/server.py`. Nine routes; dataclass models (not Pydantic); no OpenAPI
 schema is generated. Optional `X-API-Key` auth (when `SPO_API_KEY` is set) and
 optional per-minute rate limiting.
 
@@ -48,6 +48,7 @@ optional per-minute rate limiting.
 |--------|------|---------|
 | GET | `/` | HTML dashboard |
 | GET | `/api/state` | Current simulation snapshot |
+| GET | `/api/studio-feed` | Read-only `studio.control-feed.v1` live feed |
 | GET | `/api/config` | Domain / oscillator configuration |
 | GET | `/api/metrics` | Order parameter and regime metrics |
 | GET | `/api/health` | Health probe |
@@ -76,11 +77,10 @@ dataclass message layer when `protobuf` is absent.
 
 `studio/` exposes builder functions (`build_canvas_graph`,
 `build_runtime_snapshot`, `build_deployment_readiness`, `run_binding_spec_replay`,
-…) and a registry of 13 review panels. All panels are `execution_disabled=True`
-and `operator_review_required=True`. The surface emits a Python-dataclass
-`ExportManifest`; it does **not** currently emit a live JSON studio feed
-(contrast the `studio.control-feed.v1` produced by the `scpn-control` vertical).
-Wiring this into a live STUDIO feed is an open item. See
+`build_studio_control_feed`, …) and a registry of 13 review panels. All panels
+are `execution_disabled=True` and `operator_review_required=True`. The surface
+emits Python-dataclass `ExportManifest` records and a read-only
+`studio.control-feed.v1` envelope for live STUDIO ingestion. See
 [subsystems/studio-reporting.md](subsystems/studio-reporting.md).
 
 ## 6. Reporting and visualisation

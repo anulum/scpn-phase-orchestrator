@@ -74,6 +74,7 @@ cd deploy && docker compose up
 
 Endpoints:
 - `GET /api/state` — current R, regime, phases
+- `GET /api/studio-feed` — live `studio.control-feed.v1` envelope for STUDIO ingestion
 - `GET /api/health` — deep health check
 - `GET /api/metrics` — Prometheus exposition
 - `WS /ws/stream` — real-time WebSocket observer

@@ -145,6 +145,19 @@ class TestFastAPIEndpoints:
         data = r.json()
         assert "R_global" in data
 
+    def test_get_studio_feed(self, client):
+        r = client.get("/api/studio-feed")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["feed_schema"] == "studio.control-feed.v1"
+        assert data["studio"] == "scpn-phase-orchestrator"
+        assert data["runtime"]["schema"] == "spo.studio-runtime-snapshot.v1"
+        assert data["runtime"]["step"] == 0
+        assert {claim["schema"] for claim in data["claims"]} >= {
+            "spo.runtime-state.v1",
+            "spo.phase-coherence.v1",
+        }
+
     def test_post_step(self, client):
         r = client.post("/api/step")
         assert r.status_code == 200

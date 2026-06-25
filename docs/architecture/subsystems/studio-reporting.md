@@ -1,7 +1,7 @@
 # Subsystem: `studio` / `reporting` / `visualization` — operator surfaces
 
-Human-facing review, explanation, and visualisation. `studio` 23 files
-(~8.3k LOC), `reporting` 5, `visualization` 4.
+Human-facing review, explanation, and visualisation. `studio` 24 files,
+`reporting` 5, `visualization` 4.
 
 ## `studio` — review surface
 
@@ -16,10 +16,11 @@ charts, and connector plans.
 - **Outputs**: a Python-dataclass `ExportManifest` and canvas/deployment
   artefacts.
 - **Scope boundary**: every panel is `execution_disabled=True` /
-  `operator_review_required=True`. The surface does **not** emit a live JSON
-  studio feed (unlike the `studio.control-feed.v1` of the `scpn-control`
-  vertical). It is wired only into the CLI review commands, not the core loop.
-  Wiring it into a live STUDIO feed is an open item.
+  `operator_review_required=True`. The runtime server emits a read-only
+  `studio.control-feed.v1` envelope at `/api/studio-feed`, with SPO-specific
+  live state under `runtime.schema=spo.studio-runtime-snapshot.v1`. The feed is
+  additive to the existing local dashboard and WebSocket observer; it does not
+  enable hardware writes, QPU execution, or policy promotion.
 
 ## `reporting`
 
