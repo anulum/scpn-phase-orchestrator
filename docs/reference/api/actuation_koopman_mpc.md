@@ -18,6 +18,12 @@ never actuates; the first proposed input is the action a safety envelope
 (`actuation.foundation_model_governor` / `actuation.control_barrier`) admits,
 constrains, or rejects.
 
+It is not a selectable live `runtime.simulation.simulate()` mode. The generic
+binding-spec simulator accepts only `control_mode="supervisor_policy"` and fails
+closed for `koopman_mpc`; the Koopman MPC remains in the offline dVOC damping and
+FMI co-simulation surfaces where the fitted predictor and plant boundary are
+explicit.
+
 ## 1. The condensed quadratic programme
 
 Over a horizon `H` the lifted states are eliminated so the only decision

@@ -25,7 +25,8 @@ environment keys (`SPO_AUDIT_KEY`, `SPO_AUDIT_KEYRING`).
 - `runtime/simulation.simulate` — the master step loop (audit record → supervisor
   decision → action projection → engine step). When a protobuf audit stream is
   attached, the run-end `SimulationResult` includes a flushed whole-stream
-  integrity summary from `verify_event_stream_integrity()`.
+  integrity summary from `verify_event_stream_integrity()`. Its only live
+  `control_mode` is `supervisor_policy`.
 - `actuation/ActionProjector.project` — clamp to bounds, then per-step rate-limit,
   then re-clamp. Deterministic; always closes the default loop. Optional neural
   CBF use is fail-closed in `FoundationModelGovernor`: a
@@ -65,8 +66,8 @@ build bundles, and run replay.
 - Neural CBF certificates are verifier-produced, but runtime CBF use is not
   offline-trust-only: `FoundationModelGovernor` refuses a CBF filter unless the
   supplied `BarrierCertificate` is verified and digest-bound to that filter.
-- The Koopman MPC is implemented but **not wired into the default `simulate()`
-  loop**; `meta`-transfer extracts policy examples but is not consumed by
-  actuation.
+- Koopman MPC is intentionally **not** a live `simulate()` mode. Passing a
+  Koopman mode to `simulate()` fails closed; the supported Koopman path is the
+  offline/review-only dVOC damping pipeline and FMI co-simulation surface.
 - The packaged `audit.proto`, root `proto/audit.proto`, and runtime dynamic
   descriptor carry the same signature/audit-mode fields.

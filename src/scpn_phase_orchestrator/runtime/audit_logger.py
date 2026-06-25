@@ -237,6 +237,7 @@ class AuditLogger:
         method: str = "euler",
         seed: int | None = None,
         amplitude_mode: bool = False,
+        control_mode: str = "supervisor_policy",
         binding_config: dict[str, object] | None = None,
         binding_summary: dict[str, object] | None = None,
     ) -> None:
@@ -254,6 +255,8 @@ class AuditLogger:
             Seed for the deterministic RNG, or ``None``.
         amplitude_mode : bool
             Whether the engine runs in Stuart-Landau amplitude mode.
+        control_mode : str
+            Live control surface used by the simulation core.
         binding_config : dict[str, object] | None
             Resolved binding configuration, or ``None``.
         binding_summary : dict[str, object] | None
@@ -286,6 +289,10 @@ class AuditLogger:
             raise AuditError(f"seed must be integer or None, got {seed!r}")
         if isinstance(amplitude_mode, bool) is False:
             raise AuditError(f"amplitude_mode must be bool, got {amplitude_mode!r}")
+        if not isinstance(control_mode, str) or not control_mode.strip():
+            raise AuditError(
+                f"control_mode must be a non-empty string, got {control_mode!r}"
+            )
         if binding_config is not None and not isinstance(binding_config, dict):
             raise AuditError(
                 "binding_config must be dict[str, object] or None, "
@@ -306,6 +313,7 @@ class AuditLogger:
             record["seed"] = seed
         if amplitude_mode:
             record["amplitude_mode"] = True
+        record["control_mode"] = control_mode
 
         if binding_summary is None:
             binding_summary = binding_config

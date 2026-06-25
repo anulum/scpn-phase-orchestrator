@@ -81,6 +81,12 @@ bounded actions back into the dynamics; with it off, the same drivers and
 intrinsic plasticity run without control feedback, giving the baseline for
 measuring orchestration uplift on a fixed seed.
 
+The live control mode is deliberately explicit and narrow:
+`control_mode="supervisor_policy"` is the only accepted `simulate()` mode.
+Koopman MPC is not a hidden or partially wired binding-spec simulator mode; it is
+kept in the offline/review-only dVOC damping pipeline where the fitted predictor,
+plant model, and PRC evidence boundary are explicit.
+
 `simulate()` also accepts an optional `scenario_hook` for deterministic
 non-actuating perturbation schedules. The hook receives a
 `SimulationScenarioContext` before each integration step and may adjust phases,

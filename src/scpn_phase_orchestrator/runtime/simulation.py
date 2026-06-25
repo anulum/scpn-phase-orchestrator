@@ -27,6 +27,11 @@ boundary observation, and the supervisor + domainpack policy control loop.
 * ``False`` (open loop) — the same exogenous drivers and intrinsic plasticity
   still run, but no control feedback is applied. This is the baseline against
   which the closed-loop orchestration uplift is measured on the same seed.
+
+``control_mode`` is intentionally narrower than the actuation catalogue. The
+generic binding-spec loop accepts only ``"supervisor_policy"``; Koopman MPC stays
+in the specialized offline/review-only dVOC damping pipeline where its fitted
+predictor, plant model, and evidence boundaries are explicit.
 """
 
 from __future__ import annotations
@@ -34,7 +39,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from numbers import Real
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -93,11 +98,13 @@ if TYPE_CHECKING:
     )
 
 FloatArray = NDArray[np.float64]
+SimulationControlMode = Literal["supervisor_policy"]
 ScenarioCallback = Callable[["SimulationScenarioContext"], None]
 
 __all__ = [
     "SimulationResult",
     "SimulationScenarioContext",
+    "SimulationControlMode",
     "simulate",
     "petri_net_from_protocol",
 ]
@@ -140,6 +147,7 @@ class SimulationResult:
         spec_name: Binding-spec name.
         steps: Number of steps advanced.
         policy_enabled: Whether the closed-loop control feedback was active.
+        control_mode: Live control surface used by the simulation core.
         amplitude_mode: Whether the Stuart-Landau (amplitude) engine was used.
         final_phases: Final oscillator phases, shape ``(n,)``.
         final_amplitudes: Final amplitudes for amplitude mode, else ``None``.
@@ -158,6 +166,7 @@ class SimulationResult:
     spec_name: str
     steps: int
     policy_enabled: bool
+    control_mode: str
     amplitude_mode: bool
     final_phases: FloatArray
     final_amplitudes: FloatArray | None
@@ -184,6 +193,7 @@ class SimulationResult:
             "spec_name": self.spec_name,
             "steps": self.steps,
             "policy_enabled": self.policy_enabled,
+            "control_mode": self.control_mode,
             "amplitude_mode": self.amplitude_mode,
             "r_good": self.r_good,
             "r_bad": self.r_bad,
@@ -277,6 +287,7 @@ def simulate(
     steps: int = 100,
     seed: int = 42,
     policy_enabled: bool = True,
+    control_mode: SimulationControlMode = "supervisor_policy",
     audit_logger: AuditLogger | None = None,
     binding_spec_path: Path | None = None,
     scenario_hook: ScenarioCallback | None = None,
@@ -293,6 +304,11 @@ def simulate(
         RNG seed for the initial phases.
     policy_enabled : bool
         Closed-loop control feedback on (``True``) or open-loop baseline (``False``).
+    control_mode : {"supervisor_policy"}
+        The live control surface used by the generic binding-spec simulator.
+        Koopman MPC is intentionally not a selectable ``simulate`` mode; it
+        remains a review-only/offline proposal surface in
+        :mod:`scpn_phase_orchestrator.runtime.dvoc_oscillation_damping`.
     audit_logger : AuditLogger | None
         Optional logger; when given, the header, per-step records, and events are
         written. The caller owns its lifecycle (close).
@@ -314,8 +330,14 @@ def simulate(
     Raises
     ------
     ValueError
-        If the spec declares no oscillators.
+        If the spec declares no oscillators or an unsupported control mode.
     """
+    if control_mode != "supervisor_policy":
+        raise ValueError(
+            "simulate control_mode must be 'supervisor_policy'; Koopman MPC is "
+            "offline/review-only via runtime.dvoc_oscillation_damping"
+        )
+
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     if n_osc == 0:
         raise ValueError("no oscillators defined in layers")
@@ -442,6 +464,7 @@ def simulate(
             seed=seed,
             amplitude_mode=amplitude_mode,
             binding_config=binding_summary,
+            control_mode=control_mode,
         )
 
     r_good_history: list[float] = []
@@ -700,6 +723,7 @@ def simulate(
         spec_name=spec.name,
         steps=steps,
         policy_enabled=policy_enabled,
+        control_mode=control_mode,
         amplitude_mode=amplitude_mode,
         final_phases=phases,
         final_amplitudes=amplitudes if amplitude_mode else None,

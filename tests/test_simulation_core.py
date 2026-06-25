@@ -106,6 +106,8 @@ class TestSimulateContract:
         res = simulate(_spec(KURAMOTO_SPEC), steps=15, seed=5)
         assert isinstance(res, SimulationResult)
         assert res.steps == 15
+        assert res.control_mode == "supervisor_policy"
+        assert res.to_record()["control_mode"] == "supervisor_policy"
         assert len(res.r_good_history) == 15
         assert len(res.r_bad_history) == 15
         assert res.separation == pytest.approx(res.r_good - res.r_bad)
@@ -175,6 +177,15 @@ class TestSimulateContract:
 
         with pytest.raises(ValueError, match="scenario zeta"):
             simulate(_spec(KURAMOTO_SPEC), steps=3, seed=5, scenario_hook=invalid)
+
+    def test_koopman_mpc_is_not_a_live_simulate_mode(self) -> None:
+        with pytest.raises(ValueError, match="Koopman MPC is offline/review-only"):
+            simulate(
+                _spec(KURAMOTO_SPEC),
+                steps=3,
+                seed=5,
+                control_mode="koopman_mpc",  # type: ignore[arg-type]
+            )
 
 
 class TestFeatureBranches:

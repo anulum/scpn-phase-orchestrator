@@ -400,6 +400,14 @@ class TestAuditHeader:
         assert record["dt"] == 0.01
         assert record["method"] == "rk4"
         assert record["seed"] == 42
+        assert record["control_mode"] == "supervisor_policy"
+
+    def test_header_rejects_invalid_control_mode(self, tmp_path):
+        log_path = tmp_path / "audit.jsonl"
+        with AuditLogger(log_path) as logger, pytest.raises(
+            AuditError, match="control_mode"
+        ):
+            logger.log_header(n_oscillators=8, dt=0.01, control_mode="")
 
     def test_header_amplitude_mode_flag(self, tmp_path):
         log_path = tmp_path / "audit.jsonl"
