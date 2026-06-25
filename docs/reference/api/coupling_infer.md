@@ -22,7 +22,9 @@ engine input.
 
 The current production backend is transfer entropy over binned phase states.
 `granger` and `notears` are reserved method names and raise
-`NotImplementedError` until those estimators have benchmarked implementations.
+`UnsupportedInferenceMethodError`, a `NotImplementedError` subclass with a
+JSON-safe diagnostic record, until those estimators have benchmarked
+implementations.
 The boundary rejects boolean aliases, complex values, non-finite samples, and
 non-2-D phase series before inference. Backend transfer-entropy matrices must be
 finite, non-negative, correctly shaped, and zero on the diagonal; invalid
@@ -67,6 +69,7 @@ closed before a `CouplingInferenceResult` is returned.
 | --- | --- | --- |
 | `CouplingInferenceConfig` | dataclass | Inference method, binning, threshold, normalisation, and timestep limits. |
 | `CouplingInferenceResult` | dataclass | Directed coupling estimate, raw scores, support mask, and audit diagnostics. |
+| `UnsupportedInferenceMethodError` | exception | Fail-closed diagnostic for reserved methods that are not implemented. |
 | `auto_coupling_estimation` | function | Packaged review profile using transfer entropy and default thresholds. |
 | `infer_coupling_from_timeseries` | function | Full inference entry point for explicit configuration. |
 | `InferenceMethod` | type alias | Literal method names: `transfer_entropy`, `granger`, `notears`. |
@@ -123,8 +126,10 @@ Accepted method names are:
 - `notears`, reserved and fail-closed.
 
 Reserved method names are intentionally accepted by the config validator so
-callers can request them and receive a clear `NotImplementedError` rather than
-falling back to a weaker estimator.
+callers can request them and receive a clear `UnsupportedInferenceMethodError`
+rather than falling back to a weaker estimator. Its `to_audit_record()` payload
+includes the requested method, implemented method list, reserved method list, and
+`fallback_performed=false`.
 Unknown method names raise `ValueError`.
 
 ### Bin validation

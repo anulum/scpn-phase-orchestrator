@@ -37,6 +37,8 @@ NormalisationMode: TypeAlias = Literal["max", "none"]
 
 PACKAGE_NAME = "auto-coupling-estimation"
 ORIENTATION = "source_to_target"
+SUPPORTED_INFERENCE_METHODS: tuple[InferenceMethod, ...] = ("transfer_entropy",)
+RESERVED_INFERENCE_METHODS: tuple[InferenceMethod, ...] = ("granger", "notears")
 
 __all__ = [
     "BoolArray",
@@ -45,9 +47,59 @@ __all__ = [
     "FloatArray",
     "InferenceMethod",
     "NormalisationMode",
+    "RESERVED_INFERENCE_METHODS",
+    "SUPPORTED_INFERENCE_METHODS",
+    "UnsupportedInferenceMethodError",
     "auto_coupling_estimation",
     "infer_coupling_from_timeseries",
 ]
+
+
+class UnsupportedInferenceMethodError(NotImplementedError):
+    """Fail-closed error for reserved-but-unimplemented inference methods.
+
+    Attributes
+    ----------
+    method : str
+        Requested inference method.
+    supported_methods : tuple[str, ...]
+        Production methods implemented by this module.
+    reserved_methods : tuple[str, ...]
+        Recognised method names reserved for future implementations.
+    """
+
+    def __init__(
+        self,
+        method: str,
+        *,
+        supported_methods: tuple[str, ...] = SUPPORTED_INFERENCE_METHODS,
+        reserved_methods: tuple[str, ...] = RESERVED_INFERENCE_METHODS,
+    ) -> None:
+        self.method = method
+        self.supported_methods = supported_methods
+        self.reserved_methods = reserved_methods
+        super().__init__(
+            f"{method!r} coupling inference is reserved but not implemented; "
+            f"supported production method(s): {', '.join(supported_methods)}. "
+            "SPO refuses to fall back to transfer entropy implicitly because that "
+            "would change the estimator contract."
+        )
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe unsupported-method diagnostic.
+
+        Returns
+        -------
+        dict[str, object]
+            Unsupported-method diagnostic for audit logs or API responses.
+        """
+        return {
+            "error": self.__class__.__name__,
+            "method": self.method,
+            "supported_methods": list(self.supported_methods),
+            "reserved_methods": list(self.reserved_methods),
+            "fallback_performed": False,
+        }
 
 
 def _validate_optional_finite_real(value: object | None, *, name: str) -> float | None:
@@ -212,7 +264,8 @@ def _validate_phase_series(value: object, *, min_timesteps: int) -> FloatArray:
 
 def _validate_config(config: CouplingInferenceConfig) -> CouplingInferenceConfig:
     """Validate and normalise the inference config, else raise."""
-    if config.method not in {"transfer_entropy", "granger", "notears"}:
+    known_methods = (*SUPPORTED_INFERENCE_METHODS, *RESERVED_INFERENCE_METHODS)
+    if config.method not in known_methods:
         raise ValueError("method must be one of: transfer_entropy, granger, notears")
     if isinstance(config.n_bins, bool) or not isinstance(config.n_bins, int):
         raise TypeError("n_bins must be an integer greater than or equal to 2")
@@ -294,8 +347,8 @@ def infer_coupling_from_timeseries(
 
     Raises
     ------
-    NotImplementedError
-        If the configured inference method is not implemented.
+    UnsupportedInferenceMethodError
+        If the configured inference method is reserved but not implemented.
     RuntimeError
         If inference fails on the supplied series.
     """
@@ -304,11 +357,8 @@ def infer_coupling_from_timeseries(
         phase_series, min_timesteps=resolved_config.min_timesteps
     )
 
-    if resolved_config.method != "transfer_entropy":
-        raise NotImplementedError(
-            f"{resolved_config.method} coupling inference is not implemented; "
-            "use method='transfer_entropy' for the current production backend"
-        )
+    if resolved_config.method not in SUPPORTED_INFERENCE_METHODS:
+        raise UnsupportedInferenceMethodError(resolved_config.method)
 
     scores = np.asarray(
         transfer_entropy_matrix(series, n_bins=resolved_config.n_bins),

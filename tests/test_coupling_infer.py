@@ -16,6 +16,7 @@ from click.testing import CliRunner
 
 from scpn_phase_orchestrator.coupling import (
     CouplingInferenceConfig,
+    UnsupportedInferenceMethodError,
     auto_coupling_estimation,
     infer_coupling_from_timeseries,
 )
@@ -80,11 +81,33 @@ def test_inference_rejects_invalid_inputs_and_unsupported_methods() -> None:
         infer_coupling_from_timeseries(np.array([[0.1 + 0.1j, 0.2, 0.3, 0.4]] * 2))
     with pytest.raises(ValueError, match="at least 4 timesteps"):
         infer_coupling_from_timeseries(np.ones((2, 3)))
-    with pytest.raises(NotImplementedError, match="notears"):
+    with pytest.raises(UnsupportedInferenceMethodError, match="notears"):
         infer_coupling_from_timeseries(
             _directed_phase_series(),
             config=CouplingInferenceConfig(method="notears"),
         )
+
+
+@pytest.mark.parametrize("method", ["granger", "notears"])
+def test_reserved_methods_fail_closed_with_audit_record(method) -> None:
+    with pytest.raises(UnsupportedInferenceMethodError) as exc_info:
+        infer_coupling_from_timeseries(
+            _directed_phase_series(),
+            config=CouplingInferenceConfig(method=method),
+        )
+
+    err = exc_info.value
+    assert err.method == method
+    assert "transfer_entropy" in err.supported_methods
+    assert method in err.reserved_methods
+    assert "fall back" in str(err)
+    assert err.to_audit_record() == {
+        "error": "UnsupportedInferenceMethodError",
+        "method": method,
+        "supported_methods": ["transfer_entropy"],
+        "reserved_methods": ["granger", "notears"],
+        "fallback_performed": False,
+    }
 
 
 def test_cli_auto_coupling_estimation_outputs_json(tmp_path) -> None:

@@ -25,15 +25,21 @@ complex (Jiang–Lim–Yao–Ye 2011), three-factor Hebbian plasticity (Friston 
 transfer-entropy adaptation (Lizier 2012), spectral connectivity, Bayesian
 priors, HCP connectome loading, named topology templates, and non-negativity /
 symmetry constraints. `infer.py` implements coupling inference for the
-transfer-entropy method only (others raise `NotImplementedError`).
+transfer-entropy method only; reserved method names (`granger`, `notears`) raise
+`UnsupportedInferenceMethodError` with an audit-safe diagnostic and no implicit
+fallback.
 
 ## Backends
 
 Rust paths exist for Hodge, transfer-entropy adaptation, spectral, prior, and
-connectome kernels (try/except import, validated within tolerance). Two are
-**Python-only**: `coupling_est` (no Rust dispatch) and `plasticity` (a Rust
-`plasticity.rs` exists in the kernel but is not bound to Python). Multi-language
-forwarders route to `experimental/accelerators/coupling/`.
+connectome kernels (try/except import, validated within tolerance).
+`coupling_est` is intentionally Python-only for small-N least-squares review.
+`plasticity` is also intentionally Python-only at the public API boundary:
+`spo-engine/src/plasticity.rs` includes a native model with decay and `dt`, while
+the Python API is the validated TCBO-gated three-factor update used by the live
+coupling tests. The Rust file remains a native reference/parity candidate, not a
+hidden dispatcher. Multi-language forwarders route to
+`experimental/accelerators/coupling/`.
 
 ## Wiring
 
@@ -42,6 +48,8 @@ transfer-entropy adaptation is fed back as the next step's coupling.
 
 ## Scope boundaries
 
-`coupling_est` is pure Python (small-N only). SINDy and inference outputs are for
-inspection, not runtime actuation. See also [ssgf.md](ssgf.md) for the gauge-field
-coupling closure and [autotune.md](autotune.md) for offline estimation.
+`coupling_est` is pure Python (small-N only). Reserved inference methods fail
+closed with `UnsupportedInferenceMethodError`; they do not silently reuse the
+transfer-entropy backend. SINDy and inference outputs are for inspection, not
+runtime actuation. See also [ssgf.md](ssgf.md) for the gauge-field coupling
+closure and [autotune.md](autotune.md) for offline estimation.

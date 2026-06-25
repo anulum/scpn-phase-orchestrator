@@ -73,7 +73,10 @@ out-performs the current Rust path; the Rust source exists but is not bound:
 - `oscillators` phase extraction nuance and `coupling/coupling_est` (least-squares
   coupling estimation) — pure Python/NumPy.
 - `coupling/plasticity` — `plasticity.rs` exists in `spo-engine` but is **not**
-  dispatched from Python; the three-factor update runs in NumPy.
+  dispatched from Python. The native model includes decay and `dt`; the public
+  Python API is the validated TCBO-gated three-factor update. Treat the Rust file
+  as a native reference/parity candidate until its semantics are intentionally
+  aligned and benchmarked.
 
 ## 6. Benchmarks
 

@@ -39,6 +39,7 @@ __all__ = [
     "SCPN_LAYER_TIMESCALES",
     "SpatialCouplingModulator",
     "SymmetryConstraint",
+    "UnsupportedInferenceMethodError",
     "UniversalPrior",
     "adjust_ei_ratio",
     "auto_coupling_estimation",
@@ -77,6 +78,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "hodge_decomposition": (".hodge", "hodge_decomposition"),
     "CouplingInferenceConfig": (".infer", "CouplingInferenceConfig"),
     "CouplingInferenceResult": (".infer", "CouplingInferenceResult"),
+    "UnsupportedInferenceMethodError": (
+        ".infer",
+        "UnsupportedInferenceMethodError",
+    ),
     "auto_coupling_estimation": (".infer", "auto_coupling_estimation"),
     "infer_coupling_from_timeseries": (
         ".infer",
