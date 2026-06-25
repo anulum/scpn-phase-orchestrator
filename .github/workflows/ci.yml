@@ -146,11 +146,17 @@ jobs:
           - shard: b
             files: tests/test_reservoir.py tests/test_ude_kuramoto.py tests/test_kuramoto_layer.py tests/test_stuart_landau_nn.py
           - shard: c
-            files: tests/test_nn_physics_validation.py tests/test_nn_physics_validation_p2.py tests/test_nn_physics_validation_p3.py tests/test_nn_physics_validation_p4.py tests/test_nn_physics_validation_p5.py tests/test_nn_physics_validation_p6.py
+            files: tests/test_nn_physics_validation.py
           - shard: d
             files: tests/test_nn_physics_validation_p7.py tests/test_nn_physics_validation_p8.py tests/test_nn_physics_validation_p9.py tests/test_nn_physics_validation_p10.py tests/test_nn_physics_validation_p11.py tests/test_nn_physics_validation_p12.py tests/test_nn_physics_validation_p13.py
+          - shard: e
+            files: tests/test_nn_physics_validation_p2.py
+          - shard: f
+            files: tests/test_nn_physics_validation_p3.py tests/test_nn_physics_validation_p4.py
+          - shard: g
+            files: tests/test_nn_physics_validation_p5.py tests/test_nn_physics_validation_p6.py
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       HYPOTHESIS_PROFILE: ci
     steps:
@@ -241,7 +247,7 @@ jobs:
           merge-multiple: true
       - name: Combine coverage and generate XML
         run: |
-          coverage combine .coverage.test .coverage.ffi .coverage.nn-a .coverage.nn-b .coverage.nn-c .coverage.nn-d
+          coverage combine .coverage.test .coverage.ffi .coverage.nn-*
           coverage xml -o coverage-python.xml
           coverage report
       - name: Upload merged coverage XML
