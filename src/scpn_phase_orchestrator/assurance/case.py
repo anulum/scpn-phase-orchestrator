@@ -12,7 +12,9 @@ The bundle links each catalogued regulatory clause
 (:mod:`scpn_phase_orchestrator.assurance.standards`) to the SPO evidence that
 addresses it, records the conformance status and rationale, and seals the whole
 into a deterministic hash. The bundle is review-only: ``actuation_permitted`` is
-always ``False`` and the bundle carries the
+always ``False`` as documentary review metadata, not as a runtime actuation gate.
+Live runtime limits remain in the actuation projector and safety-tier checks.
+The bundle carries the
 :data:`~scpn_phase_orchestrator.assurance.standards.REGULATORY_DISCLAIMER`.
 """
 
@@ -296,7 +298,9 @@ class AssuranceCaseBundle:
     disclaimer:
         Regulatory disclaimer; fixed to ``REGULATORY_DISCLAIMER``.
     actuation_permitted:
-        Always ``False`` — the bundle is review-only.
+        Always ``False`` as a documentary review flag. The live actuation path
+        does not consult assurance bundles; runtime permission remains governed
+        by the safety-tier checks and :class:`ActionProjector` constraints.
     """
 
     system_name: str

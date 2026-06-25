@@ -467,6 +467,21 @@ class EventStreamWriter:
         self._fh.write(raw)
         self._previous_hash = event_hash
 
+    @property
+    def path(self) -> Path:
+        """Return the stream file path written by this writer.
+
+        Returns
+        -------
+        Path
+            The protobuf audit stream path.
+        """
+        return self._path
+
+    def flush(self) -> None:
+        """Flush buffered audit bytes without closing the stream handle."""
+        self._fh.flush()
+
     def close(self) -> None:
         """Flush buffered audit bytes and close the underlying stream handle."""
         self._fh.flush()

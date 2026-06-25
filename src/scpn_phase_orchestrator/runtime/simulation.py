@@ -87,7 +87,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from scpn_phase_orchestrator.binding.types import BindingSpec
-    from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
+    from scpn_phase_orchestrator.runtime.audit_logger import (
+        AuditLogger,
+        AuditStreamIntegrityResult,
+    )
 
 FloatArray = NDArray[np.float64]
 ScenarioCallback = Callable[["SimulationScenarioContext"], None]
@@ -148,6 +151,8 @@ class SimulationResult:
         r_good_history / r_bad_history: Per-step good/bad order parameters.
         boundary_violation_total: Summed boundary violations across steps.
         action_total: Total projected control actions applied (0 when open loop).
+        audit_event_stream_integrity: Close-time protobuf audit-stream integrity
+            summary when an event stream was written, else ``None``.
     """
 
     spec_name: str
@@ -165,6 +170,7 @@ class SimulationResult:
     r_bad_history: tuple[float, ...]
     boundary_violation_total: int
     action_total: int
+    audit_event_stream_integrity: AuditStreamIntegrityResult | None = None
 
     def to_record(self) -> dict[str, object]:
         """Return a deterministic JSON-serialisable summary (history omitted).
@@ -186,6 +192,11 @@ class SimulationResult:
             "mean_amplitude": self.mean_amplitude,
             "boundary_violation_total": self.boundary_violation_total,
             "action_total": self.action_total,
+            "audit_event_stream_integrity": (
+                self.audit_event_stream_integrity.to_audit_record()
+                if self.audit_event_stream_integrity is not None
+                else None
+            ),
         }
 
 
@@ -675,6 +686,9 @@ def simulate(
     if audit_logger is not None:
         for evt in event_bus.history:
             audit_logger.log_event(evt.kind, {"step": evt.step, "detail": evt.detail})
+        audit_event_stream_integrity = audit_logger.verify_event_stream_integrity()
+    else:
+        audit_event_stream_integrity = None
 
     r_good = r_good_history[-1] if r_good_history else 0.0
     r_bad = r_bad_history[-1] if r_bad_history else 0.0
@@ -698,4 +712,5 @@ def simulate(
         r_bad_history=tuple(r_bad_history),
         boundary_violation_total=boundary_violation_total,
         action_total=action_total,
+        audit_event_stream_integrity=audit_event_stream_integrity,
     )

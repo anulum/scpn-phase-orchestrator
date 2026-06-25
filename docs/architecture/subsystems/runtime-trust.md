@@ -23,7 +23,9 @@ environment keys (`SPO_AUDIT_KEY`, `SPO_AUDIT_KEYRING`).
 ## Processing model
 
 - `runtime/simulation.simulate` — the master step loop (audit record → supervisor
-  decision → action projection → engine step).
+  decision → action projection → engine step). When a protobuf audit stream is
+  attached, the run-end `SimulationResult` includes a flushed whole-stream
+  integrity summary from `verify_event_stream_integrity()`.
 - `actuation/ActionProjector.project` — clamp to bounds, then per-step rate-limit,
   then re-clamp. Deterministic; always closes the loop. An optional neural
   Control Barrier Function filter (interval-bound-propagation verified) and a
@@ -48,12 +50,14 @@ build bundles, and run replay.
 
 ## Scope boundaries (verified by execution)
 
-- **Integrity verification and deterministic replay are opt-in CLI tools**, not
-  called inside `simulate()` or before applying actions.
+- **Per-step tamper evidence is append-time hash chaining.** `simulate()` does
+  not rescan the full stream before each action; a protobuf audit stream is
+  verified once at run end and surfaced on `SimulationResult`.
 - **Audit signing is environment-gated** (`SPO_AUDIT_KEY`), not structural;
   unsigned writes are permitted.
 - **`actuation_permitted=False` is documentary** — it is a frozen-dataclass
-  assertion never consulted by the actuation flow.
+  assertion never consulted by the actuation flow. Runtime gating remains in
+  the safety-tier checks and `ActionProjector` clamp/rate-limit path.
 - The hard-deadline loop defaults to `miss_policy="observe"` (records and
   continues); `"abort"` must be requested explicitly.
 - The Koopman MPC is implemented but **not wired into the default `simulate()`

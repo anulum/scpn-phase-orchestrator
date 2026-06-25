@@ -289,6 +289,34 @@ class TestAuditLogging:
         integrity_ok, _ = ReplayEngine.verify_integrity(entries)
         assert integrity_ok
 
+    def test_simulation_surfaces_event_stream_integrity_result(
+        self, tmp_path: Path
+    ) -> None:
+        audit = tmp_path / "run.jsonl"
+        event_stream = tmp_path / "run.spoa"
+        logger = AuditLogger(audit, event_stream=event_stream)
+        result = simulate(
+            _spec(KURAMOTO_SPEC),
+            steps=6,
+            seed=3,
+            policy_enabled=True,
+            audit_logger=logger,
+            binding_spec_path=Path(KURAMOTO_SPEC),
+        )
+        logger.close()
+
+        integrity = result.audit_event_stream_integrity
+        assert integrity is not None
+        assert integrity.ok is True
+        # Header plus one event per step; event-bus emissions may add more.
+        assert integrity.verified_events >= 7
+        assert integrity.event_stream_path == str(event_stream)
+        assert result.to_record()["audit_event_stream_integrity"] == {
+            "event_stream_path": str(event_stream),
+            "ok": True,
+            "verified_events": integrity.verified_events,
+        }
+
     @pytest.mark.parametrize(
         "spec_path", [SL_RESEARCH_SPEC, SL_IMPRINT_SPEC, KURAMOTO_SPEC]
     )

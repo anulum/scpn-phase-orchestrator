@@ -21,6 +21,7 @@ import hmac
 import json
 import os
 import time
+from dataclasses import dataclass
 from math import isfinite
 from pathlib import Path
 from typing import Any
@@ -34,17 +35,58 @@ from scpn_phase_orchestrator.runtime.audit_signing import (
     SIGNATURE_ALGORITHM,
     key_id_for_secret,
 )
-from scpn_phase_orchestrator.runtime.audit_stream import EventStreamWriter
+from scpn_phase_orchestrator.runtime.audit_stream import (
+    EventStreamWriter,
+    read_event_stream,
+)
+from scpn_phase_orchestrator.runtime.audit_stream import (
+    verify_event_stream_integrity as verify_event_stream_events,
+)
 from scpn_phase_orchestrator.runtime.network_security import is_production_mode
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
-__all__ = ["AuditLogger"]
+__all__ = ["AuditLogger", "AuditStreamIntegrityResult"]
 
 FloatArray = NDArray[np.float64]
 
 _AUDIT_SCHEMA_VERSION = 1
 _DEFAULT_STREAM_ID = "spo-audit-jsonl"
 _ZERO_HASH = "0" * 64
+
+
+@dataclass(frozen=True, slots=True)
+class AuditStreamIntegrityResult:
+    """Close-time integrity summary for a protobuf audit event stream.
+
+    Parameters
+    ----------
+    event_stream_path : str
+        Filesystem path to the verified protobuf audit event stream.
+    ok : bool
+        Whether payload digests, sequence numbers, hash links, and required
+        signatures verified.
+    verified_events : int
+        Number of consecutive events verified before the first failure, or all
+        events when ``ok`` is ``True``.
+    """
+
+    event_stream_path: str
+    ok: bool
+    verified_events: int
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe audit-stream integrity record.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-safe integrity summary for downstream reports.
+        """
+        return {
+            "event_stream_path": self.event_stream_path,
+            "ok": self.ok,
+            "verified_events": self.verified_events,
+        }
 
 
 class AuditLogger:
@@ -85,6 +127,7 @@ class AuditLogger:
         self._event_stream = (
             EventStreamWriter(event_stream) if event_stream is not None else None
         )
+        self._event_stream_integrity: AuditStreamIntegrityResult | None = None
 
     def _load_previous_state(self) -> tuple[str, int]:
         """Load the previous audit-chain state from disk, else raise."""
@@ -423,9 +466,47 @@ class AuditLogger:
     def close(self) -> None:
         """Flush and close the audit log file handle."""
         self._fh.flush()
-        self._fh.close()
         if self._event_stream is not None:
+            if self._event_stream_integrity is None:
+                self.verify_event_stream_integrity()
             self._event_stream.close()
+        self._fh.close()
+
+    def verify_event_stream_integrity(self) -> AuditStreamIntegrityResult | None:
+        """Verify the configured protobuf event stream after flushing writes.
+
+        Returns
+        -------
+        AuditStreamIntegrityResult | None
+            The integrity summary when this logger owns an event stream, else
+            ``None`` for JSONL-only audit logs.
+        """
+        if self._event_stream is None:
+            return None
+        self._fh.flush()
+        self._event_stream.flush()
+        path = self._event_stream.path
+        events = read_event_stream(path)
+        ok, verified_events = verify_event_stream_events(events)
+        result = AuditStreamIntegrityResult(
+            event_stream_path=str(path),
+            ok=ok,
+            verified_events=verified_events,
+        )
+        self._event_stream_integrity = result
+        return result
+
+    @property
+    def event_stream_integrity(self) -> AuditStreamIntegrityResult | None:
+        """Return the most recent event-stream integrity summary, if any.
+
+        Returns
+        -------
+        AuditStreamIntegrityResult | None
+            The last computed event-stream integrity result, or ``None`` when no
+            protobuf stream has been verified.
+        """
+        return self._event_stream_integrity
 
     def __enter__(self) -> AuditLogger:
         return self

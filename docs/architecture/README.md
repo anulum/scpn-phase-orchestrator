@@ -167,9 +167,9 @@ declared, so consumers do not over-rely on a capability:
 - **The declared `wavelet` and `zero_crossing` phase extractors are implemented**
   alongside Hilbert extraction; runtime per-family dispatch beyond synthetic
   seeding remains an expansion item.
-- **The audit trail is real (SHA-256 chain + optional HMAC)**, but integrity
-  verification and deterministic replay are **opt-in CLI tools**, not enforced
-  inside the live step loop. Signing is environment-gated, not structural.
+- **The audit trail is real (SHA-256 chain + optional HMAC)**. Protobuf audit
+  streams are verified once at run end when attached to `simulate()`; deterministic
+  replay remains an opt-in CLI check. Signing is environment-gated, not structural.
 - **Some supervisor capabilities are offline / review-only** (federated
   transport, causal counterfactual, evolutionary search, multiverse branches).
   The formal export covers PRISM and TLA+ (no SMT-LIB exporter despite a

@@ -177,6 +177,18 @@ Enable audit logging for deterministic replay and compliance:
 spo run binding_spec.yaml --steps 10000 --audit /var/log/spo/run.jsonl
 ```
 
+For a parallel protobuf event stream, add `--audit-stream`. The shared
+simulation core flushes and verifies that event stream once at run end and
+surfaces the result on the returned `SimulationResult`; it does not run an
+O(n) stream scan before every control proposal.
+
+```bash
+spo run binding_spec.yaml \
+  --steps 10000 \
+  --audit /var/log/spo/run.jsonl \
+  --audit-stream /var/log/spo/run.spoa
+```
+
 The audit log is a JSONL file containing:
 
 - Header record (oscillator count, dt, seed, amplitude mode)

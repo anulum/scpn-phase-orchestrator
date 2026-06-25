@@ -86,6 +86,12 @@ sequence, payload hash, previous hash, and event hash.
 signature-invalid envelopes whenever `SPO_AUDIT_KEY` or `SPO_AUDIT_KEYRING` is
 configured.
 
+When `simulate()` receives an `AuditLogger` with a protobuf event stream, it
+flushes the stream after the final event and stores the whole-stream integrity
+summary on `SimulationResult.audit_event_stream_integrity`. This is a run-end
+integrity check, not a per-step action gate; append-time hash chaining remains
+the live tamper-evidence during the run.
+
 Unsigned logs and streams are allowed only when no audit key is configured.
 They are marked explicitly as `unsigned-development` and still carry
 canonical payload hashes so reviewers can distinguish local development traces
@@ -118,6 +124,8 @@ from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 
 logger = AuditLogger("audit.jsonl", event_stream="audit.spoa")
 logger.log_event("regime_transition", {"from": "nominal", "to": "degraded"})
+integrity = logger.verify_event_stream_integrity()
+assert integrity is not None and integrity.ok
 logger.close()
 ```
 
