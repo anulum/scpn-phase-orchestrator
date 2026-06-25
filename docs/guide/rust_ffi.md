@@ -16,13 +16,43 @@ backends, see [Backend Fallback Chain](backend_fallbacks.md).
 
 ## Building
 
+Use the repository helper so maturin runs through the Python interpreter that
+owns the target environment:
+
 ```bash
-cd spo-kernel
-maturin develop --release -m crates/spo-ffi/Cargo.toml
+python tools/install_spo_kernel.py --release
 ```
 
 This compiles all Rust crates and installs `spo_kernel` into the active Python
-environment. Verify:
+environment. To target the repository virtual environment explicitly:
+
+```bash
+.venv/bin/python tools/install_spo_kernel.py --release
+```
+
+Verify the selected environment:
+
+```bash
+python tools/install_spo_kernel.py --check-only
+```
+
+The equivalent raw maturin command is:
+
+```bash
+python -m maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+```
+
+Using `python -m maturin` is intentional: it prevents a globally installed
+`maturin` executable from building into a different interpreter than the one
+used by `spo run`, tests, or notebooks.
+
+You can inspect the command without compiling Rust:
+
+```bash
+python tools/install_spo_kernel.py --dry-run --json
+```
+
+After installation, direct import should work:
 
 ```python
 import spo_kernel

@@ -8,9 +8,11 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install install-dev quickstart test test-rust test-all lint fmt bandit sast \
-        preflight preflight-fast docs docs-build bench bench-rust bridge \
+        preflight preflight-fast docs docs-build bench bench-rust bridge bridge-check \
         lock-refresh lock-check \
         build docker-build docker-run clean install-hooks
+
+PYTHON ?= python
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -84,8 +86,11 @@ bench:  ## Python benchmarks
 bench-rust:  ## Rust Criterion benchmarks
 	cd spo-kernel && cargo bench -p spo-engine
 
-bridge:  ## Build Rust FFI via maturin
-	maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+bridge:  ## Build Rust FFI into the selected Python env
+	$(PYTHON) tools/install_spo_kernel.py --release
+
+bridge-check:  ## Verify spo_kernel imports in the selected Python env
+	$(PYTHON) tools/install_spo_kernel.py --check-only
 
 build:  ## Build sdist + wheel
 	python -m build

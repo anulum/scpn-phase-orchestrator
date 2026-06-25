@@ -637,8 +637,10 @@ evidence is attached.
 | macOS | Full | Full |
 | Windows | Full | Experimental (requires MSVC toolchain) |
 
-The PyPI package is pure Python. Rust FFI provides optional acceleration
-and is built from source via `maturin develop`.
+The PyPI package is pure Python. Rust FFI provides optional acceleration and
+is built from source into the selected Python environment with
+`python tools/install_spo_kernel.py --release` or
+`make bridge PYTHON=.venv/bin/python`.
 
 ## Domainpacks
 

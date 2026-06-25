@@ -2,7 +2,7 @@
 
 How SPO selects a compute backend, which languages exist, and the honest
 build-versus-runtime status of each. All claims are against the code as of
-2026-06-23.
+2026-06-26.
 
 ## 1. Strategy
 
@@ -37,10 +37,10 @@ and `upde/` are thin forwarders to the real implementations under
 
 ## 3. Languages and their status
 
-| Backend | Where | Status (2026-06-23) |
+| Backend | Where | Status (2026-06-26) |
 |---------|-------|---------------------|
 | **Python** | every kernel | Reference floor. Always available; correctness baseline. |
-| **Rust** | `spo-kernel/` (6 crates) | Built (`libspo_kernel.so` present in `target/`). **Not importable in every environment** — when `spo_kernel` is absent, `HAS_RUST=False` and Python (or another backend) runs. PyO3/maturin via the `rust` optional extra. |
+| **Rust** | `spo-kernel/` (6 crates) | Built from source into the selected Python environment with `python tools/install_spo_kernel.py --release` or `make bridge PYTHON=.venv/bin/python`. When `spo_kernel` is absent, `HAS_RUST=False` and Python (or another backend) runs. PyO3/maturin via the `rust` optional extra. |
 | **JAX** | `nn/` | Differentiable track; optional `[nn]` extra. Hardware-agnostic JIT (GPU if present). Not part of the default step loop. |
 | **Mojo** | `mojo/` (35 files) + `experimental/accelerators/**/_*_mojo.py` | Source + bridges present; opt-in, environment-gated. |
 | **Julia** | `julia/` (35 files) + `_*_julia.py` bridges (`juliacall`) | Source + bridges present; opt-in, environment-gated. |
@@ -64,6 +64,17 @@ Six crates (verified against `Cargo.toml` members):
 
 > ARCHITECTURE.md (root) lists 5 crates and omits `spo-wasm`; the verified count
 > is 6 in the workspace plus a non-Rust Verilog directory.
+
+Install the FFI through the repository helper instead of a bare `maturin`
+executable:
+
+```bash
+python tools/install_spo_kernel.py --release
+python tools/install_spo_kernel.py --check-only
+```
+
+The helper invokes `python -m maturin`, so the built extension lands in the
+same interpreter used by `spo run`, tests, and notebooks.
 
 ## 5. Intentionally Python-only kernels
 
