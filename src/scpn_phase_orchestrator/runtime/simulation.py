@@ -63,6 +63,10 @@ from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.monitor.twin_confidence import TwinConfidenceScore
+from scpn_phase_orchestrator.monitor.twin_conformal_gate import (
+    confidence_nonconformity,
+)
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -92,6 +96,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from scpn_phase_orchestrator.binding.types import BindingSpec
+    from scpn_phase_orchestrator.monitor.twin_conformal_gate import (
+        ConformalDecision,
+        TwinConformalGate,
+    )
     from scpn_phase_orchestrator.runtime.audit_logger import (
         AuditLogger,
         AuditStreamIntegrityResult,
@@ -100,11 +108,17 @@ if TYPE_CHECKING:
 FloatArray = NDArray[np.float64]
 SimulationControlMode = Literal["supervisor_policy"]
 ScenarioCallback = Callable[["SimulationScenarioContext"], None]
+TwinConfidenceSource = Callable[
+    ["SimulationTwinConfidenceContext"],
+    TwinConfidenceScore,
+]
 
 __all__ = [
     "SimulationResult",
     "SimulationScenarioContext",
+    "SimulationTwinConfidenceContext",
     "SimulationControlMode",
+    "TwinConfidenceSource",
     "simulate",
     "petri_net_from_protocol",
 ]
@@ -159,6 +173,13 @@ class SimulationResult:
         r_good_history / r_bad_history: Per-step good/bad order parameters.
         boundary_violation_total: Summed boundary violations across steps.
         action_total: Total projected control actions applied (0 when open loop).
+        conformal_admission_total: Number of live policy ticks scored by the
+            conformal twin-confidence admission gate.
+        conformal_admission_rejections: Number of scored policy ticks rejected by
+            the conformal admission gate. Rejected ticks suppress all proposed
+            actions for that control interval.
+        last_conformal_admission: Last conformal admission decision, when the
+            optional gate was active.
         audit_event_stream_integrity: Close-time protobuf audit-stream integrity
             summary when an event stream was written, else ``None``.
     """
@@ -179,6 +200,9 @@ class SimulationResult:
     r_bad_history: tuple[float, ...]
     boundary_violation_total: int
     action_total: int
+    conformal_admission_total: int = 0
+    conformal_admission_rejections: int = 0
+    last_conformal_admission: ConformalDecision | None = None
     audit_event_stream_integrity: AuditStreamIntegrityResult | None = None
 
     def to_record(self) -> dict[str, object]:
@@ -202,6 +226,13 @@ class SimulationResult:
             "mean_amplitude": self.mean_amplitude,
             "boundary_violation_total": self.boundary_violation_total,
             "action_total": self.action_total,
+            "conformal_admission_total": self.conformal_admission_total,
+            "conformal_admission_rejections": self.conformal_admission_rejections,
+            "last_conformal_admission": (
+                self.last_conformal_admission.to_audit_record()
+                if self.last_conformal_admission is not None
+                else None
+            ),
             "audit_event_stream_integrity": (
                 self.audit_event_stream_integrity.to_audit_record()
                 if self.audit_event_stream_integrity is not None
@@ -230,6 +261,50 @@ class SimulationScenarioContext:
     psi_target: float
     layer_osc_ranges: dict[int, list[int]]
     rng: np.random.Generator
+
+
+@dataclass(frozen=True)
+class SimulationTwinConfidenceContext:
+    """Read-only live state handed to a twin-confidence source.
+
+    The simulation core does not know how a deployment acquires observed twin
+    data. A configured source receives this context, computes or retrieves a
+    :class:`~scpn_phase_orchestrator.monitor.twin_confidence.TwinConfidenceScore`,
+    and the conformal gate uses that score to admit or reject the current policy
+    tick.
+
+    Attributes
+    ----------
+    spec_name : str
+        Binding-spec name being simulated.
+    step : int
+        Zero-based simulation step for the policy tick.
+    sample_period_s : float
+        Integration sample period in seconds.
+    model_phases : FloatArray
+        Current model phase vector after the integration step.
+    r_good, r_bad : float
+        Objective-layer order parameters for the current model state.
+    regime : str
+        Current supervisor regime label.
+    boundary_violation_count : int
+        Number of boundary violations on the current step.
+    proposed_action_count : int
+        Number of projected actions proposed before conformal admission.
+    layer_order_parameters : tuple[float, ...]
+        Per-layer order parameters for the current model state.
+    """
+
+    spec_name: str
+    step: int
+    sample_period_s: float
+    model_phases: FloatArray
+    r_good: float
+    r_bad: float
+    regime: str
+    boundary_violation_count: int
+    proposed_action_count: int
+    layer_order_parameters: tuple[float, ...]
 
 
 def _objective_r(
@@ -291,6 +366,8 @@ def simulate(
     audit_logger: AuditLogger | None = None,
     binding_spec_path: Path | None = None,
     scenario_hook: ScenarioCallback | None = None,
+    conformal_gate: TwinConformalGate | None = None,
+    twin_confidence_source: TwinConfidenceSource | None = None,
 ) -> SimulationResult:
     """Advance a binding spec for ``steps`` and return the simulation outcome.
 
@@ -321,6 +398,13 @@ def simulate(
         scenarios. The hook can mutate phases, frequencies, coupling, ``zeta``, or
         ``psi_target`` in a validated :class:`SimulationScenarioContext`; it cannot
         perform actuation.
+    conformal_gate : TwinConformalGate | None
+        Optional calibrated conformal twin-confidence gate. When supplied with
+        ``twin_confidence_source``, the gate scores every live policy tick before
+        actions are applied.
+    twin_confidence_source : TwinConfidenceSource | None
+        Callable that returns a twin-confidence score for the current policy tick.
+        It must be supplied together with ``conformal_gate``.
 
     Returns
     -------
@@ -330,12 +414,17 @@ def simulate(
     Raises
     ------
     ValueError
-        If the spec declares no oscillators or an unsupported control mode.
+        If the spec declares no oscillators, an unsupported control mode, or an
+        incomplete conformal-admission configuration.
     """
     if control_mode != "supervisor_policy":
         raise ValueError(
             "simulate control_mode must be 'supervisor_policy'; Koopman MPC is "
             "offline/review-only via runtime.dvoc_oscillation_damping"
+        )
+    if (conformal_gate is None) != (twin_confidence_source is None):
+        raise ValueError(
+            "conformal_gate and twin_confidence_source must be supplied together"
         )
 
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
@@ -471,6 +560,7 @@ def simulate(
     r_bad_history: list[float] = []
     boundary_violation_total = 0
     action_total = 0
+    conformal_decisions: list[tuple[int, ConformalDecision]] = []
     eff_mu = mu
 
     for step_idx in range(steps):
@@ -640,6 +730,41 @@ def simulate(
             actions = [
                 projector.project(a, prev_values.get(a.knob, 0.0)) for a in actions
             ]
+            if conformal_gate is not None and twin_confidence_source is not None:
+                confidence_context = SimulationTwinConfidenceContext(
+                    spec_name=spec.name,
+                    step=step_idx,
+                    sample_period_s=spec.sample_period_s,
+                    model_phases=phases.copy(),
+                    r_good=_objective_r(
+                        phases,
+                        spec.objectives.good_layers,
+                        layer_osc_ranges,
+                    ),
+                    r_bad=_objective_r(
+                        phases,
+                        spec.objectives.bad_layers,
+                        layer_osc_ranges,
+                    ),
+                    regime=regime_manager.current_regime.value,
+                    boundary_violation_count=len(boundary_state.violations),
+                    proposed_action_count=len(actions),
+                    layer_order_parameters=tuple(
+                        float(layer_state.R) for layer_state in executed_layer_states
+                    ),
+                )
+                confidence_score = twin_confidence_source(confidence_context)
+                if not isinstance(confidence_score, TwinConfidenceScore):
+                    raise ValueError(
+                        "twin_confidence_source must return TwinConfidenceScore"
+                    )
+                decision = conformal_gate.update(
+                    confidence_nonconformity(confidence_score),
+                    regime=confidence_context.regime,
+                )
+                conformal_decisions.append((step_idx, decision))
+                if not decision.admitted:
+                    actions = []
         action_total += len(actions)
 
         for act in actions:
@@ -707,6 +832,11 @@ def simulate(
         )
 
     if audit_logger is not None:
+        for step_idx, decision in conformal_decisions:
+            audit_logger.log_event(
+                "conformal_admission",
+                {"step": step_idx, "decision": decision.to_audit_record()},
+            )
         for evt in event_bus.history:
             audit_logger.log_event(evt.kind, {"step": evt.step, "detail": evt.detail})
         audit_event_stream_integrity = audit_logger.verify_event_stream_integrity()
@@ -736,5 +866,12 @@ def simulate(
         r_bad_history=tuple(r_bad_history),
         boundary_violation_total=boundary_violation_total,
         action_total=action_total,
+        conformal_admission_total=len(conformal_decisions),
+        conformal_admission_rejections=sum(
+            1 for _, decision in conformal_decisions if not decision.admitted
+        ),
+        last_conformal_admission=(
+            conformal_decisions[-1][1] if conformal_decisions else None
+        ),
         audit_event_stream_integrity=audit_event_stream_integrity,
     )

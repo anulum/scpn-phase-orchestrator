@@ -417,7 +417,11 @@ band. The threshold adapts online by Adaptive Conformal Inference (Gibbs &
 Candès, 2021) so the long-run empirical miscoverage tracks the target under
 non-stationarity, and it can be regime-conditioned (a separate band per detected
 sync / chimera / chaotic regime). Review-only: a flagged tick signals the twin
-has drifted beyond its calibrated band and autonomy should narrow.
+has drifted beyond its calibrated band and autonomy should narrow. In the
+generic simulation loop, callers can supply a calibrated gate and
+deployment-specific twin-confidence source; rejected conformal ticks suppress
+the current policy action set and are recorded in result/audit surfaces. The
+default CLI run has no observed-twin feed, so this admission gate is opt-in.
 
 ::: scpn_phase_orchestrator.monitor.twin_conformal_gate
 

@@ -34,9 +34,8 @@ the Ott–Antonsen reduction is an O(1) mean-field predictor (Bessel `I0`, `I1`)
 `SimplicialEngine` (3-body), `TorusEngine` (symplectic), `DelayedEngine`,
 `SplittingEngine` (operator splitting), `SheafUPDEEngine`, `SparseUPDEEngine`
 (CSR), `HypergraphEngine`, `DopplerEngine`, `MovingFrameUPDEEngine`, and JAX
-`JaxUPDEEngine` / `JaxStuartLandauEngine`. (Root ARCHITECTURE.md says "12";
-the verified count is higher.) Papers cited in code (unvouched): Acebrón 2005,
-Filatrella–Nielsen–Mallick 2008, and others.
+`JaxUPDEEngine` / `JaxStuartLandauEngine`. Papers cited in code (unvouched):
+Acebrón 2005, Filatrella–Nielsen–Mallick 2008, and others.
 
 ## Backends
 

@@ -69,7 +69,7 @@
       "inputs": ["phases", "knm", "windows", "twin model-vs-observed", "STL trace"],
       "outputs": ["30 observer metrics", "twin-confidence + conformal gate", "STL robustness"],
       "backends": ["rust", "mojo", "julia", "go", "python"],
-      "note": "twin_conformal_gate (CPTC) implemented but not wired into live actuation; modal_participation/phase_koopman/koopman_edmd/oscillation_modes orphaned."
+      "note": "twin_conformal_gate (CPTC) is wired as an opt-in live policy-admission gate when callers supply an observed-twin confidence stream; modal_participation/phase_koopman/koopman_edmd/oscillation_modes remain reviewed APIs used by the dVOC/Koopman review path."
     },
     {
       "name": "supervisor",
@@ -170,7 +170,7 @@
     "experimental/ is the load-bearing accelerator layer, not research.",
     "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; runtime per-family dispatch beyond initial seeding remains open.",
     "Audit chain is real but integrity-verify/replay are opt-in CLI; signing is env-gated.",
-    "twin_conformal_gate (CPTC) is implemented but not wired into the live actuation gate.",
+    "twin_conformal_gate (CPTC) is wired into live policy admission only when callers provide the observed-twin confidence source; default CLI runs do not synthesize that feed.",
     "Formal export covers PRISM and TLA+ only (no SMT-LIB exporter despite docstring).",
     "studio/ has no live JSON feed yet."
   ]

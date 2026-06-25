@@ -19,12 +19,18 @@ from click.testing import CliRunner
 
 from scpn_phase_orchestrator.api import evaluate_binding_spec
 from scpn_phase_orchestrator.binding import load_binding_spec
+from scpn_phase_orchestrator.monitor.twin_confidence import TwinConfidenceScore
+from scpn_phase_orchestrator.monitor.twin_conformal_gate import (
+    ConformalGateConfig,
+    TwinConformalGate,
+)
 from scpn_phase_orchestrator.runtime import cli
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.runtime.simulation import (
     SimulationResult,
     SimulationScenarioContext,
+    SimulationTwinConfidenceContext,
     simulate,
 )
 
@@ -42,6 +48,22 @@ ACTING_SPEC = (
 
 def _spec(path: str):
     return load_binding_spec(Path(path))
+
+
+def _twin_score(composite_z: float) -> TwinConfidenceScore:
+    return TwinConfidenceScore(
+        confidence=float(np.exp(-composite_z)),
+        status="critical" if composite_z > 10.0 else "healthy",
+        phase_js_divergence=0.0,
+        order_wasserstein=0.0,
+        phase_js_z=0.0,
+        order_w1_z=0.0,
+        composite_z=composite_z,
+        phase_js_within_band=True,
+        order_w1_within_band=True,
+        backend="python",
+        score_hash=f"score-{composite_z}",
+    )
 
 
 def _cli_run_finals(
@@ -280,6 +302,86 @@ class TestPolicySwitch:
         assert res.policy_enabled is False
 
 
+class TestConformalAdmission:
+    def test_gate_and_source_must_be_configured_together(self) -> None:
+        gate = TwinConformalGate()
+        gate.calibrate(list(np.linspace(0.0, 1.0, 100)))
+        with pytest.raises(ValueError, match="supplied together"):
+            simulate(_spec(ACTING_SPEC), steps=3, conformal_gate=gate)
+
+    def test_rejected_conformal_admission_blocks_live_policy_actions(self) -> None:
+        gate = TwinConformalGate(
+            ConformalGateConfig(target_miscoverage=0.1, adaptation_rate=0.001)
+        )
+        gate.calibrate(list(np.linspace(0.0, 1.0, 100)))
+        contexts: list[SimulationTwinConfidenceContext] = []
+
+        def source(context: SimulationTwinConfidenceContext) -> TwinConfidenceScore:
+            contexts.append(context)
+            return _twin_score(99.0)
+
+        result = simulate(
+            _spec(ACTING_SPEC),
+            steps=120,
+            seed=7,
+            policy_enabled=True,
+            binding_spec_path=Path(ACTING_SPEC),
+            conformal_gate=gate,
+            twin_confidence_source=source,
+        )
+
+        assert result.conformal_admission_total == len(contexts)
+        assert result.conformal_admission_total > 0
+        assert result.conformal_admission_rejections == result.conformal_admission_total
+        assert result.action_total == 0
+        assert result.last_conformal_admission is not None
+        assert result.last_conformal_admission.admitted is False
+        record = result.to_record()
+        assert (
+            record["conformal_admission_rejections"]
+            == result.conformal_admission_total
+        )
+        assert isinstance(contexts[0].model_phases, np.ndarray)
+        assert contexts[0].proposed_action_count >= 0
+
+    def test_twin_confidence_source_must_return_confidence_score(self) -> None:
+        gate = TwinConformalGate()
+        gate.calibrate(list(np.linspace(0.0, 1.0, 100)))
+
+        with pytest.raises(ValueError, match="TwinConfidenceScore"):
+            simulate(
+                _spec(ACTING_SPEC),
+                steps=10,
+                seed=7,
+                policy_enabled=True,
+                binding_spec_path=Path(ACTING_SPEC),
+                conformal_gate=gate,
+                twin_confidence_source=lambda _context: object(),  # type: ignore[return-value]
+            )
+
+    def test_admitted_conformal_score_preserves_live_policy_actions(self) -> None:
+        gate = TwinConformalGate(
+            ConformalGateConfig(target_miscoverage=0.1, adaptation_rate=0.001)
+        )
+        gate.calibrate(list(np.linspace(0.0, 1.0, 100)))
+
+        result = simulate(
+            _spec(ACTING_SPEC),
+            steps=120,
+            seed=7,
+            policy_enabled=True,
+            binding_spec_path=Path(ACTING_SPEC),
+            conformal_gate=gate,
+            twin_confidence_source=lambda _context: _twin_score(0.0),
+        )
+
+        assert result.conformal_admission_total > 0
+        assert result.conformal_admission_rejections == 0
+        assert result.action_total > 0
+        assert result.last_conformal_admission is not None
+        assert result.last_conformal_admission.admitted is True
+
+
 class TestAuditLogging:
     def test_audit_log_is_replayable(self, tmp_path: Path) -> None:
         audit = tmp_path / "run.jsonl"
@@ -327,6 +429,36 @@ class TestAuditLogging:
             "ok": True,
             "verified_events": integrity.verified_events,
         }
+
+    def test_conformal_admission_decisions_are_audited(
+        self, tmp_path: Path
+    ) -> None:
+        audit = tmp_path / "run.jsonl"
+        logger = AuditLogger(str(audit))
+        gate = TwinConformalGate(ConformalGateConfig(target_miscoverage=0.1))
+        gate.calibrate(list(np.linspace(0.0, 1.0, 100)))
+
+        result = simulate(
+            _spec(ACTING_SPEC),
+            steps=60,
+            seed=7,
+            policy_enabled=True,
+            audit_logger=logger,
+            binding_spec_path=Path(ACTING_SPEC),
+            conformal_gate=gate,
+            twin_confidence_source=lambda _context: _twin_score(99.0),
+        )
+        logger.close()
+        entries = ReplayEngine(str(audit)).load()
+        events = [
+            entry for entry in entries if entry.get("event") == "conformal_admission"
+        ]
+
+        assert len(events) == result.conformal_admission_total
+        assert events
+        decision = events[0]["decision"]
+        assert isinstance(decision, dict)
+        assert decision["admitted"] is False
 
     @pytest.mark.parametrize(
         "spec_path", [SL_RESEARCH_SPEC, SL_IMPRINT_SPEC, KURAMOTO_SPEC]

@@ -3,8 +3,7 @@
 Observes the integrated dynamics and produces metrics the supervisor acts on.
 89 files, ~18.5k LOC; of these, 30 are metric-producing observers and one is an
 STL system, the remainder being per-language backend forwarders (46) and example
-fixtures (8). (Root ARCHITECTURE.md says "15 observers"; the verified count is 30
-plus STL.)
+fixtures (8).
 
 ## Inputs
 
@@ -32,7 +31,11 @@ STL `STLTraceResult` (robustness, satisfied).
   dimension, normalised persistent entropy, delay embedding.
 - **Twin / assurance**: `twin_confidence` (Jensen–Shannon + Wasserstein-1)
   feeding `twin_conformal_gate` — a distribution-free conformal admission gate
-  (Adaptive Conformal Inference, Gibbs & Candès 2021).
+  (Adaptive Conformal Inference, Gibbs & Candès 2021). The generic
+  `runtime.simulation.simulate()` loop can now consume a deployment-provided
+  `TwinConfidenceScore` source and calibrated `TwinConformalGate`; rejected
+  conformal ticks suppress all proposed policy actions for that control interval
+  and are surfaced in result/audit records.
 - **Early warning**: ordinal-pattern transition entropy (`opt_entropy`).
 - **Runtime verification**: `stl/` — an `rtamt`-backed STL monitor plus
   automaton/controller synthesis and action projection (optional dependency).
@@ -49,13 +52,18 @@ each observer's `_load_*_fns()` forwarding to
 
 Fed by `upde` output; consumed by `supervisor` (regime conditions, policy DSL,
 STL into `policy_rules`). Observers are invoked ad hoc per call site rather than
-through a single registry fan-out.
+through a single registry fan-out. The conformal twin-confidence gate is opt-in
+at the live policy admission point: callers supply the observed-twin confidence
+stream, and the core fails closed on rejected ticks by dropping the current
+action set.
 
 ## Scope boundaries
 
-- Unexported/orphaned at present: `modal_participation`, `phase_koopman`,
-  `koopman_edmd`, `oscillation_modes`.
+- The default CLI run has no physical observed-twin feed, so conformal admission
+  remains opt-in rather than automatically enabled for every binding spec.
+- `oscillation_modes`, `modal_participation`, `koopman_edmd`, and
+  `phase_koopman` are not removed: they are reviewed APIs with focused tests and
+  are consumed by the dVOC oscillation-damping/Koopman review path where a plant
+  boundary is explicit.
 - `psychedelic` is a forward simulator, not a live observer; the integrated-
   information module is a labelled proxy.
-- Root ARCHITECTURE.md mislabels: PGBO lives in `ssgf/` not `monitor/`, and NPE
-  is *normalised persistent entropy* (topological), not "prediction error".

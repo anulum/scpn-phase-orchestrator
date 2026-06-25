@@ -95,6 +95,17 @@ finite vector shapes, scalar types, and `CouplingState` identity immediately
 after the hook returns. This is the supported path for benchmark and case-study
 scenario evidence, not a hardware or live-actuation path.
 
+For deployments that have an observed-twin confidence stream, `simulate()` can
+also receive a calibrated `TwinConformalGate` plus a `twin_confidence_source`.
+The source receives `SimulationTwinConfidenceContext` on each live policy tick
+and returns a `TwinConfidenceScore`; the gate scores that value through
+`confidence_nonconformity`. A rejected conformal decision fails closed for that
+tick by suppressing all proposed policy actions, and the result records the
+admission count, rejection count, and last decision. Audit-enabled runs emit a
+`conformal_admission` event for every scored policy tick. The default CLI run
+does not synthesize an observed twin feed, so the gate is opt-in rather than
+implicitly active for every binding spec.
+
 ::: scpn_phase_orchestrator.runtime.simulation
 
 ## Network security helpers

@@ -26,7 +26,10 @@ environment keys (`SPO_AUDIT_KEY`, `SPO_AUDIT_KEYRING`).
   decision → action projection → engine step). When a protobuf audit stream is
   attached, the run-end `SimulationResult` includes a flushed whole-stream
   integrity summary from `verify_event_stream_integrity()`. Its only live
-  `control_mode` is `supervisor_policy`.
+  `control_mode` is `supervisor_policy`. If callers provide both a calibrated
+  `TwinConformalGate` and a deployment-specific `twin_confidence_source`, each
+  live policy tick is conformal-scored before actions are applied; rejected ticks
+  drop the current action set and are surfaced in result/audit records.
 - `actuation/ActionProjector.project` — clamp to bounds, then per-step rate-limit,
   then re-clamp. Deterministic; always closes the default loop. Optional neural
   CBF use is fail-closed in `FoundationModelGovernor`: a
@@ -66,6 +69,9 @@ build bundles, and run replay.
 - Neural CBF certificates are verifier-produced, but runtime CBF use is not
   offline-trust-only: `FoundationModelGovernor` refuses a CBF filter unless the
   supplied `BarrierCertificate` is verified and digest-bound to that filter.
+- The conformal twin-confidence gate is wired into live policy admission when a
+  caller supplies the observed-twin confidence stream. It is not auto-enabled by
+  the default CLI because `spo run` has no physical observed-twin source.
 - Koopman MPC is intentionally **not** a live `simulate()` mode. Passing a
   Koopman mode to `simulate()` fails closed; the supported Koopman path is the
   offline/review-only dVOC damping pipeline and FMI co-simulation surface.
