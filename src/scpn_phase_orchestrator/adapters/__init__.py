@@ -17,6 +17,13 @@ does not depend on runtime serving code.
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.adapters.fmi_cosimulation import (
+    CoSimulationSlave,
+    FMIVariable,
+    cosimulate,
+    generate_model_description,
+    write_fmu,
+)
 from scpn_phase_orchestrator.adapters.fusion_core_bridge import FusionCoreBridge
 from scpn_phase_orchestrator.adapters.gaian_mesh_bridge import GaianMeshNode
 from scpn_phase_orchestrator.adapters.hardware_io import (
@@ -28,7 +35,9 @@ from scpn_phase_orchestrator.adapters.hardware_io import (
     SimulatedBoardAdapter,
 )
 from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
+    audit_hybrid_target_readiness,
     build_hybrid_cocompiler_manifest,
+    build_hybrid_operator_handoff_package,
 )
 from scpn_phase_orchestrator.adapters.lsl_bci_bridge import LSLBCIBridge
 from scpn_phase_orchestrator.adapters.modbus_tls import (
@@ -70,7 +79,9 @@ from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import (
 __all__ = [
     "AgentState",
     "BrainFlowAdapter",
+    "CoSimulationSlave",
     "CoherenceMemorySnapshot",
+    "FMIVariable",
     "FusionCoreBridge",
     "GaianMeshNode",
     "HAS_ASYNCUA",
@@ -100,5 +111,10 @@ __all__ = [
     "SynapseChannelBridge",
     "SynapseCouplingBridge",
     "SynapseSnapshot",
+    "audit_hybrid_target_readiness",
     "build_hybrid_cocompiler_manifest",
+    "build_hybrid_operator_handoff_package",
+    "cosimulate",
+    "generate_model_description",
+    "write_fmu",
 ]

@@ -49,8 +49,19 @@ chronic) → webhook alerter, served by FastAPI + WebSocket. Standalone and opt-
 
 ## Wiring & scope boundaries
 
-Adapters are **not wired into the core CLI or server** — they are opt-in,
-instantiated by the caller, and exercised by tests. There is no CLI tooling for
-adapter diagnostics. `HybridCocompilerBridge` and `FMICosimulationBridge` are
-aspirational/incomplete; `grpc_gen` and the OpenTelemetry/metrics modules are
-forwarding aliases to the `runtime` layer.
+Adapters are **not wired into the core simulation loop or server by default**:
+callers instantiate them explicitly, and production deployments must keep their
+endpoint, mode, and version in audit metadata. `spo doctor` now reports the two
+package-local review/export adapter surfaces that should always ship with the
+package:
+
+- `fmi-cosimulation` — `CoSimulationSlave`, `generate_model_description`,
+  `write_fmu`, and `cosimulate` for FMI 3.0 co-simulation export/review.
+- `hybrid-cocompiler` — manifest, readiness, and operator handoff builders for
+  non-executing neuromorphic/quantum co-compilation review.
+
+There is no live `FMICosimulationBridge` or `HybridCocompilerBridge` class. The
+FMI surface is a co-simulation slave/export package, and the hybrid surface is a
+deterministic manifest builder with execution permissions forced false.
+`grpc_gen` and the OpenTelemetry/metrics modules are forwarding aliases to the
+`runtime` layer.

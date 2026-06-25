@@ -325,6 +325,11 @@ Choose adapter layers by failure tolerance and change management profile:
 | Hardware field trial | `modbus_tls`, `hardware_io` with explicit opt-in flags | physical safety and rollback path |
 | Research and co-compilation | `hybrid_cocompiler`, `quantum_control_bridge` | review-only policy and explicit scope notes |
 
+`spo doctor` reports the package-local FMI and hybrid co-compiler review/export
+surfaces as optional adapter diagnostics. A warning there means the package is
+missing an expected local adapter export; it does not mean SPO is connected to a
+live FMI runtime, QPU, neuromorphic backend, or actuator.
+
 Every adapter contributes a conversion boundary. Production changes should only
 depend on adapters that are covered by active parity and boundary tests for the
 target release.

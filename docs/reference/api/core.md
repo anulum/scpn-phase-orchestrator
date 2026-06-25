@@ -161,9 +161,10 @@ either skips the optimised path (Rust → Python fallback) or raises
 `runtime.doctor` aggregates the per-module detection above into one report
 behind the `spo doctor` command. It probes the interpreter version against
 `requires-python`, the required runtime dependencies, the optional native
-backends (Rust/Julia/Go/Mojo), and the optional feature extras, returning a
-`DoctorReport` whose status is `pass` only when the interpreter is in range and
-every required dependency is importable. See the
+backends (Rust/Julia/Go/Mojo), the optional feature extras, and package-local
+review/export adapter surfaces such as FMI co-simulation and hybrid
+co-compilation, returning a `DoctorReport` whose status is `pass` only when the
+interpreter is in range and every required dependency is importable. See the
 [CLI reference](../cli.md#spo-doctor) for the command and exit codes.
 
 ::: scpn_phase_orchestrator.runtime.doctor

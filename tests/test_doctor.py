@@ -228,6 +228,32 @@ class TestMojoProbe:
         assert check.available is False
 
 
+class TestAdapterSurfaceProbe:
+    def test_fmi_and_hybrid_surfaces_are_reported(self) -> None:
+        report = run_environment_diagnostics()
+        adapters = {c.name: c for c in report.checks if c.category == "adapter"}
+        assert adapters["fmi-cosimulation"].available is True
+        assert "CoSimulationSlave" in adapters["fmi-cosimulation"].detail
+        assert adapters["hybrid-cocompiler"].available is True
+        assert (
+            "build_hybrid_cocompiler_manifest"
+            in adapters["hybrid-cocompiler"].detail
+        )
+
+    def test_adapter_surface_missing_export_is_warning(self) -> None:
+        check = doctor._check_adapter_surface(
+            name="broken-adapter",
+            module_name="json",
+            symbols=("missing_export",),
+            detail="broken adapter",
+        )
+        assert check.available is False
+        assert check.required is False
+        assert check.category == "adapter"
+        assert check.status == "warn"
+        assert "missing_export" in check.detail
+
+
 class TestRunDiagnostics:
     def test_includes_python_and_core(self) -> None:
         report = run_environment_diagnostics()

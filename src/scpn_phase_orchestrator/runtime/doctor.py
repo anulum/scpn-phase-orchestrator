@@ -20,6 +20,8 @@ packages or touching the network:
   ``juliacall``, the Go toolchain/shared libraries, the Mojo toolchain) and the
   optional feature extras (``nn``, ``studio``, ``queuewaves``, ``plot``,
   ``otel``, ``notebook``).
+* opt-in review/export adapter surfaces that should ship with the package, such
+  as the FMI co-simulation export and hybrid co-compiler manifest helpers.
 
 Detection uses :func:`importlib.util.find_spec` for Python modules (which
 locates a distribution without executing its top-level import) and
@@ -32,6 +34,7 @@ fail the run.
 
 from __future__ import annotations
 
+import importlib
 import importlib.metadata as importlib_metadata
 import importlib.util
 import platform
@@ -331,6 +334,27 @@ _OPTIONAL_EXTRAS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "notebook": (("jupyter", "jupyter", "jupyter"),),
 }
 
+# (display name, import module, expected public symbols, human detail) for
+# package-local adapter surfaces that should be visible in ``spo doctor``.
+_ADAPTER_SURFACES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
+    (
+        "fmi-cosimulation",
+        "scpn_phase_orchestrator.adapters.fmi_cosimulation",
+        ("CoSimulationSlave", "generate_model_description", "write_fmu", "cosimulate"),
+        "FMI 3.0 co-simulation export/review surface",
+    ),
+    (
+        "hybrid-cocompiler",
+        "scpn_phase_orchestrator.adapters.hybrid_cocompiler",
+        (
+            "build_hybrid_cocompiler_manifest",
+            "audit_hybrid_target_readiness",
+            "build_hybrid_operator_handoff_package",
+        ),
+        "hybrid neuromorphic-quantum review manifest surface",
+    ),
+)
+
 
 def _go_shared_libraries(repo_root: Path | None) -> list[str]:
     """Return the discovered Go shared-library paths."""
@@ -421,6 +445,61 @@ def _check_mojo() -> DependencyCheck:
     )
 
 
+def _check_adapter_surface(
+    *,
+    name: str,
+    module_name: str,
+    symbols: Sequence[str],
+    detail: str,
+) -> DependencyCheck:
+    """Return the health-check result for a package-local adapter surface.
+
+    Parameters
+    ----------
+    name : str
+        Human-facing adapter surface name.
+    module_name : str
+        Fully qualified Python module path to import.
+    symbols : Sequence[str]
+        Public symbols expected on the adapter module.
+    detail : str
+        Human-facing capability summary for a healthy adapter surface.
+
+    Returns
+    -------
+    DependencyCheck
+        Optional adapter diagnostic suitable for the ``spo doctor`` report.
+    """
+    try:
+        module = importlib.import_module(module_name)
+    except Exception as exc:
+        return DependencyCheck(
+            name=name,
+            category="adapter",
+            required=False,
+            available=False,
+            detail=f"{module_name} unavailable: {type(exc).__name__}",
+        )
+
+    missing = tuple(symbol for symbol in symbols if not hasattr(module, symbol))
+    if missing:
+        return DependencyCheck(
+            name=name,
+            category="adapter",
+            required=False,
+            available=False,
+            detail=f"{module_name} missing exports: {', '.join(missing)}",
+        )
+
+    return DependencyCheck(
+        name=name,
+        category="adapter",
+        required=False,
+        available=True,
+        detail=f"{detail}: {', '.join(symbols)}",
+    )
+
+
 def _find_repo_root(start: Path | None = None) -> Path | None:
     """Locate a checkout root that carries the ``go`` backend sources.
 
@@ -485,6 +564,15 @@ def run_environment_diagnostics(*, repo_root: Path | None = None) -> DoctorRepor
                 category=extra,
                 required=False,
                 install_hint=f"install the '{extra}' extra",
+            )
+        )
+    for name, module_name, symbols, detail in _ADAPTER_SURFACES:
+        checks.append(
+            _check_adapter_surface(
+                name=name,
+                module_name=module_name,
+                symbols=symbols,
+                detail=detail,
             )
         )
 

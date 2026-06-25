@@ -31,8 +31,10 @@ Check that the current environment can run the orchestrator: the interpreter
 version, the required runtime dependencies, the optional native compute backends
 (Rust `spo_kernel`, Julia `juliacall`, the Go toolchain or prebuilt shared
 libraries, and the Mojo toolchain), and the optional feature extras (`nn`,
-`studio`, `queuewaves`, `plot`, `otel`, `notebook`). Run it first after any
-install, upgrade, or move to a new host.
+`studio`, `queuewaves`, `plot`, `otel`, `notebook`). It also checks the
+package-local review/export adapter surfaces for FMI co-simulation and hybrid
+co-compilation manifests. Run it first after any install, upgrade, or move to a
+new host.
 
 ```
 spo doctor [--json-out]
@@ -72,9 +74,10 @@ SCPN Phase Orchestrator environment diagnostics — PASS
   [ ok ] numpy     numpy 2.4.6
   [ ok ] rust      spo_kernel 0.5.10 importable (PyO3 FFI ready)
   [ ok ] go        prebuilt shared libraries: libhodge.so, libnpe.so, ...
+  [ ok ] fmi-cosimulation  FMI 3.0 co-simulation export/review surface: ...
   [warn] streamlit not installed — install the 'studio' extra
 
-PASS: all required dependencies are present (9/13 optional components available).
+PASS: all required dependencies are present (... optional components available).
 ```
 
 The JSON form (`spo doctor --json-out`) returns a stable record with overall
