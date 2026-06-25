@@ -231,7 +231,8 @@ class TestForwardInvarianceVerification:
         return ControlBarrierFilter(**base)
 
     def test_strong_control_certifies(self) -> None:
-        cert = self._filter().verify_forward_invariance(
+        filt = self._filter()
+        cert = filt.verify_forward_invariance(
             np.array([0.0]),
             np.array([1.0]),
             np.array([-0.1]),
@@ -242,6 +243,8 @@ class TestForwardInvarianceVerification:
         assert cert.verified is True
         assert cert.boundary_cells > 0
         assert cert.worst_margin >= 0.0
+        assert cert.filter_digest == filt.filter_digest
+        assert len(cert.verification_digest) == 64
 
     def test_weak_control_fails_soundly(self) -> None:
         # Tiny control authority cannot overcome a strong downward drift.
@@ -292,7 +295,8 @@ class TestForwardInvarianceVerification:
             self._filter().verify_forward_invariance(**base)
 
     def test_certificate_to_dict(self) -> None:
-        cert = self._filter().verify_forward_invariance(
+        filt = self._filter()
+        cert = filt.verify_forward_invariance(
             np.array([0.0]), np.array([1.0]), np.array([-0.1]), np.array([0.1])
         )
         data = cert.to_dict()
@@ -303,8 +307,20 @@ class TestForwardInvarianceVerification:
             "worst_margin",
             "boundary_shell",
             "gamma",
+            "filter_digest",
+            "verification_digest",
         }
         assert isinstance(cert, BarrierCertificate)
+
+    def test_filter_digest_changes_with_safety_envelope(self) -> None:
+        assert self._filter().filter_digest != self._filter(gamma=1.0).filter_digest
+
+    def test_validate_certificate_rejects_wrong_filter(self) -> None:
+        cert = self._filter(gamma=1.0).verify_forward_invariance(
+            np.array([0.0]), np.array([1.0]), np.array([-0.1]), np.array([0.1])
+        )
+        with pytest.raises(ValueError, match="does not match"):
+            self._filter().validate_certificate(cert)
 
 
 class TestPipelineWiring:

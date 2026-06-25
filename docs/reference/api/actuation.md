@@ -347,8 +347,11 @@ exposing `value`, `gradient` (reverse-mode), and `interval_bounds` (sound IBP).
 `BarrierCertificate`: it partitions the state box, bounds ``h`` per cell by IBP,
 and requires that on every boundary-shell cell an actuator-admissible control
 restores the CBF condition. Because IBP over-approximates ``h``, a passing
-certificate is never a false guarantee. Review-only: the filter shapes a proposed
-action; it never actuates.
+certificate is never a false guarantee. The certificate now carries both a
+`filter_digest` and a `verification_digest`; runtime callers can prove the
+certificate belongs to the exact barrier weights, CBF parameters, actuator
+bounds, control-effect vector, state/drift box, and verifier settings that
+produced it. Review-only: the filter shapes a proposed action; it never actuates.
 
 ::: scpn_phase_orchestrator.actuation.control_barrier
 
@@ -359,10 +362,13 @@ controller — a foundation-model forecaster, a learned policy, any advisory sou
 SPO does not trust — deployable. `FoundationModelGovernor.govern` takes the
 proposal as an advisory scalar control and admits only a safe action by composing
 the trust stack SPO already owns: **actuator bounds** (clamp), a **rate limit**
-against the last admitted action, an optional **Control Barrier Function**
-projection (forward-invariance, with the state-left-the-safe-set case flagged when
-`h(x) < 0`), and any number of named **safety predicates** (an STL-derived check,
-an operating-envelope rule) that veto the action. Each call returns a
+against the last admitted action, an optional **certified Control Barrier
+Function** projection (forward-invariance, with the state-left-the-safe-set case
+flagged when `h(x) < 0`), and any number of named **safety predicates** (an
+STL-derived check, an operating-envelope rule) that veto the action. Supplying a
+CBF filter without a verified matching `BarrierCertificate` is rejected at
+governor construction, so the runtime path cannot silently use an uncertified or
+stale neural barrier. Each call returns a
 `GovernorDecision` recording the admitted action, the status
 (`admitted` / `constrained` / `rejected`), the ordered envelope stages that
 touched the proposal, the violations, the barrier value, and a canonical-JSON

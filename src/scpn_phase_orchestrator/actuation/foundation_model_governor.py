@@ -18,7 +18,7 @@ it through the trust stack SPO already owns —
 1. **actuator bounds** — clamp to ``[control_lo, control_hi]``;
 2. **rate limit** — bound the step against the last admitted action
    (``|u − u_prev| ≤ max_rate``);
-3. **Control Barrier Function** — project through an optional
+3. **Control Barrier Function** — project through an optional, certified
    :class:`~scpn_phase_orchestrator.actuation.control_barrier.ControlBarrierFilter`
    so the admitted action keeps the system inside the certified forward-invariant
    safe set, and flag when the state has already left it (``h(x) < 0``);
@@ -51,7 +51,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.actuation.control_barrier import ControlBarrierFilter
+from scpn_phase_orchestrator.actuation.control_barrier import (
+    BarrierCertificate,
+    ControlBarrierFilter,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -158,6 +161,12 @@ class FoundationModelGovernor:
         Maximum admitted change per call, ``|u − u_prev|`` (``> 0``).
     barrier_filter : ControlBarrierFilter | None
         Optional Control Barrier Function gate; ``None`` skips the CBF stage.
+        Supplying a filter also requires a verified matching
+        ``barrier_certificate``.
+    barrier_certificate : BarrierCertificate | None
+        Verified forward-invariance certificate generated for
+        ``barrier_filter``. Runtime construction fails closed when the
+        certificate is missing, failed, or bound to a different filter digest.
     safety_predicates : tuple[tuple[str, SafetyPredicate], ...]
         Named ``(label, predicate)`` safety checks run on the candidate action;
         any predicate returning ``ok=False`` rejects the action.
@@ -170,6 +179,7 @@ class FoundationModelGovernor:
     control_hi: float
     max_rate: float
     barrier_filter: ControlBarrierFilter | None = None
+    barrier_certificate: BarrierCertificate | None = None
     safety_predicates: tuple[tuple[str, SafetyPredicate], ...] = ()
     hold_on_reject: bool = True
 
@@ -181,6 +191,13 @@ class FoundationModelGovernor:
             raise ValueError("control_hi must be greater than control_lo")
         if rate <= 0.0:
             raise ValueError("max_rate must be positive")
+        if self.barrier_filter is None:
+            if self.barrier_certificate is not None:
+                raise ValueError("barrier_certificate requires barrier_filter")
+        elif self.barrier_certificate is None:
+            raise ValueError("barrier_certificate is required with barrier_filter")
+        else:
+            self.barrier_filter.validate_certificate(self.barrier_certificate)
 
     def govern(
         self,

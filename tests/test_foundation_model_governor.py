@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.actuation.control_barrier import (
+    BarrierCertificate,
     ControlBarrierFilter,
     NeuralBarrier,
 )
@@ -46,10 +47,34 @@ def _cbf(
     )
 
 
+def _certificate(cbf: ControlBarrierFilter) -> BarrierCertificate:
+    """Return a verified certificate for the test CBF filter."""
+    return cbf.verify_forward_invariance(
+        np.array([-1.0]),
+        np.array([1.0]),
+        np.array([-0.1]),
+        np.array([0.1]),
+        cells_per_axis=8,
+        boundary_shell=0.25,
+    )
+
+
 def _governor(**overrides: object) -> FoundationModelGovernor:
     base: dict[str, object] = {"control_lo": -1.0, "control_hi": 1.0, "max_rate": 0.5}
     base.update(overrides)
     return FoundationModelGovernor(**base)  # type: ignore[arg-type]
+
+
+def _governor_with_cbf(
+    cbf: ControlBarrierFilter | None = None, **overrides: object
+) -> FoundationModelGovernor:
+    """Return a governor with a verified runtime CBF certificate."""
+    filt = _cbf() if cbf is None else cbf
+    return _governor(
+        barrier_filter=filt,
+        barrier_certificate=_certificate(filt),
+        **overrides,
+    )
 
 
 class TestConfigValidation:
@@ -64,6 +89,36 @@ class TestConfigValidation:
     def test_rejects_non_finite_bound(self) -> None:
         with pytest.raises(ValueError, match="control_hi"):
             _governor(control_hi=float("inf"))
+
+    def test_barrier_filter_requires_matching_certificate(self) -> None:
+        cbf = _cbf()
+        with pytest.raises(ValueError, match="barrier_certificate is required"):
+            _governor(barrier_filter=cbf)
+
+    def test_barrier_certificate_requires_filter(self) -> None:
+        with pytest.raises(ValueError, match="requires barrier_filter"):
+            _governor(barrier_certificate=_certificate(_cbf()))
+
+    def test_rejects_unverified_barrier_certificate(self) -> None:
+        cbf = _cbf()
+        cert = BarrierCertificate(
+            verified=False,
+            cells_checked=1,
+            boundary_cells=1,
+            worst_margin=-1.0,
+            boundary_shell=0.25,
+            gamma=cbf.gamma,
+            filter_digest=cbf.filter_digest,
+            verification_digest="failed",
+        )
+        with pytest.raises(ValueError, match="must be verified"):
+            _governor(barrier_filter=cbf, barrier_certificate=cert)
+
+    def test_rejects_mismatched_barrier_certificate(self) -> None:
+        cbf = _cbf()
+        other = _cbf(gamma=1.0)
+        with pytest.raises(ValueError, match="does not match"):
+            _governor(barrier_filter=cbf, barrier_certificate=_certificate(other))
 
 
 class TestEnvelopeStages:
@@ -119,7 +174,7 @@ class TestBarrierStage:
         assert decision.barrier_value is None
 
     def test_safe_state_reports_positive_barrier(self) -> None:
-        governor = _governor(max_rate=2.0, barrier_filter=_cbf())
+        governor = _governor_with_cbf(max_rate=2.0)
         decision = governor.govern(0.5, _STATE, _DRIFT, previous_action=0.4)
 
         assert decision.barrier_value == pytest.approx(0.5)
@@ -128,7 +183,7 @@ class TestBarrierStage:
 
     def test_barrier_projects_unsafe_action(self) -> None:
         # x=0.05, gamma=0.5, drift=-0.5 -> CBF requires u >= 0.475; propose 0.1.
-        governor = _governor(max_rate=2.0, barrier_filter=_cbf())
+        governor = _governor_with_cbf(max_rate=2.0)
         decision = governor.govern(
             0.1, np.array([0.05]), np.array([-0.5]), previous_action=0.1
         )
@@ -138,7 +193,7 @@ class TestBarrierStage:
         assert decision.status == CONSTRAINED
 
     def test_state_outside_safe_set_is_rejected(self) -> None:
-        governor = _governor(max_rate=2.0, barrier_filter=_cbf())
+        governor = _governor_with_cbf(max_rate=2.0)
         decision = governor.govern(0.5, np.array([-0.2]), _DRIFT, previous_action=0.3)
 
         assert decision.status == REJECTED
@@ -273,11 +328,12 @@ class TestPipelineWiring:
         alpha = np.zeros((n, n))
 
         # Barrier on the mean-phase margin; governor bounds the drive strength.
-        governor = _governor(
+        cbf = _cbf(threshold=-1.0, lo=0.0, hi=2.0)
+        governor = _governor_with_cbf(
+            cbf,
             control_lo=0.0,
             control_hi=2.0,
             max_rate=0.5,
-            barrier_filter=_cbf(threshold=-1.0, lo=0.0, hi=2.0),
             safety_predicates=(
                 ("drive_cap", lambda u, s: (u <= 1.5, "drive too strong")),
             ),

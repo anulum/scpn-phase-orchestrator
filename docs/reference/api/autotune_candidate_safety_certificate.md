@@ -29,7 +29,9 @@ one content-addressed certificate:
 - **Forward invariance** — an optional `BarrierCertificate` from a
   forward-invariance verification. When it is present, verified, and the replay
   stayed within its certified shell, the certificate's evidence is reported as
-  *formally proven*; otherwise it is a *measured* replay margin.
+  *formally proven*; otherwise it is a *measured* replay margin. The certificate
+  also carries `filter_digest` and `verification_digest` fields so a runtime CBF
+  caller can reject stale or mismatched neural-barrier evidence.
 
 ```python
 import numpy as np

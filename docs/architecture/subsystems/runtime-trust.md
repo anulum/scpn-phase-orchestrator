@@ -27,9 +27,11 @@ environment keys (`SPO_AUDIT_KEY`, `SPO_AUDIT_KEYRING`).
   attached, the run-end `SimulationResult` includes a flushed whole-stream
   integrity summary from `verify_event_stream_integrity()`.
 - `actuation/ActionProjector.project` — clamp to bounds, then per-step rate-limit,
-  then re-clamp. Deterministic; always closes the loop. An optional neural
-  Control Barrier Function filter (interval-bound-propagation verified) and a
-  Koopman MPC are available.
+  then re-clamp. Deterministic; always closes the default loop. Optional neural
+  CBF use is fail-closed in `FoundationModelGovernor`: a
+  `ControlBarrierFilter` is accepted only with a verified matching
+  `BarrierCertificate` bound by filter digest. A Koopman MPC is implemented but
+  not wired into the default `simulate()` loop.
 - `audit` — hash chain `event_hash = SHA-256(canonical_json(record))`; optional
   HMAC over the chain; deterministic `ReplayEngine`.
 - `assurance` — content-addressed evidence items and a frozen, review-only bundle
@@ -60,6 +62,9 @@ build bundles, and run replay.
   the safety-tier checks and `ActionProjector` clamp/rate-limit path.
 - The hard-deadline loop defaults to `miss_policy="abort"`; diagnostic
   record-and-continue runs must request `"observe"` explicitly.
+- Neural CBF certificates are verifier-produced, but runtime CBF use is not
+  offline-trust-only: `FoundationModelGovernor` refuses a CBF filter unless the
+  supplied `BarrierCertificate` is verified and digest-bound to that filter.
 - The Koopman MPC is implemented but **not wired into the default `simulate()`
   loop**; `meta`-transfer extracts policy examples but is not consumed by
   actuation.
