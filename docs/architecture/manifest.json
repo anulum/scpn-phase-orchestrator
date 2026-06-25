@@ -93,7 +93,7 @@
       "inputs": ["UPDEState", "BoundaryState", "ControlAction proposals", "audit keys"],
       "outputs": ["projected ControlAction", "SHA-256 hash-chained JSONL + protobuf audit", "AssuranceCaseBundle"],
       "backends": ["python"],
-      "note": "integrity verify + replay are opt-in CLI; signing env-gated; actuation_permitted documentary; deterministic mode default miss_policy=observe; Koopman MPC not in default loop."
+      "note": "protobuf stream integrity is surfaced at simulate run end; signing is env-gated; actuation_permitted is documentary; hard-deadline loops default to miss_policy=abort; Koopman MPC is offline/review-only rather than a live simulate mode."
     },
     {
       "name": "adapters+apps",

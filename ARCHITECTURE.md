@@ -141,7 +141,6 @@ Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.
 | Monitor | Module | Detects |
 |---------|--------|---------|
 | Boundary Observer | `boundaries.py` | Safety/performance limit crossings |
-| PGBO (Gauged) | `ssgf/pgbo.py` | Phase-Geometry curvature alignment |
 | Coherence | `coherence.py` | Order parameter R tracking |
 | Chimera Detection | `chimera.py` | Coexistent coherent/incoherent clusters |
 | EVS | `evs.py` | Entrainment verification (3-criterion) |
@@ -156,6 +155,9 @@ Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.
 | Psychedelic Sim | `psychedelic.py` | Entropy surge simulation |
 | STL Runtime | `stl.py` | Signal Temporal Logic safety monitor |
 | Session Start | `session_start.py` | Startup coherence gate |
+
+PGBO lives in `ssgf/pgbo.py`, not under `monitor/`; it is part of the
+self-stabilising gauge-field closure layer.
 
 ### Differentiable Backend (nn/)
 
@@ -208,7 +210,7 @@ A non-Rust `spo-fpga/` directory holds a Verilog Kuramoto core
 (`kuramoto_core.v`, Zynq-7020 target; unsynthesised).
 
 The `spo-engine` crate contains 53 modules spanning UPDE integration
-(12 engine variants + order params + envelope + splitting + reduction),
+(14–15 engine variants + order params + envelope + splitting + reduction),
 coupling (plasticity, TE adaptive, prior, connectome, spectral, Hodge),
 monitors (sleep staging, EVS, chimera, Lyapunov, entropy production),
 SSGF (carrier, ethical, costs), and autotune (SINDy, coupling estimation,

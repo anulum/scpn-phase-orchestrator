@@ -1,10 +1,11 @@
 # Monitor
 
-The monitor subsystem provides 15+ dynamical observers that detect different
-aspects of oscillator network behavior. Most oscillator simulators provide
-only the global order parameter R. SPO's monitors detect chimera states,
-cross-frequency coupling, causal information flow, topological invariants,
-and thermodynamic irreversibility — phenomena that R alone cannot capture.
+The monitor subsystem provides 30+ dynamical observers plus STL runtime
+monitoring for different aspects of oscillator network behavior. Most oscillator
+simulators provide only the global order parameter R. SPO's monitors detect
+chimera states, cross-frequency coupling, causal information flow, topological
+invariants, and thermodynamic irreversibility — phenomena that R alone cannot
+capture.
 
 Detailed module references:
 
