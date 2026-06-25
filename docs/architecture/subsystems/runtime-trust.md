@@ -68,5 +68,5 @@ build bundles, and run replay.
 - The Koopman MPC is implemented but **not wired into the default `simulate()`
   loop**; `meta`-transfer extracts policy examples but is not consumed by
   actuation.
-- The `audit.proto` schema omits the signature fields, which the writer adds
-  dynamically (schema/implementation drift).
+- The packaged `audit.proto`, root `proto/audit.proto`, and runtime dynamic
+  descriptor carry the same signature/audit-mode fields.

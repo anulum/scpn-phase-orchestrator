@@ -23,4 +23,8 @@ message AuditEnvelope {
   string payload_json = 8;
   string payload_sha256 = 9;
   string event_hash = 10;
+  string signature_algorithm = 11;
+  string signature_key_id = 12;
+  string signature = 13;
+  string audit_mode = 14;
 }

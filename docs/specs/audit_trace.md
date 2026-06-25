@@ -19,9 +19,10 @@ SPO audit has two compatible encodings:
 
 The protobuf stream is event-sourced: every header, step, and named audit event
 is an immutable `AuditEnvelope` with sequence number, event type, timestamp,
-payload digest, previous event hash, and event hash. The JSON payload is still
-stored inside the envelope so existing deterministic replay semantics remain
-unchanged while the stream becomes tail-safe and schema-versioned.
+payload digest, previous event hash, event hash, audit mode, and optional HMAC
+signature metadata. The JSON payload is still stored inside the envelope so
+existing deterministic replay semantics remain unchanged while the stream becomes
+tail-safe and schema-versioned.
 
 Unsigned JSONL audit logs use the same integrity principle: the header record
 is part of the hash chain seed. The first step or event record therefore links
@@ -101,10 +102,15 @@ Envelope fields:
 | `payload_json` | string | Canonical JSON audit record. |
 | `payload_sha256` | string | SHA-256 of `payload_json`. |
 | `event_hash` | string | SHA-256 over envelope metadata and payload digest. |
+| `signature_algorithm` | string | Signature algorithm, empty for unsigned development streams. |
+| `signature_key_id` | string | Non-secret verification-key id, empty for unsigned development streams. |
+| `signature` | string | HMAC signature value, empty for unsigned development streams. |
+| `audit_mode` | string | `hmac-signed` or `unsigned-development`. |
 
 `verify_event_stream_integrity()` checks sequence continuity, previous-hash
-continuity, payload digests, and event hashes. Any mutation to a payload or
-event envelope breaks the chain at the first affected event.
+continuity, payload digests, event hashes, and HMAC signatures when verification
+keys are configured. Any mutation to a payload or event envelope breaks the chain
+at the first affected event.
 
 ## Live Watch
 

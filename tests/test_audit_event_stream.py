@@ -12,11 +12,13 @@ import hashlib
 import importlib.util
 import io
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
 from click.testing import CliRunner
-from google.protobuf import descriptor_pool
+from google.protobuf import descriptor_pb2, descriptor_pool
+from grpc_tools import protoc
 
 from scpn_phase_orchestrator.runtime import audit_stream as audit_stream_module
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
@@ -75,6 +77,54 @@ def test_audit_envelope_descriptor_contract_is_stable() -> None:
         "signature",
         "audit_mode",
     ]
+
+
+@pytest.mark.parametrize(
+    "proto_path",
+    [
+        Path("proto/audit.proto"),
+        Path("src/scpn_phase_orchestrator/audit/audit.proto"),
+    ],
+)
+def test_static_audit_proto_matches_runtime_descriptor(
+    proto_path: Path, tmp_path: Path
+) -> None:
+    runtime_fields = [
+        (field.name, field.number, field.type)
+        for field in _AuditEnvelope.DESCRIPTOR.fields
+    ]
+
+    assert _compiled_audit_proto_fields(proto_path, tmp_path) == runtime_fields
+
+
+def _compiled_audit_proto_fields(
+    proto_path: Path, tmp_path: Path
+) -> list[tuple[str, int, int]]:
+    """Compile ``proto_path`` and return the AuditEnvelope field contract."""
+    import grpc_tools
+
+    descriptor_out = tmp_path / f"{proto_path.parent.name}_audit.desc"
+    include_dir = Path(grpc_tools.__file__).parent / "_proto"
+    rc = protoc.main(
+        [
+            "grpc_tools.protoc",
+            f"-I{proto_path.parent}",
+            f"-I{include_dir}",
+            f"--descriptor_set_out={descriptor_out}",
+            proto_path.name,
+        ]
+    )
+    assert rc == 0
+
+    descriptor_set = descriptor_pb2.FileDescriptorSet()
+    descriptor_set.ParseFromString(descriptor_out.read_bytes())
+    for file_descriptor in descriptor_set.file:
+        for message in file_descriptor.message_type:
+            if message.name == "AuditEnvelope":
+                return [
+                    (field.name, field.number, field.type) for field in message.field
+                ]
+    raise AssertionError(f"AuditEnvelope not found in compiled {proto_path}")
 
 
 def _state() -> UPDEState:
