@@ -18,8 +18,8 @@ SCPN Phase Orchestrator has two maintained execution paths for production use:
   where native toolchains are unavailable.
 
 Pure Python remains the reference fallback. Auxiliary Go, Julia, and Mojo shims
-exist only for selected kernels and should be treated as experimental unless a
-maintained workload proves they are worth the CI and maintenance cost.
+exist only for selected kernels and must keep parity, test, and benchmark
+evidence for the workloads that rely on them.
 
 ## Runtime Selection Patterns
 
@@ -64,9 +64,10 @@ also bypass Python dispatch and run the WGSL/ES-module package emitted by
 Use this path when runtime portability matters more than `f64` parity and the
 deployment contract accepts the documented Euler/f32 WebGPU kernel.
 
-### Five-Backend Experimental Dispatch
+### Five-Backend Auxiliary Dispatch
 
-Some research kernels expose a broader chain:
+Some kernels expose a broader chain through the historical
+`experimental/accelerators` namespace:
 
 ```text
 rust -> mojo -> julia -> go -> python
@@ -77,12 +78,14 @@ the first importable backend. Python remains the final fallback.
 
 Examples include backend-dispatched analysis kernels such as basin stability,
 fractal dimension, Lyapunov, order-parameter, spectral, market, and related
-research paths.
+analysis paths.
 
-These shims are useful for parity experiments, but they are not the default
-production recommendation. Keep them behind explicit module boundaries and
-avoid making application behaviour depend on an auxiliary toolchain being
-installed.
+The namespace is load-bearing, but the backend files are private implementation
+details. Production callers use the owning `coupling`, `monitor`, or `upde`
+API, where validation and fallback semantics live. Keep auxiliary toolchains
+behind explicit module boundaries and avoid making application behaviour depend
+on a Go, Julia, or Mojo installation unless the deployment has parity and
+benchmark evidence for that specific backend.
 
 Fallback is intentionally narrow. Import failures, missing dynamic libraries,
 missing optional symbols, and runtime-loader failures may demote to the next
@@ -174,7 +177,7 @@ The Python path must always remain available.
 
 ## Demotion and Removal Criteria
 
-Auxiliary backends should be demoted to experimental docs, disabled by default,
+Auxiliary backends should be demoted to review-only docs, disabled by default,
 or removed when any of these are true:
 
 - no maintained workload depends on the backend,

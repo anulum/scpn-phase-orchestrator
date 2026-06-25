@@ -4,6 +4,12 @@
 # (c) Code 2020-2026 Miroslav Sotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator - Experimental accelerator namespace
+# SCPN Phase Orchestrator - Load-bearing accelerator namespace
 
-"""Experimental accelerator implementations."""
+"""Private polyglot backend implementations used by production dispatchers.
+
+The modules under this package are intentionally not public user APIs. They are
+called by validated dispatcher surfaces in ``coupling``, ``monitor``, and
+``upde`` so backend absence can fall through safely while validation failures
+remain visible.
+"""
