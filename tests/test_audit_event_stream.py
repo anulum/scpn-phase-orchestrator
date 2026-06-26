@@ -634,6 +634,13 @@ def test_read_event_stream_rejects_truncated_envelope(tmp_path) -> None:
         read_event_stream(path)
 
 
+def test_read_event_stream_rejects_unknown_stream_magic(tmp_path) -> None:
+    path = tmp_path / "audit.spoa"
+    path.write_bytes(b"WRONG\n")
+    with pytest.raises(ValueError, match="not an SPO audit event stream"):
+        read_event_stream(path)
+
+
 def test_tail_event_stream_requires_max_events(tmp_path) -> None:
     path = tmp_path / "audit.spoa"
     EventStreamWriter(path).close()
@@ -752,5 +759,23 @@ def test_verify_rejects_signed_event_with_unknown_key_id(
     event = _read_signed_event(tmp_path)
     event.signature_key_id = "0" * 16
     ok, verified = verify_event_stream_integrity([event])
+    assert ok is False
+    assert verified == 0
+
+
+def test_verify_rejects_signed_event_when_keyring_id_mismatches_material(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
+    event = _read_signed_event(tmp_path)
+    monkeypatch.setattr(
+        audit_stream_module,
+        "audit_verification_keys",
+        lambda: {event.signature_key_id: "different-key-material"},
+    )
+
+    ok, verified = verify_event_stream_integrity([event])
+
     assert ok is False
     assert verified == 0

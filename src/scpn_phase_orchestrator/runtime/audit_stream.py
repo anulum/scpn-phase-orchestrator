@@ -627,14 +627,13 @@ def tail_event_stream(
         raise ValueError("max_events must be a positive integer")
     poll_interval = _validate_poll_interval_s(poll_interval_s)
     events: list[AuditStreamEvent] = []
-    for event in iter_event_stream(
+    iterator = iter_event_stream(
         path,
         from_start=from_start,
         poll_interval_s=poll_interval,
-    ):
-        events.append(event)
-        if len(events) >= max_events:
-            return events
+    )
+    while len(events) < max_events:
+        events.append(next(iterator))
     return events
 
 
