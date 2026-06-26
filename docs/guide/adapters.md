@@ -65,6 +65,7 @@ compiler_manifest = bridge.build_quantum_compiler_manifest(
     omega_array,
     dt=0.01,
 )
+edge_import = bridge.import_scpn_upde_edge(quantum_edge_payload)
 ```
 
 `build_quantum_compiler_manifest()` emits dependency-free OpenQASM 3 review
@@ -73,6 +74,13 @@ symmetrised XY coupling terms, co-simulation parity evidence from deterministic
 term reconstruction, and SHA-256 hashes for the QASM and manifest payloads. The
 manifest keeps QPU execution and live actuation disabled until an operator runs
 external simulator parity and target handoff checks.
+
+`import_scpn_upde_edge()` accepts the QUANTUM `knm.scpn-upde.v1` payload only
+when its `scope_envelope` is `computational-agreement`, its K/omega and edge
+SHA-256 digests recompute, and both QPU execution and actuation permissions are
+false. It imports the K_nm matrix into `CouplingState` and rebuilds SPO's own
+compiler manifest; it does not promote Paper-27 couplings into canonical
+physical evidence.
 
 Use `audit_qpu_target_readiness()` to produce a non-executing target-readiness
 record for a reviewed manifest:

@@ -13,7 +13,7 @@ import of a sibling, and only when a quantum method is called.
 |--------|--------|----------|
 | `SCPNControlBridge` | `scpn-control` | wire format only (no import) |
 | `PlasmaControlBridge` | plasma physics | wire format only; local physics thresholds |
-| `QuantumControlBridge` | `scpn-quantum-control` | lazy import on `solve_q_upde` / `build_openqasm_manifest` |
+| `QuantumControlBridge` | `scpn-quantum-control` | `knm.scpn-upde` import is dependency-free; lazy import on live quantum methods |
 | `FusionCoreBridge` | `scpn-fusion-core` | wire format only |
 | `RemanentiaBridge` | `remanentia` | HTTP client (localhost:8001) |
 | `Synapse*Bridge`, `NeurocoreBridge`, `SNNControllerBridge` | `sc-neurocore` | validator / HTTP |

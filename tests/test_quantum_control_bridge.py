@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import builtins
 import importlib.util
+import json
 import re
 import sys
+from hashlib import sha256
 from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
@@ -19,6 +21,7 @@ from typing import Any, cast
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 _BRIDGE_PATH = (
@@ -39,6 +42,47 @@ _BRIDGE_SPEC.loader.exec_module(_BRIDGE_MODULE)
 QuantumControlBridge = _BRIDGE_MODULE.QuantumControlBridge
 
 TWO_PI = 2.0 * np.pi
+
+
+def _canonical_digest(payload: dict[str, object]) -> str:
+    text = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return sha256(text.encode("utf-8")).hexdigest()
+
+
+def _numeric_digest(value: object, *, name: str) -> str:
+    return _canonical_digest({"name": name, "value": value})
+
+
+def _scpn_upde_edge_payload() -> dict[str, object]:
+    knm = [[0.0, 0.25], [0.25, 0.0]]
+    omega = [1.0, -0.5]
+    payload: dict[str, object] = {
+        "schema": "knm.scpn-upde.v1",
+        "producer": "scpn-quantum-control",
+        "consumer": "scpn-phase-orchestrator",
+        "scope_envelope": "computational-agreement",
+        "claim_boundary": "Paper-27 provisional; computational agreement only.",
+        "n_oscillators": 2,
+        "K_nm": knm,
+        "omega": omega,
+        "trotter": {"time": 0.1, "steps": 1, "order": 1, "dt": 0.1},
+        "compiler": {
+            "kind": "qiskit-pauli-evolution",
+            "num_qubits": 2,
+            "depth": 1,
+            "operation_counts": {"PauliEvolution": 1},
+        },
+        "permissions": {
+            "qpu_execution_permitted": False,
+            "actuation_permitted": False,
+        },
+        "digests": {
+            "K_nm_sha256": _numeric_digest(knm, name="K_nm"),
+            "omega_sha256": _numeric_digest(omega, name="omega"),
+        },
+    }
+    payload["edge_sha256"] = _canonical_digest(payload)
+    return payload
 
 
 class TestConstructorValidation:
@@ -468,6 +512,60 @@ class TestQuantumControlBridge:
                 credentials_configured=True,
                 operator_approved=True,
             )
+
+    def test_import_scpn_upde_edge_accepts_computational_agreement_payload(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        payload = _scpn_upde_edge_payload()
+
+        record = bridge.import_scpn_upde_edge(payload)
+
+        assert record["schema"] == "spo.quantum-control.scpn-upde-import.v1"
+        assert record["status"] == "accepted_computational_agreement"
+        assert record["accepted_schema"] == "knm.scpn-upde.v1"
+        assert record["scope_envelope"] == "computational-agreement"
+        assert record["edge_sha256"] == payload["edge_sha256"]
+        assert record["qpu_execution_permitted"] is False
+        assert record["actuation_permitted"] is False
+        assert isinstance(record["import_sha256"], str)
+        assert len(record["import_sha256"]) == 64
+        coupling = cast(CouplingState, record["coupling_state"])
+        assert coupling.active_template == "quantum_import"
+        np.testing.assert_allclose(coupling.knm, np.array(payload["K_nm"]))
+        manifest = cast(dict[str, object], record["compiler_manifest"])
+        assert manifest["manifest_kind"] == "quantum_compiler_manifest"
+        assert manifest["status"] == "co_simulation_parity_passed"
+        assert manifest["qpu_execution_permitted"] is False
+        assert manifest["actuation_permitted"] is False
+
+    def test_import_scpn_upde_edge_rejects_broader_scope(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        payload = _scpn_upde_edge_payload()
+        payload["scope_envelope"] = "physical-validation"
+
+        with pytest.raises(ValueError, match="scope_envelope"):
+            bridge.import_scpn_upde_edge(payload)
+
+    def test_import_scpn_upde_edge_rejects_execution_permission(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        payload = _scpn_upde_edge_payload()
+        cast(dict[str, object], payload["permissions"])["actuation_permitted"] = True
+
+        with pytest.raises(ValueError, match="actuation_permitted"):
+            bridge.import_scpn_upde_edge(payload)
+
+    def test_import_scpn_upde_edge_rejects_tampered_knm_digest(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        payload = _scpn_upde_edge_payload()
+        cast(list[list[float]], payload["K_nm"])[0][1] += 0.01
+
+        with pytest.raises(ValueError, match="K_nm_sha256"):
+            bridge.import_scpn_upde_edge(payload)
+
+    def test_import_scpn_upde_edge_rejects_bridge_size_mismatch(self):
+        bridge = QuantumControlBridge(n_oscillators=3)
+
+        with pytest.raises(ValueError, match="n_oscillators"):
+            bridge.import_scpn_upde_edge(_scpn_upde_edge_payload())
 
 
 class TestExportArtifactValidation:

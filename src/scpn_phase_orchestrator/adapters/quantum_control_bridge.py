@@ -18,6 +18,7 @@ packages are explicitly imported by the called method.
 from __future__ import annotations
 
 import json
+import re
 from hashlib import sha256
 from numbers import Integral, Real
 from typing import Any, TypeAlias, cast
@@ -32,6 +33,9 @@ __all__ = ["QuantumControlBridge"]
 
 TWO_PI = 2.0 * np.pi
 FloatArray: TypeAlias = NDArray[np.float64]
+SCPN_UPDE_EDGE_SCHEMA = "knm.scpn-upde.v1"
+SCPN_UPDE_SCOPE_ENVELOPE = "computational-agreement"
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _require_positive_integer(value: object, *, name: str) -> int:
@@ -99,6 +103,40 @@ def _finite_array(value: object, *, name: str) -> FloatArray:
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain finite values")
     return array
+
+
+def _canonical_json(payload: dict[str, object]) -> str:
+    """Return canonical JSON used by the QUANTUM edge digest."""
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _digest_mapping(payload: dict[str, object]) -> str:
+    """Return the SHA-256 digest of a canonical JSON mapping."""
+    return sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+
+
+def _numeric_digest(value: object, *, name: str) -> str:
+    """Return a QUANTUM-compatible numeric payload digest."""
+    return _digest_mapping({"name": name, "value": value})
+
+
+def _edge_content_digest(payload: dict[str, object]) -> str:
+    """Return the digest over a ``knm.scpn-upde`` payload."""
+    payload_copy = dict(payload)
+    payload_copy.pop("edge_sha256", None)
+    return _digest_mapping(payload_copy)
+
+
+def _require_sha256(value: object, *, name: str) -> str:
+    """Return a lowercase SHA-256 hex digest, else raise ``ValueError``."""
+    if not isinstance(value, str) or _SHA256_RE.fullmatch(value) is None:
+        raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+    return value
+
+
+def _require_integer_field(mapping: dict[str, object], key: str) -> int:
+    """Return a positive integer field from ``mapping``, else raise."""
+    return _require_positive_integer(mapping.get(key), name=key)
 
 
 def _validate_layer_assignments(
@@ -298,6 +336,50 @@ class QuantumControlBridge:
             alpha=np.zeros((n, n), dtype=np.float64),
             active_template="quantum_import",
         )
+
+    def import_scpn_upde_edge(
+        self, edge_payload: dict[str, object]
+    ) -> dict[str, object]:
+        """Import a QUANTUM ``knm.scpn-upde`` edge under a bounded scope.
+
+        The accepted edge carries ``K_nm`` and ``omega`` arrays plus Trotter
+        metadata. SPO recomputes the payload digests and its own deterministic
+        compiler manifest. It does not permit QPU execution or actuation.
+
+        Parameters
+        ----------
+        edge_payload : dict[str, object]
+            A payload emitted by
+            ``scpn_quantum_control.bridge.scpn_upde_edge``.
+
+        Returns
+        -------
+        dict[str, object]
+            Import evidence containing the coupling state and compiler manifest.
+        """
+        edge = _require_mapping(edge_payload, name="edge_payload")
+        knm, omegas, dt = self._validate_scpn_upde_edge(edge)
+        coupling = self.import_knm(knm)
+        manifest = self.build_quantum_compiler_manifest(knm, omegas, dt=dt)
+        record: dict[str, object] = {
+            "schema": "spo.quantum-control.scpn-upde-import.v1",
+            "status": "accepted_computational_agreement",
+            "accepted_schema": SCPN_UPDE_EDGE_SCHEMA,
+            "scope_envelope": SCPN_UPDE_SCOPE_ENVELOPE,
+            "edge_sha256": edge["edge_sha256"],
+            "n_oscillators": self._n,
+            "coupling_state": coupling,
+            "compiler_manifest": manifest,
+            "qpu_execution_permitted": False,
+            "actuation_permitted": False,
+        }
+        canonical_record = {
+            key: value
+            for key, value in record.items()
+            if key not in {"coupling_state", "compiler_manifest"}
+        }
+        record["import_sha256"] = _digest_mapping(canonical_record)
+        return record
 
     def build_quantum_compiler_manifest(
         self,
@@ -632,6 +714,59 @@ class QuantumControlBridge:
                 f"n_oscillators={self._n}"
             )
         return knm_array.copy(), omega_array.copy()
+
+    def _validate_scpn_upde_edge(
+        self,
+        edge: dict[str, object],
+    ) -> tuple[FloatArray, FloatArray, float]:
+        """Validate a QUANTUM ``knm.scpn-upde`` edge for import."""
+        if edge.get("schema") != SCPN_UPDE_EDGE_SCHEMA:
+            raise ValueError("edge schema must be knm.scpn-upde.v1")
+        if edge.get("producer") != "scpn-quantum-control":
+            raise ValueError("edge producer must be scpn-quantum-control")
+        if edge.get("consumer") != "scpn-phase-orchestrator":
+            raise ValueError("edge consumer must be scpn-phase-orchestrator")
+        if edge.get("scope_envelope") != SCPN_UPDE_SCOPE_ENVELOPE:
+            raise ValueError("scope_envelope must be computational-agreement")
+
+        permissions = _require_mapping(edge.get("permissions"), name="permissions")
+        if permissions.get("qpu_execution_permitted") is not False:
+            raise ValueError("qpu_execution_permitted must be false")
+        if permissions.get("actuation_permitted") is not False:
+            raise ValueError("actuation_permitted must be false")
+
+        n_oscillators = _require_integer_field(edge, "n_oscillators")
+        if n_oscillators != self._n:
+            raise ValueError("edge n_oscillators does not match bridge")
+        knm = _finite_array(edge.get("K_nm"), name="K_nm")
+        omegas = _finite_array(edge.get("omega"), name="omega")
+        if knm.shape != (self._n, self._n):
+            raise ValueError("K_nm shape must match n_oscillators")
+        if omegas.shape != (self._n,):
+            raise ValueError("omega shape must match n_oscillators")
+
+        trotter = _require_mapping(edge.get("trotter"), name="trotter")
+        dt = _require_positive_real(trotter.get("dt"), name="trotter.dt")
+        _require_positive_real(trotter.get("time"), name="trotter.time")
+        _require_integer_field(trotter, "steps")
+        _require_integer_field(trotter, "order")
+
+        digests = _require_mapping(edge.get("digests"), name="digests")
+        expected_knm_digest = _numeric_digest(knm.tolist(), name="K_nm")
+        expected_omega_digest = _numeric_digest(omegas.tolist(), name="omega")
+        if _require_sha256(digests.get("K_nm_sha256"), name="K_nm_sha256") != (
+            expected_knm_digest
+        ):
+            raise ValueError("K_nm_sha256 does not match K_nm")
+        if _require_sha256(digests.get("omega_sha256"), name="omega_sha256") != (
+            expected_omega_digest
+        ):
+            raise ValueError("omega_sha256 does not match omega")
+        if _require_sha256(edge.get("edge_sha256"), name="edge_sha256") != (
+            _edge_content_digest(edge)
+        ):
+            raise ValueError("edge_sha256 does not match payload")
+        return knm.copy(), omegas.copy(), dt
 
     def _quantum_coupling_terms(
         self,
