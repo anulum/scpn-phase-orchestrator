@@ -43,15 +43,51 @@ class TestHypergraphInputs:
         result = validate_hypergraph_inputs(**_inputs())
         assert result[2] == 3  # n
 
+    def test_accepts_empty_edge_encoding(self) -> None:
+        result = validate_hypergraph_inputs(
+            **_inputs(
+                edge_nodes=np.array([], dtype=np.int64),
+                edge_offsets=np.array([], dtype=np.int64),
+                edge_strengths=np.array([], dtype=np.float64),
+            )
+        )
+        assert result[3].size == 0
+
     @pytest.mark.parametrize(
         ("overrides", "match"),
         [
             ({"n": 0}, "n must be >= 1"),
+            ({"phases": np.zeros((1, 3), dtype=np.float64)}, "phases must be"),
+            ({"phases": np.array(["bad", "phase", "value"])}, "phases must"),
+            ({"phases": np.array([0.1, 0.2, 0.3j])}, "phases must be real"),
+            ({"phases": np.array([0.1, np.inf, 0.3])}, "phases must contain"),
             ({"phases": np.array([0.1, 0.2])}, "must both have length n"),
             ({"omegas": np.zeros(2)}, "must both have length n"),
             (
                 {"edge_offsets": np.array([0, 1]), "edge_strengths": np.array([1.0])},
                 "equal length",
+            ),
+            (
+                {
+                    "edge_offsets": np.array([], dtype=np.int64),
+                    "edge_strengths": np.array([], dtype=np.float64),
+                },
+                "edge_nodes must be empty",
+            ),
+            (
+                {
+                    "edge_nodes": np.array([], dtype=np.int64),
+                    "edge_offsets": np.array([0], dtype=np.int64),
+                },
+                "edge_nodes must not be empty",
+            ),
+            (
+                {"edge_offsets": np.array([0, 3]), "edge_strengths": np.ones(2)},
+                "edge_offsets must reference",
+            ),
+            (
+                {"edge_offsets": np.array([0, 0]), "edge_strengths": np.ones(2)},
+                "edge_offsets must be strictly increasing",
             ),
             ({"edge_nodes": np.array([0])}, "hyperedge 0 must contain at least two"),
             (
