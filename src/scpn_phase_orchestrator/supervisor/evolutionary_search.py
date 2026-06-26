@@ -56,6 +56,15 @@ class _ReplaySummary(TypedDict):
     violation_count: int
 
 
+class _ValidatedReplay(TypedDict):
+    """Validated replay evidence consumed by deterministic scoring."""
+
+    replay_id: str
+    reward: float
+    safety_margin: float
+    violations: list[str]
+
+
 @dataclass(frozen=True)
 class EvolutionaryCandidate:
     """One offline candidate snapshot from a deterministic mutation step."""
@@ -403,7 +412,7 @@ def _validate_parent_policy(policy: Mapping[str, object]) -> dict[str, float]:
 
 def _validate_replays(
     audit_replays: Sequence[Mapping[str, object]],
-) -> list[dict[str, object]]:
+) -> list[_ValidatedReplay]:
     """Validate the replay records, else raise."""
     if not isinstance(audit_replays, Sequence) or isinstance(
         audit_replays, (str, bytes, bytearray)
@@ -412,7 +421,7 @@ def _validate_replays(
     if not audit_replays:
         raise ValueError("audit_replays must contain at least one replay")
 
-    out: list[dict[str, object]] = []
+    out: list[_ValidatedReplay] = []
     for index, replay in enumerate(audit_replays):
         if not isinstance(replay, Mapping):
             raise ValueError(f"audit_replays[{index}] must be a mapping")
@@ -453,7 +462,7 @@ def _validate_replays(
     return out
 
 
-def _summarise_replays(replays: Sequence[Mapping[str, object]]) -> _ReplaySummary:
+def _summarise_replays(replays: Sequence[_ValidatedReplay]) -> _ReplaySummary:
     """Return the reduced summary of the replay records."""
     rewards: list[float] = [
         _require_finite_real(replay["reward"], "reward") for replay in replays
@@ -464,10 +473,7 @@ def _summarise_replays(replays: Sequence[Mapping[str, object]]) -> _ReplaySummar
     ]
     violation_count = 0
     for replay in replays:
-        violations = replay["violations"]
-        if not isinstance(violations, list):
-            raise ValueError("violations must be a list")
-        violation_count += len(violations)
+        violation_count += len(replay["violations"])
     return {
         "replay_count": len(replays),
         "mean_reward": float(sum(rewards) / len(rewards)),
@@ -540,8 +546,6 @@ def _validate_trace(trace: Mapping[str, Sequence[object]]) -> dict[str, list[flo
             expected_length = len(finite_values)
         elif len(finite_values) != expected_length:
             raise ValueError("all signals in trace must have equal length")
-        if expected_length == 0:
-            raise ValueError("trace signals must be non-empty")
         validated[signal] = finite_values
     return validated
 
@@ -581,14 +585,10 @@ def _require_positive_int(value: object, field: str) -> int:
     return number
 
 
-def _build_stable_hash(payload: Mapping[str, Any] | object) -> str:
+def _build_stable_hash(payload: Mapping[str, Any]) -> str:
     """Return a stable SHA-256 hash of the inputs."""
-    clean_payload: object
-    if isinstance(payload, dict):
-        clean_payload = dict(payload)
-        clean_payload.pop("candidate_hash", None)
-        clean_payload.pop("report_hash", None)
-    else:
-        clean_payload = payload
+    clean_payload = dict(payload)
+    clean_payload.pop("candidate_hash", None)
+    clean_payload.pop("report_hash", None)
     blob = json.dumps(clean_payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()

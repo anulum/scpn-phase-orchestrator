@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 123,
     "rust_kernel_files": 97,
-    "test_files": 666
+    "test_files": 669
   },
   "documentation": {
     "public_pages": [
@@ -1877,6 +1877,7 @@
       "tests/test_evolutionary_policy_dsl.py",
       "tests/test_evolutionary_supervisor_examples.py",
       "tests/test_evolutionary_supervisor_search.py",
+      "tests/test_evolutionary_supervisor_search_validation.py",
       "tests/test_evolutionary_topology_grammar.py",
       "tests/test_evolutionary_topology_grammar_guards.py",
       "tests/test_evs.py",
@@ -2351,6 +2352,8 @@
       "tests/test_upde_run_algorithm.py",
       "tests/test_upde_run_backends.py",
       "tests/test_upde_run_dispatch.py",
+      "tests/test_upde_run_loader_contracts.py",
+      "tests/test_upde_run_schedule_dispatch.py",
       "tests/test_upde_run_stability.py",
       "tests/test_upde_time_varying_omega.py",
       "tests/test_upde_webgpu_backend.py",
