@@ -356,15 +356,14 @@ def _collect_evidence_objects_and_morphisms(
         )
         return (), ()
 
-    layer_targets = sorted(
-        [
-            f"{_LAYER_NAME_PREFIX}{int(layer.index)}"
-            for layer in artifacts.binding_spec.layers
-            if not isinstance(layer.index, bool)
-            and isinstance(layer.index, Integral)
-            and layer.index >= 0
-        ]
-    )
+    layer_targets: list[str] = []
+    for layer in artifacts.binding_spec.layers:
+        if isinstance(layer.index, bool) or not isinstance(layer.index, Integral):
+            continue
+        layer_index = int(layer.index)
+        if layer_index >= 0:
+            layer_targets.append(f"{_LAYER_NAME_PREFIX}{layer_index}")
+    layer_targets.sort()
 
     for index, evidence in enumerate(artifacts.retrieval_evidence):
         obj_name = f"evidence[{index}]"
