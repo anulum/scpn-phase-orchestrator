@@ -704,11 +704,11 @@ def bayesian_upde_run(
         name="knm",
     )
 
-    final_phase_samples = np.empty(
+    final_phase_samples: FloatArray = np.empty(
         (resolved.n_samples, n_oscillators), dtype=np.float64
     )
-    r_samples = np.empty(resolved.n_samples, dtype=np.float64)
-    psi_samples = np.empty(resolved.n_samples, dtype=np.float64)
+    r_samples: FloatArray = np.empty(resolved.n_samples, dtype=np.float64)
+    psi_samples: FloatArray = np.empty(resolved.n_samples, dtype=np.float64)
     for idx in range(resolved.n_samples):
         final_phases = upde_run(
             phase_array,

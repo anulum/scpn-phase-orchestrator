@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from typing import cast
 
 import numpy as np
 import pytest
@@ -20,6 +21,7 @@ from scpn_phase_orchestrator.upde import (
     bayesian_upde_run,
     fit_gaussian_upde_posterior,
 )
+from scpn_phase_orchestrator.upde.bayesian import BackendName, MethodName
 from scpn_phase_orchestrator.upde.engine import upde_run
 
 
@@ -79,6 +81,7 @@ def test_bayesian_upde_reports_reproducible_r_uncertainty() -> None:
     assert 0.0 <= result.r_mean <= 1.0
     assert result.r_sigma > 0.0
     assert result.r_lower <= result.r_mean <= result.r_upper
+    assert result.r_plus_minus == (result.r_mean, result.r_sigma)
     np.testing.assert_allclose(result.r_samples, repeated.r_samples)
     np.testing.assert_allclose(result.final_phase_samples, repeated.final_phase_samples)
 
@@ -158,6 +161,17 @@ def test_bayesian_config_rejects_non_integral_controls() -> None:
         BayesianUPDEConfig(credible_interval="0.9")
 
 
+def test_bayesian_config_rejects_invalid_backend_controls() -> None:
+    with pytest.raises(ValueError, match="method"):
+        BayesianUPDEConfig(method=cast(MethodName, "bogus"))
+    with pytest.raises(ValueError, match="backend"):
+        BayesianUPDEConfig(backend=cast(BackendName, "stan"))
+    with pytest.raises(ValueError, match="dt"):
+        BayesianUPDEConfig(dt=cast(float, "bad"))
+    with pytest.raises(ValueError, match="credible_interval"):
+        BayesianUPDEConfig(credible_interval=float("nan"))
+
+
 def test_gaussian_distribution_sample_rejects_invalid_sample_boundary() -> None:
     phases, omegas, _, _ = _base_problem()
     distribution = GaussianArrayDistribution(omegas, np.full_like(omegas, 0.01))
@@ -173,6 +187,21 @@ def test_gaussian_distribution_sample_rejects_invalid_sample_boundary() -> None:
     samples = distribution.sample(rng, 3)
     assert samples.shape == (3, phases.size)
     assert np.all(np.isfinite(samples))
+
+
+def test_gaussian_distribution_rejects_invalid_public_inputs() -> None:
+    phases, omegas, _, _ = _base_problem()
+
+    with pytest.raises(ValueError, match="non-negative"):
+        GaussianArrayDistribution(omegas, -np.ones_like(omegas))
+    with pytest.raises(ValueError, match="square matrix"):
+        GaussianArrayDistribution(omegas, np.ones_like(omegas), zero_diagonal=True)
+    with pytest.raises(ValueError, match="finite numeric array"):
+        GaussianArrayDistribution(["bad"], [1.0])
+    with pytest.raises(ValueError, match="array, not a scalar"):
+        GaussianArrayDistribution(1.0, 0.1)
+    with pytest.raises(ValueError, match="finite numeric array"):
+        GaussianArrayDistribution(_UncastableArray(), np.ones(phases.size))
 
 
 def test_bayesian_backend_status_audits_reserved_fail_closed_names() -> None:
@@ -199,6 +228,115 @@ def test_bayesian_backend_status_audits_reserved_fail_closed_names() -> None:
         assert records[backend].sample_count == 0
         assert backend in records[backend].reason
         json.dumps(records[backend].to_audit_record(), allow_nan=False)
+
+
+class _UncastableArray:
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        raise TypeError("cannot expose an array")
+
+
+class _ContractDistribution:
+    def __init__(
+        self,
+        shape: tuple[int, ...],
+        *,
+        finite: bool = True,
+        shape_offset: int = 0,
+    ) -> None:
+        self.shape = shape
+        self._finite = finite
+        self._shape_offset = shape_offset
+
+    def sample(self, rng: np.random.Generator, n_samples: int) -> np.ndarray:
+        del rng
+        value = 1.0 if self._finite else np.nan
+        return np.full(
+            (n_samples + self._shape_offset, *self.shape),
+            value,
+            dtype=np.float64,
+        )
+
+
+def test_bayesian_upde_rejects_invalid_public_run_inputs() -> None:
+    phases, omegas, knm, alpha = _base_problem()
+    config = BayesianUPDEConfig(n_samples=4, seed=7, n_steps=1)
+
+    with pytest.raises(ValueError, match="phases must be 1-D"):
+        bayesian_upde_run(
+            phases.reshape(2, 2),
+            omega=omegas,
+            knm=knm,
+            alpha=alpha,
+            zeta=0.0,
+            psi=0.0,
+            config=config,
+        )
+    with pytest.raises(ValueError, match="alpha must have shape"):
+        bayesian_upde_run(
+            phases,
+            omega=omegas,
+            knm=knm,
+            alpha=np.zeros((3, 3), dtype=np.float64),
+            zeta=0.0,
+            psi=0.0,
+            config=config,
+        )
+    with pytest.raises(ValueError, match="zeta and psi"):
+        bayesian_upde_run(
+            phases,
+            omega=omegas,
+            knm=knm,
+            alpha=alpha,
+            zeta=float("inf"),
+            psi=0.0,
+            config=config,
+        )
+    with pytest.raises(ValueError, match="omega must have shape"):
+        bayesian_upde_run(
+            phases,
+            omega=np.ones(3, dtype=np.float64),
+            knm=knm,
+            alpha=alpha,
+            zeta=0.0,
+            psi=0.0,
+            config=config,
+        )
+
+
+def test_bayesian_upde_rejects_invalid_distribution_contracts() -> None:
+    phases, _, knm, alpha = _base_problem()
+    config = BayesianUPDEConfig(n_samples=4, seed=7, n_steps=1)
+
+    with pytest.raises(ValueError, match="omega distribution must have shape"):
+        bayesian_upde_run(
+            phases,
+            omega=_ContractDistribution((3,)),
+            knm=knm,
+            alpha=alpha,
+            zeta=0.0,
+            psi=0.0,
+            config=config,
+        )
+    with pytest.raises(ValueError, match="omega samples must have shape"):
+        bayesian_upde_run(
+            phases,
+            omega=_ContractDistribution((4,), shape_offset=1),
+            knm=knm,
+            alpha=alpha,
+            zeta=0.0,
+            psi=0.0,
+            config=config,
+        )
+    with pytest.raises(ValueError, match="omega samples must be finite"):
+        bayesian_upde_run(
+            phases,
+            omega=_ContractDistribution((4,), finite=False),
+            knm=knm,
+            alpha=alpha,
+            zeta=0.0,
+            psi=0.0,
+            config=config,
+        )
 
 
 def _posterior_fit_trajectory(
@@ -305,6 +443,13 @@ def test_fit_gaussian_upde_posterior_rejects_invalid_config() -> None:
         fit_gaussian_upde_posterior(trajectory, dt=0.0, alpha=alpha)
     with pytest.raises(ValueError, match="ridge"):
         fit_gaussian_upde_posterior(trajectory, dt=0.02, alpha=alpha, ridge=-1.0)
+    with pytest.raises(ValueError, match="coupling_std_floor"):
+        fit_gaussian_upde_posterior(
+            trajectory,
+            dt=0.02,
+            alpha=alpha,
+            coupling_std_floor=cast(float, True),
+        )
     with pytest.raises(ValueError, match="alpha"):
         fit_gaussian_upde_posterior(trajectory, dt=0.02, alpha=np.zeros((2, 2)))
     with pytest.raises(ValueError, match="boolean"):
