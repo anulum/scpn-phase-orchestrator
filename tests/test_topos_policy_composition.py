@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import Any, cast
 
 import pytest
 
@@ -127,6 +128,7 @@ def test_validate_policy_composition_category_deterministic_across_shapes():
 
 
 def test_invalid_rule_collections_fail_closed():
+    """Rule collection validation rejects malformed top-level containers."""
     with pytest.raises(ValueError, match="rules must be"):
         topos_policy.validate_policy_composition_category(None)
 
@@ -135,6 +137,19 @@ def test_invalid_rule_collections_fail_closed():
 
     with pytest.raises(ValueError, match="non-empty"):
         topos_policy.validate_policy_composition_category([])
+
+
+def test_rule_names_must_be_strings() -> None:
+    """Rule names must be runtime strings before canonicalisation."""
+    rule = PolicyRule(
+        name=cast(Any, 123),
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+
+    with pytest.raises(ValueError, match="rule names must be strings"):
+        topos_policy.validate_policy_composition_category([rule])
 
 
 def test_duplicate_rule_names_or_invalid_compound_logic_cannot_pass():
@@ -254,6 +269,99 @@ def test_invalid_compound_condition_member_contract_cannot_pass() -> None:
     assert "layer" in str(condition_obligation["evidence"])
 
 
+@pytest.mark.parametrize(
+    ("condition", "evidence"),
+    [
+        (
+            CompoundCondition(
+                logic=cast(Any, 123),
+                conditions=[
+                    PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                ],
+            ),
+            "logic",
+        ),
+        (
+            CompoundCondition(logic="AND", conditions=cast(Any, "not-a-list")),
+            "list or tuple",
+        ),
+        (
+            CompoundCondition(logic="AND", conditions=[]),
+            "must contain conditions",
+        ),
+        (
+            CompoundCondition(
+                logic="AND",
+                conditions=[
+                    PolicyCondition(metric=f"R_{idx}", layer=0, op=">", threshold=0.1)
+                    for idx in range(33)
+                ],
+            ),
+            "unbounded",
+        ),
+        (
+            CompoundCondition(
+                logic="AND",
+                conditions=[
+                    PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                    cast(Any, object()),
+                ],
+            ),
+            "members",
+        ),
+    ],
+)
+def test_invalid_compound_condition_shapes_cannot_pass(
+    condition: CompoundCondition,
+    evidence: str,
+) -> None:
+    """Compound condition runtime structure is validated fail-closed."""
+    report = topos_policy.validate_policy_composition_category(
+        [
+            _rule(
+                "compound_shape",
+                ["NOMINAL"],
+                condition,
+                actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+            )
+        ]
+    )
+
+    condition_obligation = next(
+        item
+        for item in report.to_audit_record()["obligation_records"]
+        if item["name"] == "rule.compound_shape.condition"
+    )
+    assert report.passed is False
+    assert condition_obligation["status"] == "failed"
+    assert evidence in str(condition_obligation["evidence"])
+
+
+def test_invalid_condition_object_cannot_pass() -> None:
+    """Policy rules must carry atomic or compound condition objects."""
+    report = topos_policy.validate_policy_composition_category(
+        [
+            PolicyRule(
+                name="bad_condition_object",
+                regimes=["NOMINAL"],
+                condition=cast(Any, object()),
+                actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+            )
+        ]
+    )
+
+    condition_obligation = next(
+        item
+        for item in report.to_audit_record()["obligation_records"]
+        if item["name"] == "rule.bad_condition_object.condition"
+    )
+    assert report.passed is False
+    assert condition_obligation["status"] == "failed"
+    assert "PolicyCondition or CompoundCondition" in str(
+        condition_obligation["evidence"]
+    )
+
+
 def test_invalid_action_member_contract_cannot_pass() -> None:
     report = topos_policy.validate_policy_composition_category(
         [
@@ -274,6 +382,99 @@ def test_invalid_action_member_contract_cannot_pass() -> None:
     assert report.passed is False
     assert action_obligation["status"] == "failed"
     assert "PolicyAction" in str(action_obligation["evidence"])
+
+
+@pytest.mark.parametrize(
+    ("actions", "evidence"),
+    [
+        (cast(Any, ()), "actions must be a list"),
+        ([], "at least one action"),
+        (
+            [PolicyAction(knob="K", scope="global", value=0.1, ttl_s=-1.0)],
+            "non-negative",
+        ),
+    ],
+)
+def test_invalid_action_collection_contracts_cannot_pass(
+    actions: Any,
+    evidence: str,
+) -> None:
+    """Action collections are validated before object/morphism construction."""
+    report = topos_policy.validate_policy_composition_category(
+        [
+            PolicyRule(
+                name="bad_actions",
+                regimes=["NOMINAL"],
+                condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                actions=cast(Any, actions),
+            )
+        ]
+    )
+
+    action_obligation = next(
+        item
+        for item in report.to_audit_record()["obligation_records"]
+        if item["name"] == "rule.bad_actions.actions"
+    )
+    assert report.passed is False
+    assert action_obligation["status"] == "failed"
+    assert evidence in str(action_obligation["evidence"])
+
+
+@pytest.mark.parametrize(
+    ("regimes", "evidence"),
+    [
+        (cast(Any, "NOMINAL"), "list or tuple"),
+        ([], "non-empty"),
+        (["NOMINAL", "  "], "non-empty strings"),
+    ],
+)
+def test_invalid_regime_collections_cannot_pass(
+    regimes: Any,
+    evidence: str,
+) -> None:
+    """Regime collections must be non-empty lists or tuples of strings."""
+    report = topos_policy.validate_policy_composition_category(
+        [
+            PolicyRule(
+                name="bad_regimes",
+                regimes=cast(Any, regimes),
+                condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+            )
+        ]
+    )
+
+    regime_obligation = next(
+        item
+        for item in report.to_audit_record()["obligation_records"]
+        if item["name"] == "rule.bad_regimes.regimes"
+    )
+    assert report.passed is False
+    assert regime_obligation["status"] == "failed"
+    assert evidence in str(regime_obligation["evidence"])
+
+
+def test_duplicate_action_labels_create_one_morphism() -> None:
+    """Duplicate action identities are de-duplicated at morphism construction."""
+    report = topos_policy.validate_policy_composition_category(
+        [
+            _rule(
+                "duplicate_actions",
+                ["NOMINAL"],
+                PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+                actions=[
+                    PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0),
+                    PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0),
+                ],
+            )
+        ]
+    )
+
+    assert report.passed is True
+    assert report.object_count == 1
+    assert report.morphism_count == 1
+    assert len(report.objects[0].action_labels) == 2
 
 
 def test_validation_report_does_not_emit_control_actions(monkeypatch):

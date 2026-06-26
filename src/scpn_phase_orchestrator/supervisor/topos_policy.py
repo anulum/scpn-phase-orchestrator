@@ -203,8 +203,6 @@ def _normalised_logic(raw_logic: str) -> str:
 
 def _validate_policy_condition(condition: PolicyCondition) -> None:
     """Validate an atomic policy predicate used in a composition obligation."""
-    if not isinstance(condition, PolicyCondition):
-        raise ValueError("condition members must be PolicyCondition")
     if not isinstance(condition.metric, str) or not condition.metric.strip():
         raise ValueError("policy condition metric must be a non-empty string")
     if condition.op not in _ALLOWED_CONDITION_OPS:
