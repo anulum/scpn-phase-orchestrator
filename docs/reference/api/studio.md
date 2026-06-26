@@ -70,8 +70,8 @@ coherence ranges, safest-branch metadata, and immutable manifest/report hashes.
 The helper requires non-actuating execution-disabled rollout and risk claim
 boundaries, supported NumPy or JAX vectorised backends, unit-interval `R`
 metrics with ordered intervals, matching branch hashes across rollout and risk
-records, finite topology pressure metrics, and explicit
-`actuation_permitted: false` output.
+records, finite topology pressure metrics, approval/rejection counts that match
+the per-branch risk decisions, and explicit `actuation_permitted: false` output.
 
 `build_hybrid_order_studio_panel(records, scenarios=...)` renders passive
 hybrid classical-quantum order-parameter audit records and deterministic

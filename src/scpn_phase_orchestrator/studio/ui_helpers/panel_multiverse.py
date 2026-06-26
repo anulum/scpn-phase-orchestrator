@@ -271,10 +271,15 @@ def _normalise_multiverse_risk_report(
     )
     if approved_count + rejected_count != branch_count:
         raise ValueError("approved_count and rejected_count must sum to branch_count")
-    if approved_count != sum(1 for decision in decisions if decision["approved"]):
-        raise ValueError("approved_count must match approved branch decisions")
-    if rejected_count != sum(1 for decision in decisions if not decision["approved"]):
-        raise ValueError("rejected_count must match rejected branch decisions")
+    actual_approved_count = sum(1 for decision in decisions if decision["approved"])
+    actual_rejected_count = branch_count - actual_approved_count
+    if (approved_count, rejected_count) != (
+        actual_approved_count,
+        actual_rejected_count,
+    ):
+        raise ValueError(
+            "approved_count and rejected_count must match branch decisions"
+        )
     return {
         "schema_name": "multiverse_branch_risk_gate",
         "schema_version": _require_non_empty_text(
