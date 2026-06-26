@@ -16,6 +16,8 @@ or ``asyncua`` dependency; the live read path is exercised against an in-process
 from __future__ import annotations
 
 import json
+import sys
+import types
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -297,6 +299,27 @@ def test_connect_without_asyncua_raises(monkeypatch: pytest.MonkeyPatch) -> None
         bridge.connect()
 
 
+def test_connect_uses_asyncua_client_when_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _Client:
+        def __init__(self, *, url: str, timeout: float) -> None:
+            self.url = url
+            self.timeout = timeout
+
+    module = types.ModuleType("asyncua")
+    module.__dict__["Client"] = _Client
+    monkeypatch.setitem(sys.modules, "asyncua", module)
+    monkeypatch.setattr(opcua_bridge, "HAS_ASYNCUA", True)
+
+    bridge = _bridge()
+    client = bridge.connect()
+
+    assert isinstance(client, _Client)
+    assert client.url == ENDPOINT
+    assert client.timeout == pytest.approx(4.0)
+
+
 @pytest.mark.skipif(not HAS_ASYNCUA, reason="asyncua extra not installed")
 def test_connect_constructs_client_without_connecting() -> None:
     bridge = _bridge()
@@ -351,8 +374,8 @@ async def _opcua_server(port: int, value: float) -> AsyncIterator[tuple[str, str
 
 
 @pytest.mark.skipif(not HAS_ASYNCUA, reason="asyncua extra not installed")
-async def test_live_read_against_in_process_server() -> None:
-    async with _opcua_server(48495, 3.5) as (url, node_id):
+async def test_live_read_against_in_process_server(unused_tcp_port: int) -> None:
+    async with _opcua_server(unused_tcp_port, 3.5) as (url, node_id):
         bridge = OpcUaPhaseBridge.from_tags(
             url, [OpcUaTag(node_id=node_id, name="temp", sample_rate_hz=10.0)]
         )
@@ -363,8 +386,8 @@ async def test_live_read_against_in_process_server() -> None:
 
 
 @pytest.mark.skipif(not HAS_ASYNCUA, reason="asyncua extra not installed")
-async def test_collect_live_connects_and_reads() -> None:
-    async with _opcua_server(48496, 7.0) as (url, node_id):
+async def test_collect_live_connects_and_reads(unused_tcp_port: int) -> None:
+    async with _opcua_server(unused_tcp_port, 7.0) as (url, node_id):
         bridge = OpcUaPhaseBridge.from_tags(
             url, [OpcUaTag(node_id=node_id, name="pressure", sample_rate_hz=5.0)]
         )
