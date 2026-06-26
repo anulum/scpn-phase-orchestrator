@@ -281,8 +281,6 @@ def propose_sheaf_obstruction_control(
         If the node states or step parameters are invalid.
     """
     states = _validate_node_states(node_states)
-    if len(states.shape) != 2:
-        raise ValueError("node_states must be a 2-D matrix")
     maps = _validate_restriction_maps(
         restriction_maps,
         (states.shape[0], states.shape[1]),
@@ -308,18 +306,6 @@ def propose_sheaf_obstruction_control(
 
     flat_state = states.reshape(-1)
     gradient = (2.0 * baseline.laplacian @ flat_state).reshape(states.shape)
-    gradient_norm = float(np.linalg.norm(gradient))
-    if gradient_norm <= tol:
-        return _sheaf_control_proposal(
-            baseline=baseline,
-            projected=baseline,
-            update=zero_update,
-            projected_node_states=states,
-            step_size=step,
-            max_update_norm=max_norm,
-            accepted=False,
-            blocked_reasons=("zero_sheaf_laplacian_gradient",),
-        )
 
     candidate_projected = baseline
     candidate_update = zero_update
@@ -394,8 +380,6 @@ def sheaf_coherence(
         If the node states or restriction maps are invalid.
     """
     states = _validate_node_states(node_states)
-    if len(states.shape) != 2:
-        raise ValueError("node_states must be a 2-D matrix")
     maps = _validate_restriction_maps(
         restriction_maps,
         (states.shape[0], states.shape[1]),
@@ -468,7 +452,7 @@ def sheaf_laplacian(
     n_nodes, _, n_channels, _ = maps.shape
     dim = n_nodes * n_channels
     laplacian = np.zeros((dim, dim), dtype=np.float64)
-    identity = np.eye(n_channels, dtype=np.float64)
+    identity: FloatArray = np.eye(n_channels, dtype=np.float64)
 
     for target in range(n_nodes):
         target_slice = _block_slice(target, n_channels)

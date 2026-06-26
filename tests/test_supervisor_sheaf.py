@@ -26,6 +26,11 @@ from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 
+class _ArrayProtocolFailure:
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        raise TypeError("array protocol unavailable")
+
+
 def _identity_maps(n_nodes: int, n_channels: int) -> np.ndarray:
     maps = np.zeros((n_nodes, n_nodes, n_channels, n_channels), dtype=np.float64)
     identity = np.eye(n_channels, dtype=np.float64)
@@ -62,11 +67,32 @@ class TestSheafCoherenceContracts:
         with pytest.raises(ValueError, match="restriction_maps"):
             sheaf_laplacian(np.zeros((2, 2, 1), dtype=np.float64))
 
+    @pytest.mark.parametrize(
+        "maps",
+        [
+            np.array([[[["not-real"]], [[0.0]]], [[[0.0]], [[0.0]]]], dtype=object),
+            _ArrayProtocolFailure(),
+        ],
+    )
+    def test_non_castable_restriction_maps_are_rejected(self, maps: object) -> None:
+        states = np.zeros((2, 1), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="restriction_maps must be real-valued"):
+            sheaf_coherence(states, maps)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="restriction_maps must be real-valued"):
+            sheaf_laplacian(maps)  # type: ignore[arg-type]
+
     def test_empty_node_state_matrix_is_rejected(self) -> None:
         maps = np.zeros((0, 0, 1, 1), dtype=np.float64)
 
         with pytest.raises(ValueError, match="at least one node"):
             sheaf_coherence(np.zeros((0, 1), dtype=np.float64), maps)
+
+    def test_non_castable_node_states_are_rejected(self) -> None:
+        maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="node_states must be real-valued"):
+            sheaf_coherence(_ArrayProtocolFailure(), maps)  # type: ignore[arg-type]
 
     def test_non_finite_inputs_are_rejected(self) -> None:
         states = np.zeros((2, 1), dtype=np.float64)
@@ -416,6 +442,26 @@ class TestSheafCoherenceBehaviour:
         assert proposal.baseline_obstruction_score == pytest.approx(0.0)
         assert proposal.projected_obstruction_score == pytest.approx(0.0)
 
+    def test_laplacian_control_proposal_reports_bounded_zero_update(self) -> None:
+        states = np.array([[0.0], [1.0]], dtype=np.float64)
+        maps = _identity_maps(n_nodes=2, n_channels=1)
+
+        proposal = sheaf_module.propose_sheaf_obstruction_control(
+            states,
+            maps,
+            max_update_norm=0.0,
+            max_backtracking_steps=1,
+        )
+
+        assert proposal.accepted_for_review is False
+        assert proposal.blocked_reasons == ("no_monotone_sheaf_projection",)
+        assert proposal.update_norm == pytest.approx(0.0)
+        assert proposal.projected_obstruction_score == pytest.approx(
+            proposal.baseline_obstruction_score
+        )
+        assert np.allclose(proposal.recommended_update, 0.0)
+        assert np.allclose(proposal.projected_node_states, states)
+
     @pytest.mark.parametrize(
         ("step_size", "max_update_norm"),
         [(0.0, 1.0), (-1.0, 1.0), (True, 1.0), (0.1, -1.0), (0.1, True)],
@@ -434,6 +480,24 @@ class TestSheafCoherenceBehaviour:
                 maps,
                 step_size=step_size,  # type: ignore[arg-type]
                 max_update_norm=max_update_norm,  # type: ignore[arg-type]
+            )
+
+    @pytest.mark.parametrize(
+        "max_backtracking_steps",
+        [0, -1, True, np.bool_(True), 1.5],
+    )
+    def test_laplacian_control_proposal_rejects_invalid_backtracking_controls(
+        self,
+        max_backtracking_steps: object,
+    ) -> None:
+        states = np.zeros((2, 1), dtype=np.float64)
+        maps = _identity_maps(n_nodes=2, n_channels=1)
+
+        with pytest.raises(ValueError, match="max_backtracking_steps"):
+            sheaf_module.propose_sheaf_obstruction_control(
+                states,
+                maps,
+                max_backtracking_steps=max_backtracking_steps,  # type: ignore[arg-type]
             )
 
     def test_kernel_dimension_is_tolerant_to_small_numerical_noise(self) -> None:
