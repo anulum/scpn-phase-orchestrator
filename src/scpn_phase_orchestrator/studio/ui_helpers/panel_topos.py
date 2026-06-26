@@ -24,14 +24,6 @@ from ._shared import (
 _TOPOS_PROOF_BOUNDARY = "categorical_validation_prototype_not_formal_topos_proof"
 
 
-_TOPOS_REPORT_SCHEMAS = frozenset(
-    {
-        "symbolic_binding_functor",
-        "policy_composition_category",
-    }
-)
-
-
 def build_topos_semantic_binding_studio_panel(
     symbolic_reports: Sequence[Mapping[str, object]],
     policy_reports: Sequence[Mapping[str, object]],
@@ -139,8 +131,6 @@ def _normalise_topos_validation_reports(
     and non-actuating flag, and have object and morphism counts matching the
     lengths of its normalised objects and morphisms.
     """
-    if schema_name not in _TOPOS_REPORT_SCHEMAS:
-        raise ValueError("Topos report schema is not supported")
     if isinstance(reports, Mapping) or not isinstance(reports, Sequence) or not reports:
         raise ValueError(f"{label}s must be a non-empty sequence")
     normalised: list[dict[str, object]] = []
