@@ -138,6 +138,5 @@ def test_pid_information_primitives_return_zero_for_empty_counts() -> None:
 
     assert pid_module._mutual_information(joint, marginal, marginal) == 0.0
     assert (
-        pid_module._i_min_redundancy(joint, joint, marginal, marginal, marginal)
-        == 0.0
+        pid_module._i_min_redundancy(joint, joint, marginal, marginal, marginal) == 0.0
     )

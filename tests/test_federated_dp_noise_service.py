@@ -404,8 +404,7 @@ def test_preflight_rejects_non_string_label_through_builder() -> None:
         build_dp_noise_service_deployment_preflight_manifest(
             request,
             response,
-            **_preflight_labels()
-            | {"mechanism_label": cast(str, object())},
+            **_preflight_labels() | {"mechanism_label": cast(str, object())},
         )
 
 

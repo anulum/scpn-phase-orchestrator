@@ -25,11 +25,7 @@ def _repo_root() -> Path:
 def test_experimental_namespace_readme_defines_load_bearing_boundary() -> None:
     """The source-local README must describe the actual dispatcher contract."""
     readme = (
-        _repo_root()
-        / "src"
-        / "scpn_phase_orchestrator"
-        / "experimental"
-        / "README.md"
+        _repo_root() / "src" / "scpn_phase_orchestrator" / "experimental" / "README.md"
     )
 
     text = readme.read_text(encoding="utf-8")

@@ -236,8 +236,7 @@ class TestAdapterSurfaceProbe:
         assert "CoSimulationSlave" in adapters["fmi-cosimulation"].detail
         assert adapters["hybrid-cocompiler"].available is True
         assert (
-            "build_hybrid_cocompiler_manifest"
-            in adapters["hybrid-cocompiler"].detail
+            "build_hybrid_cocompiler_manifest" in adapters["hybrid-cocompiler"].detail
         )
 
     def test_adapter_surface_missing_export_is_warning(self) -> None:

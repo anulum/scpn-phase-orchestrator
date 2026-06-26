@@ -338,8 +338,7 @@ class TestConformalAdmission:
         assert result.last_conformal_admission.admitted is False
         record = result.to_record()
         assert (
-            record["conformal_admission_rejections"]
-            == result.conformal_admission_total
+            record["conformal_admission_rejections"] == result.conformal_admission_total
         )
         assert isinstance(contexts[0].model_phases, np.ndarray)
         assert contexts[0].proposed_action_count >= 0
@@ -430,9 +429,7 @@ class TestAuditLogging:
             "verified_events": integrity.verified_events,
         }
 
-    def test_conformal_admission_decisions_are_audited(
-        self, tmp_path: Path
-    ) -> None:
+    def test_conformal_admission_decisions_are_audited(self, tmp_path: Path) -> None:
         audit = tmp_path / "run.jsonl"
         logger = AuditLogger(str(audit))
         gate = TwinConformalGate(ConformalGateConfig(target_miscoverage=0.1))

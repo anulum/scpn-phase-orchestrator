@@ -201,9 +201,7 @@ def claim_summaries(runtime: Mapping[str, object]) -> tuple[StudioFeedClaim, ...
     if not isinstance(layers, Sequence) or isinstance(layers, (str, bytes)):
         raise ValueError("runtime layers must be a sequence")
     admission = "admitted" if layers else "rejected"
-    coherence_status = (
-        "bounded-support" if 0.0 <= r_global <= 1.0 else "validation-gap"
-    )
+    coherence_status = "bounded-support" if 0.0 <= r_global <= 1.0 else "validation-gap"
     return (
         StudioFeedClaim("spo.runtime-state.v1", "bounded-model", admission, "measured"),
         StudioFeedClaim(

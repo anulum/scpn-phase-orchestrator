@@ -262,9 +262,7 @@ def test_empty_binding_layers_and_families_fail_presence_obligations() -> None:
         == "failed"
     )
     assert (
-        _find_obligation(payload, "retrieval_evidence_to_evidence_morphisms")[
-            "status"
-        ]
+        _find_obligation(payload, "retrieval_evidence_to_evidence_morphisms")["status"]
         == "passed"
     )
 
@@ -288,9 +286,7 @@ def test_duplicate_and_noncanonical_layers_fail_mapping_obligations() -> None:
     assert report.passed is False
     assert _find_obligation(payload, "layer_indexes_unique")["status"] == "failed"
     assert (
-        _find_obligation(payload, "layer_indexes_map_to_stable_object_names")[
-            "status"
-        ]
+        _find_obligation(payload, "layer_indexes_map_to_stable_object_names")["status"]
         == "failed"
     )
 
@@ -326,8 +322,7 @@ def test_retrieval_evidence_without_layer_targets_fails_morphism_obligation() ->
     assert report.passed is False
     assert obligation["status"] == "failed"
     assert (
-        obligation["evidence"]
-        == "cannot map retrieval evidence without layer objects"
+        obligation["evidence"] == "cannot map retrieval evidence without layer objects"
     )
 
 

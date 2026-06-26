@@ -404,8 +404,9 @@ class TestAuditHeader:
 
     def test_header_rejects_invalid_control_mode(self, tmp_path):
         log_path = tmp_path / "audit.jsonl"
-        with AuditLogger(log_path) as logger, pytest.raises(
-            AuditError, match="control_mode"
+        with (
+            AuditLogger(log_path) as logger,
+            pytest.raises(AuditError, match="control_mode"),
         ):
             logger.log_header(n_oscillators=8, dt=0.01, control_mode="")
 

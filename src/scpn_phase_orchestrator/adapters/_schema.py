@@ -84,7 +84,5 @@ def require_waveform_extractor_type(value: object, *, field: str) -> str:
     algorithm = cast(str, resolve_extractor_type(raw))
     if algorithm not in _WAVEFORM_EXTRACTORS:
         expected = ", ".join(sorted(_WAVEFORM_EXTRACTORS))
-        raise ValueError(
-            f"{field} must resolve to one of {expected}; got {raw!r}"
-        )
+        raise ValueError(f"{field} must resolve to one of {expected}; got {raw!r}")
     return algorithm
