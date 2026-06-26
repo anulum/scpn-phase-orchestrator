@@ -134,8 +134,6 @@ class DpNoiseServiceRequestManifest:
             raise ValueError("node_budgets must be a tuple of DpNoiseNodePrivacyBudget")
         if len(self.node_budgets) != self.node_count:
             raise ValueError("node_budgets length must match node_count")
-        if not self.node_budgets:
-            raise ValueError("node_budgets must not be empty")
 
         node_ids = set[str]()
         for budget in self.node_budgets:
@@ -482,13 +480,6 @@ def build_dp_noise_service_deployment_preflight_manifest(
     if request_manifest.delta != response_manifest.delta:
         missing_reasons.append("delta mismatch between request and response manifests")
 
-    if not math.isfinite(request_manifest.epsilon) or request_manifest.epsilon <= 0.0:
-        missing_reasons.append("epsilon must be finite and positive")
-    if (
-        not math.isfinite(request_manifest.delta)
-        or not 0.0 < request_manifest.delta < 1.0
-    ):
-        missing_reasons.append("delta must be finite in (0, 1)")
     if not math.isfinite(response_manifest.epsilon) or response_manifest.epsilon <= 0.0:
         missing_reasons.append("response epsilon must be finite and positive")
     if (

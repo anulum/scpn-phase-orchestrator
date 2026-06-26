@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from typing import cast
 
 import pytest
 
 from scpn_phase_orchestrator.supervisor.federated_dp_noise_service import (
     DpNoiseNodePrivacyBudget,
+    DpNoiseServiceDeploymentPreflightManifest,
     DpNoiseServiceReadiness,
     DpNoiseServiceRequestManifest,
     DpNoiseServiceResponseManifest,
@@ -291,6 +293,8 @@ def test_dp_noise_service_deployment_preflight_hash_is_stable() -> None:
         ({"seed_hash": "z" * 64}, "seed_hash must be a hex string"),
         ({"policy_keys": ["alpha", "beta"]}, "policy_keys must be a tuple"),
         ({"policy_keys": ()}, "policy_keys must be non-empty"),
+        ({"policy_keys": ("alpha", "")}, "policy key must be a non-empty string"),
+        ({"policy_keys": ("alpha", 1)}, "policy key must be a non-empty string"),
     ],
 )
 def test_request_manifest_rejects_scalar_fields(changes, match) -> None:
@@ -340,11 +344,80 @@ def test_preflight_rejects_non_response_manifest() -> None:
         )
 
 
+def _preflight_manifest() -> DpNoiseServiceDeploymentPreflightManifest:
+    request = _seed_request()
+    response = build_dp_noise_service_manifest(request)
+    return build_dp_noise_service_deployment_preflight_manifest(
+        request,
+        response,
+        **_preflight_labels(),
+    )
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        (
+            {"mechanism_label": object()},
+            "mechanism_label must be a non-empty string",
+        ),
+        (
+            {"privacy_accountant_owner": object()},
+            "privacy_accountant_owner must be a non-empty string",
+        ),
+        (
+            {"seed_custody_label": object()},
+            "seed_custody_label must be a non-empty string",
+        ),
+        (
+            {"budget_issuer_label": object()},
+            "budget_issuer_label must be a non-empty string",
+        ),
+        (
+            {"service_endpoint_label": object()},
+            "service_endpoint_label must be a non-empty string",
+        ),
+        ({"operator_approved": "yes"}, "operator_approved must be a boolean"),
+        ({"request_hash": "0" * 63}, "request_hash must be a 64-char hex hash"),
+        ({"response_hash": "0" * 63}, "response_hash must be a 64-char hex hash"),
+        ({"epsilon": float("nan")}, "epsilon must be a finite float"),
+        ({"epsilon": 0.0}, "epsilon must be greater than 0"),
+        ({"delta": float("nan")}, "delta must be a finite float"),
+        ({"delta": 1.0}, r"delta must be in \(0, 1\)"),
+        ({"request_hash": "z" * 64}, "request_hash must be hexadecimal"),
+        ({"response_hash": "z" * 64}, "response_hash must be hexadecimal"),
+    ],
+)
+def test_deployment_preflight_manifest_rejects_malformed_fields(
+    changes: dict[str, object],
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        replace(_preflight_manifest(), **changes)
+
+
+def test_preflight_rejects_non_string_label_through_builder() -> None:
+    request = _seed_request()
+    response = _seed_response()
+
+    with pytest.raises(ValueError, match="mechanism_label must be a non-empty string"):
+        build_dp_noise_service_deployment_preflight_manifest(
+            request,
+            response,
+            **_preflight_labels()
+            | {"mechanism_label": cast(str, object())},
+        )
+
+
 @pytest.mark.parametrize(
     ("changes", "reason"),
     [
         ({"epsilon": 9.0}, "epsilon mismatch"),
         ({"delta": 0.5}, "delta mismatch"),
+        ({"epsilon": float("nan")}, "response epsilon must be finite and positive"),
+        ({"epsilon": 0.0}, "response epsilon must be finite and positive"),
+        ({"delta": float("nan")}, "response delta must be finite in"),
+        ({"delta": 2.0}, "response delta must be finite in"),
     ],
 )
 def test_preflight_detects_request_response_inconsistency(changes, reason) -> None:
