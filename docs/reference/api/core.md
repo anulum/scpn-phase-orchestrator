@@ -200,7 +200,9 @@ latencies and jitters plus aggregate statistics (mean / max / p99 latency, max
 absolute jitter, deadline-miss count). The loop is timing-only and
 non-actuating: it never inspects or mutates the step's state, so it drives the
 simulation step, a controller tick, or any periodic task without coupling to a
-specific engine.
+specific engine. Advanced callers may pass a monotonic `clock_ns` and matching
+`wait_until` hook for deterministic simulator clocks; production calls default
+to `time.perf_counter_ns` and the built-in sleep/spin waiter.
 
 ::: scpn_phase_orchestrator.runtime.deterministic
 

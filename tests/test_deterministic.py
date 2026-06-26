@@ -23,6 +23,23 @@ from scpn_phase_orchestrator.runtime.deterministic import (
 )
 
 
+class _ManualClock:
+    def __init__(self) -> None:
+        self.now_ns = 0
+        self.wait_targets_ns: list[int] = []
+
+    def now(self) -> int:
+        return self.now_ns
+
+    def advance(self, duration_ns: int) -> None:
+        self.now_ns += duration_ns
+
+    def wait_until(self, target_ns: int, _busy_wait_margin_ns: int) -> None:
+        self.wait_targets_ns.append(target_ns)
+        if self.now_ns < target_ns:
+            self.now_ns = target_ns
+
+
 class TestDeadlineBudget:
     def test_defaults_effective_wcet_to_period(self) -> None:
         budget = DeadlineBudget(period_s=0.01)
@@ -106,15 +123,27 @@ class TestLoopExecution:
         assert report.steps == 3
 
     def test_step_slower_than_period_skips_scheduling_sleep(self) -> None:
-        # A step that overruns the period leaves the next boundary already in
-        # the past, so the loop never sleeps before the following step.
+        clock = _ManualClock()
+        step_start_ns: list[int] = []
+
+        def slow_step(_index: int) -> None:
+            step_start_ns.append(clock.now())
+            clock.advance(4_000_000)
+
         report = run_deterministic_loop(
-            lambda _i: time.sleep(0.004),
+            slow_step,
             steps=3,
-            budget=DeadlineBudget(period_s=0.001, wcet_s=0.05),
+            budget=DeadlineBudget(period_s=0.001, wcet_s=0.05, freeze_gc=False),
+            clock_ns=clock.now,
+            wait_until=clock.wait_until,
         )
         assert report.steps == 3
         assert report.deadline_met is True
+        assert clock.wait_targets_ns == []
+        assert step_start_ns == [0, 4_000_000, 8_000_000]
+        assert report.latencies_s.tolist() == pytest.approx([0.004, 0.004, 0.004])
+        assert report.jitters_s.tolist() == pytest.approx([0.0, 0.003, 0.006])
+        assert report.wall_time_s == pytest.approx(0.012)
 
 
 class TestDeadlineMiss:

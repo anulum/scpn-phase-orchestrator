@@ -48,6 +48,8 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 #: Per-step callable; receives the zero-based step index and returns nothing.
 StepCallable: TypeAlias = Callable[[int], None]
+_MonotonicClockNs: TypeAlias = Callable[[], int]
+_WaitUntilNs: TypeAlias = Callable[[int, int], None]
 
 __all__ = [
     "DeadlineBudget",
@@ -266,14 +268,20 @@ def _validate_steps(steps: object) -> int:
     return steps
 
 
-def _sleep_until(target_ns: int, busy_wait_margin_ns: int) -> None:
+def _sleep_until(
+    target_ns: int,
+    busy_wait_margin_ns: int,
+    *,
+    clock_ns: _MonotonicClockNs | None = None,
+) -> None:
     """Sleep, then optionally spin, until ``target_ns`` on the monotonic clock."""
+    clock = time.perf_counter_ns if clock_ns is None else clock_ns
     spin_from = target_ns - busy_wait_margin_ns
-    remaining = spin_from - time.perf_counter_ns()
+    remaining = spin_from - clock()
     if remaining > 0:
         time.sleep(remaining / 1e9)
     if busy_wait_margin_ns > 0:
-        while time.perf_counter_ns() < target_ns:
+        while clock() < target_ns:
             pass
 
 
@@ -282,6 +290,8 @@ def run_deterministic_loop(
     *,
     steps: int,
     budget: DeadlineBudget,
+    clock_ns: _MonotonicClockNs | None = None,
+    wait_until: _WaitUntilNs | None = None,
 ) -> ExecutionTimingReport:
     """Drive ``step`` for ``steps`` iterations under a bounded-jitter budget.
 
@@ -294,6 +304,15 @@ def run_deterministic_loop(
         Number of iterations (``>= 0``).
     budget : DeadlineBudget
         The period, WCET budget, miss policy, GC policy, and spin margin.
+    clock_ns : Callable[[], int], optional
+        Monotonic nanosecond clock. Defaults to ``time.perf_counter_ns``.
+        Supplying this with ``wait_until`` lets tests and deterministic
+        simulators exercise scheduling branches without depending on host wall
+        time.
+    wait_until : Callable[[int, int], None], optional
+        Wait hook receiving the target monotonic nanosecond timestamp and busy
+        wait margin. Defaults to the production sleep/spin waiter. Custom hooks
+        must observe the same time base as ``clock_ns``.
 
     Returns
     -------
@@ -308,11 +327,21 @@ def run_deterministic_loop(
         If a step overruns ``budget.wcet_s`` and ``miss_policy == 'abort'``.
     """
     steps = _validate_steps(steps)
+    monotonic_ns = time.perf_counter_ns if clock_ns is None else clock_ns
+    wait_until_ns: _WaitUntilNs
+    if wait_until is None:
+
+        def default_wait_until_ns(target_ns: int, margin_ns: int) -> None:
+            _sleep_until(target_ns, margin_ns, clock_ns=monotonic_ns)
+
+        wait_until_ns = default_wait_until_ns
+    else:
+        wait_until_ns = wait_until
     period_ns = round(budget.period_s * 1e9)
     wcet_s = budget.effective_wcet_s
     margin_ns = round(budget.busy_wait_margin_s * 1e9)
-    latencies = np.zeros(steps, dtype=np.float64)
-    jitters = np.zeros(steps, dtype=np.float64)
+    latencies: FloatArray = np.zeros(steps, dtype=np.float64)
+    jitters: FloatArray = np.zeros(steps, dtype=np.float64)
     deadline_misses = 0
 
     gc_was_enabled = gc.isenabled()
@@ -320,22 +349,22 @@ def run_deterministic_loop(
         gc.collect()
         gc.freeze()
         gc.disable()
-    loop_start_ns = time.perf_counter_ns()
+    loop_start_ns = monotonic_ns()
     try:
         for index in range(steps):
             scheduled_ns = loop_start_ns + index * period_ns
-            if time.perf_counter_ns() < scheduled_ns:
-                _sleep_until(scheduled_ns, margin_ns)
-            actual_start_ns = time.perf_counter_ns()
+            if monotonic_ns() < scheduled_ns:
+                wait_until_ns(scheduled_ns, margin_ns)
+            actual_start_ns = monotonic_ns()
             jitters[index] = (actual_start_ns - scheduled_ns) / 1e9
             step(index)
-            latency_s = (time.perf_counter_ns() - actual_start_ns) / 1e9
+            latency_s = (monotonic_ns() - actual_start_ns) / 1e9
             latencies[index] = latency_s
             if latency_s > wcet_s:
                 deadline_misses += 1
                 if budget.miss_policy == "abort":
                     raise DeadlineExceededError(index, latency_s, wcet_s)
-        wall_time_s = (time.perf_counter_ns() - loop_start_ns) / 1e9
+        wall_time_s = (monotonic_ns() - loop_start_ns) / 1e9
     finally:
         if budget.freeze_gc:
             gc.unfreeze()
