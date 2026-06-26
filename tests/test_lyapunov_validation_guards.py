@@ -21,6 +21,13 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_validat
 _KNM = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
 
 
+class _ObjectDtypeFails:
+    def __array__(self, dtype: object = None) -> np.ndarray:
+        if dtype is object or dtype == np.dtype(object):
+            raise TypeError("object coercion rejected")
+        return np.array([0.1, 0.2, 0.3], dtype=np.float64)
+
+
 def _inputs(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "phases_init": np.array([0.1, 0.2], dtype=np.float64),
@@ -50,9 +57,13 @@ class TestLyapunovInputs:
         ("overrides", "match"),
         [
             ({"phases_init": np.array([True, False])}, "phases_init must not contain"),
+            ({"phases_init": _ObjectDtypeFails()}, "omegas shape .* does not match"),
+            ({"phases_init": np.array(["bad", "payload"])}, "phases_init must"),
             ({"phases_init": np.zeros((2, 2))}, "phases_init.*one-dimensional"),
             ({"omegas": np.array([0.0, 0.0, 0.0])}, "omegas shape .* does not match"),
             ({"knm": np.array([[0.0, 1j], [1j, 0.0]])}, "knm must"),
+            ({"knm": np.array([["bad", "payload"], ["data", "0.0"]])}, "knm must"),
+            ({"alpha": np.zeros((2, 3), dtype=np.float64)}, "alpha shape"),
             ({"knm": np.array([[True, False], [False, True]])}, "knm must"),
             ({"knm": np.array([[0.0, np.inf], [np.inf, 0.0]])}, "knm must"),
             ({"knm": np.array([[1.0, 1.0], [1.0, 0.0]])}, "diagonal"),
@@ -83,6 +94,7 @@ class TestLyapunovOutput:
         [
             (np.array([True, False]), "must not contain boolean"),
             (np.array([1.0 + 1j, 2.0]), "must be real-valued"),
+            (np.array(["not-a-number", "still-bad"]), "must be numeric"),
             (np.array([1.0, 2.0, 3.0]), "does not match"),
         ],
     )
