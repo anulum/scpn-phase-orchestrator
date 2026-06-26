@@ -163,7 +163,7 @@ def _load_webgpu_fn() -> Callable[..., FloatArray]:
         load_webgpu_dispatch_bridge,
     )
 
-    return cast("Callable[..., FloatArray]", load_webgpu_dispatch_bridge())
+    return load_webgpu_dispatch_bridge()
 
 
 def _require_juliacall_runtime() -> None:
@@ -365,22 +365,19 @@ def upde_run(
     _validate_zero_self_coupling(k)
     backend_fn = _dispatch()
     if backend_fn is None:
-        return cast(
-            "FloatArray",
-            upde_run_python(
-                p,
-                o,
-                k,
-                a,
-                float(zeta),
-                float(psi),
-                float(dt),
-                int(n_steps),
-                method,
-                int(n_substeps),
-                float(atol),
-                float(rtol),
-            ),
+        return upde_run_python(
+            p,
+            o,
+            k,
+            a,
+            float(zeta),
+            float(psi),
+            float(dt),
+            int(n_steps),
+            method,
+            int(n_substeps),
+            float(atol),
+            float(rtol),
         )
     return cast(
         "FloatArray",
@@ -427,21 +424,18 @@ def upde_run_omega_schedule(
     schedule = np.ascontiguousarray(raw_schedule, dtype=np.float64)
     backend_fn = _dispatch_schedule()
     if backend_fn is None:
-        return cast(
-            "FloatArray",
-            upde_run_omega_schedule_python(
-                p,
-                schedule,
-                k,
-                a,
-                float(zeta),
-                float(psi),
-                float(dt),
-                method,
-                int(n_substeps),
-                float(atol),
-                float(rtol),
-            ),
+        return upde_run_omega_schedule_python(
+            p,
+            schedule,
+            k,
+            a,
+            float(zeta),
+            float(psi),
+            float(dt),
+            method,
+            int(n_substeps),
+            float(atol),
+            float(rtol),
         )
     try:
         return cast(
@@ -464,19 +458,16 @@ def upde_run_omega_schedule(
             ),
         )
     except (AttributeError, ImportError):
-        return cast(
-            "FloatArray",
-            upde_run_omega_schedule_python(
-                p,
-                schedule,
-                k,
-                a,
-                float(zeta),
-                float(psi),
-                float(dt),
-                method,
-                int(n_substeps),
-                float(atol),
-                float(rtol),
-            ),
+        return upde_run_omega_schedule_python(
+            p,
+            schedule,
+            k,
+            a,
+            float(zeta),
+            float(psi),
+            float(dt),
+            method,
+            int(n_substeps),
+            float(atol),
+            float(rtol),
         )

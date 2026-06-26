@@ -51,7 +51,11 @@ def test_install_spo_kernel_dry_run_uses_selected_python() -> None:
     assert payload["release"] is True
     assert payload["command"][:3] == [sys.executable, "-m", "maturin"]
     assert "develop" in payload["command"]
-    assert "spo-kernel/crates/spo-ffi/Cargo.toml" in payload["manifest"]
+    assert (
+        Path(payload["manifest"])
+        .as_posix()
+        .endswith("spo-kernel/crates/spo-ffi/Cargo.toml")
+    )
 
 
 def test_install_spo_kernel_check_only_uses_target_interpreter() -> None:
