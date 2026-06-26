@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_validation import (
+    expected_compute_itpc_backend_output,
+    expected_itpc_persistence_backend_output,
     validate_compute_itpc_backend_inputs,
     validate_compute_itpc_backend_output,
     validate_itpc_persistence_backend_inputs,
@@ -34,6 +36,7 @@ class TestComputeItpcInputs:
         [
             (_PHASES, True, 3, "n_trials must"),
             (_PHASES, 2, -1, "n_tp must"),
+            (np.array(["not-a-float"], dtype=object), 1, 1, "finite"),
             (np.zeros(5), 2, 3, "phases"),
         ],
     )
@@ -42,6 +45,16 @@ class TestComputeItpcInputs:
     ) -> None:
         with pytest.raises(ValueError, match=match):
             validate_compute_itpc_backend_inputs(phases, n_trials, n_tp)
+
+    def test_empty_zero_dimension_payload_round_trips(self) -> None:
+        phases, trials, tp = validate_compute_itpc_backend_inputs(
+            np.array([], dtype=np.float64),
+            0,
+            0,
+        )
+
+        assert phases.size == 0
+        assert (trials, tp) == (0, 0)
 
 
 class TestComputeItpcOutput:
@@ -54,6 +67,7 @@ class TestComputeItpcOutput:
         [
             (np.array([True, False, False]), "must not contain boolean"),
             (np.array([0.5 + 1j, 0.5, 0.5]), "must be real-valued"),
+            (np.array(["not-a-float"], dtype=object), "must be numeric"),
             (np.zeros(2), "does not match"),
             (np.array([np.inf, 0.5, 0.5]), "only finite values"),
             (np.array([2.0, 0.5, 0.5]), r"must lie in \[0, 1\]"),
@@ -69,6 +83,32 @@ class TestComputeItpcOutput:
                 _ITPC, 3, expected=np.array([0.9, 0.9, 0.9])
             )
 
+    def test_rejects_expected_shape_mismatch(self) -> None:
+        with pytest.raises(ValueError, match="exact reference shape"):
+            validate_compute_itpc_backend_output(
+                _ITPC,
+                3,
+                expected=np.array([0.5, 0.5], dtype=np.float64),
+            )
+
+    def test_expected_reference_handles_empty_dimensions(self) -> None:
+        assert np.array_equal(
+            expected_compute_itpc_backend_output(
+                np.array([], dtype=np.float64),
+                2,
+                0,
+            ),
+            np.zeros(0, dtype=np.float64),
+        )
+        assert np.array_equal(
+            expected_compute_itpc_backend_output(
+                np.array([], dtype=np.float64),
+                0,
+                3,
+            ),
+            np.zeros(3, dtype=np.float64),
+        )
+
 
 class TestPersistenceOutput:
     def test_valid_round_trips(self) -> None:
@@ -79,6 +119,7 @@ class TestPersistenceOutput:
         [
             (np.array([True]), "must not contain booleans"),
             (np.array(0.5 + 1j), "must be real-valued"),
+            (np.array("not-a-float", dtype=object), "must be numeric"),
             (np.array([0.5, 0.6]), "must be scalar"),
             (np.inf, "must be finite"),
             (2.0, r"must lie in \[0, 1\]"),
@@ -87,6 +128,32 @@ class TestPersistenceOutput:
     def test_rejects_corrupt_output(self, value: Any, match: str) -> None:
         with pytest.raises(ValueError, match=match):
             validate_itpc_persistence_backend_output(value)
+
+    def test_expected_reference_handles_empty_or_invalid_pause_windows(self) -> None:
+        assert expected_itpc_persistence_backend_output(
+            np.array([], dtype=np.float64),
+            0,
+            3,
+            np.array([0], dtype=np.int64),
+        ) == pytest.approx(0.0)
+        assert expected_itpc_persistence_backend_output(
+            np.array([], dtype=np.float64),
+            2,
+            0,
+            np.array([0], dtype=np.int64),
+        ) == pytest.approx(0.0)
+        assert expected_itpc_persistence_backend_output(
+            _PHASES,
+            2,
+            3,
+            np.array([], dtype=np.int64),
+        ) == pytest.approx(0.0)
+        assert expected_itpc_persistence_backend_output(
+            _PHASES,
+            2,
+            3,
+            np.array([99], dtype=np.int64),
+        ) == pytest.approx(0.0)
 
 
 class TestPersistenceInputs:

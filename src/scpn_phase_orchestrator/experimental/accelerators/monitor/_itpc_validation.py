@@ -22,19 +22,13 @@ IntArray: TypeAlias = NDArray[np.int64]
 
 def _contains_boolean_alias(raw: object) -> bool:
     """Return whether the value contains any boolean alias."""
-    try:
-        array = np.asarray(raw, dtype=object)
-    except (TypeError, ValueError):
-        return False
+    array = np.asarray(raw, dtype=object)
     return any(isinstance(value, (bool, np.bool_)) for value in array.flat)
 
 
 def _contains_complex_alias(raw: object) -> bool:
     """Return whether the value contains any complex-number alias."""
-    try:
-        array = np.asarray(raw)
-    except (TypeError, ValueError):
-        return False
+    array = np.asarray(raw)
     if np.iscomplexobj(array):
         return True
     if array.dtype != object:
