@@ -29,12 +29,12 @@ from collections.abc import Callable
 from math import isfinite
 from numbers import Integral, Real
 from time import perf_counter
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-FloatArray = NDArray[np.float64]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -194,12 +194,8 @@ def _modulation_index_python(
 ) -> float:
     """Return the reference Tort modulation index (NumPy floor)."""
     n = min(theta_low.size, amp_high.size)
-    if n == 0:
-        return 0.0
     theta = theta_low[:n] % (2.0 * np.pi)
     amp = amp_high[:n]
-    if np.any(amp < 0.0):
-        raise ValueError("amp_high must contain non-negative amplitudes")
     bin_edges = np.linspace(0.0, 2.0 * np.pi, n_bins + 1)
     bin_indices = np.digitize(theta, bin_edges) - 1
     bin_indices = np.clip(bin_indices, 0, n_bins - 1)
@@ -216,8 +212,6 @@ def _modulation_index_python(
         return 0.0
     p = mean_amp / total
     log_n = np.log(n_bins)
-    if log_n < 1e-15:
-        return 0.0
     positive = p > 0.0
     kl = float(np.sum(p[positive] * np.log(p[positive] * n_bins)))
     mi = kl / log_n

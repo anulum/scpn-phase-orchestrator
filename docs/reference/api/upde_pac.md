@@ -553,12 +553,21 @@ Negligible compared to input data.
 
 ## Test Coverage
 
-- `tests/test_pac.py` — 18 tests: MI bounds [0,1], coupled signal MI>0.3,
-  uncoupled MI≈0, empty arrays, n_bins edge cases, pac_matrix shape,
-  pac_matrix asymmetry, pac_gate threshold, bin sensitivity
-- `tests/test_pac_parity.py` — 3 tests: Rust vs Python parity
+- `tests/test_pac.py` — 20 tests: MI bounds, non-negative amplitude
+  enforcement, vector/history validation, dispatcher fallback, backend payload
+  validation, `pac_matrix` shape/range checks, and `pac_gate` threshold
+  semantics.
+- `tests/test_pac_parity.py` — 20 tests: Python fallback contracts, malformed
+  inputs, backend fallback payload checks, Rust parity when available, and
+  matrix layout guards.
+- `tests/test_pac_backends.py` — 112 tests: direct Rust, Julia, Go, and Mojo
+  boundary contracts, runtime-loading guards, parity checks, Mojo text-protocol
+  cardinality, and cross-backend consistency.
+- `tests/test_pac_stability.py` — 7 slow stability/property tests for bounded
+  MI, modulation-depth ordering, uncorrelated noise floor, and matrix
+  invariants.
 
-Total: **21 tests**.
+Total collected PAC tests: **159**.
 
 ---
 
