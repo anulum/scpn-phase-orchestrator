@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.adapters._schema import (
     require_non_empty_str,
     require_non_negative_int,
     require_tcp_port,
+    require_waveform_extractor_type,
 )
 
 
@@ -62,6 +63,26 @@ def test_require_tcp_port_rejects_out_of_range(port: int) -> None:
 def test_require_tcp_port_rejects_non_integer() -> None:
     with pytest.raises(ValueError, match="integer"):
         require_tcp_port(70000.1, field="field")  # type: ignore[arg-type]
+
+
+def test_require_waveform_extractor_type_canonicalises_physical_aliases() -> None:
+    assert require_waveform_extractor_type("physical", field="extractor_type") == (
+        "hilbert"
+    )
+    assert require_waveform_extractor_type("wavelet", field="extractor_type") == (
+        "wavelet"
+    )
+    assert require_waveform_extractor_type("zero_crossing", field="extractor_type") == (
+        "zero_crossing"
+    )
+
+
+@pytest.mark.parametrize("extractor_type", ["event", "ring", "graph", "unknown"])
+def test_require_waveform_extractor_type_rejects_non_waveform_extractors(
+    extractor_type: str,
+) -> None:
+    with pytest.raises(ValueError, match="extractor_type"):
+        require_waveform_extractor_type(extractor_type, field="extractor_type")
 
 
 def test_modbus_adapter_host_validation_is_schema_backed(

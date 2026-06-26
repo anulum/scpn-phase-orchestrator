@@ -16,6 +16,8 @@ with an injected fake client that replays messages through the bridge callback.
 from __future__ import annotations
 
 import json
+import sys
+import types
 from typing import Any
 
 import numpy as np
@@ -38,10 +40,17 @@ HOST = "broker.local"
 
 
 def test_tag_round_trips_audit_record() -> None:
-    tag = MqttTag(topic="plant/temp", name="temp", payload_format="json")
+    tag = MqttTag(
+        topic="plant/temp",
+        name="temp",
+        extractor_type="physical",
+        payload_format="json",
+    )
     record = tag.to_audit_record()
     assert record["topic"] == "plant/temp"
+    assert record["extractor_type"] == "hilbert"
     assert record["payload_format"] == "json"
+    assert tag.extractor_type == "hilbert"
     assert json.loads(json.dumps(record)) == record
 
 
@@ -58,6 +67,11 @@ def test_tag_rejects_unknown_channel() -> None:
 def test_tag_rejects_bad_sample_rate() -> None:
     with pytest.raises(ValueError, match="sample_rate_hz"):
         MqttTag(topic="t", name="temp", sample_rate_hz=0.0)
+
+
+def test_tag_rejects_non_waveform_extractor_type() -> None:
+    with pytest.raises(ValueError, match="extractor_type"):
+        MqttTag(topic="t", name="temp", extractor_type="event")
 
 
 def test_tag_rejects_unknown_payload_format() -> None:
@@ -209,6 +223,39 @@ def test_extract_phases_returns_state_per_tag() -> None:
     assert np.isfinite(phases["temp"].theta)
 
 
+def test_extract_phases_uses_declared_zero_crossing_extractor() -> None:
+    sample_rate_hz = 64.0
+    frequency_hz = 4.0
+    bridge = MqttPhaseBridge.from_tags(
+        HOST,
+        [
+            MqttTag(
+                topic="plant/tach",
+                name="tach",
+                sample_rate_hz=sample_rate_hz,
+                extractor_type="zero_crossing",
+            )
+        ],
+    )
+    signal = np.sin(
+        2.0 * np.pi * frequency_hz * np.arange(256) / sample_rate_hz
+    ).tolist()
+
+    phases = bridge.extract_phases({"tach": signal})
+
+    assert set(phases) == {"tach"}
+    assert phases["tach"].node_id == "tach"
+    assert phases["tach"].omega == pytest.approx(2.0 * np.pi * frequency_hz, rel=0.05)
+    assert phases["tach"].quality > 0.95
+    config = bridge.to_audit_record()["config"]
+    assert isinstance(config, dict)
+    tags = config["tags"]
+    assert isinstance(tags, list)
+    tag_record = tags[0]
+    assert isinstance(tag_record, dict)
+    assert tag_record["extractor_type"] == "zero_crossing"
+
+
 def test_extract_phases_missing_tag_rejected() -> None:
     bridge = _bridge()
     with pytest.raises(ValueError, match="missing samples for tag 'flow'"):
@@ -329,6 +376,42 @@ def test_connect_without_paho_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     bridge = _bridge()
     with pytest.raises(RuntimeError, match="paho-mqtt is not installed"):
         bridge.connect()
+
+
+def test_connect_uses_paho_client_when_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _CallbackAPIVersion:
+        VERSION2 = object()
+
+    class _Client:
+        def __init__(self, version: object, *, client_id: str) -> None:
+            self.version = version
+            self.client_id = client_id
+            self.tls_enabled = False
+
+        def tls_set(self) -> None:
+            self.tls_enabled = True
+
+    package = types.ModuleType("paho")
+    mqtt_package = types.ModuleType("paho.mqtt")
+    client_module = types.ModuleType("paho.mqtt.client")
+    client_module.__dict__["CallbackAPIVersion"] = _CallbackAPIVersion
+    client_module.__dict__["Client"] = _Client
+    monkeypatch.setitem(sys.modules, "paho", package)
+    monkeypatch.setitem(sys.modules, "paho.mqtt", mqtt_package)
+    monkeypatch.setitem(sys.modules, "paho.mqtt.client", client_module)
+    monkeypatch.setattr(mqtt_bridge, "HAS_PAHO_MQTT", True)
+
+    bridge = MqttPhaseBridge.from_tags(
+        HOST, [MqttTag(topic="t", name="temp")], use_tls=True
+    )
+    client = bridge.connect()
+
+    assert isinstance(client, _Client)
+    assert client.version is _CallbackAPIVersion.VERSION2
+    assert client.client_id == "spo-mqtt-bridge"
+    assert client.tls_enabled is True
 
 
 @pytest.mark.skipif(not HAS_PAHO_MQTT, reason="paho-mqtt extra not installed")

@@ -10,7 +10,9 @@
 
 Reads oscillator-relevant process tags (temperatures, pressures, flow rates)
 from an OPC-UA server and maps each tag's sampled waveform to a physical-channel
-phase state via the Hilbert transform (:class:`PhysicalExtractor`).
+phase state via the tag's declared waveform extractor. Tags default to Hilbert
+extraction and can select the wavelet-ridge or zero-crossing extractor where
+those algorithms match the measured signal.
 
 The bridge separates three concerns so the bulk is testable without a server:
 
@@ -38,9 +40,12 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from scpn_phase_orchestrator.adapters._schema import require_non_empty_str
-from scpn_phase_orchestrator.oscillators.base import PhaseState
-from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+from scpn_phase_orchestrator.adapters._schema import (
+    require_non_empty_str,
+    require_waveform_extractor_type,
+)
+from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
+from scpn_phase_orchestrator.oscillators.factory import build_extractor
 
 if TYPE_CHECKING:
     from asyncua import Client
@@ -106,8 +111,12 @@ class OpcUaTag:
     scale, offset : float
         Affine calibration applied to each raw sample as ``scale * x + offset``.
     sample_rate_hz : float
-        Sampling rate of the tag waveform in hertz, used by the Hilbert phase
+        Sampling rate of the tag waveform in hertz, used by waveform phase
         extraction.
+    extractor_type : str
+        Waveform extractor type or channel alias. ``"physical"`` resolves to
+        ``"hilbert"``; ``"wavelet"`` and ``"zero_crossing"`` select the
+        corresponding physical-channel algorithms.
     """
 
     node_id: str
@@ -116,6 +125,7 @@ class OpcUaTag:
     scale: float = 1.0
     offset: float = 0.0
     sample_rate_hz: float = 1.0
+    extractor_type: str = "hilbert"
 
     def __post_init__(self) -> None:
         require_non_empty_str(self.node_id, field="node_id")
@@ -125,6 +135,13 @@ class OpcUaTag:
         _finite_real(self.scale, field_name="scale")
         _finite_real(self.offset, field_name="offset")
         _positive_real(self.sample_rate_hz, field_name="sample_rate_hz")
+        object.__setattr__(
+            self,
+            "extractor_type",
+            require_waveform_extractor_type(
+                self.extractor_type, field="extractor_type"
+            ),
+        )
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe audit mapping of the tag.
@@ -141,6 +158,7 @@ class OpcUaTag:
             "scale": self.scale,
             "offset": self.offset,
             "sample_rate_hz": self.sample_rate_hz,
+            "extractor_type": self.extractor_type,
         }
 
 
@@ -218,11 +236,12 @@ class OpcUaPhaseBridge:
     """
 
     config: OpcUaBridgeConfig
-    _extractors: dict[str, PhysicalExtractor] = field(init=False, repr=False)
+    _extractors: dict[str, PhaseExtractor] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._extractors = {
-            tag.name: PhysicalExtractor(node_id=tag.name) for tag in self.config.tags
+            tag.name: build_extractor(tag.extractor_type, node_id=tag.name)
+            for tag in self.config.tags
         }
 
     @classmethod

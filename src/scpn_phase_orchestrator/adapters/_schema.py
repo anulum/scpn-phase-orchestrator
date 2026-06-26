@@ -11,16 +11,23 @@
 The helpers normalize common adapter inputs such as non-empty strings,
 non-negative integers, and TCP ports before clients, sockets, or stores are
 created. They raise ``ValueError`` with field-specific messages and perform no
-I/O or dependency imports.
+I/O.
 """
 
 from __future__ import annotations
+
+from typing import cast
+
+from scpn_phase_orchestrator.binding.types import resolve_extractor_type
 
 __all__ = [
     "require_non_empty_str",
     "require_non_negative_int",
     "require_tcp_port",
+    "require_waveform_extractor_type",
 ]
+
+_WAVEFORM_EXTRACTORS = frozenset({"hilbert", "wavelet", "zero_crossing"})
 
 
 def require_non_empty_str(value: object, *, field: str) -> str:
@@ -49,3 +56,35 @@ def require_tcp_port(value: object, *, field: str) -> int:
     if not (1 <= value <= 65535):
         raise ValueError(f"{field} must be in the range 1..65535")
     return value
+
+
+def require_waveform_extractor_type(value: object, *, field: str) -> str:
+    """Return a canonical physical-waveform extractor type or raise.
+
+    Parameters
+    ----------
+    value : object
+        Candidate extractor name or channel alias.
+    field : str
+        Field name used in the raised validation message.
+
+    Returns
+    -------
+    str
+        Canonical extractor algorithm: ``"hilbert"``, ``"wavelet"``, or
+        ``"zero_crossing"``.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not a non-empty string or resolves to a non-waveform
+        extractor such as ``event``, ``ring``, or ``graph``.
+    """
+    raw = require_non_empty_str(value, field=field)
+    algorithm = cast(str, resolve_extractor_type(raw))
+    if algorithm not in _WAVEFORM_EXTRACTORS:
+        expected = ", ".join(sorted(_WAVEFORM_EXTRACTORS))
+        raise ValueError(
+            f"{field} must resolve to one of {expected}; got {raw!r}"
+        )
+    return algorithm

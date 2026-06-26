@@ -186,8 +186,9 @@ Translates ControlAction to Modbus register writes over TLS.
 Read-only ingestion from OPC-UA servers for Industry 4.0 SCADA/DCS systems.
 `OpcUaTag` and `OpcUaBridgeConfig` validate the endpoint and tag mapping;
 `OpcUaPhaseBridge.extract_phases` turns decoded process-tag sample series
-(temperatures, pressures, flow rates) into physical-channel phase states via the
-Hilbert transform, with no network dependency. Live reads use the optional
+(temperatures, pressures, flow rates) into physical-channel phase states with
+the tag's declared waveform extractor (`hilbert`/`physical`, `wavelet`, or
+`zero_crossing`), with no network dependency. Live reads use the optional
 `asyncua` dependency (`opcua` extra): `collect_live` connects, reads
 `samples_per_tag` values per tag, and disconnects; `read_live` reads from an
 already-connected client. The bridge never writes to the server.
@@ -197,7 +198,14 @@ from scpn_phase_orchestrator.adapters import OpcUaTag, OpcUaPhaseBridge
 
 bridge = OpcUaPhaseBridge.from_tags(
     "opc.tcp://plc.local:4840/scada",
-    [OpcUaTag(node_id="ns=2;s=Reactor.Temp", name="reactor_temp", sample_rate_hz=10.0)],
+    [
+        OpcUaTag(
+            node_id="ns=2;s=Reactor.Temp",
+            name="reactor_temp",
+            sample_rate_hz=10.0,
+            extractor_type="wavelet",
+        )
+    ],
 )
 samples = await bridge.collect_live(samples_per_tag=128)
 phases = bridge.extract_phases(samples)
@@ -211,8 +219,9 @@ Read-only ingestion from MQTT brokers for edge/IoT sensor fleets. `MqttTag` and
 `MqttBridgeConfig` validate the broker endpoint and topic mapping;
 `decode_payload` parses raw or JSON payloads, `ingest_messages` folds a batch of
 received `(topic, payload)` messages into per-tag sample series, and
-`extract_phases` turns those series into physical-channel phase states via the
-Hilbert transform — all with no network dependency. `collect_live` subscribes via
+`extract_phases` turns those series into physical-channel phase states with the
+tag's declared waveform extractor (`hilbert`/`physical`, `wavelet`, or
+`zero_crossing`) — all with no network dependency. `collect_live` subscribes via
 the optional `paho-mqtt` dependency (`mqtt` extra) and accumulates messages; it
 accepts an injected client for testing. The bridge never publishes to the broker.
 
@@ -221,7 +230,14 @@ from scpn_phase_orchestrator.adapters import MqttTag, MqttPhaseBridge
 
 bridge = MqttPhaseBridge.from_tags(
     "broker.local",
-    [MqttTag(topic="plant/reactor/temp", name="reactor_temp", sample_rate_hz=10.0)],
+    [
+        MqttTag(
+            topic="plant/reactor/temp",
+            name="reactor_temp",
+            sample_rate_hz=10.0,
+            extractor_type="zero_crossing",
+        )
+    ],
 )
 samples = bridge.collect_live(samples_per_tag=128)
 phases = bridge.extract_phases(samples)

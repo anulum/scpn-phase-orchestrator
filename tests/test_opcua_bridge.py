@@ -41,10 +41,18 @@ ENDPOINT = "opc.tcp://127.0.0.1:48499/spo"
 
 
 def test_tag_round_trips_audit_record() -> None:
-    tag = OpcUaTag(node_id="ns=2;i=4", name="temp", scale=2.0, offset=1.0)
+    tag = OpcUaTag(
+        node_id="ns=2;i=4",
+        name="temp",
+        scale=2.0,
+        offset=1.0,
+        extractor_type="physical",
+    )
     record = tag.to_audit_record()
     assert record["node_id"] == "ns=2;i=4"
     assert record["channel"] == "P"
+    assert record["extractor_type"] == "hilbert"
+    assert tag.extractor_type == "hilbert"
     assert json.loads(json.dumps(record)) == record
 
 
@@ -61,6 +69,11 @@ def test_tag_rejects_empty_name() -> None:
 def test_tag_rejects_unknown_channel() -> None:
     with pytest.raises(ValueError, match="channel"):
         OpcUaTag(node_id="ns=2;i=4", name="temp", channel="Z")
+
+
+def test_tag_rejects_non_waveform_extractor_type() -> None:
+    with pytest.raises(ValueError, match="extractor_type"):
+        OpcUaTag(node_id="ns=2;i=4", name="temp", extractor_type="graph")
 
 
 @pytest.mark.parametrize("scale", [np.inf, np.nan, True])
@@ -184,6 +197,41 @@ def test_extract_phases_applies_scale_and_offset() -> None:
         ENDPOINT, [OpcUaTag(node_id="ns=2;i=4", name="temp")]
     ).extract_phases({"temp": [0.1, 0.2, 0.3, 0.4]})
     assert base["temp"].amplitude != pytest.approx(raw["temp"].amplitude)
+
+
+def test_extract_phases_uses_declared_wavelet_extractor() -> None:
+    sample_rate_hz = 128.0
+    frequency_hz = 8.0
+    bridge = OpcUaPhaseBridge.from_tags(
+        ENDPOINT,
+        [
+            OpcUaTag(
+                node_id="ns=2;i=44",
+                name="vibration",
+                sample_rate_hz=sample_rate_hz,
+                extractor_type="wavelet",
+            )
+        ],
+    )
+    signal = np.sin(
+        2.0 * np.pi * frequency_hz * np.arange(512) / sample_rate_hz
+    ).tolist()
+
+    phases = bridge.extract_phases({"vibration": signal})
+
+    assert set(phases) == {"vibration"}
+    assert phases["vibration"].node_id == "vibration"
+    assert phases["vibration"].omega == pytest.approx(
+        2.0 * np.pi * frequency_hz, rel=0.25
+    )
+    assert phases["vibration"].quality > 0.5
+    config = bridge.to_audit_record()["config"]
+    assert isinstance(config, dict)
+    tags = config["tags"]
+    assert isinstance(tags, list)
+    tag_record = tags[0]
+    assert isinstance(tag_record, dict)
+    assert tag_record["extractor_type"] == "wavelet"
 
 
 def test_extract_phases_missing_tag_rejected() -> None:

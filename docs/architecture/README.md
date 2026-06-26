@@ -166,8 +166,8 @@ declared, so consumers do not over-rely on a capability:
   accelerator backends (Mojo/Julia/Go/Rust/WebGPU), fully wired through
   `coupling/`, `monitor/`, and `upde/` — not aspirational research.
 - **The declared `wavelet` and `zero_crossing` phase extractors are implemented**
-  alongside Hilbert extraction; runtime per-family dispatch beyond synthetic
-  seeding remains an expansion item.
+  alongside Hilbert extraction; MQTT and OPC-UA runtime waveform tags dispatch
+  through the declared extractor type.
 - **The audit trail is real (SHA-256 chain + optional HMAC)**. Protobuf audit
   streams are verified once at run end when attached to `simulate()`; deterministic
   replay remains an opt-in CLI check. Signing is environment-gated, not structural.

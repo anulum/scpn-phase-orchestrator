@@ -29,7 +29,7 @@
       "inputs": ["domainpack YAML/JSON", "raw signal + sample_rate"],
       "outputs": ["BindingSpec", "list[PhaseState]", "driver Psi(t)"],
       "backends": ["python", "rust(optional)"],
-      "note": "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; runtime per-family dispatch beyond initial seeding remains an expansion item."
+      "note": "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; MQTT and OPC-UA runtime waveform tags dispatch through the declared extractor type."
     },
     {
       "name": "coupling",
@@ -168,7 +168,7 @@
     "nn/ differentiable track is parallel and CLI-verification only; former 1.0-blocking validation gaps are resolved, with remaining non-blocking xfails tracked.",
     "ssgf/ and autotune/ are opt-in, not in the default loop.",
     "experimental/ is the load-bearing accelerator layer, not research.",
-    "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; runtime per-family dispatch beyond initial seeding remains open.",
+    "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; MQTT and OPC-UA runtime waveform tags dispatch through the declared extractor type.",
     "Audit chain is real but integrity-verify/replay are opt-in CLI; signing is env-gated.",
     "twin_conformal_gate (CPTC) is wired into live policy admission only when callers provide the observed-twin confidence source; default CLI runs do not synthesize that feed.",
     "Formal export covers PRISM and TLA+ only (no SMT-LIB exporter despite docstring).",

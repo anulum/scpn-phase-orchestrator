@@ -10,7 +10,9 @@
 
 Subscribes to MQTT topics carrying oscillator-relevant process measurements and
 maps each topic's sampled waveform to a physical-channel phase state via the
-Hilbert transform (:class:`PhysicalExtractor`).
+tag's declared waveform extractor. Tags default to Hilbert extraction and can
+select the wavelet-ridge or zero-crossing extractor where those algorithms match
+the measured signal.
 
 Like the OPC-UA bridge, the bulk is testable without a broker:
 
@@ -42,9 +44,10 @@ import numpy as np
 from scpn_phase_orchestrator.adapters._schema import (
     require_non_empty_str,
     require_tcp_port,
+    require_waveform_extractor_type,
 )
-from scpn_phase_orchestrator.oscillators.base import PhaseState
-from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
+from scpn_phase_orchestrator.oscillators.factory import build_extractor
 
 if TYPE_CHECKING:
     from paho.mqtt.client import Client
@@ -115,7 +118,11 @@ class MqttTag:
     scale, offset : float
         Affine calibration applied to each decoded value as ``scale * x + offset``.
     sample_rate_hz : float
-        Publish rate of the topic in hertz, used by the Hilbert phase extraction.
+        Publish rate of the topic in hertz, used by waveform phase extraction.
+    extractor_type : str
+        Waveform extractor type or channel alias. ``"physical"`` resolves to
+        ``"hilbert"``; ``"wavelet"`` and ``"zero_crossing"`` select the
+        corresponding physical-channel algorithms.
     payload_format : str
         ``"raw"`` (a decimal number as text) or ``"json"`` (a JSON number or a
         JSON object with a ``"value"`` field).
@@ -127,6 +134,7 @@ class MqttTag:
     scale: float = 1.0
     offset: float = 0.0
     sample_rate_hz: float = 1.0
+    extractor_type: str = "hilbert"
     payload_format: str = "raw"
 
     def __post_init__(self) -> None:
@@ -137,6 +145,13 @@ class MqttTag:
         _finite_real(self.scale, field_name="scale")
         _finite_real(self.offset, field_name="offset")
         _positive_real(self.sample_rate_hz, field_name="sample_rate_hz")
+        object.__setattr__(
+            self,
+            "extractor_type",
+            require_waveform_extractor_type(
+                self.extractor_type, field="extractor_type"
+            ),
+        )
         if self.payload_format not in _VALID_PAYLOAD_FORMATS:
             raise ValueError(
                 f"payload_format must be one of {sorted(_VALID_PAYLOAD_FORMATS)}"
@@ -157,6 +172,7 @@ class MqttTag:
             "scale": self.scale,
             "offset": self.offset,
             "sample_rate_hz": self.sample_rate_hz,
+            "extractor_type": self.extractor_type,
             "payload_format": self.payload_format,
         }
 
@@ -231,12 +247,13 @@ class MqttPhaseBridge:
     """
 
     config: MqttBridgeConfig
-    _extractors: dict[str, PhysicalExtractor] = field(init=False, repr=False)
+    _extractors: dict[str, PhaseExtractor] = field(init=False, repr=False)
     _by_topic: dict[str, MqttTag] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._extractors = {
-            tag.name: PhysicalExtractor(node_id=tag.name) for tag in self.config.tags
+            tag.name: build_extractor(tag.extractor_type, node_id=tag.name)
+            for tag in self.config.tags
         }
         self._by_topic = {tag.topic: tag for tag in self.config.tags}
 

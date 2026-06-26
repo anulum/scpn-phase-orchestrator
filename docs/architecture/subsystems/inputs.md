@@ -24,8 +24,9 @@ and `semantic/` subpackages), `oscillators` 8, `drivers` 4, `imprint` 3.
 
 - `load_binding_spec` (`loader.py`) — fail-closed parse; `validate_binding_spec`
   cross-field checks; `resolve_extractor_type` maps aliases to algorithms.
-- **Physical** extractor — analytic signal via Hilbert transform; instantaneous
-  phase/frequency; envelope-regularity quality.
+- **Physical** extractors — Hilbert analytic signal, wavelet ridge, and
+  zero-crossing algorithms; instantaneous phase/frequency with
+  algorithm-specific quality.
 - **Informational** extractor — inter-event-interval cadence → phase;
   inverse-coefficient-of-variation quality.
 - **Symbolic** extractor — ring (position on the circle) or graph-walk cumulative
@@ -43,14 +44,14 @@ path is otherwise Python/NumPy by design (LAPACK/FFT-favoured).
 ## Wiring
 
 `load_binding_spec` is the single entry for every domainpack. `extract_initial_phases`
-wires families to extractors for UPDE start-up; the resolved `BindingSpec` flows
-to `coupling` and `upde`.
+wires families to extractors for UPDE start-up; MQTT and OPC-UA runtime tag
+bridges also dispatch waveform tags through their declared physical extractor
+type. The resolved `BindingSpec` flows to `coupling` and `upde`.
 
 ## Scope boundaries
 
-- Two declared extractor types, **`wavelet` and `zero_crossing`, have no
-  implementation** and silently fall back to the Hilbert extractor (no error
-  raised). The loader resolves the alias but does not verify an implementation
-  exists.
+- Runtime waveform dispatch is implemented for the generic MQTT and OPC-UA input
+  bridges. Domain-specific app pipelines that expose their own service schemas
+  may still define narrower extraction policy.
 - Inert fields parsed but unused: `PhaseState.node_id` downstream,
   `ChannelSpec.metric_semantics`, `ImprintState.attribution`.
