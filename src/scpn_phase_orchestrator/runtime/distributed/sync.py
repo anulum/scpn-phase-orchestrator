@@ -23,12 +23,12 @@ import math
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-FloatArray = NDArray[np.float64]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "DistributedSyncConfig",
@@ -595,10 +595,8 @@ def simulate_lossy_phase_gossip(
                 if target_id == source_id or (source_id, target_id) in drops:
                     continue
                 result = node.ingest(wire)
-                if result.accepted:
-                    accepted += 1
-                else:
-                    rejected += 1
+                accepted += int(result.accepted)
+                rejected += int(not result.accepted)
         states = {
             node_id: nodes[node_id].synchronise(states[node_id], now_s=now_s)
             for node_id in sorted(nodes)
