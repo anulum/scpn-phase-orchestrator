@@ -212,6 +212,15 @@ class TestDirectBackendBoundaryContracts:
                 "traj_flat",
             ),
             (
+                np.array(["not-a-float", "1.0"], dtype=object),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+                "traj_flat",
+            ),
+            (
                 np.array([0.0, np.nan]),
                 2,
                 1,
@@ -219,6 +228,15 @@ class TestDirectBackendBoundaryContracts:
                 np.array([1]),
                 np.array([0.1]),
                 "traj_flat",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                3,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([0.1]),
+                "traj_flat length",
             ),
             (
                 np.array([0.0, 1.0]),
@@ -237,6 +255,60 @@ class TestDirectBackendBoundaryContracts:
                 np.array([1]),
                 np.array([0.1]),
                 "d",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([True], dtype=np.bool_),
+                np.array([1]),
+                np.array([0.1]),
+                "idx_i",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array(["zero"], dtype=object),
+                np.array([1]),
+                np.array([0.1]),
+                "idx_i",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([[0]]),
+                np.array([1]),
+                np.array([0.1]),
+                "idx_i",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([np.nan]),
+                np.array([1]),
+                np.array([0.1]),
+                "idx_i",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([0.5]),
+                np.array([1]),
+                np.array([0.1]),
+                "idx_i",
+            ),
+            (
+                np.array([], dtype=np.float64),
+                0,
+                1,
+                np.array([0]),
+                np.array([], dtype=np.int64),
+                np.array([0.1]),
+                "idx_i",
             ),
             (
                 np.array([0.0, 1.0]),
@@ -273,6 +345,15 @@ class TestDirectBackendBoundaryContracts:
                 np.array([1]),
                 np.array([0.1]),
                 "idx_i",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([True], dtype=np.bool_),
+                "epsilons",
             ),
             (
                 np.array([0.0, 1.0]),
@@ -355,6 +436,13 @@ class TestDirectBackendBoundaryContracts:
                 np.array([0.1, 0.2]),
             )
 
+    def test_correlation_integral_output_validation_rejects_boolean_dtype(self) -> None:
+        with pytest.raises(ValueError, match="boolean"):
+            dimension_validation.validate_correlation_integral_backend_output(
+                np.array([False, True], dtype=np.bool_),
+                np.array([0.1, 0.2]),
+            )
+
     def test_correlation_integral_output_validation_rejects_exact_divergence(
         self,
     ) -> None:
@@ -365,12 +453,47 @@ class TestDirectBackendBoundaryContracts:
                 expected=np.array([0.0, 1.0]),
             )
 
+    def test_correlation_integral_output_validation_rejects_expected_shape(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="expected correlation_integral shape"):
+            dimension_validation.validate_correlation_integral_backend_output(
+                np.array([0.0, 0.5]),
+                np.array([0.1, 0.2]),
+                expected=np.array([0.0]),
+            )
+
+    def test_correlation_integral_input_validation_accepts_empty_zero_t_pairs(
+        self,
+    ) -> None:
+        """Correlation-integral validation accepts empty pairs for zero samples."""
+        traj, t, d, idx_i, idx_j, epsilons = (
+            dimension_validation.validate_correlation_integral_backend_inputs(
+                np.array([], dtype=np.float64),
+                0,
+                1,
+                np.array([], dtype=np.int64),
+                np.array([], dtype=np.int64),
+                np.array([0.1], dtype=np.float64),
+            )
+        )
+
+        assert traj.size == 0
+        assert t == 0
+        assert d == 1
+        assert idx_i.dtype == np.int64
+        assert idx_i.size == 0
+        assert idx_j.dtype == np.int64
+        assert idx_j.size == 0
+        assert np.array_equal(epsilons, np.array([0.1], dtype=np.float64))
+
     @pytest.mark.parametrize(
         ("value", "match"),
         [
             (np.bool_(True), "boolean"),
             (1.0 + 0.1j, "real"),
             (np.array(1.0 + 0.1j, dtype=object), "real"),
+            ("not-a-dimension", "finite real scalar"),
             (np.inf, "finite"),
             (-0.5, "\\[0, spectrum length\\]"),
             (4.5, "\\[0, spectrum length\\]"),
@@ -385,6 +508,24 @@ class TestDirectBackendBoundaryContracts:
                 np.array([0.2, 0.0, -0.5]),
             )
 
+    @pytest.mark.parametrize(
+        ("expected", "match"),
+        [
+            (np.array(1.0 + 0.1j, dtype=object), "expected.*real"),
+            ("not-a-dimension", "expected.*finite real scalar"),
+            (np.inf, "expected.*finite"),
+        ],
+    )
+    def test_kaplan_yorke_output_validation_rejects_invalid_expected_value(
+        self, expected: object, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            dimension_validation.validate_kaplan_yorke_backend_output(
+                1.2,
+                np.array([0.2, 0.0, -0.5]),
+                expected=expected,
+            )
+
     def test_kaplan_yorke_output_validation_rejects_exact_divergence(self) -> None:
         with pytest.raises(ValueError, match="exact reference"):
             dimension_validation.validate_kaplan_yorke_backend_output(
@@ -392,6 +533,26 @@ class TestDirectBackendBoundaryContracts:
                 np.array([0.5, 0.1, -0.2, -0.5]),
                 expected=3.2,
             )
+
+    def test_exact_reference_helpers_cover_degenerate_dimension_cases(self) -> None:
+        empty_pairs = dimension_validation.expected_correlation_integral_backend_output(
+            np.array([], dtype=np.float64),
+            0,
+            1,
+            np.array([], dtype=np.int64),
+            np.array([], dtype=np.int64),
+            np.array([0.1, 0.2], dtype=np.float64),
+        )
+        assert np.array_equal(empty_pairs, np.zeros(2, dtype=np.float64))
+        assert dimension_validation.expected_kaplan_yorke_backend_output(
+            np.array([], dtype=np.float64)
+        ) == pytest.approx(0.0)
+        assert dimension_validation.expected_kaplan_yorke_backend_output(
+            np.array([-0.1, -0.2], dtype=np.float64)
+        ) == pytest.approx(0.0)
+        assert dimension_validation.expected_kaplan_yorke_backend_output(
+            np.array([0.3, 0.1], dtype=np.float64)
+        ) == pytest.approx(2.0)
 
     def test_julia_backend_rejects_nonmonotone_correlation_output(
         self, monkeypatch: pytest.MonkeyPatch

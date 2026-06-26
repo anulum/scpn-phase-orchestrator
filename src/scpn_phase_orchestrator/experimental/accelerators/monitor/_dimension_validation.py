@@ -43,19 +43,13 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
 
 def _contains_complex_alias(value: object) -> bool:
     """Return whether the value contains any complex-number alias."""
-    try:
-        raw = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
-        return False
+    raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
-    try:
-        raw = np.asarray(value)
-    except (TypeError, ValueError):
-        return _contains_complex_alias(value)
+    raw = np.asarray(value)
     return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
 
 
@@ -194,8 +188,6 @@ def expected_kaplan_yorke_backend_output(lyapunov_exponents: FloatArray) -> floa
     if j + 1 >= spectrum.size:
         return float(spectrum.size)
     denom = abs(float(spectrum[j + 1]))
-    if denom == 0.0:
-        return float(j + 1)
     return float(j + 1) + float(cumsum[j]) / denom
 
 
