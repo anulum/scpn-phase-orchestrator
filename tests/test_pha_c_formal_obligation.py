@@ -13,10 +13,12 @@ from __future__ import annotations
 from dataclasses import replace
 from decimal import ROUND_CEILING, Decimal
 from math import ceil
+from typing import cast
 
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.upde.pha_c_formal_obligation as formal_obligation
 from scpn_phase_orchestrator.upde import (
     PHACKinematicProofObligation as ExportedObligation,
 )
@@ -28,6 +30,7 @@ from scpn_phase_orchestrator.upde import (
 )
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE,
+    PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
 )
 from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
@@ -60,7 +63,7 @@ def _ceil_units(value: float, scale: float) -> int:
     )
 
 
-def _record(*, spatial_tol_m: float | None = None):
+def _record(*, spatial_tol_m: float | None = None) -> PHACAcceptanceRecord:
     n = 5
     phases = np.linspace(-0.002, 0.002, n, dtype=np.float64)
     positions = np.linspace(-0.0006, 0.0006, n, dtype=np.float64)
@@ -71,7 +74,7 @@ def _record(*, spatial_tol_m: float | None = None):
     velocities = np.vstack(
         [velocity_base + 1.0e-3 * step for step in range(4)],
     ).astype(np.float64, copy=False)
-    kwargs = {}
+    kwargs: dict[str, float] = {}
     if spatial_tol_m is not None:
         kwargs["spatial_tol_m"] = spatial_tol_m
     return build_pha_c_acceptance_record(
@@ -86,6 +89,13 @@ def _record(*, spatial_tol_m: float | None = None):
         backend="python",
         **kwargs,
     )
+
+
+def _tampered(
+    obligation: PHACKinematicProofObligation,
+    **changes: object,
+) -> PHACKinematicProofObligation:
+    return cast(PHACKinematicProofObligation, replace(obligation, **changes))
 
 
 def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:
@@ -504,15 +514,154 @@ def test_kinematic_obligation_verifier_rejects_tampering() -> None:
         )
 
 
+def test_kinematic_obligation_verifier_rejects_invalid_manifest_types() -> None:
+    obligation = build_pha_c_kinematic_proof_obligation(_record())
+
+    with pytest.raises(ValueError, match="execution_disabled must be true"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(obligation, execution_disabled=False),
+        )
+    with pytest.raises(ValueError, match="actuating must be false"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(obligation, actuating=True),
+        )
+    with pytest.raises(ValueError, match="execution_disabled must be a boolean"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(obligation, execution_disabled=1),
+        )
+    with pytest.raises(ValueError, match="fixed_point_scale_m"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(obligation, fixed_point_scale_m=True),
+        )
+    with pytest.raises(ValueError, match="fixed_point_scale_rad"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(obligation, fixed_point_scale_rad=object()),
+        )
+    with pytest.raises(ValueError, match="acceptance_sha256"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(obligation, acceptance_sha256="not-a-digest"),
+        )
+
+
+def test_kinematic_obligation_verifier_rejects_replay_math_mismatches() -> None:
+    obligation = build_pha_c_kinematic_proof_obligation(
+        _record(spatial_tol_m=0.1),
+        relative_velocity_step_bound_m=1.0e-5,
+        coupling_residual_step_bound_m=2.0e-5,
+    )
+
+    with pytest.raises(ValueError, match="time_scale_units_per_second"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                time_scale_units_per_second=(
+                    obligation.time_scale_units_per_second + 1
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="horizon_time_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                horizon_time_units=obligation.horizon_time_units + 1,
+            ),
+        )
+    with pytest.raises(ValueError, match="coupling_residual_step_bound_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                coupling_residual_step_bound_units=(
+                    obligation.coupling_residual_step_bound_units + 1
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="continuous_drive_rate_bound"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                continuous_drive_rate_bound_units_per_second=(
+                    obligation.continuous_drive_rate_bound_units_per_second + 1
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="continuous_linear_budget_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                continuous_linear_budget_units=(
+                    obligation.continuous_linear_budget_units + 1
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="continuous_margin_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                continuous_margin_units=obligation.continuous_margin_units + 1,
+            ),
+        )
+    with pytest.raises(ValueError, match="kinematic_residual_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                kinematic_residual_units=(
+                    obligation.coupling_residual_step_bound_units + 1
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="max_spatial_dispersion_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                max_spatial_dispersion_units=(
+                    obligation.max_spatial_dispersion_units + 1
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="linear_budget_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                linear_budget_units=obligation.linear_budget_units + 1,
+            ),
+        )
+    with pytest.raises(ValueError, match="gronwall_budget_margin_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                gronwall_budget_margin_units=(
+                    obligation.gronwall_budget_margin_units + 1
+                ),
+            ),
+        )
+    with pytest.raises(ValueError, match="window_budget_margin_units"):
+        verify_pha_c_kinematic_proof_obligation(
+            _tampered(
+                obligation,
+                window_budget_margin_units=obligation.window_budget_margin_units + 1,
+            ),
+        )
+
+
 def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None:
     record = _record()
 
     with pytest.raises(ValueError, match="fixed_point_scale_m"):
         build_pha_c_kinematic_proof_obligation(record, fixed_point_scale_m=0.0)
+    with pytest.raises(ValueError, match="fixed_point_scale_m"):
+        build_pha_c_kinematic_proof_obligation(
+            record,
+            fixed_point_scale_m=cast(float, object()),
+        )
     with pytest.raises(ValueError, match="fixed_point_scale_rad"):
         build_pha_c_kinematic_proof_obligation(record, fixed_point_scale_rad=np.inf)
     with pytest.raises(ValueError, match="fixed_point_time_scale_s"):
         build_pha_c_kinematic_proof_obligation(record, fixed_point_time_scale_s=0.0)
+    with pytest.raises(ValueError, match="relative_velocity_step_bound_m"):
+        build_pha_c_kinematic_proof_obligation(
+            record,
+            relative_velocity_step_bound_m=cast(float, True),
+        )
     with pytest.raises(ValueError, match="relative_velocity_step_bound_m"):
         build_pha_c_kinematic_proof_obligation(
             record,
@@ -523,10 +672,32 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
             record,
             coupling_residual_step_bound_m=np.inf,
         )
+    with pytest.raises(ValueError, match="coupling_residual_step_bound_m"):
+        build_pha_c_kinematic_proof_obligation(
+            record,
+            coupling_residual_step_bound_m=cast(float, object()),
+        )
     with pytest.raises(ValueError, match="phase_drift_bound_rad"):
         build_pha_c_kinematic_proof_obligation(
             record,
             phase_drift_bound_rad=-1.0,
         )
+    with pytest.raises(ValueError, match="lipschitz_step_gain_units"):
+        build_pha_c_kinematic_proof_obligation(
+            record,
+            lipschitz_step_gain_units=cast(int, 1.5),
+        )
+    with pytest.raises(ValueError, match="lipschitz_step_gain_units"):
+        build_pha_c_kinematic_proof_obligation(
+            record,
+            lipschitz_step_gain_units=-1,
+        )
     with pytest.raises(TypeError, match="PHACKinematicProofObligation"):
         verify_pha_c_kinematic_proof_obligation(object())  # type: ignore[arg-type]
+
+
+def test_kinematic_obligation_defensive_integer_ratio_guards() -> None:
+    with pytest.raises(ValueError, match="demo denominator"):
+        formal_obligation._ceil_div_units(1, 0, name="demo")
+    with pytest.raises(ValueError, match="demo denominator"):
+        formal_obligation._ceil_positive_ratio_units(1.0, 0.0, name="demo")
