@@ -10,6 +10,10 @@
 
 from __future__ import annotations
 
+import os
+import sys
+import time
+
 import numpy as np
 import pytest
 
@@ -23,6 +27,17 @@ from scpn_phase_orchestrator.upde.order_params import (
 
 N = 8
 RNG = np.random.default_rng(99)
+
+
+def _skip_wall_clock_perf_gate_under_shared_load() -> None:
+    ci = bool(os.getenv("CI"))
+    load_1m = os.getloadavg()[0] if hasattr(os, "getloadavg") else 0.0
+    load_threshold = max(2.0, float(os.cpu_count() or 1) / 4.0)
+    if ci or load_1m > load_threshold:
+        pytest.skip(
+            "wall-clock performance gate is benchmark-only under CI/high load "
+            f"(CI={ci}, load={load_1m:.1f}, threshold={load_threshold:.1f})"
+        )
 
 
 def _make_engine(method="euler"):
@@ -305,12 +320,10 @@ class TestPhaseContractPipelineEndToEnd:
         r, psi = compute_order_parameter(final)
         assert 0.0 <= r <= 1.0
 
+    @pytest.mark.performance
     def test_performance_order_parameter_256_under_100us(self):
         """compute_order_parameter(256 oscillators) stays inside CI budgets."""
-        import os
-        import sys
-        import time
-
+        _skip_wall_clock_perf_gate_under_shared_load()
         phases = RNG.uniform(0, TWO_PI, 256)
         for _ in range(10):
             compute_order_parameter(phases)
@@ -321,20 +334,16 @@ class TestPhaseContractPipelineEndToEnd:
                 compute_order_parameter(phases)
             samples.append((time.perf_counter() - t0) / 1000)
         elapsed = min(samples)
-        limit = (
-            5e-4 if os.getenv("CI") else 1.5e-4 if sys.platform == "darwin" else 1.5e-4
-        )
+        limit = 1.5e-4
         assert elapsed < limit, (
             f"order_parameter(256) took {elapsed * 1e6:.1f}μs, "
             f"limit {limit * 1e6:.0f}μs"
         )
 
+    @pytest.mark.performance
     def test_performance_plv_1000_under_500us(self):
         """compute_plv(1000 samples) stays inside CI budgets."""
-        import os
-        import sys
-        import time
-
+        _skip_wall_clock_perf_gate_under_shared_load()
         a = RNG.uniform(0, TWO_PI, 1000)
         b = RNG.uniform(0, TWO_PI, 1000)
         compute_plv(a, b)
@@ -342,9 +351,7 @@ class TestPhaseContractPipelineEndToEnd:
         for _ in range(1000):
             compute_plv(a, b)
         elapsed = (time.perf_counter() - t0) / 1000
-        limit = (
-            0.0025 if os.getenv("CI") else 1e-3 if sys.platform == "darwin" else 5e-4
-        )
+        limit = 1e-3 if sys.platform == "darwin" else 5e-4
         assert elapsed < limit, (
             f"PLV(1000) took {elapsed * 1e6:.1f}μs, limit {limit * 1e6:.0f}μs"
         )

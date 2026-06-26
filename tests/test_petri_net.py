@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 import pytest
 
@@ -22,6 +23,17 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
     Transition,
     parse_guard,
 )
+
+
+def _skip_wall_clock_perf_gate_under_shared_load() -> None:
+    ci = bool(os.getenv("CI"))
+    load_1m = os.getloadavg()[0] if hasattr(os, "getloadavg") else 0.0
+    load_threshold = max(2.0, float(os.cpu_count() or 1) / 4.0)
+    if ci or load_1m > load_threshold:
+        pytest.skip(
+            "wall-clock performance gate is benchmark-only under CI/high load "
+            f"(CI={ci}, load={load_1m:.1f}, threshold={load_threshold:.1f})"
+        )
 
 
 def _simple_net():
@@ -398,10 +410,10 @@ class TestPetriNetPipelineEndToEnd:
         else:
             assert len(enabled) == 0
 
+    @pytest.mark.performance
     def test_performance_enabled_under_10us(self):
         """PetriNet.enabled() remains microsecond-scale for a simple net."""
-        import time
-
+        _skip_wall_clock_perf_gate_under_shared_load()
         places = [Place("a"), Place("b")]
         t1 = Transition(
             name="t1",
@@ -417,7 +429,7 @@ class TestPetriNetPipelineEndToEnd:
         for _ in range(100000):
             pn.enabled(marking, ctx)
         elapsed = (time.perf_counter() - t0) / 100000
-        budget_s = 15e-6 if os.environ.get("CI") else 10e-6
+        budget_s = 10e-6
         assert elapsed < budget_s, f"enabled() took {elapsed * 1e6:.1f}μs"
 
 

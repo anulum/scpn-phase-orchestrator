@@ -8,12 +8,26 @@
 
 from __future__ import annotations
 
+import os
+import time
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.upde import delay as delay_mod
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+
+def _skip_wall_clock_perf_gate_under_shared_load() -> None:
+    ci = bool(os.getenv("CI"))
+    load_1m = os.getloadavg()[0] if hasattr(os, "getloadavg") else 0.0
+    load_threshold = max(2.0, float(os.cpu_count() or 1) / 4.0)
+    if ci or load_1m > load_threshold:
+        pytest.skip(
+            "wall-clock performance gate is benchmark-only under CI/high load "
+            f"(CI={ci}, load={load_1m:.1f}, threshold={load_threshold:.1f})"
+        )
 
 
 class TestDelayBuffer:
@@ -294,11 +308,10 @@ class TestDelayedEnginePipelineEndToEnd:
         # Delay generally reduces synchronisation (or at least R is finite)
         assert np.isfinite(r_del)
 
+    @pytest.mark.performance
     def test_performance_delayed_step_32_under_1ms(self):
         """DelayedEngine.step(32 oscillators, delay=5) stays inside CI budgets."""
-        import os
-        import time
-
+        _skip_wall_clock_perf_gate_under_shared_load()
         n = 32
         eng = DelayedEngine(n, dt=0.01, delay_steps=5)
         rng = np.random.default_rng(0)
@@ -313,7 +326,7 @@ class TestDelayedEnginePipelineEndToEnd:
         for _ in range(500):
             eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         elapsed = (time.perf_counter() - t0) / 500
-        limit = 0.003 if os.getenv("CI") else 0.001
+        limit = 0.001
         assert elapsed < limit, (
             f"delayed.step(32) took {elapsed * 1e3:.2f}ms, limit {limit * 1e3:.1f}ms"
         )
