@@ -472,17 +472,24 @@ using the Python reference path instead of direct optional accelerators.
 
 ## Sparse Engine
 
-The  implements the Kuramoto model using a **CSR (Compressed Sparse Row)**
-coupling matrix. This reduces memory overhead from (N^2)$ to (N + E)$, where $ is the
-number of active edge connections.
+`SparseUPDEEngine` implements the Kuramoto model using a CSR
+(compressed sparse row) coupling matrix. This reduces memory from
+`O(N^2)` dense coupling storage to `O(N + E)`, where `E` is the number
+of active directed edge connections.
 
 It is designed for large-scale simulations (national power grids, social networks)
-where most oscillators are only coupled to local neighbors.
+where most oscillators are only coupled to local neighbours.
 
 ### Features
-- **Scalability:** Integrates 0^6$ nodes with 0^7$ edges in sub-second latencies on standard hardware.
-- **FFI Parity:** Offloads integration and plasticity to the  Rust backend for zero-overhead performance.
-- **In-place Plasticity:** Supports sub-microsecond Hebbian updates to the  array during the integration step.
+- **Scalability:** Uses CSR row pointers, column indices, coupling values,
+  and phase-lag values so sparse topologies avoid dense `N x N` allocation.
+- **FFI parity:** Offloads sparse integration to the Rust backend when
+  `spo_kernel` is available, with Python fallback preserving the same shape,
+  finite-value, and phase-bounds contracts.
+- **Input validation:** Rejects malformed CSR row pointers, invalid oscillator
+  indices, non-finite phase/frequency/coupling arrays, unsupported methods,
+  and malformed optional-backend outputs before downstream workflows consume
+  the result.
 
 ::: scpn_phase_orchestrator.upde.sparse_engine
 

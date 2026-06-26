@@ -384,11 +384,8 @@ class SparseUPDEEngine:
             raise ValueError(
                 f"Rust output must be a real numeric array, got {out.dtype}"
             )
-        try:
-            if not np.all(np.isfinite(out)):
-                raise ValueError("Rust output contains NaN/Inf")
-        except TypeError as exc:
-            raise ValueError("Rust output must be a finite real numeric array") from exc
+        if not np.all(np.isfinite(out)):
+            raise ValueError("Rust output contains NaN/Inf")
         return np.asarray(out, dtype=np.float64)
 
     def _validate_inputs(
@@ -427,8 +424,6 @@ class SparseUPDEEngine:
             raise ValueError("row_ptr must be monotonic")
 
         edge_count = int(row_ptr[-1])
-        if edge_count < 0:
-            raise ValueError("row_ptr final entry must be non-negative")
 
         if col_indices.shape != (edge_count,):
             raise ValueError(
@@ -442,8 +437,6 @@ class SparseUPDEEngine:
             raise ValueError(
                 f"alpha_values.shape={alpha_values.shape}, expected {(edge_count,)}"
             )
-        if knm_values.shape != alpha_values.shape:
-            raise ValueError("knm_values and alpha_values must have matching shapes")
 
         if np.any(col_indices < 0) or np.any(col_indices >= self._n):
             raise ValueError("col_indices entries must be valid oscillator indices")
@@ -454,10 +447,7 @@ class SparseUPDEEngine:
             ("knm_values", knm_values),
             ("alpha_values", alpha_values),
         ):
-            try:
-                finite = np.isfinite(arr)
-            except TypeError as exc:
-                raise ValueError(f"{name} contains NaN/Inf") from exc
+            finite = np.isfinite(arr)
             if not np.all(finite):
                 raise ValueError(f"{name} contains NaN/Inf")
 

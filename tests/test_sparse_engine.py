@@ -295,10 +295,12 @@ class TestSparseEngineEdgeCases:
             engine.step(phases, omegas, row_ptr, col, kv, True, 0.0, av)
         with pytest.raises(ValueError):
             engine.step(phases, omegas, row_ptr, col, kv, 0.0, 1j, av)
+        with pytest.raises(ValueError, match="zeta"):
+            engine.step(phases, omegas, row_ptr, col, kv, float("nan"), 0.0, av)
 
     def test_step_rejects_array_like_inputs_not_strict_numpy_arrays(self):
         engine = SparseUPDEEngine(3, dt=0.01)
-        phases = [0.1, 0.2, 0.3]
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
         omegas = np.ones(3, dtype=np.float64)
         row_ptr = [0, 0, 0, 0]
         col = np.array([], dtype=np.uint64)
@@ -306,6 +308,30 @@ class TestSparseEngineEdgeCases:
         av = np.array([], dtype=np.float64)
 
         with pytest.raises(ValueError):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av)
+
+    def test_step_rejects_non_numpy_phase_arrays(self):
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = [0.1, 0.2, 0.3]
+        omegas = np.ones(3, dtype=np.float64)
+        row_ptr = np.array([0, 0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="phases must be a NumPy ndarray"):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av)
+
+    def test_step_rejects_wrong_rank_integer_csr_arrays(self):
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        row_ptr = np.array([[0, 0, 0, 0]], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="row_ptr must be one-dimensional"):
             engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av)
 
     def test_rejects_bool_object_and_nonfinite_csr_arrays(self):
@@ -324,6 +350,17 @@ class TestSparseEngineEdgeCases:
                 0.0,
                 0.0,
                 np.array([0.0, 0.1, 0.2], dtype=np.float64),
+            )
+        with pytest.raises(ValueError, match="phases must be a real numeric ndarray"):
+            engine.step(
+                np.array([True, False, True], dtype=np.bool_),
+                omegas,
+                np.array([0, 0, 0, 0], dtype=np.uint64),
+                np.array([], dtype=np.uint64),
+                np.array([], dtype=np.float64),
+                0.0,
+                0.0,
+                np.array([], dtype=np.float64),
             )
         with pytest.raises(ValueError):
             engine.step(
@@ -388,6 +425,28 @@ class TestSparseEngineEdgeCases:
                 0.0,
                 av,
             )
+        with pytest.raises(ValueError, match="row_ptr entries must be non-negative"):
+            engine.step(
+                phases,
+                omegas,
+                np.array([0, -1, 1, 1], dtype=np.int64),
+                np.array([0], dtype=np.int64),
+                knm,
+                0.0,
+                0.0,
+                av,
+            )
+        with pytest.raises(ValueError, match="row_ptr must start at 0"):
+            engine.step(
+                phases,
+                omegas,
+                np.array([1, 1, 1, 1], dtype=np.uint64),
+                np.array([0], dtype=np.uint64),
+                knm,
+                0.0,
+                0.0,
+                av,
+            )
 
     def test_step_rejects_col_indices_out_of_bounds(self):
         engine = SparseUPDEEngine(3, dt=0.01)
@@ -407,6 +466,35 @@ class TestSparseEngineEdgeCases:
                 0.0,
                 av,
             )
+        with pytest.raises(ValueError, match="col_indices entries"):
+            engine.step(
+                phases,
+                omegas,
+                np.array([0, 1, 1, 1], dtype=np.uint64),
+                np.array([3], dtype=np.uint64),
+                kv,
+                0.0,
+                0.0,
+                av,
+            )
+
+    def test_step_rejects_shape_mismatched_vectors_and_edge_payloads(self):
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        row_ptr = np.array([0, 1, 2, 2], dtype=np.uint64)
+        col = np.array([1, 2], dtype=np.uint64)
+        kv = np.array([0.4, 0.5], dtype=np.float64)
+        av = np.array([0.0, 0.1], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="phases.shape"):
+            engine.step(phases[:2], omegas, row_ptr, col, kv, 0.0, 0.0, av)
+        with pytest.raises(ValueError, match="omegas.shape"):
+            engine.step(phases, omegas[:2], row_ptr, col, kv, 0.0, 0.0, av)
+        with pytest.raises(ValueError, match="knm_values.shape"):
+            engine.step(phases, omegas, row_ptr, col, kv[:1], 0.0, 0.0, av)
+        with pytest.raises(ValueError, match="alpha_values.shape"):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av[:1])
 
     def test_run_zero_steps_returns_copy(self, monkeypatch):
         class FakeSparseStepper:
@@ -485,6 +573,33 @@ class TestSparseEngineEdgeCases:
             engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av)
         with pytest.raises(ValueError, match="Rust output contains NaN/Inf"):
             engine.run(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av, 3)
+
+    def test_rust_output_rejects_non_numeric_dtype(self, monkeypatch):
+        class FakeSparseStepper:
+            def __init__(self, n, dt, method, *, atol, rtol):
+                assert (n, dt, method, atol, rtol) == (3, 0.01, "rk4", 1e-6, 1e-3)
+
+            def step(self, *args):
+                return np.array(["bad", "output", "dtype"], dtype=object)
+
+            def run(self, *args):
+                return np.array([0.1, 0.2, 0.3], dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySparseUPDEStepper = FakeSparseStepper
+        monkeypatch.setattr(sparse_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SparseUPDEEngine(3, dt=0.01, method="rk4")
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
+        row_ptr = np.array([0, 0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="Rust output must be a real numeric"):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av)
 
     def test_invalid_method_rejected(self):
         """Unknown integration method must raise, mirroring UPDEEngine."""
@@ -642,6 +757,23 @@ class TestSparseEngineEdgeCases:
         assert np.all(out_rk45 < 2 * np.pi)
         with pytest.raises(AssertionError):
             np.testing.assert_allclose(out_rk45, out_rk4, atol=1e-12, rtol=1e-12)
+
+    def test_rk45_sparse_fallback_returns_after_reject_budget(self, monkeypatch):
+        monkeypatch.setattr(sparse_mod, "_HAS_RUST", False)
+        engine = SparseUPDEEngine(2, dt=10.0, method="rk45", atol=1e-16, rtol=1e-16)
+        phases = np.array([0.1, 2.0], dtype=np.float64)
+        omegas = np.array([10.0, -20.0], dtype=np.float64)
+        row_ptr = np.array([0, 1, 2], dtype=np.int64)
+        col = np.array([1, 0], dtype=np.int64)
+        kv = np.array([100.0, 100.0], dtype=np.float64)
+        alpha = np.zeros(2, dtype=np.float64)
+
+        out = engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, alpha)
+
+        assert engine.last_dt == pytest.approx(10.0 * (0.2**4))
+        assert np.all(np.isfinite(out))
+        assert np.all(out >= 0.0)
+        assert np.all(out < 2 * np.pi)
 
 
 # Pipeline wiring: the sparse engine swaps in for UPDEEngine when the
