@@ -137,12 +137,13 @@ plasma physics-invariant violations, coherence-memory snapshot, `PhaseState`.
 
 ## 5. How STUDIO consumes SPO
 
-The `studio/` subsystem is a **review surface**, not a live federated feed at the
-time of writing. It exposes builder functions and a panel registry whose panels
-are all `execution_disabled=True` / `operator_review_required=True`, and emits a
-Python-dataclass `ExportManifest` rather than a JSON studio feed. This contrasts
-with the live `studio.control-feed.v1` emitted by the `scpn-control` vertical;
-wiring SPO's studio surface into a live STUDIO feed is a known open item.
+The `studio/` subsystem is a **review surface** with a live read-only ingestion
+feed. It exposes builder functions and a panel registry whose panels are all
+`execution_disabled=True` / `operator_review_required=True`, emits
+Python-dataclass `ExportManifest` records, and exposes `/api/studio-feed` as a
+`studio.control-feed.v1` JSON envelope with SPO runtime state under
+`spo.studio-runtime-snapshot.v1`. The feed lets STUDIO ingest live SPO state; it
+does not permit hardware writes, QPU execution, or policy promotion.
 See [studio-reporting.md](subsystems/studio-reporting.md).
 
 ---

@@ -1,8 +1,8 @@
 {
-  "$comment": "Two-block STUDIO ingestion manifest (CEO/architect lock 2026-06-23): schema_a_core = scpn-studio-platform federation CapabilityManifest (pending SCPN-STUDIO ratification), architecture_map = this repo's verified superset extension the Hub ignores for federation. Public status vocabulary: wired | library-only | stub | feasibility-only; SOTA/ClaimStatus grades live only in the private audit.",
+  "$comment": "Two-block STUDIO ingestion manifest (CEO/architect lock 2026-06-23, lock-step refresh 2026-06-26): schema_a_core = scpn-studio-platform federation CapabilityManifest (pending SCPN-STUDIO ratification), architecture_map = this repo's verified superset extension the Hub ignores for federation. Public status vocabulary: wired | library-only | stub | feasibility-only; SOTA/ClaimStatus grades live only in the private audit.",
   "schema_a_core": {
     "status": "pending-scpn-studio-ratification",
-    "note": "Federation CapabilityManifest (scpn-studio-platform schema A) to be produced by tools/capability_manifest.py once SPO adopts the sibling generator (cf. FUSION/CONTROL/MIF); verb-to-schema-A mapping is under review with the SCPN-STUDIO agent.",
+    "note": "SPO ships studio/federation_manifest.py for the optional scpn-studio-platform CapabilityManifest, but final fleet-locked fields remain pending STUDIO/CEO ratification. The live /api/studio-feed endpoint uses the sibling studio.control-feed.v1 wire envelope.",
     "project": "scpn-phase-orchestrator",
     "transport_profile": null,
     "verbs": []
@@ -10,7 +10,7 @@
   "architecture_map": {
   "id": "scpn-phase-orchestrator",
   "schema_version": "0",
-  "generated": "2026-06-23",
+    "generated": "2026-06-26",
   "role": "Domain-agnostic coherence-control core (topology + solver) of the SCPN ecosystem; review-only by default.",
   "pipeline_stages": [
     "binding",
@@ -99,17 +99,17 @@
       "name": "adapters+apps",
       "status": "library-only",
       "inputs": ["R/psi/phase state", "external protocol payloads"],
-      "outputs": ["sibling wire formats", "telemetry", "anomaly alerts"],
-      "backends": ["python"],
-      "note": "23 bridges, opt-in, not wired into core CLI/server; only QuantumControlBridge imports a sibling (lazy); HybridCocompiler/FMI aspirational."
+        "outputs": ["sibling wire formats", "telemetry", "anomaly alerts"],
+        "backends": ["python"],
+        "note": "23 bridges, opt-in, not wired into the core loop; only QuantumControlBridge imports a sibling (lazy). FMI co-simulation and hybrid co-compiler review/export surfaces are shipped and reported by spo doctor adapter diagnostics."
     },
     {
       "name": "studio+reporting+visualization",
       "status": "library-only",
       "inputs": ["project/binding state", "runtime snapshots"],
-      "outputs": ["ExportManifest (dataclass)", "Matplotlib plots", "Three.js/D3 JSON"],
-      "backends": ["python"],
-      "note": "13 review panels all execution_disabled; no live studio JSON feed yet (open item)."
+        "outputs": ["ExportManifest (dataclass)", "studio.control-feed.v1 JSON", "Matplotlib plots", "Three.js/D3 JSON"],
+        "backends": ["python"],
+        "note": "13 review panels all execution_disabled; /api/studio-feed emits a read-only studio.control-feed.v1 envelope with spo.studio-runtime-snapshot.v1 runtime payload."
     },
     {
       "name": "plugins+scaffold+domainpacks",
@@ -142,9 +142,9 @@
   "interfaces": [
     {"kind": "library", "entry": "Orchestrator, OrchestratorState, evaluate_binding_spec (api.py)"},
     {"kind": "cli", "entry": "spo (runtime/cli/); ~20 verbs incl run/validate/replay/formal-export/assurance-case/twin-confidence/queuewaves"},
-    {"kind": "rest", "entry": "runtime/server.py; 8 routes; optional X-API-Key + rate limit"},
+      {"kind": "rest", "entry": "runtime/server.py; 9 routes including /api/studio-feed; optional X-API-Key + rate limit"},
     {"kind": "grpc", "entry": "runtime/server_grpc.py; GetState/Step/Reset/GetConfig + StreamPhases"},
-    {"kind": "studio", "entry": "studio/ ExportManifest (dataclass); no live feed yet"}
+      {"kind": "studio", "entry": "studio/ ExportManifest (dataclass) + read-only studio.control-feed.v1 live feed"}
   ],
   "wire_formats": [
     "K_nm handshake (NxN, zero diagonal)",
@@ -161,7 +161,7 @@
     {"sibling": "scpn-fusion-core", "extra": "fusion", "domainpack": "fusion_equilibrium", "coupling": "wire-format"},
     {"sibling": "sc-neurocore", "extra": null, "domainpack": "neuroscience_eeg", "coupling": "http/validator"},
     {"sibling": "remanentia", "extra": null, "domainpack": null, "coupling": "http"},
-    {"sibling": "scpn-studio", "extra": "studio", "domainpack": null, "coupling": "dataclass-manifest"}
+      {"sibling": "scpn-studio", "extra": "studio", "domainpack": null, "coupling": "dataclass-manifest + studio.control-feed.v1"}
   ],
   "boundaries": [
     "Rust kernel builds but is not active in every environment; dispatch falls back to Python.",
@@ -172,7 +172,7 @@
     "Audit chain is real but integrity-verify/replay are opt-in CLI; signing is env-gated.",
     "twin_conformal_gate (CPTC) is wired into live policy admission only when callers provide the observed-twin confidence source; default CLI runs do not synthesize that feed.",
     "Formal export covers PRISM and TLA+ only (no SMT-LIB exporter despite docstring).",
-    "studio/ has no live JSON feed yet."
+      "studio/ emits a read-only studio.control-feed.v1 live feed at /api/studio-feed; fleet-locked CapabilityManifest fields remain pending STUDIO/CEO ratification."
   ]
   }
 }
