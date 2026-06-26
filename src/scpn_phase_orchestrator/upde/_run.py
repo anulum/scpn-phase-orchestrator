@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import importlib
 from collections.abc import Callable
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -32,7 +32,7 @@ from scpn_phase_orchestrator.upde._ref_kernel import (
     upde_run_python,
 )
 
-FloatArray = NDArray[np.float64]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -68,17 +68,20 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         stepper = PyUPDEStepper(
             n, dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
         )
-        return np.asarray(
-            stepper.run(
-                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-                np.ascontiguousarray(knm.ravel(), dtype=np.float64),
-                float(zeta),
-                float(psi),
-                np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
-                int(n_steps),
+        return cast(
+            "FloatArray",
+            np.asarray(
+                stepper.run(
+                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+                    float(zeta),
+                    float(psi),
+                    np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
+                    int(n_steps),
+                ),
+                dtype=np.float64,
             ),
-            dtype=np.float64,
         )
 
     return cast("Callable[..., FloatArray]", _rust_run)
@@ -111,17 +114,20 @@ def _load_rust_schedule_fn() -> Callable[..., FloatArray]:
                 "spo_kernel PyUPDEStepper does not expose run_omega_schedule; "
                 "rebuild spo-kernel to enable Rust omega schedule dispatch"
             )
-        return np.asarray(
-            stepper.run_omega_schedule(
-                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                np.ascontiguousarray(omega_schedule.ravel(), dtype=np.float64),
-                np.ascontiguousarray(knm.ravel(), dtype=np.float64),
-                float(zeta),
-                float(psi),
-                np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
-                int(omega_schedule.shape[0]),
+        return cast(
+            "FloatArray",
+            np.asarray(
+                stepper.run_omega_schedule(
+                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(omega_schedule.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+                    float(zeta),
+                    float(psi),
+                    np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
+                    int(omega_schedule.shape[0]),
+                ),
+                dtype=np.float64,
             ),
-            dtype=np.float64,
         )
 
     return cast("Callable[..., FloatArray]", _rust_run_schedule)
@@ -136,7 +142,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
     )
 
     _ensure_exe()
-    return upde_run_mojo
+    return cast("Callable[..., FloatArray]", upde_run_mojo)
 
 
 def _load_mojo_schedule_fn() -> Callable[..., FloatArray]:
@@ -148,7 +154,7 @@ def _load_mojo_schedule_fn() -> Callable[..., FloatArray]:
     )
 
     _ensure_exe()
-    return upde_run_omega_schedule_mojo
+    return cast("Callable[..., FloatArray]", upde_run_omega_schedule_mojo)
 
 
 def _load_webgpu_fn() -> Callable[..., FloatArray]:
@@ -157,7 +163,7 @@ def _load_webgpu_fn() -> Callable[..., FloatArray]:
         load_webgpu_dispatch_bridge,
     )
 
-    return load_webgpu_dispatch_bridge()
+    return cast("Callable[..., FloatArray]", load_webgpu_dispatch_bridge())
 
 
 def _require_juliacall_runtime() -> None:
@@ -182,7 +188,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
         upde_run_julia,
     )
 
-    return upde_run_julia
+    return cast("Callable[..., FloatArray]", upde_run_julia)
 
 
 def _load_julia_schedule_fn() -> Callable[..., FloatArray]:
@@ -194,7 +200,7 @@ def _load_julia_schedule_fn() -> Callable[..., FloatArray]:
         upde_run_omega_schedule_julia,
     )
 
-    return upde_run_omega_schedule_julia
+    return cast("Callable[..., FloatArray]", upde_run_omega_schedule_julia)
 
 
 def _load_go_fn() -> Callable[..., FloatArray]:
@@ -206,7 +212,7 @@ def _load_go_fn() -> Callable[..., FloatArray]:
     )
 
     _load_lib()
-    return upde_run_go
+    return cast("Callable[..., FloatArray]", upde_run_go)
 
 
 def _load_go_schedule_fn() -> Callable[..., FloatArray]:
@@ -218,7 +224,7 @@ def _load_go_schedule_fn() -> Callable[..., FloatArray]:
     )
 
     _load_lib()
-    return upde_run_omega_schedule_go
+    return cast("Callable[..., FloatArray]", upde_run_omega_schedule_go)
 
 
 _LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
@@ -359,36 +365,42 @@ def upde_run(
     _validate_zero_self_coupling(k)
     backend_fn = _dispatch()
     if backend_fn is None:
-        return upde_run_python(
-            p,
-            o,
-            k,
-            a,
-            float(zeta),
-            float(psi),
-            float(dt),
-            int(n_steps),
-            method,
-            int(n_substeps),
-            float(atol),
-            float(rtol),
+        return cast(
+            "FloatArray",
+            upde_run_python(
+                p,
+                o,
+                k,
+                a,
+                float(zeta),
+                float(psi),
+                float(dt),
+                int(n_steps),
+                method,
+                int(n_substeps),
+                float(atol),
+                float(rtol),
+            ),
         )
-    return np.asarray(
-        backend_fn(
-            p,
-            o,
-            k,
-            a,
-            float(zeta),
-            float(psi),
-            float(dt),
-            int(n_steps),
-            method,
-            int(n_substeps),
-            float(atol),
-            float(rtol),
+    return cast(
+        "FloatArray",
+        np.asarray(
+            backend_fn(
+                p,
+                o,
+                k,
+                a,
+                float(zeta),
+                float(psi),
+                float(dt),
+                int(n_steps),
+                method,
+                int(n_substeps),
+                float(atol),
+                float(rtol),
+            ),
+            dtype=np.float64,
         ),
-        dtype=np.float64,
     )
 
 
@@ -415,22 +427,9 @@ def upde_run_omega_schedule(
     schedule = np.ascontiguousarray(raw_schedule, dtype=np.float64)
     backend_fn = _dispatch_schedule()
     if backend_fn is None:
-        return upde_run_omega_schedule_python(
-            p,
-            schedule,
-            k,
-            a,
-            float(zeta),
-            float(psi),
-            float(dt),
-            method,
-            int(n_substeps),
-            float(atol),
-            float(rtol),
-        )
-    try:
-        return np.asarray(
-            backend_fn(
+        return cast(
+            "FloatArray",
+            upde_run_omega_schedule_python(
                 p,
                 schedule,
                 k,
@@ -443,19 +442,41 @@ def upde_run_omega_schedule(
                 float(atol),
                 float(rtol),
             ),
-            dtype=np.float64,
+        )
+    try:
+        return cast(
+            "FloatArray",
+            np.asarray(
+                backend_fn(
+                    p,
+                    schedule,
+                    k,
+                    a,
+                    float(zeta),
+                    float(psi),
+                    float(dt),
+                    method,
+                    int(n_substeps),
+                    float(atol),
+                    float(rtol),
+                ),
+                dtype=np.float64,
+            ),
         )
     except (AttributeError, ImportError):
-        return upde_run_omega_schedule_python(
-            p,
-            schedule,
-            k,
-            a,
-            float(zeta),
-            float(psi),
-            float(dt),
-            method,
-            int(n_substeps),
-            float(atol),
-            float(rtol),
+        return cast(
+            "FloatArray",
+            upde_run_omega_schedule_python(
+                p,
+                schedule,
+                k,
+                a,
+                float(zeta),
+                float(psi),
+                float(dt),
+                method,
+                int(n_substeps),
+                float(atol),
+                float(rtol),
+            ),
         )
