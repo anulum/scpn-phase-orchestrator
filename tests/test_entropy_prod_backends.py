@@ -472,3 +472,100 @@ class TestEntropyProductionAdapterContracts:
                 np.bool_(True),
                 0.01,
             )
+
+    @pytest.mark.parametrize(
+        ("phases", "omegas", "knm", "alpha", "dt", "match"),
+        [
+            (
+                np.array(["not-a-float", "1.0"], dtype=object),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                1.0,
+                0.01,
+                "phases must be a one-dimensional float array",
+            ),
+            (
+                np.zeros((1, 2)),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                1.0,
+                0.01,
+                "phases shape",
+            ),
+            (
+                np.array([0.0, np.nan]),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                1.0,
+                0.01,
+                "phases must contain only finite values",
+            ),
+            (
+                np.zeros(2),
+                np.zeros(2),
+                np.array([["not-a-float", "0.0"], ["0.0", "0.0"]], dtype=object),
+                1.0,
+                0.01,
+                "knm must be a two-dimensional float array",
+            ),
+            (
+                np.zeros(2),
+                np.zeros(2),
+                np.zeros((2, 1)),
+                1.0,
+                0.01,
+                "knm shape",
+            ),
+            (
+                np.zeros(2),
+                np.zeros(2),
+                np.array([[0.0, np.nan], [0.0, 0.0]]),
+                1.0,
+                0.01,
+                "knm must contain only finite values",
+            ),
+            (
+                np.zeros(2),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                np.inf,
+                0.01,
+                "alpha must be finite",
+            ),
+            (
+                np.zeros(2),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                1.0,
+                -0.01,
+                "dt must be non-negative",
+            ),
+        ],
+    )
+    def test_rejects_invalid_numeric_contracts_before_runtime(
+        self,
+        name: str,
+        backend,
+        monkeypatch: pytest.MonkeyPatch,
+        phases: np.ndarray,
+        omegas: np.ndarray,
+        knm: np.ndarray,
+        alpha: object,
+        dt: object,
+        match: str,
+    ) -> None:
+        if name == "go":
+            monkeypatch.setattr(_entropy_prod_go, "_load_lib", lambda: None)
+        elif name == "julia":
+            monkeypatch.setattr(_entropy_prod_julia, "_ensure", lambda: None)
+        else:
+            monkeypatch.setattr(_entropy_prod_mojo, "_run", lambda _payload: 0.0)
+
+        with pytest.raises(ValueError, match=match):
+            backend(phases, omegas, knm, alpha, dt)
+
+
+def test_entropy_prod_validation_rejects_non_scalar_backend_output() -> None:
+    """Backend scalar validation rejects non-castable production output."""
+    with pytest.raises(ValueError, match="finite real scalar"):
+        _entropy_prod_validation.validate_entropy_prod_backend_output("not-a-number")

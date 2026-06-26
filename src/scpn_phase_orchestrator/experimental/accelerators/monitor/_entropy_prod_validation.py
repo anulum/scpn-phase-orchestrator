@@ -27,28 +27,19 @@ __all__ = [
 
 def _contains_boolean_alias(value: object) -> bool:
     """Return whether the value contains any boolean alias."""
-    try:
-        array = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
-        return False
+    array = np.asarray(value, dtype=object)
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
 def _contains_complex_alias(value: object) -> bool:
     """Return whether the value contains any complex-number alias."""
-    try:
-        array = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
-        return False
+    array = np.asarray(value, dtype=object)
     return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
 
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
-    try:
-        array = np.asarray(value)
-    except (TypeError, ValueError):
-        return _contains_complex_alias(value)
+    array = np.asarray(value)
     return bool(np.iscomplexobj(array) or _contains_complex_alias(value))
 
 
