@@ -178,16 +178,18 @@ def _normalise_evolutionary_search_reports(
         )
         if len(candidates) != candidate_count:
             raise ValueError(f"{label} candidate_count must match candidates length")
+        accepted_status_count = sum(
+            1 for candidate in candidates if candidate["accepted"]
+        )
+        rejected_status_count = len(candidates) - accepted_status_count
         if (
-            sum(1 for candidate in candidates if candidate["accepted"])
-            != accepted_count
+            accepted_status_count != accepted_count
+            or rejected_status_count != rejected_count
         ):
-            raise ValueError(f"{label} accepted_count must match candidate statuses")
-        if (
-            sum(1 for candidate in candidates if not candidate["accepted"])
-            != rejected_count
-        ):
-            raise ValueError(f"{label} rejected_count must match candidate statuses")
+            raise ValueError(
+                f"{label} accepted_count and rejected_count must match "
+                "candidate statuses"
+            )
         best_candidate = _normalise_optional_evolutionary_candidate(
             report.get("best_candidate"), f"{label} best_candidate"
         )

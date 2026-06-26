@@ -139,9 +139,11 @@ domain examples, true `non_actuating` and `execution_disabled` flags where the
 source schema carries them, disabled live merge, disabled hot patching,
 operator review requirements, SHA-256 report/candidate/scenario hashes,
 matching candidate and accepted/rejected counts, finite replay/STL metrics,
-and candidate-level actuation denial before Studio may display the evidence.
-The payload sets `actuation_permitted: false`,
-`hot_patch_permitted: false`, and `live_merge_permitted: false`.
+JSON-safe STL scalar or sequence diagnostics, non-empty blocked reasons for
+rejected candidates, no blocked reasons for accepted candidates, and
+candidate-level actuation denial before Studio may display the evidence. The
+payload sets `actuation_permitted: false`, `hot_patch_permitted: false`, and
+`live_merge_permitted: false`.
 
 `build_autopoietic_lineage_studio_panel(manifests)` renders passive
 autopoietic lineage sandbox evidence into an operator payload. It preserves
