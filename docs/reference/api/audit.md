@@ -159,11 +159,14 @@ platform differences, or code regressions.
 ```python
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 
-engine = ReplayEngine("audit.jsonl", binding_spec)
-divergences = engine.replay()
-if divergences:
-    for d in divergences:
-        print(f"Step {d.step}: Δ={d.magnitude:.2e}")
+replay = ReplayEngine("audit.jsonl")
+entries = replay.load()
+header = replay.load_header(entries)
+
+if header is not None:
+    engine = replay.build_engine(header)
+    ok, verified = replay.verify_determinism_chained(engine, entries)
+    print(f"verified={verified} ok={ok}")
 ```
 
 ::: scpn_phase_orchestrator.runtime.replay

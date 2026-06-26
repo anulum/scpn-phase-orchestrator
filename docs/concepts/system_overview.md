@@ -207,10 +207,14 @@ Every step writes a JSONL record:
 Deterministic replay from audit logs verifies reproducibility:
 
 ```python
-from scpn_phase_orchestrator.audit import ReplayEngine
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 
 replay = ReplayEngine("audit_trace.jsonl")
-replay.verify_determinism()  # re-runs and compares
+entries = replay.load()
+header = replay.load_header(entries)
+if header is not None:
+    engine = replay.build_engine(header)
+    replay.verify_determinism_chained(engine, entries)
 ```
 
 The `AuditLogger` supports structured queries for post-hoc analysis

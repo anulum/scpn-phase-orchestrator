@@ -31,7 +31,6 @@ import numpy as np
 from scpn_phase_orchestrator.runtime.audit_signing import (
     SIGNATURE_ALGORITHM,
     audit_verification_keys,
-    key_id_for_secret,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -537,8 +536,6 @@ def _verify_hmac_signature(
         return False
     audit_key = audit_keys.get(key_id)
     if audit_key is None:
-        return False
-    if key_id != key_id_for_secret(audit_key):
         return False
     if entry.get("_audit_schema_version") != _AUDIT_SCHEMA_VERSION:
         return False
