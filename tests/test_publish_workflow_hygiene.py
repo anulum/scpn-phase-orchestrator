@@ -136,6 +136,45 @@ def test_ci_slow_tests_run_once_outside_python_matrix() -> None:
     assert "slow-tests" in gate_needs
 
 
+def test_ci_lint_job_ratchets_source_docstring_coverage() -> None:
+    workflow = _ci_workflow()
+    lint_steps = workflow["jobs"]["lint"]["steps"]
+    commands = [str(step.get("run", "")) for step in lint_steps]
+    interrogate_command = next(
+        command for command in commands if command.startswith("interrogate ")
+    )
+
+    assert "interrogate src/scpn_phase_orchestrator" in interrogate_command
+    assert "--fail-under 100" in interrogate_command
+    assert "--ignore-init-method" in interrogate_command
+    assert "--ignore-magic" in interrogate_command
+    assert "--exclude src/scpn_phase_orchestrator/runtime/grpc_gen" in (
+        interrogate_command
+    )
+    assert "--quiet" in interrogate_command
+
+
+def test_dev_locks_hash_pin_interrogate_docstring_gate() -> None:
+    for lockfile in (
+        "requirements/dev-lock.txt",
+        "requirements/dev-lock-py311.txt",
+        "requirements/dev-lock-py313.txt",
+    ):
+        text = (ROOT / lockfile).read_text(encoding="utf-8")
+
+        assert "interrogate==1.7.0 \\" in text
+        assert (
+            "--hash=sha256:a320d6ec644dfd887cc58247a345054fc4d9f981100c45184470068f4b3719b0"
+            in text
+        )
+        assert (
+            "--hash=sha256:b13ff4dd8403369670e2efe684066de9fcb868ad9d7f2b4095d8112142dc9d12"
+            in text
+        )
+        assert "py==1.11.0 \\" in text
+        assert "tabulate==0.10.0 \\" in text
+
+
 def test_ffi_matrix_excludes_slow_tests() -> None:
     workflow = _ci_workflow()
     ffi_steps = workflow["jobs"]["ffi-test"]["steps"]

@@ -106,6 +106,11 @@ reason to weaken the mkdocstrings coverage gate. When touching such a module,
 add the module docstring in the same change instead of spreading generic
 one-line docstrings across unrelated code.
 
+CI also runs `interrogate src/scpn_phase_orchestrator --fail-under 100` in the
+lint job, with generated gRPC stubs excluded and `__init__`/dunder methods
+exempted. That ratchet keeps the maintained source tree from regressing below
+the documented 100% docstring floor.
+
 ## v0.6.0 Code-to-Documentation Reconciliation
 
 ## Reader-facing evidence flow

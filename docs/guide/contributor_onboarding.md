@@ -116,6 +116,9 @@ For public modules, prefer a precise module docstring over a generic label:
 state what contract the module owns, which backend or transport assumptions it
 makes, and whether invalid inputs fail closed or propagate to an owning
 validator.
+The CI lint job runs an `interrogate` 100% docstring ratchet over
+`src/scpn_phase_orchestrator`; generated gRPC stubs and protocol-defined
+`__init__`/dunder methods are the only documented source-level exemptions.
 
 ## Domainpack Contribution Checklist
 

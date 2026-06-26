@@ -33,6 +33,13 @@ jobs:
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
+      - run: >
+          interrogate src/scpn_phase_orchestrator
+          --fail-under 100
+          --ignore-init-method
+          --ignore-magic
+          --exclude src/scpn_phase_orchestrator/runtime/grpc_gen
+          --quiet
       - run: python tools/check_version_sync.py
       - run: python tools/capability_manifest.py --check
 
