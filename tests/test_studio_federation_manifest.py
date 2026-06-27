@@ -13,9 +13,16 @@ and the honesty invariants hold (review-only, no formal proof, research tier).
 
 from __future__ import annotations
 
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 import scpn_phase_orchestrator.studio.federation_manifest as fm
+from scpn_phase_orchestrator.studio.live_feed import LIVE_FEED_EVIDENCE_SCHEMAS
 
 pytest.importorskip("scpn_studio_platform")
 
@@ -29,6 +36,30 @@ from scpn_studio_platform.verbs import (  # noqa: E402  (after importorskip)
     VerbProof,
 )
 
+_STUDIO_PLATFORM_SRC = (
+    Path(__file__).resolve().parents[1].parent / "SCPN-STUDIO-PLATFORM" / "src"
+)
+_VALIDATE_WITH_SIBLING_PLATFORM = """
+import json
+import sys
+
+from scpn_studio_platform.manifest.federation import validate_studio_manifest
+
+verdict = validate_studio_manifest(json.loads(sys.stdin.read()))
+print(
+    json.dumps(
+        {
+            "admitted": verdict.admitted,
+            "contract_era": verdict.contract_era,
+            "rejections": list(verdict.rejections),
+            "warnings": list(verdict.warnings),
+        },
+        sort_keys=True,
+    )
+)
+ok = verdict.admitted and verdict.contract_era == "v1" and not verdict.warnings
+raise SystemExit(0 if ok else 1)
+"""
 _EXPECTED_VERBS = {
     "bind",
     "simulate",
@@ -51,14 +82,48 @@ def test_manifest_is_well_formed() -> None:
     assert manifest.transport_profile.value == "local-first"
     assert manifest.content_digest.startswith("sha256:")
     assert {v.name for v in manifest.verbs} == _EXPECTED_VERBS
-    assert manifest.evidence_types == ("measured", "curated")
+    assert manifest.evidence_types == LIVE_FEED_EVIDENCE_SCHEMAS
+
+
+def test_manifest_is_admitted_by_studio_platform_federation_gate() -> None:
+    """The emitted schema-A wire manifest passes the Hub's platform validator."""
+    assert _STUDIO_PLATFORM_SRC.is_dir()
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(_STUDIO_PLATFORM_SRC)
+    completed = subprocess.run(
+        [sys.executable, "-c", _VALIDATE_WITH_SIBLING_PLATFORM],
+        input=json.dumps(fm.manifest_dict(studio_version="1.2.3")),
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+    assert completed.returncode == 0, completed.stderr + completed.stdout
+    assert (
+        completed.stdout.strip()
+        == '{"admitted": true, "contract_era": "v1", "rejections": [], "warnings": []}'
+    )
 
 
 def test_digest_is_deterministic_and_version_independent() -> None:
     a = fm.build_capability_manifest(studio_version="1.0.0").content_digest
     b = fm.build_capability_manifest(studio_version="9.9.9").content_digest
-    # The digest fingerprints the verb contracts, not the package version.
+    # The digest fingerprints the manifest surface, not the package version.
     assert a == b
+
+
+def test_digest_tracks_live_feed_evidence_schemas(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Evidence schema changes alter the manifest content digest."""
+    baseline = fm.build_capability_manifest(studio_version="1.0.0").content_digest
+    monkeypatch.setattr(
+        fm,
+        "LIVE_FEED_EVIDENCE_SCHEMAS",
+        (*LIVE_FEED_EVIDENCE_SCHEMAS, "spo.extra-evidence.v1"),
+    )
+    changed = fm.build_capability_manifest(studio_version="1.0.0").content_digest
+    assert changed != baseline
 
 
 def test_honesty_invariants_hold() -> None:

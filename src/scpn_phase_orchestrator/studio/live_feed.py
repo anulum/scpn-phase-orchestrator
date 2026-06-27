@@ -20,6 +20,14 @@ from numbers import Real
 FEED_SCHEMA = "studio.control-feed.v1"
 STUDIO_ID = "scpn-phase-orchestrator"
 RUNTIME_SCHEMA = "spo.studio-runtime-snapshot.v1"
+RUNTIME_STATE_SCHEMA = "spo.runtime-state.v1"
+PHASE_COHERENCE_SCHEMA = "spo.phase-coherence.v1"
+REGIME_STATE_SCHEMA = "spo.regime-state.v1"
+LIVE_FEED_EVIDENCE_SCHEMAS = (
+    RUNTIME_STATE_SCHEMA,
+    PHASE_COHERENCE_SCHEMA,
+    REGIME_STATE_SCHEMA,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -203,14 +211,14 @@ def claim_summaries(runtime: Mapping[str, object]) -> tuple[StudioFeedClaim, ...
     admission = "admitted" if layers else "rejected"
     coherence_status = "bounded-support" if 0.0 <= r_global <= 1.0 else "validation-gap"
     return (
-        StudioFeedClaim("spo.runtime-state.v1", "bounded-model", admission, "measured"),
+        StudioFeedClaim(RUNTIME_STATE_SCHEMA, "bounded-model", admission, "measured"),
         StudioFeedClaim(
-            "spo.phase-coherence.v1",
+            PHASE_COHERENCE_SCHEMA,
             coherence_status,
             admission,
             "measured",
         ),
-        StudioFeedClaim("spo.regime-state.v1", "bounded-model", admission, "curated"),
+        StudioFeedClaim(REGIME_STATE_SCHEMA, "bounded-model", admission, "curated"),
     )
 
 

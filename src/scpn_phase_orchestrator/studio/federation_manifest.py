@@ -27,6 +27,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scpn_phase_orchestrator.studio.live_feed import LIVE_FEED_EVIDENCE_SCHEMAS
+
 try:
     from scpn_studio_platform.manifest import (
         CapabilityManifest,
@@ -197,6 +199,34 @@ def _verb_fingerprint(verb: Verb) -> str:
     )
 
 
+def _manifest_content_digest(
+    verbs: tuple[Verb, ...],
+    evidence_types: tuple[str, ...],
+) -> str:
+    """Return the digest for SPO's advertised Studio federation surface.
+
+    Parameters
+    ----------
+    verbs : tuple[Verb, ...]
+        The manifest verb contracts to fingerprint.
+    evidence_types : tuple[str, ...]
+        The versioned evidence schemas SPO emits through the live Studio feed.
+
+    Returns
+    -------
+    str
+        A ``sha256:`` digest over the advertised verb and evidence schema surface.
+    """
+    entries = {f"verb:{verb.name}": _verb_fingerprint(verb).encode() for verb in verbs}
+    entries.update(
+        {
+            f"evidence:{index}:{schema}": schema.encode()
+            for index, schema in enumerate(evidence_types)
+        }
+    )
+    return str(content_digest(entries))
+
+
 def build_capability_manifest(*, studio_version: str) -> _CapabilityManifest:
     """Construct SPO's STUDIO federation `CapabilityManifest`.
 
@@ -217,9 +247,8 @@ def build_capability_manifest(*, studio_version: str) -> _CapabilityManifest:
     """
     _require_sdk()
     verbs = _verbs()
-    digest = content_digest(
-        {verb.name: _verb_fingerprint(verb).encode() for verb in verbs}
-    )
+    evidence_types = LIVE_FEED_EVIDENCE_SCHEMAS
+    digest = _manifest_content_digest(verbs, evidence_types)
     return CapabilityManifest(
         studio="scpn-phase-orchestrator",
         studio_version=studio_version,
@@ -228,7 +257,7 @@ def build_capability_manifest(*, studio_version: str) -> _CapabilityManifest:
         protocol_version=_PROTOCOL_VERSION,
         transport_profile=TransportProfile.LOCAL_FIRST,
         verbs=verbs,
-        evidence_types=("measured", "curated"),
+        evidence_types=evidence_types,
         external_reference_datasets=(),
         ui_module=None,
         contract_era="v1",

@@ -42,7 +42,7 @@ def test_architecture_schema_a_tracks_studio_federation_manifest() -> None:
     manifest = federation_manifest.build_capability_manifest(studio_version="0.0.0")
     payload = federation_manifest.manifest_dict(studio_version="0.0.0")
 
-    assert core["status"] == "locally-verified-pending-fleet-ratification"
+    assert core["status"] == "fleet-validator-admitted"
     assert core["project"] == payload["studio"]
     assert core["platform_sdk"] == payload["platform_sdk"]
     assert core["protocol_version"] == payload["protocol_version"]
@@ -56,7 +56,7 @@ def test_architecture_schema_a_tracks_studio_federation_manifest() -> None:
 
 
 def test_architecture_map_names_live_studio_feed_boundary() -> None:
-    """The architecture map keeps the live feed and external ratification boundary."""
+    """The architecture map keeps the live feed and platform admission boundary."""
     payload = _architecture_payload()
     architecture_map = cast("dict[str, object]", payload["architecture_map"])
     lanes = cast("list[dict[str, object]]", architecture_map["lanes"])
@@ -68,6 +68,6 @@ def test_architecture_map_names_live_studio_feed_boundary() -> None:
     assert "studio.control-feed.v1 JSON" in cast("list[str]", studio_lane["outputs"])
     assert "spo.studio-runtime-snapshot.v1" in cast("str", studio_lane["note"])
     assert any(
-        "external fleet acceptance still pending" in boundary
+        "admitted by the current STUDIO Platform federation gate" in boundary
         for boundary in boundaries
     )

@@ -23,10 +23,12 @@ charts, and connector plans.
   enable hardware writes, QPU execution, or policy promotion.
 - **Federation manifest**: `studio/federation_manifest.py` builds the optional
   schema-A `CapabilityManifest` for STUDIO federation. The local fields are
-  `transport_profile=local-first`, `evidence_types=["measured", "curated"]`,
-  `ui_module=None`, `contract_era=v1`, and `enumeration=language-agnostic`.
-  The public architecture manifest mirrors those fields and still marks external
-  fleet acceptance as pending.
+  `transport_profile=local-first`,
+  `evidence_types=["spo.runtime-state.v1", "spo.phase-coherence.v1",
+  "spo.regime-state.v1"]`, `ui_module=None`, `contract_era=v1`, and
+  `enumeration=language-agnostic`. The public architecture manifest mirrors
+  those fields, and the focused manifest tests run the current STUDIO Platform
+  schema-A federation gate against the emitted wire form.
 
 ## `reporting`
 

@@ -1,17 +1,21 @@
 {
   "$comment": "Two-block STUDIO ingestion manifest (CEO/architect lock 2026-06-23, lock-step refresh 2026-06-27): schema_a_core mirrors scpn_phase_orchestrator.studio.federation_manifest CapabilityManifest fields; architecture_map is this repo's verified superset extension the Hub ignores for federation. Public status vocabulary: wired | library-only | stub | feasibility-only; SOTA/ClaimStatus grades live only in the private audit.",
   "schema_a_core": {
-    "status": "locally-verified-pending-fleet-ratification",
-    "note": "SPO's local schema-A fields are sourced from studio/federation_manifest.py and locked by tests against the optional scpn-studio-platform CapabilityManifest. External fleet acceptance by SCPN-STUDIO/CEO remains pending. The live /api/studio-feed endpoint uses the sibling studio.control-feed.v1 wire envelope.",
+    "status": "fleet-validator-admitted",
+    "note": "SPO's schema-A fields are sourced from studio/federation_manifest.py, locked by tests against the optional scpn-studio-platform CapabilityManifest, and admitted by the current STUDIO Platform schema-A federation gate. The live /api/studio-feed endpoint uses the sibling studio.control-feed.v1 wire envelope.",
     "project": "scpn-phase-orchestrator",
     "platform_sdk": "0.3.0",
     "protocol_version": "1",
     "transport_profile": "local-first",
-    "evidence_types": ["measured", "curated"],
+    "evidence_types": [
+      "spo.runtime-state.v1",
+      "spo.phase-coherence.v1",
+      "spo.regime-state.v1"
+    ],
     "ui_module": null,
     "contract_era": "v1",
     "enumeration": "language-agnostic",
-    "content_digest": "sha256:9d7c55ab7410d96294dc1a5807a470d202e26e2e75806dc9e506cb198ddbfd7d",
+    "content_digest": "sha256:bcff4ee3d707d0f4b0b3b5299a5d6546b5f2328282a994479eb255c2fa29078d",
     "verbs": [
       "bind",
       "simulate",
@@ -191,7 +195,7 @@
     "Audit chain is real but integrity-verify/replay are opt-in CLI; signing is env-gated.",
     "twin_conformal_gate (CPTC) is wired into live policy admission only when callers provide the observed-twin confidence source; default CLI runs do not synthesize that feed.",
     "Formal export covers PRISM and TLA+ only (no SMT-LIB exporter despite docstring).",
-      "studio/ emits a read-only studio.control-feed.v1 live feed at /api/studio-feed; local schema-A CapabilityManifest fields are verified against studio/federation_manifest.py, with external fleet acceptance still pending."
+      "studio/ emits a read-only studio.control-feed.v1 live feed at /api/studio-feed; schema-A CapabilityManifest fields are verified against studio/federation_manifest.py and admitted by the current STUDIO Platform federation gate."
   ]
   }
 }

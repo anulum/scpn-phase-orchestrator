@@ -17,8 +17,10 @@ import pytest
 from scpn_phase_orchestrator.studio import build_studio_control_feed
 from scpn_phase_orchestrator.studio.live_feed import (
     FEED_SCHEMA,
+    LIVE_FEED_EVIDENCE_SCHEMAS,
     RUNTIME_SCHEMA,
     STUDIO_ID,
+    claim_summaries,
     render_studio_control_feed_json,
     runtime_summary,
 )
@@ -48,11 +50,9 @@ def test_build_studio_control_feed_uses_control_feed_envelope() -> None:
     assert feed["studio_version"] == "1.2.3"
     assert str(feed["content_digest"]).startswith("sha256:")
     assert {verb["name"] for verb in feed["verbs"]} >= {"simulate", "replay"}
-    assert {claim["schema"] for claim in feed["claims"]} == {
-        "spo.runtime-state.v1",
-        "spo.phase-coherence.v1",
-        "spo.regime-state.v1",
-    }
+    assert {claim["schema"] for claim in feed["claims"]} == set(
+        LIVE_FEED_EVIDENCE_SCHEMAS
+    )
     assert feed["runtime"] == {
         "schema": RUNTIME_SCHEMA,
         "step": 3,
@@ -94,6 +94,10 @@ def test_runtime_summary_accepts_amplitude_mode() -> None:
         ("step", -1, "step must be a non-negative integer"),
         ("regime", "", "regime must be a non-empty string"),
         ("layers", [], "layers must not be empty"),
+        ("layers", "not-layers", "layers must be a sequence"),
+        ("layers", [42], r"layers\[0\] must be a mapping"),
+        ("amplitude_mode", "yes", "amplitude_mode must be a bool"),
+        ("mean_amplitude", float("inf"), "mean_amplitude must be finite"),
     ],
 )
 def test_runtime_summary_rejects_invalid_snapshot_fields(
@@ -106,3 +110,9 @@ def test_runtime_summary_rejects_invalid_snapshot_fields(
 
     with pytest.raises(ValueError, match=match):
         runtime_summary(snapshot)
+
+
+def test_claim_summaries_rejects_malformed_runtime_layers() -> None:
+    """Claim summaries reject malformed runtime layers before admission."""
+    with pytest.raises(ValueError, match="runtime layers must be a sequence"):
+        claim_summaries({"r_global": 0.25, "layers": "not-layers"})
