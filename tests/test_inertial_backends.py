@@ -239,6 +239,7 @@ class TestBackendLoaderContracts:
             monkeypatch.setitem(sys.modules, module_name, module)
 
         fake_juliacall = types.ModuleType("juliacall")
+        fake_juliacall.Main = object()
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         install_backend(
             "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_mojo",
@@ -277,6 +278,16 @@ class TestBackendLoaderContracts:
             got_theta, got_omega = loader()(*args)
             np.testing.assert_allclose(got_theta, theta + offset + 0.01)
             np.testing.assert_allclose(got_omega, omega - offset + 0.01)
+
+    def test_julia_loader_rejects_partial_juliacall_runtime(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fake_juliacall = types.ModuleType("juliacall")
+        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
+
+        with pytest.raises(ImportError, match="juliacall.Main"):
+            i_mod._load_julia_fn()
 
 
 def _direct_payload(n: int = 4):
@@ -332,6 +343,8 @@ class TestDirectBackendBoundaryContracts:
     @pytest.mark.parametrize(
         "index,replacement",
         [
+            (0, np.zeros((2, 2), dtype=np.float64)),
+            (0, np.array([0.0], dtype=np.float64)),
             (0, np.array([0.0, np.nan], dtype=np.float64)),
             (1, np.array([0.0, 1.0 + 0.1j], dtype=np.complex128)),
             (2, np.array([True, False], dtype=np.bool_)),
@@ -339,6 +352,7 @@ class TestDirectBackendBoundaryContracts:
             (4, np.array([1.0, 0.0, 1.0, 1.0], dtype=np.float64)),
             (5, np.array([1.0, 1.0, -0.1, 1.0], dtype=np.float64)),
             (6, True),
+            (7, "0.01"),
             (7, 0.0),
         ],
     )
@@ -357,6 +371,14 @@ class TestDirectBackendBoundaryContracts:
 
         with pytest.raises(ValueError, match="diagonal"):
             backend(*args)
+
+    def test_validation_rejects_out_of_range_backend_theta(self) -> None:
+        with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
+            inertial_validation.validate_inertial_output(
+                np.array([0.1, 7.0], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                n=2,
+            )
 
 
 class TestDispatchFallbackChain:

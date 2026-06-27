@@ -104,6 +104,9 @@ def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     """Load the Julia second-order Kuramoto backend callable."""
     import juliacall  # noqa: F401
 
+    if not hasattr(juliacall, "Main"):
+        raise ImportError("juliacall imported but juliacall.Main is unavailable")
+
     from ..experimental.accelerators.upde._inertial_julia import (
         inertial_step_julia,
     )
