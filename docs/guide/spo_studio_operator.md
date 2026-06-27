@@ -184,7 +184,10 @@ broker clients, start a gRPC server, or write to hardware.
 
 The connector dry-run builder emits `connector_run_record.json` for an operator
 supplied JSON payload. Offline connectors such as memory and JSONL can be
-accepted as dry-run review records.
+accepted as dry-run review records. Live transports remain blocked at this
+dry-run layer until an owner and authentication policy are assigned, and any
+non-dry-run connector record is rejected without opening a network or hardware
+boundary.
 
 For REST, gRPC, Kafka, and hardware, Studio can emit
 `owned_connector_runtime.json` once an owner and authentication policy are

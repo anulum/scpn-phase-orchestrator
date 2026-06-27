@@ -1631,6 +1631,37 @@ def test_live_connector_run_record_accepts_replay_connector_payload() -> None:
     assert record["actuation_permitted"] is False
 
 
+def test_live_connector_run_record_blocks_live_or_non_dry_run_execution() -> None:
+    result = _minimal_result()
+
+    live_transport = ui.build_live_connector_run_record(
+        result.connector_plan,
+        transport="rest",
+        payload={"sequence": 1, "kind": "live_probe"},
+        dry_run=True,
+    )
+    non_dry_run = ui.build_live_connector_run_record(
+        result.connector_plan,
+        transport="jsonl",
+        payload={"sequence": 2, "kind": "non_dry_run_probe"},
+        dry_run=False,
+    )
+
+    assert live_transport["status"] == "blocked"
+    assert live_transport["blocked_reasons"] == [
+        "connector owner and auth policy required"
+    ]
+    assert live_transport["operator_action"] == (
+        "assign connector owner and auth policy"
+    )
+    assert non_dry_run["status"] == "blocked"
+    assert non_dry_run["blocked_reasons"] == [
+        "Studio live execution uses dry-run records only"
+    ]
+    assert non_dry_run["network_opened"] is False
+    assert non_dry_run["actuation_permitted"] is False
+
+
 def test_hardware_packages_require_and_accept_complete_evidence() -> None:
     result = _minimal_result()
     package = ui.build_hardware_target_package(result)
