@@ -21,6 +21,11 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor._recurrence_valid
 )
 
 
+class _ArrayConversionFailure:
+    def __array__(self, dtype: object | None = None) -> np.ndarray[Any, Any]:
+        raise ValueError("synthetic conversion failure")
+
+
 def _inputs(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "traj_flat": np.array([0.0, 1.0], dtype=np.float64),
@@ -45,9 +50,16 @@ class TestRecurrenceInputs:
             ({"t": -1}, "t must"),
             ({"d": 0}, "d must"),
             ({"traj_flat": np.array([True, False])}, "must not contain boolean"),
+            (
+                {"traj_flat": np.array([True, 1.0], dtype=object)},
+                "must not contain boolean",
+            ),
             ({"traj_flat": np.array([0.0 + 1j, 1.0])}, "must contain real-valued"),
+            ({"traj_flat": np.array(["not-float", "1.0"])}, "must be a finite"),
+            ({"traj_flat": np.array([[0.0], [1.0]])}, "must be one-dimensional"),
             ({"traj_flat": np.array([0.0, 1.0, 2.0])}, "does not match"),
             ({"traj_flat": np.array([0.0, np.inf])}, "only finite"),
+            ({"epsilon": "wide"}, "epsilon must"),
             ({"epsilon": -0.5}, "epsilon must"),
             ({"angular": "yes"}, "angular must"),
         ],
@@ -100,6 +112,20 @@ class TestRecurrenceOutput:
         with pytest.raises(ValueError, match=match):
             validate_recurrence_backend_output(value, t=2, name="recurrence")
 
+    def test_rejects_array_conversion_failure(self) -> None:
+        with pytest.raises(ValueError, match="output must be array-like"):
+            validate_recurrence_backend_output(
+                _ArrayConversionFailure(), t=2, name="recurrence"
+            )
+
+    def test_rejects_nonnumeric_output(self) -> None:
+        with pytest.raises(ValueError, match="output must be numeric"):
+            validate_recurrence_backend_output(
+                np.array(["one", "zero", "zero", "one"], dtype=object),
+                t=2,
+                name="recurrence",
+            )
+
     def test_recurrence_matrix_requires_true_diagonal(self) -> None:
         with pytest.raises(ValueError, match="must have true diagonal"):
             validate_recurrence_backend_output(
@@ -121,9 +147,33 @@ class TestRecurrenceOutput:
                 expected=np.array([1, 1, 1, 1], dtype=np.uint8),
             )
 
+    def test_rejects_expected_output_size_mismatch(self) -> None:
+        with pytest.raises(ValueError, match="expected output must have size 4"):
+            validate_recurrence_backend_output(
+                np.array([1, 0, 0, 1], dtype=np.uint8),
+                t=2,
+                name="recurrence",
+                expected=np.array([1, 1, 1], dtype=np.uint8),
+            )
+
+    def test_rejects_nonnumeric_expected_output(self) -> None:
+        with pytest.raises(ValueError, match="expected output must be numeric"):
+            validate_recurrence_backend_output(
+                np.array([1, 0, 0, 1], dtype=np.uint8),
+                t=2,
+                name="recurrence",
+                expected=np.array(["one", "zero", "zero", "one"], dtype=object),
+            )
+
 
 def test_expected_recurrence_backend_output_reference() -> None:
     a = np.array([0.0, 1.0], dtype=np.float64)
     out = expected_recurrence_backend_output(a, a, t=2, d=1, epsilon=0.5, angular=False)
     # identical trajectories: diagonal recurs, off-diagonal exceeds epsilon
+    assert out.reshape(2, 2).tolist() == [[1, 0], [0, 1]]
+
+
+def test_expected_recurrence_backend_output_angular_reference() -> None:
+    a = np.array([0.0, np.pi], dtype=np.float64)
+    out = expected_recurrence_backend_output(a, a, t=2, d=1, epsilon=1.0, angular=True)
     assert out.reshape(2, 2).tolist() == [[1, 0], [0, 1]]
