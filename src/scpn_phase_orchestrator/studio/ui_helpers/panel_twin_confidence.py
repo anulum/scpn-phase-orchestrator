@@ -25,9 +25,7 @@ from ._shared import (
     _unit_interval_number,
 )
 
-_TWIN_CONFIDENCE_CLAIM_BOUNDARY = (
-    "digital_twin_confidence_observability_not_actuation"
-)
+_TWIN_CONFIDENCE_CLAIM_BOUNDARY = "digital_twin_confidence_observability_not_actuation"
 _STATUS_LEVELS = {"healthy": 0, "warning": 1, "critical": 2}
 
 

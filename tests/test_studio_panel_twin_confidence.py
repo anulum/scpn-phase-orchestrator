@@ -79,9 +79,7 @@ def _summary_record(
 
 
 def _rehash_summary(summary: Mapping[str, object]) -> dict[str, object]:
-    payload = {
-        key: value for key, value in summary.items() if key != "summary_hash"
-    }
+    payload = {key: value for key, value in summary.items() if key != "summary_hash"}
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return {**summary, "summary_hash": sha256(canonical.encode("utf-8")).hexdigest()}
 

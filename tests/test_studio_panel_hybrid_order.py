@@ -130,9 +130,7 @@ def test_hybrid_order_panel_rejects_malformed_record_sequence(
 ) -> None:
     """Record sequence validation fails closed before rendering."""
     with pytest.raises(ValueError, match=match):
-        studio.build_hybrid_order_studio_panel(
-            cast("list[dict[str, object]]", records)
-        )
+        studio.build_hybrid_order_studio_panel(cast("list[dict[str, object]]", records))
 
 
 @pytest.mark.parametrize(

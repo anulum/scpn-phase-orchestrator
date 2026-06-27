@@ -133,8 +133,7 @@ def test_sheaf_panel_renders_review_evidence() -> None:
     assert panel["critical_summary_count"] == 1
     assert len(panel["top_residual_rows"]) == 4
     assert (
-        panel["obstruction_range"]["maximum"]
-        >= panel["obstruction_range"]["minimum"]
+        panel["obstruction_range"]["maximum"] >= panel["obstruction_range"]["minimum"]
     )
     assert (
         panel["consistency_energy_range"]["maximum"]

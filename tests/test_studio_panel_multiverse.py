@@ -167,8 +167,9 @@ def test_multiverse_panel_joins_rollout_and_risk_gate_evidence() -> None:
         "action_count_exceeds_limit"
     ]
     assert panel["coherence_range"]["minimum"] <= panel["coherence_range"]["maximum"]
-    assert panel["coherence_range"]["final_minimum"] <= (
-        panel["coherence_range"]["final_maximum"]
+    assert (
+        panel["coherence_range"]["final_minimum"]
+        <= (panel["coherence_range"]["final_maximum"])
     )
     assert panel["operator_summary"] == (
         "multiverse branch review: 1/2 branches approved"

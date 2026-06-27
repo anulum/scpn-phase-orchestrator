@@ -105,9 +105,7 @@ def test_strange_loop_panel_rejects_malformed_record_sequence(
 ) -> None:
     """Top-level record sequence validation fails closed before rendering."""
     with pytest.raises(ValueError, match=match):
-        studio.build_strange_loop_studio_panel(
-            cast("list[dict[str, object]]", records)
-        )
+        studio.build_strange_loop_studio_panel(cast("list[dict[str, object]]", records))
 
 
 @pytest.mark.parametrize(
