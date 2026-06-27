@@ -15,6 +15,7 @@ import hashlib
 import json
 import time
 from collections.abc import Callable
+from numbers import Integral
 from pathlib import Path
 from typing import Any
 
@@ -101,6 +102,14 @@ def _report_sha256(report: MergeReport) -> str:
     return hashlib.sha256(
         json.dumps(report.to_dict(), sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
+
+
+def _validated_flag(value: object, *, name: str) -> int:
+    if isinstance(value, (bool, np.bool_)):
+        return int(value)
+    if isinstance(value, Integral):
+        return int(value)
+    raise TypeError(f"{name} must be an integer flag")
 
 
 def _report_max_abs_error(got: MergeReport, reference: MergeReport) -> float:
@@ -225,11 +234,19 @@ def _reference_contracts() -> dict[str, Any]:
         ),
     )
     phase_margin_equation_validated = all(
-        int(contracts["phase_margin_equation_validated"]) == 1
+        _validated_flag(
+            contracts["phase_margin_equation_validated"],
+            name="phase_margin_equation_validated",
+        )
+        == 1
         for contracts in margin_contract_records
     )
     spatial_margin_equation_validated = all(
-        int(contracts["spatial_margin_equation_validated"]) == 1
+        _validated_flag(
+            contracts["spatial_margin_equation_validated"],
+            name="spatial_margin_equation_validated",
+        )
+        == 1
         for contracts in margin_contract_records
     )
     return {
@@ -345,7 +362,12 @@ def benchmark_merge_window_polyglot_parity_gate(
         and contracts["explicit_profile_rejects_same_sample"] == 1
         and contracts["signed_margin_equations_validated"] == 1
         and all(
-            int(record["signed_margin_equations_validated"]) == 1 for record in records
+            _validated_flag(
+                record["signed_margin_equations_validated"],
+                name="signed_margin_equations_validated",
+            )
+            == 1
+            for record in records
         )
     )
     benchmark_payload = {

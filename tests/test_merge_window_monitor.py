@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -380,6 +381,49 @@ def test_polyglot_adapter_contracts_match_python_reference() -> None:
             tolerance_profile="baseline_1x",
         )
         assert merge_validation.validate_merge_window_report(got, expected) is got
+
+
+def test_polyglot_validator_rejects_numeric_report_drift() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.002], dtype=np.float64),
+        np.array([0.0, 0.001], dtype=np.float64),
+        required_consecutive_samples=1,
+    )
+    drifted = replace(
+        expected,
+        phase_margin_rad=expected.phase_margin_rad + 1.0e-6,
+    )
+
+    with pytest.raises(ValueError, match="phase_margin_rad"):
+        merge_validation.validate_merge_window_report(drifted, expected)
+
+
+def test_polyglot_validator_rejects_boolean_report_drift() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.002], dtype=np.float64),
+        np.array([0.0, 0.001], dtype=np.float64),
+        required_consecutive_samples=1,
+    )
+    drifted = replace(expected, lock_achieved=not expected.lock_achieved)
+
+    with pytest.raises(ValueError, match="lock_achieved"):
+        merge_validation.validate_merge_window_report(drifted, expected)
+
+
+def test_polyglot_validator_rejects_consecutive_count_drift() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.002], dtype=np.float64),
+        np.array([0.0, 0.001], dtype=np.float64),
+        required_consecutive_samples=2,
+        prior_consecutive_lock_samples=1,
+    )
+    drifted = replace(
+        expected,
+        consecutive_lock_samples=expected.consecutive_lock_samples + 1,
+    )
+
+    with pytest.raises(ValueError, match="consecutive count"):
+        merge_validation.validate_merge_window_report(drifted, expected)
 
 
 def test_merge_window_polyglot_benchmark_gate() -> None:
