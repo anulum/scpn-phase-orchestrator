@@ -856,6 +856,7 @@ spo formal-export domainpacks/my_domain/binding_spec.yaml --export policy
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export stl
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export protocol-tla
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export policy-tla
+spo formal-export domainpacks/my_domain/binding_spec.yaml --export policy-smt
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export package
 ```
 
@@ -866,14 +867,18 @@ synthesis remains future work. `--export protocol-tla` emits a bounded TLA+
 module with Petri places as variables, transition guards as constants, `Init`,
 `Next`, `Spec`, and `Safety == TypeOK`. `--export policy-tla` emits bounded
 rule-fire counters plus reachability predicates for fired rules and emitted
-actions.
+actions. `--export policy-smt` emits an SMT-LIB v2 feasibility model for Z3:
+the model declares the active regime, metric inputs, bounded rule-fire counters,
+rule firing predicates, emitted-action predicates, and a final `check-sat`
+envelope asking whether at least one rule can fire under the declared guards.
 `--export package` emits a JSON formal verification package manifest that binds
-protocol PRISM/TLA and policy PRISM artefact hashes to named safety properties
-and external PRISM/TLC command records. The package API also accepts reviewed
-Promela and SMT-LIB text artefacts through `FormalTextArtifact`, linking them
-to non-executing SPIN and Z3 command/readiness manifests under the same hash
-and disabled-execution contract. The package does not run model checkers; all
-command records keep `execution_permitted=false`. Add
+protocol PRISM/TLA, policy PRISM, and generated policy SMT-LIB artefact hashes
+to named safety properties and external PRISM/TLC/Z3 command records. The
+package API also accepts reviewed Promela and SMT-LIB text artefacts through
+`FormalTextArtifact`, linking them to non-executing SPIN and Z3
+command/readiness manifests under the same hash and disabled-execution
+contract. The package does not run model checkers; all command records keep
+`execution_permitted=false`. Add
 `--include-checker-readiness` to append non-executing checker availability
 records to that JSON; `--checker-path executable=/path` can make CI readiness
 evidence deterministic, and `--checker-path executable=` forces a missing
@@ -914,6 +919,8 @@ future review horizon, projected actions, and fail-closed blockers without
 mutating runtime state or enabling actuation.
 
 ::: scpn_phase_orchestrator.supervisor.formal_export
+
+::: scpn_phase_orchestrator.supervisor.formal_export.smt_export
 
 ---
 

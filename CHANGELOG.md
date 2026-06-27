@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `spo formal-export --export policy-smt` now emits deterministic SMT-LIB v2
+  feasibility models for supervisor policy rules, with real-valued metric and
+  regime inputs, bounded rule-fire counters, rule/action predicates, and a
+  final `check-sat` envelope for Z3. Formal package export now includes the
+  generated `policy_smt` artifact and a non-executing Z3 command/readiness
+  record alongside PRISM/TLA evidence.
 - `spo certification-evidence` now assembles a deterministic standards-shaped
   review package around the existing assurance-case bundle. It writes
   `manifest.json`, `assurance_bundle.json`, and `test_vectors.json`, refuses

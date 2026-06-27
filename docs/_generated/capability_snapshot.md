@@ -7,8 +7,8 @@
 |---|---:|
 | Package version | 0.10.0 |
 | Public API exports | 24 |
-| Python package modules | 661 |
-| Core Engine modules | 293 |
+| Python package modules | 662 |
+| Core Engine modules | 294 |
 | Runtime/Serving modules | 125 |
 | Integration modules | 27 |
 | Research/Experimental modules | 213 |

@@ -98,9 +98,9 @@
       "name": "supervisor",
       "status": "wired",
       "inputs": ["UPDEState", "BoundaryState", "metric mappings"],
-      "outputs": ["ControlAction (proposals)", "Regime", "PRISM/TLA+ export", "certificates"],
+      "outputs": ["ControlAction (proposals)", "Regime", "PRISM/TLA+/SMT-LIB export", "certificates"],
       "backends": ["python"],
-      "note": "pure NumPy; spo-supervisor Rust crate not bound; several lanes offline/review-only; no SMT exporter."
+      "note": "pure NumPy; spo-supervisor Rust crate not bound; several lanes offline/review-only; policy rules export to PRISM, TLA+, and SMT-LIB feasibility models."
     },
     {
       "name": "nn",
@@ -194,7 +194,7 @@
     "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; MQTT and OPC-UA runtime waveform tags dispatch through the declared extractor type.",
     "Audit chain is real but integrity-verify/replay are opt-in CLI; signing is env-gated.",
     "twin_conformal_gate (CPTC) is wired into live policy admission only when callers provide the observed-twin confidence source; default CLI runs do not synthesize that feed.",
-    "Formal export covers PRISM and TLA+ only (no SMT-LIB exporter despite docstring).",
+    "Formal export covers PRISM, TLA+, and generated policy SMT-LIB feasibility models; external checker execution remains non-actuating and package/readiness-gated.",
       "studio/ emits a read-only studio.control-feed.v1 live feed at /api/studio-feed; schema-A CapabilityManifest fields are verified against studio/federation_manifest.py and admitted by the current STUDIO Platform federation gate."
   ]
   }

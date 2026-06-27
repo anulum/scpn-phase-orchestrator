@@ -41,6 +41,7 @@ from .runtime_certificate import (
     audit_formal_checker_availability,
     build_runtime_control_certificate,
 )
+from .smt_export import export_policy_rules_smt
 from .stl_export import export_stl_specs_prism
 from .verification_package import (
     FormalCheckerCommand,
@@ -66,6 +67,7 @@ __all__ = [
     "export_petri_net_prism",
     "export_petri_net_tla",
     "export_policy_rules_prism",
+    "export_policy_rules_smt",
     "export_policy_rules_tla",
     "export_stl_specs_prism",
 ]

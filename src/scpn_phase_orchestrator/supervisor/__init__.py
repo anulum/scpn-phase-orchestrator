@@ -79,6 +79,7 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
     export_petri_net_tla,
     export_policy_rules_prism,
+    export_policy_rules_smt,
     export_policy_rules_tla,
     export_stl_specs_prism,
 )
@@ -342,6 +343,7 @@ __all__ = [
     "export_petri_net_prism",
     "export_petri_net_tla",
     "export_policy_rules_prism",
+    "export_policy_rules_smt",
     "export_policy_rules_tla",
     "export_stl_specs_prism",
     "evaluate_policy_stl_specs",

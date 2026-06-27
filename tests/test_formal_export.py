@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -15,6 +16,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
+from scpn_phase_orchestrator import supervisor as supervisor_api
 from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.supervisor import (
@@ -40,6 +42,9 @@ from scpn_phase_orchestrator.supervisor import (
     export_stl_specs_prism,
 )
 from scpn_phase_orchestrator.supervisor.formal_export import PrismExport, TLAExport
+from scpn_phase_orchestrator.supervisor.formal_export.smt_export import (
+    export_policy_rules_smt,
+)
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
     Guard,
@@ -1410,6 +1415,83 @@ def test_policy_rules_tla_export_rejects_empty_compound_conditions() -> None:
         export_policy_rules_tla([rule])
 
 
+def test_policy_rules_smt_export_serialises_feasible_rule_guards() -> None:
+    export = export_policy_rules_smt(_rules(), module_name="policy model")
+
+    assert supervisor_api.export_policy_rules_smt is export_policy_rules_smt
+    assert isinstance(export, FormalTextArtifact)
+    assert export.artifact_type == "smt2"
+    assert "(set-logic QF_LRA)" in export.text
+    assert "; Module: policy_model" in export.text
+    assert "(declare-const regime Real)" in export.text
+    assert "(declare-const R_bad_0 Real)" in export.text
+    assert "(declare-const boost_K_fire_count Real)" in export.text
+    assert "(assert (or (= regime 0) (= regime 1)))" in export.text
+    assert (
+        "(define-fun fires_boost_K () Bool "
+        "(and (or (= regime 1) (= regime 0)) "
+        "(< R_good_0 0.59999999999999998) (< boost_K_fire_count 2)))"
+    ) in export.text
+    assert (
+        "(define-fun fires_damp_bad () Bool "
+        "(and (= regime 0) "
+        "(and (> R_bad_0 0.40000000000000002) (<= stability_proxy 0.5)) "
+        "(< damp_bad_fire_count 1)))"
+    ) in export.text
+    assert "(define-fun emits_boost_K_K_global_0 () Bool fires_boost_K)" in export.text
+    assert "(assert (or fires_boost_K fires_damp_bad))" in export.text
+    assert export.text.endswith("(check-sat)\n")
+
+
+def test_policy_rules_smt_export_reuses_rule_validation() -> None:
+    with pytest.raises(PolicyError, match="without rules"):
+        export_policy_rules_smt([])
+
+    bad = PolicyRule(
+        name="bad",
+        regimes=["DEGRADED"],
+        condition=PolicyCondition(metric="R", layer=0, op="!=", threshold=0.1),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+    with pytest.raises(PolicyError, match="unsupported operator"):
+        export_policy_rules_smt([bad])
+
+
+def test_policy_rules_smt_export_rejects_empty_compound_conditions() -> None:
+    rule = PolicyRule(
+        name="empty compound",
+        regimes=["DEGRADED"],
+        condition=CompoundCondition(conditions=[]),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+
+    with pytest.raises(PolicyError, match="compound policy condition"):
+        export_policy_rules_smt([rule])
+
+
+def test_policy_rules_smt_export_formats_negative_exponent_literals() -> None:
+    export = export_policy_rules_smt(
+        [
+            PolicyRule(
+                name="tiny boundary",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition(
+                    metric="delta",
+                    layer=None,
+                    op=">=",
+                    threshold=-1e-20,
+                ),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            )
+        ],
+        module_name="tiny",
+    )
+
+    assert "(>= delta (- 0." in export.text
+    assert "1e-20" not in export.text.lower()
+    assert "(assert fires_tiny_boundary)" in export.text
+
+
 def test_stl_specs_prism_export_serialises_satisfaction_labels() -> None:
     export = export_stl_specs_prism(
         [
@@ -1750,6 +1832,69 @@ def test_formal_export_cli_writes_policy_tla_model(tmp_path: Path) -> None:
     assert "Fires_boost == boost_fires > 0" in model
 
 
+def test_formal_export_cli_writes_policy_smt_model(tmp_path: Path) -> None:
+    spec = {
+        "name": "formal-policy-smt-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.01,
+        "layers": [
+            {"name": "L1", "index": 0, "oscillator_ids": ["o0", "o1"]},
+        ],
+        "oscillator_families": {
+            "p": {"channel": "P", "extractor_type": "hilbert"},
+        },
+        "coupling": {"base_strength": 0.45, "decay_alpha": 0.3},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+    }
+    policy = {
+        "rules": [
+            {
+                "name": "boost",
+                "regime": ["DEGRADED"],
+                "condition": {
+                    "metric": "R_good",
+                    "layer": 0,
+                    "op": "<",
+                    "threshold": 0.7,
+                },
+                "action": {"knob": "K", "scope": "global", "value": 0.1, "ttl_s": 5.0},
+            }
+        ]
+    }
+    spec_path = tmp_path / "binding_spec.yaml"
+    policy_path = tmp_path / "policy.yaml"
+    out_path = tmp_path / "policy.smt2"
+    spec_path.write_text(yaml.safe_dump(spec), encoding="utf-8")
+    policy_path.write_text(yaml.safe_dump(policy), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "policy-smt",
+            "--output",
+            str(out_path),
+            "--module-name",
+            "policy smt",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "SMT-LIB model written:" in result.output
+    model = out_path.read_text(encoding="utf-8")
+    assert "; Module: policy_smt" in model
+    assert "(declare-const R_good_0 Real)" in model
+    assert "(define-fun fires_boost () Bool" in model
+    assert "(check-sat)" in model
+
+
 def test_formal_export_cli_writes_stl_prism_model(tmp_path: Path) -> None:
     spec = {
         "name": "formal-stl-test",
@@ -1804,6 +1949,104 @@ def test_formal_export_cli_writes_stl_prism_model(tmp_path: Path) -> None:
     model = out_path.read_text(encoding="utf-8")
     assert "module stl_test" in model
     assert 'label "stl_keep_sync_satisfied" = R >= 0.29999999999999999;' in model
+
+
+def test_formal_export_cli_package_includes_generated_policy_smt(
+    tmp_path: Path,
+) -> None:
+    spec = {
+        "name": "formal-package-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.01,
+        "layers": [
+            {"name": "L1", "index": 0, "oscillator_ids": ["o0", "o1"]},
+        ],
+        "oscillator_families": {
+            "p": {"channel": "P", "extractor_type": "hilbert"},
+        },
+        "coupling": {"base_strength": 0.45, "decay_alpha": 0.3},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+        "protocol_net": {
+            "places": ["warmup", "nominal"],
+            "initial": {"warmup": 1},
+            "place_regime": {"warmup": "NOMINAL", "nominal": "NOMINAL"},
+            "transitions": [
+                {
+                    "name": "start",
+                    "inputs": [{"place": "warmup"}],
+                    "outputs": [{"place": "nominal"}],
+                    "guard": "stability_proxy > 0.0",
+                },
+            ],
+        },
+    }
+    policy = {
+        "rules": [
+            {
+                "name": "boost",
+                "regime": ["DEGRADED"],
+                "condition": {"metric": "R_good", "op": "<", "threshold": 0.7},
+                "action": {"knob": "K", "scope": "global", "value": 0.1, "ttl_s": 5.0},
+            }
+        ]
+    }
+    spec_path = tmp_path / "binding_spec.yaml"
+    policy_path = tmp_path / "policy.yaml"
+    out_path = tmp_path / "package.json"
+    spec_path.write_text(yaml.safe_dump(spec), encoding="utf-8")
+    policy_path.write_text(yaml.safe_dump(policy), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "package",
+            "--include-checker-readiness",
+            "--checker-path",
+            "z3=/ci/bin/z3",
+            "--checker-path",
+            "prism=/ci/bin/prism",
+            "--checker-path",
+            "tlc2.TLC=/ci/bin/tlc2.TLC",
+            "--output",
+            str(out_path),
+            "--module-name",
+            "formal_package",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Formal verification package written:" in result.output
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["artifact_types"]["policy_smt"] == "smt2"
+    assert payload["artifact_hashes"]["policy_smt"]
+    assert {
+        "name": "policy_smt_feasible",
+        "artifact_name": "policy_smt",
+        "checker": "smt",
+        "expression": "check-sat",
+        "description": "Policy rule activation envelope is SMT-feasible.",
+        "required": True,
+    } in payload["properties"]
+    assert {
+        "property_name": "policy_smt_feasible",
+        "checker": "smt",
+        "artifact_name": "policy_smt",
+        "command": ["z3", "policy_smt.smt2"],
+        "execution_permitted": False,
+    } in payload["checker_commands"]
+    readiness = {
+        item["property_name"]: item for item in payload["checker_availability"]
+    }
+    assert readiness["policy_smt_feasible"]["status"] == "ready_not_executed"
+    assert readiness["policy_smt_feasible"]["resolved_path"] == "/ci/bin/z3"
 
 
 def test_formal_export_cli_requires_protocol_net(tmp_path: Path) -> None:

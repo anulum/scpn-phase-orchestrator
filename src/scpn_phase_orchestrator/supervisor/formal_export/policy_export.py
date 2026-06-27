@@ -189,6 +189,41 @@ def _policy_fire_bound(rule: PolicyRule) -> int:
     return max(1, rule.max_fires)
 
 
+def _validate_policy_rules_for_export(rules: list[PolicyRule]) -> None:
+    """Validate policy rules shared by formal exporter backends.
+
+    Parameters
+    ----------
+    rules : list[PolicyRule]
+        The policy rules to validate before model-checker text generation.
+
+    Raises
+    ------
+    PolicyError
+        If any rule cannot be represented by the bounded formal export surface.
+    """
+    if not rules:
+        raise PolicyError("cannot export policy rules without rules")
+
+    for rule in rules:
+        if not rule.name:
+            raise PolicyError("policy rule names must not be empty")
+        if not rule.regimes:
+            raise PolicyError(f"policy rule {rule.name!r} has no regimes")
+        if not rule.actions:
+            raise PolicyError(f"policy rule {rule.name!r} has no actions")
+        for condition in _policy_conditions(rule.condition):
+            if not condition.metric:
+                raise PolicyError(f"policy rule {rule.name!r} has an empty metric")
+            if not isfinite(condition.threshold):
+                raise PolicyError(f"policy rule {rule.name!r} has non-finite threshold")
+            if condition.op not in {">", ">=", "<", "<=", "=="}:
+                raise PolicyError(
+                    f"policy rule {rule.name!r} has unsupported operator "
+                    f"{condition.op!r}"
+                )
+
+
 def export_policy_rules_prism(
     rules: list[PolicyRule],
     *,
@@ -217,26 +252,7 @@ def export_policy_rules_prism(
     PolicyError
         If the rules violate the export policy.
     """
-    if not rules:
-        raise PolicyError("cannot export policy rules without rules")
-
-    for rule in rules:
-        if not rule.name:
-            raise PolicyError("policy rule names must not be empty")
-        if not rule.regimes:
-            raise PolicyError(f"policy rule {rule.name!r} has no regimes")
-        if not rule.actions:
-            raise PolicyError(f"policy rule {rule.name!r} has no actions")
-        for condition in _policy_conditions(rule.condition):
-            if not condition.metric:
-                raise PolicyError(f"policy rule {rule.name!r} has an empty metric")
-            if not isfinite(condition.threshold):
-                raise PolicyError(f"policy rule {rule.name!r} has non-finite threshold")
-            if condition.op not in {">", ">=", "<", "<=", "=="}:
-                raise PolicyError(
-                    f"policy rule {rule.name!r} has unsupported operator "
-                    f"{condition.op!r}"
-                )
+    _validate_policy_rules_for_export(rules)
 
     metric_names = _policy_metric_mapping(rules)
     rule_names = _rule_mapping(rules)
@@ -321,26 +337,7 @@ def export_policy_rules_tla(
     PolicyError
         If the rules violate the export policy.
     """
-    if not rules:
-        raise PolicyError("cannot export policy rules without rules")
-
-    for rule in rules:
-        if not rule.name:
-            raise PolicyError("policy rule names must not be empty")
-        if not rule.regimes:
-            raise PolicyError(f"policy rule {rule.name!r} has no regimes")
-        if not rule.actions:
-            raise PolicyError(f"policy rule {rule.name!r} has no actions")
-        for condition in _policy_conditions(rule.condition):
-            if not condition.metric:
-                raise PolicyError(f"policy rule {rule.name!r} has an empty metric")
-            if not isfinite(condition.threshold):
-                raise PolicyError(f"policy rule {rule.name!r} has non-finite threshold")
-            if condition.op not in {">", ">=", "<", "<=", "=="}:
-                raise PolicyError(
-                    f"policy rule {rule.name!r} has unsupported operator "
-                    f"{condition.op!r}"
-                )
+    _validate_policy_rules_for_export(rules)
 
     metric_names = _policy_metric_mapping(rules)
     rule_names = _rule_mapping(rules)

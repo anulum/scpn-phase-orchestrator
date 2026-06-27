@@ -41,6 +41,7 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
     export_petri_net_tla,
     export_policy_rules_prism,
+    export_policy_rules_smt,
     export_policy_rules_tla,
     export_stl_specs_prism,
 )
@@ -116,7 +117,15 @@ def _parse_checker_path_overrides(
     "--export",
     "export_target",
     type=click.Choice(
-        ["protocol", "protocol-tla", "policy", "policy-tla", "stl", "package"]
+        [
+            "protocol",
+            "protocol-tla",
+            "policy",
+            "policy-tla",
+            "policy-smt",
+            "stl",
+            "package",
+        ]
     ),
     default="protocol",
     show_default=True,
@@ -199,7 +208,7 @@ def formal_export(
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
 
-    if export_target in {"policy", "policy-tla", "stl", "package"}:
+    if export_target in {"policy", "policy-tla", "policy-smt", "stl", "package"}:
         policy_file = (
             Path(policy_path)
             if policy_path is not None
@@ -245,11 +254,16 @@ def formal_export(
                 rules,
                 module_name=f"{module_name}_policy",
             )
+            policy_smt = export_policy_rules_smt(
+                rules,
+                module_name=f"{module_name}_policy_smt",
+            )
             package = build_formal_verification_package(
                 {
                     "protocol_prism": petri_prism,
                     "protocol_tla": petri_tla,
                     "policy_prism": policy_prism,
+                    "policy_smt": policy_smt,
                 },
                 (
                     FormalSafetyProperty(
@@ -272,6 +286,13 @@ def formal_export(
                         checker="prism",
                         expression="P>=0 [ F true ]",
                         description="Policy artefact is available for review.",
+                    ),
+                    FormalSafetyProperty(
+                        name="policy_smt_feasible",
+                        artifact_name="policy_smt",
+                        checker="smt",
+                        expression="check-sat",
+                        description="Policy rule activation envelope is SMT-feasible.",
                     ),
                 ),
                 package_name=module_name,
@@ -301,6 +322,14 @@ def formal_export(
                 return
             Path(output).write_text(tla_export.module, encoding="utf-8")
             click.echo(f"TLA+ model written: {output}")
+            return
+        if export_target == "policy-smt":
+            smt_export = export_policy_rules_smt(rules, module_name=module_name)
+            if output is None:
+                click.echo(smt_export.text, nl=False)
+                return
+            Path(output).write_text(smt_export.text, encoding="utf-8")
+            click.echo(f"SMT-LIB model written: {output}")
             return
         export = export_policy_rules_prism(rules, module_name=module_name)
         if output is None:
