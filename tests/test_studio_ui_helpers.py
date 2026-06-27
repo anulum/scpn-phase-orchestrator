@@ -1355,6 +1355,60 @@ def test_canvas_interaction_state_reports_blocked_candidate_reasons() -> None:
     assert state["next_action"] == "fix blocked canvas rewrite before apply"
 
 
+def test_canvas_interaction_state_reports_apply_ready_and_review_hold_states() -> None:
+    result = _digital_twin_result()
+    after_graph = {
+        "nodes": result.canvas_graph["nodes"],
+        "edges": (
+            {
+                "id": "cross_channel_reviewed",
+                "source": "channel_P",
+                "target": "channel_Quality",
+                "kind": "cross_channel_coupling",
+                "source_channel": "P",
+                "target_channel": "Quality",
+                "strength": 0.07,
+                "mode": "excitatory",
+                "template": "operator_reviewed_quality_probe",
+            },
+        ),
+    }
+    artifact = ui.build_canvas_edit_artifact(result.canvas_graph, after_graph)
+    layout = ui.build_canvas_layout_manifest(
+        project_name=result.project_state.project_name,
+        graph=after_graph,
+    )
+    patch = ui.build_canvas_topology_patch(
+        project_name=result.project_state.project_name,
+        before_graph=result.canvas_graph,
+        after_graph=after_graph,
+    )
+    rewrite = ui.build_canvas_binding_rewrite_candidate(result, after_graph=after_graph)
+
+    apply_ready = ui.build_canvas_interaction_state(
+        canvas_artifact=artifact,
+        canvas_layout=layout,
+        canvas_patch=patch,
+        canvas_rewrite=rewrite,
+        operator_signoff=True,
+    )
+    review_hold = ui.build_canvas_interaction_state(
+        canvas_artifact=artifact,
+        canvas_layout=layout,
+        canvas_patch=patch,
+        canvas_rewrite={**rewrite, "validation_errors": ("manual review hold",)},
+        operator_signoff=True,
+    )
+
+    assert apply_ready["apply_enabled"] is True
+    assert apply_ready["next_action"] == (
+        "apply reviewed binding rewrite or download artefacts"
+    )
+    assert review_hold["apply_enabled"] is False
+    assert review_hold["next_action"] == "review canvas artefacts"
+    assert review_hold["disabled_reasons"] == ["manual review hold"]
+
+
 def test_canvas_binding_rewrite_blocks_invalid_result_and_invalid_couplings() -> None:
     result = _digital_twin_result()
 
@@ -1493,6 +1547,71 @@ def test_canvas_apply_detects_stale_source_and_uses_default_backup_path(
     assert fresh["status"] == "applied"
     assert fresh["backup_path"].endswith(".bak")
     assert Path(str(fresh["backup_path"])).exists()
+
+
+def test_canvas_apply_fails_closed_when_backup_namespace_is_exhausted(
+    tmp_path: Path,
+) -> None:
+    result = _digital_twin_result()
+    candidate = ui.build_canvas_binding_rewrite_candidate(
+        result,
+        after_graph={
+            "nodes": result.canvas_graph["nodes"],
+            "edges": result.canvas_graph["edges"],
+        },
+    )
+    target = tmp_path / "binding_spec.yaml"
+    target.write_text(result.project_state.binding.yaml_text, encoding="utf-8")
+    backup_stem = (
+        f"{target.name}.studio-backup-{candidate['before_yaml_sha256'][:12]}.bak"
+    )
+    target.with_name(backup_stem).write_text("existing backup", encoding="utf-8")
+    for index in range(1, 1000):
+        target.with_name(f"{backup_stem}.{index}").write_text(
+            "existing backup",
+            encoding="utf-8",
+        )
+
+    with pytest.raises(RuntimeError, match="could not allocate binding backup path"):
+        ui.apply_canvas_binding_rewrite_candidate(
+            candidate,
+            binding_spec_path=target,
+            operator_signoff=True,
+        )
+
+    assert target.read_text(encoding="utf-8") == result.project_state.binding.yaml_text
+
+
+def test_canvas_apply_cleans_temporary_file_on_atomic_replace_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _digital_twin_result()
+    candidate = ui.build_canvas_binding_rewrite_candidate(
+        result,
+        after_graph={
+            "nodes": result.canvas_graph["nodes"],
+            "edges": result.canvas_graph["edges"],
+        },
+    )
+    target = tmp_path / "binding_spec.yaml"
+    target.write_text(result.project_state.binding.yaml_text, encoding="utf-8")
+
+    def _raise_replace(self: Path, target: str | Path) -> Path:
+        raise OSError("simulated replace failure")
+
+    monkeypatch.setattr(Path, "replace", _raise_replace)
+
+    with pytest.raises(OSError, match="simulated replace failure"):
+        ui.apply_canvas_binding_rewrite_candidate(
+            candidate,
+            binding_spec_path=target,
+            operator_signoff=True,
+            create_backup=False,
+        )
+
+    assert target.read_text(encoding="utf-8") == result.project_state.binding.yaml_text
+    assert list(tmp_path.glob(".binding_spec.yaml.*.tmp")) == []
 
 
 def test_live_connector_run_record_accepts_replay_connector_payload() -> None:
@@ -1785,10 +1904,29 @@ def test_runtime_snapshot_and_replay_input_guards_are_operator_safe() -> None:
 
 
 def test_table_and_canvas_normalisers_reject_non_json_safe_rows() -> None:
+    payload = json.loads(
+        ui.build_oscillator_edit_artifact(
+            ({"id": "osc-0", "frequency": 1.0},),
+            ({"id": "osc-0", "frequency": 2.0},),
+        ).payload
+    )
+    assert payload["artifact"] == "oscillator_edit_review"
+    assert payload["changed"] is True
+    assert payload["row_count_before"] == 1
+    assert payload["row_count_after"] == 1
+    with pytest.raises(ValueError, match="after_rows must be a sequence"):
+        ui.build_oscillator_edit_artifact((), "bad")
+    with pytest.raises(ValueError, match=r"after_rows\[0\] must be a mapping"):
+        ui.build_oscillator_edit_artifact((), ("bad",))
     with pytest.raises(ValueError, match="non-string key"):
         ui.build_oscillator_edit_artifact(
             (),
             ({1: "bad", "id": "row"},),
+        )
+    with pytest.raises(ValueError, match="frequency must be finite"):
+        ui.build_oscillator_edit_artifact(
+            (),
+            ({"id": "row", "frequency": float("inf")},),
         )
     with pytest.raises(ValueError, match="JSON-safe"):
         ui.build_oscillator_edit_artifact(
@@ -1809,6 +1947,11 @@ def test_table_and_canvas_normalisers_reject_non_json_safe_rows() -> None:
         ui.build_canvas_edit_artifact(
             {"nodes": "bad", "edges": ()},
             {"nodes": (), "edges": ()},
+        )
+    with pytest.raises(ValueError, match="canvas layout node is invalid"):
+        ui.build_canvas_layout_manifest(
+            project_name="minimal_domain",
+            graph={"nodes": ({"id": "layer_0", "kind": "layer"},), "edges": ()},
         )
     with pytest.raises(ValueError, match="canvas item id"):
         ui.build_canvas_topology_patch(
