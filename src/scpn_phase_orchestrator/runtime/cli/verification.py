@@ -19,8 +19,9 @@ is invoked for that runtime path.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import Protocol, TypeVar, cast
 
 import click
 
@@ -52,6 +53,35 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     load_policy_stl_specs,
 )
 
+_F = TypeVar("_F", bound=Callable[..., object])
+
+
+class _ClickCommandDecorator(Protocol):
+    """Typed facade for Click command decorator factories."""
+
+    def __call__(self, name: str) -> Callable[[_F], _F]:
+        """Return a command decorator that preserves callback type information."""
+
+
+class _ClickParameterDecorator(Protocol):
+    """Typed facade for Click argument and option decorator factories."""
+
+    def __call__(self, *args: object, **kwargs: object) -> Callable[[_F], _F]:
+        """Return a parameter decorator that preserves callback type information."""
+
+
+class _ClickPassContextDecorator(Protocol):
+    """Typed facade for Click's context-passing callback decorator."""
+
+    def __call__(self, func: _F) -> _F:
+        """Return a context-passing callback preserving its callable type."""
+
+
+_main_command = cast(_ClickCommandDecorator, main.command)
+_click_argument = cast(_ClickParameterDecorator, click.argument)
+_click_option = cast(_ClickParameterDecorator, click.option)
+_click_pass_context = cast(_ClickPassContextDecorator, click.pass_context)
+
 
 def _parse_checker_path_overrides(
     checker_paths: tuple[str, ...],
@@ -71,18 +101,18 @@ def _parse_checker_path_overrides(
     return overrides
 
 
-@main.command("formal-export")
-@click.argument("binding_spec", type=click.Path(exists=True))
-@click.option(
+@_main_command("formal-export")
+@_click_argument("binding_spec", type=click.Path(exists=True))
+@_click_option(
     "--output",
     "-o",
     default=None,
     type=click.Path(),
     help="Write formal model to a file instead of stdout",
 )
-@click.option("--module-name", default="spo_petri", help="Formal module name")
-@click.option("--max-tokens", default=None, type=int, help="Token upper bound")
-@click.option(
+@_click_option("--module-name", default="spo_petri", help="Formal module name")
+@_click_option("--max-tokens", default=None, type=int, help="Token upper bound")
+@_click_option(
     "--export",
     "export_target",
     type=click.Choice(
@@ -92,19 +122,19 @@ def _parse_checker_path_overrides(
     show_default=True,
     help="Supervisor artefact to export",
 )
-@click.option(
+@_click_option(
     "--policy",
     "policy_path",
     default=None,
     type=click.Path(exists=True),
     help="Policy YAML path for --export policy/stl; defaults to sibling policy.yaml",
 )
-@click.option(
+@_click_option(
     "--include-checker-readiness",
     is_flag=True,
     help="Add non-executing PRISM/TLC executable-readiness records to package JSON",
 )
-@click.option(
+@_click_option(
     "--checker-path",
     "checker_paths",
     multiple=True,
@@ -343,8 +373,6 @@ def _parse_dependency_locks(values: tuple[str, ...]) -> dict[str, str]:
                 "--dependency-lock values must use '<label>:<digest>' format"
             )
         locks[label] = digest
-    if not locks:
-        raise click.ClickException("at least one --dependency-lock is required")
     return locks
 
 
@@ -443,51 +471,51 @@ def _load_supervisor_scenario_config(path: Path | None) -> dict[str, object]:
     return _supervisor_scenario_config_from_record(payload)
 
 
-@main.command("supervisor-baseline-experiment")
-@click.option(
+@_main_command("supervisor-baseline-experiment")
+@_click_option(
     "--scenario-json",
     default=None,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="Optional scenario JSON overriding the built-in deterministic fixture.",
 )
-@click.option(
+@_click_option(
     "--config-json",
     required=True,
     type=click.Path(dir_okay=False, path_type=Path),
     help="Write deterministic experiment configuration JSON.",
 )
-@click.option(
+@_click_option(
     "--metrics-jsonl",
     required=True,
     type=click.Path(dir_okay=False, path_type=Path),
     help="Write one baseline comparison audit record per JSONL line.",
 )
-@click.option(
+@_click_option(
     "--summary-json",
     required=True,
     type=click.Path(dir_okay=False, path_type=Path),
     help="Write reproducible baseline summary table as JSON.",
 )
-@click.option(
+@_click_option(
     "--manifest-json",
     default=None,
     type=click.Path(dir_okay=False, path_type=Path),
     help="Optional path for the reproducibility manifest JSON.",
 )
-@click.option(
+@_click_option(
     "--checkpoint-manifest",
     default=None,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="Existing checkpoint manifest JSON to reference in reproducibility output.",
 )
-@click.option(
+@_click_option(
     "--plot-manifest",
     default=None,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="Existing plot manifest JSON to reference in reproducibility output.",
 )
-@click.option("--git-sha", required=True, help="Git revision used for this run.")
-@click.option(
+@_click_option("--git-sha", required=True, help="Git revision used for this run.")
+@_click_option(
     "--seed",
     "seeds",
     multiple=True,
@@ -495,15 +523,15 @@ def _load_supervisor_scenario_config(path: Path | None) -> dict[str, object]:
     required=True,
     help="Non-negative deterministic seed; may be passed more than once.",
 )
-@click.option(
+@_click_option(
     "--dependency-lock",
     "dependency_locks",
     multiple=True,
     required=True,
     help="Dependency lock provenance as '<label>:<digest>'; may repeat.",
 )
-@click.option("--json-out", is_flag=True, help="Emit manifest JSON to stdout.")
-@click.pass_context
+@_click_option("--json-out", is_flag=True, help="Emit manifest JSON to stdout.")
+@_click_pass_context
 def supervisor_baseline_experiment(
     ctx: click.Context,
     scenario_json: Path | None,
@@ -693,17 +721,17 @@ def supervisor_baseline_experiment(
             click.echo(f"Wrote supervisor manifest: {manifest_json}")
 
 
-@main.command("policy-dry-run")
-@click.argument("binding_spec", type=click.Path(exists=True))
-@click.argument("audit_log", type=click.Path(exists=True))
-@click.option(
+@_main_command("policy-dry-run")
+@_click_argument("binding_spec", type=click.Path(exists=True))
+@_click_argument("audit_log", type=click.Path(exists=True))
+@_click_option(
     "--policy",
     "policy_path",
     default=None,
     type=click.Path(exists=True),
     help="Policy YAML path; defaults to binding spec sibling policy.yaml",
 )
-@click.option("--json-out", is_flag=True, help="Output JSON instead of text")
+@_click_option("--json-out", is_flag=True, help="Output JSON instead of text")
 def policy_dry_run(
     binding_spec: str,
     audit_log: str,
