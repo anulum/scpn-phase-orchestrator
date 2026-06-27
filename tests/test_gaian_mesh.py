@@ -41,6 +41,33 @@ def _unused_port() -> int:
         return sock.getsockname()[1]
 
 
+def _phase_distance(left: float, right: float) -> float:
+    delta = (left - right + np.pi) % (2.0 * np.pi) - np.pi
+    return abs(float(delta))
+
+
+def _wait_for_mesh_drive(
+    node: GaianMeshNode,
+    *,
+    expected_zeta: float,
+    expected_psi: float,
+    tolerance: float = 1e-3,
+    timeout_s: float = 3.0,
+) -> tuple[float, float]:
+    deadline = time.monotonic() + timeout_s
+    zeta = 0.0
+    psi = 0.0
+    while time.monotonic() < deadline:
+        zeta, psi = node.compute_mesh_drive()
+        if (
+            abs(zeta - expected_zeta) < tolerance
+            and _phase_distance(psi, expected_psi) < tolerance
+        ):
+            return zeta, psi
+        time.sleep(0.02)
+    return zeta, psi
+
+
 class TestGaianMesh:
     def test_single_node_drive(self):
         node = GaianMeshNode("node1", port=_unused_port())
@@ -68,24 +95,33 @@ class TestGaianMesh:
             heartbeat_interval_s=0.01,
         )
 
-        node1.start()
-        node2.start()
+        try:
+            node1.start()
+            node2.start()
 
-        node1.update_local_state(R=0.8, psi=np.pi / 2)
-        node2.update_local_state(R=0.6, psi=np.pi)
+            node1.update_local_state(R=0.8, psi=np.pi / 2)
+            node2.update_local_state(R=0.6, psi=np.pi)
 
-        time.sleep(0.12)
+            zeta1, psi1 = _wait_for_mesh_drive(
+                node1,
+                expected_zeta=0.6,
+                expected_psi=np.pi,
+                tolerance=1e-5,
+            )
+            assert abs(zeta1 - 0.6) < 1e-5
+            assert _phase_distance(psi1, np.pi) < 1e-5
 
-        zeta1, psi1 = node1.compute_mesh_drive()
-        assert abs(zeta1 - 0.6) < 1e-5
-        assert abs(psi1 - np.pi) < 1e-5
-
-        zeta2, psi2 = node2.compute_mesh_drive()
-        assert abs(zeta2 - 0.8) < 1e-5
-        assert abs(psi2 - np.pi / 2) < 1e-5
-
-        node1.stop()
-        node2.stop()
+            zeta2, psi2 = _wait_for_mesh_drive(
+                node2,
+                expected_zeta=0.8,
+                expected_psi=np.pi / 2,
+                tolerance=1e-5,
+            )
+            assert abs(zeta2 - 0.8) < 1e-5
+            assert _phase_distance(psi2, np.pi / 2) < 1e-5
+        finally:
+            node1.stop()
+            node2.stop()
 
     def test_three_node_consensus(self):
         port1 = _unused_port()
@@ -111,23 +147,26 @@ class TestGaianMesh:
             heartbeat_interval_s=0.01,
         )
 
-        node1.start()
-        node2.start()
-        node3.start()
+        try:
+            node1.start()
+            node2.start()
+            node3.start()
 
-        node1.update_local_state(R=0.5, psi=0.0)
-        node2.update_local_state(R=0.5, psi=np.pi / 2)
-        node3.update_local_state(R=0.5, psi=np.pi)
+            node1.update_local_state(R=0.5, psi=0.0)
+            node2.update_local_state(R=0.5, psi=np.pi / 2)
+            node3.update_local_state(R=0.5, psi=np.pi)
 
-        time.sleep(0.2)
-
-        zeta1, psi1 = node1.compute_mesh_drive()
-        assert abs(zeta1 - np.sqrt(0.125)) < 1e-3
-        assert abs(psi1 - 3 * np.pi / 4) < 1e-3
-
-        node1.stop()
-        node2.stop()
-        node3.stop()
+            zeta1, psi1 = _wait_for_mesh_drive(
+                node1,
+                expected_zeta=float(np.sqrt(0.125)),
+                expected_psi=float(3 * np.pi / 4),
+            )
+            assert abs(zeta1 - np.sqrt(0.125)) < 1e-3
+            assert _phase_distance(psi1, 3 * np.pi / 4) < 1e-3
+        finally:
+            node1.stop()
+            node2.stop()
+            node3.stop()
 
     @pytest.mark.parametrize(
         "kwargs",
