@@ -22,6 +22,9 @@ import {
   orderParameter,
   PARAM_LIMITS,
   phasePoint,
+  scenarioOptions,
+  scenarioParams,
+  SCENARIO_PRESETS,
   spreadPhases,
   TWO_PI,
   validateParams,
@@ -48,6 +51,44 @@ test("validateParams rejects out-of-range continuous parameters", () => {
   assert.throws(() => validateParams({ ...VALID, dt: 0 }), RangeError);
   assert.throws(() => validateParams({ ...VALID, dt: Number.POSITIVE_INFINITY }), RangeError);
   assert.throws(() => validateParams({ ...VALID, freqSpread: -0.1 }), RangeError);
+});
+
+test("scenario presets are deterministic validated playground states", () => {
+  assert.ok(Object.hasOwn(SCENARIO_PRESETS, "weak_coupling"));
+  assert.ok(Object.hasOwn(SCENARIO_PRESETS, "critical_transition"));
+  assert.ok(Object.hasOwn(SCENARIO_PRESETS, "strong_synchronisation"));
+  assert.ok(Object.hasOwn(SCENARIO_PRESETS, "wide_dispersion"));
+
+  const first = scenarioOptions();
+  const second = scenarioOptions();
+  assert.deepEqual(first, second);
+  assert.deepEqual(first.map((option) => option.id), [
+    "weak_coupling",
+    "critical_transition",
+    "strong_synchronisation",
+    "wide_dispersion",
+  ]);
+
+  for (const option of first) {
+    assert.equal(typeof option.label, "string");
+    assert.equal(typeof option.description, "string");
+    const params = scenarioParams(option.id);
+    assert.deepEqual(validateParams(params), params);
+  }
+});
+
+test("scenarioParams returns a defensive validated copy", () => {
+  const params = scenarioParams("critical_transition");
+  assert.deepEqual(params, {
+    n: 64,
+    coupling: 1.45,
+    dt: 0.04,
+    freqSpread: 1.2,
+  });
+
+  params.n = 2;
+  assert.equal(scenarioParams("critical_transition").n, 64);
+  assert.throws(() => scenarioParams("missing"), RangeError);
 });
 
 test("buildOmegas is mean-centred and the right length", () => {

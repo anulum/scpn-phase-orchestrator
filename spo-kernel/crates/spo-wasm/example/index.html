@@ -27,7 +27,12 @@
     .control { margin-bottom: 0.9rem; }
     .control label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem; }
     .control input[type=range] { width: 100%; accent-color: var(--accent); }
+    .control select {
+      width: 100%; background: #0d1117; color: var(--fg); border: 1px solid #30363d;
+      border-radius: 6px; padding: 0.45rem; font-family: inherit;
+    }
     .control .val { color: var(--accent); }
+    .scenario-copy { color: #8b949e; font-size: 0.78rem; line-height: 1.4; min-height: 2.2rem; }
     .buttons { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     button {
       background: #21262d; color: var(--fg); border: 1px solid #30363d;
@@ -56,6 +61,16 @@
     </div>
 
     <div class="panel controls">
+      <div class="control">
+        <label for="scenario">Scenario</label>
+        <select id="scenario">
+          <option value="weak_coupling">Weak coupling drift</option>
+          <option value="critical_transition" selected>Critical transition</option>
+          <option value="strong_synchronisation">Strong synchronisation</option>
+          <option value="wide_dispersion">Wide frequency dispersion</option>
+        </select>
+        <div class="scenario-copy" id="scenario-description"></div>
+      </div>
       <div class="control">
         <label for="n">Oscillators (N) <span class="val" id="n-val">48</span></label>
         <input type="range" id="n" min="2" max="512" value="48" step="1" />
@@ -89,7 +104,7 @@
     import init, { WasmEngine } from '../../../../wasm-pkg/spo_wasm.js';
     import {
       buildOmegas, coherenceLabel, meanPhase, orderParameter, phasePoint,
-      spreadPhases, validateParams,
+      scenarioOptions, scenarioParams, spreadPhases, validateParams,
     } from './simulation.mjs';
 
     await init();
@@ -101,6 +116,11 @@
 
     const ids = ['n', 'coupling', 'dt', 'spread'];
     const inputs = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+    const scenarioSelect = document.getElementById('scenario');
+    const scenarioDescription = document.getElementById('scenario-description');
+    const scenarioCopy = Object.fromEntries(
+      scenarioOptions().map((scenario) => [scenario.id, scenario.description]),
+    );
     const playBtn = document.getElementById('play');
 
     let engine = null;
@@ -117,6 +137,33 @@
         dt: parseFloat(inputs.dt.value),
         freqSpread: parseFloat(inputs.spread.value),
       });
+    }
+
+    function formatControlValue(id, value) {
+      return id === 'n' ? value : Number(value).toFixed(id === 'dt' ? 3 : 2);
+    }
+
+    function updateControlLabels() {
+      ids.forEach((id) => {
+        document.getElementById(`${id}-val`).textContent = formatControlValue(
+          id,
+          inputs[id].value,
+        );
+      });
+    }
+
+    function setControls(next) {
+      inputs.n.value = String(next.n);
+      inputs.coupling.value = String(next.coupling);
+      inputs.dt.value = String(next.dt);
+      inputs.spread.value = String(next.freqSpread);
+      updateControlLabels();
+    }
+
+    function applyScenario(id) {
+      setControls(scenarioParams(id));
+      scenarioDescription.textContent = scenarioCopy[id];
+      reset();
     }
 
     function reset() {
@@ -198,12 +245,17 @@
 
     ids.forEach((id) => {
       inputs[id].addEventListener('input', () => {
-        const fmt = id === 'n' ? (v) => v : (v) => Number(v).toFixed(id === 'dt' ? 3 : 2);
-        document.getElementById(`${id}-val`).textContent = fmt(inputs[id].value);
+        document.getElementById(`${id}-val`).textContent = formatControlValue(
+          id,
+          inputs[id].value,
+        );
         if (id === 'n' || id === 'spread') reset();
       });
     });
 
+    scenarioSelect.addEventListener('change', () => {
+      applyScenario(scenarioSelect.value);
+    });
     playBtn.addEventListener('click', () => {
       running = !running;
       playBtn.setAttribute('aria-pressed', String(running));
@@ -218,7 +270,7 @@
       reset();
     });
 
-    reset();
+    applyScenario(scenarioSelect.value);
   </script>
 </body>
 </html>

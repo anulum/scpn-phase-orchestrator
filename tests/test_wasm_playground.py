@@ -49,7 +49,13 @@ def test_index_html_uses_current_wasm_class_api() -> None:
 
 def test_index_html_has_interactive_controls() -> None:
     html = INDEX_HTML.read_text(encoding="utf-8")
-    for control_id in ('id="n"', 'id="coupling"', 'id="dt"', 'id="spread"'):
+    for control_id in (
+        'id="scenario"',
+        'id="n"',
+        'id="coupling"',
+        'id="dt"',
+        'id="spread"',
+    ):
         assert control_id in html, control_id
     for button_id in ('id="play"', 'id="step"', 'id="reset"'):
         assert button_id in html, button_id
@@ -61,8 +67,25 @@ def test_index_html_has_interactive_controls() -> None:
 def test_index_html_imports_shared_helpers() -> None:
     html = INDEX_HTML.read_text(encoding="utf-8")
     assert "./simulation.mjs" in html
-    for helper in ("orderParameter", "meanPhase", "phasePoint", "validateParams"):
+    for helper in (
+        "orderParameter",
+        "meanPhase",
+        "phasePoint",
+        "scenarioOptions",
+        "scenarioParams",
+        "validateParams",
+    ):
         assert helper in html, helper
+
+
+def test_index_html_exposes_named_playground_scenarios() -> None:
+    html = INDEX_HTML.read_text(encoding="utf-8")
+    assert "scenarioOptions()" in html
+    assert "scenarioParams(" in html
+    assert "Weak coupling drift" in html
+    assert "Critical transition" in html
+    assert "Strong synchronisation" in html
+    assert "Wide frequency dispersion" in html
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not available")

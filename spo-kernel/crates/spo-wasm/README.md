@@ -38,8 +38,10 @@ python -m http.server 8080
 # Open http://localhost:8080/spo-kernel/crates/spo-wasm/example/index.html
 ```
 
-The example page is an **interactive playground**: sliders for the oscillator
-count, coupling, time step, and frequency spread drive a live simulation that
+The example page is an **interactive playground**: a scenario selector seeds
+validated presets for weak coupling drift, the critical transition, strong
+synchronisation, and wide frequency dispersion. Sliders for the oscillator count,
+coupling, time step, and frequency spread then drive a live simulation that
 renders the phase ring, the mean-field vector, and the order-parameter time
 series on a canvas. Raise the coupling past the critical point and watch R climb
 toward 1.0 as the oscillators synchronise. Build `wasm-pkg/` first (see above) so
@@ -52,9 +54,9 @@ The page logic is split into a pure, DOM-free helper module
 node --test spo-kernel/crates/spo-wasm/example/
 ```
 
-The helper suite also drives the compiled `WasmEngine` directly (skipped when
-`wasm-pkg/` is not built) and cross-checks the WASM order parameter against the
-pure helper.
+The helper suite also checks the deterministic scenario catalogue, drives the
+compiled `WasmEngine` directly (skipped when `wasm-pkg/` is not built), and
+cross-checks the WASM order parameter against the pure helper.
 
 ## API
 

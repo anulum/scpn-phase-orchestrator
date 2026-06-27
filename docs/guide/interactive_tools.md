@@ -91,18 +91,32 @@ Opens at `http://localhost:8501`.
 
 ## WASM Browser Demo
 
-A 66KB WebAssembly build of the Kuramoto engine that runs entirely
-in the browser. No installation required.
+A WebAssembly build of the Kuramoto engine that runs entirely in the browser.
+No Python installation is required after the WASM package has been built.
 
 ### Access
 
-When deployed via GitHub Pages, the demo is at:
+When deployed via GitHub Pages, the hosted demo target is:
 
 ```
 https://anulum.github.io/scpn-phase-orchestrator/demo/
 ```
 
-Or open `docs/demo/index.html` locally after cloning the repo.
+For local development, build `wasm-pkg/` from the repository root and serve the
+example page:
+
+```bash
+cd spo-kernel
+wasm-pack build crates/spo-wasm --target web --out-dir ../../../wasm-pkg
+cd ..
+python -m http.server 8080
+```
+
+Then open:
+
+```
+http://localhost:8080/spo-kernel/crates/spo-wasm/example/index.html
+```
 
 ### Features
 
@@ -110,15 +124,19 @@ Or open `docs/demo/index.html` locally after cloning the repo.
 - **R(t) chart** — live order parameter with regime colour bands
   (green = nominal, yellow = degraded, red = critical)
 - **Phase portrait** — oscillators on the unit circle with mean-field arrow
-- **Controls** — sliders for N (4-64), coupling K, frequency spread, dt
+- **Scenario presets** — deterministic starting points for weak coupling drift,
+  the critical transition, strong synchronisation, and wide frequency dispersion
+- **Controls** — sliders for oscillator count, coupling K, frequency spread, and
+  time step after a scenario has seeded the validated parameters
 
 ### Building from Source
 
-The WASM binary is pre-built in `docs/wasm-pkg/`. To rebuild:
+The local playground loads the generated package from repository-root
+`wasm-pkg/`. To rebuild:
 
 ```bash
 cd spo-kernel
-wasm-pack build crates/spo-wasm --target web --out-dir ../../../docs/wasm-pkg
+wasm-pack build crates/spo-wasm --target web --out-dir ../../../wasm-pkg
 ```
 
 Requires [wasm-pack](https://rustwasm.github.io/wasm-pack/) and a Rust
@@ -126,9 +144,11 @@ toolchain with the `wasm32-unknown-unknown` target.
 
 ### Technical Details
 
-- **Binary size**: 66KB (gzipped ~30KB)
 - **Engine**: Euler integrator with mean-field coupling
-- **API**: `init(n)`, `step(omega_json, coupling, dt)`, `get_phases()`
+- **API**: `WasmEngine`, with `set_phases`, `get_phases`, `step`, and `run`
+- **Browser logic**: `spo-kernel/crates/spo-wasm/example/simulation.mjs`
+  contains DOM-free helper functions and the scenario catalogue, tested with
+  `node --test`
 - **No dependencies**: pure Rust → WASM, no JavaScript framework
 
 ## CLI Demo

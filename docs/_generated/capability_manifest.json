@@ -8,11 +8,11 @@
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 217,
-    "python_package_modules": 659,
+    "python_package_modules": 660,
     "research_experimental_modules": 213,
-    "runtime_serving_modules": 123,
+    "runtime_serving_modules": 124,
     "rust_kernel_files": 97,
-    "test_files": 681
+    "test_files": 682
   },
   "documentation": {
     "public_pages": [
@@ -1010,6 +1010,7 @@
       "src/scpn_phase_orchestrator/studio/ui_helpers/panel_sheaf.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers/panel_strange_loop.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers/panel_topos.py",
+      "src/scpn_phase_orchestrator/studio/ui_helpers/panel_twin_confidence.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers/replay.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers/tables.py",
       "src/scpn_phase_orchestrator/studio/workflow.py"
@@ -1557,6 +1558,7 @@
     "src/scpn_phase_orchestrator/studio/ui_helpers/panel_sheaf.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers/panel_strange_loop.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers/panel_topos.py",
+    "src/scpn_phase_orchestrator/studio/ui_helpers/panel_twin_confidence.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers/replay.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers/tables.py",
     "src/scpn_phase_orchestrator/studio/workflow.py",
@@ -2287,6 +2289,7 @@
       "tests/test_studio_panel_sheaf.py",
       "tests/test_studio_panel_strange_loop.py",
       "tests/test_studio_panel_topos.py",
+      "tests/test_studio_panel_twin_confidence.py",
       "tests/test_studio_product.py",
       "tests/test_studio_public_facade.py",
       "tests/test_studio_shared_helpers.py",

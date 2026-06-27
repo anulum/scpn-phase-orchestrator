@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The `spo-wasm` browser playground now has deterministic scenario presets for
+  weak coupling drift, the critical transition, strong synchronisation, and wide
+  frequency dispersion. The DOM-free helper module exposes validated
+  `scenarioOptions` and `scenarioParams` helpers, with Node and pytest coverage
+  keeping the HTML, helper catalogue, and `WasmEngine` integration aligned.
+
 ## [0.10.0] - 2026-06-25
 
 ### Security

@@ -23,6 +23,29 @@ export const PARAM_LIMITS = Object.freeze({
   freqSpreadMax: 10,
 });
 
+export const SCENARIO_PRESETS = Object.freeze({
+  weak_coupling: Object.freeze({
+    label: "Weak coupling drift",
+    description: "Low K keeps the oscillator cloud dispersed for comparison.",
+    params: Object.freeze({ n: 48, coupling: 0.3, dt: 0.05, freqSpread: 1.0 }),
+  }),
+  critical_transition: Object.freeze({
+    label: "Critical transition",
+    description: "Near-threshold K shows the onset of partial synchronisation.",
+    params: Object.freeze({ n: 64, coupling: 1.45, dt: 0.04, freqSpread: 1.2 }),
+  }),
+  strong_synchronisation: Object.freeze({
+    label: "Strong synchronisation",
+    description: "High K drives a rapid climb toward a locked mean field.",
+    params: Object.freeze({ n: 64, coupling: 5.0, dt: 0.03, freqSpread: 0.6 }),
+  }),
+  wide_dispersion: Object.freeze({
+    label: "Wide frequency dispersion",
+    description: "Large frequency spread stresses coherence recovery.",
+    params: Object.freeze({ n: 96, coupling: 2.4, dt: 0.035, freqSpread: 3.0 }),
+  }),
+});
+
 /**
  * Validate playground parameters, returning a normalised copy.
  * @param {{n:number,coupling:number,dt:number,freqSpread:number}} params
@@ -43,6 +66,31 @@ export function validateParams({ n, coupling, dt, freqSpread }) {
     PARAM_LIMITS.freqSpreadMax,
   );
   return { n, coupling, dt, freqSpread };
+}
+
+/**
+ * Return the deterministic scenario selector entries in display order.
+ * @returns {Array<{id:string,label:string,description:string}>}
+ */
+export function scenarioOptions() {
+  return Object.entries(SCENARIO_PRESETS).map(([id, preset]) => ({
+    id,
+    label: preset.label,
+    description: preset.description,
+  }));
+}
+
+/**
+ * Return a defensive, validated parameter copy for a named scenario.
+ * @param {string} id
+ * @returns {{n:number,coupling:number,dt:number,freqSpread:number}}
+ */
+export function scenarioParams(id) {
+  const preset = SCENARIO_PRESETS[id];
+  if (preset === undefined) {
+    throw new RangeError(`unknown playground scenario: ${id}`);
+  }
+  return validateParams({ ...preset.params });
 }
 
 function requireFiniteRange(name, value, min, max) {
