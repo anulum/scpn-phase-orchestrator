@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from importlib import import_module
 from numbers import Integral, Real
 from typing import TypeAlias, cast
 
@@ -50,9 +51,8 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 def _load_rust_fn() -> LyapunovBackendFn:
     """Load the Rust Lyapunov backend callable."""
-    from spo_kernel import lyapunov_spectrum_rust
-
-    return cast("LyapunovBackendFn", lyapunov_spectrum_rust)
+    kernel = import_module("spo_kernel")
+    return cast("LyapunovBackendFn", vars(kernel)["lyapunov_spectrum_rust"])
 
 
 def _load_mojo_fn() -> LyapunovBackendFn:
@@ -63,7 +63,7 @@ def _load_mojo_fn() -> LyapunovBackendFn:
     )
 
     _ensure_exe()
-    return lyapunov_spectrum_mojo
+    return cast("LyapunovBackendFn", lyapunov_spectrum_mojo)
 
 
 def _load_julia_fn() -> LyapunovBackendFn:
@@ -74,7 +74,7 @@ def _load_julia_fn() -> LyapunovBackendFn:
         lyapunov_spectrum_julia,
     )
 
-    return lyapunov_spectrum_julia
+    return cast("LyapunovBackendFn", lyapunov_spectrum_julia)
 
 
 def _load_go_fn() -> LyapunovBackendFn:
@@ -85,7 +85,7 @@ def _load_go_fn() -> LyapunovBackendFn:
     )
 
     _load_lib()
-    return lyapunov_spectrum_go
+    return cast("LyapunovBackendFn", lyapunov_spectrum_go)
 
 
 _LOADERS: dict[str, Callable[[], LyapunovBackendFn]] = {
@@ -302,20 +302,20 @@ class LyapunovGuard:
         LyapunovState
             The Lyapunov value, its derivative, and the basin-check result.
         """
-        phases = _validate_vector(phases, name="phases")
-        n = len(phases)
-        knm = _validate_matrix(knm, name="knm", expected_shape=(n, n))
-        _validate_zero_diagonal(knm, name="knm")
+        phase_values = _validate_vector(phases, name="phases")
+        n = len(phase_values)
+        coupling_matrix = _validate_matrix(knm, name="knm", expected_shape=(n, n))
+        _validate_zero_diagonal(coupling_matrix, name="knm")
         if n == 0:
             return LyapunovState(V=0.0, dV_dt=0.0, in_basin=True, max_phase_diff=0.0)
 
-        diff = phases[:, np.newaxis] - phases[np.newaxis, :]
+        diff = phase_values[:, np.newaxis] - phase_values[np.newaxis, :]
         cos_diff = np.cos(diff)
 
         # Lyapunov fn for Kuramoto gradient system
         # V(θ) = -(1/2N) Σ K_ij cos(θ_i - θ_j)
         # van Hemmen & Wreszinski 1993, Eq. 2.3
-        V = -0.5 * float(np.sum(knm * cos_diff)) / n
+        V = -0.5 * float(np.sum(coupling_matrix * cos_diff)) / n
 
         # Numerical dV/dt from consecutive calls
         dV_dt = 0.0
@@ -325,7 +325,7 @@ class LyapunovGuard:
 
         # Basin of attraction: all connected pairs within π/2 of each other
         # (sufficient condition for gradient convergence)
-        connected = knm > 0
+        connected = coupling_matrix > 0
         if np.any(connected):
             abs_diff = np.abs(diff)
             # Geodesic distance on S¹: min(|Δ|, 2π-|Δ|)
@@ -452,10 +452,10 @@ def _initial_tangent_basis(n: int, zeta: float) -> FloatArray:
     systems keep the identity basis because the external driver breaks that
     symmetry.
     """
-    Q = np.eye(n, dtype=np.float64)
+    Q: FloatArray = np.eye(n, dtype=np.float64)
     if zeta == 0.0:
         Q[:, 0] = 1.0 / np.sqrt(float(n))
-        Q, _ = np.linalg.qr(Q)
+        Q = cast("FloatArray", np.linalg.qr(Q)[0])
     return Q
 
 
@@ -481,7 +481,7 @@ def _lyapunov_spectrum_python(
     n = len(phases_init)
     phases = phases_init.copy()
     Q = _initial_tangent_basis(n, zeta)
-    exponents = np.zeros(n, dtype=np.float64)
+    exponents: FloatArray = np.zeros(n, dtype=np.float64)
     n_qr = 0
     total_time = 0.0
     for step in range(n_steps):
