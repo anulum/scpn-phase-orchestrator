@@ -17,6 +17,14 @@ review panels below alongside the lower-level helper module. Operator code can
 therefore depend on the Studio package surface without importing private helper
 paths or bypassing the review-only safety gates.
 
+The workflow dataclasses (`ImportedSourceSummary`, `BindingProposal`,
+`RuntimeSnapshot`, `ExportManifest`, and `StudioProjectState`) fail closed on
+malformed audit payloads: identifiers must be non-empty strings, hashes must be
+valid SHA-256 hex digests, telemetry and confidence values must be finite
+non-boolean numbers, metadata/provenance must be JSON-safe with string keys,
+exports must be explicit `ExportManifest` sequences, and export safety posture
+must be either `review_artifact` or `deployable`.
+
 `build_studio_product_manifest()` returns the metadata-only standalone Studio
 product manifest used by the packaged `tools/spo_studio.py` shell. The manifest
 lists every passive physics review panel, the public builder name, the

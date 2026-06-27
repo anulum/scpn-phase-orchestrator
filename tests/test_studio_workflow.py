@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Mapping
 from contextlib import suppress
+from typing import Literal, cast
 
 import pytest
 
@@ -18,6 +20,7 @@ from scpn_phase_orchestrator.studio.workflow import (
     BindingProposal,
     ExportManifest,
     ImportedSourceSummary,
+    JsonValue,
     RuntimeSnapshot,
     StudioProjectState,
 )
@@ -84,6 +87,20 @@ def test_export_manifest_rejects_deployable_without_warning() -> None:
         )
 
 
+def test_export_manifest_rejects_unknown_safety_posture() -> None:
+    """Export manifests only admit known safety-posture states."""
+    unsafe_posture = cast("Literal['review_artifact', 'deployable']", "unsafe")
+
+    with pytest.raises(ValueError, match="safety_posture"):
+        ExportManifest(
+            target_kind="binding_spec",
+            file_name="binding_spec.yaml",
+            payload="version: 1\n",
+            command="spo run binding_spec.yaml",
+            safety_posture=unsafe_posture,
+        )
+
+
 def test_binding_proposal_rejects_non_json_safe_provenance() -> None:
     with pytest.raises(ValueError, match="provenance"):
         BindingProposal(
@@ -118,6 +135,35 @@ def test_binding_proposal_rejects_non_string_sequence_fields() -> None:
         )
 
 
+def test_binding_proposal_rejects_non_sequence_validation_errors() -> None:
+    """Validation error fields must be explicit string sequences."""
+    with pytest.raises(ValueError, match="validation_errors"):
+        BindingProposal(
+            yaml_text="version: 1\nname: demo\n",
+            validation_errors=cast("tuple[str, ...]", object()),
+        )
+
+
+def test_binding_proposal_rejects_non_string_provenance_keys() -> None:
+    """Provenance maps must remain JSON objects with string keys."""
+    provenance = cast("Mapping[str, JsonValue]", {1: "unsafe"})
+
+    with pytest.raises(ValueError, match="provenance"):
+        BindingProposal(
+            yaml_text="version: 1\nname: demo\n",
+            provenance=provenance,
+        )
+
+
+def test_binding_proposal_rejects_non_finite_provenance_float() -> None:
+    """Provenance maps must reject non-finite JSON numbers."""
+    with pytest.raises(ValueError, match="provenance"):
+        BindingProposal(
+            yaml_text="version: 1\nname: demo\n",
+            provenance={"phase_quality": math.nan},
+        )
+
+
 @pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
 def test_binding_proposal_rejects_non_finite_confidence_factors(
     value: float,
@@ -142,6 +188,17 @@ def test_binding_proposal_rejects_bool_confidence_factors() -> None:
         BindingProposal(
             yaml_text="version: 1\nname: demo\n",
             confidence_factors={"phase_quality": True},
+        )
+
+
+def test_binding_proposal_rejects_non_numeric_confidence_factors() -> None:
+    """Confidence factors must be finite numeric values."""
+    confidence_factors = cast("dict[str, float]", {"phase_quality": "bad"})
+
+    with pytest.raises(ValueError, match="confidence_factors"):
+        BindingProposal(
+            yaml_text="version: 1\nname: demo\n",
+            confidence_factors=confidence_factors,
         )
 
 
@@ -288,6 +345,22 @@ def test_runtime_snapshot_rejects_non_mapping_hierarchy_watermarks() -> None:
             zeta=0.2,
             regime="nominal",
             hierarchy_watermarks=object(),
+        )
+
+
+def test_runtime_snapshot_rejects_non_string_hierarchy_nodes() -> None:
+    """Hierarchy watermark node names must be strings."""
+    hierarchy_watermarks = cast("dict[str, int]", {1: 3})
+
+    with pytest.raises(ValueError, match="hierarchy_watermarks"):
+        RuntimeSnapshot(
+            R=0.81,
+            Psi=0.12,
+            K=1.4,
+            alpha=0.0,
+            zeta=0.2,
+            regime="nominal",
+            hierarchy_watermarks=hierarchy_watermarks,
         )
 
 
@@ -517,6 +590,34 @@ def test_project_state_rejects_non_manifest_exports() -> None:
             binding=proposal,
             runtime=snapshot,
             exports=(object(),),
+        )
+
+
+def test_project_state_rejects_non_sequence_exports() -> None:
+    """Project export manifests must be supplied as an explicit sequence."""
+    source = ImportedSourceSummary.from_payload(
+        source_kind="time_series_csv",
+        payload=b"t,a\n0,0.0\n",
+        channel_count=1,
+        sample_count=1,
+    )
+    proposal = BindingProposal(yaml_text="version: 1\nname: demo\n")
+    snapshot = RuntimeSnapshot(
+        R=0.81,
+        Psi=0.12,
+        K=1.4,
+        alpha=0.0,
+        zeta=0.2,
+        regime="nominal",
+    )
+
+    with pytest.raises(ValueError, match="exports"):
+        StudioProjectState(
+            project_name="demo",
+            source=source,
+            binding=proposal,
+            runtime=snapshot,
+            exports=cast("tuple[ExportManifest, ...]", object()),
         )
 
 
