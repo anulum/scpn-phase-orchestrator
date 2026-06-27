@@ -143,7 +143,9 @@ feed. It exposes builder functions and a panel registry whose panels are all
 Python-dataclass `ExportManifest` records, and exposes `/api/studio-feed` as a
 `studio.control-feed.v1` JSON envelope with SPO runtime state under
 `spo.studio-runtime-snapshot.v1`. The feed lets STUDIO ingest live SPO state; it
-does not permit hardware writes, QPU execution, or policy promotion.
+does not permit hardware writes, QPU execution, or policy promotion. Its
+schema-A federation manifest is local-first, reports measured and curated
+evidence, ships no UI module, and remains pending external fleet acceptance.
 See [studio-reporting.md](subsystems/studio-reporting.md).
 
 ---

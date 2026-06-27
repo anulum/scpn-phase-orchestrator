@@ -12,13 +12,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingState
-from scpn_phase_orchestrator.runtime.server import SimulationState
 
 from ._shared import _finite_number, _require_non_empty_text
 from ._state import StudioReplayResult
@@ -29,6 +29,19 @@ from .tables import build_layer_table, build_oscillator_table
 
 if TYPE_CHECKING:
     from ._state import StudioKnobState
+
+
+class _ReplaySimulationState(Protocol):
+    """Simulation-state surface required by the Studio replay helper."""
+
+    coupling: CouplingState
+    omegas: NDArray[np.float64]
+
+    def step(self) -> dict[str, object]:
+        """Advance the replay and return a JSON-like runtime snapshot."""
+
+    def snapshot(self) -> dict[str, object]:
+        """Return a JSON-like runtime snapshot without advancing replay."""
 
 
 def run_binding_spec_replay(
@@ -60,8 +73,10 @@ def run_binding_spec_replay(
     """
     if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
         raise ValueError("steps must be a positive integer")
+    from scpn_phase_orchestrator.runtime.server import SimulationState
+
     spec = load_binding_spec(spec_path)
-    sim = SimulationState(spec)
+    sim: _ReplaySimulationState = SimulationState(spec)
     _apply_replay_knobs(sim, knobs)
 
     r_history: list[float] = []
@@ -95,7 +110,10 @@ def run_binding_spec_replay(
     )
 
 
-def _apply_replay_knobs(sim: SimulationState, knobs: StudioKnobState) -> None:
+def _apply_replay_knobs(
+    sim: _ReplaySimulationState,
+    knobs: StudioKnobState,
+) -> None:
     """Apply the Studio knobs to a simulation's coupling and natural frequencies.
 
     Scales the coupling matrix (and its reverse partner) by ``K``, adds the

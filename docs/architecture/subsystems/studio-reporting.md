@@ -21,6 +21,12 @@ charts, and connector plans.
   live state under `runtime.schema=spo.studio-runtime-snapshot.v1`. The feed is
   additive to the existing local dashboard and WebSocket observer; it does not
   enable hardware writes, QPU execution, or policy promotion.
+- **Federation manifest**: `studio/federation_manifest.py` builds the optional
+  schema-A `CapabilityManifest` for STUDIO federation. The local fields are
+  `transport_profile=local-first`, `evidence_types=["measured", "curated"]`,
+  `ui_module=None`, `contract_era=v1`, and `enumeration=language-agnostic`.
+  The public architecture manifest mirrors those fields and still marks external
+  fleet acceptance as pending.
 
 ## `reporting`
 
