@@ -23,6 +23,6 @@ def _has_authorization(headers: Mapping[str, str] | None) -> bool:
 
 
 def _require_non_empty(value: str, name: str) -> None:
-    """Return ``value`` as a non-empty string, else raise ``ValueError``."""
+    """Validate that ``value`` is a non-empty string."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
