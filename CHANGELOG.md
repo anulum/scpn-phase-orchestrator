@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `spo federated-transport-preflight` now turns federated node-update JSONL and a
+  transport declaration JSON into signed/hash-linked envelopes, a replay ledger,
+  and a deterministic non-actuating deployment preflight bundle. The command
+  validates the existing supervisor federated-transport surface without opening
+  sockets or permitting live transport execution.
 - `SupervisorPolicy` now accepts an optional `PolicyCBFAdmissionGate` that
   constrains matched control proposals through verified neural CBF filters before
   returning actions. Each admission emits a deterministic audit record with CBF

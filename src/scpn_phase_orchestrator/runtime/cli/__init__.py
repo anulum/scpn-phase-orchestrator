@@ -23,6 +23,9 @@ from scpn_phase_orchestrator.runtime.cli import audit as audit
 from scpn_phase_orchestrator.runtime.cli import binding as binding
 from scpn_phase_orchestrator.runtime.cli import diagnostics as diagnostics
 from scpn_phase_orchestrator.runtime.cli import digital_twin as digital_twin
+from scpn_phase_orchestrator.runtime.cli import (
+    federated_transport as federated_transport,
+)
 from scpn_phase_orchestrator.runtime.cli import koopman_mpc as koopman_mpc
 from scpn_phase_orchestrator.runtime.cli import meta as meta
 from scpn_phase_orchestrator.runtime.cli import monitoring as monitoring

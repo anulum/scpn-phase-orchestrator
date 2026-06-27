@@ -63,15 +63,20 @@ Deployments that provide verified neural CBF filters pass a
 admitted before downstream projection and the latest CBF audit records are
 available through `last_admission_records`.
 Formal export is reachable through the `formal-export` / `policy-dry-run` CLI.
+Federated transport preflight is reachable through
+`spo federated-transport-preflight`, which consumes node-update JSONL plus a
+transport declaration and emits signed envelopes, a replay ledger, and a
+non-actuating deployment preflight bundle.
 `spo doctor` reports `rust-supervisor` readiness separately from the generic
 Rust backend so operators can distinguish "FFI wheel importable" from "the
 supervisor PyO3 contract is actually usable".
 
 ## Scope boundaries
 
-- Several lanes are **offline / review-only**: federated transport (socket
-  stubs, no live listener), causal counterfactual (batch, not reactive),
-  evolutionary/topos grammar, multiverse branches, `*_examples` modules.
+- Several lanes are **offline / review-only**: federated transport has a CLI
+  preflight/evidence path but no owned socket execution, causal counterfactual
+  stays batch-not-reactive, and evolutionary/topos grammar, multiverse branches,
+  and `*_examples` modules remain review-only.
 - Rust supervisor validation is an optional readiness probe, not a live-control
   dispatch switch; missing Rust supervisor bindings are warnings while the
   Python supervisor remains operational.

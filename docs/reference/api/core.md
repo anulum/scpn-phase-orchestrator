@@ -71,6 +71,8 @@ keeps the callable entry points visible to mkdocstrings.
 
 ::: scpn_phase_orchestrator.runtime.cli
 
+::: scpn_phase_orchestrator.runtime.cli.federated_transport
+
 ## Simulation core
 
 `runtime.simulation` is the single non-actuating closed/open-loop core that

@@ -195,6 +195,43 @@ spo replay run.jsonl --verify --output report.json
 
 ---
 
+## `spo federated-transport-preflight`
+
+Build review-only federated transport evidence from node update audit records.
+The command reads newline-delimited node-update JSON records, wraps them in
+signed/hash-linked transport envelopes, replays the ordered batch, validates the
+transport declaration, and emits one deterministic preflight bundle. It does not
+open sockets, export raw data, or permit live transport execution.
+
+```
+spo federated-transport-preflight <node_updates.jsonl> <transport.json> [--output PATH]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `node_updates.jsonl` | JSONL node update audit records accepted by `supervisor.federated_transport` |
+| `transport.json` | Transport declaration with `transport`, endpoint, owner/auth/TLS approval fields, or JSONL replay evidence |
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--output PATH` | None | Write the emitted preflight bundle JSON while also printing it to stdout |
+
+**Output:** `scpn_federated_transport_preflight_bundle_v1` JSON containing
+`envelopes`, `replay_ledger`, `preflight_manifest`, and `bundle_hash`.
+
+**Example:**
+
+```bash
+spo federated-transport-preflight updates.jsonl transport.json \
+  --output federated_transport_preflight.json
+```
+
+---
+
 ## `spo assurance-case`
 
 Assemble a review-only assurance-case bundle from audit and evidence records.
