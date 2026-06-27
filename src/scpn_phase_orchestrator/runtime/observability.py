@@ -591,7 +591,8 @@ class MetricsExporter:
             twin_confidence_prometheus_text,
         )
 
-        return twin_confidence_prometheus_text(summary, prefix=self._prefix)
+        text: str = twin_confidence_prometheus_text(summary, prefix=self._prefix)
+        return text
 
 
 class OTelExporter:
