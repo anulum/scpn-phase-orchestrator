@@ -176,5 +176,6 @@ declared, so consumers do not over-rely on a capability:
   replay remains an opt-in CLI check. Signing is environment-gated, not structural.
 - **Some supervisor capabilities are offline / review-only** (federated
   transport, causal counterfactual, evolutionary search, multiverse branches).
-  The formal export covers PRISM and TLA+ (no SMT-LIB exporter despite a
-  docstring reference).
+  The formal export covers PRISM, TLA+, and generated SMT-LIB feasibility
+  models; optional Rust supervisor FFI readiness is probed separately from the
+  default Python live-control path.

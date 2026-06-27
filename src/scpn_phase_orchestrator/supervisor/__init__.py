@@ -186,6 +186,11 @@ from scpn_phase_orchestrator.supervisor.predictive import (
     assess_fep_hierarchy,
 )
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+from scpn_phase_orchestrator.supervisor.rust_backend import (
+    SUPERVISOR_RUST_SYMBOLS,
+    RustSupervisorBackendStatus,
+    audit_rust_supervisor_backend,
+)
 from scpn_phase_orchestrator.supervisor.sheaf import (
     SheafCoherenceResult,
     SheafCoherenceSupervisor,
@@ -296,6 +301,8 @@ __all__ = [
     "Regime",
     "RegimeEvent",
     "RegimeManager",
+    "RustSupervisorBackendStatus",
+    "SUPERVISOR_RUST_SYMBOLS",
     "SheafCoherenceResult",
     "SheafCoherenceSupervisor",
     "SheafControlProposal",
@@ -320,6 +327,7 @@ __all__ = [
     "calibrate_value_alignment_replay_evidence",
     "assess_fep_hierarchy",
     "audit_formal_checker_availability",
+    "audit_rust_supervisor_backend",
     "build_bft_meta_orchestrator_manifest",
     "build_autopoietic_lineage_replay_corpus",
     "build_autopoietic_lineage_sandbox",

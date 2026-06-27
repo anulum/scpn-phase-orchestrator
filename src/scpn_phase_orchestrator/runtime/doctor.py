@@ -44,6 +44,10 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from scpn_phase_orchestrator.supervisor.rust_backend import (
+    audit_rust_supervisor_backend,
+)
+
 __all__ = [
     "REQUIRED_PYTHON",
     "DependencyCheck",
@@ -388,6 +392,19 @@ def _check_rust() -> DependencyCheck:
     )
 
 
+def _check_rust_supervisor() -> DependencyCheck:
+    """Return the Rust supervisor FFI contract health-check result."""
+    status = audit_rust_supervisor_backend()
+    return DependencyCheck(
+        name="rust-supervisor",
+        category="backend",
+        required=False,
+        available=status.available,
+        detail=status.detail,
+        version=None,
+    )
+
+
 def _check_julia() -> DependencyCheck:
     """Return the Julia backend health-check result."""
     present = _module_present("juliacall")
@@ -554,6 +571,7 @@ def run_environment_diagnostics(*, repo_root: Path | None = None) -> DoctorRepor
         )
     )
     checks.append(_check_rust())
+    checks.append(_check_rust_supervisor())
     checks.append(_check_julia())
     checks.append(_check_go(resolved_root))
     checks.append(_check_mojo())

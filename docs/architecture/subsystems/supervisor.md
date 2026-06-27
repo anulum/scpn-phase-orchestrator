@@ -1,8 +1,10 @@
 # Subsystem: `supervisor` — regime FSM, policy, MPC, formal export
 
-Turns observer metrics into bounded, audit-ready control proposals. 45 files,
-~21.8k LOC (the largest subsystem). Pure NumPy — no Rust/JAX dispatch (the
-`spo-supervisor` Rust crate exists but is not imported here).
+Turns observer metrics into bounded, audit-ready control proposals. 47 Python
+files, ~22.6k LOC (the largest subsystem). The live control path remains the Python
+supervisor by default; the optional Rust `spo-supervisor` PyO3 surface is
+validated through `scpn_phase_orchestrator.supervisor.rust_backend` and reported
+by `spo doctor` when the `spo_kernel` wheel is installed.
 
 ## Inputs
 
@@ -15,8 +17,8 @@ Turns observer metrics into bounded, audit-ready control proposals. 45 files,
 
 - `ControlAction` (knob, scope, value, ttl_s, justification) — proposals only.
 - `Regime` ∈ {NOMINAL, DEGRADED, CRITICAL, RECOVERY}.
-- `Prediction` / free-energy assessment; PRISM and TLA+ export text; runtime
-  certificates. Every output type carries `to_audit_record() → dict`.
+- `Prediction` / free-energy assessment; PRISM, TLA+, and SMT-LIB export text;
+  runtime certificates. Every output type carries `to_audit_record() → dict`.
 
 ## Processing model
 
@@ -28,8 +30,14 @@ Turns observer metrics into bounded, audit-ready control proposals. 45 files,
   with cooldowns and fire limits; an STL automaton path.
 - **Predictive MPC** (`predictive.py`): Ott–Antonsen reduced-model horizon
   forecast; a variational free-energy variant.
-- **Formal export** (`formal_export/`): Petri net / policy / STL → PRISM and
-  TLA+ text, a verification package, and a runtime certificate.
+- **Formal export** (`formal_export/`): Petri net / policy / STL → PRISM, TLA+,
+  and generated SMT-LIB text, a verification package, and a runtime certificate.
+- **Rust supervisor backend probe** (`rust_backend.py`): optional, fail-closed
+  validation for `spo_kernel` symbols (`PyRegimeManager`,
+  `PyBoundaryObserver`, `PyCoherenceMonitor`, `PyActiveInferenceAgent`, policy,
+  Petri-net, projector, and rule-engine bindings) plus deterministic
+  non-actuating smoke checks for regime classification, boundary observation,
+  and coherence monitors.
 - **Additional lanes**: Byzantine proposal signing (HMAC-SHA256) and offline BFT
   manifest; reduced-evidence hierarchy boundary (only R/ψ/regime/confidence cross
   a hierarchy edge — raw phases are forbidden); causal counterfactual rollouts;
@@ -42,12 +50,16 @@ Turns observer metrics into bounded, audit-ready control proposals. 45 files,
 The server constructs `RegimeManager` + `SupervisorPolicy`; `policy.decide()`
 runs each step and returns `ControlAction`s for review (not auto-applied).
 Formal export is reachable through the `formal-export` / `policy-dry-run` CLI.
+`spo doctor` reports `rust-supervisor` readiness separately from the generic
+Rust backend so operators can distinguish "FFI wheel importable" from "the
+supervisor PyO3 contract is actually usable".
 
 ## Scope boundaries
 
 - Several lanes are **offline / review-only**: federated transport (socket
   stubs, no live listener), causal counterfactual (batch, not reactive),
   evolutionary/topos grammar, multiverse branches, `*_examples` modules.
-- Formal export covers PRISM and TLA+; there is **no SMT-LIB exporter** despite a
-  docstring reference to one.
+- Rust supervisor validation is an optional readiness probe, not a live-control
+  dispatch switch; missing Rust supervisor bindings are warnings while the
+  Python supervisor remains operational.
 - No god-file (largest module ~1.1k LOC).

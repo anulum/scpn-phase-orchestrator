@@ -924,6 +924,20 @@ mutating runtime state or enabling actuation.
 
 ---
 
+## Rust Supervisor Backend Probe
+
+The Python supervisor remains the default runtime-control surface. The optional
+Rust `spo-supervisor` PyO3 bindings are validated separately through
+`audit_rust_supervisor_backend()`, which checks required `spo_kernel` symbols
+and runs deterministic, non-actuating smoke checks for regime classification,
+boundary observation, and coherence monitoring. `spo doctor` reports this as
+the optional `rust-supervisor` backend so operators can diagnose a missing or
+malformed Rust supervisor FFI without changing live-control behavior.
+
+::: scpn_phase_orchestrator.supervisor.rust_backend
+
+---
+
 ## Petri Net FSM
 
 Formal Petri net state machine enabling formal verification of

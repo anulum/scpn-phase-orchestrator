@@ -23,6 +23,9 @@ from scpn_phase_orchestrator.runtime.doctor import (
     render_report,
     run_environment_diagnostics,
 )
+from scpn_phase_orchestrator.supervisor.rust_backend import (
+    RustSupervisorBackendStatus,
+)
 
 
 class TestDependencyCheck:
@@ -143,6 +146,50 @@ class TestRustProbe:
         check = doctor._check_rust()
         assert check.available is False
         assert "not importable" in check.detail
+
+
+class TestRustSupervisorProbe:
+    def test_rust_supervisor_contract_reported(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        status = RustSupervisorBackendStatus(
+            available=True,
+            symbols=("PyRegimeManager", "PyBoundaryObserver", "PyCoherenceMonitor"),
+            missing_symbols=(),
+            detail="spo-supervisor FFI smoke passed",
+            smoke={
+                "nominal_regime": "nominal",
+                "critical_regime": "critical",
+                "hard_boundary_count": 1,
+            },
+        )
+        monkeypatch.setattr(doctor, "audit_rust_supervisor_backend", lambda: status)
+
+        report = run_environment_diagnostics()
+        check = next(c for c in report.checks if c.name == "rust-supervisor")
+
+        assert check.category == "backend"
+        assert check.required is False
+        assert check.available is True
+        assert "spo-supervisor FFI smoke passed" in check.detail
+
+    def test_rust_supervisor_contract_missing_is_warning(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        status = RustSupervisorBackendStatus(
+            available=False,
+            symbols=("PyRegimeManager", "PyBoundaryObserver", "PyCoherenceMonitor"),
+            missing_symbols=("PyCoherenceMonitor",),
+            detail="missing supervisor FFI symbols: PyCoherenceMonitor",
+        )
+        monkeypatch.setattr(doctor, "audit_rust_supervisor_backend", lambda: status)
+
+        check = doctor._check_rust_supervisor()
+
+        assert check.available is False
+        assert check.required is False
+        assert check.status == "warn"
+        assert "PyCoherenceMonitor" in check.detail
 
 
 class TestFindRepoRoot:

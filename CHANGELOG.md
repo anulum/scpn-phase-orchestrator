@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Optional Rust supervisor backend readiness auditing now validates the
+  `spo_kernel`/`spo-supervisor` PyO3 surface through
+  `audit_rust_supervisor_backend()` and reports a separate `rust-supervisor`
+  optional backend in `spo doctor`. The probe checks required supervisor FFI
+  symbols and deterministic, non-actuating regime/boundary/coherence smoke
+  behavior while keeping the Python supervisor as the default live-control path.
 - `spo formal-export --export policy-smt` now emits deterministic SMT-LIB v2
   feasibility models for supervisor policy rules, with real-valued metric and
   regime inputs, bounded rule-fire counters, rule/action predicates, and a

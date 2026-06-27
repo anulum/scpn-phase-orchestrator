@@ -58,7 +58,7 @@ Six crates (verified against `Cargo.toml` members):
 | `spo-types` | Shared config / state / error types. |
 | `spo-engine` | UPDE integrators, coupling, order params, monitors (spectral, Lyapunov, transfer entropy, Hodge, recurrence, Koopman-EDMD, …). The bulk of the kernel. |
 | `spo-oscillators` | Phase extraction (physical / informational / symbolic) + quality scoring. |
-| `spo-supervisor` | Regime FSM, boundary observer, coherence, Petri net, policy, projector. **Exists but is not imported by the Python supervisor** — the Python `supervisor/` runs on NumPy. |
+| `spo-supervisor` | Regime FSM, boundary observer, coherence, Petri net, policy, projector, active inference. Exposed through the `spo_kernel` PyO3 wheel and validated by `scpn_phase_orchestrator.supervisor.rust_backend`; the live Python `supervisor/` remains the default non-actuating control path. |
 | `spo-ffi` | PyO3 bindings (`cdylib`); exposes the `_rust` functions; ships as the `spo_kernel` wheel. |
 | `spo-wasm` | Browser/edge WASM stepper (standalone). |
 
