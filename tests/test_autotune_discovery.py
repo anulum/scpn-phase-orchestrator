@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.autotune.discovery import (
     TimeSeriesDiscoveryConfig,
     TimeSeriesDiscoveryReport,
+    _correlation_clusters,
     discover_time_series_structure,
     infer_sample_rate_from_time_column,
 )
@@ -200,6 +201,25 @@ def test_discovery_config_rejects_boolean_and_complex_threshold_aliases() -> Non
     assert type(config.learned_graph_threshold) is float
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"correlation_threshold": -0.1}, "correlation_threshold"),
+        ({"correlation_threshold": 1.1}, "correlation_threshold"),
+        ({"sindy_threshold": -0.1}, "sindy_threshold"),
+        ({"phase_sindy_threshold": -0.1}, "phase_sindy_threshold"),
+        ({"learned_graph_threshold": -0.1}, "learned_graph_threshold"),
+        ({"learned_graph_threshold": float("inf")}, "learned_graph_threshold"),
+    ],
+)
+def test_discovery_config_rejects_out_of_range_thresholds(
+    kwargs: dict[str, float],
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        TimeSeriesDiscoveryConfig(**kwargs)
+
+
 def test_discover_time_series_structure_rejects_aliasing_inputs() -> None:
     with pytest.raises(ValueError, match="samples.*boolean"):
         discover_time_series_structure(
@@ -230,6 +250,157 @@ def test_discover_time_series_structure_rejects_aliasing_inputs() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("samples", "columns", "sample_period_s", "match"),
+    [
+        (np.asarray([0.0, 1.0], dtype=np.float64), ("signal",), 1.0, "2-D table"),
+        (
+            np.asarray([[0.0, 1.0]], dtype=np.float64),
+            ("left", "right"),
+            1.0,
+            "at least two rows",
+        ),
+        (
+            np.asarray([[0.0, 1.0], [1.0, 2.0]], dtype=np.float64),
+            ("left",),
+            1.0,
+            "column count",
+        ),
+        (
+            np.empty((2, 0), dtype=np.float64),
+            (),
+            1.0,
+            "at least one signal column",
+        ),
+        (
+            np.asarray([[0.0], [1.0]], dtype=np.float64),
+            ("signal",),
+            -1.0,
+            "sample_period_s must be positive",
+        ),
+        (
+            np.asarray([[0.0], [1.0]], dtype=np.float64),
+            ("signal",),
+            float("nan"),
+            "sample_period_s must be finite",
+        ),
+        (
+            np.asarray([["bad"], ["data"]], dtype=object),
+            ("signal",),
+            1.0,
+            "finite real-valued table",
+        ),
+        (
+            np.asarray([[0.0], [float("nan")]], dtype=np.float64),
+            ("signal",),
+            1.0,
+            "only finite values",
+        ),
+        (
+            np.asarray([[0.0], [1.0]], dtype=np.float64),
+            (" "),
+            1.0,
+            "non-empty",
+        ),
+    ],
+)
+def test_discover_time_series_structure_rejects_malformed_tables(
+    samples: object,
+    columns: tuple[object, ...],
+    sample_period_s: float,
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        discover_time_series_structure(
+            samples,
+            columns=columns,
+            sample_period_s=sample_period_s,
+        )
+
+
+def test_discover_time_series_structure_reports_skipped_graphs_for_one_signal() -> None:
+    samples = np.asarray([[1.0], [1.0], [1.0]], dtype=np.float64)
+
+    report = discover_time_series_structure(
+        samples,
+        columns=("constant",),
+        sample_period_s=1.0,
+    )
+    audit_record = report.to_audit_record()
+
+    assert audit_record["correlation_graph"]["density"] == 0.0
+    assert (
+        audit_record["phase_sindy"]["status"] == "requires_at_least_two_phase_columns"
+    )
+    assert audit_record["learned_graph"]["status"] == "requires_at_least_two_columns"
+    assert audit_record["learned_graph"]["density"] == 0.0
+    assert "learned_graph_density" not in report.confidence_evidence
+
+
+def test_discover_time_series_structure_reports_short_phase_and_learned_skips() -> None:
+    samples = np.asarray([[0.0, 0.1], [0.2, 0.3]], dtype=np.float64)
+
+    report = discover_time_series_structure(
+        samples,
+        columns=("theta_a", "theta_b"),
+        sample_period_s=1.0,
+    )
+    audit_record = report.to_audit_record()
+
+    assert audit_record["phase_sindy"]["status"] == "requires_at_least_three_samples"
+    assert audit_record["learned_graph"]["status"] == "requires_at_least_three_samples"
+
+
+def test_discover_time_series_structure_reports_under_sampled_phase_sindy_skip() -> (
+    None
+):
+    samples = np.asarray(
+        [
+            [0.0, 0.1, 0.2, 0.3],
+            [0.1, 0.2, 0.3, 0.4],
+            [0.2, 0.3, 0.4, 0.5],
+            [0.3, 0.4, 0.5, 0.6],
+        ],
+        dtype=np.float64,
+    )
+
+    report = discover_time_series_structure(
+        samples,
+        columns=("theta_a", "theta_b", "theta_c", "theta_d"),
+        sample_period_s=1.0,
+    )
+
+    assert (
+        report.to_audit_record()["phase_sindy"]["status"]
+        == "requires_at_least_one_derivative_sample_per_feature"
+    )
+
+
+def test_discover_time_series_structure_handles_constant_columns() -> None:
+    samples = np.asarray(
+        [
+            [1.0, 2.0],
+            [1.0, 2.0],
+            [1.0, 2.0],
+        ],
+        dtype=np.float64,
+    )
+
+    report = discover_time_series_structure(
+        samples,
+        columns=("constant_a", "constant_b"),
+        sample_period_s=1.0,
+    )
+    audit_record = report.to_audit_record()
+
+    assert audit_record["correlation_graph"]["edge_count"] == 0
+    assert audit_record["correlation_graph"]["density"] == 0.0
+    assert audit_record["sindy"]["equations"] == [
+        "d(constant_a)/dt = 0",
+        "d(constant_b)/dt = 0",
+    ]
+
+
 def test_infer_sample_rate_rejects_boolean_time_aliases() -> None:
     rows = [
         {"time": False, "signal": "1.0"},
@@ -237,6 +408,64 @@ def test_infer_sample_rate_rejects_boolean_time_aliases() -> None:
     ]
 
     with pytest.raises(ValueError, match="non-numeric sample at row 0"):
+        infer_sample_rate_from_time_column(rows, ("time", "signal"))
+
+
+def test_infer_sample_rate_accepts_real_time_values() -> None:
+    rows = [
+        {"time": 0.0, "signal": "1.0"},
+        {"time": 0.5, "signal": "0.5"},
+        {"time": 1.0, "signal": "0.0"},
+    ]
+
+    sample_rate_hz, inference = infer_sample_rate_from_time_column(
+        rows,
+        ("time", "signal"),
+    )
+
+    assert sample_rate_hz == pytest.approx(2.0)
+    assert inference == "time_column"
+
+
+@pytest.mark.parametrize(
+    ("rows", "match"),
+    [
+        ([{"time": "0.0", "signal": "1.0"}], "at least two timed samples"),
+        (
+            [
+                {"time": "1.0", "signal": "1.0"},
+                {"time": "0.0", "signal": "0.5"},
+            ],
+            "strictly increasing",
+        ),
+        (
+            [
+                {"time": "not-a-number", "signal": "1.0"},
+                {"time": "1.0", "signal": "0.5"},
+            ],
+            "non-numeric sample at row 0",
+        ),
+        (
+            [
+                {"time": object(), "signal": "1.0"},
+                {"time": "1.0", "signal": "0.5"},
+            ],
+            "non-numeric sample at row 0",
+        ),
+        (
+            [
+                {"time": "nan", "signal": "1.0"},
+                {"time": "1.0", "signal": "0.5"},
+            ],
+            "non-numeric sample at row 0",
+        ),
+    ],
+)
+def test_infer_sample_rate_rejects_malformed_time_columns(
+    rows: list[dict[str, object]],
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
         infer_sample_rate_from_time_column(rows, ("time", "signal"))
 
 
@@ -248,6 +477,42 @@ def test_infer_sample_rate_rejects_non_string_fieldnames() -> None:
 
     with pytest.raises(ValueError, match="fieldnames must be strings"):
         infer_sample_rate_from_time_column(rows, ("time", 1))
+
+
+def test_report_cluster_coverage_handles_empty_column_set() -> None:
+    report = TimeSeriesDiscoveryReport(
+        sample_period_s=1.0,
+        sample_count=0,
+        columns=(),
+        sindy={"sparsity": 1.0},
+        phase_sindy={"status": "requires_at_least_two_phase_columns"},
+        sindy_model_selection={},
+        learned_graph={"status": "requires_at_least_two_columns"},
+        correlation_graph={"density": 0.0},
+        clustering={"largest_cluster_size": 0},
+    )
+
+    assert report.cluster_coverage == 0.0
+    assert report.confidence_evidence == {
+        "sindy_sparsity": 1.0,
+        "correlation_graph_density": 0.0,
+        "cluster_coverage": 0.0,
+    }
+
+
+def test_correlation_clusters_ignore_corrupt_edge_payloads() -> None:
+    clusters = _correlation_clusters(
+        ("left", "right"),
+        edges=[
+            "not-an-edge",
+            {"source": "left", "target": "right"},
+            {"source": "left", "target": 3},
+        ],
+    )
+
+    assert clusters["cluster_count"] == 1
+    assert clusters["largest_cluster_size"] == 2
+    assert clusters["clusters"] == [["left", "right"]]
 
 
 def test_discovery_public_array_contracts_are_element_typed() -> None:
