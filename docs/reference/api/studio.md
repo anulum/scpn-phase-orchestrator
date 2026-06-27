@@ -64,6 +64,15 @@ finite non-negative metrics, unit-interval coherence, and SHA-256 scenario/
 result hashes before Studio may display the evidence. The payload remains
 review-only and sets `actuation_permitted: false`.
 
+`build_twin_confidence_studio_panel(score_records, summary_record)` renders
+digital-twin confidence audit evidence into a Studio payload. It consumes real
+`TwinConfidenceScore.to_audit_record()` rows plus the matching
+`TwinConfidenceSummary.to_audit_record()` aggregate, validates every score and
+summary SHA-256 hash, cross-checks status counts and confidence aggregates
+against the supplied score sequence, exposes latest/worst status cards and
+backend summaries, and keeps `actuation_permitted`, `live_merge_permitted`,
+`hot_patch_permitted`, and `execution_disabled` locked to review-only values.
+
 `build_morphogenetic_field_studio_panel(svg_artifact)` renders a passive
 `render_morphogenetic_field_svg()` artefact into a Studio payload with SVG
 metadata, fixed-width ASCII heatmap rows, field-energy statistics, strongest

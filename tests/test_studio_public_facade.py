@@ -18,6 +18,12 @@ from scpn_phase_orchestrator.binding.semantic import compile_symbolic_binding
 from scpn_phase_orchestrator.binding.topos_semantic import (
     validate_symbolic_binding_functor,
 )
+from scpn_phase_orchestrator.monitor.twin_confidence import (
+    TwinConfidenceBaseline,
+    TwinDivergence,
+    score_twin_confidence,
+    summarise_twin_confidence,
+)
 from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldState,
     build_autopoietic_lineage_replay_corpus,
@@ -194,6 +200,38 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     morphogenetic_panel = studio.build_morphogenetic_field_studio_panel(
         morphogenetic_artifact
     )
+    twin_baseline = TwinConfidenceBaseline(
+        phase_js_mean=0.05,
+        phase_js_std=0.01,
+        order_w1_mean=0.02,
+        order_w1_std=0.01,
+        sample_count=100,
+        band_z=3.0,
+    )
+    twin_scores = [
+        score_twin_confidence(
+            TwinDivergence(
+                phase_js_divergence=0.05,
+                order_wasserstein=0.02,
+                n_bins=36,
+                backend="python",
+            ),
+            twin_baseline,
+        ),
+        score_twin_confidence(
+            TwinDivergence(
+                phase_js_divergence=0.07,
+                order_wasserstein=0.02,
+                n_bins=36,
+                backend="python",
+            ),
+            twin_baseline,
+        ),
+    ]
+    twin_panel = studio.build_twin_confidence_studio_panel(
+        [score.to_audit_record() for score in twin_scores],
+        summarise_twin_confidence(twin_scores).to_audit_record(),
+    )
 
     assert integrated_panel["claim_boundary"] == (
         "engineering_proxy_not_theoretical_iit"
@@ -252,3 +290,8 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
     assert callable(studio.build_topos_semantic_binding_studio_panel)
     assert "build_evolutionary_supervisor_policy_search_studio_panel" in studio.__all__
     assert callable(studio.build_evolutionary_supervisor_policy_search_studio_panel)
+    assert twin_panel["panel_kind"] == "studio_twin_confidence_panel"
+    assert twin_panel["actuation_permitted"] is False
+    assert twin_panel["score_count"] == 2
+    assert "build_twin_confidence_studio_panel" in studio.__all__
+    assert callable(studio.build_twin_confidence_studio_panel)

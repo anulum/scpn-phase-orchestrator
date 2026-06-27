@@ -97,6 +97,9 @@ from .panel_strange_loop import (
 from .panel_topos import (
     build_topos_semantic_binding_studio_panel,
 )
+from .panel_twin_confidence import (
+    build_twin_confidence_studio_panel,
+)
 from .replay import (
     run_binding_spec_replay,
 )
@@ -147,6 +150,7 @@ __all__ = [
     "build_service_process_manifest",
     "build_strange_loop_studio_panel",
     "build_topos_semantic_binding_studio_panel",
+    "build_twin_confidence_studio_panel",
     "build_verified_hardware_target_package",
     "disabled_export_reasons",
     "discover_domainpacks",

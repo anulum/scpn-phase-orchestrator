@@ -59,6 +59,28 @@ STUDIO_REVIEW_PANEL_REGISTRY: tuple[PanelRecord, ...] = (
         "operator_review_required": True,
     },
     {
+        "panel_id": "digital_twin_confidence_review",
+        "title": "Digital-twin confidence review",
+        "builder": "build_twin_confidence_studio_panel",
+        "claim_boundary": "digital_twin_confidence_observability_not_actuation",
+        "source_rows": (
+            "Digital-twin binding standard",
+            "Observability and digital-twin polish",
+            "One-click SPO Studio",
+        ),
+        "required_evidence": (
+            "TwinConfidenceScore audit records",
+            "TwinConfidenceSummary audit record",
+            "score and summary SHA-256 hashes",
+            "calibrated status and confidence aggregates",
+        ),
+        "actuation_permitted": False,
+        "live_merge_permitted": False,
+        "hot_patch_permitted": False,
+        "execution_disabled": True,
+        "operator_review_required": True,
+    },
+    {
         "panel_id": "morphogenetic_field_topology",
         "title": "Morphogenetic field topology",
         "builder": "build_morphogenetic_field_studio_panel",

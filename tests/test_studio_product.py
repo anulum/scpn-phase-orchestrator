@@ -63,6 +63,7 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     assert "topos_semantic_binding" in panel_ids
     assert "sheaf_cohomology_control" in panel_ids
     assert "autopoietic_lineage_sandbox" in panel_ids
+    assert "digital_twin_confidence_review" in panel_ids
     assert "intergenerational_policy_inheritance" in panel_ids
     assert "strange_loop_meta_orchestrator" in panel_ids
 
@@ -128,6 +129,26 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     assert sheaf_panel["hot_patch_permitted"] is False
     assert sheaf_panel["execution_disabled"] is True
     assert sheaf_panel["operator_review_required"] is True
+    twin_confidence_panel = next(
+        panel
+        for panel in panels
+        if panel["panel_id"] == "digital_twin_confidence_review"
+    )
+    assert twin_confidence_panel["builder"] == "build_twin_confidence_studio_panel"
+    assert twin_confidence_panel["claim_boundary"] == (
+        "digital_twin_confidence_observability_not_actuation"
+    )
+    assert twin_confidence_panel["required_evidence"] == (
+        "TwinConfidenceScore audit records",
+        "TwinConfidenceSummary audit record",
+        "score and summary SHA-256 hashes",
+        "calibrated status and confidence aggregates",
+    )
+    assert twin_confidence_panel["actuation_permitted"] is False
+    assert twin_confidence_panel["live_merge_permitted"] is False
+    assert twin_confidence_panel["hot_patch_permitted"] is False
+    assert twin_confidence_panel["execution_disabled"] is True
+    assert twin_confidence_panel["operator_review_required"] is True
     inheritance_panel = next(
         panel
         for panel in panels

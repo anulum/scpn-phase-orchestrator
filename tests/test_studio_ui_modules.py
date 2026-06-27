@@ -45,6 +45,7 @@ SUBMODULES = (
     "scpn_phase_orchestrator.studio.ui_helpers.panel_sheaf",
     "scpn_phase_orchestrator.studio.ui_helpers.panel_strange_loop",
     "scpn_phase_orchestrator.studio.ui_helpers.panel_topos",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_twin_confidence",
     "scpn_phase_orchestrator.studio.ui_helpers.replay",
     "scpn_phase_orchestrator.studio.ui_helpers.tables",
 )
@@ -92,6 +93,7 @@ PUBLIC_SYMBOL_MODULE = {
     "build_sheaf_cohomology_studio_panel": "panel_sheaf",
     "build_strange_loop_studio_panel": "panel_strange_loop",
     "build_topos_semantic_binding_studio_panel": "panel_topos",
+    "build_twin_confidence_studio_panel": "panel_twin_confidence",
     "build_verified_hardware_target_package": "hardware",
     "disabled_export_reasons": "deployment",
     "discover_domainpacks": "_state",

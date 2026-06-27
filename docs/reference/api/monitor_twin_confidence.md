@@ -139,6 +139,10 @@ hash. `twin_confidence_prometheus_text(summary, prefix="spo")` renders it as
 Prometheus exposition text (confidence gauges, a per-status counter, and a
 numeric worst-status level). `RuntimeObservability.twin_confidence_prometheus_text`
 delegates to the same renderer with the runtime's metric prefix.
+`studio.build_twin_confidence_studio_panel(score_records, summary_record)` uses
+the same score and summary audit records for the review-only Studio surface,
+validating hashes and aggregate consistency before rendering latest/worst status
+evidence.
 
 The `spo twin-confidence` CLI command scores an observation stream against a
 calibrated baseline:
