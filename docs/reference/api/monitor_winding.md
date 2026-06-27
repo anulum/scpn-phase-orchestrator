@@ -7,7 +7,7 @@ distinct lattice points.
 
 $$
 w_i \;=\; \Bigl\lfloor \frac{1}{2\pi} \sum_{t=1}^{T-1} \operatorname{wrap}\bigl(\theta_{i,t} - \theta_{i,t-1}\bigr) \Bigr\rfloor,
-\qquad \operatorname{wrap}(x) = ((x + \pi) \bmod 2\pi) - \pi.
+\qquad \operatorname{wrap}(x) = \pi - ((\pi - x) \bmod 2\pi).
 $$
 
 Positive ``w_i`` = counterclockwise, negative = clockwise, zero =
@@ -126,8 +126,9 @@ runtimes:
 
 Invalid topological phase histories therefore fail deterministically in Python
 before shared-library loading, Julia initialisation, or subprocess execution.
-At the public API, a backend that emits a bounded but wrong winding vector is
-discarded and the Python reference is returned instead.
+At the public API, a backend that emits a bounded but wrong winding vector fails
+closed with a `ValueError`; import/runtime loader failures fall back to the next
+available backend and finally to the Python reference.
 
 ---
 
@@ -161,7 +162,8 @@ requires exactly one integer stdout line per oscillator.
 ### 4.5 Python (`monitor/winding.py`)
 
 ```python
-dtheta_wrapped = (np.diff(phases_history, axis=0) + np.pi) % TWO_PI - np.pi
+dtheta = np.diff(phases_history, axis=0)
+dtheta_wrapped = np.pi - (np.pi - dtheta) % TWO_PI
 cumulative = np.sum(dtheta_wrapped, axis=0)
 np.floor(cumulative / TWO_PI).astype(np.int64)
 ```
@@ -270,7 +272,7 @@ finally:
 
 ## 7. Tests
 
-Three files (20 tests):
+Focused winding coverage lives in five module-owned test files.
 
 ### 7.1 `tests/test_winding_algorithm.py`
 
@@ -308,10 +310,29 @@ Three ``@pytest.mark.slow`` tests:
 * Noise robustness — adding tiny Gaussian noise to a constant-ω
   rotator preserves the winding sign per oscillator.
 
+### 7.4 `tests/test_winding_validation_guards.py`
+
+Direct validation guard coverage for winding accelerator inputs and outputs:
+
+* valid flat phase buffers and integer winding outputs round-trip;
+* corrupt `t`, `n`, shape, finite-value, boolean-alias, complex, and
+  `t * n` contracts fail before optional backend execution;
+* corrupt output shape, integer, finite, wrapped-increment, and exact-reference
+  contracts fail before return.
+
+### 7.5 `tests/test_winding_dispatch_contracts.py`
+
+Dispatch and public fallback coverage:
+
+* import-time optional backend probe failures still retain Python;
+* runtime dispatch returns Python when configured non-Python loaders fail;
+* uncoercible alias probes fail open so typed public errors can be raised;
+* backend output coercion and exact-reference-shape violations fail closed.
+
 Run:
 
 ```bash
-pytest tests/test_winding_algorithm.py tests/test_winding_backends.py
+pytest tests/test_winding.py tests/test_winding_algorithm.py tests/test_winding_backends.py tests/test_winding_validation_guards.py tests/test_winding_dispatch_contracts.py
 pytest tests/test_winding_stability.py -m slow
 ```
 

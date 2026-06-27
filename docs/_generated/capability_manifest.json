@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 124,
     "rust_kernel_files": 97,
-    "test_files": 705
+    "test_files": 708
   },
   "documentation": {
     "public_pages": [
@@ -1841,6 +1841,7 @@
       "tests/test_coupling_prior.py",
       "tests/test_coupling_templates.py",
       "tests/test_coupling_templates_validation.py",
+      "tests/test_cybernetic_closure_contracts.py",
       "tests/test_cybernetic_closure_validation.py",
       "tests/test_degenerate_edges.py",
       "tests/test_delay.py",
@@ -2118,6 +2119,7 @@
       "tests/test_plugins_registry_policy_guards.py",
       "tests/test_plugins_registry_policy_report_guards.py",
       "tests/test_plugins_registry_record_guards.py",
+      "tests/test_plugins_registry_revocation_contracts.py",
       "tests/test_plugins_registry_runtime_contracts.py",
       "tests/test_plugins_registry_shared.py",
       "tests/test_plugins_registry_storage_contracts.py",
@@ -2403,6 +2405,7 @@
       "tests/test_winding_algorithm.py",
       "tests/test_winding_backends.py",
       "tests/test_winding_benchmark.py",
+      "tests/test_winding_dispatch_contracts.py",
       "tests/test_winding_stability.py",
       "tests/test_winding_validation_guards.py",
       "tests/test_winfree.py",
