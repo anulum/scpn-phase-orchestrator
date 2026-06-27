@@ -55,10 +55,10 @@ def _validate_phase_vector(value: object) -> FloatArray:
     """Return the phases as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("phases must not contain boolean values")
-    raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError("phases must be real-valued")
     try:
+        raw = np.asarray(value)
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a finite one-dimensional float array") from exc
@@ -94,10 +94,10 @@ def validate_psychedelic_entropy_backend_output(
     """Validate direct backend circular-entropy outputs."""
     if _contains_boolean_alias(value):
         raise ValueError("entropy backend output must not contain boolean values")
-    raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError("entropy backend output must be real-valued")
     try:
+        raw = np.asarray(value)
         entropy = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("entropy backend output must be numeric") from exc

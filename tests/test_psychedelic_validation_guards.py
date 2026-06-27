@@ -21,6 +21,11 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor._psychedelic_vali
 _PHASES = np.array([0.1, 0.2, 0.3], dtype=np.float64)
 
 
+class _ArrayProtocolFailure:
+    def __array__(self, dtype: object = None) -> np.ndarray:
+        raise TypeError("array protocol unavailable")
+
+
 class TestPsychedelicInputs:
     def test_valid_round_trips(self) -> None:
         phases, n_bins = validate_psychedelic_backend_inputs(_PHASES, 4)
@@ -43,6 +48,10 @@ class TestPsychedelicInputs:
         with pytest.raises(exc, match=match):
             validate_psychedelic_backend_inputs(phases, n_bins)
 
+    def test_rejects_array_protocol_failure(self) -> None:
+        with pytest.raises(ValueError, match="finite one-dimensional"):
+            validate_psychedelic_backend_inputs(_ArrayProtocolFailure(), 4)
+
 
 class TestPsychedelicEntropyOutput:
     def test_valid_round_trips(self) -> None:
@@ -61,3 +70,7 @@ class TestPsychedelicEntropyOutput:
     def test_rejects_corrupt_output(self, value: Any, match: str) -> None:
         with pytest.raises(ValueError, match=match):
             validate_psychedelic_entropy_backend_output(value, 4)
+
+    def test_rejects_array_protocol_failure(self) -> None:
+        with pytest.raises(ValueError, match="must be numeric"):
+            validate_psychedelic_entropy_backend_output(_ArrayProtocolFailure(), 4)
