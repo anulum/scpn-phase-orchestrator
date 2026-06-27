@@ -195,6 +195,71 @@ spo replay run.jsonl --verify --output report.json
 
 ---
 
+## `spo assurance-case`
+
+Assemble a review-only assurance-case bundle from audit and evidence records.
+
+```
+spo assurance-case --system NAME [OPTIONS]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--audit-log PATH` | None | Add an audit-chain integrity evidence item from a JSONL audit log |
+| `--evidence-file PATH` | None | Add JSON evidence records; repeatable |
+| `--output PATH` | None | Write the bundle JSON instead of printing to stdout |
+
+The command emits a deterministic `scpn_assurance_case_bundle_v1` record with a
+bundle hash, per-standard clause coverage summary, evidence items, conformance
+records, and the regulatory disclaimer. The output is a technical
+evidence-mapping aid; it does not permit actuation or claim compliance.
+
+**Example:**
+
+```bash
+spo assurance-case --system grid-review \
+  --audit-log run.jsonl \
+  --evidence-file twin_confidence.json \
+  --output assurance_bundle.json
+```
+
+---
+
+## `spo certification-evidence`
+
+Assemble a standards-shaped review package around the assurance-case bundle.
+
+```
+spo certification-evidence --system NAME --output-dir DIR [OPTIONS]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--audit-log PATH` | None | Add an audit-chain integrity evidence item from a JSONL audit log |
+| `--evidence-file PATH` | None | Add JSON evidence records; repeatable |
+| `--output-dir DIR` | Required | Write `manifest.json`, `assurance_bundle.json`, and `test_vectors.json` |
+
+The command refuses to write into a non-empty output directory. The manifest
+seals the package with SHA-256 file digests, the assurance bundle hash, the
+standards covered, and a package hash. `test_vectors.json` lets reviewers
+recompute evidence content hashes and clause-rationale hashes without trusting
+incidental file ordering.
+
+**Example:**
+
+```bash
+spo certification-evidence --system grid-review \
+  --audit-log run.jsonl \
+  --evidence-file twin_confidence.json \
+  --output-dir review_package
+```
+
+---
+
 ## `spo scaffold`
 
 Scaffold a new domainpack directory with starter files.

@@ -23,6 +23,28 @@ spo assurance-case --system my-deployment \
   --output assurance_bundle.json
 ```
 
+For operator review packages, `spo certification-evidence` wraps the same
+assurance bundle with deterministic test vectors and a manifest:
+
+```bash
+spo certification-evidence --system my-deployment \
+  --audit-log run.jsonl \
+  --evidence-file twin_confidence.json \
+  --output-dir review_package
+```
+
+The package directory contains:
+
+- `manifest.json` — file digests, the assurance bundle hash, standards covered,
+  coverage summary, package hash, and review-only disclaimers;
+- `assurance_bundle.json` — the existing `scpn_assurance_case_bundle_v1`
+  payload;
+- `test_vectors.json` — recomputable evidence content-hash vectors and
+  clause-rationale hash vectors.
+
+The package is standards-shaped evidence for reviewer triage. It does not claim
+legal compliance, certification, or runtime actuation permission.
+
 ## Regulatory clause catalogue
 
 `scpn_phase_orchestrator.assurance.standards` records each referenceable clause
@@ -48,6 +70,15 @@ evidence that addresses it, records the conformance status and rationale, and
 seals the result into a deterministic, fail-closed bundle.
 
 ::: scpn_phase_orchestrator.assurance.case
+
+## Certification evidence package
+
+`scpn_phase_orchestrator.assurance.certification` assembles the review package
+around the assurance-case bundle. It keeps package assembly deterministic and
+hash-sealed while preserving the same review-only boundary as the underlying
+assurance case.
+
+::: scpn_phase_orchestrator.assurance.certification
 
 ## Oscillation-monitoring evidence (NERC PRC-028 / PRC-030)
 

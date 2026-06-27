@@ -29,6 +29,12 @@ from scpn_phase_orchestrator.assurance.case import (
     ClauseConformance,
     build_assurance_case_bundle,
 )
+from scpn_phase_orchestrator.assurance.certification import (
+    CERTIFICATION_EVIDENCE_PACKAGE_DISCLAIMER,
+    CERTIFICATION_EVIDENCE_PACKAGE_SCHEMA,
+    CertificationEvidencePackage,
+    build_certification_evidence_package,
+)
 from scpn_phase_orchestrator.assurance.evidence import (
     AUDIT_LOGGING,
     CONFORMAL_GATE,
@@ -60,6 +66,9 @@ __all__ = [
     "AssuranceCaseBundle",
     "CONFORMAL_GATE",
     "CONFORMANCE_STATUSES",
+    "CERTIFICATION_EVIDENCE_PACKAGE_DISCLAIMER",
+    "CERTIFICATION_EVIDENCE_PACKAGE_SCHEMA",
+    "CertificationEvidencePackage",
     "ClauseConformance",
     "DEFAULT_EVIDENCE_CLAUSE_MAP",
     "EU_AI_ACT",
@@ -79,6 +88,7 @@ __all__ = [
     "UL_4600",
     "UL_4600_CLAUSES",
     "build_assurance_case_bundle",
+    "build_certification_evidence_package",
     "build_evidence_item",
     "clause_catalogue",
     "clause_for_key",

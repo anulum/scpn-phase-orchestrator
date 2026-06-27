@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `spo certification-evidence` now assembles a deterministic standards-shaped
+  review package around the existing assurance-case bundle. It writes
+  `manifest.json`, `assurance_bundle.json`, and `test_vectors.json`, refuses
+  non-empty output directories, seals package files with SHA-256 digests, and
+  keeps the output explicitly review-only.
 - The `spo-wasm` browser playground now has deterministic scenario presets for
   weak coupling drift, the critical transition, strong synchronisation, and wide
   frequency dispersion. The DOM-free helper module exposes validated

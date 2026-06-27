@@ -49,6 +49,7 @@ def _write_evidence(path: Path) -> None:
 
 def test_cli_module_exposes_command() -> None:
     assert cli_assurance.assurance_case.name == "assurance-case"
+    assert cli_assurance.certification_evidence.name == "certification-evidence"
 
 
 def test_build_from_evidence_file_to_stdout(runner: CliRunner, tmp_path: Path) -> None:
@@ -84,6 +85,69 @@ def test_build_to_output_file(runner: CliRunner, tmp_path: Path) -> None:
     assert out.exists()
     bundle = json.loads(out.read_text(encoding="utf-8"))
     assert bundle["bundle_hash"] in result.output
+
+
+def test_build_certification_evidence_package(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    out = tmp_path / "review_package"
+    result = runner.invoke(
+        main,
+        [
+            "certification-evidence",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--output-dir",
+            str(out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    bundle = json.loads((out / "assurance_bundle.json").read_text(encoding="utf-8"))
+    vectors = json.loads((out / "test_vectors.json").read_text(encoding="utf-8"))
+
+    assert manifest["schema"] == "scpn_certification_evidence_package_v1"
+    assert manifest["system_name"] == "Sys"
+    assert manifest["assurance_bundle_hash"] == bundle["bundle_hash"]
+    assert {row["path"] for row in manifest["files"]} == {
+        "assurance_bundle.json",
+        "test_vectors.json",
+    }
+    assert [row["evidence_id"] for row in vectors["evidence_hash_vectors"]] == [
+        "cptc",
+        "twin",
+    ]
+    assert "technical evidence-mapping package" in manifest["disclaimer"]
+
+
+def test_certification_evidence_refuses_non_empty_output_dir(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    out = tmp_path / "review_package"
+    out.mkdir()
+    (out / "stale.json").write_text("{}", encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "certification-evidence",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--output-dir",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "output directory is not empty" in result.output
 
 
 def test_build_from_audit_log(runner: CliRunner, tmp_path: Path) -> None:
