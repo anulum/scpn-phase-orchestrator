@@ -184,9 +184,7 @@ def test_supervisor_baseline_rejects_malformed_dependency_lock(
     tmp_path: Path,
 ) -> None:
     """Supervisor baseline provenance locks must include label and digest."""
-    result = _invoke(
-        _baseline_args(tmp_path, dependency_lock="requirements-dev.txt")
-    )
+    result = _invoke(_baseline_args(tmp_path, dependency_lock="requirements-dev.txt"))
 
     _assert_cli_error(
         result,
@@ -211,9 +209,7 @@ def test_supervisor_baseline_rejects_invalid_scenario_json(
     non_object_json.write_text("[1, 2, 3]", encoding="utf-8")
 
     invalid_result = _invoke(_baseline_args(tmp_path, scenario_json=invalid_json))
-    non_object_result = _invoke(
-        _baseline_args(tmp_path, scenario_json=non_object_json)
-    )
+    non_object_result = _invoke(_baseline_args(tmp_path, scenario_json=non_object_json))
 
     _assert_cli_error(invalid_result, "invalid scenario JSON:")
     _assert_cli_error(non_object_result, "scenario JSON must be an object")
