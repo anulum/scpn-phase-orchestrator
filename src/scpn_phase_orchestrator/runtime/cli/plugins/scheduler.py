@@ -19,8 +19,9 @@ is invoked for that runtime path.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import Protocol, TypeVar, cast
 
 import click
 
@@ -39,26 +40,47 @@ from scpn_phase_orchestrator.runtime.cli.plugins._group import (
     plugins_group,
 )
 
+_F = TypeVar("_F", bound=Callable[..., object])
 
-@plugins_group.command("lifecycle-remediation-scheduler-queue")
-@click.argument(
+
+class _ClickCommandDecorator(Protocol):
+    """Typed facade for Click command decorator factories."""
+
+    def __call__(self, name: str) -> Callable[[_F], _F]:
+        """Return a command decorator preserving the callback type."""
+
+
+class _ClickDecoratorFactory(Protocol):
+    """Typed facade for Click argument and option decorator factories."""
+
+    def __call__(self, *args: object, **kwargs: object) -> Callable[[_F], _F]:
+        """Return a parameter decorator preserving the callback type."""
+
+
+_plugin_command = cast(_ClickCommandDecorator, plugins_group.command)
+_click_argument = cast(_ClickDecoratorFactory, click.argument)
+_click_option = cast(_ClickDecoratorFactory, click.option)
+
+
+@_plugin_command("lifecycle-remediation-scheduler-queue")
+@_click_argument(
     "handoff_json",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.option(
+@_click_option(
     "--window-start-epoch",
     required=True,
     type=int,
     help="Scheduler window start as Unix epoch seconds (UTC).",
 )
-@click.option(
+@_click_option(
     "--window-duration-seconds",
     default=3600,
     show_default=True,
     type=int,
     help="Scheduler execution window length in seconds.",
 )
-@click.option(
+@_click_option(
     "--created-by",
     required=True,
     help="Scheduler component creating the queue payload.",
@@ -153,23 +175,23 @@ def plugins_lifecycle_remediation_scheduler_queue(
     click.echo(json.dumps(queue_payload, indent=2, sort_keys=True))
 
 
-@plugins_group.command("lifecycle-remediation-scheduler-telemetry")
-@click.argument(
+@_plugin_command("lifecycle-remediation-scheduler-telemetry")
+@_click_argument(
     "scheduler_queue_json",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.argument(
+@_click_argument(
     "action_status_json",
     nargs=-1,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.option(
+@_click_option(
     "--as-of-epoch",
     required=True,
     type=int,
     help="Telemetry snapshot epoch seconds (UTC).",
 )
-@click.option(
+@_click_option(
     "--created-by",
     required=True,
     help="Scheduler component creating telemetry payload.",
@@ -306,22 +328,22 @@ def plugins_lifecycle_remediation_scheduler_telemetry(
     click.echo(json.dumps(telemetry_payload, indent=2, sort_keys=True))
 
 
-@plugins_group.command("lifecycle-remediation-scheduler-adapter-handoff")
-@click.argument(
+@_plugin_command("lifecycle-remediation-scheduler-adapter-handoff")
+@_click_argument(
     "scheduler_telemetry_json",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.option(
+@_click_option(
     "--adapter-name",
     required=True,
     help="External scheduler adapter name.",
 )
-@click.option(
+@_click_option(
     "--adapter-endpoint",
     required=True,
     help="External scheduler adapter endpoint identifier.",
 )
-@click.option(
+@_click_option(
     "--created-by",
     required=True,
     help="Component creating adapter handoff payload.",
@@ -430,29 +452,29 @@ def plugins_lifecycle_remediation_scheduler_adapter_handoff(
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
-@plugins_group.command("lifecycle-remediation-scheduler-acknowledgement")
-@click.argument(
+@_plugin_command("lifecycle-remediation-scheduler-acknowledgement")
+@_click_argument(
     "adapter_handoff_json",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.argument("entry_hash")
-@click.option(
+@_click_argument("entry_hash")
+@_click_option(
     "--state",
     required=True,
     type=click.Choice(["in_progress", "completed", "blocked"]),
     help="External scheduler execution state.",
 )
-@click.option(
+@_click_option(
     "--acknowledged-by",
     required=True,
     help="Actor or component acknowledging execution.",
 )
-@click.option(
+@_click_option(
     "--external-reference",
     required=True,
     help="External scheduler job/task reference.",
 )
-@click.option(
+@_click_option(
     "--note",
     default="",
     show_default=True,
@@ -548,17 +570,17 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement(
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
-@plugins_group.command("lifecycle-remediation-scheduler-acknowledgement-replay")
-@click.argument(
+@_plugin_command("lifecycle-remediation-scheduler-acknowledgement-replay")
+@_click_argument(
     "adapter_handoff_json",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.argument(
+@_click_argument(
     "acknowledgement_json",
     nargs=-1,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.option(
+@_click_option(
     "--created-by",
     required=True,
     help="Component creating acknowledgement replay manifest.",
@@ -689,16 +711,16 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_replay(
     click.echo(json.dumps(replay_payload, indent=2, sort_keys=True))
 
 
-@plugins_group.command("lifecycle-remediation-scheduler-execution-dashboard")
-@click.argument(
+@_plugin_command("lifecycle-remediation-scheduler-execution-dashboard")
+@_click_argument(
     "scheduler_telemetry_json",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.argument(
+@_click_argument(
     "acknowledgement_replay_json",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
-@click.option(
+@_click_option(
     "--created-by",
     required=True,
     help="Component creating external scheduler execution dashboard.",
