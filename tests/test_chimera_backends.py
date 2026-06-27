@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from types import SimpleNamespace
-from typing import get_type_hints
+from typing import NoReturn, get_type_hints
 
 import numpy as np
 import pytest
@@ -53,6 +53,15 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 LocalOrderBackend = Callable[[np.ndarray, np.ndarray, object], np.ndarray]
+
+
+class _ArrayProtocolFailure:
+    def __array__(
+        self,
+        dtype: object | None = None,
+        copy: object | None = None,
+    ) -> NoReturn:
+        raise ValueError("synthetic array conversion failure")
 
 
 def test__chimera_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -103,6 +112,15 @@ def test_backend_array_contracts_are_parameterised() -> None:
 class TestDirectBackendBoundaryContracts:
     """Direct optional chimera backends validate before runtime loading."""
 
+    def test_validation_alias_helpers_fail_closed_on_array_protocol_failure(
+        self,
+    ) -> None:
+        value = _ArrayProtocolFailure()
+
+        assert chimera_validation._contains_boolean_alias(value) is False
+        assert chimera_validation._contains_complex_alias(value) is False
+        assert chimera_validation._has_complex_payload(value) is False
+
     @pytest.mark.parametrize(
         "backend",
         [
@@ -117,6 +135,12 @@ class TestDirectBackendBoundaryContracts:
             (np.array([True, False]), np.zeros(4), 2, "phases"),
             (np.array([0.0, np.nan]), np.zeros(4), 2, "phases"),
             (np.array([0.0, 1.0], dtype=np.complex128), np.zeros(4), 2, "real-valued"),
+            (
+                np.array(["bad", "1.0"], dtype=object),
+                np.zeros(4),
+                2,
+                "finite one-dimensional",
+            ),
             (
                 np.array([0.0 + 0.25j, 1.0], dtype=object),
                 np.zeros(4),
