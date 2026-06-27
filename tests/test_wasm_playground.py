@@ -28,6 +28,9 @@ EXAMPLE_DIR = REPO_ROOT / "spo-kernel" / "crates" / "spo-wasm" / "example"
 INDEX_HTML = EXAMPLE_DIR / "index.html"
 SIMULATION_MJS = EXAMPLE_DIR / "simulation.mjs"
 SIMULATION_TEST = EXAMPLE_DIR / "simulation.test.mjs"
+DOCS_DEMO_HTML = REPO_ROOT / "docs" / "demo" / "index.html"
+DOCS_DEMO_HELPER = REPO_ROOT / "docs" / "demo" / "simulation.mjs"
+DOCS_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "docs.yml"
 
 
 def test_playground_assets_exist() -> None:
@@ -86,6 +89,44 @@ def test_index_html_exposes_named_playground_scenarios() -> None:
     assert "Critical transition" in html
     assert "Strong synchronisation" in html
     assert "Wide frequency dispersion" in html
+
+
+def test_hosted_docs_demo_uses_current_wasm_class_api() -> None:
+    html = DOCS_DEMO_HTML.read_text(encoding="utf-8")
+    assert "import init, { WasmEngine } from '../wasm-pkg/spo_wasm.js'" in html
+    assert "new WasmEngine(" in html
+    assert "engine.step(" in html
+    assert "./simulation.mjs" in html
+    assert "{ init as spoInit, step, get_phases }" not in html
+    assert "step(JSON.stringify(omegas)" not in html
+
+
+def test_hosted_docs_demo_exposes_same_named_scenarios() -> None:
+    html = DOCS_DEMO_HTML.read_text(encoding="utf-8")
+    assert 'id="scenario"' in html
+    assert "scenarioOptions()" in html
+    assert "scenarioParams(" in html
+    assert "Weak coupling drift" in html
+    assert "Critical transition" in html
+    assert "Strong synchronisation" in html
+    assert "Wide frequency dispersion" in html
+
+
+def test_hosted_docs_demo_helper_mirrors_source_helper() -> None:
+    assert DOCS_DEMO_HELPER.is_file()
+    assert DOCS_DEMO_HELPER.read_text(encoding="utf-8") == SIMULATION_MJS.read_text(
+        encoding="utf-8",
+    )
+
+
+def test_docs_workflow_generates_hosted_wasm_bundle() -> None:
+    workflow = DOCS_WORKFLOW.read_text(encoding="utf-8")
+    assert "dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7" in workflow
+    assert "rustup target add wasm32-unknown-unknown" in workflow
+    assert "cargo install wasm-pack --version 0.14.0 --locked" in workflow
+    assert (
+        "wasm-pack build crates/spo-wasm --target web --out-dir ../../../docs/wasm-pkg"
+    ) in workflow
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not available")

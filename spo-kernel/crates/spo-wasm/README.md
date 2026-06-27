@@ -28,6 +28,13 @@ This produces `wasm-pkg/` containing:
 - `spo_wasm.d.ts` — TypeScript declarations
 - `package.json` — npm-compatible metadata
 
+The GitHub Pages `/demo/` bundle is generated separately into `docs/wasm-pkg/`:
+
+```bash
+cd spo-kernel
+wasm-pack build crates/spo-wasm --target web --out-dir ../../../docs/wasm-pkg
+```
+
 ## Demo
 
 Serve the example page with any static file server:
@@ -56,7 +63,9 @@ node --test spo-kernel/crates/spo-wasm/example/
 
 The helper suite also checks the deterministic scenario catalogue, drives the
 compiled `WasmEngine` directly (skipped when `wasm-pkg/` is not built), and
-cross-checks the WASM order parameter against the pure helper.
+cross-checks the WASM order parameter against the pure helper. The hosted
+`docs/demo/` helper is kept byte-identical to this source helper by the Python
+playground test suite.
 
 ## API
 

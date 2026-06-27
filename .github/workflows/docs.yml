@@ -38,8 +38,15 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: pip install --require-hashes --no-deps -r requirements/docs-tools.txt
+      - name: Build hosted WASM demo bundle
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-pack --version 0.14.0 --locked
+          cd spo-kernel
+          wasm-pack build crates/spo-wasm --target web --out-dir ../../../docs/wasm-pkg
       - run: mkdocs build --strict
 
   deploy:
@@ -54,6 +61,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: pip install --require-hashes --no-deps -r requirements/docs-tools.txt
+      - name: Build hosted WASM demo bundle
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-pack --version 0.14.0 --locked
+          cd spo-kernel
+          wasm-pack build crates/spo-wasm --target web --out-dir ../../../docs/wasm-pkg
       - run: mkdocs gh-deploy --force --strict

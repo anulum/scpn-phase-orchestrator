@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   frequency dispersion. The DOM-free helper module exposes validated
   `scenarioOptions` and `scenarioParams` helpers, with Node and pytest coverage
   keeping the HTML, helper catalogue, and `WasmEngine` integration aligned.
+- The hosted GitHub Pages `/demo/` playground now uses the current `WasmEngine`
+  class API instead of the removed free-function WASM API. The Docs workflow
+  generates the `docs/wasm-pkg/` bundle before publishing, the hosted helper
+  mirrors the source playground helper, and the playground test suite now guards
+  both source and hosted surfaces.
 
 ## [0.10.0] - 2026-06-25
 

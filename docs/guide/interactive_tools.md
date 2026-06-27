@@ -102,8 +102,13 @@ When deployed via GitHub Pages, the hosted demo target is:
 https://anulum.github.io/scpn-phase-orchestrator/demo/
 ```
 
-For local development, build `wasm-pkg/` from the repository root and serve the
-example page:
+The hosted page is tracked at `docs/demo/index.html`. It loads the mirrored
+helper module `docs/demo/simulation.mjs`; the Docs workflow generates the
+`docs/wasm-pkg/` bundle before publishing, so the public `/demo/` route does not
+depend on source-tree paths.
+
+For source-playground development, build `wasm-pkg/` from the repository root
+and serve the example page:
 
 ```bash
 cd spo-kernel
@@ -139,6 +144,14 @@ cd spo-kernel
 wasm-pack build crates/spo-wasm --target web --out-dir ../../../wasm-pkg
 ```
 
+The hosted GitHub Pages bundle loads from generated `docs/wasm-pkg/`. Refresh it
+locally, or let the Docs workflow build it before deployment, with:
+
+```bash
+cd spo-kernel
+wasm-pack build crates/spo-wasm --target web --out-dir ../../../docs/wasm-pkg
+```
+
 Requires [wasm-pack](https://rustwasm.github.io/wasm-pack/) and a Rust
 toolchain with the `wasm32-unknown-unknown` target.
 
@@ -147,8 +160,9 @@ toolchain with the `wasm32-unknown-unknown` target.
 - **Engine**: Euler integrator with mean-field coupling
 - **API**: `WasmEngine`, with `set_phases`, `get_phases`, `step`, and `run`
 - **Browser logic**: `spo-kernel/crates/spo-wasm/example/simulation.mjs`
-  contains DOM-free helper functions and the scenario catalogue, tested with
-  `node --test`
+  contains DOM-free helper functions and the scenario catalogue; the hosted demo
+  mirrors that helper at `docs/demo/simulation.mjs`, and
+  `tests/test_wasm_playground.py` prevents source/hosted drift
 - **No dependencies**: pure Rust → WASM, no JavaScript framework
 
 ## CLI Demo
