@@ -45,6 +45,12 @@ from scpn_phase_orchestrator.supervisor.causal import (
     build_temporal_causal_hypergraph_experiment,
     learn_causal_graph,
 )
+from scpn_phase_orchestrator.supervisor.cbf_admission import (
+    PolicyCBFAdmissionGate,
+    PolicyCBFAdmissionRecord,
+    PolicyCBFAdmissionResult,
+    PolicyCBFChannel,
+)
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 from scpn_phase_orchestrator.supervisor.evolutionary_examples import (
     EvolutionaryBoundary,
@@ -283,6 +289,10 @@ __all__ = [
     "PetriNetAdapter",
     "Place",
     "PolicyAction",
+    "PolicyCBFAdmissionGate",
+    "PolicyCBFAdmissionRecord",
+    "PolicyCBFAdmissionResult",
+    "PolicyCBFChannel",
     "PolicyCompositionMorphism",
     "PolicyCompositionObject",
     "PolicyCompositionObligation",

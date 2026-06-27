@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `SupervisorPolicy` now accepts an optional `PolicyCBFAdmissionGate` that
+  constrains matched control proposals through verified neural CBF filters before
+  returning actions. Each admission emits a deterministic audit record with CBF
+  filter/certificate digests and an SMT-LIB artefact hash for the scalar
+  admission constraint; default runtime behaviour remains unchanged unless a
+  deployment supplies a verified gate.
 - Optional Rust supervisor backend readiness auditing now validates the
   `spo_kernel`/`spo-supervisor` PyO3 surface through
   `audit_rust_supervisor_backend()` and reports a separate `rust-supervisor`

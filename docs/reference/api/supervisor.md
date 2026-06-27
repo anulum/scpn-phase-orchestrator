@@ -603,6 +603,8 @@ Rule-based evaluation of supervisor actions.
 SupervisorPolicy(
     regime_manager: RegimeManager,
     petri_adapter: PetriNetAdapter | None = None,
+    gains: SupervisorPolicyGains | None = None,
+    admission_gate: PolicyCBFAdmissionGate | None = None,
 )
 ```
 
@@ -626,6 +628,12 @@ Returns a list of `ControlAction` instructions. Each action specifies:
 | `ttl_s` | `float` | `5.0` (action expires after 5s) |
 | `justification` | `str` | `"degraded: K boost"` |
 
+When an optional `PolicyCBFAdmissionGate` is supplied, matching supervisor
+actions are admitted through verified neural CBF filters before `decide()`
+returns. `last_admission_records` exposes deterministic audit records for the
+latest call, including the CBF filter digest, certificate digest, admission
+status, admitted value, and SMT-LIB artefact hash.
+
 ### Regime-action mapping
 
 | Regime | Actions |
@@ -639,6 +647,21 @@ Returns a list of `ControlAction` instructions. Each action specifies:
 
 Hard boundary violations (`BoundaryState.hard_violations`) force
 CRITICAL regardless of R values.
+
+## Policy CBF Admission
+
+`PolicyCBFAdmissionGate` is the opt-in bridge between heuristic supervisor
+proposals and certificate-bound neural CBF admission. Each `PolicyCBFChannel`
+selects one action knob/scope, validates a matching `BarrierCertificate` for the
+provided `ControlBarrierFilter`, extracts named runtime metrics from `UPDEState`
+and `BoundaryState`, and emits a deterministic SMT-LIB admission artefact for
+the scalar CBF half-space checked at that decision. The gate does not execute
+Z3 locally and does not actuate; it constrains, admits, or rejects proposal
+values before downstream projection.
+
+::: scpn_phase_orchestrator.supervisor.cbf_admission
+
+---
 
 **Performance:** `decide()` < 50 μs.
 

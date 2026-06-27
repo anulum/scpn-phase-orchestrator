@@ -22,6 +22,10 @@ from dataclasses import dataclass
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+from scpn_phase_orchestrator.supervisor.cbf_admission import (
+    PolicyCBFAdmissionGate,
+    PolicyCBFAdmissionRecord,
+)
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import UPDEState
@@ -63,10 +67,25 @@ class SupervisorPolicy:
         regime_manager: RegimeManager,
         petri_adapter: PetriNetAdapter | None = None,
         gains: SupervisorPolicyGains | None = None,
-    ):
+        admission_gate: PolicyCBFAdmissionGate | None = None,
+    ) -> None:
         self._regime_manager = regime_manager
         self._petri_adapter = petri_adapter
         self._gains = gains or SupervisorPolicyGains()
+        self._admission_gate = admission_gate
+        self._last_admission_records: tuple[PolicyCBFAdmissionRecord, ...] = ()
+
+    @property
+    def last_admission_records(self) -> tuple[PolicyCBFAdmissionRecord, ...]:
+        """Return the CBF admission records from the latest decision.
+
+        Returns
+        -------
+        tuple[PolicyCBFAdmissionRecord, ...]
+            Deterministic audit records for actions matched by the optional CBF
+            admission gate in the previous :meth:`decide` call.
+        """
+        return self._last_admission_records
 
     def decide(
         self,
@@ -94,6 +113,14 @@ class SupervisorPolicy:
         regime = self._regime_manager.transition(proposed)
 
         actions = self._actions_for_regime(regime, upde_state)
+        if self._admission_gate is None:
+            self._last_admission_records = ()
+        else:
+            admitted = self._admission_gate.admit_actions(
+                actions, upde_state, boundary_state
+            )
+            actions = list(admitted.actions)
+            self._last_admission_records = admitted.records
         logger.info(
             "supervisor decide: regime=%s actions=%d",
             regime.value,

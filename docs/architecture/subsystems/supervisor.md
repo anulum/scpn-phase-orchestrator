@@ -1,7 +1,7 @@
 # Subsystem: `supervisor` — regime FSM, policy, MPC, formal export
 
-Turns observer metrics into bounded, audit-ready control proposals. 47 Python
-files, ~22.6k LOC (the largest subsystem). The live control path remains the Python
+Turns observer metrics into bounded, audit-ready control proposals. 48 Python
+files, ~23.1k LOC (the largest subsystem). The live control path remains the Python
 supervisor by default; the optional Rust `spo-supervisor` PyO3 surface is
 validated through `scpn_phase_orchestrator.supervisor.rust_backend` and reported
 by `spo doctor` when the `spo_kernel` wheel is installed.
@@ -10,12 +10,16 @@ by `spo doctor` when the `spo_kernel` wheel is installed.
 
 - `UPDEState` (from `upde`) and `BoundaryState` (from `monitor/boundaries`).
 - Metric mappings `Mapping[str, float]` (finiteness-guarded).
+- Optional `PolicyCBFAdmissionGate` with deployment-supplied neural CBF filters
+  and verified certificates.
 - Signatures: `RegimeManager.evaluate(upde_state, boundary_state) → Regime`;
   `SupervisorPolicy.decide(upde_state, boundary_state, …) → list[ControlAction]`.
 
 ## Outputs
 
 - `ControlAction` (knob, scope, value, ttl_s, justification) — proposals only.
+- Optional CBF admission audit records with SMT-LIB artefact hashes for matched
+  policy actions.
 - `Regime` ∈ {NOMINAL, DEGRADED, CRITICAL, RECOVERY}.
 - `Prediction` / free-energy assessment; PRISM, TLA+, and SMT-LIB export text;
   runtime certificates. Every output type carries `to_audit_record() → dict`.
@@ -28,6 +32,11 @@ by `spo doctor` when the `spo_kernel` wheel is installed.
   ≤1 transition per step.
 - **Policy DSL** (`policy_rules.py`): regime-conditioned condition/action rules
   with cooldowns and fire limits; an STL automaton path.
+- **CBF admission** (`cbf_admission.py`): optional, certificate-bound neural CBF
+  admission for `SupervisorPolicy` actions. Matching actions pass through the
+  existing `ControlBarrierFilter`/`FoundationModelGovernor` stack, and each
+  admitted/constrained/rejected decision emits a deterministic SMT-LIB admission
+  artefact plus content hashes for audit.
 - **Predictive MPC** (`predictive.py`): Ott–Antonsen reduced-model horizon
   forecast; a variational free-energy variant.
 - **Formal export** (`formal_export/`): Petri net / policy / STL → PRISM, TLA+,
@@ -49,6 +58,10 @@ by `spo doctor` when the `spo_kernel` wheel is installed.
 
 The server constructs `RegimeManager` + `SupervisorPolicy`; `policy.decide()`
 runs each step and returns `ControlAction`s for review (not auto-applied).
+Deployments that provide verified neural CBF filters pass a
+`PolicyCBFAdmissionGate` into `SupervisorPolicy`; matched policy actions are
+admitted before downstream projection and the latest CBF audit records are
+available through `last_admission_records`.
 Formal export is reachable through the `formal-export` / `policy-dry-run` CLI.
 `spo doctor` reports `rust-supervisor` readiness separately from the generic
 Rust backend so operators can distinguish "FFI wheel importable" from "the
@@ -62,4 +75,7 @@ supervisor PyO3 contract is actually usable".
 - Rust supervisor validation is an optional readiness probe, not a live-control
   dispatch switch; missing Rust supervisor bindings are warnings while the
   Python supervisor remains operational.
+- CBF admission is opt-in because the safe set and certificate are
+  deployment-specific. The default simulator does not synthesize a fake CBF
+  certificate.
 - No god-file (largest module ~1.1k LOC).

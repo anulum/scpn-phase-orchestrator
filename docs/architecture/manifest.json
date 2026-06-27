@@ -97,10 +97,10 @@
     {
       "name": "supervisor",
       "status": "wired",
-      "inputs": ["UPDEState", "BoundaryState", "metric mappings"],
-      "outputs": ["ControlAction (proposals)", "Regime", "PRISM/TLA+/SMT-LIB export", "certificates"],
+      "inputs": ["UPDEState", "BoundaryState", "metric mappings", "optional verified neural CBF admission gate"],
+      "outputs": ["ControlAction (proposals)", "Regime", "CBF/SMT admission audit records", "PRISM/TLA+/SMT-LIB export", "certificates"],
       "backends": ["python", "rust-supervisor-ffi-probe"],
-      "note": "Python supervisor remains the default live-control path; optional spo-supervisor PyO3 bindings are validated by supervisor.rust_backend and reported by spo doctor; several lanes offline/review-only; policy rules export to PRISM, TLA+, and SMT-LIB feasibility models."
+      "note": "Python supervisor remains the default live-control path; optional PolicyCBFAdmissionGate admits matched actions through verified neural CBF filters and emits per-decision SMT-LIB audit artefact hashes; optional spo-supervisor PyO3 bindings are validated by supervisor.rust_backend and reported by spo doctor; several lanes offline/review-only; policy rules export to PRISM, TLA+, and SMT-LIB feasibility models."
     },
     {
       "name": "nn",
