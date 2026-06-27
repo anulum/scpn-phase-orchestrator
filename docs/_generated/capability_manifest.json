@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 124,
     "rust_kernel_files": 97,
-    "test_files": 708
+    "test_files": 709
   },
   "documentation": {
     "public_pages": [
@@ -2074,6 +2074,7 @@
       "tests/test_order_params_backends.py",
       "tests/test_order_params_benchmark.py",
       "tests/test_order_params_stability.py",
+      "tests/test_order_params_validation_contracts.py",
       "tests/test_oscillation_modes.py",
       "tests/test_oscillator_base.py",
       "tests/test_oscillator_factory.py",

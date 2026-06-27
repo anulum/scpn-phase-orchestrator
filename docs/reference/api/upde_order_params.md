@@ -576,7 +576,7 @@ at import time and exposes the choice as ``ACTIVE_BACKEND`` /
 |---|---|---|
 | 1 | Rust | `maturin develop -m spo-kernel/crates/spo-ffi/Cargo.toml --release` |
 | 2 | Mojo | `mojo build mojo/order_params.mojo -o mojo/order_params_mojo -Xlinker -lm` |
-| 3 | Julia | `juliacall` + `julia/order_params.jl` |
+| 3 | Julia | `juliacall.Main` + `julia/order_params.jl` |
 | 4 | Go | `cd go && go build -buildmode=c-shared -o liborder_params.so order_params.go` |
 | 5 | Python | always present |
 
@@ -597,6 +597,12 @@ two finite scalar lines for ``compute_order_parameter`` and one finite scalar
 line for ``compute_plv`` or ``compute_layer_coherence``. Blank, truncated,
 overlong, non-finite, or non-numeric output is rejected before public values
 are returned.
+
+The Julia backend is advertised only when the `juliacall` package exposes
+`Main`. If a coverage tracer, host runtime, or partial installation leaves
+`juliacall` importable but without `Main`, the dispatcher treats Julia as
+unavailable and falls through to the next backend instead of selecting a backend
+that will fail at call time.
 
 ### Measured benchmark
 
@@ -629,5 +635,6 @@ library path.
   `plv`, `compute_layer_coherence_rust`)
 - Tests: `tests/test_order_params.py`,
   `tests/test_order_params_backends.py`,
+  `tests/test_order_params_validation_contracts.py`,
   `tests/test_order_params_stability.py`
 - Benchmark: `benchmarks/order_params_benchmark.py`

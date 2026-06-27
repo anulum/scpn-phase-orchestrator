@@ -44,7 +44,10 @@ def _contains_boolean_alias(value: object) -> bool:
 
 def validate_phase_vector(value: object, *, name: str) -> FloatArray:
     """Return a contiguous finite real phase vector."""
-    raw = np.asarray(value)
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be array-like") from exc
     if raw.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional phase vector")
     if _contains_boolean_alias(value):
@@ -53,10 +56,7 @@ def validate_phase_vector(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must be real-valued")
     if not np.issubdtype(raw.dtype, np.number):
         raise ValueError(f"{name} must be numeric")
-    try:
-        values = np.ascontiguousarray(raw.astype(np.float64, copy=True))
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be numeric") from exc
+    values = np.ascontiguousarray(raw.astype(np.float64, copy=True))
     if not np.all(np.isfinite(values)):
         raise ValueError(f"{name} must contain only finite values")
     return values
