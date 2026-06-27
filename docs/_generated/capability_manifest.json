@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 124,
     "rust_kernel_files": 97,
-    "test_files": 687
+    "test_files": 688
   },
   "documentation": {
     "public_pages": [
@@ -2267,6 +2267,7 @@
       "tests/test_ssgf_modules.py",
       "tests/test_stl.py",
       "tests/test_stl_automata.py",
+      "tests/test_stl_monitor_contracts.py",
       "tests/test_stochastic.py",
       "tests/test_stochastic_self_consistency.py",
       "tests/test_strange_loop_supervisor.py",
