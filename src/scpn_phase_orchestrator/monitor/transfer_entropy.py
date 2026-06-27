@@ -27,6 +27,7 @@ coupling from source to target.
 from __future__ import annotations
 
 from collections.abc import Callable
+from importlib import import_module
 from numbers import Integral, Real
 from typing import TypeAlias, cast
 
@@ -49,10 +50,9 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 def _load_rust_fns() -> dict[str, object]:
     """Load the Rust phase-transfer-entropy backend callables."""
-    from spo_kernel import (
-        phase_transfer_entropy_rust,
-        transfer_entropy_matrix_rust,
-    )
+    kernel = import_module("spo_kernel")
+    phase_transfer_entropy_rust = vars(kernel)["phase_transfer_entropy_rust"]
+    transfer_entropy_matrix_rust = vars(kernel)["transfer_entropy_matrix_rust"]
 
     return {
         "phase_te": phase_transfer_entropy_rust,
