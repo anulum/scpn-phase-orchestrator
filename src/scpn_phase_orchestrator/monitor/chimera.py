@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
+from importlib import import_module
 from numbers import Integral, Real
 from typing import TypeAlias, cast
 
@@ -35,6 +36,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
+ChimeraBackendFn: TypeAlias = Callable[[FloatArray, FloatArray, int], FloatArray]
+RustChimeraFn: TypeAlias = Callable[
+    [FloatArray, FloatArray, int],
+    tuple[object, object, object, object],
+]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -53,9 +59,10 @@ _INCOHERENT_THRESHOLD = 0.3
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., FloatArray]:
+def _load_rust_fn() -> ChimeraBackendFn:
     """Load the Rust chimera-detection backend callable."""
-    from spo_kernel import detect_chimera_rust
+    kernel = import_module("spo_kernel")
+    detect_chimera_rust = cast("RustChimeraFn", vars(kernel)["detect_chimera_rust"])
 
     def _rust(phases: FloatArray, knm_flat: FloatArray, n: int) -> FloatArray:
         """Call the Rust chimera-detection kernel with contiguous float arrays."""
@@ -66,10 +73,10 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         )
         return cast("FloatArray", np.asarray(local))
 
-    return cast("Callable[..., FloatArray]", _rust)
+    return _rust
 
 
-def _load_mojo_fn() -> Callable[..., FloatArray]:
+def _load_mojo_fn() -> ChimeraBackendFn:
     """Load the Mojo chimera-detection backend callable."""
     from ..experimental.accelerators.monitor._chimera_mojo import (
         _ensure_exe,
@@ -77,10 +84,10 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
     )
 
     _ensure_exe()
-    return local_order_parameter_mojo
+    return cast("ChimeraBackendFn", local_order_parameter_mojo)
 
 
-def _load_julia_fn() -> Callable[..., FloatArray]:
+def _load_julia_fn() -> ChimeraBackendFn:
     """Load the Julia chimera-detection backend callable."""
     import juliacall  # noqa: F401
 
@@ -88,10 +95,10 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
         local_order_parameter_julia,
     )
 
-    return local_order_parameter_julia
+    return cast("ChimeraBackendFn", local_order_parameter_julia)
 
 
-def _load_go_fn() -> Callable[..., FloatArray]:
+def _load_go_fn() -> ChimeraBackendFn:
     """Load the Go chimera-detection backend callable."""
     from ..experimental.accelerators.monitor._chimera_go import (
         _load_lib,
@@ -99,19 +106,19 @@ def _load_go_fn() -> Callable[..., FloatArray]:
     )
 
     _load_lib()
-    return local_order_parameter_go
+    return cast("ChimeraBackendFn", local_order_parameter_go)
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
+_LOADERS: dict[str, Callable[[], ChimeraBackendFn]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
     "go": _load_go_fn,
 }
-_BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
+_BACKEND_CACHE: dict[str, ChimeraBackendFn] = {}
 
 
-def _load_backend(name: str) -> Callable[..., FloatArray]:
+def _load_backend(name: str) -> ChimeraBackendFn:
     """Load and cache the named backend callable."""
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
@@ -138,7 +145,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., FloatArray] | None:
+def _dispatch() -> ChimeraBackendFn | None:
     """Return the fastest available backend callable, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     deduped: list[str] = []
@@ -330,7 +337,7 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
         except (ImportError, RuntimeError, OSError, KeyError):
             backend_fn = None
 
-    r_local = np.zeros(n, dtype=np.float64)
+    r_local: FloatArray = np.zeros(n, dtype=np.float64)
     knm_2d = knm_flat.reshape(n, n)
     diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
     unit = np.exp(1j * diffs)
