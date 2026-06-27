@@ -66,7 +66,9 @@ Topos semantic-binding, and evolutionary supervisor policy-search panels with
 their required evidence, disabled execution gates, and deterministic manifest
 SHA-256. It is product metadata: displaying the registry does not execute panel
 builders, open transports, merge policies, hot patch policies, write hardware,
-or permit actuation.
+or permit actuation. The manifest builder rejects missing or duplicate panel IDs
+and refuses any panel registry that enables actuation, live merge, hot patching,
+execution, or review bypass.
 
 ## Guided Deployment Path
 

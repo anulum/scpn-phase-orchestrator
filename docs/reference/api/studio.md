@@ -24,7 +24,9 @@ claim/proof boundary, required evidence, disabled execution gates, and a
 deterministic `manifest_sha256` over the canonical manifest payload while keeping
 `network_opened`, `hardware_write_permitted`, `qpu_execution_permitted`, and
 `actuation_permitted` false. It does not execute panel builders, import optional
-runtimes, open transports, or touch hardware.
+runtimes, open transports, or touch hardware. Custom panel registries fail
+closed when panel IDs are missing or duplicated, or when a panel enables
+actuation, live merge, hot patching, execution, or bypasses operator review.
 
 `build_studio_control_feed(snapshot, studio_version=...)` emits the live
 `studio.control-feed.v1` envelope used by the runtime server at

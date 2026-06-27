@@ -13,8 +13,14 @@ import sys
 from hashlib import sha256
 from pathlib import Path
 
+import pytest
+
 import scpn_phase_orchestrator.studio as studio
-from scpn_phase_orchestrator.studio.product import build_studio_product_manifest
+from scpn_phase_orchestrator.studio.product import (
+    STUDIO_REVIEW_PANEL_REGISTRY,
+    PanelRecord,
+    build_studio_product_manifest,
+)
 
 
 def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
@@ -157,6 +163,34 @@ def test_studio_product_manifest_is_public_and_streamlit_free() -> None:
     assert "build_studio_product_manifest" in studio.__all__
     assert manifest == build_studio_product_manifest()
     assert "streamlit" not in sys.modules
+
+
+def test_studio_product_manifest_rejects_malformed_panel_ids() -> None:
+    """The standalone manifest rejects unnamed or duplicated panel records."""
+    first_panel = dict(STUDIO_REVIEW_PANEL_REGISTRY[0])
+    missing_id_panel = {**first_panel, "panel_id": ""}
+
+    duplicate_registry = (
+        first_panel,
+        {**dict(STUDIO_REVIEW_PANEL_REGISTRY[1]), "panel_id": first_panel["panel_id"]},
+    )
+
+    with pytest.raises(ValueError, match="non-empty panel_id"):
+        build_studio_product_manifest(panel_registry=(missing_id_panel,))
+
+    with pytest.raises(ValueError, match="panel_id values must be unique"):
+        build_studio_product_manifest(panel_registry=duplicate_registry)
+
+
+def test_studio_product_manifest_rejects_enabled_panel_gates() -> None:
+    """The product manifest fails closed if a panel allows execution."""
+    unsafe_panel: PanelRecord = {
+        **dict(STUDIO_REVIEW_PANEL_REGISTRY[0]),
+        "execution_disabled": False,
+    }
+
+    with pytest.raises(ValueError, match="execution_disabled invalid"):
+        build_studio_product_manifest(panel_registry=(unsafe_panel,))
 
 
 def test_standalone_streamlit_shell_uses_product_manifest() -> None:
