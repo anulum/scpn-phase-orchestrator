@@ -19,6 +19,16 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor._pid_validation i
 )
 
 
+class _ObjectProbeRaises:
+    """Array-like payload that rejects object-dtype boolean alias probing."""
+
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        """Return numeric samples unless NumPy asks for object-dtype probing."""
+        if dtype is object or dtype == np.dtype(object):
+            raise ValueError("object probe refused")
+        return np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64)
+
+
 def _inputs(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "phase_history_flat": np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64),
@@ -41,6 +51,11 @@ class TestPidBackendInputs:
         history, t, n, ga, gb, bins = _call()
         assert (t, n, bins) == (2, 2, 4)
 
+    def test_boolean_alias_probe_failure_does_not_reject_numeric_payload(self) -> None:
+        history, t, n, ga, gb, bins = _call(phase_history_flat=_ObjectProbeRaises())
+        assert history.tolist() == [0.0, 1.0, 2.0, 3.0]
+        assert (t, n, ga.tolist(), gb.tolist(), bins) == (2, 2, [0], [1], 4)
+
     @pytest.mark.parametrize(
         ("overrides", "match"),
         [
@@ -57,6 +72,14 @@ class TestPidBackendInputs:
                 "phase_history must be real-valued",
             ),
             (
+                {
+                    "phase_history_flat": np.array(
+                        [object(), 1.0, 2.0, 3.0], dtype=object
+                    )
+                },
+                "phase_history must be a finite one-dimensional float array",
+            ),
+            (
                 {"phase_history_flat": np.zeros((2, 2))},
                 "phase_history must be one-dimensional",
             ),
@@ -67,6 +90,10 @@ class TestPidBackendInputs:
             ({"phase_history_flat": np.array([0.0, 1.0])}, "does not match t.n"),
             ({"group_a": np.array([True])}, "group_a must not contain boolean"),
             ({"group_a": np.array([0.0 + 1j])}, "group_a must be integer-valued"),
+            (
+                {"group_a": np.array([object()], dtype=object)},
+                "group_a must be an integer index array",
+            ),
             (
                 {"group_a": np.zeros((1, 1), dtype=np.int64)},
                 "group_a must be one-dimensional",
@@ -88,6 +115,7 @@ class TestPidScalarOutput:
         [
             (True, "must not be a boolean"),
             (np.array(0.0 + 1j), "must be a real scalar"),
+            (object(), "must be a real scalar"),
             (np.array([0.5, 0.6]), "must be a scalar"),
             (-0.5, "finite and non-negative"),
             (np.inf, "finite and non-negative"),
