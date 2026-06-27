@@ -71,6 +71,7 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.studio.ui_helpers.panel_sheaf",
     "scpn_phase_orchestrator.studio.ui_helpers.panel_strange_loop",
     "scpn_phase_orchestrator.studio.ui_helpers.panel_topos",
+    "scpn_phase_orchestrator.studio.ui_helpers.panel_twin_confidence",
     "scpn_phase_orchestrator.studio.ui_helpers.replay",
     "scpn_phase_orchestrator.studio.ui_helpers.tables",
     "scpn_phase_orchestrator.nn.supervisor.candidate_bridge",

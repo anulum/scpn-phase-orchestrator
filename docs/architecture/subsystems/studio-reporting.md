@@ -9,7 +9,7 @@ Builder functions (`build_canvas_graph`, `build_runtime_snapshot`,
 `build_deployment_readiness`, `build_export_manifests`, `run_binding_spec_replay`,
 …) and a registry of 13 review panels (information geometry, sheaf cohomology,
 morphogenetic field, multiverse, strange-loop, evolutionary policy, lineage, …).
-A `ui_helpers/` package (20 modules) provides canvas layout, deployment plans,
+A `ui_helpers/` package (21 modules) provides canvas layout, deployment plans,
 charts, and connector plans.
 
 - **Inputs**: a project/binding state and runtime snapshots.
