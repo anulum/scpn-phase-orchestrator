@@ -25,6 +25,14 @@ non-boolean numbers, metadata/provenance must be JSON-safe with string keys,
 exports must be explicit `ExportManifest` sequences, and export safety posture
 must be either `review_artifact` or `deployable`.
 
+The deployment helpers keep package materialisation operator-invoked. Validation
+warnings block Docker, WASM, and hardware targets with explicit
+`blocked_reasons`; malformed readiness rows or command tables raise
+`ValueError` instead of emitting partial deployment artefacts. Command tables
+include only reviewable non-blocked targets, and materialisation plans mark
+which commands write artefacts without opening a network or permitting hardware
+writes.
+
 `build_studio_product_manifest()` returns the metadata-only standalone Studio
 product manifest used by the packaged `tools/spo_studio.py` shell. The manifest
 lists every passive physics review panel, the public builder name, the

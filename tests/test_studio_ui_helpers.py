@@ -1951,6 +1951,50 @@ def test_builders_validate_malformed_readiness_tables(
     with pytest.raises(ValueError, match="readiness targets must be mappings"):
         ui.build_operator_checklist(state)
 
+    monkeypatch.setattr(
+        ui_deployment,
+        "build_deployment_readiness",
+        lambda _state: {"overall_status": "review_ready", "targets": ("bad",)},
+    )
+    with pytest.raises(ValueError, match="readiness targets must be mappings"):
+        ui.build_command_table(state)
+
+
+def test_deployment_readiness_blocks_warning_exports() -> None:
+    result = _minimal_result()
+    warning_export = replace(
+        result.project_state.exports[0],
+        warnings=("binding validation failed",),
+    )
+    blocked_state = replace(
+        result.project_state,
+        exports=(warning_export,) + tuple(result.project_state.exports[1:]),
+    )
+
+    readiness = ui.build_deployment_readiness(blocked_state)
+
+    assert readiness["overall_status"] == "blocked"
+    assert readiness["operator_next_step"] == "fix binding validation errors"
+    assert [target["target"] for target in readiness["targets"]] == [
+        "docker",
+        "wasm",
+        "hardware",
+    ]
+    assert all(target["status"] == "blocked" for target in readiness["targets"])
+    assert all(
+        target["blocked_reasons"] == ["binding validation failed"]
+        for target in readiness["targets"]
+    )
+
+
+def test_disabled_export_reasons_preserves_validation_error_sequence() -> None:
+    assert ui.disabled_export_reasons(()) == ()
+    assert ui.disabled_export_reasons(("missing oscillator", "bad coupling")) == (
+        "binding validation must pass before deploy manifests are enabled",
+        "missing oscillator",
+        "bad coupling",
+    )
+
 
 def test_canvas_rewrite_and_apply_validate_required_payload_metadata(
     tmp_path: Path,
