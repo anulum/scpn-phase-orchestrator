@@ -15,7 +15,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from types import SimpleNamespace
-from typing import get_type_hints
+from typing import NoReturn, get_type_hints
 
 import numpy as np
 import pytest
@@ -54,6 +54,15 @@ PhaseBackend = Callable[
     [np.ndarray, object, object, object, object],
     tuple[np.ndarray, np.ndarray, int],
 ]
+
+
+class _ArrayProtocolFailure:
+    def __array__(
+        self,
+        dtype: object | None = None,
+        copy: object | None = None,
+    ) -> NoReturn:
+        raise ValueError("synthetic array conversion failure")
 
 
 def test__poincare_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -121,6 +130,14 @@ def test_backend_array_contracts_are_parameterised() -> None:
 
 class TestDirectBackendBoundaryContracts:
     """Direct optional Poincare backends validate before runtime loading."""
+
+    def test_validation_alias_helpers_fail_closed_on_array_protocol_failure(
+        self,
+    ) -> None:
+        value = _ArrayProtocolFailure()
+
+        assert poincare_validation._contains_boolean_alias(value) is False
+        assert poincare_validation._contains_complex_alias(value) is False
 
     def test_backend_output_contract_accepts_valid_payload(self) -> None:
         crossings = np.array([0.0, 1.0, 0.0, 0.0, 2.0, 0.0])
@@ -226,6 +243,24 @@ class TestDirectBackendBoundaryContracts:
                 0,
                 "traj_flat",
             ),
+            (
+                np.array(["bad", "1.0"], dtype=object),
+                2,
+                1,
+                np.array([1.0]),
+                0.0,
+                0,
+                "finite one-dimensional",
+            ),
+            (
+                np.array([[0.0], [1.0]]),
+                2,
+                1,
+                np.array([1.0]),
+                0.0,
+                0,
+                "one-dimensional",
+            ),
             (np.array([0.0, np.nan]), 2, 1, np.array([1.0]), 0.0, 0, "traj_flat"),
             (np.array([0.0, 1.0]), True, 1, np.array([1.0]), 0.0, 0, "t"),
             (np.array([0.0, 1.0]), 2, 2, np.array([1.0, 0.0]), 0.0, 0, "t\\*d"),
@@ -240,6 +275,7 @@ class TestDirectBackendBoundaryContracts:
                 "normal",
             ),
             (np.array([0.0, 1.0]), 2, 1, np.array([1.0, 0.0]), 0.0, 0, "normal"),
+            (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), "origin", 0, "offset"),
             (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), math.inf, 0, "offset"),
             (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), 0.0, 3, "direction"),
         ],
