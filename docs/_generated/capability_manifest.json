@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 124,
     "rust_kernel_files": 97,
-    "test_files": 694
+    "test_files": 695
   },
   "documentation": {
     "public_pages": [
@@ -2359,6 +2359,7 @@
       "tests/test_transfer_entropy.py",
       "tests/test_transfer_entropy_backends.py",
       "tests/test_transfer_entropy_benchmark.py",
+      "tests/test_transfer_entropy_dispatch_contracts.py",
       "tests/test_transfer_entropy_stability.py",
       "tests/test_twin_confidence.py",
       "tests/test_twin_confidence_backends.py",
