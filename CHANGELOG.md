@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `spo federated-secure-aggregation-preflight` now turns federated node-commitment
+  JSONL and a deployment declaration JSON into the deterministic secure-aggregation
+  manifest, a custody/quorum deployment preflight, and a non-actuating preflight
+  bundle. The command validates the existing supervisor secure-aggregation surface
+  without opening sockets or permitting live secure-aggregation execution.
 - `spo federated-transport-preflight` now turns federated node-update JSONL and a
   transport declaration JSON into signed/hash-linked envelopes, a replay ledger,
   and a deterministic non-actuating deployment preflight bundle. The command

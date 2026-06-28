@@ -67,6 +67,10 @@ Federated transport preflight is reachable through
 `spo federated-transport-preflight`, which consumes node-update JSONL plus a
 transport declaration and emits signed envelopes, a replay ledger, and a
 non-actuating deployment preflight bundle.
+Federated secure-aggregation preflight is reachable through
+`spo federated-secure-aggregation-preflight`, which consumes node-commitment
+JSONL plus a deployment declaration and emits the secure-aggregation manifest,
+custody/quorum preflight, and a non-actuating deployment preflight bundle.
 `spo doctor` reports `rust-supervisor` readiness separately from the generic
 Rust backend so operators can distinguish "FFI wheel importable" from "the
 supervisor PyO3 contract is actually usable".

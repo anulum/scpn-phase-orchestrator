@@ -232,6 +232,44 @@ spo federated-transport-preflight updates.jsonl transport.json \
 
 ---
 
+## `spo federated-secure-aggregation-preflight`
+
+Build review-only federated secure-aggregation evidence from node commitment
+records. The command reads newline-delimited node-commitment JSON records, builds
+the deterministic secure-aggregation manifest, validates custody/quorum evidence
+and operator approval from the deployment declaration, and emits one deterministic
+preflight bundle. It does not open sockets, export raw data, or permit live
+secure-aggregation execution.
+
+```
+spo federated-secure-aggregation-preflight <commitments.jsonl> <deployment.json> [--output PATH]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `commitments.jsonl` | JSONL node commitment records accepted by `supervisor.federated_secure_aggregation` |
+| `deployment.json` | Deployment declaration with optional `aggregation` policy plus `quorum_evidence`, `custody_rotation_policy`, `custody_records`, `accepted_node_threshold`, and operator approval fields |
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--output PATH` | None | Write the emitted preflight bundle JSON while also printing it to stdout |
+
+**Output:** `scpn_federated_secure_aggregation_preflight_bundle_v1` JSON containing
+`secure_aggregation_manifest`, `preflight_manifest`, and `bundle_hash`.
+
+**Example:**
+
+```bash
+spo federated-secure-aggregation-preflight commitments.jsonl deployment.json \
+  --output federated_secure_aggregation_preflight.json
+```
+
+---
+
 ## `spo assurance-case`
 
 Assemble a review-only assurance-case bundle from audit and evidence records.
