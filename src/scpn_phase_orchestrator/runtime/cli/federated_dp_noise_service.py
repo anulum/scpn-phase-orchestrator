@@ -104,6 +104,10 @@ def federated_dp_noise_service_preflight(
         ) from exc
 
     bundle = _preflight_bundle_payload(
+        deployment_ready=preflight.deployment_readiness.ready,
+        deployment_reason=preflight.deployment_readiness.reason,
+        request_hash=preflight.request_hash,
+        response_hash=preflight.response_hash,
         request=request.to_audit_record(),
         response=response.to_audit_record(),
         preflight=preflight.to_audit_record(),
@@ -189,6 +193,10 @@ def _build_node_budgets(
 
 def _preflight_bundle_payload(
     *,
+    deployment_ready: bool,
+    deployment_reason: str,
+    request_hash: str,
+    response_hash: str,
     request: dict[str, object],
     response: dict[str, object],
     preflight: dict[str, object],
@@ -197,6 +205,12 @@ def _preflight_bundle_payload(
 
     Parameters
     ----------
+    deployment_ready : bool
+        Whether the deployment preflight reported a ready verdict.
+    deployment_reason : str
+        Readiness reason from the deployment preflight.
+    request_hash, response_hash : str
+        Hash linkage of the request and response manifests.
     request : dict[str, object]
         DP-noise request manifest audit record.
     response : dict[str, object]
@@ -209,15 +223,13 @@ def _preflight_bundle_payload(
     dict[str, object]
         JSON-safe CLI bundle with a deterministic ``bundle_hash``.
     """
-    readiness = preflight["deployment_readiness"]
-    assert isinstance(readiness, Mapping)
     bundle: dict[str, object] = {
         "schema": "scpn_federated_dp_noise_service_preflight_bundle_v1",
         "version": "1.0.0",
-        "deployment_ready": readiness["ready"],
-        "deployment_reason": readiness["reason"],
-        "request_hash": preflight["request_hash"],
-        "response_hash": preflight["response_hash"],
+        "deployment_ready": deployment_ready,
+        "deployment_reason": deployment_reason,
+        "request_hash": request_hash,
+        "response_hash": response_hash,
         "service_execution_permitted": False,
         "raw_data_export_permitted": False,
         "operator_review_required": True,
