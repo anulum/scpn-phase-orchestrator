@@ -310,6 +310,49 @@ spo federated-dp-noise-service-preflight request.json deployment.json \
 
 ---
 
+## `spo evolutionary-policy-dsl-search`
+
+Run the deterministic offline policy-DSL mutation grammar over a compact policy-DSL
+source and emit a review-only candidate bundle. It does not actuate, merge,
+hot-patch, or execute any mutated candidate.
+
+```
+spo evolutionary-policy-dsl-search <policy.dsl> [--generations N] [--population N] [--mutation-step F] [--output PATH]
+```
+
+**Output:** `scpn_evolutionary_grammar_review_bundle_v1` JSON with `grammar`
+(`policy-dsl`), the offline search `report`, and `bundle_hash`.
+
+---
+
+## `spo evolutionary-petri-mutation`
+
+Run the deterministic offline Petri-net mutation grammar over a net-like JSON
+payload (object or record array) and emit a review-only candidate bundle.
+
+```
+spo evolutionary-petri-mutation <net.json> [--generations N] [--candidates-per-generation N] [--mutation-step F] [--max-arc-weight N] [--max-token-bound N] [--output PATH]
+```
+
+**Output:** `scpn_evolutionary_grammar_review_bundle_v1` JSON with `grammar`
+(`petri`), the offline mutation `report`, and `bundle_hash`.
+
+---
+
+## `spo evolutionary-topology-mutation`
+
+Run the deterministic offline topology mutation grammar over a topology JSON with
+`nodes` and `edges` arrays and emit a review-only candidate bundle.
+
+```
+spo evolutionary-topology-mutation <topology.json> [--generations N] [--population N] [--mutation-step F] [--min-edge-weight F] [--max-edge-weight F] [--edge-add-base-weight F] [--max-add-candidates N] [--output PATH]
+```
+
+**Output:** `scpn_evolutionary_grammar_review_bundle_v1` JSON with `grammar`
+(`topology`), the offline mutation `report`, and `bundle_hash`.
+
+---
+
 ## `spo assurance-case`
 
 Assemble a review-only assurance-case bundle from audit and evidence records.

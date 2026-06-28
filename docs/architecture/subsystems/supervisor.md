@@ -76,6 +76,11 @@ Federated DP noise-service preflight is reachable through
 a deployment declaration and emits the request/response manifests and a
 non-actuating deployment readiness bundle (missing prerequisites are reported as
 not-ready rather than raising).
+The offline evolutionary supervisor grammar searches are reachable through
+`spo evolutionary-policy-dsl-search`, `spo evolutionary-petri-mutation`, and
+`spo evolutionary-topology-mutation`, which run the deterministic mutation grammars
+over a local source artefact and emit review-only candidate bundles; none actuate,
+merge, hot-patch, or execute a mutated candidate.
 `spo doctor` reports `rust-supervisor` readiness separately from the generic
 Rust backend so operators can distinguish "FFI wheel importable" from "the
 supervisor PyO3 contract is actually usable".

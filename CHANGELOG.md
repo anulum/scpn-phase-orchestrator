@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `spo evolutionary-policy-dsl-search`, `spo evolutionary-petri-mutation`, and
+  `spo evolutionary-topology-mutation` now run the deterministic offline supervisor
+  mutation-search grammars from local source artefacts and emit review-only
+  candidate bundles. The commands surface the existing
+  `supervisor.evolutionary_policy_dsl`, `supervisor.evolutionary_petri_grammar`,
+  and `supervisor.evolutionary_topology_grammar` searches without actuating,
+  merging, hot-patching, or executing any mutated candidate.
 - `spo federated-dp-noise-service-preflight` now turns a DP-noise request JSON and a
   deployment declaration JSON into deterministic request/response manifests and a
   non-actuating deployment readiness bundle. Missing deployment prerequisites are
