@@ -999,6 +999,7 @@ def test_formal_export_package_outputs_no_execution_manifest(runner, tmp_path):
     assert payload["package_name"] == "cli_formal_package"
     assert payload["artifact_types"] == {
         "policy_prism": "prism",
+        "policy_smt": "smt2",
         "protocol_prism": "prism",
         "protocol_tla": "tla",
     }
@@ -1006,6 +1007,7 @@ def test_formal_export_package_outputs_no_execution_manifest(runner, tmp_path):
         "protocol_type_ok",
         "protocol_reachable_terminal",
         "policy_rule_review",
+        "policy_smt_feasible",
     ]
     assert all(
         command["execution_permitted"] is False
@@ -1059,16 +1061,19 @@ def test_formal_export_package_can_include_checker_readiness(runner, tmp_path):
         "missing_executable",
         "ready_not_executed",
         "ready_not_executed",
+        "missing_executable",
     ]
     assert [record["executable"] for record in availability] == [
         "tlc2.TLC",
         "prism",
         "prism",
+        "z3",
     ]
     assert [record["resolved_path"] for record in availability] == [
         None,
         "/opt/prism/bin/prism",
         "/opt/prism/bin/prism",
+        None,
     ]
     assert all(record["execution_permitted"] is False for record in availability)
 
