@@ -35,6 +35,7 @@ SUBMODULES = (
     "scpn_phase_orchestrator.supervisor.formal_export.runtime_certificate",
     "scpn_phase_orchestrator.supervisor.formal_export.petri_export",
     "scpn_phase_orchestrator.supervisor.formal_export.policy_export",
+    "scpn_phase_orchestrator.supervisor.formal_export.smt_export",
     "scpn_phase_orchestrator.supervisor.formal_export.stl_export",
 )
 
@@ -55,6 +56,7 @@ PUBLIC_SYMBOL_MODULE = {
     "export_petri_net_prism": "petri_export",
     "export_petri_net_tla": "petri_export",
     "export_policy_rules_prism": "policy_export",
+    "export_policy_rules_smt": "smt_export",
     "export_policy_rules_tla": "policy_export",
     "export_stl_specs_prism": "stl_export",
 }
