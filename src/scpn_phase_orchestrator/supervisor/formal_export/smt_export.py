@@ -164,9 +164,7 @@ def export_policy_rules_smt(
         )
         for action_index, action in enumerate(rule.actions):
             action_id = action_names[_action_key(rule, action_index)]
-            lines.append(
-                f"(define-fun emits_{action_id} () Bool fires_{rule_id})"
-            )
+            lines.append(f"(define-fun emits_{action_id} () Bool fires_{rule_id})")
             lines.append(
                 f";   {action_id}: knob={action.knob!r}, "
                 f"scope={action.scope!r}, value={action.value:.17g}, "
