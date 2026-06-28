@@ -18,7 +18,7 @@ bandit==1.9.4
 mistune>=3.2.1
 mkdocs-material>=9.5,<10.0
 mkdocstrings[python]>=0.24,<2.0
-pymdown-extensions>=10.21.3,<11.0
+pymdown-extensions>=10.21.3,<12.0
 pygments>=2.20,<2.21
 pre-commit>=3.5,<5.0
 twine>=6.2,<7.0
