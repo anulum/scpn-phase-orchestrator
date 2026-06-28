@@ -270,6 +270,46 @@ spo federated-secure-aggregation-preflight commitments.jsonl deployment.json \
 
 ---
 
+## `spo federated-dp-noise-service-preflight`
+
+Build review-only federated DP noise-service evidence from a DP-noise request and
+a deployment declaration. The command builds the deterministic request and
+response manifests, validates deployment prerequisites (mechanism, custody,
+accountant, budget issuer, service endpoint, operator approval), and emits one
+deterministic preflight bundle. Missing prerequisites are reported as a not-ready
+readiness verdict rather than an error; only malformed inputs fail closed. It does
+not open sockets, generate live noise, or permit live DP noise-service execution.
+
+```
+spo federated-dp-noise-service-preflight <request.json> <deployment.json> [--output PATH]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `request.json` | DP-noise request with `epsilon`, `delta`, `sensitivity`, `noise_multiplier`, `node_count`, `seed_hash`, `policy_keys`, and per-node `node_budgets` |
+| `deployment.json` | Deployment declaration with `mechanism_label`, `privacy_accountant_owner`, `seed_custody_label`, `budget_issuer_label`, `service_endpoint_label`, and `operator_approved` |
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--output PATH` | None | Write the emitted preflight bundle JSON while also printing it to stdout |
+
+**Output:** `scpn_federated_dp_noise_service_preflight_bundle_v1` JSON containing
+`request_manifest`, `response_manifest`, `preflight_manifest`, `deployment_ready`,
+and `bundle_hash`.
+
+**Example:**
+
+```bash
+spo federated-dp-noise-service-preflight request.json deployment.json \
+  --output federated_dp_noise_service_preflight.json
+```
+
+---
+
 ## `spo assurance-case`
 
 Assemble a review-only assurance-case bundle from audit and evidence records.

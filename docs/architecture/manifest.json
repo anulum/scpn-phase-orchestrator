@@ -164,7 +164,7 @@
   ],
   "interfaces": [
     {"kind": "library", "entry": "Orchestrator, OrchestratorState, evaluate_binding_spec (api.py)"},
-    {"kind": "cli", "entry": "spo (runtime/cli/); ~20 verbs incl run/validate/replay/formal-export/federated-transport-preflight/federated-secure-aggregation-preflight/assurance-case/certification-evidence/twin-confidence/queuewaves"},
+    {"kind": "cli", "entry": "spo (runtime/cli/); ~20 verbs incl run/validate/replay/formal-export/federated-transport-preflight/federated-secure-aggregation-preflight/federated-dp-noise-service-preflight/assurance-case/certification-evidence/twin-confidence/queuewaves"},
       {"kind": "rest", "entry": "runtime/server.py; 9 routes including /api/studio-feed; optional X-API-Key + rate limit"},
     {"kind": "grpc", "entry": "runtime/server_grpc.py; GetState/Step/Reset/GetConfig + StreamPhases"},
       {"kind": "studio", "entry": "studio/ ExportManifest (dataclass) + read-only studio.control-feed.v1 live feed"}

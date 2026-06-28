@@ -71,6 +71,11 @@ Federated secure-aggregation preflight is reachable through
 `spo federated-secure-aggregation-preflight`, which consumes node-commitment
 JSONL plus a deployment declaration and emits the secure-aggregation manifest,
 custody/quorum preflight, and a non-actuating deployment preflight bundle.
+Federated DP noise-service preflight is reachable through
+`spo federated-dp-noise-service-preflight`, which consumes a DP-noise request plus
+a deployment declaration and emits the request/response manifests and a
+non-actuating deployment readiness bundle (missing prerequisites are reported as
+not-ready rather than raising).
 `spo doctor` reports `rust-supervisor` readiness separately from the generic
 Rust backend so operators can distinguish "FFI wheel importable" from "the
 supervisor PyO3 contract is actually usable".

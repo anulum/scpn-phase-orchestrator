@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `spo federated-dp-noise-service-preflight` now turns a DP-noise request JSON and a
+  deployment declaration JSON into deterministic request/response manifests and a
+  non-actuating deployment readiness bundle. Missing deployment prerequisites are
+  reported as a not-ready readiness verdict; only malformed inputs fail closed. The
+  command validates the existing supervisor DP noise-service surface without opening
+  sockets or permitting live DP noise-service execution.
 - `spo federated-secure-aggregation-preflight` now turns federated node-commitment
   JSONL and a deployment declaration JSON into the deterministic secure-aggregation
   manifest, a custody/quorum deployment preflight, and a non-actuating preflight

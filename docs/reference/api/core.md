@@ -71,6 +71,8 @@ keeps the callable entry points visible to mkdocstrings.
 
 ::: scpn_phase_orchestrator.runtime.cli
 
+::: scpn_phase_orchestrator.runtime.cli.federated_dp_noise_service
+
 ::: scpn_phase_orchestrator.runtime.cli.federated_secure_aggregation
 
 ::: scpn_phase_orchestrator.runtime.cli.federated_transport
