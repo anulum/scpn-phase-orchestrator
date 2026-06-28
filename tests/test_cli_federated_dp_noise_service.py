@@ -17,9 +17,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from scpn_phase_orchestrator.runtime.cli import (
-    federated_dp_noise_service as _dp_noise_cli,
-)
+import scpn_phase_orchestrator.runtime.cli.federated_dp_noise_service as _dp_noise_cli
 from scpn_phase_orchestrator.runtime.cli._app import main
 
 assert _dp_noise_cli is not None
