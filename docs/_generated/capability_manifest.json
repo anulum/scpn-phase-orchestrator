@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 129,
     "rust_kernel_files": 97,
-    "test_files": 718
+    "test_files": 719
   },
   "documentation": {
     "public_pages": [
@@ -1817,6 +1817,7 @@
       "tests/test_cli_approval_request_loaders.py",
       "tests/test_cli_assurance.py",
       "tests/test_cli_auto_coupling.py",
+      "tests/test_cli_binding_auto_branches.py",
       "tests/test_cli_digital_twin_contracts.py",
       "tests/test_cli_evolutionary_grammar.py",
       "tests/test_cli_federated_dp_noise_service.py",
