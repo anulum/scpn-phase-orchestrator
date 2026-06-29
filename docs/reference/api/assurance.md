@@ -21,13 +21,16 @@ spo assurance-case --system my-deployment \
   --audit-log run.jsonl \
   --evidence-file twin_confidence.json \
   --output assurance_bundle.json \
-  --report-out conformity_report.md
+  --report-out conformity_report.md \
+  --report-pdf-out conformity_report.pdf
 ```
 
 `--report-out` additionally renders a human-readable Markdown conformity report
 from the same sealed bundle — a per-standard, clause-by-clause table of
 conformance status, contributing evidence, and rationale, anchored to the bundle
-hash for traceability.
+hash for traceability. `--report-pdf-out` renders the same report as a
+deterministic, dependency-free text PDF — the distributable artefact an assessor
+files.
 
 For operator review packages, `spo certification-evidence` wraps the same
 assurance bundle with deterministic test vectors and a manifest:
@@ -97,6 +100,9 @@ clause conformance with status, evidence, and rationale, and the evidence
 inventory) under the regulatory disclaimer and anchored to the bundle hash. It
 adds no claim beyond the bundle and is review-only. The certification evidence
 package seals the rendered report as `conformity_report.md`.
+`render_conformity_report_pdf` renders the same content as a deterministic,
+dependency-free text PDF — the distributable artefact an assessor files — built
+on the reusable `scpn_phase_orchestrator.reporting.markdown_to_pdf_bytes` helper.
 
 ::: scpn_phase_orchestrator.assurance.report
 

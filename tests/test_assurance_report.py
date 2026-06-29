@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.assurance import (
     build_certification_evidence_package,
     build_evidence_item,
     render_conformity_report,
+    render_conformity_report_pdf,
 )
 from scpn_phase_orchestrator.assurance.report import (
     CONFORMITY_REPORT_SCHEMA,
@@ -114,6 +115,16 @@ def test_report_is_deterministic() -> None:
 def test_status_label_passes_through_an_unknown_status() -> None:
     assert _status_label("addressed") == "Addressed"
     assert _status_label("speculative") == "speculative"
+
+
+def test_pdf_report_is_a_deterministic_pdf() -> None:
+    bundle = _bundle()
+    pdf = render_conformity_report_pdf(bundle)
+
+    assert pdf.startswith(b"%PDF-1.4")
+    assert pdf.rstrip().endswith(b"%%EOF")
+    assert b"CONFORMITY EVIDENCE REPORT" in pdf
+    assert render_conformity_report_pdf(bundle) == pdf
 
 
 def test_certification_package_seals_the_conformity_report() -> None:

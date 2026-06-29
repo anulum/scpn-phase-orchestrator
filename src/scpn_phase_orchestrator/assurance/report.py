@@ -184,7 +184,31 @@ def render_conformity_report(bundle: AssuranceCaseBundle) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_conformity_report_pdf(bundle: AssuranceCaseBundle) -> bytes:
+    """Render the conformity report as a deterministic, dependency-free PDF.
+
+    Produces the same content as :func:`render_conformity_report` in a minimal
+    single-font text PDF — the distributable artefact an assessor files. The
+    bytes carry no timestamp and are reproducible for a given bundle. The text
+    PDF renderer is imported lazily so importing this module stays light.
+
+    Parameters
+    ----------
+    bundle:
+        The hash-sealed assurance-case bundle to render.
+
+    Returns
+    -------
+    bytes
+        The rendered conformity report PDF.
+    """
+    from scpn_phase_orchestrator.reporting import markdown_to_pdf_bytes
+
+    return markdown_to_pdf_bytes(render_conformity_report(bundle))
+
+
 __all__ = [
     "CONFORMITY_REPORT_SCHEMA",
     "render_conformity_report",
+    "render_conformity_report_pdf",
 ]

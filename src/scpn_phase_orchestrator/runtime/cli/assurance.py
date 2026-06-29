@@ -30,6 +30,7 @@ from scpn_phase_orchestrator.assurance import (
     build_certification_evidence_package,
     build_evidence_item,
     render_conformity_report,
+    render_conformity_report_pdf,
 )
 from scpn_phase_orchestrator.runtime.cli._app import main
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
@@ -120,12 +121,20 @@ def _collect_evidence(
     type=click.Path(),
     help="Also write a human-readable Markdown conformity report to this path",
 )
+@click.option(
+    "--report-pdf-out",
+    "report_pdf_out",
+    default=None,
+    type=click.Path(),
+    help="Also write a deterministic text-PDF conformity report to this path",
+)
 def assurance_case(
     system_name: str,
     audit_log: str | None,
     evidence_files: tuple[str, ...],
     output: str | None,
     report_out: str | None,
+    report_pdf_out: str | None,
 ) -> None:
     """Assemble an assurance-case evidence bundle.
 
@@ -143,6 +152,9 @@ def assurance_case(
     report_out : str | None
         Optional path for a human-readable Markdown conformity report rendered
         from the same sealed bundle.
+    report_pdf_out : str | None
+        Optional path for a deterministic text-PDF conformity report rendered
+        from the same sealed bundle.
     """
     evidence = _collect_evidence(audit_log, evidence_files)
     bundle = build_assurance_case_bundle(system_name, evidence)
@@ -155,6 +167,11 @@ def assurance_case(
     if report_out is not None:
         Path(report_out).write_text(render_conformity_report(bundle), encoding="utf-8")
         click.echo(f"Wrote conformity report to {report_out} ({bundle.bundle_hash})")
+    if report_pdf_out is not None:
+        Path(report_pdf_out).write_bytes(render_conformity_report_pdf(bundle))
+        click.echo(
+            f"Wrote conformity report PDF to {report_pdf_out} ({bundle.bundle_hash})"
+        )
 
 
 @main.command(name="certification-evidence")

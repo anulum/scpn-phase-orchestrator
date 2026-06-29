@@ -48,6 +48,7 @@ from scpn_phase_orchestrator.assurance.evidence import (
 from scpn_phase_orchestrator.assurance.report import (
     CONFORMITY_REPORT_SCHEMA,
     render_conformity_report,
+    render_conformity_report_pdf,
 )
 from scpn_phase_orchestrator.assurance.standards import (
     EU_AI_ACT,
@@ -98,4 +99,5 @@ __all__ = [
     "clause_catalogue",
     "clause_for_key",
     "render_conformity_report",
+    "render_conformity_report_pdf",
 ]

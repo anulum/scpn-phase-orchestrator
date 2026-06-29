@@ -29,6 +29,7 @@ __all__ = [
     "ActionExplanation",
     "ExplainabilityReport",
     "build_explainability_report",
+    "markdown_to_pdf_bytes",
     "render_markdown",
     "write_markdown",
     "write_pdf",
@@ -450,6 +451,26 @@ def _make_pdf_bytes(lines: list[str]) -> bytes:
     return bytes(pdf)
 
 
+def markdown_to_pdf_bytes(markdown: str) -> bytes:
+    """Return Markdown text rendered as a deterministic, dependency-free PDF.
+
+    The renderer wraps the text to the page width (upper-casing heading lines)
+    and emits a minimal single-font PDF. It contains no timestamp or other
+    non-deterministic field, so the bytes are reproducible for a given input.
+
+    Parameters
+    ----------
+    markdown : str
+        The Markdown (or plain text) document to render.
+
+    Returns
+    -------
+    bytes
+        The rendered text PDF.
+    """
+    return _make_pdf_bytes(_wrap_pdf_lines(markdown))
+
+
 def write_pdf(report: ExplainabilityReport, output_path: str | Path) -> Path:
     """Write a dependency-free text PDF report and return the output path.
 
@@ -467,6 +488,5 @@ def write_pdf(report: ExplainabilityReport, output_path: str | Path) -> Path:
     """
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    lines = _wrap_pdf_lines(render_markdown(report))
-    out.write_bytes(_make_pdf_bytes(lines))
+    out.write_bytes(markdown_to_pdf_bytes(render_markdown(report)))
     return out

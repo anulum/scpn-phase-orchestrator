@@ -115,6 +115,29 @@ def test_build_with_report_out(runner: CliRunner, tmp_path: Path) -> None:
     assert f"Wrote conformity report to {report_path}" in result.output
 
 
+def test_build_with_report_pdf_out(runner: CliRunner, tmp_path: Path) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    pdf_path = tmp_path / "conformity.pdf"
+    result = runner.invoke(
+        main,
+        [
+            "assurance-case",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--report-pdf-out",
+            str(pdf_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    pdf = pdf_path.read_bytes()
+    assert pdf.startswith(b"%PDF-1.4")
+    assert b"CONFORMITY EVIDENCE REPORT" in pdf
+    assert f"Wrote conformity report PDF to {pdf_path}" in result.output
+
+
 def test_build_certification_evidence_package(
     runner: CliRunner, tmp_path: Path
 ) -> None:
