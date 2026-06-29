@@ -138,6 +138,58 @@ def test_build_with_report_pdf_out(runner: CliRunner, tmp_path: Path) -> None:
     assert f"Wrote conformity report PDF to {pdf_path}" in result.output
 
 
+def test_build_from_run_result(runner: CliRunner, tmp_path: Path) -> None:
+    run_result = tmp_path / "run.json"
+    run_result.write_text(
+        json.dumps(
+            {
+                "spec_name": "grid",
+                "audit_event_stream_integrity": {
+                    "integrity_ok": True,
+                    "verified_records": 12,
+                },
+                "conformal_admission_total": 6,
+                "conformal_admission_rejections": 1,
+                "last_conformal_admission": {"admitted": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = tmp_path / "bundle.json"
+    result = runner.invoke(
+        main,
+        [
+            "assurance-case",
+            "--system",
+            "Grid",
+            "--run-result",
+            str(run_result),
+            "--output",
+            str(out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    bundle = json.loads(out.read_text(encoding="utf-8"))
+    evidence_ids = {item["evidence_id"] for item in bundle["evidence"]}
+    assert evidence_ids == {"run-audit-stream-integrity", "run-conformal-admission"}
+
+
+def test_run_result_without_trust_evidence_is_rejected(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    run_result = tmp_path / "run.json"
+    run_result.write_text(
+        json.dumps({"spec_name": "grid", "conformal_admission_total": 0}),
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        main,
+        ["assurance-case", "--system", "Grid", "--run-result", str(run_result)],
+    )
+    assert result.exit_code != 0
+    assert "no audit-integrity or conformal-gate evidence" in result.output
+
+
 def test_build_certification_evidence_package(
     runner: CliRunner, tmp_path: Path
 ) -> None:

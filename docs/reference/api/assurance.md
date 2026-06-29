@@ -37,10 +37,14 @@ assurance bundle with deterministic test vectors and a manifest:
 
 ```bash
 spo certification-evidence --system my-deployment \
-  --audit-log run.jsonl \
-  --evidence-file twin_confidence.json \
+  --run-result run_summary.json \
   --output-dir review_package
 ```
+
+`--run-result` takes a serialised `SimulationResult` summary and auto-derives the
+run's audit-stream integrity and conformal admission-gate evidence, so a package
+can be assembled from a run summary without hand-authoring evidence JSON
+(`--audit-log` and `--evidence-file` remain available and compose with it).
 
 The package directory contains:
 
@@ -73,6 +77,17 @@ an originating surface in a content-addressed `EvidenceItem`, so the bundle can
 reference evidence by a stable identifier and detect later mutation.
 
 ::: scpn_phase_orchestrator.assurance.evidence
+
+## Run-derived evidence
+
+`scpn_phase_orchestrator.assurance.run_evidence` maps the trust-relevant fields
+of a serialised `SimulationResult` record — the close-time audit-stream integrity
+result and the conformal admission-gate decisions — into evidence items. It
+consumes the JSON-safe record (not the runtime object), so the assurance package
+stays free of the numeric runtime import chain, and it emits nothing for a
+surface that did not run.
+
+::: scpn_phase_orchestrator.assurance.run_evidence
 
 ## Bundle assembly
 

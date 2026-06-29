@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.assurance import (
     build_assurance_case_bundle,
     build_certification_evidence_package,
     build_evidence_item,
+    build_run_evidence,
     render_conformity_report,
     render_conformity_report_pdf,
 )
@@ -79,20 +80,36 @@ def _evidence_from_file(path: str) -> list[EvidenceItem]:
     return items
 
 
+def _run_result_evidence(path: str) -> list[EvidenceItem]:
+    """Return assurance evidence derived from a simulation run record."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise click.ClickException(f"{path} must be a SimulationResult JSON object")
+    items = list(build_run_evidence(payload))
+    if not items:
+        raise click.ClickException(
+            f"{path} carries no audit-integrity or conformal-gate evidence"
+        )
+    return items
+
+
 def _collect_evidence(
     audit_log: str | None,
     evidence_files: tuple[str, ...],
+    run_results: tuple[str, ...] = (),
 ) -> list[EvidenceItem]:
     """Return evidence loaded from CLI inputs."""
     evidence: list[EvidenceItem] = []
     if audit_log is not None:
         evidence.append(_audit_log_evidence(audit_log))
+    for path in run_results:
+        evidence.extend(_run_result_evidence(path))
     for path in evidence_files:
         evidence.extend(_evidence_from_file(path))
     if not evidence:
         raise click.ClickException(
-            "no evidence supplied; pass --audit-log and/or --evidence-file "
-            f"(categories: {sorted(EVIDENCE_CATEGORIES)})"
+            "no evidence supplied; pass --audit-log, --run-result, and/or "
+            f"--evidence-file (categories: {sorted(EVIDENCE_CATEGORIES)})"
         )
     return evidence
 
@@ -113,6 +130,13 @@ def _collect_evidence(
     type=click.Path(exists=True),
     help="JSON file with evidence record(s); repeatable",
 )
+@click.option(
+    "--run-result",
+    "run_results",
+    multiple=True,
+    type=click.Path(exists=True),
+    help="SimulationResult JSON; auto-derives run evidence; repeatable",
+)
 @click.option("--output", default=None, type=click.Path(), help="Output JSON file")
 @click.option(
     "--report-out",
@@ -132,6 +156,7 @@ def assurance_case(
     system_name: str,
     audit_log: str | None,
     evidence_files: tuple[str, ...],
+    run_results: tuple[str, ...],
     output: str | None,
     report_out: str | None,
     report_pdf_out: str | None,
@@ -147,6 +172,9 @@ def assurance_case(
     evidence_files : tuple[str, ...]
         Optional JSON files, each a record or list of records with
         ``evidence_id``, ``category``, ``summary``, and ``record`` fields.
+    run_results : tuple[str, ...]
+        Optional ``SimulationResult`` JSON files; audit-integrity and
+        conformal-gate evidence is auto-derived from each.
     output : str | None
         Optional output path; the bundle JSON is printed to stdout otherwise.
     report_out : str | None
@@ -156,7 +184,7 @@ def assurance_case(
         Optional path for a deterministic text-PDF conformity report rendered
         from the same sealed bundle.
     """
-    evidence = _collect_evidence(audit_log, evidence_files)
+    evidence = _collect_evidence(audit_log, evidence_files, run_results)
     bundle = build_assurance_case_bundle(system_name, evidence)
     serialised = json.dumps(bundle.to_audit_record(), indent=2, sort_keys=True)
     if output is not None:
@@ -191,6 +219,13 @@ def assurance_case(
     help="JSON file with evidence record(s); repeatable",
 )
 @click.option(
+    "--run-result",
+    "run_results",
+    multiple=True,
+    type=click.Path(exists=True),
+    help="SimulationResult JSON; auto-derives run evidence; repeatable",
+)
+@click.option(
     "--output-dir",
     "output_dir",
     required=True,
@@ -201,6 +236,7 @@ def certification_evidence(
     system_name: str,
     audit_log: str | None,
     evidence_files: tuple[str, ...],
+    run_results: tuple[str, ...],
     output_dir: str,
 ) -> None:
     """Assemble a standards-shaped certification evidence package.
@@ -214,9 +250,12 @@ def certification_evidence(
     evidence_files : tuple[str, ...]
         Optional JSON files, each a record or list of records with
         ``evidence_id``, ``category``, ``summary``, and ``record`` fields.
+    run_results : tuple[str, ...]
+        Optional ``SimulationResult`` JSON files; audit-integrity and
+        conformal-gate evidence is auto-derived from each.
     output_dir : str
-        Output directory for ``manifest.json``, ``assurance_bundle.json``, and
-        ``test_vectors.json``.
+        Output directory for ``manifest.json``, ``assurance_bundle.json``,
+        ``conformity_report.md``, and ``test_vectors.json``.
     """
     destination = Path(output_dir)
     if destination.exists() and any(destination.iterdir()):
@@ -224,7 +263,7 @@ def certification_evidence(
     destination.mkdir(parents=True, exist_ok=True)
     package = build_certification_evidence_package(
         system_name,
-        _collect_evidence(audit_log, evidence_files),
+        _collect_evidence(audit_log, evidence_files, run_results),
     )
     for relative_path, payload in package.to_files().items():
         (destination / relative_path).write_text(payload, encoding="utf-8")

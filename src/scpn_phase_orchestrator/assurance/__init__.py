@@ -50,6 +50,7 @@ from scpn_phase_orchestrator.assurance.report import (
     render_conformity_report,
     render_conformity_report_pdf,
 )
+from scpn_phase_orchestrator.assurance.run_evidence import build_run_evidence
 from scpn_phase_orchestrator.assurance.standards import (
     EU_AI_ACT,
     EU_AI_ACT_CLAUSES,
@@ -96,6 +97,7 @@ __all__ = [
     "build_assurance_case_bundle",
     "build_certification_evidence_package",
     "build_evidence_item",
+    "build_run_evidence",
     "clause_catalogue",
     "clause_for_key",
     "render_conformity_report",

@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dependency-free text PDF (the distributable artefact an assessor files), built on
   the new reusable `scpn_phase_orchestrator.reporting.markdown_to_pdf_bytes` helper.
   Review-only; adds no claim beyond the sealed bundle.
+- `scpn_phase_orchestrator.assurance.build_run_evidence` derives audit-stream
+  integrity and conformal admission-gate evidence directly from a serialised
+  `SimulationResult` record, and `spo assurance-case` / `spo certification-evidence`
+  gain `--run-result` to assemble a conformity package from a run summary without
+  hand-authoring evidence JSON. It consumes the JSON record (not the runtime
+  object) and emits nothing for a surface that did not run.
 - `spo evolutionary-policy-dsl-search`, `spo evolutionary-petri-mutation`, and
   `spo evolutionary-topology-mutation` now run the deterministic offline supervisor
   mutation-search grammars from local source artefacts and emit review-only
