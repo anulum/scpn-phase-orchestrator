@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gain `--run-result` to assemble a conformity package from a run summary without
   hand-authoring evidence JSON. It consumes the JSON record (not the runtime
   object) and emits nothing for a surface that did not run.
+- The certification evidence package now also seals the rendered
+  `conformity_report.pdf` (the filable text PDF) alongside the Markdown report;
+  `CertificationEvidencePackage` file contents are now byte payloads and
+  `to_files()` returns `dict[str, bytes]`.
 - `spo evolutionary-policy-dsl-search`, `spo evolutionary-petri-mutation`, and
   `spo evolutionary-topology-mutation` now run the deterministic offline supervisor
   mutation-search grammars from local source artefacts and emit review-only

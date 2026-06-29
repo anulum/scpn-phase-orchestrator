@@ -27,7 +27,10 @@ from scpn_phase_orchestrator.assurance.case import (
     build_assurance_case_bundle,
 )
 from scpn_phase_orchestrator.assurance.evidence import EvidenceItem
-from scpn_phase_orchestrator.assurance.report import render_conformity_report
+from scpn_phase_orchestrator.assurance.report import (
+    render_conformity_report,
+    render_conformity_report_pdf,
+)
 from scpn_phase_orchestrator.assurance.standards import REGULATORY_DISCLAIMER
 
 CERTIFICATION_EVIDENCE_PACKAGE_SCHEMA = "scpn_certification_evidence_package_v1"
@@ -49,6 +52,11 @@ def _sha256_text(payload: str) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _sha256_bytes(payload: bytes) -> str:
+    """Return the SHA-256 digest for a byte payload."""
+    return hashlib.sha256(payload).hexdigest()
+
+
 @dataclass(frozen=True, slots=True)
 class CertificationEvidencePackage:
     """A deterministic standards-shaped review package.
@@ -63,21 +71,23 @@ class CertificationEvidencePackage:
     manifest:
         JSON-safe package manifest containing file digests and package digest.
     file_contents:
-        Mapping from relative package paths to deterministic JSON file content.
+        Mapping from relative package paths to deterministic file bytes. Text
+        artefacts are UTF-8 encoded; ``conformity_report.pdf`` is raw PDF bytes.
     """
 
     assurance_bundle: AssuranceCaseBundle
     test_vectors: Mapping[str, object]
     manifest: Mapping[str, object]
-    file_contents: Mapping[str, str]
+    file_contents: Mapping[str, bytes]
 
-    def to_files(self) -> dict[str, str]:
+    def to_files(self) -> dict[str, bytes]:
         """Return package files keyed by relative path.
 
         Returns
         -------
-        dict[str, str]
-            The package files, including ``manifest.json``.
+        dict[str, bytes]
+            The package file bytes, including ``manifest.json`` and the rendered
+            ``conformity_report.pdf``.
         """
         return dict(self.file_contents)
 
@@ -147,13 +157,15 @@ def build_certification_evidence_package(
     Returns
     -------
     CertificationEvidencePackage
-        The assembled package with deterministic JSON file contents.
+        The assembled package with deterministic file bytes (JSON, Markdown, and
+        the rendered conformity-report PDF).
     """
     bundle = build_assurance_case_bundle(system_name, evidence, version=version)
     bundle_payload = _dump_json(bundle.to_audit_record())
     test_vectors = _build_test_vectors(bundle)
     vector_payload = _dump_json(test_vectors)
     report_payload = render_conformity_report(bundle)
+    report_pdf = render_conformity_report_pdf(bundle)
     file_rows = [
         {
             "path": "assurance_bundle.json",
@@ -164,6 +176,11 @@ def build_certification_evidence_package(
             "path": "conformity_report.md",
             "sha256": _sha256_text(report_payload),
             "bytes": len(report_payload.encode("utf-8")),
+        },
+        {
+            "path": "conformity_report.pdf",
+            "sha256": _sha256_bytes(report_pdf),
+            "bytes": len(report_pdf),
         },
         {
             "path": "test_vectors.json",
@@ -191,10 +208,11 @@ def build_certification_evidence_package(
         test_vectors=test_vectors,
         manifest=manifest,
         file_contents={
-            "assurance_bundle.json": bundle_payload,
-            "conformity_report.md": report_payload,
-            "test_vectors.json": vector_payload,
-            "manifest.json": _dump_json(manifest),
+            "assurance_bundle.json": bundle_payload.encode("utf-8"),
+            "conformity_report.md": report_payload.encode("utf-8"),
+            "conformity_report.pdf": report_pdf,
+            "test_vectors.json": vector_payload.encode("utf-8"),
+            "manifest.json": _dump_json(manifest).encode("utf-8"),
         },
     )
 

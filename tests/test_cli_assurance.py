@@ -219,6 +219,7 @@ def test_build_certification_evidence_package(
     assert {row["path"] for row in manifest["files"]} == {
         "assurance_bundle.json",
         "conformity_report.md",
+        "conformity_report.pdf",
         "test_vectors.json",
     }
     assert [row["evidence_id"] for row in vectors["evidence_hash_vectors"]] == [
@@ -236,6 +237,14 @@ def test_build_certification_evidence_package(
         row for row in manifest["files"] if row["path"] == "conformity_report.md"
     )
     assert report_row["sha256"] == hashlib.sha256(report.encode("utf-8")).hexdigest()
+
+    # The filable conformity-report PDF is sealed into the package too.
+    report_pdf = (out / "conformity_report.pdf").read_bytes()
+    assert report_pdf.startswith(b"%PDF-1.4")
+    pdf_row = next(
+        row for row in manifest["files"] if row["path"] == "conformity_report.pdf"
+    )
+    assert pdf_row["sha256"] == hashlib.sha256(report_pdf).hexdigest()
 
 
 def test_certification_evidence_refuses_non_empty_output_dir(

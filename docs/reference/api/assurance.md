@@ -54,6 +54,8 @@ The package directory contains:
   payload;
 - `conformity_report.md` — a human-readable, per-standard clause-by-clause
   conformity report rendered from the bundle and sealed into the manifest digest;
+- `conformity_report.pdf` — the same conformity report as a deterministic text
+  PDF (the filable artefact), also sealed into the manifest digest;
 - `test_vectors.json` — recomputable evidence content-hash vectors and
   clause-rationale hash vectors.
 

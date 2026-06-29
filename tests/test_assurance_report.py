@@ -139,17 +139,24 @@ def test_certification_package_seals_the_conformity_report() -> None:
     package = build_certification_evidence_package("Grid Supervisor", evidence)
     files = package.to_files()
 
-    assert "conformity_report.md" in files
-    report = files["conformity_report.md"]
+    report = files["conformity_report.md"].decode("utf-8")
     assert report == render_conformity_report(package.assurance_bundle)
+    assert files["conformity_report.pdf"] == render_conformity_report_pdf(
+        package.assurance_bundle
+    )
 
     rows = {row["path"]: row for row in package.manifest["files"]}
     assert set(rows) == {
         "assurance_bundle.json",
         "conformity_report.md",
+        "conformity_report.pdf",
         "test_vectors.json",
     }
     assert (
         rows["conformity_report.md"]["sha256"]
         == hashlib.sha256(report.encode("utf-8")).hexdigest()
+    )
+    assert (
+        rows["conformity_report.pdf"]["sha256"]
+        == hashlib.sha256(files["conformity_report.pdf"]).hexdigest()
     )

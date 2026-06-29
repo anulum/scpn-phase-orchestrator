@@ -255,7 +255,8 @@ def certification_evidence(
         conformal-gate evidence is auto-derived from each.
     output_dir : str
         Output directory for ``manifest.json``, ``assurance_bundle.json``,
-        ``conformity_report.md``, and ``test_vectors.json``.
+        ``conformity_report.md``, ``conformity_report.pdf``, and
+        ``test_vectors.json``.
     """
     destination = Path(output_dir)
     if destination.exists() and any(destination.iterdir()):
@@ -266,7 +267,7 @@ def certification_evidence(
         _collect_evidence(audit_log, evidence_files, run_results),
     )
     for relative_path, payload in package.to_files().items():
-        (destination / relative_path).write_text(payload, encoding="utf-8")
+        (destination / relative_path).write_bytes(payload)
     click.echo(
         "Wrote certification evidence package to "
         f"{destination} ({package.manifest['package_hash']})"
