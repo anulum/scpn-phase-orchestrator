@@ -29,13 +29,26 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _contains_boolean_alias(value: object) -> bool:
-    """Return whether the value contains any boolean alias."""
+    """Return whether the value contains any boolean alias.
+
+    A homogeneous numpy array reports its element kind through its ``dtype`` in
+    constant time; only object-dtype arrays and raw Python sequences (where a
+    ``bool`` can hide among floats) need the per-element scan.
+    """
+    if isinstance(value, np.ndarray) and value.dtype != object:
+        return bool(value.dtype == np.bool_)
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, bool | np.bool_) for item in raw.ravel())
 
 
 def _contains_complex_alias(value: object) -> bool:
-    """Return whether the value contains any complex-number alias."""
+    """Return whether the value contains any complex-number alias.
+
+    Mirrors :func:`_contains_boolean_alias`: numpy arrays answer from ``dtype`` in
+    constant time, while object-dtype arrays and Python sequences are scanned.
+    """
+    if isinstance(value, np.ndarray) and value.dtype != object:
+        return bool(np.iscomplexobj(value))
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, complex | np.complexfloating) for item in raw.ravel())
 
@@ -160,14 +173,14 @@ class LagModel:
         """
         distances = _validate_distances(distances)
         speed = _validate_positive_real(speed, name="speed")
-        n = distances.shape[0]
-        alpha: FloatArray = np.zeros((n, n), dtype=np.float64)
-        for i in range(n):
-            for j in range(i + 1, n):
-                lag = 2.0 * np.pi * distances[i, j] / speed
-                alpha[i, j] = lag
-                alpha[j, i] = -lag
-        return alpha
+        # Antisymmetric propagation lag: alpha[i, j] = 2*pi*distance[i, j]/speed
+        # for i < j and its negative below the diagonal. Vectorised over the strict
+        # upper triangle (distances are symmetric with a zero diagonal), which is
+        # bit-identical to the per-element form and removes the O(N^2) Python loop.
+        scaled = (2.0 * np.pi * distances) / speed
+        upper: FloatArray = np.triu(scaled, k=1)
+        alpha: FloatArray = upper - upper.T
+        return np.ascontiguousarray(alpha, dtype=np.float64)
 
     def estimate_lag(
         self, signal_a: FloatArray, signal_b: FloatArray, sample_rate: float

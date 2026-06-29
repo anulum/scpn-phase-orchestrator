@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 129,
     "rust_kernel_files": 97,
-    "test_files": 719
+    "test_files": 720
   },
   "documentation": {
     "public_pages": [
@@ -1858,6 +1858,7 @@
       "tests/test_coupling_infer.py",
       "tests/test_coupling_knm.py",
       "tests/test_coupling_lags.py",
+      "tests/test_coupling_lags_validation.py",
       "tests/test_coupling_lazy_exports.py",
       "tests/test_coupling_modules.py",
       "tests/test_coupling_prior.py",
