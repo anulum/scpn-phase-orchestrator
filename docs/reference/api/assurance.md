@@ -20,8 +20,14 @@ recorded as `not_addressed` so coverage gaps are explicit rather than implied.
 spo assurance-case --system my-deployment \
   --audit-log run.jsonl \
   --evidence-file twin_confidence.json \
-  --output assurance_bundle.json
+  --output assurance_bundle.json \
+  --report-out conformity_report.md
 ```
+
+`--report-out` additionally renders a human-readable Markdown conformity report
+from the same sealed bundle — a per-standard, clause-by-clause table of
+conformance status, contributing evidence, and rationale, anchored to the bundle
+hash for traceability.
 
 For operator review packages, `spo certification-evidence` wraps the same
 assurance bundle with deterministic test vectors and a manifest:
@@ -39,6 +45,8 @@ The package directory contains:
   coverage summary, package hash, and review-only disclaimers;
 - `assurance_bundle.json` — the existing `scpn_assurance_case_bundle_v1`
   payload;
+- `conformity_report.md` — a human-readable, per-standard clause-by-clause
+  conformity report rendered from the bundle and sealed into the manifest digest;
 - `test_vectors.json` — recomputable evidence content-hash vectors and
   clause-rationale hash vectors.
 
@@ -79,6 +87,18 @@ hash-sealed while preserving the same review-only boundary as the underlying
 assurance case.
 
 ::: scpn_phase_orchestrator.assurance.certification
+
+## Conformity report
+
+`scpn_phase_orchestrator.assurance.report` renders an assurance-case bundle as a
+deterministic Markdown conformity report — the document a regulatory assessor
+reads. It restates the sealed bundle verbatim (coverage rollup, per-standard
+clause conformance with status, evidence, and rationale, and the evidence
+inventory) under the regulatory disclaimer and anchored to the bundle hash. It
+adds no claim beyond the bundle and is review-only. The certification evidence
+package seals the rendered report as `conformity_report.md`.
+
+::: scpn_phase_orchestrator.assurance.report
 
 ## Oscillation-monitoring evidence (NERC PRC-028 / PRC-030)
 

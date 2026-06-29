@@ -45,6 +45,10 @@ from scpn_phase_orchestrator.assurance.evidence import (
     EvidenceItem,
     build_evidence_item,
 )
+from scpn_phase_orchestrator.assurance.report import (
+    CONFORMITY_REPORT_SCHEMA,
+    render_conformity_report,
+)
 from scpn_phase_orchestrator.assurance.standards import (
     EU_AI_ACT,
     EU_AI_ACT_CLAUSES,
@@ -66,6 +70,7 @@ __all__ = [
     "AssuranceCaseBundle",
     "CONFORMAL_GATE",
     "CONFORMANCE_STATUSES",
+    "CONFORMITY_REPORT_SCHEMA",
     "CERTIFICATION_EVIDENCE_PACKAGE_DISCLAIMER",
     "CERTIFICATION_EVIDENCE_PACKAGE_SCHEMA",
     "CertificationEvidencePackage",
@@ -92,4 +97,5 @@ __all__ = [
     "build_evidence_item",
     "clause_catalogue",
     "clause_for_key",
+    "render_conformity_report",
 ]

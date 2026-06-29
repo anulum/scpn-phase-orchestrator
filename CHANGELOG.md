@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.assurance.report.render_conformity_report` renders an
+  assurance-case bundle as a deterministic, human-readable Markdown conformity
+  report — a per-standard, clause-by-clause table of conformance status,
+  contributing evidence, and rationale, under the regulatory disclaimer and
+  anchored to the bundle hash. The certification evidence package now seals the
+  rendered report as `conformity_report.md`, and `spo assurance-case --report-out`
+  writes it standalone. Review-only; adds no claim beyond the sealed bundle.
 - `spo evolutionary-policy-dsl-search`, `spo evolutionary-petri-mutation`, and
   `spo evolutionary-topology-mutation` now run the deterministic offline supervisor
   mutation-search grammars from local source artefacts and emit review-only

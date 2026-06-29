@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -87,6 +88,33 @@ def test_build_to_output_file(runner: CliRunner, tmp_path: Path) -> None:
     assert bundle["bundle_hash"] in result.output
 
 
+def test_build_with_report_out(runner: CliRunner, tmp_path: Path) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    bundle_path = tmp_path / "bundle.json"
+    report_path = tmp_path / "conformity.md"
+    result = runner.invoke(
+        main,
+        [
+            "assurance-case",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--output",
+            str(bundle_path),
+            "--report-out",
+            str(report_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    report = report_path.read_text(encoding="utf-8")
+    assert report.startswith("# Conformity Evidence Report — Sys")
+    assert f"`{bundle['bundle_hash']}`" in report
+    assert f"Wrote conformity report to {report_path}" in result.output
+
+
 def test_build_certification_evidence_package(
     runner: CliRunner, tmp_path: Path
 ) -> None:
@@ -115,6 +143,7 @@ def test_build_certification_evidence_package(
     assert manifest["assurance_bundle_hash"] == bundle["bundle_hash"]
     assert {row["path"] for row in manifest["files"]} == {
         "assurance_bundle.json",
+        "conformity_report.md",
         "test_vectors.json",
     }
     assert [row["evidence_id"] for row in vectors["evidence_hash_vectors"]] == [
@@ -122,6 +151,16 @@ def test_build_certification_evidence_package(
         "twin",
     ]
     assert "technical evidence-mapping package" in manifest["disclaimer"]
+
+    # The human-readable conformity report is sealed into the package.
+    report = (out / "conformity_report.md").read_text(encoding="utf-8")
+    assert report.startswith("# Conformity Evidence Report — Sys")
+    assert f"`{bundle['bundle_hash']}`" in report
+    assert "## Coverage summary" in report
+    report_row = next(
+        row for row in manifest["files"] if row["path"] == "conformity_report.md"
+    )
+    assert report_row["sha256"] == hashlib.sha256(report.encode("utf-8")).hexdigest()
 
 
 def test_certification_evidence_refuses_non_empty_output_dir(

@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.assurance import (
     build_assurance_case_bundle,
     build_certification_evidence_package,
     build_evidence_item,
+    render_conformity_report,
 )
 from scpn_phase_orchestrator.runtime.cli._app import main
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
@@ -112,11 +113,19 @@ def _collect_evidence(
     help="JSON file with evidence record(s); repeatable",
 )
 @click.option("--output", default=None, type=click.Path(), help="Output JSON file")
+@click.option(
+    "--report-out",
+    "report_out",
+    default=None,
+    type=click.Path(),
+    help="Also write a human-readable Markdown conformity report to this path",
+)
 def assurance_case(
     system_name: str,
     audit_log: str | None,
     evidence_files: tuple[str, ...],
     output: str | None,
+    report_out: str | None,
 ) -> None:
     """Assemble an assurance-case evidence bundle.
 
@@ -131,6 +140,9 @@ def assurance_case(
         ``evidence_id``, ``category``, ``summary``, and ``record`` fields.
     output : str | None
         Optional output path; the bundle JSON is printed to stdout otherwise.
+    report_out : str | None
+        Optional path for a human-readable Markdown conformity report rendered
+        from the same sealed bundle.
     """
     evidence = _collect_evidence(audit_log, evidence_files)
     bundle = build_assurance_case_bundle(system_name, evidence)
@@ -140,6 +152,9 @@ def assurance_case(
         click.echo(f"Wrote assurance-case bundle to {output} ({bundle.bundle_hash})")
     else:
         click.echo(serialised)
+    if report_out is not None:
+        Path(report_out).write_text(render_conformity_report(bundle), encoding="utf-8")
+        click.echo(f"Wrote conformity report to {report_out} ({bundle.bundle_hash})")
 
 
 @main.command(name="certification-evidence")

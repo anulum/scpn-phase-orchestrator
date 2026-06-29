@@ -27,6 +27,7 @@ from scpn_phase_orchestrator.assurance.case import (
     build_assurance_case_bundle,
 )
 from scpn_phase_orchestrator.assurance.evidence import EvidenceItem
+from scpn_phase_orchestrator.assurance.report import render_conformity_report
 from scpn_phase_orchestrator.assurance.standards import REGULATORY_DISCLAIMER
 
 CERTIFICATION_EVIDENCE_PACKAGE_SCHEMA = "scpn_certification_evidence_package_v1"
@@ -152,11 +153,17 @@ def build_certification_evidence_package(
     bundle_payload = _dump_json(bundle.to_audit_record())
     test_vectors = _build_test_vectors(bundle)
     vector_payload = _dump_json(test_vectors)
+    report_payload = render_conformity_report(bundle)
     file_rows = [
         {
             "path": "assurance_bundle.json",
             "sha256": _sha256_text(bundle_payload),
             "bytes": len(bundle_payload.encode("utf-8")),
+        },
+        {
+            "path": "conformity_report.md",
+            "sha256": _sha256_text(report_payload),
+            "bytes": len(report_payload.encode("utf-8")),
         },
         {
             "path": "test_vectors.json",
@@ -185,6 +192,7 @@ def build_certification_evidence_package(
         manifest=manifest,
         file_contents={
             "assurance_bundle.json": bundle_payload,
+            "conformity_report.md": report_payload,
             "test_vectors.json": vector_payload,
             "manifest.json": _dump_json(manifest),
         },
