@@ -22,11 +22,19 @@ from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
-    build_plugin_execution_approval,
     build_plugin_execution_plan,
 )
 from scpn_phase_orchestrator.runtime.audit_stream import read_event_stream
 from scpn_phase_orchestrator.runtime.cli import main
+from tests.plugin_execution_fixtures import (
+    normalize_plan_hash as _normalize_plan_hash,
+)
+from tests.plugin_execution_fixtures import (
+    write_approval_payload as _write_approval_payload,
+)
+from tests.plugin_execution_fixtures import (
+    write_plan_payload as _write_plan_payload,
+)
 
 
 @pytest.fixture
@@ -1483,100 +1491,6 @@ def _lookup_target_hash(
         ),
     )
     return plan.target_hash
-
-
-def _write_plan_payload(
-    path: Path,
-    manifest: PluginManifest,
-    kind: str,
-    name: str,
-    *,
-    execution_permitted: bool = True,
-    require_target_hash_approval: bool = False,
-    approved_target_hashes: tuple[str, ...] = (),
-) -> dict[str, object]:
-    policy = PluginRuntimeExecutionPolicy(
-        loading_permitted=True,
-        execution_permitted=True,
-        require_target_hash_approval=require_target_hash_approval,
-        approved_target_hashes=approved_target_hashes,
-    )
-    plan = build_plugin_execution_plan(
-        manifest,
-        kind,
-        name,
-        policy=policy,
-    )
-    payload: dict[str, object] = {
-        **plan.audit_record,
-        "manifest": manifest.to_audit_record(),
-        "capability": {
-            "kind": plan.capability.kind,
-            "name": plan.capability.name,
-            "target": plan.capability.target,
-            "version": plan.capability.version,
-            "channels": list(plan.capability.channels),
-            "knobs": list(plan.capability.knobs),
-        },
-    }
-    if not execution_permitted:
-        payload["execution_permitted"] = False
-        payload["plan_hash"] = _normalize_plan_hash(payload)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-    return payload
-
-
-def _write_approval_payload(
-    path: Path,
-    manifest: PluginManifest,
-    kind: str,
-    name: str,
-    *,
-    operator_identity: str = "operator_42",
-    approval_reference: str = "RFC-2026-05-20-01",
-    approval_reason: str = "Production change window",
-    approved: bool = True,
-) -> dict[str, object]:
-    policy = PluginRuntimeExecutionPolicy(
-        loading_permitted=True,
-        execution_permitted=True,
-    )
-    plan = build_plugin_execution_plan(
-        manifest,
-        kind,
-        name,
-        policy=policy,
-    )
-    approval = build_plugin_execution_approval(
-        plan,
-        operator_identity=operator_identity,
-        approval_reference=approval_reference,
-        approval_reason=approval_reason,
-    )
-    payload = dict(approval.audit_record)
-    payload["approved"] = approved
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
-    return payload
-
-
-def _recompute_plan_hash(plan_payload: dict[str, object]) -> str:
-    canonical_payload = dict(plan_payload)
-    canonical_payload.pop("plan_hash", None)
-    canonical_payload.pop("manifest", None)
-    canonical_payload.pop("capability", None)
-    canonical_payload.pop("compatible", None)
-    canonical_payload.pop("compatibility_reasons", None)
-    canonical = json.dumps(canonical_payload, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def _normalize_plan_hash(plan_payload: dict[str, object]) -> str:
-    payload = dict(plan_payload)
-    payload["plan_hash"] = _recompute_plan_hash(plan_payload)
-    return payload["plan_hash"]
 
 
 def test_plugins_plan_execution_outputs_non_executing_plan(
