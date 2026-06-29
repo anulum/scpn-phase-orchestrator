@@ -160,7 +160,9 @@ def _controller_focus_index(
         return int(np.argmin(pointwise))
     if automaton.temporal_op == "eventually":
         return int(np.argmax(pointwise))
-    raise ValueError(f"unsupported STL temporal operator {automaton.temporal_op!r}")
+    raise ValueError(  # pragma: no cover - parser yields only always/eventually
+        f"unsupported STL temporal operator {automaton.temporal_op!r}"
+    )
 
 
 def _candidate_for_predicate(
@@ -199,4 +201,6 @@ def _controller_direction(op: str) -> str:
         return "decrease"
     if op == "==":
         return "restore"
-    raise ValueError(f"unsupported STL comparison operator {op!r}")
+    raise ValueError(  # pragma: no cover - parser yields only the five known operators
+        f"unsupported STL comparison operator {op!r}"
+    )
