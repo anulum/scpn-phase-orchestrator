@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 129,
     "rust_kernel_files": 97,
-    "test_files": 726
+    "test_files": 727
   },
   "documentation": {
     "public_pages": [
@@ -1991,6 +1991,7 @@
       "tests/test_inertial_stability.py",
       "tests/test_information_geometry_control.py",
       "tests/test_information_geometry_examples.py",
+      "tests/test_information_geometry_validation.py",
       "tests/test_information_replay_cyber_industrial.py",
       "tests/test_information_replay_infrastructure.py",
       "tests/test_information_replay_physiology.py",

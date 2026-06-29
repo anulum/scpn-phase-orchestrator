@@ -291,7 +291,9 @@ def _validate_gradient(
     if array.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional array")
     if not np.all(np.isfinite(array)):
-        raise ValueError(f"{name} must contain finite values only")
+        raise ValueError(  # pragma: no cover - already finite from _as_float_array
+            f"{name} must contain finite values only"
+        )
     return array.astype(np.float64, copy=True)
 
 
@@ -305,9 +307,13 @@ def _as_float_array(
         raise ValueError(f"{name} must contain real-valued numeric values")
     array = np.asarray(values, dtype=np.float64)
     if not isinstance(array, np.ndarray):
-        raise ValueError(f"{name} must be an array-like of floats")
+        raise ValueError(  # pragma: no cover - asarray returns a float64 ndarray
+            f"{name} must be an array-like of floats"
+        )
     if not np.issubdtype(array.dtype, np.floating):
-        raise ValueError(f"{name} must contain numeric float-like values")
+        raise ValueError(  # pragma: no cover - asarray dtype is float64
+            f"{name} must contain numeric float-like values"
+        )
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain finite values")
     return np.array(array, dtype=np.float64, copy=True)
@@ -317,7 +323,7 @@ def _contains_complex_alias(value: object) -> bool:
     """Return whether the value contains any complex-number alias."""
     try:
         array = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError):  # pragma: no cover - asarray never raises
         return False
     return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
@@ -326,7 +332,7 @@ def _contains_boolean_alias(value: object) -> bool:
     """Return whether the value contains any boolean alias."""
     try:
         array = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError):  # pragma: no cover - asarray never raises
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
