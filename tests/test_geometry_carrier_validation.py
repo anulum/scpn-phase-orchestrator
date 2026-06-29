@@ -69,3 +69,40 @@ def test_u1_geometry_carrier_reset_rejects_non_integer_seed() -> None:
     carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
     with pytest.raises(TypeError, match="int or None"):
         carrier.reset(seed="bad")  # type: ignore[arg-type]
+
+
+def test_u1_geometry_carrier_rejects_non_integer_oscillator_count() -> None:
+    with pytest.raises(TypeError, match="n_oscillators must be a positive integer"):
+        GeometryCarrier("four")  # type: ignore[arg-type]
+
+
+def test_u1_geometry_carrier_rejects_non_positive_oscillator_count() -> None:
+    with pytest.raises(ValueError, match="n_oscillators must be a positive integer"):
+        GeometryCarrier(0)
+
+
+def test_u1_geometry_carrier_rejects_non_integer_latent_dim() -> None:
+    with pytest.raises(TypeError, match="z_dim must be a positive integer"):
+        GeometryCarrier(4, z_dim="eight")  # type: ignore[arg-type]
+
+
+def test_u1_geometry_carrier_rejects_non_real_learning_rate() -> None:
+    with pytest.raises(TypeError, match="lr must be a finite positive real"):
+        GeometryCarrier(4, lr="fast")  # type: ignore[arg-type]
+
+
+def test_u1_geometry_carrier_rejects_non_positive_learning_rate() -> None:
+    with pytest.raises(ValueError, match="lr must be a finite positive real"):
+        GeometryCarrier(4, lr=-0.1)
+
+
+def test_u1_geometry_carrier_decode_rejects_non_finite_latent() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    with pytest.raises(ValueError, match="z must contain only finite values"):
+        carrier.decode(np.array([0.0, np.nan]))
+
+
+def test_u1_geometry_carrier_update_rejects_non_finite_cost() -> None:
+    carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
+    with pytest.raises(TypeError, match="cost must be finite real"):
+        carrier.update(cost=float("nan"))
