@@ -25,6 +25,7 @@ import click
 from scpn_phase_orchestrator.assurance import (
     AUDIT_LOGGING,
     EVIDENCE_CATEGORIES,
+    REPLAY_DETERMINISM,
     EvidenceItem,
     build_assurance_case_bundle,
     build_certification_evidence_package,
@@ -35,6 +36,7 @@ from scpn_phase_orchestrator.assurance import (
 )
 from scpn_phase_orchestrator.runtime.cli._app import main
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
+from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 
 def _audit_log_evidence(log_path: str) -> EvidenceItem:
@@ -51,6 +53,32 @@ def _audit_log_evidence(log_path: str) -> EvidenceItem:
             "verified_records": verified,
             "entry_count": len(entries),
         },
+    )
+
+
+def _replay_determinism_evidence(log_path: str) -> EvidenceItem:
+    """Return replay-determinism evidence by re-executing the logged run."""
+    engine_replay = ReplayEngine(log_path)
+    entries = engine_replay.load()
+    header = engine_replay.load_header(entries)
+    if header is None:
+        raise click.ClickException(
+            f"{log_path} has no header record for determinism replay"
+        )
+    engine = engine_replay.build_engine(header)
+    if isinstance(engine, StuartLandauEngine):
+        deterministic, verified = engine_replay.verify_determinism_sl_chained(
+            engine, entries
+        )
+    else:
+        deterministic, verified = engine_replay.verify_determinism_chained(
+            engine, entries
+        )
+    return build_evidence_item(
+        evidence_id="replay-determinism",
+        category=REPLAY_DETERMINISM,
+        summary=f"Deterministic re-execution over {log_path}",
+        record={"deterministic": deterministic, "verified_transitions": verified},
     )
 
 
@@ -97,11 +125,15 @@ def _collect_evidence(
     audit_log: str | None,
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...] = (),
+    *,
+    verify_determinism: bool = False,
 ) -> list[EvidenceItem]:
     """Return evidence loaded from CLI inputs."""
     evidence: list[EvidenceItem] = []
     if audit_log is not None:
         evidence.append(_audit_log_evidence(audit_log))
+        if verify_determinism:
+            evidence.append(_replay_determinism_evidence(audit_log))
     for path in run_results:
         evidence.extend(_run_result_evidence(path))
     for path in evidence_files:
@@ -131,6 +163,12 @@ def _collect_evidence(
     help="JSON file with evidence record(s); repeatable",
 )
 @click.option(
+    "--verify-determinism",
+    "verify_determinism",
+    is_flag=True,
+    help="With --audit-log, add replay-determinism evidence (re-runs determinism)",
+)
+@click.option(
     "--run-result",
     "run_results",
     multiple=True,
@@ -157,6 +195,7 @@ def assurance_case(
     audit_log: str | None,
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...],
+    verify_determinism: bool,
     output: str | None,
     report_out: str | None,
     report_pdf_out: str | None,
@@ -175,6 +214,9 @@ def assurance_case(
     run_results : tuple[str, ...]
         Optional ``SimulationResult`` JSON files; audit-integrity and
         conformal-gate evidence is auto-derived from each.
+    verify_determinism : bool
+        When set with ``--audit-log``, re-run the determinism check and add a
+        replay-determinism evidence item.
     output : str | None
         Optional output path; the bundle JSON is printed to stdout otherwise.
     report_out : str | None
@@ -184,7 +226,9 @@ def assurance_case(
         Optional path for a deterministic text-PDF conformity report rendered
         from the same sealed bundle.
     """
-    evidence = _collect_evidence(audit_log, evidence_files, run_results)
+    evidence = _collect_evidence(
+        audit_log, evidence_files, run_results, verify_determinism=verify_determinism
+    )
     bundle = build_assurance_case_bundle(system_name, evidence)
     serialised = json.dumps(bundle.to_audit_record(), indent=2, sort_keys=True)
     if output is not None:
@@ -219,6 +263,12 @@ def assurance_case(
     help="JSON file with evidence record(s); repeatable",
 )
 @click.option(
+    "--verify-determinism",
+    "verify_determinism",
+    is_flag=True,
+    help="With --audit-log, add replay-determinism evidence (re-runs determinism)",
+)
+@click.option(
     "--run-result",
     "run_results",
     multiple=True,
@@ -237,6 +287,7 @@ def certification_evidence(
     audit_log: str | None,
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...],
+    verify_determinism: bool,
     output_dir: str,
 ) -> None:
     """Assemble a standards-shaped certification evidence package.
@@ -253,6 +304,9 @@ def certification_evidence(
     run_results : tuple[str, ...]
         Optional ``SimulationResult`` JSON files; audit-integrity and
         conformal-gate evidence is auto-derived from each.
+    verify_determinism : bool
+        When set with ``--audit-log``, re-run the determinism check and add a
+        replay-determinism evidence item.
     output_dir : str
         Output directory for ``manifest.json``, ``assurance_bundle.json``,
         ``conformity_report.md``, ``conformity_report.pdf``, and
@@ -264,7 +318,12 @@ def certification_evidence(
     destination.mkdir(parents=True, exist_ok=True)
     package = build_certification_evidence_package(
         system_name,
-        _collect_evidence(audit_log, evidence_files, run_results),
+        _collect_evidence(
+            audit_log,
+            evidence_files,
+            run_results,
+            verify_determinism=verify_determinism,
+        ),
     )
     for relative_path, payload in package.to_files().items():
         (destination / relative_path).write_bytes(payload)

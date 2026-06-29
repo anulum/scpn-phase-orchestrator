@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `conformity_report.pdf` (the filable text PDF) alongside the Markdown report;
   `CertificationEvidencePackage` file contents are now byte payloads and
   `to_files()` returns `dict[str, bytes]`.
+- `spo assurance-case` / `spo certification-evidence` gain `--verify-determinism`:
+  with `--audit-log`, the logged run is re-executed and a `replay_determinism`
+  evidence item recording the deterministic re-execution result is added to the
+  bundle, mapping to the reproducibility/robustness clauses.
 - `spo evolutionary-policy-dsl-search`, `spo evolutionary-petri-mutation`, and
   `spo evolutionary-topology-mutation` now run the deterministic offline supervisor
   mutation-search grammars from local source artefacts and emit review-only

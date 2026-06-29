@@ -44,7 +44,9 @@ spo certification-evidence --system my-deployment \
 `--run-result` takes a serialised `SimulationResult` summary and auto-derives the
 run's audit-stream integrity and conformal admission-gate evidence, so a package
 can be assembled from a run summary without hand-authoring evidence JSON
-(`--audit-log` and `--evidence-file` remain available and compose with it).
+(`--audit-log` and `--evidence-file` remain available and compose with it). With
+`--audit-log`, adding `--verify-determinism` re-executes the logged run and
+records a `replay_determinism` evidence item for the reproducibility clauses.
 
 The package directory contains:
 

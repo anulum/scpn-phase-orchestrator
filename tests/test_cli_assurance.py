@@ -14,6 +14,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import click
 import pytest
 from click.testing import CliRunner
 
@@ -285,6 +286,60 @@ def test_build_from_audit_log(runner: CliRunner, tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     bundle = json.loads(result.output)
     categories = {item["category"] for item in bundle["evidence"]}
+    assert "audit_logging" in categories
+
+
+def _write_header_log(path: Path, *, amplitude_mode: bool = False) -> None:
+    header: dict[str, object] = {"header": True, "n_oscillators": 2, "dt": 0.01}
+    if amplitude_mode:
+        header["amplitude_mode"] = True
+    path.write_text(json.dumps(header) + "\n", encoding="utf-8")
+
+
+def test_replay_determinism_evidence_for_an_upde_log(tmp_path: Path) -> None:
+    log = tmp_path / "upde.jsonl"
+    _write_header_log(log)
+    item = cli_assurance._replay_determinism_evidence(str(log))
+    assert item.category == "replay_determinism"
+    assert item.record["deterministic"] is True
+    assert item.record["verified_transitions"] == 0
+
+
+def test_replay_determinism_evidence_for_a_stuart_landau_log(tmp_path: Path) -> None:
+    log = tmp_path / "sl.jsonl"
+    _write_header_log(log, amplitude_mode=True)
+    item = cli_assurance._replay_determinism_evidence(str(log))
+    assert item.category == "replay_determinism"
+    assert "verified_transitions" in item.record
+
+
+def test_replay_determinism_evidence_rejects_a_log_without_a_header(
+    tmp_path: Path,
+) -> None:
+    log = tmp_path / "nohdr.jsonl"
+    log.write_text(json.dumps({"step": 0}) + "\n", encoding="utf-8")
+    with pytest.raises(click.ClickException, match="no header record"):
+        cli_assurance._replay_determinism_evidence(str(log))
+
+
+def test_build_with_verify_determinism(runner: CliRunner, tmp_path: Path) -> None:
+    log = tmp_path / "audit.jsonl"
+    _write_header_log(log)
+    result = runner.invoke(
+        main,
+        [
+            "assurance-case",
+            "--system",
+            "Sys",
+            "--audit-log",
+            str(log),
+            "--verify-determinism",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    bundle = json.loads(result.output)
+    categories = {item["category"] for item in bundle["evidence"]}
+    assert "replay_determinism" in categories
     assert "audit_logging" in categories
 
 
