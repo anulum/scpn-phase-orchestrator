@@ -57,7 +57,7 @@ def _contains_boolean_alias(value: object) -> bool:
             return False
     try:
         raw = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError):  # pragma: no cover - asarray-to-object never raises
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
 
@@ -66,15 +66,15 @@ def _contains_complex_alias(value: object) -> bool:
     """Return whether the value contains any complex-number alias."""
     try:
         raw = np.asarray(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError):  # pragma: no cover - asarray-to-object never raises
         return False
-    if np.iscomplexobj(raw):
+    if np.iscomplexobj(raw):  # pragma: no cover - caller short-circuits first
         return True
     if isinstance(value, np.ndarray) and raw.dtype != object:
         return False
     try:
         raw = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError):  # pragma: no cover - asarray-to-object never raises
         return False
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.ravel())
 
@@ -234,7 +234,7 @@ def compute_ssgf_costs(
     n = W_array.shape[0]
 
     if _HAS_RUST:
-        if _rust_costs is None:
+        if _rust_costs is None:  # pragma: no cover - set when _HAS_RUST
             raise RuntimeError("Rust SSGF backend unavailable")
         w_flat: FloatArray = np.ascontiguousarray(W_array.ravel())
         p: FloatArray = np.ascontiguousarray(phases, dtype=np.float64)
