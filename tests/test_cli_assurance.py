@@ -20,6 +20,11 @@ from click.testing import CliRunner
 
 import scpn_phase_orchestrator.runtime.cli.assurance as cli_assurance
 from scpn_phase_orchestrator.runtime.cli import main
+from scpn_phase_orchestrator.supervisor.formal_export import (
+    FormalSafetyProperty,
+    FormalTextArtifact,
+    build_formal_verification_package,
+)
 
 
 @pytest.fixture
@@ -189,6 +194,70 @@ def test_run_result_without_trust_evidence_is_rejected(
     )
     assert result.exit_code != 0
     assert "no audit-integrity or conformal-gate evidence" in result.output
+
+
+def _write_formal_package(path: Path) -> None:
+    package = build_formal_verification_package(
+        {"safety": FormalTextArtifact("smt2", "(assert (= x x))")},
+        [
+            FormalSafetyProperty(
+                name="bounded",
+                artifact_name="safety",
+                checker="smt",
+                expression="(check-sat)",
+            )
+        ],
+    )
+    path.write_text(json.dumps(package.to_audit_record()), encoding="utf-8")
+
+
+def test_build_from_formal_package(runner: CliRunner, tmp_path: Path) -> None:
+    manifest = tmp_path / "formal.json"
+    _write_formal_package(manifest)
+    out = tmp_path / "bundle.json"
+    result = runner.invoke(
+        main,
+        [
+            "assurance-case",
+            "--system",
+            "Sys",
+            "--formal-package",
+            str(manifest),
+            "--output",
+            str(out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    bundle = json.loads(out.read_text(encoding="utf-8"))
+    formal = [
+        item for item in bundle["evidence"] if item["category"] == "formal_verification"
+    ]
+    assert len(formal) == 1
+    assert formal[0]["evidence_id"] == "formal-verification-package"
+
+
+def test_formal_package_non_object_is_rejected(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    bad = tmp_path / "formal.json"
+    bad.write_text(json.dumps(["not-an-object"]), encoding="utf-8")
+    result = runner.invoke(
+        main, ["assurance-case", "--system", "Sys", "--formal-package", str(bad)]
+    )
+    assert result.exit_code != 0
+    assert "must be a FormalVerificationPackage JSON manifest" in result.output
+
+
+def test_formal_package_invalid_manifest_is_rejected(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    bad = tmp_path / "formal.json"
+    bad.write_text(json.dumps({"package_name": "x"}), encoding="utf-8")
+    result = runner.invoke(
+        main, ["assurance-case", "--system", "Sys", "--formal-package", str(bad)]
+    )
+    assert result.exit_code != 0
+    assert "is not a valid manifest" in result.output
 
 
 def test_build_certification_evidence_package(

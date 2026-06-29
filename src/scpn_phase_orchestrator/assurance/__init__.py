@@ -45,6 +45,9 @@ from scpn_phase_orchestrator.assurance.evidence import (
     EvidenceItem,
     build_evidence_item,
 )
+from scpn_phase_orchestrator.assurance.formal_evidence import (
+    build_formal_verification_evidence,
+)
 from scpn_phase_orchestrator.assurance.report import (
     CONFORMITY_REPORT_SCHEMA,
     render_conformity_report,
@@ -97,6 +100,7 @@ __all__ = [
     "build_assurance_case_bundle",
     "build_certification_evidence_package",
     "build_evidence_item",
+    "build_formal_verification_evidence",
     "build_run_evidence",
     "clause_catalogue",
     "clause_for_key",

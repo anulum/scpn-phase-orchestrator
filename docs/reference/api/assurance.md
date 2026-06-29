@@ -47,6 +47,10 @@ can be assembled from a run summary without hand-authoring evidence JSON
 (`--audit-log` and `--evidence-file` remain available and compose with it). With
 `--audit-log`, adding `--verify-determinism` re-executes the logged run and
 records a `replay_determinism` evidence item for the reproducibility clauses.
+`--formal-package` takes a serialised `FormalVerificationPackage` manifest (from
+the supervisor formal exporters) and adds a `formal_verification` evidence item for
+the formal-argument clauses, recording which model-checking properties were posed
+against which exported artefacts.
 
 The package directory contains:
 
@@ -92,6 +96,19 @@ stays free of the numeric runtime import chain, and it emits nothing for a
 surface that did not run.
 
 ::: scpn_phase_orchestrator.assurance.run_evidence
+
+## Formal-verification evidence
+
+`scpn_phase_orchestrator.assurance.formal_evidence` maps a serialised
+`FormalVerificationPackage.to_audit_record()` manifest — the supervisor formal
+exporters' artefact hashes, model-checking property library, and non-executing
+checker commands — into a single `formal_verification` evidence item. Like the
+run-derived evidence, it consumes the JSON manifest (not the package object), so
+the assurance package stays free of the supervisor import chain, and it restates
+the manifest verbatim: it records which properties were posed against which
+artefacts, never that any external checker accepted them.
+
+::: scpn_phase_orchestrator.assurance.formal_evidence
 
 ## Bundle assembly
 

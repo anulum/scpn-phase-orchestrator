@@ -8,11 +8,11 @@
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 217,
-    "python_package_modules": 670,
+    "python_package_modules": 671,
     "research_experimental_modules": 213,
-    "runtime_serving_modules": 131,
+    "runtime_serving_modules": 132,
     "rust_kernel_files": 97,
-    "test_files": 731
+    "test_files": 732
   },
   "documentation": {
     "public_pages": [
@@ -908,6 +908,7 @@
       "src/scpn_phase_orchestrator/assurance/case.py",
       "src/scpn_phase_orchestrator/assurance/certification.py",
       "src/scpn_phase_orchestrator/assurance/evidence.py",
+      "src/scpn_phase_orchestrator/assurance/formal_evidence.py",
       "src/scpn_phase_orchestrator/assurance/prc_oscillation.py",
       "src/scpn_phase_orchestrator/assurance/report.py",
       "src/scpn_phase_orchestrator/assurance/run_evidence.py",
@@ -1085,6 +1086,7 @@
     "src/scpn_phase_orchestrator/assurance/case.py",
     "src/scpn_phase_orchestrator/assurance/certification.py",
     "src/scpn_phase_orchestrator/assurance/evidence.py",
+    "src/scpn_phase_orchestrator/assurance/formal_evidence.py",
     "src/scpn_phase_orchestrator/assurance/prc_oscillation.py",
     "src/scpn_phase_orchestrator/assurance/report.py",
     "src/scpn_phase_orchestrator/assurance/run_evidence.py",
@@ -1752,6 +1754,7 @@
       "tests/test_api_docs_navigation.py",
       "tests/test_architecture_studio_manifest.py",
       "tests/test_assurance_case.py",
+      "tests/test_assurance_formal_evidence.py",
       "tests/test_assurance_report.py",
       "tests/test_assurance_run_evidence.py",
       "tests/test_attention_residuals.py",

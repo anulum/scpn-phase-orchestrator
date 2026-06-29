@@ -30,6 +30,7 @@ from scpn_phase_orchestrator.assurance import (
     build_assurance_case_bundle,
     build_certification_evidence_package,
     build_evidence_item,
+    build_formal_verification_evidence,
     build_run_evidence,
     render_conformity_report,
     render_conformity_report_pdf,
@@ -121,10 +122,24 @@ def _run_result_evidence(path: str) -> list[EvidenceItem]:
     return items
 
 
+def _formal_package_evidence(path: str) -> EvidenceItem:
+    """Return formal-verification evidence from a verification-package manifest."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise click.ClickException(
+            f"{path} must be a FormalVerificationPackage JSON manifest"
+        )
+    try:
+        return build_formal_verification_evidence(payload)
+    except (ValueError, TypeError) as exc:
+        raise click.ClickException(f"{path} is not a valid manifest: {exc}") from exc
+
+
 def _collect_evidence(
     audit_log: str | None,
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...] = (),
+    formal_packages: tuple[str, ...] = (),
     *,
     verify_determinism: bool = False,
 ) -> list[EvidenceItem]:
@@ -136,11 +151,14 @@ def _collect_evidence(
             evidence.append(_replay_determinism_evidence(audit_log))
     for path in run_results:
         evidence.extend(_run_result_evidence(path))
+    for path in formal_packages:
+        evidence.append(_formal_package_evidence(path))
     for path in evidence_files:
         evidence.extend(_evidence_from_file(path))
     if not evidence:
         raise click.ClickException(
-            "no evidence supplied; pass --audit-log, --run-result, and/or "
+            "no evidence supplied; pass --audit-log, --run-result, "
+            "--formal-package, and/or "
             f"--evidence-file (categories: {sorted(EVIDENCE_CATEGORIES)})"
         )
     return evidence
@@ -175,6 +193,13 @@ def _collect_evidence(
     type=click.Path(exists=True),
     help="SimulationResult JSON; auto-derives run evidence; repeatable",
 )
+@click.option(
+    "--formal-package",
+    "formal_packages",
+    multiple=True,
+    type=click.Path(exists=True),
+    help="FormalVerificationPackage manifest JSON; adds formal evidence; repeatable",
+)
 @click.option("--output", default=None, type=click.Path(), help="Output JSON file")
 @click.option(
     "--report-out",
@@ -195,6 +220,7 @@ def assurance_case(
     audit_log: str | None,
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...],
+    formal_packages: tuple[str, ...],
     verify_determinism: bool,
     output: str | None,
     report_out: str | None,
@@ -214,6 +240,9 @@ def assurance_case(
     run_results : tuple[str, ...]
         Optional ``SimulationResult`` JSON files; audit-integrity and
         conformal-gate evidence is auto-derived from each.
+    formal_packages : tuple[str, ...]
+        Optional ``FormalVerificationPackage`` manifest JSON files; a
+        formal-verification evidence item is derived from each.
     verify_determinism : bool
         When set with ``--audit-log``, re-run the determinism check and add a
         replay-determinism evidence item.
@@ -227,7 +256,11 @@ def assurance_case(
         from the same sealed bundle.
     """
     evidence = _collect_evidence(
-        audit_log, evidence_files, run_results, verify_determinism=verify_determinism
+        audit_log,
+        evidence_files,
+        run_results,
+        formal_packages,
+        verify_determinism=verify_determinism,
     )
     bundle = build_assurance_case_bundle(system_name, evidence)
     serialised = json.dumps(bundle.to_audit_record(), indent=2, sort_keys=True)
@@ -276,6 +309,13 @@ def assurance_case(
     help="SimulationResult JSON; auto-derives run evidence; repeatable",
 )
 @click.option(
+    "--formal-package",
+    "formal_packages",
+    multiple=True,
+    type=click.Path(exists=True),
+    help="FormalVerificationPackage manifest JSON; adds formal evidence; repeatable",
+)
+@click.option(
     "--output-dir",
     "output_dir",
     required=True,
@@ -287,6 +327,7 @@ def certification_evidence(
     audit_log: str | None,
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...],
+    formal_packages: tuple[str, ...],
     verify_determinism: bool,
     output_dir: str,
 ) -> None:
@@ -304,6 +345,9 @@ def certification_evidence(
     run_results : tuple[str, ...]
         Optional ``SimulationResult`` JSON files; audit-integrity and
         conformal-gate evidence is auto-derived from each.
+    formal_packages : tuple[str, ...]
+        Optional ``FormalVerificationPackage`` manifest JSON files; a
+        formal-verification evidence item is derived from each.
     verify_determinism : bool
         When set with ``--audit-log``, re-run the determinism check and add a
         replay-determinism evidence item.
@@ -322,6 +366,7 @@ def certification_evidence(
             audit_log,
             evidence_files,
             run_results,
+            formal_packages,
             verify_determinism=verify_determinism,
         ),
     )

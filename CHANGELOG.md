@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with `--audit-log`, the logged run is re-executed and a `replay_determinism`
   evidence item recording the deterministic re-execution result is added to the
   bundle, mapping to the reproducibility/robustness clauses.
+- `scpn_phase_orchestrator.assurance.build_formal_verification_evidence` maps a
+  serialised `FormalVerificationPackage` manifest (the supervisor formal
+  exporters' PRISM/TLA/SMT artefact hashes, property library, and non-executing
+  checker commands) into a `formal_verification` evidence item, and
+  `spo assurance-case` / `spo certification-evidence` gain `--formal-package` to
+  attach the formal argument to a conformity bundle. It consumes the JSON manifest
+  (not the package object), restates it verbatim, and records which properties were
+  posed against which artefacts — never that any checker accepted them.
 - `spo evolutionary-policy-dsl-search`, `spo evolutionary-petri-mutation`, and
   `spo evolutionary-topology-mutation` now run the deterministic offline supervisor
   mutation-search grammars from local source artefacts and emit review-only
