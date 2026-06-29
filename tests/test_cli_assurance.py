@@ -19,6 +19,14 @@ import pytest
 from click.testing import CliRunner
 
 import scpn_phase_orchestrator.runtime.cli.assurance as cli_assurance
+from scpn_phase_orchestrator.assurance import (
+    SignedCertificationEnvelope,
+    verify_signed_certification_envelope,
+)
+from scpn_phase_orchestrator.runtime.audit_pqc import (
+    generate_signing_seed,
+    signing_key_from_seed,
+)
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalSafetyProperty,
@@ -27,9 +35,35 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
 )
 
 
+def _mldsa_supported() -> bool:
+    """Return whether the platform cryptography backend implements ML-DSA."""
+    try:
+        from cryptography.exceptions import UnsupportedAlgorithm
+        from cryptography.hazmat.primitives.asymmetric import mldsa
+    except ImportError:
+        return False
+    try:
+        mldsa.MLDSA65PrivateKey.generate()
+    except UnsupportedAlgorithm:
+        return False
+    return True
+
+
+requires_mldsa = pytest.mark.skipif(
+    not _mldsa_supported(),
+    reason="ML-DSA requires an OpenSSL 3.5+ cryptography backend",
+)
+
+
 @pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
+
+
+def _write_chain_log(path: Path, *, tip: str = "ab" * 32) -> None:
+    path.write_text(
+        json.dumps({"event": "close", "_hash": tip}) + "\n", encoding="utf-8"
+    )
 
 
 def _write_evidence(path: Path) -> None:
@@ -439,6 +473,184 @@ def test_non_object_row_is_reported(runner: CliRunner, tmp_path: Path) -> None:
     )
     assert result.exit_code != 0
     assert "must be a JSON object" in result.output
+
+
+def test_certification_evidence_writes_anchor_only_envelope(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    log = tmp_path / "audit.jsonl"
+    tip = "ab" * 32
+    _write_chain_log(log, tip=tip)
+    out = tmp_path / "review_package"
+    result = runner.invoke(
+        main,
+        [
+            "certification-evidence",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--audit-log",
+            str(log),
+            "--sign-envelope",
+            "--output-dir",
+            str(out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    envelope_record = json.loads(
+        (out / "signed_envelope.json").read_text(encoding="utf-8")
+    )
+    assert envelope_record["schema"] == "scpn_signed_certification_envelope_v1"
+    assert envelope_record["package_hash"] == manifest["package_hash"]
+    assert envelope_record["audit_chain_tip"] == tip
+    assert envelope_record["seal"] is None
+
+    envelope = SignedCertificationEnvelope(
+        package_hash=envelope_record["package_hash"],
+        audit_chain_tip=envelope_record["audit_chain_tip"],
+        audit_record_count=envelope_record["audit_record_count"],
+        seal=envelope_record["seal"],
+        envelope_hash=envelope_record["envelope_hash"],
+    )
+    assert verify_signed_certification_envelope(
+        envelope, package_hash=manifest["package_hash"]
+    )
+
+
+def test_sign_envelope_without_audit_log_is_rejected(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    out = tmp_path / "review_package"
+    result = runner.invoke(
+        main,
+        [
+            "certification-evidence",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--sign-envelope",
+            "--output-dir",
+            str(out),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "require --audit-log" in result.output
+
+
+def test_anchor_envelope_rejects_log_without_chain_tip(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    log = tmp_path / "audit.jsonl"
+    log.write_text(json.dumps({"header": True}) + "\n", encoding="utf-8")
+    out = tmp_path / "review_package"
+    result = runner.invoke(
+        main,
+        [
+            "certification-evidence",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--audit-log",
+            str(log),
+            "--sign-envelope",
+            "--output-dir",
+            str(out),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "cannot anchor an envelope" in result.output
+
+
+def test_signed_envelope_rejects_a_malformed_seed(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    log = tmp_path / "audit.jsonl"
+    _write_chain_log(log)
+    seed_file = tmp_path / "seed.hex"
+    seed_file.write_text("not-valid-hex", encoding="utf-8")
+    out = tmp_path / "review_package"
+    result = runner.invoke(
+        main,
+        [
+            "certification-evidence",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--audit-log",
+            str(log),
+            "--signing-seed-file",
+            str(seed_file),
+            "--output-dir",
+            str(out),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "post-quantum envelope signing failed" in result.output
+
+
+@requires_mldsa
+def test_certification_evidence_signs_envelope_with_seed(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    evidence = tmp_path / "ev.json"
+    _write_evidence(evidence)
+    log = tmp_path / "audit.jsonl"
+    tip = "ab" * 32
+    _write_chain_log(log, tip=tip)
+    seed = generate_signing_seed()
+    seed_file = tmp_path / "seed.hex"
+    seed_file.write_text(seed, encoding="utf-8")
+    out = tmp_path / "review_package"
+    result = runner.invoke(
+        main,
+        [
+            "certification-evidence",
+            "--system",
+            "Sys",
+            "--evidence-file",
+            str(evidence),
+            "--audit-log",
+            str(log),
+            "--signing-seed-file",
+            str(seed_file),
+            "--output-dir",
+            str(out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    envelope_record = json.loads(
+        (out / "signed_envelope.json").read_text(encoding="utf-8")
+    )
+    assert envelope_record["seal"] is not None
+    assert envelope_record["seal"]["tip_hash"] == tip
+
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    public_hex = signing_key_from_seed(seed).public_key().public_bytes_raw().hex()
+    envelope = SignedCertificationEnvelope(
+        package_hash=envelope_record["package_hash"],
+        audit_chain_tip=envelope_record["audit_chain_tip"],
+        audit_record_count=envelope_record["audit_record_count"],
+        seal=envelope_record["seal"],
+        envelope_hash=envelope_record["envelope_hash"],
+    )
+    assert verify_signed_certification_envelope(
+        envelope,
+        package_hash=manifest["package_hash"],
+        trusted_public_key_hex=public_hex,
+    )
 
 
 def test_invalid_category_is_reported(runner: CliRunner, tmp_path: Path) -> None:

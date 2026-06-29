@@ -52,6 +52,14 @@ the supervisor formal exporters) and adds a `formal_verification` evidence item 
 the formal-argument clauses, recording which model-checking properties were posed
 against which exported artefacts.
 
+With `--audit-log`, `--sign-envelope` additionally writes `signed_envelope.json` —
+a deterministic binding of the package hash to the run's audit-chain tip, so the
+package is anchored to a specific, tamper-evident, replayable execution.
+`--signing-seed-file` supplies an ML-DSA seed (FIPS 204) and adds a post-quantum
+seal over that tip to the envelope, making the binding publicly verifiable
+(it implies `--sign-envelope`). The ML-DSA seal needs the `pqc` extra and an
+OpenSSL 3.5+ backend.
+
 The package directory contains:
 
 - `manifest.json` — file digests, the assurance bundle hash, standards covered,
@@ -63,7 +71,9 @@ The package directory contains:
 - `conformity_report.pdf` — the same conformity report as a deterministic text
   PDF (the filable artefact), also sealed into the manifest digest;
 - `test_vectors.json` — recomputable evidence content-hash vectors and
-  clause-rationale hash vectors.
+  clause-rationale hash vectors;
+- `signed_envelope.json` — *(only with `--sign-envelope`)* the package hash bound
+  to the run's audit-chain tip, optionally carrying a post-quantum ML-DSA seal.
 
 The package is standards-shaped evidence for reviewer triage. It does not claim
 legal compliance, certification, or runtime actuation permission.
@@ -126,6 +136,22 @@ hash-sealed while preserving the same review-only boundary as the underlying
 assurance case.
 
 ::: scpn_phase_orchestrator.assurance.certification
+
+## Signed certification envelope
+
+`scpn_phase_orchestrator.assurance.envelope` binds a certification package to the
+run that produced it. A `SignedCertificationEnvelope` commits, in one deterministic
+record, to the package hash, the run's audit-chain tip (the SHA-256 commitment to
+the whole audit log, so the package is anchored to a specific, replayable, tamper-
+evident execution), and an optional post-quantum seal over that tip
+(`scpn_phase_orchestrator.runtime.audit_pqc.AuditChainSeal`, ML-DSA / FIPS 204). It
+reuses the audit seal verbatim and performs no signing or log reading itself — the
+CLI layer reads the tip and produces the seal — so the assurance leaf only validates
+and binds. `verify_signed_certification_envelope` re-derives the envelope hash,
+checks the package binding, and verifies any attached seal against a trusted public
+key.
+
+::: scpn_phase_orchestrator.assurance.envelope
 
 ## Conformity report
 

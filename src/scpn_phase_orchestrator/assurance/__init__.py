@@ -35,6 +35,12 @@ from scpn_phase_orchestrator.assurance.certification import (
     CertificationEvidencePackage,
     build_certification_evidence_package,
 )
+from scpn_phase_orchestrator.assurance.envelope import (
+    SIGNED_CERTIFICATION_ENVELOPE_SCHEMA,
+    SignedCertificationEnvelope,
+    build_signed_certification_envelope,
+    verify_signed_certification_envelope,
+)
 from scpn_phase_orchestrator.assurance.evidence import (
     AUDIT_LOGGING,
     CONFORMAL_GATE,
@@ -93,7 +99,9 @@ __all__ = [
     "REGULATORY_DISCLAIMER",
     "REPLAY_DETERMINISM",
     "RegulatoryClause",
+    "SIGNED_CERTIFICATION_ENVELOPE_SCHEMA",
     "SUPPORTED_STANDARDS",
+    "SignedCertificationEnvelope",
     "TWIN_CONFIDENCE",
     "UL_4600",
     "UL_4600_CLAUSES",
@@ -102,8 +110,10 @@ __all__ = [
     "build_evidence_item",
     "build_formal_verification_evidence",
     "build_run_evidence",
+    "build_signed_certification_envelope",
     "clause_catalogue",
     "clause_for_key",
     "render_conformity_report",
     "render_conformity_report_pdf",
+    "verify_signed_certification_envelope",
 ]

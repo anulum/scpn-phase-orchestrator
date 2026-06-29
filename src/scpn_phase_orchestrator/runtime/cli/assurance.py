@@ -32,8 +32,15 @@ from scpn_phase_orchestrator.assurance import (
     build_evidence_item,
     build_formal_verification_evidence,
     build_run_evidence,
+    build_signed_certification_envelope,
     render_conformity_report,
     render_conformity_report_pdf,
+)
+from scpn_phase_orchestrator.runtime.audit_pqc import (
+    AuditChainSeal,
+    read_audit_chain_tip,
+    seal_audit_chain,
+    signing_key_from_seed,
 )
 from scpn_phase_orchestrator.runtime.cli._app import main
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
@@ -133,6 +140,39 @@ def _formal_package_evidence(path: str) -> EvidenceItem:
         return build_formal_verification_evidence(payload)
     except (ValueError, TypeError) as exc:
         raise click.ClickException(f"{path} is not a valid manifest: {exc}") from exc
+
+
+def _signed_envelope_record(
+    package_hash: str,
+    audit_log: str,
+    signing_seed_file: str | None,
+) -> dict[str, object]:
+    """Return a signed, replay-anchored certification envelope record.
+
+    The envelope anchors ``package_hash`` to the audit-chain tip of ``audit_log``;
+    when ``signing_seed_file`` is given, it also carries a post-quantum ML-DSA seal
+    over that tip produced from the seed.
+    """
+    try:
+        tip_hash, record_count = read_audit_chain_tip(Path(audit_log))
+    except ValueError as exc:
+        raise click.ClickException(
+            f"{audit_log} cannot anchor an envelope: {exc}"
+        ) from exc
+    seal: AuditChainSeal | None = None
+    if signing_seed_file is not None:
+        seed = Path(signing_seed_file).read_text(encoding="utf-8").strip()
+        try:
+            key = signing_key_from_seed(seed)
+            seal = seal_audit_chain(tip_hash, record_count, key)
+        except (ValueError, ImportError) as exc:
+            raise click.ClickException(
+                f"post-quantum envelope signing failed: {exc}"
+            ) from exc
+    envelope = build_signed_certification_envelope(
+        package_hash, tip_hash, record_count, seal=seal
+    )
+    return envelope.to_record()
 
 
 def _collect_evidence(
@@ -316,6 +356,19 @@ def assurance_case(
     help="FormalVerificationPackage manifest JSON; adds formal evidence; repeatable",
 )
 @click.option(
+    "--sign-envelope",
+    "sign_envelope",
+    is_flag=True,
+    help="With --audit-log, also write a replay-anchored signed_envelope.json",
+)
+@click.option(
+    "--signing-seed-file",
+    "signing_seed_file",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False),
+    help="ML-DSA seed file; adds a post-quantum seal to the envelope",
+)
+@click.option(
     "--output-dir",
     "output_dir",
     required=True,
@@ -329,6 +382,8 @@ def certification_evidence(
     run_results: tuple[str, ...],
     formal_packages: tuple[str, ...],
     verify_determinism: bool,
+    sign_envelope: bool,
+    signing_seed_file: str | None,
     output_dir: str,
 ) -> None:
     """Assemble a standards-shaped certification evidence package.
@@ -351,11 +406,22 @@ def certification_evidence(
     verify_determinism : bool
         When set with ``--audit-log``, re-run the determinism check and add a
         replay-determinism evidence item.
+    sign_envelope : bool
+        When set with ``--audit-log``, also write ``signed_envelope.json`` binding
+        the package hash to the run's audit-chain tip.
+    signing_seed_file : str | None
+        Optional ML-DSA seed file; when given, the envelope additionally carries a
+        post-quantum seal over the anchored tip (implies ``--sign-envelope``).
     output_dir : str
         Output directory for ``manifest.json``, ``assurance_bundle.json``,
-        ``conformity_report.md``, ``conformity_report.pdf``, and
-        ``test_vectors.json``.
+        ``conformity_report.md``, ``conformity_report.pdf``, ``test_vectors.json``,
+        and, when requested, ``signed_envelope.json``.
     """
+    produce_envelope = sign_envelope or signing_seed_file is not None
+    if produce_envelope and audit_log is None:
+        raise click.ClickException(
+            "--sign-envelope/--signing-seed-file require --audit-log to anchor to"
+        )
     destination = Path(output_dir)
     if destination.exists() and any(destination.iterdir()):
         raise click.ClickException(f"output directory is not empty: {destination}")
@@ -372,7 +438,12 @@ def certification_evidence(
     )
     for relative_path, payload in package.to_files().items():
         (destination / relative_path).write_bytes(payload)
+    package_hash = str(package.manifest["package_hash"])
+    if produce_envelope and audit_log is not None:
+        record = _signed_envelope_record(package_hash, audit_log, signing_seed_file)
+        (destination / "signed_envelope.json").write_text(
+            json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
     click.echo(
-        "Wrote certification evidence package to "
-        f"{destination} ({package.manifest['package_hash']})"
+        f"Wrote certification evidence package to {destination} ({package_hash})"
     )

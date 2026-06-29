@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   attach the formal argument to a conformity bundle. It consumes the JSON manifest
   (not the package object), restates it verbatim, and records which properties were
   posed against which artefacts — never that any checker accepted them.
+- `scpn_phase_orchestrator.assurance.build_signed_certification_envelope` /
+  `verify_signed_certification_envelope` bind a certification package hash to the
+  run's audit-chain tip in a deterministic `SignedCertificationEnvelope`, anchoring
+  the package to a specific, replayable, tamper-evident execution and optionally
+  carrying a post-quantum ML-DSA seal (FIPS 204) over that tip. `spo
+  certification-evidence` gains `--sign-envelope` (writes `signed_envelope.json`
+  anchored to `--audit-log`) and `--signing-seed-file` (adds the ML-DSA seal). The
+  envelope reuses the existing `runtime.audit_pqc` seal verbatim; the assurance leaf
+  only validates and binds.
 - `spo evolutionary-policy-dsl-search`, `spo evolutionary-petri-mutation`, and
   `spo evolutionary-topology-mutation` now run the deterministic offline supervisor
   mutation-search grammars from local source artefacts and emit review-only
