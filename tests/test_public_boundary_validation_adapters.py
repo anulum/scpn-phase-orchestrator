@@ -13,7 +13,11 @@ import pytest
 
 from scpn_phase_orchestrator.adapters.gaian_mesh_bridge import PeerState
 from scpn_phase_orchestrator.adapters.remanentia_bridge import CoherenceMemorySnapshot
-from scpn_phase_orchestrator.adapters.synapse_channel_bridge import AgentState
+from scpn_phase_orchestrator.adapters.synapse_channel_bridge import (
+    AgentState,
+    _normalise_hub_message,
+    _validate_agents,
+)
 from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import SynapseSnapshot
 
 
@@ -70,6 +74,61 @@ def test_agent_state_wraps_phase_values_into_two_pi() -> None:
     assert 0.0 <= state.phase_p < 2.0 * 3.141592653589793
     assert 0.0 <= state.phase_i < 2.0 * 3.141592653589793
     assert 0.0 <= state.phase_s < 2.0 * 3.141592653589793
+
+
+@pytest.mark.parametrize("bad", [-1.0, float("nan"), True, "0.0"])
+def test_agent_state_rejects_invalid_last_heartbeat(bad: object) -> None:
+    with pytest.raises(ValueError, match="last_heartbeat must be a finite"):
+        AgentState(last_heartbeat=bad)
+
+
+def test_agent_state_rejects_non_list_heartbeat_intervals() -> None:
+    with pytest.raises(ValueError, match="heartbeat_intervals must be a list"):
+        AgentState(heartbeat_intervals="not-a-list")
+
+
+@pytest.mark.parametrize("bad", [0.0, -1.0, float("inf"), True, "1.0"])
+def test_agent_state_rejects_non_positive_heartbeat_interval(bad: object) -> None:
+    with pytest.raises(ValueError, match="heartbeat_intervals must be a list"):
+        AgentState(heartbeat_intervals=[bad])
+
+
+def test_agent_state_rejects_non_list_task_events() -> None:
+    with pytest.raises(ValueError, match="task_events must be a list"):
+        AgentState(task_events="not-a-list")
+
+
+@pytest.mark.parametrize("bad", [-1.0, float("nan"), True, "0.0"])
+def test_agent_state_rejects_invalid_task_event(bad: object) -> None:
+    with pytest.raises(ValueError, match="task_events must be a list"):
+        AgentState(task_events=[bad])
+
+
+def test_agent_state_accepts_and_floats_valid_sequences() -> None:
+    state = AgentState(heartbeat_intervals=[1, 2.5], task_events=[0, 0.5])
+    assert state.heartbeat_intervals == [1.0, 2.5]
+    assert state.task_events == [0.0, 0.5]
+    assert all(isinstance(value, float) for value in state.heartbeat_intervals)
+    assert all(isinstance(value, float) for value in state.task_events)
+
+
+@pytest.mark.parametrize("bad", ["", 5])
+def test_agent_state_rejects_invalid_current_task(bad: object) -> None:
+    with pytest.raises(ValueError, match="current_task must be None or a non-empty"):
+        AgentState(current_task=bad)
+
+
+def test_agent_state_rejects_control_chars_in_current_task() -> None:
+    with pytest.raises(ValueError, match="current_task must not contain control"):
+        AgentState(current_task="task\x01")
+
+
+def test_validate_agents_treats_none_as_empty_roster() -> None:
+    assert _validate_agents(None) == []
+
+
+def test_normalise_hub_message_rejects_control_chars_in_header() -> None:
+    assert _normalise_hub_message({"sender": "node\x01", "type": "claim"}) is None
 
 
 def test_synapse_snapshot_rejects_shape_mismatch_between_matrices() -> None:
