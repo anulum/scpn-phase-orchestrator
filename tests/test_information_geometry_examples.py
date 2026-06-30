@@ -356,3 +356,19 @@ def test_ig_validate_scenario_rejects_non_scenario() -> None:
         ValueError, match="scenario must be an InformationGeometryScenario"
     ):
         _validate_information_geometry_scenario("not-a-scenario")  # type: ignore[arg-type]
+
+
+def test_rejects_scenario_identity_and_objective_label_violations() -> None:
+    with pytest.raises(ValueError, match="scenario_id must be a non-empty string"):
+        _validate_information_geometry_scenario(_bad_scenario(scenario_id="  "))
+
+    with pytest.raises(ValueError, match="objective_labels must be a non-empty tuple"):
+        _validate_information_geometry_scenario(_bad_scenario(objective_labels=()))
+
+    with pytest.raises(ValueError, match="objective_labels must contain non-empty"):
+        _validate_information_geometry_scenario(
+            _bad_scenario(objective_labels=("load_stability", "  "))
+        )
+
+    with pytest.raises(ValueError, match="must be a numeric value"):
+        _validate_information_geometry_scenario(_bad_scenario(max_step="fast"))

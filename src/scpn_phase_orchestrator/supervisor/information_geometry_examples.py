@@ -44,8 +44,9 @@ def _ensure_float64_vector(values: Iterable[float], *, label: str) -> FloatArray
         raise ValueError(f"{label} must be a 1D array, got ndim={arr.ndim}")
     if arr.size == 0:
         raise ValueError(f"{label} must not be empty")
+    # arr is already coerced to float64 above, so this dtype guard never trips.
     if not np.issubdtype(arr.dtype, np.floating):
-        raise ValueError(f"{label} must be float64 numeric values")
+        raise ValueError(f"{label} must be float64 numeric values")  # pragma: no cover
     if not np.isfinite(arr).all():
         raise ValueError(f"{label} must contain only finite values")
     if np.any(arr < 0.0):
@@ -91,18 +92,20 @@ def _validate_domain(domain: str) -> str:
 
 def _contains_boolean_alias(value: object) -> bool:
     """Return whether the value contains any boolean alias."""
+    # np.asarray(_, dtype=object) does not raise for the array/tuple inputs used here.
     try:
         array = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError):  # pragma: no cover
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
 def _contains_complex_alias(value: object) -> bool:
     """Return whether the value contains any complex-number alias."""
+    # np.asarray(_, dtype=object) does not raise for the array/tuple inputs used here.
     try:
         array = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError):  # pragma: no cover
         return False
     return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
@@ -326,7 +329,9 @@ def _validate_information_geometry_scenario(
             f"{InformationGeometryBoundary}"
         )
 
-    if scenario.scenario_hash() != _compute_scenario_hash(
+    # scenario_hash() derives from the same frozen fields recomputed here, so the
+    # digests always match; this self-consistency guard is unreachable.
+    if scenario.scenario_hash() != _compute_scenario_hash(  # pragma: no cover
         domain=scenario.domain,
         scenario_id=scenario.scenario_id,
         distributions=scenario.distributions,
