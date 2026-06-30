@@ -339,10 +339,12 @@ def build_plugin_execution_request_lifecycle_record(
         validate_plugin_execution_request_revocation_list(revocation_list)
         revocation_list_hash = revocation_list.revocation_list_hash
         revocations = revocation_list.audit_record.get("revocations")
-        if not isinstance(revocations, (list, tuple)):
+        # Defensive: validate_..._revocation_list above already guarantees
+        # ``revocations`` is a list of dict records.
+        if not isinstance(revocations, (list, tuple)):  # pragma: no cover
             raise ValueError("revocation list revocations must be a sequence")
         for revocation in revocations:
-            if not isinstance(revocation, dict):
+            if not isinstance(revocation, dict):  # pragma: no cover
                 raise ValueError("revocation list revocations must be object records")
             if revocation.get("request_hash") == request_hash:
                 revocation_hash = str(revocation["revocation_hash"])
