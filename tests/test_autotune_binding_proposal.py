@@ -12,7 +12,9 @@ import importlib
 import json
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
+import numpy as np
 import pytest
 import yaml
 
@@ -684,3 +686,53 @@ def test_cross_channel_couplings_filters_invalid_entries():
             "template": "auto_initial_k",
         }
     ]
+
+
+def test_edge_sequence_returns_empty_for_malformed_payload() -> None:
+    assert binding_proposal._edge_sequence({"sec": "not-a-mapping"}, "sec") == ()
+    assert binding_proposal._edge_sequence({"sec": {"edges": "abc"}}, "sec") == ()
+
+
+def test_accumulate_directed_edges_skips_malformed_edges() -> None:
+    matrix = np.zeros((2, 2), dtype=np.float64)
+    column_index = {"a": 0, "b": 1}
+    edges: list[dict[str, Any]] = [
+        {"source": 1, "target": "b", "w": 0.5},
+        {"source": "x", "target": "b", "w": 0.5},
+        {"source": "a", "target": "b", "w": True},
+        {"source": "a", "target": "b", "w": float("inf")},
+    ]
+
+    binding_proposal._accumulate_directed_edges(
+        matrix, column_index=column_index, edges=edges, weight_field="w"
+    )
+
+    assert float(matrix.sum()) == 0.0
+
+
+def test_accumulate_correlation_edges_skips_malformed_edges() -> None:
+    matrix = np.zeros((2, 2), dtype=np.float64)
+    column_index = {"a": 0, "b": 1}
+    edges: list[dict[str, Any]] = [
+        {"source": 1, "target": "b", "abs_correlation": 0.5},
+        {"source": "x", "target": "b", "abs_correlation": 0.5},
+        {"source": "a", "target": "b", "abs_correlation": True},
+        {"source": "a", "target": "b", "abs_correlation": float("nan")},
+    ]
+
+    binding_proposal._accumulate_correlation_edges(
+        matrix, column_index=column_index, edges=edges
+    )
+
+    assert float(matrix.sum()) == 0.0
+
+
+def test_cross_channel_couplings_skips_malformed_edges() -> None:
+    proposal: dict[str, Any] = {
+        "edges": [
+            "not-a-mapping",
+            {"source_channel": 1, "target_channel": "b", "strength": 0.5},
+        ]
+    }
+
+    assert binding_proposal._cross_channel_couplings(proposal) == []
