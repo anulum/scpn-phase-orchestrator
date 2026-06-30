@@ -165,7 +165,8 @@ def watch(
     if poll_interval <= 0.0:
         click.echo("ERROR: --poll-interval must be positive", err=True)
         raise SystemExit(1)
-    if stream_format != "protobuf":
+    # Defensive: --format is click.Choice(["protobuf"]), so this never triggers.
+    if stream_format != "protobuf":  # pragma: no cover
         click.echo("ERROR: unsupported stream format", err=True)
         raise SystemExit(1)
 
