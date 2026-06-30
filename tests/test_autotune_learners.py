@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.autotune.learners import (
     generate_ppo_like_proposal,
     generate_sac_like_proposal,
 )
+from scpn_phase_orchestrator.autotune.policy_search import ReplayPolicySearchResult
 from scpn_phase_orchestrator.autotune.reward import (
     KnobPolicyCandidate,
     PolicyProposalConfig,
@@ -349,3 +350,53 @@ def test_failed_search_collects_alternatives_when_ranking_fallback_succeeds(
     assert proposal.policy_search.proposal.selected is None
     assert len(proposal.policy_search.proposal.alternatives) == 3
     assert proposal.policy_search.proposal.reasons == ("search blocked",)
+
+
+def test_learner_proposal_rejects_non_policy_search() -> None:
+    with pytest.raises(TypeError, match="policy_search must be a ReplayPolicy"):
+        LearnerPolicyProposal(
+            learner_kind="ppo",
+            policy_search=cast(ReplayPolicySearchResult, "not-a-result"),
+        )
+
+
+def test_learner_proposal_rejects_non_mapping_physics_prior() -> None:
+    seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
+    proposal = generate_ppo_like_proposal(seed, _safe_observation, seed_value=7)
+
+    with pytest.raises(TypeError, match="physics_prior must be a mapping"):
+        LearnerPolicyProposal(
+            learner_kind=proposal.learner_kind,
+            policy_search=proposal.policy_search,
+            physics_prior=cast("Mapping[str, object]", ["not-a-mapping"]),
+        )
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_type"),
+    [(np.bool_(True), bool), (np.int64(5), int)],
+)
+def test_json_safe_value_coerces_numpy_bool_and_integer(
+    value: object, expected_type: type
+) -> None:
+    result = learner_mod._json_safe_value(value)
+    assert type(result) is expected_type
+    assert result == expected_type(value)
+
+
+def test_mean_seed_k_rejects_non_float_convertible_object_array() -> None:
+    seed = KnobPolicyCandidate(K=cast("float", np.array(["x", "y"], dtype=object)))
+
+    with pytest.raises(ValueError, match="seed.K must be real-valued"):
+        learner_mod._mean_seed_k(seed)
+
+
+@pytest.mark.parametrize(
+    "array",
+    [np.array([], dtype=np.float64), np.array([np.inf], dtype=np.float64)],
+)
+def test_mean_seed_k_rejects_empty_or_non_finite_array(array: np.ndarray) -> None:
+    seed = KnobPolicyCandidate(K=array)
+
+    with pytest.raises(ValueError, match="seed.K must be finite and non-empty"):
+        learner_mod._mean_seed_k(seed)
