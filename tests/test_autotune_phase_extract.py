@@ -13,6 +13,7 @@ from typing import cast
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.autotune.phase_extract as phase_mod
 from scpn_phase_orchestrator.autotune.phase_extract import extract_phases
 
 
@@ -89,3 +90,15 @@ def test_extract_phases_bandpass_keeps_in_band_component() -> None:
     result = extract_phases(signal, fs, (4.0, 8.0))
 
     assert np.isclose(result.dominant_freq, 6.0)
+
+
+def test_real_signal_rejects_non_float_convertible_object_array() -> None:
+    with pytest.raises(ValueError, match="signal must be real-valued"):
+        phase_mod._real_signal(np.array(["x", "y"], dtype=object))
+
+
+def test_validated_bandpass_rejects_non_pair() -> None:
+    with pytest.raises(ValueError, match=r"must be a \(low, high\) frequency tuple"):
+        phase_mod._validated_bandpass(
+            cast("tuple[float, float]", (1.0, 2.0, 3.0)), 64.0
+        )
