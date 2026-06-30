@@ -11,6 +11,8 @@ from __future__ import annotations
 import importlib
 import sys
 import types
+from collections.abc import Sequence
+from typing import Any
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -360,3 +362,68 @@ class TestCaptureLoop:
             ],
         )
         assert bridge._data_buffer == [0.7]
+
+
+def _run_capture_loop(
+    bridge: LSLBCIBridge, samples: list[tuple[object, object]]
+) -> None:
+    """Feed one batch of samples through the capture loop, then stop it."""
+    state = {"index": 0}
+
+    def pull_side_effect(timeout: float = 0.1) -> tuple[object, object]:
+        if state["index"] < len(samples):
+            value = samples[state["index"]]
+            state["index"] += 1
+            return value
+        bridge._running = False
+        raise OSError("stop")
+
+    mock_inlet = MagicMock()
+    mock_inlet.pull_sample.side_effect = pull_side_effect
+    bridge._inlet = mock_inlet
+    bridge._running = True
+    bridge._capture_loop()
+
+
+class _UnindexableSequence(Sequence):
+    """A Sequence whose length passes the bound check but indexing raises."""
+
+    def __len__(self) -> int:
+        return 2
+
+    def __getitem__(self, index: Any) -> float:
+        raise IndexError("unindexable")
+
+
+def test_is_valid_timestamp_rejects_bool_and_non_float() -> None:
+    assert lsl_mod._is_valid_timestamp(True) is False
+    assert lsl_mod._is_valid_timestamp("not-a-number") is False
+
+
+def test_start_is_idempotent_when_capture_thread_already_alive() -> None:
+    bridge = LSLBCIBridge()
+    bridge._running = False
+    bridge._thread = MagicMock()
+    bridge._thread.is_alive.return_value = True
+
+    bridge.start()
+
+    assert bridge._running is True
+
+
+def test_capture_loop_skips_non_sequence_sample() -> None:
+    bridge = LSLBCIBridge(target_channel=0)
+    bridge._buffer_len = 100
+
+    _run_capture_loop(bridge, [(object(), 100.0), ([0.7], 100.1)])
+
+    assert bridge._data_buffer == [0.7]
+
+
+def test_capture_loop_skips_unindexable_sequence_sample() -> None:
+    bridge = LSLBCIBridge(target_channel=0)
+    bridge._buffer_len = 100
+
+    _run_capture_loop(bridge, [(_UnindexableSequence(), 100.0), ([0.8], 100.1)])
+
+    assert bridge._data_buffer == [0.8]
