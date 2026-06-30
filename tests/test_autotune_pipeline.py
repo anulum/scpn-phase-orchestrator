@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.autotune.freq_id import (
 from scpn_phase_orchestrator.autotune.phase_extract import PhaseResult, extract_phases
 from scpn_phase_orchestrator.autotune.pipeline import (
     AutoTuneResult,
+    _real_time_series,
     identify_binding_spec,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
@@ -93,6 +94,7 @@ class TestAutoTunePipeline:
             ([[False, True, False, True]], "boolean"),
             ([[0.0, 1.0 + 0.0j, 0.0, -1.0]], "real-valued"),
             ([[0.0, np.inf, 0.0, -1.0]], "finite"),
+            ([[0.1, 0.2, 0.3]], "needs >= 4 samples"),
         ],
     )
     def test_rejects_non_physical_time_series_payloads(
@@ -102,6 +104,12 @@ class TestAutoTunePipeline:
     ) -> None:
         with pytest.raises(ValueError, match=match):
             identify_binding_spec(cast(np.ndarray, time_series), fs=200.0)
+
+    def test_real_time_series_rejects_non_float_convertible_object_array(self) -> None:
+        payload = np.array(["x", "y", "z", "w"], dtype=object)
+
+        with pytest.raises(ValueError, match="time_series must be real-valued"):
+            _real_time_series(payload)
 
     @pytest.mark.parametrize("fs", [True, 0.0, -1.0, np.inf])
     def test_rejects_invalid_sample_rates(self, fs: object) -> None:
