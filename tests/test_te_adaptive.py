@@ -333,3 +333,35 @@ class TestTEAdaptiveBackendContracts:
         result = te_adapt_coupling(knm, history, lr=0.1, decay=0.1)
         expected = np.array([[0.0, 0.46], [0.46, 0.0]])
         np.testing.assert_allclose(result, expected, atol=1e-12)
+
+
+class TestTEAdaptiveValidationGuards:
+    """Direct contracts for the array/scalar validation helpers."""
+
+    def test_native_bool_dtype_array_is_rejected(self) -> None:
+        # A list of numpy bool scalars coerces to a bool-dtype array without
+        # tripping the object-iteration alias check, so the native-dtype guard
+        # is what refuses it.
+        value = [np.bool_(True), np.bool_(False)]
+
+        with pytest.raises(ValueError, match="must not contain boolean values"):
+            te_mod._as_finite_real_array(value, name="probe")
+
+    def test_non_float_convertible_object_array_is_rejected(self) -> None:
+        value = np.array([["a", "b"], ["c", "d"]], dtype=object)
+
+        with pytest.raises(ValueError, match="must be finite and real-valued"):
+            te_mod._as_finite_real_array(value, name="probe")
+
+    def test_phase_history_must_be_two_dimensional(self) -> None:
+        with pytest.raises(ValueError, match="finite 2-D phase matrix"):
+            te_mod._validate_phase_history(np.zeros(4), n=4)
+
+    @pytest.mark.parametrize("value", [True, "0.5", None])
+    def test_non_negative_real_rejects_non_real_values(self, value: object) -> None:
+        with pytest.raises(ValueError, match="finite non-negative real"):
+            te_mod._validate_non_negative_real(value, name="lr")
+
+    def test_adapted_coupling_wrong_shape_is_rejected(self) -> None:
+        with pytest.raises(RuntimeError, match="TE adaptive backend returned wrong"):
+            te_mod._validate_adapted_coupling(np.zeros((2, 3)), n=2)
