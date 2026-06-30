@@ -12,7 +12,7 @@
     "research_experimental_modules": 213,
     "runtime_serving_modules": 133,
     "rust_kernel_files": 97,
-    "test_files": 739
+    "test_files": 740
   },
   "documentation": {
     "public_pages": [
@@ -1767,6 +1767,7 @@
       "tests/test_audit_event_stream.py",
       "tests/test_audit_logger.py",
       "tests/test_audit_logger_validation.py",
+      "tests/test_audit_logger_validation_guards.py",
       "tests/test_audit_package_exports.py",
       "tests/test_audit_pqc.py",
       "tests/test_audit_production_signing.py",
