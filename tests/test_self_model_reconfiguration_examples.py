@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import json
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -208,3 +210,60 @@ def test_validate_scenario_record_rejects_corrupt_error_payload(
     record["self_model_error"][field] = value
     with pytest.raises(ValueError, match=match):
         examples._validate_scenario_record(record)
+
+
+def test_coerce_scalar_accepts_numpy_scalars() -> None:
+    assert examples._coerce_scalar(np.float64(1.5), label="x") == 1.5
+    assert examples._coerce_scalar(np.int64(3), label="y") == 3.0
+
+
+def test_coerce_error_payload_reads_object_error_result_fields() -> None:
+    class _ObjectErrorResult:
+        within_threshold = True
+        metric = "object_metric"
+
+    payload = examples._coerce_error_payload(
+        cast("Any", _ObjectErrorResult()),
+        predicted_phase=np.zeros(4, dtype=np.float64),
+        observed_phase=np.zeros(4, dtype=np.float64),
+        error_threshold=0.5,
+    )
+
+    assert payload["within_threshold"] is True
+    assert payload["metric"] == "object_metric"
+
+
+def test_to_audit_record_rejects_mismatched_stored_hash() -> None:
+    proposal = examples._build_static_proposals()[0]
+    tampered = dataclasses.replace(proposal, scenario_hash="f" * 64)
+
+    with pytest.raises(ValueError, match="mismatched scenario_hash"):
+        tampered.to_audit_record()
+
+
+def test_validate_proposal_rejects_phase_shape_mismatch() -> None:
+    proposal = examples._build_static_proposals()[0]
+    shorter = np.asarray(proposal.observed_phase, dtype=np.float64)[:-1]
+    tampered = dataclasses.replace(proposal, observed_phase=shorter)
+
+    with pytest.raises(ValueError, match="predicted and observed phase vectors must"):
+        examples._validate_self_model_reconfiguration_proposal(tampered)
+
+
+def test_validate_scenario_record_rejects_empty_stored_hash() -> None:
+    with pytest.raises(ValueError, match="has invalid scenario_hash"):
+        examples._validate_scenario_record(_corrupt_record("scenario_hash", ""))
+
+
+def test_coerce_error_payload_rejects_non_bool_object_within_threshold() -> None:
+    class _BadObjectErrorResult:
+        within_threshold = "maybe"
+        metric = "m"
+
+    with pytest.raises(ValueError, match="within_threshold must be boolean"):
+        examples._coerce_error_payload(
+            cast("Any", _BadObjectErrorResult()),
+            predicted_phase=np.zeros(4, dtype=np.float64),
+            observed_phase=np.zeros(4, dtype=np.float64),
+            error_threshold=0.5,
+        )

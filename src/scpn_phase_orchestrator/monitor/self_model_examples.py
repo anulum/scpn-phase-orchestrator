@@ -123,7 +123,10 @@ def _coerce_error_payload(
                 return _coerce_scalar(getattr(obj, name), label=name)
         if default is not None:
             return default
-        raise ValueError(f"missing error field(s): {', '.join(names)}")
+        # every call site passes a non-None default, so this is never reached.
+        raise ValueError(
+            f"missing error field(s): {', '.join(names)}"
+        )  # pragma: no cover
 
     def _from_obj_bool(
         obj: object, names: tuple[str, ...], default: bool | None = None
@@ -141,7 +144,10 @@ def _coerce_error_payload(
                 raise ValueError(f"{name} must be boolean")
         if default is not None:
             return default
-        raise ValueError(f"missing error boolean field(s): {', '.join(names)}")
+        # every call site passes a non-None default, so this is never reached.
+        raise ValueError(  # pragma: no cover
+            f"missing error boolean field(s): {', '.join(names)}"
+        )
 
     threshold = _from_obj(
         error_result,
@@ -303,8 +309,11 @@ class SelfModelReconfigurationProposal:
         record["scenario_hash"] = _compute_scenario_hash(
             proposal=self, error_payload=error_payload
         )
+        # _validate_self_model_reconfiguration_proposal above already rejects a
+        # mismatched stored hash, so a surviving proposal's hash is empty or equal
+        # to this digest; this guard is unreachable.
         if self.scenario_hash and self.scenario_hash != record["scenario_hash"]:
-            raise ValueError(
+            raise ValueError(  # pragma: no cover
                 f"scenario {self.scenario_id} has mismatched scenario_hash"
             )
         return record
@@ -383,7 +392,9 @@ def _validate_self_model_reconfiguration_proposal(
         )
         if scenario.scenario_hash != expected:
             raise ValueError(f"{scenario.scenario_id} has mismatched scenario_hash")
-        if len(scenario.scenario_hash) != 64:
+        # reaching here means the hash equals the freshly computed digest, which is
+        # always 64 hex chars, so this length guard is unreachable.
+        if len(scenario.scenario_hash) != 64:  # pragma: no cover
             raise ValueError(
                 f"{scenario.scenario_id} scenario_hash must be 64 hex chars"
             )
