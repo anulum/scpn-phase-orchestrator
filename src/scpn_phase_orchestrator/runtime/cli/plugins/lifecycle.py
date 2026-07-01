@@ -391,7 +391,7 @@ def plugins_lifecycle_multistore_dashboard(
 
     for policy in policies:
         request_count = policy["request_count"]
-        if not isinstance(request_count, int):
+        if not isinstance(request_count, int):  # pragma: no cover - loader enforces int
             raise click.ClickException(
                 "lifecycle policy schema mismatch: request_count must be an integer"
             )
@@ -512,7 +512,9 @@ def plugins_lifecycle_multistore_drilldown(
         policy_hash = _require_sha256(policy["policy_hash"], "policy_hash")
         summary_hash = _require_sha256(policy["summary_hash"], "summary_hash")
         request_count = policy["request_count"]
-        if not isinstance(request_count, int) or request_count < 1:
+        if (
+            not isinstance(request_count, int) or request_count < 1
+        ):  # pragma: no cover - loader enforces positive int
             raise click.ClickException(
                 "lifecycle policy schema mismatch: "
                 "request_count must be a positive integer"
