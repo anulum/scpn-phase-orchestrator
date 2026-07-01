@@ -115,6 +115,22 @@ def test_bad_actuator_knob(sample_binding_spec):
     assert any("knob" in e for e in errors)
 
 
+def test_validator_reports_malformed_actuator_limits_from_bypassed_constructor(
+    sample_binding_spec,
+):
+    actuator = object.__new__(ActuatorMapping)
+    object.__setattr__(actuator, "name", "malformed")
+    object.__setattr__(actuator, "knob", "K")
+    object.__setattr__(actuator, "scope", "global")
+    object.__setattr__(actuator, "limits", (0.0, float("inf")))
+    object.__setattr__(actuator, "rate_limit_per_step", None)
+    bad = replace(sample_binding_spec, actuators=[actuator])
+
+    errors = validate_binding_spec(bad)
+
+    assert any("limits must be finite and lo <= hi" in e for e in errors)
+
+
 def test_bad_boundary_severity(sample_binding_spec):
     bad_bounds = [
         BoundaryDef(name="b", variable="R", lower=0.0, upper=1.0, severity="extreme"),
@@ -135,6 +151,29 @@ def test_objective_references_missing_layer(sample_binding_spec):
     bad = replace(sample_binding_spec, objectives=bad_obj)
     errors = validate_binding_spec(bad)
     assert any("layer index 99" in e for e in errors)
+
+
+def test_layer_family_must_reference_declared_oscillator_family(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        layers=[
+            HierarchyLayer(
+                name="forecast",
+                index=0,
+                oscillator_ids=["osc0"],
+                family="missing-family",
+            ),
+        ],
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any(
+        "layer 'forecast'" in error
+        and "family 'missing-family'" in error
+        and "oscillator_families" in error
+        for error in errors
+    )
 
 
 def test_control_period_must_be_positive(sample_binding_spec):

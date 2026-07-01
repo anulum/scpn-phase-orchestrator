@@ -191,6 +191,36 @@ def test_channel_runtime_defaults_to_current_tick_policy_for_undeclared_channel(
     assert record["uncertain_layers"] == []
 
 
+def test_channel_runtime_defaults_to_physical_channel_for_unassigned_layer(
+    tmp_path,
+) -> None:
+    spec = {
+        "name": "channel-runtime-unassigned-layer",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.02,
+        "control_period_s": 0.1,
+        "layers": [
+            {"name": "unassigned", "index": 0, "oscillator_ids": ["p0"]},
+        ],
+        "oscillator_families": {
+            "plant": {"channel": "P", "extractor_type": "physical", "config": {}}
+        },
+        "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+    }
+    spec_path = _write_runtime_spec_payload(tmp_path, spec)
+
+    executor = ChannelRuntimeExecutor.from_spec(load_binding_spec(spec_path))
+    execution = executor.execute([LayerState(R=0.72, psi=0.31)])
+
+    assert execution.evidence[0].channel == "P"
+    assert execution.evidence[0].executed_R == 0.72
+
+
 def test_channel_runtime_confidence_weights_clamped_to_unit_interval(tmp_path):
     spec = {
         "name": "channel-runtime-confidence",
@@ -239,11 +269,11 @@ def test_channel_runtime_confidence_weights_clamped_to_unit_interval(tmp_path):
     assert run_with_weight(-0.5) == 0.0
 
 
-def test_channel_runtime_falls_back_to_default_channel_for_undefined_layer_family(
+def test_channel_runtime_rejects_undefined_layer_family(
     tmp_path,
 ) -> None:
     spec = {
-        "name": "channel-runtime-fallback-channel",
+        "name": "channel-runtime-undefined-family",
         "version": "1.0.0",
         "safety_tier": "research",
         "sample_period_s": 0.02,
@@ -267,17 +297,9 @@ def test_channel_runtime_falls_back_to_default_channel_for_undefined_layer_famil
         "actuators": [],
     }
     path = _write_runtime_spec_payload(tmp_path, spec)
-    executor = ChannelRuntimeExecutor.from_spec(load_binding_spec(path))
 
-    execution = executor.execute(
-        [LayerState(R=0.21, psi=0.01), LayerState(R=0.62, psi=0.02)]
-    )
-
-    assert [e.channel for e in execution.evidence] == ["P", "P"]
-    assert execution.evidence[0].raw_R == 0.21
-    assert execution.evidence[1].raw_R == 0.62
-    assert execution.evidence[0].executed_R == 0.21
-    assert execution.evidence[1].executed_R == 0.62
-    assert execution.evidence[1].evidence_source == "current_tick"
-    assert execution.to_audit_record()["delayed_layers"] == []
-    assert execution.to_audit_record()["uncertain_layers"] == []
+    with pytest.raises(
+        ValueError,
+        match=("layer 'unknown': family 'ghost' is not defined in oscillator_families"),
+    ):
+        ChannelRuntimeExecutor.from_spec(load_binding_spec(path))

@@ -72,6 +72,13 @@ class TestMalformedYAML:
         with pytest.raises(BindingLoadError, match="duplicate key"):
             load_binding_spec(p)
 
+    def test_unhashable_yaml_mapping_keys_fail_closed(self, tmp_path: Path) -> None:
+        p = tmp_path / "unhashable_key.yaml"
+        p.write_text("? [unhashable]\n: value\n", encoding="utf-8")
+
+        with pytest.raises(BindingLoadError, match="unhashable key"):
+            load_binding_spec(p)
+
     def test_python_yaml_tags_remain_blocked(self, tmp_path: Path) -> None:
         p = tmp_path / "python_tag.yaml"
         p.write_text("name: !!python/object/apply:os.system ['id']\n", encoding="utf-8")

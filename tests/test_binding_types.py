@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 
 from scpn_phase_orchestrator.binding.types import (
+    ActuatorMapping,
     BoundaryDef,
     DriverSpec,
     is_valid_channel_id,
@@ -60,3 +61,42 @@ def test_boundary_lower_upper_inversion_rejected():
         ValidationError, match=r"lower \(1\.0\) must be < upper \(0\.0\)"
     ):
         BoundaryDef(name="bad", variable="R", lower=1.0, upper=0.0, severity="soft")
+
+
+@pytest.mark.parametrize("limits", [(True, 1.0), ("low", 1.0)])
+def test_actuator_mapping_rejects_non_real_limits(
+    limits: tuple[object, object],
+) -> None:
+    with pytest.raises(TypeError, match="limits must be finite reals"):
+        ActuatorMapping(
+            name="bad_limits",
+            knob="K",
+            scope="global",
+            limits=limits,  # type: ignore[arg-type]
+        )
+
+
+@pytest.mark.parametrize("value", [True, "fast"])
+def test_actuator_mapping_rejects_non_real_rate_limit(value: object) -> None:
+    with pytest.raises(TypeError, match="rate_limit_per_step"):
+        ActuatorMapping(
+            name="bad_rate",
+            knob="K",
+            scope="global",
+            limits=(0.0, 1.0),
+            rate_limit_per_step=value,  # type: ignore[arg-type]
+        )
+
+
+@pytest.mark.parametrize("value", [float("inf"), -0.1])
+def test_actuator_mapping_rejects_non_finite_or_negative_rate_limit(
+    value: float,
+) -> None:
+    with pytest.raises(ValueError, match="rate_limit_per_step"):
+        ActuatorMapping(
+            name="bad_rate",
+            knob="K",
+            scope="global",
+            limits=(0.0, 1.0),
+            rate_limit_per_step=value,
+        )

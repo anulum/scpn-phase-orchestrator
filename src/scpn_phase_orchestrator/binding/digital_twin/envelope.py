@@ -30,11 +30,15 @@ class DigitalTwinSyncEnvelope:
     payload: dict[str, object]
 
     def __post_init__(self) -> None:
+        """Validate envelope identity, sequence, and payload invariants."""
         _require_non_empty(self.contract_hash, "contract_hash")
         _require_non_empty(self.capability, "capability")
         _require_non_empty(self.direction, "direction")
+        if not isinstance(self.sequence, int) or isinstance(self.sequence, bool):
+            raise ValueError("sequence must be a non-negative integer")
         if self.sequence < 0:
             raise ValueError("sequence must be >= 0")
+        _validate_payload(self.payload)
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe sync envelope.
@@ -61,7 +65,12 @@ class DigitalTwinSyncEnvelope:
         str
             The envelope serialised as a JSON string with deterministically sorted keys.
         """
-        return json.dumps(self.to_audit_record(), sort_keys=True, separators=(",", ":"))
+        return json.dumps(
+            self.to_audit_record(),
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
 
 
 @dataclass(frozen=True)
@@ -277,6 +286,20 @@ def _find_capability(
         if capability.name == name:
             return capability
     return None
+
+
+def _validate_payload(payload: object) -> None:
+    """Validate the envelope payload as strict JSON-safe data."""
+    if not isinstance(payload, dict):
+        raise ValueError("payload must be a dictionary")
+    if not all(isinstance(key, str) for key in payload):
+        raise ValueError("payload keys must be strings")
+    try:
+        json.dumps(payload, allow_nan=False, sort_keys=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "payload must be strict JSON-safe and contain only finite numbers"
+        ) from exc
 
 
 def _envelope_from_record(record: object) -> DigitalTwinSyncEnvelope | None:

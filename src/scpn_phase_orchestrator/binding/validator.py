@@ -102,6 +102,14 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
         errors.append("at least one layer is required")
 
     layer_indices = {lay.index for lay in spec.layers}
+    oscillator_family_names = set(spec.oscillator_families)
+
+    for layer in spec.layers:
+        if layer.family is not None and layer.family not in oscillator_family_names:
+            errors.append(
+                f"layer {layer.name!r}: family {layer.family!r} is not defined "
+                "in oscillator_families"
+            )
 
     used_channels = spec.used_channels()
     for channel_id in used_channels:

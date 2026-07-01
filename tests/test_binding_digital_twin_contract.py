@@ -229,6 +229,65 @@ def test_digital_twin_sync_envelope_rejects_negative_sequence() -> None:
         )
 
 
+def test_digital_twin_sync_envelope_rejects_boolean_sequence() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    with pytest.raises(ValueError, match="sequence must be a non-negative integer"):
+        build_digital_twin_sync_envelope(
+            contract,
+            capability="state_snapshot",
+            direction="twin_to_spo",
+            sequence=True,  # type: ignore[arg-type]
+            payload={"R": 0.9},
+        )
+
+
+def test_digital_twin_sync_envelope_rejects_non_mapping_payload() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    with pytest.raises(ValueError, match="payload must be a dictionary"):
+        build_digital_twin_sync_envelope(
+            contract,
+            capability="state_snapshot",
+            direction="twin_to_spo",
+            sequence=1,
+            payload=["not", "a", "mapping"],  # type: ignore[arg-type]
+        )
+
+
+def test_digital_twin_sync_envelope_rejects_non_string_payload_keys() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    with pytest.raises(ValueError, match="payload keys must be strings"):
+        build_digital_twin_sync_envelope(
+            contract,
+            capability="state_snapshot",
+            direction="twin_to_spo",
+            sequence=1,
+            payload={1: "coerced"},  # type: ignore[dict-item]
+        )
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_digital_twin_sync_envelope_rejects_non_finite_payload_values(
+    value: float,
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    with pytest.raises(ValueError, match="payload must be strict JSON-safe"):
+        build_digital_twin_sync_envelope(
+            contract,
+            capability="state_snapshot",
+            direction="twin_to_spo",
+            sequence=1,
+            payload={"R": value},
+        )
+
+
 def test_digital_twin_jsonl_adapter_round_trips_valid_envelopes(tmp_path) -> None:
     spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
     contract = build_digital_twin_binding_contract(spec)
@@ -367,6 +426,23 @@ def test_digital_twin_adapter_manifest_reports_compatible_offline_adapter() -> N
     }
 
 
+def test_digital_twin_adapter_manifest_flags_offline_replay_gate() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    compatibility = build_digital_twin_adapter_manifest(
+        contract,
+        name="memory-review",
+        transport="memory",
+        sync_capabilities=("state_snapshot",),
+        supports_replay=False,
+        requires_auth=False,
+    )
+
+    assert compatibility.compatible is False
+    assert compatibility.reasons == ("offline_transport_requires_replay",)
+
+
 def test_digital_twin_adapter_manifest_flags_live_transport_gates() -> None:
     spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
     contract = build_digital_twin_binding_contract(spec)
@@ -457,6 +533,16 @@ def test_digital_twin_rest_adapter_accepts_authorised_contract_payloads() -> Non
         "capability": "state_snapshot",
         "sequence": 8,
         "contract_hash": contract.contract_hash,
+    }
+    assert response.to_audit_record() == {
+        "status_code": 202,
+        "accepted": True,
+        "reason": "accepted",
+        "body": {
+            "capability": "state_snapshot",
+            "sequence": 8,
+            "contract_hash": contract.contract_hash,
+        },
     }
     assert adapter.to_audit_record()["queued_sequences"] == [8]
     assert adapter.drain() == (envelope,)
@@ -1074,6 +1160,7 @@ def test_digital_twin_jsonl_read_records_boolean_and_payload_type_rejections(
                 "",  # parser skip path
                 valid.to_json(),
                 "{not-json}",
+                "[]",
                 (
                     '{"contract_hash":"'
                     + contract.contract_hash
@@ -1083,8 +1170,20 @@ def test_digital_twin_jsonl_read_records_boolean_and_payload_type_rejections(
                 (
                     '{"contract_hash":"'
                     + contract.contract_hash
+                    + '","capability":7,"direction":"twin_to_spo",'
+                    + '"sequence":1,"payload":{"R":0.91}}'
+                ),
+                (
+                    '{"contract_hash":"'
+                    + contract.contract_hash
                     + '","capability":"state_snapshot","direction":"twin_to_spo",'
                     + '"sequence":1,"payload":[1,2]}'
+                ),
+                (
+                    '{"contract_hash":"'
+                    + contract.contract_hash
+                    + '","capability":"state_snapshot","direction":"twin_to_spo",'
+                    + '"sequence":1,"payload":{"R":NaN}}'
                 ),
                 wrong_hash.to_json().replace(
                     contract.contract_hash,
@@ -1103,7 +1202,10 @@ def test_digital_twin_jsonl_read_records_boolean_and_payload_type_rejections(
         {"line_number": 3, "reason": "malformed_json"},
         {"line_number": 4, "reason": "invalid_envelope"},
         {"line_number": 5, "reason": "invalid_envelope"},
-        {"line_number": 6, "reason": "contract_hash_mismatch"},
+        {"line_number": 6, "reason": "invalid_envelope"},
+        {"line_number": 7, "reason": "invalid_envelope"},
+        {"line_number": 8, "reason": "invalid_envelope"},
+        {"line_number": 9, "reason": "contract_hash_mismatch"},
     )
 
 

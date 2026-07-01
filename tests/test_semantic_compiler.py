@@ -290,6 +290,28 @@ def test_compile_artifacts_records_deterministic_retrieval_ranking(tmp_path):
     assert artefacts.retrieval_evidence[0].ranking_features["term_density"] > 0.0
 
 
+def test_compile_artifacts_ignores_unmatched_domainpack_evidence(tmp_path):
+    domainpack_root = tmp_path / "domainpacks"
+    unrelated = domainpack_root / "unrelated"
+    unrelated.mkdir(parents=True)
+    (unrelated / "binding_spec.yaml").write_text(
+        "name: unrelated\n# manufacturing queue scheduling only\n",
+        encoding="utf-8",
+    )
+
+    artefacts = compile_symbolic_binding(
+        "A 2-layer cardiac arrhythmia coherence controller",
+        name="cardiac_unmatched_retrieval_review",
+        oscillators_per_layer=2,
+        dry_run_steps=2,
+        retrieval_root=domainpack_root,
+        docs_root=None,
+    )
+
+    assert artefacts.retrieval_evidence == []
+    assert artefacts.audit_record["confidence_factors"]["retrieval_score"] == 0.0
+
+
 def test_compile_artifacts_records_long_form_docs_retrieval_evidence(tmp_path):
     docs_root = tmp_path / "docs"
     docs_root.mkdir()

@@ -67,11 +67,15 @@ def test_resolved_binding_config_summarises_runtime_choices(tmp_path):
     )
 
     summary = resolved_binding_config(load_binding_spec(path))
+    lines = format_resolved_binding_config(summary)
 
     assert summary["engine_mode"] == "kuramoto"
     assert summary["control_interval_steps"] == 10
     assert summary["oscillator_count"] == 3
     assert summary["unassigned_layer_count"] == 1
+    assert any(
+        "1 layer(s) have no explicit oscillator family" in line for line in lines
+    )
     channels = summary["channels"]
     assert channels["P"]["families"] == ["phys"]
     assert channels["P"]["extractors"] == ["hilbert"]

@@ -169,8 +169,9 @@ phase observations, proposed control actions, and audit replay.
 Transport adapters should wrap payloads in `DigitalTwinSyncEnvelope` and run
 `validate_digital_twin_sync_envelope()` before handing data to a runtime or
 external twin. The validator checks contract-hash compatibility, declared
-capability names, allowed directions, non-negative sequence numbers, and
-non-empty payloads. It remains transport-neutral: REST, gRPC, Kafka, file, and
+capability names, allowed directions, integer-only non-negative sequence
+numbers, non-empty string-keyed payloads, and strict JSON-safe finite payload
+values before serialization. It remains transport-neutral: REST, gRPC, Kafka, file, and
 hardware adapters can all use the same validation record without this module
 opening sockets.
 
@@ -343,7 +344,9 @@ Core type definitions shared across the binding subsystem.
 - `ActuatorMapping` — maps a control knob to a named actuator
   with scope and limits
 - `HierarchyLayer` — declares a layer with channel, extractor, and
-  frequency range
+  frequency range. When `family` is set, it must reference a key under
+  `oscillator_families`; omitting `family` uses the physical-channel default,
+  but misspelled family names fail validation and direct runtime construction.
 - `VALID_KNOBS` — recognised control knobs: `K`, `alpha`, `zeta`, `Psi`
 
 ::: scpn_phase_orchestrator.binding.types
@@ -367,7 +370,8 @@ separation allows testing with deliberately invalid specs.
 Schema validation for binding specifications. Checks:
 
 - Field types and required fields (against JSON schema)
-- Cross-references: actuator knobs must match declared layers
+- Cross-references: actuator scopes must match declared layers, and explicit
+  layer families must match `oscillator_families`
 - Frequency ranges: `f_min < f_max`, both positive
 - Channel constraints: at least one layer, no duplicate names
 - Template resolution: referenced templates must exist

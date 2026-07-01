@@ -47,7 +47,10 @@
             "type": "array",
             "items": { "type": "string" }
           },
-          "family": { "type": "string" }
+          "family": {
+            "type": "string",
+            "description": "Optional oscillator_families key for this layer. When present, validate_binding_spec requires the referenced family to be declared."
+          }
         }
       },
       "minItems": 1

@@ -113,6 +113,7 @@ class ChannelRuntimeExecutor:
         report: ChannelAlgebraReport,
         confidence_weights: dict[str, float],
     ) -> None:
+        """Initialise an executor from resolved channel policy inputs."""
         self._layer_channels = layer_channels
         self._report = report
         self._confidence_weights = confidence_weights
@@ -132,15 +133,8 @@ class ChannelRuntimeExecutor:
         ChannelRuntimeExecutor
             An executor configured with the spec's per-channel runtime policies.
         """
-        family_channels = {
-            name: family.channel for name, family in spec.oscillator_families.items()
-        }
-        layer_channels = tuple(
-            family_channels.get(layer.family, "P") if layer.family else "P"
-            for layer in spec.layers
-        )
         return cls(
-            layer_channels=layer_channels,
+            layer_channels=_layer_channels(spec),
             report=build_channel_algebra_report(spec),
             confidence_weights=_confidence_weights(spec),
         )
@@ -222,6 +216,32 @@ class ChannelRuntimeExecutor:
 
         self._last_raw_layers = tuple(raw_layers)
         return ChannelRuntimeExecution(layers=tuple(executed), evidence=tuple(evidence))
+
+
+def _layer_channels(spec: BindingSpec) -> tuple[str, ...]:
+    """Return the channel assigned to each layer.
+
+    Layers without an explicit family retain the historical physical-channel
+    default. Layers with an explicit family must reference an oscillator family
+    declared in the same spec; otherwise runtime execution could silently bind a
+    misspelled family to the wrong channel.
+    """
+    family_channels = {
+        name: family.channel for name, family in spec.oscillator_families.items()
+    }
+    channels: list[str] = []
+    for layer in spec.layers:
+        if layer.family is None:
+            channels.append("P")
+            continue
+        try:
+            channels.append(family_channels[layer.family])
+        except KeyError:
+            raise ValueError(
+                f"layer {layer.name!r}: family {layer.family!r} is not defined "
+                "in oscillator_families"
+            ) from None
+    return tuple(channels)
 
 
 def _confidence_weights(spec: BindingSpec) -> dict[str, float]:
