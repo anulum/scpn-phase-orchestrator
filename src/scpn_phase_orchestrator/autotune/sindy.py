@@ -78,6 +78,7 @@ class PhaseSINDy:
     """
 
     def __init__(self, threshold: float = 0.05, max_iter: int = 10):
+        """Create a SINDy estimator with validated sparsity controls."""
         if _is_boolean_alias(threshold) or not isinstance(threshold, Real):
             raise ValueError("threshold must be finite and non-negative")
         parsed_threshold = float(threshold)

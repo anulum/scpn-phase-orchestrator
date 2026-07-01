@@ -183,10 +183,20 @@ def _barrier_margins(
         return None, 0
     if replay_states is None:
         raise ValueError("a barrier requires replay_states to evaluate")
-    states = np.atleast_2d(np.asarray(replay_states, dtype=float))
-    if states.shape[0] == 0:
+    try:
+        states = np.atleast_2d(np.asarray(replay_states, dtype=np.float64))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("replay_states must be a finite numeric state table") from exc
+    if states.shape[0] == 0 or states.shape[1] == 0:
         raise ValueError("replay_states must contain at least one state")
-    margins = [float(barrier.value(np.asarray(row, dtype=float))) for row in states]
+    if not np.all(np.isfinite(states)):
+        raise ValueError("replay_states must contain only finite values")
+    margins: list[float] = []
+    for row in states:
+        margin = float(barrier.value(np.asarray(row, dtype=np.float64)))
+        if not np.isfinite(margin):
+            raise ValueError("barrier must return a finite barrier margin")
+        margins.append(margin)
     worst = min(margins)
     violations = sum(1 for margin in margins if margin < 0.0)
     return worst, violations
@@ -256,7 +266,7 @@ def certify_candidate_safety(
     ------
     ValueError
         If ``observations`` is empty, or if ``barrier`` is supplied without
-        ``replay_states`` (or with empty states).
+        ``replay_states`` (or with empty/non-finite states or margins).
     """
     if len(observations) == 0:
         raise ValueError("observations must be non-empty")

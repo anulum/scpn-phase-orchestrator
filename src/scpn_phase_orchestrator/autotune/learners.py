@@ -56,6 +56,7 @@ class LearnerPolicyProposal:
     physics_prior: AuditMapping = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Validate the replay-only learner proposal envelope."""
         if not isinstance(self.learner_kind, str) or not self.learner_kind.strip():
             raise ValueError("learner_kind must be a non-empty string")
         object.__setattr__(self, "learner_kind", self.learner_kind.strip())

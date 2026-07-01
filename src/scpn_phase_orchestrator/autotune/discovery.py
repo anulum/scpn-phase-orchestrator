@@ -48,6 +48,7 @@ class TimeSeriesDiscoveryConfig:
     learned_graph_threshold: float = 0.2
 
     def __post_init__(self) -> None:
+        """Validate and canonicalise scalar discovery thresholds."""
         correlation_threshold = _finite_real_scalar(
             self.correlation_threshold,
             "correlation_threshold",

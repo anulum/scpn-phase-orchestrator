@@ -56,6 +56,7 @@ class AdaptiveReplayPolicySearchConfig:
     min_step: float = 0.0
 
     def __post_init__(self) -> None:
+        """Validate adaptive search bounds and canonical integer fields."""
         if not isinstance(self.base_search_config, OfflinePolicySearchConfig):
             raise TypeError("base_search_config must be OfflinePolicySearchConfig")
         object.__setattr__(
@@ -98,6 +99,7 @@ class ReplayPolicySearchResult:
     proposal: AutotunePolicyProposal
 
     def __post_init__(self) -> None:
+        """Validate the seed, generated candidates, and review proposal."""
         _validate_candidate(self.seed, "seed")
         if not isinstance(self.candidates, tuple):
             raise TypeError("candidates must be a tuple of KnobPolicyCandidate")
@@ -135,6 +137,7 @@ class AdaptiveReplayPolicySearchResult:
     config: AdaptiveReplayPolicySearchConfig
 
     def __post_init__(self) -> None:
+        """Validate the multi-round adaptive replay-search record."""
         _validate_candidate(self.seed, "seed")
         if not isinstance(self.rounds, tuple):
             raise TypeError("rounds must be a tuple of ReplayPolicySearchResult")

@@ -35,5 +35,7 @@ and then the normal pipeline. SINDy output is for inspection.
 ## Scope boundaries
 
 The candidate-safety certificate generates a report but does **not** block a
-proposal (no enforcement gate). Policy-search and learner outputs are proposals,
-not live actuation.
+proposal (no enforcement gate). It still validates replay evidence strictly:
+empty observation windows, malformed replay states, and non-finite barrier
+margins fail before a certificate is emitted. Policy-search and learner outputs
+are proposals, not live actuation.

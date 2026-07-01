@@ -21,7 +21,9 @@ one content-addressed certificate:
 - **Barrier margin** — the worst value of a control-barrier function `h(x)` over
   the states the candidate visited in replay. A non-negative worst margin means
   the system never left the safe set `{x : h(x) >= 0}`; the number of violating
-  states is reported alongside it.
+  states is reported alongside it. Replay states must be finite numeric vectors,
+  and every barrier evaluation must return a finite margin; malformed evidence
+  is rejected instead of being interpreted as safe.
 - **Constraint margins** — the worst Lyapunov-exponent, STL-robustness, and
   safety-cost margins over the replay observations against the bounds in a
   `SafetyConstraintConfig`, with the proposal gate's require-evidence semantics: a
@@ -76,6 +78,11 @@ actually held over a replay and, where a forward-invariance proof covers that
 replay, upgrades the claim from measured to formally proven. That distinction is
 deliberately preserved: a proven margin and a measured one are different
 *modalities* of evidence, not different grades of the same number.
+
+The certificate also fails closed on numeric evidence: empty observations,
+missing barrier states, non-finite replay states, and non-finite barrier margins
+raise `ValueError` before a certificate is emitted. This prevents `NaN` barrier
+values from bypassing the violation count.
 
 ## Where this sits in the autotune track
 

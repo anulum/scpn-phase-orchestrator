@@ -39,6 +39,14 @@ def test_extract_phases_reports_zero_dominant_frequency_for_dc_signal() -> None:
     assert np.allclose(result.instantaneous_freq, 0.0)
 
 
+def test_extract_phases_rejects_non_vector_and_short_signals() -> None:
+    with pytest.raises(ValueError, match="1-D"):
+        extract_phases(np.ones((2, 4), dtype=np.float64), 64.0)
+
+    with pytest.raises(ValueError, match="too short"):
+        extract_phases(np.ones(3, dtype=np.float64), 64.0)
+
+
 @pytest.mark.parametrize(
     ("signal", "match"),
     [

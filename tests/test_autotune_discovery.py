@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.autotune.discovery as discovery_mod
 from scpn_phase_orchestrator.autotune.discovery import (
     TimeSeriesDiscoveryConfig,
     TimeSeriesDiscoveryReport,
@@ -179,6 +180,25 @@ def test_infer_sample_rate_rejects_irregular_time_column() -> None:
     ]
 
     with pytest.raises(ValueError, match="regular sampling interval"):
+        infer_sample_rate_from_time_column(rows, ("time", "signal"))
+
+
+def test_infer_sample_rate_rejects_degenerate_median_period(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rows = [
+        {"time": "0.0", "signal": "1.0"},
+        {"time": "0.25", "signal": "0.5"},
+        {"time": "0.50", "signal": "0.0"},
+    ]
+
+    def zero_median(_values: object) -> float:
+        return 0.0
+
+    monkeypatch.setattr(discovery_mod.np, "median", zero_median)
+    monkeypatch.setattr(discovery_mod.np, "allclose", lambda *_args, **_kwargs: True)
+
+    with pytest.raises(ValueError, match="could not be inferred"):
         infer_sample_rate_from_time_column(rows, ("time", "signal"))
 
 

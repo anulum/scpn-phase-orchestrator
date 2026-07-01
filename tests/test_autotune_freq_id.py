@@ -13,6 +13,7 @@ from typing import cast
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.autotune.freq_id as freq_mod
 from scpn_phase_orchestrator.autotune.freq_id import identify_frequencies
 
 
@@ -87,3 +88,50 @@ def test_identify_frequencies_rejects_invalid_rank_thresholds(
 def test_identify_frequencies_rejects_no_temporal_dynamics() -> None:
     with pytest.raises(ValueError, match="non-zero temporal dynamics"):
         identify_frequencies(np.ones((2, 16)), 64.0)
+
+
+def test_identify_frequencies_rejects_short_time_series() -> None:
+    with pytest.raises(ValueError, match="Need >= 3 time samples"):
+        identify_frequencies(np.asarray([[0.0, 1.0]], dtype=np.float64), 64.0)
+
+
+def test_identify_frequencies_rejects_non_numeric_data_payloads() -> None:
+    with pytest.raises(ValueError, match="real-valued"):
+        identify_frequencies(cast(np.ndarray, np.asarray([["x", "y", "z"]])), 64.0)
+
+
+def test_identify_frequencies_uses_rank_threshold_when_mode_count_is_default() -> None:
+    fs = 64.0
+    t = np.arange(0.0, 1.0, 1.0 / fs)
+    data = np.asarray(
+        [[0.0, 1.0, 0.0, -1.0] * 16, np.sin(2.0 * np.pi * 4.0 * t)],
+        dtype=object,
+    )
+
+    result = identify_frequencies(cast(np.ndarray, data), fs)
+
+    assert result.frequencies.size >= 1
+
+
+def test_identify_frequencies_rejects_degenerate_svd_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def empty_svd(
+        _matrix: np.ndarray,
+        *,
+        full_matrices: bool,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        assert full_matrices is False
+        return (
+            np.empty((1, 0), dtype=np.float64),
+            np.asarray([], dtype=np.float64),
+            np.empty((0, 3), dtype=np.float64),
+        )
+
+    monkeypatch.setattr(freq_mod.np.linalg, "svd", empty_svd)
+
+    with pytest.raises(ValueError, match="non-zero temporal dynamics"):
+        identify_frequencies(
+            np.asarray([[0.0, 1.0, 0.0, -1.0]], dtype=np.float64),
+            64.0,
+        )

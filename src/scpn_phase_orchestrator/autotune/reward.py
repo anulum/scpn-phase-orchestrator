@@ -74,6 +74,7 @@ class RewardObservation:
     safety_cost: float = 0.0
 
     def __post_init__(self) -> None:
+        """Validate observation probabilities, flags, and optional safety evidence."""
         _require_probability(self.coherence, "coherence")
         if self.previous_coherence is not None:
             _require_probability(self.previous_coherence, "previous_coherence")
@@ -110,6 +111,7 @@ class OfflinePolicySearchConfig:
     max_abs_knob: float | None = None
 
     def __post_init__(self) -> None:
+        """Validate coordinate-search step sizes and clipping bounds."""
         _require_bool(self.include_baseline, "include_baseline")
         for label, value in [
             ("K_step", self.K_step),
@@ -155,6 +157,7 @@ class RewardConfig:
     )
 
     def __post_init__(self) -> None:
+        """Validate reward weights and component-order policy."""
         _require_probability(self.target_coherence, "target_coherence")
         _require_probability(self.bad_coherence_threshold, "bad_coherence_threshold")
         for label, value in [
@@ -183,6 +186,7 @@ class SafetyConstraintConfig:
     require_safety_cost: bool = False
 
     def __post_init__(self) -> None:
+        """Validate safety evidence bounds and require-evidence flags."""
         object.__setattr__(
             self,
             "max_lyapunov_exponent",
@@ -244,6 +248,7 @@ class PolicyProposalConfig:
     )
 
     def __post_init__(self) -> None:
+        """Validate policy proposal gates and embedded safety constraints."""
         if isinstance(self.min_reward, (bool, np.bool_)) or not isinstance(
             self.min_reward, Real
         ):

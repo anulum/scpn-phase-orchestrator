@@ -288,6 +288,7 @@ class _CoalitionValuer:
         active: Sequence[str],
         evaluate: CandidateEvaluator,
     ) -> None:
+        """Initialise the memoised coalition scorer."""
         self._template = template
         self._candidate_values = candidate_values
         self._baseline_values = baseline_values
