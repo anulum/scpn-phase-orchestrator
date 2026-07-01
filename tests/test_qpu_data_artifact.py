@@ -95,6 +95,42 @@ def test_validate_rejects_invalid_artifact_fields(
         )
 
 
+def test_emit_qpu_data_artifact_rejects_empty_oscillator_network() -> None:
+    with pytest.raises(ValueError, match="at least one oscillator"):
+        emit_qpu_data_artifact(
+            domain="unit",
+            source_name="unit-fixture",
+            source_mode="curated",
+            K_nm=np.zeros((0, 0)),
+            omega=np.array([], dtype=np.float64),
+            layer_assignments=[],
+            normalization="unit canonical scaling",
+            extraction_method="unit-test",
+            replay_id="unit:replay:1",
+        )
+
+
+def test_from_dict_coerces_null_metadata_and_hashes_to_empty() -> None:
+    """JSON null metadata and hashes load as canonical empty mappings."""
+    payload = emit_qpu_data_artifact(
+        domain="unit",
+        source_name="unit-fixture",
+        source_mode="curated",
+        K_nm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+        omega=np.array([1.0, 1.2]),
+        normalization="unit canonical scaling",
+        extraction_method="unit-test",
+        replay_id="unit:replay:1",
+    )
+    payload["metadata"] = None
+    payload["hashes"] = None
+
+    artifact = QPUDataArtifact.from_dict(payload)
+
+    assert artifact.metadata == {}
+    assert set(artifact.hashes) == {"K_nm_sha256", "omega_sha256"}
+
+
 def test_validate_rejects_missing_publication_provenance() -> None:
     payload = emit_qpu_data_artifact(
         domain="unit",

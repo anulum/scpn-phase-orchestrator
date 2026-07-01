@@ -128,7 +128,7 @@ def _coerce_mapping(value: object, *, field: str) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class QPUDataArtifact:
-    """Validated oscillator data ready for quantum-control compilation."""
+    """Validated non-empty oscillator data for quantum-control compilation."""
 
     domain: str
     source_name: str
@@ -171,6 +171,8 @@ class QPUDataArtifact:
             raise ValueError("extraction_method must be non-empty")
         if K_nm.shape[0] != K_nm.shape[1]:
             raise ValueError("K_nm must be square")
+        if K_nm.shape[0] == 0:
+            raise ValueError("artifact must contain at least one oscillator")
         if omega.shape != (K_nm.shape[0],):
             msg = f"omega shape must be ({K_nm.shape[0]},), got {omega.shape}"
             raise ValueError(msg)

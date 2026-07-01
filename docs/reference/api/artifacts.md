@@ -33,12 +33,13 @@ The artifact module is not a simulator, not a QPU runner, and not a persistence
 service. Its responsibility is narrower: convert an already-reviewed oscillator
 network into a deterministic data envelope that another system can validate.
 
-The boundary has four non-negotiable contracts:
+The boundary has five non-negotiable contracts:
 
 1. Numeric arrays must be finite real `float64` arrays after coercion.
-2. The coupling graph must be a symmetric non-negative matrix with a zero diagonal.
-3. The manifest must carry provenance sufficient for review or replay.
-4. The JSON digest must change whenever the payload changes.
+2. The oscillator network must contain at least one oscillator.
+3. The coupling graph must be a symmetric non-negative matrix with a zero diagonal.
+4. The manifest must carry provenance sufficient for review or replay.
+5. The JSON digest must change whenever the payload changes.
 
 The module therefore rejects malformed inputs early and returns plain Python
 mappings that serialise through the standard JSON encoder with `allow_nan=False`.
@@ -136,7 +137,7 @@ rejected before hashes are computed.
 
 | Array | Required rank | Shape relation |
 |---|---:|---|
-| `K_nm` | 2 | Square matrix `(N, N)`. |
+| `K_nm` | 2 | Non-empty square matrix `(N, N)` where `N >= 1`. |
 | `omega` | 1 | Vector `(N,)`. |
 | `theta0` | 1 when present | Same shape as `omega`. |
 
@@ -153,6 +154,7 @@ The accepted matrix must satisfy all invariants below:
 | Invariant | Enforcement |
 |---|---|
 | Square shape | `K_nm.shape[0] == K_nm.shape[1]`. |
+| Non-empty network | `K_nm.shape[0] >= 1`. |
 | Zero diagonal | `np.allclose(np.diag(K_nm), 0.0, atol=1e-12)`. |
 | Non-negative weights | No entry may be less than `-1e-12`. |
 | Symmetry | `np.allclose(K_nm, K_nm.T, atol=1e-12)`. |
@@ -208,6 +210,10 @@ when present.
 
 `metadata` must be a mapping. The module copies the mapping into the dataclass
 and includes it in the canonical payload.
+
+When loading legacy or hand-authored JSON, `metadata: null` and `hashes: null`
+are accepted and normalised to empty mappings before the canonical digest is
+verified. Emitted payloads always contain concrete objects for both fields.
 
 Metadata values must be JSON serialisable and finite. Non-finite numeric values
 fail when the payload digest is computed because the encoder uses
@@ -485,6 +491,7 @@ Typical error messages are stable enough for operator diagnosis:
 | `source_name must be non-empty` | Missing source label. |
 | `source_mode must be one of` | Unknown source classification. |
 | `K_nm must be square` | Coupling matrix rank or shape is invalid. |
+| `artifact must contain at least one oscillator` | Empty oscillator network supplied. |
 | `K_nm diagonal must be zero` | Self-coupling detected. |
 | `K_nm must be non-negative` | Negative coupling weight detected. |
 | `K_nm must be symmetric` | Directed coupling supplied to an undirected schema. |
@@ -572,6 +579,7 @@ check:
 - `source_mode` is appropriate for the intended use;
 - `source_timestamp` or `replay_id` is present when publication safety matters;
 - `domain` and `source_name` identify the source unambiguously;
+- `K_nm` encodes at least one oscillator;
 - `K_nm` is square, symmetric, non-negative, and zero diagonal;
 - `omega` length equals the oscillator count;
 - `theta0` is absent or shape-compatible;
@@ -656,6 +664,7 @@ It covers:
 
 - curated domainpack compilation;
 - malformed field rejection;
+- empty oscillator-network rejection;
 - publication-safety enforcement;
 - stable and verified array hashes;
 - final artifact digest verification;
