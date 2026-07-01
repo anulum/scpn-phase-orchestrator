@@ -206,6 +206,80 @@ def test_state_history_empty(client: TestClient) -> None:
     assert r.json() == []
 
 
+@pytest.mark.parametrize(
+    ("n", "expected"),
+    [
+        (0, []),
+        (-3, []),
+        (3, [7, 8, 9]),
+        (100, list(range(10))),
+    ],
+)
+def test_tail_page_non_positive_n_returns_empty(n: int, expected: list[int]) -> None:
+    """`_tail_page` must return an empty page for n <= 0, not the whole history.
+
+    Guards the ``[-n:]`` slice pitfall: ``items[-0:]`` is ``items[0:]`` (the
+    whole list) and ``items[-(-3):]`` is an arbitrary tail, both wrong for a
+    "last n" query.
+    """
+    from scpn_phase_orchestrator.apps.queuewaves.server import _tail_page
+
+    assert _tail_page(list(range(10)), n) == expected
+
+
+def test_production_rejects_present_but_wrong_api_key(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A present but incorrect X-API-Key is rejected (constant-time compare)."""
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=SecurityConfig(mode="production"),
+    )
+    monkeypatch.setenv("QUEUEWAVES_API_KEY", "correct-key")
+    client = TestClient(create_app(cfg))
+
+    wrong = client.get("/api/v1/health", headers={"X-API-Key": "wrong-key"})
+    correct = client.get("/api/v1/health", headers={"X-API-Key": "correct-key"})
+
+    assert wrong.status_code == 401
+    assert correct.status_code == 200
+
+
+def test_websocket_rejects_present_but_wrong_api_key(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A present but incorrect X-API-Key on the WS stream is closed with 1008."""
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=SecurityConfig(mode="production"),
+    )
+    monkeypatch.setenv("QUEUEWAVES_API_KEY", "correct-key")
+    client = TestClient(create_app(cfg))
+
+    with (
+        pytest.raises(WebSocketDisconnect) as exc_info,
+        client.websocket_connect("/ws/stream", headers={"X-API-Key": "wrong-key"}),
+    ):
+        pass
+    assert exc_info.value.code == 1008
+
+
 def test_production_requires_api_key_env(
     minimal_config: QueueWavesConfig,
     monkeypatch: pytest.MonkeyPatch,

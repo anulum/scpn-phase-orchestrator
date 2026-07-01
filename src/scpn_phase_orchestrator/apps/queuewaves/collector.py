@@ -163,6 +163,14 @@ class PrometheusCollector:
                     self._buffers[name].push(float(ts), float(val))
             except _SCRAPE_ERRORS:
                 logger.warning("scrape failed for %s", name, exc_info=True)
+            except (KeyError, IndexError, TypeError, ValueError):
+                # A 2xx response whose JSON lacks ``data.result[0].value`` or
+                # carries a non-numeric sample must not abort the scrape of the
+                # remaining services; log and skip this one, honouring the
+                # per-service isolation contract stated in the module docstring.
+                logger.warning(
+                    "malformed Prometheus response for %s", name, exc_info=True
+                )
         return self._buffers
 
     def scrape_sync(

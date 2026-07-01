@@ -17,6 +17,7 @@ the server does not accept remote actuation commands.
 
 import asyncio
 import contextlib
+import hmac
 import json
 import logging
 import os
@@ -24,7 +25,7 @@ from collections import deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 try:
     from httpx import HTTPError as _HTTPError
@@ -56,6 +57,8 @@ logger = logging.getLogger(__name__)
 _MAX_HISTORY = 500
 _MAX_WEBSOCKET_MESSAGE_BYTES = 1024
 _KEEPALIVE_TYPES = frozenset({"ping", "pong"})
+
+_T = TypeVar("_T")
 
 
 def create_app(cfg: QueueWavesConfig) -> object:
@@ -121,7 +124,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
         """Assert network access is permitted, else raise."""
         if api_key is None:
             identity = request.client.host if request.client is not None else "local"
-        elif x_api_key != api_key:
+        elif x_api_key is None or not hmac.compare_digest(x_api_key, api_key):
             raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
         else:
             identity = x_api_key
@@ -225,8 +228,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
     @app.get("/api/v1/state/history", dependencies=[Depends(_require_network_access)])
     async def state_history(n: int = 100) -> list[dict[str, Any]]:
         """Handle GET /api/v1/state/history — return last n snapshots."""
-        sliced = list(history)[-n:]
-        return [s.to_dict() for s in sliced]
+        return [s.to_dict() for s in _tail_page(list(history), n)]
 
     @app.get("/api/v1/anomalies", dependencies=[Depends(_require_network_access)])
     async def anomalies() -> list[dict[str, Any]]:
@@ -321,7 +323,10 @@ def create_app(cfg: QueueWavesConfig) -> object:
     @app.websocket("/ws/stream")
     async def ws_stream(websocket: WebSocket) -> None:
         """Read-only observer stream with keepalive-only inbound messages."""
-        if api_key is not None and websocket.headers.get("x-api-key") != api_key:
+        ws_key = websocket.headers.get("x-api-key")
+        if api_key is not None and (
+            ws_key is None or not hmac.compare_digest(ws_key, api_key)
+        ):
             await websocket.close(code=1008, reason="Invalid or missing X-API-Key")
             return
         if limiter is not None:
@@ -366,6 +371,26 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 def _websocket_message_exceeds_limit(msg: str) -> bool:
     """Return whether a websocket message exceeds the size limit."""
     return len(msg.encode("utf-8")) > _MAX_WEBSOCKET_MESSAGE_BYTES
+
+
+def _tail_page(items: list[_T], n: int) -> list[_T]:
+    """Return the last ``n`` items, or an empty page for non-positive ``n``.
+
+    Parameters
+    ----------
+    items : list[_T]
+        Ordered sequence, oldest first.
+    n : int
+        Number of most-recent items requested.
+
+    Returns
+    -------
+    list[_T]
+        The last ``n`` items. ``items[-n:]`` returns the whole list for
+        ``n == 0`` (``[-0:]`` is ``[0:]``) and an arbitrary tail for ``n < 0``,
+        so any non-positive ``n`` yields ``[]`` — the correct "last n" answer.
+    """
+    return items[-n:] if n > 0 else []
 
 
 def _is_keepalive_message(msg: str) -> bool:

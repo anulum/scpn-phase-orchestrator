@@ -202,6 +202,55 @@ def test_scrape_successful_response():
     asyncio.run(_run())
 
 
+def test_scrape_isolates_malformed_response_per_service():
+    """A 2xx response missing `value` must not abort the remaining services.
+
+    The module contract promises per-service isolation ("failures are logged
+    per service and do not mutate unrelated buffers"). A malformed but HTTP-200
+    payload raises KeyError/ValueError inside the parse; if uncaught it would
+    propagate and skip every service queued after the bad one.
+    """
+
+    async def _run():
+        from unittest.mock import AsyncMock
+
+        import httpx
+
+        req = httpx.Request("GET", "http://fake:9090/api/v1/query")
+        malformed = httpx.Response(
+            200,
+            json={"status": "success", "data": {"result": [{"metric": {}}]}},
+            request=req,
+        )
+        good = httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": {"result": [{"value": [1000.0, "2.5"]}]},
+            },
+            request=req,
+        )
+
+        collector = PrometheusCollector(
+            "http://fake:9090",
+            {"bad": "up", "good": "up2"},
+            buffer_length=8,
+        )
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=[malformed, good])
+        collector._client = mock_client
+
+        buffers = await collector.scrape()  # must not raise
+
+        assert len(buffers["bad"]) == 0
+        assert len(buffers["good"]) == 1
+        np.testing.assert_allclose(buffers["good"].values_array(), [2.5])
+
+        await collector.close()
+
+    asyncio.run(_run())
+
+
 # Salvaged module-specific behavioural contracts from deleted broad tests.
 class TestMetricBufferValidation:
     def test_rejects_zero_maxlen(self) -> None:
