@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
 from types import SimpleNamespace
 
 import numpy as np
@@ -76,3 +78,33 @@ def test_broadcast_is_noop_when_loop_not_running() -> None:
     stream = VisualizerStreamer()
     stream._clients.add(object())
     stream.broadcast({})
+
+
+def test_send_cleanup_discards_client_when_status_probe_raises() -> None:
+    stream = VisualizerStreamer()
+    client = object()
+    stream._clients.add(client)
+    callback = stream._make_send_cleanup_callback(client)
+
+    # SimpleNamespace has no ``cancelled`` attribute, so the probe raises
+    # AttributeError and the client is discarded defensively.
+    callback(SimpleNamespace())
+
+    assert client not in stream._clients
+
+
+def test_module_marks_websockets_absent_when_import_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = streamer_module.HAS_WEBSOCKETS
+    monkeypatch.setitem(sys.modules, "websockets", None)
+
+    reloaded = importlib.reload(streamer_module)
+    try:
+        assert reloaded.HAS_WEBSOCKETS is False
+        assert reloaded.websockets is None
+    finally:
+        monkeypatch.undo()
+        importlib.reload(streamer_module)
+
+    assert streamer_module.HAS_WEBSOCKETS is original
