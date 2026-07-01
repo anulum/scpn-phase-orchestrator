@@ -245,6 +245,7 @@ class ClauseConformance:
     rationale: str
 
     def __post_init__(self) -> None:
+        """Validate status, evidence references, and rationale text."""
         if self.status not in CONFORMANCE_STATUSES:
             raise ValueError(
                 f"status must be one of {sorted(CONFORMANCE_STATUSES)}, "
@@ -314,6 +315,7 @@ class AssuranceCaseBundle:
     actuation_permitted: bool = False
 
     def __post_init__(self) -> None:
+        """Validate bundle invariants and compute or verify the bundle hash."""
         if not self.system_name.strip():
             raise ValueError("system_name must be a non-empty string")
         if not self.version.strip():

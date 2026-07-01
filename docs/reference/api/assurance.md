@@ -93,6 +93,9 @@ submission.
 `scpn_phase_orchestrator.assurance.evidence` wraps the JSON-safe audit record of
 an originating surface in a content-addressed `EvidenceItem`, so the bundle can
 reference evidence by a stable identifier and detect later mutation.
+The shared canonical hashing path accepts only strict JSON records: `NaN`,
+`Infinity`, and `-Infinity` are rejected before any digest is emitted, so hashes
+remain portable across JSON implementations and non-Python verifiers.
 
 ::: scpn_phase_orchestrator.assurance.evidence
 

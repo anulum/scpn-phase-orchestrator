@@ -62,6 +62,20 @@ def test_canonical_hash_changes_with_content() -> None:
     assert canonical_record_hash({"a": 1}) != canonical_record_hash({"a": 2})
 
 
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_canonical_hash_rejects_non_finite_numbers(value: float) -> None:
+    with pytest.raises(ValueError, match="finite JSON numbers"):
+        canonical_record_hash({"value": value})
+
+
+def test_canonical_hash_preserves_unrelated_json_errors() -> None:
+    recursive: dict[str, object] = {}
+    recursive["self"] = recursive
+
+    with pytest.raises(ValueError, match="Circular reference"):
+        canonical_record_hash(recursive)
+
+
 def test_require_sha256_accepts_valid_digest() -> None:
     digest = canonical_record_hash({"a": 1})
     assert require_sha256(digest, "field") == digest

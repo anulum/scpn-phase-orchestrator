@@ -191,6 +191,7 @@ class PRCOscillationEvidence:
     content_hash: str = field(default="", init=False)
 
     def __post_init__(self) -> None:
+        """Compute the content hash from the canonical evidence payload."""
         object.__setattr__(
             self, "content_hash", canonical_record_hash(self._canonical_payload())
         )

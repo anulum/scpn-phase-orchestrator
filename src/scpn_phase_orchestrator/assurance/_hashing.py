@@ -21,8 +21,9 @@ _SHA256_ALPHABET = set("0123456789abcdef")
 def canonical_record_hash(record: Mapping[str, object]) -> str:
     """Return the SHA-256 of a record under canonical JSON serialisation.
 
-    The canonical form sorts object keys and removes incidental whitespace so a
-    record always hashes to the same digest regardless of construction order.
+    The canonical form sorts object keys, removes incidental whitespace, and
+    rejects non-finite numbers so every accepted record is strict JSON rather
+    than Python's extended ``NaN`` / ``Infinity`` dialect.
 
     Parameters
     ----------
@@ -33,8 +34,23 @@ def canonical_record_hash(record: Mapping[str, object]) -> str:
     -------
     str
         Lowercase hexadecimal SHA-256 digest.
+
+    Raises
+    ------
+    ValueError
+        If the record contains ``NaN`` or infinite numbers.
     """
-    serialised = json.dumps(record, sort_keys=True, separators=(",", ":"))
+    try:
+        serialised = json.dumps(
+            record,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+    except ValueError as exc:
+        if "Out of range float values" in str(exc):
+            raise ValueError("record must contain only finite JSON numbers") from exc
+        raise
     return hashlib.sha256(serialised.encode("utf-8")).hexdigest()
 
 

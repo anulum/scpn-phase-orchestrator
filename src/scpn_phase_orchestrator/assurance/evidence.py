@@ -69,6 +69,7 @@ class EvidenceItem:
     content_hash: str = field(default="")
 
     def __post_init__(self) -> None:
+        """Validate the evidence metadata and compute or verify its content hash."""
         if not self.evidence_id.strip():
             raise ValueError("evidence_id must be a non-empty string")
         if self.category not in EVIDENCE_CATEGORIES:
