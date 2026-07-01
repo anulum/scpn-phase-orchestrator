@@ -95,11 +95,21 @@ def _validate_matrix(value: object, *, name: str) -> FloatArray:
     return np.ascontiguousarray(raw, dtype=np.float64)
 
 
-def _validate_vector(value: object, *, name: str) -> FloatArray:
-    """Return the value as a validated finite vector, else raise."""
+def _validate_vector(
+    value: object, *, name: str, allow_infinite: bool = True
+) -> FloatArray:
+    """Return the value as a validated vector, else raise.
+
+    NaN is always rejected. ``±inf`` is permitted by default (the constraint
+    bounds ``l``/``u`` use it to encode one-sided or absent bounds); pass
+    ``allow_infinite=False`` for quantities that must be finite (the linear term
+    ``q``, whose infinities would silently poison the objective).
+    """
     raw = np.asarray(value, dtype=np.float64).ravel()
-    if not np.all(np.isfinite(raw) | np.isinf(raw)):
+    if np.any(np.isnan(raw)):
         raise ValueError(f"{name} must not contain NaN values")
+    if not allow_infinite and not np.all(np.isfinite(raw)):
+        raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(raw, dtype=np.float64)
 
 
@@ -164,7 +174,9 @@ def solve_qp_admm(
         If a scalar parameter is not a real number.
     """
     hessian = _validate_matrix(objective_matrix, name="objective_matrix")
-    linear = _validate_vector(objective_vector, name="objective_vector")
+    linear = _validate_vector(
+        objective_vector, name="objective_vector", allow_infinite=False
+    )
     constraint = _validate_matrix(constraint_matrix, name="constraint_matrix")
     lower_bound = _validate_vector(lower, name="lower")
     upper_bound = _validate_vector(upper, name="upper")
@@ -206,7 +218,9 @@ def solve_qp_admm(
         kkt[:n_vars, :n_vars] = hessian + identity_n
         kkt[:n_vars, n_vars:] = constraint.T
         kkt[n_vars:, :n_vars] = constraint
-        # A validated constraint always has at least one row (n_cons ≥ 1).
+        # rho_vector entries are strictly positive (a positive base, optionally
+        # scaled up for equalities), so the reciprocal is always finite; the block
+        # is empty when the problem is unconstrained (n_cons == 0).
         kkt[n_vars:, n_vars:] = -np.diag(1.0 / rho_vector)
         return scipy.linalg.lu_factor(kkt)
 

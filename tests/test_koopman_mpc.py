@@ -114,6 +114,63 @@ def test_controller_drives_toward_a_non_zero_set_point() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Condensed prediction ground truth                                           #
+# --------------------------------------------------------------------------- #
+def test_condensed_prediction_matches_forward_roll() -> None:
+    # Ground-truth check of the condensed matrices Ψ, Θ against an independent
+    # forward roll of z_{k+1}=A z_k + B u_k, y=C z_k. Uses a lift dimension N > n
+    # and a non-identity C so both the free response (C A^{i+1}) and every forced
+    # block (C A^{i-j} B, diagonal C B) are exercised — the previous code applied
+    # one extra factor of A to Θ, which this comparison catches exactly.
+    rng = np.random.default_rng(3)
+    lift_dim, n_input, n_state, horizon = 5, 2, 3, 4
+    state_matrix = 0.5 * rng.standard_normal((lift_dim, lift_dim))
+    input_matrix = rng.standard_normal((lift_dim, n_input))
+    output_matrix = rng.standard_normal((n_state, lift_dim))
+    predictor = KoopmanPredictor(
+        state_matrix=state_matrix,
+        input_matrix=input_matrix,
+        output_matrix=output_matrix,
+        dictionary=KoopmanDictionary(
+            kind="identity", state_dim=n_state, include_constant=False
+        ),
+        fit_residual=0.0,
+    )
+    psi, theta = mpc_mod._condensed_prediction(predictor, horizon)
+
+    z0 = rng.standard_normal(lift_dim)
+    inputs = rng.standard_normal((horizon, n_input))
+    predicted = (psi @ z0 + theta @ inputs.ravel()).reshape(horizon, n_state)
+
+    z = z0.copy()
+    expected = np.empty((horizon, n_state), dtype=np.float64)
+    for step in range(horizon):
+        z = state_matrix @ z + input_matrix @ inputs[step]
+        expected[step] = output_matrix @ z
+    assert np.allclose(predicted, expected, atol=1e-12)
+
+    # The diagonal forced block is the direct feed-through C B (not C A B).
+    diag_block = theta[:n_state, :n_input]
+    assert np.allclose(diag_block, output_matrix @ input_matrix, atol=1e-12)
+
+
+def test_condensed_prediction_agrees_with_predictor_predict() -> None:
+    # The integration path: Ψ ψ(x_0) + Θ U must equal the predictor's own forward
+    # roll of the physical output over the same inputs.
+    predictor = _fit_predictor()
+    horizon = 6
+    psi, theta = mpc_mod._condensed_prediction(predictor, horizon)
+    rng = np.random.default_rng(11)
+    x0 = rng.standard_normal(predictor.state_dim)
+    inputs = rng.standard_normal((horizon, predictor.input_dim))
+    condensed = (psi @ predictor.lift(x0) + theta @ inputs.ravel()).reshape(
+        horizon, predictor.state_dim
+    )
+    rolled = predictor.predict(x0, inputs)[1:]
+    assert np.allclose(condensed, rolled, atol=1e-9)
+
+
+# --------------------------------------------------------------------------- #
 # Decision contract                                                           #
 # --------------------------------------------------------------------------- #
 def test_decision_shapes_and_reproducible_hash() -> None:

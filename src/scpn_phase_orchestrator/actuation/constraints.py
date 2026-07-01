@@ -151,7 +151,9 @@ class ActionProjector:
         Returns
         -------
         ControlAction
-            Clamp action value to bounds and rate limit relative to *previous_value*.
+            A copy of ``action`` whose value is clamped to the knob's absolute
+            bounds and then limited to at most the per-step rate change from
+            ``previous_value``; all other action metadata is preserved.
 
         Raises
         ------

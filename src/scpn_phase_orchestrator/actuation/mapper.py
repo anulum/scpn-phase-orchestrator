@@ -60,7 +60,9 @@ class ActuationMapper:
         Returns
         -------
         list[dict[str, Any]]
-            ControlActions into actuator command dicts, clamping to limits.
+            One command dict (``actuator``, ``knob``, ``scope``, ``value``,
+            ``ttl_s``) per matching actuator, with the value clamped to that
+            actuator's limits; actions with a non-finite value are dropped.
         """
         commands = []
         for action in actions:
@@ -107,7 +109,7 @@ class ActuationMapper:
 
 
 def _validate_mapping(mapping: ActuatorMapping) -> None:
-    """Return the validated actuator mapping, else raise."""
+    """Validate an actuator mapping in place, raising ``ValueError`` if malformed."""
     if mapping.knob not in VALID_KNOBS:
         raise ValueError("actuator mapping knob must be a valid control knob")
     if not isinstance(mapping.scope, str) or not mapping.scope.strip():
@@ -120,5 +122,5 @@ def _validate_mapping(mapping: ActuatorMapping) -> None:
 
 
 def _finite_real(value: object) -> bool:
-    """Return ``value`` as a finite real float, else raise ``ValueError``."""
+    """Return whether ``value`` is a finite real scalar (booleans excluded)."""
     return isinstance(value, Real) and not isinstance(value, bool) and isfinite(value)

@@ -343,14 +343,19 @@ def _condensed_prediction(
     n_state = predictor.state_dim
     n_input = predictor.input_dim
 
-    # Impulse-response blocks C A^p B for p = 0 … horizon-1.
+    # For output row i (the predicted output y_{i+1}) the free response is
+    # Ψ_i = C A^{i+1} and the forced blocks are Θ_{i,j} = C A^{i-j} B (j ≤ i), so
+    # the impulse-response blocks are C A^p B for p = 0 … horizon-1 — the p = 0
+    # block C B is the direct effect of u_i on y_{i+1}. The free-response power
+    # (A^{i+1}) and the impulse power (A^p) differ by one factor of A and must be
+    # tracked separately; ``power`` below holds A^i at the top of iteration i.
     impulse: list[FloatArray] = []
     power = np.eye(lift_dim, dtype=np.float64)
     psi = np.zeros((horizon * n_state, lift_dim), dtype=np.float64)
     for i in range(horizon):
-        power = power @ state_matrix if i else state_matrix
-        psi[i * n_state : (i + 1) * n_state, :] = output_matrix @ power
-        impulse.append(output_matrix @ (power @ input_matrix))
+        impulse.append(output_matrix @ (power @ input_matrix))  # C A^i B
+        power = power @ state_matrix  # advance to A^{i+1}
+        psi[i * n_state : (i + 1) * n_state, :] = output_matrix @ power  # C A^{i+1}
 
     theta = np.zeros((horizon * n_state, horizon * n_input), dtype=np.float64)
     for i in range(horizon):

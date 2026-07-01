@@ -199,6 +199,40 @@ def test_admm_rejects_non_finite_objective_matrix() -> None:
         solve_qp_admm(bad, np.zeros(2), np.eye(2), np.zeros(2), np.ones(2))
 
 
+def test_admm_rejects_an_infinite_objective_vector() -> None:
+    # The linear term q must be finite; an infinity there would silently poison
+    # the objective (the bounds l/u still accept ±inf — see the bounds tests).
+    with pytest.raises(ValueError, match="only finite values"):
+        solve_qp_admm(
+            np.eye(1), np.array([np.inf]), np.eye(1), np.array([-1.0]), np.array([1.0])
+        )
+
+
+def test_admm_accepts_infinite_bounds() -> None:
+    # ±inf bounds encode an absent/one-sided constraint and must be accepted.
+    solution = solve_qp_admm(
+        np.array([[2.0]]),
+        np.array([-4.0]),
+        np.array([[1.0]]),
+        np.array([-np.inf]),
+        np.array([np.inf]),
+    )
+    assert solution.x[0] == pytest.approx(2.0, abs=1.0e-6)
+
+
+def test_admm_solves_an_unconstrained_problem_with_no_constraint_rows() -> None:
+    # n_cons == 0 (empty bounds, a (0, n) constraint) is a valid unconstrained QP;
+    # the solver's per-constraint guards must handle it and recover x = -P⁻¹q.
+    hessian = np.array([[3.0, 0.5], [0.5, 2.0]])
+    linear = np.array([1.0, -2.0])
+    solution = solve_qp_admm(
+        hessian, linear, np.zeros((0, 2)), np.zeros(0), np.zeros(0)
+    )
+    np.testing.assert_allclose(solution.x, np.linalg.solve(hessian, -linear), atol=1e-6)
+    assert solution.converged
+    assert solution.primal_residual == 0.0
+
+
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     [
