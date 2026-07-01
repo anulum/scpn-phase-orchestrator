@@ -379,8 +379,11 @@ class RemanentiaBridge:
             if not scores:
                 self._last_novelty_score = 1.0
                 return 1.0  # fully novel — no relevant memories
-            # Novelty = 1 - mean relevance score
-            novelty = float(max(0.0, 1.0 - float(np.mean(scores))))
+            # Novelty = 1 - mean relevance score, clamped to [0, 1]. Recall
+            # scores may be cosine similarities in [-1, 1]; a negative mean
+            # would push 1 - mean above 1 and later violate the unit-interval
+            # contract enforced by CoherenceMemorySnapshot.
+            novelty = float(min(1.0, max(0.0, 1.0 - float(np.mean(scores)))))
             self._last_novelty_score = novelty
             return novelty
         except BaseException as exc:

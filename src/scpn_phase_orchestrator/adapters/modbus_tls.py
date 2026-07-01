@@ -143,7 +143,7 @@ class SecureModbusAdapter:
         Raises
         ------
         ConnectionError
-            If the TLS Modbus connection is not active.
+            If the read fails or the device returns a Modbus error frame.
         """
         address = _non_negative_int(address, field="address")
         # type ignore: optional pymodbus client is stored as object after runtime guard.
@@ -169,7 +169,7 @@ class SecureModbusAdapter:
         Raises
         ------
         ConnectionError
-            If the TLS Modbus connection is not active.
+            If the write fails or the device returns a Modbus error frame.
         """
         address = _non_negative_int(address, field="address")
         value = _int_value(value, field="value")

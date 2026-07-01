@@ -91,6 +91,18 @@ class TestSTDP:
         snap = bridge.snapshot()
         assert snap.mean_weight_change > 0.0
 
+    def test_rejected_update_preserves_previous_weight_baseline(self) -> None:
+        # A malformed update must not advance the previous-weight baseline; the
+        # dW delta computed by the next snapshot must still reflect the last
+        # accepted weight matrix rather than collapsing to zero.
+        bridge = SynapseCouplingBridge(n_oscillators=2)
+        bridge.update_stdp_weights(np.array([[0.0, 0.5], [0.5, 0.0]]))
+        with pytest.raises(ValueError, match="weights"):
+            bridge.update_stdp_weights(np.zeros((3, 3)))  # wrong shape
+        snap = bridge.snapshot()
+        assert snap.knm_delta[0, 1] == 0.5
+        assert snap.knm_delta[1, 0] == 0.5
+
 
 class TestGapJunction:
     def test_symmetric(self) -> None:

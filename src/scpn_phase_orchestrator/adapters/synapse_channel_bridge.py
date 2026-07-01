@@ -337,19 +337,21 @@ class SynapseChannelBridge:
             state.message_count += 1
 
     def get_phases(self) -> FloatArray:
-        """Extract current oscillator phases from agent activity.
+        """Extract current oscillator phases from agent heartbeat activity.
 
-        P-channel: phase advances at heartbeat frequency.
-        I-channel: phase advances at task event frequency.
-        S-channel: message count modulo 2π.
+        The returned phase for each agent is the P-channel phase, which
+        advances once per call at the agent's recent mean heartbeat frequency
+        (a regular heartbeat yields a steady phase advance). The per-agent
+        ``phase_i`` (task cadence) and ``phase_s`` (topic alignment) channels
+        are tracked on :class:`AgentState` but are not folded into this
+        one-dimensional phase vector.
 
         Returns
         -------
         FloatArray
-            Extract current oscillator phases from agent activity.
+            The P-channel phase per agent, shape ``(n_oscillators,)``.
         """
         phases = np.zeros(self._n)
-        time.time()
 
         for name, state in self._states.items():
             idx = self._agent_idx[name]

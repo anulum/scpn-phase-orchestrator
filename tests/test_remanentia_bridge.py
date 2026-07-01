@@ -103,6 +103,28 @@ class TestRemanentiaBridge:
         score = bridge.get_novelty_score("test query")
         assert 0.0 <= score <= 1.0
 
+    def test_novelty_score_clamps_negative_recall_scores(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Recall scores may be cosine similarities in [-1, 1]. A negative mean
+        # drives ``1 - mean`` above 1; the returned novelty must still be a
+        # valid unit-interval value so the downstream snapshot contract holds.
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        monkeypatch.setattr(
+            bridge,
+            "_post",
+            lambda _path, _payload: {
+                "results": [{"score": -0.5}, {"score": -0.3}],
+            },
+        )
+        novelty = bridge.get_novelty_score("q")
+        assert novelty == 1.0
+        assert bridge._last_novelty_score == 1.0
+        # The cached value must satisfy the snapshot unit-interval contract.
+        snapshot = bridge.snapshot()
+        assert snapshot.novelty_score == 1.0
+
     def test_novelty_score_offline(self) -> None:
         bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         assert bad.get_novelty_score("test") == 0.5

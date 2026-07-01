@@ -219,8 +219,12 @@ class SynapseCouplingBridge:
         weights : FloatArray
             STDP weight matrix, shape ``(N, N)``.
         """
+        # Validate the incoming weights BEFORE advancing the previous-weight
+        # baseline, so a rejected update leaves the dW reference intact rather
+        # than silently zeroing the next delta.
+        validated = _validate_square_matrix(weights, "weights", self._n)
         self._prev_weights = self._stdp_weights.copy()
-        self._stdp_weights = _validate_square_matrix(weights, "weights", self._n)
+        self._stdp_weights = validated
 
     def update_gap_conductances(self, conductances: FloatArray) -> None:
         """Feed gap junction conductance matrix.
