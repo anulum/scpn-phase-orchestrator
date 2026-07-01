@@ -8,12 +8,14 @@
 
 from __future__ import annotations
 
+import types
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
+import scpn_phase_orchestrator.runtime.server_grpc as grpc_mod
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.runtime.grpc_gen import StateResponse, StreamRequest
 from scpn_phase_orchestrator.runtime.server import SimulationState
@@ -252,3 +254,42 @@ def test_step_rejects_negative_n_steps():
 
 # Pipeline wiring: StreamPhases streams SimulationState.step() which
 # drives UPDEEngine internally. Tests above verify R_global and layers.
+
+
+def test_normalise_metadata_handles_none_and_malformed_pairs() -> None:
+    assert grpc_mod._normalise_metadata(None) == {}
+    assert grpc_mod._normalise_metadata([("a", "b"), "bad", (1, 2, 3)]) == {"a": "b"}
+
+
+@pytest.mark.parametrize("value", ["x", True])
+def test_validate_non_negative_real_rejects_non_numeric(value: object) -> None:
+    with pytest.raises(ValueError, match="must be a non-negative real"):
+        grpc_mod._validate_non_negative_real(value, "interval")
+
+
+def test_resolve_stream_max_steps_defaults_when_unset() -> None:
+    request = types.SimpleNamespace(max_steps=None)
+    assert grpc_mod._resolve_stream_max_steps(request) == 100
+
+
+def test_resolve_stream_max_steps_rejects_boolean() -> None:
+    request = types.SimpleNamespace(max_steps=True)
+    with pytest.raises(ValueError, match="max_steps must be a positive integer"):
+        grpc_mod._resolve_stream_max_steps(request)
+
+
+def test_resolve_stream_max_steps_rejects_explicit_zero_field() -> None:
+    descriptor = types.SimpleNamespace(name="max_steps")
+    request = types.SimpleNamespace(max_steps=0, ListFields=lambda: [(descriptor, 0)])
+    with pytest.raises(ValueError, match="max_steps must be a positive integer"):
+        grpc_mod._resolve_stream_max_steps(request)
+
+
+def test_abort_invokes_context_and_raises_permission_error() -> None:
+    servicer = _make_servicer()
+    context = MagicMock()
+
+    with pytest.raises(PermissionError, match="denied"):
+        servicer._abort(context, None, "denied")
+
+    context.abort.assert_called_once_with(None, "denied")
