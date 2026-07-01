@@ -119,6 +119,12 @@ Appends timestamped, SHA256-chained records to a JSONL audit trail. When
 `event_stream` is supplied, the same stored records are also appended to a
 length-delimited protobuf stream.
 
+The compatibility facade `scpn_phase_orchestrator.audit` exposes the audit
+logger, replay engine, and event-stream helpers lazily. Its `__all__` and
+`dir()` output list the same public exports before import-time resolution, so
+interactive tools and documentation generators see the facade contract without
+eagerly importing the runtime audit stack.
+
 ```python
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 

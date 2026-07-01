@@ -37,6 +37,11 @@ _EXPORT_MODULES = {
 }
 
 
+def __dir__() -> list[str]:
+    """Return module attributes plus lazy public audit exports."""
+    return sorted({*globals(), *__all__})
+
+
 def __getattr__(name: str) -> Any:
     """Lazily expose audit package exports without import cycles."""
     module_name = _EXPORT_MODULES.get(name)
