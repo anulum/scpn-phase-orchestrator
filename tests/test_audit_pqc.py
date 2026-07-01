@@ -24,9 +24,11 @@ from scpn_phase_orchestrator.runtime.audit_pqc import (
     read_audit_chain_tip,
     seal_audit_chain,
     seal_audit_log,
+    sign_bytes,
     signing_key_from_seed,
     verify_audit_chain_seal,
     verify_audit_log_seal,
+    verify_bytes,
 )
 
 _SEED = "01" * 32
@@ -338,3 +340,66 @@ class TestPipelineWiring:
         with log.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps({"injected": True, "_hash": "00" * 32}) + "\n")
         assert verify_audit_log_seal(log, seal, _pub_hex(key)) is False
+
+
+class TestSignBytesValidation:
+    """Validation guards that run without an ML-DSA backend."""
+
+    def test_sign_bytes_rejects_unknown_algorithm(self) -> None:
+        with pytest.raises(ValueError, match="algorithm must be one of"):
+            sign_bytes(b"m", object(), algorithm="rsa")
+
+    def test_sign_bytes_rejects_non_bytes_message(self) -> None:
+        with pytest.raises(ValueError, match="message must be raw bytes"):
+            sign_bytes("not-bytes", object())  # type: ignore[arg-type]
+
+    def test_verify_bytes_rejects_unknown_algorithm(self) -> None:
+        with pytest.raises(ValueError, match="algorithm must be one of"):
+            verify_bytes(b"m", b"s", "ab" * 32, algorithm="rsa")
+
+    def test_verify_bytes_rejects_non_bytes_message(self) -> None:
+        with pytest.raises(ValueError, match="message must be raw bytes"):
+            verify_bytes("m", b"s", "ab" * 32)  # type: ignore[arg-type]
+
+    def test_verify_bytes_rejects_non_bytes_signature(self) -> None:
+        with pytest.raises(ValueError, match="signature must be raw bytes"):
+            verify_bytes(b"m", "s", "ab" * 32)  # type: ignore[arg-type]
+
+    def test_verify_bytes_rejects_non_string_key(self) -> None:
+        with pytest.raises(ValueError, match="trusted_public_key_hex must be a hex"):
+            verify_bytes(b"m", b"s", 123)  # type: ignore[arg-type]
+
+    def test_verify_bytes_rejects_non_hex_key(self) -> None:
+        with pytest.raises(ValueError, match="must be valid hex"):
+            verify_bytes(b"m", b"s", "zz")
+
+
+@requires_mldsa
+class TestSignBytesRoundTrip:
+    def test_sign_then_verify_generic_message(self) -> None:
+        key = _key()
+        message = b"arbitrary domain-separated bytes"
+        signature = sign_bytes(message, key)
+        assert verify_bytes(message, signature, _pub_hex(key)) is True
+
+    def test_sign_bytes_rejects_mismatched_key_type(self) -> None:
+        with pytest.raises(ValueError, match="private_key must be an ml-dsa-65"):
+            sign_bytes(b"m", object())
+
+    def test_verify_bytes_rejects_wrong_key(self) -> None:
+        key = _key()
+        signature = sign_bytes(b"payload", key)
+        other = signing_key_from_seed(generate_signing_seed())
+        assert verify_bytes(b"payload", signature, _pub_hex(other)) is False
+
+    def test_verify_bytes_rejects_tampered_message(self) -> None:
+        key = _key()
+        signature = sign_bytes(b"payload", key)
+        assert verify_bytes(b"tampered", signature, _pub_hex(key)) is False
+
+    def test_verify_bytes_returns_false_on_malformed_key_bytes(self) -> None:
+        key = _key()
+        signature = sign_bytes(b"payload", key)
+        # Valid hex, but the wrong byte length for an ML-DSA public key, so the
+        # backend rejects the key material and verification fails closed.
+        assert verify_bytes(b"payload", signature, "ab" * 20) is False

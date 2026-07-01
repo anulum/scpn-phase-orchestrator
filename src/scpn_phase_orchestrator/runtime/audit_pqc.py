@@ -64,9 +64,11 @@ __all__ = [
     "read_audit_chain_tip",
     "seal_audit_chain",
     "seal_audit_log",
+    "sign_bytes",
     "signing_key_from_seed",
     "verify_audit_chain_seal",
     "verify_audit_log_seal",
+    "verify_bytes",
 ]
 
 
@@ -155,6 +157,100 @@ def signing_key_from_seed(seed_hex: str, *, algorithm: str = DEFAULT_VARIANT) ->
     algorithm = _require_variant(algorithm)
     seed = _validate_seed(seed_hex)
     return _private_class(algorithm).from_seed_bytes(seed)
+
+
+def sign_bytes(
+    message: bytes,
+    private_key: Any,
+    *,
+    algorithm: str = DEFAULT_VARIANT,
+) -> bytes:
+    """Sign an arbitrary message with an ML-DSA private key.
+
+    This is the generic post-quantum signing primitive that higher-level sealers
+    (the audit-chain seal, the DSSE attestation envelope) build on, so the
+    ``cryptography`` backend is loaded in exactly one place.
+
+    Parameters
+    ----------
+    message : bytes
+        The raw message to sign (already domain-separated by the caller).
+    private_key : MLDSA private key
+        An ML-DSA private key matching ``algorithm``.
+    algorithm : str
+        The ML-DSA variant; must match ``private_key``.
+
+    Returns
+    -------
+    bytes
+        The raw ML-DSA signature.
+
+    Raises
+    ------
+    ValueError
+        If the algorithm, message, or private key is invalid.
+    """
+    algorithm = _require_variant(algorithm)
+    if not isinstance(message, (bytes, bytearray)):
+        raise ValueError("message must be raw bytes")
+    if not isinstance(private_key, _private_class(algorithm)):
+        raise ValueError(f"private_key must be an {algorithm} private key")
+    return bytes(private_key.sign(bytes(message)))
+
+
+def verify_bytes(
+    message: bytes,
+    signature: bytes,
+    trusted_public_key_hex: str,
+    *,
+    algorithm: str = DEFAULT_VARIANT,
+) -> bool:
+    """Verify an ML-DSA signature over a message against a trusted public key.
+
+    Parameters
+    ----------
+    message : bytes
+        The raw message the signature is expected to cover.
+    signature : bytes
+        The raw ML-DSA signature.
+    trusted_public_key_hex : str
+        The hex-encoded raw ML-DSA public key the verifier trusts.
+    algorithm : str
+        The ML-DSA variant to verify under.
+
+    Returns
+    -------
+    bool
+        ``True`` if the signature is valid for the trusted key, else ``False``.
+
+    Raises
+    ------
+    ValueError
+        If the algorithm is unknown, the message or signature is not raw bytes, or
+        the trusted key is not a hex string.
+    """
+    algorithm = _require_variant(algorithm)
+    if not isinstance(message, (bytes, bytearray)):
+        raise ValueError("message must be raw bytes")
+    if not isinstance(signature, (bytes, bytearray)):
+        raise ValueError("signature must be raw bytes")
+    if not isinstance(trusted_public_key_hex, str):
+        raise ValueError("trusted_public_key_hex must be a hex string")
+    try:
+        trusted_bytes = bytes.fromhex(trusted_public_key_hex)
+    except ValueError as exc:
+        raise ValueError("trusted_public_key_hex must be valid hex") from exc
+    from cryptography.exceptions import InvalidSignature
+
+    try:
+        public_key = _public_class(algorithm).from_public_bytes(trusted_bytes)
+    except ValueError:
+        return False
+    try:
+        public_key.verify(bytes(signature), bytes(message))
+    except InvalidSignature:
+        return False
+    return True
 
 
 def public_key_id(public_bytes: bytes) -> str:

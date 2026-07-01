@@ -35,6 +35,13 @@ from scpn_phase_orchestrator.assurance.certification import (
     CertificationEvidencePackage,
     build_certification_evidence_package,
 )
+from scpn_phase_orchestrator.assurance.dsse import (
+    DSSE_PAYLOAD_TYPE,
+    DsseEnvelope,
+    DsseSignature,
+    sign_provenance_statement,
+    verify_dsse_envelope,
+)
 from scpn_phase_orchestrator.assurance.envelope import (
     SIGNED_CERTIFICATION_ENVELOPE_SCHEMA,
     SignedCertificationEnvelope,
@@ -53,6 +60,17 @@ from scpn_phase_orchestrator.assurance.evidence import (
 )
 from scpn_phase_orchestrator.assurance.formal_evidence import (
     build_formal_verification_evidence,
+)
+from scpn_phase_orchestrator.assurance.provenance import (
+    IN_TOTO_STATEMENT_TYPE,
+    SLSA_PROVENANCE_PREDICATE_TYPE,
+    ArtifactSubject,
+    BuildDefinition,
+    ResourceDescriptor,
+    RunDetails,
+    SlsaProvenanceStatement,
+    build_slsa_provenance_statement,
+    provenance_statement_hash,
 )
 from scpn_phase_orchestrator.assurance.report import (
     CONFORMITY_REPORT_SCHEMA,
@@ -78,7 +96,21 @@ __all__ = [
     "ADDRESSED",
     "ASSURANCE_CASE_SCHEMA",
     "AUDIT_LOGGING",
+    "ArtifactSubject",
     "AssuranceCaseBundle",
+    "BuildDefinition",
+    "DSSE_PAYLOAD_TYPE",
+    "DsseEnvelope",
+    "DsseSignature",
+    "IN_TOTO_STATEMENT_TYPE",
+    "ResourceDescriptor",
+    "RunDetails",
+    "SLSA_PROVENANCE_PREDICATE_TYPE",
+    "SlsaProvenanceStatement",
+    "build_slsa_provenance_statement",
+    "provenance_statement_hash",
+    "sign_provenance_statement",
+    "verify_dsse_envelope",
     "CONFORMAL_GATE",
     "CONFORMANCE_STATUSES",
     "CONFORMITY_REPORT_SCHEMA",

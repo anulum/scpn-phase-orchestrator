@@ -153,6 +153,44 @@ key.
 
 ::: scpn_phase_orchestrator.assurance.envelope
 
+## Supply-chain provenance (SLSA / DSSE)
+
+The certification envelope attests to a *run*; the provenance layer attests to a
+*build* — which release artefacts were produced, from which resolved inputs, by
+which builder. `scpn_phase_orchestrator.assurance.provenance` assembles a
+deterministic [in-toto Statement v1](https://in-toto.io/Statement/v1) carrying a
+[SLSA provenance v1](https://slsa.dev/provenance/v1) predicate: the produced
+artefacts as digest-pinned subjects, the build definition (build type, external
+parameters, digest-pinned resolved dependencies), and the run details (builder
+identity and invocation). It reads no wall clock and makes no network call, so the
+same build inputs always serialise to the same statement.
+
+`scpn_phase_orchestrator.assurance.dsse` wraps that statement in a
+[DSSE](https://github.com/secure-systems-lab/dsse) envelope — the wire format
+`cosign attest` produces — and signs its pre-authentication encoding with ML-DSA
+(FIPS 204), reusing the single post-quantum primitive in
+`scpn_phase_orchestrator.runtime.audit_pqc`. Each signature records its algorithm so
+a second scheme can be added without breaking existing envelopes; **SLH-DSA**
+(FIPS 205 / SPHINCS+) is the reserved hash-based alternative and is added once the
+`cryptography` backend ships it. Verification is offline and self-contained: the
+verifier supplies the trusted public key, whose short id must match the signature.
+
+```bash
+spo provenance-attest build_provenance.json \
+  --signing-seed-file signing.seed > attestation.json
+
+spo provenance-verify attestation.json --public-key-file signer.pub
+```
+
+Signing needs the `pqc` extra and an OpenSSL 3.5+ backend. Publishing the envelope
+to a Rekor transparency log or verifying it with `cosign` is an optional operator
+step that needs network and OIDC, and is left to the operator; the envelope itself
+is deterministic and verifiable without either.
+
+::: scpn_phase_orchestrator.assurance.provenance
+
+::: scpn_phase_orchestrator.assurance.dsse
+
 ## Conformity report
 
 `scpn_phase_orchestrator.assurance.report` renders an assurance-case bundle as a
