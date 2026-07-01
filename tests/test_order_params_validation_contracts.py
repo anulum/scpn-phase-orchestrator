@@ -89,3 +89,24 @@ def test_finite_scalar_rejects_uncoercible_unit_interval_output() -> None:
     """Backend scalar outputs must be finite real numbers."""
     with pytest.raises(ValueError, match="PLV must be a finite real scalar"):
         order_params_validation.validate_unit_interval_output(object(), name="PLV")
+
+
+def test_core_boolean_alias_detector_treats_uncoercible_payload_as_non_alias() -> None:
+    """The core module's alias guard must fail open on an uncoercible payload.
+
+    ``_contains_boolean_alias`` runs before the numeric cast in
+    ``_validate_phases``; an array-like that refuses object coercion must be
+    reported as "no boolean alias" so the subsequent cast raises the precise
+    typed error rather than a raw NumPy exception.
+    """
+    assert order_params._contains_boolean_alias(_ArrayRaises()) is False
+
+
+def test_compute_order_parameter_rejects_non_numeric_phase_array() -> None:
+    """A non-numeric phase array must raise the typed "must be numeric" error.
+
+    The string array coerces to a NumPy array but fails the float64 cast, which
+    is the public-API path into ``_validate_phases``'s numeric guard.
+    """
+    with pytest.raises(ValueError, match="phases must be numeric"):
+        order_params.compute_order_parameter(np.array(["a", "b"]))

@@ -192,10 +192,9 @@ def _layer_indices(layer_mask: BoolArray | IntArray, n_phases: int) -> IntArray:
         raise ValueError("layer_mask indices must not contain boolean values")
     if not np.issubdtype(mask.dtype, np.integer):
         raise ValueError("layer_mask indices must be integers")
-    try:
-        indices = mask.astype(np.int64, copy=True).ravel()
-    except (TypeError, ValueError) as exc:
-        raise ValueError("layer_mask indices must be integers") from exc
+    # ``mask`` is guaranteed an integer dtype by the check above, so the
+    # widening cast to int64 is total and cannot raise.
+    indices = mask.astype(np.int64, copy=True).ravel()
     if indices.size > 0 and (np.any(indices < 0) or np.any(indices >= n_phases)):
         raise ValueError("layer_mask indices must reference existing oscillators")
     if np.unique(indices).size != indices.size:
@@ -256,7 +255,9 @@ def _dispatch(fn_name: str) -> object:
             continue
         seen.add(backend)
         if backend == "python":
-            return None
+            # Python is the reference floor: stop probing external backends and
+            # fall through to the ``None`` sentinel that selects the NumPy path.
+            break
         try:
             fn = _load_backend(backend).get(fn_name)
         except (ImportError, RuntimeError, OSError, KeyError):
@@ -373,8 +374,8 @@ def compute_layer_coherence(
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         return _unit_interval(float(fn(p, indices)))
 
+    # ``indices`` is non-empty (checked above) and every entry is a valid
+    # in-range oscillator, so the gathered sub-population is never empty.
     sub = phases[indices]
-    if sub.size == 0:
-        return 0.0
     z = np.mean(np.exp(1j * sub))
     return _unit_interval(float(np.abs(z)))
