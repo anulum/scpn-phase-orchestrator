@@ -25,6 +25,11 @@ jobs:
       contents: write
       id-token: write      # keyless sigstore signing of the provenance
       attestations: write  # store the SLSA build-provenance attestation
+    env:
+      # Optional ML-DSA (FIPS 204) seed for the post-quantum provenance seal. When
+      # unset (the secret is not configured), the extra attestation step is skipped
+      # and the release still carries GitHub's keyless build-provenance attestation.
+      SPO_PROVENANCE_SIGNING_SEED: ${{ secrets.SPO_PROVENANCE_SIGNING_SEED }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -49,6 +54,34 @@ jobs:
             dist/*.tar.gz
             sbom.json
 
+      - name: Assemble post-quantum-signed SLSA provenance attestation
+        if: env.SPO_PROVENANCE_SIGNING_SEED != ''
+        env:
+          # The runner pins Python 3.12 above; record it in the builder version.
+          PROVENANCE_PYTHON_VERSION: "3.12"
+        run: |
+          pip install --require-hashes -r requirements/pqc-lock.txt
+          pip install --no-deps -e .
+          artifact_args=()
+          for archive in dist/*.tar.gz; do
+            artifact_args+=(--artifact "$archive")
+          done
+          python tools/build_release_provenance_spec.py \
+            "${artifact_args[@]}" \
+            --sbom sbom.json \
+            --lock requirements/pqc-lock.txt \
+            --lock requirements/release-tools.txt \
+            --output provenance_spec.json
+          # Write the seed to a private file, sign, then remove it immediately.
+          umask 077
+          printf '%s' "$SPO_PROVENANCE_SIGNING_SEED" > signing.seed
+          spo provenance-attest provenance_spec.json \
+            --signing-seed-file signing.seed > provenance_attestation.json
+          rm -f signing.seed
+          # Publish the verification key so consumers can run provenance-verify.
+          python -c "import json; print(json.load(open('provenance_attestation.json'))['public_key_hex'])" \
+            > provenance_signing_key.pub
+
       - name: Extract changelog
         id: changelog
         run: |
@@ -64,7 +97,12 @@ jobs:
       - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
         with:
           body_path: release_notes.md
+          # The provenance attestation and its verification key are attached only
+          # when the signing secret is configured; action-gh-release skips
+          # unmatched files by default, so an unsigned release still succeeds.
           files: |
             dist/*.tar.gz
             sbom.json
+            provenance_attestation.json
+            provenance_signing_key.pub
           generate_release_notes: false

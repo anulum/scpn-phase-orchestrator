@@ -111,13 +111,17 @@ def _subjects(spec: dict[str, Any]) -> tuple[ArtifactSubject, ...]:
     return tuple(subjects)
 
 
-def _resolved_dependencies(spec: dict[str, Any]) -> tuple[ResourceDescriptor, ...]:
-    """Build the resolved dependencies from the spec, else raise ``ClickException``."""
-    entries = _require_list(spec, "resolved_dependencies", required=False)
+def _descriptors(spec: dict[str, Any], key: str) -> tuple[ResourceDescriptor, ...]:
+    """Build a descriptor list under ``key`` from the spec, else raise.
+
+    Shared by ``resolved_dependencies``, ``builder_dependencies``, and
+    ``byproducts`` — each an optional list of ``{uri, sha256, name?}`` objects.
+    """
+    entries = _require_list(spec, key, required=False)
     descriptors: list[ResourceDescriptor] = []
     for entry in entries:
         if not isinstance(entry, dict):
-            raise click.ClickException("each resolved dependency must be an object")
+            raise click.ClickException(f"each {key} entry must be an object")
         try:
             descriptors.append(
                 ResourceDescriptor(
@@ -129,6 +133,23 @@ def _resolved_dependencies(spec: dict[str, Any]) -> tuple[ResourceDescriptor, ..
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
     return tuple(descriptors)
+
+
+def _builder_version(spec: dict[str, Any]) -> dict[str, str]:
+    """Return the builder version map from the spec, else raise ``ClickException``.
+
+    Every key and value must be a string so the block round-trips through JSON and
+    serialises deterministically.
+    """
+    entries = _require_object(spec, "builder_version", required=False)
+    version: dict[str, str] = {}
+    for key, value in entries.items():
+        if not isinstance(value, str):
+            raise click.ClickException(
+                f"builder_version value for '{key}' must be a string"
+            )
+        version[key] = value
+    return version
 
 
 def _load_seed(signing_seed: str | None, signing_seed_file: Path | None) -> str:
@@ -204,13 +225,16 @@ def provenance_attest(
         internal_parameters=_require_object(
             spec, "internal_parameters", required=False
         ),
-        resolved_dependencies=_resolved_dependencies(spec),
+        resolved_dependencies=_descriptors(spec, "resolved_dependencies"),
     )
     run_details = RunDetails(
         builder_id=_require_str(spec, "builder_id"),
         invocation_id=_require_str(spec, "invocation_id"),
         started_on=str(spec.get("started_on", "")),
         finished_on=str(spec.get("finished_on", "")),
+        builder_version=_builder_version(spec),
+        builder_dependencies=_descriptors(spec, "builder_dependencies"),
+        byproducts=_descriptors(spec, "byproducts"),
     )
     # The subjects, build definition, and run details are all pre-validated above,
     # so assembling the statement cannot fail here.

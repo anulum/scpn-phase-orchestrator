@@ -24,6 +24,7 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
+import scpn_phase_orchestrator.runtime.cli.provenance as provenance_cli
 from scpn_phase_orchestrator.assurance.dsse import (
     DSSE_PAYLOAD_TYPE,
     DsseEnvelope,
@@ -36,7 +37,6 @@ from scpn_phase_orchestrator.runtime.audit_pqc import (
     signing_key_from_seed,
 )
 from scpn_phase_orchestrator.runtime.cli import main
-from scpn_phase_orchestrator.runtime.cli import provenance as provenance_cli
 from tests.test_audit_pqc import requires_mldsa
 
 _A = "a" * 64
@@ -104,11 +104,21 @@ class TestAttestSpecGuards:
             ({"external_parameters": "x"}, "'external_parameters' must be an object"),
             ({"internal_parameters": "x"}, "'internal_parameters' must be an object"),
             ({"resolved_dependencies": "x"}, "'resolved_dependencies' must be a list"),
-            ({"resolved_dependencies": ["x"]}, "each resolved dependency"),
+            ({"resolved_dependencies": ["x"]}, "each resolved_dependencies entry"),
             (
                 {"resolved_dependencies": [{"uri": "u", "sha256": "short"}]},
                 "resolved dependency sha256",
             ),
+            ({"builder_dependencies": "x"}, "'builder_dependencies' must be a list"),
+            ({"builder_dependencies": ["x"]}, "each builder_dependencies entry"),
+            ({"byproducts": "x"}, "'byproducts' must be a list"),
+            ({"byproducts": ["x"]}, "each byproducts entry"),
+            (
+                {"byproducts": [{"uri": "u", "sha256": "short"}]},
+                "resolved dependency sha256",
+            ),
+            ({"builder_version": "x"}, "'builder_version' must be an object"),
+            ({"builder_version": {"k": 3}}, "builder_version value for 'k'"),
             ({"builder_id": ""}, "'builder_id' must be a non-empty string"),
             ({"invocation_id": ""}, "'invocation_id' must be a non-empty string"),
         ],
@@ -378,6 +388,50 @@ class TestAttestVerifyRoundTrip:
         )
         assert verify.exit_code == 1
         assert "signature is not valid" in verify.output
+
+    def test_attest_carries_extended_run_details(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        # builder_version, builder_dependencies, and byproducts must survive the
+        # spec → statement → signed-envelope → verified-statement round-trip.
+        spec = _spec(
+            builder_version={"python": "3.12", "runner": "ubuntu-latest"},
+            builder_dependencies=[
+                {"uri": "pkg:pypi/build@1.5.0", "sha256": "d" * 64, "name": "build"}
+            ],
+            byproducts=[
+                {"uri": "file:sbom.json", "sha256": "e" * 64, "name": "sbom.json"}
+            ],
+        )
+        spec_path = _write(tmp_path, "spec.json", spec)
+        attest = runner.invoke(
+            main,
+            [
+                "provenance-attest",
+                str(spec_path),
+                "--signing-seed",
+                generate_signing_seed(),
+            ],
+        )
+        assert attest.exit_code == 0, attest.output
+        env_path = _write(tmp_path, "env.json", json.loads(attest.output))
+        verify = runner.invoke(
+            main,
+            [
+                "provenance-verify",
+                str(env_path),
+                "--public-key",
+                json.loads(attest.output)["public_key_hex"],
+            ],
+        )
+        assert verify.exit_code == 0, verify.output
+        run_details = json.loads(verify.output)["statement"]["predicate"]["runDetails"]
+        assert run_details["builder"]["version"] == {
+            "python": "3.12",
+            "runner": "ubuntu-latest",
+        }
+        assert run_details["builder"]["builderDependencies"][0]["name"] == "build"
+        assert run_details["byproducts"][0]["name"] == "sbom.json"
 
     def test_verify_reports_non_object_signed_payload(
         self, runner: CliRunner, tmp_path: Path

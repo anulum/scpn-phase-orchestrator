@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.assurance.provenance import (
     SlsaProvenanceStatement,
     build_slsa_provenance_statement,
     provenance_statement_hash,
+    pypi_resolved_dependency,
 )
 
 _A = "a" * 64
@@ -75,6 +76,35 @@ class TestValidators:
         result = provenance._require_json_mapping(source, "block")
         assert result == source
         assert result is not source
+
+    def test_require_str_mapping_rejects_non_mapping(self) -> None:
+        with pytest.raises(ValueError, match="ver must be a mapping"):
+            provenance._require_str_mapping(["x"], "ver")
+
+    def test_require_str_mapping_rejects_non_string_keys_and_values(self) -> None:
+        with pytest.raises(ValueError, match="ver keys must be strings"):
+            provenance._require_str_mapping({1: "x"}, "ver")
+        with pytest.raises(ValueError, match="ver values must be strings"):
+            provenance._require_str_mapping({"k": 2}, "ver")
+
+    def test_require_str_mapping_copies_mapping(self) -> None:
+        source = {"python": "3.12"}
+        result = provenance._require_str_mapping(source, "ver")
+        assert result == source
+        assert result is not source
+
+    def test_descriptor_dicts_sorted_by_uri_then_name(self) -> None:
+        descriptors = (
+            ResourceDescriptor(uri="pkg:b", sha256=_B, name="z"),
+            ResourceDescriptor(uri="pkg:a", sha256=_A, name="y"),
+            ResourceDescriptor(uri="pkg:a", sha256=_C, name="x"),
+        )
+        result = provenance._descriptor_dicts(descriptors)
+        assert [(item["uri"], item["name"]) for item in result] == [
+            ("pkg:a", "x"),
+            ("pkg:a", "y"),
+            ("pkg:b", "z"),
+        ]
 
 
 # --- ArtifactSubject ------------------------------------------------------
@@ -177,6 +207,100 @@ class TestRunDetails:
     def test_builder_block_carries_id(self) -> None:
         assert _run_details().to_dict()["builder"] == {
             "id": "https://github.com/anulum/spo/ci"
+        }
+
+    def test_default_run_details_omit_new_optional_blocks(self) -> None:
+        record = _run_details().to_dict()
+        assert record["builder"] == {"id": "https://github.com/anulum/spo/ci"}
+        assert "byproducts" not in record
+
+    def test_rejects_non_string_builder_version_value(self) -> None:
+        with pytest.raises(ValueError, match="builder_version values must be strings"):
+            _run_details(builder_version={"python": 3})
+
+    def test_builder_version_included_when_present(self) -> None:
+        builder = _run_details(builder_version={"python": "3.12"}).to_dict()["builder"]
+        assert builder["version"] == {"python": "3.12"}
+
+    def test_builder_dependencies_sorted_and_included(self) -> None:
+        details = _run_details(
+            builder_dependencies=(
+                ResourceDescriptor(uri="pkg:b", sha256=_B),
+                ResourceDescriptor(uri="pkg:a", sha256=_A),
+            )
+        )
+        builder = details.to_dict()["builder"]
+        uris = [dep["uri"] for dep in builder["builderDependencies"]]
+        assert uris == ["pkg:a", "pkg:b"]
+
+    def test_byproducts_sorted_and_included(self) -> None:
+        details = _run_details(
+            byproducts=(
+                ResourceDescriptor(uri="pkg:sbom", sha256=_B, name="sbom.json"),
+                ResourceDescriptor(uri="pkg:log", sha256=_A, name="build.log"),
+            )
+        )
+        byproducts = details.to_dict()["byproducts"]
+        assert [item["uri"] for item in byproducts] == ["pkg:log", "pkg:sbom"]
+
+
+# --- pypi_resolved_dependency ---------------------------------------------
+
+
+class TestPypiResolvedDependency:
+    def test_normalises_name_for_purl_and_preserves_original(self) -> None:
+        descriptor = pypi_resolved_dependency("Foo_Bar.Baz", "1.2.3", _A)
+        assert descriptor.uri == "pkg:pypi/foo-bar-baz@1.2.3"
+        assert descriptor.name == "Foo_Bar.Baz"
+        assert descriptor.sha256 == _A
+
+    def test_collapses_repeated_separators(self) -> None:
+        descriptor = pypi_resolved_dependency("a--b__c", "0.1", _A)
+        assert descriptor.uri == "pkg:pypi/a-b-c@0.1"
+
+    def test_rejects_empty_name(self) -> None:
+        with pytest.raises(ValueError, match="dependency name"):
+            pypi_resolved_dependency("", "1.0", _A)
+
+    def test_rejects_empty_version(self) -> None:
+        with pytest.raises(ValueError, match="dependency version"):
+            pypi_resolved_dependency("click", "", _A)
+
+    def test_rejects_bad_digest(self) -> None:
+        with pytest.raises(ValueError, match="resolved dependency sha256"):
+            pypi_resolved_dependency("click", "8.1.7", "nope")
+
+    def test_feeds_a_fuller_resolved_dependency_tree(self) -> None:
+        definition = _build_definition(
+            resolved_dependencies=(
+                pypi_resolved_dependency("click", "8.1.7", _A),
+                pypi_resolved_dependency("cryptography", "49.0.0", _B),
+            )
+        )
+        deps = definition.to_dict()["resolvedDependencies"]
+        assert [dep["uri"] for dep in deps] == [
+            "pkg:pypi/click@8.1.7",
+            "pkg:pypi/cryptography@49.0.0",
+        ]
+
+
+# --- backward compatibility -----------------------------------------------
+
+
+class TestBackwardCompatibility:
+    def test_statement_hash_unchanged_when_new_blocks_empty(self) -> None:
+        # A statement built without any of the new optional run-detail blocks must
+        # serialise byte-identically to the pre-extension format, so previously
+        # issued attestations keep the same hash.
+        statement = build_slsa_provenance_statement(
+            (ArtifactSubject(name="wheel", sha256=_A),),
+            _build_definition(),
+            _run_details(),
+        )
+        record = statement.to_statement()
+        assert record["predicate"]["runDetails"] == {
+            "builder": {"id": "https://github.com/anulum/spo/ci"},
+            "metadata": {"invocationId": "run-42"},
         }
 
 

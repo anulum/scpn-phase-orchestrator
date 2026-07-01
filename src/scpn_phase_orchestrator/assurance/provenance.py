@@ -73,6 +73,39 @@ def _require_json_mapping(value: object, field_name: str) -> dict[str, object]:
     return result
 
 
+def _require_str_mapping(value: object, field_name: str) -> dict[str, str]:
+    """Return a copy of ``value`` if it is a ``str``-to-``str`` mapping, else raise.
+
+    The SLSA ``builder.version`` block is a map of string keys to string values
+    (e.g. component name to version); both sides must be strings for the block to
+    serialise deterministically and to round-trip through JSON unchanged.
+    """
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field_name} must be a mapping")
+    result: dict[str, str] = {}
+    for key, item in value.items():
+        if not isinstance(key, str):
+            raise ValueError(f"{field_name} keys must be strings")
+        if not isinstance(item, str):
+            raise ValueError(f"{field_name} values must be strings")
+        result[key] = item
+    return result
+
+
+def _descriptor_dicts(
+    descriptors: tuple[ResourceDescriptor, ...],
+) -> list[dict[str, object]]:
+    """Return the descriptors as in-toto mappings, sorted by ``(uri, name)``.
+
+    Sorting makes the serialisation independent of the order the caller supplied,
+    so the same set of resolved inputs always produces the same canonical hash.
+    """
+    return [
+        descriptor.to_dict()
+        for descriptor in sorted(descriptors, key=lambda item: (item.uri, item.name))
+    ]
+
+
 @dataclass(frozen=True, slots=True)
 class ArtifactSubject:
     """A produced artefact pinned by its SHA-256 digest.
@@ -94,7 +127,13 @@ class ArtifactSubject:
         require_sha256(self.sha256, "subject sha256")
 
     def to_dict(self) -> dict[str, object]:
-        """Return the in-toto subject mapping (``name`` + ``digest.sha256``)."""
+        """Return the in-toto subject mapping (``name`` + ``digest.sha256``).
+
+        Returns
+        -------
+        dict[str, object]
+            The ``{"name": …, "digest": {"sha256": …}}`` subject entry.
+        """
         return {"name": self.name, "digest": {"sha256": self.sha256}}
 
 
@@ -123,7 +162,13 @@ class ResourceDescriptor:
         require_sha256(self.sha256, "resolved dependency sha256")
 
     def to_dict(self) -> dict[str, object]:
-        """Return the in-toto resource-descriptor mapping."""
+        """Return the in-toto resource-descriptor mapping.
+
+        Returns
+        -------
+        dict[str, object]
+            The ``uri`` + ``digest.sha256`` mapping, carrying ``name`` when set.
+        """
         descriptor: dict[str, object] = {
             "uri": self.uri,
             "digest": {"sha256": self.sha256},
@@ -166,6 +211,12 @@ class BuildDefinition:
         ``resolvedDependencies`` is sorted by ``(uri, name)`` so the same set of
         inputs always serialises identically. ``internalParameters`` is omitted when
         empty to keep the statement minimal.
+
+        Returns
+        -------
+        dict[str, object]
+            The ``buildType`` / ``externalParameters`` / ``resolvedDependencies``
+            mapping, carrying ``internalParameters`` when non-empty.
         """
         definition: dict[str, object] = {
             "buildType": self.build_type,
@@ -178,12 +229,9 @@ class BuildDefinition:
         )
         if internal:
             definition["internalParameters"] = internal
-        definition["resolvedDependencies"] = [
-            descriptor.to_dict()
-            for descriptor in sorted(
-                self.resolved_dependencies, key=lambda item: (item.uri, item.name)
-            )
-        ]
+        definition["resolvedDependencies"] = _descriptor_dicts(
+            self.resolved_dependencies
+        )
         return definition
 
 
@@ -202,30 +250,64 @@ class RunDetails:
         by the caller (never read from the wall clock) to preserve determinism.
     finished_on:
         Optional RFC 3339 build-finish timestamp; the empty string omits it.
+    builder_version:
+        Optional ``str``-to-``str`` map of the builder's own component versions
+        (e.g. the runner image and toolchain versions); omitted when empty.
+    builder_dependencies:
+        The builder's own digest-pinned dependencies — the actions, images, and
+        toolchains the build platform itself resolved, distinct from the sources the
+        build consumed. Omitted when empty.
+    byproducts:
+        Digest-pinned artefacts the build produced that are not release subjects —
+        the SBOM, build logs, or intermediate manifests. Omitted when empty.
     """
 
     builder_id: str
     invocation_id: str
     started_on: str = ""
     finished_on: str = ""
+    builder_version: Mapping[str, str] = field(default_factory=dict)
+    builder_dependencies: tuple[ResourceDescriptor, ...] = ()
+    byproducts: tuple[ResourceDescriptor, ...] = ()
 
     def __post_init__(self) -> None:
-        """Validate the builder identity and invocation id."""
+        """Validate the builder identity, invocation id, and version map."""
         _require_non_empty_str(self.builder_id, "builder_id")
         _require_non_empty_str(self.invocation_id, "invocation_id")
+        _require_str_mapping(self.builder_version, "builder_version")
 
     def to_dict(self) -> dict[str, object]:
         """Return the SLSA ``runDetails`` mapping.
 
-        The ``metadata`` block always carries ``invocationId`` and adds
-        ``startedOn`` / ``finishedOn`` only when the caller supplied them.
+        The ``builder`` block always carries its ``id`` and adds ``version`` and
+        ``builderDependencies`` only when supplied. The ``metadata`` block always
+        carries ``invocationId`` and adds ``startedOn`` / ``finishedOn`` only when
+        the caller supplied them. ``byproducts`` is added to ``runDetails`` only when
+        non-empty, so a statement without them is byte-identical to the prior format.
+
+        Returns
+        -------
+        dict[str, object]
+            The ``builder`` + ``metadata`` mapping, carrying ``byproducts`` when
+            non-empty.
         """
+        builder: dict[str, object] = {"id": self.builder_id}
+        version = _require_str_mapping(self.builder_version, "builder_version")
+        if version:
+            builder["version"] = version
+        if self.builder_dependencies:
+            builder["builderDependencies"] = _descriptor_dicts(
+                self.builder_dependencies
+            )
         metadata: dict[str, object] = {"invocationId": self.invocation_id}
         if self.started_on:
             metadata["startedOn"] = self.started_on
         if self.finished_on:
             metadata["finishedOn"] = self.finished_on
-        return {"builder": {"id": self.builder_id}, "metadata": metadata}
+        run_details: dict[str, object] = {"builder": builder, "metadata": metadata}
+        if self.byproducts:
+            run_details["byproducts"] = _descriptor_dicts(self.byproducts)
+        return run_details
 
 
 @dataclass(frozen=True, slots=True)
@@ -277,7 +359,13 @@ class SlsaProvenanceStatement:
         }
 
     def statement_hash(self) -> str:
-        """Return the SHA-256 of the canonical statement serialisation."""
+        """Return the SHA-256 of the canonical statement serialisation.
+
+        Returns
+        -------
+        str
+            Lowercase hexadecimal SHA-256 over the canonical statement JSON.
+        """
         return canonical_record_hash(self.to_statement())
 
 
@@ -314,6 +402,53 @@ def build_slsa_provenance_statement(
     )
 
 
+def pypi_resolved_dependency(
+    name: str, version: str, sha256: str
+) -> ResourceDescriptor:
+    """Return a digest-pinned resolved dependency for a PyPI package.
+
+    Turns one hash-pinned lock-file entry into a :class:`ResourceDescriptor` whose
+    ``uri`` is a `Package URL <https://github.com/package-url/purl-spec>`_
+    (``pkg:pypi/<name>@<version>``). The package name is normalised to the PyPI form
+    (lowercased, runs of ``.``/``-``/``_`` collapsed to a single ``-``, per PEP 503)
+    for the URL, while the original name is preserved in the descriptor ``name`` so
+    the resolved-dependency tree records exactly what the lock pinned. Assembling one
+    descriptor per pinned artefact yields the fuller ``resolvedDependencies`` block a
+    consumer needs to reproduce the build's inputs.
+
+    Parameters
+    ----------
+    name:
+        The package name as written in the lock file, non-empty.
+    version:
+        The pinned package version, non-empty.
+    sha256:
+        The pinned artefact's SHA-256 digest, lowercase hex (64 characters).
+
+    Returns
+    -------
+    ResourceDescriptor
+        The digest-pinned dependency, ready to include in a
+        :class:`BuildDefinition`.
+
+    Raises
+    ------
+    ValueError
+        If the name or version is empty, or the digest is malformed.
+    """
+    normalised = _require_non_empty_str(name, "dependency name").lower()
+    for separator in ("_", "."):
+        normalised = normalised.replace(separator, "-")
+    while "--" in normalised:
+        normalised = normalised.replace("--", "-")
+    pinned_version = _require_non_empty_str(version, "dependency version")
+    return ResourceDescriptor(
+        uri=f"pkg:pypi/{normalised}@{pinned_version}",
+        sha256=sha256,
+        name=name,
+    )
+
+
 def provenance_statement_hash(statement: SlsaProvenanceStatement) -> str:
     """Return the canonical SHA-256 digest of a provenance statement.
 
@@ -340,4 +475,5 @@ __all__ = [
     "SlsaProvenanceStatement",
     "build_slsa_provenance_statement",
     "provenance_statement_hash",
+    "pypi_resolved_dependency",
 ]

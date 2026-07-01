@@ -113,7 +113,13 @@ class DsseSignature:
         _decode_b64(self.signature_b64, "signature_b64")
 
     def to_dict(self) -> dict[str, str]:
-        """Return the DSSE signature mapping (``keyid`` / ``algorithm`` / ``sig``)."""
+        """Return the DSSE signature mapping (``keyid`` / ``algorithm`` / ``sig``).
+
+        Returns
+        -------
+        dict[str, str]
+            The ``keyid`` / ``algorithm`` / ``sig`` wire mapping.
+        """
         return {
             "keyid": self.keyid,
             "algorithm": self.algorithm,
@@ -191,7 +197,13 @@ class DsseEnvelope:
             raise ValueError("envelope requires at least one signature")
 
     def payload_bytes(self) -> bytes:
-        """Return the decoded payload bytes."""
+        """Return the decoded payload bytes.
+
+        Returns
+        -------
+        bytes
+            The base64-decoded payload (the canonical statement JSON bytes).
+        """
         return _decode_b64(self.payload_b64, "payload")
 
     def statement(self) -> dict[str, object]:
@@ -216,7 +228,13 @@ class DsseEnvelope:
         return parsed
 
     def to_dict(self) -> dict[str, object]:
-        """Return the DSSE wire mapping (payload / payloadType / signatures)."""
+        """Return the DSSE wire mapping (payload / payloadType / signatures).
+
+        Returns
+        -------
+        dict[str, object]
+            The ``payload`` / ``payloadType`` / ``signatures`` wire mapping.
+        """
         return {
             "payload": self.payload_b64,
             "payloadType": self.payload_type,

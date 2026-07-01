@@ -71,6 +71,7 @@ from scpn_phase_orchestrator.assurance.provenance import (
     SlsaProvenanceStatement,
     build_slsa_provenance_statement,
     provenance_statement_hash,
+    pypi_resolved_dependency,
 )
 from scpn_phase_orchestrator.assurance.report import (
     CONFORMITY_REPORT_SCHEMA,
@@ -109,6 +110,7 @@ __all__ = [
     "SlsaProvenanceStatement",
     "build_slsa_provenance_statement",
     "provenance_statement_hash",
+    "pypi_resolved_dependency",
     "sign_provenance_statement",
     "verify_dsse_envelope",
     "CONFORMAL_GATE",

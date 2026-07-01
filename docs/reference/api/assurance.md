@@ -162,8 +162,14 @@ deterministic [in-toto Statement v1](https://in-toto.io/Statement/v1) carrying a
 [SLSA provenance v1](https://slsa.dev/provenance/v1) predicate: the produced
 artefacts as digest-pinned subjects, the build definition (build type, external
 parameters, digest-pinned resolved dependencies), and the run details (builder
-identity and invocation). It reads no wall clock and makes no network call, so the
-same build inputs always serialise to the same statement.
+identity and invocation). The run details also carry the optional `builder.version`
+map, the builder's own digest-pinned `builderDependencies`, and the build
+`byproducts` (for example a digest-pinned SBOM); each is omitted when empty, so a
+minimal statement is byte-identical to one without them. `pypi_resolved_dependency`
+turns a hash-pinned lock-file entry into a Package-URL-addressed resolved dependency,
+so the `resolvedDependencies` block can carry the full dependency tree. It reads no
+wall clock and makes no network call, so the same build inputs always serialise to
+the same statement.
 
 `scpn_phase_orchestrator.assurance.dsse` wraps that statement in a
 [DSSE](https://github.com/secure-systems-lab/dsse) envelope — the wire format
@@ -186,6 +192,18 @@ Signing needs the `pqc` extra and an OpenSSL 3.5+ backend. Publishing the envelo
 to a Rekor transparency log or verifying it with `cosign` is an optional operator
 step that needs network and OIDC, and is left to the operator; the envelope itself
 is deterministic and verifiable without either.
+
+The release workflow (`.github/workflows/release.yml`) wires this into the build:
+after building the sdist and SBOM it runs `tools/build_release_provenance_spec.py`
+to assemble the spec — the sdist as a subject, the SBOM as a byproduct, the
+hash-pinned lock files as resolved dependencies, and the tag, commit, and runner
+metadata as the build definition and run details — then signs it with `spo
+provenance-attest` using the `SPO_PROVENANCE_SIGNING_SEED` repository secret, and
+attaches `provenance_attestation.json` and `provenance_signing_key.pub` to the
+GitHub Release. The seed is written to a private file, used, and deleted within the
+step; it is never committed. When the secret is not configured the step is skipped
+and the release still carries GitHub's own keyless build-provenance attestation.
+Consumers should obtain the public key from a trusted channel before pinning it.
 
 ::: scpn_phase_orchestrator.assurance.provenance
 
