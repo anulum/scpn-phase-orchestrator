@@ -888,3 +888,70 @@ class TestQuantumControlBridgeImportExportContracts:
 # ──────────────────────────────────────────────────────────────────────
 # audit/logger.py: phases without omegas raises ValueError
 # ──────────────────────────────────────────────────────────────────────
+
+
+def test_require_positive_real_rejects_boolean() -> None:
+    with pytest.raises(ValueError, match="finite and positive"):
+        _BRIDGE_MODULE._require_positive_real(True, name="dt")
+
+
+def test_require_finite_real_rejects_boolean_and_non_finite() -> None:
+    with pytest.raises(ValueError, match="must be finite"):
+        _BRIDGE_MODULE._require_finite_real(True, name="R")
+    with pytest.raises(ValueError, match="must be finite"):
+        _BRIDGE_MODULE._require_finite_real(float("inf"), name="R")
+
+
+def test_finite_array_rejects_non_numeric_values() -> None:
+    with pytest.raises(ValueError, match="must be numeric"):
+        _BRIDGE_MODULE._finite_array(np.array(["a", "b"], dtype=object), name="knm")
+
+
+def test_require_sha256_rejects_non_digest() -> None:
+    with pytest.raises(ValueError, match="lowercase SHA-256 hex digest"):
+        _BRIDGE_MODULE._require_sha256("not-a-digest", name="edge_sha256")
+
+
+def test_validate_layer_assignments_rejects_non_list_group() -> None:
+    with pytest.raises(ValueError, match="must contain list groups"):
+        _BRIDGE_MODULE._validate_layer_assignments([5], n_phases=1)
+
+
+def test_validate_upde_state_rejects_non_square_alignment() -> None:
+    state = UPDEState(
+        layers=[LayerState(R=0.5, psi=0.1), LayerState(R=0.6, psi=0.2)],
+        cross_layer_alignment=np.zeros((2, 3), dtype=np.float64),
+        stability_proxy=0.0,
+        regime_id="probe",
+    )
+    with pytest.raises(ValueError, match="must be a square matrix"):
+        _BRIDGE_MODULE._validate_upde_state(state)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("schema", "wrong", "edge schema must be"),
+        ("producer", "wrong", "edge producer must be"),
+        ("consumer", "wrong", "edge consumer must be"),
+    ],
+)
+def test_validate_scpn_upde_edge_rejects_bad_headers(
+    field: str, value: str, match: str
+) -> None:
+    bridge = QuantumControlBridge(n_oscillators=2)
+    edge = _scpn_upde_edge_payload()
+    edge[field] = value
+    with pytest.raises(ValueError, match=match):
+        bridge._validate_scpn_upde_edge(edge)
+
+
+def test_validate_scpn_upde_edge_rejects_permitted_qpu_execution() -> None:
+    bridge = QuantumControlBridge(n_oscillators=2)
+    edge = _scpn_upde_edge_payload()
+    edge["permissions"] = {
+        "qpu_execution_permitted": True,
+        "actuation_permitted": False,
+    }
+    with pytest.raises(ValueError, match="qpu_execution_permitted must be false"):
+        bridge._validate_scpn_upde_edge(edge)
