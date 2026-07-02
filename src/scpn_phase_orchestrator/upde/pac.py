@@ -34,6 +34,10 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._pac_validation import (
+    validate_modulation_index_output,
+    validate_pac_matrix_output,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -169,14 +173,9 @@ def _validate_finite_real(name: str, value: object) -> float:
     return parsed
 
 
-def _validate_mi_value(name: str, value: object) -> float:
+def _validate_mi_value(_name: str, value: object) -> float:
     """Return the backend modulation index matching the reference, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError(f"{name} must be a finite real number")
-    parsed = float(value)
-    if not isfinite(parsed):
-        raise ValueError(f"{name} must be finite")
-    return float(np.clip(parsed, 0.0, 1.0))
+    return validate_modulation_index_output(value)
 
 
 def _load_backend(name: str) -> dict[str, object]:
@@ -383,14 +382,8 @@ def pac_matrix(
             n,
             n_bins,
         )
-        matrix = np.asarray(flat, dtype=np.float64).ravel(order="C")
-        if matrix.size != n * n:
-            raise ValueError(
-                "pac_matrix backend must return n*n values in C-order layout"
-            )
-        if not np.all(np.isfinite(matrix)):
-            raise ValueError("pac_matrix backend must return finite values")
-        return np.clip(matrix.reshape((n, n), order="C"), 0.0, 1.0)
+        matrix = validate_pac_matrix_output(flat, n=n)
+        return matrix.reshape((n, n), order="C")
 
     result = np.zeros((n, n), dtype=np.float64)
     for i in range(n):

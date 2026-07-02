@@ -245,17 +245,22 @@ These findings motivate PAC as a biomarker for closed-loop neurostimulation
 | `pac_matrix` | All-pairs PAC | `(T,N)` + `(T,N)` | `(N,N)` |
 | `pac_gate` | Binary decision | float MI | bool |
 
-### 4.2 Rust Acceleration
+### 4.2 Accelerator Output Contract
 
 `modulation_index` delegates to `spo_kernel.pac_modulation_index` when
 available. The Rust implementation uses sorted-bin counting instead of
-`np.digitize`, avoiding branch mispredictions.
+`np.digitize`, avoiding branch mispredictions. Optional Rust, Go, Julia, and
+Mojo returns use the same output contract before public publication:
+modulation-index scalars must be finite real values in `[0, 1]`, and flattened
+PAC-matrix payloads must contain exactly `N*N` finite real values in `[0, 1]`.
+Malformed optional backend output raises an error instead of being clipped into
+synthetic PAC evidence.
 
 ### 4.3 Robustness
 
 - Empty arrays → MI = 0.0
-- `n_bins < 2` → MI = 0.0
-- `n_bins = 1` → guarded against $\log(1) = 0$ denominator
+- `n_bins < 2` or boolean bin aliases → `ValueError`
+- `n_bins = 1` → rejected before the $\log(1) = 0$ denominator
 - All-zero amplitude → MI = 0.0
 - Mismatched lengths → uses `min(len(theta), len(amp))`
 
@@ -566,8 +571,11 @@ Negligible compared to input data.
 - `tests/test_pac_stability.py` — 7 slow stability/property tests for bounded
   MI, modulation-depth ordering, uncorrelated noise floor, and matrix
   invariants.
+- `tests/test_pac_public_backend_output_contracts.py` — 6 public dispatcher
+  tests covering optional backend output rejection, valid output publication,
+  loader-failure fallback, and timing-probe unavailability.
 
-Total collected PAC tests: **159**.
+Total collected PAC tests: **165**.
 
 ---
 

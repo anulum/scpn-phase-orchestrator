@@ -8,11 +8,16 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias, cast
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import pac as pac_mod
 from scpn_phase_orchestrator.upde.pac import modulation_index, pac_gate, pac_matrix
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def test_modulation_index_is_bounded_for_locked_amplitude_envelope() -> None:
@@ -95,7 +100,7 @@ def test_pac_rejects_invalid_bin_counts(n_bins: object) -> None:
     amplitude = np.ones_like(theta)
 
     with pytest.raises(ValueError, match="n_bins"):
-        modulation_index(theta, amplitude, n_bins=n_bins)
+        modulation_index(theta, amplitude, n_bins=cast("int", n_bins))
 
 
 @pytest.mark.parametrize(
@@ -121,7 +126,7 @@ def test_modulation_index_rejects_invalid_backend_scalar(
 
     monkeypatch.setattr(pac_mod, "_dispatch", lambda _name: invalid_backend)
 
-    with pytest.raises(ValueError, match="modulation_index backend"):
+    with pytest.raises(TypeError, match="modulation index must be a real scalar"):
         modulation_index(theta, amplitude, n_bins=18)
 
 
@@ -131,12 +136,12 @@ def test_pac_matrix_rejects_non_finite_backend_payload(
     phases = np.zeros((3, 2), dtype=np.float64)
     amplitudes = np.ones((3, 2), dtype=np.float64)
 
-    def non_finite_backend(*_args: object) -> np.ndarray:
+    def non_finite_backend(*_args: object) -> FloatArray:
         return np.array([0.1, np.nan, 0.2, 0.3], dtype=np.float64)
 
     monkeypatch.setattr(pac_mod, "_dispatch", lambda _name: non_finite_backend)
 
-    with pytest.raises(ValueError, match="pac_matrix backend must return finite"):
+    with pytest.raises(ValueError, match="PAC matrix must contain only finite values"):
         pac_matrix(phases, amplitudes, n_bins=18)
 
 

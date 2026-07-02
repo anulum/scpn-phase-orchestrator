@@ -330,7 +330,10 @@ accepted only when finite, correctly sized, and inside the physical `[0, 1]`
 interval. Direct Mojo PAC output must contain exactly one scalar line for
 modulation-index calls or exactly N×N scalar lines for matrix calls; blank,
 non-finite, truncated, or overlong text output is rejected before public
-assembly.
+assembly. The public PAC dispatcher applies the same output contract to
+optional backend returns before exposing `modulation_index()` or `pac_matrix()`
+results, so backend physics-contract faults fail closed instead of being
+clipped into synthetic PAC evidence.
 Central to neuroscience cross-frequency coupling analysis.
 
 ::: scpn_phase_orchestrator.upde.pac

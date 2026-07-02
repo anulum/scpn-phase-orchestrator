@@ -12,7 +12,7 @@
     "research_experimental_modules": 217,
     "runtime_serving_modules": 136,
     "rust_kernel_files": 97,
-    "test_files": 760
+    "test_files": 761
   },
   "documentation": {
     "public_pages": [
@@ -2166,6 +2166,7 @@
       "tests/test_pac.py",
       "tests/test_pac_backends.py",
       "tests/test_pac_parity.py",
+      "tests/test_pac_public_backend_output_contracts.py",
       "tests/test_pac_stability.py",
       "tests/test_petri_adapter.py",
       "tests/test_petri_adapter_validation.py",
