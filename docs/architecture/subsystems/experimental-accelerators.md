@@ -26,6 +26,9 @@ Each accelerated kernel has, per theme, a set of backend modules
 Backends take flat `float64` arrays (phases, omegas, flattened coupling) plus
 scalar parameters and return `float64` arrays / tuples / scalars; the producer
 modules in `coupling`/`monitor`/`upde` wrap them for type-checking and audit.
+Validation runs before dtype coercion: Python booleans, NumPy boolean scalars,
+boolean dtypes, and raw containers carrying boolean aliases are rejected rather
+than widened to `0.0`/`1.0` backend payloads.
 
 ## Wiring
 

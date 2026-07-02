@@ -16,6 +16,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._validation_common import (
+    contains_boolean_alias,
+)
+
 __all__ = [
     "validate_modulation_index_inputs",
     "validate_modulation_index_output",
@@ -30,7 +34,9 @@ _UNIT_INTERVAL_TOLERANCE = 1e-12
 
 def _as_int(value: Any, *, name: str, minimum: int) -> int:
     """Return ``value`` as a validated integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if contains_boolean_alias(value):
+        raise TypeError(f"{name} must be an integer, not boolean")
+    if not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     out = int(value)
     if out < minimum:
@@ -40,9 +46,9 @@ def _as_int(value: Any, *, name: str, minimum: int) -> int:
 
 def _as_finite_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite vector, else raise."""
-    array = np.asarray(value)
-    if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
+    if contains_boolean_alias(value):
         raise TypeError(f"{name} must be real-valued, not boolean")
+    array = np.asarray(value)
     if np.iscomplexobj(array):
         raise TypeError(f"{name} must be real-valued, not complex")
     if not np.issubdtype(array.dtype, np.number):
@@ -93,7 +99,9 @@ def validate_modulation_index_inputs(
 
 def validate_modulation_index_output(value: Any) -> float:
     """Validate direct backend Tort modulation-index output."""
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if contains_boolean_alias(value):
+        raise TypeError("modulation index must be a real scalar, not boolean")
+    if not isinstance(value, Real):
         raise TypeError("modulation index must be a real scalar")
     out = float(value)
     if not np.isfinite(out):

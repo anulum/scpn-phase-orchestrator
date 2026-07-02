@@ -16,6 +16,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._validation_common import (
+    contains_boolean_alias,
+)
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 TWO_PI = 2.0 * np.pi
@@ -25,10 +29,12 @@ __all__ = ["TWO_PI", "validate_hypergraph_inputs", "validate_hypergraph_output"]
 
 def _as_real_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite real vector, else raise."""
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be real-valued, not boolean")
     arr = np.asarray(value)
     if arr.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional float64 vector")
-    if arr.dtype == np.bool_ or not np.issubdtype(arr.dtype, np.number):
+    if not np.issubdtype(arr.dtype, np.number):
         raise ValueError(f"{name} must be a finite real-valued vector")
     if np.iscomplexobj(arr):
         raise ValueError(f"{name} must be real-valued")
@@ -40,31 +46,39 @@ def _as_real_vector(value: Any, *, name: str) -> FloatArray:
 
 def _as_index_vector(value: Any, *, name: str) -> IntArray:
     """Return ``value`` as a validated integer index vector, else raise."""
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must contain non-boolean integer indices")
     arr = np.asarray(value)
     if arr.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional int64 vector")
-    if arr.dtype == np.bool_ or not np.issubdtype(arr.dtype, np.integer):
+    if not np.issubdtype(arr.dtype, np.integer):
         raise ValueError(f"{name} must contain non-boolean integer indices")
     return np.ascontiguousarray(arr, dtype=np.int64)
 
 
 def _validate_positive_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be a non-boolean integer")
+    if not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer")
     return int(value)
 
 
 def _validate_non_negative_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be a non-boolean integer")
+    if not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer")
     return int(value)
 
 
 def _validate_real_scalar(value: Any, *, name: str) -> float:
     """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be finite real, not boolean")
+    if not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real")
     out = float(value)
     if not np.isfinite(out):

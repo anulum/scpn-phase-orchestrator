@@ -16,6 +16,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._validation_common import (
+    contains_boolean_alias,
+)
+
 __all__ = [
     "validate_market_order_inputs",
     "validate_market_order_output",
@@ -31,7 +35,9 @@ _PLV_MATRIX_TOLERANCE = 1e-9
 
 def _as_positive_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if contains_boolean_alias(value):
+        raise TypeError(f"{name} must be an integer, not boolean")
+    if not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     out = int(value)
     if out <= 0:
@@ -41,9 +47,9 @@ def _as_positive_int(value: Any, *, name: str) -> int:
 
 def _as_real_finite_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite real vector, else raise."""
-    array = np.asarray(value)
-    if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
+    if contains_boolean_alias(value):
         raise TypeError(f"{name} must be real-valued, not boolean")
+    array = np.asarray(value)
     if np.iscomplexobj(array):
         raise TypeError(f"{name} must be real-valued, not complex")
     if not np.issubdtype(array.dtype, np.number):

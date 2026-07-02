@@ -17,6 +17,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.experimental.accelerators.upde._validation_common import (
+    contains_boolean_alias,
+)
 
 __all__ = ["validate_swarmalator_inputs", "validate_swarmalator_output"]
 
@@ -37,9 +40,9 @@ ValidatedSwarmalatorInputs: TypeAlias = tuple[
 
 def _as_real_array(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite real array, else raise."""
-    array = np.asarray(value)
-    if np.issubdtype(array.dtype, np.bool_):
+    if contains_boolean_alias(value):
         raise ValueError(f"{name} must be real-valued, not boolean")
+    array = np.asarray(value)
     if np.iscomplexobj(array):
         raise ValueError(f"{name} must be real-valued, not complex")
     if not np.issubdtype(array.dtype, np.number):
@@ -71,7 +74,9 @@ def _as_position_matrix(value: Any, *, n: int, dim: int, name: str) -> FloatArra
 
 def _as_positive_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be a non-boolean integer")
+    if not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-boolean integer")
     out = int(value)
     if out < 1:
@@ -81,7 +86,9 @@ def _as_positive_int(value: Any, *, name: str) -> int:
 
 def _as_finite_real(value: Any, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be finite real, not boolean")
+    if not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real")
     out = float(value)
     if not np.isfinite(out):

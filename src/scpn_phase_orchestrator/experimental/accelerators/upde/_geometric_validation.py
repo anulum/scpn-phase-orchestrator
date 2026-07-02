@@ -16,6 +16,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._validation_common import (
+    contains_boolean_alias,
+)
+
 __all__ = ["validate_torus_inputs", "validate_torus_output"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -36,9 +40,9 @@ TWO_PI = 2.0 * np.pi
 
 def _as_finite_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite vector, else raise."""
-    array = np.asarray(value)
-    if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
+    if contains_boolean_alias(value):
         raise TypeError(f"{name} must be real-valued, not boolean")
+    array = np.asarray(value)
     if np.iscomplexobj(array):
         raise TypeError(f"{name} must be real-valued, not complex")
     if not np.issubdtype(array.dtype, np.number):
@@ -64,7 +68,9 @@ def _as_flat_matrix(value: Any, *, name: str, n: int) -> FloatArray:
 
 def _as_int(value: Any, *, name: str, minimum: int) -> int:
     """Return ``value`` as a validated integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if contains_boolean_alias(value):
+        raise TypeError(f"{name} must be an integer, not boolean")
+    if not isinstance(value, Integral):
         raise TypeError(f"{name} must be an integer")
     out = int(value)
     if out < minimum:
@@ -74,7 +80,9 @@ def _as_int(value: Any, *, name: str, minimum: int) -> int:
 
 def _as_finite_real(value: Any, *, name: str, positive: bool = False) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if contains_boolean_alias(value):
+        raise TypeError(f"{name} must be a real scalar, not boolean")
+    if not isinstance(value, Real):
         raise TypeError(f"{name} must be a real scalar")
     out = float(value)
     if not np.isfinite(out):

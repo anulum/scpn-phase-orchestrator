@@ -8,11 +8,11 @@
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 217,
-    "python_package_modules": 675,
-    "research_experimental_modules": 213,
+    "python_package_modules": 676,
+    "research_experimental_modules": 214,
     "runtime_serving_modules": 136,
     "rust_kernel_files": 97,
-    "test_files": 751
+    "test_files": 752
   },
   "documentation": {
     "public_pages": [
@@ -860,6 +860,7 @@
       "src/scpn_phase_orchestrator/experimental/accelerators/upde/_swarmalator_julia.py",
       "src/scpn_phase_orchestrator/experimental/accelerators/upde/_swarmalator_mojo.py",
       "src/scpn_phase_orchestrator/experimental/accelerators/upde/_swarmalator_validation.py",
+      "src/scpn_phase_orchestrator/experimental/accelerators/upde/_validation_common.py",
       "src/scpn_phase_orchestrator/nn/__init__.py",
       "src/scpn_phase_orchestrator/nn/bold.py",
       "src/scpn_phase_orchestrator/nn/chimera.py",
@@ -1339,6 +1340,7 @@
     "src/scpn_phase_orchestrator/experimental/accelerators/upde/_swarmalator_julia.py",
     "src/scpn_phase_orchestrator/experimental/accelerators/upde/_swarmalator_mojo.py",
     "src/scpn_phase_orchestrator/experimental/accelerators/upde/_swarmalator_validation.py",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_validation_common.py",
     "src/scpn_phase_orchestrator/grpc_gen/__init__.py",
     "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_fallback.py",
     "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_grpc_fallback.py",
@@ -2452,6 +2454,7 @@
       "tests/test_twin_conformal_gate.py",
       "tests/test_type_ignore_justifications.py",
       "tests/test_ude_kuramoto.py",
+      "tests/test_upde_accelerator_bool_alias_guards.py",
       "tests/test_upde_bayesian.py",
       "tests/test_upde_doppler.py",
       "tests/test_upde_engine.py",

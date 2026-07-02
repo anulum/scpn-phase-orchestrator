@@ -16,6 +16,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._validation_common import (
+    contains_boolean_alias,
+)
+
 __all__ = [
     "validate_envelope_modulation_input",
     "validate_envelope_modulation_output",
@@ -28,9 +32,9 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 def _as_finite_vector(value: Any, *, name: str, allow_empty: bool) -> FloatArray:
     """Return ``value`` as a validated finite vector, else raise."""
-    array = np.asarray(value)
-    if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
+    if contains_boolean_alias(value):
         raise TypeError(f"{name} must be real-valued, not boolean")
+    array = np.asarray(value)
     if np.iscomplexobj(array):
         raise TypeError(f"{name} must be real-valued, not complex")
     if not np.issubdtype(array.dtype, np.number):
@@ -47,7 +51,9 @@ def _as_finite_vector(value: Any, *, name: str, allow_empty: bool) -> FloatArray
 
 def _as_positive_window(value: Any) -> int:
     """Return ``value`` as a validated positive window length, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if contains_boolean_alias(value):
+        raise TypeError("window must be an integer, not boolean")
+    if not isinstance(value, Integral):
         raise TypeError("window must be an integer")
     out = int(value)
     if out < 1:
@@ -83,9 +89,9 @@ def validate_envelope_modulation_input(env: FloatArray) -> FloatArray:
 
 def validate_envelope_modulation_output(value: Any) -> float:
     """Validate a direct backend modulation-depth scalar."""
-    array = np.asarray(value)
-    if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
+    if contains_boolean_alias(value):
         raise TypeError("modulation depth must be real-valued, not boolean")
+    array = np.asarray(value)
     if np.iscomplexobj(array):
         raise TypeError("modulation depth must be real-valued, not complex")
     if array.shape not in ((), (1,)):

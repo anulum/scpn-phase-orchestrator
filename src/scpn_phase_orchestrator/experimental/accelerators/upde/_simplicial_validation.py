@@ -17,6 +17,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.experimental.accelerators.upde._validation_common import (
+    contains_boolean_alias,
+)
 
 __all__ = ["validate_simplicial_inputs", "validate_simplicial_output"]
 
@@ -37,11 +40,11 @@ ValidatedSimplicialInputs: TypeAlias = tuple[
 
 def _as_real_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite real vector, else raise."""
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be real-valued, not boolean")
     array = np.asarray(value)
     if array.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional vector")
-    if array.dtype == np.bool_ or np.issubdtype(array.dtype, np.bool_):
-        raise ValueError(f"{name} must be real-valued, not boolean")
     if np.iscomplexobj(array):
         raise ValueError(f"{name} must be real-valued, not complex")
     if not np.issubdtype(array.dtype, np.number):
@@ -63,7 +66,9 @@ def _as_square_flat(value: Any, *, name: str, n: int) -> FloatArray:
 
 def _as_positive_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be a non-boolean integer")
+    if not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-boolean integer")
     out = int(value)
     if out < 1:
@@ -73,7 +78,9 @@ def _as_positive_int(value: Any, *, name: str) -> int:
 
 def _as_non_negative_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be a non-boolean integer")
+    if not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-boolean integer")
     out = int(value)
     if out < 0:
@@ -83,7 +90,9 @@ def _as_non_negative_int(value: Any, *, name: str) -> int:
 
 def _as_finite_real(value: Any, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if contains_boolean_alias(value):
+        raise ValueError(f"{name} must be finite real, not boolean")
+    if not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real")
     out = float(value)
     if not np.isfinite(out):
