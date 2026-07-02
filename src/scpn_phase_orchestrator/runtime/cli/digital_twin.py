@@ -200,18 +200,12 @@ def digital_twin_observability_bundle(
         replay_linkage["scheduler_replay_completed_count"] = replay_completed
         replay_linkage["scheduler_replay_hash"] = replay_hash
 
-    accepted_count = evidence.get("accepted_count", 0)
-    rejected_count = evidence.get("rejected_count", 0)
-    if not isinstance(accepted_count, int) or isinstance(accepted_count, bool):
-        raise click.ClickException(
-            "digital-twin observability bundle schema mismatch: "
-            "accepted_count must be an integer"
-        )
-    if not isinstance(rejected_count, int) or isinstance(rejected_count, bool):
-        raise click.ClickException(
-            "digital-twin observability bundle schema mismatch: "
-            "rejected_count must be an integer"
-        )
+    # digital_twin_prometheus_text above has already validated accepted_count
+    # and rejected_count as present, boolean-free, non-negative integers (via
+    # observability's _validated_non_negative_count on this same mapping), so
+    # the values are reused here without re-checking.
+    accepted_count = evidence["accepted_count"]
+    rejected_count = evidence["rejected_count"]
 
     bundle_payload: dict[str, object] = {
         "schema": "scpn_digital_twin_observability_bundle_v1",

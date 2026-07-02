@@ -235,6 +235,43 @@ def test_secure_aggregation_preflight_rejects_missing_operator_approval(
     assert "operator approval is required" in result.output
 
 
+def test_secure_aggregation_preflight_defaults_without_aggregation_block(
+    tmp_path: Path,
+) -> None:
+    """Absent ``aggregation`` block falls back to the strict policy defaults.
+
+    Under the default ``clipping_norm=1.0`` the fixture deltas exceed the norm
+    and are clipped, so their declared share hashes no longer verify and the
+    affected nodes are rejected — quorum fails closed. A deployment must either
+    declare its aggregation policy explicitly or satisfy the defaults.
+    """
+    commitments_path = _write_jsonl(tmp_path / "commitments.jsonl", _commitments())
+    deployment = _deployment()
+    del deployment["aggregation"]
+    deployment_path = _write_json(tmp_path / "deployment.json", deployment)
+
+    result = _invoke(commitments_path, deployment_path)
+
+    assert result.exit_code == 1
+    assert "quorum_not_met" in result.output
+
+
+def test_secure_aggregation_preflight_rejects_non_object_aggregation_block(
+    tmp_path: Path,
+) -> None:
+    """A present but non-object ``aggregation`` block is a policy schema error."""
+    commitments_path = _write_jsonl(tmp_path / "commitments.jsonl", _commitments())
+    deployment_path = _write_json(
+        tmp_path / "deployment.json",
+        _deployment(aggregation="not-a-policy-object"),
+    )
+
+    result = _invoke(commitments_path, deployment_path)
+
+    assert result.exit_code == 1
+    assert "aggregation must be a JSON object" in result.output
+
+
 def test_secure_aggregation_preflight_rejects_unsupported_rotation_policy(
     tmp_path: Path,
 ) -> None:

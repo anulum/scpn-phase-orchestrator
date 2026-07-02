@@ -71,6 +71,44 @@ def test_auto_coupling_estimation_json_output_is_structured(
     assert len(payload["shape"]) == 2
 
 
+def test_auto_coupling_estimation_time_by_oscillator_matches_default(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    """A transposed table with `--orientation time-by-oscillator` is equivalent.
+
+    The same phase series presented oscillator-by-time (default) and
+    time-by-oscillator (rows and columns swapped) must produce identical
+    coupling estimates — the CLI transposes the table back before estimation.
+    """
+    default_path = tmp_path / "phases.csv"
+    default_path.write_text("0.0,0.2,0.4,0.6\n0.1,0.3,0.5,0.7\n", encoding="utf-8")
+    transposed_path = tmp_path / "phases_t.csv"
+    transposed_path.write_text("0.0,0.1\n0.2,0.3\n0.4,0.5\n0.6,0.7\n", encoding="utf-8")
+
+    default_result = runner.invoke(
+        main,
+        ["auto-coupling-estimation", str(default_path), "--json-out"],
+    )
+    transposed_result = runner.invoke(
+        main,
+        [
+            "auto-coupling-estimation",
+            str(transposed_path),
+            "--orientation",
+            "time-by-oscillator",
+            "--json-out",
+        ],
+    )
+
+    assert default_result.exit_code == 0, default_result.output
+    assert transposed_result.exit_code == 0, transposed_result.output
+    default_payload = json.loads(default_result.output)
+    transposed_payload = json.loads(transposed_result.output)
+    assert transposed_payload["shape"] == default_payload["shape"]
+    assert transposed_payload["knm"] == default_payload["knm"]
+    assert transposed_payload["score_matrix"] == default_payload["score_matrix"]
+
+
 def test_auto_coupling_estimation_rejects_flat_phase_series(
     runner: CliRunner, tmp_path: Path
 ) -> None:

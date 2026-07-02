@@ -168,6 +168,41 @@ def test_digital_twin_observability_bundle_rejects_bad_evidence(
     assert match in result.output
 
 
+def test_digital_twin_observability_bundle_defaults_without_scheduler_inputs(
+    tmp_path: Path,
+) -> None:
+    """Evidence-only bundles carry zeroed, absent-marked replay linkage.
+
+    Without ``--scheduler-dashboard-json`` and ``--scheduler-replay-json`` the
+    bundle must still seal, with both presence flags false, zero counts, null
+    linkage hashes, and the evidence counts passed through unchanged.
+    """
+    result = _invoke(
+        tmp_path,
+        (
+            "digital-twin-observability-bundle",
+            str(tmp_path / "evidence.json"),
+            "--created-by",
+            "operator_console",
+        ),
+        {"evidence.json": _evidence_payload()},
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_digital_twin_observability_bundle_v1"
+    assert payload["accepted_count"] == 1
+    assert payload["rejected_count"] == 0
+    linkage = payload["replay_linkage"]
+    assert linkage["scheduler_dashboard_present"] is False
+    assert linkage["scheduler_replay_present"] is False
+    assert linkage["scheduler_row_count"] == 0
+    assert linkage["scheduler_replay_count"] == 0
+    assert linkage["scheduler_dashboard_hash"] is None
+    assert linkage["scheduler_replay_hash"] is None
+    assert len(payload["bundle_hash"]) == 64
+
+
 def test_digital_twin_observability_bundle_requires_created_by(
     tmp_path: Path,
 ) -> None:

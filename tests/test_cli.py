@@ -2191,16 +2191,18 @@ def test_plugins_request_execution_rejects_missing_approval_hash(
     assert "approval_hash" in result.output
 
 
-def _write_request_payload_from_cli(runner, tmp_path: Path) -> Path:
+def _write_request_payload_from_cli(
+    runner, tmp_path: Path, *, plugin_name: str = "cli_plugin"
+) -> Path:
     manifest = PluginManifest(
-        name="cli_plugin",
+        name=plugin_name,
         version="0.1.0",
-        package="cli_plugin",
+        package=plugin_name,
         capabilities=(
             PluginCapability(
                 kind="actuator",
                 name="phase_driver",
-                target="cli_plugin.actuators:PhaseDriver",
+                target=f"{plugin_name}.actuators:PhaseDriver",
                 knobs=("Psi",),
             ),
         ),
@@ -2391,6 +2393,119 @@ def test_plugins_storage_adapter_manifest_outputs_external_handoff(
     assert payload["write_performed"] is False
     assert len(payload["bundle_hash"]) == 64
     assert len(payload["adapter_hash"]) == 64
+
+
+def _write_revocation_list_from_cli(runner, request_path: Path, tmp_dir: Path) -> Path:
+    """Revoke a request through the CLI and write its aggregate revocation list."""
+    revocation = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revoke-execution-request",
+            str(request_path),
+            "--revoked-by",
+            "deployment_gate",
+            "--revocation-reference",
+            "REV-2026-07-02-STORAGE",
+            "--revocation-reason",
+            "operator rotation",
+        ],
+    )
+    assert revocation.exit_code == 0, revocation.output
+    revocation_path = tmp_dir / "revocation.json"
+    revocation_path.write_text(revocation.output, encoding="utf-8")
+    revocation_list = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert revocation_list.exit_code == 0, revocation_list.output
+    revocation_list_path = tmp_dir / "revocation-list.json"
+    revocation_list_path.write_text(revocation_list.output, encoding="utf-8")
+    return revocation_list_path
+
+
+def test_plugins_storage_adapter_manifest_rejects_request_revoked_via_list(
+    runner,
+    tmp_path: Path,
+):
+    """A revocation list naming the stored request itself is fail-closed."""
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    revocation_list_path = _write_revocation_list_from_cli(
+        runner, request_path, tmp_path
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "storage-adapter-manifest",
+            str(request_path),
+            "--storage-uri",
+            "s3://spo-prod/plugin-requests/request.json",
+            "--storage-backend",
+            "s3_object",
+            "--created-by",
+            "deployment_gate",
+            "--revocation-list",
+            str(revocation_list_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "plugin execution request has been revoked" in result.output
+
+
+def test_plugins_storage_adapter_manifest_binds_foreign_revocation_list(
+    runner,
+    tmp_path: Path,
+):
+    """A revocation list for a different request binds without blocking storage."""
+    tmp_stored = tmp_path / "stored"
+    tmp_revoked = tmp_path / "revoked"
+    tmp_stored.mkdir()
+    tmp_revoked.mkdir()
+    request_path = _write_request_payload_from_cli(runner, tmp_stored)
+    revoked_request_path = _write_request_payload_from_cli(
+        runner, tmp_revoked, plugin_name="cli_plugin_revoked"
+    )
+    revoked_payload = json.loads(revoked_request_path.read_text(encoding="utf-8"))
+    revocation_list_path = _write_revocation_list_from_cli(
+        runner, revoked_request_path, tmp_revoked
+    )
+
+    base_arguments = [
+        "plugins",
+        "storage-adapter-manifest",
+        str(request_path),
+        "--storage-uri",
+        "s3://spo-prod/plugin-requests/request.json",
+        "--storage-backend",
+        "s3_object",
+        "--created-by",
+        "deployment_gate",
+    ]
+    without_list = runner.invoke(main, base_arguments)
+    with_list = runner.invoke(
+        main, [*base_arguments, "--revocation-list", str(revocation_list_path)]
+    )
+
+    assert without_list.exit_code == 0, without_list.output
+    assert with_list.exit_code == 0, with_list.output
+    plain_payload = json.loads(without_list.output)
+    bound_payload = json.loads(with_list.output)
+    assert bound_payload["schema"] == "scpn_plugin_execution_request_storage_adapter_v1"
+    assert bound_payload["request_hash"] != revoked_payload["request_hash"]
+    # Binding the foreign revocation list changes the sealed storage manifest —
+    # the revocations are part of the hashed handoff, not dropped on the floor.
+    assert (
+        bound_payload["storage_manifest_hash"] != plain_payload["storage_manifest_hash"]
+    )
 
 
 def test_plugins_storage_adapter_manifest_rejects_credential_uri(
@@ -3742,6 +3857,171 @@ def test_plugins_lifecycle_remediation_execution_dashboard_rejects_plan_mismatch
 
     assert result.exit_code == 1
     assert "status plan_hash does not match remediation plan" in result.output
+
+
+def _build_remediation_plan(runner, tmp_path: Path) -> tuple[Path, dict[str, object]]:
+    """Build a remediation plan through the CLI lifecycle chain."""
+    current = _write_request_payload_from_cli(runner, tmp_path)
+    for command, output_name in [
+        ("lifecycle-status", "lifecycle.json"),
+        ("lifecycle-summary", "summary.json"),
+        ("lifecycle-policy-report", "policy.json"),
+        ("lifecycle-multistore-drilldown", "drilldown.json"),
+        ("lifecycle-remediation-orchestration", "plan.json"),
+    ]:
+        result = runner.invoke(
+            main,
+            ["plugins", command, str(current), "--created-by", "deployment_gate"],
+        )
+        assert result.exit_code == 0, result.output
+        current = tmp_path / output_name
+        current.write_text(result.output, encoding="utf-8")
+    return current, json.loads(current.read_text(encoding="utf-8"))
+
+
+def _write_remediation_action_status(
+    runner, plan_path: Path, action_hash: str, status_path: Path
+) -> Path:
+    """Write a completed action-status record for one plan action."""
+    status = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-action-status",
+            str(plan_path),
+            action_hash,
+            "--state",
+            "completed",
+            "--updated-by",
+            "deployment_gate",
+        ],
+    )
+    assert status.exit_code == 0, status.output
+    status_path.write_text(status.output, encoding="utf-8")
+    return status_path
+
+
+@pytest.mark.parametrize(
+    ("command", "argument_count", "actor_option", "actor_field"),
+    [
+        ("lifecycle-remediation-orchestration", 1, "--created-by", "created_by"),
+        ("lifecycle-remediation-action-status", 1, "--updated-by", "updated_by"),
+        ("lifecycle-remediation-execution-dashboard", 2, "--created-by", "created_by"),
+        ("lifecycle-remediation-deployment-handoff", 1, "--created-by", "created_by"),
+    ],
+)
+def test_plugins_lifecycle_remediation_commands_reject_empty_actor(
+    runner,
+    tmp_path: Path,
+    command: str,
+    argument_count: int,
+    actor_option: str,
+    actor_field: str,
+):
+    """An empty actor identity is rejected before any artifact is read.
+
+    Click's ``required=True`` does not reject an explicitly empty string, so
+    each remediation command guards the actor itself — first, before loading
+    or validating any artifact (the dummy file is never parsed).
+    """
+    dummy = tmp_path / "artifact.json"
+    dummy.write_text("{}", encoding="utf-8")
+    arguments = [str(dummy)] * argument_count
+    if command == "lifecycle-remediation-action-status":
+        arguments += ["a" * 64, "--state", "pending"]
+
+    result = runner.invoke(main, ["plugins", command, *arguments, actor_option, ""])
+
+    assert result.exit_code == 1
+    assert f"{actor_field} must be non-empty" in result.output
+
+
+def test_plugins_lifecycle_remediation_action_status_rejects_unknown_hash(
+    runner,
+    tmp_path: Path,
+):
+    """A valid-format action hash that is not part of the plan is rejected."""
+    plan_path, _plan_payload = _build_remediation_plan(runner, tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-action-status",
+            str(plan_path),
+            "a" * 64,
+            "--state",
+            "completed",
+            "--updated-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "action_hash is not part of the remediation plan" in result.output
+
+
+def test_plugins_lifecycle_remediation_execution_dashboard_rejects_foreign_status(
+    runner,
+    tmp_path: Path,
+):
+    """A status record whose action_hash is outside the plan is rejected."""
+    plan_path, plan_payload = _build_remediation_plan(runner, tmp_path)
+    actions = plan_payload["actions"]
+    assert isinstance(actions, list)
+    first_hash = actions[0]["action_hash"]
+    status_path = _write_remediation_action_status(
+        runner, plan_path, str(first_hash), tmp_path / "status.json"
+    )
+    foreign = json.loads(status_path.read_text(encoding="utf-8"))
+    foreign["action_hash"] = "b" * 64
+    foreign_path = tmp_path / "foreign-status.json"
+    foreign_path.write_text(json.dumps(foreign, sort_keys=True), encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-execution-dashboard",
+            str(plan_path),
+            str(foreign_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "status action_hash is not part of remediation plan" in result.output
+
+
+def test_plugins_lifecycle_remediation_execution_dashboard_rejects_duplicate_status(
+    runner,
+    tmp_path: Path,
+):
+    """The same action-status file supplied twice is a duplicate, not a merge."""
+    plan_path, plan_payload = _build_remediation_plan(runner, tmp_path)
+    actions = plan_payload["actions"]
+    assert isinstance(actions, list)
+    first_hash = actions[0]["action_hash"]
+    status_path = _write_remediation_action_status(
+        runner, plan_path, str(first_hash), tmp_path / "status.json"
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-remediation-execution-dashboard",
+            str(plan_path),
+            str(status_path),
+            str(status_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "duplicate remediation action status for action_hash" in result.output
 
 
 def test_plugins_lifecycle_remediation_deployment_handoff_outputs_unresolved_actions(
@@ -6634,6 +6914,20 @@ def test_meta_transfer_manifest_rejects_missing_and_conflicting_sources(
     assert "mutually exclusive" in conflicting.output
     assert bad_min.exit_code == 1
     assert "--min-records must be at least 1" in bad_min.output
+
+
+def test_meta_transfer_manifest_rejects_malformed_audit_json(
+    runner,
+    tmp_path,
+) -> None:
+    """A malformed audit JSONL line is reported as a CLI error, not a traceback."""
+    audit_path = tmp_path / "audit.jsonl"
+    audit_path.write_text("{not valid json}\n", encoding="utf-8")
+
+    result = runner.invoke(main, ["meta-transfer-manifest", str(audit_path)])
+
+    assert result.exit_code == 1
+    assert "Error:" in result.output
 
 
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):
