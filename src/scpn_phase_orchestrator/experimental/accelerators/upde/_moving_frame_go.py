@@ -21,7 +21,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._engine_go import (
     _load_lib,
 )
 from scpn_phase_orchestrator.upde.moving_frame import (
+    _expected_positions_from_schedule,
     validate_moving_frame_backend_inputs,
+    validate_moving_frame_backend_output,
 )
 
 __all__ = ["moving_frame_run_go"]
@@ -129,6 +131,7 @@ def moving_frame_run_go(
     lib = _load_lib()
     _configure_symbol(lib)
     n = int(p.size)
+    expected_positions = _expected_positions_from_schedule(z, velocities, dt_f)
     p_work = p.copy()
     z_work = z.copy()
     rc = lib.UPDERunMovingFrameSchedule(
@@ -157,4 +160,8 @@ def moving_frame_run_go(
     )
     if rc != 0:
         raise ValueError(f"Go UPDERunMovingFrameSchedule rc={rc}")
-    return np.ascontiguousarray(np.concatenate([p_work, z_work]), dtype=np.float64)
+    return validate_moving_frame_backend_output(
+        np.concatenate([p_work, z_work]),
+        n=n,
+        expected_positions=expected_positions,
+    )

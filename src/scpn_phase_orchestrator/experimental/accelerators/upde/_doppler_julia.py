@@ -16,7 +16,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_julia import _ensure
-from scpn_phase_orchestrator.upde.doppler import validate_doppler_backend_inputs
+from scpn_phase_orchestrator.upde.doppler import (
+    validate_doppler_backend_inputs,
+    validate_doppler_backend_output,
+)
 
 __all__ = ["doppler_run_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -74,7 +77,7 @@ def doppler_run_julia(
     jl = _ensure()
     if not hasattr(jl, "upde_run_doppler_schedule"):
         raise ImportError("Julia upde_run_doppler_schedule is not available")
-    return np.ascontiguousarray(
+    return validate_doppler_backend_output(
         np.asarray(
             jl.upde_run_doppler_schedule(
                 p,
@@ -95,5 +98,6 @@ def doppler_run_julia(
                 rtol_f,
             ),
             dtype=np.float64,
-        )
+        ),
+        n=int(p.size),
     )

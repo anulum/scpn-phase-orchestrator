@@ -8,11 +8,23 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import Any, cast
+
 import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.upde.moving_frame as moving_frame_module
 from scpn_phase_orchestrator.coupling import SpatialCouplingModulator
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _moving_frame_go as moving_frame_go_module,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _moving_frame_julia as moving_frame_julia_module,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _moving_frame_mojo as moving_frame_mojo_module,
+)
 from scpn_phase_orchestrator.upde.moving_frame import (
     MovingFrameUPDEEngine,
     _validate_backend_output,
@@ -48,6 +60,70 @@ def _valid_inputs(**overrides: object) -> dict[str, object]:
     }
     inputs.update(overrides)
     return inputs
+
+
+def _direct_backend_args() -> tuple[object, ...]:
+    """Return a valid direct moving-frame backend call payload."""
+    inputs = _valid_inputs(spatial_decay_form=1)
+    return (
+        inputs["phases"],
+        inputs["positions"],
+        inputs["omega_schedule"],
+        inputs["knm"],
+        inputs["alpha"],
+        inputs["velocity_schedule"],
+        inputs["spatial_k_base"],
+        inputs["spatial_decay_form"],
+        inputs["spatial_decay_exponent"],
+        inputs["spatial_decay_length_scale"],
+        inputs["spatial_epsilon"],
+        inputs["doppler_strength"],
+        inputs["doppler_epsilon"],
+        inputs["zeta"],
+        inputs["psi"],
+        inputs["dt"],
+        inputs["method"],
+        inputs["n_substeps"],
+        inputs["atol"],
+        inputs["rtol"],
+    )
+
+
+class _CorruptMovingFrameGoSymbol:
+    """Fake Go symbol that writes an invalid position into the output buffer."""
+
+    restype: object
+    argtypes: object
+
+    def __call__(
+        self, _phases_ptr: object, positions_ptr: object, *_args: object
+    ) -> int:
+        cast(Any, positions_ptr)[0] = 99.0
+        return 0
+
+
+class _CorruptMovingFrameGoLibrary:
+    """Fake Go library exposing the moving-frame schedule symbol."""
+
+    def __init__(self) -> None:
+        self.UPDERunMovingFrameSchedule = _CorruptMovingFrameGoSymbol()
+
+
+class _FailingMovingFrameGoSymbol:
+    """Fake Go symbol returning a non-zero moving-frame backend status."""
+
+    restype: object
+    argtypes: object
+
+    def __call__(self, *_args: object) -> int:
+        return 9
+
+
+class _FailingMovingFrameGoLibrary:
+    """Fake Go library exposing a failing moving-frame schedule symbol."""
+
+    def __init__(self) -> None:
+        self.UPDERunMovingFrameSchedule = _FailingMovingFrameGoSymbol()
 
 
 class TestBackendInputContract:
@@ -110,6 +186,86 @@ class TestBackendOutputContract:
         value = np.array([0.1, 0.2, 5.0, 6.0], dtype=np.float64)
         with pytest.raises(ValueError, match="violate ballistic kinematics"):
             _validate_backend_output(value, n=2, expected_positions=np.zeros(2))
+
+
+class TestDirectMovingFrameAdapterOutputContracts:
+    """Direct polyglot adapters validate untrusted moving-frame outputs."""
+
+    def test_go_adapter_rejects_kinematic_output_violation(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            moving_frame_go_module,
+            "_load_lib",
+            lambda: _CorruptMovingFrameGoLibrary(),
+        )
+
+        with pytest.raises(ValueError, match="violate ballistic kinematics"):
+            moving_frame_go_module.moving_frame_run_go(*_direct_backend_args())
+
+    def test_go_adapter_rejects_missing_symbol_and_nonzero_status(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            moving_frame_go_module,
+            "_load_lib",
+            lambda: SimpleNamespace(),
+        )
+        with pytest.raises(ImportError, match="UPDERunMovingFrameSchedule"):
+            moving_frame_go_module.moving_frame_run_go(*_direct_backend_args())
+
+        monkeypatch.setattr(
+            moving_frame_go_module,
+            "_load_lib",
+            lambda: _FailingMovingFrameGoLibrary(),
+        )
+        with pytest.raises(ValueError, match="rc=9"):
+            moving_frame_go_module.moving_frame_run_go(*_direct_backend_args())
+
+    def test_julia_adapter_rejects_kinematic_output_violation(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            moving_frame_julia_module,
+            "_ensure",
+            lambda: SimpleNamespace(
+                upde_run_moving_frame_schedule=lambda *_args: np.array(
+                    [0.0, 0.0, 99.0, 1.0], dtype=np.float64
+                )
+            ),
+        )
+
+        with pytest.raises(ValueError, match="violate ballistic kinematics"):
+            moving_frame_julia_module.moving_frame_run_julia(*_direct_backend_args())
+
+    def test_julia_adapter_rejects_missing_schedule_symbol(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            moving_frame_julia_module,
+            "_ensure",
+            lambda: SimpleNamespace(),
+        )
+
+        with pytest.raises(ImportError, match="upde_run_moving_frame_schedule"):
+            moving_frame_julia_module.moving_frame_run_julia(*_direct_backend_args())
+
+    def test_mojo_adapter_rejects_kinematic_output_violation(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            moving_frame_mojo_module,
+            "_run",
+            lambda *_args, **_kwargs: [0.0, 0.0, 99.0, 1.0],
+        )
+
+        with pytest.raises(ValueError, match="violate ballistic kinematics"):
+            moving_frame_mojo_module.moving_frame_run_mojo(*_direct_backend_args())
 
 
 class TestMovingFrameRunDispatch:

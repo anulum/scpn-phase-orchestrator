@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import importlib
+from types import SimpleNamespace
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -53,6 +55,64 @@ def _two_body_knm(k: float = 1.0) -> np.ndarray:
 
 def _zero_alpha(n: int = 2) -> np.ndarray:
     return np.zeros((n, n), dtype=np.float64)
+
+
+def _direct_backend_args() -> tuple[object, ...]:
+    """Return a valid direct Doppler backend call payload."""
+    return (
+        np.zeros(2, dtype=np.float64),
+        np.zeros((1, 2), dtype=np.float64),
+        _two_body_knm(),
+        _zero_alpha(),
+        np.zeros((1, 2), dtype=np.float64),
+        1.0,
+        1.0e-9,
+        0.0,
+        0.0,
+        0.01,
+        "rk4",
+        1,
+        1.0e-6,
+        1.0e-3,
+    )
+
+
+class _CorruptDopplerGoSymbol:
+    """Fake Go symbol that writes a corrupt phase into the output buffer."""
+
+    restype: object
+    argtypes: object
+
+    def __init__(self, value: float) -> None:
+        self._value = value
+
+    def __call__(self, phases_ptr: object, *_args: object) -> int:
+        cast(Any, phases_ptr)[0] = self._value
+        return 0
+
+
+class _CorruptDopplerGoLibrary:
+    """Fake Go library exposing the Doppler schedule symbol."""
+
+    def __init__(self, value: float) -> None:
+        self.UPDERunDopplerSchedule = _CorruptDopplerGoSymbol(value)
+
+
+class _FailingDopplerGoSymbol:
+    """Fake Go symbol returning a non-zero Doppler backend status."""
+
+    restype: object
+    argtypes: object
+
+    def __call__(self, *_args: object) -> int:
+        return 7
+
+
+class _FailingDopplerGoLibrary:
+    """Fake Go library exposing a failing Doppler schedule symbol."""
+
+    def __init__(self) -> None:
+        self.UPDERunDopplerSchedule = _FailingDopplerGoSymbol()
 
 
 def _wrapped_abs_delta(phases: np.ndarray) -> float:
@@ -339,3 +399,89 @@ def test_doppler_julia_and_mojo_adapters_validate_before_runtime(
         doppler_julia_module.doppler_run_julia(*args)
     with pytest.raises(ValueError, match="velocity_schedule"):
         doppler_mojo_module.doppler_run_mojo(*args)
+
+
+@pytest.mark.parametrize(
+    ("bad_value", "match"),
+    [
+        (float("nan"), "contains NaN/Inf"),
+        (TWO_PI, r"phases must be in \[0, 2\*pi\)"),
+    ],
+)
+def test_doppler_go_adapter_rejects_corrupt_backend_output(
+    monkeypatch: pytest.MonkeyPatch,
+    bad_value: float,
+    match: str,
+) -> None:
+    """The direct Go adapter must validate the untrusted backend output."""
+    monkeypatch.setattr(
+        doppler_go_module,
+        "_load_lib",
+        lambda: _CorruptDopplerGoLibrary(bad_value),
+    )
+
+    with pytest.raises(ValueError, match=match):
+        doppler_go_module.doppler_run_go(*_direct_backend_args())
+
+
+def test_doppler_go_adapter_rejects_missing_symbol_and_nonzero_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The direct Go adapter must surface missing symbols and failing rc values."""
+    monkeypatch.setattr(
+        doppler_go_module,
+        "_load_lib",
+        lambda: SimpleNamespace(),
+    )
+    with pytest.raises(ImportError, match="UPDERunDopplerSchedule"):
+        doppler_go_module.doppler_run_go(*_direct_backend_args())
+
+    monkeypatch.setattr(
+        doppler_go_module,
+        "_load_lib",
+        lambda: _FailingDopplerGoLibrary(),
+    )
+    with pytest.raises(ValueError, match="rc=7"):
+        doppler_go_module.doppler_run_go(*_direct_backend_args())
+
+
+def test_doppler_julia_adapter_rejects_corrupt_backend_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The direct Julia adapter must reject phases outside the principal branch."""
+    monkeypatch.setattr(
+        doppler_julia_module,
+        "_ensure",
+        lambda: SimpleNamespace(
+            upde_run_doppler_schedule=lambda *_args: np.array(
+                [TWO_PI, 0.0], dtype=np.float64
+            )
+        ),
+    )
+
+    with pytest.raises(ValueError, match=r"phases must be in \[0, 2\*pi\)"):
+        doppler_julia_module.doppler_run_julia(*_direct_backend_args())
+
+
+def test_doppler_julia_adapter_rejects_missing_schedule_symbol(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The direct Julia adapter must fail closed on a missing entrypoint."""
+    monkeypatch.setattr(doppler_julia_module, "_ensure", lambda: SimpleNamespace())
+
+    with pytest.raises(ImportError, match="upde_run_doppler_schedule"):
+        doppler_julia_module.doppler_run_julia(*_direct_backend_args())
+
+
+def test_doppler_mojo_adapter_rejects_corrupt_backend_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The direct Mojo adapter must validate parsed stdout values."""
+    monkeypatch.setattr(
+        doppler_mojo_module,
+        "_run",
+        lambda *_args, **_kwargs: [float("inf"), 0.0],
+    )
+
+    with pytest.raises(ValueError, match="contains NaN/Inf"):
+        doppler_mojo_module.doppler_run_mojo(*_direct_backend_args())

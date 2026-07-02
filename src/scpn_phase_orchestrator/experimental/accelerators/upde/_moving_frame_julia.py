@@ -17,7 +17,9 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_julia import _ensure
 from scpn_phase_orchestrator.upde.moving_frame import (
+    _expected_positions_from_schedule,
     validate_moving_frame_backend_inputs,
+    validate_moving_frame_backend_output,
 )
 
 __all__ = ["moving_frame_run_julia"]
@@ -94,7 +96,8 @@ def moving_frame_run_julia(
     jl = _ensure()
     if not hasattr(jl, "upde_run_moving_frame_schedule"):
         raise ImportError("Julia upde_run_moving_frame_schedule is not available")
-    return np.ascontiguousarray(
+    expected_positions = _expected_positions_from_schedule(z, velocities, dt_f)
+    return validate_moving_frame_backend_output(
         np.asarray(
             jl.upde_run_moving_frame_schedule(
                 p,
@@ -121,5 +124,7 @@ def moving_frame_run_julia(
                 rtol_f,
             ),
             dtype=np.float64,
-        )
+        ),
+        n=int(p.size),
+        expected_positions=expected_positions,
     )

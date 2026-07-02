@@ -20,7 +20,10 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._engine_go import (
     _METHOD_IDS,
     _load_lib,
 )
-from scpn_phase_orchestrator.upde.doppler import validate_doppler_backend_inputs
+from scpn_phase_orchestrator.upde.doppler import (
+    validate_doppler_backend_inputs,
+    validate_doppler_backend_output,
+)
 
 __all__ = ["doppler_run_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -124,4 +127,4 @@ def doppler_run_go(
     )
     if rc != 0:
         raise ValueError(f"Go UPDERunDopplerSchedule rc={rc}")
-    return np.ascontiguousarray(p_work, dtype=np.float64)
+    return validate_doppler_backend_output(p_work, n=n)

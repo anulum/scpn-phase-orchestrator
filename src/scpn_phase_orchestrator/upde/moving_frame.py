@@ -49,6 +49,7 @@ __all__ = [
     "moving_frame_run",
     "moving_frame_run_python",
     "validate_moving_frame_backend_inputs",
+    "validate_moving_frame_backend_output",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -350,13 +351,34 @@ def _kinematic_residual_max(
     return float(np.max(np.abs(observed_positions - expected_positions)))
 
 
-def _validate_backend_output(
+def validate_moving_frame_backend_output(
     value: object,
     *,
     n: int,
     expected_positions: FloatArray | None = None,
 ) -> FloatArray:
-    """Return the backend output matching the reference, else raise."""
+    """Validate moving-frame backend output before returning it to callers.
+
+    Parameters
+    ----------
+    value : object
+        Backend-produced concatenated phase and position vector, shape ``(2*N,)``.
+    n : int
+        Expected oscillator count.
+    expected_positions : FloatArray | None
+        Optional ballistic position reference derived from the submitted schedule.
+
+    Returns
+    -------
+    FloatArray
+        Contiguous ``float64`` vector containing final phases followed by positions.
+
+    Raises
+    ------
+    ValueError
+        If the backend output is non-finite, has the wrong shape, leaves the
+        principal phase branch, or violates the ballistic position contract.
+    """
     out = _reject_non_real_array(value, name="moving_frame_backend_output")
     if out.shape != (2 * n,):
         raise ValueError("moving-frame backend output shape must be (2*n,)")
@@ -378,6 +400,20 @@ def _validate_backend_output(
                 f"{KINEMATIC_RESIDUAL_TOLERANCE_M} m"
             )
     return np.ascontiguousarray(out, dtype=np.float64)
+
+
+def _validate_backend_output(
+    value: object,
+    *,
+    n: int,
+    expected_positions: FloatArray | None = None,
+) -> FloatArray:
+    """Return the backend output matching the reference, else raise."""
+    return validate_moving_frame_backend_output(
+        value,
+        n=n,
+        expected_positions=expected_positions,
+    )
 
 
 def moving_frame_run_python(
@@ -771,7 +807,7 @@ def moving_frame_run(
                 atol_f,
                 rtol_f,
             )
-            return _validate_backend_output(
+            return validate_moving_frame_backend_output(
                 out,
                 n=int(p.size),
                 expected_positions=expected_positions,
@@ -781,7 +817,7 @@ def moving_frame_run(
             continue
     if backend != "auto" and last_error is not None:
         raise last_error
-    return _validate_backend_output(
+    return validate_moving_frame_backend_output(
         moving_frame_run_python(
             p,
             z,

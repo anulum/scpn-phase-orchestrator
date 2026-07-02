@@ -38,6 +38,7 @@ __all__ = [
     "doppler_run_python",
     "doppler_term",
     "validate_doppler_backend_inputs",
+    "validate_doppler_backend_output",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -147,6 +148,33 @@ def _validate_phases(phases: object, *, n: int) -> FloatArray:
     if p.shape != (n,):
         raise ValueError("phases shape must be (n,)")
     return p
+
+
+def validate_doppler_backend_output(value: object, *, n: int) -> FloatArray:
+    """Validate Doppler backend output before returning it to callers.
+
+    Parameters
+    ----------
+    value : object
+        Backend-produced oscillator phases in radians, shape ``(N,)``.
+    n : int
+        Expected oscillator count.
+
+    Returns
+    -------
+    FloatArray
+        Contiguous ``float64`` phase vector in the principal ``[0, 2*pi)`` branch.
+
+    Raises
+    ------
+    ValueError
+        If the backend output is non-finite, has the wrong shape, or leaves the
+        principal phase branch.
+    """
+    out = _validate_phases(value, n=n)
+    if np.any(out < 0.0) or np.any(out >= _TWO_PI):
+        raise ValueError("Doppler backend output phases must be in [0, 2*pi)")
+    return np.ascontiguousarray(out, dtype=np.float64)
 
 
 def _validate_positive_step_count(value: object, *, name: str) -> int:
@@ -669,10 +697,7 @@ def doppler_run(
                 atol_f,
                 rtol_f,
             )
-            got = _validate_phases(out, n=int(p.size))
-            if np.any(got < 0.0) or np.any(got >= _TWO_PI):
-                raise ValueError("Doppler backend output phases must be in [0, 2*pi)")
-            return got
+            return validate_doppler_backend_output(out, n=int(p.size))
         except (AttributeError, ImportError) as exc:
             last_error = exc
             continue

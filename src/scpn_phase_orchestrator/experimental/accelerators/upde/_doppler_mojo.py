@@ -19,7 +19,10 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._engine_mojo import 
     _METHOD_IDS,
     _run,
 )
-from scpn_phase_orchestrator.upde.doppler import validate_doppler_backend_inputs
+from scpn_phase_orchestrator.upde.doppler import (
+    validate_doppler_backend_inputs,
+    validate_doppler_backend_output,
+)
 
 __all__ = ["doppler_run_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -95,4 +98,4 @@ def doppler_run_mojo(
     tokens.extend(repr(float(x)) for x in a.ravel().tolist())
     tokens.extend(repr(float(x)) for x in velocities.ravel().tolist())
     result = _run(" ".join(tokens) + "\n", expected_count=n)
-    return np.ascontiguousarray(np.array(result, dtype=np.float64))
+    return validate_doppler_backend_output(np.array(result, dtype=np.float64), n=n)
