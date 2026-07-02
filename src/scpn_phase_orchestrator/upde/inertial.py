@@ -37,6 +37,7 @@ from numbers import Integral, Real
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import _inertial_validation
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray = NDArray[np.float64]
@@ -81,12 +82,19 @@ def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
             int(n),
             float(dt),
         )
-        return (
-            np.asarray(new_th, dtype=np.float64),
-            np.asarray(new_od, dtype=np.float64),
-        )
+        return _validate_backend_output(new_th, new_od, n=int(n))
 
     return _rust
+
+
+def _validate_backend_output(
+    theta: object,
+    omega_dot: object,
+    *,
+    n: int,
+) -> tuple[FloatArray, FloatArray]:
+    """Return validated inertial backend state output, else raise ``ValueError``."""
+    return _inertial_validation.validate_inertial_output(theta, omega_dot, n=n)
 
 
 def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
@@ -282,6 +290,7 @@ class InertialKuramotoEngine:
     """
 
     def __init__(self, n: int, dt: float = 0.01) -> None:
+        """Initialise the stateless inertial Kuramoto stepper geometry."""
         self._n = _validate_positive_int(n, name="n")
         self._dt = _validate_positive_float(dt, name="dt")
 
@@ -337,7 +346,7 @@ class InertialKuramotoEngine:
         knm_flat = knm64.ravel()
         backend_fn = _dispatch()
         if backend_fn is not None:
-            return backend_fn(
+            new_theta, new_omega = backend_fn(
                 theta64,
                 omega_dot64,
                 power64,
@@ -347,7 +356,8 @@ class InertialKuramotoEngine:
                 self._n,
                 self._dt,
             )
-        return _python_step(
+            return _validate_backend_output(new_theta, new_omega, n=self._n)
+        new_theta, new_omega = _python_step(
             theta64,
             omega_dot64,
             power64,
@@ -357,6 +367,7 @@ class InertialKuramotoEngine:
             self._n,
             self._dt,
         )
+        return _validate_backend_output(new_theta, new_omega, n=self._n)
 
     def run(
         self,

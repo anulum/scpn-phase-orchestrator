@@ -164,6 +164,12 @@ shedding in real grids) and `coherence()` (phase-lock measure).
 
 Filatrella et al. 2008; Dörfler & Bullo 2014.
 
+Optional inertial backend outputs are validated before public return: `theta`
+and `omega_dot` must keep oscillator cardinality and finite values, with
+returned phases inside `[0, 2*pi)`. Backend loader/runtime unavailability may
+fall through to Python; malformed backend physics payloads raise instead of
+becoming swing-equation state.
+
 ::: scpn_phase_orchestrator.upde.inertial
 
 ## Financial Market Regime Detection

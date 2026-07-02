@@ -19,11 +19,14 @@ from __future__ import annotations
 import contextlib
 import sys
 import types
+from collections.abc import Callable, Iterator
+from typing import TypeAlias, cast
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _inertial_mojo,
@@ -43,8 +46,37 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_mojo impor
 from scpn_phase_orchestrator.upde import inertial as i_mod
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
 
+FloatArray: TypeAlias = NDArray[np.float64]
+BackendFn: TypeAlias = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        int,
+        float,
+    ],
+    tuple[FloatArray, FloatArray],
+]
+BackendArgs: TypeAlias = tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    int,
+    float,
+]
+
 TOL = 1e-12
-DIRECT_BACKENDS = (inertial_step_go, inertial_step_julia, inertial_step_mojo)
+TWO_PI = 2.0 * np.pi
+DIRECT_BACKENDS = cast(
+    tuple[BackendFn, ...],
+    (inertial_step_go, inertial_step_julia, inertial_step_mojo),
+)
 
 
 def test__inertial_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -53,7 +85,7 @@ def test__inertial_validation_helper_is_directly_linked_to_backend_tests() -> No
 
 
 @contextlib.contextmanager
-def _force_backend(name: str):
+def _force_backend(name: str) -> Iterator[None]:
     prev = i_mod.ACTIVE_BACKEND
     i_mod.ACTIVE_BACKEND = name
     try:
@@ -62,19 +94,30 @@ def _force_backend(name: str):
         i_mod.ACTIVE_BACKEND = prev
 
 
-def _problem(n: int, seed: int):
+def _problem(
+    n: int, seed: int
+) -> tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+]:
     rng = np.random.default_rng(seed)
+    knm = rng.uniform(0, 0.5, (n, n))
+    np.fill_diagonal(knm, 0.0)
     return (
         rng.uniform(0, 2 * np.pi, n),
         rng.normal(0, 0.1, n),
         rng.normal(0, 0.5, n),
-        (lambda k: (np.fill_diagonal(k, 0), k)[1])(rng.uniform(0, 0.5, (n, n))),
+        knm,
         np.ones(n),
         np.ones(n) * 0.1,
     )
 
 
-def _run_backend(backend: str, n: int, seed: int):
+def _run_backend(backend: str, n: int, seed: int) -> tuple[FloatArray, FloatArray]:
     if backend not in i_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     theta, od, p, k, m, d = _problem(n, seed)
@@ -84,25 +127,25 @@ def _run_backend(backend: str, n: int, seed: int):
 
 
 class TestBackendParity:
-    def test_rust_matches_python(self):
+    def test_rust_matches_python(self) -> None:
         ref_th, ref_od = _run_backend("python", 8, 0)
         got_th, got_od = _run_backend("rust", 8, 0)
         assert np.max(np.abs(got_th - ref_th)) < TOL
         assert np.max(np.abs(got_od - ref_od)) < TOL
 
-    def test_julia_matches_python(self):
+    def test_julia_matches_python(self) -> None:
         ref_th, ref_od = _run_backend("python", 8, 1)
         got_th, got_od = _run_backend("julia", 8, 1)
         assert np.max(np.abs(got_th - ref_th)) < TOL
         assert np.max(np.abs(got_od - ref_od)) < TOL
 
-    def test_go_matches_python(self):
+    def test_go_matches_python(self) -> None:
         ref_th, ref_od = _run_backend("python", 8, 2)
         got_th, got_od = _run_backend("go", 8, 2)
         assert np.max(np.abs(got_th - ref_th)) < TOL
         assert np.max(np.abs(got_od - ref_od)) < TOL
 
-    def test_mojo_matches_python(self):
+    def test_mojo_matches_python(self) -> None:
         ref_th, ref_od = _run_backend("python", 6, 3)
         got_th, got_od = _run_backend("mojo", 6, 3)
         # Text round-trip on a single RK4 step ≤ 1e-14.
@@ -113,7 +156,13 @@ class TestBackendParity:
 class TestMultiStepParity:
     """After many RK4 steps the backends must still agree tightly."""
 
-    def _ref_run(self, backend: str, n: int, seed: int, steps: int):
+    def _ref_run(
+        self,
+        backend: str,
+        n: int,
+        seed: int,
+        steps: int,
+    ) -> tuple[FloatArray, FloatArray]:
         if backend not in i_mod.AVAILABLE_BACKENDS:
             pytest.skip(f"backend {backend!r} unavailable")
         theta, od, p, k, m, d = _problem(n, seed)
@@ -130,13 +179,13 @@ class TestMultiStepParity:
             )
         return fin_th, fin_od
 
-    def test_rust_vs_python_50_steps(self):
+    def test_rust_vs_python_50_steps(self) -> None:
         ref_th, ref_od = self._ref_run("python", 8, 4, 50)
         got_th, got_od = self._ref_run("rust", 8, 4, 50)
         assert np.max(np.abs(got_th - ref_th)) < 1e-10
         assert np.max(np.abs(got_od - ref_od)) < 1e-10
 
-    def test_go_vs_python_50_steps(self):
+    def test_go_vs_python_50_steps(self) -> None:
         ref_th, ref_od = self._ref_run("python", 8, 5, 50)
         got_th, got_od = self._ref_run("go", 8, 5, 50)
         assert np.max(np.abs(got_th - ref_th)) < 1e-10
@@ -153,7 +202,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rust_hypothesis(self, n, seed):
+    def test_rust_hypothesis(self, n: int, seed: int) -> None:
         if "rust" not in i_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         ref_th, ref_od = _run_backend("python", n, seed)
@@ -170,7 +219,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_go_hypothesis(self, n, seed):
+    def test_go_hypothesis(self, n: int, seed: int) -> None:
         if "go" not in i_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
         ref_th, ref_od = _run_backend("python", n, seed)
@@ -180,21 +229,31 @@ class TestHypothesisParity:
 
 
 class TestBackendLoaderContracts:
-    def test_rust_loader_adapts_kernel_output_to_float64_arrays(self, monkeypatch):
-        calls = {}
+    def test_rust_loader_adapts_kernel_output_to_float64_arrays(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: dict[str, object] = {}
 
         def inertial_step_rust(
-            theta, omega_dot, power, knm_flat, inertia, damping, n, dt
-        ):
+            theta: FloatArray,
+            omega_dot: FloatArray,
+            _power: FloatArray,
+            knm_flat: FloatArray,
+            _inertia: FloatArray,
+            damping: FloatArray,
+            n: int,
+            dt: float,
+        ) -> tuple[FloatArray, FloatArray]:
             calls["n"] = n
             calls["dt"] = dt
             calls["contiguous"] = (
                 theta.flags.c_contiguous and knm_flat.flags.c_contiguous
             )
-            return theta + dt * omega_dot, omega_dot + dt * (power - damping)
+            return theta + dt * omega_dot, omega_dot + dt * (_power - damping)
 
         fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.inertial_step_rust = inertial_step_rust
+        fake_spo.__dict__["inertial_step_rust"] = inertial_step_rust
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
         fn = i_mod._load_rust_fn()
@@ -216,30 +275,41 @@ class TestBackendLoaderContracts:
         assert calls == {"n": 2, "dt": 0.05, "contiguous": True}
 
     def test_optional_backend_loaders_return_callable_numeric_kernels(
-        self, monkeypatch
-    ):
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         def install_backend(
             module_name: str, function_name: str, offset: float
         ) -> None:
             module = types.ModuleType(module_name)
-            module.loaded = False
+            module.__dict__["loaded"] = False
 
-            def _ensure_exe():
-                module.loaded = True
+            def _ensure_exe() -> str:
+                module.__dict__["loaded"] = True
+                return "inertial"
 
-            def _load_lib():
-                module.loaded = True
+            def _load_lib() -> None:
+                module.__dict__["loaded"] = True
 
-            def kernel(theta, omega_dot, power, knm_flat, inertia, damping, n, dt):
+            def kernel(
+                theta: FloatArray,
+                omega_dot: FloatArray,
+                _power: FloatArray,
+                _knm_flat: FloatArray,
+                _inertia: FloatArray,
+                _damping: FloatArray,
+                _n: int,
+                dt: float,
+            ) -> tuple[FloatArray, FloatArray]:
                 return theta + offset + dt, omega_dot - offset + dt
 
-            module._ensure_exe = _ensure_exe
-            module._load_lib = _load_lib
-            setattr(module, function_name, kernel)
+            module.__dict__["_ensure_exe"] = _ensure_exe
+            module.__dict__["_load_lib"] = _load_lib
+            module.__dict__[function_name] = kernel
             monkeypatch.setitem(sys.modules, module_name, module)
 
         fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
+        fake_juliacall.__dict__["Main"] = object()
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         install_backend(
             "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_mojo",
@@ -259,13 +329,13 @@ class TestBackendLoaderContracts:
 
         theta = np.array([0.0, 1.0], dtype=np.float64)
         omega = np.array([0.5, -0.5], dtype=np.float64)
-        args = (
+        args: BackendArgs = (
             theta,
             omega,
-            np.ones(2),
-            np.zeros(4),
-            np.ones(2),
-            np.ones(2),
+            np.ones(2, dtype=np.float64),
+            np.zeros(4, dtype=np.float64),
+            np.ones(2, dtype=np.float64),
+            np.ones(2, dtype=np.float64),
             2,
             0.01,
         )
@@ -290,7 +360,7 @@ class TestBackendLoaderContracts:
             i_mod._load_julia_fn()
 
 
-def _direct_payload(n: int = 4):
+def _direct_payload(n: int = 4) -> BackendArgs:
     theta = np.linspace(0.1, 1.0, n, dtype=np.float64)
     omega_dot = np.linspace(-0.2, 0.2, n, dtype=np.float64)
     power = np.linspace(-0.4, 0.4, n, dtype=np.float64)
@@ -323,7 +393,7 @@ class TestDirectMojoBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(_inertial_mojo, "_ensure_exe", lambda: "inertial")
         monkeypatch.setattr(
-            _inertial_mojo.subprocess,
+            cast(object, _inertial_mojo.__dict__["subprocess"]),
             "run",
             lambda *_args, **_kwargs: type(
                 "Proc",
@@ -356,21 +426,26 @@ class TestDirectBackendBoundaryContracts:
             (7, 0.0),
         ],
     )
-    def test_validation_precedes_runtime_load(self, backend, index, replacement):
+    def test_validation_precedes_runtime_load(
+        self,
+        backend: BackendFn,
+        index: int,
+        replacement: object,
+    ) -> None:
         args = list(_direct_payload())
         args[index] = replacement
         with pytest.raises(ValueError):
-            backend(*args)
+            backend(*cast(BackendArgs, tuple(args)))
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
-    def test_rejects_self_coupling_diagonal(self, backend):
+    def test_rejects_self_coupling_diagonal(self, backend: BackendFn) -> None:
         args = list(_direct_payload())
         knm = np.full((4, 4), 0.03, dtype=np.float64)
         np.fill_diagonal(knm, 0.2)
         args[3] = knm.ravel()
 
         with pytest.raises(ValueError, match="diagonal"):
-            backend(*args)
+            backend(*cast(BackendArgs, tuple(args)))
 
     def test_validation_rejects_out_of_range_backend_theta(self) -> None:
         with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
@@ -381,8 +456,142 @@ class TestDirectBackendBoundaryContracts:
             )
 
 
+class TestPublicBackendOutputContracts:
+    """Public inertial dispatchers replay direct backend output contracts."""
+
+    @pytest.mark.parametrize(
+        "backend_theta",
+        [
+            np.array([-0.1, 0.2], dtype=np.float64),
+            np.array([0.1, TWO_PI + 1e-6], dtype=np.float64),
+        ],
+    )
+    def test_step_rejects_optional_backend_theta_outside_torus(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_theta: FloatArray,
+    ) -> None:
+        def malformed_backend(
+            _theta: FloatArray,
+            _omega_dot: FloatArray,
+            _power: FloatArray,
+            _knm_flat: FloatArray,
+            _inertia: FloatArray,
+            _damping: FloatArray,
+            _n: int,
+            _dt: float,
+        ) -> tuple[FloatArray, FloatArray]:
+            return backend_theta, np.array([0.0, 0.0], dtype=np.float64)
+
+        monkeypatch.setattr(i_mod, "_dispatch", lambda: malformed_backend)
+        engine = InertialKuramotoEngine(2, 0.01)
+
+        with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
+            engine.step(
+                np.array([0.1, 0.2], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+                np.array([0.1, 0.1], dtype=np.float64),
+            )
+
+    def test_step_rejects_optional_backend_wrong_omega_length(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def malformed_backend(
+            _theta: FloatArray,
+            _omega_dot: FloatArray,
+            _power: FloatArray,
+            _knm_flat: FloatArray,
+            _inertia: FloatArray,
+            _damping: FloatArray,
+            _n: int,
+            _dt: float,
+        ) -> tuple[FloatArray, FloatArray]:
+            return (
+                np.array([0.1, 0.2], dtype=np.float64),
+                np.array([0.0], dtype=np.float64),
+            )
+
+        monkeypatch.setattr(i_mod, "_dispatch", lambda: malformed_backend)
+        engine = InertialKuramotoEngine(2, 0.01)
+
+        with pytest.raises(ValueError, match="omega_dot must have length n"):
+            engine.step(
+                np.array([0.1, 0.2], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+                np.array([0.1, 0.1], dtype=np.float64),
+            )
+
+    def test_rust_wrapper_rejects_optional_backend_theta_outside_torus(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def inertial_step_rust(
+            _theta: FloatArray,
+            _omega_dot: FloatArray,
+            _power: FloatArray,
+            _knm_flat: FloatArray,
+            _inertia: FloatArray,
+            _damping: FloatArray,
+            _n: int,
+            _dt: float,
+        ) -> tuple[FloatArray, FloatArray]:
+            return (
+                np.array([0.1, TWO_PI + 1e-6], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+            )
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.__dict__["inertial_step_rust"] = inertial_step_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        rust_backend = i_mod._load_rust_fn()
+
+        with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
+            rust_backend(*_direct_payload(n=2))
+
+
+class TestPublicInputContracts:
+    """Public inertial dispatchers fail closed on malformed input payloads."""
+
+    def test_step_rejects_uncoercible_theta_payload(self) -> None:
+        engine = InertialKuramotoEngine(2, 0.01)
+
+        with pytest.raises(ValueError, match="theta must be a finite float array"):
+            engine.step(
+                cast(FloatArray, object()),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+                np.array([0.1, 0.1], dtype=np.float64),
+            )
+
+    def test_step_rejects_negative_damping(self) -> None:
+        engine = InertialKuramotoEngine(2, 0.01)
+
+        with pytest.raises(ValueError, match="damping must contain only non-negative"):
+            engine.step(
+                np.array([0.1, 0.2], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+                np.array([0.1, -0.1], dtype=np.float64),
+            )
+
+
 class TestDispatchFallbackChain:
-    def test_dispatch_falls_back_to_python_when_loader_fails(self, monkeypatch):
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = i_mod.ACTIVE_BACKEND
         previous_available = list(i_mod.AVAILABLE_BACKENDS)
         previous_loader = i_mod._LOADERS["go"]
@@ -404,7 +613,35 @@ class TestDispatchFallbackChain:
 
         assert backend is None
 
-    def test_dispatch_uses_cached_loader_once(self, monkeypatch):
+    def test_dispatch_returns_python_after_exhausting_non_python_backends(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        previous_backend = i_mod.ACTIVE_BACKEND
+        previous_available = list(i_mod.AVAILABLE_BACKENDS)
+        previous_loader = i_mod._LOADERS["go"]
+        i_mod.ACTIVE_BACKEND = "go"
+        i_mod.AVAILABLE_BACKENDS = ["go"]
+        i_mod._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            i_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(RuntimeError("go backend unavailable")),
+        )
+        try:
+            backend = i_mod._dispatch()
+        finally:
+            i_mod.ACTIVE_BACKEND = previous_backend
+            i_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(i_mod._LOADERS, "go", previous_loader)
+            i_mod._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_uses_cached_loader_once(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = i_mod.ACTIVE_BACKEND
         previous_available = list(i_mod.AVAILABLE_BACKENDS)
         previous_loader = i_mod._LOADERS["go"]
@@ -414,18 +651,18 @@ class TestDispatchFallbackChain:
         call_count = 0
 
         def fake_backend(
-            theta: np.ndarray,
-            omega_dot: np.ndarray,
-            _power: np.ndarray,
-            _knm_flat: np.ndarray,
-            _inertia: np.ndarray,
-            _damping: np.ndarray,
+            theta: FloatArray,
+            omega_dot: FloatArray,
+            _power: FloatArray,
+            _knm_flat: FloatArray,
+            _inertia: FloatArray,
+            _damping: FloatArray,
             _n: int,
             _dt: float,
-        ) -> tuple[np.ndarray, np.ndarray]:
+        ) -> tuple[FloatArray, FloatArray]:
             return theta.copy(), omega_dot.copy()
 
-        def loader():
+        def loader() -> BackendFn:
             nonlocal call_count
             call_count += 1
             return fake_backend

@@ -220,6 +220,11 @@ an exactly `N*N` flat pairwise coupling buffer; and a zero self-coupling
 diagonal. Backend outputs must return finite `(theta, omega_dot)` vectors of
 length `N`, with phases on the torus `[0, 2π)`.
 
+The public `InertialKuramotoEngine.step()` dispatcher and Rust wrapper replay
+that same output contract before returning optional backend state. Loader and
+runtime unavailability still fall back through the backend chain, but malformed
+backend physics payloads raise instead of becoming simulation state.
+
 The direct Mojo bridge also preserves raw stdout cardinality: `INERT` must
 emit exactly `2N` scalar lines, ordered as `N` torus phases followed by `N`
 frequency deviations. Blank, truncated, overlong, non-numeric, non-finite, or
@@ -578,13 +583,19 @@ eliminates intermediate array allocation.
   zero power convergence, frequency deviation bounds, coherence range,
   high damping overdamped behaviour, low damping oscillatory behaviour,
   heterogeneous inertia, Rust parity, energy-like conservation
-
-Total: **13 tests**.
+- `tests/test_inertial_backends.py` — cross-backend parity, loader contracts,
+  Mojo stdout cardinality, direct backend validation, and public optional
+  backend output replay for the inertial dispatcher and Rust wrapper
+- `tests/test_inertial_algorithm.py`,
+  `tests/test_inertial_stability.py`,
+  `tests/test_inertial_config_validation.py`, and
+  `tests/test_prop_swarmalator_inertial.py` — focused numerical, stability,
+  constructor-boundary, and property regressions.
 
 ---
 
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/inertial.py` (105 lines)
+- Python: `src/scpn_phase_orchestrator/upde/inertial.py`
 - Rust: `spo-kernel/crates/spo-engine/src/inertial.rs`
 - FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (PyInertialStepper)
