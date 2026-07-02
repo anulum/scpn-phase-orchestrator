@@ -26,6 +26,7 @@ __all__ = [
     "FloatArray",
     "IntArray",
     "validate_layer_coherence_inputs",
+    "validate_mean_phase_output",
     "validate_order_parameter_inputs",
     "validate_order_parameter_output",
     "validate_plv_inputs",
@@ -110,6 +111,8 @@ def validate_layer_coherence_inputs(
 
 def _finite_scalar(value: object, *, name: str) -> float:
     """Return ``value`` as a finite scalar, else raise ``ValueError``."""
+    if _contains_boolean_alias(value):
+        raise TypeError(f"{name} must be a real scalar, not boolean")
     try:
         scalar = float(cast("SupportsFloat | str | bytes | bytearray", value))
     except (TypeError, ValueError) as exc:
@@ -127,8 +130,14 @@ def validate_unit_interval_output(value: object, *, name: str) -> float:
     return float(np.clip(scalar, 0.0, 1.0))
 
 
+def validate_mean_phase_output(psi: object) -> float:
+    """Validate and canonicalise a finite backend mean phase."""
+    psi_value = _finite_scalar(psi, name="mean phase")
+    return float(psi_value % TWO_PI)
+
+
 def validate_order_parameter_output(r: object, psi: object) -> tuple[float, float]:
     """Validate and canonicalise backend ``(R, psi)`` output."""
     r_value = validate_unit_interval_output(r, name="R")
-    psi_value = _finite_scalar(psi, name="mean phase")
-    return r_value, float(psi_value % TWO_PI)
+    psi_value = validate_mean_phase_output(psi)
+    return r_value, psi_value

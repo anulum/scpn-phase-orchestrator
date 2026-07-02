@@ -45,6 +45,11 @@ The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep
 `N*N` cardinality with every entry inside `[0, 1]`.
+The public order-parameter dispatcher applies the direct scalar output
+validators to optional backend returns before publication: order-parameter
+magnitudes, PLV, and layer coherence must be finite real scalars inside
+`[0, 1]`, and boolean aliases are rejected instead of widened to `0.0` or
+`1.0`.
 The public envelope dispatcher now applies its direct accelerator output
 validators to optional backend returns before publication: RMS-envelope vectors
 must keep input cardinality, finite values, and non-negative values, while

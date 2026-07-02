@@ -91,6 +91,22 @@ def test_finite_scalar_rejects_uncoercible_unit_interval_output() -> None:
         order_params_validation.validate_unit_interval_output(object(), name="PLV")
 
 
+@pytest.mark.parametrize("value", [True, np.bool_(False)])
+def test_unit_interval_output_rejects_boolean_aliases(value: object) -> None:
+    """Backend scalar outputs must not accept boolean aliases as coherence."""
+    with pytest.raises(TypeError, match="PLV must be a real scalar, not boolean"):
+        order_params_validation.validate_unit_interval_output(value, name="PLV")
+
+
+def test_mean_phase_output_rejects_boolean_alias() -> None:
+    """Backend mean-phase outputs must not accept boolean aliases."""
+    with pytest.raises(
+        TypeError,
+        match="mean phase must be a real scalar, not boolean",
+    ):
+        order_params_validation.validate_mean_phase_output(True)
+
+
 def test_core_boolean_alias_detector_treats_uncoercible_payload_as_non_alias() -> None:
     """The core module's alias guard must fail open on an uncoercible payload.
 
@@ -110,3 +126,80 @@ def test_compute_order_parameter_rejects_non_numeric_phase_array() -> None:
     """
     with pytest.raises(ValueError, match="phases must be numeric"):
         order_params.compute_order_parameter(np.array(["a", "b"]))
+
+
+def test_public_order_parameter_rejects_boolean_backend_magnitude(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public order-parameter dispatch must reject boolean backend magnitudes."""
+
+    def fake_order_parameter(_phases: np.ndarray) -> tuple[object, float]:
+        """Return a malformed backend order-parameter payload."""
+        return True, 0.0
+
+    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
+    monkeypatch.setattr(order_params, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setattr(order_params, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setattr(
+        order_params,
+        "_LOADERS",
+        {"rust": lambda: {"order_parameter": fake_order_parameter}},
+    )
+
+    with pytest.raises(
+        TypeError,
+        match="coherence magnitude must be a real scalar, not boolean",
+    ):
+        order_params.compute_order_parameter(np.array([0.0], dtype=np.float64))
+
+
+def test_public_plv_rejects_boolean_backend_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public PLV dispatch must reject boolean backend coherence outputs."""
+
+    def fake_plv(_a: np.ndarray, _b: np.ndarray) -> object:
+        """Return a malformed backend PLV payload."""
+        return np.bool_(True)
+
+    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
+    monkeypatch.setattr(order_params, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setattr(order_params, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setattr(order_params, "_LOADERS", {"rust": lambda: {"plv": fake_plv}})
+
+    with pytest.raises(
+        TypeError,
+        match="coherence magnitude must be a real scalar, not boolean",
+    ):
+        order_params.compute_plv(
+            np.array([0.0, 0.1], dtype=np.float64),
+            np.array([0.0, 0.1], dtype=np.float64),
+        )
+
+
+def test_public_layer_coherence_rejects_boolean_backend_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public layer-coherence dispatch must reject boolean backend outputs."""
+
+    def fake_layer_coherence(_phases: np.ndarray, _indices: np.ndarray) -> object:
+        """Return a malformed backend layer-coherence payload."""
+        return False
+
+    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
+    monkeypatch.setattr(order_params, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setattr(order_params, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setattr(
+        order_params,
+        "_LOADERS",
+        {"rust": lambda: {"layer_coherence": fake_layer_coherence}},
+    )
+
+    with pytest.raises(
+        TypeError,
+        match="coherence magnitude must be a real scalar, not boolean",
+    ):
+        order_params.compute_layer_coherence(
+            np.array([0.0, 0.1], dtype=np.float64),
+            np.array([0, 1], dtype=np.int64),
+        )

@@ -34,6 +34,11 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+from ..experimental.accelerators.upde._order_params_validation import (
+    validate_mean_phase_output,
+    validate_unit_interval_output,
+)
+
 FloatArray = NDArray[np.float64]
 IntArray = NDArray[np.int64]
 BoolArray = NDArray[np.bool_]
@@ -150,22 +155,6 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in values.flat)
 
 
-def _unit_interval(value: float) -> float:
-    """Preserve the physical bound of coherence magnitudes."""
-    if not np.isfinite(value):
-        raise ValueError("coherence magnitude must be finite")
-    if value < -1e-12 or value > 1.0 + 1e-12:
-        raise ValueError("coherence magnitude must lie in [0, 1]")
-    return float(np.clip(value, 0.0, 1.0))
-
-
-def _mean_phase(value: float) -> float:
-    """Preserve the physical phase domain for mean phase outputs."""
-    if not np.isfinite(value):
-        raise ValueError("mean phase must be finite")
-    return float(value % TWO_PI)
-
-
 def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
     """Return the phases as a validated finite array, else raise."""
     raw = np.asarray(phases)
@@ -206,7 +195,13 @@ def _python_order_parameter(phases: FloatArray) -> tuple[float, float]:
     """Return the reference Kuramoto order parameters (NumPy floor)."""
     with np.errstate(invalid="ignore"):
         z = np.mean(np.exp(1j * phases))
-    return _unit_interval(float(np.abs(z))), _mean_phase(float(np.angle(z)))
+    return (
+        validate_unit_interval_output(
+            float(np.abs(z)),
+            name="coherence magnitude",
+        ),
+        validate_mean_phase_output(float(np.angle(z))),
+    )
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
@@ -297,7 +292,10 @@ def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
         fn = cast("Callable[[FloatArray], tuple[float, float]]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         r, psi = fn(p)
-        return _unit_interval(float(r)), _mean_phase(float(psi))
+        return (
+            validate_unit_interval_output(r, name="coherence magnitude"),
+            validate_mean_phase_output(psi),
+        )
 
     return _python_order_parameter(phases)
 
@@ -340,9 +338,12 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
         )
         a = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
         b = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)
-        return _unit_interval(float(fn(a, b)))
+        return validate_unit_interval_output(fn(a, b), name="coherence magnitude")
 
-    return _unit_interval(float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b))))))
+    return validate_unit_interval_output(
+        float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b))))),
+        name="coherence magnitude",
+    )
 
 
 def compute_layer_coherence(
@@ -372,10 +373,16 @@ def compute_layer_coherence(
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, IntArray], float]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-        return _unit_interval(float(fn(p, indices)))
+        return validate_unit_interval_output(
+            fn(p, indices),
+            name="coherence magnitude",
+        )
 
     # ``indices`` is non-empty (checked above) and every entry is a valid
     # in-range oscillator, so the gathered sub-population is never empty.
     sub = phases[indices]
     z = np.mean(np.exp(1j * sub))
-    return _unit_interval(float(np.abs(z)))
+    return validate_unit_interval_output(
+        float(np.abs(z)),
+        name="coherence magnitude",
+    )

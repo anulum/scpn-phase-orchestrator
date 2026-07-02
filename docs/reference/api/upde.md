@@ -310,6 +310,10 @@ It records Rust/Mojo/Julia/Go/Python status, timing, unavailable-toolchain
 reasons, deterministic hashes, and tolerance-bounded parity against the forced
 Python reference for global `R`, mean phase, PLV, and layer coherence. The
 reference-suite snapshot exposes this gate as `order_parameter_polyglot`.
+The public dispatcher applies the same scalar output contract to optional
+backend returns before publication: order-parameter magnitudes, PLV, and layer
+coherence must be finite real values in `[0, 1]`, with boolean aliases rejected
+instead of widened to synthetic `0.0` or `1.0` evidence.
 
 ::: scpn_phase_orchestrator.upde.order_params
 

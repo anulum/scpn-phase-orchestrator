@@ -221,7 +221,15 @@ Both `compute_order_parameter` and `compute_plv` have Rust backends via
 when `spo-kernel` is installed. The Rust implementation uses SIMD-friendly
 sin/cos computation and avoids complex number overhead.
 
-### 4.2 Empty Array Handling
+### 4.2 Accelerator Output Contract
+
+Optional Rust, Go, Julia, and Mojo returns use the same scalar output contract
+before public publication. Order-parameter magnitudes, PLV values, and layer
+coherence must be finite real scalars inside `[0, 1]`; boolean aliases are
+rejected before they can widen to `0.0` or `1.0`. Mean phase must be finite and
+is canonicalised to the public `[0, 2*pi)` convention.
+
+### 4.3 Empty Array Handling
 
 All three functions gracefully handle empty inputs:
 - `compute_order_parameter([])` → `(0.0, 0.0)`
@@ -230,13 +238,13 @@ All three functions gracefully handle empty inputs:
 
 No exceptions for degenerate inputs — the caller gets a sensible default.
 
-### 4.3 Numerical Stability
+### 4.4 Numerical Stability
 
 `compute_order_parameter` uses `np.errstate(invalid="ignore")` to suppress
 warnings when all phases are identical (the complex mean is exactly real,
 `np.angle` returns 0.0 without spurious NaN warnings).
 
-### 4.4 Phase Wrapping
+### 4.5 Phase Wrapping
 
 The returned mean phase $\psi$ is wrapped to $[0, 2\pi)$ via `% TWO_PI`.
 This matches the convention used throughout SPO (phases are always
