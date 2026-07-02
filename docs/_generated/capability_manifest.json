@@ -12,7 +12,7 @@
     "research_experimental_modules": 217,
     "runtime_serving_modules": 136,
     "rust_kernel_files": 97,
-    "test_files": 759
+    "test_files": 760
   },
   "documentation": {
     "public_pages": [
@@ -2002,6 +2002,7 @@
       "tests/test_geometric_algorithm.py",
       "tests/test_geometric_backends.py",
       "tests/test_geometric_config_validation.py",
+      "tests/test_geometric_public_backend_output_contracts.py",
       "tests/test_geometric_stability.py",
       "tests/test_geometry_carrier_validation.py",
       "tests/test_geometry_constraints_deep.py",

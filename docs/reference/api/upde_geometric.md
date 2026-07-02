@@ -184,11 +184,11 @@ CouplingBuilder.build() ──→ K_nm, α
 |--------|------|-------|-------|
 | `phases_new` | `NDArray[float64]` | `(N,)` | $[0, 2\pi)$ via `atan2` + `rem_euclid` |
 
-Direct Mojo torus adapters enforce exact raw stdout cardinality and finite
-phase-domain values: `TORUS` must emit exactly one finite scalar in
-`[0, 2*pi)` per oscillator. Blank, truncated, overlong, non-numeric,
-non-finite, or out-of-domain output is rejected before public arrays are
-returned.
+The public `TorusEngine.run()` dispatcher and direct torus adapters validate
+optional backend returns before publication: each result must contain exactly
+one finite phase in `[0, 2*pi)` per oscillator. Blank, truncated, overlong,
+non-numeric, non-finite, wrong-cardinality, or out-of-domain output is rejected
+before public arrays are returned.
 
 ---
 
@@ -410,8 +410,8 @@ finite real one-dimensional `float64` vectors of length `N`; `knm_flat` and
 positive integer; `zeta`, `psi`, and `dt` must be finite real scalars with
 `dt > 0`; and `n_steps` must be a non-negative integer. A zero-step direct
 call returns the initial phases normalised into `[0, 2π)` without requiring
-the optional backend binary or runtime. Backend outputs are validated as
-finite phase vectors in `[0, 2π)`.
+the optional backend binary or runtime. Direct backend outputs and public
+optional-dispatch outputs are validated as finite phase vectors in `[0, 2π)`.
 
 ---
 

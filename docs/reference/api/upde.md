@@ -225,6 +225,9 @@ Symplectic Euler on T^N using SO(2) exponential map: z_i = exp(iθ_i).
 Avoids mod 2π discontinuity errors that accumulate in standard integrators
 over long simulations. Essential for multi-hour or multi-day simulations
 where phase wrapping drift becomes significant.
+The public dispatcher validates optional backend outputs before publication:
+selected Rust, Go, Julia, or Mojo returns must be finite phase vectors with the
+same oscillator cardinality and values in `[0, 2*pi)`.
 **Detailed documentation:** [Geometric (SO(2)) — detailed reference](upde_geometric.md)
 
 ::: scpn_phase_orchestrator.upde.geometric

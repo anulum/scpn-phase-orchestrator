@@ -38,6 +38,9 @@ The public market dispatcher replays the same market output validators for
 optional backend returns before publication: `R(t)` must be finite and bounded
 in `[0, 1]`, and rolling PLV payloads must keep the expected cardinality, unit
 diagonals, symmetry, and `[0, 1]` bounds.
+The public geometric dispatcher applies the direct torus output validator to
+optional backend returns before publication: phase vectors must keep oscillator
+cardinality, contain finite values, and remain in `[0, 2*pi)`.
 The public envelope dispatcher now applies its direct accelerator output
 validators to optional backend returns before publication: RMS-envelope vectors
 must keep input cardinality, finite values, and non-negative values, while

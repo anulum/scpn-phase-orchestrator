@@ -40,6 +40,8 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
+from ..experimental.accelerators.upde._geometric_validation import validate_torus_output
+
 FloatArray = NDArray[np.float64]
 
 __all__ = [
@@ -365,7 +367,14 @@ class TorusEngine:
         Returns
         -------
         FloatArray
-            The final phases after ``n_steps`` torus steps.
+            The final finite torus phases after ``n_steps`` torus steps, in
+            ``[0, 2π)``.
+
+        Raises
+        ------
+        ValueError
+            If the submitted state is malformed or an optional backend returns
+            a phase vector outside the public torus contract.
         """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
@@ -382,16 +391,19 @@ class TorusEngine:
         alpha_flat = alpha64.ravel()
         backend_fn = _dispatch()
         if backend_fn is not None:
-            return backend_fn(
-                phases64,
-                omegas64,
-                knm_flat,
-                alpha_flat,
-                self._n,
-                float(zeta),
-                float(psi),
-                float(self._dt),
-                n_steps,
+            return validate_torus_output(
+                backend_fn(
+                    phases64,
+                    omegas64,
+                    knm_flat,
+                    alpha_flat,
+                    self._n,
+                    float(zeta),
+                    float(psi),
+                    float(self._dt),
+                    n_steps,
+                ),
+                n=self._n,
             )
         return _python_torus_run(
             phases64,

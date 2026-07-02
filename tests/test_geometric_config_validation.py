@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -43,7 +43,10 @@ def test_torus_engine_run_rejects_invalid_step_count(n_steps: Any) -> None:
 
 
 def test_torus_engine_normalises_accepted_numpy_scalars() -> None:
-    engine = TorusEngine(n_oscillators=np.int64(4), dt=np.float64(0.01))
+    engine = TorusEngine(
+        n_oscillators=cast("int", np.int64(4)),
+        dt=cast("float", np.float64(0.01)),
+    )
 
     assert engine._n == 4
     assert pytest.approx(0.01) == engine._dt
@@ -139,6 +142,22 @@ def test_torus_run_rejects_invalid_scalar_inputs(
             np.zeros((4, 4), dtype=np.float64),
             kwargs["zeta"],
             kwargs["psi"],
+            np.zeros((4, 4), dtype=np.float64),
+            n_steps=1,
+        )
+
+
+def test_torus_run_rejects_non_numeric_state_arrays() -> None:
+    """Reject non-coercible public state arrays before backend dispatch."""
+    engine = TorusEngine(n_oscillators=4, dt=0.01)
+
+    with pytest.raises(ValueError, match="phases must be a finite float array"):
+        engine.run(
+            np.array(["bad", "bad", "bad", "bad"], dtype=object),
+            np.ones(4, dtype=np.float64),
+            np.zeros((4, 4), dtype=np.float64),
+            0.0,
+            0.0,
             np.zeros((4, 4), dtype=np.float64),
             n_steps=1,
         )
