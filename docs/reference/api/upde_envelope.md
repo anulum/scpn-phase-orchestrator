@@ -359,6 +359,13 @@ finite scalar line per extracted envelope sample for `RMS` and exactly one
 finite scalar line for `MOD`; blank, truncated, overlong, non-numeric, and
 non-finite output is rejected before public validators run.
 
+The public `extract_envelope()` and `envelope_modulation_depth()` dispatchers
+apply the same output contract to optional backend returns before exposing
+results: RMS-envelope payloads must be finite, non-negative, and exactly as long
+as the submitted 1-D input, while modulation depth must be a finite scalar in
+`[0, 1]`. Optional backend loader/runtime unavailability still falls through to
+the Python implementation; malformed backend physics payloads fail closed.
+
 ---
 
 ## 7. Performance Benchmarks

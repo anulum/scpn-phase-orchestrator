@@ -12,7 +12,7 @@
     "research_experimental_modules": 217,
     "runtime_serving_modules": 136,
     "rust_kernel_files": 97,
-    "test_files": 758
+    "test_files": 759
   },
   "documentation": {
     "public_pages": [
@@ -1961,6 +1961,7 @@
       "tests/test_envelope.py",
       "tests/test_envelope_algorithm.py",
       "tests/test_envelope_backends.py",
+      "tests/test_envelope_public_backend_output_contracts.py",
       "tests/test_event_bus_validation.py",
       "tests/test_evolutionary_petri_grammar.py",
       "tests/test_evolutionary_policy_dsl.py",

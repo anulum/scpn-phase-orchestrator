@@ -38,6 +38,10 @@ The public market dispatcher replays the same market output validators for
 optional backend returns before publication: `R(t)` must be finite and bounded
 in `[0, 1]`, and rolling PLV payloads must keep the expected cardinality, unit
 diagonals, symmetry, and `[0, 1]` bounds.
+The public envelope dispatcher now applies its direct accelerator output
+validators to optional backend returns before publication: RMS-envelope vectors
+must keep input cardinality, finite values, and non-negative values, while
+modulation depth must be a finite scalar in `[0, 1]`.
 
 ## Wiring
 

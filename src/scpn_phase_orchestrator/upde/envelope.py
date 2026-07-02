@@ -33,6 +33,11 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
+from ..experimental.accelerators.upde._envelope_validation import (
+    validate_envelope_modulation_output,
+    validate_extract_envelope_output,
+)
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -248,9 +253,9 @@ def extract_envelope(
         backend_fn = _dispatch("extract")
         if backend_fn is not None:
             fn = cast("Callable[[FloatArray, int], FloatArray]", backend_fn)
-            return np.asarray(
+            return validate_extract_envelope_output(
                 fn(amplitudes, int(window)),
-                dtype=np.float64,
+                n=int(amplitudes.size),
             )
         return _extract_1d_python(amplitudes, int(window))
 
@@ -289,7 +294,7 @@ def envelope_modulation_depth(envelope: FloatArray) -> float:
     backend_fn = _dispatch("mod")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray], float]", backend_fn)
-        return float(fn(envelope))
+        return validate_envelope_modulation_output(fn(envelope))
     flat = envelope.ravel()
     vmax = float(np.max(flat))
     vmin = float(np.min(flat))
