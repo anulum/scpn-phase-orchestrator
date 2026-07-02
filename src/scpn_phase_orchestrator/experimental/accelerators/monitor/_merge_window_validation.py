@@ -10,7 +10,11 @@
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Integral, Real
 from typing import Any, cast
+
+import numpy as np
 
 from scpn_phase_orchestrator.monitor.merge_window import (
     MergeReport,
@@ -32,6 +36,65 @@ def expected_merge_window_report(*args: object, **kwargs: object) -> MergeReport
     return evaluate_merge_window(*cast(Any, args), **cast(Any, kwargs))
 
 
+def _validate_real_report_field(report: MergeReport, field: str) -> float:
+    """Return a report field as a finite non-boolean real scalar."""
+    value = getattr(report, field)
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Real, np.floating, np.integer),
+    ):
+        raise ValueError(
+            f"merge-window accelerator field {field!r} must be a finite real scalar"
+        )
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"merge-window accelerator field {field!r} must be finite")
+    return parsed
+
+
+def _validate_bool_report_field(report: MergeReport, field: str) -> bool:
+    """Return a report field after confirming it is a plain ``bool``."""
+    value = getattr(report, field)
+    if type(value) is not bool:
+        raise ValueError(f"merge-window accelerator field {field!r} must be bool")
+    return value
+
+
+def _validate_consecutive_count(report: MergeReport) -> int:
+    """Return the report's consecutive sample count as a non-negative integer."""
+    value = report.consecutive_lock_samples
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Integral, np.integer),
+    ):
+        raise ValueError(
+            "merge-window accelerator field 'consecutive_lock_samples' "
+            "must be a non-negative integer"
+        )
+    parsed = int(value)
+    if parsed < 0:
+        raise ValueError(
+            "merge-window accelerator field 'consecutive_lock_samples' "
+            "must be non-negative"
+        )
+    return parsed
+
+
+def _validate_tolerance(value: object) -> float:
+    """Return a finite non-negative comparison tolerance."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Real, np.floating, np.integer),
+    ):
+        raise ValueError("merge-window accelerator tolerance must be a finite scalar")
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError("merge-window accelerator tolerance must be finite")
+    if parsed < 0.0:
+        raise ValueError("merge-window accelerator tolerance must be non-negative")
+    return parsed
+
+
 def validate_merge_window_report(
     got: MergeReport,
     expected: MergeReport,
@@ -39,19 +102,21 @@ def validate_merge_window_report(
     tolerance: float = 1.0e-12,
 ) -> MergeReport:
     """Validate an accelerator report against the Python reference contract."""
-    got_dict = got.to_dict()
-    expected_dict = expected.to_dict()
+    tolerance_value = _validate_tolerance(tolerance)
     for field in _NUMERIC_FIELDS:
-        error = abs(float(got_dict[field]) - float(expected_dict[field]))
-        if error > tolerance:
+        got_value = _validate_real_report_field(got, field)
+        expected_value = _validate_real_report_field(expected, field)
+        error = abs(got_value - expected_value)
+        if error > tolerance_value:
             raise ValueError(
                 f"merge-window accelerator field {field!r} diverged by {error}"
             )
     for field in _BOOL_FIELDS:
-        if bool(got_dict[field]) is not bool(expected_dict[field]):
+        if _validate_bool_report_field(got, field) is not _validate_bool_report_field(
+            expected,
+            field,
+        ):
             raise ValueError(f"merge-window accelerator field {field!r} diverged")
-    if int(got_dict["consecutive_lock_samples"]) != int(
-        expected_dict["consecutive_lock_samples"]
-    ):
+    if _validate_consecutive_count(got) != _validate_consecutive_count(expected):
         raise ValueError("merge-window accelerator consecutive count diverged")
     return got

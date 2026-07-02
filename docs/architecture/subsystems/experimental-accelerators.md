@@ -83,6 +83,11 @@ contain finite real non-boolean values, remain symmetric, keep a zero diagonal,
 and preserve the input `K_nm` zero-edge topology. Malformed AttnRes physics
 payloads raise immediately, preserving fallback only for loader or runtime
 unavailability.
+Merge-window Rust, Go, Julia, and Mojo source-contract adapters route
+`MergeReport` evidence through the shared validator before parity publication:
+numeric fields must be finite real non-boolean scalars, lock fields must be
+plain booleans, consecutive counts must be non-negative integers, and every
+signed-margin field must replay the Python reference within tolerance.
 The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep

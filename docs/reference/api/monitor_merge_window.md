@@ -83,6 +83,10 @@ boolean lock evidence. The benchmark payload also publishes
 `phase_margin_equation_validated`, `spatial_margin_equation_validated`,
 `signed_margin_equations_validated`, and `margin_replay_tolerance`; the gate
 fails unless every declared backend row proves both signed-margin equations.
+The shared accelerator validator checks raw `MergeReport` fields before parity
+comparison: numeric fields must be finite real non-boolean scalars, lock fields
+must be plain booleans, consecutive counts must be non-negative integers, and
+the comparison tolerance itself must be finite and non-negative.
 
 ```bash
 uv run python benchmarks/merge_window_benchmark.py --parity-gate

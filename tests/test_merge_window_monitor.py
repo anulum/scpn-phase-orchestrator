@@ -426,6 +426,107 @@ def test_polyglot_validator_rejects_consecutive_count_drift() -> None:
         merge_validation.validate_merge_window_report(drifted, expected)
 
 
+def test_polyglot_validator_rejects_numeric_alias_report_fields() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.0], dtype=np.float64),
+        np.array([0.0, 0.0], dtype=np.float64),
+        t=1.0,
+        phase_tol_rad=1.0,
+        spatial_tol_m=1.0,
+        required_consecutive_samples=1,
+    )
+
+    for field, value in (
+        ("t", True),
+        ("phase_dispersion_rad", False),
+        ("spatial_dispersion_m", False),
+        ("phase_margin_rad", np.bool_(True)),
+        ("spatial_margin_m", True),
+    ):
+        with pytest.raises(ValueError, match=field):
+            merge_validation.validate_merge_window_report(
+                replace(expected, **{field: value}),
+                expected,
+            )
+
+
+def test_polyglot_validator_rejects_non_finite_report_fields() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.002], dtype=np.float64),
+        np.array([0.0, 0.001], dtype=np.float64),
+        required_consecutive_samples=1,
+    )
+
+    with pytest.raises(ValueError, match="phase_margin_rad"):
+        merge_validation.validate_merge_window_report(
+            replace(expected, phase_margin_rad=np.nan),
+            expected,
+        )
+
+
+def test_polyglot_validator_requires_bool_report_fields() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.002], dtype=np.float64),
+        np.array([0.0, 0.001], dtype=np.float64),
+        required_consecutive_samples=1,
+    )
+
+    for field in ("phase_locked", "spatial_locked", "lock_achieved"):
+        with pytest.raises(ValueError, match=field):
+            merge_validation.validate_merge_window_report(
+                replace(expected, **{field: np.bool_(True)}),
+                expected,
+            )
+
+
+def test_polyglot_validator_rejects_boolean_consecutive_count_alias() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.002], dtype=np.float64),
+        np.array([0.0, 0.001], dtype=np.float64),
+        required_consecutive_samples=1,
+    )
+
+    with pytest.raises(ValueError, match="consecutive_lock_samples"):
+        merge_validation.validate_merge_window_report(
+            replace(expected, consecutive_lock_samples=np.bool_(True)),
+            expected,
+        )
+
+
+def test_polyglot_validator_rejects_negative_consecutive_count() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.002], dtype=np.float64),
+        np.array([0.0, 0.001], dtype=np.float64),
+        required_consecutive_samples=1,
+    )
+
+    with pytest.raises(ValueError, match="consecutive_lock_samples"):
+        merge_validation.validate_merge_window_report(
+            replace(expected, consecutive_lock_samples=-1),
+            expected,
+        )
+
+
+def test_polyglot_validator_rejects_invalid_tolerance() -> None:
+    expected = evaluate_merge_window(
+        np.array([0.0, 0.002], dtype=np.float64),
+        np.array([0.0, 0.001], dtype=np.float64),
+        required_consecutive_samples=1,
+    )
+
+    for tolerance, match in (
+        (np.bool_(True), "finite scalar"),
+        (np.nan, "finite"),
+        (-1.0, "non-negative"),
+    ):
+        with pytest.raises(ValueError, match=match):
+            merge_validation.validate_merge_window_report(
+                expected,
+                expected,
+                tolerance=tolerance,
+            )
+
+
 def test_merge_window_polyglot_benchmark_gate() -> None:
     result = benchmark_merge_window_polyglot_parity_gate(n=6, calls=1)
     assert result["suite"] == "merge_window_polyglot_parity_gate"

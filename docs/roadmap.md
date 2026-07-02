@@ -49,12 +49,12 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public AttnRes dispatcher, plus the direct Go, Julia,
-and Mojo bridges, now validate optional backend modulated-coupling outputs
-before publication. The shared validator rejects malformed, boolean-alias,
-complex-alias, non-finite, wrong-cardinality, non-symmetric, nonzero-diagonal,
-and zero-edge-creating payloads immediately, preserving fallback only for
-loader or runtime unavailability.
+Latest U1 closure: the merge-window Rust, Go, Julia, and Mojo source-contract
+adapters now validate raw `MergeReport` output fields before parity publication.
+The shared validator rejects boolean-alias or non-finite numeric fields,
+non-plain lock flags, invalid consecutive counts, invalid tolerances, and
+reference-divergent signed-margin evidence before benchmark records or
+downstream PHA-C review lanes consume it.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|
