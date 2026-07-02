@@ -48,10 +48,48 @@ def test_update_rejects_a_non_numeric_exposure_vector() -> None:
         _model().update(_state(), cast("np.ndarray", exposure), dt=0.1)
 
 
+def test_update_accepts_a_plain_python_list_exposure() -> None:
+    """A finite float list is a valid array-like exposure, not a boolean alias.
+
+    Exercises the scalar leaf of the recursive alias probe: each float element
+    is inspected and reported as non-boolean before the exposure is accepted.
+    """
+    result = _model().update(_state(), cast("np.ndarray", [0.1, 0.2]), dt=0.1)
+    assert result.m_k.shape == (2,)
+    assert np.all(np.isfinite(result.m_k))
+
+
+def test_update_rejects_an_object_dtype_boolean_exposure_alias() -> None:
+    """Object-dtype boolean aliases must not coerce silently to 1.0/0.0."""
+    exposure = np.array([True, False], dtype=object)
+    with pytest.raises(ValueError, match="exposure must not contain boolean values"):
+        _model().update(_state(), cast("np.ndarray", exposure), dt=0.1)
+
+
+def test_update_rejects_a_mixed_python_boolean_exposure_alias() -> None:
+    """A Python list mixing a boolean with a float is a rejected boolean alias."""
+    with pytest.raises(ValueError, match="exposure must not contain boolean values"):
+        _model().update(_state(), cast("np.ndarray", [True, 1.0]), dt=0.1)
+
+
 def test_modulate_coupling_rejects_a_boolean_matrix() -> None:
     knm = np.array([[True, False], [False, True]])
     with pytest.raises(ValueError, match="knm must not contain boolean values"):
         _model().modulate_coupling(knm, _state())
+
+
+def test_modulate_coupling_rejects_an_object_dtype_boolean_matrix_alias() -> None:
+    """Object-dtype boolean matrix aliases must be rejected, not coerced."""
+    knm = np.array([[False, True], [True, False]], dtype=object)
+    with pytest.raises(ValueError, match="knm must not contain boolean values"):
+        _model().modulate_coupling(cast("np.ndarray", knm), _state())
+
+
+def test_modulate_lag_rejects_an_object_dtype_boolean_matrix_alias() -> None:
+    """Object-dtype boolean lag-matrix aliases must be rejected, not coerced."""
+    alpha = np.array([[False, True], [True, False]], dtype=object)
+    with pytest.raises(ValueError, match="alpha must not contain boolean values"):
+        _model().modulate_lag(cast("np.ndarray", alpha), _state())
 
 
 def test_modulate_coupling_rejects_a_non_numeric_matrix() -> None:

@@ -17,6 +17,7 @@ for downstream dynamics.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from numbers import Real
 from typing import TypeAlias
 
@@ -28,6 +29,29 @@ from scpn_phase_orchestrator.imprint.state import ImprintState
 __all__ = ["ImprintModel"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _contains_boolean_alias(value: object) -> bool:
+    """Return whether ``value`` carries a Python or NumPy boolean alias.
+
+    Plain ``bool_`` arrays are caught by a dtype check, but boolean scalars
+    nested inside ``object``-dtype arrays or mixed Python sequences coerce
+    silently to ``1.0``/``0.0`` under ``astype``; this recursive probe rejects
+    them so imprint validation honours its documented no-boolean contract.
+    """
+    if isinstance(value, (bool, np.bool_)):
+        return True
+    if isinstance(value, np.ndarray):
+        if np.issubdtype(value.dtype, np.bool_):
+            return True
+        if value.dtype == object:
+            return any(_contains_boolean_alias(item) for item in value.flat)
+        return False
+    if isinstance(value, (str, bytes)):
+        return False
+    if isinstance(value, Iterable):
+        return any(_contains_boolean_alias(item) for item in value)
+    return False
 
 
 def _finite_real(value: float, name: str) -> float:
@@ -48,9 +72,9 @@ def _finite_vector(
     non_negative: bool = False,
 ) -> FloatArray:
     """Return ``value`` as a validated finite vector, else raise."""
-    raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    raw = np.asarray(value)
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -68,9 +92,9 @@ def _finite_vector(
 
 def _finite_square_matrix(value: FloatArray, name: str, *, size: int) -> FloatArray:
     """Return ``value`` as a validated finite square matrix, else raise."""
-    raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    raw = np.asarray(value)
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -185,7 +209,7 @@ class ImprintModel:
         Parameters
         ----------
         alpha : FloatArray
-            Phase-lag knob value, or ``None``.
+            Phase-lag matrix ``alpha``, shape ``(N, N)``.
         imprint : ImprintState
             The imprint state.
 
@@ -206,7 +230,7 @@ class ImprintModel:
         Parameters
         ----------
         mu : FloatArray
-            Imprint vector, shape ``(N,)``.
+            Bifurcation parameter ``μ``, shape ``(N,)``.
         imprint : ImprintState
             The imprint state.
 
