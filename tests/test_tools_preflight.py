@@ -271,3 +271,85 @@ class TestMain:
         flattened = [" ".join(c) for c in calls]
         assert any("--cov-report=xml" in s for s in flattened)
         assert any("tools/coverage_guard.py" in s for s in flattened)
+
+    def test_branch_coverage_flag_runs_branch_gates(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--branch-coverage adds the --cov-branch run and the branch guard."""
+        calls: list[list[str]] = []
+
+        def fake_run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            calls.append(list(cmd))
+            return _completed(0)
+
+        with (
+            patch.object(mod.shutil, "which", return_value=None),
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(sys, "argv", ["preflight", "--no-tests", "--branch-coverage"]),
+        ):
+            rc = mod.main()
+        out = capsys.readouterr().out
+        assert rc == 0
+        assert "branch coverage" in out
+        flattened = [" ".join(c) for c in calls]
+        assert any("--cov-branch" in s for s in flattened)
+        assert any("coverage_guard_branch_thresholds.json" in s for s in flattened)
+
+    def test_branch_coverage_gate_deselects_performance_tests(self) -> None:
+        """The branch lane is perf-isolated: performance tests are deselected."""
+        _, cmd, _ = mod.BRANCH_COVERAGE_GATE
+        assert "not slow and not performance" in cmd
+        assert "not performance" in cmd
+        assert "--cov-branch" in cmd
+
+    def test_branch_coverage_pytest_failure_blocks(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        def fake_run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            if "--cov-branch" in cmd:
+                return _completed(1, stderr="branch run failed")
+            return _completed(0)
+
+        with (
+            patch.object(mod.shutil, "which", return_value=None),
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(sys, "argv", ["preflight", "--no-tests", "--branch-coverage"]),
+        ):
+            rc = mod.main()
+        out = capsys.readouterr().out
+        assert rc == 1
+        assert "BLOCKED" in out
+        assert "branch coverage (pytest --cov-branch)" in out
+
+    def test_branch_coverage_guard_failure_blocks(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        def fake_run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            if "tools/coverage_guard.py" in cmd:
+                return _completed(1, stdout="Coverage guard FAILED")
+            return _completed(0)
+
+        with (
+            patch.object(mod.shutil, "which", return_value=None),
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(sys, "argv", ["preflight", "--no-tests", "--branch-coverage"]),
+        ):
+            rc = mod.main()
+        out = capsys.readouterr().out
+        assert rc == 1
+        assert "branch coverage (guard)" in out
+
+    def test_branch_gates_absent_without_flag(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            calls.append(list(cmd))
+            return _completed(0)
+
+        with (
+            patch.object(mod.shutil, "which", return_value=None),
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(sys, "argv", ["preflight", "--no-tests"]),
+        ):
+            mod.main()
+        assert not any("--cov-branch" in " ".join(c) for c in calls)

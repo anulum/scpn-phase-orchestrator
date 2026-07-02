@@ -116,9 +116,11 @@ are left unchanged, but the old trailer is no longer accepted for new commits.
 To run manually at any time:
 
 ```bash
-python tools/preflight.py            # full (~3 min)
-python tools/preflight.py --no-tests # lint-only (~5 sec)
-python tools/preflight.py --coverage # full + coverage guard
+python tools/preflight.py                   # full (~3 min)
+python tools/preflight.py --no-tests        # lint-only (~5 sec)
+python tools/preflight.py --coverage        # full + line-coverage guard
+python tools/preflight.py --branch-coverage # full + branch-coverage guard
+                                            # (performance tests deselected)
 ```
 
 ## Running Tests

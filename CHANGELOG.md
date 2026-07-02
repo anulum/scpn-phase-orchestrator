@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Perf-isolated branch-coverage gate: `tools/coverage_guard.py` now parses and
+  enforces branch rates (global / per-domain / per-file) alongside line rates,
+  failing closed when branch floors are configured against a line-only report;
+  a new CI `branch-coverage` lane re-runs the ffi-test selection with
+  performance tests deselected and `--cov-branch` enabled, gated by the
+  no-decrease floors in `tools/coverage_guard_branch_thresholds.json`;
+  `tools/preflight.py --branch-coverage` mirrors the lane locally. The main
+  coverage matrix stays line-only because branch instrumentation flips
+  host-sensitive wall-clock performance tests.
 - `scpn_phase_orchestrator.assurance.report.render_conformity_report` renders an
   assurance-case bundle as a deterministic, human-readable Markdown conformity
   report — a per-standard, clause-by-clause table of conformance status,
@@ -107,6 +116,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generates the `docs/wasm-pkg/` bundle before publishing, the hosted helper
   mirrors the source playground helper, and the playground test suite now guards
   both source and hosted surfaces.
+
+### Fixed
+
+- `tests/test_itpc_bridge_paths.py` failed-subprocess test grants the execute
+  bit to its fake Mojo artefact: the hardened runtime probe rejects
+  non-executable artefacts before the subprocess path, so the test never
+  reached the non-zero-exit surface it targets.
+- `TestNeurocoreBridgeScaleTiming` now carries the `performance` marker: its
+  per-step wall-clock budgets are host-sensitive and flip under branch
+  instrumentation or machine load, so perf-isolated lanes deselect the class.
 
 ## [0.10.0] - 2026-06-25
 

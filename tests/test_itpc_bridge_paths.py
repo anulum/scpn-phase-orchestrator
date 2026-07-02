@@ -93,6 +93,10 @@ class TestMojoBridgeErrorPaths:
 
         fake_exe = tmp_path / "itpc_mojo"
         fake_exe.touch()
+        # The runtime probe rejects non-executable artefacts before the
+        # subprocess path; grant the execute bit so this test reaches the
+        # non-zero-exit surface it targets.
+        fake_exe.chmod(0o755)
         monkeypatch.setattr(_itpc_mojo, "_EXE_PATH", fake_exe)
         monkeypatch.setattr(_itpc_mojo.subprocess, "run", _fake_run)
         # The short-circuit for empty indices would skip _run; use a

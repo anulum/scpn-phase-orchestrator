@@ -303,8 +303,15 @@ class TestNeurocoreBridgeScale:
             assert elapsed < 5.0, f"Numpy N=10000 took {elapsed:.3f}s (expected <5s)"
 
 
+@pytest.mark.performance
 class TestNeurocoreBridgeScaleTiming:
-    """Benchmark timing across backends and neuron counts."""
+    """Benchmark timing across backends and neuron counts.
+
+    Marked ``performance``: the per-step wall-clock budgets are
+    host-sensitive and flip under branch instrumentation or heavy machine
+    load, so perf-isolated lanes (the CI branch-coverage job) deselect
+    this class via ``-m "not performance"``.
+    """
 
     @pytest.mark.parametrize(
         "n_per,label",

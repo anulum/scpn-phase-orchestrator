@@ -264,6 +264,71 @@ jobs:
           path: coverage-python.xml
       - run: python tools/coverage_guard.py --coverage-xml coverage-python.xml
 
+  branch-coverage:
+    # Branch instrumentation is heavier than line instrumentation and flips
+    # host-sensitive wall-clock performance tests, which is why the main
+    # coverage matrix stays line-only. This lane runs the ffi-test selection
+    # with performance tests deselected and --cov-branch enabled, then gates
+    # the branch rate through tools/coverage_guard_branch_thresholds.json
+    # (no-decrease ratchet, fail-closed if the XML carries no branch data).
+    # Wider timeout than ffi-test: on CPython 3.12 branch measurement runs on
+    # the C tracer (sys.monitoring branch support needs 3.14+), so the suite
+    # is markedly slower under branch instrumentation. The dev Hypothesis
+    # profile (50 examples) is deliberate: this lane measures coverage, not
+    # property-based correctness — the main lanes already run the ci profile
+    # (500 examples) — and 500-example properties under the C tracer would
+    # dominate the lane's wall clock.
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HYPOTHESIS_PROFILE: dev
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            spo-kernel/target
+          key: cargo-ffi-${{ runner.os }}-py3.12-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-ffi-${{ runner.os }}-
+      - name: Build kernel and run tests with branch coverage
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+          pytest tests/ --tb=short -p no:cacheprovider \
+            --ignore=tests/test_kuramoto_layer.py \
+            --ignore=tests/test_stuart_landau_nn.py \
+            --ignore=tests/test_bold.py \
+            --ignore=tests/test_reservoir.py \
+            --ignore=tests/test_ude_kuramoto.py \
+            --ignore=tests/test_inverse.py \
+            --ignore=tests/test_oim.py \
+            --ignore=tests/test_quantum_bridge_live.py \
+            --ignore=tests/test_geometry_walk.py \
+            --ignore-glob=tests/test_nn_physics_validation*.py \
+            -m "not slow and not performance" \
+            -k "not performance" \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0
+          coverage xml -o coverage-branch.xml
+      - name: Upload branch coverage XML
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-xml-branch
+          path: coverage-branch.xml
+      - run: >
+          python tools/coverage_guard.py
+          --coverage-xml coverage-branch.xml
+          --thresholds tools/coverage_guard_branch_thresholds.json
+
   module-linkage:
     runs-on: ubuntu-latest
     steps:

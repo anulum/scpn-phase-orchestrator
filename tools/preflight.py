@@ -7,6 +7,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Local CI preflight
 
+"""Local mirror of the CI gate chain.
+
+Runs the lint/type/test/security gates in CI order with fail-fast
+semantics. ``--coverage`` appends the line-coverage lane (pytest with
+``--cov`` plus the coverage guard); ``--branch-coverage`` appends the
+perf-isolated branch lane (performance tests deselected, ``--cov-branch``,
+gated by ``tools/coverage_guard_branch_thresholds.json``); ``--no-tests``
+skips the plain pytest gate.
+"""
+
 from __future__ import annotations
 
 import os
@@ -137,8 +147,46 @@ COVERAGE_CHECK: tuple[str, list[str], Path] = (
     ROOT,
 )
 
+# Branch instrumentation flips host-sensitive wall-clock performance tests,
+# so the branch lane deselects them instead of enabling branch coverage in
+# the default lanes (mirrors the CI branch-coverage job).
+BRANCH_COVERAGE_GATE: tuple[str, list[str], Path] = (
+    "branch coverage (pytest)",
+    [
+        _PY,
+        "-m",
+        "pytest",
+        "tests/",
+        "-x",
+        "--tb=short",
+        "-q",
+        "-m",
+        "not slow and not performance",
+        "-k",
+        "not performance",
+        "--cov=scpn_phase_orchestrator",
+        "--cov-branch",
+        "--cov-report=xml:coverage-branch.xml",
+        *PYTEST_HEAVY_IGNORES,
+    ],
+    ROOT,
+)
+BRANCH_COVERAGE_CHECK: tuple[str, list[str], Path] = (
+    "branch coverage (guard)",
+    [
+        _PY,
+        "tools/coverage_guard.py",
+        "--coverage-xml",
+        "coverage-branch.xml",
+        "--thresholds",
+        "tools/coverage_guard_branch_thresholds.json",
+    ],
+    ROOT,
+)
+
 
 def run_gate(name: str, cmd: list[str], cwd: Path) -> bool:
+    """Run one gate command, print PASS/FAIL with timing, return success."""
     env = os.environ.copy()
     if "pytest" in cmd:
         src_path = str((ROOT / "src").resolve())
@@ -172,7 +220,9 @@ def run_gate(name: str, cmd: list[str], cwd: Path) -> bool:
 
 
 def main() -> int:
+    """Run the selected preflight gates; return the process exit code."""
     coverage = "--coverage" in sys.argv
+    branch_coverage = "--branch-coverage" in sys.argv
     skip_tests = "--no-tests" in sys.argv
     has_cargo = shutil.which("cargo") is not None
 
@@ -187,6 +237,8 @@ def main() -> int:
         parts.append("no cargo")
     if coverage:
         parts.append("coverage")
+    if branch_coverage:
+        parts.append("branch coverage")
     print(f"preflight: {', '.join(parts)}")
     print()
 
@@ -203,6 +255,12 @@ def main() -> int:
             failed.append("coverage (pytest --cov)")
         elif not run_gate(*COVERAGE_CHECK):
             failed.append("coverage (guard)")
+
+    if not failed and branch_coverage:
+        if not run_gate(*BRANCH_COVERAGE_GATE):
+            failed.append("branch coverage (pytest --cov-branch)")
+        elif not run_gate(*BRANCH_COVERAGE_CHECK):
+            failed.append("branch coverage (guard)")
 
     elapsed = time.monotonic() - t_start
     print()

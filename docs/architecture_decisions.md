@@ -182,6 +182,17 @@ combines the test and ffi coverage and enforces the per-module thresholds in
 on platform-robust invariants (a learned frequency is checked by magnitude, not
 sign, because of the phase autoencoder's reflection symmetry).
 
+Branch coverage is gated by a separate, perf-isolated `branch-coverage` lane:
+branch instrumentation is heavier than line instrumentation and flips
+host-sensitive wall-clock performance tests, so the main coverage matrix stays
+line-only while the branch lane re-runs the ffi-test selection with performance
+tests deselected and `--cov-branch` enabled. The same `tools/coverage_guard.py`
+enforces `tools/coverage_guard_branch_thresholds.json` on that lane's report and
+fails closed if the XML carries no branch data. Locally,
+`python tools/preflight.py --branch-coverage` mirrors the lane.
+
 **Rationale.** Per-lane gating would fail spuriously whenever a backend is missing;
 combining coverage and gating per module captures the real picture, and asserting
-robust invariants keeps ML tests from flaking across jaxlib builds.
+robust invariants keeps ML tests from flaking across jaxlib builds. Isolating the
+branch axis into its own lane makes branch regressions gate-visible without
+destabilising the wall-clock performance guards.

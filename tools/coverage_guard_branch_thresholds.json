@@ -1,0 +1,33 @@
+{
+  "_comment": "2026-07-03: no-decrease floors for the perf-isolated branch-coverage CI lane, seeded from a full local baseline run of the lane's exact selection (dev Hypothesis profile, -m 'not slow and not performance' -k 'not performance', ffi ignore list; measured global line 96.49%, branch 93.22% = 17364/18626). Floors sit below the measurement because the baseline host had Go/Mojo/Julia backend artefacts built while the CI lane builds Rust only, so polyglot dispatch domains (coupling, experimental, upde, nn, monitor, oscillators, ssgf, adapters, supervisor) carry a wider margin. The __init__.py micro-domain (a handful of branches) is deliberately unfloored: one branch flip swings it by tens of points. Ratchet these floors upward from the first green CI run of the branch-coverage lane; never decrease.",
+  "global_min_line_rate": 94.0,
+  "global_min_branch_rate": 91.0,
+  "domain_min_branch_rate": {
+    "actuation": 96.0,
+    "adapters": 92.0,
+    "api.py": 95.0,
+    "apps": 95.0,
+    "artifacts": 98.0,
+    "assurance": 97.0,
+    "audit": 98.0,
+    "autotune": 97.0,
+    "binding": 97.0,
+    "coupling": 66.0,
+    "drivers": 98.0,
+    "experimental": 75.0,
+    "imprint": 98.0,
+    "meta": 95.0,
+    "monitor": 92.0,
+    "nn": 75.0,
+    "oscillators": 88.0,
+    "plugins": 96.0,
+    "reporting": 95.0,
+    "runtime": 96.0,
+    "scaffold": 98.0,
+    "ssgf": 90.0,
+    "studio": 97.0,
+    "supervisor": 91.0,
+    "upde": 84.0,
+    "visualization": 94.0
+  }
+}

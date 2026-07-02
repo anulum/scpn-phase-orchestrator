@@ -1,5 +1,5 @@
 {
-  "_comment": "2026-06-26: ratcheted from the CI-measured line coverage on run 28250327371 / e785648e (global 94.34%, 50787/53835). Floors sit below measured rates as no-regression baselines while keeping generated/experimental/studio domains visible. Branch coverage remains deferred: enabling [tool.coverage.run] branch=true inflates coverage-job instrumentation and flips tight wall-clock perf tests under coverage; re-add branch together with a branch-rate gate after those perf tests are trace-robust.",
+  "_comment": "2026-06-26: ratcheted from the CI-measured line coverage on run 28250327371 / e785648e (global 94.34%, 50787/53835). Floors sit below measured rates as no-regression baselines while keeping generated/experimental/studio domains visible. Branch coverage is gated separately by the perf-isolated branch-coverage CI lane via coverage_guard_branch_thresholds.json (performance tests deselected there; enabling branch=true in the main coverage matrix flips tight wall-clock perf tests under coverage).",
   "global_min_line_rate": 93.0,
   "domain_min_line_rate": {
     "actuation": 97.0,
