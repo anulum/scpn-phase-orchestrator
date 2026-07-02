@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
 from typing import Any
 
 import numpy as np
@@ -113,3 +115,57 @@ class TestNumpyFallback:
         assert costs.c3_sparsity >= 0.0
         assert costs.c4_symmetry == pytest.approx(0.0)  # W is symmetric
         assert np.isfinite(costs.u_total)
+
+    def test_module_marks_rust_absent_when_kernel_cannot_import(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Importing without ``spo_kernel`` drives the ImportError fallback.
+
+        A sandboxed copy of the module is executed with ``spo_kernel`` blocked
+        (a reload of the real module would change the ``SSGFCosts`` class
+        identity held by other test modules). The copy must mark the Rust
+        backend absent, keep the loader slot ``None``, and still compute costs
+        through the NumPy floor that agree with the Rust-backed values from
+        the untouched module.
+        """
+        rust_costs = compute_ssgf_costs(_W, _PHASES, _WEIGHTS)
+        monkeypatch.setitem(sys.modules, "spo_kernel", None)
+        spec = importlib.util.spec_from_file_location(
+            "ssgf_costs_rustless_copy", costs_mod.__file__
+        )
+        assert spec is not None and spec.loader is not None
+        rustless = importlib.util.module_from_spec(spec)
+        # The dataclass decorator resolves cls.__module__ through sys.modules,
+        # so the sandboxed copy must be registered before its body executes.
+        monkeypatch.setitem(sys.modules, "ssgf_costs_rustless_copy", rustless)
+
+        spec.loader.exec_module(rustless)
+
+        assert rustless._HAS_RUST is False
+        assert rustless._rust_costs is None
+        python_costs = rustless.compute_ssgf_costs(_W, _PHASES, _WEIGHTS)
+        assert costs_mod._HAS_RUST is True  # the real module is untouched
+        assert python_costs.c1_sync == pytest.approx(rust_costs.c1_sync)
+        assert python_costs.c2_spectral_gap == pytest.approx(rust_costs.c2_spectral_gap)
+        assert python_costs.c3_sparsity == pytest.approx(rust_costs.c3_sparsity)
+        assert python_costs.c4_symmetry == pytest.approx(rust_costs.c4_symmetry)
+        assert python_costs.u_total == pytest.approx(rust_costs.u_total)
+
+
+class TestBooleanAliasDetector:
+    def test_object_dtype_ndarray_with_boolean_is_an_alias(self) -> None:
+        """A boolean nested in an object-dtype ndarray must be detected."""
+        value = np.array([0.1, True], dtype=object)
+
+        assert costs_mod._contains_boolean_alias(value) is True
+
+    def test_object_dtype_ndarray_without_boolean_is_clean(self) -> None:
+        """A purely numeric object-dtype ndarray passes the alias scan."""
+        value = np.array([0.1, 0.2], dtype=object)
+
+        assert costs_mod._contains_boolean_alias(value) is False
+
+    def test_plain_python_list_with_boolean_is_an_alias(self) -> None:
+        """A non-ndarray sequence goes through the object scan directly."""
+        assert costs_mod._contains_boolean_alias([0.1, True]) is True
+        assert costs_mod._contains_boolean_alias([0.1, 0.2]) is False
