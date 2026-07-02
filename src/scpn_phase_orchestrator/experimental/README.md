@@ -32,6 +32,8 @@ are implementation backends for those modules.
 - Rust, WebGPU, Mojo, Julia, and Go paths are selected by the owning dispatcher
   when the backend exists for that kernel.
 - Missing optional toolchains may demote to the next backend.
+- Julia paths require a complete `juliacall.Main` runtime before side-file
+  loading; partially initialised `juliacall` modules are treated as unavailable.
 - Validation failures, non-finite outputs, ABI mismatches, and physics-contract
   violations must not demote silently.
 - New backend work needs production-surface tests, parity evidence, docs, and

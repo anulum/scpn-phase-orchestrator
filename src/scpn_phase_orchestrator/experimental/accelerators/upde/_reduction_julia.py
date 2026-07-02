@@ -13,6 +13,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
+    require_julia_main,
+)
+
 from ._reduction_validation import validate_oa_inputs, validate_oa_output
 
 __all__ = ["oa_run_julia"]
@@ -26,7 +30,7 @@ def _ensure() -> Any:
     global _JULIA_MODULE
     if _JULIA_MODULE is not None:
         return _JULIA_MODULE
-    from juliacall import Main as JuliaMain
+    JuliaMain = require_julia_main()
 
     if not _JULIA_FILE.exists():
         raise ImportError(f"julia side-file not found: {_JULIA_FILE}")

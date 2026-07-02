@@ -15,12 +15,15 @@ the toolchain is absent.
 
 from __future__ import annotations
 
-import importlib
 from pathlib import Path
 from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
+    require_julia_main,
+)
 
 from ._order_params_validation import (
     validate_layer_coherence_inputs,
@@ -43,21 +46,12 @@ _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "order_params.jl"
 _JULIA_MODULE: Any | None = None
 
 
-def _require_juliacall_main() -> Any:
-    """Return ``juliacall.Main`` when the Julia runtime initialised fully."""
-    juliacall = importlib.import_module("juliacall")
-    main = getattr(juliacall, "Main", None)
-    if main is None:
-        raise ImportError("juliacall.Main unavailable; Julia runtime not initialised")
-    return main
-
-
 def _ensure_julia_loaded() -> Any:
     """Load the Julia backend runtime if not already loaded, else raise."""
     global _JULIA_MODULE
     if _JULIA_MODULE is not None:
         return _JULIA_MODULE
-    JuliaMain = _require_juliacall_main()
+    JuliaMain = require_julia_main()
 
     if not _JULIA_FILE.exists():
         raise ImportError(f"julia side-file not found: {_JULIA_FILE}")

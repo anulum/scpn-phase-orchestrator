@@ -2,7 +2,7 @@
 
 Despite the name, this is **not aspirational research**: it is the load-bearing
 polyglot acceleration layer that the production `coupling`, `monitor`, and `upde`
-subsystems dispatch to. 168 files, ~18.3k LOC, organised solely as
+subsystems dispatch to. 170 files, ~18.9k LOC, organised solely as
 `experimental/accelerators/{coupling, monitor, upde}/`.
 
 ## Structure
@@ -35,10 +35,11 @@ than widened to `0.0`/`1.0` backend payloads.
 The per-language forwarder modules in the production subsystems
 (`upde/_engine_mojo.py`, `monitor/_lyapunov_julia.py`, …) re-export from here.
 Selection is the per-lane fastest-first chain (see [backends.md](../backends.md)).
-Production UPDE, monitor, and coupling Julia forwarders require
-`juliacall.Main`, not just an importable `juliacall` package; partial Julia
-initialisation is treated as an unavailable optional backend and the dispatcher
-falls through instead of advertising a bridge that will fail after selection.
+Production UPDE, monitor, and coupling Julia forwarders, plus the direct
+accelerator Julia `_ensure()` loaders, require `juliacall.Main`, not just an
+importable `juliacall` package; partial Julia initialisation is treated as an
+unavailable optional backend and the dispatcher falls through instead of
+advertising a bridge that will fail after selection.
 Nothing here is re-exported in the public API — access is always indirect
 through a production subsystem's dispatcher.
 
@@ -47,8 +48,8 @@ through a production subsystem's dispatcher.
 - The naming is misleading; treat this as the acceleration layer, not a research
   sandbox.
 - The polyglot backends are environment-gated — Go/Julia/Mojo require their
-  toolchains; absent or partially initialised Julia runtimes fall through to
-  Python.
+  toolchains; absent or partially initialised Julia runtimes fail before
+  side-file loading and fall through to Python through the owning dispatcher.
 - `monitor/psychedelic` is a heuristic with no cited reference; the PHA-C
   acceptance lane is a deterministic evidence-binding chain (distinct from the
   conformal twin-confidence gate, which lives in `monitor/twin_conformal_gate.py`).

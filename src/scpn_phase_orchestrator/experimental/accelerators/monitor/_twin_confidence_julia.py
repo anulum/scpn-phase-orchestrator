@@ -20,6 +20,10 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
+    require_julia_main,
+)
+
 from ._twin_confidence_validation import (
     validate_twin_divergence_backend_inputs,
     validate_twin_divergence_backend_output,
@@ -37,7 +41,7 @@ def _ensure() -> Any:
     global _JULIA_MODULE
     if _JULIA_MODULE is not None:
         return _JULIA_MODULE
-    from juliacall import Main as JuliaMain
+    JuliaMain = require_julia_main()
 
     if not _JULIA_FILE.exists():
         raise ImportError(f"julia side-file not found: {_JULIA_FILE}")
