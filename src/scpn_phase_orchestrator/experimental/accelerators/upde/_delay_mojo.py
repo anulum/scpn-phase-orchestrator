@@ -12,13 +12,16 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._delay_validation import validate_delay_backend_inputs
+from ._delay_validation import (
+    validate_delay_backend_inputs,
+    validate_delay_backend_output,
+)
 
 __all__ = ["_ensure_exe", "delayed_kuramoto_run_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -33,7 +36,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build mojo/delay.mojo "
             f"-o mojo/delay_mojo -Xlinker -lm"
         )
-    return require_mojo_executable(_EXE_PATH)
+    return cast(Path, require_mojo_executable(_EXE_PATH))
 
 
 def delayed_kuramoto_run_mojo(
@@ -78,7 +81,4 @@ def delayed_kuramoto_run_mojo(
         values = [float(line) for line in lines]
     except ValueError as exc:
         raise ValueError("Mojo DELAY output must contain finite phases") from exc
-    parsed = np.asarray(values, dtype=np.float64)
-    if not np.all(np.isfinite(parsed)):
-        raise ValueError("Mojo DELAY output must contain finite phases")
-    return parsed
+    return validate_delay_backend_output(values, n=n)

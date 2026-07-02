@@ -20,7 +20,10 @@ from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
 
-from ._delay_validation import validate_delay_backend_inputs
+from ._delay_validation import (
+    validate_delay_backend_inputs,
+    validate_delay_backend_output,
+)
 
 __all__ = ["delayed_kuramoto_run_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -62,9 +65,9 @@ def delayed_kuramoto_run_julia(
         )
     )
     jl = _ensure()
-    return np.asarray(
+    return validate_delay_backend_output(
         jl.delayed_kuramoto_run(
             ph, om, knm, alpha, n, zeta, psi, dt, delay_steps, n_steps
         ),
-        dtype=np.float64,
+        n=n,
     )

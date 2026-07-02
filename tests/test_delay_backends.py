@@ -16,12 +16,27 @@ before any runtime loads.
 
 from __future__ import annotations
 
+import ctypes
+import subprocess
 import sys
 import types
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _delay_go as delay_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _delay_julia as delay_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _delay_mojo as delay_mojo,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _delay_validation as delay_validation,
 )
@@ -38,9 +53,39 @@ from scpn_phase_orchestrator.upde import delay as delay_mod
 from scpn_phase_orchestrator.upde.delay import AVAILABLE_BACKENDS, DelayedEngine
 
 TWO_PI = 2.0 * np.pi
+FloatArray: TypeAlias = NDArray[np.float64]
+DelayProblem: TypeAlias = tuple[FloatArray, FloatArray, FloatArray, FloatArray]
+DirectDelayBackend: TypeAlias = Callable[..., FloatArray]
 
 
-def _problem(seed: int, n: int = 6):
+def _direct_backend_args() -> tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    int,
+    float,
+    float,
+    float,
+    int,
+    int,
+]:
+    """Return a minimal valid delayed-Kuramoto direct backend problem."""
+    return (
+        np.zeros(2, dtype=np.float64),
+        np.zeros(2, dtype=np.float64),
+        np.zeros(4, dtype=np.float64),
+        np.zeros(4, dtype=np.float64),
+        2,
+        0.0,
+        0.0,
+        0.05,
+        1,
+        5,
+    )
+
+
+def _problem(seed: int, n: int = 6) -> DelayProblem:
     rng = np.random.default_rng(seed)
     phases = rng.uniform(0, TWO_PI, n)
     omegas = rng.uniform(-1.0, 1.0, n)
@@ -50,7 +95,7 @@ def _problem(seed: int, n: int = 6):
     return phases, omegas, knm, alpha
 
 
-def _reference(problem, delay, steps):
+def _reference(problem: DelayProblem, delay: int, steps: int) -> FloatArray:
     phases, omegas, knm, alpha = problem
     prev = delay_mod.ACTIVE_BACKEND
     delay_mod.ACTIVE_BACKEND = "python"
@@ -77,6 +122,7 @@ def _assert_parity(backend: str, seed: int, atol: float, delay: int = 2) -> None
 
 def test__delay_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(delay_validation.validate_delay_backend_inputs)
+    assert callable(delay_validation.validate_delay_backend_output)
 
 
 class TestRustParity:
@@ -146,6 +192,23 @@ class TestCrossBackendConsistency:
 
 class TestDirectBackendBoundaryContracts:
     @pytest.mark.parametrize(
+        ("bad_output", "match"),
+        [
+            (np.zeros(3, dtype=np.float64), "shape"),
+            (np.array([0.0, np.nan], dtype=np.float64), "finite"),
+            (np.array([0.0, 100.0], dtype=np.float64), "phases"),
+            (np.array([0.0, 1.0 + 0j]), "real-valued"),
+            (np.array(["a", "b"]), "finite phase vector"),
+            (np.array([True, False]), "boolean"),
+        ],
+    )
+    def test_output_validator_rejects_invalid_phase_vector(
+        self, bad_output: object, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            delay_validation.validate_delay_backend_output(bad_output, n=2)
+
+    @pytest.mark.parametrize(
         "backend",
         [
             delayed_kuramoto_run_go,
@@ -173,8 +236,10 @@ class TestDirectBackendBoundaryContracts:
             ({"zeta": None}, "zeta"),
         ],
     )
-    def test_validation_precedes_runtime_load(self, backend, kwargs, match) -> None:
-        base = {
+    def test_validation_precedes_runtime_load(
+        self, backend: DirectDelayBackend, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {
             "phases": np.zeros(2),
             "omegas": np.zeros(2),
             "knm_flat": np.zeros(4),
@@ -201,17 +266,195 @@ class TestDirectBackendBoundaryContracts:
                 base["n_steps"],
             )
 
+    def test_go_rejects_runtime_output_outside_phase_range(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class FakeGoLib:
+            """C-shared Go shim writing an invalid phase vector."""
+
+            def DelayedKuramotoRun(self, *_args: object) -> int:
+                out_ptr = ctypes.cast(
+                    cast(Any, _args[-1]), ctypes.POINTER(ctypes.c_double)
+                )
+                out_ptr[0] = 0.0
+                out_ptr[1] = 100.0
+                return 0
+
+        monkeypatch.setattr(delay_go, "_load_lib", lambda: FakeGoLib())
+
+        with pytest.raises(ValueError, match="phases"):
+            delayed_kuramoto_run_go(*_direct_backend_args())
+
+    def test_go_missing_library_raises_import_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(delay_go, "_LIB", None)
+        monkeypatch.setattr(delay_go, "_LIB_PATH", Path("missing-libdelay.so"))
+
+        with pytest.raises(ImportError, match="libdelay.so not found"):
+            delay_go._load_lib()
+
+    def test_go_rejects_nonzero_runtime_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class FakeGoLib:
+            """C-shared Go shim reporting a runtime failure."""
+
+            def DelayedKuramotoRun(self, *_args: object) -> int:
+                return 17
+
+        monkeypatch.setattr(delay_go, "_load_lib", lambda: FakeGoLib())
+
+        with pytest.raises(ValueError, match="rc=17"):
+            delayed_kuramoto_run_go(*_direct_backend_args())
+
+    def test_julia_rejects_runtime_output_outside_phase_range(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class FakeJuliaModule:
+            """Julia shim returning an invalid phase vector."""
+
+            def delayed_kuramoto_run(self, *_args: object) -> FloatArray:
+                return np.array([0.0, 100.0], dtype=np.float64)
+
+        monkeypatch.setattr(delay_julia, "_ensure", lambda: FakeJuliaModule())
+
+        with pytest.raises(ValueError, match="phases"):
+            delayed_kuramoto_run_julia(*_direct_backend_args())
+
+    def test_julia_ensure_returns_cached_module(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cached = object()
+        monkeypatch.setattr(delay_julia, "_JULIA_MODULE", cached)
+
+        assert delay_julia._ensure() is cached
+
+    def test_julia_missing_side_file_raises_import_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(delay_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(delay_julia, "require_julia_main", lambda: object())
+        monkeypatch.setattr(delay_julia, "_JULIA_FILE", Path("missing-delay.jl"))
+
+        with pytest.raises(ImportError, match="julia side-file not found"):
+            delay_julia._ensure()
+
+    def test_julia_ensure_includes_side_file(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        side_file = tmp_path / "delay.jl"
+        side_file.write_text("module DelayJL\nend\n", encoding="utf-8")
+        module = object()
+
+        class FakeJuliaMain:
+            """Minimal Julia main shim for loader coverage."""
+
+            def __init__(self) -> None:
+                self.DelayJL = module
+                self.includes: list[str] = []
+
+            def include(self, path: str) -> None:
+                self.includes.append(path)
+
+        fake_main = FakeJuliaMain()
+        monkeypatch.setattr(delay_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(delay_julia, "_JULIA_FILE", side_file)
+        monkeypatch.setattr(delay_julia, "require_julia_main", lambda: fake_main)
+
+        assert delay_julia._ensure() is module
+        assert fake_main.includes == [str(side_file)]
+
+    def test_mojo_rejects_runtime_output_outside_phase_range(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_run_mojo_executable(
+            _exe: Path,
+            _stdin: str,
+            *,
+            runner: object,
+        ) -> subprocess.CompletedProcess[str]:
+            del runner
+            return subprocess.CompletedProcess(
+                args=["delay_mojo"],
+                returncode=0,
+                stdout="0.0\n100.0\n",
+                stderr="",
+            )
+
+        monkeypatch.setattr(delay_mojo, "_ensure_exe", lambda: Path("delay_mojo"))
+        monkeypatch.setattr(delay_mojo, "run_mojo_executable", fake_run_mojo_executable)
+
+        with pytest.raises(ValueError, match="phases"):
+            delayed_kuramoto_run_mojo(*_direct_backend_args())
+
+    def test_mojo_missing_executable_raises_import_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(delay_mojo, "_EXE_PATH", Path("missing-delay-mojo"))
+
+        with pytest.raises(ImportError, match="not built"):
+            delay_mojo._ensure_exe()
+
+    @pytest.mark.parametrize(
+        ("stdout", "returncode", "match"),
+        [
+            ("", 7, "Mojo delay exit 7"),
+            ("0.0\n", 0, "returned 1 lines"),
+            ("0.0\nnot-a-float\n", 0, "finite phases"),
+        ],
+    )
+    def test_mojo_rejects_invalid_process_results(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        returncode: int,
+        match: str,
+    ) -> None:
+        def fake_run_mojo_executable(
+            _exe: Path,
+            _stdin: str,
+            *,
+            runner: object,
+        ) -> subprocess.CompletedProcess[str]:
+            del runner
+            return subprocess.CompletedProcess(
+                args=["delay_mojo"],
+                returncode=returncode,
+                stdout=stdout,
+                stderr="process failed",
+            )
+
+        monkeypatch.setattr(delay_mojo, "_ensure_exe", lambda: Path("delay_mojo"))
+        monkeypatch.setattr(delay_mojo, "run_mojo_executable", fake_run_mojo_executable)
+
+        with pytest.raises(ValueError, match=match):
+            delayed_kuramoto_run_mojo(*_direct_backend_args())
+
 
 class TestBackendLoaderDispatch:
-    def test_rust_loader_wraps_spo_kernel(self, monkeypatch) -> None:
-        calls: list[tuple] = []
+    def test_rust_loader_wraps_spo_kernel(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[int, int, int]] = []
 
-        def fake_rust(phases, omegas, knm, alpha, n, zeta, psi, dt, delay, steps):
+        def fake_rust(
+            _phases: FloatArray,
+            _omegas: FloatArray,
+            _knm: FloatArray,
+            _alpha: FloatArray,
+            n: int,
+            _zeta: float,
+            _psi: float,
+            _dt: float,
+            delay: int,
+            steps: int,
+        ) -> FloatArray:
             calls.append((n, delay, steps))
             return np.zeros(n, dtype=np.float64)
 
         fake_module = types.ModuleType("spo_kernel")
-        fake_module.delayed_kuramoto_run_rust = fake_rust
+        fake_module.delayed_kuramoto_run_rust = fake_rust  # type: ignore[attr-defined]
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
 
         backend = delay_mod._load_rust_fn()
@@ -221,7 +464,9 @@ class TestBackendLoaderDispatch:
         assert out.shape == (2,)
         assert calls[0] == (2, 1, 5)
 
-    def test_resolve_backends_falls_back_to_python(self, monkeypatch) -> None:
+    def test_resolve_backends_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         def _fail() -> delay_mod._DelayBackend:
             raise RuntimeError("unavailable")
 
@@ -235,13 +480,16 @@ class TestBackendLoaderDispatch:
 class _ArrayRaises:
     """Object whose array conversion always fails (probes the defensive guards)."""
 
-    def __array__(self, *_args: object, **_kwargs: object) -> np.ndarray:
+    def __array__(self, *_args: object, **_kwargs: object) -> FloatArray:
         raise ValueError("no array interface")
 
 
 class TestDispatchFallthrough:
-    def test_dispatch_skips_failing_active_and_dedups(self, monkeypatch) -> None:
-        sentinel: delay_mod._DelayBackend = lambda *_a, **_k: np.zeros(2)  # noqa: E731
+    def test_dispatch_skips_failing_active_and_dedups(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def sentinel(*_a: object, **_k: object) -> FloatArray:
+            return np.zeros(2, dtype=np.float64)
 
         def fake_load(name: str) -> delay_mod._DelayBackend:
             if name == "rust":
@@ -256,12 +504,16 @@ class TestDispatchFallthrough:
         # second rust is deduplicated, go resolves.
         assert delay_mod._dispatch() is sentinel
 
-    def test_dispatch_returns_none_when_only_python(self, monkeypatch) -> None:
+    def test_dispatch_returns_none_when_only_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(delay_mod, "ACTIVE_BACKEND", "python")
         monkeypatch.setattr(delay_mod, "AVAILABLE_BACKENDS", ["python"])
         assert delay_mod._dispatch() is None
 
-    def test_dispatch_none_when_all_accelerators_fail(self, monkeypatch) -> None:
+    def test_dispatch_none_when_all_accelerators_fail(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         def fake_load(_name: str) -> delay_mod._DelayBackend:
             raise RuntimeError("no accelerator resolves")
 
@@ -285,8 +537,10 @@ class TestBackendOutputContract:
             np.array([0.0, np.nan]),  # non-finite
         ],
     )
-    def test_invalid_backend_output_falls_back(self, monkeypatch, bad_output) -> None:
-        def bad_backend(*_a: object, **_k: object) -> np.ndarray:
+    def test_invalid_backend_output_falls_back(
+        self, monkeypatch: pytest.MonkeyPatch, bad_output: object
+    ) -> None:
+        def bad_backend(*_a: object, **_k: object) -> object:
             return bad_output
 
         monkeypatch.setattr(delay_mod, "_dispatch", lambda: bad_backend)

@@ -29,11 +29,11 @@ modules in `coupling`/`monitor`/`upde` wrap them for type-checking and audit.
 Validation runs before dtype coercion: Python booleans, NumPy boolean scalars,
 boolean dtypes, and raw containers carrying boolean aliases are rejected rather
 than widened to `0.0`/`1.0` backend payloads.
-Direct UPDE Doppler and moving-frame Go/Julia/Mojo adapters also replay the
-owning public output validators after backend execution: Doppler outputs must be
-finite principal-branch phases, and moving-frame outputs must be finite
-phase/position vectors whose final positions match the submitted ballistic
-velocity schedule.
+Direct UPDE delay, Doppler, and moving-frame Go/Julia/Mojo adapters also replay
+the owning output validators after backend execution: delayed-Kuramoto outputs
+must be finite phase vectors in `[0, 2*pi)`, Doppler outputs must be finite
+principal-branch phases, and moving-frame outputs must be finite phase/position
+vectors whose final positions match the submitted ballistic velocity schedule.
 
 ## Wiring
 

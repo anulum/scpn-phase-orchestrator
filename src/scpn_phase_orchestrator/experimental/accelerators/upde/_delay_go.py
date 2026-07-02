@@ -12,13 +12,16 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from .._go_runtime import load_go_library
-from ._delay_validation import validate_delay_backend_inputs
+from ._delay_validation import (
+    validate_delay_backend_inputs,
+    validate_delay_backend_output,
+)
 
 __all__ = ["delayed_kuramoto_run_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -37,7 +40,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libdelay.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libdelay.so delay.go"
         )
-    lib = load_go_library(_LIB_PATH)
+    lib = cast(ctypes.CDLL, load_go_library(_LIB_PATH))
     lib.DelayedKuramotoRun.restype = ctypes.c_int
     lib.DelayedKuramotoRun.argtypes = [
         ctypes.POINTER(ctypes.c_double),
@@ -75,7 +78,7 @@ def delayed_kuramoto_run_go(
         )
     )
     lib = _load_lib()
-    out = np.zeros(n, dtype=np.float64)
+    out: FloatArray = np.zeros(n, dtype=np.float64)
     rc = lib.DelayedKuramotoRun(
         ph.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         om.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -91,4 +94,4 @@ def delayed_kuramoto_run_go(
     )
     if rc != 0:
         raise ValueError(f"Go DelayedKuramotoRun rc={rc}")
-    return out
+    return validate_delay_backend_output(out, n=n)

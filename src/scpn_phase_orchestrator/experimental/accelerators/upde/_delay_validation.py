@@ -18,7 +18,9 @@ from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
-__all__ = ["validate_delay_backend_inputs"]
+_TWO_PI = 2.0 * np.pi
+
+__all__ = ["validate_delay_backend_inputs", "validate_delay_backend_output"]
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -75,6 +77,35 @@ def _float_vector(value: object, *, name: str, size: int) -> FloatArray:
         raise ValueError(f"{name} length {vector.size} does not match {size}")
     if not np.all(np.isfinite(vector)):
         raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(vector, dtype=np.float64)
+
+
+def validate_delay_backend_output(value: object, *, n: object) -> FloatArray:
+    """Return a validated delayed-Kuramoto backend phase vector.
+
+    Direct Go, Julia, and Mojo adapters are production boundaries in their own
+    right, not only implementation details of ``DelayedEngine``. The adapters
+    must therefore reject non-finite, shape-mismatched, or out-of-range backend
+    output before returning it to callers.
+    """
+    n_int = _count(n, name="n", minimum=1)
+    if _contains_boolean_alias(value):
+        raise ValueError("delay backend output must not contain boolean values")
+    raw = np.asarray(value)
+    if np.iscomplexobj(raw):
+        raise ValueError("delay backend output must be real-valued")
+    try:
+        vector = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("delay backend output must be a finite phase vector") from exc
+    if vector.shape != (n_int,):
+        raise ValueError(
+            f"delay backend output shape {vector.shape} does not match ({n_int},)"
+        )
+    if not np.all(np.isfinite(vector)):
+        raise ValueError("delay backend output must contain only finite values")
+    if np.any(vector < 0.0) or np.any(vector >= _TWO_PI):
+        raise ValueError("delay backend output phases must be in [0, 2*pi)")
     return np.ascontiguousarray(vector, dtype=np.float64)
 
 
