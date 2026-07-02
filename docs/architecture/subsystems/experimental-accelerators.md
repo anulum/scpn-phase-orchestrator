@@ -34,6 +34,10 @@ the owning output validators after backend execution: delayed-Kuramoto outputs
 must be finite phase vectors in `[0, 2*pi)`, Doppler outputs must be finite
 principal-branch phases, and moving-frame outputs must be finite phase/position
 vectors whose final positions match the submitted ballistic velocity schedule.
+The public market dispatcher replays the same market output validators for
+optional backend returns before publication: `R(t)` must be finite and bounded
+in `[0, 1]`, and rolling PLV payloads must keep the expected cardinality, unit
+diagonals, symmetry, and `[0, 1]` bounds.
 
 ## Wiring
 

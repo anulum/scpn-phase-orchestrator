@@ -36,6 +36,10 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._market_validation import (
+    validate_market_order_output,
+    validate_market_plv_output,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 BoolArray = NDArray[np.bool_]
@@ -280,8 +284,6 @@ def _python_market_order_parameter(
     n: int,
 ) -> FloatArray:
     """Return the reference market order parameter (NumPy floor)."""
-    if t == 0 or n == 0:
-        return np.empty(0, dtype=np.float64)
     phases = phases_flat.reshape(t, n)
     z = np.exp(1j * phases)
     R: FloatArray = np.abs(np.mean(z, axis=1))
@@ -303,11 +305,13 @@ def market_order_parameter(phases: FloatArray) -> FloatArray:
     """
     phases = _validate_phase_matrix(phases)
     T, N = phases.shape
+    if T == 0:
+        return np.empty(0, dtype=np.float64)
     flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     dispatched = _dispatch()
     if dispatched is not None:
         op_fn, _ = dispatched
-        return np.asarray(op_fn(flat, T, N), dtype=np.float64)
+        return validate_market_order_output(op_fn(flat, T, N), t=T)
     return _python_market_order_parameter(flat, T, N)
 
 
@@ -318,8 +322,6 @@ def _python_market_plv(
     window: int,
 ) -> FloatArray:
     """Return the reference market phase-locking value (NumPy floor)."""
-    if t < window or n == 0 or window == 0:
-        return np.empty(0, dtype=np.float64)
     phases = phases_flat.reshape(t, n)
     n_windows = t - window + 1
     out = np.empty(n_windows * n * n, dtype=np.float64)
@@ -363,11 +365,14 @@ def market_plv(phases: FloatArray, window: int = 50) -> FloatArray:
     dispatched = _dispatch()
     if dispatched is not None:
         _, plv_fn = dispatched
-        result_flat = np.asarray(plv_fn(flat, T, N, window), dtype=np.float64)
+        result_flat = validate_market_plv_output(
+            plv_fn(flat, T, N, window),
+            t=T,
+            n=N,
+            window=window,
+        )
     else:
         result_flat = _python_market_plv(flat, T, N, window)
-    if result_flat.size == 0:
-        return result_flat.reshape(0, N, N)
     n_windows = T - window + 1
     return result_flat.reshape(n_windows, N, N)
 

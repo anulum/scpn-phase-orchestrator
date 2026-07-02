@@ -176,6 +176,10 @@ controls must be positive non-boolean integers; the PLV window must not exceed
 `T`; backend `R(t)` outputs must have length `T` and lie in `[0, 1]`; rolling
 PLV outputs must have the expected `(T-window+1)*N*N` cardinality, lie in
 `[0, 1]`, preserve unit diagonals, and remain symmetric.
+The public market dispatcher applies the same output contract to optional
+backend returns before exposing `market_order_parameter()` or `market_plv()`
+results, so backend physics-contract faults propagate instead of falling
+through as trusted market evidence.
 
 R(t) → 1 preceding market crashes documented for Black Monday 1987 and
 the 2008 financial crisis (arXiv:1109.1167).

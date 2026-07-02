@@ -12,7 +12,7 @@
     "research_experimental_modules": 217,
     "runtime_serving_modules": 136,
     "rust_kernel_files": 97,
-    "test_files": 757
+    "test_files": 758
   },
   "documentation": {
     "public_pages": [
@@ -2084,6 +2084,7 @@
       "tests/test_market_algorithm.py",
       "tests/test_market_backends.py",
       "tests/test_market_guards.py",
+      "tests/test_market_public_backend_output_contracts.py",
       "tests/test_market_stability.py",
       "tests/test_merge_window_monitor.py",
       "tests/test_meta_transfer.py",

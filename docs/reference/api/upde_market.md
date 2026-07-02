@@ -70,6 +70,14 @@ High PLV between two assets indicates consistent phase relationship
 
 Output shape: $(T - W + 1, N, N)$ — one PLV matrix per window position.
 
+Optional Rust, Go, Julia, and Mojo backend returns are validated at the public
+dispatcher before they become market evidence. `market_order_parameter()` only
+publishes finite unit-interval `R(t)` vectors with length `T`; `market_plv()`
+only publishes flattened backend payloads that reshape to
+$(T-W+1) \times N \times N$ PLV matrices with unit diagonals, symmetry, and
+unit-interval entries. Loader or runtime unavailability still falls through to
+the next backend, but malformed backend physics payloads fail closed.
+
 ### 1.4 Regime Classification
 
 The `detect_regimes` function maps $R(t)$ to discrete labels:
