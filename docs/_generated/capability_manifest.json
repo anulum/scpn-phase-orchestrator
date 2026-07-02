@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 296,
+    "core_engine_modules": 297,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 27,
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 217,
-    "python_package_modules": 676,
+    "python_package_modules": 677,
     "research_experimental_modules": 214,
     "runtime_serving_modules": 136,
     "rust_kernel_files": 97,
-    "test_files": 752
+    "test_files": 753
   },
   "documentation": {
     "public_pages": [
@@ -593,6 +593,7 @@
       "src/scpn_phase_orchestrator/upde/_inertial_go.py",
       "src/scpn_phase_orchestrator/upde/_inertial_julia.py",
       "src/scpn_phase_orchestrator/upde/_inertial_mojo.py",
+      "src/scpn_phase_orchestrator/upde/_julia_runtime.py",
       "src/scpn_phase_orchestrator/upde/_market_go.py",
       "src/scpn_phase_orchestrator/upde/_market_julia.py",
       "src/scpn_phase_orchestrator/upde/_market_mojo.py",
@@ -1659,6 +1660,7 @@
     "src/scpn_phase_orchestrator/upde/_inertial_go.py",
     "src/scpn_phase_orchestrator/upde/_inertial_julia.py",
     "src/scpn_phase_orchestrator/upde/_inertial_mojo.py",
+    "src/scpn_phase_orchestrator/upde/_julia_runtime.py",
     "src/scpn_phase_orchestrator/upde/_market_go.py",
     "src/scpn_phase_orchestrator/upde/_market_julia.py",
     "src/scpn_phase_orchestrator/upde/_market_mojo.py",
@@ -2460,6 +2462,7 @@
       "tests/test_upde_engine.py",
       "tests/test_upde_engine_guards.py",
       "tests/test_upde_engine_validation.py",
+      "tests/test_upde_julia_runtime_contracts.py",
       "tests/test_upde_lazy_exports.py",
       "tests/test_upde_math.py",
       "tests/test_upde_moving_frame.py",

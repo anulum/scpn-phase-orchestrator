@@ -402,6 +402,7 @@ class TestOptionalLoaderSuccessPaths:
 
     def test_julia_loader_requires_juliacall_and_returns_runner(self, monkeypatch):
         fake_juliacall = types.ModuleType("juliacall")
+        fake_juliacall.Main = object()
         fake_julia = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_julia"
         )

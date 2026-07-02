@@ -44,6 +44,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -107,7 +109,7 @@ def _load_mojo_fn() -> Callable[..., float]:
 def _load_julia_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
     """Load the Julia basin-stability backend callable."""
-    import juliacall  # noqa: F401
+    require_juliacall_main()
 
     from ..experimental.accelerators.upde._basin_stability_julia import (
         steady_state_r_julia,

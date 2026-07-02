@@ -35,15 +35,19 @@ than widened to `0.0`/`1.0` backend payloads.
 The per-language forwarder modules in the production subsystems
 (`upde/_engine_mojo.py`, `monitor/_lyapunov_julia.py`, …) re-export from here.
 Selection is the per-lane fastest-first chain (see [backends.md](../backends.md)).
-Nothing here is re-exported in the public API — access is always indirect through
-a production subsystem's dispatcher.
+UPDE Julia forwarders require `juliacall.Main`, not just an importable
+`juliacall` package; partial Julia initialisation is treated as an unavailable
+optional backend and the dispatcher falls through instead of advertising a
+bridge that will fail after selection. Nothing here is re-exported in the public
+API — access is always indirect through a production subsystem's dispatcher.
 
 ## Scope boundaries
 
 - The naming is misleading; treat this as the acceleration layer, not a research
   sandbox.
 - The polyglot backends are environment-gated — Go/Julia/Mojo require their
-  toolchains; absence falls through to Python.
+  toolchains; absent or partially initialised Julia runtimes fall through to
+  Python.
 - `monitor/psychedelic` is a heuristic with no cited reference; the PHA-C
   acceptance lane is a deterministic evidence-binding chain (distinct from the
   conformal twin-confidence gate, which lives in `monitor/twin_conformal_gate.py`).

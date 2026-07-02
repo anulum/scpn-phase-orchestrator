@@ -431,7 +431,11 @@ class TestBackendLoaderDispatch:
         self,
         monkeypatch,
     ):
-        monkeypatch.setitem(sys.modules, "juliacall", types.SimpleNamespace())
+        monkeypatch.setitem(
+            sys.modules,
+            "juliacall",
+            types.SimpleNamespace(Main=object()),
+        )
         monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(
             (

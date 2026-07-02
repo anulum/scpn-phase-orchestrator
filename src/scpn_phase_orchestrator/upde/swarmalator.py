@@ -39,6 +39,7 @@ from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.coupling.spatial_modulator import (
     SpatialCouplingModulator,
 )
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -102,7 +103,7 @@ def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
     """Load the Julia swarmalator backend callable."""
-    import juliacall  # noqa: F401
+    require_juliacall_main()
 
     from ..experimental.accelerators.upde._swarmalator_julia import (
         swarmalator_step_julia,

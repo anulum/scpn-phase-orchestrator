@@ -36,6 +36,8 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+
 BoolArray = NDArray[np.bool_]
 FloatArray = NDArray[np.float64]
 IntArray = NDArray[np.int32]
@@ -107,7 +109,7 @@ def _load_mojo_fn() -> tuple[_MarketFn, _MarketFn]:
 def _load_julia_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
     """Load the Julia market backend callable."""
-    import juliacall  # noqa: F401
+    require_juliacall_main()
 
     from ..experimental.accelerators.upde._market_julia import (
         market_order_parameter_julia,

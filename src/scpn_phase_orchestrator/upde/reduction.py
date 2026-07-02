@@ -50,6 +50,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+
 try:
     from spo_kernel import (
         fit_lorentzian_rust as _rust_fit_lorentzian,
@@ -142,7 +144,7 @@ def _load_mojo_fn() -> Callable[..., tuple[float, float, float, float]]:
 def _load_julia_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
     """Load the Julia Ott-Antonsen backend callable."""
-    import juliacall  # noqa: F401
+    require_juliacall_main()
 
     from ..experimental.accelerators.upde._reduction_julia import (
         oa_run_julia,

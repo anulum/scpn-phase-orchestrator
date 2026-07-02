@@ -47,6 +47,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray = NDArray[np.float64]
 IntArray = NDArray[np.int64]
@@ -113,7 +114,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     """Load the Julia simplicial backend callable."""
-    import juliacall  # noqa: F401
+    require_juliacall_main()
 
     from ..experimental.accelerators.upde._simplicial_julia import (
         simplicial_run_julia,

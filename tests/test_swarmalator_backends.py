@@ -538,7 +538,9 @@ class TestBackendLoaderContracts:
             setattr(module, function_name, kernel)
             monkeypatch.setitem(sys.modules, module_name, module)
 
-        monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
+        fake_juliacall = types.ModuleType("juliacall")
+        fake_juliacall.Main = object()
+        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         install_backend(
             "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_mojo",
             "swarmalator_step_mojo",

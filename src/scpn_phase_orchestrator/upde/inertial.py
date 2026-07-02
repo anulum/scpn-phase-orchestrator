@@ -37,6 +37,8 @@ from numbers import Integral, Real
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+
 FloatArray = NDArray[np.float64]
 
 TWO_PI = 2.0 * np.pi
@@ -102,10 +104,7 @@ def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
     """Load the Julia second-order Kuramoto backend callable."""
-    import juliacall  # noqa: F401
-
-    if not hasattr(juliacall, "Main"):
-        raise ImportError("juliacall imported but juliacall.Main is unavailable")
+    require_juliacall_main()
 
     from ..experimental.accelerators.upde._inertial_julia import (
         inertial_step_julia,
