@@ -18,17 +18,40 @@ from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
+HodgeTuple: TypeAlias = tuple[FloatArray, FloatArray, FloatArray]
 
-__all__ = ["validate_hodge_backend_inputs"]
+__all__ = ["validate_hodge_backend_inputs", "validate_hodge_backend_output"]
 
 
 def _contains_boolean_alias(value: object) -> bool:
     """Return whether the value contains any boolean alias."""
+    if isinstance(value, np.ndarray):
+        if value.dtype == np.bool_:
+            return True
+        if value.dtype != object:
+            return False
     try:
         raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if np.iscomplexobj(raw):
+        return True
+    if isinstance(value, np.ndarray) and raw.dtype != object:
+        return False
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
 def _validate_n(value: object) -> int:
@@ -46,7 +69,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
     try:
         vector = raw.astype(np.float64, copy=True)
@@ -133,3 +156,42 @@ def validate_hodge_backend_inputs(
         n=n_int,
     )
     return k, p, n_int, edges, n_edges_int, tris, n_tris_int
+
+
+def _validate_output_matrix(value: object, *, n: int) -> FloatArray:
+    """Return one validated backend flow matrix."""
+    if _contains_boolean_alias(value) or _contains_complex_alias(value):
+        raise ValueError("Hodge backend output must be finite real-valued")
+    try:
+        raw = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Hodge backend output must be finite real-valued") from exc
+
+    expected_shape = (n, n)
+    if raw.shape == (n * n,):
+        matrix = raw.reshape(expected_shape)
+    elif raw.shape == expected_shape:
+        matrix = raw
+    else:
+        raise ValueError("Hodge backend returned matrices with invalid shape")
+
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("Hodge backend returned non-finite values")
+    if matrix.size and np.max(np.abs(matrix + matrix.T)) > 1.0e-10:
+        raise ValueError("Hodge backend returned non-antisymmetric matrices")
+    return np.ascontiguousarray(matrix, dtype=np.float64)
+
+
+def validate_hodge_backend_output(output: object, *, n: object) -> HodgeTuple:
+    """Validate direct Hodge backend output before publication or parity fallback."""
+    n_int = _validate_n(n)
+    if not isinstance(output, tuple) or len(output) != 3:
+        raise ValueError(
+            "Hodge backend output must contain gradient, curl, and harmonic matrices"
+        )
+    gradient_raw, curl_raw, harmonic_raw = output
+    return (
+        _validate_output_matrix(gradient_raw, n=n_int),
+        _validate_output_matrix(curl_raw, n=n_int),
+        _validate_output_matrix(harmonic_raw, n=n_int),
+    )

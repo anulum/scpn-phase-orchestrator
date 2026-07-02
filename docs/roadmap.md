@@ -49,12 +49,13 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public spatial-modulator dispatcher, Rust wrapper, and
-direct Julia bridge now validate optional backend coupling-matrix outputs before
-publication, preserving fallback only for loader/runtime unavailability while
-rejecting malformed, boolean-alias, complex-alias, non-finite, wrong-cardinality,
-and non-zero-diagonal outputs before they can become public spatial coupling
-state.
+Latest U1 closure: the public Hodge dispatcher and Rust wrapper, plus the
+direct Go, Julia, and Mojo bridges, now validate optional backend
+gradient/curl/harmonic outputs before publication or parity fallback. The shared
+validator rejects malformed, boolean-alias, complex-alias, non-finite,
+wrong-cardinality, and non-antisymmetric outputs immediately, while preserving
+NumPy fallback for valid finite antisymmetric payloads that miss numerical
+parity.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.coupling.hodge import (
     hodge_decomposition,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _hodge_julia,
     _hodge_mojo,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
@@ -93,6 +94,17 @@ def _zeros_int() -> np.ndarray:
 
 def _mojo_proc(stdout: str) -> object:
     return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
+
+
+class _FakeJuliaHodgeModule:
+    """Minimal Julia module stand-in for direct bridge output-boundary tests."""
+
+    def __init__(self, output: tuple[object, object, object]) -> None:
+        self._output = output
+
+    def hodge_decomposition(self, *_args: object) -> tuple[object, object, object]:
+        """Return the configured backend payload."""
+        return self._output
 
 
 class TestDirectBackendBoundaryContracts:
@@ -201,6 +213,30 @@ class TestDirectBackendBoundaryContracts:
         assert curl.dtype == np.float64
         assert harmonic.dtype == np.float64
         assert gradient.shape == curl.shape == harmonic.shape == (0, 0)
+
+    def test_direct_julia_rejects_boolean_output_alias(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Julia outputs are validated before object bools can widen to floats."""
+        bad_gradient = np.array([0.0, np.bool_(True), -1.0, 0.0], dtype=object)
+        zero = np.zeros(4, dtype=np.float64)
+        monkeypatch.setattr(
+            _hodge_julia,
+            "_ensure",
+            lambda: _FakeJuliaHodgeModule((bad_gradient, zero, zero.copy())),
+        )
+
+        with pytest.raises(ValueError, match="finite real-valued"):
+            hodge_decomposition_julia(
+                np.array([0.0, 1.0, 1.0, 0.0], dtype=np.float64),
+                np.array([0.0, 0.4], dtype=np.float64),
+                2,
+                np.array([0, 1], dtype=np.int64),
+                1,
+                _zeros_int(),
+                0,
+            )
 
 
 class TestDirectMojoBoundaryContracts:
@@ -394,8 +430,8 @@ class TestBackendLoaderDispatch:
 
         def fake_rust(knm_flat, phases, n, edges, n_edges, tris, n_tris):
             calls.append((knm_flat, phases, n, n_edges, n_tris))
-            flat = np.arange(n * n, dtype=np.float64)
-            return (flat, flat + 1.0, flat + 2.0)
+            flat = np.array([0.0, 1.0, -1.0, 0.0], dtype=np.float64)
+            return (flat, flat * 2.0, flat * 3.0)
 
         fake_module = types.ModuleType("spo_kernel")
         fake_module.hodge_decomposition_rust = fake_rust
@@ -410,10 +446,39 @@ class TestBackendLoaderDispatch:
         )
 
         assert gradient.shape == (2, 2)
-        np.testing.assert_array_equal(gradient, np.arange(4).reshape(2, 2))
+        np.testing.assert_array_equal(
+            gradient,
+            np.array([[0.0, 1.0], [-1.0, 0.0]], dtype=np.float64),
+        )
         assert calls[0][2] == 2
         assert calls[0][0].flags.c_contiguous
         np.testing.assert_array_equal(calls[0][0], knm.ravel())
+
+    def test_rust_loader_rejects_boolean_output_alias(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fake_rust(*_args: object) -> tuple[object, object, object]:
+            bad_gradient = np.array([0.0, np.bool_(True), -1.0, 0.0], dtype=object)
+            zero = np.zeros(4, dtype=np.float64)
+            return bad_gradient, zero, zero.copy()
+
+        fake_module = types.ModuleType("spo_kernel")
+        fake_module.hodge_decomposition_rust = fake_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
+
+        backend = h_mod._load_rust_fn()
+
+        with pytest.raises(ValueError, match="finite real-valued"):
+            backend(
+                np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64),
+                np.array([0.1, 0.4], dtype=np.float64),
+                2,
+                _K3_EDGES[:2],
+                1,
+                _zeros_int(),
+                0,
+            )
 
     def test_julia_loader_requires_juliacall_then_returns_backend(
         self,

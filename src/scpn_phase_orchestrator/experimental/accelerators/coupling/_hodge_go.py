@@ -18,7 +18,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .._go_runtime import load_go_library
-from ._hodge_validation import validate_hodge_backend_inputs
+from ._hodge_validation import (
+    validate_hodge_backend_inputs,
+    validate_hodge_backend_output,
+)
 
 __all__ = ["hodge_decomposition_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -95,8 +98,7 @@ def hodge_decomposition_go(
     )
     if rc != 0:
         raise ValueError(f"Go HodgeDecomposition rc={rc}")
-    return (
-        gradient.reshape(n, n),
-        curl.reshape(n, n),
-        harmonic.reshape(n, n),
+    return validate_hodge_backend_output(
+        (gradient.reshape(n, n), curl.reshape(n, n), harmonic.reshape(n, n)),
+        n=n,
     )

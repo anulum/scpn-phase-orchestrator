@@ -64,6 +64,12 @@ bridge, apply the shared direct spatial-modulator output validator before
 publication: outputs must keep `N*N` cardinality or matrix shape, contain finite
 real non-boolean values, and preserve the zero self-coupling diagonal before the
 public dispatcher reshapes them for callers.
+The public Hodge dispatcher and Rust wrapper, plus the direct Go, Julia, and
+Mojo bridges, apply the shared Hodge output validator before publication or
+parity fallback: gradient, curl, and harmonic payloads must keep `N*N`
+cardinality or `(N, N)` matrix shape, contain finite real non-boolean values,
+and remain antisymmetric. Malformed backend outputs raise immediately, while
+validated numerical parity mismatches still fall back to the NumPy reference.
 The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep

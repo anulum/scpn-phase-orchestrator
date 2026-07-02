@@ -20,7 +20,10 @@ from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
 
-from ._hodge_validation import validate_hodge_backend_inputs
+from ._hodge_validation import (
+    validate_hodge_backend_inputs,
+    validate_hodge_backend_output,
+)
 
 __all__ = ["hodge_decomposition_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -75,8 +78,4 @@ def hodge_decomposition_julia(
         tris,
         n_tris,
     )
-    return (
-        np.asarray(g, dtype=np.float64).reshape(n, n),
-        np.asarray(c, dtype=np.float64).reshape(n, n),
-        np.asarray(h, dtype=np.float64).reshape(n, n),
-    )
+    return validate_hodge_backend_output((g, c, h), n=n)

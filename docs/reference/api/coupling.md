@@ -308,15 +308,20 @@ Because the decomposition relies on two least-squares pseudoinverse
 solves, exact cross-language parity is not attainable; the dispatcher
 validates each accelerated backend against the NumPy reference within
 `rtol = 1e-10` / `atol = 1e-12` (matching the spectral solver) and falls
-back to NumPy on any mismatch.
+back to NumPy only after the backend has returned a valid Hodge payload.
 
-Direct accelerator boundary contract: Go, Julia, and Mojo Hodge adapters use a
-single typed `float64` validation path before loading shared-library, Julia, or
-subprocess runtimes. The contract rejects boolean aliases, complex or non-finite
-payloads, malformed flattened `n*n` coupling buffers, phase vectors whose length
-does not match `n`, and invalid oscillator counts. Empty Hodge systems return
-empty `gradient`, `curl`, and `harmonic` components without requiring optional
-runtimes, matching the public Python special case.
+Direct accelerator boundary contract: the public Rust wrapper and the Go,
+Julia, and Mojo Hodge adapters use one typed `float64` input validation path
+before loading shared-library, Julia, or subprocess runtimes. The contract
+rejects boolean aliases, complex or non-finite payloads, malformed flattened
+`n*n` coupling buffers, phase vectors whose length does not match `n`, and
+invalid oscillator counts. After backend execution, the same output validator
+checks that `gradient`, `curl`, and `harmonic` are finite real non-boolean
+`(N, N)` or flattened `N*N` antisymmetric matrices before publication or parity
+fallback. Malformed backend outputs raise immediately; fallback is reserved for
+validated numerical parity mismatches. Empty Hodge systems return empty
+components without requiring optional runtimes, matching the public Python
+special case.
 
 ::: scpn_phase_orchestrator.coupling.hodge
 

@@ -125,9 +125,8 @@ class TestHodgeBackendDispatch:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         def fake_backend(*args: object) -> tuple:
-            n = int(args[2])  # type: ignore[arg-type]
-            ones = np.full((n, n), 7.0, dtype=np.float64)
-            return ones, ones.copy(), ones.copy()
+            gradient, curl, harmonic = _matrix_reference(*args)  # type: ignore[arg-type]
+            return gradient * 2.0, curl.copy(), harmonic.copy()
 
         monkeypatch.setattr(hodge, "_dispatch", lambda: fake_backend)
 
@@ -140,6 +139,42 @@ class TestHodgeBackendDispatch:
             res.gradient + res.curl + res.harmonic, res.flow, atol=1e-12
         )
         np.testing.assert_allclose(res.curl, 0.0, atol=1e-12)
+
+    def test_backend_boolean_output_alias_is_rejected_before_fallback(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fake_backend(*args: object) -> tuple:
+            n = int(args[2])  # type: ignore[arg-type]
+            bad = np.zeros((n, n), dtype=object)
+            bad[0, 1] = np.bool_(True)
+            bad[1, 0] = -1.0
+            zeros = np.zeros((n, n), dtype=np.float64)
+            return bad, zeros, zeros.copy()
+
+        monkeypatch.setattr(hodge, "_dispatch", lambda: fake_backend)
+
+        phases = np.array([0.3, -0.2])
+        knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+        with pytest.raises(ValueError, match="finite real-valued"):
+            hodge_decomposition(knm, phases)
+
+    def test_backend_non_antisymmetric_output_is_rejected_before_fallback(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fake_backend(*args: object) -> tuple:
+            n = int(args[2])  # type: ignore[arg-type]
+            bad = np.full((n, n), 1.0, dtype=np.float64)
+            zeros = np.zeros((n, n), dtype=np.float64)
+            return bad, zeros, zeros.copy()
+
+        monkeypatch.setattr(hodge, "_dispatch", lambda: fake_backend)
+
+        phases = np.array([0.3, -0.2])
+        knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+        with pytest.raises(ValueError, match="antisymmetric"):
+            hodge_decomposition(knm, phases)
 
 
 class TestHodgeValidation:
@@ -259,6 +294,39 @@ class TestHodgeValidation:
             hodge._normalise_backend_output(
                 (
                     np.full((2, 2), np.nan, dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                ),
+                expected_n=2,
+            )
+
+    def test_backend_output_boolean_alias_is_validated(self) -> None:
+        with pytest.raises(ValueError, match="finite real-valued"):
+            hodge._normalise_backend_output(
+                (
+                    np.array([[0.0, np.bool_(True)], [-1.0, 0.0]], dtype=object),
+                    np.zeros((2, 2), dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                ),
+                expected_n=2,
+            )
+
+    def test_backend_output_complex_alias_is_validated(self) -> None:
+        with pytest.raises(ValueError, match="finite real-valued"):
+            hodge._normalise_backend_output(
+                (
+                    np.array([[0.0, 1.0 + 0.0j], [-1.0, 0.0]], dtype=object),
+                    np.zeros((2, 2), dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                ),
+                expected_n=2,
+            )
+
+    def test_backend_output_antisymmetry_is_validated(self) -> None:
+        with pytest.raises(ValueError, match="antisymmetric"):
+            hodge._normalise_backend_output(
+                (
+                    np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64),
                     np.zeros((2, 2), dtype=np.float64),
                     np.zeros((2, 2), dtype=np.float64),
                 ),

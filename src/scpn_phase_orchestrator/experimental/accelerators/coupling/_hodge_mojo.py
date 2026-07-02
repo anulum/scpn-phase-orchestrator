@@ -18,7 +18,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._hodge_validation import validate_hodge_backend_inputs
+from ._hodge_validation import (
+    validate_hodge_backend_inputs,
+    validate_hodge_backend_output,
+)
 
 __all__ = ["_ensure_exe", "hodge_decomposition_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -88,4 +91,4 @@ def hodge_decomposition_mojo(
     gradient = parsed[:block].reshape(n, n).copy()
     curl = parsed[block : 2 * block].reshape(n, n).copy()
     harmonic = parsed[2 * block : 3 * block].reshape(n, n).copy()
-    return gradient, curl, harmonic
+    return validate_hodge_backend_output((gradient, curl, harmonic), n=n)

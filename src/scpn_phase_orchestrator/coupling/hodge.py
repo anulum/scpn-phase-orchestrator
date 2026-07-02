@@ -78,7 +78,8 @@ The decomposition needs two least-squares solves (``L0⁺``, ``L2⁺``), so
 exact cross-language parity is not attainable; the dispatcher validates
 each accelerated backend against the NumPy reference within
 ``rtol = 1e-10`` / ``atol = 1e-12`` (matching the spectral solver) and
-falls back to NumPy on any mismatch.
+falls back to NumPy on any valid numerical mismatch. Malformed backend
+payloads fail closed before parity fallback.
 
 Reference
 ---------
@@ -97,6 +98,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_validation import (  # noqa: E501
+    validate_hodge_backend_output,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -148,11 +152,7 @@ def _load_rust_fn() -> HodgeBackend:
             np.ascontiguousarray(tris_flat.ravel(), dtype=np.int64),
             int(n_tris),
         )
-        return (
-            np.asarray(g, dtype=np.float64).reshape(n, n),
-            np.asarray(c, dtype=np.float64).reshape(n, n),
-            np.asarray(h, dtype=np.float64).reshape(n, n),
-        )
+        return validate_hodge_backend_output((g, c, h), n=n)
 
     return cast("HodgeBackend", _rust)
 
@@ -543,30 +543,12 @@ def _python_decomposition(
 
 
 def _normalise_backend_output(
-    output: HodgeTuple,
+    output: object,
     *,
     expected_n: int,
 ) -> HodgeTuple:
     """Return the normalised backend Hodge decomposition output."""
-    gradient, curl, harmonic = (
-        np.asarray(output[0], dtype=np.float64),
-        np.asarray(output[1], dtype=np.float64),
-        np.asarray(output[2], dtype=np.float64),
-    )
-    expected_shape = (expected_n, expected_n)
-    if (
-        gradient.shape != expected_shape
-        or curl.shape != expected_shape
-        or harmonic.shape != expected_shape
-    ):
-        raise ValueError("Hodge backend returned matrices with invalid shape")
-    if not (
-        np.all(np.isfinite(gradient))
-        and np.all(np.isfinite(curl))
-        and np.all(np.isfinite(harmonic))
-    ):
-        raise ValueError("Hodge backend returned non-finite values")
-    return gradient, curl, harmonic
+    return validate_hodge_backend_output(output, n=expected_n)
 
 
 def _backend_matches_reference(
