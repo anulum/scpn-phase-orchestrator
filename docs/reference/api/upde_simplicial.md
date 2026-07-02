@@ -157,6 +157,12 @@ CouplingBuilder.build() ──→ K_nm, α
 |--------|------|-------|-------|
 | `phases_new` | `NDArray[float64]` | `(N,)` | radians in $[0, 2\pi)$ |
 
+The public dispatcher and the Rust wrapper apply the same torus output contract
+to optional backend returns before publication. A selected backend must return
+exactly `N` finite real phase values in `[0, 2*pi)`; malformed, non-finite, or
+out-of-domain backend output raises instead of becoming synchronization
+evidence.
+
 ---
 
 ## 4. Features

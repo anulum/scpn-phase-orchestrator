@@ -15,11 +15,14 @@ import ctypes
 import math
 import sys
 import types
+from collections.abc import Callable, Iterator
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _simplicial_go,
@@ -34,6 +37,10 @@ from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
+FloatArray: TypeAlias = NDArray[np.float64]
+DirectArgs: TypeAlias = tuple[object, ...]
+DirectRunner: TypeAlias = Callable[..., FloatArray]
+DirectArgMutator: TypeAlias = Callable[[DirectArgs], DirectArgs]
 
 
 def test__simplicial_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -51,7 +58,7 @@ def test__simplicial_validation_helper_is_directly_linked_to_backend_tests() -> 
 
 
 @contextlib.contextmanager
-def _force_backend(name: str):
+def _force_backend(name: str) -> Iterator[None]:
     prev = s_mod.ACTIVE_BACKEND
     s_mod.ACTIVE_BACKEND = name
     try:
@@ -60,7 +67,11 @@ def _force_backend(name: str):
         s_mod.ACTIVE_BACKEND = prev
 
 
-def _problem(seed: int, n: int = 6, alpha_nonzero: bool = False):
+def _problem(
+    seed: int,
+    n: int = 6,
+    alpha_nonzero: bool = False,
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
     rng = np.random.default_rng(seed)
     theta = rng.uniform(0, TWO_PI, n)
     omegas = rng.normal(1.0, 0.2, n)
@@ -83,7 +94,7 @@ def _run_backend(
     zeta: float = 0.0,
     psi: float = 0.0,
     alpha_nonzero: bool = False,
-):
+) -> FloatArray:
     if backend not in s_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     theta, omegas, knm, alpha = _problem(seed, n, alpha_nonzero)
@@ -92,18 +103,7 @@ def _run_backend(
         return eng.run(theta, omegas, knm, zeta, psi, alpha, n_steps=n_steps)
 
 
-def _valid_direct_args() -> tuple[
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    int,
-    float,
-    float,
-    float,
-    float,
-    int,
-]:
+def _valid_direct_args() -> DirectArgs:
     return (
         np.array([0.1, 0.3], dtype=np.float64),
         np.array([0.2, -0.1], dtype=np.float64),
@@ -118,13 +118,21 @@ def _valid_direct_args() -> tuple[
     )
 
 
+def _call_direct_runner(runner: DirectRunner, args: DirectArgs) -> FloatArray:
+    """Call a direct backend runner with deliberately dynamic test arguments."""
+    return runner(*args)
+
+
 class _FakeGoSimplicialLib:
     def __init__(self, output: tuple[float, ...], rc: int = 0) -> None:
         self.output = output
         self.rc = rc
 
     def SimplicialRun(self, *_args: object) -> int:
-        output_ref = ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))
+        output_ref = ctypes.cast(
+            cast(Any, _args[-1]),
+            ctypes.POINTER(ctypes.c_double),
+        )
         for index, value in enumerate(self.output):
             output_ref[index] = value
         return self.rc
@@ -138,12 +146,27 @@ class _FakeJuliaSimplicialModule:
         return np.asarray(self.output, dtype=np.float64)
 
 
+class _AstypeFailure:
+    """Array-like test double that exercises the state coercion error path."""
+
+    dtype = np.dtype(np.float64)
+
+    def astype(self, *_args: object, **_kwargs: object) -> FloatArray:
+        """Raise the same exception family as a failed NumPy coercion."""
+        raise TypeError("failed coercion")
+
+
 def _mojo_proc_from_output(output: tuple[float, ...]) -> types.SimpleNamespace:
     return types.SimpleNamespace(
         returncode=0,
         stdout="\n".join(str(value) for value in output) + "\n",
         stderr="",
     )
+
+
+def _mojo_subprocess_module() -> types.ModuleType:
+    """Return the private subprocess module used by the Mojo shim."""
+    return cast(types.ModuleType, cast(Any, _simplicial_mojo).subprocess)
 
 
 def _install_direct_output(
@@ -167,7 +190,7 @@ def _install_direct_output(
         return
     monkeypatch.setattr(_simplicial_mojo, "_ensure_exe", lambda: "simplicial")
     monkeypatch.setattr(
-        _simplicial_mojo.subprocess,
+        _mojo_subprocess_module(),
         "run",
         lambda *_args, **_kwargs: _mojo_proc_from_output(output),
     )
@@ -242,7 +265,7 @@ class TestDirectSimplicialBoundaryContracts:
         self,
         monkeypatch: pytest.MonkeyPatch,
         module: object,
-        mutator: object,
+        mutator: DirectArgMutator,
         match: str,
     ) -> None:
         args = mutator(_valid_direct_args())
@@ -252,7 +275,7 @@ class TestDirectSimplicialBoundaryContracts:
                 "_load_lib",
                 lambda: pytest.fail("Go runtime must not be loaded"),
             )
-            runner = _simplicial_go.simplicial_run_go
+            runner: DirectRunner = _simplicial_go.simplicial_run_go
         elif module is _simplicial_julia:
             monkeypatch.setattr(
                 _simplicial_julia,
@@ -288,23 +311,24 @@ class TestDirectSimplicialBoundaryContracts:
                 "_load_lib",
                 lambda: pytest.fail("Go runtime must not be loaded"),
             )
-            got = _simplicial_go.simplicial_run_go(*args)
+            runner: DirectRunner = _simplicial_go.simplicial_run_go
         elif module is _simplicial_julia:
             monkeypatch.setattr(
                 _simplicial_julia,
                 "_ensure",
                 lambda: pytest.fail("Julia runtime must not be loaded"),
             )
-            got = _simplicial_julia.simplicial_run_julia(*args)
+            runner = _simplicial_julia.simplicial_run_julia
         else:
             monkeypatch.setattr(
                 _simplicial_mojo,
                 "_ensure_exe",
                 lambda: pytest.fail("Mojo runtime must not be loaded"),
             )
-            got = _simplicial_mojo.simplicial_run_mojo(*args)
+            runner = _simplicial_mojo.simplicial_run_mojo
 
-        np.testing.assert_allclose(got, args[0], atol=0.0, rtol=0.0)
+        got = _call_direct_runner(runner, args)
+        np.testing.assert_allclose(got, cast(FloatArray, args[0]), atol=0.0, rtol=0.0)
         assert got is not args[0]
 
     @pytest.mark.parametrize(
@@ -320,11 +344,12 @@ class TestDirectSimplicialBoundaryContracts:
         _install_direct_output(monkeypatch, module, (0.2, 0.4))
 
         if module is _simplicial_go:
-            got = _simplicial_go.simplicial_run_go(*_valid_direct_args())
+            runner: DirectRunner = _simplicial_go.simplicial_run_go
         elif module is _simplicial_julia:
-            got = _simplicial_julia.simplicial_run_julia(*_valid_direct_args())
+            runner = _simplicial_julia.simplicial_run_julia
         else:
-            got = _simplicial_mojo.simplicial_run_mojo(*_valid_direct_args())
+            runner = _simplicial_mojo.simplicial_run_mojo
+        got = _call_direct_runner(runner, _valid_direct_args())
 
         np.testing.assert_allclose(got, [0.2, 0.4], atol=1e-12)
 
@@ -343,14 +368,14 @@ class TestDirectSimplicialBoundaryContracts:
         _install_direct_output(monkeypatch, module, output)
 
         if module is _simplicial_go:
-            runner = _simplicial_go.simplicial_run_go
+            runner: DirectRunner = _simplicial_go.simplicial_run_go
         elif module is _simplicial_julia:
             runner = _simplicial_julia.simplicial_run_julia
         else:
             runner = _simplicial_mojo.simplicial_run_mojo
 
         with pytest.raises(ValueError, match="phases"):
-            runner(*_valid_direct_args())
+            _call_direct_runner(runner, _valid_direct_args())
 
     @pytest.mark.parametrize(
         "module",
@@ -364,49 +389,130 @@ class TestDirectSimplicialBoundaryContracts:
     ) -> None:
         _install_direct_output(monkeypatch, module, (0.2,))
 
-        runner = (
+        runner: DirectRunner = (
             _simplicial_julia.simplicial_run_julia
             if module is _simplicial_julia
             else _simplicial_mojo.simplicial_run_mojo
         )
         with pytest.raises(ValueError, match="length 2|expected 2"):
-            runner(*_valid_direct_args())
+            _call_direct_runner(runner, _valid_direct_args())
+
+
+class TestPublicSimplicialBoundaryContracts:
+    """Public dispatcher contract coverage for optional simplicial backends."""
+
+    @pytest.mark.parametrize("output", [(-0.1, 0.2), (0.1, TWO_PI)])
+    def test_public_engine_rejects_out_of_torus_backend_outputs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        output: tuple[float, float],
+    ) -> None:
+        """Reject optional backend phase vectors outside the public torus."""
+
+        def fake_backend(*_args: object) -> np.ndarray:
+            return np.asarray(output, dtype=np.float64)
+
+        monkeypatch.setattr(s_mod, "_dispatch", lambda: fake_backend)
+        phases, omegas, knm, alpha = _problem(17, n=2)
+        engine = SimplicialEngine(2, 0.01, sigma2=0.4)
+
+        with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
+            engine.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=1)
+
+    def test_public_engine_rejects_negative_step_count(self) -> None:
+        """Reject negative integration counts before backend dispatch."""
+        phases, omegas, knm, alpha = _problem(19, n=2)
+        engine = SimplicialEngine(2, 0.01, sigma2=0.4)
+
+        with pytest.raises(ValueError, match="n_steps"):
+            engine.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=-1)
+
+    def test_public_engine_rejects_nonfinite_drive_control(self) -> None:
+        """Reject nonfinite scalar controls before backend dispatch."""
+        phases, omegas, knm, alpha = _problem(23, n=2)
+        engine = SimplicialEngine(2, 0.01, sigma2=0.4)
+
+        with pytest.raises(ValueError, match="zeta"):
+            engine.run(phases, omegas, knm, float("inf"), 0.0, alpha, n_steps=1)
+
+    def test_state_validator_wraps_failed_array_coercion(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Normalize low-level ndarray coercion failures to ``ValueError``."""
+
+        def fake_asarray(_value: object) -> _AstypeFailure:
+            return _AstypeFailure()
+
+        monkeypatch.setattr(np, "asarray", fake_asarray)
+
+        with pytest.raises(ValueError, match="finite float array"):
+            s_mod._validate_state_array(object(), name="phases", shape=(1,))
+
+    def test_rust_loader_rejects_out_of_torus_kernel_outputs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Reject Rust kernel phase vectors outside the direct backend torus."""
+
+        def simplicial_run_rust(*_args: object) -> list[float]:
+            return [0.1, TWO_PI]
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.__dict__["simplicial_run_rust"] = simplicial_run_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        run = s_mod._load_rust_fn()
+
+        with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
+            run(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.ones(2, dtype=np.float64),
+                np.zeros(4, dtype=np.float64),
+                np.zeros(4, dtype=np.float64),
+                2,
+                0.0,
+                0.0,
+                0.4,
+                0.01,
+                1,
+            )
 
 
 class TestParityAlphaZero:
-    def test_rust(self):
+    def test_rust(self) -> None:
         ref = _run_backend("python", 0)
         got = _run_backend("rust", 0)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         ref = _run_backend("python", 1)
         got = _run_backend("julia", 1)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go(self):
+    def test_go(self) -> None:
         ref = _run_backend("python", 2)
         got = _run_backend("go", 2)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         ref = _run_backend("python", 3, n=5)
         got = _run_backend("mojo", 3, n=5)
         assert np.max(np.abs(got - ref)) < 1e-10
 
 
 class TestParityAlphaNonZero:
-    def test_rust(self):
+    def test_rust(self) -> None:
         ref = _run_backend("python", 4, alpha_nonzero=True, zeta=0.3, psi=1.1)
         got = _run_backend("rust", 4, alpha_nonzero=True, zeta=0.3, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         ref = _run_backend("python", 5, alpha_nonzero=True, zeta=0.3, psi=1.1)
         got = _run_backend("julia", 5, alpha_nonzero=True, zeta=0.3, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go(self):
+    def test_go(self) -> None:
         ref = _run_backend("python", 6, alpha_nonzero=True, zeta=0.3, psi=1.1)
         got = _run_backend("go", 6, alpha_nonzero=True, zeta=0.3, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
@@ -415,12 +521,12 @@ class TestParityAlphaNonZero:
 class TestSigma2Zero:
     """σ₂ = 0 must take the pure-pairwise branch unchanged."""
 
-    def test_rust_sigma2_zero(self):
+    def test_rust_sigma2_zero(self) -> None:
         ref = _run_backend("python", 10, sigma2=0.0)
         got = _run_backend("rust", 10, sigma2=0.0)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go_sigma2_zero(self):
+    def test_go_sigma2_zero(self) -> None:
         ref = _run_backend("python", 11, sigma2=0.0)
         got = _run_backend("go", 11, sigma2=0.0)
         assert np.max(np.abs(got - ref)) < TOL
@@ -437,7 +543,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rust_hypothesis(self, n, sigma2, seed):
+    def test_rust_hypothesis(self, n: int, sigma2: float, seed: int) -> None:
         if "rust" not in s_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         ref = _run_backend("python", seed, n=n, sigma2=sigma2)
@@ -454,7 +560,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_go_hypothesis(self, n, sigma2, seed):
+    def test_go_hypothesis(self, n: int, sigma2: float, seed: int) -> None:
         if "go" not in s_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
         ref = _run_backend("python", seed, n=n, sigma2=sigma2)
@@ -482,7 +588,7 @@ class TestDirectMojoBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(_simplicial_mojo, "_ensure_exe", lambda: "simplicial")
         monkeypatch.setattr(
-            _simplicial_mojo.subprocess,
+            _mojo_subprocess_module(),
             "run",
             lambda *_args, **_kwargs: types.SimpleNamespace(
                 returncode=0,
@@ -507,15 +613,18 @@ class TestDirectMojoBoundaryContracts:
 
 
 class TestOptionalLoaderSuccessPaths:
-    def test_rust_loader_wraps_spo_kernel_function(self, monkeypatch):
-        calls = []
+    def test_rust_loader_wraps_spo_kernel_function(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[tuple[object, ...]] = []
 
-        def simplicial_run_rust(*args):
+        def simplicial_run_rust(*args: object) -> list[float]:
             calls.append(args)
             return [0.1, 0.2, 0.3]
 
         fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.simplicial_run_rust = simplicial_run_rust
+        fake_spo.__dict__["simplicial_run_rust"] = simplicial_run_rust
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
         run = s_mod._load_rust_fn()
@@ -536,20 +645,23 @@ class TestOptionalLoaderSuccessPaths:
         assert calls[0][4] == 3
         assert calls[0][9] == 2
 
-    def test_mojo_loader_runs_availability_probe(self, monkeypatch):
+    def test_mojo_loader_runs_availability_probe(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         fake_mojo = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_mojo"
         )
-        probe_calls = []
+        probe_calls: list[bool] = []
 
-        def _ensure_exe():
+        def _ensure_exe() -> None:
             probe_calls.append(True)
 
-        def simplicial_run_mojo(*args):
+        def simplicial_run_mojo(*args: object) -> FloatArray:
             return np.array([0.4, 0.5], dtype=np.float64)
 
-        fake_mojo._ensure_exe = _ensure_exe
-        fake_mojo.simplicial_run_mojo = simplicial_run_mojo
+        fake_mojo.__dict__["_ensure_exe"] = _ensure_exe
+        fake_mojo.__dict__["simplicial_run_mojo"] = simplicial_run_mojo
         monkeypatch.setitem(
             sys.modules,
             "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_mojo",
@@ -560,17 +672,20 @@ class TestOptionalLoaderSuccessPaths:
         np.testing.assert_allclose(run(), [0.4, 0.5], atol=1e-12)
         assert probe_calls == [True]
 
-    def test_julia_loader_requires_juliacall_and_returns_runner(self, monkeypatch):
+    def test_julia_loader_requires_juliacall_and_returns_runner(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
+        fake_juliacall.__dict__["Main"] = object()
         fake_julia = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_julia"
         )
 
-        def simplicial_run_julia(*args):
+        def simplicial_run_julia(*args: object) -> FloatArray:
             return np.array([0.6, 0.7], dtype=np.float64)
 
-        fake_julia.simplicial_run_julia = simplicial_run_julia
+        fake_julia.__dict__["simplicial_run_julia"] = simplicial_run_julia
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         monkeypatch.setitem(
             sys.modules,
@@ -581,20 +696,23 @@ class TestOptionalLoaderSuccessPaths:
         run = s_mod._load_julia_fn()
         np.testing.assert_allclose(run(), [0.6, 0.7], atol=1e-12)
 
-    def test_go_loader_runs_shared_library_probe(self, monkeypatch):
+    def test_go_loader_runs_shared_library_probe(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         fake_go = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_go"
         )
-        probe_calls = []
+        probe_calls: list[bool] = []
 
-        def _load_lib():
+        def _load_lib() -> None:
             probe_calls.append(True)
 
-        def simplicial_run_go(*args):
+        def simplicial_run_go(*args: object) -> FloatArray:
             return np.array([0.8, 0.9], dtype=np.float64)
 
-        fake_go._load_lib = _load_lib
-        fake_go.simplicial_run_go = simplicial_run_go
+        fake_go.__dict__["_load_lib"] = _load_lib
+        fake_go.__dict__["simplicial_run_go"] = simplicial_run_go
         monkeypatch.setitem(
             sys.modules,
             "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_go",
@@ -607,7 +725,10 @@ class TestOptionalLoaderSuccessPaths:
 
 
 class TestDispatchFallbackChain:
-    def test_dispatch_falls_back_to_python_when_loader_fails(self, monkeypatch):
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = s_mod.ACTIVE_BACKEND
         previous_available = list(s_mod.AVAILABLE_BACKENDS)
         previous_loader = s_mod._LOADERS["go"]
@@ -629,7 +750,35 @@ class TestDispatchFallbackChain:
 
         assert backend is None
 
-    def test_dispatch_uses_cached_loader_once(self, monkeypatch):
+    def test_dispatch_returns_none_when_every_loader_fails(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        previous_backend = s_mod.ACTIVE_BACKEND
+        previous_available = list(s_mod.AVAILABLE_BACKENDS)
+        previous_loader = s_mod._LOADERS["go"]
+        s_mod.ACTIVE_BACKEND = "go"
+        s_mod.AVAILABLE_BACKENDS = ["go"]
+        s_mod._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            s_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(OSError("go backend unavailable")),
+        )
+        try:
+            backend = s_mod._dispatch()
+        finally:
+            s_mod.ACTIVE_BACKEND = previous_backend
+            s_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(s_mod._LOADERS, "go", previous_loader)
+            s_mod._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_uses_cached_loader_once(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = s_mod.ACTIVE_BACKEND
         previous_available = list(s_mod.AVAILABLE_BACKENDS)
         previous_loader = s_mod._LOADERS["go"]
@@ -652,7 +801,7 @@ class TestDispatchFallbackChain:
         ) -> np.ndarray:
             return np.asarray(phases, dtype=np.float64)
 
-        def loader():
+        def loader() -> DirectRunner:
             nonlocal call_count
             call_count += 1
             return fake_backend

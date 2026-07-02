@@ -41,6 +41,10 @@ diagonals, symmetry, and `[0, 1]` bounds.
 The public geometric dispatcher applies the direct torus output validator to
 optional backend returns before publication: phase vectors must keep oscillator
 cardinality, contain finite values, and remain in `[0, 2*pi)`.
+The public simplicial dispatcher applies the shared direct torus output
+validator to optional backend returns before publication: higher-order Kuramoto
+phase vectors must keep oscillator cardinality, contain finite values, and stay
+inside `[0, 2*pi)`.
 The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep

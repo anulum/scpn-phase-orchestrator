@@ -142,6 +142,10 @@ pairwise graph represents interactions between distinct oscillators; `zeta`,
 non-negative triadic strength, positive timestep, and non-negative step count.
 Zero-step direct calls return a copy of the input phases without loading the
 optional runtime. Backend outputs must be finite torus phases in `[0, 2*pi)`.
+The public dispatcher and Rust wrapper apply that same output contract to
+optional backend returns before exposing `SimplicialEngine.run()` results, so
+backend physics-contract faults raise instead of falling through as trusted
+higher-order synchronization evidence.
 
 Gambuzza et al. 2023, Nature Physics; Tang et al. 2025.
 **Detailed documentation:** [Simplicial (3-body) — detailed reference](upde_simplicial.md)

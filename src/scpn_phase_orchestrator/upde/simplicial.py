@@ -47,6 +47,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _simplicial_validation,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray = NDArray[np.float64]
@@ -80,7 +83,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         n_steps: int,
     ) -> FloatArray:
         """Call the Rust simplicial (3-body) Kuramoto step kernel."""
-        return np.asarray(
+        return _simplicial_validation.validate_simplicial_output(
             simplicial_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
                 np.ascontiguousarray(omegas, dtype=np.float64),
@@ -93,7 +96,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
                 float(dt),
                 int(n_steps),
             ),
-            dtype=np.float64,
+            n=int(n),
         )
 
     return _rust
@@ -261,8 +264,11 @@ def _validate_backend_result(
     name: str,
     n: int,
 ) -> FloatArray:
-    """Return the backend result matching the reference, else raise."""
-    return _validate_state_array(value, name=name, shape=(n,))
+    """Return validated backend torus phases, else raise ``ValueError``."""
+    try:
+        return _simplicial_validation.validate_simplicial_output(value, n=n)
+    except ValueError as exc:
+        raise ValueError(f"{name}: {exc}") from exc
 
 
 def _python_run(
@@ -325,6 +331,17 @@ class SimplicialEngine:
     """
 
     def __init__(self, n_oscillators: int, dt: float, sigma2: float = 0.0):
+        """Initialise the simplicial Kuramoto stepper.
+
+        Parameters
+        ----------
+        n_oscillators : int
+            Number of oscillators in the fixed engine geometry.
+        dt : float
+            Positive Euler timestep in seconds.
+        sigma2 : float, default=0.0
+            Non-negative all-to-all triadic coupling strength.
+        """
         self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
         self._dt = _validate_positive_float(dt, name="dt")
         self._sigma2 = _validate_nonnegative_float(sigma2, name="sigma2")

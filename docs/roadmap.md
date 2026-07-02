@@ -49,10 +49,11 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public basin-stability dispatcher now validates optional
-backend steady-state order-parameter scalars before publication, preserving
-fallback only for loader/runtime unavailability while rejecting boolean,
-non-finite, and out-of-range outputs before they can become basin evidence.
+Latest U1 closure: the public simplicial dispatcher and Rust wrapper now
+validate optional backend phase vectors before publication, preserving fallback
+only for loader/runtime unavailability while rejecting malformed, non-finite,
+and out-of-torus outputs before they can become higher-order synchronization
+evidence.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|
