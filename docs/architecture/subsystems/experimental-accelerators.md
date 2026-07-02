@@ -76,6 +76,13 @@ payloads must contain finite real non-boolean eigenvalue and Fiedler vectors of
 length `N`, eigenvalues must be non-negative and sorted ascending, and
 non-trivial Fiedler vectors must be non-zero. Malformed spectral payloads raise
 immediately, preserving fallback only for loader or runtime unavailability.
+The public AttnRes dispatcher, plus the direct Go, Julia, and Mojo bridges,
+apply the shared AttnRes output validator before publication: modulated
+coupling payloads may be flat `N*N` vectors or `(N, N)` matrices, but must
+contain finite real non-boolean values, remain symmetric, keep a zero diagonal,
+and preserve the input `K_nm` zero-edge topology. Malformed AttnRes physics
+payloads raise immediately, preserving fallback only for loader or runtime
+unavailability.
 The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep

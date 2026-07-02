@@ -108,4 +108,4 @@ def attnres_modulate_julia(
         temperature,
         lambda_,
     )
-    return validate_attnres_backend_output(result, n=n)
+    return validate_attnres_backend_output(result, n=n, knm_flat=knm_flat)

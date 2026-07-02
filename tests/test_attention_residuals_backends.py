@@ -245,6 +245,8 @@ class TestDirectMojoBoundaryContracts:
             ("0\nnan\n2\n3\n4\n5\n6\n7\n8\n", "finite modulated"),
             ("0\n1\n2\n3\ninf\n5\n6\n7\n8\n", "finite modulated"),
             ("0\n1\n2\n3\n4\n5\n6\n7\n-inf\n", "finite modulated"),
+            ("1\n0\n0\n0\n0\n0\n0\n0\n0\n", "diagonal"),
+            ("0\n1\n0\n0\n0\n0\n0\n0\n0\n", "symmetric"),
         ],
     )
     def test_mojo_runner_rejects_malformed_raw_stdout(
@@ -262,6 +264,50 @@ class TestDirectMojoBoundaryContracts:
 
         with pytest.raises(ValueError, match=match):
             _attnres_mojo.attnres_modulate_mojo(*_direct_payload())
+
+    def test_mojo_runner_rejects_output_that_creates_zero_edges(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(_attnres_mojo, "_ensure_exe", lambda: "attnres")
+        monkeypatch.setattr(
+            _attnres_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: _mojo_proc(
+                "0\n0.25\n0.5\n0.25\n0\n0\n0.5\n0\n0\n"
+            ),
+        )
+        knm_flat = np.array(
+            [
+                0.0,
+                0.25,
+                0.0,
+                0.25,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            ],
+            dtype=np.float64,
+        )
+        theta = np.linspace(0.0, TWO_PI, 3, endpoint=False)
+        w = np.zeros((1, 8, 8), dtype=np.float64).ravel()
+
+        with pytest.raises(ValueError, match="preserve zero"):
+            _attnres_mojo.attnres_modulate_mojo(
+                knm_flat,
+                theta,
+                w,
+                w.copy(),
+                w.copy(),
+                w.copy(),
+                3,
+                1,
+                -1,
+                1.0,
+                0.25,
+            )
 
 
 class TestBackendTypingContracts:

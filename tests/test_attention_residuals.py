@@ -51,6 +51,13 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 TWO_PI = 2.0 * np.pi
 
 
+class _FloatRejectingArray:
+    def __array__(self, dtype: object = None) -> np.ndarray:
+        if dtype is not None and np.dtype(dtype) == np.dtype(object):
+            return np.array([0.0], dtype=object)
+        raise TypeError("float conversion rejected")
+
+
 def _symmetric_knm(n: int, strength: float = 0.3, seed: int = 0) -> np.ndarray:
     rng = np.random.default_rng(seed)
     half = rng.uniform(0.0, 2.0 * strength, size=(n, n))
@@ -298,6 +305,21 @@ class TestContractFailures:
         with pytest.raises(ValueError, match=field):
             attnres_modulate(knm, theta, **kwargs)
 
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"temperature": True},
+            {"lambda_": True},
+            {"projection_seed": -1},
+        ],
+    )
+    def test_scalar_constructor_aliases_rejected(
+        self,
+        kwargs: dict[str, object],
+    ) -> None:
+        with pytest.raises(ValueError):
+            attnres_modulate(_symmetric_knm(4), np.zeros(4), **kwargs)
+
     def test_default_projection_factory_must_fill_all_missing_slots(
         self,
         monkeypatch,
@@ -395,6 +417,40 @@ class TestContractFailures:
         w_v = np.zeros((2, 4, 2), dtype=np.float64)
         w_o = np.zeros((3, 4), dtype=np.float64)
         with pytest.raises(ValueError, match="w_o shape"):
+            attnres_modulate(
+                _symmetric_knm(4),
+                np.zeros(4),
+                w_q=w_q,
+                w_k=w_k,
+                w_v=w_v,
+                w_o=w_o,
+                n_heads=2,
+            )
+
+    def test_projection_tensors_must_be_rank_three(self) -> None:
+        w_q = np.zeros((2, 4), dtype=np.float64)
+        w_k = np.zeros((2, 4), dtype=np.float64)
+        w_v = np.zeros((2, 4), dtype=np.float64)
+        w_o = np.zeros((4, 4), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="3-D"):
+            attnres_modulate(
+                _symmetric_knm(4),
+                np.zeros(4),
+                w_q=w_q,
+                w_k=w_k,
+                w_v=w_v,
+                w_o=w_o,
+                n_heads=2,
+            )
+
+    def test_projection_head_width_must_match_model_width(self) -> None:
+        w_q = np.zeros((2, 8, 3), dtype=np.float64)
+        w_k = np.zeros((2, 8, 3), dtype=np.float64)
+        w_v = np.zeros((2, 8, 3), dtype=np.float64)
+        w_o = np.zeros((6, 8), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="d_model"):
             attnres_modulate(
                 _symmetric_knm(4),
                 np.zeros(4),
@@ -528,6 +584,20 @@ class TestDispatcher:
 
         assert calls["go"] == 1
 
+    def test_dispatch_returns_python_when_available_list_omits_python(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def _fail_go() -> object:
+            raise ImportError("go unavailable")
+
+        monkeypatch.setattr(attnres_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(attnres_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(attnres_mod, "AVAILABLE_BACKENDS", ["go"])
+        monkeypatch.setattr(attnres_mod, "_LOADERS", {"go": _fail_go})
+
+        assert attnres_mod._dispatch_backend() is None
+
 
 def test_python_reference_lambda_zero_returns_independent_identity_copy() -> None:
     knm = _symmetric_knm(5, seed=17)
@@ -576,6 +646,9 @@ def test_public_entry_rejects_boolean_and_complex_payload_aliases() -> None:
 
     with pytest.raises(ValueError, match="theta.*real-valued"):
         attnres_modulate(knm, np.array([0.0, 1.0 + 0.0j, 2.0], dtype=object))
+
+    with pytest.raises(ValueError, match="theta.*finite real array"):
+        attnres_modulate(knm, _FloatRejectingArray())
 
     w_q, w_k, w_v, w_o = default_projections(n_heads=1)
     w_q_obj = w_q.astype(object)
@@ -637,3 +710,21 @@ def test_backend_output_must_preserve_attnres_physics_contract(
 
     with pytest.raises(ValueError, match="backend output.*diagonal"):
         attnres_modulate(_symmetric_knm(3), np.zeros(3), n_heads=1, lambda_=0.25)
+
+
+def test_backend_output_must_not_create_zero_input_edges(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def non_physical_backend(*args: object) -> np.ndarray:
+        n = int(args[6])
+        out = np.zeros((n, n), dtype=np.float64)
+        out[0, 1] = out[1, 0] = 0.5
+        return out.ravel()
+
+    knm = np.zeros((3, 3), dtype=np.float64)
+    knm[1, 2] = knm[2, 1] = 0.25
+
+    monkeypatch.setattr(attnres_mod, "_dispatch_backend", lambda: non_physical_backend)
+
+    with pytest.raises(ValueError, match="preserve zero"):
+        attnres_modulate(knm, np.zeros(3), n_heads=1, lambda_=0.25)

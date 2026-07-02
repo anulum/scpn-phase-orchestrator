@@ -33,6 +33,15 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
 def _validate_non_negative_int(value: object, *, name: str) -> int:
     """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
@@ -83,24 +92,62 @@ def _validate_lambda(value: object) -> float:
     return resolved
 
 
-def _validate_float_vector(value: object, *, name: str) -> FloatArray:
-    """Return ``value`` as a validated finite float vector, else raise."""
+def _validate_float_array(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite real float array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    raw = np.asarray(value)
+    if _contains_complex_alias(value):
+        raise ValueError(f"{name} must be real-valued")
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real float array") from exc
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
     try:
-        vector = raw.astype(np.float64, copy=True)
+        array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
-        raise ValueError(
-            f"{name} must be a finite one-dimensional float array"
-        ) from exc
+        raise ValueError(f"{name} must be a finite real float array") from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_float_vector(value: object, *, name: str) -> FloatArray:
+    """Return ``value`` as a validated finite float vector, else raise."""
+    vector = _validate_float_array(value, name=name)
     if vector.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {vector.shape}")
-    if not np.all(np.isfinite(vector)):
-        raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(vector, dtype=np.float64)
+
+
+def _validate_output_topology(matrix: FloatArray, *, name: str) -> None:
+    """Validate the AttnRes output coupling topology, else raise."""
+    if not np.allclose(matrix, matrix.T, rtol=1e-12, atol=1e-12):
+        raise ValueError(f"{name} must be symmetric")
+    if not np.allclose(np.diag(matrix), 0.0, rtol=0.0, atol=1e-12):
+        raise ValueError(f"{name} diagonal must be zero")
+
+
+def _validate_zero_edge_preservation(
+    matrix: FloatArray,
+    *,
+    n: int,
+    knm_flat: object | None,
+    name: str,
+) -> None:
+    """Validate that the backend did not create edges absent from ``K_nm``."""
+    if knm_flat is None:
+        return
+    reference = _validate_float_vector(knm_flat, name="knm_flat")
+    expected = n * n
+    if reference.size != expected:
+        raise ValueError(
+            f"knm_flat length {reference.size} does not match n*n={expected}"
+        )
+    zero_edges = np.isclose(reference.reshape(n, n), 0.0, rtol=0.0, atol=1e-12)
+    if not np.allclose(matrix[zero_edges], 0.0, rtol=0.0, atol=1e-12):
+        raise ValueError(f"{name} must preserve zero coupling edges")
 
 
 def validate_attnres_backend_inputs(
@@ -177,12 +224,33 @@ def validate_attnres_backend_inputs(
     )
 
 
-def validate_attnres_backend_output(value: object, *, n: int) -> FloatArray:
+def validate_attnres_backend_output(
+    value: object,
+    *,
+    n: int,
+    knm_flat: object | None = None,
+    name: str = "attnres output",
+) -> FloatArray:
     """Validate direct AttnRes backend output before returning it."""
-    output = _validate_float_vector(value, name="attnres output")
-    expected = n * n
-    if output.size != expected:
+    n_int = _validate_non_negative_int(n, name="n")
+    output = _validate_float_array(value, name=name)
+    expected = n_int * n_int
+    if output.shape == (expected,) or output.shape == (n_int, n_int):
+        flat = output.reshape(expected)
+    elif output.ndim == 1:
+        raise ValueError(f"{name} length {output.size} does not match {expected}")
+    else:
         raise ValueError(
-            f"attnres output length {output.size} does not match {expected}"
+            f"{name} shape {output.shape} does not match ({n_int}, {n_int}) "
+            f"or flat length {expected}"
         )
-    return output
+    flat = np.ascontiguousarray(flat, dtype=np.float64)
+    matrix = flat.reshape(n_int, n_int)
+    _validate_output_topology(matrix, name=name)
+    _validate_zero_edge_preservation(
+        matrix,
+        n=n_int,
+        knm_flat=knm_flat,
+        name=name,
+    )
+    return flat

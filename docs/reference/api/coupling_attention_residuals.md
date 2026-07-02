@@ -174,7 +174,7 @@ call.
 | Position | Backend | Build / dependency | Notes |
 |---|---|---|---|
 | 1 | Rust | ``maturin develop`` from ``spo-kernel/crates/spo-ffi`` | Canonical fast path; PyO3 binding returns ``Bound<PyArray1<f64>>`` directly (no Vec → PyList round-trip). |
-| 2 | Mojo | ``mojo build mojo/attnres.mojo -o mojo/attnres_mojo -Xlinker -lm`` | Subprocess bridge with one-line text protocol; the Python boundary accepts exactly ``N*N`` finite output records before returning a matrix. Mojo 0.26 ``UnsafePointer`` C-ABI is not yet stable, so full ctypes binding is deferred to Mojo 0.27+. |
+| 2 | Mojo | ``mojo build mojo/attnres.mojo -o mojo/attnres_mojo -Xlinker -lm`` | Subprocess bridge with one-line text protocol; the Python boundary accepts exactly ``N*N`` finite output records, then replays the same symmetric, zero-diagonal, zero-edge-preserving coupling contract used by the public dispatcher. Mojo 0.26 ``UnsafePointer`` C-ABI is not yet stable, so full ctypes binding is deferred to Mojo 0.27+. |
 | 3 | Julia | ``juliacall`` + ``julia/attnres.jl`` | Bridged lazily; first call pays Julia's one-time PythonCall bootstrap (~30 s) but subsequent calls JIT to native speed. |
 | 4 | Go | ``go build -buildmode=c-shared -o go/libattnres.so go/attnres.go`` | ctypes call into the shared library. No JIT warm-up. |
 | 5 | Python | always present | NumPy reference — the correctness floor, and the implementation all compiled backends mirror bit-for-bit. |
@@ -195,9 +195,10 @@ always appears as the last entry in ``AVAILABLE_BACKENDS``.
 | Python | 0 (reference) |
 
 Anything outside these budgets is a bug in the port, not a numerical
-limit. The 14 ``test_attention_residuals_backends.py`` tests guard
-these tolerances; the two Hypothesis-driven suites (Rust, Go) run
-against random ``N ∈ [4, 24]`` each session.
+limit. ``test_attention_residuals_backends.py`` guards these
+tolerances and the direct-adapter boundary contracts; the two
+Hypothesis-driven suites (Rust, Go) run against random ``N`` values
+each session.
 
 ---
 
@@ -318,14 +319,17 @@ baseline without branching on backend availability.
 
 | File | Purpose | Count |
 |---|---|---|
-| `tests/test_attention_residuals.py` | Algorithm invariants, contract failures, dispatcher | 20 |
-| `tests/test_attention_residuals_backends.py` | Per-backend parity | 14 |
+| `tests/test_attention_residuals.py` | Algorithm invariants, contract failures, dispatcher, public optional-output physics | focused |
+| `tests/test_attention_residuals_backends.py` | Per-backend parity and direct output validation | focused |
+| `tests/test_attnres_validation_guards.py` | Shared direct input/output validator branch coverage | focused |
 | `tests/test_attention_residuals_stability.py` | Lyapunov + long-run (marked slow) | 3 |
 | `benchmarks/attnres_modulation_benchmark.py` | Wall-clock per backend | — |
 | `spo-kernel/crates/spo-engine/benches/utility_bench.rs::bench_attnres_modulate` | Bare Rust kernel (criterion) | — |
 
-Total: 37 AttnRes-specific Python tests plus the Rust criterion
-bench.
+The focused AttnRes Python suites cover the public algorithm,
+dispatcher, shared direct validator, direct Go/Julia/Mojo adapter
+contracts, and slow stability checks; the Rust criterion bench covers
+the bare kernel.
 
 ---
 
@@ -473,11 +477,12 @@ value that meets the objective.
 | `julia/attnres.jl` | Julia module `AttnRes`. |
 | `go/attnres.go` | Go c-shared library entry `AttnResModulate`. |
 | `mojo/attnres.mojo` | Mojo text-stdin executable. |
-| `src/scpn_phase_orchestrator/coupling/_attnres_julia.py` | `juliacall` bridge. |
-| `src/scpn_phase_orchestrator/coupling/_attnres_go.py` | `ctypes` bridge. |
-| `src/scpn_phase_orchestrator/coupling/_attnres_mojo.py` | Subprocess bridge. |
-| `tests/test_attention_residuals.py` | 20 algorithm / contract / dispatcher tests. |
-| `tests/test_attention_residuals_backends.py` | 14 per-backend parity tests. |
+| `src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_validation.py` | Shared direct input/output boundary validator. |
+| `src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_julia.py` | `juliacall` bridge. |
+| `src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_go.py` | `ctypes` bridge. |
+| `src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_mojo.py` | Subprocess bridge. |
+| `tests/test_attention_residuals.py` | Algorithm / contract / dispatcher tests. |
+| `tests/test_attention_residuals_backends.py` | Per-backend parity and direct boundary tests. |
 | `tests/test_attention_residuals_stability.py` | 3 Lyapunov / long-run stability tests (slow). |
 | `benchmarks/attnres_modulation_benchmark.py` | Multi-backend wall-clock harness. |
 | Internal Phase-3 research brief | Validation criteria source. |
@@ -490,6 +495,13 @@ coupling lengths, phase-length mismatch, incompatible flattened projection
 lengths, invalid head counts, invalid `block_size`, non-positive temperature,
 and negative modulation strength. Empty systems return an empty flattened
 coupling vector without optional runtime loading.
+After backend execution, the same shared validator is replayed by the direct
+Go, Julia, and Mojo adapters and by the public optional-backend path. Backend
+outputs may be flattened `N*N` vectors or `(N, N)` matrices, but must be finite
+real non-boolean values, symmetric, zero on the diagonal, and must not create
+new nonzero edges where the input `K_nm` had zero coupling. Malformed backend
+physics raises immediately; fallback remains reserved for loader or runtime
+unavailability.
 
 ---
 

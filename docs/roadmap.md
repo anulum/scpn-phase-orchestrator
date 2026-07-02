@@ -49,11 +49,11 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public spectral dispatcher, plus the direct Go, Julia,
-and Mojo bridges, now validate optional backend eigensystem outputs before
-publication. The shared validator rejects malformed, boolean-alias,
-complex-alias, non-finite, wrong-cardinality, negative, unsorted, and zero
-non-trivial Fiedler-vector payloads immediately, preserving fallback only for
+Latest U1 closure: the public AttnRes dispatcher, plus the direct Go, Julia,
+and Mojo bridges, now validate optional backend modulated-coupling outputs
+before publication. The shared validator rejects malformed, boolean-alias,
+complex-alias, non-finite, wrong-cardinality, non-symmetric, nonzero-diagonal,
+and zero-edge-creating payloads immediately, preserving fallback only for
 loader or runtime unavailability.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |

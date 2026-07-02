@@ -125,4 +125,4 @@ def attnres_modulate_go(
     )
     if rc != 0:
         raise ValueError(f"Go AttnResModulate returned error code {rc}")
-    return validate_attnres_backend_output(out, n=n)
+    return validate_attnres_backend_output(out, n=n, knm_flat=knm64)

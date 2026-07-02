@@ -54,6 +54,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _attnres_validation as attnres_validation,
+)
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -162,17 +165,20 @@ def _validate_coupling_contract(knm: FloatArray, *, name: str = "knm") -> None:
         raise ValueError(f"{name} diagonal must be zero")
 
 
-def _validate_backend_output(value: object, *, n: int) -> FloatArray:
+def _validate_backend_output(
+    value: object,
+    *,
+    n: int,
+    knm_flat: FloatArray,
+) -> FloatArray:
     """Return the backend output matching the reference, else raise."""
-    parsed = _as_real_array("backend output", value)
-    if parsed.shape == (n * n,):
-        parsed = parsed.reshape(n, n)
-    elif parsed.shape != (n, n):
-        raise ValueError(
-            f"backend output shape {parsed.shape} does not match ({n}, {n})"
-        )
-    _validate_coupling_contract(parsed, name="backend output")
-    return np.asarray(parsed, dtype=np.float64)
+    flat = attnres_validation.validate_attnres_backend_output(
+        value,
+        n=n,
+        knm_flat=knm_flat,
+        name="backend output",
+    )
+    return flat.reshape(n, n)
 
 
 def default_projections(
@@ -586,7 +592,7 @@ def attnres_modulate(
             temperature,
             lambda_,
         )
-        return _validate_backend_output(out, n=n)
+        return _validate_backend_output(out, n=n, knm_flat=knm_flat)
 
     out = _python_fallback(
         knm_flat,
