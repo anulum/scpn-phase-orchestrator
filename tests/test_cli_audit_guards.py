@@ -10,10 +10,13 @@
 
 These tests drive the remaining uncovered branches of
 :mod:`scpn_phase_orchestrator.runtime.cli.audit`: the replay determinism-FAILED
-exit, the ``_watch_line`` fallback for non-step/non-header events, the
-``--max-events`` guard, the bounded ``--from-start`` read path, and the
-watch stream-integrity-FAILED exit. The determinism and integrity verifiers are
-monkeypatched to their failing result so the exit paths run deterministically.
+exit, the replay hash-chain-integrity-FAILED exit (driven by a genuinely
+tampered log, not a stub), the no-step replay summary, the ``_watch_line``
+fallback for non-step/non-header events, the ``--max-events`` guard, the
+bounded ``--from-start`` read path, the live-iterator path bounded by
+``--max-events``, and the watch stream-integrity-FAILED exit. The determinism
+and stream-integrity verifiers are monkeypatched to their failing result where
+noted; the replay hash-chain check runs against real tampered bytes.
 """
 
 from __future__ import annotations
@@ -92,6 +95,82 @@ def test_replay_verify_reports_determinism_failure(
 
     assert result.exit_code == 1
     assert "Determinism FAILED at transition 3" in result.output
+
+
+def test_replay_verify_reports_integrity_failure_on_tampered_log(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    """A genuinely tampered record must fail `--verify` before determinism runs.
+
+    The step record's ``stability`` value is edited in place WITHOUT
+    recomputing the record hash, so the real hash-chain verifier (no stub)
+    must report the break and exit non-zero.
+    """
+    log = tmp_path / "audit.jsonl"
+    _write_replay_log(log)
+    lines = log.read_text(encoding="utf-8").splitlines()
+    tampered = [
+        (
+            line.replace('"stability": 0.82', '"stability": 0.99')
+            if '"step"' in line
+            else line
+        )
+        for line in lines
+    ]
+    assert tampered != lines, "fixture must contain a tamperable step record"
+    log.write_text("\n".join(tampered) + "\n", encoding="utf-8")
+
+    result = runner.invoke(main, ["replay", str(log), "--verify"])
+
+    assert result.exit_code == 1
+    assert "audit integrity FAILED" in result.output
+
+
+def test_replay_summarises_event_only_log_without_final_state_lines(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    """A log with no step records reports zero steps and omits final-state lines."""
+    log = tmp_path / "audit.jsonl"
+    with AuditLogger(str(log)) as logger:
+        logger.log_header(n_oscillators=2, dt=0.01, seed=42)
+        logger.log_event("operator_note", {"note": "no steps recorded"})
+
+    result = runner.invoke(main, ["replay", str(log)])
+
+    assert result.exit_code == 0, result.output
+    assert "Steps logged: 0" in result.output
+    assert "Events logged: 1" in result.output
+    assert "Final regime" not in result.output
+
+
+def test_watch_max_events_bounds_the_live_iterator_path(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    """`--from-start --max-events N` takes the live-iterator path and stops at N.
+
+    With ``--max-events`` set the command must use the tailing iterator (not
+    the bounded one-shot read), echo exactly N events, and verify integrity
+    over that bounded prefix.
+    """
+    stream = _write_event_stream(tmp_path / "audit.jsonl", with_note=True)
+
+    result = runner.invoke(
+        main,
+        [
+            "watch",
+            str(stream),
+            "--from-start",
+            "--max-events",
+            "2",
+            "--poll-interval",
+            "0.01",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "stream integrity: OK (2 events)" in result.output
+    # The third event (operator_note) is beyond the bound and must not render.
+    assert "operator_note" not in result.output
 
 
 def test_watch_from_start_reads_bounded_stream_and_renders_event(

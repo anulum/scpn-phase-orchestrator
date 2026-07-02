@@ -177,6 +177,9 @@ def watch(
             for event in events:
                 click.echo(_watch_line(event))
         else:
+            # iter_event_stream is an unbounded tailing generator (it polls
+            # forever), so this loop exits only via the --max-events break
+            # below or the ValueError handler — never by iterator exhaustion.
             for event in iter_event_stream(
                 stream_path,
                 from_start=from_start,
