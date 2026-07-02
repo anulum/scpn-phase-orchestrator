@@ -23,6 +23,8 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation i
     validate_upde_schedule_backend_inputs,
 )
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
+
 __all__ = ["_ensure_exe", "upde_run_mojo", "upde_run_omega_schedule_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -38,19 +40,13 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build mojo/upde_engine.mojo "
             f"-o mojo/upde_engine_mojo -Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def _run(payload: str, *, expected_count: int) -> list[float]:
     """Call the backend kernel with the prepared inputs and return its result."""
     exe = _ensure_exe()
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=payload,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, payload, runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(
             f"Mojo upde_engine returned exit {proc.returncode}: {proc.stderr.strip()}"

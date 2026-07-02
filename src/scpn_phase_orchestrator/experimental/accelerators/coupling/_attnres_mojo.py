@@ -25,6 +25,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._attnres_validation import (
     validate_attnres_backend_inputs,
     validate_attnres_backend_output,
@@ -43,7 +44,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build mojo/attnres.mojo "
             f"-o mojo/attnres_mojo -Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def attnres_modulate_mojo(
@@ -108,13 +109,7 @@ def attnres_modulate_mojo(
     tokens.extend(repr(float(x)) for x in w_o.tolist())
     payload = " ".join(tokens) + "\n"
 
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=payload,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, payload, runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(
             f"Mojo attnres returned exit {proc.returncode}: {proc.stderr.strip()}"

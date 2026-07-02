@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._hodge_validation import validate_hodge_backend_inputs
 
 __all__ = ["_ensure_exe", "hodge_decomposition_mojo"]
@@ -32,7 +33,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build mojo/hodge.mojo "
             f"-o mojo/hodge_mojo -Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def hodge_decomposition_mojo(
@@ -63,13 +64,7 @@ def hodge_decomposition_mojo(
     tokens.extend(repr(float(x)) for x in p.tolist())
     tokens.extend(str(int(x)) for x in edges.tolist())
     tokens.extend(str(int(x)) for x in tris.tolist())
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=" ".join(tokens) + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, " ".join(tokens) + "\n", runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(f"Mojo hodge exit {proc.returncode}: {proc.stderr.strip()}")
     lines = proc.stdout.splitlines()

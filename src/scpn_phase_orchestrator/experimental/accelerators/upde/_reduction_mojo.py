@@ -14,6 +14,7 @@ import math
 import subprocess
 from pathlib import Path
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._reduction_validation import validate_oa_inputs, validate_oa_output
 
 __all__ = ["_ensure_exe", "oa_run_mojo"]
@@ -28,7 +29,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build "
             f"mojo/reduction.mojo -o mojo/reduction_mojo -Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def oa_run_mojo(
@@ -64,13 +65,7 @@ def oa_run_mojo(
         repr(float(dt)),
         str(int(n_steps)),
     ]
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=" ".join(tokens) + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, " ".join(tokens) + "\n", runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(f"Mojo OARUN exit {proc.returncode}: {proc.stderr.strip()}")
     lines = proc.stdout.splitlines()

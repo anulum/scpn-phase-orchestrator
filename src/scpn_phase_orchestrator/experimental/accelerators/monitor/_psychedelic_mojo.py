@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._psychedelic_validation import (
     validate_psychedelic_backend_inputs,
     validate_psychedelic_entropy_backend_output,
@@ -36,7 +37,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build mojo/psychedelic.mojo "
             f"-o mojo/psychedelic_mojo -Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
@@ -47,13 +48,7 @@ def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
     exe = _ensure_exe()
     tokens: list[str] = ["ENT", str(int(p.size)), str(bin_count)]
     tokens.extend(repr(float(x)) for x in p.tolist())
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=" ".join(tokens) + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, " ".join(tokens) + "\n", runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(
             f"Mojo psychedelic exit {proc.returncode}: {proc.stderr.strip()}"

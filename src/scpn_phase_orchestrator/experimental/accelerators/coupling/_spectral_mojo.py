@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._spectral_validation import validate_spectral_backend_inputs
 
 __all__ = ["_ensure_exe", "spectral_eig_mojo"]
@@ -32,7 +33,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build "
             f"mojo/spectral.mojo -o mojo/spectral_mojo"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def spectral_eig_mojo(
@@ -47,13 +48,7 @@ def spectral_eig_mojo(
     exe = _ensure_exe()
     tokens: list[str] = ["EIG", str(int(n))]
     tokens.extend(repr(float(x)) for x in k.tolist())
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=" ".join(tokens) + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, " ".join(tokens) + "\n", runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(f"Mojo spectral exit {proc.returncode}: {proc.stderr.strip()}")
     lines = proc.stdout.splitlines()

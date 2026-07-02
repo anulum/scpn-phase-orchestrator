@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._basin_stability_validation import (
     validate_basin_stability_inputs,
     validate_basin_stability_output,
@@ -36,7 +37,7 @@ def _ensure_exe() -> Path:
             f"mojo/basin_stability.mojo -o mojo/basin_stability_mojo "
             f"-Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def steady_state_r_mojo(
@@ -90,13 +91,7 @@ def steady_state_r_mojo(
     tokens.extend(repr(float(x)) for x in o.tolist())
     tokens.extend(repr(float(x)) for x in k.tolist())
     tokens.extend(repr(float(x)) for x in a.tolist())
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=" ".join(tokens) + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, " ".join(tokens) + "\n", runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(
             f"Mojo basin_stability exit {proc.returncode}: {proc.stderr.strip()}"

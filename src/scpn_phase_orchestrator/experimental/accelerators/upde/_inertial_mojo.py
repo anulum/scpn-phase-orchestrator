@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._inertial_validation import (
     validate_inertial_inputs,
     validate_inertial_output,
@@ -37,7 +38,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build "
             f"mojo/inertial.mojo -o mojo/inertial_mojo -Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def inertial_step_mojo(
@@ -71,13 +72,7 @@ def inertial_step_mojo(
     tokens.extend(repr(float(x)) for x in km.tolist())
     for arr in (ine, dmp):
         tokens.extend(repr(float(x)) for x in arr.tolist())
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=" ".join(tokens) + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, " ".join(tokens) + "\n", runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(f"Mojo inertial exit {proc.returncode}: {proc.stderr.strip()}")
     lines = proc.stdout.splitlines()

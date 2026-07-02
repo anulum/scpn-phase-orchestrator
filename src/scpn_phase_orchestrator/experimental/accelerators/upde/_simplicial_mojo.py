@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._simplicial_validation import (
     validate_simplicial_inputs,
     validate_simplicial_output,
@@ -38,7 +39,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build "
             f"mojo/simplicial.mojo -o mojo/simplicial_mojo -Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def simplicial_run_mojo(
@@ -87,13 +88,7 @@ def simplicial_run_mojo(
     tokens.extend(repr(float(x)) for x in omegas.tolist())
     tokens.extend(repr(float(x)) for x in knm_flat.tolist())
     tokens.extend(repr(float(x)) for x in alpha_flat.tolist())
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=" ".join(tokens) + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, " ".join(tokens) + "\n", runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(
             f"Mojo simplicial exit {proc.returncode}: {proc.stderr.strip()}"

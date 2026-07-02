@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 from ._pac_validation import (
     validate_modulation_index_inputs,
     validate_modulation_index_output,
@@ -37,19 +38,13 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build mojo/pac.mojo "
             f"-o mojo/pac_mojo -Xlinker -lm"
         )
-    return _EXE_PATH
+    return require_mojo_executable(_EXE_PATH)
 
 
 def _run(payload: str, *, expected_count: int, label: str) -> list[float]:
     """Call the backend kernel with the prepared inputs and return its result."""
     exe = _ensure_exe()
-    proc = subprocess.run(  # nosec B603
-        [str(exe)],
-        input=payload,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    proc = run_mojo_executable(exe, payload, runner=subprocess.run)
     if proc.returncode != 0:
         raise ValueError(
             f"Mojo pac returned exit {proc.returncode}: {proc.stderr.strip()}"
