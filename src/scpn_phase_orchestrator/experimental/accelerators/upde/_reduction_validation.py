@@ -86,10 +86,10 @@ def validate_oa_inputs(
 
 
 def validate_oa_output(
-    z_re: float,
-    z_im: float,
-    radius: float,
-    psi: float,
+    z_re: object,
+    z_im: object,
+    radius: object,
+    psi: object,
 ) -> OAOutput:
     """Validate a backend OA state before publishing it to the public API."""
     z_re_f = _as_real_scalar(z_re, name="backend z_re output")

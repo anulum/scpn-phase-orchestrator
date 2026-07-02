@@ -50,6 +50,11 @@ validators to optional backend returns before publication: order-parameter
 magnitudes, PLV, and layer coherence must be finite real scalars inside
 `[0, 1]`, and boolean aliases are rejected instead of widened to `0.0` or
 `1.0`.
+The public Ott-Antonsen reduction dispatcher applies the shared OA output
+validator to optional backend returns before publication: returned scalar
+records must be finite non-boolean values, `z` must stay inside the OA unit
+disk, `R` must match `|z|`, and `psi` must match `atan2(Im(z), Re(z))` for
+non-zero radius.
 The public envelope dispatcher now applies its direct accelerator output
 validators to optional backend returns before publication: RMS-envelope vectors
 must keep input cardinality, finite values, and non-negative values, while

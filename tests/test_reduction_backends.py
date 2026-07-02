@@ -20,11 +20,15 @@ import ctypes
 import importlib
 import sys
 import types
+from collections.abc import Callable, Iterator
+from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _reduction_go,
@@ -35,9 +39,11 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _reduction_validation as reduction_validation,
 )
 from scpn_phase_orchestrator.upde import reduction as r_mod
-from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
+from scpn_phase_orchestrator.upde.reduction import OAState, OttAntonsenReduction
 
 TOL = 1e-12
+OAOutput = tuple[float, float, float, float]
+ReductionRunner = Callable[..., OAOutput]
 
 
 def test__reduction_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -63,8 +69,18 @@ def test__reduction_validation_helper_is_directly_linked_to_backend_tests() -> N
     assert output[3] == float(np.arctan2(0.2, 0.3))
 
 
+def test_reduction_validator_rejects_non_integer_step_count() -> None:
+    with pytest.raises(TypeError, match="n_steps must be an integer"):
+        reduction_validation.validate_oa_inputs(0.2, 0.1, 0.5, 0.1, 1.0, 0.01, True)
+
+
+def test_reduction_validator_rejects_radius_outside_unit_interval() -> None:
+    with pytest.raises(ValueError, match=r"\[0, 1\]"):
+        reduction_validation.validate_oa_output(0.2, 0.0, 1.2, 0.0)
+
+
 @contextlib.contextmanager
-def _force_backend(name: str):
+def _force_backend(name: str) -> Iterator[None]:
     prev = r_mod.ACTIVE_BACKEND
     r_mod.ACTIVE_BACKEND = name
     try:
@@ -83,7 +99,7 @@ def _run(
     K: float = 1.0,
     dt: float = 0.01,
     n_steps: int = 500,
-):
+) -> OAState:
     if backend not in r_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     red = OttAntonsenReduction(omega_0=omega_0, delta=delta, K=K, dt=dt)
@@ -102,7 +118,8 @@ class _FakeGoReductionLib:
 
     def OARun(self, *_args: object) -> int:
         output_refs = (
-            ctypes.cast(arg, ctypes.POINTER(ctypes.c_double)) for arg in _args[-4:]
+            ctypes.cast(cast(Any, arg), ctypes.POINTER(ctypes.c_double))
+            for arg in _args[-4:]
         )
         for output_ref, value in zip(output_refs, self.output, strict=True):
             output_ref.contents.value = value
@@ -136,9 +153,10 @@ def _install_reduction_output(
             lambda: _FakeJuliaReductionModule(output),
         )
         return
+    mojo_subprocess = cast(Any, _reduction_mojo).subprocess
     monkeypatch.setattr(_reduction_mojo, "_ensure_exe", lambda: "reduction")
     monkeypatch.setattr(
-        _reduction_mojo.subprocess,
+        mojo_subprocess,
         "run",
         lambda *_args, **_kwargs: _mojo_proc(
             "\n".join(str(value) for value in output) + "\n"
@@ -192,6 +210,7 @@ class TestDirectReductionBoundaryContracts:
             )
             runner = _reduction_mojo.oa_run_mojo
 
+        runner = cast(ReductionRunner, runner)
         with pytest.raises((TypeError, ValueError), match=match):
             runner(*args)
 
@@ -248,6 +267,150 @@ class TestDirectReductionBoundaryContracts:
         with pytest.raises(ValueError, match=match):
             runner(0.2, 0.0, 0.5, 0.1, 1.0, 0.01, 8)
 
+    def test_direct_julia_backend_rejects_boolean_alias_outputs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _install_reduction_output(monkeypatch, _reduction_julia, (True, 0.0, 1.0, 0.0))
+
+        with pytest.raises(TypeError, match="backend z_re output"):
+            _reduction_julia.oa_run_julia(0.2, 0.0, 0.5, 0.1, 1.0, 0.01, 8)
+
+
+class TestDirectJuliaLoaderBoundaryContracts:
+    def test_ensure_returns_cached_julia_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        cached = object()
+        monkeypatch.setattr(_reduction_julia, "_JULIA_MODULE", cached)
+        monkeypatch.setattr(
+            _reduction_julia,
+            "require_julia_main",
+            lambda: pytest.fail("cached module must avoid Julia runtime probing"),
+        )
+
+        assert _reduction_julia._ensure() is cached
+
+    def test_ensure_rejects_missing_julia_side_file(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        monkeypatch.setattr(_reduction_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_reduction_julia, "_JULIA_FILE", tmp_path / "missing.jl")
+        monkeypatch.setattr(_reduction_julia, "require_julia_main", lambda: object())
+
+        with pytest.raises(ImportError, match="julia side-file not found"):
+            _reduction_julia._ensure()
+
+    def test_ensure_loads_existing_julia_side_file(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        side_file = tmp_path / "reduction.jl"
+        side_file.write_text("module ReductionJL\nend\n", encoding="utf-8")
+        reduction_module = object()
+        includes: list[str] = []
+
+        class FakeJuliaMain:
+            ReductionJL = reduction_module
+
+            @staticmethod
+            def include(path: str) -> None:
+                includes.append(path)
+
+        monkeypatch.setattr(_reduction_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_reduction_julia, "_JULIA_FILE", side_file)
+        monkeypatch.setattr(
+            _reduction_julia,
+            "require_julia_main",
+            lambda: FakeJuliaMain,
+        )
+
+        assert _reduction_julia._ensure() is reduction_module
+        assert includes == [str(side_file)]
+
+
+class TestPublicReductionOutputContracts:
+    @pytest.mark.parametrize(
+        ("output", "match"),
+        [
+            ((0.2, 0.0, 0.5, 0.0), "R must match"),
+            ((0.0, 0.2, 0.2, 0.0), "psi must match"),
+            ((True, 0.0, 1.0, 0.0), "backend z_re output"),
+        ],
+    )
+    def test_public_run_rejects_invalid_optional_backend_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        output: tuple[object, object, object, object],
+        match: str,
+    ) -> None:
+        def fake_backend(*_args: object) -> tuple[object, object, object, object]:
+            return output
+
+        reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0, dt=0.01)
+        monkeypatch.setattr(r_mod, "_dispatch", lambda: fake_backend)
+
+        with pytest.raises((TypeError, ValueError), match=match):
+            reducer.run(complex(0.2, 0.0), n_steps=8)
+
+    def test_public_run_rejects_invalid_step_count_before_dispatch(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0, dt=0.01)
+        monkeypatch.setattr(
+            r_mod,
+            "_dispatch",
+            lambda: pytest.fail("invalid n_steps must not reach backend dispatch"),
+        )
+
+        with pytest.raises(ValueError, match="n_steps must be a positive integer"):
+            reducer.run(complex(0.2, 0.0), n_steps=False)
+
+    @pytest.mark.parametrize("z0", ["0.2", complex(float("nan"), 0.0)])
+    def test_public_run_rejects_non_complex_initial_state_before_dispatch(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        z0: object,
+    ) -> None:
+        reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0, dt=0.01)
+        monkeypatch.setattr(
+            r_mod,
+            "_dispatch",
+            lambda: pytest.fail("invalid z0 must not reach backend dispatch"),
+        )
+
+        with pytest.raises(ValueError, match="z0 must be a finite complex scalar"):
+            reducer.run(cast(complex, z0), n_steps=8)
+
+    def test_predict_from_oscillators_rejects_uncoercible_array_input(
+        self,
+    ) -> None:
+        class BadArray:
+            def __array__(self, _dtype: object | None = None) -> object:
+                raise ValueError("cannot expose array")
+
+        reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0, dt=0.01)
+
+        with pytest.raises(ValueError, match="finite one-dimensional array"):
+            reducer.predict_from_oscillators(
+                cast(NDArray[np.float64], BadArray()),
+                K=1.0,
+            )
+
+    def test_subcritical_steady_state_uses_python_floor_when_rust_absent(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        reducer = OttAntonsenReduction(omega_0=0.0, delta=1.0, K=1.5, dt=0.01)
+        monkeypatch.setattr(r_mod, "_HAS_RUST_SCALAR", False)
+
+        assert reducer.steady_state_R() == 0.0
+
 
 class TestDirectMojoBoundaryContracts:
     @pytest.mark.parametrize(
@@ -262,10 +425,16 @@ class TestDirectMojoBoundaryContracts:
             ("0.1\n0.2\n0.3\n-inf\n", "finite z_real"),
         ],
     )
-    def test_mojo_runner_rejects_malformed_raw_stdout(self, monkeypatch, stdout, match):
+    def test_mojo_runner_rejects_malformed_raw_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        mojo_subprocess = cast(Any, _reduction_mojo).subprocess
         monkeypatch.setattr(_reduction_mojo, "_ensure_exe", lambda: "reduction")
         monkeypatch.setattr(
-            _reduction_mojo.subprocess,
+            mojo_subprocess,
             "run",
             lambda *_args, **_kwargs: _mojo_proc(stdout),
         )
@@ -275,7 +444,7 @@ class TestDirectMojoBoundaryContracts:
 
 
 class TestBackendParity:
-    def test_rust_matches_python(self):
+    def test_rust_matches_python(self) -> None:
         ref = _run("python")
         got = _run("rust")
         assert abs(got.z.real - ref.z.real) < TOL
@@ -283,19 +452,19 @@ class TestBackendParity:
         assert abs(got.R - ref.R) < TOL
         assert abs(got.psi - ref.psi) < TOL
 
-    def test_julia_matches_python(self):
+    def test_julia_matches_python(self) -> None:
         ref = _run("python")
         got = _run("julia")
         assert abs(got.z.real - ref.z.real) < TOL
         assert abs(got.z.imag - ref.z.imag) < TOL
 
-    def test_go_matches_python(self):
+    def test_go_matches_python(self) -> None:
         ref = _run("python")
         got = _run("go")
         assert abs(got.z.real - ref.z.real) < TOL
         assert abs(got.z.imag - ref.z.imag) < TOL
 
-    def test_mojo_matches_python(self):
+    def test_mojo_matches_python(self) -> None:
         ref = _run("python")
         got = _run("mojo")
         # Text round-trip tolerance on scalar RK4 over 500 steps.
@@ -304,12 +473,12 @@ class TestBackendParity:
 
 
 class TestSubcriticalParity:
-    def test_rust_subcritical(self):
+    def test_rust_subcritical(self) -> None:
         ref = _run("python", delta=1.0, K=1.5, n_steps=1000)
         got = _run("rust", delta=1.0, K=1.5, n_steps=1000)
         assert abs(got.R - ref.R) < TOL
 
-    def test_go_subcritical(self):
+    def test_go_subcritical(self) -> None:
         ref = _run("python", delta=1.0, K=1.5, n_steps=1000)
         got = _run("go", delta=1.0, K=1.5, n_steps=1000)
         assert abs(got.R - ref.R) < TOL
@@ -326,7 +495,12 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rust_hypothesis(self, delta, K_ratio, n_steps):
+    def test_rust_hypothesis(
+        self,
+        delta: float,
+        K_ratio: float,
+        n_steps: int,
+    ) -> None:
         if "rust" not in r_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         K = K_ratio * delta
@@ -345,7 +519,12 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_go_hypothesis(self, delta, K_ratio, n_steps):
+    def test_go_hypothesis(
+        self,
+        delta: float,
+        K_ratio: float,
+        n_steps: int,
+    ) -> None:
         if "go" not in r_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
         K = K_ratio * delta
@@ -356,40 +535,64 @@ class TestHypothesisParity:
 
 
 class TestOptionalLoaderSuccessPaths:
-    def test_rust_loader_wraps_spo_kernel_function(self, monkeypatch):
-        calls = []
+    def test_rust_loader_wraps_spo_kernel_function(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[tuple[object, ...]] = []
 
-        def oa_run_rust(*args):
+        def oa_run_rust(*args: object) -> OAOutput:
             calls.append(args)
-            return 0.1, 0.2, 0.3, 0.4
+            return 0.1, 0.2, float(np.hypot(0.1, 0.2)), float(np.arctan2(0.2, 0.1))
 
         fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.oa_run_rust = oa_run_rust
+        fake_spo_dynamic = cast(Any, fake_spo)
+        fake_spo_dynamic.oa_run_rust = oa_run_rust
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
         run = r_mod._load_rust_fn()
         assert run(0.01, 0.02, 0.5, 0.1, 1.0, 0.01, 3) == (
             0.1,
             0.2,
-            0.3,
-            0.4,
+            float(np.hypot(0.1, 0.2)),
+            float(np.arctan2(0.2, 0.1)),
         )
         assert calls == [(0.01, 0.02, 0.5, 0.1, 1.0, 0.01, 3)]
 
-    def test_mojo_loader_runs_availability_probe(self, monkeypatch):
+    def test_rust_loader_rejects_inconsistent_backend_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def oa_run_rust(*_args: object) -> OAOutput:
+            return 0.2, 0.0, 0.5, 0.0
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo_dynamic = cast(Any, fake_spo)
+        fake_spo_dynamic.oa_run_rust = oa_run_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        run = r_mod._load_rust_fn()
+        with pytest.raises(ValueError, match="R must match"):
+            run(0.01, 0.02, 0.5, 0.1, 1.0, 0.01, 3)
+
+    def test_mojo_loader_runs_availability_probe(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         fake_mojo = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_mojo"
         )
-        probe_calls = []
+        probe_calls: list[bool] = []
 
-        def _ensure_exe():
+        def _ensure_exe() -> None:
             probe_calls.append(True)
 
-        def oa_run_mojo(*args):
+        def oa_run_mojo(*_args: object) -> OAOutput:
             return 0.2, 0.3, 0.4, 0.5
 
-        fake_mojo._ensure_exe = _ensure_exe
-        fake_mojo.oa_run_mojo = oa_run_mojo
+        fake_mojo_dynamic = cast(Any, fake_mojo)
+        fake_mojo_dynamic._ensure_exe = _ensure_exe
+        fake_mojo_dynamic.oa_run_mojo = oa_run_mojo
         monkeypatch.setitem(
             sys.modules,
             "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_mojo",
@@ -400,17 +603,22 @@ class TestOptionalLoaderSuccessPaths:
         assert run() == (0.2, 0.3, 0.4, 0.5)
         assert probe_calls == [True]
 
-    def test_julia_loader_requires_juliacall_and_returns_runner(self, monkeypatch):
+    def test_julia_loader_requires_juliacall_and_returns_runner(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
+        fake_juliacall_dynamic = cast(Any, fake_juliacall)
+        fake_juliacall_dynamic.Main = object()
         fake_julia = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_julia"
         )
 
-        def oa_run_julia(*args):
+        def oa_run_julia(*_args: object) -> OAOutput:
             return 0.3, 0.4, 0.5, 0.6
 
-        fake_julia.oa_run_julia = oa_run_julia
+        fake_julia_dynamic = cast(Any, fake_julia)
+        fake_julia_dynamic.oa_run_julia = oa_run_julia
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         monkeypatch.setitem(
             sys.modules,
@@ -426,20 +634,24 @@ class TestOptionalLoaderSuccessPaths:
             0.6,
         )
 
-    def test_go_loader_runs_shared_library_probe(self, monkeypatch):
+    def test_go_loader_runs_shared_library_probe(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         fake_go = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_go"
         )
-        probe_calls = []
+        probe_calls: list[bool] = []
 
-        def _load_lib():
+        def _load_lib() -> None:
             probe_calls.append(True)
 
-        def oa_run_go(*args):
+        def oa_run_go(*_args: object) -> OAOutput:
             return 0.4, 0.5, 0.6, 0.7
 
-        fake_go._load_lib = _load_lib
-        fake_go.oa_run_go = oa_run_go
+        fake_go_dynamic = cast(Any, fake_go)
+        fake_go_dynamic._load_lib = _load_lib
+        fake_go_dynamic.oa_run_go = oa_run_go
         monkeypatch.setitem(
             sys.modules,
             "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_go",
@@ -455,16 +667,27 @@ class TestOptionalLoaderSuccessPaths:
         )
         assert probe_calls == [True]
 
-    def test_scalar_rust_helpers_feed_steady_state_and_fit(self, monkeypatch):
-        def steady_state(delta, coupling):
+    def test_scalar_rust_helpers_feed_steady_state_and_fit(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def steady_state(delta: float, coupling: float) -> float:
             assert (delta, coupling) == (0.2, 1.0)
             return 0.75
 
-        def fit_lorentzian(omegas):
+        def fit_lorentzian(omegas: NDArray[np.float64]) -> tuple[float, float]:
             assert omegas.flags.c_contiguous
             return 1.25, 0.35
 
-        def fake_run(z_re, z_im, omega_0, delta, k_coupling, dt, n_steps):
+        def fake_run(
+            z_re: float,
+            z_im: float,
+            omega_0: float,
+            delta: float,
+            k_coupling: float,
+            dt: float,
+            n_steps: int,
+        ) -> OAOutput:
             assert (omega_0, delta, k_coupling, dt, n_steps) == (
                 1.25,
                 0.35,
@@ -495,19 +718,25 @@ class TestOptionalLoaderSuccessPaths:
         assert state.R == 0.5
         assert state.K_c == 0.7
 
-    def test_module_import_detects_scalar_rust_helpers(self, monkeypatch):
+    def test_module_import_detects_scalar_rust_helpers(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Reload-time scalar helper detection should wire the optional Rust
         steady-state and Lorentzian-fit helpers when spo_kernel provides them."""
 
-        def fit_lorentzian_rust(_omegas):
+        def fit_lorentzian_rust(
+            _omegas: NDArray[np.float64],
+        ) -> tuple[float, float]:
             return 0.0, 0.1
 
-        def steady_state_r_oa_rust(_delta, _coupling):
+        def steady_state_r_oa_rust(_delta: float, _coupling: float) -> float:
             return 0.2
 
         fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.fit_lorentzian_rust = fit_lorentzian_rust
-        fake_spo.steady_state_r_oa_rust = steady_state_r_oa_rust
+        fake_spo_dynamic = cast(Any, fake_spo)
+        fake_spo_dynamic.fit_lorentzian_rust = fit_lorentzian_rust
+        fake_spo_dynamic.steady_state_r_oa_rust = steady_state_r_oa_rust
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
         reloaded = importlib.reload(r_mod)
@@ -520,7 +749,35 @@ class TestOptionalLoaderSuccessPaths:
 
 
 class TestDispatchFallbackChain:
-    def test_dispatch_falls_back_to_python_when_loader_fails(self, monkeypatch):
+    def test_dispatch_returns_python_floor_after_all_optional_loaders_fail(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        previous_backend = r_mod.ACTIVE_BACKEND
+        previous_available = list(r_mod.AVAILABLE_BACKENDS)
+        previous_loader = r_mod._LOADERS["go"]
+        r_mod.ACTIVE_BACKEND = "go"
+        r_mod.AVAILABLE_BACKENDS = ["go"]
+        r_mod._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            r_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend = r_mod._dispatch()
+        finally:
+            r_mod.ACTIVE_BACKEND = previous_backend
+            r_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(r_mod._LOADERS, "go", previous_loader)
+            r_mod._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = r_mod.ACTIVE_BACKEND
         previous_available = list(r_mod.AVAILABLE_BACKENDS)
         previous_loader = r_mod._LOADERS["go"]
@@ -542,7 +799,10 @@ class TestDispatchFallbackChain:
 
         assert backend is None
 
-    def test_dispatch_uses_cached_loader_once(self, monkeypatch):
+    def test_dispatch_uses_cached_loader_once(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = r_mod.ACTIVE_BACKEND
         previous_available = list(r_mod.AVAILABLE_BACKENDS)
         previous_loader = r_mod._LOADERS["go"]
@@ -562,7 +822,7 @@ class TestDispatchFallbackChain:
         ) -> tuple[float, float, float, float]:
             return z_re, z_im, 0.0, 0.0
 
-        def loader():
+        def loader() -> ReductionRunner:
             nonlocal call_count
             call_count += 1
             return fake_backend

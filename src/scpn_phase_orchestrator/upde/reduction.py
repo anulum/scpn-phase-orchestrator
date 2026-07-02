@@ -50,6 +50,9 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _reduction_validation,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 try:
@@ -124,7 +127,7 @@ def _load_rust_fn() -> Callable[..., tuple[float, float, float, float]]:
             float(dt),
             int(n_steps),
         )
-        return float(re), float(im), float(r), float(psi)
+        return _reduction_validation.validate_oa_output(re, im, r, psi)
 
     return _rust
 
@@ -447,14 +450,16 @@ class OttAntonsenReduction:
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         backend_fn = _dispatch()
         if backend_fn is not None:
-            return backend_fn(
-                z_re,
-                z_im,
-                self._omega_0,
-                self._delta,
-                self._K,
-                self._dt,
-                int(n_steps),
+            return _reduction_validation.validate_oa_output(
+                *backend_fn(
+                    z_re,
+                    z_im,
+                    self._omega_0,
+                    self._delta,
+                    self._K,
+                    self._dt,
+                    int(n_steps),
+                )
             )
         return _python_oa_run(
             z_re,

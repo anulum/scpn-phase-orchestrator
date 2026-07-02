@@ -71,9 +71,4 @@ def oa_run_julia(
         float(dt),
         int(n_steps),
     )
-    return validate_oa_output(
-        float(result[0]),
-        float(result[1]),
-        float(result[2]),
-        float(result[3]),
-    )
+    return validate_oa_output(result[0], result[1], result[2], result[3])

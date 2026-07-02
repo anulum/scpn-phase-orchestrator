@@ -259,6 +259,10 @@ controls must be finite non-boolean real values. Backend outputs are accepted
 only when the returned complex state remains in the OA unit disk, `R` matches
 `|z|`, and `psi` matches `atan2(Im(z), Re(z))`, preserving the physical
 mean-field state contract across the polyglot chain.
+The public dispatcher applies the same output contract to optional backend
+returns before publishing `OAState`, so inconsistent `R`, inconsistent `psi`,
+or boolean-alias scalar outputs fail closed instead of becoming mean-field
+evidence.
 
 **Detailed documentation:** [Ott-Antonsen Reduction — detailed reference](upde_reduction.md)
 

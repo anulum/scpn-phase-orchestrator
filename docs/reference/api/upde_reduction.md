@@ -155,7 +155,7 @@ Oscillators.extract() ──→ ω₁, ω₂, ..., ωₙ
 | `K` | `float` | $\geq 0$ | Coupling strength |
 | `dt` | `float` | $> 0$ | Integration time step (default 0.01) |
 | `z0` | `complex` | $|z_0| < 1$ | Seed (typically $0.01 + 0i$) |
-| `n_steps` | `int` | $\geq 0$ | Number of RK4 steps |
+| `n_steps` | `int` | $\geq 1$ | Number of RK4 steps |
 
 ### Output Contract
 
@@ -166,6 +166,16 @@ Oscillators.extract() ──→ ω₁, ω₂, ..., ωₙ
 | `psi` | `float` | $(-\pi, \pi]$ | $\arg(z)$, mean phase |
 | `K_c` | `float` | $\geq 0$ | Critical coupling $2\Delta$ |
 
+### Accelerator Output Contract
+
+Direct Go, Julia, Mojo, and Rust-backed public dispatch outputs must preserve
+the same Ott-Antonsen state invariant before an `OAState` is published. The
+backend tuple must contain finite non-boolean real scalars, the complex state
+must remain inside the OA unit disk, `R` must equal `abs(z)`, and `psi` must
+match `atan2(Im(z), Re(z))` for non-zero radius. Loader or runtime
+unavailability still falls through to the Python floor, but physics-contract
+faults propagate as validation errors.
+
 ---
 
 ## 4. Features
@@ -175,6 +185,9 @@ Oscillators.extract() ──→ ω₁, ω₂, ..., ωₙ
 - **Rust FFI acceleration** — 38-96x speedup over Python loop
 - **Mojo subprocess boundary** — accepts exactly four finite scalar records
   from the compiled OA runner before constructing an `OAState`
+- **Public backend output replay** — optional backend outputs are checked for
+  `R == |z|`, `psi == atan2(Im(z), Re(z))`, and non-boolean finite scalars
+  before publication
 - **Analytical steady-state** — `steady_state_R()` returns exact $R_{ss}$
 - **Automatic Lorentzian fitting** — `predict_from_oscillators()` fits
   $(\omega_0, \Delta)$ from measured frequencies
