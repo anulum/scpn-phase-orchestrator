@@ -63,8 +63,8 @@ def _problem(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     phases = np.linspace(-0.002, 0.002, n, dtype=np.float64)
     positions = np.linspace(-0.0006, 0.0006, n, dtype=np.float64)
-    omega = np.zeros((4, n), dtype=np.float64)
-    knm = np.full((n, n), 0.04, dtype=np.float64)
+    omega: np.ndarray = np.zeros((4, n), dtype=np.float64)
+    knm: np.ndarray = np.full((n, n), 0.04, dtype=np.float64)
     np.fill_diagonal(knm, 0.0)
     velocity_base = np.linspace(0.10, 0.12, n, dtype=np.float64)
     velocities = np.vstack(
@@ -191,7 +191,7 @@ def test_acceptance_tolerance_profile_records_review_boundary() -> None:
 
 def test_invalid_acceptance_inputs_fail_closed() -> None:
     phases, positions, omega, knm, velocities = _problem()
-    invalid_cases = (
+    invalid_cases: tuple[tuple[object, object, object, object, object, str], ...] = (
         ([], positions, omega, knm, velocities, "phases_t0"),
         (phases, positions[:-1], omega, knm, velocities, "same shape"),
         ([[0.0]], positions, omega, knm, velocities, "one-dimensional"),
@@ -529,8 +529,8 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
     n = 5
     phases = np.linspace(-0.002, 0.002, n, dtype=np.float64)
     positions = np.linspace(-0.0006, 0.0006, n, dtype=np.float64)
-    omega = np.zeros((4, n), dtype=np.float64)
-    knm = np.full((n, n), 0.04, dtype=np.float64)
+    omega: np.ndarray = np.zeros((4, n), dtype=np.float64)
+    knm: np.ndarray = np.full((n, n), 0.04, dtype=np.float64)
     np.fill_diagonal(knm, 0.0)
     velocities = np.vstack(
         [np.linspace(0.10, 0.12, n, dtype=np.float64) for _ in range(4)]
@@ -613,7 +613,7 @@ def _build_with(**overrides: object) -> object:
         (float("inf"), "zeta must be finite"),
     ],
 )
-def test_acceptance_rejects_invalid_scalar(zeta, match) -> None:
+def test_acceptance_rejects_invalid_scalar(zeta: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
         _build_with(zeta=zeta)
 
@@ -646,7 +646,11 @@ def _object_array(shape: tuple[int, ...]) -> np.ndarray:
         ),
     ],
 )
-def test_acceptance_rejects_invalid_array_dtype(field, value, match) -> None:
+def test_acceptance_rejects_invalid_array_dtype(
+    field: str,
+    value: object,
+    match: str,
+) -> None:
     with pytest.raises(ValueError, match=match):
         _build_with(**{field: value})
 
@@ -682,9 +686,43 @@ def _valid_record() -> PHACAcceptanceRecord:
     )
 
 
+@pytest.mark.parametrize("tolerance", [True, -1.0e-12, float("nan"), float("inf")])
+def test_acceptance_validation_rejects_invalid_tolerance(tolerance: float) -> None:
+    record = _valid_record()
+    with pytest.raises(ValueError, match="tolerance"):
+        _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
+            record,
+            record,
+            tolerance=tolerance,
+        )
+
+
+def test_acceptance_validation_rejects_numeric_divergence() -> None:
+    record = _valid_record()
+    expected = _build_with(doppler_strength=2.0e-3)
+
+    with pytest.raises(ValueError, match="max_abs_doppler_term"):
+        _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
+            record,
+            expected,
+            tolerance=0.0,
+        )
+
+
+def test_acceptance_validation_rejects_discrete_divergence() -> None:
+    record = _valid_record()
+    expected = _build_with(backend="go")
+
+    with pytest.raises(ValueError, match="moving_frame_backend_request"):
+        _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
+            record,
+            expected,
+        )
+
+
 def test_verify_rejects_non_record() -> None:
     with pytest.raises(ValueError, match="record must be a PHACAcceptanceRecord"):
-        verify_pha_c_acceptance_record("not-a-record")  # type: ignore[arg-type]
+        verify_pha_c_acceptance_record("not-a-record")
 
 
 @pytest.mark.parametrize(
@@ -717,7 +755,10 @@ def test_verify_rejects_non_record() -> None:
         ({"tolerance_profile_name": ""}, "tolerance_profile_name must be a non-empty"),
     ],
 )
-def test_verify_rejects_tampered_record(changes, match) -> None:
+def test_verify_rejects_tampered_record(
+    changes: dict[str, object],
+    match: str,
+) -> None:
     with pytest.raises(ValueError, match=match):
         verify_pha_c_acceptance_record(replace(_valid_record(), **changes))
 

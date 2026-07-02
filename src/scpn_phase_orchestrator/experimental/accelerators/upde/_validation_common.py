@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import numpy as np
 
-__all__ = ["contains_boolean_alias"]
+__all__ = ["contains_boolean_alias", "validate_non_negative_tolerance"]
 
 
 def contains_boolean_alias(value: object) -> bool:
@@ -21,3 +21,18 @@ def contains_boolean_alias(value: object) -> bool:
         return True
     raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def validate_non_negative_tolerance(value: object, *, name: str = "tolerance") -> float:
+    """Return ``value`` as a finite, non-negative comparison tolerance."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (int, float, np.integer, np.floating),
+    ):
+        raise ValueError(f"{name} must be a finite real scalar")
+    parsed = float(value)
+    if not np.isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    if parsed < 0.0:
+        raise ValueError(f"{name} must be non-negative")
+    return parsed

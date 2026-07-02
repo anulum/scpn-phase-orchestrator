@@ -25,6 +25,8 @@ from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     verify_pha_c_acceptance_record,
 )
 
+from ._validation_common import validate_non_negative_tolerance
+
 _NUMERIC_FIELDS = (
     "start_time",
     "end_time",
@@ -140,16 +142,17 @@ def validate_pha_c_acceptance_record(
     got: PHACAcceptanceRecord,
     expected: PHACAcceptanceRecord,
     *,
-    tolerance: float = 1.0e-12,
+    tolerance: object = 1.0e-12,
 ) -> PHACAcceptanceRecord:
     """Validate an accelerator acceptance record against the reference."""
+    tolerance_f = validate_non_negative_tolerance(tolerance)
     verify_pha_c_acceptance_record(got)
     verify_pha_c_acceptance_record(expected)
     got_dict = got.to_dict()
     expected_dict = expected.to_dict()
     for field in _NUMERIC_FIELDS:
         error = abs(float(got_dict[field]) - float(expected_dict[field]))
-        if error > tolerance:
+        if error > tolerance_f:
             raise ValueError(f"PHA-C acceptance field {field!r} diverged by {error}")
     for field in _DISCRETE_FIELDS:
         if got_dict[field] != expected_dict[field]:

@@ -173,7 +173,7 @@ def test_timeline_tolerance_profile_records_boundary() -> None:
 
 def test_invalid_timeline_inputs_fail_closed() -> None:
     phases, positions, times = _trajectory()
-    invalid_cases = (
+    invalid_cases: tuple[tuple[object, object, object | None, str], ...] = (
         ([], [], None, "two-dimensional"),
         ([[0.0]], [[0.0], [1.0]], None, "same shape"),
         ([0.0], [0.0], None, "two-dimensional"),
@@ -453,9 +453,58 @@ def _valid_timeline() -> PHACTimelineRecord:
     )
 
 
+@pytest.mark.parametrize("tolerance", [True, -1.0e-12, float("nan"), float("inf")])
+def test_timeline_validation_rejects_invalid_tolerance(tolerance: float) -> None:
+    timeline = _valid_timeline()
+    with pytest.raises(ValueError, match="tolerance"):
+        _pha_c_timeline_validation.validate_pha_c_event_timeline(
+            timeline,
+            timeline,
+            tolerance=tolerance,
+        )
+
+
+def test_timeline_validation_rejects_numeric_divergence() -> None:
+    phases, positions, times = _trajectory()
+    timeline = _valid_timeline()
+    expected = build_pha_c_event_timeline(
+        phases,
+        positions,
+        times=times + 1.0,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+    )
+
+    with pytest.raises(ValueError, match="start_time"):
+        _pha_c_timeline_validation.validate_pha_c_event_timeline(
+            timeline,
+            expected,
+            tolerance=0.0,
+        )
+
+
+def test_timeline_validation_rejects_discrete_divergence() -> None:
+    phases, positions, times = _trajectory()
+    timeline = _valid_timeline()
+    expected = build_pha_c_event_timeline(
+        phases,
+        -positions,
+        times=times,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        tolerance_profile="baseline_1x",
+    )
+
+    with pytest.raises(ValueError, match="sample_records_sha256"):
+        _pha_c_timeline_validation.validate_pha_c_event_timeline(timeline, expected)
+
+
 def test_verify_rejects_a_non_timeline() -> None:
     with pytest.raises(ValueError, match="must be a PHACTimelineRecord"):
-        verify_pha_c_event_timeline("not a timeline")  # type: ignore[arg-type]
+        verify_pha_c_event_timeline("not a timeline")
 
 
 @pytest.mark.parametrize(
@@ -505,7 +554,10 @@ def test_verify_rejects_a_non_timeline() -> None:
         ({"tolerance_profile_name": ""}, "must be a non-empty string"),
     ],
 )
-def test_verify_rejects_tampered_timeline(changes, match) -> None:
+def test_verify_rejects_tampered_timeline(
+    changes: dict[str, object],
+    match: str,
+) -> None:
     record = replace(_valid_timeline(), **changes)
     with pytest.raises(ValueError, match=match):
         verify_pha_c_event_timeline(record)
@@ -534,7 +586,7 @@ def test_build_uses_default_integer_times_when_none() -> None:
         (np.array(["a", "b", "c", "d", "e"]), "times must be numeric"),
     ],
 )
-def test_build_rejects_invalid_times(times, match) -> None:
+def test_build_rejects_invalid_times(times: object, match: str) -> None:
     phases, positions, _ = _trajectory()
     with pytest.raises(ValueError, match=match):
         build_pha_c_event_timeline(
@@ -576,7 +628,7 @@ def test_verify_accepts_a_never_locked_timeline() -> None:
     samples = 5
     phases = np.tile(np.array([-1.0, 0.0, 1.0]), (samples, 1))
     positions = np.tile(np.array([-0.5, 0.0, 0.5]), (samples, 1))
-    times = np.arange(samples, dtype=np.float64)
+    times: np.ndarray = np.arange(samples, dtype=np.float64)
     timeline = build_pha_c_event_timeline(
         phases,
         positions,

@@ -18,6 +18,8 @@ from scpn_phase_orchestrator.upde.pha_c_timeline import (
     verify_pha_c_event_timeline,
 )
 
+from ._validation_common import validate_non_negative_tolerance
+
 _NUMERIC_FIELDS = (
     "start_time",
     "end_time",
@@ -72,16 +74,17 @@ def validate_pha_c_event_timeline(
     got: PHACTimelineRecord,
     expected: PHACTimelineRecord,
     *,
-    tolerance: float = 1.0e-12,
+    tolerance: object = 1.0e-12,
 ) -> PHACTimelineRecord:
     """Validate an accelerator timeline against the Python reference contract."""
+    tolerance_f = validate_non_negative_tolerance(tolerance)
     verify_pha_c_event_timeline(got)
     verify_pha_c_event_timeline(expected)
     got_dict = got.to_dict()
     expected_dict = expected.to_dict()
     for field in _NUMERIC_FIELDS:
         error = abs(float(got_dict[field]) - float(expected_dict[field]))
-        if error > tolerance:
+        if error > tolerance_f:
             raise ValueError(f"PHA-C timeline field {field!r} diverged by {error}")
     for field in _DISCRETE_FIELDS:
         if got_dict[field] != expected_dict[field]:

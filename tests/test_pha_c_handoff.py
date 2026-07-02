@@ -205,7 +205,7 @@ def test_handoff_tolerance_profile_records_review_boundary() -> None:
 
 
 def test_invalid_handoff_inputs_fail_closed() -> None:
-    invalid_cases = (
+    invalid_cases: tuple[tuple[object, object, str], ...] = (
         ([], [], "phases"),
         ([0.0], [0.0, 1.0], "same one-dimensional shape"),
         ([[0.0]], [[0.0]], "one-dimensional"),
@@ -446,9 +446,58 @@ def _valid_handoff_record() -> PHACHandoffRecord:
     )
 
 
+@pytest.mark.parametrize("tolerance", [True, -1.0e-12, float("nan"), float("inf")])
+def test_handoff_validation_rejects_invalid_tolerance(tolerance: float) -> None:
+    record = _valid_handoff_record()
+    with pytest.raises(ValueError, match="tolerance"):
+        _pha_c_handoff_validation.validate_pha_c_handoff_record(
+            record,
+            record,
+            tolerance=tolerance,
+        )
+
+
+def test_handoff_validation_rejects_numeric_divergence() -> None:
+    record = _valid_handoff_record()
+    expected = build_pha_c_handoff_record(
+        np.array([0.0, 0.003, -0.004], dtype=np.float64),
+        np.array([0.0, 0.0005, -0.0008], dtype=np.float64),
+        t=4.1,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        prior_consecutive_lock_samples=2,
+        tolerance_profile="baseline_1x",
+    )
+
+    with pytest.raises(ValueError, match="'t'"):
+        _pha_c_handoff_validation.validate_pha_c_handoff_record(
+            record,
+            expected,
+            tolerance=0.0,
+        )
+
+
+def test_handoff_validation_rejects_discrete_divergence() -> None:
+    record = _valid_handoff_record()
+    expected = build_pha_c_handoff_record(
+        np.array([0.0, 0.003, -0.004], dtype=np.float64),
+        np.array([0.0, -0.0005, 0.0008], dtype=np.float64),
+        t=4.0,
+        phase_tol_rad=0.01,
+        spatial_tol_m=0.002,
+        required_consecutive_samples=3,
+        prior_consecutive_lock_samples=2,
+        tolerance_profile="baseline_1x",
+    )
+
+    with pytest.raises(ValueError, match="position_state_sha256"):
+        _pha_c_handoff_validation.validate_pha_c_handoff_record(record, expected)
+
+
 def test_verify_rejects_a_non_record() -> None:
     with pytest.raises(ValueError, match="must be a PHACHandoffRecord"):
-        verify_pha_c_handoff_record("not a record")  # type: ignore[arg-type]
+        verify_pha_c_handoff_record("not a record")
 
 
 @pytest.mark.parametrize(
@@ -511,7 +560,10 @@ def test_verify_rejects_a_non_record() -> None:
         ({"tolerance_profile_name": ""}, "must be a non-empty string"),
     ],
 )
-def test_verify_rejects_tampered_handoff_record(changes, match) -> None:
+def test_verify_rejects_tampered_handoff_record(
+    changes: dict[str, object],
+    match: str,
+) -> None:
     record = replace(_valid_handoff_record(), **changes)
     with pytest.raises(ValueError, match=match):
         verify_pha_c_handoff_record(record)
@@ -522,13 +574,13 @@ def test_build_rejects_non_integer_sample_count() -> None:
         build_pha_c_handoff_record(
             np.array([0.0, 0.003, -0.004]),
             np.array([0.0, 0.0005, -0.0008]),
-            required_consecutive_samples=2.5,  # type: ignore[arg-type]
+            required_consecutive_samples=2.5,
         )
 
 
 def test_build_rejects_non_numeric_phase_vector() -> None:
     with pytest.raises(ValueError, match="must be numeric"):
         build_pha_c_handoff_record(
-            np.array(["a", "b", "c"]),  # type: ignore[arg-type]
+            np.array(["a", "b", "c"]),
             np.array([0.0, 0.0005, -0.0008]),
         )

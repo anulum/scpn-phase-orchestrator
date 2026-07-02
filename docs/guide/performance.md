@@ -328,6 +328,9 @@ merge-window timeline conversion, schedule/trajectory/spatial/Doppler/timeline
 hashing, maximum dispersion and minimum margin evidence, aggregate subgate
 evidence, Lean kinematic proof-obligation hashing, and Rust/Go/Julia/Mojo
 source-contract parity adapters.
+Those source-contract comparators reject boolean, negative, and non-finite
+numeric tolerances before comparing backend records, so a malformed tolerance
+cannot widen or poison parity acceptance.
 
 Each downstream PHA-C gate now also replays the canonical record hash before a
 backend row can pass. Handoff rows call `verify_pha_c_handoff_record(...)`,
